@@ -23,8 +23,9 @@ pytest -q
 
 - **Workload generators** (`simllm/workload/`): arrival processes, length
   distributions, shared-prefix structure, trace replay.
-- **Compute-cost calibration** (`simllm/core/`): measured prefill/decode
-  latency profiles for specific GPUs and models.
+- **Compute-time providers** (`simllm/compute/`): measured prefill/decode
+  latency profiles for specific GPUs and models, roofline refinements,
+  offline SASS-level (Accel-Sim/GPGPU-Sim) table generation.
 - **Placement & fabric** (`simllm/placement/`): manifest extraction for new
   framework versions, fabric topology descriptions, NIC-selection logic.
 - **Traffic models** (`simllm/traffic/`): TP/PP collectives, MoE

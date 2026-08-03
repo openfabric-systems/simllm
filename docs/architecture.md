@@ -112,11 +112,35 @@ assignment mirrors the htsim RNIC drivers' `-goal_rank_mapping` option:
 `gpu-rank` (one GOAL rank per GPU) or `unique-nic` (one per NIC; intra-node
 transfers stay off the fabric).
 
-### Core (`simllm/core/`, `simllm/traffic/`, `simllm/goal/`)
+### Core (`simllm/core/`, `simllm/compute/`, `simllm/traffic/`, `simllm/goal/`)
 
 - **Virtual clock** — orders request arrivals and step completions.
-- **Compute-cost model** — calibrated per-(GPU, model) profiles mapping
-  (prefill tokens, decode batch size) to kernel time, with uncertainty bounds.
+- **Compute-time providers** (`simllm/compute/`) — the duration of every
+  GOAL `calc` node comes from a pluggable `ComputeProvider`:
+  `ProfileTableProvider` (measured (kernel, config, GPU) → duration tables
+  from real captures), `RooflineProvider` (analytical
+  `max(flops/peak, bytes/bw)`, classifying each kernel as compute- or
+  memory-bound from its configuration alone), and — planned — an offline
+  SASS-level provider (Accel-Sim / GPGPU-Sim). Cycle-accurate GPU simulation
+  is orders of magnitude too slow to sit inside the step loop, so it runs
+  offline to *populate profile tables* for configurations nobody measured;
+  the step loop always reads tables or analytical estimates. Every estimate
+  carries an uncertainty so results can report error bounds honestly.
+- **Host initiation model** (`simllm/compute/host.py`) — the data-parallel
+  handoff chain (receive data + a small start packet → compute → hand data
+  over → write a small packet releasing the next rank) is exactly GOAL's
+  `recv → calc → send` chain with `requires` edges. The doorbell packet
+  itself is modeled *in-band* as a small high-priority control message on
+  the fabric (the RNIC endpoint models already carry ~64 B control packets),
+  so it competes for wire time and sees network-side jitter. The host path
+  before the wire (CPU proxy vs GPU-initiated networking, PCIe, RNIC
+  doorbell-to-wire) defaults to **zero delay and zero jitter** — those
+  effects are roughly constant per operation, orthogonal to fabric behavior,
+  and folding them in by default would confound network attribution. A
+  single per-endpoint `initiation_delay_ps` constant exists for launch-path
+  studies (e.g. sub-µs GPU-initiated vs multi-µs CPU-proxy) where
+  small-message all-to-all makes launch overhead comparable to transfer
+  time.
 - **Traffic model** — consumes three inputs: a *collective trace*
   (`simllm-collective-trace-v1`, one JSONL record per op: step, layer, op,
   group type, group global ranks, send counts, element bytes, placement

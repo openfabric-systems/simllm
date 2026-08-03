@@ -88,8 +88,9 @@ through both.
 
 | Module | Purpose |
 |---|---|
-| `simllm/core` | Virtual clock, scheduler-step records, compute-cost model |
+| `simllm/core` | Virtual clock, scheduler-step records |
 | `simllm/workload` | Arrival processes, length distributions, shared-prefix structure |
+| `simllm/compute` | Pluggable compute-time providers (measured profile tables, analytical roofline, offline SASS-level simulation) + host initiation model (doorbell launch path) |
 | `simllm/placement` | **The mapper**: placement manifest (rank→node→GPU→shard→groups, expert ownership, EPLB epochs), fabric topology manifest, rank→endpoint/GOAL-rank resolution |
 | `simllm/traffic` | Semantic collectives → physical flows: TP/PP/DP collectives, MoE all-to-allv from expert owners, KV-cache transfers |
 | `simllm/goal` | GOAL dependency-graph trace emission |
@@ -150,7 +151,8 @@ TTFT/TPOT report with bottleneck attribution.
 - [ ] M4 — closed loop + calibration/validation against real captures
 - [ ] M5 — RNIC fidelity profiles wired end to end (explicit-rate CN,
   Slingshot-like); MoE expert-parallel traffic from real routing captures;
-  training workloads
+  training workloads; SASS-level (Accel-Sim/GPGPU-Sim) offline profile
+  generation
 - [ ] M6 — PD-disaggregation and KV-transfer traffic modeling
 
 ## Contributing
