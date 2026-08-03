@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simllm"
+version = "0.0.1"
+description = "Network-faithful simulation of LLM serving and training deployments"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "SimLLM contributors" }]
+dependencies = [
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "ruff>=0.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/yifeng-ethz/simllm"
+Issues = "https://github.com/yifeng-ethz/simllm/issues"
+
+[tool.setuptools.packages.find]
+include = ["simllm*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

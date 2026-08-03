@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Simulation outputs (keep bulk artifacts out of the repo)
+runs/
+*.goal.bin
+*.bin
+*.npz
+*.csv
+!tests/data/*.csv
+
+# Editors
+.vscode/
+.idea/
+*.swp
