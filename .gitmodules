@@ -1,0 +1,8 @@
+[submodule "third_party/atlahs"]
+	path = third_party/atlahs
+	url = https://github.com/yifeng-ethz/ATLAHS-rnic-private.git
+	branch = codex/rnic-rewrite
+[submodule "third_party/htsim"]
+	path = third_party/htsim
+	url = https://github.com/yifeng-ethz/HTSIM-rnic-private.git
+	branch = main
