@@ -18,6 +18,9 @@ backend submodules.
   (source, destination, tag). Valid for aligned-start flows; for phases
   with model-dependent start stagger use the phase makespan ratio
   (M1 finding F1).
+- `HtsimDcqcnConfig` + `run_htsim_dcqcn`: GOAL-driven RoCEv2 DCQCN runs
+  over a topology-file ns-tm3 Clos (`htsim_dcqcn_atlahs`, landed via the
+  backend DCQCN PR); same completion-CSV schema and quiescence contract.
 - `HtsimUecConfig` + `build_htsim_uec_command`: argv construction for
   GOAL-driven `htsim_uec` runs.
 
@@ -53,6 +56,11 @@ mis-registrations, not defects (findings F1-F3 in examples/m1/RESULTS.md).
 ## Open tasks
 
 - BACK-2: LogGOPSim invocation helper for fast flow-level sweeps.
+- BACK-4: default multi-QP striping of large inter-node flows in the
+  traffic layer (tag-distinct subflows), motivated by the DCQCN ECMP
+  collision study: leaf-affine permutations collide under static flow
+  hashing on an 8-path Clos (16 of 32 flows at 3.5x FCT, seed-invariant);
+  4-way striping cut the tail to 2.05x.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
