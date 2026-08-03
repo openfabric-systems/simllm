@@ -56,11 +56,10 @@ mis-registrations, not defects (findings F1-F3 in examples/m1/RESULTS.md).
 ## Open tasks
 
 - BACK-2: LogGOPSim invocation helper for fast flow-level sweeps.
-- BACK-4: default multi-QP striping of large inter-node flows in the
-  traffic layer (tag-distinct subflows), motivated by the DCQCN ECMP
-  collision study: leaf-affine permutations collide under static flow
-  hashing on an 8-path Clos (16 of 32 flows at 3.5x FCT, seed-invariant);
-  4-way striping cut the tail to 2.05x.
+- BACK-4 (retracted 2026-08-03): multi-QP striping as a DCQCN mitigation
+  was withdrawn by maintainer decision; DCQCN is the expected-fail
+  comparator and its ECMP-collision and slow-start behavior is the
+  phenomenon under study, not a defect to engineer around.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
