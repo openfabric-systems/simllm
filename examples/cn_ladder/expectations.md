@@ -52,8 +52,11 @@ one-way control deadline K (default 10 us, calibrated 4.5 us).
 
 ## Disqualifiers (any one is a stop-and-debug)
 
-- Ring-CAM late-admission or GAP-NACK counts exploding at small S
-  (would indicate the own-fraction scaling or dwnd accounting is wrong).
+- ANY nonzero Ring-CAM late-admission or GAP-NACK count, in any cell,
+  including startup. The design invariant is that bytes sent within a
+  dwnd never exceed the bytes reserved for it (lossless by design, no
+  PFC, loss never a signal), so recovery events are not noise, they are
+  proof the invariant broke.
 - Additive excess growing with decreasing S, or with W at fixed small S.
 - Any nondeterminism across 5 repeats of the same cell.
 - Any cell above 2x.
