@@ -21,6 +21,10 @@ runs/
 *.csv
 !tests/data/*.csv
 
+# Local agent rule files (kept out of the public repo on purpose)
+CLAUDE.md
+AGENTS.md
+
 # Editors
 .vscode/
 .idea/

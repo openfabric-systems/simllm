@@ -10,19 +10,19 @@ Provider                      Fidelity / cost
 ============================  ================================================
 :class:`ProfileTableProvider` Measured (kernel, config) → duration tables from
                               real captures. Cheap, accurate on covered points.
-:class:`RooflineProvider`     Analytical ``max(flops/peak, bytes/bw)`` —
+:class:`RooflineProvider`     Analytical ``max(flops/peak, bytes/bw)``:
                               classifies compute- vs memory-bound from the
                               kernel configuration alone. Cheap, coarse.
 ``AccelSimProvider`` (M5+)    SASS-level cycle simulation (Accel-Sim /
                               GPGPU-Sim). Far too slow to sit in the step
-                              loop — it runs *offline* to populate profile
+                              loop; it runs *offline* to populate profile
                               tables for configurations nobody measured.
 ============================  ================================================
 
-The DP dependency chain the user-visible simulation executes — receive data
+The DP dependency chain the user-visible simulation executes (receive data
 plus a small start packet, compute, hand data over, write a small packet to
-release the next rank — is exactly GOAL's ``recv → calc → send`` chain with
-``requires`` edges; providers only supply the ``calc`` durations.
+release the next rank) is exactly GOAL's ``recv``/``calc``/``send`` chain
+with ``requires`` edges; providers only supply the ``calc`` durations.
 
 Host-side initiation (doorbells) is modeled separately in
 :mod:`simllm.compute.host`.

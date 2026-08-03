@@ -9,7 +9,7 @@ SimLLM's default deliberately collapses the host side to zero:
 
 - **no host-side jitter** (no CPU scheduling, no proxy-thread wakeup),
 - **zero RNIC doorbell-to-wire time**, **no PCIe transfer time or jitter**,
-- the doorbell itself IS modeled — as a small in-band control message on the
+- the doorbell itself IS modeled, as a small in-band control message on the
   fabric (the RNIC endpoint models already carry high-priority ~64 B control
   packets), so it competes for wire time and experiences *network-side*
   jitter, which is this project's focus.

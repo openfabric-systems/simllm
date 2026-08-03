@@ -1,7 +1,7 @@
 # Contributing to SimLLM
 
 Thanks for your interest in SimLLM. The project is young and contributions of
-every size are welcome — from a topology config to a new frontend adapter.
+every size are welcome, from a topology config to a new frontend adapter.
 
 ## Development setup
 

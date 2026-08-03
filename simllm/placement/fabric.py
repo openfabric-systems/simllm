@@ -11,7 +11,7 @@ Sources:
   would use; for what-if studies the graph is declared.
 - **Inter-node** (NIC → ToR → fabric): a cluster inventory or the simulator
   topology config (htsim ``.topo`` files). NCCL's local discovery is *not* a
-  complete description of the routed network — the switch-level graph always
+  complete description of the routed network; the switch-level graph always
   comes from here.
 
 The concrete schema lands with milestone M4 together with the mapper's NIC

@@ -9,7 +9,7 @@ comparable.
 Extraction rules that matter for correctness:
 
 - Export the *actual* group memberships (e.g. vLLM ``GroupCoordinator.ranks``)
-  rather than recomputing them from a rank formula — external DP, elastic
+  rather than recomputing them from a rank formula: external DP, elastic
   scaling or implementation changes silently break derived layouts.
 - Use GPU UUID or PCI bus ID as the stable cross-system GPU identifier.
 - Record the framework version/commit in the manifest; the extraction surface
@@ -47,7 +47,7 @@ class RankPlacement:
     pci_bus_id: str | None = None
     #: group name ("tp", "pp", "dp", "ep", "pcp", ...) → membership
     groups: dict[str, GroupMembership] = field(default_factory=dict)
-    #: pipeline layer ownership as [start, end) — take the model's actual
+    #: pipeline layer ownership as [start, end); take the model's actual
     #: range, partitions are not guaranteed equal
     pipeline_layer_range: tuple[int, int] | None = None
     #: MoE layer id → global expert ids owned by this rank
