@@ -3,6 +3,7 @@
 Nothing in this package may import vLLM or SGLang.
 """
 
+from simllm.core.clock import VirtualClock
 from simllm.core.step import (
     RESULT_SCHEMA,
     STEP_SCHEMA,
@@ -19,4 +20,5 @@ __all__ = [
     "ScheduledRequest",
     "StepRecord",
     "StepResult",
+    "VirtualClock",
 ]

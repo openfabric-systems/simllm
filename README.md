@@ -121,9 +121,6 @@ schemas and the GOAL trace format.
 
 ## Getting Started
 
-> ⚠️ Early stage: the scaffold, package layout and backends are in place;
-> the first runnable end-to-end pipeline lands with milestone M1 below.
-
 ```bash
 git clone https://github.com/yifeng-ethz/simllm.git
 cd simllm
@@ -137,6 +134,10 @@ pip install -e .
 # Build the packet-level network simulator
 cmake -S third_party/htsim/htsim/sim -B build/htsim -DCMAKE_BUILD_TYPE=Release
 cmake --build build/htsim --parallel
+
+# Run the M1 sanity studies: probes + bandwidth/parallelism sweeps +
+# pipeline-parallel TTFT/TPOT on the default 8-node x 8-GPU 400G Clos
+python examples/m1/run_m1.py --out runs/m1
 ```
 
 Pinned backends (details in [docs/modules/backends.md](docs/modules/backends.md)):
@@ -148,9 +149,13 @@ Pinned backends (details in [docs/modules/backends.md](docs/modules/backends.md)
 
 ## Demo
 
-`demo/` will contain a full integration walk-through: workload definition,
-vLLM frontend with `SimExecutor`, GOAL emission, htsim packet simulation,
-and a TTFT/TPOT report with bottleneck attribution.
+[examples/m1](examples/m1/) is the current end-to-end demo: a
+pipeline-parallel decode of a 70B-class model on the reference topology,
+reporting the signature metrics (TTFT/TPOT) with per-flow FCT as the debug
+layer, validated against pre-registered closed forms
+([expectations](examples/m1/expectations.md),
+[results](examples/m1/RESULTS.md)). The full frontend-integrated demo
+(vLLM `SimExecutor` driving the same pipeline) arrives with M2.
 
 ## Tutorials
 
@@ -166,9 +171,15 @@ above is the reference.
   `rnic-nn-fluid` and `rnic-cn` fidelity profiles and the validated ATLAHS
   launcher are merged and pinned (2026-08-03), so packet-level RNIC runs
   work from a fresh clone today.
-- [ ] M1 (next): standalone core: workload gen to GOAL to `htsim_rnic` to
-  metrics, no frontend; first JCT sanity studies sweeping bandwidth and
-  parallelism.
+- [x] M1: standalone core: workload gen to GOAL to `htsim_rnic` to metrics,
+  no frontend. Virtual clock, length distributions, collective patterns
+  (scatter/gather, ring allreduce, all-to-allv, binomial tree), `txt2bin`
+  conversion, direct `htsim_rnic` invocation with FCT parsing and
+  nn-normalized FCT. Validated by pre-registered sanity studies sweeping
+  bandwidth and parallelism, then independently audited: 15 of 18 checks
+  pass (ten runs reproduce their closed forms with zero picosecond
+  residual); the three misses are traced to mis-registered expectations,
+  each with a closed ledger ([examples/m1](examples/m1/RESULTS.md)).
 - [ ] M2: vLLM adapter (`SimExecutor`, offline mode) + placement-manifest
   exporter.
 - [ ] M3: SGLang adapter (`SimTpModelWorker`; RadixCache-aware prefix-hit

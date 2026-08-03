@@ -22,4 +22,19 @@ patterns rather than abstract ops.
 
 COLLECTIVE_TRACE_SCHEMA = "simllm-collective-trace-v1"
 
-__all__ = ["COLLECTIVE_TRACE_SCHEMA"]
+from simllm.traffic.patterns import (
+    binomial_broadcast,
+    gather,
+    pairwise_all_to_allv,
+    ring_allreduce,
+    scatter,
+)
+
+__all__ = [
+    "COLLECTIVE_TRACE_SCHEMA",
+    "binomial_broadcast",
+    "gather",
+    "pairwise_all_to_allv",
+    "ring_allreduce",
+    "scatter",
+]

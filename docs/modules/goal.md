@@ -23,13 +23,17 @@ rank 1 {
 
 Optional `cpu` / `nic` clauses pin operations to resources.
 
+Conversion: `to_binary(goal_path)` runs `txt2bin`, discovered via
+`SIMLLM_TXT2BIN`, the checked-in binary in the htsim submodule, then `PATH`.
+
 ## Status
 
-Implemented and tested. Validated end to end against the real toolchain: an
-emitter-generated 8-rank chain converted with `txt2bin` and executed by both
-`htsim_uec` and all three wired `htsim_rnic` profiles (2026-08-03 smoke).
+Implemented and tested; GOAL-1 closed with M1. The `txt2bin` helper and an
+end-to-end round-trip test landed (`tests/test_htsim_rnic.py`); the test
+self-skips where the backend toolchain is absent (e.g. CI without
+submodules) and runs for real otherwise. Validated end to end by the M1
+sanity studies across all three wired `htsim_rnic` profiles.
 
 ## Open tasks
 
-- GOAL-1: `txt2bin` invocation helper and a binary round-trip test wired
-  into CI once the toolchain location is standardized (milestone M1).
+None currently.

@@ -20,14 +20,13 @@ Nothing in this package may import vLLM or SGLang.
 
 ## Status
 
-Step records are implemented and tested. The virtual clock is not yet
-implemented; it lands with milestone M1. The closed-loop schemas are pinned
-names only, first exercised in milestone M4.
+Step records and the virtual clock (`VirtualClock`: heap-ordered events,
+monotonic picosecond time, deterministic tie-breaking) are implemented and
+tested; CORE-1 closed with M1. The closed-loop schemas are pinned names
+only, first exercised in milestone M4.
 
 ## Open tasks
 
-- CORE-1: implement the virtual clock (event ordering for arrivals, step
-  releases and completions) as the M1 backbone.
 - BRIDGE-1 (inherited from the folded bridge module): persistent
   co-simulator process for closed loop, replacing per-step subprocess
   spawns; needs the incremental flow-injection mode on the htsim side

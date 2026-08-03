@@ -24,14 +24,21 @@ shapes suffice for communication simulation.
 
 ## Status
 
-Schema name pinned; no implementation yet. First real consumer is milestone
-M1 (TP collectives for a dense model), extended by M5 (MoE dispatch/combine
-from captured routings).
+Pattern expansion landed with M1 (`simllm.traffic.patterns`): scatter,
+gather, ring allreduce (reduce-scatter + allgather, 2(W-1) chained rounds),
+pairwise all-to-allv, and binomial-tree broadcast, all rendered as GOAL
+send/recv chains with explicit dependencies (TRAF-1 closed). Backend
+validation coverage differs by pattern: scatter/gather are validated end to
+end against the packet-level backends with picosecond-exact closed forms
+(examples/m1/RESULTS.md); ring allreduce, pairwise all-to-allv and the
+binomial tree have structural unit tests only so far (TRAF-4). The JSONL
+collective-trace consumer is not yet implemented.
 
 ## Open tasks
 
-- TRAF-1: collective-algorithm expansion (ring, tree, pairwise all-to-allv)
-  into GOAL send/recv chains (milestone M1).
+- TRAF-4: end-to-end closed-form validation of ring allreduce, pairwise
+  all-to-allv and binomial broadcast against the fluid backend (per-round
+  forms are exact there), extending the M1 study pattern.
 - TRAF-2: MoE dispatch/combine from routed-experts captures, including EPLB
   epoch-snapshot handling in trace records (milestone M5).
 - TRAF-3: KV-transfer records for PD-disaggregation and cache-miss

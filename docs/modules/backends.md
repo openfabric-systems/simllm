@@ -5,11 +5,21 @@ backend submodules.
 
 ## Interface
 
+- `HtsimRnicConfig` + `build_htsim_rnic_command` + `run_htsim_rnic`: direct
+  GOAL-driven `htsim_rnic` runs (profiles `rnic-nn`, `rnic-nn-fluid`,
+  `rnic-cn`; a run is valid only with `physical_quiescence=verified`),
+  binary discovered via `SIMLLM_HTSIM_RNIC`, the README build location,
+  then `PATH`.
+- `FlowCompletion` + `parse_completion_csv`: completion-CSV parsing
+  (`profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps`);
+  `RnicRunResult.job_completion_time_ps()` for JCT.
+- `simllm.backends.fct.normalized_fct`: per-flow FCT normalized to the
+  `rnic-nn` baseline of the identical GOAL, matched by
+  (source, destination, tag). Valid for aligned-start flows; for phases
+  with model-dependent start stagger use the phase makespan ratio
+  (M1 finding F1).
 - `HtsimUecConfig` + `build_htsim_uec_command`: argv construction for
-  GOAL-driven `htsim_uec` runs (implemented, tested).
-- Planned: the same for `htsim_rnic` (profiles `rnic-nn`, `rnic-nn-fluid`,
-  `rnic-cn`) and completion-CSV parsing
-  (`profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps`).
+  GOAL-driven `htsim_uec` runs.
 
 ## Pinned submodules
 
@@ -32,13 +42,16 @@ Changes to the backends go through their own repos on
 
 ## Status
 
-`htsim_uec` command builder implemented. RNIC profile invocation and result
-parsing not started (milestone M1).
+`htsim_rnic` invocation, completion parsing and FCT normalization landed
+with M1 (BACK-1, BACK-3 closed). The end-to-end test runs them for real
+wherever the backend toolchain is built (it self-skips otherwise), and the
+M1 sanity studies exercise the full pipeline: 15 of 18 pre-registered
+checks pass, the six fluid workload-A configurations and four workload-B
+runs to zero picosecond residual, and the three failures are traced to
+mis-registrations, not defects (findings F1-F3 in examples/m1/RESULTS.md).
 
 ## Open tasks
 
-- BACK-1: `htsim_rnic` command builder plus completion-CSV parser
-  (milestone M1).
 - BACK-2: LogGOPSim invocation helper for fast flow-level sweeps.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
