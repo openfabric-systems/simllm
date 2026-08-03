@@ -180,6 +180,8 @@ are added here when a decision defers them and removed when they land.
 | htsim | GOAL-driven DCQCN profile (`htsim_dcqcn_atlahs`) | backend follow-up |
 | htsim | GOAL parser hardening + `htsim_goal_txt2bin` tool | backend follow-up |
 | ATLAHS | Correct the vendored-fallback wording (vendored htsim cannot satisfy the resolver); pin a known-good HTSIM commit | backend follow-up |
+| simllm | Re-pin `third_party/atlahs` to `main` once its launcher PR (#2) merges, and update the pin table below | M0 follow-up |
+| simllm | Re-pin `third_party/htsim` to `main` once the htsim_rnic wiring PR (#6) merges; the RNIC profiles then run from `main` | M0 follow-up |
 | simllm | Fabric topology schema (`simllm-fabric-topology-v1`) + NIC selection in the mapper | M4 |
 | simllm | `unique-nic` GOAL-rank mapping (depends on the fabric manifest) | M4 |
 | simllm | Persistent co-simulator process for closed loop (per-step subprocess is the diagnostic mode) | M4 |
