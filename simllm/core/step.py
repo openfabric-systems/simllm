@@ -4,12 +4,23 @@ One :class:`StepRecord` describes what the framework's scheduler decided to run
 in a single engine step; one :class:`StepResult` carries the simulated outcome
 back. Adapters (vLLM, SGLang) translate their native scheduler outputs into
 these records so the core never depends on a specific framework.
+
+In closed-loop mode the same contract crosses a process boundary as versioned
+JSON manifests: a step manifest (schema ``atlahs-closed-loop-step-v1``, what
+the scheduler ran plus the virtual time) goes to the simulator, and a result
+manifest (schema ``atlahs-closed-loop-result-v1``, ``simulated_time_us`` plus
+per-flow completions) comes back. Per-step subprocess invocation is the
+diagnostic mode; a persistent co-simulator process is planned (BRIDGE-1).
 """
 
 from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
+
+#: closed-loop wire-format schema names for StepRecord / StepResult
+STEP_SCHEMA = "atlahs-closed-loop-step-v1"
+RESULT_SCHEMA = "atlahs-closed-loop-result-v1"
 
 
 class RequestPhase(enum.Enum):

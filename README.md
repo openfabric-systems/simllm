@@ -105,7 +105,7 @@ status and numbered open tasks; the README stays a map.
 
 | Module | Purpose | Doc |
 |---|---|---|
-| `simllm/core` | Virtual clock, scheduler-step records | [core](docs/modules/core.md) |
+| `simllm/core` | Virtual clock, scheduler-step records, closed-loop wire schemas | [core](docs/modules/core.md) |
 | `simllm/workload` | Arrival processes, length distributions, shared-prefix structure | [workload](docs/modules/workload.md) |
 | `simllm/compute` | Pluggable compute-time providers + host initiation model | [compute](docs/modules/compute.md) |
 | `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
@@ -114,7 +114,6 @@ status and numbered open tasks; the README stays a map.
 | `simllm/backends` | htsim / LogGOPSim invocation + result parsing, submodule pins | [backends](docs/modules/backends.md) |
 | `simllm/adapters/vllm` | `SimExecutor` (pluggable, no fork) + placement exporter | [adapters-vllm](docs/modules/adapters-vllm.md) |
 | `simllm/adapters/sglang` | `SimTpModelWorker` + placement exporter | [adapters-sglang](docs/modules/adapters-sglang.md) |
-| `simllm/bridge` | Closed-loop step/result manifest schemas | [bridge](docs/modules/bridge.md) |
 
 See [docs/architecture.md](docs/architecture.md) for the full design,
 including the exact integration seams in vLLM and SGLang, the manifest
@@ -162,16 +161,24 @@ above is the reference.
 
 ## Roadmap
 
-- [x] M0: repo scaffold, backend submodules, CI
-- [ ] M1: standalone core: workload gen to GOAL to htsim to metrics (no frontend)
-- [ ] M2: vLLM adapter (`SimExecutor`, offline mode)
-- [ ] M3: SGLang adapter (`SimTpModelWorker`; RadixCache-aware KV traffic)
-- [ ] M4: closed loop + calibration/validation against real captures
-- [ ] M5: RNIC fidelity profiles wired end to end (explicit-rate CN,
-  Slingshot-like); MoE expert-parallel traffic from real routing captures;
-  training workloads; SASS-level (Accel-Sim/GPGPU-Sim) offline profile
-  generation
-- [ ] M6: PD-disaggregation and KV-transfer traffic modeling
+- [x] M0: repo scaffold, backend submodules, CI, per-module docs. Landed
+  ahead of schedule on the backend side: `htsim_rnic` with the `rnic-nn`,
+  `rnic-nn-fluid` and `rnic-cn` fidelity profiles and the validated ATLAHS
+  launcher are merged and pinned (2026-08-03), so packet-level RNIC runs
+  work from a fresh clone today.
+- [ ] M1 (next): standalone core: workload gen to GOAL to `htsim_rnic` to
+  metrics, no frontend; first JCT sanity studies sweeping bandwidth and
+  parallelism.
+- [ ] M2: vLLM adapter (`SimExecutor`, offline mode) + placement-manifest
+  exporter.
+- [ ] M3: SGLang adapter (`SimTpModelWorker`; RadixCache-aware prefix-hit
+  and vRAM studies).
+- [ ] M4: closed loop (persistent co-simulator), fabric manifest + NIC
+  selection, calibration/validation against real captures.
+- [ ] M5: Slingshot-like `rnic-ss` profile end to end; MoE expert-parallel
+  traffic from real routing captures; training workloads; SASS-level
+  (Accel-Sim/GPGPU-Sim) offline profile generation.
+- [ ] M6: PD-disaggregation and KV-transfer traffic modeling.
 
 ## Open task registry
 
@@ -180,7 +187,8 @@ Open tasks are tracked in each module's doc with stable numbered IDs
 defers the work and closed by the change that completes it, never renumbered.
 This section is only the index:
 
-- [core](docs/modules/core.md): CORE-*
+- [core](docs/modules/core.md): CORE-*, plus BRIDGE-* inherited from the
+  folded bridge module
 - [workload](docs/modules/workload.md): WORK-*
 - [compute](docs/modules/compute.md): COMP-*
 - [placement](docs/modules/placement.md): PLACE-*
@@ -190,7 +198,6 @@ This section is only the index:
   follow-ups HTSIM-* and ATLAHS-*
 - [adapters-vllm](docs/modules/adapters-vllm.md): VLLM-*
 - [adapters-sglang](docs/modules/adapters-sglang.md): SGL-*
-- [bridge](docs/modules/bridge.md): BRIDGE-*
 
 ## Contributing
 

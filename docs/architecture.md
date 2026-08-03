@@ -215,7 +215,7 @@ abstract collective op.
    before the next one is released; the network's completion time advances the
    virtual clock the scheduler sees. The step/result exchange uses versioned
    JSON manifests (`atlahs-closed-loop-step-v1` / `atlahs-closed-loop-result-v1`,
-   see `simllm/bridge/`). Per-step subprocess invocation is the diagnostic
+   see `simllm/core`). Per-step subprocess invocation is the diagnostic
    mode; a persistent co-simulator process is planned for scale.
 
 ## Timing and metrics

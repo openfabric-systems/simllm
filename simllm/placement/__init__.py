@@ -20,16 +20,17 @@ SimLLM therefore joins two independent descriptions:
 - a **placement manifest** (:mod:`simllm.placement.manifest`):
   global rank → node → GPU → model shard → process groups, including
   per-layer local expert ownership and the expert-placement epoch;
-- a **fabric topology manifest** (:mod:`simllm.placement.fabric`):
-  GPU → PCIe/NVLink → NIC → switch → link graph.
+- a **fabric topology manifest** (schema pinned in
+  :mod:`simllm.placement.manifest`): GPU to PCIe/NVLink to NIC to switch to
+  link graph.
 
 The **mapper** (:mod:`simllm.placement.mapper`) resolves every rank in a
 collective to a physical endpoint and assigns GOAL ranks for the network
 backend.
 """
 
-from simllm.placement.fabric import FABRIC_SCHEMA
 from simllm.placement.manifest import (
+    FABRIC_SCHEMA,
     PLACEMENT_SCHEMA,
     GroupMembership,
     PlacementManifest,

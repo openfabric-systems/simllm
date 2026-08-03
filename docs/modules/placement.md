@@ -14,7 +14,8 @@ both.
   answers `by_rank` / `group_ranks`. Manifests are either declared (what-if)
   or extracted from a live run; both share one schema.
 - Fabric topology manifest (`simllm-fabric-topology-v1`): GPU to PCIe/NVLink
-  to NIC to switch to link graph. Schema name pinned; contents land with M4.
+  to NIC to switch to link graph. Schema name pinned in `manifest.py`;
+  contents land with M4.
 - `RankMapper`: rank to GOAL-rank assignment mirroring the htsim drivers'
   `-goal_rank_mapping` (`gpu-rank` implemented; `unique-nic` needs the
   fabric manifest), plus `is_intra_node`.
