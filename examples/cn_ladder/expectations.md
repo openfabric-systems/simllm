@@ -27,7 +27,12 @@ one-way control deadline K (default 10 us, calibrated 4.5 us).
    slowdown <= 1.2 for S >= 64 KiB.
 2. Bulk incast (S well above the fractional budget): every flow declares
    whole, n_hat = W. Steady per-flow rate margin * C / W; aligned starts;
-   FCT ~ W * T(S)/0.9 + P + settle, settle <= one round trip of feedback.
+   FCT ~ W * T(S)/0.9 + P + settle. Under the windowed feedback semantics
+   (receiver freezes one snapshot per dwnd window; a snapshot taken in
+   window k governs arrivals from window k + 2), the startup transient is
+   bounded by two receiver windows: settle in [0, 2K], so the k10 and
+   k4p5 variants may differ by at most 2 * (10 - 4.5) = 11 us in the
+   additive term and rate changes land only on window boundaries.
    Slowdown -> 1/0.9 = 1.11 as S grows, for every W. No lease machinery
    exists any more, so no expiry race at any K; the calibrated K = 4.5 us
    run must be deterministic and quiescent (5x identical).
