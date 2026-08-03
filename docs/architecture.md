@@ -42,7 +42,9 @@ comes back.
   `get_supported_tasks`) with model-derived values — the simulated vRAM size is
   pinned via `CacheConfig.num_gpu_blocks_override`;
 - fabricates `ModelRunnerOutput(req_ids, req_id_to_index, sampled_token_ids)`
-  per step and attaches simulated timing.
+  per step and attaches simulated timing;
+- exports the placement manifest (below) from the workers via
+  `collective_rpc`, for both simulated and real capture runs.
 
 The vLLM v1 KV-cache manager, block pool, prefix-block hashing and preemption
 logic are pure CPU-side bookkeeping inside the scheduler process, so they run
@@ -59,15 +61,76 @@ token/request pool accounting are scheduler-side index bookkeeping and stay
 real — so radix hit rates and vRAM pressure respond to the workload exactly as
 in production.
 
+### Placement and the mapper (`simllm/placement/`)
+
+Serving frameworks are *topology-light*, not topology-agnostic. Each layer of
+the stack knows a different slice of the truth:
+
+| Layer | What it knows |
+|---|---|
+| Model-parallel framework | Logical ranks, TP/PP/DP/EP groups, how weights/experts are partitioned |
+| Executor / launcher | Which global rank runs on which host and local GPU |
+| NCCL / cluster runtime | PCIe/NVLink/NIC topology, selected communication path and collective algorithm |
+| Network simulator | Switches, links, routing, queueing, congestion-control behavior |
+
+SimLLM joins two independent descriptions:
+
+**Placement manifest** (`simllm-placement-manifest-v1`) — per global rank:
+host, local rank, GPU UUID / PCI bus ID, group memberships with the *actual*
+global rank lists (export `GroupCoordinator.ranks` at runtime rather than
+recomputing from the `((dp·PP+pp)·PCP+pcp)·TP+tp` formula — external DP,
+elastic behavior or implementation changes break derived layouts), the
+pipeline layer range `[start, end)` taken from the model (partitions are not
+guaranteed equal), and per-MoE-layer local global expert IDs. A GPU generally
+owns a *product* of shards simultaneously — a PP layer range × a TP slice ×
+a DP replica index × a set of local experts — so the manifest records all
+coordinates, not a single "shard id". Manifests are either **declared**
+(what-if placements for simulation) or **extracted** from a live run — in
+vLLM, one `collective_rpc` over the workers (via a callable or a worker
+extension class, still no fork), recording the framework version since this
+is an internal surface. Both modes share one schema, which is what makes
+simulated and real deployments directly comparable.
+
+With dynamic expert load balancing (EPLB), expert ownership changes at
+runtime: each re-placement bumps a monotonically increasing
+`placement_epoch`, the physical↔logical expert maps are snapshotted per
+epoch, and every traffic record references the epoch it was routed under.
+With redundant experts, the logical expert ID alone does not identify the
+destination rank — the dispatcher's selected physical expert (or destination
+rank) is recorded.
+
+**Fabric topology manifest** (`simllm-fabric-topology-v1`) — nodes, GPUs,
+PCIe/NVLink links, NICs, GPU→NIC affinity, switches, links, bandwidths,
+delays, queue configuration. Intra-node structure can be taken from NCCL's
+detected topology (`NCCL_TOPO_DUMP_FILE`); the switch-level graph always
+comes from a cluster inventory or the simulator topology config — NCCL's
+local discovery is not a description of the routed network.
+
+The **mapper** resolves every rank in a communication event to a physical
+endpoint (`rank → node → GPU → NIC`) and assigns GOAL ranks. GOAL rank
+assignment mirrors the htsim RNIC drivers' `-goal_rank_mapping` option:
+`gpu-rank` (one GOAL rank per GPU) or `unique-nic` (one per NIC; intra-node
+transfers stay off the fabric).
+
 ### Core (`simllm/core/`, `simllm/traffic/`, `simllm/goal/`)
 
 - **Virtual clock** — orders request arrivals and step completions.
 - **Compute-cost model** — calibrated per-(GPU, model) profiles mapping
   (prefill tokens, decode batch size) to kernel time, with uncertainty bounds.
-- **Traffic model** — expands each step into network work: TP collectives per
-  layer, MoE expert-parallel dispatch/combine (optionally driven by captured
-  per-token expert routings), PP activations, and KV-cache transfers
-  (PD-disaggregation, cache-miss re-prefill).
+- **Traffic model** — consumes three inputs: a *collective trace*
+  (`simllm-collective-trace-v1`, one JSONL record per op: step, layer, op,
+  group type, group global ranks, send counts, element bytes, placement
+  epoch, release time), the placement manifest, and the fabric manifest. For
+  MoE, the static map `expert_owners[layer][global_expert_id] → ranks` turns
+  routed tokens into all-to-allv destinations (per placement epoch). Semantic
+  collectives are expanded into the algorithm actually used — ring, tree,
+  pairwise all-to-allv, or a custom collective-network schedule — as chunked
+  send/recv chains. Covers TP collectives per layer, MoE dispatch/combine
+  (optionally driven by captured per-token expert routings), PP activations,
+  and KV-cache transfers (PD-disaggregation, cache-miss re-prefill). For
+  simulating communication patterns, group memberships + activation shapes
+  suffice; exact TP weight-storage intervals (packed QKV, gate/up packing,
+  quantization padding) are deliberately out of scope.
 - **GOAL emitter** — renders the step DAG as a GOAL trace (below).
 
 ### Network backend (`simllm/backends/`, `third_party/`)

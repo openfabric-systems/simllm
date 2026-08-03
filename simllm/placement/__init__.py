@@ -1,0 +1,47 @@
+"""Placement and fabric mapping: where logical ranks physically live.
+
+Serving frameworks are *topology-light*, not topology-agnostic. Each layer of
+the stack knows a different slice of the truth:
+
+=========================  ====================================================
+Layer                      What it knows
+=========================  ====================================================
+Model-parallel framework   Logical ranks, TP/PP/DP/EP groups, weight/expert
+                           partitioning
+Executor / launcher        Which global rank runs on which host and local GPU
+NCCL / cluster runtime     PCIe/NVLink/NIC topology, chosen communication path
+                           and collective algorithm
+Network simulator          Switches, links, routing, queueing, congestion
+                           control
+=========================  ====================================================
+
+SimLLM therefore joins two independent descriptions:
+
+- a **placement manifest** (:mod:`simllm.placement.manifest`):
+  global rank → node → GPU → model shard → process groups, including
+  per-layer local expert ownership and the expert-placement epoch;
+- a **fabric topology manifest** (:mod:`simllm.placement.fabric`):
+  GPU → PCIe/NVLink → NIC → switch → link graph.
+
+The **mapper** (:mod:`simllm.placement.mapper`) resolves every rank in a
+collective to a physical endpoint and assigns GOAL ranks for the network
+backend.
+"""
+
+from simllm.placement.fabric import FABRIC_SCHEMA
+from simllm.placement.manifest import (
+    PLACEMENT_SCHEMA,
+    GroupMembership,
+    PlacementManifest,
+    RankPlacement,
+)
+from simllm.placement.mapper import RankMapper
+
+__all__ = [
+    "FABRIC_SCHEMA",
+    "PLACEMENT_SCHEMA",
+    "GroupMembership",
+    "PlacementManifest",
+    "RankMapper",
+    "RankPlacement",
+]

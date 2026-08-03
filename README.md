@@ -74,9 +74,33 @@ Two coupling modes:
    that the frontend schedules against — congestion changes batching, and
    batching changes traffic.
 
+A key design point: serving frameworks are **topology-light, not
+topology-agnostic**. vLLM knows logical ranks, TP/PP/DP/EP groups and a
+rank-to-worker placement — but not the switch-level graph; NCCL knows the
+intra-node PCIe/NVLink/NIC topology; only the network simulator knows links,
+routing and queueing. SimLLM therefore joins two independent descriptions —
+a **placement manifest** (rank → node → GPU → shard → groups → local
+experts) and a **fabric topology manifest** (GPU → PCIe/NVLink → NIC →
+switch → links) — via the mapper, and every communication event is resolved
+through both.
+
+### Modules
+
+| Module | Purpose |
+|---|---|
+| `simllm/core` | Virtual clock, scheduler-step records, compute-cost model |
+| `simllm/workload` | Arrival processes, length distributions, shared-prefix structure |
+| `simllm/placement` | **The mapper**: placement manifest (rank→node→GPU→shard→groups, expert ownership, EPLB epochs), fabric topology manifest, rank→endpoint/GOAL-rank resolution |
+| `simllm/traffic` | Semantic collectives → physical flows: TP/PP/DP collectives, MoE all-to-allv from expert owners, KV-cache transfers |
+| `simllm/goal` | GOAL dependency-graph trace emission |
+| `simllm/backends` | htsim (packet-level) and LogGOPSim (flow-level) invocation + result parsing |
+| `simllm/adapters/vllm` | `SimExecutor` (pluggable, no fork) + shard/placement manifest exporter |
+| `simllm/adapters/sglang` | `SimTpModelWorker` + placement exporter |
+| `simllm/bridge` | Closed-loop step/result manifest schemas |
+
 See [docs/architecture.md](docs/architecture.md) for the full design,
-including the exact integration seams in vLLM and SGLang and the GOAL trace
-format.
+including the exact integration seams in vLLM and SGLang, the manifest
+schemas and the GOAL trace format.
 
 ## Getting Started
 

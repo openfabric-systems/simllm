@@ -25,8 +25,10 @@ pytest -q
   distributions, shared-prefix structure, trace replay.
 - **Compute-cost calibration** (`simllm/core/`): measured prefill/decode
   latency profiles for specific GPUs and models.
+- **Placement & fabric** (`simllm/placement/`): manifest extraction for new
+  framework versions, fabric topology descriptions, NIC-selection logic.
 - **Traffic models** (`simllm/traffic/`): TP/PP collectives, MoE
-  dispatch/combine, KV-cache transfers.
+  dispatch/combine, KV-cache transfers, collective-algorithm expansion.
 - **Frontend adapters** (`simllm/adapters/`): vLLM and SGLang first; the
   adapter contract is one scheduler-step record in, one step result out.
 - **Backends** (`simllm/backends/`): invocation and result parsing for
