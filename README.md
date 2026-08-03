@@ -65,7 +65,8 @@ workloads for the AGI era) and welcomes community contributions.
 ```
    Workload Generator ──► Framework Frontend ──► SimLLM Core ──► Network Backend
    arrivals, lengths,     vLLM  : SimExecutor    virtual clock,   ATLAHS GOAL →
-   prefix structure       SGLang: SimTpWorker    compute model,   htsim (packet-level
+   prefix structure       SGLang: SimTpModel-    compute model,   htsim (packet-level
+                                  Worker
    (queueing model)       real scheduler +       DAG → GOAL       RNIC + switch models)
                           KV/prefix cache        emission              │
         ▲                                                              │
@@ -99,18 +100,21 @@ initiation-delay constant exists for launch-path studies.
 
 ### Modules
 
-| Module | Purpose |
-|---|---|
-| `simllm/core` | Virtual clock, scheduler-step records |
-| `simllm/workload` | Arrival processes, length distributions, shared-prefix structure |
-| `simllm/compute` | Pluggable compute-time providers (measured profile tables, analytical roofline, offline SASS-level simulation) + host initiation model (doorbell launch path) |
-| `simllm/placement` | **The mapper**: placement manifest (rank to node/GPU/shard/groups, expert ownership, EPLB epochs), fabric topology manifest, rank-to-endpoint/GOAL-rank resolution |
-| `simllm/traffic` | Semantic collectives to physical flows: TP/PP/DP collectives, MoE all-to-allv from expert owners, KV-cache transfers |
-| `simllm/goal` | GOAL dependency-graph trace emission |
-| `simllm/backends` | htsim (packet-level) and LogGOPSim (flow-level) invocation + result parsing |
-| `simllm/adapters/vllm` | `SimExecutor` (pluggable, no fork) + shard/placement manifest exporter |
-| `simllm/adapters/sglang` | `SimTpModelWorker` + placement exporter |
-| `simllm/bridge` | Closed-loop step/result manifest schemas |
+Each module has its own doc as the source of truth for design, current
+status and numbered open tasks; the README stays a map.
+
+| Module | Purpose | Doc |
+|---|---|---|
+| `simllm/core` | Virtual clock, scheduler-step records | [core](docs/modules/core.md) |
+| `simllm/workload` | Arrival processes, length distributions, shared-prefix structure | [workload](docs/modules/workload.md) |
+| `simllm/compute` | Pluggable compute-time providers + host initiation model | [compute](docs/modules/compute.md) |
+| `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
+| `simllm/traffic` | Semantic collectives to physical flows | [traffic](docs/modules/traffic.md) |
+| `simllm/goal` | GOAL dependency-graph trace emission | [goal](docs/modules/goal.md) |
+| `simllm/backends` | htsim / LogGOPSim invocation + result parsing, submodule pins | [backends](docs/modules/backends.md) |
+| `simllm/adapters/vllm` | `SimExecutor` (pluggable, no fork) + placement exporter | [adapters-vllm](docs/modules/adapters-vllm.md) |
+| `simllm/adapters/sglang` | `SimTpModelWorker` + placement exporter | [adapters-sglang](docs/modules/adapters-sglang.md) |
+| `simllm/bridge` | Closed-loop step/result manifest schemas | [bridge](docs/modules/bridge.md) |
 
 See [docs/architecture.md](docs/architecture.md) for the full design,
 including the exact integration seams in vLLM and SGLang, the manifest
@@ -136,12 +140,12 @@ cmake -S third_party/htsim/htsim/sim -B build/htsim -DCMAKE_BUILD_TYPE=Release
 cmake --build build/htsim --parallel
 ```
 
-Pinned backends:
+Pinned backends (details in [docs/modules/backends.md](docs/modules/backends.md)):
 
 | Submodule | Repo | Ref |
 |---|---|---|
-| `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `codex/rnic-rewrite` (GOAL toolchain + RNIC launcher) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` (UEC htsim + RNIC model libraries) |
+| `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` (GOAL toolchain + validated RNIC launcher) |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` (UEC htsim + `htsim_rnic`: rnic-nn, rnic-nn-fluid, rnic-cn) |
 
 ## Demo
 
@@ -151,9 +155,10 @@ and a TTFT/TPOT report with bottleneck attribution.
 
 ## Tutorials
 
-- Using parts of the library standalone (workload generation, GOAL emission,
-  htsim invocation): `docs/tutorials/`
-- Writing a frontend adapter for a new framework: `docs/tutorials/`
+Planned, will live in `docs/tutorials/`: using parts of the library
+standalone (workload generation, GOAL emission, htsim invocation), and
+writing a frontend adapter for a new framework. Until then, each module doc
+above is the reference.
 
 ## Roadmap
 
@@ -170,25 +175,22 @@ and a TTFT/TPOT report with bottleneck attribution.
 
 ## Open task registry
 
-Work that is intentionally deferred, so nothing silently disappears. Items
-are added here when a decision defers them and removed when they land.
+Open tasks are tracked in each module's doc with stable numbered IDs
+(`PREFIX-N`, e.g. `PLACE-1`, `HTSIM-2`); an ID is added in the change that
+defers the work and closed by the change that completes it, never renumbered.
+This section is only the index:
 
-| Area | Open item | Target |
-|---|---|---|
-| htsim | `rnic-ss` (Slingshot-like) profile wiring; the runtime factory rejects it until the Slingshot PR lands | backend [5/5] follow-up |
-| htsim | Goodput/state/queue trace CLI flags for `rnic-cn` (need trace hooks in the reviewed runtime first) | backend follow-up |
-| htsim | GOAL-driven DCQCN profile (`htsim_dcqcn_atlahs`) | backend follow-up |
-| htsim | GOAL parser hardening + `htsim_goal_txt2bin` tool | backend follow-up |
-| ATLAHS | Correct the vendored-fallback wording (vendored htsim cannot satisfy the resolver); pin a known-good HTSIM commit | backend follow-up |
-| simllm | Re-pin `third_party/atlahs` to `main` once its launcher PR (#2) merges, and update the pin table below | M0 follow-up |
-| simllm | Re-pin `third_party/htsim` to `main` once the htsim_rnic wiring PR (#6) merges; the RNIC profiles then run from `main` | M0 follow-up |
-| simllm | Fabric topology schema (`simllm-fabric-topology-v1`) + NIC selection in the mapper | M4 |
-| simllm | `unique-nic` GOAL-rank mapping (depends on the fabric manifest) | M4 |
-| simllm | Persistent co-simulator process for closed loop (per-step subprocess is the diagnostic mode) | M4 |
-| simllm | Calibrated host-initiation profiles (GPU-initiated vs CPU-proxy constants) | M4/M5 |
-| simllm | SASS-level offline profile generation (Accel-Sim / GPGPU-Sim table generator) | M5 |
-| simllm | `ProfileTableProvider` interpolation across uncovered configs | M5 |
-| simllm | EPLB epoch-snapshot wiring in collective-trace records | M5 |
+- [core](docs/modules/core.md): CORE-*
+- [workload](docs/modules/workload.md): WORK-*
+- [compute](docs/modules/compute.md): COMP-*
+- [placement](docs/modules/placement.md): PLACE-*
+- [traffic](docs/modules/traffic.md): TRAF-*
+- [goal](docs/modules/goal.md): GOAL-*
+- [backends](docs/modules/backends.md): BACK-*, plus backend-repo
+  follow-ups HTSIM-* and ATLAHS-*
+- [adapters-vllm](docs/modules/adapters-vllm.md): VLLM-*
+- [adapters-sglang](docs/modules/adapters-sglang.md): SGL-*
+- [bridge](docs/modules/bridge.md): BRIDGE-*
 
 ## Contributing
 

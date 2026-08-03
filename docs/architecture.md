@@ -143,8 +143,9 @@ transfers stay off the fabric).
   to transfer time.
 - **Traffic model**: consumes three inputs: a *collective trace*
   (`simllm-collective-trace-v1`, one JSONL record per op: step, layer, op,
-  group type, group global ranks, send counts, element bytes, placement
-  epoch, release time), the placement manifest, and the fabric manifest. For
+  group type, group global ranks, send counts, element bytes, hidden size,
+  placement epoch, release time), the placement manifest, and the fabric
+  manifest. For
   MoE, the static map `expert_owners[layer][global_expert_id]` (a list of
   ranks) turns routed tokens into all-to-allv destinations (per placement
   epoch). Semantic collectives are expanded into the algorithm actually
@@ -163,12 +164,14 @@ transfers stay off the fabric).
 The GOAL trace is executed by a discrete-event simulator:
 
 - **htsim** (packet-level): `htsim_uec -goal <bin> -topo <topo>` executes the
-  GOAL schedule over a Clos topology with full transport behavior. The RNIC
-  model series (null-network baselines `rnic-nn`/`rnic-nn-fluid`, the
-  explicit-rate collective-network endpoint `rnic-cn`, DCQCN over a VoQ
-  traffic-manager switch, and a Slingshot-like profile `rnic-ss`) provides
-  fidelity profiles; CLI wiring for the RNIC profiles is being upstreamed to
-  the htsim submodule's `main`.
+  GOAL schedule over a Clos topology with full transport behavior, and
+  `htsim_rnic` (on the submodule's `main` since 2026-08-03) runs the RNIC
+  fidelity profiles: the null-network baselines `rnic-nn`/`rnic-nn-fluid`
+  and the explicit-rate collective-network endpoint `rnic-cn`. The
+  Slingshot-like profile `rnic-ss` and the GOAL-driven DCQCN profile are
+  follow-ups (HTSIM-1, HTSIM-3 in
+  [modules/backends.md](modules/backends.md)); until they land the factory
+  rejects `rnic-ss` with an explicit error.
 - **LogGOPSim** (flow-level, fast): same GOAL input, LogGOP cost model;
   useful for quick sweeps before packet-level runs.
 
