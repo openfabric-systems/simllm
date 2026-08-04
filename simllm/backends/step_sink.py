@@ -18,10 +18,15 @@ persistent co-simulator that amortizes this is BRIDGE-1 and needs the
 incremental flow-injection mode on the htsim side; this module deliberately
 does not attempt it.
 
-A step with no TP collectives returns ``None``: either the TP world has
-size 1 or the record is a drain record with zero new tokens. ``None``
-tells the adapter that its own compute-only estimate stands, which is
-exactly right when there is no network work to simulate.
+A step with no collective work returns ``None``: the TP world has size 1
+(or the dims declare no experts, or no EP group is configured) and the
+record is a drain record with zero new tokens. ``None`` tells the adapter
+that its own compute-only estimate stands, which is exactly right when
+there is no network work to simulate. With MoE dims and ``ep_ranks``
+configured, the per-step GOAL additionally carries the dispatch and
+combine all-to-alls of every layer
+(:func:`simllm.traffic.step_moe_alltoalls`); a non-MoE configuration
+renders byte-identically to the pre-MoE sink.
 
 Modeling approximations (numbered in docs/modules/backends.md):
 
@@ -52,7 +57,7 @@ from simllm.compute import (
 )
 from simllm.core import StepRecord, StepResult
 from simllm.goal import to_binary
-from simllm.traffic import render_step_goal, step_tp_allreduces
+from simllm.traffic import render_step_goal, step_moe_alltoalls, step_tp_allreduces
 
 
 @dataclass
@@ -62,15 +67,21 @@ class HtsimStepSinkConfig:
     ``tp_ranks`` are the GOAL ranks of the tensor-parallel group (e.g.
     ``manifest.group_ranks(0, "tp")`` of a declared manifest under the
     gpu-rank mapping); ``dims`` is the per-rank sharded geometry the same
-    deployment declares. ``topology`` is optional: the null-network
-    profiles (``rnic-nn``, ``rnic-nn-fluid``) run on the generated
-    manifold, ``rnic-cn`` takes a Clos topology file.
+    deployment declares. ``ep_ranks`` is the optional expert-parallel
+    group: when the dims declare experts (``dims.num_experts > 0``) and
+    ``ep_ranks`` are given, every step's GOAL includes the per-layer MoE
+    dispatch and combine all-to-alls over these ranks; leaving it ``None``
+    (or using dense dims) keeps the per-step GOAL byte-identical to the
+    pre-MoE sink. ``topology`` is optional: the null-network profiles
+    (``rnic-nn``, ``rnic-nn-fluid``) run on the generated manifold,
+    ``rnic-cn`` takes a Clos topology file.
     """
 
     profile: str
     tp_ranks: Sequence[int]
     dims: ModelDims
     workdir: Path
+    ep_ranks: Sequence[int] | None = None
     linkspeed_bps: int = 400_000_000_000
     topology: Path | None = None
     provider: ComputeProvider = field(default_factory=lambda: RooflineProvider(efficiency=0.7))
@@ -125,7 +136,11 @@ class HtsimStepSink:
 
     def __call__(self, record: StepRecord) -> StepResult | None:
         cfg = self.config
-        if not step_tp_allreduces(record, cfg.dims, cfg.tp_ranks):
+        tp_ops = step_tp_allreduces(record, cfg.dims, cfg.tp_ranks)
+        moe_ops = step_moe_alltoalls(
+            record, cfg.dims, cfg.ep_ranks if cfg.ep_ranks is not None else []
+        )
+        if not tp_ops and not moe_ops:
             return None
         estimate_ps = self.compute_estimate_ps(record)
         per_layer_calc_ns = estimate_ps // (cfg.dims.num_layers * 1000)
@@ -134,6 +149,7 @@ class HtsimStepSink:
             cfg.dims,
             cfg.tp_ranks,
             per_layer_calc_ns,
+            ep_ranks=cfg.ep_ranks,
             base_tag=cfg.base_tag,
         )
         name = f"step-{record.step_index:06d}"

@@ -27,7 +27,9 @@ backend submodules.
   a callable `StepRecord -> StepResult | None` matching the adapters' sink
   contract. Per step it renders the TP serial chain
   (`simllm.traffic.render_step_goal`: per layer one
-  `calc(per_layer_compute_ns)` then the two ring allreduces), converts
+  `calc(per_layer_compute_ns)` then the two ring allreduces, plus the MoE
+  dispatch/combine all-to-alls when the config declares `ep_ranks` and
+  the dims declare experts, landed with the M5 slice), converts
   with `txt2bin`, runs `htsim_rnic` on the configured profile/topology,
   parses the completion CSV and returns the simulated makespan as the
   step latency with `completed_at_ps = record.virtual_time_ps + makespan`.

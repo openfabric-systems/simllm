@@ -1,10 +1,14 @@
-"""Tests for the per-step TP collective mapping (simllm.traffic.step_comm)."""
+"""Tests for the per-step collective mapping (simllm.traffic.step_comm)."""
 
 import pytest
 
 from simllm.compute import ModelDims
 from simllm.core import RequestPhase, ScheduledRequest, StepRecord
-from simllm.traffic import render_step_goal, step_tp_allreduces
+from simllm.traffic import (
+    render_step_goal,
+    step_moe_alltoalls,
+    step_tp_allreduces,
+)
 
 TINY_DIMS = ModelDims(
     num_layers=2,
@@ -15,6 +19,21 @@ TINY_DIMS = ModelDims(
     head_size=2,
     vocab_size=16,
     dtype_bytes=2,
+)
+
+TINY_MOE_DIMS = ModelDims(
+    num_layers=2,
+    hidden_size=4,
+    intermediate_size=8,
+    num_heads=2,
+    num_kv_heads=2,
+    head_size=2,
+    vocab_size=16,
+    dtype_bytes=2,
+    num_experts=8,
+    top_k=2,
+    moe_intermediate_size=4,
+    local_num_experts=2,
 )
 
 
@@ -171,3 +190,77 @@ def test_render_step_goal_golden_text():
     trace = render_step_goal(decode_record(), TINY_DIMS, [0, 1],
                              per_layer_calc_ns=7, num_goal_ranks=3)
     assert trace.render() == GOLDEN_TINY_STEP
+
+
+def test_render_step_goal_dense_ignores_ep_ranks():
+    """Dense dims with an EP group configured: byte-identical to no EP."""
+    trace = render_step_goal(decode_record(), TINY_DIMS, [0, 1],
+                             per_layer_calc_ns=7, ep_ranks=[0, 1, 2],
+                             num_goal_ranks=3)
+    assert trace.render() == GOLDEN_TINY_STEP
+
+
+# ---- MoE all-to-alls (TRAF-2 first half) ----
+
+def test_step_moe_alltoalls_counts_and_payload():
+    ops = step_moe_alltoalls(decode_record(), TINY_MOE_DIMS, [0, 1, 2, 3])
+    # 2 phases per layer, layer-major (dispatch, combine) order
+    assert [(op.layer, op.phase) for op in ops] == [
+        (0, "dispatch"), (0, "combine"), (1, "dispatch"), (1, "combine")]
+    # per pair: total_new_tokens * top_k * hidden * dtype / W
+    assert {op.per_pair_bytes for op in ops} == {3 * 2 * 4 * 2 // 4}
+    assert {op.ranks for op in ops} == {(0, 1, 2, 3)}
+
+
+def test_step_moe_alltoalls_empty_cases():
+    # dense dims: no experts, no all-to-alls
+    assert step_moe_alltoalls(decode_record(), TINY_DIMS, [0, 1]) == []
+    # EP world of 1: everything stays local
+    assert step_moe_alltoalls(decode_record(), TINY_MOE_DIMS, [0]) == []
+    # drain record: zero new tokens
+    drain = StepRecord(step_index=9, virtual_time_ps=100, finished_request_ids=["a"])
+    assert step_moe_alltoalls(drain, TINY_MOE_DIMS, [0, 1]) == []
+
+
+def test_render_step_goal_moe_only_structure():
+    """EP-only step (TP world of 1): calc, dispatch, combine per layer."""
+    trace = render_step_goal(decode_record(), TINY_MOE_DIMS, [0],
+                             per_layer_calc_ns=5, ep_ranks=[0, 1, 2, 3])
+    text = trace.render()
+    # per pair 12 B; per a2av W(W-1) = 12 sends, 2 a2avs per layer, 2 layers
+    assert text.count("send 12b") == 2 * 2 * 12
+    assert text.count("recv 12b") == 2 * 2 * 12
+    # one calc per layer on each of the 4 EP ranks, no idle fillers
+    assert text.count("calc 5") == 2 * 4
+    assert text.count("calc 0") == 0
+    # no TP ops: a2av j takes tag base_tag + j
+    for tag in (1000, 1001, 1002, 1003):
+        assert f"tag {tag}" in text
+    assert "tag 1004" not in text
+
+
+def test_render_step_goal_moe_with_tp_structure():
+    """TP=2 inside EP=[0..3]: allreduces then a2avs, disjoint tag spaces."""
+    trace = render_step_goal(decode_record(), TINY_MOE_DIMS, [0, 1],
+                             per_layer_calc_ns=5, ep_ranks=[0, 1, 2, 3])
+    text = trace.render()
+    # TP payload = 24 B over W=2: chunk 12 B, 2 rounds per allreduce, 2
+    # sends per round; 4 allreduces total; a2avs also move 12 B pairs
+    assert text.count("send 12b") == 4 * 2 * 2 + 2 * 2 * 12
+    # allreduce tag blocks 1000..1007 (stride 2), then a2avs at 1008..1011
+    for tag in (1000, 1002, 1004, 1006, 1008, 1009, 1010, 1011):
+        assert f"tag {tag}" in text
+    assert "tag 1012" not in text
+    # every participant calcs every layer
+    assert text.count("calc 5") == 2 * 4
+
+
+def test_render_step_goal_moe_chains_phases():
+    """Layer 1's calc on an EP-only rank requires layer 0's combine recv."""
+    trace = render_step_goal(decode_record(), TINY_MOE_DIMS, [0],
+                             per_layer_calc_ns=5, ep_ranks=[0, 1])
+    text = trace.render()
+    # rank 0, W=2: per layer 1 calc + dispatch (send+recv) + combine
+    # (send+recv): ops 0..4 in layer 0, layer 1 calc is op 5 and must
+    # require the combine recv (op 4)
+    assert "r0op5 requires r0op4" in text

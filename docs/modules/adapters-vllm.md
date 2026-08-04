@@ -170,9 +170,11 @@ row-for-row.
   (`Executor`, `ModelRunnerOutput`, `FullAttentionSpec`, `CompilationTimes`)
   so the init-RPC sequence and the step loop run end to end without a GPU
   stack installed.
-- VLLM-6: MoE terms in the step cost model. `ModelDims` is dense-only, so an
-  MoE model is costed as attention plus one expert's worth of MLP per token,
-  and expert routing produces no traffic yet.
+- VLLM-6 (rescoped after the M5 slice landed MoE `ModelDims` and
+  `step_moe_alltoalls` in the shared modules): the adapter half remains,
+  `model_dims_from_vllm_config` does not yet read the MoE geometry
+  (num_experts, top_k, per-expert intermediate size, local experts) off a
+  vLLM MoE config, and `SimExecutor` passes no `ep_ranks` to a sink.
 - VLLM-7 (placement half closed with M4): the placement-side builder
   exists, `simllm.placement.declared_manifest` computes a
   `source="declared"` manifest from tp/pp/dp in the DP x PP x TP layout

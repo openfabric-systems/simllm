@@ -50,3 +50,10 @@ selection are design-only.
 - PLACE-1: fabric topology schema contents and NIC selection in the mapper
   (milestone M4), sourcing intra-node structure from NCCL topology dumps.
 - PLACE-2: `unique-nic` GOAL-rank mapping (depends on PLACE-1).
+- PLACE-3: expert-parallel group memberships and declared expert ownership
+  in `declared_manifest`. The builder emits tp/pp/dp groups only, so the
+  M5 MoE studies pass an explicit `ep_ranks` list to `HtsimStepSink`
+  instead of reading an EP group from a manifest; a declared EP layout
+  (group lists plus per-layer `local_num_experts` ownership) would close
+  the gap, and the extracted manifest's per-MoE-layer expert IDs already
+  model the live half.

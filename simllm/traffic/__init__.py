@@ -30,15 +30,20 @@ from simllm.traffic.patterns import (
     scatter,
 )
 from simllm.traffic.step_comm import (
+    MOE_A2A_PHASES,
     TP_ALLREDUCE_SITES,
+    MoeAllToAll,
     TpAllReduce,
     render_step_goal,
+    step_moe_alltoalls,
     step_tp_allreduces,
 )
 
 __all__ = [
     "COLLECTIVE_TRACE_SCHEMA",
+    "MOE_A2A_PHASES",
     "TP_ALLREDUCE_SITES",
+    "MoeAllToAll",
     "TpAllReduce",
     "binomial_broadcast",
     "gather",
@@ -46,5 +51,6 @@ __all__ = [
     "render_step_goal",
     "ring_allreduce",
     "scatter",
+    "step_moe_alltoalls",
     "step_tp_allreduces",
 ]
