@@ -92,24 +92,28 @@ vRAM pressure respond to the workload exactly as in production.
 The pure surfaces (batch observation for extend/decode/mixed/idle, the
 report-once radix-hit translation, the SGLang geometry reader, the config)
 are unit-tested without importing SGLang in `tests/test_adapters_sglang.py`.
-The worker, runner stub and plugin hook are written against a source read of
-the pinned commit (the seam facts above carry file-level provenance in the
-module docstrings) but have not yet driven a live SGLang scheduler (SGL-4).
-The overlap path is out of scope for the first iteration: run with
-`--disable-overlap-schedule` (nothing forces overlap on, and PP asserts it
-off anyway).
+The worker, runner stub and plugin hook are validated by a live end-to-end
+run: on 2026-08-04 a real SGLang at the pinned commit
+(`/data3/yifeng/simllm-dev/venv-sglang`, editable install of the fresh
+clone, `SGLANG_BUILD_RUST_EXTS=none`) ran the offline `Engine` on the CPU
+engine (`device="cpu"`, torch_native attention selection, gloo process
+groups) with the plugin active via its entry point: the scheduler
+subprocess constructed `SimTpModelWorker`, three requests generated 8
+fabricated tokens each, and the streamed JSONL held 9 schema-tagged records
+with exactly 3 prefill and 21 decode rows and monotonic virtual time.
+RadixCache ran live (0 hits, correctly: first-contact prompts shorter than
+any reusable prefix). The overlap path is out of scope for the first
+iteration: run with `--disable-overlap-schedule` (nothing forces overlap
+on, and PP asserts it off anyway).
 
 ## Open tasks
 
 - SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic
   vs shared-prefix workload structure.
-- SGL-4: live end-to-end validation: install SGLang (fresh clone at the
-  pinned commit is at `/data3/yifeng/simllm-dev/sglang`) into a `/data3`
-  venv, run the CPU engine (`--device cpu` or `SGLANG_USE_CPU_ENGINE=1`,
-  gloo process groups, `torch.cpu` streams; nothing scheduler-side
-  hard-requires CUDA at the pinned commit) with the plugin active, and
-  verify token flow, radix-hit accounting and the streamed records against
-  a scripted workload, including both timing modes.
+- SGL-4 (remaining half): a paced-mode run checked against SGLang's own
+  wall-clock metrics, a workload that actually exercises radix hits
+  (repeated shared prefixes) and retraction under KV pressure, and a
+  `launch_server` (HTTP) run in addition to the offline `Engine` smoke.
 - SGL-5: logprobs, speculative decoding and the dLLM/hybrid modes are
   refused or unreachable rather than fabricated.
 - SGL-6: overlap-schedule support (the scheduler-side dual-stream loop with
