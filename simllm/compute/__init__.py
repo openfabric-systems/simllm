@@ -30,6 +30,7 @@ Host-side initiation (doorbells) is modeled separately in
 
 from simllm.compute.host import HostInitiationModel
 from simllm.compute.provider import (
+    PS_PER_SECOND,
     ComputeProvider,
     DurationEstimate,
     GpuSpec,
@@ -37,13 +38,24 @@ from simllm.compute.provider import (
     ProfileTableProvider,
     RooflineProvider,
 )
+from simllm.compute.transformer import (
+    GPU_ENVELOPES,
+    ModelDims,
+    estimate_step_latency_ps,
+    step_kernel,
+)
 
 __all__ = [
+    "GPU_ENVELOPES",
+    "PS_PER_SECOND",
     "ComputeProvider",
     "DurationEstimate",
     "GpuSpec",
     "HostInitiationModel",
     "KernelSpec",
+    "ModelDims",
     "ProfileTableProvider",
     "RooflineProvider",
+    "estimate_step_latency_ps",
+    "step_kernel",
 ]

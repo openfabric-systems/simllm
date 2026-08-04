@@ -118,3 +118,29 @@ def write_step_records(records: Sequence[StepRecord], path: str | Path) -> Path:
     with open(path, "w") as handle:
         handle.writelines(json.dumps(entry) + "\n" for entry in step_records_to_json(records))
     return path
+
+
+class StepRecordStream:
+    """Append records to a JSONL path the moment each step completes.
+
+    Frontend engines do not reliably route in-process teardown through any
+    callback the adapter can see (observed on vLLM v0.26.0), so a dump that
+    waits for shutdown loses everything; this writer truncates the file on
+    the first append and makes every record durable immediately.
+    """
+
+    def __init__(self, path: str | Path) -> None:
+        self._path = Path(path)
+        self._started = False
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    def append(self, record: StepRecord) -> None:
+        if not self._started:
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            self._path.write_text("")
+            self._started = True
+        with open(self._path, "a") as handle:
+            handle.write(json.dumps(step_record_to_json(record)) + "\n")

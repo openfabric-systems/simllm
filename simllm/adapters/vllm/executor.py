@@ -72,7 +72,6 @@ variables and the JSONL dump.
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import time
@@ -84,20 +83,23 @@ from typing import TYPE_CHECKING, Any
 
 from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
 from simllm.compute import (
+    GPU_ENVELOPES,
+    PS_PER_SECOND,
     ComputeProvider,
     GpuSpec,
     HostInitiationModel,
-    KernelSpec,
+    ModelDims,
     RooflineProvider,
+    estimate_step_latency_ps,
+    step_kernel,
 )
-from simllm.compute.provider import PS_PER_SECOND
 from simllm.core import (
     RequestPhase,
     ScheduledRequest,
     StepRecord,
+    StepRecordStream,
     StepResult,
     VirtualClock,
-    step_record_to_json,
     step_records_to_json,
     write_step_records,
 )
@@ -121,6 +123,7 @@ __all__ = [
     "estimate_step_latency_ps",
     "fabricate_sampled_tokens",
     "latest_executor",
+    "model_dims_from_vllm_config",
     "observe_scheduler_output",
     "step_kernel",
     "step_records_to_json",
@@ -128,15 +131,6 @@ __all__ = [
     "vllm_is_available",
     "write_step_records",
 ]
-
-#: Dense (non-sparse) BF16 tensor-core peak FLOP/s and HBM bytes/s.
-GPU_ENVELOPES: dict[str, GpuSpec] = {
-    "a100": GpuSpec(name="a100", peak_flops=312e12, mem_bandwidth=2.039e12),
-    "h100": GpuSpec(name="h100", peak_flops=989.5e12, mem_bandwidth=3.35e12),
-    "h200": GpuSpec(name="h200", peak_flops=989.5e12, mem_bandwidth=4.8e12),
-    "b100": GpuSpec(name="b100", peak_flops=1.8e15, mem_bandwidth=8.0e12),
-    "b200": GpuSpec(name="b200", peak_flops=2.25e15, mem_bandwidth=8.0e12),
-}
 
 #: A step sink consumes one record and may return the simulated outcome; a
 #: sink that returns ``None`` leaves the estimate to the compute provider.
@@ -590,196 +584,75 @@ def _weight_element_bytes_from_quant(quant_config: Any, default: float) -> float
     return default
 
 
-@dataclass(frozen=True)
-class ModelDims:
-    """Per-rank transformer geometry for the analytical step estimate.
+def model_dims_from_vllm_config(vllm_config: VllmConfig) -> ModelDims:
+    """Read the per-rank geometry off a ``VllmConfig``.
 
-    Every field is already sharded, i.e. it describes what one GPU owns:
-    ``num_layers`` is the pipeline slice, ``num_heads`` / ``num_kv_heads`` /
-    ``intermediate_size`` are the tensor-parallel slice. MoE routing is not
-    modeled (see VLLM-6): an MoE model is costed as its dense attention plus
-    one expert's worth of MLP per token.
-
-    ``dtype_bytes`` is the activation dtype width. Weights and KV cache may
-    be narrower (quantized checkpoints, ``--kv-cache-dtype fp8``), so they
-    carry their own element widths; ``None`` means "same as the activation
-    dtype". ``defaulted_fields`` names every geometry field that fell back
-    to its Llama-8B-shaped default, so a consumer can see which latency
-    terms rest on a guessed geometry.
+    The geometry class itself is framework-neutral
+    (:class:`simllm.compute.ModelDims`); this reader knows vLLM's accessor
+    names. Every accessor has a Llama-8B-shaped fallback so a renamed vLLM
+    internal degrades the estimate instead of taking the run down, but a
+    fallback is never silent: the defaulted field names are warned once and
+    stamped on ``ModelDims.defaulted_fields``.
     """
+    model_config = vllm_config.model_config
+    parallel_config = vllm_config.parallel_config
+    defaulted: list[str] = []
 
-    num_layers: int
-    hidden_size: int
-    intermediate_size: int
-    num_heads: int
-    num_kv_heads: int
-    head_size: int
-    vocab_size: int
-    dtype_bytes: int = 2
-    weight_dtype_bytes: float | None = None
-    kv_dtype_bytes: float | None = None
-    defaulted_fields: tuple[str, ...] = ()
+    def geom(name: str, getter: Callable[[], Any], default: Any) -> Any:
+        try:
+            value = getter()
+        except Exception as exc:  # noqa: BLE001 - vLLM internals differ across releases
+            logger.debug("vLLM accessor for %s failed: %s", name, exc)
+            value = None
+        if value is None:
+            defaulted.append(name)
+            return default
+        return value
 
-    @property
-    def weight_element_bytes(self) -> float:
-        """Bytes per weight element (quantization-aware)."""
-        if self.weight_dtype_bytes is not None:
-            return self.weight_dtype_bytes
-        return float(self.dtype_bytes)
-
-    @property
-    def kv_element_bytes(self) -> float:
-        """Bytes per KV-cache element (``--kv-cache-dtype``-aware)."""
-        if self.kv_dtype_bytes is not None:
-            return self.kv_dtype_bytes
-        return float(self.dtype_bytes)
-
-    @property
-    def attention_params(self) -> int:
-        """QKV and output projection parameters on this rank, all layers."""
-        q_dim = self.num_heads * self.head_size
-        kv_dim = self.num_kv_heads * self.head_size
-        per_layer = self.hidden_size * (q_dim + 2 * kv_dim) + q_dim * self.hidden_size
-        return per_layer * self.num_layers
-
-    @property
-    def mlp_params(self) -> int:
-        """Gate, up and down projection parameters on this rank, all layers."""
-        return 3 * self.hidden_size * self.intermediate_size * self.num_layers
-
-    @property
-    def weight_bytes(self) -> int:
-        return int((self.attention_params + self.mlp_params) * self.weight_element_bytes)
-
-    @property
-    def lm_head_bytes(self) -> int:
-        return int(self.hidden_size * self.vocab_size * self.weight_element_bytes)
-
-    @classmethod
-    def from_vllm_config(cls, vllm_config: VllmConfig) -> ModelDims:
-        """Read the geometry off a ``VllmConfig``.
-
-        Every accessor has a Llama-8B-shaped fallback so a renamed vLLM
-        internal degrades the estimate instead of taking the run down, but a
-        fallback is never silent: the defaulted field names are warned once
-        and stamped on :attr:`defaulted_fields`.
-        """
-        model_config = vllm_config.model_config
-        parallel_config = vllm_config.parallel_config
-        defaulted: list[str] = []
-
-        def geom(name: str, getter: Callable[[], Any], default: Any) -> Any:
-            try:
-                value = getter()
-            except Exception as exc:  # noqa: BLE001 - vLLM internals differ across releases
-                logger.debug("vLLM accessor for %s failed: %s", name, exc)
-                value = None
-            if value is None:
-                defaulted.append(name)
-                return default
-            return value
-
-        tp_size = max(
-            int(geom("tensor_parallel_size", lambda: parallel_config.tensor_parallel_size, 1)),
-            1,
-        )
-        hidden_size = int(geom("hidden_size", model_config.get_hidden_size, 4096))
-        text_config = _safe(lambda: model_config.hf_text_config)
-        intermediate = int(
-            geom(
-                "intermediate_size",
-                lambda: getattr(text_config, "intermediate_size", None),
-                4 * hidden_size,
-            )
-        )
-        dtype_bytes = int(geom("dtype_bytes", lambda: model_config.dtype.itemsize, 2))
-        dims = cls(
-            num_layers=int(
-                geom("num_layers", lambda: model_config.get_num_layers(parallel_config), 32)
-            ),
-            hidden_size=hidden_size,
-            intermediate_size=max(intermediate // tp_size, 1),
-            num_heads=int(
-                geom("num_heads", lambda: model_config.get_num_attention_heads(parallel_config), 32)
-            ),
-            num_kv_heads=int(
-                geom("num_kv_heads", lambda: model_config.get_num_kv_heads(parallel_config), 8)
-            ),
-            head_size=int(geom("head_size", model_config.get_head_size, 128)),
-            vocab_size=int(geom("vocab_size", model_config.get_vocab_size, 128256)),
-            dtype_bytes=dtype_bytes,
-            weight_dtype_bytes=_weight_element_bytes_from_quant(
-                getattr(vllm_config, "quant_config", None), float(dtype_bytes)
-            ),
-            kv_dtype_bytes=_kv_element_bytes_from_cache_config(
-                getattr(vllm_config, "cache_config", None), float(dtype_bytes)
-            ),
-            defaulted_fields=tuple(defaulted),
-        )
-        if defaulted:
-            logger.warning(
-                "ModelDims: geometry fields defaulted to Llama-8B-shaped values: %s. "
-                "Latency terms driven by them describe a phantom geometry.",
-                ", ".join(defaulted),
-            )
-        return dims
-
-
-def step_kernel(dims: ModelDims, record: StepRecord, num_sampled: int) -> KernelSpec:
-    """One engine step as a single fused kernel for a compute provider.
-
-    FLOPs are 2 per multiply-accumulate over (a) the dense projections for
-    every scheduled token, (b) the attention score and value passes, counted
-    as ``n * (prior_context + n/2)`` query-key pairs per request so a prefill
-    chunk pays its triangular share, and (c) the LM head for the tokens that
-    actually sample. Bytes are the resident weights (read once per step), the
-    LM head, and the KV cache of every scheduled request's context, which is
-    what makes decode steps memory-bound in the roofline.
-    """
-    new_tokens = 0
-    kv_read_tokens = 0
-    attention_pairs = 0
-    for request in record.scheduled:
-        n = request.num_new_tokens
-        prior = max(request.context_length - n, 0)
-        new_tokens += n
-        kv_read_tokens += request.context_length
-        attention_pairs += n * prior + n * n // 2
-
-    dense_flops = 2 * new_tokens * (dims.attention_params + dims.mlp_params)
-    attn_flops = 4 * attention_pairs * dims.num_layers * dims.num_heads * dims.head_size
-    head_flops = 2 * num_sampled * dims.hidden_size * dims.vocab_size
-    kv_bytes = (
-        2
-        * kv_read_tokens
-        * dims.num_layers
-        * dims.num_kv_heads
-        * dims.head_size
-        * dims.kv_element_bytes
+    tp_size = max(
+        int(geom("tensor_parallel_size", lambda: parallel_config.tensor_parallel_size, 1)),
+        1,
     )
-    return KernelSpec(
-        name="vllm_step",
-        flops=float(dense_flops + attn_flops + head_flops),
-        bytes_moved=float(dims.weight_bytes + dims.lm_head_bytes + kv_bytes),
-        config=(
-            ("new_tokens", new_tokens),
-            ("sampled", num_sampled),
-            ("kv_tokens", kv_read_tokens),
+    hidden_size = int(geom("hidden_size", model_config.get_hidden_size, 4096))
+    text_config = _safe(lambda: model_config.hf_text_config)
+    intermediate = int(
+        geom(
+            "intermediate_size",
+            lambda: getattr(text_config, "intermediate_size", None),
+            4 * hidden_size,
+        )
+    )
+    dtype_bytes = int(geom("dtype_bytes", lambda: model_config.dtype.itemsize, 2))
+    dims = ModelDims(
+        num_layers=int(
+            geom("num_layers", lambda: model_config.get_num_layers(parallel_config), 32)
         ),
+        hidden_size=hidden_size,
+        intermediate_size=max(intermediate // tp_size, 1),
+        num_heads=int(
+            geom("num_heads", lambda: model_config.get_num_attention_heads(parallel_config), 32)
+        ),
+        num_kv_heads=int(
+            geom("num_kv_heads", lambda: model_config.get_num_kv_heads(parallel_config), 8)
+        ),
+        head_size=int(geom("head_size", model_config.get_head_size, 128)),
+        vocab_size=int(geom("vocab_size", model_config.get_vocab_size, 128256)),
+        dtype_bytes=dtype_bytes,
+        weight_dtype_bytes=_weight_element_bytes_from_quant(
+            getattr(vllm_config, "quant_config", None), float(dtype_bytes)
+        ),
+        kv_dtype_bytes=_kv_element_bytes_from_cache_config(
+            getattr(vllm_config, "cache_config", None), float(dtype_bytes)
+        ),
+        defaulted_fields=tuple(defaulted),
     )
-
-
-def estimate_step_latency_ps(
-    dims: ModelDims,
-    record: StepRecord,
-    num_sampled: int,
-    provider: ComputeProvider,
-    gpu: GpuSpec,
-    host_model: HostInitiationModel,
-) -> int:
-    """Simulated duration of one step: kernel estimate plus host initiation."""
-    kernel = step_kernel(dims, record, num_sampled)
-    return provider.estimate(kernel, gpu).duration_ps + host_model.delay_ps()
+    if defaulted:
+        logger.warning(
+            "ModelDims: geometry fields defaulted to Llama-8B-shaped values: %s. "
+            "Latency terms driven by them describe a phantom geometry.",
+            ", ".join(defaulted),
+        )
+    return dims
 
 
 # Record export lives in simllm.core.step (step_records_to_json,
@@ -880,7 +753,11 @@ class SimExecutor(_ExecutorBase):
         self.step_sink: StepSink | None = step_sink or _HOOKS.step_sink
         #: every translated step, in order; the offline mode renders these
         self.step_records: list[StepRecord] = []
-        self._step_records_started = False
+        self._record_stream = (
+            StepRecordStream(self.config.step_records_path)
+            if self.config.step_records_path
+            else None
+        )
         #: simulated outcome per recorded step, parallel to step_records
         self.step_results: list[StepResult] = []
         self.clock = VirtualClock()
@@ -905,7 +782,7 @@ class SimExecutor(_ExecutorBase):
         self.world_size = int(
             getattr(parallel_config, "world_size", 0) or self.tp_size * self.pp_size
         )
-        self.dims = ModelDims.from_vllm_config(self.vllm_config)
+        self.dims = model_dims_from_vllm_config(self.vllm_config)
         self.translator = StepTranslator()
         self.step_index = 0
         self.token_id = self._resolve_token_id()
@@ -1286,16 +1163,8 @@ class SimExecutor(_ExecutorBase):
         shutdown RPC (observed on v0.26.0), so the dump must never depend on
         a teardown callback: each step is durable the moment it completes.
         """
-        path = self.config.step_records_path
-        if not path:
-            return
-        target = Path(path)
-        if not self._step_records_started:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text("")
-            self._step_records_started = True
-        with open(target, "a") as handle:
-            handle.write(json.dumps(step_record_to_json(record)) + "\n")
+        if self._record_stream is not None:
+            self._record_stream.append(record)
 
     def shutdown(self) -> None:
         """Nothing to flush: every record is durable when its step completes."""
