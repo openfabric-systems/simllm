@@ -24,6 +24,12 @@ dev = [
 Homepage = "https://github.com/yifeng-ethz/simllm"
 Issues = "https://github.com/yifeng-ethz/simllm/issues"
 
+# SGLang discovers and runs this before constructing its Scheduler. The
+# callable is a no-op unless SIMLLM_SGLANG_ENABLE=1, so an installed simllm
+# never changes a real SGLang deployment by accident.
+[project.entry-points."sglang.srt.plugins"]
+simllm = "simllm.adapters.sglang.plugin:register"
+
 [tool.setuptools.packages.find]
 include = ["simllm*"]
 

@@ -51,12 +51,16 @@ The vLLM v1 KV-cache manager, block pool, prefix-block hashing and preemption
 logic are pure CPU-side bookkeeping inside the scheduler process, so they run
 for real under the simulated executor.
 
-**SGLang:** the seam is the TP worker. SimLLM implements
-`SimTpModelWorker(BaseTpWorker)` whose `forward_batch_generation(batch)`
-returns a `GenerationBatchResult` with fabricated `next_token_ids` and
-simulated timing; it is selected at the scheduler's worker-construction point
-(`Scheduler.init_tp_model_worker`), the same seam SGLang already uses to swap
-in platform-specific workers. The first iteration runs with
+**SGLang (main, pinned by commit):** the seam is the TP worker. SimLLM
+implements `SimTpModelWorker(TpModelWorker)` whose
+`forward_batch_generation(batch)` returns a `GenerationBatchResult` with
+fabricated `next_token_ids` and simulated timing; it is installed at the
+scheduler's worker-construction point (`Scheduler.init_tp_model_worker`,
+the same seam SGLang uses to swap in its MLX worker) through SGLang's
+plugin framework (a `sglang.srt.plugins` entry point applying a `REPLACE`
+hook, no fork; the pinned commit and every version-specific behavior live
+in [modules/adapters-sglang.md](modules/adapters-sglang.md), the true
+source for the adapter). The first iteration runs with
 `--disable-overlap-schedule`. RadixCache prefix matching, eviction, and the
 token/request pool accounting are scheduler-side index bookkeeping and stay
 real, so radix hit rates and vRAM pressure respond to the workload exactly as

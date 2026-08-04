@@ -1,14 +1,75 @@
-"""SGLang adapter (milestone M3).
+"""SGLang adapter, pinned to SGLang main commit **8f2a3ad** (milestone M3).
 
-The seam is the TP worker: ``SimTpModelWorker`` implements SGLang's
-``BaseTpWorker`` interface, and its ``forward_batch_generation(batch)``
-returns a ``GenerationBatchResult`` with fabricated ``next_token_ids`` and
-simulated timing. It is selected at the scheduler's worker-construction
-point; the first iteration targets ``--disable-overlap-schedule``.
+The seam is the TP worker: ``SimTpModelWorker`` subclasses SGLang's
+``TpModelWorker`` (the same pattern as SGLang's own MLX worker) and replaces
+model-runner construction and the forward pass with a simulated GPU, while
+the scheduler, RadixCache and pool accounting run for real. It is installed
+without a fork through SGLang's plugin framework::
 
-RadixCache prefix matching, eviction and the token/request pool accounting
-are scheduler-side and stay real, so radix hit rates and vRAM pressure
-respond to the workload exactly as in production.
+    SIMLLM_SGLANG_ENABLE=1 SIMLLM_SGLANG_MODE=virtual \\
+    python -m sglang.launch_server --model-path meta-llama/Llama-3.1-8B \\
+        --disable-overlap-schedule
 
-This package intentionally has no import-time SGLang dependency.
+Environment variables read by the worker (full table in
+:mod:`simllm.adapters.sglang.worker`): ``SIMLLM_SGLANG_ENABLE``,
+``SIMLLM_SGLANG_MODE``, ``SIMLLM_SGLANG_GPU``, ``SIMLLM_SGLANG_PEAK_FLOPS``,
+``SIMLLM_SGLANG_MEM_BANDWIDTH``, ``SIMLLM_SGLANG_EFFICIENCY``,
+``SIMLLM_SGLANG_HOST_INIT_PS``, ``SIMLLM_SGLANG_TOKEN_ID``,
+``SIMLLM_SGLANG_STEP_RECORDS``.
+
+Exports are resolved lazily through the module ``__getattr__``, so importing
+this package pulls in neither the worker module nor SGLang until a name is
+actually used.
 """
+
+from typing import Any
+
+from simllm.adapters.sglang._version import PINNED_SGLANG_COMMIT
+
+_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+    "BatchRow": ("worker", "BatchRow"),
+    "SglStepTranslator": ("worker", "SglStepTranslator"),
+    "SimTpModelWorker": ("worker", "SimTpModelWorker"),
+    "SimWorkerConfig": ("worker", "SimWorkerConfig"),
+    "SimWorkerHooks": ("worker", "SimWorkerHooks"),
+    "configure": ("worker", "configure"),
+    "latest_worker": ("worker", "latest_worker"),
+    "model_dims_from_sglang": ("worker", "model_dims_from_sglang"),
+    "observe_schedule_batch": ("worker", "observe_schedule_batch"),
+    "sglang_is_available": ("worker", "sglang_is_available"),
+    "install": ("plugin", "install"),
+    "register": ("plugin", "register"),
+}
+
+__all__ = [
+    "PINNED_SGLANG_COMMIT",
+    "BatchRow",
+    "SglStepTranslator",
+    "SimTpModelWorker",
+    "SimWorkerConfig",
+    "SimWorkerHooks",
+    "configure",
+    "install",
+    "latest_worker",
+    "model_dims_from_sglang",
+    "observe_schedule_batch",
+    "register",
+    "sglang_is_available",
+]
+
+
+def __getattr__(name: str) -> Any:
+    target = _LAZY_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attribute = target
+    from importlib import import_module
+
+    module = import_module(f"{__name__}.{module_name}")
+    value = getattr(module, attribute)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(__all__)
