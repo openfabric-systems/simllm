@@ -29,18 +29,19 @@ prefill/decode tokens each, how many tokens were served from cache) goes to
 the core, and a **step result** (simulated step latency, flow completions)
 comes back.
 
-**vLLM (v1 engine, >= 0.14):** no fork needed. The engine's step loop is
-`EngineCore.step()`, i.e. `Scheduler.schedule()` producing a
+**vLLM (v1 engine, pinned to v0.26.0):** no fork needed. The engine's step
+loop is `EngineCore.step()`, i.e. `Scheduler.schedule()` producing a
 `SchedulerOutput`, then `Executor.execute_model(scheduler_output)` returning
 a `ModelRunnerOutput`, then `Scheduler.update_from_output()`. The executor
 class is pluggable: `--distributed-executor-backend` accepts a dotted import
 path, resolved in `Executor.get_class()` (`vllm/v1/executor/abstract.py`).
 SimLLM ships `simllm.adapters.vllm.SimExecutor`, which
 
-- serves the init-time RPCs (`get_kv_cache_spec`, `determine_available_memory`,
-  `initialize_from_config`, `compile_or_warm_up_model`, `initialize_cache`,
-  `get_supported_tasks`) with model-derived values; the simulated vRAM size is
-  pinned via `CacheConfig.num_gpu_blocks_override`;
+- serves the init-time RPCs with model-derived values (the current RPC list
+  and every version-specific behavior live in
+  [modules/adapters-vllm.md](modules/adapters-vllm.md), the true source for
+  the adapter); the simulated vRAM size is pinned via
+  `CacheConfig.num_gpu_blocks_override`;
 - fabricates `ModelRunnerOutput(req_ids, req_id_to_index, sampled_token_ids)`
   per step and attaches simulated timing;
 - exports the placement manifest (below) from the workers via

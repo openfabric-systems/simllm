@@ -11,6 +11,9 @@ from simllm.core.step import (
     ScheduledRequest,
     StepRecord,
     StepResult,
+    step_record_to_json,
+    step_records_to_json,
+    write_step_records,
 )
 
 __all__ = [
@@ -21,4 +24,7 @@ __all__ = [
     "StepRecord",
     "StepResult",
     "VirtualClock",
+    "step_record_to_json",
+    "step_records_to_json",
+    "write_step_records",
 ]

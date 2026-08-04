@@ -16,7 +16,11 @@ diagnostic mode; a persistent co-simulator process is planned (BRIDGE-1).
 from __future__ import annotations
 
 import enum
+import json
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 #: closed-loop wire-format schema names for StepRecord / StepResult
 STEP_SCHEMA = "atlahs-closed-loop-step-v1"
@@ -67,3 +71,50 @@ class StepResult:
     step_latency_ps: int
     #: virtual time at which the step completed
     completed_at_ps: int
+
+
+def step_record_to_json(record: StepRecord) -> dict[str, Any]:
+    """One record as a JSON-ready dict, tagged with :data:`STEP_SCHEMA`.
+
+    This is *the* JSON form of a step record: the offline JSONL dump and the
+    closed-loop step manifest both use it, so the two cannot drift.
+
+    Attribution note: ``finished_request_ids`` on record N lists the requests
+    the scheduler reported finished when it released step N, i.e. they
+    completed during the *previous* step (vLLM's scheduler rebinds its
+    finished set after constructing the step, so the ids arrive one step
+    later). ``preempted_request_ids`` is same-step. A consumer computing
+    completion times joins a finished id to the preceding record's virtual
+    time.
+    """
+    return {
+        "schema": STEP_SCHEMA,
+        "step_index": record.step_index,
+        "virtual_time_ps": record.virtual_time_ps,
+        "scheduled": [
+            {
+                "request_id": request.request_id,
+                "phase": request.phase.value,
+                "num_new_tokens": request.num_new_tokens,
+                "num_cached_tokens": request.num_cached_tokens,
+                "context_length": request.context_length,
+            }
+            for request in record.scheduled
+        ],
+        "preempted_request_ids": list(record.preempted_request_ids),
+        "finished_request_ids": list(record.finished_request_ids),
+    }
+
+
+def step_records_to_json(records: Sequence[StepRecord]) -> list[dict[str, Any]]:
+    """Step records as plain JSON-ready dicts (phase enums become strings)."""
+    return [step_record_to_json(record) for record in records]
+
+
+def write_step_records(records: Sequence[StepRecord], path: str | Path) -> Path:
+    """Write one JSON object per step record, newline delimited."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as handle:
+        handle.writelines(json.dumps(entry) + "\n" for entry in step_records_to_json(records))
+    return path

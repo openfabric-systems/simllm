@@ -32,7 +32,7 @@ validation coverage differs by pattern: scatter/gather are validated end to
 end against the packet-level backends with picosecond-exact closed forms
 (examples/m1/RESULTS.md); ring allreduce, pairwise all-to-allv and the
 binomial tree have structural unit tests only so far (TRAF-4). The JSONL
-collective-trace consumer is not yet implemented.
+collective-trace consumer is not yet implemented (TRAF-5).
 
 ## Open tasks
 
@@ -43,3 +43,5 @@ collective-trace consumer is not yet implemented.
   epoch-snapshot handling in trace records (milestone M5).
 - TRAF-3: KV-transfer records for PD-disaggregation and cache-miss
   re-prefill (milestone M6).
+- TRAF-5: the JSONL collective-trace consumer (parse
+  `simllm-collective-trace-v1` records and hand them to pattern expansion).

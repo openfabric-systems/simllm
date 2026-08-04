@@ -1,16 +1,107 @@
-"""vLLM adapter (milestone M2).
+"""vLLM adapter, pinned to vLLM **v0.26.0** (milestone M2).
 
-vLLM's v1 engine selects its executor class from a dotted import path, so no
-fork is required::
+vLLM's v1 engine resolves its executor class from a dotted import path, so
+SimLLM plugs in without a fork::
 
-    vllm serve <model> --distributed-executor-backend simllm.adapters.vllm.SimExecutor
+    SIMLLM_VLLM_MODE=virtual SIMLLM_VLLM_GPU=b100 \\
+    SIMLLM_VLLM_STEP_RECORDS=/data3/yifeng/simllm/steps.jsonl \\
+    vllm serve meta-llama/Llama-3.1-8B \\
+        --distributed-executor-backend simllm.adapters.vllm.SimExecutor \\
+        --num-gpu-blocks-override 8192
 
-``SimExecutor`` will subclass ``vllm.v1.executor.abstract.Executor``: it
-serves the init-time RPCs with model-derived values, pins the simulated KV
-pool via ``CacheConfig.num_gpu_blocks_override``, and fabricates a
-``ModelRunnerOutput`` per step with simulated timing. The v1 scheduler,
-KV-cache manager and prefix-cache hashing run unmodified.
+``SimExecutor`` subclasses ``vllm.v1.executor.abstract.Executor``: it serves
+the init-time RPCs with model-derived values, pins the simulated KV pool via
+``CacheConfig.num_gpu_blocks_override``, and fabricates a
+``ModelRunnerOutput`` per step while translating that step into a
+:class:`simllm.core.StepRecord`. The v1 scheduler, KV-cache manager, block
+pool and prefix hashing run unmodified.
 
-This package intentionally has no import-time vLLM dependency; the executor
-is only importable once the adapter lands and vLLM is installed.
+``PlacementExporter`` is the capture-side companion, used on *real* vLLM runs
+to extract a placement manifest without a fork::
+
+    vllm serve <model> -tp 8 \\
+        --worker-extension-cls simllm.adapters.vllm.PlacementExporter
+
+Environment variables read by the executor (full table in
+:mod:`simllm.adapters.vllm.executor`): ``SIMLLM_VLLM_MODE``,
+``SIMLLM_VLLM_KV_MEMORY_BYTES``, ``SIMLLM_VLLM_GPU``,
+``SIMLLM_VLLM_PEAK_FLOPS``, ``SIMLLM_VLLM_MEM_BANDWIDTH``,
+``SIMLLM_VLLM_EFFICIENCY``, ``SIMLLM_VLLM_HOST_INIT_PS``,
+``SIMLLM_VLLM_TOKEN_ID``, ``SIMLLM_VLLM_STEP_RECORDS``.
+
+Exports are resolved lazily through the module ``__getattr__``, so importing
+this package pulls in neither the executor module nor vLLM until a name is
+actually used. vLLM itself only ever asks for one attribute
+(``resolve_obj_by_qualname`` does ``import_module`` plus ``getattr``), which
+is exactly what this indirection serves.
 """
+
+from typing import Any
+
+from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
+
+_LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+    "GPU_ENVELOPES": ("executor", "GPU_ENVELOPES"),
+    "ModelDims": ("executor", "ModelDims"),
+    "SimExecutor": ("executor", "SimExecutor"),
+    "SimExecutorConfig": ("executor", "SimExecutorConfig"),
+    "SimExecutorHooks": ("executor", "SimExecutorHooks"),
+    "StepTranslator": ("executor", "StepTranslator"),
+    "TranslatedStep": ("executor", "TranslatedStep"),
+    "configure": ("executor", "configure"),
+    "estimate_step_latency_ps": ("executor", "estimate_step_latency_ps"),
+    "fabricate_sampled_tokens": ("executor", "fabricate_sampled_tokens"),
+    "latest_executor": ("executor", "latest_executor"),
+    "observe_scheduler_output": ("executor", "observe_scheduler_output"),
+    "step_kernel": ("executor", "step_kernel"),
+    "translate_scheduler_output": ("executor", "translate_scheduler_output"),
+    "step_records_to_json": ("executor", "step_records_to_json"),
+    "vllm_is_available": ("executor", "vllm_is_available"),
+    "write_step_records": ("executor", "write_step_records"),
+    "PlacementExporter": ("worker_ext", "PlacementExporter"),
+    "manifest_from_worker_entries": ("worker_ext", "manifest_from_worker_entries"),
+    "placement_entry": ("worker_ext", "placement_entry"),
+    "vllm_version": ("worker_ext", "vllm_version"),
+}
+
+__all__ = [
+    "GPU_ENVELOPES",
+    "PINNED_VLLM_VERSION",
+    "ModelDims",
+    "PlacementExporter",
+    "SimExecutor",
+    "SimExecutorConfig",
+    "SimExecutorHooks",
+    "StepTranslator",
+    "TranslatedStep",
+    "configure",
+    "estimate_step_latency_ps",
+    "fabricate_sampled_tokens",
+    "latest_executor",
+    "manifest_from_worker_entries",
+    "observe_scheduler_output",
+    "placement_entry",
+    "step_kernel",
+    "step_records_to_json",
+    "translate_scheduler_output",
+    "vllm_is_available",
+    "vllm_version",
+    "write_step_records",
+]
+
+
+def __getattr__(name: str) -> Any:
+    target = _LAZY_EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attribute = target
+    from importlib import import_module
+
+    module = import_module(f"{__name__}.{module_name}")
+    value = getattr(module, attribute)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(__all__)

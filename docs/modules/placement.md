@@ -23,14 +23,16 @@ both.
 ## Status
 
 Manifest round-trip and the gpu-rank mapper are implemented and tested
-(including the DP=2 x PP=2 x TP=4 worked example). Fabric manifest and NIC
-selection are design-only.
+(including the DP=2 x PP=2 x TP=4 worked example). The extraction path is
+implemented for vLLM: `simllm.adapters.vllm.PlacementExporter` is a worker
+extension class whose one RPC returns this rank's entry, and
+`manifest_from_worker_entries` assembles the per-worker dicts into a
+`source="extracted"` manifest with the framework version recorded (see
+[adapters-vllm](adapters-vllm.md)). Fabric manifest and NIC selection are
+design-only.
 
 ## Open tasks
 
 - PLACE-1: fabric topology schema contents and NIC selection in the mapper
   (milestone M4), sourcing intra-node structure from NCCL topology dumps.
 - PLACE-2: `unique-nic` GOAL-rank mapping (depends on PLACE-1).
-- PLACE-3: the extraction path, i.e. the worker-side manifest exporter
-  invoked over `collective_rpc` (ships with the vLLM adapter, see
-  [adapters-vllm](adapters-vllm.md)).
