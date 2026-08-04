@@ -31,8 +31,12 @@ backend submodules.
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
 | `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` | UEC htsim, RNIC model series, `htsim_rnic` executable |
 
-As of 2026-08-03 both launcher and wiring PRs are merged, so the RNIC
-profiles run from the pinned `main` refs:
+As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
+(mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
+metrics) and the full rnic-cn algorithm-book implementation
+(deterministic reservation ledger, windowed feedforward snapshots,
+fractional nflow, sender egress composition, BJP-derived resequencing
+window) are all merged, so everything runs from the pinned `main` refs:
 
 ```
 cmake -S third_party/htsim/htsim/sim -B build/htsim -DCMAKE_BUILD_TYPE=Release
@@ -65,10 +69,10 @@ mis-registrations, not defects (findings F1-F3 in examples/m1/RESULTS.md).
 
 - HTSIM-1: `rnic-ss` (Slingshot-like) profile wiring; the runtime factory
   rejects it with a clear error until the slingshot runtime lands. Its CLI
-  options are already parsed so the flag ABI is stable.
+  options are already parsed so the flag ABI is stable. Out of simllm's
+  scope by maintainer decision; tracked here for the backend repo only.
 - HTSIM-2: goodput/state/queue trace flags for `rnic-cn`; they need trace
   hooks in the reviewed runtime first.
-- HTSIM-3: GOAL-driven DCQCN profile (`htsim_dcqcn_atlahs`).
 - HTSIM-4: GOAL parser hardening and the checked-in `txt2bin` build target.
 - ATLAHS-1: correct the vendored-fallback wording (the vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.
