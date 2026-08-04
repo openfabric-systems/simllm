@@ -180,15 +180,17 @@ above is the reference.
   pass (ten runs reproduce their closed forms with zero picosecond
   residual); the three misses are traced to mis-registered expectations,
   each with a closed ledger ([examples/m1](examples/m1/RESULTS.md)).
-- [ ] M2: vLLM adapter (`SimExecutor`, offline mode) + placement-manifest
-  exporter.
+- [ ] M2 (next): vLLM adapter (`SimExecutor`, offline mode) +
+  placement-manifest exporter, against the most recent vLLM release.
 - [ ] M3: SGLang adapter (`SimTpModelWorker`; RadixCache-aware prefix-hit
-  and vRAM studies).
-- [ ] M4: closed loop (persistent co-simulator), fabric manifest + NIC
-  selection, calibration/validation against real captures.
-- [ ] M5: Slingshot-like `rnic-ss` profile end to end; MoE expert-parallel
-  traffic from real routing captures; training workloads; SASS-level
-  (Accel-Sim/GPGPU-Sim) offline profile generation.
+  and vRAM studies), against a fresh SGLang pull.
+- [ ] M4: closed loop focused on validating that M2 and M3 work
+  (persistent co-simulator, fabric manifest + NIC selection,
+  calibration/validation against real captures).
+- [ ] M5: all-to-all traffic studies (MoE expert-parallel from real
+  routing captures) with the focus on SASS-level (Accel-Sim/GPGPU-Sim)
+  offline calibration; training workloads. Slingshot is out of scope for
+  simllm (the `rnic-ss` profile remains a backend-repo follow-up only).
 - [ ] M6: PD-disaggregation and KV-transfer traffic modeling.
 
 ## Open task registry

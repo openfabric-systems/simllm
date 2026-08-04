@@ -89,3 +89,16 @@ Ladder phase: the algorithm meets the maintainer's bar everywhere except
 three specified sub-packet corner cells. Mixed phase: blocked on the
 sender-egress composition mechanism, now precisely characterized. Both
 gaps live in the algorithm book's backlog with designed fixes.
+
+## Plots
+
+`plots/a2a16_flow_size_pdf.png`: the mixed workload's flow-size PDF
+(lognormal, mean 256 KiB, 240 flows). `plots/a2a16_normalized_fct_cdf.png`:
+per-flow FCT CDFs of rnic-nn-fluid / rnic-nn / rnic-cn / dcqcn on the
+identical GOAL and 64-node 400G Clos, normalized to rnic-nn-fluid.
+Medians: nn 1.025, dcqcn 1.336, cn 2.062 (p99 18.3). The cn tail bloat
+under this heavily oversubscribed all-to-all is the accepted price of the
+deliberate RTT rebalancer (maintainer ruling): cn stays lossless and
+deterministic with zero recovery events while dcqcn trades losslessness
+and determinism for shorter congested FCTs. Removing destination
+oversubscription by construction is the recorded open design point.
