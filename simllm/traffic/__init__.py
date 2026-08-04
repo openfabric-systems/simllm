@@ -29,12 +29,22 @@ from simllm.traffic.patterns import (
     ring_allreduce,
     scatter,
 )
+from simllm.traffic.step_comm import (
+    TP_ALLREDUCE_SITES,
+    TpAllReduce,
+    render_step_goal,
+    step_tp_allreduces,
+)
 
 __all__ = [
     "COLLECTIVE_TRACE_SCHEMA",
+    "TP_ALLREDUCE_SITES",
+    "TpAllReduce",
     "binomial_broadcast",
     "gather",
     "pairwise_all_to_allv",
+    "render_step_goal",
     "ring_allreduce",
     "scatter",
+    "step_tp_allreduces",
 ]

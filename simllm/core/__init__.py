@@ -12,7 +12,9 @@ from simllm.core.step import (
     StepRecord,
     StepRecordStream,
     StepResult,
+    step_record_from_json,
     step_record_to_json,
+    step_records_from_jsonl,
     step_records_to_json,
     write_step_records,
 )
@@ -26,7 +28,9 @@ __all__ = [
     "StepRecordStream",
     "StepResult",
     "VirtualClock",
+    "step_record_from_json",
     "step_record_to_json",
+    "step_records_from_jsonl",
     "step_records_to_json",
     "write_step_records",
 ]

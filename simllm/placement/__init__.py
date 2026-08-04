@@ -29,6 +29,7 @@ collective to a physical endpoint and assigns GOAL ranks for the network
 backend.
 """
 
+from simllm.placement.declared import declared_manifest
 from simllm.placement.manifest import (
     FABRIC_SCHEMA,
     PLACEMENT_SCHEMA,
@@ -45,4 +46,5 @@ __all__ = [
     "PlacementManifest",
     "RankMapper",
     "RankPlacement",
+    "declared_manifest",
 ]

@@ -13,6 +13,16 @@ both.
   and the EPLB `placement_epoch`. `PlacementManifest` loads/saves JSON and
   answers `by_rank` / `group_ranks`. Manifests are either declared (what-if)
   or extracted from a live run; both share one schema.
+- `declared_manifest(tp=..., pp=..., dp=..., nodes=..., gpus_per_node=...,
+  hostname_pattern=...)`: builds a `source="declared"` manifest with
+  tp/pp/dp memberships in the DP x PP x TP layout order
+  (`global_rank = (dp*PP + pp)*TP + tp`, TP innermost). A declared
+  manifest is a what-if placement *computed from the layout formula*,
+  which is exactly what the extraction rule forbids for live runs and
+  permits here: a live run must export the actual group lists because the
+  manifest records what really happened, while a declared deployment has
+  no live groups to ask and the formula is its specification. The
+  `source` field keeps the two kinds distinguishable forever.
 - Fabric topology manifest (`simllm-fabric-topology-v1`): GPU to PCIe/NVLink
   to NIC to switch to link graph. Schema name pinned in `manifest.py`;
   contents land with M4.
@@ -28,8 +38,12 @@ implemented for vLLM: `simllm.adapters.vllm.PlacementExporter` is a worker
 extension class whose one RPC returns this rank's entry, and
 `manifest_from_worker_entries` assembles the per-worker dicts into a
 `source="extracted"` manifest with the framework version recorded (see
-[adapters-vllm](adapters-vllm.md)). Fabric manifest and NIC selection are
-design-only.
+[adapters-vllm](adapters-vllm.md)). The declared builder landed with the
+M4 first slice (tested against the same DP=2 x PP=2 x TP=4 worked example,
+exact group lists) and closes the placement half of VLLM-7; the M4 studies
+and the live tp=8 closed-loop run drive `HtsimStepSink` off
+`declared_manifest(tp=8).group_ranks(0, "tp")`. Fabric manifest and NIC
+selection are design-only.
 
 ## Open tasks
 

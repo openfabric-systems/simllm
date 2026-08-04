@@ -141,6 +141,19 @@ completes and `shutdown` only logs. The record JSON is the schema-tagged
 form from `simllm.core.step` (`atlahs-closed-loop-step-v1`), shared with
 the closed-loop wire format by construction.
 
+The closed-loop seam is validated live as of the M4 first slice
+(examples/m4/RESULTS.md): the same in-process pattern with
+`tensor_parallel_size=8` was accepted on a single-GPU box (the executor
+fabricates 8 workers and touches no device; v0.26.0's config validation
+raised no device-count objection and the engine served all 8 workers'
+init RPCs), and `configure(step_sink=HtsimStepSink(...))` put the
+packet-level simulator inside the live step loop: 8 steps whose simulated
+latencies each match the pre-registered closed form to 0 ps, with
+sim-native TTFT/TPOT reported off the virtual clock. The recorded smoke
+JSONL also replays through the same sink offline
+(`simllm.core.step_records_from_jsonl`), reproducing the live latencies
+row-for-row.
+
 ## Open tasks
 
 - VLLM-3: sim-native metrics export via a `vllm.stat_logger_plugins` stat
@@ -160,9 +173,13 @@ the closed-loop wire format by construction.
 - VLLM-6: MoE terms in the step cost model. `ModelDims` is dense-only, so an
   MoE model is costed as attention plus one expert's worth of MLP per token,
   and expert routing produces no traffic yet.
-- VLLM-7: declared placement manifest for `SimExecutor` runs. Extraction
-  needs real workers, so a simulated deployment has to derive its manifest
-  from `ParallelConfig` instead (see [placement](placement.md)).
+- VLLM-7 (placement half closed with M4): the placement-side builder
+  exists, `simllm.placement.declared_manifest` computes a
+  `source="declared"` manifest from tp/pp/dp in the DP x PP x TP layout
+  order, and the M4 closed-loop runs drive the sink off it. Remaining
+  half: `SimExecutor` deriving that declared manifest from its own
+  `ParallelConfig` automatically (today the caller constructs it by hand
+  and must keep the sizes in sync with the vLLM flags).
 - VLLM-8: generate-only today. Speculative decoding and structured output
   are refused with explicit errors (fabricated tokens would silently model
   0% draft acceptance or first-token grammar deaths); pooling models

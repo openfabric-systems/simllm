@@ -23,6 +23,20 @@ backend submodules.
   backend DCQCN PR); same completion-CSV schema and quiescence contract.
 - `HtsimUecConfig` + `build_htsim_uec_command`: argv construction for
   GOAL-driven `htsim_uec` runs.
+- `HtsimStepSink` + `HtsimStepSinkConfig` (M4): the closed-loop step sink,
+  a callable `StepRecord -> StepResult | None` matching the adapters' sink
+  contract. Per step it renders the TP serial chain
+  (`simllm.traffic.render_step_goal`: per layer one
+  `calc(per_layer_compute_ns)` then the two ring allreduces), converts
+  with `txt2bin`, runs `htsim_rnic` on the configured profile/topology,
+  parses the completion CSV and returns the simulated makespan as the
+  step latency with `completed_at_ps = record.virtual_time_ps + makespan`.
+  A step with no TP collectives (TP world of 1, or a zero-token drain
+  record) returns `None`, so the adapter's own compute-only estimate
+  stands. Per-step subprocess invocation is the documented diagnostic
+  mode; the persistent co-simulator is BRIDGE-1 (core.md).
+  `StepNetworkOutcome` keeps per-step bookkeeping (compute estimate,
+  per-layer calc, makespan, network share) for reporting.
 
 ## Pinned submodules
 
@@ -57,9 +71,28 @@ checks pass, the six fluid workload-A configurations and four workload-B
 runs to zero picosecond residual, and the three failures are traced to
 mis-registrations, not defects (findings F1-F3 in examples/m1/RESULTS.md).
 
+`HtsimStepSink` landed with the M4 first slice and is validated by the
+examples/m4 pre-registered studies (every check passes: fluid step
+makespans exact to 0 ps across TP x step-shape, packetized nn inside its
+registered band and in fact on its point form, replayed TTFT/TPOT exact)
+plus a live closed loop: vLLM v0.26.0 in-process at tp=8 under
+`SimExecutor` with the sink drove `htsim_rnic` inside the engine step
+loop, every step latency matching the closed form to 0 ps
+(examples/m4/RESULTS.md).
+
 ## Open tasks
 
 - BACK-2: LogGOPSim invocation helper for fast flow-level sweeps.
+- BACK-5: `HtsimStepSink` splits the whole-step compute estimate evenly
+  across layers (`estimate_step_latency_ps(...) // (L * 1000)`, which
+  also truncates to whole GOAL ns units). Real per-layer durations differ
+  (LM head and sampling live in the last layer's share); a per-layer
+  provider breakdown would replace the even split.
+- BACK-6: `HtsimStepSink` approximates `num_sampled` as the number of
+  scheduled requests; a mid-prompt chunked-prefill request does not
+  actually sample. The inflated LM-head term is small against the step
+  total; exact sampling attribution needs prompt-completion knowledge in
+  the record.
 - BACK-4 (retracted 2026-08-03): multi-QP striping as a DCQCN mitigation
   was withdrawn by maintainer decision; DCQCN is the expected-fail
   comparator and its ECMP-collision and slow-start behavior is the

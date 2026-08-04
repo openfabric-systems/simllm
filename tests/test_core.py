@@ -1,4 +1,22 @@
-from simllm.core import RequestPhase, ScheduledRequest, StepRecord, StepResult
+import json
+from pathlib import Path
+
+import pytest
+
+from simllm.core import (
+    STEP_SCHEMA,
+    RequestPhase,
+    ScheduledRequest,
+    StepRecord,
+    StepResult,
+    step_record_from_json,
+    step_record_to_json,
+    step_records_from_jsonl,
+    write_step_records,
+)
+
+M2_SMOKE_JSONL = Path("/data3/yifeng/simllm-dev/m2-smoke-steps-v2.jsonl")
+M3_SMOKE_JSONL = Path("/data3/yifeng/simllm-dev/m3-smoke-steps.jsonl")
 
 
 def test_step_record_totals():
@@ -20,3 +38,68 @@ def test_step_record_totals():
 def test_step_result_carries_virtual_time():
     result = StepResult(step_index=3, step_latency_ps=42_000_000, completed_at_ps=1_042_000_000)
     assert result.completed_at_ps - result.step_latency_ps == 1_000_000_000
+
+
+def test_step_record_json_round_trip():
+    record = StepRecord(
+        step_index=7,
+        virtual_time_ps=123_456_789,
+        scheduled=[
+            ScheduledRequest("a", RequestPhase.PREFILL, num_new_tokens=512,
+                             num_cached_tokens=128, context_length=640),
+            ScheduledRequest("b", RequestPhase.DECODE, num_new_tokens=1, context_length=901),
+        ],
+        preempted_request_ids=["p"],
+        finished_request_ids=["c", "d"],
+    )
+    payload = step_record_to_json(record)
+    assert payload["schema"] == STEP_SCHEMA
+    back = step_record_from_json(payload)
+    assert back == record
+    assert back.scheduled[0].phase is RequestPhase.PREFILL
+
+
+def test_step_record_from_json_rejects_unknown_schema():
+    record = StepRecord(step_index=0, virtual_time_ps=0)
+    payload = step_record_to_json(record)
+    payload["schema"] = "atlahs-closed-loop-step-v2"
+    with pytest.raises(ValueError, match="schema"):
+        step_record_from_json(payload)
+    with pytest.raises(ValueError, match="schema"):
+        step_record_from_json({"step_index": 0, "virtual_time_ps": 0})
+
+
+def test_step_records_jsonl_round_trip(tmp_path):
+    records = [
+        StepRecord(step_index=0, virtual_time_ps=0, scheduled=[
+            ScheduledRequest("a", RequestPhase.PREFILL, num_new_tokens=4, context_length=4)]),
+        StepRecord(step_index=1, virtual_time_ps=1_000, scheduled=[
+            ScheduledRequest("a", RequestPhase.DECODE, num_new_tokens=1, context_length=5)],
+            finished_request_ids=["z"]),
+    ]
+    path = write_step_records(records, tmp_path / "steps.jsonl")
+    assert step_records_from_jsonl(path) == records
+
+
+def test_step_records_jsonl_names_bad_line(tmp_path):
+    path = tmp_path / "bad.jsonl"
+    good = step_record_to_json(StepRecord(step_index=0, virtual_time_ps=0))
+    path.write_text(json.dumps(good) + "\n" + '{"schema": "nope"}' + "\n")
+    with pytest.raises(ValueError, match=":2:"):
+        step_records_from_jsonl(path)
+
+
+@pytest.mark.parametrize(
+    "path,expected_records",
+    [(M2_SMOKE_JSONL, 8), (M3_SMOKE_JSONL, 9)],
+    ids=["vllm-m2", "sglang-m3"],
+)
+def test_real_smoke_jsonl_loads(path, expected_records):
+    if not path.is_file():
+        pytest.skip(f"recorded smoke JSONL not on this machine: {path}")
+    records = step_records_from_jsonl(path)
+    assert len(records) == expected_records
+    times = [r.virtual_time_ps for r in records]
+    assert times == sorted(times)
+    assert all(r.scheduled for r in records)
+    assert all(r.total_new_tokens >= 1 for r in records)

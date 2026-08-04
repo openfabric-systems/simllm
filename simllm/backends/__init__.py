@@ -18,15 +18,23 @@ from simllm.backends.htsim_rnic import (
     parse_completion_csv,
     run_htsim_rnic,
 )
+from simllm.backends.step_sink import (
+    HtsimStepSink,
+    HtsimStepSinkConfig,
+    StepNetworkOutcome,
+)
 
 __all__ = [
     "RNIC_PROFILES",
     "FlowCompletion",
     "HtsimDcqcnConfig",
     "HtsimRnicConfig",
+    "HtsimStepSink",
+    "HtsimStepSinkConfig",
     "HtsimUecConfig",
     "NormalizedFct",
     "RnicRunResult",
+    "StepNetworkOutcome",
     "build_htsim_dcqcn_command",
     "build_htsim_rnic_command",
     "build_htsim_uec_command",

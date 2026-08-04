@@ -106,6 +106,15 @@ any reusable prefix). The overlap path is out of scope for the first
 iteration: run with `--disable-overlap-schedule` (nothing forces overlap
 on, and PP asserts it off anyway).
 
+The recorded smoke JSONL is exercised against the closed-loop sink as of
+the M4 first slice: all 9 records load through
+`simllm.core.step_records_from_jsonl` and replay through
+`simllm.backends.HtsimStepSink` behind a declared tp=8 manifest, with
+monotonic virtual time and every step's simulated latency above the
+compute-only estimate (examples/m4/RESULTS.md check E). The live
+closed-loop run of that slice used the vLLM adapter; the SGLang worker's
+sink seam is the same contract but has not driven htsim live yet (SGL-8).
+
 ## Open tasks
 
 - SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic
@@ -122,6 +131,10 @@ on, and PP asserts it off anyway).
 - SGL-7: mamba/hybrid-attention models need the auxiliary-state pool the
   stub does not build; the stub currently builds a plain `ReqToTokenPool`
   only.
+- SGL-8: a live closed-loop run with `HtsimStepSink` installed via
+  `configure(step_sink=...)` on the CPU-engine smoke path, mirroring the
+  vLLM tp=8 run of examples/m4 (the M4 slice covered this adapter by
+  JSONL replay only).
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
 worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin

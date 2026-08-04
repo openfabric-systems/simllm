@@ -111,6 +111,56 @@ def step_records_to_json(records: Sequence[StepRecord]) -> list[dict[str, Any]]:
     return [step_record_to_json(record) for record in records]
 
 
+def step_record_from_json(payload: dict[str, Any]) -> StepRecord:
+    """Inverse of :func:`step_record_to_json`.
+
+    Validates the schema tag first and rejects anything else loudly: a
+    record stream is a wire format, so silently accepting an untagged or
+    differently-versioned payload would let two ends drift apart without
+    either noticing.
+    """
+    schema = payload.get("schema")
+    if schema != STEP_SCHEMA:
+        raise ValueError(
+            f"unsupported step-record schema {schema!r}; this reader speaks {STEP_SCHEMA!r}"
+        )
+    scheduled = [
+        ScheduledRequest(
+            request_id=entry["request_id"],
+            phase=RequestPhase(entry["phase"]),
+            num_new_tokens=entry["num_new_tokens"],
+            num_cached_tokens=entry.get("num_cached_tokens", 0),
+            context_length=entry.get("context_length", 0),
+        )
+        for entry in payload.get("scheduled", [])
+    ]
+    return StepRecord(
+        step_index=payload["step_index"],
+        virtual_time_ps=payload["virtual_time_ps"],
+        scheduled=scheduled,
+        preempted_request_ids=list(payload.get("preempted_request_ids", [])),
+        finished_request_ids=list(payload.get("finished_request_ids", [])),
+    )
+
+
+def step_records_from_jsonl(path: str | Path) -> list[StepRecord]:
+    """Load a newline-delimited step-record dump (the adapters' JSONL format).
+
+    Every non-blank line must be one schema-tagged record; a bad line names
+    its line number so a truncated or foreign file fails with a usable error.
+    """
+    records: list[StepRecord] = []
+    with open(Path(path)) as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                records.append(step_record_from_json(json.loads(line)))
+            except (ValueError, KeyError) as exc:
+                raise ValueError(f"{path}:{line_number}: {exc}") from exc
+    return records
+
+
 def write_step_records(records: Sequence[StepRecord], path: str | Path) -> Path:
     """Write one JSON object per step record, newline delimited."""
     path = Path(path)
