@@ -36,8 +36,10 @@ fabric feed back on each other.
   - vLLM: a `SimExecutor` selected with the existing
     `--distributed-executor-backend simllm.adapters.vllm.SimExecutor` flag
     (no fork required).
-  - SGLang: a `SimTpModelWorker` selected at the scheduler's worker-class
-    seam.
+  - SGLang: a `SimTpModelWorker` installed through SGLang's own plugin
+    framework (an entry point applying a replace hook at the scheduler's
+    worker-construction seam; no fork required, inert unless explicitly
+    enabled).
 - **Workload as a queueing model.** Arrival processes (Poisson, bursty, trace
   replay) and prompt/output length distributions, with controllable shared-
   prefix structure, drive the frontend, so prefix-hit probability, cache-miss
@@ -149,13 +151,21 @@ Pinned backends (details in [docs/modules/backends.md](docs/modules/backends.md)
 
 ## Demo
 
-[examples/m1](examples/m1/) is the current end-to-end demo: a
-pipeline-parallel decode of a 70B-class model on the reference topology,
-reporting the signature metrics (TTFT/TPOT) with per-flow FCT as the debug
-layer, validated against pre-registered closed forms
-([expectations](examples/m1/expectations.md),
-[results](examples/m1/RESULTS.md)). The full frontend-integrated demo
-(vLLM `SimExecutor` driving the same pipeline) arrives with M2.
+[examples/m4](examples/m4/) is the current flagship demo: the closed loop.
+A real vLLM v0.26.0 engine runs in-process at `tensor_parallel_size=8`
+under the `SimExecutor` (no GPUs touched), and every scheduler step's
+tensor-parallel traffic is executed by `htsim_rnic` at packet granularity
+before the step's completion time advances the scheduler's clock. All 36
+pre-registered checks pass, the fluid-profile closed forms to a residual
+of 0 ps ([expectations](examples/m4/expectations.md),
+[results](examples/m4/RESULTS.md)).
+
+[examples/m1](examples/m1/) remains the standalone-core demo: workload to
+GOAL to `htsim_rnic` to TTFT/TPOT with per-flow FCT as the debug layer,
+validated the same way ([results](examples/m1/RESULTS.md)). The
+[examples/cn_ladder](examples/cn_ladder/) study compares the fidelity
+profiles (rnic-cn vs DCQCN under incast and all-to-all) and carries the
+definitive comparator figures.
 
 ## Tutorials
 
@@ -180,17 +190,34 @@ above is the reference.
   pass (ten runs reproduce their closed forms with zero picosecond
   residual); the three misses are traced to mis-registered expectations,
   each with a closed ledger ([examples/m1](examples/m1/RESULTS.md)).
-- [ ] M2 (next): vLLM adapter (`SimExecutor`, offline mode) +
-  placement-manifest exporter, against the most recent vLLM release.
-- [ ] M3: SGLang adapter (`SimTpModelWorker`; RadixCache-aware prefix-hit
-  and vRAM studies), against a fresh SGLang pull.
-- [ ] M4: closed loop focused on validating that M2 and M3 work
-  (persistent co-simulator, fabric manifest + NIC selection,
-  calibration/validation against real captures).
-- [ ] M5: all-to-all traffic studies (MoE expert-parallel from real
-  routing captures) with the focus on SASS-level (Accel-Sim/GPGPU-Sim)
-  offline calibration; training workloads. Slingshot is out of scope for
-  simllm (the `rnic-ss` profile remains a backend-repo follow-up only).
+- [x] M2: vLLM adapter, pinned to v0.26.0. `SimExecutor` services the full
+  init and step RPC surface, translates every scheduler step into a step
+  record (streamed JSONL, schema-tagged), refuses what fabricated tokens
+  would silently corrupt (speculative decoding, structured output), and
+  the `PlacementExporter` extracts placement manifests from real runs.
+  Independently audited (19 findings folded) and validated end to end
+  against a live engine (2026-08-04). Remaining halves are numbered tasks
+  in [adapters-vllm](docs/modules/adapters-vllm.md).
+- [x] M3: SGLang adapter, pinned to a fresh main-branch commit. SGLang now
+  ships a first-class plugin framework, so `SimTpModelWorker` installs
+  with no fork through an entry point (inert unless
+  `SIMLLM_SGLANG_ENABLE=1`), fabricates CPU-resident pools so RadixCache
+  and retraction stay real, and passed a live CPU-engine smoke on the
+  pinned commit (2026-08-04). Remaining halves in
+  [adapters-sglang](docs/modules/adapters-sglang.md).
+- [ ] M4 (in progress): closed loop validating M2/M3. The loop itself
+  landed and is validated: `HtsimStepSink` runs each step's TP traffic
+  through `htsim_rnic` (diagnostic per-step mode), a live vLLM tp=8 run
+  closed the loop with 0 ps residual against pre-registered closed forms
+  ([examples/m4](examples/m4/RESULTS.md)). Remaining: the persistent
+  co-simulator (BRIDGE-1), fabric manifest + NIC selection (PLACE-1/2),
+  and calibration against real captures.
+- [ ] M5 (in progress): all-to-all traffic studies (MoE expert-parallel)
+  with the focus on SASS-level (Accel-Sim/GPGPU-Sim) offline calibration
+  of the compute model (the calibration plan is recorded in
+  [compute](docs/modules/compute.md)); training workloads. Slingshot is
+  out of scope for simllm (the `rnic-ss` profile remains a backend-repo
+  follow-up only).
 - [ ] M6: PD-disaggregation and KV-transfer traffic modeling.
 
 ## Open task registry
