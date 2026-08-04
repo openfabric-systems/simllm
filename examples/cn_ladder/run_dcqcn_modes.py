@@ -28,7 +28,10 @@ from simllm.workload import LogNormalLengths
 HERE = Path(__file__).resolve().parent
 TOPO = HERE.parent / "m1" / "topologies" / "clos_64_400g.topo"
 G400 = 400_000_000_000
-SMALL_BUFFERS = {"-shared_buffer_bytes": "4194304", "-egress_buffer_bytes": "4194304"}
+# 1 MiB is where the lossy regime lives for this GOAL: at 4 MiB the ECN
+# control alone keeps occupancy below overflow (verified), so the study
+# operates at the buffer point where drops and recovery actually occur.
+SMALL_BUFFERS = {"-shared_buffer_bytes": "1048576", "-egress_buffer_bytes": "1048576"}
 
 _ = LogNormalLengths  # re-exported context for readers; sizes live in the GOAL
 
@@ -67,7 +70,8 @@ def main() -> None:
         print(rows[-1])
 
     counter_keys = ["ns_tm3_dropped_packets", "silent_rtos", "ecn_marked_packets",
-                    "dcqcn_pfc_pause_frames_total", "dcqcn_pfc_max_cascade_depth"]
+                    "loss_rate_cuts", "dcqcn_pfc_pause_frames",
+                    "dcqcn_pfc_paused_wall_ps", "dcqcn_pfc_max_cascade_depth"]
     for mode, extra in (("ecn-only", {"-pfc": "off"}), ("ecn-pfc", {"-pfc": "on"})):
         for seed in range(1, args.seeds + 1):
             flags = dict(SMALL_BUFFERS)

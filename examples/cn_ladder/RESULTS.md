@@ -102,3 +102,22 @@ deliberate RTT rebalancer (maintainer ruling): cn stays lossless and
 deterministic with zero recovery events while dcqcn trades losslessness
 and determinism for shorter congested FCTs. Removing destination
 oversubscription by construction is the recorded open design point.
+
+## Comparator realism round (maintainer correction)
+
+The first CDF was too kind to DCQCN: default 33.5 MiB buffers meant zero
+drops, two pauses and zero RTOs, so it never paid its own costs. With
+mlx5-faithful loss recovery landed in the backend (go-back-N default with
+the CNP-equivalent rate cut on every recovery event; optional limited
+selective repeat with GBN fallback modeling ConnectX-6 Dx tracking;
+ECN-only mode with drops at overflow; PFC storm metrics with cascade
+depth), the seeded study at the 1 MiB lossy operating point
+(`plots/a2a16_lossy_fct_cdf_seeded.png`, 8 seeds per DCQCN mode) shows the
+true comparison: DCQCN median 1.52 but p99 at 1902x and worst-seed max
+3528x (RTO-dominated tail; about 12 percent of flows strand beyond 100x),
+against rnic-cn's median 2.06 with p99 19.3x and max 24.9x, lossless and
+deterministic. ECN plus PFC at these thresholds barely engages (up to 7
+pauses, cascade depth 3) and does not rescue the tail. Two harness bugs of
+this study (a silently failed buffer edit and mismatched counter keys)
+were caught by cross-checking against the backend acceptance numbers and
+are fixed in run_dcqcn_modes.py.
