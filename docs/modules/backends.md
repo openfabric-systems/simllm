@@ -93,6 +93,12 @@ loop, every step latency matching the closed form to 0 ps
   actually sample. The inflated LM-head term is small against the step
   total; exact sampling attribution needs prompt-completion knowledge in
   the record.
+- BACK-7: `HtsimStepSinkConfig` has no explicit GOAL-rank padding knob.
+  `rnic-cn` enforces that the resolved GOAL layout matches the topology's
+  node count, so a topology run today must place its TP group on the
+  highest-numbered node's GPUs to pad the GOAL implicitly (see
+  examples/breakdown/RESULTS.md method notes); the sink should pass
+  `num_goal_ranks` through to `render_step_goal` when a topology is set.
 - BACK-4 (retracted 2026-08-03): multi-QP striping as a DCQCN mitigation
   was withdrawn by maintainer decision; DCQCN is the expected-fail
   comparator and its ECMP-collision and slow-start behavior is the
