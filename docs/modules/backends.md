@@ -122,7 +122,14 @@ loop, every step latency matching the closed form to 0 ps
   anchors and candidate parameter sets in
   [docs/papers/msg-size-vs-bandwidth.md](../papers/msg-size-vs-bandwidth.md)
   (UCCL Fig. 14/15a, the 256 KB half-rate datum, DCQCN paper and vendor
-  timer sets). Acceptance bars recorded there.
+  timer sets). Acceptance bars recorded there, micro-behavior anchors in
+  examples/dcqcn_micro. Source-level findings from the micro study's
+  review, now the concrete work items: every send op constructs a fresh
+  DCQCN source at line rate with no cross-WQE rate state
+  (dcqcn_atlahs_runtime.cpp:398), the additive/hyper increase is
+  R_AI = C/20 and C/10 (dcqcn.cpp:48-49) against the paper's fixed
+  40 Mbps, and the ECN defaults are fixed bytes (Kmin 64 KB, Kmax
+  640 KB, Pmax 0.25) independent of the link rate.
 - HTSIM-6: rnic-cn WQE-queue lookahead (maintainer design 2026-08-05): a
   WQE toward an established link-table destination does not wait when the
   granted bandwidth suffices, and the endpoint pre-declares one RTT ahead
