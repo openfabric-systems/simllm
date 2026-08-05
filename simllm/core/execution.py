@@ -19,9 +19,12 @@ from __future__ import annotations
 import enum
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Protocol, TypeAlias, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, TypeAlias, runtime_checkable
 
 from simllm.core.step import StepRecord
+
+if TYPE_CHECKING:
+    from simllm.core.bookkeeping import RequestBookkeeper
 
 #: Reserved wire-format names. JSON readers/writers land with CORE-2.
 EXECUTION_GRAPH_SCHEMA = "simllm-execution-graph-v1"
@@ -72,6 +75,7 @@ class ResourceKind(enum.Enum):
     COPY_ENGINE = "copy-engine"
     NCCL_CHANNEL = "nccl-channel"
     NIC_SEND_QUEUE = "nic-send-queue"
+    NIC_RECEIVE_QUEUE = "nic-receive-queue"
     NIC = "nic"
     COMPLETION_QUEUE = "completion-queue"
     CONTROL_QUEUE = "control-queue"
@@ -165,6 +169,22 @@ WorkPayload: TypeAlias = ComputeWork | KvCacheWork | DmaWork | CollectiveWork | 
 
 
 @dataclass(frozen=True)
+class OperationCorrelation:
+    """Stable semantic identities shared by plans, events and metrics.
+
+    One operation may serve several requests in a scheduler batch.  Layer,
+    microbatch and iteration are optional because the same graph contract is
+    used by serving and future training-plan producers.
+    """
+
+    request_ids: tuple[str, ...] = ()
+    batch_id: str | None = None
+    layer: int | None = None
+    microbatch: int | None = None
+    iteration: int | None = None
+
+
+@dataclass(frozen=True)
 class ExecutionOperation:
     """One node in an execution graph.
 
@@ -181,6 +201,24 @@ class ExecutionOperation:
     depends_on: tuple[str, ...] = ()
     not_before_ps: int = 0
     priority: int = 0
+    correlation: OperationCorrelation = field(default_factory=OperationCorrelation)
+    placement_epoch: int = 0
+    participant_local_depends_on: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ExecutionObservations:
+    """Framework-neutral device work observed for one scheduler step.
+
+    Adapters normalize native cache, stream, event, kernel, collective, DMA
+    and control observations into these typed operations.  The core does not
+    reconstruct framework policy from token counts.  Tuple order preserves
+    observed submission order; dependencies and logical queues preserve the
+    framework's concurrency contract.
+    """
+
+    operations: tuple[ExecutionOperation, ...] = ()
+    completion_operation_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -188,8 +226,11 @@ class ExecutionGraph:
     """Versioned device-level DAG lowered from one scheduler step.
 
     This passive record has no execution policy.  Its tuple order defines
-    FIFO submission order within each logical queue, while ``depends_on``
-    supplies cross-queue start-after-completion edges.
+    FIFO submission order within each logical queue. ``depends_on`` supplies
+    operation-completion edges, while ``participant_local_depends_on`` lets
+    each rank of a distributed operation wait for the predecessor frontier on
+    that same rank. Keeping the two edge kinds separate permits a target to
+    carry both semantics without weakening either one.
     """
 
     execution_id: str
@@ -210,7 +251,12 @@ class ResourceRef:
 
 @dataclass(frozen=True)
 class CompletionEvent:
-    """Timestamped evidence of an operation moving through one resource."""
+    """Timestamped evidence of an operation or created object making progress.
+
+    ``subject_object_id`` identifies the finer-grained object when one graph
+    operation expands into several runtime objects, e.g. one WQE per rank and
+    peer for a collective. Packet identifiers never cross this boundary.
+    """
 
     execution_id: str
     operation_id: str
@@ -218,6 +264,7 @@ class CompletionEvent:
     timestamp_ps: int
     resource: ResourceRef | None = None
     completed_bytes: int | None = None
+    subject_object_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -244,7 +291,11 @@ CompletionHandler: TypeAlias = Callable[[CompletionEvent], None]
 class ExecutionLowerer(Protocol):
     """Translate a framework step and observations into the shared graph."""
 
-    def lower(self, record: StepRecord) -> ExecutionGraph:
+    def lower(
+        self,
+        record: StepRecord,
+        observations: ExecutionObservations | None = None,
+    ) -> ExecutionGraph:
         """Return the device-level graph for ``record``."""
         ...
 
@@ -258,6 +309,7 @@ class DeviceRuntime(Protocol):
         graph: ExecutionGraph,
         *,
         on_event: CompletionHandler | None = None,
+        bookkeeping: RequestBookkeeper | None = None,
     ) -> ExecutionResult:
-        """Advance ``graph`` to its declared completion boundary."""
+        """Advance ``graph`` and append runtime facts when requested."""
         ...

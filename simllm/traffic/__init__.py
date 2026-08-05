@@ -22,6 +22,7 @@ patterns rather than abstract ops.
 
 COLLECTIVE_TRACE_SCHEMA = "simllm-collective-trace-v1"
 
+from simllm.traffic.execution_goal import render_serial_execution_graph_goal
 from simllm.traffic.patterns import (
     binomial_broadcast,
     gather,
@@ -48,6 +49,7 @@ __all__ = [
     "binomial_broadcast",
     "gather",
     "pairwise_all_to_allv",
+    "render_serial_execution_graph_goal",
     "render_step_goal",
     "ring_allreduce",
     "scatter",

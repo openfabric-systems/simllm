@@ -40,6 +40,13 @@ the flow-level work the GOAL emitter renders.
   existing `ring_allreduce` and `pairwise_all_to_allv` patterns; tags are
   disjoint per collective and a step without MoE work renders
   byte-identically to the pre-M5 emitter (golden test).
+- `render_serial_execution_graph_goal` is the CORE-2 graph-only diagnostic
+  replay. It accepts validated per-rank compute, ring allreduce and pairwise
+  all-to-allv operations, preserves `participant_local_depends_on` edges and
+  FIFO predecessors, and never reduces a separate `depends_on`
+  whole-operation barrier through rank-local ancestry. It fails loudly on
+  cross-rank barriers, work or timing semantics the serial GOAL subset cannot
+  represent. It consumes no `StepRecord` after lowering.
 
 Deliberately out of scope: exact TP weight-storage intervals (packed QKV,
 gate/up packing, quantization padding); group memberships plus activation
@@ -65,6 +72,11 @@ and the live tp=8 closed-loop run; the MoE mapping (uniform-routing first
 half of TRAF-2) landed with M5 and is validated by the examples/m5 step
 grid (fluid MoE step makespans exact to 0 ps across EP x step-shape). The
 JSONL collective-trace consumer is not yet implemented (TRAF-5).
+
+CORE-2 additionally proved that serial GOAL rendered only from a
+JSON-round-tripped `ExecutionGraph` is byte- and timing-equivalent to the
+legacy step path over TP width and link-rate sweeps, including a MoE sentinel
+([results](../../examples/core2_lowering/RESULTS.md)).
 
 ## Open tasks
 

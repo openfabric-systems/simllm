@@ -69,9 +69,9 @@ Workload -> framework scheduler -> StepRecord + framework observations
                   ^                            |
                   |                            v
        TTFT/TPOT + virtual clock <- CompletionEvent <- DeviceRuntime
-                                                    ^        |
+                     RequestBookkeeper <----------/  ^        |
                                                     |        v
-                                      ExecutionGraph v1 -> GPU/HBM/DMA/NCCL/NIC
+                                      ExecutionGraph v1 -> GPU/HBM/DMA/NCCL/WQE/NIC
 ```
 
 `StepRecord` remains the compact record of what the real framework chose.
@@ -84,6 +84,12 @@ NCCL-channel and NIC contention, then returns timestamped
 `CompletionEvent` records for latency attribution. Compute providers,
 including the planned calibrated SASS tables, plug into lowering without
 changing this control-plane boundary.
+
+An independent append-only `RequestBookkeeper` correlates request stages with
+opaque framework vRAM allocations, execution operations, NCCL commands,
+SQ/RQ/CQ, WQEs and either DCQCN QPs or `rnic-cn` directed link pairs. The
+graph remains immutable, and network bookkeeping stops at WQE completion;
+packet events remain backend-private.
 
 Two coupling modes:
 
@@ -126,7 +132,7 @@ status and numbered open tasks; the README stays a map.
 
 | Module | Purpose | Doc |
 |---|---|---|
-| `simllm/core` | Virtual clock, scheduler-step records, execution graphs, completion contracts | [core](docs/modules/core.md) |
+| `simllm/core` | Virtual clock, scheduler-step records, execution graphs, central bookkeeping, completion contracts | [core](docs/modules/core.md) |
 | `simllm/workload` | Arrival processes, length distributions, shared-prefix structure | [workload](docs/modules/workload.md) |
 | `simllm/compute` | Pluggable compute-time providers + host initiation model | [compute](docs/modules/compute.md) |
 | `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
@@ -229,7 +235,7 @@ above is the reference.
   through `htsim_rnic` (diagnostic per-step mode), a live vLLM tp=8 run
   closed the loop with 0 ps residual against pre-registered closed forms
   ([examples/m4](examples/m4/RESULTS.md)). Remaining: the persistent
-  co-simulator (BRIDGE-1), the execution/resource runtime (CORE-2 through
+  co-simulator (BRIDGE-1), the execution/resource runtime (CORE-3 through
   CORE-5), and calibration against real captures. General fabric manifests
   (PLACE-1/2) are deferred behind the fixed eight-GPU, one-NIC node profile.
 - [ ] M5 (in progress): all-to-all traffic studies (MoE expert-parallel)
@@ -265,11 +271,14 @@ it:
 The implementation order is architectural, not just a feature ranking.
 Each stage supplies the evidence needed to calibrate the next one:
 
-1. **Execution and completion boundary:** the contract is now reserved as
+1. **Execution and completion boundary (complete):** strict lowering,
+   validation, JSON round trips, central request/object bookkeeping and
+   graph-only serial replay now implement
    `simllm-execution-graph-v1`, `simllm-completion-event-v1` and
-   `simllm-execution-result-v1`. Implement step lowering and wire-format
-   round trips under [CORE-2](docs/modules/core.md#open-tasks), with actual
-   device schedule capture owned by
+   `simllm-execution-result-v1`, plus `simllm-request-bookkeeping-v1`.
+   Exact lowering and WQE results are in
+   [examples/core2_lowering](examples/core2_lowering/RESULTS.md).
+   Actual device schedule capture is owned by
    [VLLM-12](docs/modules/adapters-vllm.md#open-tasks) and
    [SGL-10](docs/modules/adapters-sglang.md#open-tasks).
 2. **Hybrid measured plus SASS compute:** complete per-invocation shapes,

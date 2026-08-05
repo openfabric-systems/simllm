@@ -57,6 +57,23 @@ def test_execution_graph_expresses_legal_overlap_without_assigning_resources():
     assert graph.completion_operation_ids == ("allreduce-0",)
 
 
+def test_execution_operation_keeps_the_original_positional_tail():
+    operation = ExecutionOperation(
+        "compute-0",
+        0,
+        "cuda:0:compute",
+        ComputeWork("gemm"),
+        ("producer",),
+        123,
+        7,
+    )
+
+    assert operation.depends_on == ("producer",)
+    assert operation.not_before_ps == 123
+    assert operation.priority == 7
+    assert operation.participant_local_depends_on == ()
+
+
 def test_kv_lifecycle_and_resource_events_share_correlation_ids():
     kv = KvCacheWork(
         action=KvCacheAction.ALLOCATE,

@@ -11,8 +11,13 @@ backend submodules.
   binary discovered via `SIMLLM_HTSIM_RNIC`, the README build location,
   then `PATH`.
 - `FlowCompletion` + `parse_completion_csv`: completion-CSV parsing
-  (`profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps`);
-  `RnicRunResult.job_completion_time_ps()` for JCT.
+  with a stable legacy prefix
+  (`profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps`)
+  followed by optional WQE bookkeeping (`wqe_id`, SQ/RQ/CQ identities and
+  sequences, transport kind and transport-object ID);
+  `RnicRunResult.job_completion_time_ps()` takes the maximum of exact WQE
+  completion rows and the driver's whole-nanosecond GOAL completion summary.
+  This covers compute-only schedules and trailing compute after the last WQE.
 - `simllm.backends.fct.normalized_fct`: per-flow FCT normalized to the
   `rnic-nn` baseline of the identical GOAL, matched by
   (source, destination, tag). Valid for aligned-start flows; for phases
@@ -39,6 +44,11 @@ backend submodules.
   mode; the persistent co-simulator is BRIDGE-1 (core.md).
   `StepNetworkOutcome` keeps per-step bookkeeping (compute estimate,
   per-layer calc, makespan, network share) for reporting.
+- `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
+  from a `StepRecord` to per-layer compute plus semantic TP/EP collective
+  operations. Explicit framework observations bypass the fallback schedule and
+  are enveloped without reconstructing framework policy. JSON-round-tripped
+  graphs replay through `render_serial_execution_graph_goal`.
 
 ## Pinned submodules
 
@@ -82,6 +92,22 @@ plus a live closed loop: vLLM v0.26.0 in-process at tp=8 under
 loop, every step latency matching the closed form to 0 ps
 (examples/m4/RESULTS.md).
 
+On 2026-08-05 HTSIM commit `d778326` added one timing-neutral WQE lifecycle
+layer shared by the injected runtimes. It creates deterministic per-node
+SQ/RQ/CQ identities, posts and FIFO-dispatches the SQ at the existing send
+timestamp, retains RQ as an identity-only placeholder, and posts plus consumes
+the CQ at the existing completion timestamp. DCQCN rows carry a stable
+directed-pair QP identity; `rnic-cn` rows carry a stable directed L2 link-pair
+identity; null profiles explicitly carry `none`. Packets remain private.
+The complete backend suite passed 344 of 344 tests. Separate reproducible
+manual driver smokes checked both physical transport fields. The frozen
+lowering study retained every JCT and combined flow/WQE row exactly; see
+[examples/core2_lowering/RESULTS.md](../../examples/core2_lowering/RESULTS.md).
+
+BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
+was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
+and its ECMP-collision and slow-start behavior is the phenomenon under study.
+
 ## Open tasks
 
 - BACK-2: LogGOPSim invocation helper for fast flow-level sweeps.
@@ -101,11 +127,6 @@ loop, every step latency matching the closed form to 0 ps
   highest-numbered node's GPUs to pad the GOAL implicitly (see
   examples/breakdown/RESULTS.md method notes); the sink should pass
   `num_goal_ranks` through to `render_step_goal` when a topology is set.
-- BACK-4 (retracted 2026-08-03): multi-QP striping as a DCQCN mitigation
-  was withdrawn by maintainer decision; DCQCN is the expected-fail
-  comparator and its ECMP-collision and slow-start behavior is the
-  phenomenon under study, not a defect to engineer around.
-
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
 - HTSIM-1: `rnic-ss` (Slingshot-like) profile wiring; the runtime factory
@@ -115,10 +136,11 @@ loop, every step latency matching the closed form to 0 ps
 - HTSIM-2: goodput/state/queue trace flags for `rnic-cn`; they need trace
   hooks in the reviewed runtime first.
 - HTSIM-4: GOAL parser hardening and the checked-in `txt2bin` build target.
-- HTSIM-5: per-WQE starting behavior for the DCQCN comparator (maintainer
-  direction 2026-08-05): a fixed WQE initiation latency and per-QP DCQCN
-  rate state shared by WQEs of one source-destination pair, plus
-  pipelined WQE queues, calibrated against the message-size-vs-bandwidth
+- HTSIM-5: behavioral per-WQE starting for the DCQCN comparator (maintainer
+  direction 2026-08-05). The common SQ/RQ/CQ ledger and directed-pair QP
+  identity landed in `d778326`; fixed WQE initiation latency, DCQCN rate state
+  shared by WQEs of one pair, and behavioral SQ pipelining remain. Calibrate
+  them against the message-size-vs-bandwidth
   anchors and candidate parameter sets in
   [docs/papers/msg-size-vs-bandwidth.md](../papers/msg-size-vs-bandwidth.md)
   (UCCL Fig. 14/15a, the 256 KB half-rate datum, DCQCN paper and vendor
@@ -136,14 +158,20 @@ loop, every step latency matching the closed form to 0 ps
   queue 10,000; examples/dcqcn_micro addendum 1), far beyond the
   algorithm book's S_max regime but reachable by WQE-flood workloads;
   the measured per-flow control cost also scales with flow count, not
-  bytes (16 KiB flood streams cap at 0.36 to 0.46 C). Both are HTSIM-6
-  adjacents: queue lookahead removes the per-WQE declare cost, and the
-  event-loop scaling needs its own look.
+  bytes (16 KiB flood streams cap at 0.36 to 0.46 C). Both are adjacent to
+  HTSIM-6's remaining behavioral work: queue lookahead removes the per-WQE
+  declare cost, and the event-loop scaling needs its own look.
 - HTSIM-6: rnic-cn WQE-queue lookahead (maintainer design 2026-08-05): a
-  WQE toward an established link-table destination does not wait when the
-  granted bandwidth suffices, and the endpoint pre-declares one RTT ahead
-  for queued WQEs of the same destination, hiding later WQEs' declare
-  latency. Design and expected effects in the same doc; belongs in the
-  htsim algorithm book alongside the bootstrap control slots.
+  timing-neutral SQ and directed link-pair identity landed in `d778326`.
+  The established-pair fast path still must avoid waiting when granted
+  bandwidth suffices, and the endpoint must pre-declare one RTT ahead for
+  queued WQEs of the same destination to hide later declare latency. Design
+  and expected effects are in the same doc; the behavior belongs in the htsim
+  algorithm book alongside the bootstrap control slots.
+- HTSIM-8: repair the backend `commit_check.sh` validation gate. Current
+  `origin/main` has no `validate_outputs` baselines, `validate.py` divides by
+  zero in every attempted case, and the script lacks fail-fast handling, so
+  it reports a false success. Add checked-in baselines or remove that compare,
+  fix zero-flow diagnostics, and make every failed command fail the gate.
 - ATLAHS-1: correct the vendored-fallback wording (the vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.

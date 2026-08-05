@@ -5,17 +5,23 @@ import pytest
 from simllm.backends import (
     FlowCompletion,
     HtsimRnicConfig,
+    RnicRunResult,
     build_htsim_rnic_command,
     find_htsim_rnic,
     parse_completion_csv,
     run_htsim_rnic,
 )
+from simllm.backends.htsim_rnic import _parse_goal_completion_time_ps
 from simllm.goal import GoalTrace, find_txt2bin, to_binary
 from simllm.traffic import gather, scatter
 
 CSV_SAMPLE = """profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps
 rnic-cn,21474836482,5,6,1,65536,178513600,210652800,32139200
 rnic-cn,25769803778,6,7,1,65536,215652800,243539200,27886400
+"""
+
+WQE_CSV_SAMPLE = """profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps,wqe_id,sq_id,rq_id,cq_id,sq_post_sequence,sq_dispatch_sequence,cq_post_sequence,cq_consume_sequence,transport_kind,transport_object_id
+rnic-cn,7,1,2,9,4096,100,300,200,7,5,10,7,3,3,2,2,rnic-cn-link-pair,4294967298
 """
 
 
@@ -44,6 +50,42 @@ def test_parse_completion_csv(tmp_path):
         "rnic-cn", 21474836482, 5, 6, 1, 65536, 178513600, 210652800, 32139200
     )
     assert flows[1].fct_ps == flows[1].completion_time_ps - flows[1].start_time_ps
+
+
+def test_parse_completion_csv_preserves_appended_wqe_fields(tmp_path):
+    path = tmp_path / "wqe.csv"
+    path.write_text(WQE_CSV_SAMPLE)
+    flow = parse_completion_csv(path)[0]
+    assert flow.wqe_id == flow.flow_id == 7
+    assert (flow.sq_id, flow.rq_id, flow.cq_id) == (5, 10, 7)
+    assert (flow.sq_post_sequence, flow.sq_dispatch_sequence) == (3, 3)
+    assert (flow.cq_post_sequence, flow.cq_consume_sequence) == (2, 2)
+    assert flow.transport_kind == "rnic-cn-link-pair"
+    assert flow.transport_object_id == 4_294_967_298
+
+
+def test_compute_only_goal_uses_the_driver_completion_summary():
+    stdout = "noise\nMaximum finishing time at host 0: 24060 (2.406e-05 s)\n"
+    completion_ps = _parse_goal_completion_time_ps(stdout)
+    assert completion_ps == 24_060_000
+    assert RnicRunResult([], [], True, completion_ps).job_completion_time_ps() == completion_ps
+
+
+def test_flow_followed_by_trailing_compute_uses_schedule_completion():
+    flow = FlowCompletion(
+        "rnic-nn",
+        1,
+        0,
+        1,
+        7,
+        4096,
+        0,
+        10_000,
+        10_000,
+    )
+
+    assert RnicRunResult([flow], [], True, 15_000).job_completion_time_ps() == 15_000
+    assert RnicRunResult([flow], [], True, 9_000).job_completion_time_ps() == 10_000
 
 
 @pytest.mark.skipif(

@@ -134,6 +134,7 @@ batch decision, not a guessed GPU timeline. A framework-independent
 ```text
 framework scheduler and KV control plane
   -> StepRecord + KV events + captured stream/event schedule
+       \-> request stages + opaque framework objects -> RequestBookkeeper
   -> ExecutionLowerer + ComputeProvider
   -> ExecutionGraph
        ComputeWork | KvCacheWork | DmaWork | CollectiveWork | ControlWork
@@ -146,13 +147,17 @@ framework scheduler and KV control plane
        one shared NIC arbiter and serializer per node
        completion and high-priority control queues
   -> CompletionEvent stream
+       \-> operation + created-object subject -> RequestBookkeeper
   -> StepResult + virtual-time metrics + next framework decision
 ```
 
-The graph records FIFO submission order within each logical queue and
-explicit start-after-completion dependencies across queues. Two nodes on
-different queues with no dependency are legally concurrent, but that is not
-a promise that they overlap in time. The `DeviceRuntime` maps ready work onto
+The graph records FIFO submission order within each logical queue and two
+explicit start-after-completion edge kinds across queues. `depends_on` waits
+for the whole predecessor operation. `participant_local_depends_on` lets a
+distributed command's rank wait for the predecessor frontier on that same
+rank. One target may carry both kinds without conflating them. Two nodes on
+different queues with no dependency are legally concurrent, but that is not a
+promise that they overlap in time. The `DeviceRuntime` maps ready work onto
 physical queues and resources; overlap emerges from resource availability and
 contention. The framework never supplies an overlap percentage, and compute,
 traffic or network providers never rewrite framework ordering.
@@ -182,19 +187,45 @@ Typed payloads preserve replaceable fidelity boundaries:
   visible in completion events.
 
 `simllm-completion-event-v1` records submitted, queued, started, progress and
-completed timestamps with the selected resource. This is the accounting
+completed timestamps with the selected resource and an optional created-object
+subject. This is the accounting
 surface for queue delay, compute service, HBM wait, DMA/copy delay, collective
 progress, WQE/NIC delay and control completion. `simllm-execution-result-v1`
 reduces a graph to its completion boundary while retaining those events for
 tail-latency attribution.
+
+`simllm-request-bookkeeping-v1` is the independent, append-only runtime fact
+stream. It keeps the graph immutable while correlating request stages and
+owner-created objects: opaque framework vRAM allocations, execution
+operations, NCCL commands, SQ/RQ/CQ, WQEs and either DCQCN QPs or `rnic-cn`
+directed L2 link pairs. WQE completion is the lowest public network unit.
+Packet identities and packet lifecycle remain backend-private. The initial CQ
+policy consumes completion immediately at the WQE timestamp. RQ is an
+identity-only placeholder in this contract. Every WQE names one SQ, RQ and CQ;
+physical profiles also name one DCQCN QP or `rnic-cn` directed link pair,
+while null profiles explicitly record transport kind `none`.
+Reusable vRAM, queue, QP and link-pair objects retain the scope in which they
+were created, while each later use records its own step, execution, operation
+and request scope. Causal lineage may narrow a batched request set and rejects
+new request IDs that do not occur in any causal parent; reusable resource
+references do not impose their original transient scope on later users.
 
 ### Core (`simllm/core/`, `simllm/compute/`, `simllm/traffic/`, `simllm/goal/`)
 
 - **Virtual clock**: orders request arrivals and step completions.
 - **Execution contracts** (`simllm/core/execution.py`): the passive,
   versioned graph and completion records above, plus `ExecutionLowerer` and
-  `DeviceRuntime` protocols. The initial contract is inert; CORE-2 through
-  CORE-5 implement lowering, KV lifecycle, resources and feedback in order.
+  `DeviceRuntime` protocols. CORE-2 supplies strict graph/result JSON,
+  serial diagnostic lowering and graph-only replay. CORE-3 through CORE-5
+  implement KV lifecycle, resources and feedback in order.
+  Dependency semantics are explicit per edge: `depends_on` waits for complete
+  predecessor operations, while `participant_local_depends_on` lets
+  distributed collective ranks arrive after their own predecessor frontiers.
+  The serial GOAL renderer rejects cross-rank operation barriers that it
+  cannot encode.
+- **Central bookkeeping** (`simllm/core/bookkeeping.py`): validated frozen
+  stage, object-lineage and completion facts behind one mutable append seam,
+  with strict JSON round trips and request/execution/object queries.
 - **Compute-time providers** (`simllm/compute/`): the duration of every
   GOAL `calc` node comes from a pluggable `ComputeProvider`:
   `ProfileTableProvider` (measured (kernel, config, GPU) duration tables
@@ -248,10 +279,10 @@ The GOAL trace is executed by a discrete-event simulator:
   `htsim_rnic` (on the submodule's `main` since 2026-08-03) runs the RNIC
   fidelity profiles: the null-network baselines `rnic-nn`/`rnic-nn-fluid`
   and the explicit-rate collective-network endpoint `rnic-cn`. The
-  Slingshot-like profile `rnic-ss` and the GOAL-driven DCQCN profile are
-  follow-ups (HTSIM-1, HTSIM-3 in
-  [modules/backends.md](modules/backends.md)); until they land the factory
-  rejects `rnic-ss` with an explicit error.
+  GOAL-driven `htsim_dcqcn_atlahs` comparator is also available. Only the
+  Slingshot-like profile `rnic-ss` remains a profile-wiring follow-up
+  (HTSIM-1 in [modules/backends.md](modules/backends.md)); the factory rejects
+  it with an explicit error.
 - **LogGOPSim** (flow-level, fast): same GOAL input, LogGOP cost model;
   useful for quick sweeps before packet-level runs.
 

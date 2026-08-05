@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field
@@ -24,6 +25,7 @@ RNIC_PROFILES = ("rnic-nn", "rnic-nn-fluid", "rnic-cn")
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_BUILD_BINARY = _REPO_ROOT / "build" / "htsim" / "datacenter" / "htsim_rnic"
+_GOAL_FINISH_RE = re.compile(r"^Maximum finishing time at host \d+: (\d+)(?:\s|$)")
 
 
 def find_htsim_rnic() -> Path | None:
@@ -73,7 +75,11 @@ def build_htsim_rnic_command(binary: Path, cfg: HtsimRnicConfig) -> list[str]:
 
 @dataclass(frozen=True)
 class FlowCompletion:
-    """One row of the completion CSV."""
+    """One WQE-level row of the completion CSV.
+
+    Queue and transport fields are optional so old backend outputs remain
+    readable. New HTSIM outputs append them after the stable flow prefix.
+    """
 
     profile: str
     flow_id: int
@@ -84,6 +90,16 @@ class FlowCompletion:
     start_time_ps: int
     completion_time_ps: int
     fct_ps: int
+    wqe_id: int | None = None
+    sq_id: int | None = None
+    rq_id: int | None = None
+    cq_id: int | None = None
+    sq_post_sequence: int | None = None
+    sq_dispatch_sequence: int | None = None
+    cq_post_sequence: int | None = None
+    cq_consume_sequence: int | None = None
+    transport_kind: str | None = None
+    transport_object_id: int | None = None
 
 
 @dataclass
@@ -91,15 +107,34 @@ class RnicRunResult:
     flows: list[FlowCompletion]
     manifest: list[str]
     quiescent: bool
+    goal_completion_time_ps: int | None = None
 
     def job_completion_time_ps(self) -> int:
-        """Completion of the last flow: the JCT of a schedule released at 0."""
-        if not self.flows:
-            raise ValueError("run produced no flows")
-        return max(f.completion_time_ps for f in self.flows)
+        """Completion of all represented schedule work released at time zero."""
+        candidates = [flow.completion_time_ps for flow in self.flows]
+        if self.goal_completion_time_ps is not None:
+            candidates.append(self.goal_completion_time_ps)
+        if candidates:
+            return max(candidates)
+        raise ValueError("run produced neither flows nor a GOAL completion time")
+
+
+def _parse_goal_completion_time_ps(stdout: str) -> int | None:
+    """Parse LogGOPSim's whole-nanosecond schedule completion summary."""
+
+    finishing_ns = [
+        int(match.group(1))
+        for line in stdout.splitlines()
+        if (match := _GOAL_FINISH_RE.match(line)) is not None
+    ]
+    return max(finishing_ns) * 1000 if finishing_ns else None
 
 
 def parse_completion_csv(path: str | Path) -> list[FlowCompletion]:
+    def optional_int(row: dict[str, str], field_name: str) -> int | None:
+        value = row.get(field_name)
+        return None if value in (None, "") else int(value)
+
     flows = []
     with open(path, newline="") as handle:
         for row in csv.DictReader(handle):
@@ -113,6 +148,16 @@ def parse_completion_csv(path: str | Path) -> list[FlowCompletion]:
                 start_time_ps=int(row["start_time_ps"]),
                 completion_time_ps=int(row["completion_time_ps"]),
                 fct_ps=int(row["fct_ps"]),
+                wqe_id=optional_int(row, "wqe_id"),
+                sq_id=optional_int(row, "sq_id"),
+                rq_id=optional_int(row, "rq_id"),
+                cq_id=optional_int(row, "cq_id"),
+                sq_post_sequence=optional_int(row, "sq_post_sequence"),
+                sq_dispatch_sequence=optional_int(row, "sq_dispatch_sequence"),
+                cq_post_sequence=optional_int(row, "cq_post_sequence"),
+                cq_consume_sequence=optional_int(row, "cq_consume_sequence"),
+                transport_kind=row.get("transport_kind") or None,
+                transport_object_id=optional_int(row, "transport_object_id"),
             ))
     return flows
 
@@ -142,4 +187,9 @@ def run_htsim_rnic(cfg: HtsimRnicConfig, binary: Path | None = None,
         if cfg.completion_csv is not None and Path(cfg.completion_csv).is_file()
         else []
     )
-    return RnicRunResult(flows=flows, manifest=manifest, quiescent=quiescent)
+    return RnicRunResult(
+        flows=flows,
+        manifest=manifest,
+        quiescent=quiescent,
+        goal_completion_time_ps=_parse_goal_completion_time_ps(result.stdout),
+    )

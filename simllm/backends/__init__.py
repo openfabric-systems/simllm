@@ -18,6 +18,7 @@ from simllm.backends.htsim_rnic import (
     parse_completion_csv,
     run_htsim_rnic,
 )
+from simllm.backends.step_lowerer import SerialStepLowerer, SerialStepLowererConfig
 from simllm.backends.step_sink import (
     HtsimStepSink,
     HtsimStepSinkConfig,
@@ -34,6 +35,8 @@ __all__ = [
     "HtsimUecConfig",
     "NormalizedFct",
     "RnicRunResult",
+    "SerialStepLowerer",
+    "SerialStepLowererConfig",
     "StepNetworkOutcome",
     "build_htsim_dcqcn_command",
     "build_htsim_rnic_command",

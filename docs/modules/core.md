@@ -24,23 +24,46 @@ own modules.
 
 ### Execution and completion boundary
 
-`simllm.core.execution` reserves three versioned contracts:
+`simllm.core` publishes four versioned contracts:
 
 - `simllm-execution-graph-v1`: an immutable `ExecutionGraph` containing an
   ordered tuple of `ExecutionOperation` nodes. Tuple order is FIFO submission
-  order within each `logical_queue`; `depends_on` supplies cross-queue
-  start-after-completion edges. Operations in different queues with no path
-  between them are legally allowed to overlap. `completion_operation_ids`
+  order within each `logical_queue`; `depends_on` supplies whole-operation
+  cross-queue edges. The separate `participant_local_depends_on` tuple lets
+  each rank of a distributed command wait for the predecessor frontier on that
+  same rank. A node may carry both edge kinds, so a local arrival cannot weaken
+  an independent whole-operation barrier. Operations in different queues with
+  no path between them are legally allowed to overlap.
+  `completion_operation_ids`
   names the logical boundary that releases the framework; an empty tuple means
   every operation, while an explicit subset permits background asynchronous
   work to remain in the stateful runtime.
 - `simllm-completion-event-v1`: a timestamped `CompletionEvent` at submitted,
   queued, started, progress or completed phase, optionally attributed to one
-  concrete `ResourceRef`.
+  concrete `ResourceRef`. `subject_object_id` identifies the WQE or other
+  created object when one operation expands into several runtime objects.
 - `simllm-execution-result-v1`: an `ExecutionResult` containing the graph
   completion time and its ordered completion-event stream. A separate optional
   quiescence time distinguishes framework-visible completion from all physical
   work draining.
+- `simllm-request-bookkeeping-v1`: an append-only `BookkeepingLedger` of
+  request-stage transitions, created-object records and the same
+  `CompletionEvent` objects returned by the runtime. `RequestBookkeeper`
+  assigns sequence numbers, validates lineage, registers a graph without
+  mutating it, and queries by request, execution or object ancestry.
+
+Created objects use typed portable identities and opaque owner-native handles:
+framework request and vRAM allocation, execution operation, NCCL command,
+SQ/RQ/CQ, network WQE, and either a DCQCN QP or an `rnic-cn` directed L2 link
+pair. A WQE must name exactly one SQ, RQ and CQ. Physical WQEs name exactly one
+QP or link pair; topology-free null profiles instead record
+`transport_kind=none`. Packet objects are intentionally absent. Framework
+pointers remain strings owned by the adapter; the core records them but never
+interprets or dereferences them. Reusable vRAM, queue, QP and link-pair records
+retain their creation scope but may be referenced by later steps and
+executions. Each use carries its own scope. Causal object lineage may narrow a
+batched request set, but cannot introduce a request absent from its causal
+parents.
 
 The graph carries five typed work payloads rather than one unstructured
 dictionary:
@@ -53,10 +76,17 @@ dictionary:
 | `CollectiveWork` | Framework/NCCL observation plus traffic planner | NCCL channels, DMA/HBM work, WQEs and network flows |
 | `ControlWork` | Framework or runtime controller | synchronous or asynchronous high-priority local/fabric control path |
 
-`ExecutionLowerer` and `DeviceRuntime` are protocols only. No lowerer,
-resource scheduler or serializer is installed yet. Current adapters continue
-to use the existing `StepRecord -> StepResult | None` sink unchanged. This
-keeps the new boundary inert until CORE-2 through CORE-5 are validated.
+`ExecutionLowerer` and `DeviceRuntime` remain narrow protocols.
+`SerialStepLowerer` implements the diagnostic compatibility schedule and
+`render_serial_execution_graph_goal` replays its supported subset using only
+the JSON-round-tripped graph. The lowerer places distributed sequencing in
+`participant_local_depends_on`; the renderer rejects operation-scoped
+cross-rank barriers instead of weakening them. The backend driver's GOAL
+completion summary participates in schedule JCT even when earlier WQE rows
+exist, so compute-only TP=1 graphs and graphs with trailing compute are both
+covered. A runtime can receive an optional central bookkeeper; the coarse
+resource scheduler itself remains CORE-4. Current adapters continue to use the existing
+`StepRecord -> StepResult | None` sink until their observation producers land.
 
 Nothing in this package may import vLLM or SGLang.
 
@@ -66,6 +96,7 @@ Nothing in this package may import vLLM or SGLang.
 workload
   -> framework scheduler and KV control plane
   -> StepRecord plus adapter observations
+       \-> request stages + opaque vRAM refs -> RequestBookkeeper
   -> ExecutionLowerer
        compute estimates + KV events + stream/dependency order
   -> ExecutionGraph v1
@@ -75,6 +106,7 @@ workload
                           -> NCCL channels -> per-GPU/QP WQE queues
                           -> one shared NIC per node -> network backend
   -> CompletionEvent v1
+       \-> operation + WQE subject -> RequestBookkeeper
   -> StepResult, virtual clock and TTFT/TPOT attribution
   -> framework scheduler
 ```
@@ -110,15 +142,35 @@ tested; CORE-1 closed with M1. The step-record JSON readers landed with the
 M4 first slice, which also exercised the step schema for real: recorded M2/M3
 smoke JSONLs load, round-trip and replay through `HtsimStepSink`.
 
-The execution slice currently contains only passive typed records, reserved
-schema names and the `ExecutionLowerer`/`DeviceRuntime` protocols. It changes
-no current timing path. This is deliberate: the SASS pipeline, explicit KV
-lifecycle, resource runtime and overlap arrive in that dependency order.
+CORE-2 is complete. Graph structural and payload validation includes implicit
+FIFO edges, strict JSON readers and writers cover all five work kinds, and the
+serial compatibility lowerer retains per-layer request correlation, queues,
+dependencies and collective semantics. The independent central ledger and its
+JSON form retain opaque framework objects and WQE-level runtime lineage without
+making the graph mutable. Its lineage rules distinguish causal parents from
+reusable resource references, allow batched request scopes to split, and reject
+request identities not supplied by a causal parent.
+
+The pre-registered
+[CORE-2 lowering study](../../examples/core2_lowering/RESULTS.md) compared the
+legacy sink, graph-only JSON replay and a frozen closed form over TP width
+`{2, 4}` and link rate `{200, 400}` Gbit/s. All four JCTs matched to 0 ps,
+full completion rows were identical, and the MoE sentinel matched
+25,811,524 ps with 48 flows. The HTSIM WQE identity layer was then checked
+against the same frozen values; its post/dispatch and immediate-CQ accounting
+adds no packet timing behavior. The core ledger invariants and backend CSV
+rows are separately validated surfaces. CORE-4 owns their concrete
+graph-operation/tag/WQE correlation.
+
+Actual framework observation producers remain VLLM-11/12 and SGL-9/10.
+Explicit KV state semantics remain CORE-3; physical queue arbitration and
+creation of NCCL, SQ/RQ/CQ, WQE and transport records remain CORE-4; completion
+reduction and tail attribution remain CORE-5.
 
 ## Pre-registered runtime sanity experiments
 
-These expectations are recorded before CORE-4 implements scheduling. The
-contract-only slice cannot produce the measurements yet.
+These expectations are recorded before CORE-4 implements scheduling. CORE-2
+does not claim to produce these resource-contention measurements.
 
 1. **Dependency versus legal overlap.** Release one compute operation of C
    picoseconds and one DMA operation of D picoseconds on independent logical
@@ -142,11 +194,6 @@ contract-only slice cannot produce the measurements yet.
 
 ## Open tasks
 
-- CORE-2: implement `ExecutionLowerer`, graph validation and JSON round trips.
-  Lower one `StepRecord` plus adapter observations into per-layer compute,
-  KV, DMA, collective and control nodes while preserving framework stream
-  order and dependencies. The current `HtsimStepSink` remains the diagnostic
-  compatibility path until graph replay reproduces its serial closed forms.
 - CORE-3: implement explicit KV lifecycle accounting before resource
   contention. Consume adapter observations for RESERVE, ALLOCATE,
   BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
@@ -166,7 +213,12 @@ contract-only slice cannot produce the measurements yet.
   arbiter/serializer, completion queue and high-priority control queue. Start
   with the fixed eight-GPU, one-NIC node above. Keep every resource policy
   replaceable so a later GPU scheduler can add SM/block detail without a new
-  graph contract. Run and defend all pre-registered experiments above.
+  graph contract. Append concrete NCCL command, SQ/RQ/CQ, WQE and QP/link-pair
+  records to `RequestBookkeeper`; CQ is initially consumed immediately at the
+  WQE completion timestamp and RQ stays an identity-only placeholder. Preserve
+  graph operation identity through collective expansion and rendered GOAL tags
+  so backend WQE rows correlate without inference. Run and defend all
+  pre-registered experiments above.
 - CORE-5: implement completion feedback and tail attribution. Stream queue,
   start, progress and completion events, reduce the required completion
   boundary to `StepResult`, advance `VirtualClock`, and export per-request
@@ -176,5 +228,6 @@ contract-only slice cannot produce the measurements yet.
 - BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
   process for closed loop, replacing per-step subprocess spawns. Its
   incremental flow-injection transport should carry `ExecutionGraph` and
-  `CompletionEvent` once CORE-2/5 land. The M4 diagnostic mode currently pays
+  `CompletionEvent` and bookkeeping facts once CORE-5 lands. The M4 diagnostic
+  mode currently pays
   about 8 seconds of process/parse overhead per live tp=8 step.
