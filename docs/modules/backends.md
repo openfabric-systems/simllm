@@ -115,5 +115,19 @@ loop, every step latency matching the closed form to 0 ps
 - HTSIM-2: goodput/state/queue trace flags for `rnic-cn`; they need trace
   hooks in the reviewed runtime first.
 - HTSIM-4: GOAL parser hardening and the checked-in `txt2bin` build target.
+- HTSIM-5: per-WQE starting behavior for the DCQCN comparator (maintainer
+  direction 2026-08-05): a fixed WQE initiation latency and per-QP DCQCN
+  rate state shared by WQEs of one source-destination pair, plus
+  pipelined WQE queues, calibrated against the message-size-vs-bandwidth
+  anchors and candidate parameter sets in
+  [docs/papers/msg-size-vs-bandwidth.md](../papers/msg-size-vs-bandwidth.md)
+  (UCCL Fig. 14/15a, the 256 KB half-rate datum, DCQCN paper and vendor
+  timer sets). Acceptance bars recorded there.
+- HTSIM-6: rnic-cn WQE-queue lookahead (maintainer design 2026-08-05): a
+  WQE toward an established link-table destination does not wait when the
+  granted bandwidth suffices, and the endpoint pre-declares one RTT ahead
+  for queued WQEs of the same destination, hiding later WQEs' declare
+  latency. Design and expected effects in the same doc; belongs in the
+  htsim algorithm book alongside the bootstrap control slots.
 - ATLAHS-1: correct the vendored-fallback wording (the vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.
