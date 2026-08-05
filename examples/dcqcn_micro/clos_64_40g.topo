@@ -1,0 +1,19 @@
+Nodes 64
+Tiers 2
+Podsize 64
+
+# Eight leaf switches, each with eight directly attached RNIC nodes and one
+# 40-Gbit/s uplink to each of the eight spine switches.
+Tier 0
+Downlink_speed_Gbps 40
+Radix_Down 8
+Radix_Up 8
+Downlink_Latency_ns 1000
+Switch_Latency_ns 0
+
+# Eight spine switches, each with one 40-Gbit/s link to every leaf.
+Tier 1
+Downlink_speed_Gbps 40
+Radix_Down 8
+Downlink_Latency_ns 1000
+Switch_Latency_ns 0
