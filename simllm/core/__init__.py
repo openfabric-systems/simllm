@@ -1,9 +1,32 @@
-"""Framework-agnostic core: virtual clock, step records, compute-cost model.
+"""Framework-agnostic core: clock, step records and execution contracts.
 
 Nothing in this package may import vLLM or SGLang.
 """
 
 from simllm.core.clock import VirtualClock
+from simllm.core.execution import (
+    COMPLETION_EVENT_SCHEMA,
+    EXECUTION_GRAPH_SCHEMA,
+    EXECUTION_RESULT_SCHEMA,
+    CollectiveWork,
+    CompletionEvent,
+    CompletionHandler,
+    ComputeWork,
+    ControlMode,
+    ControlWork,
+    DeviceRuntime,
+    DmaWork,
+    EventPhase,
+    ExecutionGraph,
+    ExecutionLowerer,
+    ExecutionOperation,
+    ExecutionResult,
+    KvCacheAction,
+    KvCacheWork,
+    ResourceKind,
+    ResourceRef,
+    WorkPayload,
+)
 from simllm.core.step import (
     RESULT_SCHEMA,
     STEP_SCHEMA,
@@ -20,14 +43,35 @@ from simllm.core.step import (
 )
 
 __all__ = [
+    "COMPLETION_EVENT_SCHEMA",
+    "EXECUTION_GRAPH_SCHEMA",
+    "EXECUTION_RESULT_SCHEMA",
     "RESULT_SCHEMA",
     "STEP_SCHEMA",
+    "CollectiveWork",
+    "CompletionEvent",
+    "CompletionHandler",
+    "ComputeWork",
+    "ControlMode",
+    "ControlWork",
+    "DeviceRuntime",
+    "DmaWork",
+    "EventPhase",
+    "ExecutionGraph",
+    "ExecutionLowerer",
+    "ExecutionOperation",
+    "ExecutionResult",
+    "KvCacheAction",
+    "KvCacheWork",
     "RequestPhase",
+    "ResourceKind",
+    "ResourceRef",
     "ScheduledRequest",
     "StepRecord",
     "StepRecordStream",
     "StepResult",
     "VirtualClock",
+    "WorkPayload",
     "step_record_from_json",
     "step_record_to_json",
     "step_records_from_jsonl",

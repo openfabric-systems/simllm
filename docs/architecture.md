@@ -117,9 +117,84 @@ assignment mirrors the htsim RNIC drivers' `-goal_rank_mapping` option:
 `gpu-rank` (one GOAL rank per GPU) or `unique-nic` (one per NIC; intra-node
 transfers stay off the fabric).
 
+General fabric discovery is not on the critical path for the first execution
+runtime. That profile fixes each node at eight GPUs and one shared 400G NIC:
+one logical WQE submission queue or QP per GPU feeds one physical NIC arbiter
+and serializer, while intra-node traffic uses an NVLink-class resource. This
+retains the queue structure needed for head-of-line blocking, fairness and
+control priority without first solving arbitrary GPU-to-NIC inventory.
+
+### Execution and resource boundary (`simllm/core/execution.py`)
+
+`StepRecord` deliberately stays small: it records the scheduler's semantic
+batch decision, not a guessed GPU timeline. A framework-independent
+`ExecutionLowerer` combines that record with adapter observations and emits
+`simllm-execution-graph-v1`:
+
+```text
+framework scheduler and KV control plane
+  -> StepRecord + KV events + captured stream/event schedule
+  -> ExecutionLowerer + ComputeProvider
+  -> ExecutionGraph
+       ComputeWork | KvCacheWork | DmaWork | CollectiveWork | ControlWork
+  -> DeviceRuntime
+       host launch queue
+       logical CUDA streams and event dependencies
+       GPU work queue, coarse hardware scheduler and HBM queue
+       directional copy engines and DMA descriptors
+       NCCL channels and per-GPU/QP WQE queues
+       one shared NIC arbiter and serializer per node
+       completion and high-priority control queues
+  -> CompletionEvent stream
+  -> StepResult + virtual-time metrics + next framework decision
+```
+
+The graph records FIFO submission order within each logical queue and
+explicit start-after-completion dependencies across queues. Two nodes on
+different queues with no dependency are legally concurrent, but that is not
+a promise that they overlap in time. The `DeviceRuntime` maps ready work onto
+physical queues and resources; overlap emerges from resource availability and
+contention. The framework never supplies an overlap percentage, and compute,
+traffic or network providers never rewrite framework ordering.
+
+`completion_operation_ids` separates the framework-visible boundary from
+physical quiescence. An empty tuple means all graph operations must complete.
+An explicit subset lets asynchronous DMA, collective or control work remain in
+the stateful runtime when the next framework step is released. The result
+records both the boundary time and, when reached, the physical-quiescence time;
+later events retain their original execution and operation IDs.
+
+Typed payloads preserve replaceable fidelity boundaries:
+
+- `ComputeWork` carries kernel identity, shape, flops, HBM demand and the
+  selected provider's nominal service estimate. A measured table, calibrated
+  SASS table or future GPU scheduler can price the same node.
+- `KvCacheWork` carries explicit allocation, prefix, access, retention,
+  eviction, movement and recompute decisions made by the real framework.
+  Physical KV reads/writes lower to HBM operations; swap and remote movement
+  lower to DMA plus network work; recompute lowers to compute plus a KV write.
+- `DmaWork` is a data-mover descriptor independent of a particular copy
+  engine. The runtime selects and contends engines.
+- `CollectiveWork` is semantic. The traffic/NCCL planner selects algorithms,
+  chunks and channels before WQEs reach the network backend.
+- `ControlWork` records local or in-band messages and their synchronous or
+  asynchronous semantics. Control priority is a runtime policy and remains
+  visible in completion events.
+
+`simllm-completion-event-v1` records submitted, queued, started, progress and
+completed timestamps with the selected resource. This is the accounting
+surface for queue delay, compute service, HBM wait, DMA/copy delay, collective
+progress, WQE/NIC delay and control completion. `simllm-execution-result-v1`
+reduces a graph to its completion boundary while retaining those events for
+tail-latency attribution.
+
 ### Core (`simllm/core/`, `simllm/compute/`, `simllm/traffic/`, `simllm/goal/`)
 
 - **Virtual clock**: orders request arrivals and step completions.
+- **Execution contracts** (`simllm/core/execution.py`): the passive,
+  versioned graph and completion records above, plus `ExecutionLowerer` and
+  `DeviceRuntime` protocols. The initial contract is inert; CORE-2 through
+  CORE-5 implement lowering, KV lifecycle, resources and feedback in order.
 - **Compute-time providers** (`simllm/compute/`): the duration of every
   GOAL `calc` node comes from a pluggable `ComputeProvider`:
   `ProfileTableProvider` (measured (kernel, config, GPU) duration tables
@@ -243,3 +318,14 @@ topology, calibration profile, seeds) and be checked against real captures
 where available: single-node runs for compute-model calibration, multi-node
 NCCL traces (via the ATLAHS capture pipeline) for network-model validation,
 with error bounds reported per metric.
+
+Accuracy validation advances only after calibrated compute and the resource
+runtime are available. Use identical framework commit, model, parallelism,
+request trace, seed and warm-up policy in simulation and silicon. Progress
+through single-GPU compute, eight-GPU intra-node, two-node shared-NIC,
+offered-load sweeps, KV pressure, chunked prefill/preemption or retraction,
+then mixed and bursty workloads. Report p50, p90, p99 and p99.9 TTFT/TPOT,
+with residuals attributed to request queues, KV state, kernel service, HBM,
+DMA, collectives, WQEs/NIC, flow completions and control delivery. Fit only
+the early calibration cases; later cases remain held out. The largest
+attributed held-out residual selects the next fidelity improvement.

@@ -63,19 +63,41 @@ examples/m5 studies together with the MoE traffic mapping
 
 Strictly offline; the step loop never invokes a cycle-level simulator.
 
-- Simulator: Accel-Sim v1.3.0 in SASS trace-driven mode over GPGPU-Sim
-  4.x. Tracing with NVBit 1.8 (CUDA 13 headers; SM_110 support and the
-  TMA alpha are needed for Hopper/Blackwell-generation kernels).
-- Pipeline per kernel family (the `step_kernels` families): write a
-  microbenchmark that launches the family's kernels over a sweep of
-  shapes (the family's config axes), trace it on a real GPU with NVBit,
-  replay the traces on a validated Accel-Sim config (A100;
-  opportunistically H100 if cluster hours materialize), and tabulate the
-  simulated durations into a `simllm-profile-table-v1` artifact
-  (`source="accel-sim"`, simulator version in provenance).
-- Validation is pre-registered three ways before any table is trusted:
-  roofline estimate vs simulator vs silicon measurement on the shapes
-  where all three exist, with error bounds reported per family.
+- Use a hybrid measured plus SASS pipeline. Raw cycle-simulator output is
+  never treated as silicon truth. Pin a support envelope for every table:
+  framework and commit, model, GPU architecture, CUDA/toolchain, dtype and
+  quantization, eager or CUDA-graph mode, kernel implementation, tensor
+  parallel width, batch/new-token/context shapes, KV dtype and MoE shape.
+  Unsupported combinations miss loudly rather than borrowing a precise-
+  looking number.
+- Capture the exact production run first. Nsight/CUPTI metadata records
+  kernel identity, launch order, streams, shapes and silicon durations;
+  NVBit supplies the SASS traces required by Accel-Sim. Key table entries
+  by kernel binary/hash plus the semantic shape, not by a family label alone,
+  so a framework or compiler kernel change invalidates the correct entries.
+- Build one replayable microbenchmark per captured kernel implementation.
+  It must reproduce launch parameters, tensor layout, dtype, workspace,
+  stream/graph mode and relevant cache state. Sweep the captured shape axes,
+  not synthetic square GEMMs that the real framework never launches.
+- Replay traces offline with a pinned Accel-Sim/GPGPU-Sim configuration on
+  hardware that the simulator supports. Fit and report calibration residuals
+  against silicon using train shapes, then evaluate held-out shapes. Launch
+  overhead, host delay and queueing are measured separately from kernel
+  service, so the SASS table cannot hide a missing runtime queue.
+- Populate `simllm-profile-table-v1` with capture hash, kernel hash, GPU,
+  tool versions, shape, measured samples, simulated cycles, calibrated
+  duration, uncertainty, calibration split and creation date. Tables are
+  immutable artifacts; changing any identity field produces a new entry.
+- Initial acceptance bars, to be tightened from evidence: 100 percent kernel
+  identity coverage for the supported run; measured coefficient of variation
+  below 2 percent for controlled microbenchmarks; held-out per-kernel median
+  absolute percentage error below 10 percent and p95 below 20 percent;
+  per-phase median below 5 percent and p95 below 10 percent; compute-only
+  step error below 5 percent. Every miss is reported, never averaged away.
+- Simulator starting point: Accel-Sim v1.3.0 in SASS trace-driven mode over
+  GPGPU-Sim 4.x with a compatible NVBit tracer. Tool versions remain pinned
+  per artifact because modern framework kernels and GPU architectures may
+  require newer support than this starting point provides.
 - B100: no validated Accel-Sim config exists. The per-family
   efficiency-versus-shape surface measured on the validated GPU is
   transferred onto the B100 roofline roofs (peak flops and HBM bandwidth
@@ -115,3 +137,8 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   rank) ULP effects could mask a real mismatch even though the integer
   identity is exact. Assert the sums in the integer domain when such
   shapes enter scope (audit note, examples/m5/RESULTS.md).
+- COMP-9: extend `DurationEstimate` and profile artifacts from one nominal
+  value plus uncertainty to a measured or fitted service-time distribution
+  with declared sample count and quantiles. CORE-5 needs this before claiming
+  kernel-level p99 or p99.9 tail accuracy; deterministic means remain valid
+  for closed-form sanity studies.

@@ -122,12 +122,20 @@ sink seam is the same contract but has not driven htsim live yet (SGL-8).
 - SGL-4 (remaining half): a paced-mode run checked against SGLang's own
   wall-clock metrics, a workload that actually exercises radix hits
   (repeated shared prefixes) and retraction under KV pressure, and a
-  `launch_server` (HTTP) run in addition to the offline `Engine` smoke.
+  `launch_server` (HTTP) run in addition to the offline `Engine` smoke. Run
+  after the calibrated compute table and CORE-3/4/5, using the same commit,
+  model, parallel configuration, request trace, seed and warm-up policy on
+  silicon and in simulation. Stage single-GPU compute, eight-GPU intra-node,
+  two-node shared-NIC, offered-load, KV-pressure, chunked/retraction and
+  mixed/bursty cases. Report p50 through p99.9 TTFT/TPOT and attributed queue,
+  KV, kernel, collective, DMA, WQE/NIC, flow and control residuals. Calibrate
+  early stages and reserve later stages as holdouts.
 - SGL-5: logprobs, speculative decoding and the dLLM/hybrid modes are
   refused or unreachable rather than fabricated.
 - SGL-6: overlap-schedule support (the scheduler-side dual-stream loop with
   its result queue; needs delayed-sample semantics in the fabricated
-  result).
+  result). Its observed host-side order and completion waits lower to graph
+  dependencies; device overlap itself remains owned by CORE-4/TRAF-7.
 - SGL-7: mamba/hybrid-attention models need the auxiliary-state pool the
   stub does not build; the stub currently builds a plain `ReqToTokenPool`
   only.
@@ -135,6 +143,17 @@ sink seam is the same contract but has not driven htsim live yet (SGL-8).
   `configure(step_sink=...)` on the CPU-engine smoke path, mirroring the
   vLLM tp=8 run of examples/m4 (the M4 slice covered this adapter by
   JSONL replay only).
+- SGL-9: observe RadixCache, token-pool and request-pool lifecycle events for
+  CORE-3 without replacing SGLang's policy. Emit stable pool/block/request
+  IDs, token intervals, layer/dtype/bytes, epoch, reference count, cause and
+  correlation ID for allocation, prefix bind/touch, reads/writes,
+  release/free, eviction, transfer and retraction-driven recompute. The
+  dedicated KV study compares these actual decisions with VLLM-11.
+- SGL-10: capture and replay the supported model runner's CUDA stream/event,
+  kernel and NCCL schedule as an `ExecutionGraph` template keyed by the same
+  identity envelope as its compute table. Bind batch shapes, radix events and
+  overlap-scheduler dependencies at runtime; never infer device concurrency
+  from a single elapsed phase duration.
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
 worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin

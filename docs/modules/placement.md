@@ -47,9 +47,17 @@ selection are design-only.
 
 ## Open tasks
 
-- PLACE-1: fabric topology schema contents and NIC selection in the mapper
-  (milestone M4), sourcing intra-node structure from NCCL topology dumps.
-- PLACE-2: `unique-nic` GOAL-rank mapping (depends on PLACE-1).
+- PLACE-1: fabric topology schema contents and general NIC selection in the
+  mapper, sourcing intra-node structure from NCCL topology dumps. This is
+  explicitly deferred until after CORE-4 validates the first fixed resource
+  profile: eight GPUs per node, one WQE submission queue or QP per GPU, all
+  eight feeding one shared 400G NIC, with intra-node transfers on an
+  NVLink-class path. The fixed profile does not need general inventory
+  discovery.
+- PLACE-2: `unique-nic` GOAL-rank mapping (depends on PLACE-1). Also deferred
+  behind the fixed eight-GPU, one-NIC profile; that profile still preserves
+  separate per-GPU/QP queues before the shared physical NIC rather than
+  collapsing them into one FIFO.
 - PLACE-3: expert-parallel group memberships and declared expert ownership
   in `declared_manifest`. The builder emits tp/pp/dp groups only, so the
   M5 MoE studies pass an explicit `ep_ranks` list to `HtsimStepSink`

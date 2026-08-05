@@ -65,15 +65,25 @@ workloads for the AGI era) and welcomes community contributions.
 ## Architecture
 
 ```
-   Workload Generator ──► Framework Frontend ──► SimLLM Core ──► Network Backend
-   arrivals, lengths,     vLLM  : SimExecutor    virtual clock,   ATLAHS GOAL →
-   prefix structure       SGLang: SimTpModel-    compute model,   htsim (packet-level
-                                  Worker
-   (queueing model)       real scheduler +       DAG → GOAL       RNIC + switch models)
-                          KV/prefix cache        emission              │
-        ▲                                                              │
-        └───────────── completion times feed back (closed loop) ◄──────┘
+Workload -> framework scheduler -> StepRecord + framework observations
+                  ^                            |
+                  |                            v
+       TTFT/TPOT + virtual clock <- CompletionEvent <- DeviceRuntime
+                                                    ^        |
+                                                    |        v
+                                      ExecutionGraph v1 -> GPU/HBM/DMA/NCCL/NIC
 ```
+
+`StepRecord` remains the compact record of what the real framework chose.
+An `ExecutionLowerer` expands it, together with observed KV lifecycle and
+stream ordering, into a versioned `ExecutionGraph`. Graph dependencies and
+logical submission queues state which operations are legally allowed to
+overlap. They do not predict an overlap percentage. A `DeviceRuntime`
+decides what actually overlaps after launch, GPU, HBM, copy-engine, DMA,
+NCCL-channel and NIC contention, then returns timestamped
+`CompletionEvent` records for latency attribution. Compute providers,
+including the planned calibrated SASS tables, plug into lowering without
+changing this control-plane boundary.
 
 Two coupling modes:
 
@@ -93,6 +103,15 @@ experts) and a **fabric topology manifest** (GPU to PCIe/NVLink to NIC to
 switch to links), via the mapper, and every communication event is resolved
 through both.
 
+The first resource-runtime profile deliberately fixes each node at eight
+GPUs sharing one 400G NIC. Every GPU has its own logical WQE submission
+queue or QP, and all eight feed one shared physical NIC arbiter and
+serializer. Intra-node transfers use an NVLink-class path. General fabric
+manifest discovery and arbitrary GPU-to-NIC selection remain deferred until
+this fixed profile is validated; the per-GPU queues must not be collapsed
+into one FIFO because head-of-line blocking, fairness and control priority
+are tail-latency mechanisms.
+
 Host-side effects are deliberately out of the default model: the inter-rank
 doorbell (the small packet that releases the next rank) is simulated
 in-band as a high-priority control message on the fabric, while the host
@@ -107,7 +126,7 @@ status and numbered open tasks; the README stays a map.
 
 | Module | Purpose | Doc |
 |---|---|---|
-| `simllm/core` | Virtual clock, scheduler-step records, closed-loop wire schemas | [core](docs/modules/core.md) |
+| `simllm/core` | Virtual clock, scheduler-step records, execution graphs, completion contracts | [core](docs/modules/core.md) |
 | `simllm/workload` | Arrival processes, length distributions, shared-prefix structure | [workload](docs/modules/workload.md) |
 | `simllm/compute` | Pluggable compute-time providers + host initiation model | [compute](docs/modules/compute.md) |
 | `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
@@ -210,8 +229,9 @@ above is the reference.
   through `htsim_rnic` (diagnostic per-step mode), a live vLLM tp=8 run
   closed the loop with 0 ps residual against pre-registered closed forms
   ([examples/m4](examples/m4/RESULTS.md)). Remaining: the persistent
-  co-simulator (BRIDGE-1), fabric manifest + NIC selection (PLACE-1/2),
-  and calibration against real captures.
+  co-simulator (BRIDGE-1), the execution/resource runtime (CORE-2 through
+  CORE-5), and calibration against real captures. General fabric manifests
+  (PLACE-1/2) are deferred behind the fixed eight-GPU, one-NIC node profile.
 - [ ] M5 (in progress): all-to-all traffic studies (MoE expert-parallel)
   with the focus on SASS-level (Accel-Sim/GPGPU-Sim) offline calibration
   of the compute model (the calibration plan is recorded in
@@ -225,7 +245,8 @@ above is the reference.
 Open tasks are tracked in each module's doc with stable numbered IDs
 (`PREFIX-N`, e.g. `PLACE-1`, `HTSIM-2`); an ID is added in the change that
 defers the work and closed by the change that completes it, never renumbered.
-This section is only the index:
+The module list is only the index; the cross-module priority sequence follows
+it:
 
 - [core](docs/modules/core.md): CORE-*, plus BRIDGE-* inherited from the
   folded bridge module
@@ -238,6 +259,45 @@ This section is only the index:
   follow-ups HTSIM-* and ATLAHS-*
 - [adapters-vllm](docs/modules/adapters-vllm.md): VLLM-*
 - [adapters-sglang](docs/modules/adapters-sglang.md): SGL-*
+
+### Approved execution-fidelity order
+
+The implementation order is architectural, not just a feature ranking.
+Each stage supplies the evidence needed to calibrate the next one:
+
+1. **Execution and completion boundary:** the contract is now reserved as
+   `simllm-execution-graph-v1`, `simllm-completion-event-v1` and
+   `simllm-execution-result-v1`. Implement step lowering and wire-format
+   round trips under [CORE-2](docs/modules/core.md#open-tasks), with actual
+   device schedule capture owned by
+   [VLLM-12](docs/modules/adapters-vllm.md#open-tasks) and
+   [SGL-10](docs/modules/adapters-sglang.md#open-tasks).
+2. **Hybrid measured plus SASS compute:** complete per-invocation shapes,
+   capture real framework kernels, calibrate offline SASS replay against
+   silicon, and populate provenance-carrying tables under
+   [COMP-1, COMP-5 and COMP-6](docs/modules/compute.md#open-tasks).
+3. **Explicit KV lifecycle:** capture allocation, prefix binding, reads,
+   writes, retention, release, eviction, swap, transfer and recompute under
+   [CORE-3](docs/modules/core.md#open-tasks),
+   [VLLM-11](docs/modules/adapters-vllm.md#open-tasks) and
+   [SGL-9](docs/modules/adapters-sglang.md#open-tasks). Validate the two
+   framework strategies in the dedicated `examples/kv_cache_strategies/`
+   study before coupling KV bytes to resource contention.
+4. **Resource queues and data movement:** model launch and CUDA-stream
+   queues, GPU work and hardware scheduling, HBM, directional copy engines,
+   DMA descriptors, NCCL channels, per-GPU/QP WQE queues, the shared NIC,
+   completion queues and a high-priority control queue under
+   [CORE-4](docs/modules/core.md#open-tasks).
+5. **Dependency-driven overlap:** replace the serial step chain only after
+   KV and resource queues exist. Framework lowering declares dependencies;
+   runtime arbitration determines realized overlap under
+   [TRAF-7](docs/modules/traffic.md#open-tasks).
+6. **Paced comparison and residual closure:** compare p50 through p99.9
+   TTFT/TPOT with real vLLM and SGLang in increasing-complexity stages,
+   then select the next model from queue-, KV-, kernel-, DMA-, collective-
+   and network-attributed residuals. This closes
+   [VLLM-4](docs/modules/adapters-vllm.md#open-tasks) and
+   [SGL-4](docs/modules/adapters-sglang.md#open-tasks).
 
 ## Contributing
 

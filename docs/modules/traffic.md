@@ -93,7 +93,16 @@ JSONL collective-trace consumer is not yet implemented (TRAF-5).
 - TRAF-7: communication/compute overlap in the step model. `step_comm`
   chains each layer's compute and its collectives strictly serially;
   real engines overlap the MLP allreduce with the next layer's start under
-  some schedules.
+  some schedules. Implement this after CORE-3/4, by lowering compute and
+  collective work onto the framework-observed logical streams with explicit
+  event/dependency edges in `ExecutionGraph`. The adapter owns observed
+  program order and legal concurrency; the traffic planner owns collective
+  algorithm/chunk expansion; `DeviceRuntime` owns realized overlap after
+  CUDA-stream, GPU, HBM, copy-engine, NCCL-channel, WQE and NIC contention.
+  No layer stores or learns an overlap percentage. First validate an ideal
+  independent-resource graph at exact `max(compute, communication)` versus
+  the serial graph at exact `compute + communication`, then add one resource
+  contention mechanism at a time.
 - TRAF-8: pipeline-parallel activation traffic from step records. Records
   carry no PP stage attribution yet, so `step_comm` emits TP and EP
   collectives only; the M1 workload-B GOAL shows the target

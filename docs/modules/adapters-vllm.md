@@ -165,7 +165,16 @@ row-for-row.
   under the fabricated executor: prefix-cache hit accounting with shared
   prefixes longer than one KV block (the 2026-08-04 smoke's shared prefix
   was shorter than the 16-token block, so hits were legitimately zero), and
-  preemption behavior under KV pressure.
+  preemption behavior under KV pressure. Run only after the calibrated
+  compute table and CORE-3/4/5 are ready. Use the identical vLLM commit,
+  model, parallel configuration, request trace, seed and warm-up policy in
+  simulation and silicon. Stage the comparison as single-GPU compute,
+  eight-GPU intra-node, two-node shared-NIC, offered-load sweep, KV pressure,
+  chunked prefill/preemption, and mixed/bursty arrivals. Report p50, p90, p99
+  and p99.9 TTFT/TPOT plus request queue, KV wait, kernel, collective, DMA,
+  WQE/NIC, flow-completion and control-delay components. Calibrate only the
+  early stages; hold out later stages, and choose the next accuracy task from
+  their attributed residuals rather than aggregate error alone.
 - VLLM-5: CI harness with transcribed stand-ins for the vLLM types
   (`Executor`, `ModelRunnerOutput`, `FullAttentionSpec`, `CompilationTimes`)
   so the init-RPC sequence and the step loop run end to end without a GPU
@@ -194,3 +203,16 @@ row-for-row.
   batch-queue loop's interleaved `execute_model`/`sample_tokens` pairs map
   to the right steps, plus per-stage step accounting; until then
   `supports_pp` stays False and vLLM rejects PP > 1 up front.
+- VLLM-11: observe the real vLLM KV manager and block-pool lifecycle for
+  CORE-3 without replacing its policy. Emit stable pool/block/request IDs,
+  token intervals, layer/dtype/bytes, allocation epoch, reference count,
+  cause and correlation ID for reserve/allocation, prefix binding/touch,
+  reads/writes, release/free, eviction, swap/transfer and preemption-driven
+  recompute. Do not reconstruct allocation or eviction decisions from token
+  deltas when the framework can report the actual event.
+- VLLM-12: capture and replay the supported model runner's device schedule as
+  an `ExecutionGraph` template keyed with the same identity envelope as the
+  compute profile. Preserve CUDA stream order, event waits, kernel launches,
+  NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
+  The simulated executor binds step shapes and framework KV events to this
+  template; it does not invent concurrency from aggregate phase timings.
