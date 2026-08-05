@@ -33,3 +33,7 @@ AGENTS.md
 # Downloaded reference papers (bulk PDFs at the repo root; the
 # committed summaries live in docs/papers/)
 /papers/
+
+# Local bottom-layer records (decision notes and explorative studies;
+# see the two-layer rule in AGENTS.md)
+/notes/
