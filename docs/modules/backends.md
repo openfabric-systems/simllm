@@ -130,6 +130,15 @@ loop, every step latency matching the closed form to 0 ps
   R_AI = C/20 and C/10 (dcqcn.cpp:48-49) against the paper's fixed
   40 Mbps, and the ECN defaults are fixed bytes (Kmin 64 KB, Kmax
   640 KB, Pmax 0.25) independent of the link rate.
+- HTSIM-7: rnic-cn concurrent same-pair flow scaling. 10,000
+  simultaneous flows between one source-destination pair make no visible
+  progress within a 600 s wall-time budget (progress 0 percent, request
+  queue 10,000; examples/dcqcn_micro addendum 1), far beyond the
+  algorithm book's S_max regime but reachable by WQE-flood workloads;
+  the measured per-flow control cost also scales with flow count, not
+  bytes (16 KiB flood streams cap at 0.36 to 0.46 C). Both are HTSIM-6
+  adjacents: queue lookahead removes the per-WQE declare cost, and the
+  event-loop scaling needs its own look.
 - HTSIM-6: rnic-cn WQE-queue lookahead (maintainer design 2026-08-05): a
   WQE toward an established link-table destination does not wait when the
   granted bandwidth suffices, and the endpoint pre-declares one RTT ahead

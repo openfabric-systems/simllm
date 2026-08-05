@@ -158,3 +158,104 @@ catalogued with its mechanism and citation, and the HTSIM-5 parameter
 sets (A2 fixed latency, D1 to D3 ramps, threshold rescaling, per-QP
 persistent rate state) are the closure path, with this study's tables
 as their frozen anchors.
+
+## Addendum (2026-08-05): repeated-WQE streams, single-pair and contended
+
+Registrations: [expectations-rep.md](expectations-rep.md) (single-pair
+grid, frozen before its first run) and
+[expectations-rep2.md](expectations-rep2.md) (contended grid, frozen
+before its own first run and motivated by the single-pair grid's
+mechanism finding). Data in rep.csv, rep2.csv and rep-summary.csv /
+rep2-summary.csv under the same runs directory. Process note: the
+single-pair grid's first invocation piped its output through a filter
+that swallowed a crash traceback and reported a false success; the rule
+adopted is that background runs are never stderr-filtered, and the
+harness was made timeout-tolerant before the full rerun.
+
+![repeated WQE collapse](plots/repeated_wqe_collapse.png)
+
+### Addendum 1: single-pair repetition (3 of 8 checks pass)
+
+The registered premise failed in an instructive way: a single source
+can never inject faster than its own access link, so same-pair
+repetition alone produces no congestion anywhere in this topology
+model. P1 and the cn determinism check pass; P5 passes but its premise
+(an RTO tail to amortize) never materialized, the observed monotonicity
+is plain fixed-offset amortization. The FAILs:
+
+- P4 and P6 (the finding): zero drops and zero pauses in every cell,
+  including 10,000 x 64 KiB; DCQCN holds 39 to 49 GB/s throughout. The
+  overflow the maintainer asked for requires convergence, which is what
+  addendum 2 registers.
+- P3, registration slip: the within-25-percent-of-fluid bar ignored
+  that at a 160 KiB aggregate the engines' different fixed offsets
+  dominate (DCQCN 14.1 vs fluid 31.0 GB/s at n = 10, zero congestion
+  events); the no-drops half of the check held.
+- P2, two causes: the 10k cn cells are unmeasured, rnic-cn makes no
+  visible progress on 10,000 simultaneous same-pair flows within a
+  600 s budget (now HTSIM-7); and the measured band was violated at
+  16 KiB (cn 0.36 to 0.42 C), because cn's control cost scales with
+  flow count rather than bytes, which the registered floor mis-derived.
+  Zero recovery events everywhere cn ran.
+- P7, substantive reversal: with no congestion present, DCQCN (39 to
+  49 GB/s) beats cn (17.8 to 36.4), the uncontended-boundary result of
+  the earlier studies appearing again at stream scale.
+
+### Addendum 2: contended repetition, the collapse (4 of 7 checks pass)
+
+Two same-leaf senders stream n repeated WQEs into one receiver: 2 C
+offered into a C bottleneck for the burst duration.
+
+| S | n | fluid | rnic-cn | DCQCN ECN-only | DCQCN ECN+PFC |
+|---|---|---|---|---|---|
+| 16 KiB | 10 | 38.3 | 11.9 | 21.9 | 21.9 |
+| 16 KiB | 100 | 48.5 | 23.2 | **0.064** | **0.064** |
+| 16 KiB | 1000 | 49.8 | 20.5 | 0.32 | 0.32 |
+| 64 KiB | 10 | 46.5 | 25.7 | 37.6 | 37.6 |
+| 64 KiB | 100 | 49.6 | 35.0 | **0.128** | **0.128** |
+| 64 KiB | 1000 | 50.0 | 36.0 | 0.43 | 0.43 |
+
+(GB/s, aggregate; DCQCN seed 1, seed 2 agrees to three digits.)
+
+- Q4 PASS, the headline: every overflow cell drops (449 to 80,279
+  packets plus 116 to 3,752 silent RTOs) and the n = 100 goodput is
+  0.064 / 0.128 GB/s = 0.0013 / 0.0026 C, matching the registered RTO
+  derivation (3.2 MB over one 50 ms tail = 0.064 GB/s) to the digit.
+  The maintainer's predicted collapse beyond about 100 repetitions is
+  measured exactly.
+- Q6 PASS: rnic-cn beats the better DCQCN mode by 84 to 360x at the
+  overflow cells while staying lossless (zero recovery counters), and
+  Q1/Q3 PASS (fluid at line rate, absorbed cells clean).
+- Q2 FAIL, band only: cn is lossless and complete everywhere, but at
+  0.41 to 0.46 C (16 KiB) and 0.70 to 0.72 C (64 KiB) against the
+  registered 0.75 floor: the per-flow declare cost again, now
+  quantified under contention. These are direct HTSIM-6 acceptance
+  anchors (queue lookahead should lift the 16 KiB stream toward the
+  64 KiB one and both toward the 0.9 C basis).
+- Q5 FAIL, a finding: PFC never engages. The ECN+PFC runs are
+  bit-identical to ECN-only including their drops; at this
+  buffer/threshold configuration (1 MiB shared pool, fixed-byte ECN
+  defaults) the pause threshold is never reached before shared-pool
+  drops, so the "lossless" mode loses packets. Threshold-interplay
+  evidence for the HTSIM-5 parameter work.
+- Q7 FAIL, registered escape hatch invoked: goodput heals with stream
+  length (0.32 vs 0.064 at 16 KiB, a 5x rise where the bar allowed
+  2x). Drops do recur throughout the stream (13,852 at n = 1000
+  against 585 at n = 100), so the renewal premise was half right, but
+  the fixed RTO tail amortizes over the longer stream and dominates
+  the goodput arithmetic. The registered fallback reading applies:
+  recovery amortization, not overload healing.
+
+### Interpretation
+
+Under the maintainer's WQE-as-new-flow premise (which this comparator
+implements literally), repeated small WQEs across any converging
+bottleneck collapse DCQCN by two to three orders of magnitude while
+rnic-cn stays lossless at its control-cost-limited rate, and the
+single-sender case shows the collapse is a property of convergence,
+not of repetition itself. The interpretation boundary registered in
+expectations-rep2.md stands: a real single-QP hardware stream would
+settle near the fair share instead, so this axis is harsher than
+hardware for same-pair streams; choosing the semantics (per-WQE
+restart vs per-QP state, and where between them mlx5 sits) is the
+HTSIM-5 decision, now bracketed by measurements on both sides.
