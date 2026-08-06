@@ -44,8 +44,8 @@ class KernelSpec:
 @dataclass(frozen=True)
 class DurationEstimate:
     duration_ps: int
-    #: which regime dominated: "compute", "memory", "measured", or
-    #: "interpolated" (a table lookup between measured neighbors)
+    #: estimate provenance/regime: "compute", "memory", "measured",
+    #: "interpolated" (a table lookup between neighbors), or "sass-replay"
     bound: str
     #: relative uncertainty (0.1 = ±10%); providers must be honest here
     uncertainty: float = 0.0

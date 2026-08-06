@@ -141,7 +141,7 @@ framework scheduler and KV control plane
   -> DeviceRuntime
        host launch queue
        logical CUDA streams and event dependencies
-       GPU work queue, coarse hardware scheduler and HBM queue
+       GPU work queue -> isolated kernel scheduler/SM/HBM service
        directional copy engines and DMA descriptors
        NCCL channels and per-GPU/QP WQE queues
        one shared NIC arbiter and serializer per node
@@ -173,7 +173,7 @@ Typed payloads preserve replaceable fidelity boundaries:
 
 - `ComputeWork` carries kernel identity, shape, flops, HBM demand and the
   selected provider's nominal service estimate. A measured table, calibrated
-  SASS table or future GPU scheduler can price the same node.
+  SASS table or trace-driven GPU service model can price the same node.
 - `KvCacheWork` carries explicit allocation, prefix, access, retention,
   eviction, movement and recompute decisions made by the real framework.
   Physical KV reads/writes lower to HBM operations; swap and remote movement
@@ -231,12 +231,17 @@ references do not impose their original transient scope on later users.
   `ProfileTableProvider` (measured (kernel, config, GPU) duration tables
   from real captures), `RooflineProvider` (analytical
   `max(flops/peak, bytes/bw)`, classifying each kernel as compute- or
-  memory-bound from its configuration alone), and, planned, an offline
-  SASS-level provider (Accel-Sim / GPGPU-Sim). Cycle-accurate GPU simulation
-  is orders of magnitude too slow to sit inside the step loop, so it runs
-  offline to *populate profile tables* for configurations nobody measured;
-  the step loop always reads tables or analytical estimates. Every estimate
-  carries an uncertainty so results can report error bounds honestly.
+  memory-bound from its configuration alone), and a trace-driven service
+  model behind the same boundary. The service model represents SASS
+  dependencies, warp issue, CTA admission and SM residency, HBM latency and
+  bandwidth, plus isolated copy-descriptor service. It is intentionally an
+  extensible mechanism model, not an analytical roofline in disguise.
+  Catalog replay happens once while constructing a provider or artifact, and
+  validated artifacts compile into O(1) profile tables. Detailed Accel-Sim
+  replay still runs offline for configurations nobody measured. The serving
+  step loop invokes neither cycle simulator. Every estimate carries provenance
+  and uncertainty so bootstrap parameters cannot be mistaken for silicon
+  validation.
 - **Host initiation model** (`simllm/compute/host.py`): the data-parallel
   handoff chain (receive data plus a small start packet, compute, hand data
   over, write a small packet releasing the next rank) is exactly GOAL's
@@ -276,7 +281,8 @@ The GOAL trace is executed by a discrete-event simulator:
 
 - **htsim** (packet-level): `htsim_uec -goal <bin> -topo <topo>` executes the
   GOAL schedule over a Clos topology with full transport behavior, and
-  `htsim_rnic` (on the submodule's `main` since 2026-08-03) runs the RNIC
+  `htsim_rnic` (currently pinned on the append-only
+  `2026_08_05/simllm-addon` branch) runs the RNIC
   fidelity profiles: the null-network baselines `rnic-nn`/`rnic-nn-fluid`
   and the explicit-rate collective-network endpoint `rnic-cn`. The
   GOAL-driven `htsim_dcqcn_atlahs` comparator is also available. Only the
@@ -360,3 +366,45 @@ with residuals attributed to request queues, KV state, kernel service, HBM,
 DMA, collectives, WQEs/NIC, flow completions and control delivery. Fit only
 the early calibration cases; later cases remain held out. The largest
 attributed held-out residual selects the next fidelity improvement.
+
+### GPU service-model evidence boundary
+
+The first trace-driven GPU slice validates mechanisms before claiming device
+accuracy. Exact synthetic fixtures cover partial CTA waves, scheduler width,
+dependency chains, occupancy minima, HBM latency plus serialization, and
+copy-descriptor setup plus bandwidth. The frozen study is
+[examples/gpu_service_model](../examples/gpu_service_model/expectations.md).
+It varies at least two parameters in every component sweep and requires zero
+cycle residual for the closed forms.
+
+Open public evidence seeds the A100 SXM 80 GB and H100 SXM 80 GB profiles:
+
+- NVIDIA's [Ampere tuning guide](https://docs.nvidia.com/cuda/ampere-tuning-guide/index.html)
+  and [Hopper tuning guide](https://docs.nvidia.com/cuda/hopper-tuning-guide/index.html)
+  supply documented occupancy and shared-memory limits.
+- NVIDIA's [A100 data sheet](https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/a100/pdf/a100-80gb-datasheet-update-nvidia-us-1521051-r2-web.pdf)
+  and [H100 product specifications](https://www.nvidia.com/en-us/data-center/h100/)
+  supply SKU-level peak memory and arithmetic envelopes.
+- The open [Ampere microbenchmark study](https://arxiv.org/abs/2208.11174),
+  [Hopper/H800 study](https://arxiv.org/abs/2402.13499), and later
+  [A100/H800 study](https://arxiv.org/abs/2501.12084) provide timing context
+  where NVIDIA does not publish a contract. The numeric memory priors are
+  transferred from the last paper. H800 PCIe timing is not H100 SXM timing,
+  and the A100 test device is not assumed to match the target SKU exactly.
+- The [Accel-Sim ISCA 2020 paper](https://doi.org/10.1109/ISCA45697.2020.00047)
+  and [framework repository](https://github.com/accel-sim/accel-sim-framework)
+  define the external SASS trace-replay and correlation path used by COMP-1.
+
+These sources do not establish production-kernel timing accuracy. Public
+measurements can initialize a parameter with explicit uncertainty, but exact
+framework kernel identity, copy-engine topology, cache state, launch mode and
+silicon durations must come from a capture ledger.
+`simllm-gpu-model-artifact-v1` binds a target-architecture calibration and a
+structured capture envelope to trace, kernel and copy identities, stream
+order, numeric observed core/memory clocks, simulated cycles, optional
+measured samples, calibration split, uncertainty and replay counters. Its
+strict loader reruns deterministic v1 estimates and rejects target, clock,
+identity or sample-summary drift. Bulk raw traces stay outside Git under
+`/data3/yifeng/`. COMP-1,
+COMP-5, COMP-6 and advanced instruction/cache semantics in COMP-10 remain
+open, as does the inter-operation `DeviceRuntime` in CORE-4.

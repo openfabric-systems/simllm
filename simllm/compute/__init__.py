@@ -13,10 +13,12 @@ Provider                      Fidelity / cost
 :class:`RooflineProvider`     Analytical ``max(flops/peak, bytes/bw)``:
                               classifies compute- vs memory-bound from the
                               kernel configuration alone. Cheap, coarse.
-``AccelSimProvider`` (M5+)    SASS-level cycle simulation (Accel-Sim /
-                              GPGPU-Sim). Far too slow to sit in the step
-                              loop; it runs *offline* to populate profile
-                              tables for configurations nobody measured.
+:class:`TraceCalibratedGpuProvider`
+                              Deterministic CTA, warp, pipeline, memory, and
+                              copy-service replay. Replays once at provider
+                              construction; online estimates are cached.
+External Accel-Sim            Offline SASS trace replay used to calibrate and
+                              cross-check immutable profile tables.
 ============================  ================================================
 
 The DP dependency chain the user-visible simulation executes (receive data
@@ -28,6 +30,47 @@ Host-side initiation (doorbells) is modeled separately in
 :mod:`simllm.compute.host`.
 """
 
+from simllm.compute.gpu_model import (
+    GPU_MODEL_IMPLEMENTATION,
+    CopyDirection,
+    CopyDirectionProfile,
+    CopyEngineProfile,
+    CopyEngineServiceModel,
+    CopyServiceEstimate,
+    CopyTransfer,
+    CtaTrace,
+    GpuArchitectureProfile,
+    GpuCalibrationProfile,
+    GpuKernelEstimate,
+    GpuModelProvenance,
+    KernelLaunch,
+    MemoryHierarchyProfile,
+    MemorySpace,
+    PipelineKind,
+    PipelineProfile,
+    SassInstruction,
+    SassWarpTrace,
+    SmSchedulerModel,
+    TraceCalibratedGpuProvider,
+    WarpSchedulerPolicy,
+    a100_sxm_80gb_seed_profile,
+    h100_sxm_80gb_seed_profile,
+)
+from simllm.compute.gpu_model_io import (
+    GPU_MODEL_ARTIFACT_SCHEMA,
+    CalibrationSplit,
+    GpuCaptureEnvironment,
+    GpuCopyReplayRecord,
+    GpuKernelCatalogRecord,
+    GpuMeasurementRecord,
+    GpuModelArtifact,
+    GpuReplayRecord,
+    gpu_model_artifact_from_json,
+    gpu_model_artifact_to_json,
+    gpu_model_artifact_to_profile_table,
+    load_gpu_model_artifact,
+    save_gpu_model_artifact,
+)
 from simllm.compute.host import HostInitiationModel
 from simllm.compute.provider import (
     PROFILE_TABLE_SCHEMA,
@@ -50,18 +93,55 @@ from simllm.compute.transformer import (
 
 __all__ = [
     "GPU_ENVELOPES",
+    "GPU_MODEL_ARTIFACT_SCHEMA",
+    "GPU_MODEL_IMPLEMENTATION",
     "PROFILE_TABLE_SCHEMA",
     "PS_PER_SECOND",
+    "CalibrationSplit",
     "ComputeProvider",
+    "CopyDirection",
+    "CopyDirectionProfile",
+    "CopyEngineProfile",
+    "CopyEngineServiceModel",
+    "CopyServiceEstimate",
+    "CopyTransfer",
+    "CtaTrace",
     "DurationEstimate",
+    "GpuArchitectureProfile",
+    "GpuCalibrationProfile",
+    "GpuCaptureEnvironment",
+    "GpuCopyReplayRecord",
+    "GpuKernelCatalogRecord",
+    "GpuKernelEstimate",
+    "GpuMeasurementRecord",
+    "GpuModelArtifact",
+    "GpuModelProvenance",
+    "GpuReplayRecord",
     "GpuSpec",
     "HostInitiationModel",
+    "KernelLaunch",
     "KernelSpec",
+    "MemoryHierarchyProfile",
+    "MemorySpace",
     "ModelDims",
+    "PipelineKind",
+    "PipelineProfile",
     "ProfileTableProvenance",
     "ProfileTableProvider",
     "RooflineProvider",
+    "SassInstruction",
+    "SassWarpTrace",
+    "SmSchedulerModel",
+    "TraceCalibratedGpuProvider",
+    "WarpSchedulerPolicy",
+    "a100_sxm_80gb_seed_profile",
     "estimate_step_latency_ps",
+    "gpu_model_artifact_from_json",
+    "gpu_model_artifact_to_json",
+    "gpu_model_artifact_to_profile_table",
+    "h100_sxm_80gb_seed_profile",
+    "load_gpu_model_artifact",
+    "save_gpu_model_artifact",
     "step_kernel",
     "step_kernels",
 ]

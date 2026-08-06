@@ -53,7 +53,7 @@ workload model (arrivals, prompt/output lengths, shared prefixes)
 real framework scheduler (vLLM / SGLang, unmodified)
         |    scheduler step: which requests, which tokens, cache hits
         v
-simulated GPU executor (roofline model or measured profile tables)
+simulated GPU executor (roofline, profile tables, or trace-driven service)
         |    per-step collectives: TP allreduce, MoE all-to-all, PP
         v
 packet-level network simulator (htsim RNIC models on a Clos fabric)
@@ -73,9 +73,11 @@ Two coupling modes:
 
 Under the hood, every scheduler step is lowered to a versioned execution
 graph with central request/object bookkeeping down to the WQE level;
-runtime resource arbitration (launch queues, GPU, HBM, DMA, NCCL
-channels, shared-NIC contention) is the next stage of the roadmap
-(CORE-4). The full design, including the exact vLLM/SGLang integration
+the current compute stage establishes a trace-driven, replaceable model of
+intra-kernel SASS scheduling, SM residency, HBM service and isolated copy
+service. Explicit KV lifecycle follows, then CORE-4 composes those pieces
+with launch queues, streams, DMA/NCCL queues and shared-NIC contention. The
+full design, including the exact vLLM/SGLang integration
 seams, the manifest schemas and the GOAL trace format, is in
 [docs/architecture.md](docs/architecture.md). The developer map
 (module status, contracts, open tasks, development process) is in
@@ -166,6 +168,7 @@ Slingshot-style adaptive routing is out of simllm scope.
 |---|---|---|
 | Roofline | available | Analytical `max(flops/peak, bytes/bandwidth)` per kernel family, dense and MoE geometry, per-GPU envelopes |
 | Profile tables | available | Measured (kernel, config, GPU) duration tables; versioned artifact with mandatory provenance and interpolation |
+| Trace-driven GPU service | available, bootstrap | Isolated-kernel CTA/SM/warp scheduling, dependency scoreboards, occupancy and HBM service, plus isolated copy descriptors; [22 structural cells](examples/gpu_service_model/RESULTS.md) are exact, A100/H100 seed timing is not yet silicon-validated |
 | SASS offline calibration | planned ([COMP-1/5](docs/modules/compute.md)) | Accel-Sim trace-driven replay populates the tables offline for configurations nobody measured; a cycle simulator never sits inside the step loop |
 | Service-time distributions | planned ([COMP-9](docs/modules/compute.md)) | Beyond-mean service times for honest p99+ tails |
 

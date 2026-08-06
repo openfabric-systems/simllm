@@ -2,9 +2,11 @@
 
 Pluggable compute-time providers plus the host initiation model. The core
 needs one number per GOAL `calc` node: how long a rank computes before it
-hands data over. Providers answer at different fidelity/cost points; the
-step loop always reads tables or analytical estimates, never a cycle-level
-simulator.
+hands data over. Providers answer at different fidelity/cost points. A compact
+trace-driven service model replays captured kernels when a provider or
+calibration artifact is built. Its online provider path is a cached lookup;
+external Accel-Sim replay also remains offline. Neither simulator runs once
+per serving step.
 
 ## Interface
 
@@ -24,6 +26,10 @@ simulator.
 - `RooflineProvider`: analytical `max(flops/peak, bytes/bw)` with an
   efficiency derate; classifies compute- vs memory-bound from the kernel
   configuration alone.
+- `TraceCalibratedGpuProvider`: validates and replays its exact trace catalog
+  once at construction, then serves O(1) cached estimates behind the existing
+  `ComputeProvider` interface. `gpu_model_artifact_to_profile_table` compiles
+  validated replays into the smaller immutable online table artifact.
 - `ModelDims`: per-rank transformer geometry, dense or MoE. MoE fields
   (`num_experts`, `top_k`, `moe_intermediate_size`, `local_num_experts`)
   default to the dense model; when declared, per-token MLP flops count
@@ -47,17 +53,184 @@ simulator.
 Every estimate carries an honest uncertainty so results can report error
 bounds.
 
+## Trace-driven GPU service boundary
+
+The first SASS service slice models one isolated kernel at a time. Its input
+contains stable implementation and trace identities, launch grid and CTA
+resource use, plus explicit CTA trace classes. Each class binds a per-warp
+instruction stream and dependencies to exact linear block IDs, so edge or
+data-dependent CTAs need not be cloned from a representative block. The model
+has four replaceable mechanisms:
+
+1. **CTA admission and assignment.** Resident CTAs are limited by the minimum
+   of SM block, warp, thread, per-warp register allocation, static and total
+   shared-memory capacities. Per-block thread and per-thread register limits
+   are checked separately. CTAs are assigned deterministically to SMs as
+   capacity becomes available. A launch that cannot admit one CTA fails
+   instead of returning a precise-looking duration.
+2. **Warp scheduling and SM service.** Ready warps issue through a declared
+   number of schedulers and per-cycle issue width. Dependency scoreboards
+   preserve RAW and WAW producer ordering. Instruction classes map to
+   replaceable latency, initiation interval and execution-port parameters, so
+   later calibration can improve tensor, scalar, special-function and memory
+   behavior independently. Warp selection is an explicit calibration choice;
+   v1 provides deterministic loose round-robin and greedy-then-oldest policies.
+   The bootstrap profiles use loose round-robin without claiming NVIDIA's
+   undisclosed subpartition policy. The v1 model handles synchronous
+   normalized per-warp instructions only. Barriers, `cp.async`, TMA, warpgroup
+   async issue/commit/wait, cooperative launches and thread-block clusters
+   fail closed under COMP-10.
+3. **HBM service.** Global-memory instructions create explicit byte demand.
+   The first slice separates logical lane-request bytes from physical
+   transacted bytes, then applies a fixed return latency plus sustained service
+   bandwidth to the latter. It reports requested, transacted and serviced
+   bytes plus request-instruction count. An input trace may label L1, L2 or
+   shared-memory service and receive an explicit fixed latency, but v1 does not
+   predict cache hits, partitions or bank conflicts. Those mechanisms and
+   cross-kernel HBM contention are unsupported under COMP-10, not hidden
+   efficiency factors.
+4. **Copy service.** A copy descriptor declares direction, endpoints and
+   bytes. Isolated service is setup time plus byte serialization in the copy
+   engine's own declared clock domain and directional bandwidth. API launch
+   delay, engine selection, queue waiting, simultaneous copies, compute/copy
+   overlap and shared-HBM arbitration belong to CORE-4. This is external
+   device DMA service. In-kernel async copy and TMA are not approximated as
+   external DMA.
+
+The result reports total cycles and picoseconds together with occupancy,
+instruction issue, HBM demand and per-SM counters. Scheduler pressure counts
+wall cycles in which an SM exhausts its dispatch budget. Dependency idle and
+pipeline idle count whole-SM idle wall cycles; final instruction or memory
+completion is reported separately as completion drain. These counters are
+model observables, not aliases for Nsight's per-warp stall metrics.
+Deterministic replay of the same artifact must be bit-identical. Unknown
+opcodes, missing trace identity, impossible residency, unsupported
+cooperative or cluster launches, and incompatible copy directions fail
+loudly. The model does not infer a SASS stream from the five aggregate
+`step_kernels` accounting families; exact per-invocation records remain
+COMP-6.
+
+This boundary is deliberately below the online `ComputeProvider` lookup and
+above a full device runtime. Provider construction can replay a catalog once,
+or an offline run can populate `simllm-profile-table-v1`. `ExecutionGraph` keeps
+CUDA streams and dependencies. CORE-4 composes service calls, selects physical
+engines, arbitrates resources and determines inter-operation overlap. Neither
+package duplicates the other's scheduler.
+
+## Seed profiles and calibration ledger
+
+`GpuArchitectureProfile` contains structural limits. Its swappable
+`GpuCalibrationProfile` is explicitly bound to one target architecture profile
+and contains the target core and optional memory clock, instruction/pipeline
+timing, memory timing and bandwidth, warp selection, copy-engine timing,
+provenance and uncertainty. The provenance GPU may identify a transferred
+evidence source, e.g. H800 timing used as an H100 prior, without changing the
+target identity. Recalibration therefore leaves architecture and trace
+identity unchanged, and attaching an A100 calibration to an H100 structure
+fails at construction.
+
+The A100 SXM 80 GB and H100 SXM 80 GB profiles are bootstrap artifacts. Their
+documented occupancy limits and SKU peaks come from NVIDIA's
+[Ampere tuning guide](https://docs.nvidia.com/cuda/ampere-tuning-guide/index.html),
+[Hopper tuning guide](https://docs.nvidia.com/cuda/hopper-tuning-guide/index.html),
+[A100 data sheet](https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/a100/pdf/a100-80gb-datasheet-update-nvidia-us-1521051-r2-web.pdf)
+and [H100 specifications](https://www.nvidia.com/en-us/data-center/h100/).
+Instruction and memory context comes from the open
+[Ampere study](https://arxiv.org/abs/2208.11174),
+[Hopper/H800 study](https://arxiv.org/abs/2402.13499), and the later
+[A100/H800 microbenchmark study](https://arxiv.org/abs/2501.12084). The
+numeric memory-latency priors are transferred from the last study. Its Hopper
+device is H800 PCIe, not H100 SXM, and its A100 measurements are not treated as
+an exact A100 SXM 80 GB match. The profile provenance says so and assigns 50
+percent relative uncertainty. A public peak is a capacity constraint, not a
+claim that an arbitrary kernel reaches it. Public documentation does not
+expose a complete copy-engine timing or selection contract, so the seed
+profiles intentionally contain no copy engines until capture supplies them.
+
+The production path uses the
+[Accel-Sim paper](https://doi.org/10.1109/ISCA45697.2020.00047) and
+[Accel-Sim framework](https://github.com/accel-sim/accel-sim-framework) for
+external SASS replay and counter correlation. Every capture/calibration
+run must eventually close this production ledger before COMP-1 can close:
+
+| Component | Required evidence |
+|---|---|
+| Run envelope | framework and commit, model, exact GPU SKU and UUID, driver, CUDA, libraries, dtype/quantization, eager or graph mode, numeric observed core/memory clocks, lock policy and warm-up policy |
+| Kernel identity | binary and function hash, semantic operation, launch order, stream, grid/block dimensions, registers, static/dynamic shared memory, cooperative/cluster flags |
+| SASS and scheduler | tracer/version, trace hash, warp and CTA identities, instruction classes and dependencies, elapsed cycles, eligible/active warps, issue utilization and stall reasons |
+| Memory | requested and transacted bytes, cache hit/miss counters, HBM throughput, latency probes, cache-state protocol and memory-clock state |
+| Copy | API kind, direction and endpoints, bytes, stream/event order, reported device engine capabilities, setup samples, sustained bandwidth and concurrent-copy experiment |
+| Fit | immutable train/held-out split, raw samples, sample count, fitted parameters, residuals by component, uncertainty and creation date |
+
+The v1 artifact enforces the capture environment, model/GPU identity,
+framework/tool/library versions, clock and warm-up policy, numeric observed
+core and memory clocks, hashes, semantic attributes, launch resources,
+CTA/warp traces, stream order, requested and transacted bytes, copy
+direction/endpoints, raw duration samples, deterministic replay, split and
+residual. A captured artifact must use the calibration's exact core and target
+memory clocks; seed calibrations without a numeric memory-clock target cannot
+claim captured measurements. It does not yet encode profiler cache counters,
+per-warp eligible/active samples, 3D launch coordinates or concurrent-copy
+experiments. Those production ledger fields land with COMP-1 and COMP-10 in a
+new schema version before either task closes. Bulk counter exports remain
+content-addressed outside Git.
+
+The ledger keeps structural facts separate from fitted timing parameters. A
+future capture can replace instruction latencies, throughput corrections,
+cache/HBM behavior and copy parameters without changing the trace, service or
+provider interfaces.
+
+### Artifact boundary
+
+`simllm-gpu-model-artifact-v1` is the versioned interchange record for this
+model. It complements `simllm-profile-table-v1`: the GPU-model artifact keeps
+one replay auditable, while the profile table is the compact online lookup
+surface produced after calibration. A GPU-model artifact retains:
+
+- the architecture-profile identity, exact SKU, structural limits, fitted
+  parameter set, source links and declared uncertainty;
+- capture envelope and calibration provenance, including framework,
+  toolchain, tracer/simulator versions, observed core/memory clocks and
+  creation date;
+- SASS trace identity, kernel binary/function identity, semantic catalog key,
+  launch shape and resource declaration;
+- simulated cycles and picoseconds, replay counters, occupancy, issued
+  instructions, per-SM idle/pressure/drain counters, and requested,
+  transacted and serviced HBM bytes;
+- explicit copy transfers and service replays with direction, endpoints,
+  selected engine, independent clock domain and stream order;
+- measured duration samples, sample count and summary statistics when silicon
+  measurements exist; absent measurements remain explicitly absent rather
+  than being synthesized from the model;
+- immutable train or held-out split and the fitted residual/uncertainty when
+  the artifact participates in calibration.
+
+The strict loader normalizes hash spellings, rejects duplicate semantic keys
+and stream orders, recomputes sample summaries, checks capture split isolation,
+and reruns every deterministic v1 kernel/copy estimate before accepting it.
+Changing an identity, source, fit or split produces a new artifact. Small
+synthetic fixtures may live with tests and studies. Raw production SASS traces,
+profiler exports and bulk replay outputs live under `/data3/yifeng/`, never in
+Git; the public artifact records their content hashes and provenance.
+
 ## Status
 
-Both providers, the transformer step model (fused and family-decomposed)
-and the host model are implemented and tested. The M5 first slice landed
-the COMP-1 groundwork: `step_kernels`, the `simllm-profile-table-v1`
-artifact with provenance, and 1D log-linear interpolation (closing
-COMP-3; the multi-axis extension is COMP-4). The offline SASS pipeline
-itself (below) has not run yet; it is blocked on trace-capture hardware
-(COMP-5). MoE geometry landed with the same slice and is exercised by the
-examples/m5 studies together with the MoE traffic mapping
-([traffic](traffic.md), examples/m5/RESULTS.md).
+Both providers, the transformer step model (fused and family-decomposed),
+the host model, and the trace-driven isolated-kernel and copy service are
+implemented and tested. The
+[service-model study](../../examples/gpu_service_model/RESULTS.md) validates
+22 frozen mechanism cells to zero-cycle residual; the built-in A100/H100 profiles are
+unvalidated bootstrap seeds and do not establish production accuracy.
+
+The M5 first slice landed the COMP-1 groundwork: `step_kernels`, the
+`simllm-profile-table-v1` artifact with provenance, and 1D log-linear
+interpolation (closing COMP-3; the multi-axis extension is COMP-4). The
+production SASS pipeline itself (below) has not run yet; it is blocked on
+trace-capture hardware
+(COMP-5). Therefore COMP-1, COMP-5 and COMP-6 remain open. MoE geometry
+landed with the same slice and is exercised by the examples/m5 studies
+together with the MoE traffic mapping
+([traffic](traffic.md), [M5 results](../../examples/m5/RESULTS.md)).
 
 ## COMP-1: offline SASS calibration plan
 
@@ -84,10 +257,12 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   against silicon using train shapes, then evaluate held-out shapes. Launch
   overhead, host delay and queueing are measured separately from kernel
   service, so the SASS table cannot hide a missing runtime queue.
-- Populate `simllm-profile-table-v1` with capture hash, kernel hash, GPU,
+- Populate `simllm-gpu-model-artifact-v1` with capture hash, kernel hash, GPU,
   tool versions, shape, measured samples, simulated cycles, calibrated
-  duration, uncertainty, calibration split and creation date. Tables are
-  immutable artifacts; changing any identity field produces a new entry.
+  duration, uncertainty, calibration split and creation date. Derive the
+  compact `simllm-profile-table-v1` lookup entry from that record and retain
+  the model artifact's identity in table provenance. Both artifacts are
+  immutable; changing an identity field produces a new record.
 - Initial acceptance bars, to be tightened from evidence: 100 percent kernel
   identity coverage for the supported run; measured coefficient of variation
   below 2 percent for controlled microbenchmarks; held-out per-kernel median
@@ -115,7 +290,9 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
 
 - COMP-1: run the offline SASS pipeline above and ship the first
   populated per-family table (groundwork landed with M5: `step_kernels`,
-  the table artifact, interpolation; blocked on COMP-5 for capture).
+  the table artifact and interpolation; the trace-driven service-model
+  mechanisms and bootstrap profiles are also landed, but production capture,
+  calibration and a populated table remain blocked on COMP-5).
 - COMP-2: calibrated host-initiation profiles (GPU-initiated vs CPU-proxy
   constants) for launch-path sensitivity studies.
 - COMP-4: multi-axis interpolation in `ProfileTableProvider`. The landed
@@ -142,3 +319,9 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   with declared sample count and quantiles. CORE-5 needs this before claiming
   kernel-level p99 or p99.9 tail accuracy; deterministic means remain valid
   for closed-form sanity studies.
+- COMP-10: extend trace replay beyond synchronous normalized per-warp
+  instructions. Add subpartition-aware scheduler ownership, barriers,
+  `cp.async`, Hopper TMA and warpgroup async issue/commit/wait semantics, plus
+  calibrated cache partitions, bank conflicts and hit/miss behavior. Until
+  each mechanism lands with capture evidence, its opcode or launch form must
+  fail closed rather than borrow a scalar latency.

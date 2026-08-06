@@ -88,9 +88,12 @@ linked task IDs own the detail.
    [VLLM-12](modules/adapters-vllm.md#open-tasks) and
    [SGL-10](modules/adapters-sglang.md#open-tasks).
 2. **Hybrid measured plus SASS compute.** Capture real framework
-   kernels, calibrate offline SASS replay against silicon, populate
-   provenance-carrying tables:
-   [COMP-1, COMP-5, COMP-6](modules/compute.md#open-tasks).
+   kernels, calibrate offline SASS replay against silicon, and populate
+   provenance-carrying tables. The first slice supplies a replaceable
+   intra-kernel scheduler, SM-residency, HBM and isolated-copy service model
+   plus exact synthetic validation. Its A100/H100 parameters are bootstrap
+   seeds, not COMP-1 closure:
+   [COMP-1, COMP-5, COMP-6, COMP-10](modules/compute.md#open-tasks).
 3. **Explicit KV lifecycle.** Capture the framework's KV decisions
    (allocation through eviction, swap, transfer, recompute):
    [CORE-3](modules/core.md#open-tasks),
@@ -120,7 +123,7 @@ One line per module; the linked doc is the source of truth.
 |---|---|---|
 | [core](modules/core.md) | Implemented: virtual clock, step records, execution-graph/completion/result/bookkeeping contracts with strict JSON, serial lowerer, graph-only replay | CORE-3/4/5/6/7, BRIDGE-1 |
 | [workload](modules/workload.md) | Partial: Poisson/trace arrivals, fixed/lognormal/trace lengths | WORK-1 (shared prefixes), WORK-2 (bursty/MMPP) |
-| [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model | COMP-1/2/4/5/6/7/8/9 |
+| [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven isolated-kernel and copy service with A100/H100 bootstrap profiles | COMP-1/2/4/5/6/7/8/9/10 |
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | PLACE-1/2/3 |
 | [traffic](modules/traffic.md) | Implemented: collective patterns, TP step mapping, MoE all-to-all, GOAL renderers for steps and execution graphs | TRAF-2/3/4/5/6/7/8/9/10 |
 | [goal](modules/goal.md) | Implemented: GOAL trace + txt2bin helper | none |
@@ -144,6 +147,7 @@ script, and an audited `RESULTS.md`. Reproduce with
 | [dcqcn_vs_cn](../examples/dcqcn_vs_cn/RESULTS.md) | Mechanism-level scenarios: incast above/below buffer, ECMP collisions, cross-node TP ring | 18/20 checked rows pass; DCQCN collapses 2 to 3 orders of magnitude past the buffer, wins the buffer-absorbed cell (1.07 vs 1.68) and the path-disjoint ring |
 | [dcqcn_micro](../examples/dcqcn_micro/RESULTS.md) | NIC micro-behavior calibration: message-size law, incast fair share, join/exit convergence, repeated-WQE streams | Jain fairness 0.993 to 1.000; model undershoots real-NIC anchors at 64 to 256 KB (no per-WQE host cost yet), the registered HTSIM-5 calibration target; contended repeated-WQE collapse reproduced to the derived digit |
 | [core2_lowering](../examples/core2_lowering/RESULTS.md) | Execution lowering, graph-only JSON replay and WQE bookkeeping | Legacy sink, graph replay and frozen closed form agree to 0 ps on all five rows (including the MoE sentinel); flow and WQE ledgers field-identical; backend WQE layer timing-neutral (344/344 backend tests) |
+| [gpu_service_model](../examples/gpu_service_model/RESULTS.md) | Isolated CTA/SM/warp scheduling, occupancy, HBM and direction-specific copy service, plus strict capture/replay artifacts | 22/22 frozen structural cells exact to zero cycles; A100/H100 timing remains an explicitly uncertain, unvalidated bootstrap |
 
 ## Milestones
 
@@ -178,10 +182,12 @@ script, and an audited `RESULTS.md`. Reproduce with
   General fabric manifests (PLACE-1/2) stay deferred behind the fixed
   eight-GPU, one-NIC node profile.
 - **M5 (in progress).** All-to-all traffic studies (MoE expert
-  parallelism) landed ([m5](../examples/m5/RESULTS.md)); the focus is
-  SASS-level offline calibration of the compute model (plan in
-  [modules/compute.md](modules/compute.md), blocked on capture hardware
-  under COMP-5); training workloads pending. Slingshot is out of simllm
-  scope (`rnic-ss` remains a backend-repo follow-up only).
+  parallelism) landed ([m5](../examples/m5/RESULTS.md)). The trace-driven
+  isolated-kernel and copy-service mechanisms plus A100/H100 bootstrap
+  profiles are now available; production SASS calibration and populated
+  profile tables remain blocked on capture hardware under COMP-5 (plan in
+  [modules/compute.md](modules/compute.md)). Training workloads are pending.
+  Slingshot is out of simllm scope (`rnic-ss` remains a backend-repo
+  follow-up only).
 - **M6 (not started).** PD-disaggregation and KV-transfer traffic
   modeling.

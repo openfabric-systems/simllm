@@ -137,10 +137,21 @@ arbiter and serializer. All cross-node WQEs contend for that NIC. Intra-node
 traffic uses an NVLink-class resource. General fabric discovery and arbitrary
 GPU-to-NIC mapping are not prerequisites for this profile.
 
-The first GPU model stops at coarse, replaceable mechanisms: non-preemptive
-kernel service, a calibrated compute duration, shared HBM demand and a small
-number of copy engines. Warp issue, SM residency and block-level cycle
-scheduling remain later refinements behind `DeviceRuntime`.
+GPU fidelity is split at the operation boundary. `simllm.compute` owns the
+isolated service of one kernel or one copy descriptor. Its trace-driven model
+admits CTAs under register, warp, thread, block and shared-memory limits,
+assigns them to SMs, issues ready warps through dependency scoreboards, and
+services their HBM demand. The isolated copy model supplies descriptor setup
+and directional bandwidth service. These mechanisms can be calibrated or
+replaced without changing `ExecutionGraph`.
+
+CORE-4 owns everything between operations: launch and CUDA-stream FIFO order,
+event dependencies, selection and queueing of copy engines, simultaneous
+kernel and copy execution, cross-operation HBM contention, NCCL expansion,
+WQE/NIC arbitration and completion delivery. It must call the compute service
+model rather than grow a second SM or SASS model in `simllm.core`. The first
+compute slice therefore does not claim whole-task execution timing or
+compute/copy overlap.
 
 ## Status
 
@@ -174,6 +185,12 @@ Actual framework observation producers remain VLLM-11/12 and SGL-9/10.
 Explicit KV state semantics remain CORE-3; physical queue arbitration and
 creation of NCCL, SQ/RQ/CQ, WQE and transport records remain CORE-4; completion
 reduction and tail attribution remain CORE-5.
+
+The trace-driven GPU service slice establishes the intra-kernel scheduler,
+SM, residency and HBM mechanisms plus isolated copy-descriptor service in
+`simllm.compute`. Its synthetic study validates those component laws only.
+It does not close CORE-4, because no inter-operation resource runtime or
+whole-graph overlap policy is added by that slice.
 
 ## Pre-registered runtime sanity experiments
 
@@ -216,12 +233,15 @@ does not claim to produce these resource-contention measurements.
   TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9.
 - CORE-4: implement the first coarse `DeviceRuntime`: framework launch FIFO,
   per-CUDA-stream FIFO and event dependencies, non-preemptive GPU work queue
-  and hardware service, shared HBM queue, directional copy engines, explicit
-  DMA descriptors, NCCL channel queues, per-GPU/QP WQE queues, one shared NIC
-  arbiter/serializer, completion queue and high-priority control queue. Start
+  and dispatch into the `simllm.compute` kernel service model, shared
+  cross-operation HBM arbitration, directional copy-engine selection and
+  queueing for explicit DMA descriptors, NCCL channel queues, per-GPU/QP WQE
+  queues, one shared NIC arbiter/serializer, completion queue and high-priority
+  control queue. Start
   with the fixed eight-GPU, one-NIC node above. Keep every resource policy
-  replaceable so a later GPU scheduler can add SM/block detail without a new
-  graph contract. Append concrete NCCL command, SQ/RQ/CQ, WQE and QP/link-pair
+  replaceable. Do not duplicate the SASS scheduler, SM-residency or isolated
+  copy-service mechanisms owned by `simllm.compute`. Append concrete NCCL
+  command, SQ/RQ/CQ, WQE and QP/link-pair
   records to `RequestBookkeeper`; CQ is initially consumed immediately at the
   WQE completion timestamp and RQ stays an identity-only placeholder. Preserve
   graph operation identity through collective expansion and rendered GOAL tags
