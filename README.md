@@ -5,58 +5,40 @@ Network-faithful simulation of LLM serving and training deployments
 </h3>
 
 <p align="center">
-| <a href="#about"><b>About</b></a> | <a href="#architecture"><b>Architecture</b></a> | <a href="#getting-started"><b>Getting Started</b></a> | <a href="#demo"><b>Demo</b></a> | <a href="#tutorials"><b>Tutorials</b></a> | <a href="#roadmap"><b>Roadmap</b></a> | <a href="#open-task-registry"><b>Open Tasks</b></a> | <a href="#contributing"><b>Contributing</b></a> |
+| <a href="#about"><b>About</b></a> | <a href="#architecture"><b>Architecture</b></a> | <a href="#getting-started"><b>Getting Started</b></a> | <a href="#demo"><b>Demo</b></a> | <a href="#models"><b>Models</b></a> | <a href="#modules"><b>Modules</b></a> | <a href="#development"><b>Development</b></a> | <a href="#contributing"><b>Contributing</b></a> |
 </p>
 
 ## About
 
-SimLLM predicts the serving performance (TTFT, TPOT, goodput, SLO attainment)
-of large LLM deployments **before you buy or reserve the hardware**, with a
-packet-level network underneath rather than a `bytes / bandwidth` estimate.
+SimLLM predicts the serving performance (TTFT, TPOT, goodput, SLO
+attainment) of large LLM deployments **before you buy or reserve the
+hardware**, with a packet-level network underneath rather than a
+`bytes / bandwidth` estimate.
 
-Modern serving stacks (vLLM, SGLang) treat deployment as a GPU scheduling
-problem. At 4+ nodes, and especially at 64+, the network stops being a
-constant: incast, queue buildup, congestion-control oscillation and
-head-of-line blocking reshape TTFT/TPOT distributions in ways no analytic
-model captures. SimLLM couples the **real frontend scheduler** of your
-serving framework with a discrete-event, packet-level network backend
-(ATLAHS + htsim) so that scheduling, KV/prefix-cache management, and the
-fabric feed back on each other.
+At 4+ nodes, and especially at 64+, the network stops being a constant:
+incast, queue buildup, congestion-control oscillation and head-of-line
+blocking reshape TTFT/TPOT distributions in ways no analytic model
+captures. SimLLM couples the **real frontend scheduler** of your serving
+framework with a simulated GPU executor and a discrete-event,
+packet-level network backend (ATLAHS + htsim), so scheduling,
+KV/prefix-cache management and the fabric feed back on each other.
 
-**Key ideas**
+Three ideas carry the design:
 
-- **Frontends are real, GPUs are simulated.** The framework's own scheduler,
-  batching policy, and prefix/KV-cache accounting run unmodified (they are
-  CPU-side bookkeeping); only model execution is replaced by a calibrated
-  compute-cost model plus simulated network time.
-- **Framework-agnostic core, thin adapters.** vLLM and SGLang differ exactly
-  where it matters: request scheduling, RadixCache vs block-hash prefix
-  caching, vRAM accounting. Each framework plugs in behind one common
-  scheduler-step interface:
-  - vLLM: a `SimExecutor` selected with the existing
-    `--distributed-executor-backend simllm.adapters.vllm.SimExecutor` flag
-    (no fork required).
-  - SGLang: a `SimTpModelWorker` installed through SGLang's own plugin
-    framework (an entry point applying a replace hook at the scheduler's
-    worker-construction seam; no fork required, inert unless explicitly
-    enabled).
-- **Workload as a queueing model.** Arrival processes (Poisson, bursty, trace
-  replay) and prompt/output length distributions, with controllable shared-
-  prefix structure, drive the frontend, so prefix-hit probability, cache-miss
-  re-prefill traffic, and vRAM pressure are emergent rather than assumed.
-- **Network with fidelity profiles.** GOAL dependency graphs (compute / send /
-  recv) are executed by htsim at packet granularity: RoCEv2-style DCQCN,
-  explicit-rate collective-network endpoints, Slingshot-like adaptive routing
-  (planned), over Clos topologies with detailed switch models (VoQ traffic
-  manager, request/grant input-buffered).
-- **Pluggable compute-time fidelity.** The duration of every simulated
-  compute region comes from a `ComputeProvider`: measured profile tables
-  from real captures, an analytical roofline model (classifying each kernel
-  as compute- or memory-bound from its configuration alone), or, planned,
-  offline SASS-level cycle simulation (Accel-Sim / GPGPU-Sim) used to
-  populate profile tables for configurations nobody measured. Cycle-accurate
-  GPU simulation never sits inside the step loop; the loop always reads
-  tables or analytical estimates.
+- **Frontends are real, GPUs are simulated.** The framework's own
+  scheduler, batching policy and KV/prefix-cache accounting run
+  unmodified (they are CPU-side bookkeeping); only model execution is
+  replaced by a calibrated compute-cost model plus simulated network
+  time.
+- **No forks.** vLLM plugs in through its existing
+  `--distributed-executor-backend` flag; SGLang through its own plugin
+  framework (inert unless explicitly enabled). Each framework sits
+  behind one common scheduler-step interface.
+- **The network is simulated at packet granularity.** Every scheduler
+  step's collective traffic (tensor-parallel allreduce, MoE all-to-all,
+  pipeline activations) runs through htsim RNIC models over a Clos
+  fabric, and the simulated completion times can feed back into the
+  scheduler's clock.
 
 SimLLM is developed in the open. It is initiated and sponsored by
 **OpenFabric** (we design network hardware to enable distributed AI
@@ -65,86 +47,39 @@ workloads for the AGI era) and welcomes community contributions.
 ## Architecture
 
 ```
-Workload -> framework scheduler -> StepRecord + framework observations
-                  ^                            |
-                  |                            v
-       TTFT/TPOT + virtual clock <- CompletionEvent <- DeviceRuntime
-                     RequestBookkeeper <----------/  ^        |
-                                                    |        v
-                                      ExecutionGraph v1 -> GPU/HBM/DMA/NCCL/WQE/NIC
+workload model (arrivals, prompt/output lengths, shared prefixes)
+        |
+        v
+real framework scheduler (vLLM / SGLang, unmodified)
+        |    scheduler step: which requests, which tokens, cache hits
+        v
+simulated GPU executor (roofline model or measured profile tables)
+        |    per-step collectives: TP allreduce, MoE all-to-all, PP
+        v
+packet-level network simulator (htsim RNIC models on a Clos fabric)
+        |
+        v
+TTFT / TPOT / goodput on a virtual clock
 ```
-
-`StepRecord` remains the compact record of what the real framework chose.
-An `ExecutionLowerer` expands it, together with observed KV lifecycle and
-stream ordering, into a versioned `ExecutionGraph`. Graph dependencies and
-logical submission queues state which operations are legally allowed to
-overlap. They do not predict an overlap percentage. A `DeviceRuntime`
-decides what actually overlaps after launch, GPU, HBM, copy-engine, DMA,
-NCCL-channel and NIC contention, then returns timestamped
-`CompletionEvent` records for latency attribution. Compute providers,
-including the planned calibrated SASS tables, plug into lowering without
-changing this control-plane boundary.
-
-An independent append-only `RequestBookkeeper` correlates request stages with
-opaque framework vRAM allocations, execution operations, NCCL commands,
-SQ/RQ/CQ, WQEs and either DCQCN QPs or `rnic-cn` directed link pairs. The
-graph remains immutable, and network bookkeeping stops at WQE completion;
-packet events remain backend-private.
 
 Two coupling modes:
 
-1. **Offline (open-loop):** run the frontend fast with the sim executor,
-   record every scheduler step, emit one GOAL trace, simulate once, report.
-2. **Closed-loop:** the network's completion times advance the virtual clock
-   that the frontend schedules against, so congestion changes batching, and
+1. **Offline (open-loop):** run the frontend fast, record every
+   scheduler step, emit one GOAL dependency trace, simulate once,
+   report.
+2. **Closed-loop:** each step's simulated completion time advances the
+   virtual clock the scheduler sees, so congestion changes batching and
    batching changes traffic.
 
-A key design point: serving frameworks are **topology-light, not
-topology-agnostic**. vLLM knows logical ranks, TP/PP/DP/EP groups and a
-rank-to-worker placement, but not the switch-level graph; NCCL knows the
-intra-node PCIe/NVLink/NIC topology; only the network simulator knows links,
-routing and queueing. SimLLM therefore joins two independent descriptions,
-a **placement manifest** (rank to node to GPU to shard to groups to local
-experts) and a **fabric topology manifest** (GPU to PCIe/NVLink to NIC to
-switch to links), via the mapper, and every communication event is resolved
-through both.
-
-The first resource-runtime profile deliberately fixes each node at eight
-GPUs sharing one 400G NIC. Every GPU has its own logical WQE submission
-queue or QP, and all eight feed one shared physical NIC arbiter and
-serializer. Intra-node transfers use an NVLink-class path. General fabric
-manifest discovery and arbitrary GPU-to-NIC selection remain deferred until
-this fixed profile is validated; the per-GPU queues must not be collapsed
-into one FIFO because head-of-line blocking, fairness and control priority
-are tail-latency mechanisms.
-
-Host-side effects are deliberately out of the default model: the inter-rank
-doorbell (the small packet that releases the next rank) is simulated
-in-band as a high-priority control message on the fabric, while the host
-launch path (CPU proxy vs GPU-initiated networking, PCIe, RNIC doorbell)
-defaults to zero delay and zero jitter. A single per-endpoint
-initiation-delay constant exists for launch-path studies.
-
-### Modules
-
-Each module has its own doc as the source of truth for design, current
-status and numbered open tasks; the README stays a map.
-
-| Module | Purpose | Doc |
-|---|---|---|
-| `simllm/core` | Virtual clock, scheduler-step records, execution graphs, central bookkeeping, completion contracts | [core](docs/modules/core.md) |
-| `simllm/workload` | Arrival processes, length distributions, shared-prefix structure | [workload](docs/modules/workload.md) |
-| `simllm/compute` | Pluggable compute-time providers + host initiation model | [compute](docs/modules/compute.md) |
-| `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
-| `simllm/traffic` | Semantic collectives to physical flows | [traffic](docs/modules/traffic.md) |
-| `simllm/goal` | GOAL dependency-graph trace emission | [goal](docs/modules/goal.md) |
-| `simllm/backends` | htsim / LogGOPSim invocation + result parsing, submodule pins | [backends](docs/modules/backends.md) |
-| `simllm/adapters/vllm` | `SimExecutor` (pluggable, no fork) + placement exporter | [adapters-vllm](docs/modules/adapters-vllm.md) |
-| `simllm/adapters/sglang` | `SimTpModelWorker` + placement exporter | [adapters-sglang](docs/modules/adapters-sglang.md) |
-
-See [docs/architecture.md](docs/architecture.md) for the full design,
-including the exact integration seams in vLLM and SGLang, the manifest
-schemas and the GOAL trace format.
+Under the hood, every scheduler step is lowered to a versioned execution
+graph with central request/object bookkeeping down to the WQE level;
+runtime resource arbitration (launch queues, GPU, HBM, DMA, NCCL
+channels, shared-NIC contention) is the next stage of the roadmap
+(CORE-4). The full design, including the exact vLLM/SGLang integration
+seams, the manifest schemas and the GOAL trace format, is in
+[docs/architecture.md](docs/architecture.md). The developer map
+(module status, contracts, open tasks, development process) is in
+[docs/README.md](docs/README.md).
 
 ## Getting Started
 
@@ -172,153 +107,131 @@ Pinned backends (details in [docs/modules/backends.md](docs/modules/backends.md)
 | Submodule | Repo | Ref |
 |---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` (GOAL toolchain + validated RNIC launcher) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` (UEC htsim + `htsim_rnic`: rnic-nn, rnic-nn-fluid, rnic-cn) |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `2026_08_05/simllm-addon` (UEC htsim + `htsim_rnic`: rnic-nn, rnic-nn-fluid, rnic-cn; WQE bookkeeping) |
 
 ## Demo
 
-[examples/m4](examples/m4/) is the current flagship demo: the closed loop.
-A real vLLM v0.26.0 engine runs in-process at `tensor_parallel_size=8`
-under the `SimExecutor` (no GPUs touched), and every scheduler step's
-tensor-parallel traffic is executed by `htsim_rnic` at packet granularity
-before the step's completion time advances the scheduler's clock. All 36
-pre-registered checks pass, the fluid-profile closed forms to a residual
-of 0 ps ([expectations](examples/m4/expectations.md),
-[results](examples/m4/RESULTS.md)).
+Every study under [examples/](examples/) is open to users and follows
+the same discipline: an `expectations.md` frozen before the run, the run
+script, and an audited `RESULTS.md`. Start with these:
 
-[examples/m1](examples/m1/) remains the standalone-core demo: workload to
-GOAL to `htsim_rnic` to TTFT/TPOT with per-flow FCT as the debug layer,
-validated the same way ([results](examples/m1/RESULTS.md)). The
-[examples/cn_ladder](examples/cn_ladder/) study compares the fidelity
-profiles (rnic-cn vs DCQCN under incast and all-to-all) and carries the
-definitive comparator figures.
+| Study | Question | Headline result |
+|---|---|---|
+| [m4](examples/m4/RESULTS.md) | Does the closed loop work end to end? | A live vLLM engine at `tensor_parallel_size=8` runs under the `SimExecutor` with `htsim_rnic` inside the step loop; all 36 pre-registered checks pass, fluid closed forms to 0 ps |
+| [dcqcn_micro](examples/dcqcn_micro/RESULTS.md) | **NIC calibration: message size and incast.** How does goodput scale with message size, and is incast bandwidth shared fairly? | Model tracks the real-NIC (UCCL) message-size anchors from above at saturation but undershoots at 64 to 256 KB (0.79x at 64 KB): the calibration target for HTSIM-5; incast fair share is near-ideal (Jain 0.993 to 1.000 across fan-in 2 to 20) |
+| [dcqcn_vs_cn](examples/dcqcn_vs_cn/RESULTS.md) | When does DCQCN collapse, and when does it honestly win? | Buffer-exceeding incast collapses DCQCN by 2 to 3 orders of magnitude (32x64 KiB: p99 slowdown 1161x vs rnic-cn 1.60); buffer-absorbed incast is a registered DCQCN win (1.07 vs 1.68) |
+| [cn_ladder](examples/cn_ladder/RESULTS.md) | Does the explicit-rate `rnic-cn` endpoint meet its acceptance bar? | 46 of 49 incast ladder cells within the 20% target of the ideal baseline; under a lossy all-to-all, DCQCN p99 slowdown is 1902x vs rnic-cn 19.3x (lossless, deterministic) |
+| [breakdown](examples/breakdown/RESULTS.md) | Where does request time actually go? | Network share of request time rises from 52% (TP=2) to 89% (TP=8) at 400G, 96% at 100G |
+| [m1](examples/m1/RESULTS.md) | Standalone core: workload to GOAL to htsim to metrics | Ten runs reproduce their closed forms with 0 ps residual |
+| [m5](examples/m5/RESULTS.md) | MoE expert-parallel all-to-all | Pairwise all-to-allv closed forms exact to 0 ps across size and width |
+| [core2_lowering](examples/core2_lowering/RESULTS.md) | Execution lowering and WQE bookkeeping | Legacy path, graph-only replay and frozen closed form agree to 0 ps on all rows; flow and WQE ledgers field-identical |
 
-## Tutorials
+The message-size calibration curve and the definitive comparator figure:
 
-Planned, will live in `docs/tutorials/`: using parts of the library
-standalone (workload generation, GOAL emission, htsim invocation), and
-writing a frontend adapter for a new framework. Until then, each module doc
-above is the reference.
+<p align="center">
+<img src="examples/dcqcn_micro/plots/msg_size_vs_goodput.png" width="46%" alt="Goodput vs message size against real-NIC anchors">
+<img src="examples/cn_ladder/plots/a2a16_lossy_fct_cdf_seeded.png" width="46%" alt="Seeded FCT CDF, DCQCN vs rnic-cn under a lossy all-to-all">
+</p>
 
-## Roadmap
+The NIC calibration anchors themselves (UCCL, DCQCN, HPCC, Kalia et al.
+measurements distilled into parameter sets) are recorded in
+[docs/papers/msg-size-vs-bandwidth.md](docs/papers/msg-size-vs-bandwidth.md).
 
-- [x] M0: repo scaffold, backend submodules, CI, per-module docs. Landed
-  ahead of schedule on the backend side: `htsim_rnic` with the `rnic-nn`,
-  `rnic-nn-fluid` and `rnic-cn` fidelity profiles and the validated ATLAHS
-  launcher are merged and pinned (2026-08-03), so packet-level RNIC runs
-  work from a fresh clone today.
-- [x] M1: standalone core: workload gen to GOAL to `htsim_rnic` to metrics,
-  no frontend. Virtual clock, length distributions, collective patterns
-  (scatter/gather, ring allreduce, all-to-allv, binomial tree), `txt2bin`
-  conversion, direct `htsim_rnic` invocation with FCT parsing and
-  nn-normalized FCT. Validated by pre-registered sanity studies sweeping
-  bandwidth and parallelism, then independently audited: 15 of 18 checks
-  pass (ten runs reproduce their closed forms with zero picosecond
-  residual); the three misses are traced to mis-registered expectations,
-  each with a closed ledger ([examples/m1](examples/m1/RESULTS.md)).
-- [x] M2: vLLM adapter, pinned to v0.26.0. `SimExecutor` services the full
-  init and step RPC surface, translates every scheduler step into a step
-  record (streamed JSONL, schema-tagged), refuses what fabricated tokens
-  would silently corrupt (speculative decoding, structured output), and
-  the `PlacementExporter` extracts placement manifests from real runs.
-  Independently audited (19 findings folded) and validated end to end
-  against a live engine (2026-08-04). Remaining halves are numbered tasks
-  in [adapters-vllm](docs/modules/adapters-vllm.md).
-- [x] M3: SGLang adapter, pinned to a fresh main-branch commit. SGLang now
-  ships a first-class plugin framework, so `SimTpModelWorker` installs
-  with no fork through an entry point (inert unless
-  `SIMLLM_SGLANG_ENABLE=1`), fabricates CPU-resident pools so RadixCache
-  and retraction stay real, and passed a live CPU-engine smoke on the
-  pinned commit (2026-08-04). Remaining halves in
-  [adapters-sglang](docs/modules/adapters-sglang.md).
-- [ ] M4 (in progress): closed loop validating M2/M3. The loop itself
-  landed and is validated: `HtsimStepSink` runs each step's TP traffic
-  through `htsim_rnic` (diagnostic per-step mode), a live vLLM tp=8 run
-  closed the loop with 0 ps residual against pre-registered closed forms
-  ([examples/m4](examples/m4/RESULTS.md)). Remaining: the persistent
-  co-simulator (BRIDGE-1), the execution/resource runtime (CORE-3 through
-  CORE-5), and calibration against real captures. General fabric manifests
-  (PLACE-1/2) are deferred behind the fixed eight-GPU, one-NIC node profile.
-- [ ] M5 (in progress): all-to-all traffic studies (MoE expert-parallel)
-  with the focus on SASS-level (Accel-Sim/GPGPU-Sim) offline calibration
-  of the compute model (the calibration plan is recorded in
-  [compute](docs/modules/compute.md)); training workloads. Slingshot is
-  out of scope for simllm (the `rnic-ss` profile remains a backend-repo
-  follow-up only).
-- [ ] M6: PD-disaggregation and KV-transfer traffic modeling.
+## Models
 
-## Open task registry
+What SimLLM models today and what is planned next. Each task ID links to
+the module doc that owns it.
 
-Open tasks are tracked in each module's doc with stable numbered IDs
-(`PREFIX-N`, e.g. `PLACE-1`, `HTSIM-2`); an ID is added in the change that
-defers the work and closed by the change that completes it, never renumbered.
-The module list is only the index; the cross-module priority sequence follows
-it:
+### Network and NIC
 
-- [core](docs/modules/core.md): CORE-*, plus BRIDGE-* inherited from the
-  folded bridge module
-- [workload](docs/modules/workload.md): WORK-*
-- [compute](docs/modules/compute.md): COMP-*
-- [placement](docs/modules/placement.md): PLACE-*
-- [traffic](docs/modules/traffic.md): TRAF-*
-- [goal](docs/modules/goal.md): GOAL-*
-- [backends](docs/modules/backends.md): BACK-*, plus backend-repo
-  follow-ups HTSIM-* and ATLAHS-*
-- [adapters-vllm](docs/modules/adapters-vllm.md): VLLM-*
-- [adapters-sglang](docs/modules/adapters-sglang.md): SGL-*
+| Model | Status | What it is |
+|---|---|---|
+| `rnic-nn` | available | Packetized ideal-NIC baseline (no congestion control); the reference every profile normalizes to |
+| `rnic-nn-fluid` | available | Continuous fluid baseline with deterministic closed forms; the 0 ps validation anchor |
+| `rnic-cn` | available | Explicit-rate collective-network endpoint: deterministic reservation ledger, per-packet spraying with resequencing, lossless without PFC |
+| DCQCN | available | RoCEv2 comparator with mlx5-faithful loss recovery (go-back-N + CNP rate cut, optional limited selective repeat), ECN-only and ECN+PFC modes, PFC storm metrics |
+| WQE lifecycle | available | SQ/RQ/CQ queues and per-WQE transport identities (DCQCN QP or rnic-cn link pair), timing-neutral bookkeeping in the backend |
+| Per-WQE start behavior | planned ([HTSIM-5/6](docs/modules/backends.md)) | WQE initiation latency, shared per-pair rate state and submission-queue pipelining/lookahead, calibrated against the real-NIC message-size anchors |
+| LogGOPSim flow level | planned ([BACK-2](docs/modules/backends.md)) | Fast flow-level sweeps before packet-level runs |
 
-### Approved execution-fidelity order
+Fabrics are two-tier Clos topologies with detailed switch models (VoQ
+traffic manager, request/grant input-buffered). The default reference
+configuration is 8 nodes x 8 B100 GPUs, one 400G NIC per GPU; intra-node
+traffic rides an NVLink-class path and stays off the fabric.
+Slingshot-style adaptive routing is out of simllm scope.
 
-The implementation order is architectural, not just a feature ranking.
-Each stage supplies the evidence needed to calibrate the next one:
+### GPU compute
 
-1. **Execution and completion boundary (complete):** strict lowering,
-   validation, JSON round trips, central request/object bookkeeping and
-   graph-only serial replay now implement
-   `simllm-execution-graph-v1`, `simllm-completion-event-v1` and
-   `simllm-execution-result-v1`, plus `simllm-request-bookkeeping-v1`.
-   Exact lowering and WQE results are in
-   [examples/core2_lowering](examples/core2_lowering/RESULTS.md).
-   Actual device schedule capture is owned by
-   [VLLM-12](docs/modules/adapters-vllm.md#open-tasks) and
-   [SGL-10](docs/modules/adapters-sglang.md#open-tasks).
-2. **Hybrid measured plus SASS compute:** complete per-invocation shapes,
-   capture real framework kernels, calibrate offline SASS replay against
-   silicon, and populate provenance-carrying tables under
-   [COMP-1, COMP-5 and COMP-6](docs/modules/compute.md#open-tasks).
-3. **Explicit KV lifecycle:** capture allocation, prefix binding, reads,
-   writes, retention, release, eviction, swap, transfer and recompute under
-   [CORE-3](docs/modules/core.md#open-tasks),
-   [VLLM-11](docs/modules/adapters-vllm.md#open-tasks) and
-   [SGL-9](docs/modules/adapters-sglang.md#open-tasks). Validate the two
-   framework strategies in the dedicated `examples/kv_cache_strategies/`
-   study before coupling KV bytes to resource contention.
-4. **Resource queues and data movement:** model launch and CUDA-stream
-   queues, GPU work and hardware scheduling, HBM, directional copy engines,
-   DMA descriptors, NCCL channels, per-GPU/QP WQE queues, the shared NIC,
-   completion queues and a high-priority control queue under
-   [CORE-4](docs/modules/core.md#open-tasks).
-5. **Dependency-driven overlap:** replace the serial step chain only after
-   KV and resource queues exist. Framework lowering declares dependencies;
-   runtime arbitration determines realized overlap under
-   [TRAF-7](docs/modules/traffic.md#open-tasks).
-6. **Paced comparison and residual closure:** compare p50 through p99.9
-   TTFT/TPOT with real vLLM and SGLang in increasing-complexity stages,
-   then select the next model from queue-, KV-, kernel-, DMA-, collective-
-   and network-attributed residuals. This closes
-   [VLLM-4](docs/modules/adapters-vllm.md#open-tasks) and
-   [SGL-4](docs/modules/adapters-sglang.md#open-tasks).
+| Model | Status | What it is |
+|---|---|---|
+| Roofline | available | Analytical `max(flops/peak, bytes/bandwidth)` per kernel family, dense and MoE geometry, per-GPU envelopes |
+| Profile tables | available | Measured (kernel, config, GPU) duration tables; versioned artifact with mandatory provenance and interpolation |
+| SASS offline calibration | planned ([COMP-1/5](docs/modules/compute.md)) | Accel-Sim trace-driven replay populates the tables offline for configurations nobody measured; a cycle simulator never sits inside the step loop |
+| Service-time distributions | planned ([COMP-9](docs/modules/compute.md)) | Beyond-mean service times for honest p99+ tails |
+
+### Framework (scheduling and KV cache)
+
+| Framework | Real (runs unmodified) | Simulated | Doc |
+|---|---|---|---|
+| vLLM, pinned v0.26.0 | v1 scheduler, KV-cache manager, block pool, prefix hashing, preemption | Model execution, sampled tokens, step latency | [adapters-vllm](docs/modules/adapters-vllm.md) |
+| SGLang, pinned main commit | RadixCache prefix matching, eviction, token/request pool accounting, retraction | Forward results and timing | [adapters-sglang](docs/modules/adapters-sglang.md) |
+
+Planned on this axis: explicit KV-lifecycle capture
+([CORE-3](docs/modules/core.md), [VLLM-11](docs/modules/adapters-vllm.md),
+[SGL-9](docs/modules/adapters-sglang.md)), device-schedule capture
+([VLLM-12](docs/modules/adapters-vllm.md),
+[SGL-10](docs/modules/adapters-sglang.md)), and PD-disaggregation /
+KV-transfer traffic (M6).
+
+## Modules
+
+Each module has its own doc as the source of truth for design, current
+status and numbered open tasks; the README stays a map.
+
+| Module | Purpose | Doc |
+|---|---|---|
+| `simllm/core` | Virtual clock, scheduler-step records, execution graphs, central bookkeeping, completion contracts | [core](docs/modules/core.md) |
+| `simllm/workload` | Arrival processes, length distributions, shared-prefix structure | [workload](docs/modules/workload.md) |
+| `simllm/compute` | Pluggable compute-time providers + host initiation model | [compute](docs/modules/compute.md) |
+| `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
+| `simllm/traffic` | Semantic collectives to physical flows | [traffic](docs/modules/traffic.md) |
+| `simllm/goal` | GOAL dependency-graph trace emission | [goal](docs/modules/goal.md) |
+| `simllm/backends` | htsim / LogGOPSim invocation + result parsing, submodule pins | [backends](docs/modules/backends.md) |
+| `simllm/adapters/vllm` | `SimExecutor` (pluggable, no fork) + placement exporter | [adapters-vllm](docs/modules/adapters-vllm.md) |
+| `simllm/adapters/sglang` | `SimTpModelWorker` + placement exporter | [adapters-sglang](docs/modules/adapters-sglang.md) |
+
+## Development
+
+SimLLM is built in validated stages; every stage ships with
+pre-registered studies whose numbers are defended in the open (see
+[docs/README.md](docs/README.md) for the process and the stage-by-stage
+fidelity plan).
+
+- [x] M0: repo scaffold, backend submodules, CI, per-module docs
+- [x] M1: standalone core (workload to GOAL to `htsim_rnic` to metrics)
+- [x] M2: vLLM adapter, pinned to v0.26.0, no fork
+- [x] M3: SGLang adapter, plugin entry point, no fork
+- [ ] M4 (in progress): closed loop and the execution/resource runtime
+- [ ] M5 (in progress): MoE all-to-all studies + SASS compute calibration
+- [ ] M6: PD-disaggregation and KV-transfer traffic modeling
+
+Everything deeper lives in the developer guide
+[docs/README.md](docs/README.md): the open task registry, the full
+roadmap and milestone detail, the execution-fidelity order, and the
+development workflow (pre-registered studies, audited results, numbered
+deferrals).
 
 ## Contributing
 
 We welcome contributions of every size; see [CONTRIBUTING.md](CONTRIBUTING.md).
-Good first areas: workload generators, compute-cost calibration profiles for
-new GPUs, topology configs, metrics/plotting.
+Good first areas: workload generators, compute-cost calibration profiles
+for new GPUs, topology configs, metrics/plotting.
 
 ## License
 
-SimLLM is licensed under [Apache-2.0](LICENSE). The backend submodules keep
-their own permissive licenses (htsim: BSD 2-Clause, UEC/UCL/UPB/Broadcom;
-ATLAHS: MIT, SPCL).
+SimLLM is licensed under [Apache-2.0](LICENSE). The backend submodules
+keep their own permissive licenses (htsim: BSD 2-Clause,
+UEC/UCL/UPB/Broadcom; ATLAHS: MIT, SPCL).
 
 ## Design & References
 
