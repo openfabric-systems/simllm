@@ -342,6 +342,7 @@ def validate_bookkeeping_ledger(ledger: BookkeepingLedger) -> None:
         path = f"ledger.entries[{index}]"
         if not isinstance(entry, BookkeepingEntry):
             raise TypeError(f"{path}: expected BookkeepingEntry")
+        _require_integer(entry.sequence, f"{path}.sequence", nonnegative=True)
         if entry.sequence != index:
             raise ValueError(f"{path}.sequence: expected contiguous value {index}")
         fact = entry.fact
@@ -454,23 +455,34 @@ def validate_bookkeeping_ledger(ledger: BookkeepingLedger) -> None:
         if fact.timestamp_ps < prior_timestamp:
             raise ValueError(f"{path}.fact.timestamp_ps: subject timestamps must be nondecreasing")
         subject_timestamp[subject_id] = fact.timestamp_ps
-        if fact.phase is EventPhase.COMPLETED and subject.ref.kind is CreatedObjectKind.NETWORK_WQE:
+        if subject.ref.kind is CreatedObjectKind.NETWORK_WQE:
             if subject_id in completed_wqes:
-                raise ValueError(f"{path}.fact: WQE has more than one completion")
-            completion_queues = tuple(
-                parent
-                for parent in subject.parent_refs
-                if parent.kind is CreatedObjectKind.COMPLETION_QUEUE
-            )
-            expected_resource = ResourceRef(
-                ResourceKind.COMPLETION_QUEUE,
-                completion_queues[0].object_id,
-            )
-            if fact.resource != expected_resource:
+                if fact.phase is EventPhase.COMPLETED:
+                    raise ValueError(f"{path}.fact: WQE has more than one completion")
                 raise ValueError(
-                    f"{path}.fact.resource: WQE completion must name its completion queue"
+                    f"{path}.fact: WQE accepts no events after its completion"
                 )
-            completed_wqes.add(subject_id)
+            if fact.phase is EventPhase.COMPLETED:
+                completion_queues = tuple(
+                    parent
+                    for parent in subject.parent_refs
+                    if parent.kind is CreatedObjectKind.COMPLETION_QUEUE
+                )
+                expected_resource = ResourceRef(
+                    ResourceKind.COMPLETION_QUEUE,
+                    completion_queues[0].object_id,
+                )
+                if fact.resource != expected_resource:
+                    raise ValueError(
+                        f"{path}.fact.resource: WQE completion must name its completion queue"
+                    )
+                completed_wqes.add(subject_id)
+
+
+def _escape_object_id_component(value: str) -> str:
+    """Escape the composite-ID separator so distinct pairs never collide."""
+
+    return value.replace("%", "%25").replace(":", "%3A")
 
 
 class RequestBookkeeper:
@@ -528,7 +540,9 @@ class RequestBookkeeper:
             CreatedObjectRecord(
                 ref=CreatedObjectRef(
                     CreatedObjectKind.EXECUTION_OPERATION,
-                    f"execution-operation:{graph.execution_id}:{operation.operation_id}",
+                    "execution-operation:"
+                    f"{_escape_object_id_component(graph.execution_id)}:"
+                    f"{_escape_object_id_component(operation.operation_id)}",
                 ),
                 owner=ObjectOwner.CORE,
                 created_at_ps=graph.released_at_ps,
@@ -558,26 +572,34 @@ class RequestBookkeeper:
             for entry in self._entries
             if isinstance(entry.fact, CreatedObjectRecord)
         }
-        operation_scopes = {
-            (entry.fact.scope.execution_id, entry.fact.scope.operation_id): entry.fact.scope
-            for entry in self._entries
-            if isinstance(entry.fact, CreatedObjectRecord)
-            and entry.fact.ref.kind is CreatedObjectKind.EXECUTION_OPERATION
-        }
+        # Several operation records may legally share one scope key, e.g. a
+        # runtime-appended record next to register_graph's; a subjectless
+        # event belongs to every request any of them correlates.
+        operation_scopes: dict[tuple[str | None, str | None], list[BookkeepingScope]] = {}
+        for entry in self._entries:
+            fact = entry.fact
+            if (
+                isinstance(fact, CreatedObjectRecord)
+                and fact.ref.kind is CreatedObjectKind.EXECUTION_OPERATION
+            ):
+                key = (fact.scope.execution_id, fact.scope.operation_id)
+                operation_scopes.setdefault(key, []).append(fact.scope)
         selected: list[BookkeepingEntry] = []
         for entry in self._entries:
-            scope = _fact_scope(entry.fact)
-            if isinstance(entry.fact, CompletionEvent):
-                if entry.fact.subject_object_id is not None:
-                    subject = objects.get(entry.fact.subject_object_id)
+            fact = entry.fact
+            scopes: tuple[BookkeepingScope, ...] = (_fact_scope(fact),)
+            if isinstance(fact, CompletionEvent):
+                if fact.subject_object_id is not None:
+                    subject = objects.get(fact.subject_object_id)
                     if subject is not None:
-                        scope = subject.scope
+                        scopes = (subject.scope,)
                 else:
-                    scope = operation_scopes.get(
-                        (entry.fact.execution_id, entry.fact.operation_id),
-                        scope,
+                    matched = operation_scopes.get(
+                        (fact.execution_id, fact.operation_id)
                     )
-            if request_id in scope.correlation.request_ids:
+                    if matched:
+                        scopes = tuple(matched)
+            if any(request_id in scope.correlation.request_ids for scope in scopes):
                 selected.append(entry)
         return tuple(selected)
 

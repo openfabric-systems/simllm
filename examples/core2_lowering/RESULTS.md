@@ -56,6 +56,14 @@ At either rate, width-4 serialization was exactly 1.5 times width-2
 serialization. Total JCT did not halve with doubled bandwidth because compute
 and propagation remained fixed, as registered.
 
+Disclosure (added 2026-08-06): the registered cross-rate graph-identity check
+(`graph_equal_across_rates`) is true by construction and carries no
+evidential weight. The harness lowers each width's graph once outside the
+rate loop and `SerialStepLowererConfig` has no link-rate input, so the
+compared canonical JSON strings are two serializations of the same in-memory
+object. The flag remains as a regression guard only; every JCT and ledger
+check above is independently anchored.
+
 ## WQE seam validation
 
 The focused HTSIM matrix crossed WQE count `{2, 4}` with transport kind

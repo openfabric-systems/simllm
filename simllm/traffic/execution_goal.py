@@ -171,6 +171,18 @@ def render_serial_execution_graph_goal(
             ring_tags[operation.operation_id] = next_ring_tag
             next_ring_tag += 2 * (len(work.ranks) - 1)
         elif _is_pairwise(work):
+            if work.payload_bytes == 0:
+                raise ValueError(
+                    f"operation {operation.operation_id!r} is a zero-payload "
+                    "pairwise all-to-allv; the serial GOAL renderer rejects it "
+                    "instead of silently dropping the collective"
+                )
+            if len(work.ranks) < 2:
+                raise ValueError(
+                    f"operation {operation.operation_id!r} is a single-rank "
+                    "pairwise all-to-allv; the serial GOAL renderer rejects it "
+                    "instead of silently dropping the collective"
+                )
             pairwise_operations.append(operation)
         else:
             raise ValueError(

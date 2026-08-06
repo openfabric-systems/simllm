@@ -26,7 +26,7 @@ from simllm.core.step import StepRecord
 if TYPE_CHECKING:
     from simllm.core.bookkeeping import RequestBookkeeper
 
-#: Reserved wire-format names. JSON readers/writers land with CORE-2.
+#: Versioned wire-format names; execution_io implements the JSON readers and writers.
 EXECUTION_GRAPH_SCHEMA = "simllm-execution-graph-v1"
 COMPLETION_EVENT_SCHEMA = "simllm-completion-event-v1"
 EXECUTION_RESULT_SCHEMA = "simllm-execution-result-v1"
@@ -146,7 +146,15 @@ class DmaWork:
 
 @dataclass(frozen=True)
 class CollectiveWork:
-    """One semantic collective before algorithm and channel expansion."""
+    """One semantic collective before algorithm and channel expansion.
+
+    ``payload_bytes`` is algorithm-relative, and consumers must branch on
+    ``(collective, algorithm_hint)``: a ring all-reduce carries the full
+    reduced payload, while a pairwise all-to-allv carries the bytes each
+    rank sends to each other rank (one uniform ordered-pair share).
+    Captured all-to-allv patterns with per-pair size variation are not
+    representable by this scalar; CORE-6 owns that contract extension.
+    """
 
     collective: str
     ranks: tuple[int, ...]

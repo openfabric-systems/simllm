@@ -28,7 +28,9 @@ class RankMapper:
         if mode not in GOAL_RANK_MAPPINGS:
             raise ValueError(f"mode must be one of {GOAL_RANK_MAPPINGS}")
         if mode == "unique-nic":
-            raise NotImplementedError("unique-nic mapping lands with the fabric manifest (M4)")
+            raise NotImplementedError(
+                "unique-nic mapping is deferred behind the fabric manifest (PLACE-2)"
+            )
         self.placement = placement
         self.mode = mode
 

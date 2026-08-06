@@ -223,6 +223,111 @@ def test_graph_registration_is_immutable_and_queryable_by_request():
     assert event_entry in bookkeeper.for_object(operation_ref)
 
 
+def test_composite_operation_object_ids_stay_injective_across_colon_ids():
+    bookkeeper = RequestBookkeeper()
+    bookkeeper.register_graph(
+        ExecutionGraph(
+            "a",
+            0,
+            0,
+            (
+                ExecutionOperation(
+                    "b:c",
+                    0,
+                    "cuda:0:compute",
+                    ComputeWork("gemm", nominal_duration_ps=10),
+                ),
+            ),
+        )
+    )
+    bookkeeper.register_graph(
+        ExecutionGraph(
+            "a:b",
+            1,
+            0,
+            (
+                ExecutionOperation(
+                    "c",
+                    0,
+                    "cuda:0:compute",
+                    ComputeWork("gemm", nominal_duration_ps=10),
+                ),
+            ),
+        )
+    )
+
+    object_ids = [
+        entry.fact.ref.object_id
+        for entry in bookkeeper.snapshot().entries
+        if isinstance(entry.fact, CreatedObjectRecord)
+    ]
+    assert len(object_ids) == len(set(object_ids)) == 2
+
+
+def test_subjectless_completion_is_attributed_to_every_matching_operation_scope():
+    def _operation_record(object_id: str, request_id: str, created_at_ps: int):
+        return CreatedObjectRecord(
+            CreatedObjectRef(CreatedObjectKind.EXECUTION_OPERATION, object_id),
+            ObjectOwner.CORE,
+            created_at_ps,
+            BookkeepingScope(
+                correlation=OperationCorrelation(request_ids=(request_id,)),
+                execution_id="exec",
+                operation_id="op",
+            ),
+        )
+
+    bookkeeper = RequestBookkeeper()
+    bookkeeper.extend(
+        (
+            _operation_record("operation:manual", "request-a", 0),
+            _operation_record("execution-operation:exec:op", "request-b", 1),
+        )
+    )
+    event_entry = bookkeeper.append(
+        CompletionEvent("exec", "op", EventPhase.COMPLETED, 2)
+    )
+
+    assert event_entry in bookkeeper.for_request("request-a")
+    assert event_entry in bookkeeper.for_request("request-b")
+
+
+def test_ledger_rejects_boolean_sequence_numbers():
+    stage = StageRecord(
+        ProcessingStage.REQUEST, StagePhase.ENTERED, 0, BookkeepingScope()
+    )
+    ledger = BookkeepingLedger(
+        (BookkeepingEntry(0, stage), BookkeepingEntry(True, stage))
+    )
+    with pytest.raises(ValueError, match="sequence: must be an integer"):
+        validate_bookkeeping_ledger(ledger)
+
+
+def test_wqe_accepts_no_events_after_its_completion():
+    bookkeeper = RequestBookkeeper(_network_ledger())
+    with pytest.raises(ValueError, match="no events after its completion"):
+        bookkeeper.append(
+            CompletionEvent(
+                "execution-7",
+                "collective-3",
+                EventPhase.PROGRESS,
+                25,
+                subject_object_id="wqe:0",
+            )
+        )
+
+
+def test_wire_scope_correlation_fields_are_optional_like_the_graph_schema():
+    payload = bookkeeping_ledger_to_json(_network_ledger())
+    payload["entries"][0]["fact"]["scope"]["correlation"] = {
+        "request_ids": ["request-0"]
+    }
+    ledger = bookkeeping_ledger_from_json(payload)
+    assert ledger.entries[0].fact.scope.correlation == OperationCorrelation(
+        request_ids=("request-0",)
+    )
+
+
 def test_independent_executions_may_be_appended_out_of_timestamp_order():
     bookkeeper = RequestBookkeeper()
     bookkeeper.append(

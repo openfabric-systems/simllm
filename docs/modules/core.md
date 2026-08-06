@@ -76,6 +76,14 @@ dictionary:
 | `CollectiveWork` | Framework/NCCL observation plus traffic planner | NCCL channels, DMA/HBM work, WQEs and network flows |
 | `ControlWork` | Framework or runtime controller | synchronous or asynchronous high-priority local/fabric control path |
 
+`CollectiveWork.payload_bytes` is algorithm-relative, and consumers must
+branch on `(collective, algorithm_hint)`: a ring `all-reduce` carries the
+full reduced payload, while a `pairwise` `all-to-allv` carries the bytes each
+rank sends to each other rank (one uniform ordered-pair share; the serial
+lowerer and the serial GOAL renderer agree on this decoding). An all-to-allv
+with per-pair size variation, e.g. captured routed-expert dispatch, is not
+representable by the single scalar; CORE-6 owns the contract extension.
+
 `ExecutionLowerer` and `DeviceRuntime` remain narrow protocols.
 `SerialStepLowerer` implements the diagnostic compatibility schedule and
 `render_serial_execution_graph_goal` replays its supported subset using only
@@ -225,6 +233,20 @@ does not claim to produce these resource-contention measurements.
   TTFT/TPOT plus queue-, KV-, kernel-, DMA-, collective-, NIC- and control-
   attributed components. Support synchronous waits and asynchronous control
   or collective progress without changing the event schema.
+- CORE-6: represent variable per-pair all-to-allv sizes in the graph
+  contract. `CollectiveWork.payload_bytes` carries one uniform ordered-pair
+  share for `pairwise` all-to-allv, so a captured, non-uniform dispatch
+  (routed experts under real gating) cannot be expressed. Decide between an
+  optional per-pair size table on the collective payload and a schema bump;
+  the uniform scalar form must stay readable either way. Coordinate with the
+  TRAF-2 capture half so traffic expansion and the renderer consume the same
+  representation.
+- CORE-7: make `RequestBookkeeper.append` and `extend` validation
+  incremental. Every append currently revalidates the entire candidate
+  ledger, so N single-fact appends cost quadratic work; CORE-4 streams
+  per-WQE events for 64-rank runs and needs amortized constant-time appends
+  with unchanged invariants. The full-ledger validator remains the reference
+  implementation for snapshots and wire loads.
 - BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
   process for closed loop, replacing per-step subprocess spawns. Its
   incremental flow-injection transport should carry `ExecutionGraph` and

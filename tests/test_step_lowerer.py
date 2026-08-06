@@ -310,6 +310,51 @@ def test_serial_goal_renderer_rejects_work_it_cannot_preserve(graph, match):
         render_serial_execution_graph_goal(graph)
 
 
+def test_serial_goal_renderer_rejects_zero_payload_pairwise_all_to_allv():
+    graph = ExecutionGraph(
+        "zero-a2a",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "c0",
+                0,
+                "cuda:0:compute",
+                ComputeWork("gemm", nominal_duration_ps=1_000),
+            ),
+            ExecutionOperation(
+                "a2a",
+                0,
+                "cuda:0:nccl:ep",
+                CollectiveWork("all-to-allv", (0, 1), 0, algorithm_hint="pairwise"),
+                participant_local_depends_on=("c0",),
+            ),
+        ),
+        ("a2a",),
+    )
+    with pytest.raises(ValueError, match="zero-payload pairwise"):
+        render_serial_execution_graph_goal(graph)
+
+
+def test_serial_goal_renderer_rejects_single_rank_pairwise_all_to_allv():
+    graph = ExecutionGraph(
+        "solo-a2a",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "a2a",
+                0,
+                "cuda:0:nccl:ep",
+                CollectiveWork("all-to-allv", (0,), 4096, algorithm_hint="pairwise"),
+            ),
+        ),
+        ("a2a",),
+    )
+    with pytest.raises(ValueError, match="single-rank pairwise"):
+        render_serial_execution_graph_goal(graph)
+
+
 def test_serial_lowerer_config_rejects_bad_rank_sets():
     with pytest.raises(ValueError, match="at least one"):
         SerialStepLowererConfig(SMALL_DIMS, ())
