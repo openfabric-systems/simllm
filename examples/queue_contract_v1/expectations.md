@@ -6,7 +6,7 @@ This file is the expectations-only record for the first shared queue-service
 contract. It is written before the contract implementation or any run of its
 conformance study. Existing component outputs may be used as regression
 baselines, but no result from the new study is included here. The results must
-cite the commit that first adds this file.
+cite both the original freeze commit and the final pre-run expectations commit.
 
 ## Scope
 

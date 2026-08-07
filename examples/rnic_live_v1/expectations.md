@@ -5,8 +5,8 @@
 This file is the expectations-only record for the first composed native RNIC
 and htsim run. It is written before implementation, before the SimLLM RNIC
 library is linked into an htsim driver, and before any run of this study. It
-contains no measured values. The results must cite the commit that first adds
-this file.
+contains no measured values. The results must cite both the original freeze
+commit and the final pre-run expectations commit.
 
 ## Authority and modes
 
@@ -62,7 +62,8 @@ the `ExecutionGraph`, `StepResult`, TTFT and TPOT checks.
    later relation. One-sided operations consume no receive WQE.
 8. For a signaled WQE, application-visible completion occurs at CQ poll. An
    unsignaled successful WQE produces no fabricated CQE or CQ completion; its
-   SQ reclamation follows the later signaled completion or explicit drain rule.
+   SQ reclamation follows a later signaled completion or an explicit modeled
+   drain or teardown rule.
 9. `first_packet_at_ps` is the native NIC-start timestamp. Network acceptance
    and whole-flow delivery are not substitutes for first or last packet issue.
 
