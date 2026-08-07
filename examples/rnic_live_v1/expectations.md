@@ -51,9 +51,12 @@ the `ExecutionGraph`, `StepResult`, TTFT and TPOT checks.
    same hardware-configuration hash. Only transport-policy identity and its
    consequences may differ.
 6. Every accepted native post maps to exactly one session-stable WQE key. Each
-   htsim extent token maps to one WQE key and extent index until one terminal
-   delivery or drop. Native records, transport terminals, projected rows and
-   public object references reconcile exactly at quiescence.
+   logical network extent maps to one WQE key and extent index. Every wire
+   attempt has a distinct attempt index and opaque token and terminates in one
+   delivery or drop event. A dropped attempt may create a later retry while
+   preserving the WQE and logical-extent keys. Native records, all attempt
+   terminals, projected rows and public object references reconcile exactly at
+   quiescence.
 7. A send WQE names its local SQ and send CQ, never a fabricated remote RQ. A
    receive WQE names exactly one RQ or SRQ and its receive CQ. RX matching is a
    later relation. One-sided operations consume no receive WQE.

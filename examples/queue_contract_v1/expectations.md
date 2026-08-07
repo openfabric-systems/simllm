@@ -29,10 +29,11 @@ For one visit, queue wait is `started_at - eligible_at`, service is
 The sum of visit waits is a work total, not a critical-path delay. Only a
 separately reduced critical-path queue delay may be added to TTFT or TPOT.
 
-The explicit off policy is identity FIFO. It ignores class and priority and
-selects the legal ready request with the smallest
-`(eligible_at, enqueue_sequence)` pair. Protocol legality is applied before
-policy selection.
+The explicit off policy is identity. It ignores class and priority and
+preserves each mechanism's deterministic baseline order after protocol
+legality is applied. In the reference serial-resource fixture below, that
+baseline is FIFO by `(eligible_at, enqueue_sequence)`. The shared contract does
+not impose global FIFO on GPU schedulers or protocol resources.
 
 ## Exact conformance cases
 
@@ -59,8 +60,8 @@ cycles or picoseconds without changing the relations.
    during that interval uses an idle link opportunity before the read. The
    identity policy never reverses this mandatory legality rule.
 7. **Identity labels.** Changing only class and priority labels under identity
-   FIFO changes no selected order, timestamp, wait, byte count, counter or
-   random draw.
+   changes no selected order, timestamp, wait, byte count, counter or random
+   draw.
 8. **Overflow rollback.** Timestamp overflow fails before any queue cursor,
    reservation, capacity counter, random-draw cursor or owner container is
    mutated.
