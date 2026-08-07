@@ -50,21 +50,9 @@ workloads for the AGI era) and welcomes community contributions.
 
 ## Architecture
 
-```
-workload model (arrivals, prompt/output lengths, shared prefixes)
-        |
-        v
-real framework scheduler (vLLM / SGLang, unmodified)
-        |    scheduler step: which requests, which tokens, cache hits
-        v
-simulated GPU executor (roofline, profile tables, or trace-driven service)
-        |    per-step collectives: TP allreduce, MoE all-to-all, PP
-        v
-packet-level network simulator (htsim RNIC models on a Clos fabric)
-        |
-        v
-TTFT / TPOT / goodput on a virtual clock
-```
+<p align="center">
+  <img src="resources/architecture/simllm-workflow.svg" width="100%" alt="SimLLM workflow from workload generation through the real framework scheduler, virtual GPU execution and packet-level fabric simulation to TTFT, TPOT and goodput, with closed-loop virtual-time feedback">
+</p>
 
 Two coupling modes:
 
