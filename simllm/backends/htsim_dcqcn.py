@@ -11,26 +11,27 @@ Binary discovery mirrors :mod:`simllm.backends.htsim_rnic`:
 
 from __future__ import annotations
 
-import os
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from simllm._native import cmake_binary_candidates, find_native_binary
 from simllm.backends.htsim_rnic import RnicRunResult, parse_completion_csv
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_DEFAULT_BUILD_BINARY = _REPO_ROOT / "build" / "htsim" / "datacenter" / "htsim_dcqcn_atlahs"
+_DEFAULT_BUILD_ROOT = _REPO_ROOT / "build" / "htsim"
 
 
 def find_htsim_dcqcn() -> Path | None:
-    env = os.environ.get("SIMLLM_HTSIM_DCQCN")
-    if env and Path(env).is_file():
-        return Path(env)
-    if _DEFAULT_BUILD_BINARY.is_file() and os.access(_DEFAULT_BUILD_BINARY, os.X_OK):
-        return _DEFAULT_BUILD_BINARY
-    on_path = shutil.which("htsim_dcqcn_atlahs")
-    return Path(on_path) if on_path else None
+    return find_native_binary(
+        "SIMLLM_HTSIM_DCQCN",
+        "htsim_dcqcn_atlahs",
+        cmake_binary_candidates(
+            _DEFAULT_BUILD_ROOT,
+            "htsim_dcqcn_atlahs",
+            subdirectory="datacenter",
+        ),
+    )
 
 
 @dataclass

@@ -98,11 +98,36 @@ cd simllm
 git submodule update --init third_party/atlahs third_party/htsim
 
 pip install -e .
+```
 
-# Build the packet-level network simulator
-cmake -S third_party/htsim/htsim/sim -B build/htsim -DCMAKE_BUILD_TYPE=Release
-cmake --build build/htsim --parallel
+Build HTSIM with a C++17 toolchain. On Linux, use GCC or Clang with
+CMake 3.16 or newer:
 
+```bash
+./scripts/build_htsim.sh build/htsim --test
+```
+
+On Windows, install Visual Studio 2022 Build Tools with the **Desktop
+development with C++** workload and CMake, then run in PowerShell:
+
+```powershell
+.\scripts\build_htsim.ps1 -BuildDirectory build\htsim -RunTests
+```
+
+The Windows build uses MSVC and places executables in CMake's
+configuration directories, for example
+`build/htsim/datacenter/Release/htsim_rnic.exe`. SimLLM automatically
+discovers both that layout and the single-configuration Linux layout.
+The `SIMLLM_HTSIM_RNIC`, `SIMLLM_HTSIM_DCQCN`, and `SIMLLM_TXT2BIN`
+environment variables can override discovery.
+
+The vLLM and SGLang adapters and traffic models are Python code and do
+not need a Windows-specific fork; on Windows they invoke the native
+HTSIM `.exe` files through the same backend interface.
+
+Run a sanity study after building:
+
+```bash
 # Run the M1 sanity studies: probes + bandwidth/parallelism sweeps +
 # pipeline-parallel TTFT/TPOT on the default 8-node x 8-GPU 400G Clos
 python examples/m1/run_m1.py --out runs/m1

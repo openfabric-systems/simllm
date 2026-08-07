@@ -1,29 +1,28 @@
 """Convert GOAL text to the binary format the simulators consume.
 
-The ``txt2bin`` tool ships with the backends; discovery order is the
-``SIMLLM_TXT2BIN`` environment variable, then the checked-in binary inside
-the htsim submodule, then ``PATH``.
+The ``txt2bin`` tool builds with the htsim backend; discovery order is the
+``SIMLLM_TXT2BIN`` environment variable, the CMake build tree, the legacy
+source-tree symlink on Unix, then ``PATH``.
 """
 
 from __future__ import annotations
 
-import os
-import shutil
 import subprocess
 from pathlib import Path
 
+from simllm._native import cmake_binary_candidates, find_native_binary
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+_DEFAULT_BUILD_ROOT = _REPO_ROOT / "build" / "htsim"
 _SUBMODULE_TXT2BIN = _REPO_ROOT / "third_party" / "htsim" / "htsim" / "sim" / "lgs" / "txt2bin"
 
 
 def find_txt2bin() -> Path | None:
-    env = os.environ.get("SIMLLM_TXT2BIN")
-    if env and Path(env).is_file():
-        return Path(env)
-    if _SUBMODULE_TXT2BIN.is_file() and os.access(_SUBMODULE_TXT2BIN, os.X_OK):
-        return _SUBMODULE_TXT2BIN
-    on_path = shutil.which("txt2bin")
-    return Path(on_path) if on_path else None
+    candidates = [
+        *cmake_binary_candidates(_DEFAULT_BUILD_ROOT, "txt2bin"),
+        _SUBMODULE_TXT2BIN,
+    ]
+    return find_native_binary("SIMLLM_TXT2BIN", "txt2bin", candidates)
 
 
 def to_binary(goal_path: str | Path, bin_path: str | Path | None = None,
