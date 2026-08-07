@@ -172,30 +172,119 @@ connected, so the old HTSIM ledger remains the live compatibility path.
 The pre-registered native study passes all 11 cells exactly; see
 [examples/rnic_wq_v1/RESULTS.md](../../examples/rnic_wq_v1/RESULTS.md).
 
+On 2026-08-07 BACK-10 closed at its accepted deterministic transaction-level
+boundary. The shared `PcieFabric` has distinct semantic service classes,
+transactional plan/commit, MWr/MRd/CplD segmentation, configured modeled-link
+overhead, Gen1 through Gen5 directional serialization, DWORD, 4 KiB, MPS,
+MRRS and eager-RCB splitting, typed credit pools, read-tag and completion-
+buffer limits, fixed service latency, and per-class byte, wait, service-delay
+and path-delay accounting. Every NUMA, IOMMU, ACS, switch, DDIO-miss and GPU
+Direct penalty accepts an explicit disabled state or fixed, nonnegative
+discrete-Gaussian and rare-tail two-Gaussian-mixture profiles with nonzero
+analytical incidence. Results record realized delay plus evaluation,
+occurrence and tail-selection counts.
+The regular mlx5 Work Queue path emits its 4-byte
+DB-record host store, 8-byte UAR write, WQE reads and CQE writes through that
+fabric. The pre-registered 35-row study and all 18 cross-checks pass; see
+[examples/rnic_pcie_v1/RESULTS.md](../../examples/rnic_pcie_v1/RESULTS.md).
+The incidence draws are independent analytical surrogates: they do not claim
+that the model detects a NUMA route, IOMMU or DDIO miss, ACS redirect or GPU
+Direct event. Defaults remain synthetic, not a ConnectX-7 profile.
+BACK-16 owns active-path timing precision and calibration; BACK-17 owns
+optional PCIe feature completeness.
+
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
 and its ECMP-collision and slow-start behavior is the phenomenon under study.
 
 ## Open tasks
 
-- BACK-2: LogGOPSim invocation helper for fast flow-level sweeps.
-- BACK-5: `HtsimStepSink` splits the whole-step compute estimate evenly
+Every task is labeled `(Category; priority; difficulty)`. P0 is a correctness,
+state-integrity or validation-gate failure and outranks both categories. P1 is
+active-path precision or completeness required by an accepted study or
+milestone. P2 is deliberately disabled or bypassed feature coverage. Active-
+path precision normally precedes P2 completeness. A disabled completeness
+path must preserve the exact accepted baseline. Once a study enables that
+path, errors in its behavior or calibration are precision work.
+
+Difficulty is S for a localized change with local evidence, M for a change
+that crosses one interface or needs one reproducible calibration, and L for
+cross-layer work, hardware evidence or a multi-repository campaign. Difficulty
+does not override priority, and correctness is never deferred because a fix
+is difficult.
+
+### Precision
+
+- BACK-5 (Precision; P1; M): `HtsimStepSink` splits the whole-step compute
+  estimate evenly
   across layers (`estimate_step_latency_ps(...) // (L * 1000)`, which
   also truncates to whole GOAL ns units). Real per-layer durations differ
   (LM head and sampling live in the last layer's share); a per-layer
   provider breakdown would replace the even split.
-- BACK-6: `HtsimStepSink` approximates `num_sampled` as the number of
+- BACK-6 (Precision; P1; M): `HtsimStepSink` approximates `num_sampled` as
+  the number of
   scheduled requests; a mid-prompt chunked-prefill request does not
   actually sample. The inflated LM-head term is small against the step
   total; exact sampling attribution needs prompt-completion knowledge in
   the record.
-- BACK-7: `HtsimStepSinkConfig` has no explicit GOAL-rank padding knob.
+- BACK-13 (Precision; P1; L): build a versioned CX-7 observable-state model
+  and capture schema. Inventory only public Linux mlx5, rdma-core, NVIDIA
+  MFT/DOCA and device-reported fields. Tag each as `documented`,
+  `driver-inferred` or `calibrated-opaque`, with PSID, firmware, kernel,
+  rdma-core, MFT, PCIe and topology provenance. Capture supported named
+  registers, resource dumps, queue/counter snapshots, `ethtool -S`, RDMA
+  hardware counters, `rdma resource`/`rdma statistic`, devlink health,
+  DCB/PFC state, PCIe/AER/telemetry and tracepoints. Do not invent physical
+  addresses, internal cache geometry, scheduler registers or firmware-
+  private behavior.
+- BACK-14 (Precision; P1; L): add an ibverbs capture/replay bridge for
+  controlled calibration. Capture control verbs at QP/CQ/MR creation and
+  modification, then capture data-path WR chains and CQ polls at the
+  rdma-core mlx5 provider boundary, because the fast path bypasses the kernel
+  and generic wrappers can be inlined or bypassed. Normalize both live
+  capture and SimLLM lowering into the BACK-9 WR/WQE schema. An optional
+  preload wrapper is a convenience path, not the signoff oracle. Preserve WR
+  chains, SGEs, flags, queue identities, QP state and timestamps without
+  recording payload contents by default.
+- BACK-15 (Precision; P1; L): run the pre-registered RNIC calibration and
+  boundary campaign. Start with DCQCN, then WQ/CQ and PCIe, QPC/cache, port
+  loss and PFC. Sweep at least two dimensions per claim: WQ
+  depth/batch/SGE/payload/signaling; QP and MR working sets; page size and
+  context locality; PCIe width/NUMA/ordering; CQ depth/poll cadence;
+  MTU/direction/loopback; loss location/rate/burst; DCQCN timers/rates/ECN;
+  and PFC headroom/incast/RTT. Use Collie cases as reproducer seeds, not CX-7
+  truth, since its Mellanox results are CX-6 and omit packet-loss,
+  control-path and NDA diagnostic-counter details. Match transaction identity
+  through the first loss or queue knee, classify every drop by evidence tier,
+  and defend WQE latency, FCT/JCT, useful/raw bytes, queue depth, cache miss,
+  retry, CQE, CNP and pause metrics.
+- BACK-16 (Precision; P1; L): advance BACK-10's reproducible analytical
+  profiles and generic FIFO approximations into mechanism-driven occurrence,
+  correlation and measured calibration. Topology selects NUMA, ACS and GPU
+  Direct routes; cache and translation state decide DDIO and IOMMU events,
+  consuming ATS/ATC events from BACK-17 when that optional feature is enabled.
+  Add class-specific DMA/MMIO queues, chronological arbitration and occupancy,
+  variable measured replay, actual PCIe ordering rules, negotiated read-tag
+  capacity including 10-bit tag scaling, and provenance-bearing CX-7
+  calibration. Preserve deterministic replay and transactional sample state;
+  extend run records with calibration provenance and exact draw ranges.
+  Acceptance includes per-class attribution, calibrated queue and tag knees,
+  and defended p50 through p99.9 latency. Until those mechanisms land,
+  analytical incidence must not be described as detected hardware behavior.
+
+### Completeness
+
+- BACK-2 (Completeness; P2; S): LogGOPSim invocation helper for fast
+  flow-level sweeps.
+- BACK-7 (Completeness; P2; S): `HtsimStepSinkConfig` has no explicit
+  GOAL-rank padding knob.
   `rnic-cn` enforces that the resolved GOAL layout matches the topology's
   node count, so a topology run today must place its TP group on the
   highest-numbered node's GPUs to pad the GOAL implicitly (see
   examples/breakdown/RESULTS.md method notes); the sink should pass
   `num_goal_ranks` through to `render_step_goal` when a topology is set.
-- BACK-8: create the protocol-neutral SimLLM RNIC hardware extension under
+- BACK-8 (Completeness; P1; L): create the protocol-neutral SimLLM RNIC
+  hardware extension under
   `simllm/backends/rnic/`. Its C++ event core must be independent of Python
   and of any one CC policy, compose with htsim through HTSIM-9, and preserve
   direct binary invocation. Define versioned configuration and result
@@ -207,14 +296,17 @@ and its ECMP-collision and slow-start behavior is the phenomenon under study.
   build and deterministic fake adapter are complete. Remaining scope is the
   outer `AtlahsFlowRuntime` wrapper, live htsim composition, run records,
   configuration hash and bypass equivalence.
-- BACK-9: replace the timing-neutral WQE ledger with the structural **RDMA
+- BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
+  the structural **RDMA
   Work Queue**, merging the old WQE lifecycle and per-WQE-start work. Model
   verbs WR chains, WQE construction, SQ/RQ/SRQ rings, many-WQ CQ sharing,
   doorbell batches, WQEBB and WR indices, fences, inline data, signaled and
   unsignaled sends, receive consumption, finite depth, wrap and reclamation.
   CQ is a real host-memory queue with requester/responder/error CQEs, owner
   phase, producer/consumer indices, 64/128-byte format profiles, compression,
-  moderation, poll and completion-channel paths, interrupts and overrun.
+  moderation policy, polling, completion-channel notification requests and
+  overrun. BACK-17 owns optional BlueFlame transport and MSI-X delivery, not
+  the CQ's logical moderation, arming or polling policy.
   Normalized CQE content includes WR ID, QPN/source QP, opcode, status,
   opcode-valid byte count, immediate/invalidate data, flags, syndrome and
   vendor syndrome; provider-derived fields and valid bits stay explicit.
@@ -226,30 +318,10 @@ and its ECMP-collision and slow-start behavior is the phenomenon under study.
   finite depth, batching, ordered retirement, signaling, poll-time reclaim,
   CQ wrap/owner generation and controlled first-failure evidence. Remaining
   scope includes RQ/SRQ, multiple WQs and shared CQs, WQEBB encoding, fences,
-  inline/BlueFlame paths, CQE format profiles, compression, moderation,
-  completion channels and interrupts.
-- BACK-10: complete the shared PCIe/MMIO/DMA queueing model. Keep distinct
-  service classes for UAR doorbells, BlueFlame write-combining copies, DB
-  records, WQE reads, QPC/ICM and MTT/MPT fetches, payload reads, payload
-  writes, CQE writes, command queues, interrupts and ODP/IOMMU faults.
-  The first deterministic shared-link slice is complete: CPU host-store
-  dependency events; MWr/MRd/CplD segmentation; configured modeled-link
-  overhead; Gen1 through Gen5 directional serialization; DWORD, 4 KiB,
-  MPS/MRRS and eager-RCB splitting; typed flow-control pools; outstanding-read
-  and completion-buffer limits; fixed latency profiles; transactional
-  plan/commit; and per-class byte, wait, service-delay and labeled path-delay
-  accounting. The one-SQ path emits a 4-byte mlx5 send DB-record store, regular
-  8-byte UAR write, WQE reads and CQE writes. All defaults are synthetic and
-  are not a ConnectX-7 profile. The pre-registered evidence is in
-  [examples/rnic_pcie_v1](../../examples/rnic_pcie_v1/RESULTS.md).
-  Remaining scope includes BlueFlame production and fetch bypass;
-  class-specific DMA/MMIO queues, chronological arbitration and occupancy;
-  QPC/MTT/payload/command/interrupt/fault producers; variable measured latency
-  replay; PCIe Relaxed Ordering; lower-layer DLLP/UpdateFC/replay/SKP/FEC
-  events; topology and cache/fault behavior for ACS, IOMMU, DDIO, NUMA and GPU
-  Direct; and a provenance-bearing CX-7 calibration. Every modeled byte and
-  wait must remain attributed to one class.
-- BACK-11: implement QP lifecycle, RNIC pairing and context placement. Cover
+  inline WQE encodings, CQE format profiles, compression, moderation and
+  completion-channel notification semantics.
+- BACK-11 (Completeness; P1; L): implement QP lifecycle, RNIC pairing and
+  context placement. Cover
   RESET, INIT, RTR, RTS, SQD/SQE, ERR and teardown; PD/MR/MPT/MTT ownership;
   peer QPN/PSN/GID/path exchange; retry/RNR parameters; and failed or timed-out
   pairing. Provide both manual out-of-band TCP pairing and `rdma_cm`/IB-CM
@@ -264,58 +336,47 @@ and its ECMP-collision and slow-start behavior is the phenomenon under study.
   model TCP connect and attribute exchange, CM events and QP firmware-command
   time as control-path events. Model QPC, WQE-cache and MTT/MPT locality
   separately.
-- BACK-12: implement the TX/RX hardware pipelines and cross-layer fault
+- BACK-12 (Completeness; P1; L): implement the TX/RX hardware pipelines and
+  cross-layer fault
   boundary. Include WQE decode, context/translation lookup, opcode-specific
   DMA, packetization, per-QP eligibility, arbitration, rate and PFC gates, MAC
   queues, RX matching/reassembly, SEND-to-RQ consumption, one-sided access,
-  ACK/NAK/RNR, retry/timeout, error transition, CQE DMA and interrupt/poll
-  delivery. Add deterministic, Bernoulli and burst injection at named TX,
+  ACK/NAK/RNR, retry/timeout, error transition and CQE production. BACK-9 owns
+  CQ and poll semantics; BACK-17 owns optional MSI-X delivery.
+  Add deterministic, Bernoulli and burst injection at named TX,
   wire/switch and RX boundaries; every loss reports location, reason and
   controlled/asserted/inferred evidence. RNIC PFC covers per-priority
   headroom, XOFF/XON hysteresis, pause quanta/refresh, paused-egress gating and
   insufficient-headroom drops; HTSIM-9 transports the frames through the
   fabric. The DCQCN policy adapter is delivered and calibrated before wider
   PFC and programmable-CC work.
-- BACK-13: build a versioned CX-7 observable-state model and capture schema.
-  Inventory only public Linux mlx5, rdma-core, NVIDIA MFT/DOCA and device-
-  reported fields. Tag each as `documented`, `driver-inferred` or
-  `calibrated-opaque`, with PSID, firmware, kernel, rdma-core, MFT, PCIe and
-  topology provenance. Capture supported named registers, resource dumps,
-  queue/counter snapshots, `ethtool -S`, RDMA hardware counters,
-  `rdma resource`/`rdma statistic`, devlink health, DCB/PFC state,
-  PCIe/AER/telemetry and
-  tracepoints. Do not invent physical addresses, internal cache geometry,
-  scheduler registers or firmware-private behavior.
-- BACK-14: add an ibverbs capture/replay bridge for controlled calibration.
-  Capture control verbs at QP/CQ/MR creation and modification, then capture
-  data-path WR chains and CQ polls at the rdma-core mlx5 provider boundary,
-  because the fast path bypasses the kernel and generic wrappers can be
-  inlined or bypassed. Normalize both live capture and SimLLM lowering into
-  the BACK-9 WR/WQE schema. An optional preload wrapper is a convenience path,
-  not the signoff oracle. Preserve WR chains, SGEs, flags, queue identities,
-  QP state and timestamps without recording payload contents by default.
-- BACK-15: run the pre-registered RNIC calibration and boundary campaign.
-  Start with DCQCN, then WQ/CQ and PCIe, QPC/cache, port loss and PFC. Sweep at
-  least two dimensions per claim: WQ depth/batch/SGE/payload/signaling; QP and
-  MR working sets; page size and context locality; PCIe width/NUMA/ordering;
-  CQ depth/poll cadence; MTU/direction/loopback; loss location/rate/burst;
-  DCQCN timers/rates/ECN; and PFC headroom/incast/RTT. Use Collie cases as
-  reproducer seeds, not CX-7 truth, since its Mellanox results are CX-6 and
-  omit packet-loss, control-path and NDA diagnostic-counter details. Match
-  transaction identity through the first loss or queue knee, classify every
-  drop by evidence tier, and defend WQE latency, FCT/JCT, useful/raw bytes,
-  queue depth, cache miss, retry, CQE, CNP and pause metrics.
+- BACK-17 (Completeness; P2; L): add optional PCIe mechanisms behind explicit
+  enable, disable and rejection profiles. Cover mlx5 BlueFlame write-combining
+  semantics and WQE-fetch bypass; ATS negotiation, ATC translation caching and
+  fault production; MSI-X vector routing, interrupt-side coalescing and
+  interrupt writes that execute BACK-9's logical notification policy;
+  QPC/ICM, MTT/MPT, payload, command and fault transaction adapters;
+  and lower-layer DLLP, UpdateFC, replay, SKP and FEC events. Every disabled
+  mode must preserve the accepted BACK-10 baseline exactly. Once enabled,
+  timing, occurrence and calibration defects move to BACK-16 precision scope.
+  BACK-11 and BACK-12 own when semantic lookup, DMA, CQE and fault events
+  occur; BACK-17 only lowers still-unconnected events into their shared-fabric
+  PCIe service classes.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
-- HTSIM-1: `rnic-ss` (Slingshot-like) profile wiring; the runtime factory
+- HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
+  the runtime factory
   rejects it with a clear error until the slingshot runtime lands. Its CLI
   options are already parsed so the flag ABI is stable. Out of simllm's
   scope by maintainer decision; tracked here for the backend repo only.
-- HTSIM-2: goodput/state/queue trace flags for `rnic-cn`; they need trace
+- HTSIM-2 (Precision; P1; M): goodput/state/queue trace flags for `rnic-cn`;
+  they need trace
   hooks in the reviewed runtime first.
-- HTSIM-4: GOAL parser hardening and the checked-in `txt2bin` build target.
-- HTSIM-5: persistent DCQCN policy state across hardware WQEs. On
+- HTSIM-4 (Completeness; P2; M): GOAL parser hardening and the checked-in
+  `txt2bin` build target.
+- HTSIM-5 (Precision; P1; L): persistent DCQCN policy state across hardware
+  WQEs. On
   2026-08-07 the former hardware-specific per-WQE-start scope was merged into
   the BACK-9 RDMA Work Queue; this stable ID remains open for the unfinished
   CC behavior. One QP's alpha, current/target rate, CNP suppression, byte and
@@ -327,8 +388,9 @@ and its ECMP-collision and slow-start behavior is the phenomenon under study.
   to DCQCN. Calibrate policy parameters against
   [docs/papers/msg-size-vs-bandwidth.md](../papers/msg-size-vs-bandwidth.md)
   using the DCQCN algorithm and vendor timer sets plus post-CNP repeated-WQE
-  traces. The UCCL no-loss curve and 256 KB half-rate datum now calibrate
-  BACK-9/BACK-10 hardware and must not be fitted again in the policy. The
+  traces. The UCCL no-loss curve and 256 KB half-rate datum now calibrate the
+  landed BACK-10 shared fabric plus BACK-9 Work Queue, and must not be fitted
+  again in the policy. The
   existing micro-behavior anchors are in examples/dcqcn_micro. Source-level
   findings from the micro study's
   review, now the concrete work items: every send op constructs a fresh
@@ -337,7 +399,8 @@ and its ECMP-collision and slow-start behavior is the phenomenon under study.
   R_AI = C/20 and C/10 (dcqcn.cpp:48-49) against the paper's fixed
   40 Mbps, and the ECN defaults are fixed bytes (Kmin 64 KB, Kmax
   640 KB, Pmax 0.25) independent of the link rate.
-- HTSIM-7: rnic-cn concurrent same-pair flow scaling. 10,000
+- HTSIM-7 (Precision; P1; L): rnic-cn concurrent same-pair flow scaling.
+  10,000
   simultaneous flows between one source-destination pair make no visible
   progress within a 600 s wall-time budget (progress 0 percent, request
   queue 10,000; examples/dcqcn_micro addendum 1), far beyond the
@@ -347,7 +410,8 @@ and its ECMP-collision and slow-start behavior is the phenomenon under study.
   HTSIM-6 and BACK-9: policy lookahead removes the repeated declare cost,
   structural WQ backpressure limits how much work can be exposed, and the
   event-loop scaling needs its own look.
-- HTSIM-6: `rnic-cn` policy lookahead (maintainer design 2026-08-05). The
+- HTSIM-6 (Precision; P1; L): `rnic-cn` policy lookahead (maintainer design
+  2026-08-05). The
   established-pair fast path must not wait when granted bandwidth suffices,
   and the policy receives bounded lookahead from BACK-9 so it can pre-declare
   one RTT ahead for queued work toward the same destination. The WQ, WQE and
@@ -355,12 +419,14 @@ and its ECMP-collision and slow-start behavior is the phenomenon under study.
   control-slot and predeclaration state. The timing-neutral SQ and directed
   link-pair identity in `d778326` remain the compatibility ledger until the
   adapter lands.
-- HTSIM-8: repair the backend `commit_check.sh` validation gate. Current
+- HTSIM-8 (Precision; P0; M): repair the backend `commit_check.sh` validation
+  gate. Current
   `origin/main` has no `validate_outputs` baselines, `validate.py` divides by
   zero in every attempted case, and the script lacks fail-fast handling, so
   it reports a false success. Add checked-in baselines or remove that compare,
   fix zero-flow diagnostics, and make every failed command fail the gate.
-- HTSIM-9: add the htsim side of the SimLLM RNIC extension. The combined
+- HTSIM-9 (Completeness; P1; L): add the htsim side of the SimLLM RNIC
+  extension. The combined
   session still implements `AtlahsFlowRuntime`, while the inner versioned port
   carries only opaque flow/packet tokens, transmit descriptors, delivery,
   drop/ECN, receive, pause and link-state events. Hardware submits an opaque
@@ -372,5 +438,6 @@ and its ECMP-collision and slow-start behavior is the phenomenon under study.
   live in this adapter.
   Develop it only in the HTSIM repo's dated append-only addon branch, then
   update the SimLLM submodule pin.
-- ATLAHS-1: correct the vendored-fallback wording (the vendored htsim tree
+- ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
+  vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.

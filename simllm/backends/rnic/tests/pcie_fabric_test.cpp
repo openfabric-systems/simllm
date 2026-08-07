@@ -4,8 +4,10 @@
 #include <exception>
 #include <iostream>
 #include <limits>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 #include "simllm/rnic/pcie_fabric.h"
 
@@ -13,16 +15,24 @@ namespace {
 
 using simllm::rnic::PcieDirection;
 using simllm::rnic::PcieClassAccounting;
+using simllm::rnic::PcieAnalyticalDelayAccounting;
+using simllm::rnic::PcieAnalyticalDelayKind;
+using simllm::rnic::PcieAnalyticalDelayProfile;
 using simllm::rnic::PcieFabric;
 using simllm::rnic::PcieFabricConfig;
 using simllm::rnic::PcieGeneration;
 using simllm::rnic::PcieOperation;
 using simllm::rnic::PcieOrdering;
+using simllm::rnic::PciePathDelayAccounting;
+using simllm::rnic::PciePathPenaltyProfiles;
+using simllm::rnic::PciePathProfileAccounting;
 using simllm::rnic::PcieServiceClass;
 using simllm::rnic::PcieTransactionRequest;
 using simllm::rnic::PcieTransactionResult;
 using simllm::rnic::Picoseconds;
 using simllm::rnic::defaultPcieFabricConfig;
+using simllm::rnic::kPcieAnalyticalDelayProfileVersion;
+using simllm::rnic::kPcieProbabilityScalePpm;
 using simllm::rnic::kPcieServiceClassCount;
 using simllm::rnic::kPcieTransactionAbiVersion;
 
@@ -91,6 +101,126 @@ std::uint64_t modeledBytes(const PcieTransactionResult& result) {
         + result.device_to_host.modeled_link_bytes;
 }
 
+using PenaltyProfileMember =
+    PcieAnalyticalDelayProfile PciePathPenaltyProfiles::*;
+using PenaltyAccountingMember =
+    PcieAnalyticalDelayAccounting PciePathProfileAccounting::*;
+using PenaltyDelayMember = Picoseconds PciePathDelayAccounting::*;
+
+constexpr std::array<PenaltyProfileMember, 6> kPenaltyProfileMembers{
+    &PciePathPenaltyProfiles::numa,
+    &PciePathPenaltyProfiles::iommu,
+    &PciePathPenaltyProfiles::acs,
+    &PciePathPenaltyProfiles::switch_path,
+    &PciePathPenaltyProfiles::ddio_miss,
+    &PciePathPenaltyProfiles::gpu_direct,
+};
+
+constexpr std::array<PenaltyAccountingMember, 6>
+    kPenaltyAccountingMembers{
+        &PciePathProfileAccounting::numa,
+        &PciePathProfileAccounting::iommu,
+        &PciePathProfileAccounting::acs,
+        &PciePathProfileAccounting::switch_path,
+        &PciePathProfileAccounting::ddio_miss,
+        &PciePathProfileAccounting::gpu_direct,
+    };
+
+constexpr std::array<PenaltyDelayMember, 6> kPenaltyDelayMembers{
+    &PciePathDelayAccounting::numa_ps,
+    &PciePathDelayAccounting::iommu_ps,
+    &PciePathDelayAccounting::acs_ps,
+    &PciePathDelayAccounting::switch_ps,
+    &PciePathDelayAccounting::ddio_miss_ps,
+    &PciePathDelayAccounting::gpu_direct_ps,
+};
+
+PcieAnalyticalDelayProfile fixedProfile(
+    Picoseconds mean_ps,
+    std::uint32_t incidence_probability_ppm =
+        kPcieProbabilityScalePpm) {
+    PcieAnalyticalDelayProfile profile;
+    profile.kind = PcieAnalyticalDelayKind::Fixed;
+    profile.incidence_probability_ppm = incidence_probability_ppm;
+    profile.mean_ps = mean_ps;
+    return profile;
+}
+
+PcieAnalyticalDelayProfile gaussianProfile(
+    Picoseconds mean_ps,
+    Picoseconds standard_deviation_ps,
+    std::uint32_t incidence_probability_ppm =
+        kPcieProbabilityScalePpm) {
+    PcieAnalyticalDelayProfile profile;
+    profile.kind = PcieAnalyticalDelayKind::Gaussian;
+    profile.incidence_probability_ppm = incidence_probability_ppm;
+    profile.mean_ps = mean_ps;
+    profile.standard_deviation_ps = standard_deviation_ps;
+    return profile;
+}
+
+PcieAnalyticalDelayProfile gaussianTailProfile(
+    Picoseconds mean_ps,
+    Picoseconds standard_deviation_ps,
+    std::uint32_t tail_probability_ppm,
+    Picoseconds tail_mean_ps,
+    Picoseconds tail_standard_deviation_ps,
+    std::uint32_t incidence_probability_ppm =
+        kPcieProbabilityScalePpm) {
+    PcieAnalyticalDelayProfile profile = gaussianProfile(
+        mean_ps, standard_deviation_ps, incidence_probability_ppm);
+    profile.kind = PcieAnalyticalDelayKind::GaussianTailMixture;
+    profile.tail_probability_ppm = tail_probability_ppm;
+    profile.tail_mean_ps = tail_mean_ps;
+    profile.tail_standard_deviation_ps = tail_standard_deviation_ps;
+    return profile;
+}
+
+void addAnalyticalAccounting(
+    PcieAnalyticalDelayAccounting& destination,
+    const PcieAnalyticalDelayAccounting& source) {
+    destination.draws += source.draws;
+    destination.occurrences += source.occurrences;
+    destination.tail_draws += source.tail_draws;
+}
+
+void addPathProfileAccounting(
+    PciePathProfileAccounting& destination,
+    const PciePathProfileAccounting& source) {
+    for (PenaltyAccountingMember member : kPenaltyAccountingMembers) {
+        addAnalyticalAccounting(destination.*member, source.*member);
+    }
+}
+
+bool sameAnalyticalAccounting(
+    const PcieAnalyticalDelayAccounting& lhs,
+    const PcieAnalyticalDelayAccounting& rhs) {
+    return lhs.draws == rhs.draws
+        && lhs.occurrences == rhs.occurrences
+        && lhs.tail_draws == rhs.tail_draws;
+}
+
+bool samePathProfileAccounting(
+    const PciePathProfileAccounting& lhs,
+    const PciePathProfileAccounting& rhs) {
+    for (PenaltyAccountingMember member : kPenaltyAccountingMembers) {
+        if (!sameAnalyticalAccounting(lhs.*member, rhs.*member)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool hasAnalyticalAccounting(
+    const PcieAnalyticalDelayAccounting& accounting,
+    std::uint64_t draws,
+    std::uint64_t occurrences,
+    std::uint64_t tail_draws) {
+    return accounting.draws == draws
+        && accounting.occurrences == occurrences
+        && accounting.tail_draws == tail_draws;
+}
+
 void addAccounting(
     PcieClassAccounting& destination,
     const PcieClassAccounting& source) {
@@ -132,6 +262,8 @@ void addAccounting(
     destination.path_delay.switch_ps += source.path_delay.switch_ps;
     destination.path_delay.ddio_miss_ps += source.path_delay.ddio_miss_ps;
     destination.path_delay.gpu_direct_ps += source.path_delay.gpu_direct_ps;
+    addPathProfileAccounting(
+        destination.path_profiles, source.path_profiles);
     destination.latency_samples_used += source.latency_samples_used;
 }
 
@@ -174,6 +306,7 @@ bool sameAccounting(
         && lhs.path_delay.switch_ps == rhs.path_delay.switch_ps
         && lhs.path_delay.ddio_miss_ps == rhs.path_delay.ddio_miss_ps
         && lhs.path_delay.gpu_direct_ps == rhs.path_delay.gpu_direct_ps
+        && samePathProfileAccounting(lhs.path_profiles, rhs.path_profiles)
         && lhs.latency_samples_used == rhs.latency_samples_used;
 }
 
@@ -244,8 +377,10 @@ void testConfigValidation(TestRunner& test) {
     const Picoseconds maximum_duration =
         static_cast<Picoseconds>(std::numeric_limits<std::int64_t>::max());
     invalid.paths[1].base_latency_ps = maximum_duration;
-    invalid.paths[1].numa_penalty_ps = maximum_duration;
-    invalid.paths[1].iommu_penalty_ps = maximum_duration;
+    invalid.paths[1].analytical_penalties.numa = fixedProfile(
+        maximum_duration);
+    invalid.paths[1].analytical_penalties.iommu = fixedProfile(
+        maximum_duration);
     test.expectThrowAs<std::invalid_argument>(
         [&invalid]() { PcieFabric invalid_fabric(invalid); },
         "aggregate path-delay overflow is rejected at construction");
@@ -292,6 +427,473 @@ void testConfigValidation(TestRunner& test) {
     test.check(
         disabled_path.totalAccounting().transactions == 0,
         "disabled-path rejection leaves the ledger unchanged");
+}
+
+void testAnalyticalProfileValidation(TestRunner& test) {
+    const auto reject_profile = [&test](
+                                    const PcieAnalyticalDelayProfile& profile,
+                                    const std::string& message) {
+        PcieFabricConfig config = defaultPcieFabricConfig();
+        config.paths[1].analytical_penalties.numa = profile;
+        test.expectThrowAs<std::invalid_argument>(
+            [&config]() { PcieFabric fabric(config); }, message);
+    };
+
+    PcieAnalyticalDelayProfile profile = fixedProfile(1);
+    profile.version = kPcieAnalyticalDelayProfileVersion + 1;
+    reject_profile(profile, "analytical profile version is validated");
+
+    profile = fixedProfile(1);
+    profile.kind = static_cast<PcieAnalyticalDelayKind>(255);
+    reject_profile(profile, "analytical profile kind is validated");
+
+    profile = fixedProfile(1, kPcieProbabilityScalePpm + 1);
+    reject_profile(profile, "incidence probability cannot exceed one");
+
+    profile = PcieAnalyticalDelayProfile{};
+    profile.mean_ps = 1;
+    reject_profile(profile, "disabled profile rejects active parameters");
+
+    profile = fixedProfile(1, 0);
+    reject_profile(
+        profile, "active profile cannot silently use zero incidence");
+
+    profile = gaussianTailProfile(10, 1, 500'000, 20, 1);
+    profile.tail_probability_ppm = kPcieProbabilityScalePpm + 1;
+    reject_profile(profile, "tail probability cannot exceed one");
+
+    profile = fixedProfile(1);
+    profile.standard_deviation_ps = 1;
+    reject_profile(profile, "fixed profile rejects an active sigma field");
+
+    profile = fixedProfile(1);
+    profile.tail_probability_ppm = 1;
+    profile.tail_mean_ps = 2;
+    profile.tail_standard_deviation_ps = 1;
+    reject_profile(profile, "fixed profile rejects active tail fields");
+
+    profile = gaussianProfile(10, 0);
+    reject_profile(profile, "Gaussian profile requires positive sigma");
+
+    profile = gaussianProfile(10, 1);
+    profile.tail_mean_ps = 20;
+    reject_profile(profile, "Gaussian profile rejects inactive tail fields");
+
+    profile = gaussianTailProfile(10, 0, 500'000, 20, 1);
+    reject_profile(
+        profile, "Gaussian-tail profile requires positive base sigma");
+
+    profile = gaussianTailProfile(10, 1, 500'000, 20, 0);
+    reject_profile(
+        profile, "Gaussian-tail profile requires positive tail sigma");
+
+    profile = gaussianTailProfile(10, 1, 0, 20, 1);
+    reject_profile(
+        profile, "Gaussian-tail profile rejects an empty tail mixture");
+
+    profile = gaussianTailProfile(
+        10, 1, kPcieProbabilityScalePpm, 20, 1);
+    reject_profile(
+        profile, "Gaussian-tail profile rejects an all-tail mixture");
+
+    profile = gaussianTailProfile(10, 1, 500'000, 10, 1);
+    reject_profile(
+        profile, "Gaussian-tail profile requires a larger tail mean");
+
+    const Picoseconds maximum_duration =
+        static_cast<Picoseconds>(std::numeric_limits<std::int64_t>::max());
+    reject_profile(
+        fixedProfile(maximum_duration + 1),
+        "analytical duration cannot exceed INT64_MAX");
+    reject_profile(
+        gaussianProfile(maximum_duration, 1),
+        "maximum Gaussian sample cannot overflow the timestamp range");
+
+    PcieFabricConfig aggregate = defaultPcieFabricConfig();
+    aggregate.paths[1].base_latency_ps = maximum_duration - 2;
+    aggregate.paths[1].analytical_penalties.numa = fixedProfile(2);
+    aggregate.paths[1].analytical_penalties.iommu = fixedProfile(1);
+    test.expectThrowAs<std::invalid_argument>(
+        [&aggregate]() { PcieFabric fabric(aggregate); },
+        "aggregate maxima across path components cannot overflow");
+}
+
+void testAnalyticalSamplingGoldens(TestRunner& test) {
+    constexpr std::uint64_t analytical_seed = 0x123456789abcdef0ULL;
+    constexpr std::array<Picoseconds, 8> expected_gaussian{
+        64'767,
+        98'824,
+        86'014,
+        109'337,
+        79'137,
+        127'324,
+        102'750,
+        135'233,
+    };
+    PcieFabricConfig gaussian_config = defaultPcieFabricConfig();
+    gaussian_config.analytical_seed = analytical_seed;
+    gaussian_config.paths[1].analytical_penalties.numa = gaussianProfile(
+        100'000, 20'000);
+    PcieFabric gaussian(gaussian_config);
+    for (std::size_t index = 0; index < expected_gaussian.size(); ++index) {
+        const auto result = gaussian.submit(transaction(
+            PcieOperation::HostStore, 8));
+        test.check(
+            result.path_delay.numa_ps == expected_gaussian[index]
+                && result.completed_at_ps == expected_gaussian[index]
+                && hasAnalyticalAccounting(
+                    result.path_profiles.numa, 1, 1, 0),
+            "Gaussian counter sample matches its frozen golden at draw "
+                + std::to_string(index));
+        for (std::size_t component = 1;
+             component < kPenaltyAccountingMembers.size();
+             ++component) {
+            test.check(
+                hasAnalyticalAccounting(
+                    result.path_profiles.*kPenaltyAccountingMembers[
+                        component],
+                    1,
+                    0,
+                    0),
+                "inactive profile still records one draw per sample");
+        }
+    }
+    const auto gaussian_total = gaussian.totalAccounting();
+    test.check(
+        gaussian_total.path_delay.numa_ps == 803'386
+            && hasAnalyticalAccounting(
+                gaussian_total.path_profiles.numa, 8, 8, 0),
+        "Gaussian realized delay and counters accumulate exactly");
+    gaussian.validateInvariants();
+
+    constexpr std::array<Picoseconds, 12> expected_tail_mixture{
+        268'331,
+        227'736,
+        93'007,
+        248'039,
+        89'568,
+        113'662,
+        0,
+        117'617,
+        269'558,
+        0,
+        104'668,
+        97'829,
+    };
+    constexpr std::array<bool, 12> expected_occurrence{
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        true,
+    };
+    constexpr std::array<bool, 12> expected_tail_draw{
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+    };
+    PcieFabricConfig tail_config = defaultPcieFabricConfig();
+    tail_config.analytical_seed = analytical_seed;
+    tail_config.paths[1].analytical_penalties.numa = gaussianTailProfile(
+        100'000, 10'000, 500'000, 250'000, 20'000, 700'000);
+    PcieFabric tail_mixture(tail_config);
+    for (std::size_t index = 0;
+         index < expected_tail_mixture.size();
+         ++index) {
+        const auto result = tail_mixture.submit(transaction(
+            PcieOperation::HostStore, 8));
+        test.check(
+            result.path_delay.numa_ps == expected_tail_mixture[index]
+                && result.completed_at_ps == expected_tail_mixture[index]
+                && hasAnalyticalAccounting(
+                    result.path_profiles.numa,
+                    1,
+                    expected_occurrence[index] ? 1 : 0,
+                    expected_tail_draw[index] ? 1 : 0),
+            "Gaussian-tail counter sample matches its frozen golden at draw "
+                + std::to_string(index));
+    }
+    const auto tail_total = tail_mixture.totalAccounting();
+    const auto tail_class = tail_mixture.accounting(
+        PcieServiceClass::DoorbellRecord);
+    test.check(
+        tail_total.path_delay.numa_ps == 1'630'015
+            && hasAnalyticalAccounting(
+                tail_total.path_profiles.numa, 12, 10, 4)
+            && sameAccounting(tail_total, tail_class),
+        "Gaussian-tail realized delay and counters accumulate exactly");
+    tail_mixture.validateInvariants();
+}
+
+void testEveryComponentSupportsEveryProfileKind(TestRunner& test) {
+    constexpr std::array<PcieAnalyticalDelayKind, 3> kinds{
+        PcieAnalyticalDelayKind::Fixed,
+        PcieAnalyticalDelayKind::Gaussian,
+        PcieAnalyticalDelayKind::GaussianTailMixture,
+    };
+    for (PcieAnalyticalDelayKind kind : kinds) {
+        PcieAnalyticalDelayProfile profile;
+        switch (kind) {
+        case PcieAnalyticalDelayKind::Fixed:
+            profile = fixedProfile(100'000);
+            break;
+        case PcieAnalyticalDelayKind::Gaussian:
+            profile = gaussianProfile(100'000, 10'000);
+            break;
+        case PcieAnalyticalDelayKind::GaussianTailMixture:
+            profile = gaussianTailProfile(
+                100'000, 10'000, 500'000, 250'000, 20'000);
+            break;
+        default:
+            test.check(false, "test profile kind is valid");
+            continue;
+        }
+
+        PcieFabricConfig config = defaultPcieFabricConfig();
+        config.analytical_seed = 0x42ULL;
+        for (PenaltyProfileMember member : kPenaltyProfileMembers) {
+            config.paths[1].analytical_penalties.*member = profile;
+        }
+        PcieFabric fabric(config);
+        const auto result = fabric.submit(transaction(
+            PcieOperation::HostStore, 8));
+        for (std::size_t component = 0;
+             component < kPenaltyProfileMembers.size();
+             ++component) {
+            const Picoseconds delay =
+                result.path_delay.*kPenaltyDelayMembers[component];
+            const auto& accounting =
+                result.path_profiles.*kPenaltyAccountingMembers[component];
+            test.check(
+                delay > 0
+                    && hasAnalyticalAccounting(
+                        accounting,
+                        1,
+                        1,
+                        accounting.tail_draws),
+                "path component supports profile kind "
+                    + std::to_string(static_cast<unsigned>(kind))
+                    + " at component " + std::to_string(component));
+            test.check(
+                accounting.tail_draws
+                    <= (kind
+                            == PcieAnalyticalDelayKind::GaussianTailMixture
+                        ? 1U
+                        : 0U),
+                "only the mixture kind can report a tail draw");
+            if (kind == PcieAnalyticalDelayKind::Fixed) {
+                test.check(
+                    delay == 100'000,
+                    "fixed component profile realizes its exact mean");
+            }
+        }
+        fabric.validateInvariants();
+    }
+}
+
+void testFragmentSamplingAndAccounting(TestRunner& test) {
+    constexpr std::array<Picoseconds, 6> component_delays{
+        11, 22, 33, 44, 55, 66};
+    PcieFabricConfig config = defaultPcieFabricConfig();
+    config.max_payload_size_bytes = 128;
+    config.max_read_request_size_bytes = 256;
+    for (std::size_t component = 0;
+         component < kPenaltyProfileMembers.size();
+         ++component) {
+        config.paths[1].analytical_penalties.*kPenaltyProfileMembers[
+            component] = fixedProfile(component_delays[component]);
+    }
+    PcieFabric fabric(config);
+
+    const auto posted = fabric.submit(transaction(
+        PcieOperation::PostedWrite, 512));
+    const auto read = fabric.submit(transaction(
+        PcieOperation::NonPostedRead,
+        512,
+        PcieDirection::DeviceToHost));
+    test.check(
+        posted.request_tlps == 4 && posted.latency_samples_used == 4,
+        "posted write consumes one profile draw per MWr fragment");
+    test.check(
+        read.request_tlps == 2
+            && read.completion_tlps == 4
+            && read.latency_samples_used == 2,
+        "read consumes profile draws per MRd and not per CplD");
+
+    const auto posted_class = fabric.accounting(
+        PcieServiceClass::PayloadWrite);
+    const auto read_class = fabric.accounting(PcieServiceClass::PayloadRead);
+    const auto total = fabric.totalAccounting();
+    for (std::size_t component = 0;
+         component < kPenaltyProfileMembers.size();
+         ++component) {
+        const PenaltyDelayMember delay_member =
+            kPenaltyDelayMembers[component];
+        const PenaltyAccountingMember accounting_member =
+            kPenaltyAccountingMembers[component];
+        const Picoseconds unit = component_delays[component];
+        test.check(
+            posted.path_delay.*delay_member == 4 * unit
+                && hasAnalyticalAccounting(
+                    posted.path_profiles.*accounting_member, 4, 4, 0),
+            "posted transaction reports exact realized component delay");
+        test.check(
+            read.path_delay.*delay_member == 2 * unit
+                && hasAnalyticalAccounting(
+                    read.path_profiles.*accounting_member, 2, 2, 0),
+            "read transaction reports exact realized component delay");
+        test.check(
+            posted_class.path_delay.*delay_member == 4 * unit
+                && hasAnalyticalAccounting(
+                    posted_class.path_profiles.*accounting_member,
+                    4,
+                    4,
+                    0),
+            "posted class ledger preserves component delay and counters");
+        test.check(
+            read_class.path_delay.*delay_member == 2 * unit
+                && hasAnalyticalAccounting(
+                    read_class.path_profiles.*accounting_member, 2, 2, 0),
+            "read class ledger preserves component delay and counters");
+        test.check(
+            total.path_delay.*delay_member == 6 * unit
+                && hasAnalyticalAccounting(
+                    total.path_profiles.*accounting_member, 6, 6, 0),
+            "global ledger sums component delay and counters exactly");
+    }
+    fabric.validateInvariants();
+
+    PcieFabricConfig readiness_config = defaultPcieFabricConfig();
+    readiness_config.max_payload_size_bytes = 128;
+    readiness_config.max_read_request_size_bytes = 128;
+    readiness_config.paths[1].analytical_penalties.numa = gaussianProfile(
+        100'000, 100'000);
+    PcieFabric readiness(readiness_config);
+    const auto variable_read = readiness.submit(transaction(
+        PcieOperation::NonPostedRead,
+        256,
+        PcieDirection::DeviceToHost));
+    test.check(
+        variable_read.request_tlps == 2
+            && variable_read.path_delay.numa_ps == 156'544
+            && variable_read.completion_ready_at_ps == 75'023,
+        "read reports the earliest response-ready MRd under variable delay");
+    readiness.validateInvariants();
+}
+
+void testAnalyticalPlanRollbackAndStreamIndependence(TestRunner& test) {
+    constexpr Picoseconds first_sample = 64'767;
+    constexpr Picoseconds second_sample = 98'824;
+    PcieFabricConfig config = defaultPcieFabricConfig();
+    config.analytical_seed = 0x123456789abcdef0ULL;
+    config.paths[1].analytical_penalties.numa = gaussianProfile(
+        100'000, 20'000);
+
+    PcieFabric discarded(config);
+    {
+        auto plan = discarded.beginPlan();
+        const auto private_result = discarded.schedule(
+            plan, transaction(PcieOperation::HostStore, 8));
+        test.check(
+            private_result.path_delay.numa_ps == first_sample,
+            "discarded plan observes the first private profile sample");
+    }
+    const auto after_discard = discarded.submit(transaction(
+        PcieOperation::HostStore, 8));
+    const auto after_discard_second = discarded.submit(transaction(
+        PcieOperation::HostStore, 8));
+    test.check(
+        after_discard.path_delay.numa_ps == first_sample
+            && after_discard_second.path_delay.numa_ps == second_sample,
+        "discarding a plan rolls back its analytical draw cursor");
+
+    PcieFabric stale_fabric(config);
+    auto winner = stale_fabric.beginPlan();
+    auto stale = stale_fabric.beginPlan();
+    const auto winner_result = stale_fabric.schedule(
+        winner, transaction(PcieOperation::HostStore, 8));
+    const auto stale_result = stale_fabric.schedule(
+        stale, transaction(PcieOperation::HostStore, 8));
+    stale_fabric.commit(std::move(winner));
+    test.expectThrowAs<std::logic_error>(
+        [&stale_fabric, &stale]() {
+            stale_fabric.commit(std::move(stale));
+        },
+        "stale sampled plan is rejected");
+    const auto after_stale = stale_fabric.submit(transaction(
+        PcieOperation::HostStore, 8));
+    test.check(
+        winner_result.path_delay.numa_ps == first_sample
+            && stale_result.path_delay.numa_ps == first_sample
+            && after_stale.path_delay.numa_ps == second_sample,
+        "stale-plan rejection preserves the committed draw stream");
+
+    PcieFabric failed_fabric(config);
+    auto failed_plan = failed_fabric.beginPlan();
+    PcieTransactionRequest overflowing = transaction(
+        PcieOperation::HostStore, 8);
+    overflowing.submitted_at_ps =
+        std::numeric_limits<std::uint64_t>::max();
+    test.expectThrowAs<std::overflow_error>(
+        [&failed_fabric, &failed_plan, &overflowing]() {
+            (void)failed_fabric.schedule(failed_plan, overflowing);
+        },
+        "failed schedule throws after sampling its candidate state");
+    const auto recovered = failed_fabric.schedule(
+        failed_plan, transaction(PcieOperation::HostStore, 8));
+    failed_fabric.commit(std::move(failed_plan));
+    const auto after_failed = failed_fabric.submit(transaction(
+        PcieOperation::HostStore, 8));
+    test.check(
+        recovered.path_delay.numa_ps == first_sample
+            && after_failed.path_delay.numa_ps == second_sample,
+        "failed schedule rolls back its analytical draw cursor");
+
+    PcieFabricConfig isolated_config = defaultPcieFabricConfig();
+    isolated_config.analytical_seed = 0x123456789abcdef0ULL;
+    isolated_config.paths[1].analytical_penalties.iommu = gaussianProfile(
+        100'000, 20'000);
+    PcieFabricConfig extra_component_config = isolated_config;
+    extra_component_config.paths[1].analytical_penalties.numa =
+        gaussianTailProfile(
+            100'000, 10'000, 500'000, 250'000, 20'000);
+    PcieFabric isolated(isolated_config);
+    PcieFabric with_extra_component(extra_component_config);
+    for (std::size_t draw = 0; draw < 8; ++draw) {
+        const auto isolated_result = isolated.submit(transaction(
+            PcieOperation::HostStore, 8));
+        const auto extra_result = with_extra_component.submit(transaction(
+            PcieOperation::HostStore, 8));
+        test.check(
+            isolated_result.path_delay.iommu_ps
+                    == extra_result.path_delay.iommu_ps
+                && sameAnalyticalAccounting(
+                    isolated_result.path_profiles.iommu,
+                    extra_result.path_profiles.iommu),
+            "unrelated component activity cannot perturb an IOMMU stream at draw "
+                + std::to_string(draw));
+    }
+    discarded.validateInvariants();
+    stale_fabric.validateInvariants();
+    failed_fabric.validateInvariants();
+    isolated.validateInvariants();
+    with_extra_component.validateInvariants();
 }
 
 void testPostedWriteSegmentationAndSerialization(TestRunner& test) {
@@ -674,8 +1276,8 @@ void testOrderingPathAndOverflow(TestRunner& test) {
 
     const auto run_path = [](Picoseconds numa, Picoseconds iommu) {
         PcieFabricConfig path_config = defaultPcieFabricConfig();
-        path_config.paths[1].numa_penalty_ps = numa;
-        path_config.paths[1].iommu_penalty_ps = iommu;
+        path_config.paths[1].analytical_penalties.numa = fixedProfile(numa);
+        path_config.paths[1].analytical_penalties.iommu = fixedProfile(iommu);
         PcieFabric path_fabric(path_config);
         return path_fabric.submit(transaction(
             PcieOperation::NonPostedRead,
@@ -797,6 +1399,11 @@ void testCrossClassAccountingOverflowIsAtomic(TestRunner& test) {
 int main() {
     TestRunner test;
     testConfigValidation(test);
+    testAnalyticalProfileValidation(test);
+    testAnalyticalSamplingGoldens(test);
+    testEveryComponentSupportsEveryProfileKind(test);
+    testFragmentSamplingAndAccounting(test);
+    testAnalyticalPlanRollbackAndStreamIndependence(test);
     testPostedWriteSegmentationAndSerialization(test);
     testReadByteMatrixAndDirection(test);
     testHostStoreAndClassLedgers(test);

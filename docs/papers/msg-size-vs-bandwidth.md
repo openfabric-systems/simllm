@@ -107,11 +107,12 @@ about 12 us at Q = 128, consistent with A3 once contention is added; A2
 sits between the clean anchors, and A2 at Q = 16 predicts 32 KB at
 ~34 GB/s, inside the Fig. 14 band.
 
-T0 is not an implementation sleep on every WQE. BACK-9/BACK-10 must reproduce
-the envelope through explicit doorbell batching, finite queues, shared PCIe
-service, context locality and overlapped WQE issue, while retaining each stage
-timestamp. The fitted values remain regression summaries and initialization
-bounds for measurements that are not yet available.
+T0 is not an implementation sleep on every WQE. The landed BACK-10 fabric plus
+BACK-9 and BACK-16 must reproduce the envelope through explicit doorbell
+batching, finite queues, shared PCIe service, context locality and overlapped
+WQE issue, while retaining each stage timestamp. The fitted values remain
+regression summaries and initialization bounds for measurements that are not
+yet available.
 
 ### Model B: DCQCN rate ramp (per-QP state the WQE inherits)
 
@@ -165,9 +166,9 @@ Readings:
 
 ## Calibration and design tasks
 
-- BACK-9/BACK-10 (SimLLM): implement Model A as structural WQ/CQ and
-  MMIO/PCIe/DMA service shared by every full-RNIC policy. Sweep the A1 to A3
-  envelope as a diagnostic, not as three hard-coded sleeps. Acceptance:
+- BACK-9/BACK-16 (SimLLM): complete structural WQ/CQ and calibrate the landed
+  BACK-10 MMIO/PCIe/DMA service shared by every full-RNIC policy. Sweep the A1
+  to A3 envelope as a diagnostic, not as three hard-coded sleeps. Acceptance:
   reproduce UCCL Fig. 14 no-loss goodput within 15 percent at Q = 16 and the
   maintainer's 256 KB half-rate datum at Q = 1 under the A2 summary, while
   accounting for every stage and PCIe byte.
@@ -190,5 +191,5 @@ Readings:
 
 The probe above is a gap measurement, not a registered study; the
 registered validation of the calibrated behaviors happens with the relevant
-BACK-9/BACK-10/HTSIM-5/HTSIM-6 landings, with expectations frozen against the
+BACK-9/BACK-16/HTSIM-5/HTSIM-6 landings, with expectations frozen against the
 anchor tables in this note.

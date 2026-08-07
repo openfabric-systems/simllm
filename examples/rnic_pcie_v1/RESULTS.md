@@ -1,8 +1,9 @@
 # RNIC PCIe v1 results
 
-All 29 pre-registered sweep rows match the independent byte and rational-time
-oracles exactly. All 10 cross-row relations pass, and the native CTest suite
-passes the PCIe fabric, WorkQueue integration and negative-input checks.
+All 35 pre-registered sweep rows match the independent byte, rational-time and
+integer analytical-sampler oracles exactly. All 18 cross-checks pass,
+and the native CTest suite passes the PCIe fabric, WorkQueue integration and
+negative-input checks.
 
 ## Method
 
@@ -18,8 +19,8 @@ Reproduce and compare every byte of the tracked CSV from the repository root:
 python3 examples/rnic_pcie_v1/run_rnic_pcie_v1.py --check
 ```
 
-Raw probe knobs, effective fixed configuration, requested and accounted
-transaction counts, measurements and expected values are in
+Raw probe knobs, effective configuration, requested and accounted transaction
+counts, analytical-profile parameters, measurements and expected values are in
 [results.csv](results.csv).
 
 ## MPS and MRRS byte conservation
@@ -84,8 +85,33 @@ bytes.
 | IOMMU | 0 | 200000 | 208824 |
 | remote NUMA plus IOMMU | 100000 | 200000 | 308824 |
 
-These are explicit synthetic delay labels, not a derived PCIe topology or a
-measured ConnectX-7 profile.
+These are explicit fixed analytical profiles, not a derived PCIe topology or
+a measured ConnectX-7 profile.
+
+## Analytical penalty profiles
+
+Each row below contains 4,096 independent 8-byte host stores at time zero.
+Only the NUMA profile is active, so completion time is the realized profile
+sample and no PCIe link bytes are emitted. Every aggregate, incidence decision
+and tail selection matches the independent integer-only Python replay exactly.
+
+| Profile | Realized delay sum (ps) | Occurrences | Tail draws | Min (ps) | Max/JCT (ps) |
+|---|---:|---:|---:|---:|---:|
+| fixed | 409600000 | 4096 | 0 | 100000 | 100000 |
+| Gaussian, sigma 10000 ps | 408738343 | 4096 | 0 | 75824 | 124176 |
+| Gaussian, sigma 40000 ps | 406153332 | 4096 | 0 | 3298 | 196702 |
+| mixture, 1% tail | 423145553 | 4096 | 36 | 75824 | 588084 |
+| mixture, 10% tail | 569124409 | 4096 | 395 | 75824 | 620878 |
+| Gaussian, 25% incidence | 100506113 | 1003 | 0 | 0 | 124176 |
+
+The wider Gaussian expands the observed range from 48,352 to 193,404 ps,
+exactly fourfold for the frozen quantile stream. Raising tail probability
+increases selections from 36 to 395 and increases aggregate delay. The 25
+percent incidence profile applies 1,003 times and returns zero for every
+absent event. These are deterministic finite discrete distributions. The
+two-Gaussian mixture is a rare-tail surrogate, not a mathematically
+long-tailed law. Incidence is analytical and independent; it does not claim
+to detect an IOTLB, ATC or DDIO-cache transition.
 
 ## Directed boundaries and atomicity
 
@@ -110,9 +136,13 @@ service remain local RNIC stages.
 
 ## What this validates and what remains
 
-This validates the first deterministic shared-link slice of BACK-10. It does
-not close BACK-10. Remaining work includes BlueFlame production and fetch
-bypass, class-specific DMA/MMIO queues and chronological arbitration, queue
-occupancy, QPC/MTT/payload/command/interrupt/fault producers, variable measured
-latency replay, full PCIe ordering semantics, lower-layer traffic events,
-topology and cache/fault behavior, and a provenance-bearing CX-7 calibration.
+This closes BACK-10 at its accepted transaction-level queueing boundary. The
+model now includes deterministic shared serialization and resources,
+transactional WorkQueue integration, explicit class and path ledgers, and
+fixed, Gaussian and rare-tail mixture profiles for every analytical path
+penalty. BACK-16 owns higher-precision occurrence mechanisms, chronological
+and class-specific arbitration, measured replay, PCIe ordering, 10-bit tag
+scaling and CX-7 calibration. BACK-17 owns optional BlueFlame, ATS/ATC, MSI-X,
+missing traffic producers and lower-layer PCIe events. Defaults remain
+synthetic and no analytical incidence draw is presented as detected hardware
+state.

@@ -4,6 +4,7 @@
 #include <exception>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -12,6 +13,8 @@
 namespace {
 
 using simllm::rnic::PcieDirection;
+using simllm::rnic::PcieAnalyticalDelayKind;
+using simllm::rnic::PcieAnalyticalDelayProfile;
 using simllm::rnic::PcieEndpointKind;
 using simllm::rnic::PcieFabric;
 using simllm::rnic::PcieGeneration;
@@ -42,12 +45,20 @@ struct Options {
     std::uint64_t posted_visibility_ps{0};
     std::uint64_t read_completion_ps{0};
     std::uint64_t base_path_ps{0};
-    std::uint64_t numa_ps{0};
+    std::uint64_t numa_mean_ps{0};
     std::uint64_t iommu_ps{0};
     std::uint64_t acs_ps{0};
     std::uint64_t switch_ps{0};
     std::uint64_t ddio_ps{0};
     std::uint64_t gpu_direct_ps{0};
+    std::string numa_profile{"auto"};
+    bool numa_profile_set{false};
+    std::optional<std::uint64_t> numa_incidence_ppm;
+    std::uint64_t numa_standard_deviation_ps{0};
+    std::uint64_t numa_tail_probability_ppm{0};
+    std::uint64_t numa_tail_mean_ps{0};
+    std::uint64_t numa_tail_standard_deviation_ps{0};
+    std::uint64_t analytical_seed{0};
     std::uint64_t visibility_dependency{0};
 };
 
@@ -90,6 +101,23 @@ PcieDirection parseDirection(const std::string& text) {
     throw std::invalid_argument("unknown RNIC PCIe direction: " + text);
 }
 
+PcieAnalyticalDelayKind parseAnalyticalKind(const std::string& text) {
+    if (text == "disabled") {
+        return PcieAnalyticalDelayKind::Disabled;
+    }
+    if (text == "fixed") {
+        return PcieAnalyticalDelayKind::Fixed;
+    }
+    if (text == "gaussian") {
+        return PcieAnalyticalDelayKind::Gaussian;
+    }
+    if (text == "gaussian_tail_mixture") {
+        return PcieAnalyticalDelayKind::GaussianTailMixture;
+    }
+    throw std::invalid_argument(
+        "unknown RNIC PCIe analytical profile: " + text);
+}
+
 const char* endpointName(PcieEndpointKind endpoint) {
     switch (endpoint) {
     case PcieEndpointKind::MmioBar:
@@ -120,6 +148,12 @@ Options parseOptions(int argc, char** argv) {
         }
         if (option == "--direction") {
             options.direction = parseDirection(text);
+            continue;
+        }
+        if (option == "--numa-profile") {
+            (void)parseAnalyticalKind(text);
+            options.numa_profile = text;
+            options.numa_profile_set = true;
             continue;
         }
         const std::uint64_t value = parseUnsigned(text, argv[index]);
@@ -155,8 +189,9 @@ Options parseOptions(int argc, char** argv) {
             options.read_completion_ps = value;
         } else if (option == "--base-path-ps") {
             options.base_path_ps = value;
-        } else if (option == "--numa-ps") {
-            options.numa_ps = value;
+        } else if (option == "--numa-ps"
+                   || option == "--numa-mean-ps") {
+            options.numa_mean_ps = value;
         } else if (option == "--iommu-ps") {
             options.iommu_ps = value;
         } else if (option == "--acs-ps") {
@@ -167,6 +202,18 @@ Options parseOptions(int argc, char** argv) {
             options.ddio_ps = value;
         } else if (option == "--gpu-direct-ps") {
             options.gpu_direct_ps = value;
+        } else if (option == "--numa-incidence-ppm") {
+            options.numa_incidence_ppm = value;
+        } else if (option == "--numa-standard-deviation-ps") {
+            options.numa_standard_deviation_ps = value;
+        } else if (option == "--numa-tail-probability-ppm") {
+            options.numa_tail_probability_ppm = value;
+        } else if (option == "--numa-tail-mean-ps") {
+            options.numa_tail_mean_ps = value;
+        } else if (option == "--numa-tail-standard-deviation-ps") {
+            options.numa_tail_standard_deviation_ps = value;
+        } else if (option == "--analytical-seed") {
+            options.analytical_seed = value;
         } else if (option == "--visibility-dependency") {
             options.visibility_dependency = value;
         } else {
@@ -193,11 +240,28 @@ Options parseOptions(int argc, char** argv) {
         || options.rcb > std::numeric_limits<std::uint32_t>::max()
         || options.outstanding_reads
             > std::numeric_limits<std::uint32_t>::max()
+        || (options.numa_incidence_ppm.has_value()
+            && *options.numa_incidence_ppm
+                > simllm::rnic::kPcieProbabilityScalePpm)
+        || options.numa_tail_probability_ppm
+            > simllm::rnic::kPcieProbabilityScalePpm
         || options.visibility_dependency > 1) {
         throw std::out_of_range(
             "RNIC PCIe probe option exceeds its modeled range");
     }
     return options;
+}
+
+PcieAnalyticalDelayProfile fixedPenalty(std::uint64_t delay_ps) {
+    PcieAnalyticalDelayProfile profile;
+    if (delay_ps == 0) {
+        return profile;
+    }
+    profile.kind = PcieAnalyticalDelayKind::Fixed;
+    profile.incidence_probability_ppm =
+        simllm::rnic::kPcieProbabilityScalePpm;
+    profile.mean_ps = delay_ps;
+    return profile;
 }
 
 PcieGeneration generation(std::uint64_t value) {
@@ -217,6 +281,7 @@ int run(const Options& options) {
         static_cast<std::uint32_t>(options.outstanding_reads);
     config.completion_buffer_bytes = options.completion_buffer_bytes;
     config.credit_return_latency_ps = options.credit_return_ps;
+    config.analytical_seed = options.analytical_seed;
     config.host_store_latency_ps.samples_ps = {
         options.host_store_latency_ps};
     config.posted_write_visibility_latency_ps.samples_ps = {
@@ -224,12 +289,36 @@ int run(const Options& options) {
     config.read_completion_latency_ps.samples_ps = {
         options.read_completion_ps};
     config.paths[1].base_latency_ps = options.base_path_ps;
-    config.paths[1].numa_penalty_ps = options.numa_ps;
-    config.paths[1].iommu_penalty_ps = options.iommu_ps;
-    config.paths[1].acs_penalty_ps = options.acs_ps;
-    config.paths[1].switch_penalty_ps = options.switch_ps;
-    config.paths[1].ddio_miss_penalty_ps = options.ddio_ps;
-    config.paths[1].gpu_direct_penalty_ps = options.gpu_direct_ps;
+    PcieAnalyticalDelayProfile numa = fixedPenalty(options.numa_mean_ps);
+    if (options.numa_profile_set) {
+        numa.kind = parseAnalyticalKind(options.numa_profile);
+        numa.incidence_probability_ppm = static_cast<std::uint32_t>(
+            options.numa_incidence_ppm.value_or(
+                numa.kind == PcieAnalyticalDelayKind::Disabled
+                    ? 0
+                    : simllm::rnic::kPcieProbabilityScalePpm));
+        numa.mean_ps = options.numa_mean_ps;
+        numa.standard_deviation_ps = options.numa_standard_deviation_ps;
+        numa.tail_probability_ppm = static_cast<std::uint32_t>(
+            options.numa_tail_probability_ppm);
+        numa.tail_mean_ps = options.numa_tail_mean_ps;
+        numa.tail_standard_deviation_ps =
+            options.numa_tail_standard_deviation_ps;
+    } else if (options.numa_incidence_ppm.has_value()
+               || options.numa_standard_deviation_ps != 0
+               || options.numa_tail_probability_ppm != 0
+               || options.numa_tail_mean_ps != 0
+               || options.numa_tail_standard_deviation_ps != 0) {
+        throw std::invalid_argument(
+            "NUMA analytical fields require --numa-profile");
+    }
+    auto& penalties = config.paths[1].analytical_penalties;
+    penalties.numa = numa;
+    penalties.iommu = fixedPenalty(options.iommu_ps);
+    penalties.acs = fixedPenalty(options.acs_ps);
+    penalties.switch_path = fixedPenalty(options.switch_ps);
+    penalties.ddio_miss = fixedPenalty(options.ddio_ps);
+    penalties.gpu_direct = fixedPenalty(options.gpu_direct_ps);
     PcieFabric fabric(config);
 
     const PcieServiceClass service_class =
@@ -241,6 +330,8 @@ int run(const Options& options) {
 
     Picoseconds first_issue_at_ps = 0;
     Picoseconds jct_ps = 0;
+    Picoseconds minimum_completion_ps =
+        std::numeric_limits<Picoseconds>::max();
     std::uint64_t request_tlps = 0;
     std::uint64_t completion_tlps = 0;
     for (std::uint64_t index = 0; index < options.transactions; ++index) {
@@ -265,6 +356,8 @@ int run(const Options& options) {
         request_tlps += result.request_tlps;
         completion_tlps += result.completion_tlps;
         jct_ps = std::max(jct_ps, result.completed_at_ps);
+        minimum_completion_ps = std::min(
+            minimum_completion_ps, result.completed_at_ps);
     }
     fabric.validateInvariants();
     const auto accounting = fabric.accounting(service_class);
@@ -288,8 +381,12 @@ int run(const Options& options) {
            "completion_buffer_bytes,credit_return_ps,"
            "completion_buffer_release_ps,"
            "host_store_latency_ps,posted_visibility_ps,"
-           "read_completion_ps,base_path_ps,numa_ps,iommu_ps,acs_ps,"
-           "switch_ps,ddio_ps,gpu_direct_ps,"
+           "read_completion_ps,base_path_ps,numa_mean_ps,iommu_ps,acs_ps,"
+           "switch_ps,ddio_ps,gpu_direct_ps,analytical_seed,"
+           "analytical_profile_version,numa_profile,"
+           "numa_incidence_ppm,numa_standard_deviation_ps,"
+           "numa_tail_probability_ppm,numa_tail_mean_ps,"
+           "numa_tail_standard_deviation_ps,"
            "request_tlps,completion_tlps,accounted_useful_bytes,"
            "accounted_transferred_bytes,host_store_bytes,"
            "h2d_tlps,h2d_payload_bytes,h2d_overhead_bytes,h2d_link_bytes,"
@@ -298,9 +395,18 @@ int run(const Options& options) {
            "credit_wait_ps,link_queue_wait_ps,base_path_attributed_ps,"
            "numa_attributed_ps,iommu_attributed_ps,acs_attributed_ps,"
            "switch_attributed_ps,ddio_attributed_ps,"
-           "gpu_direct_attributed_ps,host_store_service_ps,"
+           "gpu_direct_attributed_ps,numa_profile_draws,"
+           "numa_profile_occurrences,numa_profile_tail_draws,"
+           "iommu_profile_draws,iommu_profile_occurrences,"
+           "iommu_profile_tail_draws,acs_profile_draws,"
+           "acs_profile_occurrences,acs_profile_tail_draws,"
+           "switch_profile_draws,switch_profile_occurrences,"
+           "switch_profile_tail_draws,ddio_profile_draws,"
+           "ddio_profile_occurrences,ddio_profile_tail_draws,"
+           "gpu_direct_profile_draws,gpu_direct_profile_occurrences,"
+           "gpu_direct_profile_tail_draws,host_store_service_ps,"
            "posted_visibility_service_ps,read_completion_service_ps,"
-           "latency_samples,first_issue_ps,jct_ps\n"
+           "latency_samples,first_issue_ps,minimum_completion_ps,jct_ps\n"
         << toString(options.operation) << ','
         << toString(options.direction) << ','
         << toString(service_class) << ','
@@ -347,12 +453,20 @@ int run(const Options& options) {
         << options.posted_visibility_ps << ','
         << options.read_completion_ps << ','
         << options.base_path_ps << ','
-        << options.numa_ps << ','
+        << options.numa_mean_ps << ','
         << options.iommu_ps << ','
         << options.acs_ps << ','
         << options.switch_ps << ','
         << options.ddio_ps << ','
         << options.gpu_direct_ps << ','
+        << options.analytical_seed << ','
+        << simllm::rnic::kPcieAnalyticalDelayProfileVersion << ','
+        << toString(numa.kind) << ','
+        << numa.incidence_probability_ppm << ','
+        << numa.standard_deviation_ps << ','
+        << numa.tail_probability_ppm << ','
+        << numa.tail_mean_ps << ','
+        << numa.tail_standard_deviation_ps << ','
         << request_tlps << ','
         << completion_tlps << ','
         << accounting.useful_bytes << ','
@@ -378,11 +492,30 @@ int run(const Options& options) {
         << accounting.path_delay.switch_ps << ','
         << accounting.path_delay.ddio_miss_ps << ','
         << accounting.path_delay.gpu_direct_ps << ','
+        << accounting.path_profiles.numa.draws << ','
+        << accounting.path_profiles.numa.occurrences << ','
+        << accounting.path_profiles.numa.tail_draws << ','
+        << accounting.path_profiles.iommu.draws << ','
+        << accounting.path_profiles.iommu.occurrences << ','
+        << accounting.path_profiles.iommu.tail_draws << ','
+        << accounting.path_profiles.acs.draws << ','
+        << accounting.path_profiles.acs.occurrences << ','
+        << accounting.path_profiles.acs.tail_draws << ','
+        << accounting.path_profiles.switch_path.draws << ','
+        << accounting.path_profiles.switch_path.occurrences << ','
+        << accounting.path_profiles.switch_path.tail_draws << ','
+        << accounting.path_profiles.ddio_miss.draws << ','
+        << accounting.path_profiles.ddio_miss.occurrences << ','
+        << accounting.path_profiles.ddio_miss.tail_draws << ','
+        << accounting.path_profiles.gpu_direct.draws << ','
+        << accounting.path_profiles.gpu_direct.occurrences << ','
+        << accounting.path_profiles.gpu_direct.tail_draws << ','
         << accounting.service_delay.host_store_ps << ','
         << accounting.service_delay.posted_write_visibility_ps << ','
         << accounting.service_delay.read_completion_ps << ','
         << accounting.latency_samples_used << ','
         << first_issue_at_ps << ','
+        << minimum_completion_ps << ','
         << jct_ps << '\n';
     return 0;
 }

@@ -24,6 +24,23 @@ RATE = {
     5: (32000, 128, 130),
 }
 
+MASK64 = (1 << 64) - 1
+PROBABILITY_SCALE_PPM = 1_000_000
+GAUSSIAN_SCALE_Q20 = 1 << 20
+GAUSSIAN_QUANTILES_Q20 = (
+    -2534994, -2083969, -1847245, -1678779, -1545043, -1432569,
+    -1334521, -1246929, -1167269, -1093831, -1025400, -961079,
+    -900186, -842187, -786658, -733252, -681684, -631714,
+    -583140, -535786, -489502, -444152, -399618, -355794,
+    -312583, -269897, -227653, -185776, -144193, -102836,
+    -61638, -20536, 20536, 61638, 102836, 144193, 185776,
+    227653, 269897, 312583, 355794, 399618, 444152, 489502,
+    535786, 583140, 631714, 681684, 733252, 786658, 842187,
+    900186, 961079, 1025400, 1093831, 1167269, 1246929,
+    1334521, 1432569, 1545043, 1678779, 1847245, 2083969,
+    2534994,
+)
+
 
 def _ceil(value: Fraction) -> int:
     return value.numerator // value.denominator + (value.numerator % value.denominator != 0)
@@ -102,10 +119,97 @@ def _probe(probe: Path, **parameters: int | str) -> dict[str, int | str]:
         raise RuntimeError(f"probe returned {len(rows)} rows, expected one")
     return {
         name: value
-        if name in {"operation", "direction", "service_class", "path_endpoint"}
+        if name
+        in {"operation", "direction", "service_class", "path_endpoint", "numa_profile"}
         else int(value)
         for name, value in rows[0].items()
     }
+
+
+def _split_mix_64(value: int) -> int:
+    value = (value + 0x9E3779B97F4A7C15) & MASK64
+    value = ((value ^ (value >> 30)) * 0xBF58476D1CE4E5B9) & MASK64
+    value = ((value ^ (value >> 27)) * 0x94D049BB133111EB) & MASK64
+    return value ^ (value >> 31)
+
+
+def _analytical_word(seed: int, draw_index: int, stream: int) -> int:
+    key = seed
+    key ^= (0x9E3779B97F4A7C15 * (2 + 1)) & MASK64
+    key ^= (0xD1B54A32D192ED03 * (0 + 1)) & MASK64
+    key ^= (0x94D049BB133111EB * (draw_index + 1)) & MASK64
+    key ^= (0xBF58476D1CE4E5B9 * (stream + 1)) & MASK64
+    return _split_mix_64(key & MASK64)
+
+
+def _probability_event(probability_ppm: int, word: int) -> bool:
+    if probability_ppm == 0:
+        return False
+    if probability_ppm == PROBABILITY_SCALE_PPM:
+        return True
+    bucket = (((word >> 32) * PROBABILITY_SCALE_PPM) >> 32)
+    return bucket < probability_ppm
+
+
+def _gaussian_sample(mean_ps: int, standard_deviation_ps: int, word: int) -> int:
+    quantile = GAUSSIAN_QUANTILES_Q20[word & 63]
+    magnitude = (
+        standard_deviation_ps * abs(quantile) + GAUSSIAN_SCALE_Q20 // 2
+    ) // GAUSSIAN_SCALE_Q20
+    if quantile < 0:
+        return max(0, mean_ps - magnitude)
+    return mean_ps + magnitude
+
+
+def _analytical_samples(
+    *,
+    transactions: int,
+    seed: int,
+    profile: str,
+    incidence_probability_ppm: int,
+    mean_ps: int,
+    standard_deviation_ps: int,
+    tail_probability_ppm: int = 0,
+    tail_mean_ps: int = 0,
+    tail_standard_deviation_ps: int = 0,
+) -> tuple[list[int], int, int]:
+    samples = []
+    occurrences = 0
+    tails = 0
+    for draw_index in range(transactions):
+        if not _probability_event(
+            incidence_probability_ppm,
+            _analytical_word(seed, draw_index, 0),
+        ):
+            samples.append(0)
+            continue
+        occurrences += 1
+        if profile == "fixed":
+            samples.append(mean_ps)
+        elif profile == "gaussian":
+            samples.append(
+                _gaussian_sample(
+                    mean_ps,
+                    standard_deviation_ps,
+                    _analytical_word(seed, draw_index, 2),
+                )
+            )
+        elif profile == "gaussian_tail_mixture":
+            tail = _probability_event(
+                tail_probability_ppm,
+                _analytical_word(seed, draw_index, 1),
+            )
+            tails += int(tail)
+            samples.append(
+                _gaussian_sample(
+                    tail_mean_ps if tail else mean_ps,
+                    tail_standard_deviation_ps if tail else standard_deviation_ps,
+                    _analytical_word(seed, draw_index, 3 if tail else 2),
+                )
+            )
+        else:
+            raise ValueError(f"unsupported analytical profile {profile}")
+    return samples, occurrences, tails
 
 
 def _serialization_ps(bytes_: int, generation: int, lanes: int) -> int:
@@ -198,6 +302,9 @@ def _base_row(
     expected_outstanding_wait_ps: int = 0,
     expected_numa_ps: int = 0,
     expected_iommu_ps: int = 0,
+    expected_numa_occurrences: int | None = None,
+    expected_numa_tail_draws: int = 0,
+    expected_minimum_completion_ps: int | None = None,
 ) -> dict[str, int | str]:
     failures = []
     checks = {
@@ -226,6 +333,11 @@ def _base_row(
     if accounted_transactions != requested_transactions:
         failures.append(
             f"accounted_transactions={accounted_transactions} expected {requested_transactions}"
+        )
+    if int(measured["analytical_profile_version"]) != 1:
+        failures.append(
+            "analytical_profile_version="
+            f"{measured['analytical_profile_version']} expected 1"
         )
     expected_useful = requested_transactions * int(measured["useful_bytes"])
     expected_transferred = requested_transactions * int(measured["bytes"])
@@ -330,18 +442,51 @@ def _base_row(
         if int(measured[field]) != expected:
             failures.append(f"{field}={measured[field]} expected {expected}")
     path_fields = {
-        "base_path_attributed_ps": "base_path_ps",
-        "numa_attributed_ps": "numa_ps",
-        "iommu_attributed_ps": "iommu_ps",
-        "acs_attributed_ps": "acs_ps",
-        "switch_attributed_ps": "switch_ps",
-        "ddio_attributed_ps": "ddio_ps",
-        "gpu_direct_attributed_ps": "gpu_direct_ps",
+        "base_path_attributed_ps": expected_samples * int(measured["base_path_ps"]),
+        "numa_attributed_ps": expected_numa_ps,
+        "iommu_attributed_ps": expected_iommu_ps,
+        "acs_attributed_ps": expected_samples * int(measured["acs_ps"]),
+        "switch_attributed_ps": expected_samples * int(measured["switch_ps"]),
+        "ddio_attributed_ps": expected_samples * int(measured["ddio_ps"]),
+        "gpu_direct_attributed_ps": expected_samples * int(measured["gpu_direct_ps"]),
     }
-    for attributed_field, configured_field in path_fields.items():
-        expected = expected_samples * int(measured[configured_field])
+    for attributed_field, expected in path_fields.items():
         if int(measured[attributed_field]) != expected:
             failures.append(f"{attributed_field}={measured[attributed_field]} expected {expected}")
+    if expected_numa_occurrences is None:
+        expected_numa_occurrences = (
+            expected_samples if int(measured["numa_mean_ps"]) != 0 else 0
+        )
+    profile_expectations = {
+        "numa_profile_draws": expected_samples,
+        "numa_profile_occurrences": expected_numa_occurrences,
+        "numa_profile_tail_draws": expected_numa_tail_draws,
+    }
+    fixed_components = {
+        "iommu": "iommu_ps",
+        "acs": "acs_ps",
+        "switch": "switch_ps",
+        "ddio": "ddio_ps",
+        "gpu_direct": "gpu_direct_ps",
+    }
+    for component, configured_field in fixed_components.items():
+        profile_expectations[f"{component}_profile_draws"] = expected_samples
+        profile_expectations[f"{component}_profile_occurrences"] = (
+            expected_samples if int(measured[configured_field]) != 0 else 0
+        )
+        profile_expectations[f"{component}_profile_tail_draws"] = 0
+    for field, expected in profile_expectations.items():
+        if int(measured[field]) != expected:
+            failures.append(f"{field}={measured[field]} expected {expected}")
+    if (
+        expected_minimum_completion_ps is not None
+        and int(measured["minimum_completion_ps"]) != expected_minimum_completion_ps
+    ):
+        failures.append(
+            "minimum_completion_ps="
+            f"{measured['minimum_completion_ps']} expected "
+            f"{expected_minimum_completion_ps}"
+        )
     for zero_wait in (
         "ordering_wait_ps",
         "completion_buffer_wait_ps",
@@ -359,6 +504,11 @@ def _base_row(
         "expected_outstanding_wait_ps": expected_outstanding_wait_ps,
         "expected_numa_ps": expected_numa_ps,
         "expected_iommu_ps": expected_iommu_ps,
+        "expected_numa_occurrences": expected_numa_occurrences,
+        "expected_numa_tail_draws": expected_numa_tail_draws,
+        "expected_minimum_completion_ps": (
+            "" if expected_minimum_completion_ps is None else expected_minimum_completion_ps
+        ),
         "check": "PASS" if not failures else "; ".join(failures),
     }
 
@@ -466,7 +616,7 @@ def _sweep_path(probe: Path) -> list[dict[str, int | str]]:
             bytes=512,
             mps=512,
             mrrs=512,
-            numa_ps=numa_ps,
+            numa_mean_ps=numa_ps,
             iommu_ps=iommu_ps,
         )
         local_serialization = _read_oracle(1, 512, 512, 512, 64, 0)[0]
@@ -482,6 +632,108 @@ def _sweep_path(probe: Path) -> list[dict[str, int | str]]:
                 expected_iommu_ps=iommu_ps,
             )
         )
+    return rows
+
+
+def _sweep_analytical_profiles(probe: Path) -> list[dict[str, int | str]]:
+    transactions = 4096
+    seed = 0xC0FFEE
+    profiles = (
+        {
+            "name": "fixed",
+            "profile": "fixed",
+            "incidence_probability_ppm": 1_000_000,
+            "mean_ps": 100_000,
+            "standard_deviation_ps": 0,
+        },
+        {
+            "name": "gaussian_narrow",
+            "profile": "gaussian",
+            "incidence_probability_ppm": 1_000_000,
+            "mean_ps": 100_000,
+            "standard_deviation_ps": 10_000,
+        },
+        {
+            "name": "gaussian_wide",
+            "profile": "gaussian",
+            "incidence_probability_ppm": 1_000_000,
+            "mean_ps": 100_000,
+            "standard_deviation_ps": 40_000,
+        },
+        {
+            "name": "tail_rare",
+            "profile": "gaussian_tail_mixture",
+            "incidence_probability_ppm": 1_000_000,
+            "mean_ps": 100_000,
+            "standard_deviation_ps": 10_000,
+            "tail_probability_ppm": 10_000,
+            "tail_mean_ps": 500_000,
+            "tail_standard_deviation_ps": 50_000,
+        },
+        {
+            "name": "tail_frequent",
+            "profile": "gaussian_tail_mixture",
+            "incidence_probability_ppm": 1_000_000,
+            "mean_ps": 100_000,
+            "standard_deviation_ps": 10_000,
+            "tail_probability_ppm": 100_000,
+            "tail_mean_ps": 500_000,
+            "tail_standard_deviation_ps": 50_000,
+        },
+        {
+            "name": "intermittent",
+            "profile": "gaussian",
+            "incidence_probability_ppm": 250_000,
+            "mean_ps": 100_000,
+            "standard_deviation_ps": 10_000,
+        },
+    )
+    rows = []
+    for parameters in profiles:
+        tail_probability_ppm = int(parameters.get("tail_probability_ppm", 0))
+        tail_mean_ps = int(parameters.get("tail_mean_ps", 0))
+        tail_standard_deviation_ps = int(
+            parameters.get("tail_standard_deviation_ps", 0)
+        )
+        samples, occurrences, tails = _analytical_samples(
+            transactions=transactions,
+            seed=seed,
+            profile=str(parameters["profile"]),
+            incidence_probability_ppm=int(parameters["incidence_probability_ppm"]),
+            mean_ps=int(parameters["mean_ps"]),
+            standard_deviation_ps=int(parameters["standard_deviation_ps"]),
+            tail_probability_ppm=tail_probability_ppm,
+            tail_mean_ps=tail_mean_ps,
+            tail_standard_deviation_ps=tail_standard_deviation_ps,
+        )
+        measured = _probe(
+            probe,
+            operation="host_store",
+            direction="host_to_device",
+            transactions=transactions,
+            bytes=8,
+            analytical_seed=seed,
+            numa_profile=str(parameters["profile"]),
+            numa_incidence_ppm=int(parameters["incidence_probability_ppm"]),
+            numa_mean_ps=int(parameters["mean_ps"]),
+            numa_standard_deviation_ps=int(parameters["standard_deviation_ps"]),
+            numa_tail_probability_ppm=tail_probability_ppm,
+            numa_tail_mean_ps=tail_mean_ps,
+            numa_tail_standard_deviation_ps=tail_standard_deviation_ps,
+        )
+        row = _base_row(
+            f"analytical_profile_{parameters['name']}",
+            measured,
+            0,
+            0,
+            0,
+            max(samples),
+            expected_numa_ps=sum(samples),
+            expected_numa_occurrences=occurrences,
+            expected_numa_tail_draws=tails,
+            expected_minimum_completion_ps=min(samples),
+        )
+        rows.append(row)
     return rows
 
 
@@ -519,7 +771,42 @@ def _cross_checks(rows: list[dict[str, int | str]]) -> tuple[int, list[str]]:
         }
         if jct[512] > jct[128]:
             failures.append(f"read slots {slots}: MPS 512 is slower than MPS 128")
-    return 10, failures
+
+    profile_rows = {
+        str(row["sweep"]): row
+        for row in rows
+        if str(row["sweep"]).startswith("analytical_profile_")
+    }
+    narrow = profile_rows["analytical_profile_gaussian_narrow"]
+    wide = profile_rows["analytical_profile_gaussian_wide"]
+    for name, row in (("narrow", narrow), ("wide", wide)):
+        if not (
+            int(row["minimum_completion_ps"]) < 100_000
+            and int(row["jct_ps"]) > 100_000
+        ):
+            failures.append(f"{name} Gaussian did not span both sides of its mean")
+    narrow_range = int(narrow["jct_ps"]) - int(narrow["minimum_completion_ps"])
+    wide_range = int(wide["jct_ps"]) - int(wide["minimum_completion_ps"])
+    if wide_range <= narrow_range:
+        failures.append("wider Gaussian sigma did not increase the observed range")
+    rare = profile_rows["analytical_profile_tail_rare"]
+    frequent = profile_rows["analytical_profile_tail_frequent"]
+    for name, row in (("rare", rare), ("frequent", frequent)):
+        if int(row["numa_profile_tail_draws"]) == 0:
+            failures.append(f"{name} tail mixture selected no tail samples")
+    if int(frequent["numa_profile_tail_draws"]) <= int(
+        rare["numa_profile_tail_draws"]
+    ):
+        failures.append("higher tail probability did not increase tail selections")
+    if int(frequent["numa_attributed_ps"]) <= int(rare["numa_attributed_ps"]):
+        failures.append("higher tail probability did not increase aggregate delay")
+    intermittent = profile_rows["analytical_profile_intermittent"]
+    if not (
+        int(intermittent["numa_profile_occurrences"]) < 4096
+        and int(intermittent["minimum_completion_ps"]) == 0
+    ):
+        failures.append("intermittent incidence did not produce absent penalties")
+    return 18, failures
 
 
 def _render_csv(rows: list[dict[str, int | str]]) -> bytes:
@@ -546,7 +833,13 @@ def main() -> None:
     arguments = parser.parse_args()
 
     probe = _build(arguments.build_dir.resolve())
-    rows = _sweep_bytes(probe) + _sweep_link(probe) + _sweep_read_window(probe) + _sweep_path(probe)
+    rows = (
+        _sweep_bytes(probe)
+        + _sweep_link(probe)
+        + _sweep_read_window(probe)
+        + _sweep_path(probe)
+        + _sweep_analytical_profiles(probe)
+    )
     failed = [row for row in rows if row["check"] != "PASS"]
     cross_total, cross_failures = _cross_checks(rows)
     rendered = _render_csv(rows)

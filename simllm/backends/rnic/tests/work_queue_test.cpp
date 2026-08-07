@@ -19,6 +19,7 @@ using simllm::rnic::DropReason;
 using simllm::rnic::EvidenceKind;
 using simllm::rnic::NetworkEventKind;
 using simllm::rnic::Picoseconds;
+using simllm::rnic::PcieAnalyticalDelayAccounting;
 using simllm::rnic::PcieDirection;
 using simllm::rnic::PcieClassAccounting;
 using simllm::rnic::PcieFabric;
@@ -32,6 +33,14 @@ using simllm::rnic::WorkRequest;
 using simllm::rnic::WqeState;
 using simllm::rnic::defaultPcieFabricConfig;
 using simllm::rnic::testing::FakeNetworkPort;
+
+bool sameAnalyticalAccounting(
+    const PcieAnalyticalDelayAccounting& lhs,
+    const PcieAnalyticalDelayAccounting& rhs) {
+    return lhs.draws == rhs.draws
+        && lhs.occurrences == rhs.occurrences
+        && lhs.tail_draws == rhs.tail_draws;
+}
 
 bool samePcieAccounting(
     const PcieClassAccounting& lhs,
@@ -72,6 +81,18 @@ bool samePcieAccounting(
         && lhs.path_delay.switch_ps == rhs.path_delay.switch_ps
         && lhs.path_delay.ddio_miss_ps == rhs.path_delay.ddio_miss_ps
         && lhs.path_delay.gpu_direct_ps == rhs.path_delay.gpu_direct_ps
+        && sameAnalyticalAccounting(
+            lhs.path_profiles.numa, rhs.path_profiles.numa)
+        && sameAnalyticalAccounting(
+            lhs.path_profiles.iommu, rhs.path_profiles.iommu)
+        && sameAnalyticalAccounting(
+            lhs.path_profiles.acs, rhs.path_profiles.acs)
+        && sameAnalyticalAccounting(
+            lhs.path_profiles.switch_path, rhs.path_profiles.switch_path)
+        && sameAnalyticalAccounting(
+            lhs.path_profiles.ddio_miss, rhs.path_profiles.ddio_miss)
+        && sameAnalyticalAccounting(
+            lhs.path_profiles.gpu_direct, rhs.path_profiles.gpu_direct)
         && lhs.latency_samples_used == rhs.latency_samples_used;
 }
 

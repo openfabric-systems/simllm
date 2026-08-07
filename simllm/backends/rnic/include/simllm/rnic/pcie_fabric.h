@@ -13,8 +13,10 @@
 namespace simllm::rnic {
 
 inline constexpr std::uint32_t kPcieFabricConfigVersion = 1;
+inline constexpr std::uint32_t kPcieAnalyticalDelayProfileVersion = 1;
 inline constexpr std::uint32_t kPcieTransactionAbiVersion = 1;
 inline constexpr std::uint32_t kPcieTransactionResultVersion = 1;
+inline constexpr std::uint32_t kPcieProbabilityScalePpm = 1'000'000;
 
 enum class PcieServiceClass : std::uint8_t {
     UarDoorbell,
@@ -69,9 +71,43 @@ enum class PcieEndpointKind : std::uint8_t {
 };
 
 struct PcieLatencyProfile {
-    // V1 accepts exactly one fixed sample. Chronological arbitration for a
-    // multi-sample replay profile remains open BACK-10 work.
+    // V1 accepts exactly one fixed service-latency sample. Variable path
+    // penalties use PcieAnalyticalDelayProfile below.
     std::vector<Picoseconds> samples_ps{0};
+};
+
+enum class PcieAnalyticalDelayKind : std::uint8_t {
+    Disabled,
+    Fixed,
+    Gaussian,
+    GaussianTailMixture,
+};
+
+struct PcieAnalyticalDelayProfile {
+    std::uint32_t version{kPcieAnalyticalDelayProfileVersion};
+    // Disabled is the only valid zero-incidence profile. Active kinds require
+    // a nonzero incidence so configured delays cannot disappear silently.
+    PcieAnalyticalDelayKind kind{PcieAnalyticalDelayKind::Disabled};
+    // This is a statistical occurrence surrogate. It does not implement an
+    // IOTLB, ATC, DDIO cache, NUMA route or GPU Direct state machine.
+    std::uint32_t incidence_probability_ppm{0};
+    Picoseconds mean_ps{0};
+    Picoseconds standard_deviation_ps{0};
+    std::uint32_t tail_probability_ppm{0};
+    Picoseconds tail_mean_ps{0};
+    Picoseconds tail_standard_deviation_ps{0};
+};
+
+struct PciePathPenaltyProfiles {
+    // Each component is evaluated once per host store, posted-write fragment
+    // or memory-read fragment. A read sample delays response availability,
+    // not each Completion with Data packet.
+    PcieAnalyticalDelayProfile numa;
+    PcieAnalyticalDelayProfile iommu;
+    PcieAnalyticalDelayProfile acs;
+    PcieAnalyticalDelayProfile switch_path;
+    PcieAnalyticalDelayProfile ddio_miss;
+    PcieAnalyticalDelayProfile gpu_direct;
 };
 
 struct PciePathConfig {
@@ -79,12 +115,7 @@ struct PciePathConfig {
     PcieEndpointKind endpoint{PcieEndpointKind::HostPinnedMemory};
     bool enabled{true};
     Picoseconds base_latency_ps{0};
-    Picoseconds numa_penalty_ps{0};
-    Picoseconds iommu_penalty_ps{0};
-    Picoseconds acs_penalty_ps{0};
-    Picoseconds switch_penalty_ps{0};
-    Picoseconds ddio_miss_penalty_ps{0};
-    Picoseconds gpu_direct_penalty_ps{0};
+    PciePathPenaltyProfiles analytical_penalties;
 };
 
 struct PcieCreditConfig {
@@ -115,6 +146,9 @@ struct PcieFabricConfig {
     std::uint64_t max_tlps_per_transaction{1'000'000};
     Picoseconds credit_return_latency_ps{0};
     Picoseconds completion_buffer_release_latency_ps{0};
+    // Counter-based analytical streams derive from this seed, path ID,
+    // component ID and a transactional component-local draw index.
+    std::uint64_t analytical_seed{0};
     PcieLatencyProfile host_store_latency_ps;
     PcieLatencyProfile posted_write_visibility_latency_ps;
     PcieLatencyProfile read_completion_latency_ps;
@@ -175,6 +209,21 @@ struct PciePathDelayAccounting {
     Picoseconds gpu_direct_ps{0};
 };
 
+struct PcieAnalyticalDelayAccounting {
+    std::uint64_t draws{0};
+    std::uint64_t occurrences{0};
+    std::uint64_t tail_draws{0};
+};
+
+struct PciePathProfileAccounting {
+    PcieAnalyticalDelayAccounting numa;
+    PcieAnalyticalDelayAccounting iommu;
+    PcieAnalyticalDelayAccounting acs;
+    PcieAnalyticalDelayAccounting switch_path;
+    PcieAnalyticalDelayAccounting ddio_miss;
+    PcieAnalyticalDelayAccounting gpu_direct;
+};
+
 struct PcieTransactionResult {
     std::uint32_t version{kPcieTransactionResultVersion};
     std::uint64_t transaction_id{0};
@@ -196,6 +245,7 @@ struct PcieTransactionResult {
     PcieWaitAccounting waits;
     PcieServiceDelayAccounting service_delay;
     PciePathDelayAccounting path_delay;
+    PciePathProfileAccounting path_profiles;
     std::uint64_t latency_samples_used{0};
     Picoseconds submitted_at_ps{0};
     Picoseconds first_issue_at_ps{0};
@@ -218,6 +268,7 @@ struct PcieClassAccounting {
     PcieWaitAccounting waits;
     PcieServiceDelayAccounting service_delay;
     PciePathDelayAccounting path_delay;
+    PciePathProfileAccounting path_profiles;
     std::uint64_t latency_samples_used{0};
 };
 
@@ -273,6 +324,7 @@ private:
 const char* toString(PcieServiceClass service_class) noexcept;
 const char* toString(PcieOperation operation) noexcept;
 const char* toString(PcieDirection direction) noexcept;
+const char* toString(PcieAnalyticalDelayKind kind) noexcept;
 
 }  // namespace simllm::rnic
 

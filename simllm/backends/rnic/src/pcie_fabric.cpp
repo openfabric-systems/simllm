@@ -13,6 +13,37 @@
 namespace simllm::rnic {
 namespace {
 
+constexpr std::int64_t kGaussianScaleQ20 = 1 << 20;
+// Rounded midpoint quantiles Phi^-1((i + 0.5) / 64) in signed Q20. Keeping
+// this table and all sampling arithmetic integral makes replay independent of
+// the host C++ library's floating-point normal-distribution implementation.
+constexpr std::array<std::int32_t, 64> kGaussianQuantilesQ20{
+    -2534994, -2083969, -1847245, -1678779, -1545043, -1432569,
+    -1334521, -1246929, -1167269, -1093831, -1025400, -961079,
+    -900186, -842187, -786658, -733252, -681684, -631714,
+    -583140, -535786, -489502, -444152, -399618, -355794,
+    -312583, -269897, -227653, -185776, -144193, -102836,
+    -61638, -20536, 20536, 61638, 102836, 144193, 185776,
+    227653, 269897, 312583, 355794, 399618, 444152, 489502,
+    535786, 583140, 631714, 681684, 733252, 786658, 842187,
+    900186, 961079, 1025400, 1093831, 1167269, 1246929,
+    1334521, 1432569, 1545043, 1678779, 1847245, 2083969,
+    2534994,
+};
+
+enum class PathComponent : std::uint8_t {
+    Numa,
+    Iommu,
+    Acs,
+    Switch,
+    DdioMiss,
+    GpuDirect,
+    Count,
+};
+
+constexpr std::size_t kPathComponentCount =
+    static_cast<std::size_t>(PathComponent::Count);
+
 std::uint64_t checkedAdd(std::uint64_t lhs, std::uint64_t rhs) {
     if (rhs > std::numeric_limits<std::uint64_t>::max() - lhs) {
         throw std::overflow_error("RNIC PCIe unsigned addition overflow");
@@ -112,6 +143,290 @@ void validateEndpoint(PcieEndpointKind endpoint) {
         return;
     default:
         throw std::invalid_argument("invalid RNIC PCIe endpoint kind");
+    }
+}
+
+const PcieAnalyticalDelayProfile& penaltyProfile(
+    const PciePathPenaltyProfiles& profiles,
+    PathComponent component) {
+    switch (component) {
+    case PathComponent::Numa:
+        return profiles.numa;
+    case PathComponent::Iommu:
+        return profiles.iommu;
+    case PathComponent::Acs:
+        return profiles.acs;
+    case PathComponent::Switch:
+        return profiles.switch_path;
+    case PathComponent::DdioMiss:
+        return profiles.ddio_miss;
+    case PathComponent::GpuDirect:
+        return profiles.gpu_direct;
+    default:
+        throw std::logic_error("invalid RNIC PCIe path component");
+    }
+}
+
+Picoseconds& penaltyDelay(
+    PciePathDelayAccounting& accounting,
+    PathComponent component) {
+    switch (component) {
+    case PathComponent::Numa:
+        return accounting.numa_ps;
+    case PathComponent::Iommu:
+        return accounting.iommu_ps;
+    case PathComponent::Acs:
+        return accounting.acs_ps;
+    case PathComponent::Switch:
+        return accounting.switch_ps;
+    case PathComponent::DdioMiss:
+        return accounting.ddio_miss_ps;
+    case PathComponent::GpuDirect:
+        return accounting.gpu_direct_ps;
+    default:
+        throw std::logic_error("invalid RNIC PCIe path component");
+    }
+}
+
+PcieAnalyticalDelayAccounting& penaltyAccounting(
+    PciePathProfileAccounting& accounting,
+    PathComponent component) {
+    switch (component) {
+    case PathComponent::Numa:
+        return accounting.numa;
+    case PathComponent::Iommu:
+        return accounting.iommu;
+    case PathComponent::Acs:
+        return accounting.acs;
+    case PathComponent::Switch:
+        return accounting.switch_path;
+    case PathComponent::DdioMiss:
+        return accounting.ddio_miss;
+    case PathComponent::GpuDirect:
+        return accounting.gpu_direct;
+    default:
+        throw std::logic_error("invalid RNIC PCIe path component");
+    }
+}
+
+const PcieAnalyticalDelayAccounting& penaltyAccounting(
+    const PciePathProfileAccounting& accounting,
+    PathComponent component) {
+    switch (component) {
+    case PathComponent::Numa:
+        return accounting.numa;
+    case PathComponent::Iommu:
+        return accounting.iommu;
+    case PathComponent::Acs:
+        return accounting.acs;
+    case PathComponent::Switch:
+        return accounting.switch_path;
+    case PathComponent::DdioMiss:
+        return accounting.ddio_miss;
+    case PathComponent::GpuDirect:
+        return accounting.gpu_direct;
+    default:
+        throw std::logic_error("invalid RNIC PCIe path component");
+    }
+}
+
+std::uint64_t splitMix64(std::uint64_t value) noexcept {
+    value += 0x9e3779b97f4a7c15ULL;
+    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
+    return value ^ (value >> 31);
+}
+
+std::uint64_t analyticalWord(
+    std::uint64_t seed,
+    std::uint32_t path_id,
+    PathComponent component,
+    std::uint64_t draw_index,
+    std::uint64_t stream) noexcept {
+    std::uint64_t key = seed;
+    key ^= 0x9e3779b97f4a7c15ULL
+        * (static_cast<std::uint64_t>(path_id) + 1);
+    key ^= 0xd1b54a32d192ed03ULL
+        * (static_cast<std::uint64_t>(component) + 1);
+    key ^= 0x94d049bb133111ebULL * (draw_index + 1);
+    key ^= 0xbf58476d1ce4e5b9ULL * (stream + 1);
+    return splitMix64(key);
+}
+
+std::uint32_t probabilityBucket(std::uint64_t word) noexcept {
+    const std::uint64_t high = word >> 32;
+    return static_cast<std::uint32_t>(
+        (high * kPcieProbabilityScalePpm) >> 32);
+}
+
+bool probabilityEvent(
+    std::uint32_t probability_ppm,
+    std::uint64_t word) noexcept {
+    if (probability_ppm == 0) {
+        return false;
+    }
+    if (probability_ppm == kPcieProbabilityScalePpm) {
+        return true;
+    }
+    return probabilityBucket(word) < probability_ppm;
+}
+
+Picoseconds scaledGaussianMagnitude(
+    Picoseconds standard_deviation_ps,
+    std::uint32_t absolute_quantile_q20) {
+    const std::uint64_t whole = standard_deviation_ps
+        / static_cast<std::uint64_t>(kGaussianScaleQ20);
+    const std::uint64_t remainder = standard_deviation_ps
+        % static_cast<std::uint64_t>(kGaussianScaleQ20);
+    const std::uint64_t whole_product = checkedMultiply(
+        whole, absolute_quantile_q20);
+    const std::uint64_t remainder_product = checkedMultiply(
+        remainder, absolute_quantile_q20);
+    const std::uint64_t rounded_remainder = checkedAdd(
+        remainder_product,
+        static_cast<std::uint64_t>(kGaussianScaleQ20 / 2));
+    return checkedAdd(
+        whole_product,
+        rounded_remainder
+            / static_cast<std::uint64_t>(kGaussianScaleQ20));
+}
+
+Picoseconds gaussianSample(
+    Picoseconds mean_ps,
+    Picoseconds standard_deviation_ps,
+    std::uint64_t word) {
+    const std::int32_t quantile = kGaussianQuantilesQ20[
+        static_cast<std::size_t>(word & 63ULL)];
+    const std::uint32_t magnitude_q20 = static_cast<std::uint32_t>(
+        quantile < 0 ? -static_cast<std::int64_t>(quantile) : quantile);
+    const Picoseconds magnitude = scaledGaussianMagnitude(
+        standard_deviation_ps, magnitude_q20);
+    if (quantile < 0) {
+        return magnitude >= mean_ps ? 0 : mean_ps - magnitude;
+    }
+    return checkedAdd(mean_ps, magnitude);
+}
+
+Picoseconds maximumGaussianSample(
+    Picoseconds mean_ps,
+    Picoseconds standard_deviation_ps) {
+    return checkedAdd(
+        mean_ps,
+        scaledGaussianMagnitude(
+            standard_deviation_ps,
+            static_cast<std::uint32_t>(kGaussianQuantilesQ20.back())));
+}
+
+void validateAnalyticalProfile(
+    const PcieAnalyticalDelayProfile& profile,
+    const char* name) {
+    if (profile.version != kPcieAnalyticalDelayProfileVersion) {
+        throw std::invalid_argument(
+            std::string("unsupported RNIC PCIe ") + name
+            + " analytical profile version");
+    }
+    if (profile.incidence_probability_ppm > kPcieProbabilityScalePpm
+        || profile.tail_probability_ppm > kPcieProbabilityScalePpm) {
+        throw std::invalid_argument(
+            std::string("RNIC PCIe ") + name
+            + " analytical probability exceeds one million ppm");
+    }
+    validateDuration(profile.mean_ps, name);
+    validateDuration(profile.standard_deviation_ps, name);
+    validateDuration(profile.tail_mean_ps, name);
+    validateDuration(profile.tail_standard_deviation_ps, name);
+    switch (profile.kind) {
+    case PcieAnalyticalDelayKind::Disabled:
+        if (profile.incidence_probability_ppm != 0
+            || profile.mean_ps != 0
+            || profile.standard_deviation_ps != 0
+            || profile.tail_probability_ppm != 0
+            || profile.tail_mean_ps != 0
+            || profile.tail_standard_deviation_ps != 0) {
+            throw std::invalid_argument(
+                std::string("RNIC PCIe disabled ") + name
+                + " profile has active fields");
+        }
+        return;
+    case PcieAnalyticalDelayKind::Fixed:
+        if (profile.incidence_probability_ppm == 0) {
+            throw std::invalid_argument(
+                std::string("RNIC PCIe active ") + name
+                + " profile has zero incidence; use Disabled explicitly");
+        }
+        if (profile.standard_deviation_ps != 0
+            || profile.tail_probability_ppm != 0
+            || profile.tail_mean_ps != 0
+            || profile.tail_standard_deviation_ps != 0) {
+            throw std::invalid_argument(
+                std::string("RNIC PCIe fixed ") + name
+                + " profile has active Gaussian fields");
+        }
+        return;
+    case PcieAnalyticalDelayKind::Gaussian:
+        if (profile.incidence_probability_ppm == 0
+            || profile.standard_deviation_ps == 0
+            || profile.tail_probability_ppm != 0
+            || profile.tail_mean_ps != 0
+            || profile.tail_standard_deviation_ps != 0) {
+            throw std::invalid_argument(
+                std::string("RNIC PCIe Gaussian ") + name
+                + " profile fields are inconsistent");
+        }
+        break;
+    case PcieAnalyticalDelayKind::GaussianTailMixture:
+        if (profile.incidence_probability_ppm == 0
+            || profile.standard_deviation_ps == 0
+            || profile.tail_probability_ppm == 0
+            || profile.tail_probability_ppm
+                == kPcieProbabilityScalePpm
+            || profile.tail_mean_ps <= profile.mean_ps
+            || profile.tail_standard_deviation_ps == 0) {
+            throw std::invalid_argument(
+                std::string("RNIC PCIe Gaussian-tail ") + name
+                + " profile fields are inconsistent");
+        }
+        break;
+    default:
+        throw std::invalid_argument(
+            std::string("invalid RNIC PCIe ") + name
+            + " analytical profile kind");
+    }
+    try {
+        (void)maximumGaussianSample(
+            profile.mean_ps, profile.standard_deviation_ps);
+        if (profile.kind == PcieAnalyticalDelayKind::GaussianTailMixture) {
+            (void)maximumGaussianSample(
+                profile.tail_mean_ps,
+                profile.tail_standard_deviation_ps);
+        }
+    } catch (const std::overflow_error&) {
+        throw std::invalid_argument(
+            std::string("RNIC PCIe ") + name
+            + " analytical profile exceeds the timestamp range");
+    }
+}
+
+Picoseconds maximumAnalyticalProfileDelay(
+    const PcieAnalyticalDelayProfile& profile) {
+    switch (profile.kind) {
+    case PcieAnalyticalDelayKind::Disabled:
+        return 0;
+    case PcieAnalyticalDelayKind::Fixed:
+        return profile.mean_ps;
+    case PcieAnalyticalDelayKind::Gaussian:
+        return maximumGaussianSample(
+            profile.mean_ps, profile.standard_deviation_ps);
+    case PcieAnalyticalDelayKind::GaussianTailMixture:
+        return std::max(
+            maximumGaussianSample(
+                profile.mean_ps, profile.standard_deviation_ps),
+            maximumGaussianSample(
+                profile.tail_mean_ps,
+                profile.tail_standard_deviation_ps));
+    default:
+        throw std::logic_error(
+            "invalid validated RNIC PCIe analytical profile kind");
     }
 }
 
@@ -379,25 +694,97 @@ struct DirectionResources {
 
 struct PathDelay {
     PciePathDelayAccounting fields;
+    PciePathProfileAccounting profiles;
     Picoseconds total_ps{0};
 };
 
-PathDelay makePathDelay(const PciePathConfig& path) {
+struct AnalyticalSample {
+    Picoseconds delay_ps{0};
+    bool occurrence{false};
+    bool tail{false};
+};
+
+AnalyticalSample sampleAnalyticalProfile(
+    const PcieAnalyticalDelayProfile& profile,
+    std::uint64_t seed,
+    std::uint32_t path_id,
+    PathComponent component,
+    std::uint64_t draw_index) {
+    AnalyticalSample sample;
+    sample.occurrence = probabilityEvent(
+        profile.incidence_probability_ppm,
+        analyticalWord(seed, path_id, component, draw_index, 0));
+    if (!sample.occurrence) {
+        return sample;
+    }
+    switch (profile.kind) {
+    case PcieAnalyticalDelayKind::Disabled:
+        return sample;
+    case PcieAnalyticalDelayKind::Fixed:
+        sample.delay_ps = profile.mean_ps;
+        return sample;
+    case PcieAnalyticalDelayKind::Gaussian:
+        sample.delay_ps = gaussianSample(
+            profile.mean_ps,
+            profile.standard_deviation_ps,
+            analyticalWord(seed, path_id, component, draw_index, 2));
+        return sample;
+    case PcieAnalyticalDelayKind::GaussianTailMixture:
+        sample.tail = probabilityEvent(
+            profile.tail_probability_ppm,
+            analyticalWord(seed, path_id, component, draw_index, 1));
+        sample.delay_ps = sample.tail
+            ? gaussianSample(
+                  profile.tail_mean_ps,
+                  profile.tail_standard_deviation_ps,
+                  analyticalWord(seed, path_id, component, draw_index, 3))
+            : gaussianSample(
+                  profile.mean_ps,
+                  profile.standard_deviation_ps,
+                  analyticalWord(seed, path_id, component, draw_index, 2));
+        return sample;
+    default:
+        throw std::logic_error(
+            "invalid validated RNIC PCIe analytical profile kind");
+    }
+}
+
+using PathDrawKey = std::pair<std::uint32_t, PathComponent>;
+
+PathDelay samplePathDelay(
+    const PciePathConfig& path,
+    std::uint64_t seed,
+    std::map<PathDrawKey, std::uint64_t>& draw_cursors) {
     PathDelay result;
     result.fields.base_ps = path.base_latency_ps;
-    result.fields.numa_ps = path.numa_penalty_ps;
-    result.fields.iommu_ps = path.iommu_penalty_ps;
-    result.fields.acs_ps = path.acs_penalty_ps;
-    result.fields.switch_ps = path.switch_penalty_ps;
-    result.fields.ddio_miss_ps = path.ddio_miss_penalty_ps;
-    result.fields.gpu_direct_ps = path.gpu_direct_penalty_ps;
     result.total_ps = checkedAdd(result.total_ps, result.fields.base_ps);
-    result.total_ps = checkedAdd(result.total_ps, result.fields.numa_ps);
-    result.total_ps = checkedAdd(result.total_ps, result.fields.iommu_ps);
-    result.total_ps = checkedAdd(result.total_ps, result.fields.acs_ps);
-    result.total_ps = checkedAdd(result.total_ps, result.fields.switch_ps);
-    result.total_ps = checkedAdd(result.total_ps, result.fields.ddio_miss_ps);
-    result.total_ps = checkedAdd(result.total_ps, result.fields.gpu_direct_ps);
+    for (std::size_t index = 0; index < kPathComponentCount; ++index) {
+        const PathComponent component = static_cast<PathComponent>(index);
+        const PathDrawKey key{path.path_id, component};
+        const auto cursor = draw_cursors.find(key);
+        const std::uint64_t draw_index = cursor == draw_cursors.end()
+            ? 0
+            : cursor->second;
+        if (draw_index == std::numeric_limits<std::uint64_t>::max()) {
+            throw std::overflow_error(
+                "RNIC PCIe analytical draw index overflow");
+        }
+        const AnalyticalSample sample = sampleAnalyticalProfile(
+            penaltyProfile(path.analytical_penalties, component),
+            seed,
+            path.path_id,
+            component,
+            draw_index);
+        Picoseconds& field = penaltyDelay(result.fields, component);
+        field = sample.delay_ps;
+        PcieAnalyticalDelayAccounting& accounting = penaltyAccounting(
+            result.profiles, component);
+        accounting.draws = 1;
+        accounting.occurrences = sample.occurrence ? 1 : 0;
+        accounting.tail_draws = sample.tail ? 1 : 0;
+        result.total_ps = checkedAdd(result.total_ps, sample.delay_ps);
+        draw_cursors[key] = draw_index + 1;
+    }
     return result;
 }
 
@@ -446,6 +833,37 @@ void accumulatePath(
     checkedAccumulate(destination.switch_ps, source.switch_ps);
     checkedAccumulate(destination.ddio_miss_ps, source.ddio_miss_ps);
     checkedAccumulate(destination.gpu_direct_ps, source.gpu_direct_ps);
+}
+
+void accumulateAnalyticalAccounting(
+    PcieAnalyticalDelayAccounting& destination,
+    const PcieAnalyticalDelayAccounting& source) {
+    checkedAccumulate(destination.draws, source.draws);
+    checkedAccumulate(destination.occurrences, source.occurrences);
+    checkedAccumulate(destination.tail_draws, source.tail_draws);
+}
+
+void accumulatePathProfiles(
+    PciePathProfileAccounting& destination,
+    const PciePathProfileAccounting& source) {
+    for (std::size_t index = 0; index < kPathComponentCount; ++index) {
+        const PathComponent component = static_cast<PathComponent>(index);
+        accumulateAnalyticalAccounting(
+            penaltyAccounting(destination, component),
+            penaltyAccounting(source, component));
+    }
+}
+
+void validatePathProfiles(const PciePathProfileAccounting& accounting) {
+    for (std::size_t index = 0; index < kPathComponentCount; ++index) {
+        const auto& component = penaltyAccounting(
+            accounting, static_cast<PathComponent>(index));
+        if (component.occurrences > component.draws
+            || component.tail_draws > component.occurrences) {
+            throw std::logic_error(
+                "RNIC PCIe analytical profile accounting invariant failed");
+        }
+    }
 }
 
 void accumulatePathRepeated(
@@ -708,29 +1126,30 @@ void validateConfig(const PcieFabricConfig& config) {
         }
         validateEndpoint(path.endpoint);
         validateDuration(path.base_latency_ps, "path base latency");
-        validateDuration(path.numa_penalty_ps, "NUMA penalty");
-        validateDuration(path.iommu_penalty_ps, "IOMMU penalty");
-        validateDuration(path.acs_penalty_ps, "ACS penalty");
-        validateDuration(path.switch_penalty_ps, "switch penalty");
-        validateDuration(path.ddio_miss_penalty_ps, "DDIO penalty");
-        validateDuration(
-            path.gpu_direct_penalty_ps, "GPU Direct penalty");
-        Picoseconds aggregate_path_delay = 0;
-        for (Picoseconds component : {
-                 path.base_latency_ps,
-                 path.numa_penalty_ps,
-                 path.iommu_penalty_ps,
-                 path.acs_penalty_ps,
-                 path.switch_penalty_ps,
-                 path.ddio_miss_penalty_ps,
-                 path.gpu_direct_penalty_ps}) {
-            if (component
-                > std::numeric_limits<Picoseconds>::max()
+        Picoseconds aggregate_path_delay = path.base_latency_ps;
+        constexpr std::array<const char*, kPathComponentCount> names{
+            "NUMA penalty",
+            "IOMMU penalty",
+            "ACS penalty",
+            "switch penalty",
+            "DDIO-miss penalty",
+            "GPU Direct penalty",
+        };
+        for (std::size_t index = 0; index < kPathComponentCount; ++index) {
+            const auto& profile = penaltyProfile(
+                path.analytical_penalties,
+                static_cast<PathComponent>(index));
+            validateAnalyticalProfile(profile, names[index]);
+            const Picoseconds maximum = maximumAnalyticalProfileDelay(
+                profile);
+            if (maximum
+                > static_cast<Picoseconds>(
+                      std::numeric_limits<std::int64_t>::max())
                     - aggregate_path_delay) {
                 throw std::invalid_argument(
-                    "RNIC PCIe aggregate path delay overflows");
+                    "RNIC PCIe aggregate analytical path delay overflows");
             }
-            aggregate_path_delay += component;
+            aggregate_path_delay += maximum;
         }
         if (std::find(path_ids.begin(), path_ids.end(), path.path_id)
             != path_ids.end()) {
@@ -825,17 +1244,16 @@ public:
             }
         }
 
-        const PathDelay path_delay = makePathDelay(path);
         switch (request.operation) {
         case PcieOperation::HostStore:
             scheduleHostStore(
-                request, path_delay, eligible_at_ps, result);
+                request, path, eligible_at_ps, result);
             break;
         case PcieOperation::PostedWrite:
             schedulePostedWrite(
                 request,
                 shape,
-                path_delay,
+                path,
                 eligible_at_ps,
                 result);
             break;
@@ -843,7 +1261,7 @@ public:
             scheduleRead(
                 request,
                 shape,
-                path_delay,
+                path,
                 eligible_at_ps,
                 result);
             break;
@@ -857,6 +1275,7 @@ public:
         }
         validateDirectionAccounting(result.host_to_device);
         validateDirectionAccounting(result.device_to_host);
+        validatePathProfiles(result.path_profiles);
         accumulateResult(result);
         // The public ledger is the checked sum of every class row. Validate
         // that sum while this Impl is still a private plan candidate so a
@@ -881,9 +1300,47 @@ public:
         for (const PcieClassAccounting& item : accounting_) {
             validateDirectionAccounting(item.host_to_device);
             validateDirectionAccounting(item.device_to_host);
+            validatePathProfiles(item.path_profiles);
             transactions = checkedAdd(transactions, item.transactions);
         }
-        (void)totalAccounting();
+        const PcieClassAccounting total = totalAccounting();
+        for (const auto& item : path_draw_cursors_) {
+            const bool known_path = std::any_of(
+                config_.paths.begin(),
+                config_.paths.end(),
+                [&item](const PciePathConfig& path) {
+                    return path.path_id == item.first.first;
+                });
+            if (!known_path
+                || static_cast<std::size_t>(item.first.second)
+                    >= kPathComponentCount) {
+                throw std::logic_error(
+                    "RNIC PCIe analytical draw-cursor key invariant failed");
+            }
+        }
+        for (std::size_t index = 0; index < kPathComponentCount; ++index) {
+            const PathComponent component = static_cast<PathComponent>(index);
+            std::uint64_t cursor_draws = 0;
+            for (const auto& item : path_draw_cursors_) {
+                if (item.first.second == component) {
+                    cursor_draws = checkedAdd(cursor_draws, item.second);
+                }
+            }
+            if (cursor_draws
+                != penaltyAccounting(total.path_profiles, component).draws) {
+                throw std::logic_error(
+                    "RNIC PCIe analytical draw-cursor invariant failed");
+            }
+        }
+        const std::uint64_t service_samples = checkedAdd(
+            checkedAdd(
+                host_store_latency_cursor_,
+                posted_write_latency_cursor_),
+            read_completion_latency_cursor_);
+        if (service_samples != total.latency_samples_used) {
+            throw std::logic_error(
+                "RNIC PCIe service-latency cursor invariant failed");
+        }
         if (checkedAdd(transactions, 1) != next_transaction_id_) {
             throw std::logic_error(
                 "RNIC PCIe transaction-ID accounting mismatch");
@@ -908,6 +1365,8 @@ private:
         accumulateServiceDelay(
             destination.service_delay, source.service_delay);
         accumulatePath(destination.path_delay, source.path_delay);
+        accumulatePathProfiles(
+            destination.path_profiles, source.path_profiles);
         checkedAccumulate(
             destination.latency_samples_used,
             source.latency_samples_used);
@@ -943,6 +1402,7 @@ private:
         PcieTransactionResult& result,
         const PathDelay& delay) {
         accumulatePathRepeated(result.path_delay, delay.fields);
+        accumulatePathProfiles(result.path_profiles, delay.profiles);
     }
 
     static void noteFirstIssue(
@@ -963,9 +1423,11 @@ private:
 
     void scheduleHostStore(
         const PcieTransactionRequest& request,
-        const PathDelay& path_delay,
+        const PciePathConfig& path,
         Picoseconds eligible_at_ps,
         PcieTransactionResult& result) {
+        const PathDelay path_delay = samplePathDelay(
+            path, config_.analytical_seed, path_draw_cursors_);
         noteFirstIssue(result, eligible_at_ps);
         result.host_store_bytes = request.transfer_bytes;
         const Picoseconds latency = sample(
@@ -981,7 +1443,7 @@ private:
     void schedulePostedWrite(
         const PcieTransactionRequest& request,
         const TransactionShape& shape,
-        const PathDelay& path_delay,
+        const PciePathConfig& path,
         Picoseconds eligible_at_ps,
         PcieTransactionResult& result) {
         DirectionResources& direction =
@@ -990,6 +1452,8 @@ private:
         Picoseconds latest_visibility = eligible_at_ps;
         bool first = true;
         for (const TransactionFragment& fragment : shape.fragments) {
+            const PathDelay path_delay = samplePathDelay(
+                path, config_.analytical_seed, path_draw_cursors_);
             const std::uint64_t data_credits = ceilDivide(
                 fragment.wire_payload_bytes,
                 config_.data_credit_unit_bytes);
@@ -1054,7 +1518,7 @@ private:
     void scheduleRead(
         const PcieTransactionRequest& request,
         const TransactionShape& shape,
-        const PathDelay& path_delay,
+        const PciePathConfig& path,
         Picoseconds eligible_at_ps,
         PcieTransactionResult& result) {
         const std::size_t request_index = directionIndex(
@@ -1073,6 +1537,8 @@ private:
         bool first_request = true;
         bool first_response = true;
         for (const TransactionFragment& fragment : shape.fragments) {
+            const PathDelay path_delay = samplePathDelay(
+                path, config_.analytical_seed, path_draw_cursors_);
             const Picoseconds link_not_before = request_eligible;
             Picoseconds issue_at = request_resources.link.readyAt(
                 link_not_before);
@@ -1136,7 +1602,8 @@ private:
                 request_reservation.finished_at_ps,
                 response_latency,
                 path_delay.total_ps);
-            if (first_response) {
+            if (first_response
+                || response_ready < *result.completion_ready_at_ps) {
                 result.completion_ready_at_ps = response_ready;
                 first_response = false;
             }
@@ -1224,6 +1691,8 @@ private:
         accumulateServiceDelay(
             destination.service_delay, result.service_delay);
         accumulatePath(destination.path_delay, result.path_delay);
+        accumulatePathProfiles(
+            destination.path_profiles, result.path_profiles);
         checkedAccumulate(
             destination.latency_samples_used,
             result.latency_samples_used);
@@ -1234,6 +1703,7 @@ private:
     std::array<CapacityPool, 2> outstanding_reads_;
     std::array<CapacityPool, 2> completion_buffers_;
     std::map<std::uint64_t, Picoseconds> ordering_cursors_;
+    std::map<PathDrawKey, std::uint64_t> path_draw_cursors_;
     std::array<PcieClassAccounting, kPcieServiceClassCount> accounting_{};
     std::uint64_t generation_{0};
     std::uint64_t next_transaction_id_{1};
@@ -1388,6 +1858,21 @@ const char* toString(PcieDirection direction) noexcept {
         return "host_to_device";
     case PcieDirection::DeviceToHost:
         return "device_to_host";
+    default:
+        return "invalid";
+    }
+}
+
+const char* toString(PcieAnalyticalDelayKind kind) noexcept {
+    switch (kind) {
+    case PcieAnalyticalDelayKind::Disabled:
+        return "disabled";
+    case PcieAnalyticalDelayKind::Fixed:
+        return "fixed";
+    case PcieAnalyticalDelayKind::Gaussian:
+        return "gaussian";
+    case PcieAnalyticalDelayKind::GaussianTailMixture:
+        return "gaussian_tail_mixture";
     default:
         return "invalid";
     }

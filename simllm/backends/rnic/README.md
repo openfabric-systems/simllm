@@ -25,7 +25,11 @@ serializers retain rational time. Standard posted, non-posted and completion
 credit pools, read tags and completion-buffer reservations are finite. Every
 transaction returns class-attributed useful/transfer/host-store bytes,
 directional TLP payload/overhead/modeled-link bytes, queue waits, fixed service
-delay and labeled path delay.
+delay and realized analytical path delay. NUMA, IOMMU, ACS, switch, DDIO-miss
+and GPU Direct penalties each accept an explicit disabled state or fixed,
+discrete Gaussian and rare-tail two-Gaussian-mixture profiles with a nonzero
+incidence probability. Results separately count profile evaluations,
+occurrences and tail selections.
 
 Planning is transactional. `beginPlan`, `schedule` and `commit` let a client
 calculate a complete state transition against a private snapshot. A failed or
@@ -40,10 +44,14 @@ All default queue depths and delay values are synthetic. The default envelope
 charges 24 B for MWr/MRd and 20 B for CplD, and calls the resulting total
 modeled-link bytes. It is not a raw physical-wire byte count and does not
 include unmodeled DLLPs, UpdateFC, replay, SKP or FEC traffic. V1 accepts one
-fixed latency sample per profile and reserves one FIFO serializer per
-direction. Chronological multi-sample arbitration, class-specific queues,
-PCIe Relaxed Ordering and topology-derived NUMA/IOMMU/ACS/DDIO/GPU Direct
-effects remain BACK-10 work.
+fixed sample per service-latency profile and reserves one FIFO serializer per
+direction. The path sampler is deterministic, counter based and integer only;
+failed or discarded plans consume no shared draw. Its incidence probability
+is an analytical surrogate, not a topology, translation-cache, DDIO-cache or
+fault mechanism. Chronological arbitration, class-specific queues, actual
+PCIe ordering and mechanism-driven occurrence remain BACK-16 precision work.
+Optional BlueFlame, ATS/ATC and MSI-X behavior remains BACK-17 completeness
+work.
 
 The PCIe WorkQueue overload takes a separately versioned
 `WorkQueuePcieBinding`. In the regular mlx5 submission path it records one

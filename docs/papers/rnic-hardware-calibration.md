@@ -233,8 +233,9 @@ to the identical `rnic-nn` GOAL where starts are aligned.
    fitting.
 2. BACK-8 and HTSIM-9 establish the C++ hardware/policy ABI and prove that all
    full-RNIC profiles share one hardware configuration.
-3. BACK-9 and BACK-10 implement WQ/CQ plus PCIe/MMIO/DMA queues and close the
-   no-loss message-size and batching anchors.
+3. The landed BACK-10 fabric supplies shared PCIe/MMIO/DMA transactions;
+   BACK-9 completes WQ/CQ structure and BACK-16 calibrates the active hardware
+   path against the no-loss message-size and batching anchors.
 4. BACK-11 adds QP pairing, lifecycle and separate QPC/WQE/translation
    locality; its cache tiers remain generic and evidence-labelled.
 5. BACK-12 adds TX/RX reliability, named loss boundaries and PFC hardware.

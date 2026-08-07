@@ -1,11 +1,14 @@
 # RNIC PCIe v1 expectations
 
-Frozen before the first native PCIe-model run on 2026-08-07.
+Sweeps A through D and directed checks 1 through 10 were frozen before the
+first native PCIe-model run on 2026-08-07. Sweep E and directed checks 11 and
+12 were frozen as an analytical-profile addendum before its first run later
+that day.
 
 ## Scope and evidence boundary
 
-This study validates the first executable slice of BACK-10: deterministic,
-full-duplex PCIe transaction scheduling shared by RNIC clients. It covers host
+This study is the closure evidence for BACK-10: deterministic, full-duplex
+PCIe transaction scheduling shared by RNIC clients. It covers host
 stores, posted Memory Writes, non-posted Memory Read requests and Completion
 with Data packets. Semantic service class remains separate from PCIe
 operation, so UAR, BlueFlame, doorbell-record, WQE, context, translation,
@@ -17,9 +20,15 @@ The model parameters are synthetic unless a captured profile says otherwise.
 PCIe generation, negotiated width, MPS, MRRS and topology are observable.
 Credit depths, outstanding-read limits and completion buffering are
 calibrated-opaque. Internal DMA arbitration is not modeled in v1. NUMA, IOMMU,
-ACS, DDIO and GPU Direct fields are labeled additive path profiles, not yet
-topology, IOTLB, cache-residency or route-contention models. No value in this
-study is asserted as a ConnectX-7 internal constant.
+ACS, switch, DDIO-miss and GPU Direct penalties are labeled analytical path
+profiles. Each profile is explicitly disabled or has a nonzero incidence
+probability and is fixed, a bounded discrete Gaussian, or a bounded
+two-Gaussian tail mixture. Zero incidence is rejected for active profiles.
+The incidence draw decides when the analytical penalty is applied. It does
+not model topology, IOTLB or ATC state, cache residency, fault handling or
+route contention. The tail mixture is a finite rare-event surrogate, not a
+mathematically long-tailed distribution. No value in this study is asserted
+as a ConnectX-7 internal constant.
 
 The submission order follows the public mlx5 userspace fast path: the provider
 builds WQEs, updates the SQ doorbell record in host memory, then publishes the
@@ -27,7 +36,7 @@ batch through a UAR or BlueFlame write. A doorbell record is therefore a host
 store, not an assumed device DMA read. Its default send-queue store is 4 bytes;
 the regular UAR doorbell is 8 bytes. The regular UAR path permits subsequent
 WQE DMA reads. BlueFlame is represented as its own class but its WorkQueue
-producer remains later BACK-9/BACK-10 scope.
+producer remains later completeness work.
 
 ## Byte and time equations
 
@@ -38,10 +47,24 @@ for unaligned directed tests. The v1 completer uses an eager split at the first
 RCB crossing. This is a legal, conservative policy, not the only behavior PCIe
 permits; a measured completer policy remains open calibration work.
 
-V1 uses one fixed latency sample per host-store, posted-visibility and read-
-response profile. TLP reservations are FIFO in transaction scheduling order
-on one serializer per direction. Multi-sample latency replay, chronological
-cross-class arbitration and PCIe Relaxed Ordering remain open BACK-10 scope.
+V1 uses one fixed service-latency sample per host-store, posted-visibility and
+read-response profile. Path penalties are sampled separately: once for a host
+store, once for each posted-write fragment and once for each memory-read
+fragment. A read's sampled path delay applies to request-to-response
+availability, not to each CplD. TLP reservations are FIFO in transaction
+scheduling order on one serializer per direction. Chronological cross-class
+arbitration and PCIe Relaxed Ordering remain precision work.
+
+The analytical sampler is counter based and uses only specified unsigned
+integer operations. A fabric seed, path ID, component ID and component-local
+draw index select independent incidence, mixture and quantile streams through
+SplitMix64. A probability draw maps the high 32 bits into `[0, 1,000,000)`.
+Gaussian values use a checked-in 64-entry signed Q20 table containing the
+midpoint quantiles `Phi^-1((i + 0.5) / 64)`, rounded to nearest. Sigma scaling
+also rounds to nearest; negative samples clamp to zero. Configuration
+validation proves that every positive sample and the aggregate path maximum
+fit in the asserted timestamp range. A failed or discarded plan cannot
+consume a shared draw.
 
 With logical transferred span `S` (equal to useful bytes in these aligned
 sweeps), posted/read-request overhead `H = 24 B` and completion overhead
@@ -145,6 +168,35 @@ Pre-registered exact expectations:
 The penalties are path delay, not extra modeled-link bytes. No positive
 remote or translated path may outperform its otherwise identical local path.
 
+## Sweep E: analytical penalty profiles
+
+Issue 4,096 independent 8-byte host stores at time zero. Host stores isolate
+the sampled path distribution from PCIe serializer arbitration. Apply the
+profile only to the NUMA component and keep fixed service and other path delay
+at zero. Sweep these pre-registered profiles:
+
+| Profile | Incidence | Body mean | Body sigma | Tail probability | Tail mean | Tail sigma |
+|---|---:|---:|---:|---:|---:|---:|
+| fixed | 100% | 100000 ps | 0 | 0 | 0 | 0 |
+| Gaussian narrow | 100% | 100000 ps | 10000 ps | 0 | 0 | 0 |
+| Gaussian wide | 100% | 100000 ps | 40000 ps | 0 | 0 | 0 |
+| tail rare | 100% | 100000 ps | 10000 ps | 1% | 500000 ps | 50000 ps |
+| tail frequent | 100% | 100000 ps | 10000 ps | 10% | 500000 ps | 50000 ps |
+| intermittent | 25% | 100000 ps | 10000 ps | 0 | 0 | 0 |
+
+The Python oracle independently reproduces every integer draw. For each row,
+the aggregate realized NUMA delay, occurrence count, tail count and maximum
+completion time must match the oracle exactly. Every row has exactly 4,096
+NUMA profile evaluations. Fixed has exactly 4,096 occurrences, zero tail
+draws, aggregate delay 409,600,000 ps and JCT 100,000 ps. Both Gaussian rows
+must contain samples above and below 100,000 ps; widening sigma from 10,000 to
+40,000 ps must increase the observed range. Both mixture rows must select at
+least one tail draw; increasing tail probability from 1 to 10 percent must
+increase both tail count and aggregate realized delay for the frozen seed.
+The intermittent row must have fewer than 4,096 occurrences and zero delay on
+at least one transaction. Sampling changes neither transferred bytes nor
+modeled-link bytes.
+
 ## Directed boundary checks
 
 The native harness must additionally prove:
@@ -173,8 +225,15 @@ The native harness must additionally prove:
 9. The WorkQueue regular-doorbell path accounts one host DB-record store and
    one UAR posted write per batch, one WQE DMA read per WQE and one CQE DMA
    write per required completion. Failed doorbell and CQE plans preserve both
-   WorkQueue ownership and fabric state. Existing scalar-mode timing remains
+   WorkQueue ownership and fabric state. Existing fixed-profile timing remains
    bit-for-bit unchanged.
 10. Per-class totals sum exactly to the global useful, transferred,
     host-store, directional payload, overhead, modeled-link, wait and path
-    fields, as well as service-delay and latency-sample fields.
+    fields, as well as service-delay, service-sample and analytical-profile
+    accounting fields.
+11. Every path component accepts fixed, Gaussian and two-Gaussian tail-mixture
+    profiles. Invalid kinds, versions, probabilities, inactive fields,
+    standard deviations and worst-case aggregate delay fail at construction.
+12. Per-component profile evaluations, occurrences and tail selections sum
+    exactly from transactions into class and global ledgers. A failed,
+    discarded or stale plan consumes no shared analytical sample.
