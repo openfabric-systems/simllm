@@ -20,7 +20,19 @@ Reproduce from the repository root:
 python examples/rnic_wq_v1/run_rnic_wq_v1.py
 ```
 
-Raw rows are in [results.csv](results.csv).
+Raw rows are in [results.csv](results.csv). Render the figure with:
+
+```bash
+uv run --extra plot python examples/rnic_wq_v1/plot_rnic_wq_v1.py
+```
+
+![Native RNIC work-queue sweeps](plots/rnic_wq_v1_sweeps.png)
+
+The four panels show JCT against doorbell batching with the three signaling
+curves coincident, CQE traffic against signaling at each batch size, and the
+two backpressure cells. The JCT and backpressure panels include their frozen
+closed-form references. Doorbell and CQE counts remain fully tabulated in
+[results.csv](results.csv). Both figure formats are under [plots/](plots/).
 
 ## Sweep A: doorbell batching and signaling
 
