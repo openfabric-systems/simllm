@@ -1,16 +1,24 @@
 # GPU service model: structural validation results
 
-The 2026-08-06 run passed all 22 pre-registered cells with zero residual.
-These are mechanism checks on a synthetic 1 GHz profile. They validate the
-event model's equations and boundaries, not A100 or H100 timing accuracy.
+The 2026-08-06 run passed all 22 post-specified exact-oracle rows with zero
+residual. The expectations, implementation, runner and first results all
+landed together in commit `12bfe8b`, so this study is regression evidence, not
+preregistration. These are mechanism checks on a synthetic 1 GHz profile. They
+validate the event model's equations and boundaries, not A100 or H100 timing
+accuracy.
 
 Reproduce from the repository root:
 
 ```bash
-.venv/bin/python examples/gpu_service_model/run_gpu_service_model.py
-MPLCONFIGDIR=/tmp/simllm-gpu-service-mpl \
-  python3 examples/gpu_service_model/plot_gpu_service_model.py
+uv run --extra dev python examples/gpu_service_model/run_gpu_service_model.py
 ```
+
+```bash
+uv run --extra plot python examples/gpu_service_model/plot_gpu_service_model.py
+```
+
+The plot command needs the `plot` extra, which is where this repository
+declares matplotlib.
 
 The raw table is [results.csv](results.csv). The renderer produces
 [PNG](plots/gpu_service_structural_checks.png) and
@@ -19,7 +27,7 @@ sweeps.
 
 ## Exact results
 
-| Check | Parameter A | Parameter B | replay | frozen | residual |
+| Check | Parameter A | Parameter B | replay | closed form | residual |
 |---|---:|---:|---:|---:|---:|
 | CTA waves | 4 CTAs | 1 SM | 1,024 cycles | 1,024 | 0 |
 | CTA waves | 4 CTAs | 4 SMs | 256 cycles | 256 | 0 |
@@ -65,7 +73,7 @@ The focused test suite also exercises behavior that has no useful scalar plot:
   an independent clock domain;
 - unsupported barrier, cooperative, cluster and Hopper warpgroup forms fail
   rather than receiving an invented scalar latency;
-- the strict `simllm-gpu-model-artifact-v1` codec freezes caller-owned
+- the strict `simllm-gpu-model-artifact-v2` codec freezes caller-owned
   sequences, binds timing calibration to one target architecture, records and
   validates observed core/memory clocks, normalizes hash identities, enforces
   train/held-out isolation and stream order, recomputes sample statistics, and
@@ -98,3 +106,44 @@ this study. COMP-1, COMP-5, COMP-6 and COMP-10 retain production capture,
 per-invocation mapping and advanced instruction/cache semantics. CORE-4 retains
 inter-operation scheduling, copy selection/queueing, overlap and shared-HBM
 arbitration.
+
+### Seed pipeline correction, 2026-08-06
+
+The seed profiles originally gave every pipeline one merged ALU entry at
+issue width 4 and initiation interval 1, which sustained 4 warp
+instructions per SM per cycle on every operation class. Review found that
+overshoots the per-SM core counts in the whitepapers the profiles cite by
+2x on FP32 and 4x on FP64, an error the declared 50 percent uncertainty
+cannot cover. The seeds now carry separate ALU, INT and FP64 pipelines
+with sustained-throughput initiation intervals derived from those core
+counts: FP32 issues every 2 cycles on A100 and every cycle on H100, INT
+every 2 cycles on both, FP64 every 4 cycles on A100 and every 2 on H100,
+tensor every 4, load/store every 4 and special-function every 8. The
+intervals remain unvalidated bootstrap priors at the same 50 percent
+uncertainty; only their relation to the published core counts improved.
+The 22 cells above are unaffected because this study runs on the
+synthetic fixture, not on a seed profile, and `results.csv` reproduced
+byte-identically after the change.
+
+### By-construction disclosures, 2026-08-06
+
+Three post-specified clauses carry no evidential weight as experiments and
+survive only as regression tripwires, following the precedent set in
+[examples/m4](../m4/RESULTS.md):
+
+- The copy check's "effective throughput never exceeds the configured
+  bandwidth" clause is true by arithmetic: duration is
+  `setup + ceil(bytes / rate)`, which is at least `bytes / rate`, so the
+  assertion cannot fail for any input. Its companion clause, that
+  throughput must rise with descriptor size, was specified but was not
+  enforced by the initial harness; it is now a real
+  cross-case assertion and it passes.
+- The HBM check's "serviced bytes equal submitted bytes" identity holds
+  by assignment: the estimate sets `hbm_serviced_bytes` from
+  `hbm_transacted_bytes`, and both accumulate on the same line at issue
+  time. The current replay has no independent service-side ledger to disagree
+  with.
+- The replay-determinism check calls one pure function twice in the same
+  process. The model holds no RNG and no entropy source, so equality is
+  guaranteed by construction; the check is a tripwire against future
+  edits, not evidence of cross-process reproducibility.

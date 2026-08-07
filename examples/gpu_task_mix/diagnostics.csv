@@ -1,0 +1,14 @@
+diagnostic,duration_cycles
+"network submitted first, memory second",328
+D2 scheduler budget doubled,329
+D2 load-store lanes doubled,329
+D2 scheduler budget and load-store lanes doubled,328
+"compute isolated, half-SM shared-memory demand",14
+"memory isolated, half-SM shared-memory demand",229
+"memory admission, half-SM shared-memory demand",14
+"compute isolated, no shared-memory pressure",7
+"memory isolated, no shared-memory pressure",132
+"compute beside memory, no shared-memory pressure",133
+E ring isolated,4397
+E memory isolated,132
+E ring beside memory,4397

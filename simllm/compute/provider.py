@@ -7,6 +7,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 PS_PER_SECOND = 1_000_000_000_000
 
@@ -96,20 +97,32 @@ class ProfileTableProvenance:
     simulator or capture-tool version string; ``gpu`` is the GPU the table
     describes; ``created`` is a caller-supplied date string. The library
     never reads the clock itself: the caller states when the table was
-    made, so replayed builds stay byte-reproducible.
+    made, so replayed builds stay byte-reproducible. ``references`` carries
+    the audit links of the upstream evidence, so citations survive
+    compilation from a richer artifact into this compact table.
     """
 
     source: str
     version: str
     gpu: str
     created: str
+    references: tuple[str, ...] = ()
 
-    def to_json(self) -> dict[str, str]:
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "references", tuple(self.references))
+        for reference in self.references:
+            if not isinstance(reference, str) or not reference.strip():
+                raise ValueError("profile-table provenance references must be nonblank strings")
+        if len(set(self.references)) != len(self.references):
+            raise ValueError("profile-table provenance references must not contain duplicates")
+
+    def to_json(self) -> dict[str, Any]:
         return {
             "source": self.source,
             "version": self.version,
             "gpu": self.gpu,
             "created": self.created,
+            "references": list(self.references),
         }
 
     @classmethod
@@ -117,11 +130,22 @@ class ProfileTableProvenance:
         missing = [f for f in ("source", "version", "gpu", "created") if f not in payload]
         if missing:
             raise ValueError(f"profile-table provenance missing fields: {missing}")
+        references = payload.get("references", [])
+        if not isinstance(references, list):
+            raise TypeError("profile-table provenance references must be an array")
+        parsed_references = []
+        for index, reference in enumerate(references):
+            if not isinstance(reference, str) or not reference.strip():
+                raise ValueError(
+                    f"profile-table provenance references[{index}] must be a nonblank string"
+                )
+            parsed_references.append(reference)
         return cls(
             source=str(payload["source"]),
             version=str(payload["version"]),
             gpu=str(payload["gpu"]),
             created=str(payload["created"]),
+            references=tuple(parsed_references),
         )
 
 

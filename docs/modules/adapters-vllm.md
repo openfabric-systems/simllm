@@ -158,10 +158,11 @@ row-for-row.
 
 - VLLM-3: sim-native metrics export via a `vllm.stat_logger_plugins` stat
   logger for virtual-time runs.
-- VLLM-4 (remaining half): a paced-mode run whose TTFT/TPOT are compared
-  with a real capture, a `vllm serve` run confirming the drain record lands
-  under the `EngineCore` busy loop (source-verified only; the in-process
-  loop is confirmed to never issue it), and the scheduler-side invariants
+- VLLM-4 (Precision; P1; L) (remaining half): a paced-mode run whose TTFT/TPOT
+  are compared with a real capture, a `vllm serve` run confirming the drain
+  record lands under the `EngineCore` busy loop (source-verified only; the
+  in-process loop is confirmed to never issue it), and the scheduler-side
+  invariants
   under the fabricated executor: prefix-cache hit accounting with shared
   prefixes longer than one KV block (the 2026-08-04 smoke's shared prefix
   was shorter than the 16-token block, so hits were legitimately zero), and
@@ -169,7 +170,7 @@ row-for-row.
   compute table and CORE-3/4/5 are ready. Use the identical vLLM commit,
   model, parallel configuration, request trace, seed and warm-up policy in
   simulation and silicon. Stage the comparison as single-GPU compute,
-  eight-GPU intra-node, two-node shared-NIC, offered-load sweep, KV pressure,
+  eight-GPU intra-node, two-node rail-RNIC, offered-load sweep, KV pressure,
   chunked prefill/preemption, and mixed/bursty arrivals. Report p50, p90, p99
   and p99.9 TTFT/TPOT plus request queue, KV wait, kernel, collective, DMA,
   WQE/NIC, flow-completion and control-delay components. Calibrate only the

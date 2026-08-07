@@ -1,0 +1,8 @@
+include examples/rnic_wq_v1/expectations.md
+include examples/rnic_wq_v1/RESULTS.md
+include examples/rnic_wq_v1/results.csv
+include examples/rnic_wq_v1/run_rnic_wq_v1.py
+include examples/rnic_pcie_v1/expectations.md
+include examples/rnic_pcie_v1/RESULTS.md
+include examples/rnic_pcie_v1/results.csv
+include examples/rnic_pcie_v1/run_rnic_pcie_v1.py

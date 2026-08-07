@@ -54,16 +54,80 @@ own modules.
 
 Created objects use typed portable identities and opaque owner-native handles:
 framework request and vRAM allocation, execution operation, NCCL command,
-SQ/RQ/CQ, network WQE, and either a DCQCN QP or an `rnic-cn` directed L2 link
-pair. A WQE must name exactly one SQ, RQ and CQ. Physical WQEs name exactly one
-QP or link pair; topology-free null profiles instead record
-`transport_kind=none`. Packet objects are intentionally absent. Framework
+SQ/RQ/CQ and network WQE. The current v1 compatibility ledger also records
+either a DCQCN QP or an `rnic-cn` directed L2 link pair. In that compatibility
+shape, every WQE names exactly one SQ, RQ and CQ. Physical compatibility WQEs
+name exactly one QP or link pair;
+topology-free null profiles instead record `transport_kind=none`. BACK-11 will
+give every full-RNIC policy a hardware QP and retain CC/link-pair identity as a
+separate policy context. Packet objects are intentionally absent. Framework
 pointers remain strings owned by the adapter; the core records them but never
 interprets or dereferences them. Reusable vRAM, queue, QP and link-pair records
 retain their creation scope but may be referenced by later steps and
 executions. Each use carries its own scope. Causal object lineage may narrow a
 batched request set, but cannot introduce a request absent from its causal
 parents.
+
+### Authority, queue visits and arbitration
+
+An enabled execution profile has one mutable authority for each object. The
+`ExecutionGraph` is authoritative for semantic work, logical release
+constraints and dependency identity. The `DeviceRuntime` owns orchestration:
+realized operation eligibility, operation-level start and completion, and
+selection only for resources it directly implements. It delegates
+provider-owned physical objects. When the structural RNIC path is enabled, the
+selected native `WqeRecord` owns the WQE lifecycle and every calibrated
+per-WQE start stage.
+The request bookkeeper, backend result rows and completion stream are
+projections of that record, not independent WQE state machines; the
+`AtlahsWqeLedger` is not constructed in this mode. Until the structural path is
+live, a run may explicitly select `AtlahsWqeLedger` as its sole timing-neutral
+bypass authority. A run never enables both mutable authorities, and every
+projection must conserve identity, cardinality and timestamps available at its
+boundary.
+
+The target contract requires all contended resources to use one queue-visit
+meaning even when Python and C++ use different mechanisms:
+
+| Point | Meaning |
+|---|---|
+| `submitted_at` | Work entered its logical queue. |
+| `eligible_at` | Causal, ordering and other gates external to this resource are satisfied. |
+| `started_at` | Arbitration granted the resource and non-preemptive service began. |
+| `finished_at` | This resource was released. |
+| `completed_at` | The result became visible to the downstream consumer. |
+
+For one visit, queue wait is exactly `started_at - eligible_at`, service is
+exactly `finished_at - started_at`, and downstream response or visibility is
+`completed_at - finished_at`. `CompletionEvent.QUEUED` projects eligibility,
+not submission or an arbitrary simulator callback time;
+`CompletionEvent.STARTED` projects the resource grant. An internal mechanism
+may retain finer visits than the public event stream, but it must reduce them
+with these meanings and pass the shared conformance fixtures.
+
+Two reductions remain deliberately separate. `sum_visit_wait_ps` sums work
+waiting across resource visits and may exceed elapsed time when visits overlap.
+`critical_path_queue_ps` includes only waits on the realized dependency and
+resource critical path. Only the latter can participate in an additive TTFT,
+TPOT or JCT decomposition. GPU wall-idle classifications, PCIe transaction
+wait sums, WQ stage waits and last-completion makespans retain distinct names;
+no caller may compare or add them merely because each has units of time.
+
+Every optional class or priority scheduler must sit behind a replaceable
+policy. Mandatory protocol legality and ordering constrain the ready set before
+that policy is called. The required identity policy ignores class and priority
+labels and returns the first request in the resource's deterministic baseline
+order.
+Selecting identity is the feature-off path: it must preserve timestamps,
+waits, byte counts, random draws and completion order exactly, including when
+class labels are permuted. A non-identity policy may reorder only legal ready
+requests. For example, it cannot violate SQ ordering or PCIe forward-progress
+rules.
+
+The pre-implementation queue conformance expectations were first frozen in
+[examples/queue_contract_v1](../../examples/queue_contract_v1/expectations.md)
+at commit `65b5609`; commit `facb26d` clarified identity-policy scope, and
+commit `947399c` records the final pre-run state.
 
 The graph carries five typed work payloads rather than one unstructured
 dictionary:
@@ -74,7 +138,7 @@ dictionary:
 | `KvCacheWork` | Real framework KV/prefix-cache manager | logical state transition; READ/WRITE becomes HBM work, SWAP/TRANSFER becomes DMA, RECOMPUTE becomes compute plus WRITE |
 | `DmaWork` | Data-mover planner | DMA descriptor, directional copy engine, source/destination memory queues |
 | `CollectiveWork` | Framework/NCCL observation plus traffic planner | NCCL channels, DMA/HBM work, WQEs and network flows |
-| `ControlWork` | Framework or runtime controller | synchronous or asynchronous high-priority local/fabric control path |
+| `ControlWork` | Framework or runtime controller | synchronous or asynchronous labeled local/fabric control path; priority only under an opted-in policy |
 
 `CollectiveWork.payload_bytes` is algorithm-relative, and consumers must
 branch on `(collective, algorithm_hint)`: a ring `all-reduce` carries the
@@ -111,8 +175,9 @@ workload
   -> DeviceRuntime
        launch/CUDA queues -> GPU scheduler + HBM
                           -> copy engines + DMA
-                          -> NCCL channels -> per-GPU/QP WQE queues
-                          -> one shared NIC per node -> network backend
+                          -> NCCL channels -> semantic RNIC submission
+                          -> one GPU-affine RNIC session per GPU (WQ/CQ + hardware)
+                                                       -> network backend
   -> CompletionEvent v1
        \-> operation + WQE subject -> RequestBookkeeper
   -> StepResult, virtual clock and TTFT/TPOT attribution
@@ -125,33 +190,42 @@ The ownership rule for overlap is strict:
    whether a control or collective launch is synchronous or asynchronous.
 2. The lowerer expresses that knowledge as queues and dependency edges. It
    never inserts an empirical overlap percentage.
-3. The device runtime applies FIFO queueing and physical resource arbitration.
-   Overlap occurs only when operations are ready together and their selected
-   resources permit concurrent service.
+3. The device runtime applies queueing and physical resource arbitration
+   through an explicit policy. Identity arbitration preserves each resource's
+   existing deterministic baseline after legality. Overlap occurs only when
+   operations are ready together and their selected resources permit
+   concurrent service.
 4. Compute, collective and network models supply service demand and resource
    behavior. They do not rewrite framework ordering.
 
 The first runtime profile is intentionally fixed: eight GPUs per node, one
-logical WQE submission queue or QP per GPU, and one shared 400G physical NIC
-arbiter and serializer. All cross-node WQEs contend for that NIC. Intra-node
-traffic uses an NVLink-class resource. General fabric discovery and arbitrary
-GPU-to-NIC mapping are not prerequisites for this profile.
+logical WQE submission queue or QP per GPU, and one GPU-affine 400G physical
+RNIC per GPU. Cross-node WQEs contend within their selected RNIC, while the
+eight rail endpoints can transmit concurrently. Intra-node traffic uses an
+NVLink-class resource. General fabric discovery and arbitrary GPU-to-NIC
+mapping are not prerequisites for this profile.
 
 GPU fidelity is split at the operation boundary. `simllm.compute` owns the
-isolated service of one kernel or one copy descriptor. Its trace-driven model
-admits CTAs under register, warp, thread, block and shared-memory limits,
-assigns them to SMs, issues ready warps through dependency scoreboards, and
-services their HBM demand. The isolated copy model supplies descriptor setup
-and directional bandwidth service. These mechanisms can be calibrated or
-replaced without changing `ExecutionGraph`.
+service of one kernel, an explicitly supplied set of concurrent kernel tasks,
+or one isolated copy descriptor. Its trace-driven model admits CTAs under
+register, warp, thread, block and shared-memory limits, assigns them to SMs,
+issues ready warps through dependency scoreboards, and services their shared
+HBM and NVLink demand. The isolated copy model supplies descriptor setup and
+directional bandwidth service. These mechanisms can be calibrated or replaced
+without changing `ExecutionGraph`.
 
-CORE-4 owns everything between operations: launch and CUDA-stream FIFO order,
-event dependencies, selection and queueing of copy engines, simultaneous
-kernel and copy execution, cross-operation HBM contention, NCCL expansion,
-WQE/NIC arbitration and completion delivery. It must call the compute service
-model rather than grow a second SM or SASS model in `simllm.core`. The first
-compute slice therefore does not claim whole-task execution timing or
-compute/copy overlap.
+CORE-4 owns everything between semantic operations: launch and CUDA-stream
+FIFO order, event dependencies, selection of the kernel set passed to
+concurrent compute service, selection and queueing of copy engines,
+simultaneous kernel and copy execution, kernel-versus-DMA HBM arbitration,
+graph-level NCCL expansion, GPU-affine RNIC selection and semantic submission,
+and completion-event/projection plumbing. In bypass mode it delegates SQ/RQ/CQ
+and WQE state to the sole timing-neutral `AtlahsWqeLedger` authority. In
+structural mode it delegates WQE lifecycle, WQ/CQ state, NIC arbitration and
+completion to the native RNIC session owned by BACK-8, BACK-9 and BACK-12. It
+must call the compute service model rather than grow a second SM or SASS model
+in `simllm.core`. The compute slice therefore does not claim whole-task
+execution timing or compute/copy overlap.
 
 ## Status
 
@@ -182,9 +256,10 @@ rows are separately validated surfaces. CORE-4 owns their concrete
 graph-operation/tag/WQE correlation.
 
 Actual framework observation producers remain VLLM-11/12 and SGL-9/10.
-Explicit KV state semantics remain CORE-3; physical queue arbitration and
-creation of NCCL, SQ/RQ/CQ, WQE and transport records remain CORE-4; completion
-reduction and tail attribution remain CORE-5.
+Explicit KV state semantics remain CORE-3. Non-RNIC device-resource arbitration
+and projection of NCCL, SQ/RQ/CQ, WQE and transport correlation records remain
+CORE-4; BACK-8, BACK-9 and BACK-12 own structural RNIC objects and arbitration.
+Completion reduction and tail attribution remain CORE-5.
 
 The trace-driven GPU service slice establishes the intra-kernel scheduler,
 SM, residency and HBM mechanisms plus isolated copy-descriptor service in
@@ -203,19 +278,28 @@ does not claim to produce these resource-contention measurements.
    `max(C, D)`; adding a dependency must make it `C + D`. Sweep both the
    dependency setting and two demand pairs, `(C, D) = (10 us, 40 us)` and
    `(80 us, 40 us)`. Every result must match exactly in the ideal profile.
-2. **Eight producers sharing one NIC.** Each active GPU submits one aligned
-   WQE of B bytes from its own FIFO/QP to the same node NIC, with no propagation
-   or protocol overhead in the ideal profile. Sweep active GPUs N in `{1, 8}`
-   and link rate R in `{200, 400}` Gbit/s. The phase makespan must be
-   `8 * N * B / R` seconds; doubling R halves it exactly and changing N from 1
-   to 8 multiplies it by eight. Per-GPU FIFO order must remain stable under
-   both rates.
+2. **Eight GPU-affine RNICs.** Each active GPU submits one aligned WQE of B
+   bytes from its own FIFO/QP to its own rail RNIC, with no propagation or
+   protocol overhead in the ideal profile. Sweep active GPUs N in `{1, 8}`
+   and per-port rate R in `{200, 400}` Gbit/s. The phase makespan must be
+   `8 * B / R` seconds independent of N, aggregate useful throughput must be
+   `N * R`, and doubling R halves makespan exactly. Per-GPU FIFO order must
+   remain stable under both rates.
 3. **Tail attribution conservation.** For every completed operation, the sum
-   of time attributed to launch queue, device queue, service and completion
-   delivery must equal its end-to-end latency exactly. No interval may be
+   of critical-path time attributed to launch queue, device queue, service and
+   completion delivery must equal its end-to-end latency exactly. Separately
+   report the sum over all queue visits, which may exceed latency when visits
+   overlap and therefore must not enter that identity. No interval may be
    negative, and graph completion must equal the latest required completion
-   event. Sweep synchronous versus asynchronous control delivery and control
-   priority at two levels; only dependency-reachable work may move.
+   event. Sweep synchronous versus asynchronous control delivery and two
+   control-class labels under identity. Class labels must move nothing; only
+   dependency-reachable work may move. CORE-10 owns priority-caused movement.
+4. **Identity arbitration is the exact off path.** Run each shared resource
+   with omitted class arbitration and with the explicit identity policy, then
+   permute class labels without changing arrivals or service demand. Event
+   order, every timestamp, all wait and byte counters, random draws and final
+   JCT must remain byte-identical. A separately enabled priority policy may
+   change only the order of simultaneously legal ready requests.
 
 ## Open tasks
 
@@ -231,28 +315,41 @@ does not claim to produce these resource-contention measurements.
   live/reserved/reclaimable bytes, fragmentation, hits, eviction reason and
   age, reads/writes, transfers, recompute, preemption, capacity wait and
   TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9.
-- CORE-4: implement the first coarse `DeviceRuntime`: framework launch FIFO,
+- CORE-4 (Completeness; P1; L): implement the first coarse `DeviceRuntime`:
+  framework launch FIFO,
   per-CUDA-stream FIFO and event dependencies, non-preemptive GPU work queue
-  and dispatch into the `simllm.compute` kernel service model, shared
-  cross-operation HBM arbitration, directional copy-engine selection and
-  queueing for explicit DMA descriptors, NCCL channel queues, per-GPU/QP WQE
-  queues, one shared NIC arbiter/serializer, completion queue and high-priority
-  control queue. Start
-  with the fixed eight-GPU, one-NIC node above. Keep every resource policy
-  replaceable. Do not duplicate the SASS scheduler, SM-residency or isolated
+  and selection of the co-runnable task set dispatched into the
+  `simllm.compute` kernel service model, shared kernel-versus-DMA HBM
+  arbitration, directional copy-engine selection and queueing for explicit
+  DMA descriptors, NCCL channel queues, GPU-affine RNIC selection and semantic
+  submission, completion-event/projection plumbing and a control queue whose
+  class is accounting-only under identity. Start with the fixed eight-GPU,
+  eight-RNIC node above. Expose the CORE-8 policy seam and use only identity;
+  CORE-10 owns non-identity policies. In bypass mode delegate SQ/RQ/CQ and WQE
+  state to the sole `AtlahsWqeLedger` authority. In structural mode delegate
+  WQE lifecycle, WQ/CQ state, RNIC arbitration and completion to the
+  BACK-8/BACK-9/BACK-12 native session. Do not duplicate the SASS scheduler,
+  SM-residency or isolated
   copy-service mechanisms owned by `simllm.compute`. Append concrete NCCL
   command, SQ/RQ/CQ, WQE and QP/link-pair
-  records to `RequestBookkeeper`; CQ is initially consumed immediately at the
-  WQE completion timestamp and RQ stays an identity-only placeholder. Preserve
+  projections to `RequestBookkeeper`; the timing-neutral immediate-CQ and
+  identity-only RQ behavior remains a compatibility path until BACK-9 supplies
+  structural WQ/CQ service through the SimLLM RNIC extension. The native path
+  must be live-reachable from an `ExecutionGraph` to a changed completion time;
+  its standalone probes do not close this task. Preserve
   graph operation identity through collective expansion and rendered GOAL tags
   so backend WQE rows correlate without inference. Run and defend all
   pre-registered experiments above.
-- CORE-5: implement completion feedback and tail attribution. Stream queue,
+- CORE-5 (Completeness; P1; L): implement completion feedback and tail
+  attribution. Stream queue,
   start, progress and completion events, reduce the required completion
   boundary to `StepResult`, advance `VirtualClock`, and export per-request
   TTFT/TPOT plus queue-, KV-, kernel-, DMA-, collective-, NIC- and control-
-  attributed components. Support synchronous waits and asynchronous control
-  or collective progress without changing the event schema.
+  attributed components. Export additive visit totals separately from the
+  realized critical-path decomposition; only the latter must conserve
+  end-to-end latency. Support synchronous waits and asynchronous control or
+  collective progress. Preserve v1 readers if the queue-visit projection needs
+  a versioned event extension.
 - CORE-6: represent variable per-pair all-to-allv sizes in the graph
   contract. `CollectiveWork.payload_bytes` carries one uniform ordered-pair
   share for `pairwise` all-to-allv, so a captured, non-uniform dispatch
@@ -267,6 +364,38 @@ does not claim to produce these resource-contention measurements.
   per-WQE events for 64-rank runs and needs amortized constant-time appends
   with unchanged invariants. The full-ledger validator remains the reference
   implementation for snapshots and wire loads.
+- CORE-8 (Precision; P1; L): establish the cross-layer authority and
+  queue-visit contract above before residual-driven calibration. Define one
+  loss-checked projection from each authoritative runtime object into
+  `CompletionEvent` and `RequestBookkeeper`; use a versioned bookkeeping or
+  completion-event extension only where v1 cannot represent that projection
+  without ambiguity. Keep language-specific mechanisms behind the same
+  contract: the native side extracts a protocol-neutral exact reservation
+  timeline and finite-capacity resource from the PCIe implementation, while
+  Python uses a reference serial and capacity resource for GPU and runtime
+  queues. Mandatory protocol rules stay in their owning adapters. Shared
+  golden fixtures must prove isolated zero wait, one external contention wait
+  without triangular self-charging, predecessor service excluded from queue
+  wait, finite-capacity release, overflow rollback and identical reductions in
+  both languages. Existing PCIe, WQ and GPU studies must remain byte-identical
+  under identity arbitration before any non-identity class policy is enabled.
+- CORE-9 (Completeness; P1; M): replace the bookkeeping-v1 WQE compatibility
+  shape with a versioned structural projection while retaining a strict v1
+  reader. A send WQE names one local SQ and send CQ, a receive WQE names one RQ
+  or SRQ and receive CQ, and RX matching is a later relation. Represent
+  transport retirement, SQ reclamation, optional CQE visibility and CQ poll as
+  distinct facts so an unsignaled success never fabricates a CQ completion.
+  Preserve the native session, endpoint, WQ kind, WQ identity and post
+  sequence as the conservation key; WR ID, GOAL flow ID and backend tokens are
+  explicit aliases only. Acceptance covers send, RQ receive, SRQ receive,
+  one-sided no-receive and unsignaled no-CQE records plus v1 round-trip
+  compatibility.
+- CORE-10 (Completeness; P2; M): add non-identity arbitration policies only
+  after CORE-8 establishes the policy seam and exact identity baseline. Start
+  with strict priority and weighted round robin over legal ready candidates;
+  keep per-SQ ordering and protocol forward-progress rules outside the policy.
+  Every policy has an explicit identity setting whose class-label permutation
+  leaves the accepted baseline byte-identical.
 - BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
   process for closed loop, replacing per-step subprocess spawns. Its
   incremental flow-injection transport should carry `ExecutionGraph` and

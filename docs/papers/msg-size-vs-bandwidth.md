@@ -1,13 +1,12 @@
-# Message size vs bandwidth: extracted data and starting-behavior parameters
+# Message size vs bandwidth: hardware and CC calibration parameters
 
-Working note for calibrating the DCQCN comparator's per-WQE starting
-behavior (and the rnic-cn WQE-queue prefetch design). Source PDFs live in
-the gitignored `papers/` directory at the repo root; this summary and the
-extracted numbers are the committed record. Maintainer direction
-(2026-08-05): every WQE is a flow start, so the comparator must reproduce
-the measured message-size-vs-bandwidth curves, with two candidate
-mechanisms to parameterize: the mlx5-style fixed per-WQE latency and the
-DCQCN rate ramp.
+Working note for calibrating the common RNIC hardware initiation envelope,
+the persistent DCQCN rate state and the `rnic-cn` WQ lookahead policy. Source
+PDFs live in the gitignored `papers/` directory at the repo root; this summary
+and the extracted numbers are the committed record. The 2026-08-07
+architecture split assigns WQ/PCIe/DMA behavior to the SimLLM hardware model
+and CC state to htsim. The complete queueing, mlx5 capture and CX-7 evidence
+plan is [rnic-hardware-calibration.md](rnic-hardware-calibration.md).
 
 ## Sources
 
@@ -84,15 +83,18 @@ DCQCN rate ramp.
 
 ## Candidate parameter sets
 
-Two mechanisms, parameterized separately; the calibrated comparator
-composes them (a WQE pays the fixed initiation latency, and its flow
-inherits the QP's DCQCN rate state).
+Two separately owned mechanisms are composed in a full-RNIC run. Model A is a
+reduced-form check on common hardware initiation and queue service; Model B is
+the CC policy state inherited by later WQEs on the same QP. Model A must not be
+charged only to DCQCN.
 
-### Model A: mlx5 fixed per-WQE latency
+### Model A: common RNIC hardware initiation envelope
 
 Effective goodput of a stream of S-byte WQEs with Q outstanding:
 `B(S, Q) = S / (T0/Q + S/C)`; the half-rate message size is
-`S_half = T0 C / Q`. Fitting T0:
+`S_half = T0 C / Q`. If the structural posting, MMIO, WQE/context fetch,
+admission and completion queues are collapsed into one diagnostic number,
+fitting T0 gives:
 
 | Set | T0 | Anchor |
 |---|---|---|
@@ -104,6 +106,13 @@ The UCCL Fig. 15a 8 KB plateau under contended all-to-all fits T0 of
 about 12 us at Q = 128, consistent with A3 once contention is added; A2
 sits between the clean anchors, and A2 at Q = 16 predicts 32 KB at
 ~34 GB/s, inside the Fig. 14 band.
+
+T0 is not an implementation sleep on every WQE. The landed BACK-10 fabric plus
+BACK-9 and BACK-16 must reproduce the envelope through explicit doorbell
+batching, finite queues, shared PCIe service, context locality and overlapped
+WQE issue, while retaining each stage timestamp. The fitted values remain
+regression summaries and initialization bounds for measurements that are not
+yet available.
 
 ### Model B: DCQCN rate ramp (per-QP state the WQE inherits)
 
@@ -150,34 +159,37 @@ Readings:
   have no pipelining or state reuse across WQEs of the same
   destination. Real NICs pipeline the queue (UCCL's Q = 16 curve), and
   the maintainer's cn design amortizes the control cost (below).
-- The current dcqcn model never ramps: it has no CNP-driven rate state,
-  so an uncontended flow always runs at line rate. Everything in Model
-  B is missing; the loss recovery and rate cut exist only under actual
-  congestion events.
+- The current DCQCN runtime recreates source state per WQE, so policy state
+  does not persist into later WQEs on the same QP. An uncontended WQE starts
+  at line rate, as it should; post-CNP persistence and recovery across WQEs in
+  Model B remain missing.
 
 ## Calibration and design tasks
 
-- HTSIM-5 (backend, see docs/modules/backends.md): give the DCQCN
-  comparator per-WQE starting behavior: a fixed initiation latency
-  (Model A, sets A1 to A3 as CLI parameters, default A2) and per-QP
-  DCQCN rate state shared by WQEs of the same source-destination pair
-  (Model B, sets D1 to D3, default D3 at 400G), plus pipelined WQE
-  queues (Q outstanding). Acceptance: reproduce the UCCL Fig. 14
-  no-loss curve within 15 percent at Q = 16, and the maintainer's
-  256 KB half-rate datum at Q = 1 under A2.
-- HTSIM-6 (backend, maintainer design 2026-08-05): rnic-cn WQE-queue
-  lookahead. A WQE toward a destination whose link table is already
-  established (DECLAREs never expire) must not wait when the granted
-  bandwidth suffices; and the endpoint checks its WQE queue one RTT
-  ahead and pre-declares bandwidth for queued WQEs of the same
-  destination, hiding the declare latency of later WQEs behind the
-  transmission of earlier ones. Expected effect on the probe: the
-  16-deep same-destination queue collapses from 16 x 11.0 us of serial
-  control cost toward fluid-plus-one-setup, and the sub-BDP corners
-  (the 1.68x buffer-absorbed incast, the 14.3x a2a16 tail vs rnic-nn)
-  shrink toward the large-flow 1.13 to 1.17x band.
+- BACK-9/BACK-16 (SimLLM): complete structural WQ/CQ and calibrate the landed
+  BACK-10 MMIO/PCIe/DMA service shared by every full-RNIC policy. Sweep the A1
+  to A3 envelope as a diagnostic, not as three hard-coded sleeps. Acceptance:
+  reproduce UCCL Fig. 14 no-loss goodput within 15 percent at Q = 16 and the
+  maintainer's 256 KB half-rate datum at Q = 1 under the A2 summary, while
+  accounting for every stage and PCIe byte.
+- HTSIM-5 (backend): implement Model B as persistent DCQCN policy state shared
+  by WQEs of one hardware QP. Sweep D1 to D3, start a new QP at line/local-QoS
+  rate, then verify that a controlled CNP affects later WQEs until timer/byte
+  recovery restores the rate. The policy must not add doorbell, DMA or CQ
+  cost.
+- HTSIM-6 (backend): implement `rnic-cn` policy lookahead. A WQE toward a
+  destination whose link table is already established must not wait when the
+  granted bandwidth suffices; the policy receives bounded lookahead from
+  BACK-9 and pre-declares one RTT ahead. Expected effect on the probe: the
+  16-deep same-destination queue collapses from 16 x 11.0 us of serial control
+  cost toward fluid-plus-one-setup, and the sub-BDP corners (the 1.68x
+  buffer-absorbed incast, the 14.3x a2a16 tail vs `rnic-nn`) shrink toward the
+  large-flow 1.13 to 1.17x band.
+- BACK-8/HTSIM-9 own the common C++ boundary. A comparison is invalid if the
+  hardware configuration hash differs between `rnic-nn`, `rnic-cn` and
+  DCQCN.
 
 The probe above is a gap measurement, not a registered study; the
-registered validation of the calibrated behaviors happens with the
-HTSIM-5/HTSIM-6 landings, with expectations frozen against the anchor
-tables in this note.
+registered validation of the calibrated behaviors happens with the relevant
+BACK-9/BACK-16/HTSIM-5/HTSIM-6 landings, with expectations frozen against the
+anchor tables in this note.

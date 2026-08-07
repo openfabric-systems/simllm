@@ -1,0 +1,12 @@
+sweep,wqes,doorbell_batch,signal_every,network_capacity,network_latency_ps,doorbell_service_ps,fetch_service_ps,doorbells,cqes,network_busy,jct_ps,posted,delivered,reclaimed,sq_high_watermark,cq_high_watermark,evidence_count,expected_doorbells,expected_cqes,expected_network_busy,expected_jct_ps,check
+doorbell_signaling,32,1,1,32,0,1000,10,32,32,0,32010,32,32,32,32,1,0,32,32,0,32010,PASS
+doorbell_signaling,32,1,4,32,0,1000,10,32,8,0,32010,32,32,32,32,1,0,32,8,0,32010,PASS
+doorbell_signaling,32,1,16,32,0,1000,10,32,2,0,32010,32,32,32,32,1,0,32,2,0,32010,PASS
+doorbell_signaling,32,4,1,32,0,1000,10,8,32,0,8040,32,32,32,32,1,0,8,32,0,8040,PASS
+doorbell_signaling,32,4,4,32,0,1000,10,8,8,0,8040,32,32,32,32,1,0,8,8,0,8040,PASS
+doorbell_signaling,32,4,16,32,0,1000,10,8,2,0,8040,32,32,32,32,1,0,8,2,0,8040,PASS
+doorbell_signaling,32,16,1,32,0,1000,10,2,32,0,2160,32,32,32,32,1,0,2,32,0,2160,PASS
+doorbell_signaling,32,16,4,32,0,1000,10,2,8,0,2160,32,32,32,32,1,0,2,8,0,2160,PASS
+doorbell_signaling,32,16,16,32,0,1000,10,2,2,0,2160,32,32,32,32,1,0,2,2,0,2160,PASS
+network_backpressure,16,16,1,1,1000,100,10,1,16,15,16110,16,16,16,16,1,0,1,16,15,16110,PASS
+network_backpressure,16,16,1,4,1000,100,10,1,16,12,4140,16,16,16,16,1,0,1,16,12,4140,PASS

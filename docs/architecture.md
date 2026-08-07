@@ -118,11 +118,11 @@ assignment mirrors the htsim RNIC drivers' `-goal_rank_mapping` option:
 transfers stay off the fabric).
 
 General fabric discovery is not on the critical path for the first execution
-runtime. That profile fixes each node at eight GPUs and one shared 400G NIC:
-one logical WQE submission queue or QP per GPU feeds one physical NIC arbiter
-and serializer, while intra-node traffic uses an NVLink-class resource. This
-retains the queue structure needed for head-of-line blocking, fairness and
-control priority without first solving arbitrary GPU-to-NIC inventory.
+runtime. That profile fixes each node at eight GPUs and one GPU-affine 400G
+RNIC per GPU: one logical WQE submission queue or QP per GPU feeds its rail
+endpoint, while intra-node traffic uses an NVLink-class resource. This retains
+the queue structure needed for head-of-line blocking, fairness and control
+priority without first solving arbitrary GPU-to-NIC inventory.
 
 ### Execution and resource boundary (`simllm/core/execution.py`)
 
@@ -143,9 +143,9 @@ framework scheduler and KV control plane
        logical CUDA streams and event dependencies
        GPU work queue -> isolated kernel scheduler/SM/HBM service
        directional copy engines and DMA descriptors
-       NCCL channels and per-GPU/QP WQE queues
-       one shared NIC arbiter and serializer per node
-       completion and high-priority control queues
+       NCCL channels -> semantic RNIC submission
+       one GPU-affine RNIC session per GPU (WQ/CQ and hardware)
+       completion/event plumbing and control queue (class label only under identity)
   -> CompletionEvent stream
        \-> operation + created-object subject -> RequestBookkeeper
   -> StepResult + virtual-time metrics + next framework decision
@@ -161,6 +161,37 @@ promise that they overlap in time. The `DeviceRuntime` maps ready work onto
 physical queues and resources; overlap emerges from resource availability and
 contention. The framework never supplies an overlap percentage, and compute,
 traffic or network providers never rewrite framework ordering.
+
+The target cross-layer queue contract is a canonical `QueueVisit` accounting
+record, not one universal queue implementation. GPU schedulers, PCIe rational
+calendars,
+capacity pools and RNIC work queues keep their mechanism-specific state, but
+each visit exposes the same boundary: subject and resource identity, accounting
+class, deterministic tie-break sequence, `submitted_at_ps`, `eligible_at_ps`,
+`started_at_ps`, `finished_at_ps` and `completed_at_ps` when a later observer
+exists. `eligible_at_ps` includes required same-subject
+predecessors, so an object's earlier fragments are service dependencies rather
+than fictitious contention. Queue wait is exactly
+`started_at_ps - eligible_at_ps`; service is exactly
+`finished_at_ps - started_at_ps`. A credit, dependency or
+downstream visibility gate is either its own visit or an explicitly named
+nonqueue interval. It is never folded into another resource's wait. End-to-end
+attribution follows the graph's realized critical path; it does not add nested
+or parallel visit durations. CORE-8 owns the shared semantics, CORE-4 emits
+runtime visits, and each mechanism must reconcile its local counters to them.
+
+Every contended resource must also expose an explicit arbitration-policy seam.
+The identity policy preserves the mechanism's existing deterministic order,
+adds no policy delay and ignores accounting class for scheduling. This is the
+mandatory off path. An enabled policy may use class or priority to choose among
+eligible visits, but it cannot rewrite readiness or service demand. Disabling
+it must reproduce the identity visits and completion times exactly. Thus class
+remains useful attribution in the baseline and becomes a scheduling dimension
+only through an opted-in, testable policy.
+The queue contract expectations were first frozen before implementation in
+[examples/queue_contract_v1](../examples/queue_contract_v1/expectations.md) at
+commit `65b5609`; commit `facb26d` clarified identity-policy scope, and commit
+`947399c` records the final pre-run state.
 
 `completion_operation_ids` separates the framework-visible boundary from
 physical quiescence. An empty tuple means all graph operations must complete.
@@ -197,13 +228,32 @@ tail-latency attribution.
 `simllm-request-bookkeeping-v1` is the independent, append-only runtime fact
 stream. It keeps the graph immutable while correlating request stages and
 owner-created objects: opaque framework vRAM allocations, execution
-operations, NCCL commands, SQ/RQ/CQ, WQEs and either DCQCN QPs or `rnic-cn`
-directed L2 link pairs. WQE completion is the lowest public network unit.
-Packet identities and packet lifecycle remain backend-private. The initial CQ
-policy consumes completion immediately at the WQE timestamp. RQ is an
-identity-only placeholder in this contract. Every WQE names one SQ, RQ and CQ;
-physical profiles also name one DCQCN QP or `rnic-cn` directed link pair,
-while null profiles explicitly record transport kind `none`.
+operations, NCCL commands, SQ/RQ/CQ and WQEs. It is a public projection, not a
+second WQE lifecycle implementation. Packet identities and packet lifecycle
+remain backend-private.
+
+One run has one mutable WQE authority. Today the live htsim path uses its
+timing-neutral `AtlahsWqeLedger`, while the structural C++ `WorkQueue` is
+reachable only from native tests and probes. In the target structural mode the
+SimLLM native RNIC session alone allocates WQ and WQE identities, changes
+occupancy and records lifecycle timestamps. The htsim ledger is then neither
+constructed nor mutated; bookkeeping facts and result rows are immutable
+projections of native records. The explicit hardware-bypass mode does the
+opposite: it constructs no structural RNIC state and labels the compatibility
+ledger as the authority for that run. Structural and bypass records are never
+merged or reconciled by choosing timestamps after simulation.
+
+The stable WQE key is session and endpoint plus WQ kind, WQ identity and post
+sequence. WR IDs, GOAL flow IDs, htsim tokens and local vector indices are
+correlations only. Each logical network extent has a stable index, while every
+transmission or retry has its own attempt index and opaque token; a dropped
+attempt does not terminate the logical extent if reliability retries it. A
+send WQE belongs to its local SQ and send CQ; a remote RQ
+or SRQ owns a separately posted receive WQE and is linked only when RX matching
+occurs. The current bookkeeping-v1 `rq_id` and immediate-CQ behavior remain
+compatibility projections until BACK-9 supplies the structural schema. BACK-11
+gives every full-RNIC policy a hardware QP while keeping its CC or link-pair
+identity separate.
 Reusable vRAM, queue, QP and link-pair objects retain the scope in which they
 were created, while each later use records its own step, execution, operation
 and request scope. Causal lineage may narrow a batched request set and rejects
@@ -246,8 +296,8 @@ references do not impose their original transient scope on later users.
   handoff chain (receive data plus a small start packet, compute, hand data
   over, write a small packet releasing the next rank) is exactly GOAL's
   `recv`/`calc`/`send` chain with `requires` edges. The doorbell packet
-  itself is modeled *in-band* as a small high-priority control message on
-  the fabric (the RNIC endpoint models already carry ~64 B control packets),
+  itself is modeled *in-band* as a small control-class message on the fabric
+  (the RNIC endpoint models already carry ~64 B control packets),
   so it competes for wire time and sees network-side jitter. The host path
   before the wire (CPU proxy vs GPU-initiated networking, PCIe, RNIC
   doorbell-to-wire) defaults to **zero delay and zero jitter**: those
@@ -277,14 +327,56 @@ references do not impose their original transient scope on later users.
 
 ### Network backend (`simllm/backends/`, `third_party/`)
 
+The target full packet path has two independent model axes. SimLLM owns a C++
+RNIC hardware extension under `simllm/backends/rnic/`: RDMA WQ/CQ, QP/QPC,
+MMIO/PCIe/DMA and TX/RX hardware. htsim owns selectable transport/CC policies
+and the packet fabric. A versioned C++ adapter passes opaque packet or flow
+tokens and feedback events between them; no QP, queue, context or DMA object
+crosses that boundary. BACK-8 and HTSIM-9 will link the SimLLM static library
+into the directly invoked htsim binaries and present the composition through
+the existing `AtlahsFlowRuntime` interface. There is no Python callback in the
+packet event loop.
+
+That composition is not live today. The wheel carries the CMake files and C++
+sources but builds no Python extension, and the current `htsim_rnic` binaries
+do not link `simllm::rnic`. The implemented standalone C++17 SQ/CQ,
+`PcieFabric` and opaque flow-level `NetworkPort` are therefore reached by
+native tests and probe studies only. Their timing cannot yet change packet
+FCT, `ExecutionResult`, `StepResult` or TTFT/TPOT. The descriptor carries GOAL
+flow/tag identity and a separate policy-context token, while completion uses a
+network-owned token. It does not equate flow acceptance or delivery with
+first/last packet issue. The standalone slice is validated in
+[examples/rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md); its live wrapper and
+packet-level adapter remain BACK-8 and HTSIM-9. The detailed evidence and
+calibration plan is
+[papers/rnic-hardware-calibration.md](papers/rnic-hardware-calibration.md).
+
+The reachability contract is one timing path. `ExecutionGraph` enters the
+CORE-4 `DeviceRuntime`, which invokes the composed htsim binary and returns one
+`ExecutionResult`; its completion boundary becomes `StepResult`, advances the
+virtual clock and therefore changes TTFT/TPOT. The current `HtsimStepSink`
+already maps an htsim makespan into `StepResult`, but it still invokes the
+uncomposed binary and no concrete graph `DeviceRuntime` exists. Structural
+mode must start the inner htsim network operation only when the native WQE is
+eligible and must release the outer GOAL operation only when native completion
+delivery, e.g. CQ polling, permits it. The resulting terminal completion is
+consumed once. Python must never compute `native delay + htsim FCT`, and the
+composed binary must never retain the timing-neutral ledger beside the native
+WorkQueue. Bypass mode uses the old path alone and must preserve its accepted
+completion times exactly.
+The composition expectations were first frozen before implementation in
+[examples/rnic_live_v1](../examples/rnic_live_v1/expectations.md) at commit
+`65b5609`; commit `facb26d` clarified retry identity, and commit `947399c`
+records the final pre-run drain and audit wording.
+
 The GOAL trace is executed by a discrete-event simulator:
 
 - **htsim** (packet-level): `htsim_uec -goal <bin> -topo <topo>` executes the
   GOAL schedule over a Clos topology with full transport behavior, and
   `htsim_rnic` (currently pinned on the append-only
   `2026_08_05/simllm-addon` branch) runs the RNIC
-  fidelity profiles: the null-network baselines `rnic-nn`/`rnic-nn-fluid`
-  and the explicit-rate collective-network endpoint `rnic-cn`. The
+  policy profiles: the packetized no-CC baseline `rnic-nn`, explicit-hardware
+  bypass baseline `rnic-nn-fluid` and explicit-rate endpoint `rnic-cn`. The
   GOAL-driven `htsim_dcqcn_atlahs` comparator is also available. Only the
   Slingshot-like profile `rnic-ss` remains a profile-wiring follow-up
   (HTSIM-1 in [modules/backends.md](modules/backends.md)); the factory rejects
@@ -359,7 +451,7 @@ with error bounds reported per metric.
 Accuracy validation advances only after calibrated compute and the resource
 runtime are available. Use identical framework commit, model, parallelism,
 request trace, seed and warm-up policy in simulation and silicon. Progress
-through single-GPU compute, eight-GPU intra-node, two-node shared-NIC,
+through single-GPU compute, eight-GPU intra-node, two-node rail-RNIC,
 offered-load sweeps, KV pressure, chunked prefill/preemption or retraction,
 then mixed and bursty workloads. Report p50, p90, p99 and p99.9 TTFT/TPOT,
 with residuals attributed to request queues, KV state, kernel service, HBM,
@@ -372,10 +464,26 @@ attributed held-out residual selects the next fidelity improvement.
 The first trace-driven GPU slice validates mechanisms before claiming device
 accuracy. Exact synthetic fixtures cover partial CTA waves, scheduler width,
 dependency chains, occupancy minima, HBM latency plus serialization, and
-copy-descriptor setup plus bandwidth. The frozen study is
+copy-descriptor setup plus bandwidth. The post-specified regression study is
 [examples/gpu_service_model](../examples/gpu_service_model/expectations.md).
 It varies at least two parameters in every component sweep and requires zero
 cycle residual for the closed forms.
+
+The GPU service primitive can also schedule several explicitly supplied
+kernels at once. `estimate_concurrent`
+replays compute, memory and NCCL network tasks together: they share SM
+residency, per-SM issue budgets, pipelines, the HBM cursor and a per-GPU
+NVLink egress cursor, and a later task backfills capacity an earlier one
+cannot use. A collective is therefore an ordinary kernel here, built by
+`simllm.compute.nccl` as the per-GPU egress half of a ring all-reduce, so
+it contends for the same GPU as the work it overlaps with rather than
+being priced alone. The intra-node NVLink path deliberately stays inside
+this model instead of reaching the fabric backend, which is the split
+TRAF-10 owns; only inter-node segments become GOAL traffic. The post-specified
+regression study is [examples/gpu_task_mix](../examples/gpu_task_mix/expectations.md),
+and COMP-11 owns peer topology, ingress service and reduction lanes. The
+primitive does not select runnable graph operations; CORE-4 still owns that
+DeviceRuntime policy and dispatch.
 
 Open public evidence seeds the A100 SXM 80 GB and H100 SXM 80 GB profiles:
 
@@ -399,11 +507,11 @@ These sources do not establish production-kernel timing accuracy. Public
 measurements can initialize a parameter with explicit uncertainty, but exact
 framework kernel identity, copy-engine topology, cache state, launch mode and
 silicon durations must come from a capture ledger.
-`simllm-gpu-model-artifact-v1` binds a target-architecture calibration and a
+`simllm-gpu-model-artifact-v2` binds a target-architecture calibration and a
 structured capture envelope to trace, kernel and copy identities, stream
 order, numeric observed core/memory clocks, simulated cycles, optional
 measured samples, calibration split, uncertainty and replay counters. Its
-strict loader reruns deterministic v1 estimates and rejects target, clock,
+strict loader reruns deterministic estimates and rejects target, clock,
 identity or sample-summary drift. Bulk raw traces stay outside Git under
 `/data3/yifeng/`. COMP-1,
 COMP-5, COMP-6 and advanced instruction/cache semantics in COMP-10 remain

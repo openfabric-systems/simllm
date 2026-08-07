@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title description">
+  <title id="title">SimLLM social preview</title>
+  <desc id="description">SimLLM, network-faithful simulation for LLM serving and training, a project initiated by OpenFabric Systems.</desc>
+  <defs>
+    <linearGradient id="side-shade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#010711" stop-opacity="0.78"/>
+      <stop offset="0.48" stop-color="#010711" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#010711" stop-opacity="0.078"/>
+    </linearGradient>
+    <linearGradient id="bottom-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.42" stop-color="#00040C" stop-opacity="0"/>
+      <stop offset="1" stop-color="#00040C" stop-opacity="0.56"/>
+    </linearGradient>
+    <mask id="open-ring" maskUnits="userSpaceOnUse" x="0" y="0" width="26" height="26">
+      <rect width="26" height="26" fill="#000"/>
+      <circle cx="13" cy="13" r="13" fill="#fff"/>
+      <circle cx="13" cy="13" r="11" fill="#000"/>
+      <path d="M13 13 0 0V26Z" fill="#000"/>
+    </mask>
+  </defs>
+
+  <image xlink:href="simllm-social-preview-background.png" width="1280" height="640" preserveAspectRatio="xMidYMid slice"/>
+  <rect width="1280" height="640" fill="url(#bottom-shade)"/>
+  <rect width="1280" height="640" fill="url(#side-shade)"/>
+
+  <g transform="translate(88 68) scale(2.2)" fill="#FFFFFF">
+    <rect width="26" height="26" mask="url(#open-ring)"/>
+    <rect x="5" y="11" width="4" height="4" rx="1"/>
+    <rect x="11" y="11" width="4" height="4" rx="1"/>
+    <rect x="17" y="11" width="4" height="4" rx="1"/>
+  </g>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="82" y="252" fill="#FFFFFF" font-size="112" font-weight="400" letter-spacing="-7.28">SimLLM</text>
+    <text x="88" y="326" fill="#FFFFFF" fill-opacity="0.76" font-size="26" font-weight="400">Network-faithful simulation for LLM serving and training</text>
+    <line x1="88" y1="478" x2="650" y2="478" stroke="#FFFFFF" stroke-opacity="0.34" stroke-width="1"/>
+    <text x="88" y="526" fill="#FFFFFF" fill-opacity="0.72" font-size="15" font-weight="600" letter-spacing="2.1">PROJECT INITIATED BY OPENFABRIC SYSTEMS</text>
+  </g>
+</svg>

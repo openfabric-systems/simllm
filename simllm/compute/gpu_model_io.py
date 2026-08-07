@@ -1,6 +1,6 @@
 """Strict JSON artifact boundary for trace-calibrated GPU service replay.
 
-``simllm-gpu-model-artifact-v1`` keeps the evidence needed to audit one
+``simllm-gpu-model-artifact-v2`` keeps the evidence needed to audit one
 service-model replay.  It is intentionally richer than the compact profile
 table consumed by an online step loop: architecture and calibration identity,
 kernel and trace hashes, the semantic catalog key, replay counters, immutable
@@ -36,6 +36,7 @@ from simllm.compute.gpu_model import (
     KernelLaunch,
     MemoryHierarchyProfile,
     MemorySpace,
+    NvlinkProfile,
     PipelineKind,
     PipelineProfile,
     SassInstruction,
@@ -44,10 +45,39 @@ from simllm.compute.gpu_model import (
     WarpSchedulerPolicy,
 )
 from simllm.compute.provider import ProfileTableProvenance, ProfileTableProvider
+from simllm.core._wire import (
+    _boolean,
+    _enum_value,
+    _fields,
+    _integer,
+    _number,
+    _optional_string,
+    _string,
+)
 
-GPU_MODEL_ARTIFACT_SCHEMA = "simllm-gpu-model-artifact-v1"
+GPU_MODEL_ARTIFACT_SCHEMA = "simllm-gpu-model-artifact-v2"
+_LEGACY_GPU_MODEL_ARTIFACT_SCHEMA = "simllm-gpu-model-artifact-v1"
+_LEGACY_GPU_MODEL_IMPLEMENTATION = "simllm-isolated-gpu-service-v1"
 
 _SHA256_RE = re.compile(r"(?:sha256:)?[0-9a-f]{64}\Z")
+
+
+def _object(value: object, path: str) -> Mapping[str, Any]:
+    """Accept the artifact API's historical read-only mapping views."""
+
+    if not isinstance(value, Mapping):
+        raise TypeError(f"{path}: expected an object")
+    if any(not isinstance(key, str) for key in value):
+        raise ValueError(f"{path}: object keys must be strings")
+    return value
+
+
+def _array(value: object, path: str) -> Sequence[Any]:
+    """Accept tuple views without widening the strict core wire codecs."""
+
+    if not isinstance(value, list | tuple):
+        raise TypeError(f"{path}: expected an array")
+    return value
 
 
 def _freeze_pairs(values: Sequence[Sequence[Any]]) -> tuple[tuple[Any, Any], ...]:
@@ -206,85 +236,8 @@ class GpuModelArtifact:
         return load_gpu_model_artifact(path)
 
 
-def _type_name(value: object) -> str:
-    return type(value).__name__
-
-
-def _mapping(value: object, path: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping):
-        raise TypeError(f"{path}: expected an object, got {_type_name(value)}")
-    if not all(isinstance(key, str) for key in value):
-        raise ValueError(f"{path}: object keys must be strings")
-    return value
-
-
-def _exact_keys(
-    value: Mapping[str, Any],
-    path: str,
-    *,
-    required: set[str],
-    optional: set[str] = frozenset(),
-) -> None:
-    keys = set(value)
-    missing = sorted(required - keys)
-    unexpected = sorted(keys - required - optional)
-    if missing or unexpected:
-        details = []
-        if missing:
-            details.append(f"missing {missing}")
-        if unexpected:
-            details.append(f"unexpected {unexpected}")
-        raise ValueError(f"{path}: {'; '.join(details)}")
-
-
-def _sequence(value: object, path: str) -> Sequence[Any]:
-    if not isinstance(value, list | tuple):
-        raise TypeError(f"{path}: expected an array, got {_type_name(value)}")
-    return value
-
-
-def _text(value: object, path: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{path}: expected a nonblank string")
-    return value
-
-
-def _integer(value: object, path: str, *, minimum: int | None = None) -> int:
-    if type(value) is not int:
-        raise ValueError(f"{path}: expected an integer")
-    if minimum is not None and value < minimum:
-        raise ValueError(f"{path}: must be >= {minimum}")
-    return value
-
-
-def _number(value: object, path: str, *, minimum: float | None = None) -> float:
-    if isinstance(value, bool) or not isinstance(value, int | float):
-        raise TypeError(f"{path}: expected a number")
-    result = float(value)
-    if not math.isfinite(result):
-        raise ValueError(f"{path}: expected a finite number")
-    if minimum is not None and result < minimum:
-        raise ValueError(f"{path}: must be >= {minimum}")
-    return result
-
-
-def _boolean(value: object, path: str) -> bool:
-    if type(value) is not bool:
-        raise ValueError(f"{path}: expected a boolean")
-    return value
-
-
-def _enum(enum_type: type[Enum], value: object, path: str) -> Any:
-    text = _text(value, path)
-    try:
-        return enum_type(text)
-    except ValueError as exc:
-        choices = [member.value for member in enum_type]
-        raise ValueError(f"{path}: expected one of {choices}, got {text!r}") from exc
-
-
 def _sha256(value: object, path: str) -> str:
-    text = _text(value, path)
+    text = _string(value, path)
     if _SHA256_RE.fullmatch(text) is None:
         raise ValueError(f"{path}: expected 64 lowercase hex digits, optionally prefixed sha256:")
     return text
@@ -308,7 +261,7 @@ def _unique(values: Sequence[Any], path: str) -> None:
 
 def _text_tuple(value: object, path: str, *, nonempty: bool = False) -> tuple[str, ...]:
     values = tuple(
-        _text(item, f"{path}[{index}]") for index, item in enumerate(_sequence(value, path))
+        _string(item, f"{path}[{index}]") for index, item in enumerate(_array(value, path))
     )
     if nonempty and not values:
         raise ValueError(f"{path}: must not be empty")
@@ -318,21 +271,19 @@ def _text_tuple(value: object, path: str, *, nonempty: bool = False) -> tuple[st
 
 def _text_pairs(value: object, path: str) -> tuple[tuple[str, str], ...]:
     pairs: list[tuple[str, str]] = []
-    for index, raw_pair in enumerate(_sequence(value, path)):
+    for index, raw_pair in enumerate(_array(value, path)):
         pair_path = f"{path}[{index}]"
-        pair = _sequence(raw_pair, pair_path)
+        pair = _array(raw_pair, pair_path)
         if len(pair) != 2:
             raise ValueError(f"{pair_path}: expected [name, value]")
-        pairs.append((_text(pair[0], f"{pair_path}[0]"), _text(pair[1], f"{pair_path}[1]")))
+        pairs.append((_string(pair[0], f"{pair_path}[0]"), _string(pair[1], f"{pair_path}[1]")))
     _unique(tuple(name for name, _ in pairs), f"{path} names")
     return tuple(pairs)
 
 
-def _optional_text(value: object, path: str) -> str | None:
-    return None if value is None else _text(value, path)
-
-
 def _optional_integer(value: object, path: str, *, minimum: int = 0) -> int | None:
+    """Nonnegative-by-default optional integer, the artifact's convention."""
+
     return None if value is None else _integer(value, path, minimum=minimum)
 
 
@@ -347,17 +298,17 @@ def _provenance_to_json(value: GpuModelProvenance) -> dict[str, Any]:
 
 
 def _provenance_from_json(value: object, path: str) -> GpuModelProvenance:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={"source", "version", "gpu", "created", "references"},
     )
     return GpuModelProvenance(
-        source=_text(payload["source"], f"{path}.source"),
-        version=_text(payload["version"], f"{path}.version"),
-        gpu=_text(payload["gpu"], f"{path}.gpu"),
-        created=_text(payload["created"], f"{path}.created"),
+        source=_string(payload["source"], f"{path}.source"),
+        version=_string(payload["version"], f"{path}.version"),
+        gpu=_string(payload["gpu"], f"{path}.gpu"),
+        created=_string(payload["created"], f"{path}.created"),
         references=_text_tuple(payload["references"], f"{path}.references"),
     )
 
@@ -385,7 +336,7 @@ def _capture_to_json(value: GpuCaptureEnvironment) -> dict[str, Any]:
 
 
 def _capture_from_json(value: object, path: str) -> GpuCaptureEnvironment:
-    payload = _mapping(value, path)
+    payload = _object(value, path)
     text_fields = {
         "capture_id",
         "model_id",
@@ -399,7 +350,7 @@ def _capture_from_json(value: object, path: str) -> GpuCaptureEnvironment:
         "clock_policy",
         "created",
     }
-    _exact_keys(
+    _fields(
         payload,
         path,
         required=text_fields
@@ -412,7 +363,7 @@ def _capture_from_json(value: object, path: str) -> GpuCaptureEnvironment:
             "libraries",
         },
     )
-    texts = {name: _text(payload[name], f"{path}.{name}") for name in text_fields}
+    texts = {name: _string(payload[name], f"{path}.{name}") for name in text_fields}
     return GpuCaptureEnvironment(
         **texts,
         observed_core_clock_hz=_integer(
@@ -445,15 +396,42 @@ def _calibration_to_json(value: GpuCalibrationProfile) -> dict[str, Any]:
         "target_memory_clock_hz": value.target_memory_clock_hz,
         "pipelines": [_pipeline_to_json(item) for item in value.pipelines],
         "memory": _memory_to_json(value.memory),
+        "nvlink": _nvlink_to_json(value.nvlink),
         "copy_engines": [_copy_engine_to_json(item) for item in value.copy_engines],
         "warp_scheduler_policy": value.warp_scheduler_policy.value,
-        "relative_uncertainty": value.relative_uncertainty,
+        "relative_uncertainty": float(value.relative_uncertainty),
     }
 
 
+def _nvlink_to_json(value: NvlinkProfile | None) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    return {
+        "latency_cycles": value.latency_cycles,
+        "bandwidth_bytes_per_cycle": float(value.bandwidth_bytes_per_cycle),
+    }
+
+
+def _nvlink_from_json(value: object, path: str) -> NvlinkProfile | None:
+    if value is None:
+        return None
+    payload = _object(value, path)
+    _fields(payload, path, required={"latency_cycles", "bandwidth_bytes_per_cycle"})
+    return NvlinkProfile(
+        latency_cycles=_integer(
+            payload["latency_cycles"], f"{path}.latency_cycles", minimum=0
+        ),
+        bandwidth_bytes_per_cycle=_number(
+            payload["bandwidth_bytes_per_cycle"],
+            f"{path}.bandwidth_bytes_per_cycle",
+            minimum=0.0,
+        ),
+    )
+
+
 def _calibration_from_json(value: object, path: str) -> GpuCalibrationProfile:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -464,6 +442,7 @@ def _calibration_from_json(value: object, path: str) -> GpuCalibrationProfile:
             "target_memory_clock_hz",
             "pipelines",
             "memory",
+            "nvlink",
             "copy_engines",
             "warp_scheduler_policy",
             "relative_uncertainty",
@@ -471,15 +450,15 @@ def _calibration_from_json(value: object, path: str) -> GpuCalibrationProfile:
     )
     pipelines = tuple(
         _pipeline_from_json(item, f"{path}.pipelines[{index}]")
-        for index, item in enumerate(_sequence(payload["pipelines"], f"{path}.pipelines"))
+        for index, item in enumerate(_array(payload["pipelines"], f"{path}.pipelines"))
     )
     copy_engines = tuple(
         _copy_engine_from_json(item, f"{path}.copy_engines[{index}]")
-        for index, item in enumerate(_sequence(payload["copy_engines"], f"{path}.copy_engines"))
+        for index, item in enumerate(_array(payload["copy_engines"], f"{path}.copy_engines"))
     )
     return GpuCalibrationProfile(
-        calibration_id=_text(payload["calibration_id"], f"{path}.calibration_id"),
-        target_architecture_profile_id=_text(
+        calibration_id=_string(payload["calibration_id"], f"{path}.calibration_id"),
+        target_architecture_profile_id=_string(
             payload["target_architecture_profile_id"],
             f"{path}.target_architecture_profile_id",
         ),
@@ -492,8 +471,9 @@ def _calibration_from_json(value: object, path: str) -> GpuCalibrationProfile:
         ),
         pipelines=pipelines,
         memory=_memory_from_json(payload["memory"], f"{path}.memory"),
+        nvlink=_nvlink_from_json(payload["nvlink"], f"{path}.nvlink"),
         copy_engines=copy_engines,
-        warp_scheduler_policy=_enum(
+        warp_scheduler_policy=_enum_value(
             WarpSchedulerPolicy,
             payload["warp_scheduler_policy"],
             f"{path}.warp_scheduler_policy",
@@ -518,8 +498,8 @@ def _pipeline_to_json(value: PipelineProfile) -> dict[str, Any]:
 
 
 def _pipeline_from_json(value: object, path: str) -> PipelineProfile:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -533,21 +513,21 @@ def _pipeline_from_json(value: object, path: str) -> PipelineProfile:
     )
     opcode_latencies: list[tuple[str, int]] = []
     for index, raw_entry in enumerate(
-        _sequence(payload["opcode_latencies"], f"{path}.opcode_latencies")
+        _array(payload["opcode_latencies"], f"{path}.opcode_latencies")
     ):
         entry_path = f"{path}.opcode_latencies[{index}]"
-        entry = _sequence(raw_entry, entry_path)
+        entry = _array(raw_entry, entry_path)
         if len(entry) != 2:
             raise ValueError(f"{entry_path}: expected [opcode, latency_cycles]")
         opcode_latencies.append(
             (
-                _text(entry[0], f"{entry_path}[0]"),
+                _string(entry[0], f"{entry_path}[0]"),
                 _integer(entry[1], f"{entry_path}[1]", minimum=1),
             )
         )
     _unique(tuple(opcode for opcode, _ in opcode_latencies), f"{path}.opcode_latencies")
     return PipelineProfile(
-        kind=_enum(PipelineKind, payload["kind"], f"{path}.kind"),
+        kind=_enum_value(PipelineKind, payload["kind"], f"{path}.kind"),
         opcodes=_text_tuple(payload["opcodes"], f"{path}.opcodes", nonempty=True),
         latency_cycles=_integer(payload["latency_cycles"], f"{path}.latency_cycles", minimum=1),
         issue_width_per_sm=_integer(
@@ -565,7 +545,7 @@ def _pipeline_from_json(value: object, path: str) -> PipelineProfile:
 def _memory_to_json(value: MemoryHierarchyProfile) -> dict[str, Any]:
     return {
         "hbm_latency_cycles": value.hbm_latency_cycles,
-        "hbm_bandwidth_bytes_per_cycle": value.hbm_bandwidth_bytes_per_cycle,
+        "hbm_bandwidth_bytes_per_cycle": float(value.hbm_bandwidth_bytes_per_cycle),
         "l2_latency_cycles": value.l2_latency_cycles,
         "l1_latency_cycles": value.l1_latency_cycles,
         "shared_latency_cycles": value.shared_latency_cycles,
@@ -573,8 +553,8 @@ def _memory_to_json(value: MemoryHierarchyProfile) -> dict[str, Any]:
 
 
 def _memory_from_json(value: object, path: str) -> MemoryHierarchyProfile:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -610,13 +590,13 @@ def _copy_direction_profile_to_json(value: CopyDirectionProfile) -> dict[str, An
     return {
         "direction": value.direction.value,
         "setup_cycles": value.setup_cycles,
-        "bandwidth_bytes_per_cycle": value.bandwidth_bytes_per_cycle,
+        "bandwidth_bytes_per_cycle": float(value.bandwidth_bytes_per_cycle),
     }
 
 
 def _copy_direction_profile_from_json(value: object, path: str) -> CopyDirectionProfile:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={"direction", "setup_cycles", "bandwidth_bytes_per_cycle"},
@@ -629,7 +609,7 @@ def _copy_direction_profile_from_json(value: object, path: str) -> CopyDirection
     if bandwidth == 0.0:
         raise ValueError(f"{path}.bandwidth_bytes_per_cycle: must be positive")
     return CopyDirectionProfile(
-        direction=_enum(CopyDirection, payload["direction"], f"{path}.direction"),
+        direction=_enum_value(CopyDirection, payload["direction"], f"{path}.direction"),
         setup_cycles=_integer(payload["setup_cycles"], f"{path}.setup_cycles", minimum=0),
         bandwidth_bytes_per_cycle=bandwidth,
     )
@@ -646,8 +626,8 @@ def _copy_engine_to_json(value: CopyEngineProfile) -> dict[str, Any]:
 
 
 def _copy_engine_from_json(value: object, path: str) -> CopyEngineProfile:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -659,11 +639,11 @@ def _copy_engine_from_json(value: object, path: str) -> CopyEngineProfile:
     direction_profiles = tuple(
         _copy_direction_profile_from_json(item, f"{path}.direction_profiles[{index}]")
         for index, item in enumerate(
-            _sequence(payload["direction_profiles"], f"{path}.direction_profiles")
+            _array(payload["direction_profiles"], f"{path}.direction_profiles")
         )
     )
     return CopyEngineProfile(
-        engine_id=_text(payload["engine_id"], f"{path}.engine_id"),
+        engine_id=_string(payload["engine_id"], f"{path}.engine_id"),
         clock_hz=_integer(payload["clock_hz"], f"{path}.clock_hz", minimum=1),
         direction_profiles=direction_profiles,
     )
@@ -696,8 +676,8 @@ def _architecture_to_json(value: GpuArchitectureProfile) -> dict[str, Any]:
 
 
 def _architecture_from_json(value: object, path: str) -> GpuArchitectureProfile:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -723,8 +703,8 @@ def _architecture_from_json(value: object, path: str) -> GpuArchitectureProfile:
         },
     )
     return GpuArchitectureProfile(
-        profile_id=_text(payload["profile_id"], f"{path}.profile_id"),
-        gpu_name=_text(payload["gpu_name"], f"{path}.gpu_name"),
+        profile_id=_string(payload["profile_id"], f"{path}.profile_id"),
+        gpu_name=_string(payload["gpu_name"], f"{path}.gpu_name"),
         sm_count=_integer(payload["sm_count"], f"{path}.sm_count", minimum=1),
         warp_size=_integer(payload["warp_size"], f"{path}.warp_size", minimum=1),
         scheduler_count_per_sm=_integer(
@@ -809,8 +789,8 @@ def _instruction_from_json(
     *,
     dynamic_instruction_offset: int,
 ) -> SassInstruction:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -830,7 +810,7 @@ def _instruction_from_json(
     dependencies = tuple(
         _integer(item, f"{path}.dependency_indices[{index}]", minimum=0)
         for index, item in enumerate(
-            _sequence(payload["dependency_indices"], f"{path}.dependency_indices")
+            _array(payload["dependency_indices"], f"{path}.dependency_indices")
         )
     )
     _unique(dependencies, f"{path}.dependency_indices")
@@ -838,15 +818,15 @@ def _instruction_from_json(
         raise ValueError(f"{path}.dependency_indices: dependencies must precede instruction")
     memory_space = payload["memory_space"]
     parsed_memory_space = (
-        None if memory_space is None else _enum(MemorySpace, memory_space, f"{path}.memory_space")
+        None if memory_space is None else _enum_value(MemorySpace, memory_space, f"{path}.memory_space")
     )
     requested_bytes = _integer(payload["requested_bytes"], f"{path}.requested_bytes", minimum=0)
     transacted_bytes = _integer(payload["transacted_bytes"], f"{path}.transacted_bytes", minimum=0)
     if parsed_memory_space is None and (requested_bytes != 0 or transacted_bytes != 0):
         raise ValueError(f"{path}: non-memory instruction must carry zero byte counts")
     return SassInstruction(
-        opcode=_text(payload["opcode"], f"{path}.opcode"),
-        pipeline=_enum(PipelineKind, payload["pipeline"], f"{path}.pipeline"),
+        opcode=_string(payload["opcode"], f"{path}.opcode"),
+        pipeline=_enum_value(PipelineKind, payload["pipeline"], f"{path}.pipeline"),
         repeat=_integer(payload["repeat"], f"{path}.repeat", minimum=1),
         dependent=_boolean(payload["dependent"], f"{path}.dependent"),
         dependency_indices=dependencies,
@@ -869,11 +849,11 @@ def _warp_to_json(value: SassWarpTrace) -> dict[str, Any]:
 
 
 def _warp_from_json(value: object, path: str) -> SassWarpTrace:
-    payload = _mapping(value, path)
-    _exact_keys(payload, path, required={"warp_id", "instructions"})
+    payload = _object(value, path)
+    _fields(payload, path, required={"warp_id", "instructions"})
     instructions: list[SassInstruction] = []
     dynamic_offset = 0
-    for index, item in enumerate(_sequence(payload["instructions"], f"{path}.instructions")):
+    for index, item in enumerate(_array(payload["instructions"], f"{path}.instructions")):
         instruction = _instruction_from_json(
             item,
             f"{path}.instructions[{index}]",
@@ -898,18 +878,18 @@ def _cta_trace_to_json(value: CtaTrace) -> dict[str, Any]:
 
 
 def _cta_trace_from_json(value: object, path: str) -> CtaTrace:
-    payload = _mapping(value, path)
-    _exact_keys(payload, path, required={"trace_class_id", "block_ids", "warp_traces"})
+    payload = _object(value, path)
+    _fields(payload, path, required={"trace_class_id", "block_ids", "warp_traces"})
     block_ids = tuple(
         _integer(item, f"{path}.block_ids[{index}]", minimum=0)
-        for index, item in enumerate(_sequence(payload["block_ids"], f"{path}.block_ids"))
+        for index, item in enumerate(_array(payload["block_ids"], f"{path}.block_ids"))
     )
     warps = tuple(
         _warp_from_json(item, f"{path}.warp_traces[{index}]")
-        for index, item in enumerate(_sequence(payload["warp_traces"], f"{path}.warp_traces"))
+        for index, item in enumerate(_array(payload["warp_traces"], f"{path}.warp_traces"))
     )
     return CtaTrace(
-        trace_class_id=_text(payload["trace_class_id"], f"{path}.trace_class_id"),
+        trace_class_id=_string(payload["trace_class_id"], f"{path}.trace_class_id"),
         block_ids=block_ids,
         warp_traces=warps,
     )
@@ -931,8 +911,8 @@ def _launch_to_json(value: KernelLaunch) -> dict[str, Any]:
 
 
 def _launch_from_json(value: object, path: str) -> KernelLaunch:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -950,13 +930,13 @@ def _launch_from_json(value: object, path: str) -> KernelLaunch:
     )
     cta_traces = tuple(
         _cta_trace_from_json(item, f"{path}.cta_traces[{index}]")
-        for index, item in enumerate(_sequence(payload["cta_traces"], f"{path}.cta_traces"))
+        for index, item in enumerate(_array(payload["cta_traces"], f"{path}.cta_traces"))
     )
     if not cta_traces:
         raise ValueError(f"{path}.cta_traces: must not be empty")
     return KernelLaunch(
-        implementation_id=_text(payload["implementation_id"], f"{path}.implementation_id"),
-        trace_id=_text(payload["trace_id"], f"{path}.trace_id"),
+        implementation_id=_string(payload["implementation_id"], f"{path}.implementation_id"),
+        trace_id=_string(payload["trace_id"], f"{path}.trace_id"),
         grid_blocks=_integer(payload["grid_blocks"], f"{path}.grid_blocks", minimum=1),
         threads_per_block=_integer(
             payload["threads_per_block"], f"{path}.threads_per_block", minimum=1
@@ -997,8 +977,8 @@ def _catalog_to_json(value: GpuKernelCatalogRecord) -> dict[str, Any]:
 
 
 def _catalog_from_json(value: object, path: str) -> GpuKernelCatalogRecord:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -1016,24 +996,24 @@ def _catalog_from_json(value: object, path: str) -> GpuKernelCatalogRecord:
         },
     )
     config: list[tuple[str, int]] = []
-    for index, raw_entry in enumerate(_sequence(payload["config"], f"{path}.config")):
+    for index, raw_entry in enumerate(_array(payload["config"], f"{path}.config")):
         entry_path = f"{path}.config[{index}]"
-        entry = _sequence(raw_entry, entry_path)
+        entry = _array(raw_entry, entry_path)
         if len(entry) != 2:
             raise ValueError(f"{entry_path}: expected [name, integer]")
-        config.append((_text(entry[0], f"{entry_path}[0]"), _integer(entry[1], f"{entry_path}[1]")))
+        config.append((_string(entry[0], f"{entry_path}[0]"), _integer(entry[1], f"{entry_path}[1]")))
     _unique(tuple(name for name, _ in config), f"{path}.config names")
     return GpuKernelCatalogRecord(
-        kernel=_text(payload["kernel"], f"{path}.kernel"),
+        kernel=_string(payload["kernel"], f"{path}.kernel"),
         config=tuple(config),
-        gpu=_text(payload["gpu"], f"{path}.gpu"),
+        gpu=_string(payload["gpu"], f"{path}.gpu"),
         binary_sha256=_sha256(payload["binary_sha256"], f"{path}.binary_sha256"),
         function_sha256=_sha256(payload["function_sha256"], f"{path}.function_sha256"),
         trace_sha256=_sha256(payload["trace_sha256"], f"{path}.trace_sha256"),
         launch=_launch_from_json(payload["launch"], f"{path}.launch"),
-        capture_id=_optional_text(payload["capture_id"], f"{path}.capture_id"),
+        capture_id=_optional_string(payload["capture_id"], f"{path}.capture_id"),
         launch_order=_optional_integer(payload["launch_order"], f"{path}.launch_order", minimum=0),
-        stream_id=_optional_text(payload["stream_id"], f"{path}.stream_id"),
+        stream_id=_optional_string(payload["stream_id"], f"{path}.stream_id"),
         attributes=_text_pairs(payload["attributes"], f"{path}.attributes"),
     )
 
@@ -1052,6 +1032,9 @@ _ESTIMATE_INTEGER_FIELDS = {
     "hbm_transacted_bytes",
     "hbm_serviced_bytes",
     "hbm_request_instructions",
+    "nvlink_requested_bytes",
+    "nvlink_transacted_bytes",
+    "nvlink_request_instructions",
     "completed_blocks",
 }
 
@@ -1070,20 +1053,20 @@ def _estimate_to_json(value: GpuKernelEstimate) -> dict[str, Any]:
             "pipeline_issue_counts": [
                 [kind.value, count] for kind, count in value.pipeline_issue_counts
             ],
-            "sm_active_cycles": list(value.sm_active_cycles),
+            "sm_last_completion_cycles": list(value.sm_last_completion_cycles),
             "sm_scheduler_pressure_cycles": list(value.sm_scheduler_pressure_cycles),
             "sm_dependency_idle_cycles": list(value.sm_dependency_idle_cycles),
             "sm_pipeline_idle_cycles": list(value.sm_pipeline_idle_cycles),
             "sm_completion_drain_cycles": list(value.sm_completion_drain_cycles),
-            "relative_uncertainty": value.relative_uncertainty,
+            "relative_uncertainty": float(value.relative_uncertainty),
         }
     )
     return payload
 
 
 def _estimate_from_json(value: object, path: str) -> GpuKernelEstimate:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required=_ESTIMATE_INTEGER_FIELDS
@@ -1094,7 +1077,7 @@ def _estimate_from_json(value: object, path: str) -> GpuKernelEstimate:
             "implementation_id",
             "trace_id",
             "pipeline_issue_counts",
-            "sm_active_cycles",
+            "sm_last_completion_cycles",
             "sm_scheduler_pressure_cycles",
             "sm_dependency_idle_cycles",
             "sm_pipeline_idle_cycles",
@@ -1108,23 +1091,23 @@ def _estimate_from_json(value: object, path: str) -> GpuKernelEstimate:
     }
     pipeline_counts: list[tuple[PipelineKind, int]] = []
     for index, raw_entry in enumerate(
-        _sequence(payload["pipeline_issue_counts"], f"{path}.pipeline_issue_counts")
+        _array(payload["pipeline_issue_counts"], f"{path}.pipeline_issue_counts")
     ):
         entry_path = f"{path}.pipeline_issue_counts[{index}]"
-        entry = _sequence(raw_entry, entry_path)
+        entry = _array(raw_entry, entry_path)
         if len(entry) != 2:
             raise ValueError(f"{entry_path}: expected [pipeline, issue_count]")
         pipeline_counts.append(
             (
-                _enum(PipelineKind, entry[0], f"{entry_path}[0]"),
+                _enum_value(PipelineKind, entry[0], f"{entry_path}[0]"),
                 _integer(entry[1], f"{entry_path}[1]", minimum=0),
             )
         )
     _unique(tuple(kind for kind, _ in pipeline_counts), f"{path}.pipeline_issue_counts")
-    sm_active_cycles = tuple(
-        _integer(item, f"{path}.sm_active_cycles[{index}]", minimum=0)
+    sm_last_completion_cycles = tuple(
+        _integer(item, f"{path}.sm_last_completion_cycles[{index}]", minimum=0)
         for index, item in enumerate(
-            _sequence(payload["sm_active_cycles"], f"{path}.sm_active_cycles")
+            _array(payload["sm_last_completion_cycles"], f"{path}.sm_last_completion_cycles")
         )
     )
     per_sm_counters: dict[str, tuple[int, ...]] = {}
@@ -1136,18 +1119,18 @@ def _estimate_from_json(value: object, path: str) -> GpuKernelEstimate:
     ):
         per_sm_counters[name] = tuple(
             _integer(item, f"{path}.{name}[{index}]", minimum=0)
-            for index, item in enumerate(_sequence(payload[name], f"{path}.{name}"))
+            for index, item in enumerate(_array(payload[name], f"{path}.{name}"))
         )
     return GpuKernelEstimate(
-        model_implementation=_text(payload["model_implementation"], f"{path}.model_implementation"),
-        architecture_profile_id=_text(
+        model_implementation=_string(payload["model_implementation"], f"{path}.model_implementation"),
+        architecture_profile_id=_string(
             payload["architecture_profile_id"], f"{path}.architecture_profile_id"
         ),
-        calibration_id=_text(payload["calibration_id"], f"{path}.calibration_id"),
-        implementation_id=_text(payload["implementation_id"], f"{path}.implementation_id"),
-        trace_id=_text(payload["trace_id"], f"{path}.trace_id"),
+        calibration_id=_string(payload["calibration_id"], f"{path}.calibration_id"),
+        implementation_id=_string(payload["implementation_id"], f"{path}.implementation_id"),
+        trace_id=_string(payload["trace_id"], f"{path}.trace_id"),
         pipeline_issue_counts=tuple(pipeline_counts),
-        sm_active_cycles=sm_active_cycles,
+        sm_active_cycles=sm_last_completion_cycles,
         **per_sm_counters,
         relative_uncertainty=_number(
             payload["relative_uncertainty"], f"{path}.relative_uncertainty", minimum=0.0
@@ -1163,14 +1146,14 @@ def _replay_to_json(value: GpuReplayRecord) -> dict[str, Any]:
         "architecture_profile_id": value.architecture_profile_id,
         "calibration_id": value.calibration_id,
         "calibration_split": value.calibration_split.value,
-        "relative_uncertainty": value.relative_uncertainty,
+        "relative_uncertainty": float(value.relative_uncertainty),
         "estimate": _estimate_to_json(value.estimate),
     }
 
 
 def _replay_from_json(value: object, path: str) -> GpuReplayRecord:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -1184,13 +1167,13 @@ def _replay_from_json(value: object, path: str) -> GpuReplayRecord:
         },
     )
     return GpuReplayRecord(
-        replay_id=_text(payload["replay_id"], f"{path}.replay_id"),
-        implementation_id=_text(payload["implementation_id"], f"{path}.implementation_id"),
-        architecture_profile_id=_text(
+        replay_id=_string(payload["replay_id"], f"{path}.replay_id"),
+        implementation_id=_string(payload["implementation_id"], f"{path}.implementation_id"),
+        architecture_profile_id=_string(
             payload["architecture_profile_id"], f"{path}.architecture_profile_id"
         ),
-        calibration_id=_text(payload["calibration_id"], f"{path}.calibration_id"),
-        calibration_split=_enum(
+        calibration_id=_string(payload["calibration_id"], f"{path}.calibration_id"),
+        calibration_split=_enum_value(
             CalibrationSplit, payload["calibration_split"], f"{path}.calibration_split"
         ),
         relative_uncertainty=_number(
@@ -1211,18 +1194,18 @@ def _copy_transfer_to_json(value: CopyTransfer) -> dict[str, Any]:
 
 
 def _copy_transfer_from_json(value: object, path: str) -> CopyTransfer:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={"transfer_id", "direction", "bytes", "source", "destination"},
     )
     return CopyTransfer(
-        transfer_id=_text(payload["transfer_id"], f"{path}.transfer_id"),
-        direction=_enum(CopyDirection, payload["direction"], f"{path}.direction"),
+        transfer_id=_string(payload["transfer_id"], f"{path}.transfer_id"),
+        direction=_enum_value(CopyDirection, payload["direction"], f"{path}.direction"),
         bytes=_integer(payload["bytes"], f"{path}.bytes", minimum=1),
-        source=_text(payload["source"], f"{path}.source"),
-        destination=_text(payload["destination"], f"{path}.destination"),
+        source=_string(payload["source"], f"{path}.source"),
+        destination=_string(payload["destination"], f"{path}.destination"),
     )
 
 
@@ -1238,13 +1221,15 @@ def _copy_estimate_to_json(value: CopyServiceEstimate) -> dict[str, Any]:
         "setup_cycles": value.setup_cycles,
         "transfer_cycles": value.transfer_cycles,
         "bytes_transferred": value.bytes_transferred,
-        "effective_bandwidth_bytes_per_cycle": value.effective_bandwidth_bytes_per_cycle,
-        "relative_uncertainty": value.relative_uncertainty,
+        "effective_bandwidth_bytes_per_cycle": float(
+            value.effective_bandwidth_bytes_per_cycle
+        ),
+        "relative_uncertainty": float(value.relative_uncertainty),
     }
 
 
 def _copy_estimate_from_json(value: object, path: str) -> CopyServiceEstimate:
-    payload = _mapping(value, path)
+    payload = _object(value, path)
     integer_fields = {
         "duration_cycles",
         "duration_ps",
@@ -1252,7 +1237,7 @@ def _copy_estimate_from_json(value: object, path: str) -> CopyServiceEstimate:
         "transfer_cycles",
         "bytes_transferred",
     }
-    _exact_keys(
+    _fields(
         payload,
         path,
         required=integer_fields
@@ -1270,11 +1255,11 @@ def _copy_estimate_from_json(value: object, path: str) -> CopyServiceEstimate:
         name: _integer(payload[name], f"{path}.{name}", minimum=0) for name in integer_fields
     }
     return CopyServiceEstimate(
-        transfer_id=_text(payload["transfer_id"], f"{path}.transfer_id"),
-        engine_id=_text(payload["engine_id"], f"{path}.engine_id"),
-        direction=_enum(CopyDirection, payload["direction"], f"{path}.direction"),
-        source=_text(payload["source"], f"{path}.source"),
-        destination=_text(payload["destination"], f"{path}.destination"),
+        transfer_id=_string(payload["transfer_id"], f"{path}.transfer_id"),
+        engine_id=_string(payload["engine_id"], f"{path}.engine_id"),
+        direction=_enum_value(CopyDirection, payload["direction"], f"{path}.direction"),
+        source=_string(payload["source"], f"{path}.source"),
+        destination=_string(payload["destination"], f"{path}.destination"),
         effective_bandwidth_bytes_per_cycle=_number(
             payload["effective_bandwidth_bytes_per_cycle"],
             f"{path}.effective_bandwidth_bytes_per_cycle",
@@ -1295,7 +1280,7 @@ def _copy_replay_to_json(value: GpuCopyReplayRecord) -> dict[str, Any]:
         "architecture_profile_id": value.architecture_profile_id,
         "calibration_id": value.calibration_id,
         "calibration_split": value.calibration_split.value,
-        "relative_uncertainty": value.relative_uncertainty,
+        "relative_uncertainty": float(value.relative_uncertainty),
         "transfer": _copy_transfer_to_json(value.transfer),
         "estimate": _copy_estimate_to_json(value.estimate),
         "capture_id": value.capture_id,
@@ -1306,8 +1291,8 @@ def _copy_replay_to_json(value: GpuCopyReplayRecord) -> dict[str, Any]:
 
 
 def _copy_replay_from_json(value: object, path: str) -> GpuCopyReplayRecord:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -1325,12 +1310,12 @@ def _copy_replay_from_json(value: object, path: str) -> GpuCopyReplayRecord:
         },
     )
     return GpuCopyReplayRecord(
-        replay_id=_text(payload["replay_id"], f"{path}.replay_id"),
-        architecture_profile_id=_text(
+        replay_id=_string(payload["replay_id"], f"{path}.replay_id"),
+        architecture_profile_id=_string(
             payload["architecture_profile_id"], f"{path}.architecture_profile_id"
         ),
-        calibration_id=_text(payload["calibration_id"], f"{path}.calibration_id"),
-        calibration_split=_enum(
+        calibration_id=_string(payload["calibration_id"], f"{path}.calibration_id"),
+        calibration_split=_enum_value(
             CalibrationSplit, payload["calibration_split"], f"{path}.calibration_split"
         ),
         relative_uncertainty=_number(
@@ -1338,9 +1323,9 @@ def _copy_replay_from_json(value: object, path: str) -> GpuCopyReplayRecord:
         ),
         transfer=_copy_transfer_from_json(payload["transfer"], f"{path}.transfer"),
         estimate=_copy_estimate_from_json(payload["estimate"], f"{path}.estimate"),
-        capture_id=_optional_text(payload["capture_id"], f"{path}.capture_id"),
+        capture_id=_optional_string(payload["capture_id"], f"{path}.capture_id"),
         launch_order=_optional_integer(payload["launch_order"], f"{path}.launch_order", minimum=0),
-        stream_id=_optional_text(payload["stream_id"], f"{path}.stream_id"),
+        stream_id=_optional_string(payload["stream_id"], f"{path}.stream_id"),
         attributes=_text_pairs(payload["attributes"], f"{path}.attributes"),
     )
 
@@ -1353,17 +1338,19 @@ def _measurement_to_json(value: GpuMeasurementRecord) -> dict[str, Any]:
         "capture_sha256": value.capture_sha256,
         "duration_samples_ps": list(value.duration_samples_ps),
         "sample_count": len(value.duration_samples_ps),
-        "mean_duration_ps": value.mean_duration_ps,
-        "p50_duration_ps": value.p50_duration_ps,
-        "coefficient_of_variation": value.coefficient_of_variation,
+        "mean_duration_ps": float(value.mean_duration_ps),
+        "p50_duration_ps": float(value.p50_duration_ps),
+        "coefficient_of_variation": float(value.coefficient_of_variation),
         "calibration_split": value.calibration_split.value,
-        "residual_fraction": value.residual_fraction,
+        "residual_fraction": (
+            None if value.residual_fraction is None else float(value.residual_fraction)
+        ),
     }
 
 
 def _measurement_from_json(value: object, path: str) -> GpuMeasurementRecord:
-    payload = _mapping(value, path)
-    _exact_keys(
+    payload = _object(value, path)
+    _fields(
         payload,
         path,
         required={
@@ -1383,7 +1370,7 @@ def _measurement_from_json(value: object, path: str) -> GpuMeasurementRecord:
     samples = tuple(
         _integer(item, f"{path}.duration_samples_ps[{index}]", minimum=1)
         for index, item in enumerate(
-            _sequence(payload["duration_samples_ps"], f"{path}.duration_samples_ps")
+            _array(payload["duration_samples_ps"], f"{path}.duration_samples_ps")
         )
     )
     if not samples:
@@ -1412,15 +1399,15 @@ def _measurement_from_json(value: object, path: str) -> GpuMeasurementRecord:
         if not math.isclose(observed, expected, rel_tol=1e-12, abs_tol=1e-12):
             raise ValueError(f"{path}.{name}: does not match duration samples")
     return GpuMeasurementRecord(
-        measurement_id=_text(payload["measurement_id"], f"{path}.measurement_id"),
-        replay_id=_text(payload["replay_id"], f"{path}.replay_id"),
-        capture_id=_text(payload["capture_id"], f"{path}.capture_id"),
+        measurement_id=_string(payload["measurement_id"], f"{path}.measurement_id"),
+        replay_id=_string(payload["replay_id"], f"{path}.replay_id"),
+        capture_id=_string(payload["capture_id"], f"{path}.capture_id"),
         capture_sha256=_sha256(payload["capture_sha256"], f"{path}.capture_sha256"),
         duration_samples_ps=samples,
         mean_duration_ps=mean,
         p50_duration_ps=p50,
         coefficient_of_variation=coefficient_of_variation,
-        calibration_split=_enum(
+        calibration_split=_enum_value(
             CalibrationSplit, payload["calibration_split"], f"{path}.calibration_split"
         ),
         residual_fraction=(
@@ -1431,7 +1418,7 @@ def _measurement_from_json(value: object, path: str) -> GpuMeasurementRecord:
 
 def _artifact_to_payload(value: GpuModelArtifact) -> dict[str, Any]:
     if not isinstance(value, GpuModelArtifact):
-        raise TypeError(f"expected GpuModelArtifact, got {_type_name(value)}")
+        raise TypeError(f"expected GpuModelArtifact, got {type(value).__name__}")
     return {
         "schema": GPU_MODEL_ARTIFACT_SCHEMA,
         "artifact_id": value.artifact_id,
@@ -1444,9 +1431,78 @@ def _artifact_to_payload(value: GpuModelArtifact) -> dict[str, Any]:
     }
 
 
+def _mutable_json_copy(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {key: _mutable_json_copy(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_mutable_json_copy(item) for item in value]
+    return value
+
+
+def _upgrade_v1_payload(value: Mapping[str, Any]) -> dict[str, Any]:
+    """Upgrade the losslessly representable v1 fields to the v2 wire shape."""
+
+    upgraded = _mutable_json_copy(value)
+    if not isinstance(upgraded, dict):
+        raise TypeError("artifact: expected an object")
+    upgraded["schema"] = GPU_MODEL_ARTIFACT_SCHEMA
+
+    architecture = upgraded.get("architecture")
+    if isinstance(architecture, dict):
+        calibration = architecture.get("calibration")
+        if isinstance(calibration, dict):
+            if "nvlink" in calibration:
+                raise ValueError(
+                    "artifact.architecture.calibration.nvlink: field is not valid in v1"
+                )
+            calibration["nvlink"] = None
+
+    replays = upgraded.get("replays")
+    if isinstance(replays, list):
+        for index, replay in enumerate(replays):
+            if not isinstance(replay, dict):
+                continue
+            estimate = replay.get("estimate")
+            if not isinstance(estimate, dict):
+                continue
+            path = f"artifact.replays[{index}].estimate"
+            if "sm_last_completion_cycles" in estimate:
+                raise ValueError(f"{path}.sm_last_completion_cycles: field is not valid in v1")
+            if "sm_active_cycles" in estimate:
+                estimate["sm_last_completion_cycles"] = estimate.pop("sm_active_cycles")
+            model_implementation = estimate.get("model_implementation")
+            if model_implementation == _LEGACY_GPU_MODEL_IMPLEMENTATION:
+                estimate["model_implementation"] = GPU_MODEL_IMPLEMENTATION
+            elif model_implementation is not None:
+                raise ValueError(
+                    f"{path}.model_implementation: unsupported v1 implementation "
+                    f"{model_implementation!r}"
+                )
+            for field in (
+                "nvlink_requested_bytes",
+                "nvlink_transacted_bytes",
+                "nvlink_request_instructions",
+            ):
+                if field in estimate:
+                    raise ValueError(f"{path}.{field}: field is not valid in v1")
+                estimate[field] = 0
+    return upgraded
+
+
 def _artifact_from_payload(value: object) -> GpuModelArtifact:
-    payload = _mapping(value, "artifact")
-    _exact_keys(
+    payload = _object(value, "artifact")
+    # Version discrimination precedes structural validation so a payload from
+    # another schema version reports the version, not a confusing field shape.
+    if "schema" not in payload:
+        raise ValueError("artifact: missing fields ['schema']")
+    if payload["schema"] == _LEGACY_GPU_MODEL_ARTIFACT_SCHEMA:
+        payload = _upgrade_v1_payload(payload)
+    elif payload["schema"] != GPU_MODEL_ARTIFACT_SCHEMA:
+        raise ValueError(
+            f"artifact.schema: unsupported {payload['schema']!r}; "
+            f"expected {GPU_MODEL_ARTIFACT_SCHEMA!r}"
+        )
+    _fields(
         payload,
         "artifact",
         required={
@@ -1460,31 +1516,26 @@ def _artifact_from_payload(value: object) -> GpuModelArtifact:
             "measurements",
         },
     )
-    if payload["schema"] != GPU_MODEL_ARTIFACT_SCHEMA:
-        raise ValueError(
-            f"artifact.schema: unsupported {payload['schema']!r}; "
-            f"expected {GPU_MODEL_ARTIFACT_SCHEMA!r}"
-        )
     architecture = _architecture_from_json(payload["architecture"], "artifact.architecture")
     captures = tuple(
         _capture_from_json(item, f"artifact.captures[{index}]")
-        for index, item in enumerate(_sequence(payload["captures"], "artifact.captures"))
+        for index, item in enumerate(_array(payload["captures"], "artifact.captures"))
     )
     catalog = tuple(
         _catalog_from_json(item, f"artifact.catalog[{index}]")
-        for index, item in enumerate(_sequence(payload["catalog"], "artifact.catalog"))
+        for index, item in enumerate(_array(payload["catalog"], "artifact.catalog"))
     )
     replays = tuple(
         _replay_from_json(item, f"artifact.replays[{index}]")
-        for index, item in enumerate(_sequence(payload["replays"], "artifact.replays"))
+        for index, item in enumerate(_array(payload["replays"], "artifact.replays"))
     )
     copy_replays = tuple(
         _copy_replay_from_json(item, f"artifact.copy_replays[{index}]")
-        for index, item in enumerate(_sequence(payload["copy_replays"], "artifact.copy_replays"))
+        for index, item in enumerate(_array(payload["copy_replays"], "artifact.copy_replays"))
     )
     measurements = tuple(
         _measurement_from_json(item, f"artifact.measurements[{index}]")
-        for index, item in enumerate(_sequence(payload["measurements"], "artifact.measurements"))
+        for index, item in enumerate(_array(payload["measurements"], "artifact.measurements"))
     )
 
     _unique(
@@ -1616,8 +1667,8 @@ def _artifact_from_payload(value: object) -> GpuModelArtifact:
             raise ValueError(f"{path}.relative_uncertainty: calibration mismatch")
         if replay.estimate.completed_blocks != entry.launch.grid_blocks:
             raise ValueError(f"{path}.estimate.completed_blocks: does not match launch grid")
-        if len(replay.estimate.sm_active_cycles) != architecture.sm_count:
-            raise ValueError(f"{path}.estimate.sm_active_cycles: one counter per SM is required")
+        if len(replay.estimate.sm_last_completion_cycles) != architecture.sm_count:
+            raise ValueError(f"{path}.estimate.sm_last_completion_cycles: one counter per SM is required")
         for name in (
             "sm_scheduler_pressure_cycles",
             "sm_dependency_idle_cycles",
@@ -1719,7 +1770,7 @@ def _artifact_from_payload(value: object) -> GpuModelArtifact:
                 )
 
     return GpuModelArtifact(
-        artifact_id=_text(payload["artifact_id"], "artifact.artifact_id"),
+        artifact_id=_string(payload["artifact_id"], "artifact.artifact_id"),
         architecture=architecture,
         captures=captures,
         catalog=catalog,
@@ -1811,6 +1862,7 @@ def gpu_model_artifact_to_profile_table(
             version=GPU_MODEL_IMPLEMENTATION,
             gpu=validated.architecture.gpu_name,
             created=validated.architecture.calibration.provenance.created,
+            references=validated.architecture.calibration.provenance.references,
         ),
     )
 

@@ -76,12 +76,11 @@ Two coupling modes:
    batching changes traffic.
 
 Under the hood, every scheduler step is lowered to a versioned execution
-graph with central request/object bookkeeping down to the WQE level;
-the current compute stage establishes a trace-driven, replaceable model of
-intra-kernel SASS scheduling, SM residency, HBM service and isolated copy
-service. Explicit KV lifecycle follows, then CORE-4 composes those pieces
-with launch queues, streams, DMA/NCCL queues and shared-NIC contention. The
-full design, including the exact vLLM/SGLang integration
+graph, and the GPU itself is modeled rather than assumed. Its service-model
+primitive can schedule explicitly submitted compute, memory and NCCL network
+kernels together so each finds its own limit; wiring graph operations into
+that primitive remains part of the planned DeviceRuntime (CORE-4). The full
+design, including the exact vLLM/SGLang integration
 seams, the manifest schemas and the GOAL trace format, is in
 [docs/architecture.md](docs/architecture.md). The developer map
 (module status, contracts, open tasks, development process) is in
@@ -142,20 +141,24 @@ Pinned backends (details in [docs/modules/backends.md](docs/modules/backends.md)
 
 ## Demo
 
-Every study under [examples/](examples/) is open to users and follows
-the same discipline: an `expectations.md` frozen before the run, the run
-script, and an audited `RESULTS.md`. Start with these:
+Every study under [examples/](examples/) is open to users and carries an
+`expectations.md`, a run script, an audited `RESULTS.md` and explicit evidence
+provenance. New and extended studies freeze expectations in their own commit
+before implementation and execution. Start with these:
 
 | Study | Question | Headline result |
 |---|---|---|
 | [m4](examples/m4/RESULTS.md) | Does the closed loop work end to end? | A live vLLM engine at `tensor_parallel_size=8` runs under the `SimExecutor` with `htsim_rnic` inside the step loop; all 36 pre-registered checks pass, fluid closed forms to 0 ps |
-| [dcqcn_micro](examples/dcqcn_micro/RESULTS.md) | **NIC calibration: message size and incast.** How does goodput scale with message size, and is incast bandwidth shared fairly? | Model tracks the real-NIC (UCCL) message-size anchors from above at saturation but undershoots at 64 to 256 KB (0.79x at 64 KB): the calibration target for HTSIM-5; incast fair share is near-ideal (Jain 0.993 to 1.000 across fan-in 2 to 20) |
+| [dcqcn_micro](examples/dcqcn_micro/RESULTS.md) | **NIC calibration: message size and incast.** How does goodput scale with message size, and is incast bandwidth shared fairly? | Model tracks the real-NIC (UCCL) message-size anchors at saturation but undershoots at 64 to 256 KB (0.79x at 64 KB): WQ completion is BACK-9 and PCIe calibration is BACK-16 atop the landed BACK-10 fabric; persistent post-CNP DCQCN state is HTSIM-5; incast fair share is near-ideal (Jain 0.993 to 1.000 across fan-in 2 to 20) |
 | [dcqcn_vs_cn](examples/dcqcn_vs_cn/RESULTS.md) | When does DCQCN collapse, and when does it honestly win? | Buffer-exceeding incast collapses DCQCN by 2 to 3 orders of magnitude (32x64 KiB: p99 slowdown 1161x vs rnic-cn 1.60); buffer-absorbed incast is a registered DCQCN win (1.07 vs 1.68) |
 | [cn_ladder](examples/cn_ladder/RESULTS.md) | Does the explicit-rate `rnic-cn` endpoint meet its acceptance bar? | 46 of 49 incast ladder cells within the 20% target of the ideal baseline; under a lossy all-to-all, DCQCN p99 slowdown is 1902x vs rnic-cn 19.3x (lossless, deterministic) |
 | [breakdown](examples/breakdown/RESULTS.md) | Where does request time actually go? | Network share of request time rises from 52% (TP=2) to 89% (TP=8) at 400G, 96% at 100G |
 | [m1](examples/m1/RESULTS.md) | Standalone core: workload to GOAL to htsim to metrics | Ten runs reproduce their closed forms with 0 ps residual |
 | [m5](examples/m5/RESULTS.md) | MoE expert-parallel all-to-all | Pairwise all-to-allv closed forms exact to 0 ps across size and width |
+| [gpu_task_mix](examples/gpu_task_mix/RESULTS.md) | **GPU scheduling: what limits a compute, a memory and an NCCL kernel?** | Compute scales with SMs, memory is pinned to the HBM cursor and gains nothing from more SMs, and a double-buffered ring egress kernel falls from 6.1 times its NVLink bound at one warp per channel to within 2.4 percent at eight warps |
 | [core2_lowering](examples/core2_lowering/RESULTS.md) | Execution lowering and WQE bookkeeping | Legacy path, graph-only replay and frozen closed form agree to 0 ps on all rows; flow and WQE ledgers field-identical |
+| [rnic_wq_v1](examples/rnic_wq_v1/RESULTS.md) | **RNIC queueing: what do doorbell batches, signaling and network credits change?** | All 11 native C++ sweep cells match their closed forms exactly; batching cuts 32 doorbells to 2, signaling cuts 32 CQEs to 2 independently, and four network credits cut JCT from 16,110 ps to 4,140 ps |
+| [rnic_pcie_v1](examples/rnic_pcie_v1/RESULTS.md) | **RNIC PCIe: how do transactions, finite resources and analytical path penalties change completion time?** | All 35 deterministic row oracles and 18 behavioral predicate instances pass; corrected link-queue accounting leaves every JCT unchanged, and ready posted traffic passes a blocked non-posted request in the frozen gap case |
 
 The message-size calibration curve and the definitive comparator figure:
 
@@ -167,6 +170,9 @@ The message-size calibration curve and the definitive comparator figure:
 The NIC calibration anchors themselves (UCCL, DCQCN, HPCC, Kalia et al.
 measurements distilled into parameter sets) are recorded in
 [docs/papers/msg-size-vs-bandwidth.md](docs/papers/msg-size-vs-bandwidth.md).
+The hardware/CC boundary, mlx5 hook, CX-7 evidence rules and full boundary
+campaign are in
+[docs/papers/rnic-hardware-calibration.md](docs/papers/rnic-hardware-calibration.md).
 
 ## Models
 
@@ -175,14 +181,34 @@ the module doc that owns it.
 
 ### Network and NIC
 
+RNIC hardware and congestion control are separate model axes. A full-RNIC
+comparison holds the hardware profile fixed and swaps only the htsim
+transport/CC policy. The analytical fluid baseline keeps an explicit hardware
+bypass so closed-form validation remains available.
+The native WQ and PCIe slices are currently standalone component models: the
+live packet and TTFT/TPOT path still uses htsim's timing-neutral compatibility
+ledger until BACK-8 and HTSIM-9 link the native hardware session into the
+directly invoked simulator, CORE-4 invokes that composition from the execution
+graph, and CORE-5 reduces its completion into `StepResult` and TTFT/TPOT.
+
+#### RNIC hardware
+
 | Model | Status | What it is |
 |---|---|---|
-| `rnic-nn` | available | Packetized ideal-NIC baseline (no congestion control); the reference every profile normalizes to |
-| `rnic-nn-fluid` | available | Continuous fluid baseline with deterministic closed forms; the 0 ps validation anchor |
-| `rnic-cn` | available | Explicit-rate collective-network endpoint: deterministic reservation ledger, per-packet spraying with resequencing, lossless without PFC |
-| DCQCN | available | RoCEv2 comparator with mlx5-faithful loss recovery (go-back-N + CNP rate cut, optional limited selective repeat), ECN-only and ECN+PFC modes, PFC storm metrics |
-| WQE lifecycle | available | SQ/RQ/CQ queues and per-WQE transport identities (DCQCN QP or rnic-cn link pair), timing-neutral bookkeeping in the backend |
-| Per-WQE start behavior | planned ([HTSIM-5/6](docs/modules/backends.md)) | WQE initiation latency, shared per-pair rate state and submission-queue pipelining/lookahead, calibrated against the real-NIC message-size anchors |
+| RDMA Work Queue | partial, first native slice available ([study](examples/rnic_wq_v1/RESULTS.md), [BACK-8/9](docs/modules/backends.md)) | SimLLM C++ now models one finite SQ/CQ pair, WR-prefix posting, doorbell batches, ordered retirement, signaling, polling, owner wrap, network backpressure and controlled queue failures; RQ/SRQ, shared CQs and mlx5 encoding remain planned |
+| PCIe, MMIO and DMA | available, deterministic transaction slice ([study](examples/rnic_pcie_v1/RESULTS.md), [BACK-16/17](docs/modules/backends.md)) | Shared host-store, MWr/MRd/CplD scheduling with finite credits, tags and buffers, class ledgers and analytical path profiles; measured calibration and optional BlueFlame, ATS/ATC and MSI-X remain planned |
+| QP, QPC and context memory | planned ([BACK-11](docs/modules/backends.md)) | QP pairing and state transitions plus QPC, MTT/MPT and WQE-cache residency in a measured device-cache and host-ICM hierarchy |
+| TX/RX hardware pipelines | planned ([BACK-12](docs/modules/backends.md)) | Packetization, schedulers, port buffers, ACK/NAK/RNR/retry, CQE completion, PFC gates and location-specific fault injection |
+| CX-7 observable state | planned ([BACK-13/14/15](docs/modules/backends.md)) | Versioned driver-visible registers, counters and traces, verbs capture/replay, and Collie-seeded boundary calibration; undocumented internals stay explicit calibrated abstractions |
+
+#### Congestion-control and transport policies
+
+| Model | Status | What it is |
+|---|---|---|
+| `rnic-nn` | available, hardware adapter planned ([HTSIM-9](docs/modules/backends.md)) | Packetized no-CC policy and the reference for normalized FCT; full-RNIC runs use the same hardware path as physical policies |
+| `rnic-nn-fluid` | available | Continuous fluid policy with deterministic closed forms and the explicit hardware-bypass 0 ps anchor |
+| `rnic-cn` | available, hardware adapter planned ([HTSIM-6/9](docs/modules/backends.md)) | Explicit-rate policy with deterministic reservations, packet spraying and resequencing, lossless without PFC |
+| DCQCN | available, hardware adapter planned ([HTSIM-5/9](docs/modules/backends.md)) | RoCEv2 comparator with per-QP CNP state, rate reduction/recovery and ECN plus optional PFC; DCQCN calibration lands before programmable CC |
 | LogGOPSim flow level | planned ([BACK-2](docs/modules/backends.md)) | Fast flow-level sweeps before packet-level runs |
 
 Fabrics are two-tier Clos topologies with detailed switch models (VoQ
@@ -198,6 +224,8 @@ Slingshot-style adaptive routing is out of simllm scope.
 | Roofline | available | Analytical `max(flops/peak, bytes/bandwidth)` per kernel family, dense and MoE geometry, per-GPU envelopes |
 | Profile tables | available | Measured (kernel, config, GPU) duration tables; versioned artifact with mandatory provenance and interpolation |
 | Trace-driven GPU service | available, bootstrap | Isolated-kernel CTA/SM/warp scheduling, dependency scoreboards, occupancy and HBM service, plus isolated copy descriptors; [22 structural cells](examples/gpu_service_model/RESULTS.md) are exact, A100/H100 seed timing is not yet silicon-validated |
+| Concurrent GPU tasks | available, service primitive | Explicitly submitted compute, memory and NCCL network kernels share SM residency, issue budgets, the HBM cursor and the NVLink egress cursor; DeviceRuntime dispatch is planned under CORE-4 ([task-mix study](examples/gpu_task_mix/RESULTS.md)) |
+| NVLink egress + NCCL ring | available, first cut | One flat per-GPU egress serializer and the per-GPU egress kernel of a ring all-reduce; peer topology, ingress and reduction lanes are planned ([COMP-11](docs/modules/compute.md)) |
 | SASS offline calibration | planned ([COMP-1/5](docs/modules/compute.md)) | Accel-Sim trace-driven replay populates the tables offline for configurations nobody measured; a cycle simulator never sits inside the step loop |
 | Service-time distributions | planned ([COMP-9](docs/modules/compute.md)) | Beyond-mean service times for honest p99+ tails |
 
