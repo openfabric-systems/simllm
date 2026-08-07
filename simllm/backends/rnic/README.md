@@ -37,8 +37,10 @@ discarded plan changes no shared IDs, credits, counters or link time. The
 fabric is single-threaded; multiple clients share it through deterministic
 event-loop call order. Its address is stable in v1: a fabric cannot be copied
 or moved and must outlive every plan and WorkQueue bound to it.
-Visibility-dependency domain zero is the generic global conservative domain;
-clients use nonzero namespaces to separate unrelated queues.
+Visibility-dependency domains keep separate posted-publication and non-posted-
+completion horizons. A posted request never inherits an earlier read's
+completion wait. Domain zero is the generic global domain; clients use nonzero
+namespaces to separate unrelated queues.
 
 All default queue depths and delay values are synthetic. The default envelope
 charges 24 B for MWr/MRd and 20 B for CplD, and calls the resulting total
@@ -48,8 +50,21 @@ fixed sample per service-latency profile and reserves one FIFO serializer per
 direction. The path sampler is deterministic, counter based and integer only;
 failed or discarded plans consume no shared draw. Its incidence probability
 is an analytical surrogate, not a topology, translation-cache, DDIO-cache or
-fault mechanism. Chronological arbitration, class-specific queues, actual
-PCIe ordering and mechanism-driven occurrence remain BACK-16 precision work.
+fault mechanism.
+
+`link_queue_ps` counts contention from earlier public transactions, not a
+transaction's own preceding TLPs. One transaction carries a same-direction
+accounting eligibility chain across all MWr fragments, MRd requests and CplDs;
+the rational reservation roots remain unchanged. The serializer calendar lets
+a ready posted TLP fill an idle gap before a resource-blocked non-posted
+request. Posted placement is recomputed after credit availability, and any
+external link delay reached after that credit stall remains link queueing. If
+mandatory posted-over-non-posted ordering would require displacing a result
+already returned by the eager API, planning fails transactionally rather than
+reporting an illegal order. Posted traffic may legally remain behind a
+completion, with that delay charged to the link ledger. Deferred chronological
+arbitration, class-specific queues, the remaining PCIe ordering matrix and
+mechanism-driven occurrence remain BACK-16 precision work.
 Optional BlueFlame, ATS/ATC and MSI-X behavior remains BACK-17 completeness
 work.
 
@@ -60,7 +75,8 @@ then one WQE MRd/CplD transaction per WQE. A required completion emits one CQE
 posted write. `doorbell_seen_at`, WQE-fetch begin/end and CQE visibility come
 from these transactions. QPC lookup and scheduler service remain local RNIC
 stages. BlueFlame production and its WQE-fetch bypass are not yet connected.
-The frozen equations, raw configuration and measured sweeps are in
+The provenance, correction freeze, equations, raw configuration and measured
+sweeps are in
 [`examples/rnic_pcie_v1`](../../../examples/rnic_pcie_v1/RESULTS.md).
 
 ## Network boundary

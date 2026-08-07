@@ -458,6 +458,12 @@ struct LinkReservation {
     Picoseconds finished_at_ps{0};
 };
 
+enum class LinkReservationKind : std::uint8_t {
+    Posted,
+    NonPosted,
+    Completion,
+};
+
 class RationalLink {
 public:
     RationalLink() = default;
@@ -475,68 +481,228 @@ public:
     }
 
     Picoseconds readyAt(Picoseconds desired_at_ps) const {
-        return std::max(desired_at_ps, cursorCeiling());
+        return ceiling(maxPoint(
+            RationalPoint{desired_at_ps, 0}, cursor_));
     }
 
-    LinkReservation reserve(
+    Picoseconds postedOpportunityAt(Picoseconds desired_at_ps) const {
+        // Credit availability decides whether a posted TLP is ready to claim
+        // a gap. Return the first idle point here; reservePosted checks the
+        // complete TLP fit after credits have been evaluated.
+        RationalPoint candidate{desired_at_ps, 0};
+        if (has_posted_reservation_) {
+            candidate = maxPoint(candidate, posted_cursor_);
+        }
+        for (const Interval& interval : reservations_) {
+            if (lessOrEqual(interval.finish, candidate)) {
+                continue;
+            }
+            if (lessOrEqual(interval.start, candidate)) {
+                candidate = interval.finish;
+                continue;
+            }
+            break;
+        }
+        return ceiling(candidate);
+    }
+
+    LinkReservation reserveFifo(
+        Picoseconds desired_at_ps,
+        std::uint64_t modeled_link_bytes,
+        LinkReservationKind kind) {
+        if (modeled_link_bytes == 0) {
+            throw std::logic_error("RNIC PCIe cannot serialize zero bytes");
+        }
+        if (kind == LinkReservationKind::Posted) {
+            throw std::logic_error(
+                "RNIC PCIe posted traffic requires posted arbitration");
+        }
+        const RationalPoint start = maxPoint(
+            RationalPoint{desired_at_ps, 0}, cursor_);
+        const RationalPoint finish = addBytes(start, modeled_link_bytes);
+        reservations_.push_back(Interval{start, finish, kind});
+        cursor_ = finish;
+        return reported(start, finish);
+    }
+
+    LinkReservation reservePosted(
         Picoseconds desired_at_ps,
         std::uint64_t modeled_link_bytes) {
         if (modeled_link_bytes == 0) {
             throw std::logic_error("RNIC PCIe cannot serialize zero bytes");
         }
-        std::uint64_t start_whole = cursor_whole_ps_;
-        std::uint64_t start_remainder = cursor_remainder_;
-        if (desired_at_ps > start_whole) {
-            start_whole = desired_at_ps;
-            start_remainder = 0;
+        const RationalPoint start = findPostedStart(
+            desired_at_ps, modeled_link_bytes);
+        const RationalPoint finish = addBytes(start, modeled_link_bytes);
+        const auto insertion = std::lower_bound(
+            reservations_.begin(),
+            reservations_.end(),
+            start,
+            [](const Interval& interval, const RationalPoint& point) {
+                return less(interval.start, point);
+            });
+        reservations_.insert(
+            insertion,
+            Interval{start, finish, LinkReservationKind::Posted});
+        if (less(cursor_, finish)) {
+            cursor_ = finish;
         }
-        const std::uint64_t increment = checkedMultiply(
-            modeled_link_bytes, numerator_per_byte_);
-        const std::uint64_t increment_whole = increment / denominator_;
-        const std::uint64_t increment_remainder = increment % denominator_;
-        std::uint64_t finish_whole = checkedAdd(
-            start_whole, increment_whole);
-        const std::uint64_t remainder_sum = checkedAdd(
-            start_remainder, increment_remainder);
-        std::uint64_t finish_remainder = remainder_sum;
-        if (finish_remainder >= denominator_) {
-            finish_remainder -= denominator_;
-            finish_whole = checkedAdd(finish_whole, 1);
-        }
-        const LinkReservation reservation{
-            ceiling(start_whole, start_remainder),
-            ceiling(finish_whole, finish_remainder),
-        };
-        cursor_whole_ps_ = finish_whole;
-        cursor_remainder_ = finish_remainder;
-        return reservation;
+        posted_cursor_ = finish;
+        has_posted_reservation_ = true;
+        return reported(start, finish);
     }
 
     void validate() const {
         if (denominator_ == 0 || numerator_per_byte_ == 0) {
             throw std::logic_error("RNIC PCIe link-rate invariant failed");
         }
-        if (cursor_remainder_ >= denominator_) {
+        if (cursor_.remainder >= denominator_
+            || posted_cursor_.remainder >= denominator_) {
             throw std::logic_error(
                 "RNIC PCIe serializer remainder invariant failed");
+        }
+        RationalPoint previous_end{};
+        RationalPoint latest_posted{};
+        bool first = true;
+        bool found_posted = false;
+        for (const Interval& interval : reservations_) {
+            if (interval.start.remainder >= denominator_
+                || interval.finish.remainder >= denominator_
+                || !less(interval.start, interval.finish)
+                || (!first && less(interval.start, previous_end))) {
+                throw std::logic_error(
+                    "RNIC PCIe serializer calendar invariant failed");
+            }
+            previous_end = interval.finish;
+            first = false;
+            if (interval.kind == LinkReservationKind::Posted) {
+                latest_posted = interval.finish;
+                found_posted = true;
+            }
+        }
+        const RationalPoint expected_cursor = reservations_.empty()
+            ? RationalPoint{}
+            : reservations_.back().finish;
+        if (!equal(cursor_, expected_cursor)
+            || found_posted != has_posted_reservation_
+            || (found_posted && !equal(posted_cursor_, latest_posted))) {
+            throw std::logic_error(
+                "RNIC PCIe serializer cursor invariant failed");
         }
     }
 
 private:
-    static Picoseconds ceiling(
-        Picoseconds whole_ps,
-        std::uint64_t remainder) {
-        return remainder == 0 ? whole_ps : checkedAdd(whole_ps, 1);
+    struct RationalPoint {
+        Picoseconds whole_ps{0};
+        std::uint64_t remainder{0};
+    };
+
+    struct Interval {
+        RationalPoint start;
+        RationalPoint finish;
+        LinkReservationKind kind{LinkReservationKind::NonPosted};
+    };
+
+    static bool less(
+        const RationalPoint& lhs,
+        const RationalPoint& rhs) noexcept {
+        return lhs.whole_ps < rhs.whole_ps
+            || (lhs.whole_ps == rhs.whole_ps
+                && lhs.remainder < rhs.remainder);
     }
 
-    Picoseconds cursorCeiling() const {
-        return ceiling(cursor_whole_ps_, cursor_remainder_);
+    static bool equal(
+        const RationalPoint& lhs,
+        const RationalPoint& rhs) noexcept {
+        return lhs.whole_ps == rhs.whole_ps
+            && lhs.remainder == rhs.remainder;
+    }
+
+    static bool lessOrEqual(
+        const RationalPoint& lhs,
+        const RationalPoint& rhs) noexcept {
+        return !less(rhs, lhs);
+    }
+
+    static RationalPoint maxPoint(
+        const RationalPoint& lhs,
+        const RationalPoint& rhs) noexcept {
+        return less(lhs, rhs) ? rhs : lhs;
+    }
+
+    static Picoseconds ceiling(const RationalPoint& point) {
+        return point.remainder == 0
+            ? point.whole_ps
+            : checkedAdd(point.whole_ps, 1);
+    }
+
+    LinkReservation reported(
+        const RationalPoint& start,
+        const RationalPoint& finish) const {
+        return LinkReservation{ceiling(start), ceiling(finish)};
+    }
+
+    RationalPoint addBytes(
+        const RationalPoint& start,
+        std::uint64_t modeled_link_bytes) const {
+        const std::uint64_t increment = checkedMultiply(
+            modeled_link_bytes, numerator_per_byte_);
+        const std::uint64_t increment_whole = increment / denominator_;
+        const std::uint64_t increment_remainder = increment % denominator_;
+        RationalPoint finish{
+            checkedAdd(start.whole_ps, increment_whole),
+            start.remainder,
+        };
+        const std::uint64_t remainder_sum = checkedAdd(
+            finish.remainder, increment_remainder);
+        finish.remainder = remainder_sum;
+        if (finish.remainder >= denominator_) {
+            finish.remainder -= denominator_;
+            finish.whole_ps = checkedAdd(finish.whole_ps, 1);
+        }
+        return finish;
+    }
+
+    RationalPoint findPostedStart(
+        Picoseconds desired_at_ps,
+        std::uint64_t modeled_link_bytes) const {
+        if (modeled_link_bytes == 0) {
+            throw std::logic_error("RNIC PCIe cannot serialize zero bytes");
+        }
+        RationalPoint candidate{desired_at_ps, 0};
+        if (has_posted_reservation_) {
+            candidate = maxPoint(candidate, posted_cursor_);
+        }
+        for (const Interval& interval : reservations_) {
+            if (lessOrEqual(interval.finish, candidate)) {
+                continue;
+            }
+            if (less(interval.start, candidate)
+                || equal(interval.start, candidate)) {
+                candidate = interval.finish;
+                continue;
+            }
+            const RationalPoint finish = addBytes(
+                candidate, modeled_link_bytes);
+            if (lessOrEqual(finish, interval.start)) {
+                return candidate;
+            }
+            if (interval.kind == LinkReservationKind::NonPosted) {
+                throw std::logic_error(
+                    "RNIC PCIe posted request would have to displace a "
+                    "finalized non-posted reservation");
+            }
+            candidate = interval.finish;
+        }
+        return candidate;
     }
 
     std::uint64_t denominator_{1};
     std::uint64_t numerator_per_byte_{1};
-    Picoseconds cursor_whole_ps_{0};
-    std::uint64_t cursor_remainder_{0};
+    RationalPoint cursor_{};
+    RationalPoint posted_cursor_{};
+    bool has_posted_reservation_{false};
+    std::vector<Interval> reservations_;
 };
 
 class CapacityPool {
@@ -1236,11 +1402,19 @@ public:
         if (request.ordering == PcieOrdering::VisibilityDependency) {
             const auto ordering = ordering_cursors_.find(
                 request.ordering_domain);
-            if (ordering != ordering_cursors_.end()
-                && ordering->second > eligible_at_ps) {
+            Picoseconds ordering_horizon = 0;
+            if (ordering != ordering_cursors_.end()) {
+                ordering_horizon = ordering->second.posted_visibility_ps;
+                if (request.operation == PcieOperation::NonPostedRead) {
+                    ordering_horizon = std::max(
+                        ordering_horizon,
+                        ordering->second.nonposted_completion_ps);
+                }
+            }
+            if (ordering_horizon > eligible_at_ps) {
                 result.waits.ordering_ps =
-                    ordering->second - eligible_at_ps;
-                eligible_at_ps = ordering->second;
+                    ordering_horizon - eligible_at_ps;
+                eligible_at_ps = ordering_horizon;
             }
         }
 
@@ -1270,8 +1444,13 @@ public:
         }
 
         if (request.ordering == PcieOrdering::VisibilityDependency) {
-            ordering_cursors_[request.ordering_domain] =
-                result.completed_at_ps;
+            OrderingDomainCursors& ordering =
+                ordering_cursors_[request.ordering_domain];
+            if (request.operation == PcieOperation::NonPostedRead) {
+                ordering.nonposted_completion_ps = result.completed_at_ps;
+            } else {
+                ordering.posted_visibility_ps = result.completed_at_ps;
+            }
         }
         validateDirectionAccounting(result.host_to_device);
         validateDirectionAccounting(result.device_to_host);
@@ -1448,7 +1627,7 @@ private:
         PcieTransactionResult& result) {
         DirectionResources& direction =
             directions_[directionIndex(request.request_direction)];
-        Picoseconds fragment_eligible = eligible_at_ps;
+        std::optional<Picoseconds> preceding_fragment_end;
         Picoseconds latest_visibility = eligible_at_ps;
         bool first = true;
         for (const TransactionFragment& fragment : shape.fragments) {
@@ -1457,10 +1636,17 @@ private:
             const std::uint64_t data_credits = ceilDivide(
                 fragment.wire_payload_bytes,
                 config_.data_credit_unit_bytes);
-            const Picoseconds link_not_before = fragment_eligible;
-            Picoseconds issue_at = direction.link.readyAt(link_not_before);
+            const std::uint64_t link_bytes = checkedAdd(
+                fragment.wire_payload_bytes,
+                config_.posted_write_overhead_bytes);
+            const Picoseconds link_not_before = eligible_at_ps;
+            const Picoseconds accounting_eligible = preceding_fragment_end
+                ? std::max(link_not_before, *preceding_fragment_end)
+                : link_not_before;
+            Picoseconds issue_at = direction.link.postedOpportunityAt(
+                link_not_before);
             checkedAccumulate(
-                result.waits.link_queue_ps, issue_at - fragment_eligible);
+                result.waits.link_queue_ps, issue_at - accounting_eligible);
             Picoseconds credit_ready = direction.posted_headers.earliest(
                 1, issue_at);
             credit_ready = direction.posted_data.earliest(
@@ -1472,12 +1658,12 @@ private:
             direction.posted_headers.acquireAt(1, issue_at);
             direction.posted_data.acquireAt(data_credits, issue_at);
 
-            const std::uint64_t link_bytes = checkedAdd(
-                fragment.wire_payload_bytes,
-                config_.posted_write_overhead_bytes);
-            const LinkReservation reservation = direction.link.reserve(
+            const LinkReservation reservation = direction.link.reservePosted(
                 credit_stalled ? issue_at : link_not_before,
                 link_bytes);
+            checkedAccumulate(
+                result.waits.link_queue_ps,
+                reservation.started_at_ps - issue_at);
             if (first) {
                 noteFirstIssue(result, reservation.started_at_ps);
                 first = false;
@@ -1510,7 +1696,7 @@ private:
                 request.request_direction,
                 fragment.wire_payload_bytes,
                 config_.posted_write_overhead_bytes);
-            fragment_eligible = eligible_at_ps;
+            preceding_fragment_end = reservation.finished_at_ps;
         }
         result.completed_at_ps = latest_visibility;
     }
@@ -1532,18 +1718,24 @@ private:
         CapacityPool& completion_buffer =
             completion_buffers_[request_index];
 
-        Picoseconds request_eligible = eligible_at_ps;
+        std::optional<Picoseconds> preceding_request_end;
+        std::optional<Picoseconds> preceding_completion_end;
         Picoseconds latest_completion = eligible_at_ps;
         bool first_request = true;
         bool first_response = true;
         for (const TransactionFragment& fragment : shape.fragments) {
             const PathDelay path_delay = samplePathDelay(
                 path, config_.analytical_seed, path_draw_cursors_);
-            const Picoseconds link_not_before = request_eligible;
+            const Picoseconds link_not_before = eligible_at_ps;
+            const Picoseconds request_accounting_eligible =
+                preceding_request_end
+                ? std::max(link_not_before, *preceding_request_end)
+                : link_not_before;
             Picoseconds issue_at = request_resources.link.readyAt(
                 link_not_before);
             checkedAccumulate(
-                result.waits.link_queue_ps, issue_at - link_not_before);
+                result.waits.link_queue_ps,
+                issue_at - request_accounting_eligible);
             Picoseconds outstanding_ready = outstanding.earliest(1, issue_at);
             checkedAccumulate(
                 result.waits.outstanding_read_ps,
@@ -1568,9 +1760,10 @@ private:
                 fragment.wire_payload_bytes, issue_at);
             request_resources.nonposted_headers.acquireAt(1, issue_at);
             const LinkReservation request_reservation =
-                request_resources.link.reserve(
+                request_resources.link.reserveFifo(
                     request_resource_stalled ? issue_at : link_not_before,
-                    config_.read_request_overhead_bytes);
+                    config_.read_request_overhead_bytes,
+                    LinkReservationKind::NonPosted);
             if (first_request) {
                 noteFirstIssue(result, request_reservation.started_at_ps);
                 first_request = false;
@@ -1588,6 +1781,7 @@ private:
                 config_.read_request_overhead_bytes);
             result.request_finished_at_ps =
                 request_reservation.finished_at_ps;
+            preceding_request_end = request_reservation.finished_at_ps;
 
             const Picoseconds response_latency = sample(
                 config_.read_completion_latency_ps,
@@ -1608,19 +1802,25 @@ private:
                 first_response = false;
             }
 
-            Picoseconds completion_eligible = response_ready;
+            const Picoseconds completion_root_ready = response_ready;
             Picoseconds final_completion = response_ready;
             for (std::uint64_t payload : fragment.completion_payloads) {
                 const std::uint64_t data_credits = ceilDivide(
                     payload, config_.data_credit_unit_bytes);
                 const Picoseconds completion_link_not_before =
-                    completion_eligible;
+                    completion_root_ready;
+                const Picoseconds completion_accounting_eligible =
+                    preceding_completion_end
+                    ? std::max(
+                        completion_link_not_before,
+                        *preceding_completion_end)
+                    : completion_link_not_before;
                 Picoseconds completion_issue =
                     completion_resources.link.readyAt(
                         completion_link_not_before);
                 checkedAccumulate(
                     result.waits.link_queue_ps,
-                    completion_issue - completion_eligible);
+                    completion_issue - completion_accounting_eligible);
                 Picoseconds completion_credit_ready =
                     completion_resources.completion_headers.earliest(
                         1, completion_issue);
@@ -1640,11 +1840,12 @@ private:
                 const std::uint64_t link_bytes = checkedAdd(
                     payload, config_.completion_overhead_bytes);
                 const LinkReservation completion_reservation =
-                    completion_resources.link.reserve(
+                    completion_resources.link.reserveFifo(
                         completion_credit_stalled
                             ? completion_issue
                             : completion_link_not_before,
-                        link_bytes);
+                        link_bytes,
+                        LinkReservationKind::Completion);
                 const Picoseconds credit_release = checkedAdd(
                     completion_reservation.finished_at_ps,
                     config_.credit_return_latency_ps);
@@ -1659,7 +1860,8 @@ private:
                     payload,
                     config_.completion_overhead_bytes);
                 final_completion = completion_reservation.finished_at_ps;
-                completion_eligible = response_ready;
+                preceding_completion_end =
+                    completion_reservation.finished_at_ps;
             }
             outstanding.releaseAt(1, final_completion);
             completion_buffer.releaseAt(
@@ -1669,7 +1871,6 @@ private:
                     config_.completion_buffer_release_latency_ps));
             latest_completion = std::max(
                 latest_completion, final_completion);
-            request_eligible = eligible_at_ps;
         }
         result.completed_at_ps = latest_completion;
     }
@@ -1702,7 +1903,12 @@ private:
     std::array<DirectionResources, 2> directions_;
     std::array<CapacityPool, 2> outstanding_reads_;
     std::array<CapacityPool, 2> completion_buffers_;
-    std::map<std::uint64_t, Picoseconds> ordering_cursors_;
+    struct OrderingDomainCursors {
+        Picoseconds posted_visibility_ps{0};
+        Picoseconds nonposted_completion_ps{0};
+    };
+
+    std::map<std::uint64_t, OrderingDomainCursors> ordering_cursors_;
     std::map<PathDrawKey, std::uint64_t> path_draw_cursors_;
     std::array<PcieClassAccounting, kPcieServiceClassCount> accounting_{};
     std::uint64_t generation_{0};

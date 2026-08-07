@@ -17,30 +17,45 @@ status and open tasks; nothing here overrides them.
 | Full design | [architecture.md](architecture.md) | Components, vLLM/SGLang integration seams, manifest schemas, execution/resource boundary, GOAL trace format, coupling modes, metrics |
 | Module truth | [modules/*.md](modules/) | Per-module design, current status, numbered open tasks |
 | Calibration sources | [papers/](papers/) | Literature anchors and evidence plans, including [message-size parameters](papers/msg-size-vs-bandwidth.md) and the [RNIC hardware/CX-7 boundary campaign](papers/rnic-hardware-calibration.md) |
-| Studies | [../examples/](../examples/) | Pre-registered expectations, run scripts, audited results, plots |
+| Studies | [../examples/](../examples/) | Expectation provenance, run scripts, audited results, plots |
 
 ## Development process
 
 Every behavioral change follows the same discipline:
 
-1. **Pre-register, then run.** Each study freezes an `expectations.md`
-   before the run: the swept parameters (at least two), the expected
-   direction and shape of every effect, and exact or bounded closed
-   forms where they exist. The run script executes the sweep and the
-   `RESULTS.md` defends every number: it matches the registered form
-   exactly, or the deviation is explained, or the bug is found. Misses
-   are kept and ledgered, not silently re-registered.
-2. **Independent audit.** Studies and landings are reviewed by
+1. **Commit expectations before implementation or execution.** Each new or
+   extended study first lands an expectations-only commit. Its
+   `expectations.md` freezes the swept parameters (at least two), the expected
+   direction and shape of every effect, and exact or bounded closed forms
+   where they exist. That commit contains no implementation of the behavior,
+   generated results, measured values or outcome-dependent edits. The final
+   pre-run expectation commit must precede both the implementation that
+   satisfies it and the first run, and `RESULTS.md` cites its hash.
+2. **Run once the ledger is auditable.** The run script executes the frozen
+   sweep and `RESULTS.md` defends every number: it matches the registered form
+   exactly, the deviation is explained, or the bug is found. Misses are kept
+   and ledgered, not silently re-registered. If no qualifying earlier commit
+   exists, call the assertions post-specified regression checks, never
+   pre-registration. Do not rewrite or split history after observing outcomes
+   to manufacture an earlier expectation commit.
+3. **Keep evidence classes separate.** Report run configurations, exact-oracle
+   rows, behavioral relation families and parameterized instances, structural
+   invariants, and native test executables separately. Conservation identities,
+   inactive fields, disabled paths and other configuration-forced or
+   by-construction zero assertions remain fatal when violated, but they are
+   unscored and never increase a behavioral pass denominator. Do not sum
+   counts from different evidence classes into one headline total.
+4. **Independent audit.** Studies and landings are reviewed by
    independent passes (math, API conformance, house rules); audit
    findings are folded before a milestone is declared done.
-3. **Numbered deferrals.** Whenever a change intentionally defers work
+5. **Numbered deferrals.** Whenever a change intentionally defers work
    (a carve-out, a stubbed mode, a `NotImplementedError`), the same
    change adds a numbered task to the owning module doc using the
    module's stable prefix (CORE-, WORK-, COMP-, PLACE-, TRAF-, GOAL-,
    BACK-, VLLM-, SGL-, BRIDGE-, and HTSIM-/ATLAHS- for backend-repo
    follow-ups). IDs are never renumbered or reused; the change that
    completes a task removes its entry. Nothing is deferred silently.
-4. **Backends are pinned, not edited here.** `third_party/atlahs` and
+6. **Backends are pinned, not edited here.** `third_party/atlahs` and
    `third_party/htsim` are submodules. Changes to them are developed in
    their own repos on dated `<YYYY_MM_DD>/simllm-addon` branches cut
    from main, never directly on the backend main, and simllm re-pins the
@@ -134,8 +149,10 @@ One line per module; the linked doc is the source of truth.
 
 ## Study index
 
-Every study ships `expectations.md` (frozen pre-registration), a run
-script, and an audited `RESULTS.md`. Reproduce with
+Every study ships `expectations.md` with explicit provenance, a run script and
+an audited `RESULTS.md`. New studies use the expectations-only commit rule
+above; older studies without that public ancestor are labeled post-specified.
+Reproduce with
 `python examples/<study>/run_*.py` after the quick-start build.
 
 | Study | What it validates | Outcome |
@@ -148,8 +165,8 @@ script, and an audited `RESULTS.md`. Reproduce with
 | [dcqcn_vs_cn](../examples/dcqcn_vs_cn/RESULTS.md) | Mechanism-level scenarios: incast above/below buffer, ECMP collisions, cross-node TP ring | 18/20 checked rows pass; DCQCN collapses 2 to 3 orders of magnitude past the buffer, wins the buffer-absorbed cell (1.07 vs 1.68) and the path-disjoint ring |
 | [dcqcn_micro](../examples/dcqcn_micro/RESULTS.md) | NIC micro-behavior calibration: message-size law, incast fair share, join/exit convergence, repeated-WQE streams | Jain fairness 0.993 to 1.000; the timing-neutral WQ undershoots real-NIC anchors at 64 to 256 KB, now a BACK-9 WQ and BACK-16 PCIe-calibration target atop the landed BACK-10 fabric; persistent post-CNP rate state remains HTSIM-5; contended repeated-WQE collapse is reproduced to the derived digit |
 | [core2_lowering](../examples/core2_lowering/RESULTS.md) | Execution lowering, graph-only JSON replay and WQE bookkeeping | Legacy sink, graph replay and frozen closed form agree to 0 ps on all five rows (including the MoE sentinel); flow and WQE ledgers field-identical; backend WQE layer timing-neutral (344/344 backend tests) |
-| [rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md) | Native RNIC SQ/CQ structure, doorbell batching, signaling and network-credit backpressure | 11/11 cells exact; controlled SQ-full, drop and CQ-overrun boundaries pass in the native harness |
-| [rnic_pcie_v1](../examples/rnic_pcie_v1/RESULTS.md) | Shared PCIe transactions, finite credits/tags/buffers and deterministic analytical path penalties | 35/35 rows and 18/18 cross-checks pass exact byte, time and sampler oracles; Gaussian width, tail probability and incidence move the distribution as pre-registered |
+| [rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md) | Native RNIC SQ/CQ structure, doorbell batching, signaling and network-credit backpressure | 11/11 post-specified cells exact; controlled SQ-full, drop and CQ-overrun boundaries pass in the native harness |
+| [rnic_pcie_v1](../examples/rnic_pcie_v1/RESULTS.md) | Shared PCIe transactions, finite credits/tags/buffers and deterministic analytical path penalties | 35/35 deterministic row oracles and 10/10 behavioral relation families over 18 instances pass; structural invariants are unscored, corrected link-queue accounting leaves JCT unchanged, and posted traffic fills the frozen blocked-read gap |
 | [gpu_service_model](../examples/gpu_service_model/RESULTS.md) | Isolated CTA/SM/warp scheduling, occupancy, HBM and direction-specific copy service, plus strict capture/replay artifacts | 22/22 frozen structural cells exact to zero cycles; A100/H100 timing remains an explicitly uncertain, unvalidated bootstrap |
 
 ## Milestones

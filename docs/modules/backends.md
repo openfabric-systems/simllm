@@ -169,7 +169,7 @@ plus flow/tag and policy-context identity without transferring WQ/QP/CQ
 ownership. Flow-level acceptance/outcome timestamps remain separate from the
 packet issue timestamps that HTSIM-9 must supply. The htsim wrapper is not yet
 connected, so the old HTSIM ledger remains the live compatibility path.
-The pre-registered native study passes all 11 cells exactly; see
+The post-specified native regression study passes all 11 cells exactly; see
 [examples/rnic_wq_v1/RESULTS.md](../../examples/rnic_wq_v1/RESULTS.md).
 
 On 2026-08-07 BACK-10 closed at its accepted deterministic transaction-level
@@ -185,7 +185,15 @@ analytical incidence. Results record realized delay plus evaluation,
 occurrence and tail-selection counts.
 The regular mlx5 Work Queue path emits its 4-byte
 DB-record host store, 8-byte UAR write, WQE reads and CQE writes through that
-fabric. The pre-registered 35-row study and all 18 cross-checks pass; see
+fabric. All 35 deterministic row oracles pass; ten behavioral relation
+families pass across 18 instances, while structural invariants remain fatal but
+unscored. The review correction chains link-queue eligibility across one
+transaction, separates posted and non-posted dependency horizons, and lets a
+ready posted TLP fill an idle gap before a resource-blocked non-posted request;
+posted placement is recomputed after credit availability so post-credit link
+contention stays in the link ledger rather than disappearing or becoming a
+false displacement error. Posted-after-completion remains legal and separately
+accounted. See
 [examples/rnic_pcie_v1/RESULTS.md](../../examples/rnic_pcie_v1/RESULTS.md).
 The incidence draws are independent analytical surrogates: they do not claim
 that the model detects a NUMA route, IOMMU or DDIO miss, ACS redirect or GPU
@@ -263,11 +271,13 @@ is difficult.
   correlation and measured calibration. Topology selects NUMA, ACS and GPU
   Direct routes; cache and translation state decide DDIO and IOMMU events,
   consuming ATS/ATC events from BACK-17 when that optional feature is enabled.
-  Add class-specific DMA/MMIO queues, chronological arbitration and occupancy,
-  variable measured replay, actual PCIe ordering rules, negotiated read-tag
-  capacity including 10-bit tag scaling, and provenance-bearing CX-7
-  calibration. Preserve deterministic replay and transactional sample state;
-  extend run records with calibration provenance and exact draw ranges.
+  Add class-specific DMA/MMIO queues, deferred chronological arbitration that
+  can displace pending reservations before returning results, and occupancy.
+  Add variable measured replay, the remaining PCIe RO/IDO/TC/VC ordering
+  matrix, negotiated read-tag capacity including 10-bit tag scaling, and
+  provenance-bearing CX-7 calibration. Preserve deterministic replay and
+  transactional sample state; extend run records with calibration provenance
+  and exact draw ranges.
   Acceptance includes per-class attribution, calibrated queue and tag knees,
   and defended p50 through p99.9 latency. Until those mechanisms land,
   analytical incidence must not be described as detected hardware behavior.

@@ -797,6 +797,103 @@ void testFragmentSamplingAndAccounting(TestRunner& test) {
     readiness.validateInvariants();
 }
 
+void testLinkQueueCountsOnlyExternalContention(TestRunner& test) {
+    PcieFabricConfig multi_mwr_config = defaultPcieFabricConfig();
+    multi_mwr_config.max_payload_size_bytes = 128;
+    PcieFabric multi_mwr(multi_mwr_config);
+    const auto mwr = multi_mwr.submit(transaction(
+        PcieOperation::PostedWrite, 512));
+    test.check(
+        mwr.request_tlps == 4
+            && mwr.completion_tlps == 0
+            && mwr.waits.link_queue_ps == 0,
+        "one uncontended multi-MWr transaction has zero link-queue wait");
+    multi_mwr.validateInvariants();
+
+    PcieFabricConfig credit_chain_config = multi_mwr_config;
+    credit_chain_config.host_to_device_credits.posted_header_credits = 1;
+    credit_chain_config.credit_return_latency_ps = 1'000;
+    PcieFabric credit_chain(credit_chain_config);
+    const auto credit_stalled = credit_chain.submit(transaction(
+        PcieOperation::PostedWrite, 512));
+    test.check(
+        credit_stalled.request_tlps == 4
+            && credit_stalled.waits.credit_ps == 3'000
+            && credit_stalled.waits.link_queue_ps == 0,
+        "intra-transaction credit stalls are not relabeled as link queueing");
+    credit_chain.validateInvariants();
+
+    PcieFabricConfig multi_mrd_config = defaultPcieFabricConfig();
+    multi_mrd_config.max_payload_size_bytes = 512;
+    multi_mrd_config.max_read_request_size_bytes = 128;
+    PcieFabric multi_mrd(multi_mrd_config);
+    const auto mrd = multi_mrd.submit(transaction(
+        PcieOperation::NonPostedRead,
+        512,
+        PcieDirection::DeviceToHost));
+    test.check(
+        mrd.request_tlps == 4
+            && mrd.completion_tlps == 4
+            && mrd.waits.link_queue_ps == 0,
+        "one uncontended multi-MRd transaction has zero link-queue wait");
+    multi_mrd.validateInvariants();
+
+    PcieFabricConfig multi_cpld_config = defaultPcieFabricConfig();
+    multi_cpld_config.max_payload_size_bytes = 128;
+    multi_cpld_config.max_read_request_size_bytes = 512;
+    PcieFabric multi_cpld(multi_cpld_config);
+    const auto cpld = multi_cpld.submit(transaction(
+        PcieOperation::NonPostedRead,
+        512,
+        PcieDirection::DeviceToHost));
+    test.check(
+        cpld.request_tlps == 1
+            && cpld.completion_tlps == 4
+            && cpld.waits.link_queue_ps == 0,
+        "one uncontended multi-CplD transaction has zero link-queue wait");
+    multi_cpld.validateInvariants();
+
+    PcieFabricConfig backlog_config = defaultPcieFabricConfig();
+    backlog_config.max_payload_size_bytes = 128;
+    PcieFabric backlog(backlog_config);
+    const auto external = backlog.submit(transaction(
+        PcieOperation::PostedWrite, 64));
+    const auto behind_external = backlog.submit(transaction(
+        PcieOperation::PostedWrite, 512));
+    test.check(
+        external.waits.link_queue_ps == 0
+            && external.completed_at_ps == 1'397
+            && behind_external.request_tlps == 4
+            && behind_external.first_issue_at_ps == 1'397
+            && behind_external.completed_at_ps == 11'045
+            && behind_external.waits.link_queue_ps == 1'397,
+        "a 64-byte external write backlog is charged exactly once");
+    backlog.validateInvariants();
+
+    PcieFabricConfig completion_gap_config = defaultPcieFabricConfig();
+    completion_gap_config.max_payload_size_bytes = 128;
+    completion_gap_config.max_read_request_size_bytes = 128;
+    completion_gap_config.read_completion_latency_ps.samples_ps = {10'000};
+    PcieFabric completion_gap(completion_gap_config);
+    const auto read_before_gap = completion_gap.submit(transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::HostToDevice));
+    const auto posted_around_completion = completion_gap.submit(transaction(
+        PcieOperation::PostedWrite,
+        1'024,
+        PcieDirection::DeviceToHost));
+    test.check(
+        read_before_gap.completion_ready_at_ps == 10'381
+            && read_before_gap.completed_at_ps == 12'730
+            && posted_around_completion.request_tlps == 8
+            && posted_around_completion.first_issue_at_ps == 0
+            && posted_around_completion.completed_at_ps == 22'379
+            && posted_around_completion.waits.link_queue_ps == 3'081,
+        "legal posted wait behind a future completion is charged exactly");
+    completion_gap.validateInvariants();
+}
+
 void testAnalyticalPlanRollbackAndStreamIndependence(TestRunner& test) {
     constexpr Picoseconds first_sample = 64'767;
     constexpr Picoseconds second_sample = 98'824;
@@ -1254,6 +1351,254 @@ void testFiniteCreditsAndReadResources(TestRunner& test) {
     }
 }
 
+void testPostedBypassesSameDomainReadCompletion(TestRunner& test) {
+    PcieFabricConfig config = defaultPcieFabricConfig();
+    config.max_payload_size_bytes = 128;
+    config.max_read_request_size_bytes = 128;
+    config.read_completion_latency_ps.samples_ps = {1'000'000};
+    PcieFabric fabric(config);
+
+    PcieTransactionRequest read = transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost);
+    read.ordering = PcieOrdering::VisibilityDependency;
+    read.ordering_domain = 6;
+    const auto read_result = fabric.submit(read);
+
+    PcieTransactionRequest posted = transaction(
+        PcieOperation::PostedWrite,
+        4,
+        PcieDirection::DeviceToHost);
+    posted.ordering = PcieOrdering::VisibilityDependency;
+    posted.ordering_domain = 6;
+    const auto posted_result = fabric.submit(posted);
+
+    test.check(
+        read_result.transaction_id == 1
+            && read_result.waits.ordering_ps == 0
+            && read_result.request_finished_at_ps == 381
+            && read_result.completion_ready_at_ps == 1'000'381
+            && read_result.completed_at_ps == 1'002'730,
+        "long same-domain MRd advances its completion horizon exactly");
+    test.check(
+        posted_result.transaction_id == 2
+            && posted_result.waits.ordering_ps == 0
+            && posted_result.waits.link_queue_ps == 381
+            && posted_result.first_issue_at_ps == 381
+            && posted_result.request_finished_at_ps == 826
+            && posted_result.completed_at_ps == 826
+            && posted_result.completed_at_ps < read_result.completed_at_ps,
+        "same-domain posted write bypasses the MRd completion horizon");
+    fabric.validateInvariants();
+}
+
+void testSplitOrderingHorizons(TestRunner& test) {
+    PcieFabricConfig config = defaultPcieFabricConfig();
+    config.max_payload_size_bytes = 128;
+    config.max_read_request_size_bytes = 128;
+    PcieFabric fabric(config);
+
+    PcieTransactionRequest posted = transaction(
+        PcieOperation::PostedWrite,
+        4,
+        PcieDirection::DeviceToHost);
+    posted.ordering = PcieOrdering::VisibilityDependency;
+    posted.ordering_domain = 9;
+    const auto posted_result = fabric.submit(posted);
+
+    PcieTransactionRequest read = transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost);
+    read.ordering = PcieOrdering::VisibilityDependency;
+    read.ordering_domain = 9;
+    const auto first_read = fabric.submit(read);
+    const auto second_read = fabric.submit(read);
+
+    PcieTransactionRequest independent = transaction(
+        PcieOperation::HostStore, 8);
+    independent.ordering = PcieOrdering::Independent;
+    independent.ordering_domain = 9;
+    const auto bypass = fabric.submit(independent);
+
+    test.check(
+        posted_result.completed_at_ps == 445
+            && first_read.waits.ordering_ps == 445
+            && first_read.first_issue_at_ps == 445
+            && first_read.request_finished_at_ps == 826
+            && first_read.completed_at_ps == 3'175,
+        "non-posted read waits for the same-domain posted horizon exactly");
+    test.check(
+        second_read.waits.ordering_ps == 3'175
+            && second_read.first_issue_at_ps == 3'175
+            && second_read.request_finished_at_ps == 3'556
+            && second_read.completed_at_ps == 5'905,
+        "non-posted read waits for the prior read completion horizon exactly");
+    test.check(
+        bypass.waits.ordering_ps == 0
+            && bypass.first_issue_at_ps == 0
+            && bypass.completed_at_ps == 0,
+        "independent work bypasses both same-domain dependency horizons");
+    fabric.validateInvariants();
+}
+
+void testPostedFillsBlockedReadGapTransactionally(TestRunner& test) {
+    PcieFabricConfig config = defaultPcieFabricConfig();
+    config.max_payload_size_bytes = 128;
+    config.max_read_request_size_bytes = 128;
+    config.max_outstanding_read_requests = 1;
+    config.completion_buffer_bytes = 128;
+    config.read_completion_latency_ps.samples_ps = {1'000'000};
+
+    PcieFabric gap_fabric(config);
+    const auto first_read = gap_fabric.submit(transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost));
+    const auto blocked_read = gap_fabric.submit(transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost));
+    const auto posted = gap_fabric.submit(transaction(
+        PcieOperation::PostedWrite,
+        4,
+        PcieDirection::DeviceToHost));
+    test.check(
+        first_read.request_finished_at_ps == 381
+            && first_read.completed_at_ps == 1'002'730
+            && blocked_read.first_issue_at_ps == 1'002'730
+            && blocked_read.waits.outstanding_read_ps == 1'002'349,
+        "one read slot creates the frozen resource-blocked MRd gap");
+    test.check(
+        posted.first_issue_at_ps == 381
+            && posted.request_finished_at_ps == 826
+            && posted.completed_at_ps == 826
+            && posted.waits.link_queue_ps == 381
+            && posted.completed_at_ps < blocked_read.first_issue_at_ps,
+        "ready posted write fills the blocked-MRd serializer gap exactly");
+    gap_fabric.validateInvariants();
+
+    PcieFabric failure_fabric(config);
+    (void)failure_fabric.submit(transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost));
+    (void)failure_fabric.submit(transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost));
+    const auto before_failure = failure_fabric.totalAccounting();
+    PcieTransactionRequest too_large = transaction(
+        PcieOperation::PostedWrite,
+        64 * 1024ULL,
+        PcieDirection::DeviceToHost);
+    test.expectThrowAs<std::logic_error>(
+        [&failure_fabric, &too_large]() {
+            (void)failure_fabric.submit(too_large);
+        },
+        "posted transaction too large for a blocked-MRd gap is rejected");
+    test.check(
+        failure_fabric.generation() == 2
+            && sameAccounting(
+                before_failure, failure_fabric.totalAccounting())
+            && failure_fabric.accounting(PcieServiceClass::PayloadWrite)
+                    .transactions
+                == 0,
+        "oversized gap insertion leaves IDs, reservations and ledgers unchanged");
+
+    const auto recovered = failure_fabric.submit(transaction(
+        PcieOperation::PostedWrite,
+        4,
+        PcieDirection::DeviceToHost));
+    test.check(
+        recovered.transaction_id == 3
+            && recovered.first_issue_at_ps == 381
+            && recovered.completed_at_ps == 826
+            && recovered.waits.link_queue_ps == 381,
+        "small posted gap insertion succeeds exactly after rejected work");
+    failure_fabric.validateInvariants();
+}
+
+void testPostedCreditAwareArbitration(TestRunner& test) {
+    PcieFabricConfig post_credit_config = defaultPcieFabricConfig();
+    post_credit_config.max_payload_size_bytes = 128;
+    post_credit_config.max_read_request_size_bytes = 128;
+    post_credit_config.max_outstanding_read_requests = 1;
+    post_credit_config.completion_buffer_bytes = 128;
+    post_credit_config.credit_return_latency_ps = 1'003'000;
+    post_credit_config.read_completion_latency_ps.samples_ps = {1'000'000};
+    post_credit_config.device_to_host_credits.posted_header_credits = 1;
+    PcieFabric post_credit(post_credit_config);
+
+    const auto seed_posted = post_credit.submit(transaction(
+        PcieOperation::PostedWrite,
+        4,
+        PcieDirection::DeviceToHost));
+    const auto first_read = post_credit.submit(transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost));
+    const auto blocked_read = post_credit.submit(transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost));
+    const auto posted_after_credit = post_credit.submit(transaction(
+        PcieOperation::PostedWrite,
+        4,
+        PcieDirection::DeviceToHost));
+
+    test.check(
+        seed_posted.completed_at_ps == 445
+            && first_read.request_finished_at_ps == 826
+            && first_read.completed_at_ps == 1'003'175
+            && blocked_read.first_issue_at_ps == 1'003'175
+            && blocked_read.request_finished_at_ps == 1'003'556,
+        "credit-aware queue case creates the frozen future MRd interval");
+    test.check(
+        posted_after_credit.waits.credit_ps == 1'002'619
+            && posted_after_credit.waits.link_queue_ps == 937
+            && posted_after_credit.first_issue_at_ps == 1'003'556
+            && posted_after_credit.completed_at_ps == 1'004'001,
+        "link wait reached after posted credit return is charged exactly");
+    post_credit.validateInvariants();
+
+    PcieFabricConfig unavailable_config = defaultPcieFabricConfig();
+    unavailable_config.max_payload_size_bytes = 128;
+    unavailable_config.max_read_request_size_bytes = 128;
+    unavailable_config.max_outstanding_read_requests = 1;
+    unavailable_config.completion_buffer_bytes = 128;
+    unavailable_config.credit_return_latency_ps = 3'500;
+    unavailable_config.device_to_host_credits.posted_header_credits = 1;
+    PcieFabric unavailable(unavailable_config);
+
+    (void)unavailable.submit(transaction(
+        PcieOperation::PostedWrite,
+        4,
+        PcieDirection::DeviceToHost));
+    (void)unavailable.submit(transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost));
+    const auto short_gap_read = unavailable.submit(transaction(
+        PcieOperation::NonPostedRead,
+        128,
+        PcieDirection::DeviceToHost));
+    const auto unavailable_until_after_gap = unavailable.submit(transaction(
+        PcieOperation::PostedWrite,
+        128,
+        PcieDirection::DeviceToHost));
+    test.check(
+        short_gap_read.first_issue_at_ps == 3'175
+            && short_gap_read.request_finished_at_ps == 3'556
+            && unavailable_until_after_gap.waits.link_queue_ps == 826
+            && unavailable_until_after_gap.waits.credit_ps == 3'119
+            && unavailable_until_after_gap.first_issue_at_ps == 3'945
+            && unavailable_until_after_gap.completed_at_ps == 6'358,
+        "posted arbitration waits for credit before enforcing displacement");
+    unavailable.validateInvariants();
+}
+
 void testOrderingPathAndOverflow(TestRunner& test) {
     PcieFabricConfig config = defaultPcieFabricConfig();
     config.host_store_latency_ps.samples_ps = {100};
@@ -1403,12 +1748,17 @@ int main() {
     testAnalyticalSamplingGoldens(test);
     testEveryComponentSupportsEveryProfileKind(test);
     testFragmentSamplingAndAccounting(test);
+    testLinkQueueCountsOnlyExternalContention(test);
     testAnalyticalPlanRollbackAndStreamIndependence(test);
     testPostedWriteSegmentationAndSerialization(test);
     testReadByteMatrixAndDirection(test);
     testHostStoreAndClassLedgers(test);
     testPlanAtomicityAndStaleness(test);
     testFiniteCreditsAndReadResources(test);
+    testPostedBypassesSameDomainReadCompletion(test);
+    testSplitOrderingHorizons(test);
+    testPostedFillsBlockedReadGapTransactionally(test);
+    testPostedCreditAwareArbitration(test);
     testOrderingPathAndOverflow(test);
     testCrossClassAccountingOverflowIsAtomic(test);
     if (test.failures() != 0) {

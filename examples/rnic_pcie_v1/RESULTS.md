@@ -1,17 +1,32 @@
 # RNIC PCIe v1 results
 
-All 35 pre-registered sweep rows match the independent byte, rational-time and
-integer analytical-sampler oracles exactly. All 18 cross-checks pass,
-and the native CTest suite passes the PCIe fabric, WorkQueue integration and
-negative-input checks.
+The study reproduces 35 configurations: 29 baseline rows and 6 analytical-
+profile rows. All 35 match their deterministic row oracles. Ten behavioral
+relation families are instantiated 18 times, and all 18 instances pass.
+Structural conservation, inactive-field and configuration-forced zero
+invariants also pass, but are unscored. Fifteen directed requirement families
+run through three native test executables and are reported separately. Counts
+from these evidence classes are not added together.
 
 ## Method
 
 The study builds the dependency-free C++17 RNIC library in Release mode, runs
-CTest, then drives `simllm_rnic_pcie_probe` over the parameter grid frozen in
-[expectations.md](expectations.md). The Python runner computes its expected
-TLP counts, directional bytes and serializer times independently. It does not
-reuse C++ model results as its oracle.
+CTest, then drives `simllm_rnic_pcie_probe` over the parameter grid specified in
+[expectations.md](expectations.md). The Python runner computes expected TLP
+counts, directional bytes, serializer times and link-queue attribution
+independently. It does not reuse C++ model results as its oracle.
+
+The original sweeps first entered public history together with their results,
+so they are post-specified regression oracles, not publicly auditable
+preregistration. The main review-correction expectations were committed alone
+in `91cfe65` before the corrected implementation or run. Additional credit and
+split-horizon edges were frozen in `7f2e961` and `acbef82`; `f269bc8` froze the
+legal posted-after-completion queue ledger. Commit `7f592d3`
+records an explicit pre-landing retraction: an intermediate expectation
+generalized the mandatory posted-over-non-posted rule to completions, but the
+first native regression exposed that as an overconstraint on a legal
+posted-after-completion order. These commits are the audit trail for the
+correction reported here.
 
 Reproduce and compare every byte of the tracked CSV from the repository root:
 
@@ -22,6 +37,12 @@ python3 examples/rnic_pcie_v1/run_rnic_pcie_v1.py --check
 Raw probe knobs, effective configuration, requested and accounted transaction
 counts, analytical-profile parameters, measurements and expected values are in
 [results.csv](results.csv).
+
+The correction changes no JCT, transaction timestamp, byte, TLP, credit,
+finite-resource or analytical-profile result in the 35-row study. Among fields
+present in both CSV versions, only `link_queue_wait_ps` changes. The CSV now
+also carries its independent expected value and a separate fatal, unscored
+structural-invariant status.
 
 ## MPS and MRRS byte conservation
 
@@ -54,18 +75,50 @@ traffic from 4864 to 4288 bytes.
 Gen5 x8 equals Gen4 x16 in every row. The x8 values are exactly twice the x16
 continuous result, subject only to the final integer-picosecond ceiling.
 
+## Link-queue accounting correction
+
+The old ledger measured every fragment from transaction eligibility. It
+therefore charged a transaction for its own preceding fragments, producing the
+triangular `N * (N - 1) / 2` overcount. The corrected metric chains accounting
+eligibility across every same-direction TLP in one public transaction while
+leaving the rational serializer recurrence unchanged.
+
+All 25 single-transaction link rows in sweeps A, B and D now report zero
+link-queue wait. Representative corrections are:
+
+| Transaction | Segmentation | Old link queue (ps) | Corrected (ps) | Unchanged JCT (ps) |
+|---|---:|---:|---:|---:|
+| 4096-byte MWr, Gen5 x16 | MPS 128, 32 MWr | 1196422 | 0 | 77188 |
+| 4096-byte MWr, Gen5 x16 | MPS 256, 16 MWr | 533211 | 0 | 71094 |
+| 512-byte read | MRRS 128, MPS 128 | 14093 | 0 | 9776 |
+| 512-byte read | MRRS 512, MPS 512 | one MRd, one CplD | 0 | 0 | 8824 |
+
+The 16-transaction read-window rows retain real external contention. Their
+independent oracle and measured ledger agree exactly:
+
+| Read slots | MPS (B) | Old link queue (ps) | Corrected link queue (ps) |
+|---:|---:|---:|---:|
+| 1 | 128 | 106257683 | 106032195 |
+| 1 | 512 | 105932235 | 105932235 |
+| 4 | 128 | 21796041 | 21408305 |
+| 4 | 512 | 21368316 | 21368316 |
+
+These are sums of per-transaction waits, so they may exceed the final JCT. MPS
+128 changes because each read has four CplDs; MPS 512 already had one and was
+not affected.
+
 ## Outstanding-read queue
 
 Sixteen 512-byte DMA reads were submitted at time zero with a fixed 1,000,000
 ps response delay. Increasing the read window from one to four reduces both
 JCT and accumulated outstanding-slot wait exactly as predicted.
 
-| Read slots | MPS (B) | JCT (ps) | Outstanding wait (ps) |
-|---:|---:|---:|---:|
-| 1 | 128 | 16156416 | 15140925 |
-| 1 | 512 | 16141184 | 15126645 |
-| 4 | 128 | 4067289 | 3051798 |
-| 4 | 512 | 4060623 | 3046084 |
+| Read slots | MPS (B) | JCT (ps) | Outstanding wait (ps) | Link queue (ps) |
+|---:|---:|---:|---:|---:|
+| 1 | 128 | 16156416 | 15140925 | 106032195 |
+| 1 | 512 | 16141184 | 15126645 | 105932235 |
+| 4 | 128 | 4067289 | 3051798 | 21408305 |
+| 4 | 512 | 4060623 | 3046084 | 21368316 |
 
 At each window size, MPS 512 is slightly faster because it emits fewer CplD
 headers. The four-slot case is about one quarter of the one-slot JCT, with the
@@ -121,6 +174,45 @@ completion-buffer capacity and release, directional full-duplex accounting,
 stale and discarded plans, and visibility-dependency domains. It checks all
 semantic service-class ledgers against the aggregate ledger field by field.
 
+Posted visibility and non-posted completion now have separate domain horizons.
+In the directed long-read case, a same-domain 4-byte MWr has zero ordering wait,
+starts at 381 ps and completes at 826 ps instead of waiting for the MRd
+completion at 1,002,730 ps. A second directed case exhausts the one-entry read
+window: read B is blocked until 1,002,730 ps, while the ready MWr fills the idle
+request-link gap from 381 to 826 ps. A posted transaction too large for the
+pre-reserved gap fails inside its private plan; the following 4-byte retry then
+uses transaction ID 3 and the exact same gap. The eager API never silently
+reports the forbidden posted-behind-blocked-read order.
+
+The complementary dependency test fixes both read-side horizons numerically.
+A 4-byte MWr completes at 445 ps; the following same-domain MRd attributes 445
+ps of ordering wait and completes at 3,175 ps; the next MRd attributes 3,175 ps
+and completes at 5,905 ps. Independent work in the same numeric domain has zero
+ordering wait and completes at time zero.
+
+Credit-aware arbitration is also pinned on both sides of a future MRd
+reservation. When a posted credit returns during the MRd, the later MWr starts
+at 1,003,556 ps and attributes 937 ps of link queue: 826 ps before credit
+waiting and 111 ps after credit availability. Its separate credit wait is
+1,002,619 ps. In the companion short-gap case, the MWr is not credit-ready
+before the MRd, so it is not falsely rejected for failing to fit there. It
+starts when its credit returns at 3,945 ps, completes at 6,358 ps and attributes
+826 ps of link queue plus 3,119 ps of credit wait.
+
+Completion ordering is deliberately not folded into the mandatory
+posted-over-non-posted exception. In its directed case, a D2H completion owns
+the link from 10,381 to 12,730 ps. A later eight-TLP D2H MWr legally emits four
+TLPs before that interval and four after it, completes at 22,379 ps and charges
+the intervening 3,081 ps exactly once as external link queueing.
+
+This boundary follows the PCI-SIG ordering rationale that independent posted,
+non-posted and completion flow-control classes preserve forward progress, plus
+the AMD requester guidance that tag- or non-posted-credit-starved reads must
+not create posted head-of-line blocking. See the
+[PCI-SIG ordering webinar](https://pcisig.com/sites/default/files/files/PCI-SIG%20Unordered%20IO%20Webinar_Rev4_FINAL.pdf)
+and
+[AMD requester guidance](https://docs.amd.com/r/en-US/pg346-cpm-pcie/Avoiding-Head-of-Line-Blocking-for-Posted-Requests?contentId=M~o53XyovPwgj5x38Vm~_g).
+
 Timestamp, transaction-ID and accounting overflow tests run through the real
 PCIe fabric. Cross-class byte and path-delay overflow is detected while the
 candidate plan is still private, leaving shared counters, resources and time
@@ -141,8 +233,10 @@ model now includes deterministic shared serialization and resources,
 transactional WorkQueue integration, explicit class and path ledgers, and
 fixed, Gaussian and rare-tail mixture profiles for every analytical path
 penalty. BACK-16 owns higher-precision occurrence mechanisms, chronological
-and class-specific arbitration, measured replay, PCIe ordering, 10-bit tag
-scaling and CX-7 calibration. BACK-17 owns optional BlueFlame, ATS/ATC, MSI-X,
-missing traffic producers and lower-layer PCIe events. Defaults remain
-synthetic and no analytical incidence draw is presented as detected hardware
-state.
+and class-specific arbitration, completion arbitration, deferred displacement
+of already returned reservations, measured replay, the remaining PCIe
+RO/IDO/TC/VC ordering matrix, 10-bit tag scaling and CX-7 calibration. BACK-17
+owns optional BlueFlame,
+ATS/ATC, MSI-X, missing traffic producers and lower-layer PCIe events. Defaults
+remain synthetic and no analytical incidence draw is presented as detected
+hardware state.

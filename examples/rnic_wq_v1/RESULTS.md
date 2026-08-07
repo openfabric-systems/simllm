@@ -1,7 +1,10 @@
 # RNIC WQ v1 results
 
-All 11 pre-registered sweep cells pass exactly. The dependency-free native
-unit harness also passes every directed SQ/CQ/network-port boundary check.
+All 11 post-specified regression cells pass exactly. The dependency-free
+native unit harness also passes every directed SQ/CQ/network-port boundary
+check. The expectations, implementation and results first entered public
+history together in `98746ff`, so this study does not claim publicly auditable
+preregistration.
 
 ## Method
 
@@ -41,7 +44,7 @@ single per-WQE delay to stand in for both.
 
 ## Sweep B: network backpressure
 
-Both credit cells match the pre-registered queueing equation exactly.
+Both credit cells match the fixed queueing equation exactly.
 
 | Network capacity C | Measured busy attempts | Expected | Measured JCT (ps) | Expected (ps) |
 |---:|---:|---:|---:|---:|

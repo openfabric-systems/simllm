@@ -1,6 +1,11 @@
 # RNIC WQ v1 expectations
 
-Frozen before the first native WQ model run on 2026-08-07.
+The sweep equations, implementation and results first entered public history
+together in commit `98746ff`. Directed requirements 7 through 11 were added
+after initial runs, as recorded below, but before that same landing commit.
+There is no expectations-only public ancestor. This document is therefore a
+post-specified frozen regression specification, not publicly auditable
+preregistration.
 
 ## Scope
 
@@ -24,7 +29,7 @@ capacity 32 and zero network latency. All doorbells are issued at time zero.
 Because `D >= B * F`, each batch's fetches finish before the next doorbell is
 observed.
 
-Pre-registered exact expectations:
+Fixed regression expectations:
 
 - doorbell count is `N / B`;
 - CQE count is `N / S`;
@@ -53,7 +58,7 @@ Post `N = 16` signaled WQEs as one batch into an SQ/CQ of depth 32. Use
 network in-flight capacity `C` in `{1, 4}`. Since C divides N, the completion
 lanes remain regular.
 
-Pre-registered exact expectations:
+Fixed regression expectations:
 
 - JCT is `D + C * F + (N / C) * L`;
 - network-busy attempts are `N - C`;

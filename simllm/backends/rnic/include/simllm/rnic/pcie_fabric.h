@@ -49,8 +49,10 @@ enum class PcieDirection : std::uint8_t {
 };
 
 enum class PcieOrdering : std::uint8_t {
-    // This is an explicit simulator dependency on modeled visibility. It is
-    // not the PCIe Relaxed Ordering, IDO, TC or VC ordering matrix.
+    // Preserve publication dependencies with separate posted-visibility and
+    // non-posted-completion horizons. Posted traffic never inherits a prior
+    // non-posted completion wait. This is not the complete PCIe RO, IDO, TC
+    // or VC ordering matrix.
     VisibilityDependency,
     Independent,
 };
@@ -168,8 +170,8 @@ struct PcieTransactionRequest {
     PcieDirection request_direction{PcieDirection::HostToDevice};
     PcieOrdering ordering{PcieOrdering::VisibilityDependency};
     std::uint32_t path_id{0};
-    // Domain zero is a valid global conservative dependency domain. Clients
-    // should use nonzero namespaces when unrelated queues may share a fabric.
+    // Domain zero is a valid global dependency domain. Clients should use
+    // nonzero namespaces when unrelated queues may share a fabric.
     std::uint64_t ordering_domain{0};
     std::uint64_t useful_bytes{0};
     std::uint64_t transfer_bytes{0};

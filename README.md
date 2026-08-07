@@ -113,9 +113,10 @@ Pinned backends (details in [docs/modules/backends.md](docs/modules/backends.md)
 
 ## Demo
 
-Every study under [examples/](examples/) is open to users and follows
-the same discipline: an `expectations.md` frozen before the run, the run
-script, and an audited `RESULTS.md`. Start with these:
+Every study under [examples/](examples/) is open to users and carries an
+`expectations.md`, a run script, an audited `RESULTS.md` and explicit evidence
+provenance. New and extended studies freeze expectations in their own commit
+before implementation and execution. Start with these:
 
 | Study | Question | Headline result |
 |---|---|---|
@@ -128,7 +129,7 @@ script, and an audited `RESULTS.md`. Start with these:
 | [m5](examples/m5/RESULTS.md) | MoE expert-parallel all-to-all | Pairwise all-to-allv closed forms exact to 0 ps across size and width |
 | [core2_lowering](examples/core2_lowering/RESULTS.md) | Execution lowering and WQE bookkeeping | Legacy path, graph-only replay and frozen closed form agree to 0 ps on all rows; flow and WQE ledgers field-identical |
 | [rnic_wq_v1](examples/rnic_wq_v1/RESULTS.md) | **RNIC queueing: what do doorbell batches, signaling and network credits change?** | All 11 native C++ sweep cells match their closed forms exactly; batching cuts 32 doorbells to 2, signaling cuts 32 CQEs to 2 independently, and four network credits cut JCT from 16,110 ps to 4,140 ps |
-| [rnic_pcie_v1](examples/rnic_pcie_v1/RESULTS.md) | **RNIC PCIe: how do transactions, finite resources and analytical path penalties change completion time?** | All 35 rows and 18 cross-checks pass exact byte, time and deterministic-sampler oracles; four read slots cut JCT to about one quarter of one slot, and Gaussian width, tail probability and incidence move the measured distribution as pre-registered |
+| [rnic_pcie_v1](examples/rnic_pcie_v1/RESULTS.md) | **RNIC PCIe: how do transactions, finite resources and analytical path penalties change completion time?** | All 35 deterministic row oracles and 18 behavioral predicate instances pass; corrected link-queue accounting leaves every JCT unchanged, and ready posted traffic passes a blocked non-posted request in the frozen gap case |
 
 The message-size calibration curve and the definitive comparator figure:
 

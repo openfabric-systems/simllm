@@ -1,4 +1,4 @@
-"""Build and run the pre-registered native RNIC PCIe v1 sweeps."""
+"""Build and run the deterministic native RNIC PCIe v1 regression study."""
 
 from __future__ import annotations
 
@@ -15,6 +15,27 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_DIR = REPO_ROOT / "simllm" / "backends" / "rnic"
 DEFAULT_BUILD_DIR = REPO_ROOT / "build" / "rnic_pcie_v1"
 RESULTS = Path(__file__).with_name("results.csv")
+
+EXPECTED_RUN_ROWS = 35
+EXPECTED_RELATION_FAMILIES = 10
+EXPECTED_PREDICATE_INSTANCES = 18
+DIRECTED_REQUIREMENT_FAMILIES = 15
+DIRECTED_TEST_EXECUTABLES = 3
+
+RELATION_FAMILIES = frozenset(
+    {
+        "aggregate_delay_monotonicity",
+        "gaussian_mean_straddling",
+        "generation_equivalence",
+        "intermittent_incidence",
+        "lane_scaling",
+        "mps_ordering",
+        "read_window_improvement",
+        "sigma_range_widening",
+        "tail_count_monotonicity",
+        "tail_selection",
+    }
+)
 
 RATE = {
     1: (2500, 8, 10),
@@ -251,6 +272,32 @@ class _RationalLink:
         return _ceil(start), _ceil(self.cursor)
 
 
+def _posted_oracle(
+    transactions: int,
+    bytes_: int,
+    mps: int,
+    generation: int,
+    lanes: int,
+) -> tuple[int, int]:
+    link = _RationalLink(generation, lanes)
+    final_completion = 0
+    link_queue_wait = 0
+
+    for _ in range(transactions):
+        preceding_fragment_end = 0
+        remaining = bytes_
+        while remaining:
+            payload = min(remaining, mps)
+            root_ready = 0
+            link_ready = link.ready(root_ready)
+            accounting_eligible = max(root_ready, preceding_fragment_end)
+            link_queue_wait += link_ready - accounting_eligible
+            _, final_completion = link.reserve(root_ready, payload + 24)
+            preceding_fragment_end = final_completion
+            remaining -= payload
+    return final_completion, link_queue_wait
+
+
 def _read_oracle(
     transactions: int,
     bytes_: int,
@@ -258,18 +305,26 @@ def _read_oracle(
     mrrs: int,
     slots: int,
     response_latency_ps: int,
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     request_link = _RationalLink(5, 16)
     completion_link = _RationalLink(5, 16)
     releases: list[int] = []
     outstanding_wait = 0
+    link_queue_wait = 0
     final_completion = 0
 
     for _ in range(transactions):
+        preceding_request_end = 0
+        preceding_completion_end = 0
         remaining = bytes_
         while remaining:
             request_bytes = min(remaining, mrrs)
-            initial_link_ready = request_link.ready(0)
+            request_root_ready = 0
+            initial_link_ready = request_link.ready(request_root_ready)
+            request_accounting_eligible = max(
+                request_root_ready, preceding_request_end
+            )
+            link_queue_wait += initial_link_ready - request_accounting_eligible
             issue_at = initial_link_ready
             while releases and releases[0] <= issue_at:
                 heapq.heappop(releases)
@@ -278,18 +333,31 @@ def _read_oracle(
                 while releases and releases[0] <= issue_at:
                     heapq.heappop(releases)
             outstanding_wait += issue_at - initial_link_ready
-            request_not_before = issue_at if issue_at > initial_link_ready else 0
+            request_not_before = (
+                issue_at if issue_at > initial_link_ready else request_root_ready
+            )
             _, request_finished = request_link.reserve(request_not_before, 24)
+            preceding_request_end = request_finished
             response_ready = request_finished + response_latency_ps
             final_completion = response_ready
             completion_remaining = request_bytes
             while completion_remaining:
                 payload = min(completion_remaining, mps)
-                _, final_completion = completion_link.reserve(response_ready, payload + 20)
+                completion_link_ready = completion_link.ready(response_ready)
+                completion_accounting_eligible = max(
+                    response_ready, preceding_completion_end
+                )
+                link_queue_wait += (
+                    completion_link_ready - completion_accounting_eligible
+                )
+                _, final_completion = completion_link.reserve(
+                    response_ready, payload + 20
+                )
+                preceding_completion_end = final_completion
                 completion_remaining -= payload
             heapq.heappush(releases, final_completion)
             remaining -= request_bytes
-    return final_completion, outstanding_wait
+    return final_completion, outstanding_wait, link_queue_wait
 
 
 def _base_row(
@@ -300,54 +368,69 @@ def _base_row(
     expected_link_bytes: int,
     expected_jct_ps: int,
     expected_outstanding_wait_ps: int = 0,
+    expected_link_queue_wait_ps: int = 0,
     expected_numa_ps: int = 0,
     expected_iommu_ps: int = 0,
     expected_numa_occurrences: int | None = None,
     expected_numa_tail_draws: int = 0,
     expected_minimum_completion_ps: int | None = None,
 ) -> dict[str, int | str]:
-    failures = []
-    checks = {
+    exact_failures = []
+    structural_failures = []
+    exact_checks = {
         "request_tlps": expected_request_tlps,
         "completion_tlps": expected_completion_tlps,
         "expected_link_bytes": expected_link_bytes,
         "jct_ps": expected_jct_ps,
-        "outstanding_wait_ps": expected_outstanding_wait_ps,
-        "numa_attributed_ps": expected_numa_ps,
-        "iommu_attributed_ps": expected_iommu_ps,
     }
+    structural_expected_checks = {}
+    for field, expected in (
+        ("outstanding_wait_ps", expected_outstanding_wait_ps),
+        ("link_queue_wait_ps", expected_link_queue_wait_ps),
+        ("numa_attributed_ps", expected_numa_ps),
+        ("iommu_attributed_ps", expected_iommu_ps),
+    ):
+        destination = exact_checks if expected != 0 else structural_expected_checks
+        destination[field] = expected
     actual_link_bytes = int(measured["h2d_link_bytes"]) + int(measured["d2h_link_bytes"])
     actual = dict(measured)
     actual["expected_link_bytes"] = actual_link_bytes
-    for name, expected in checks.items():
+    for name, expected in exact_checks.items():
         if int(actual[name]) != expected:
-            failures.append(f"{name}={actual[name]} expected {expected}")
+            exact_failures.append(f"{name}={actual[name]} expected {expected}")
+    for name, expected in structural_expected_checks.items():
+        if int(actual[name]) != expected:
+            structural_failures.append(
+                f"{name}={actual[name]} expected {expected}"
+            )
     for prefix in ("h2d", "d2h"):
         payload = int(measured[f"{prefix}_payload_bytes"])
         overhead = int(measured[f"{prefix}_overhead_bytes"])
         link = int(measured[f"{prefix}_link_bytes"])
         if payload + overhead != link:
-            failures.append(f"{prefix} conservation={payload}+{overhead} != {link}")
+            structural_failures.append(
+                f"{prefix} conservation={payload}+{overhead} != {link}"
+            )
     requested_transactions = int(measured["requested_transactions"])
     accounted_transactions = int(measured["accounted_transactions"])
     if accounted_transactions != requested_transactions:
-        failures.append(
+        structural_failures.append(
             f"accounted_transactions={accounted_transactions} expected {requested_transactions}"
         )
     if int(measured["analytical_profile_version"]) != 1:
-        failures.append(
+        structural_failures.append(
             "analytical_profile_version="
             f"{measured['analytical_profile_version']} expected 1"
         )
     expected_useful = requested_transactions * int(measured["useful_bytes"])
     expected_transferred = requested_transactions * int(measured["bytes"])
     if int(measured["accounted_useful_bytes"]) != expected_useful:
-        failures.append(
+        structural_failures.append(
             "accounted_useful_bytes="
             f"{measured['accounted_useful_bytes']} expected {expected_useful}"
         )
     if int(measured["accounted_transferred_bytes"]) != expected_transferred:
-        failures.append(
+        structural_failures.append(
             "accounted_transferred_bytes="
             f"{measured['accounted_transferred_bytes']} "
             f"expected {expected_transferred}"
@@ -377,28 +460,36 @@ def _base_row(
             "overhead_bytes": expected_completion_tlps * int(measured["completion_overhead_bytes"]),
         }
     elif operation != "host_store":
-        failures.append(f"unsupported directional oracle operation {operation}")
+        structural_failures.append(
+            f"unsupported directional oracle operation {operation}"
+        )
     for prefix, expected_direction in directional.items():
         for field, expected in expected_direction.items():
             measured_field = int(measured[f"{prefix}_{field}"])
             if measured_field != expected:
-                failures.append(f"{prefix}_{field}={measured_field} expected {expected}")
+                structural_failures.append(
+                    f"{prefix}_{field}={measured_field} expected {expected}"
+                )
         expected_direction_link = (
             expected_direction["payload_bytes"] + expected_direction["overhead_bytes"]
         )
         measured_link = int(measured[f"{prefix}_link_bytes"])
         if measured_link != expected_direction_link:
-            failures.append(
+            structural_failures.append(
                 f"{prefix}_link_bytes={measured_link} expected {expected_direction_link}"
             )
     total_directional_tlps = int(measured["h2d_tlps"]) + int(measured["d2h_tlps"])
     expected_total_tlps = expected_request_tlps + expected_completion_tlps
     if total_directional_tlps != expected_total_tlps:
-        failures.append(f"directional_tlps={total_directional_tlps} expected {expected_total_tlps}")
+        structural_failures.append(
+            f"directional_tlps={total_directional_tlps} expected {expected_total_tlps}"
+        )
     expected_payload = 0 if operation == "host_store" else expected_transferred
     actual_payload = int(measured["h2d_payload_bytes"]) + int(measured["d2h_payload_bytes"])
     if actual_payload != expected_payload:
-        failures.append(f"directional payload={actual_payload} expected {expected_payload}")
+        structural_failures.append(
+            f"directional payload={actual_payload} expected {expected_payload}"
+        )
 
     expected_service_class = {
         "host_store": "doorbell_record",
@@ -406,19 +497,19 @@ def _base_row(
         "nonposted_read": "payload_read",
     }[operation]
     if measured["service_class"] != expected_service_class:
-        failures.append(
+        structural_failures.append(
             f"service_class={measured['service_class']} expected {expected_service_class}"
         )
     expected_samples = (
         requested_transactions if operation == "host_store" else expected_request_tlps
     )
     if int(measured["latency_samples"]) != expected_samples:
-        failures.append(
+        structural_failures.append(
             f"latency_samples={measured['latency_samples']} expected {expected_samples}"
         )
     expected_host_store_bytes = expected_transferred if operation == "host_store" else 0
     if int(measured["host_store_bytes"]) != expected_host_store_bytes:
-        failures.append(
+        structural_failures.append(
             f"host_store_bytes={measured['host_store_bytes']} expected {expected_host_store_bytes}"
         )
     service_expectations = {
@@ -440,11 +531,11 @@ def _base_row(
     }
     for field, expected in service_expectations.items():
         if int(measured[field]) != expected:
-            failures.append(f"{field}={measured[field]} expected {expected}")
+            structural_failures.append(
+                f"{field}={measured[field]} expected {expected}"
+            )
     path_fields = {
         "base_path_attributed_ps": expected_samples * int(measured["base_path_ps"]),
-        "numa_attributed_ps": expected_numa_ps,
-        "iommu_attributed_ps": expected_iommu_ps,
         "acs_attributed_ps": expected_samples * int(measured["acs_ps"]),
         "switch_attributed_ps": expected_samples * int(measured["switch_ps"]),
         "ddio_attributed_ps": expected_samples * int(measured["ddio_ps"]),
@@ -452,16 +543,35 @@ def _base_row(
     }
     for attributed_field, expected in path_fields.items():
         if int(measured[attributed_field]) != expected:
-            failures.append(f"{attributed_field}={measured[attributed_field]} expected {expected}")
+            structural_failures.append(
+                f"{attributed_field}={measured[attributed_field]} expected {expected}"
+            )
     if expected_numa_occurrences is None:
         expected_numa_occurrences = (
             expected_samples if int(measured["numa_mean_ps"]) != 0 else 0
         )
-    profile_expectations = {
+    numa_profile = str(measured["numa_profile"])
+    profile_exact_expectations = {}
+    profile_structural_expectations = {
         "numa_profile_draws": expected_samples,
-        "numa_profile_occurrences": expected_numa_occurrences,
-        "numa_profile_tail_draws": expected_numa_tail_draws,
     }
+    occurrence_destination = (
+        profile_structural_expectations
+        if numa_profile == "disabled"
+        else profile_exact_expectations
+    )
+    occurrence_destination["numa_profile_occurrences"] = (
+        expected_numa_occurrences
+    )
+    tail_destination = (
+        profile_exact_expectations
+        if numa_profile == "gaussian_tail_mixture"
+        else profile_structural_expectations
+    )
+    tail_destination["numa_profile_tail_draws"] = expected_numa_tail_draws
+    for field, expected in profile_exact_expectations.items():
+        if int(measured[field]) != expected:
+            exact_failures.append(f"{field}={measured[field]} expected {expected}")
     fixed_components = {
         "iommu": "iommu_ps",
         "acs": "acs_ps",
@@ -470,19 +580,23 @@ def _base_row(
         "gpu_direct": "gpu_direct_ps",
     }
     for component, configured_field in fixed_components.items():
-        profile_expectations[f"{component}_profile_draws"] = expected_samples
-        profile_expectations[f"{component}_profile_occurrences"] = (
+        profile_structural_expectations[
+            f"{component}_profile_draws"
+        ] = expected_samples
+        profile_structural_expectations[f"{component}_profile_occurrences"] = (
             expected_samples if int(measured[configured_field]) != 0 else 0
         )
-        profile_expectations[f"{component}_profile_tail_draws"] = 0
-    for field, expected in profile_expectations.items():
+        profile_structural_expectations[f"{component}_profile_tail_draws"] = 0
+    for field, expected in profile_structural_expectations.items():
         if int(measured[field]) != expected:
-            failures.append(f"{field}={measured[field]} expected {expected}")
+            structural_failures.append(
+                f"{field}={measured[field]} expected {expected}"
+            )
     if (
         expected_minimum_completion_ps is not None
         and int(measured["minimum_completion_ps"]) != expected_minimum_completion_ps
     ):
-        failures.append(
+        exact_failures.append(
             "minimum_completion_ps="
             f"{measured['minimum_completion_ps']} expected "
             f"{expected_minimum_completion_ps}"
@@ -493,7 +607,9 @@ def _base_row(
         "credit_wait_ps",
     ):
         if int(measured[zero_wait]) != 0:
-            failures.append(f"{zero_wait}={measured[zero_wait]} expected 0")
+            structural_failures.append(
+                f"{zero_wait}={measured[zero_wait]} expected 0"
+            )
     return {
         "sweep": sweep,
         **measured,
@@ -502,6 +618,7 @@ def _base_row(
         "expected_link_bytes": expected_link_bytes,
         "expected_jct_ps": expected_jct_ps,
         "expected_outstanding_wait_ps": expected_outstanding_wait_ps,
+        "expected_link_queue_wait_ps": expected_link_queue_wait_ps,
         "expected_numa_ps": expected_numa_ps,
         "expected_iommu_ps": expected_iommu_ps,
         "expected_numa_occurrences": expected_numa_occurrences,
@@ -509,7 +626,10 @@ def _base_row(
         "expected_minimum_completion_ps": (
             "" if expected_minimum_completion_ps is None else expected_minimum_completion_ps
         ),
-        "check": "PASS" if not failures else "; ".join(failures),
+        "structural_check": (
+            "PASS" if not structural_failures else "; ".join(structural_failures)
+        ),
+        "check": "PASS" if not exact_failures else "; ".join(exact_failures),
     }
 
 
@@ -527,6 +647,9 @@ def _sweep_bytes(probe: Path) -> list[dict[str, int | str]]:
             )
             requests, completions = _aligned_read_counts(512, mps, mrrs)
             expected_bytes = requests * 24 + 512 + completions * 20
+            expected_jct, _, expected_link_queue_wait = _read_oracle(
+                1, 512, mps, mrrs, 64, 0
+            )
             rows.append(
                 _base_row(
                     "mps_mrrs_bytes",
@@ -534,7 +657,8 @@ def _sweep_bytes(probe: Path) -> list[dict[str, int | str]]:
                     requests,
                     completions,
                     expected_bytes,
-                    _read_oracle(1, 512, mps, mrrs, 64, 0)[0],
+                    expected_jct,
+                    expected_link_queue_wait_ps=expected_link_queue_wait,
                 )
             )
     return rows
@@ -556,6 +680,9 @@ def _sweep_link(probe: Path) -> list[dict[str, int | str]]:
                 )
                 tlps = 4096 // mps
                 link_bytes = 4096 + tlps * 24
+                expected_jct, expected_link_queue_wait = _posted_oracle(
+                    1, 4096, mps, generation, lanes
+                )
                 rows.append(
                     _base_row(
                         "generation_width_mps",
@@ -563,7 +690,8 @@ def _sweep_link(probe: Path) -> list[dict[str, int | str]]:
                         tlps,
                         0,
                         link_bytes,
-                        _serialization_ps(link_bytes, generation, lanes),
+                        expected_jct,
+                        expected_link_queue_wait_ps=expected_link_queue_wait,
                     )
                 )
     return rows
@@ -584,7 +712,9 @@ def _sweep_read_window(probe: Path) -> list[dict[str, int | str]]:
                 outstanding_reads=slots,
                 read_completion_ps=1_000_000,
             )
-            expected_jct, expected_wait = _read_oracle(16, 512, mps, 512, slots, 1_000_000)
+            expected_jct, expected_wait, expected_link_queue_wait = _read_oracle(
+                16, 512, mps, 512, slots, 1_000_000
+            )
             completion_tlps = 16 * (512 // mps)
             link_bytes = 16 * 24 + 16 * 512 + completion_tlps * 20
             rows.append(
@@ -595,7 +725,8 @@ def _sweep_read_window(probe: Path) -> list[dict[str, int | str]]:
                     completion_tlps,
                     link_bytes,
                     expected_jct,
-                    expected_wait,
+                    expected_outstanding_wait_ps=expected_wait,
+                    expected_link_queue_wait_ps=expected_link_queue_wait,
                 )
             )
     return rows
@@ -619,7 +750,9 @@ def _sweep_path(probe: Path) -> list[dict[str, int | str]]:
             numa_mean_ps=numa_ps,
             iommu_ps=iommu_ps,
         )
-        local_serialization = _read_oracle(1, 512, 512, 512, 64, 0)[0]
+        local_serialization, _, expected_link_queue_wait = _read_oracle(
+            1, 512, 512, 512, 64, 0
+        )
         rows.append(
             _base_row(
                 "path_attribution",
@@ -628,6 +761,7 @@ def _sweep_path(probe: Path) -> list[dict[str, int | str]]:
                 1,
                 556,
                 local_serialization + numa_ps + iommu_ps,
+                expected_link_queue_wait_ps=expected_link_queue_wait,
                 expected_numa_ps=numa_ps,
                 expected_iommu_ps=iommu_ps,
             )
@@ -737,8 +871,24 @@ def _sweep_analytical_profiles(probe: Path) -> list[dict[str, int | str]]:
     return rows
 
 
-def _cross_checks(rows: list[dict[str, int | str]]) -> tuple[int, list[str]]:
+def _cross_checks(
+    rows: list[dict[str, int | str]],
+) -> tuple[int, int, set[str], list[str]]:
+    observed_families: set[str] = set()
+    failed_families: set[str] = set()
     failures = []
+    predicate_instances = 0
+
+    def record(family: str, passed: bool, failure: str) -> None:
+        nonlocal predicate_instances
+        if family not in RELATION_FAMILIES:
+            raise RuntimeError(f"unknown behavioral relation family {family}")
+        observed_families.add(family)
+        predicate_instances += 1
+        if not passed:
+            failed_families.add(family)
+            failures.append(failure)
+
     link_rows = [row for row in rows if row["sweep"] == "generation_width_mps"]
     for mps in (128, 256, 512):
         lookup = {
@@ -746,13 +896,20 @@ def _cross_checks(rows: list[dict[str, int | str]]) -> tuple[int, list[str]]:
             for row in link_rows
             if int(row["mps"]) == mps
         }
-        if lookup[(5, 8)] != lookup[(4, 16)]:
-            failures.append(f"MPS {mps}: Gen5 x8 != Gen4 x16")
-        if lookup[(5, 8)] not in {
-            2 * lookup[(5, 16)],
-            2 * lookup[(5, 16)] - 1,
-        }:
-            failures.append(f"MPS {mps}: x8 does not scale as 2x x16")
+        record(
+            "generation_equivalence",
+            lookup[(5, 8)] == lookup[(4, 16)],
+            f"MPS {mps}: Gen5 x8 != Gen4 x16",
+        )
+        record(
+            "lane_scaling",
+            lookup[(5, 8)]
+            in {
+                2 * lookup[(5, 16)],
+                2 * lookup[(5, 16)] - 1,
+            },
+            f"MPS {mps}: x8 does not scale as 2x x16",
+        )
 
     window_rows = [row for row in rows if row["sweep"] == "read_window"]
     for mps in (128, 512):
@@ -761,16 +918,22 @@ def _cross_checks(rows: list[dict[str, int | str]]) -> tuple[int, list[str]]:
             for row in window_rows
             if int(row["mps"]) == mps
         }
-        if jct[4] >= jct[1]:
-            failures.append(f"MPS {mps}: four read slots did not reduce JCT")
+        record(
+            "read_window_improvement",
+            jct[4] < jct[1],
+            f"MPS {mps}: four read slots did not reduce JCT",
+        )
     for slots in (1, 4):
         jct = {
             int(row["mps"]): int(row["jct_ps"])
             for row in window_rows
             if int(row["outstanding_reads"]) == slots
         }
-        if jct[512] > jct[128]:
-            failures.append(f"read slots {slots}: MPS 512 is slower than MPS 128")
+        record(
+            "mps_ordering",
+            jct[512] <= jct[128],
+            f"read slots {slots}: MPS 512 is slower than MPS 128",
+        )
 
     profile_rows = {
         str(row["sweep"]): row
@@ -780,33 +943,65 @@ def _cross_checks(rows: list[dict[str, int | str]]) -> tuple[int, list[str]]:
     narrow = profile_rows["analytical_profile_gaussian_narrow"]
     wide = profile_rows["analytical_profile_gaussian_wide"]
     for name, row in (("narrow", narrow), ("wide", wide)):
-        if not (
+        record(
+            "gaussian_mean_straddling",
             int(row["minimum_completion_ps"]) < 100_000
-            and int(row["jct_ps"]) > 100_000
-        ):
-            failures.append(f"{name} Gaussian did not span both sides of its mean")
+            and int(row["jct_ps"]) > 100_000,
+            f"{name} Gaussian did not span both sides of its mean",
+        )
     narrow_range = int(narrow["jct_ps"]) - int(narrow["minimum_completion_ps"])
     wide_range = int(wide["jct_ps"]) - int(wide["minimum_completion_ps"])
-    if wide_range <= narrow_range:
-        failures.append("wider Gaussian sigma did not increase the observed range")
+    record(
+        "sigma_range_widening",
+        wide_range > narrow_range,
+        "wider Gaussian sigma did not increase the observed range",
+    )
     rare = profile_rows["analytical_profile_tail_rare"]
     frequent = profile_rows["analytical_profile_tail_frequent"]
     for name, row in (("rare", rare), ("frequent", frequent)):
-        if int(row["numa_profile_tail_draws"]) == 0:
-            failures.append(f"{name} tail mixture selected no tail samples")
-    if int(frequent["numa_profile_tail_draws"]) <= int(
-        rare["numa_profile_tail_draws"]
-    ):
-        failures.append("higher tail probability did not increase tail selections")
-    if int(frequent["numa_attributed_ps"]) <= int(rare["numa_attributed_ps"]):
-        failures.append("higher tail probability did not increase aggregate delay")
+        record(
+            "tail_selection",
+            int(row["numa_profile_tail_draws"]) > 0,
+            f"{name} tail mixture selected no tail samples",
+        )
+    record(
+        "tail_count_monotonicity",
+        int(frequent["numa_profile_tail_draws"])
+        > int(rare["numa_profile_tail_draws"]),
+        "higher tail probability did not increase tail selections",
+    )
+    record(
+        "aggregate_delay_monotonicity",
+        int(frequent["numa_attributed_ps"]) > int(rare["numa_attributed_ps"]),
+        "higher tail probability did not increase aggregate delay",
+    )
     intermittent = profile_rows["analytical_profile_intermittent"]
-    if not (
+    record(
+        "intermittent_incidence",
         int(intermittent["numa_profile_occurrences"]) < 4096
-        and int(intermittent["minimum_completion_ps"]) == 0
-    ):
-        failures.append("intermittent incidence did not produce absent penalties")
-    return 18, failures
+        and int(intermittent["minimum_completion_ps"]) == 0,
+        "intermittent incidence did not produce absent penalties",
+    )
+
+    if observed_families != RELATION_FAMILIES:
+        missing = sorted(RELATION_FAMILIES - observed_families)
+        raise RuntimeError(f"behavioral relation families not exercised: {missing}")
+    if len(observed_families) != EXPECTED_RELATION_FAMILIES:
+        raise RuntimeError(
+            f"observed {len(observed_families)} behavioral relation families, "
+            f"expected {EXPECTED_RELATION_FAMILIES}"
+        )
+    if predicate_instances != EXPECTED_PREDICATE_INSTANCES:
+        raise RuntimeError(
+            f"observed {predicate_instances} behavioral predicate instances, "
+            f"expected {EXPECTED_PREDICATE_INSTANCES}"
+        )
+    return (
+        len(observed_families),
+        predicate_instances,
+        failed_families,
+        failures,
+    )
 
 
 def _render_csv(rows: list[dict[str, int | str]]) -> bytes:
@@ -840,22 +1035,67 @@ def main() -> None:
         + _sweep_path(probe)
         + _sweep_analytical_profiles(probe)
     )
-    failed = [row for row in rows if row["check"] != "PASS"]
-    cross_total, cross_failures = _cross_checks(rows)
+    if len(rows) != EXPECTED_RUN_ROWS:
+        raise RuntimeError(
+            f"observed {len(rows)} run rows, expected {EXPECTED_RUN_ROWS}"
+        )
+    failed_exact_rows = [row for row in rows if row["check"] != "PASS"]
+    failed_structural_rows = [
+        row for row in rows if row["structural_check"] != "PASS"
+    ]
+    (
+        relation_family_total,
+        predicate_instance_total,
+        failed_relation_families,
+        relation_failures,
+    ) = _cross_checks(rows)
     rendered = _render_csv(rows)
+    tracked_results_failure = None
     if arguments.check:
         if not RESULTS.is_file() or RESULTS.read_bytes() != rendered:
-            raise SystemExit(f"measured RNIC PCIe rows differ from tracked {RESULTS}")
-        print(f"tracked results match {len(rows)} measured rows")
+            tracked_results_failure = (
+                f"measured RNIC PCIe rows differ from tracked {RESULTS}"
+            )
+        else:
+            print(f"tracked results match {len(rows)} measured rows")
     else:
         RESULTS.write_bytes(rendered)
         print(f"wrote {len(rows)} rows to {RESULTS}")
-    print(f"row checks: {len(rows) - len(failed)}/{len(rows)} PASS")
-    print(f"cross checks: {cross_total - len(cross_failures)}/{cross_total} PASS")
-    if failed or cross_failures:
-        for row in failed:
-            print(row["check"])
-        for failure in cross_failures:
+    print(f"run rows: {len(rows)}")
+    print(
+        "exact-oracle rows: "
+        f"{len(rows) - len(failed_exact_rows)}/{len(rows)} PASS"
+    )
+    print(
+        "behavioral relation families: "
+        f"{relation_family_total - len(failed_relation_families)}/"
+        f"{relation_family_total} PASS"
+    )
+    print(
+        "behavioral predicate instances: "
+        f"{predicate_instance_total - len(relation_failures)}/"
+        f"{predicate_instance_total} PASS"
+    )
+    structural_status = "PASS" if not failed_structural_rows else "FAIL"
+    print(f"structural invariants: {structural_status}, unscored")
+    print(
+        f"directed requirements: {DIRECTED_REQUIREMENT_FAMILIES} families "
+        f"through {DIRECTED_TEST_EXECUTABLES}/{DIRECTED_TEST_EXECUTABLES} "
+        "CTest executables"
+    )
+    if (
+        tracked_results_failure is not None
+        or failed_exact_rows
+        or failed_structural_rows
+        or relation_failures
+    ):
+        if tracked_results_failure is not None:
+            print(tracked_results_failure)
+        for row in failed_exact_rows:
+            print(f"{row['sweep']} exact oracle: {row['check']}")
+        for row in failed_structural_rows:
+            print(f"{row['sweep']} structural: {row['structural_check']}")
+        for failure in relation_failures:
             print(failure)
         raise SystemExit(1)
 

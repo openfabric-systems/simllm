@@ -1,4 +1,4 @@
-"""Build and run the pre-registered native RNIC WQ v1 sweeps."""
+"""Build and run the deterministic native RNIC WQ v1 regression sweeps."""
 
 from __future__ import annotations
 
