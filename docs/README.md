@@ -16,7 +16,7 @@ status and open tasks; nothing here overrides them.
 | Developer map | this file | Process, fidelity order, module status, study index |
 | Full design | [architecture.md](architecture.md) | Components, vLLM/SGLang integration seams, manifest schemas, execution/resource boundary, GOAL trace format, coupling modes, metrics |
 | Module truth | [modules/*.md](modules/) | Per-module design, current status, numbered open tasks |
-| Calibration sources | [papers/](papers/) | Measurement anchors distilled from the literature (e.g. [msg-size-vs-bandwidth.md](papers/msg-size-vs-bandwidth.md)) |
+| Calibration sources | [papers/](papers/) | Literature anchors and evidence plans, including [message-size parameters](papers/msg-size-vs-bandwidth.md) and the [RNIC hardware/CX-7 boundary campaign](papers/rnic-hardware-calibration.md) |
 | Studies | [../examples/](../examples/) | Pre-registered expectations, run scripts, audited results, plots |
 
 ## Development process
@@ -103,8 +103,9 @@ linked task IDs own the detail.
    couple to resource contention.
 4. **Resource queues and data movement.** The first coarse
    `DeviceRuntime`: launch and stream queues, GPU/HBM, copy engines and
-   DMA, NCCL channels, per-GPU WQE queues, the shared NIC, completion
-   and control queues: [CORE-4](modules/core.md#open-tasks).
+   DMA, NCCL channels, per-GPU WQE queues, GPU-affine RNICs, completion
+   and control queues: [CORE-4](modules/core.md#open-tasks). Structural
+   RNIC service then lands under BACK-8 through BACK-12.
 5. **Dependency-driven overlap.** Replace the serial step chain only
    after KV and resource queues exist; framework lowering declares
    dependencies, runtime arbitration determines realized overlap:
@@ -127,7 +128,7 @@ One line per module; the linked doc is the source of truth.
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | PLACE-1/2/3 |
 | [traffic](modules/traffic.md) | Implemented: collective patterns, TP step mapping, MoE all-to-all, GOAL renderers for steps and execution graphs | TRAF-2/3/4/5/6/7/8/9/10 |
 | [goal](modules/goal.md) | Implemented: GOAL trace + txt2bin helper | none |
-| [backends](modules/backends.md) | Implemented: htsim_rnic/dcqcn/uec invocation, completion + WQE CSV parsing, FCT normalization, step sink, step lowerer | BACK-2/5/6/7; backend-repo HTSIM-1/2/4/5/6/7/8, ATLAHS-1 |
+| [backends](modules/backends.md) | Implemented: htsim invocation/parsing plus the first native C++ RNIC SQ/CQ and network-port slice; htsim composition remains open | BACK-2/5-15; backend-repo HTSIM-1/2/4-9, ATLAHS-1 |
 | [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop | VLLM-3 through VLLM-12 |
 | [adapters-sglang](modules/adapters-sglang.md) | Implemented: SimTpModelWorker via plugin entry point at pinned commit, live CPU-engine smoke | SGL-3 through SGL-10 |
 
@@ -145,8 +146,9 @@ script, and an audited `RESULTS.md`. Reproduce with
 | [breakdown](../examples/breakdown/RESULTS.md) | Per-request compute/memory/network decomposition, expected vs actual, TP {2,4,8} x {100G,400G} | 21/22 pass; network share 52% (TP=2) to 89% (TP=8) at 400G, 96% at 100G |
 | [cn_ladder](../examples/cn_ladder/RESULTS.md) | `rnic-cn` acceptance: incast ladder and mixed all-to-all against the ideal baselines and DCQCN | 46/49 ladder cells within the 20% target; lossy a2a16: DCQCN median 1.52 but p99 1902x vs rnic-cn median 2.06, p99 19.3x, lossless |
 | [dcqcn_vs_cn](../examples/dcqcn_vs_cn/RESULTS.md) | Mechanism-level scenarios: incast above/below buffer, ECMP collisions, cross-node TP ring | 18/20 checked rows pass; DCQCN collapses 2 to 3 orders of magnitude past the buffer, wins the buffer-absorbed cell (1.07 vs 1.68) and the path-disjoint ring |
-| [dcqcn_micro](../examples/dcqcn_micro/RESULTS.md) | NIC micro-behavior calibration: message-size law, incast fair share, join/exit convergence, repeated-WQE streams | Jain fairness 0.993 to 1.000; model undershoots real-NIC anchors at 64 to 256 KB (no per-WQE host cost yet), the registered HTSIM-5 calibration target; contended repeated-WQE collapse reproduced to the derived digit |
+| [dcqcn_micro](../examples/dcqcn_micro/RESULTS.md) | NIC micro-behavior calibration: message-size law, incast fair share, join/exit convergence, repeated-WQE streams | Jain fairness 0.993 to 1.000; the timing-neutral WQ undershoots real-NIC anchors at 64 to 256 KB, now the BACK-9/10 hardware target; persistent post-CNP rate state remains HTSIM-5; contended repeated-WQE collapse is reproduced to the derived digit |
 | [core2_lowering](../examples/core2_lowering/RESULTS.md) | Execution lowering, graph-only JSON replay and WQE bookkeeping | Legacy sink, graph replay and frozen closed form agree to 0 ps on all five rows (including the MoE sentinel); flow and WQE ledgers field-identical; backend WQE layer timing-neutral (344/344 backend tests) |
+| [rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md) | Native RNIC SQ/CQ structure, doorbell batching, signaling and network-credit backpressure | 11/11 cells exact; controlled SQ-full, drop and CQ-overrun boundaries pass in the native harness |
 | [gpu_service_model](../examples/gpu_service_model/RESULTS.md) | Isolated CTA/SM/warp scheduling, occupancy, HBM and direction-specific copy service, plus strict capture/replay artifacts | 22/22 frozen structural cells exact to zero cycles; A100/H100 timing remains an explicitly uncertain, unvalidated bootstrap |
 
 ## Milestones
@@ -180,7 +182,7 @@ script, and an audited `RESULTS.md`. Reproduce with
   the persistent co-simulator (BRIDGE-1), KV lifecycle and the resource
   runtime (CORE-3 through CORE-5), calibration against real captures.
   General fabric manifests (PLACE-1/2) stay deferred behind the fixed
-  eight-GPU, one-NIC node profile.
+  eight-GPU profile with one 400G RNIC per GPU.
 - **M5 (in progress).** All-to-all traffic studies (MoE expert
   parallelism) landed ([m5](../examples/m5/RESULTS.md)). The trace-driven
   isolated-kernel and copy-service mechanisms plus A100/H100 bootstrap

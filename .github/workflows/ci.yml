@@ -22,3 +22,24 @@ jobs:
         run: ruff check .
       - name: Test
         run: pytest -q
+
+  native-rnic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure RNIC model
+        run: >-
+          cmake -S simllm/backends/rnic -B build/rnic
+          -DCMAKE_BUILD_TYPE=Debug
+          -DSIMLLM_RNIC_BUILD_TESTS=ON
+          -DSIMLLM_RNIC_BUILD_TOOLS=ON
+          -DSIMLLM_RNIC_WARNINGS_AS_ERRORS=ON
+      - name: Build RNIC model
+        run: cmake --build build/rnic --parallel
+      - name: Test RNIC model
+        run: ctest --test-dir build/rnic --output-on-failure
+      - name: Validate RNIC release sweep
+        run: >-
+          python examples/rnic_wq_v1/run_rnic_wq_v1.py
+          --check
+          --build-dir build/rnic_wq_v1_ci
