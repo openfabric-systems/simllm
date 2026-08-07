@@ -340,7 +340,13 @@ The native harness must additionally prove:
     wait, as do host-store rows in sweep E. Every read-window row matches an
     independent external-contention oracle. Directed multi-MWr, multi-MRd and
     multi-CplD cases prove that adding fragments to one uncontended transaction
-    cannot create the triangular `N * (N - 1) / 2` overcount.
+    cannot create the triangular `N * (N - 1) / 2` overcount. Legal waiting
+    behind a future completion remains external link queueing. With MPS = MRRS
+    = 128 and 10,000 ps response latency, H2D MRd(128) reserves its D2H CplD
+    from 10,381 to 12,730 ps. A later D2H MWr(1,024) emits four TLPs before that
+    interval and four after it, completes at 22,379 ps and attributes exactly
+    3,081 ps of link queue. It is not rejected because completion ordering is
+    outside the mandatory posted-over-non-posted exception.
 14. A ready posted request can fill a serializer gap before a resource-blocked
     non-posted request. The directed Gen5 x16 case uses MPS = MRRS = 128, one
     outstanding read, a 128-byte completion buffer, 1,000,000 ps response
