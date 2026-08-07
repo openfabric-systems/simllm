@@ -362,3 +362,11 @@ The native harness must additionally prove:
     which makes it ready during B's request reservation. P1 therefore starts
     at 1,003,556 ps, completes at 1,004,001 ps and charges 937 ps of link queue:
     826 ps before the credit stall plus 111 ps after credit availability.
+    Arbitration must also apply the ready qualifier after credit availability,
+    not at transaction eligibility. In a companion case with zero response
+    latency, 3,500 ps credit return and P1 = MWr(128), the initial 826 to 3,175
+    ps gap is too short for P1's TLP, but its credit does not return until 3,945
+    ps, after B's request ends at 3,556 ps. P1 must therefore succeed from
+    3,945 to 6,358 ps, attributing 826 ps of link queue and 3,119 ps of credit
+    wait; it must not be rejected based on the gap seen before its credit is
+    available.
