@@ -1,9 +1,18 @@
 # RNIC PCIe v1 expectations
 
-Sweeps A through D and directed checks 1 through 10 were frozen before the
-first native PCIe-model run on 2026-08-07. Sweep E and directed checks 11 and
-12 were frozen as an analytical-profile addendum before its first run later
-that day.
+Sweeps A through D and directed requirements 1 through 10 first entered public
+history together with their results in commit `447a962`. Sweep E and
+requirements 11 and 12 first entered public history together with their
+implementation and results in commit `09030c9`. No earlier public commit
+contains either expectation tranche alone. This document is therefore a
+frozen regression specification from those landing commits onward; it does
+not claim publicly auditable preregistration.
+
+The ordering, link-queue accounting and evidence-class corrections below are
+committed as an expectations-only child of `09030c9`, before their corrective
+implementation, tests or regenerated results. That parent-child order is the
+public freeze audit trail for the correction. Future study extensions must use
+the same expectations-only commit boundary before implementation or execution.
 
 ## Scope and evidence boundary
 
@@ -52,8 +61,16 @@ read-response profile. Path penalties are sampled separately: once for a host
 store, once for each posted-write fragment and once for each memory-read
 fragment. A read's sampled path delay applies to request-to-response
 availability, not to each CplD. TLP reservations are FIFO in transaction
-scheduling order on one serializer per direction. Chronological cross-class
-arbitration and PCIe Relaxed Ordering remain precision work.
+scheduling order on one serializer per direction. Within a visibility domain,
+posted publication and non-posted completion use separate dependency horizons:
+a later posted request cannot inherit the completion wait of an earlier
+non-posted request. This implements the mandatory posted-over-blocked-
+non-posted dependency rule. The serializer also lets a ready posted TLP fill an
+idle gap before an already scheduled, resource-blocked non-posted request. If
+correct arbitration would have to displace a result already returned by the
+eager v1 API, the model must fail transactionally instead of reporting an
+illegal order. Fully deferred cross-class arbitration, Relaxed Ordering,
+ID-based ordering, Traffic Classes and Virtual Channels remain precision work.
 
 The analytical sampler is counter based and uses only specified unsigned
 integer operations. A fabric seed, path ID, component ID and component-local
@@ -95,6 +112,54 @@ serializer retains its rational cursor, so a stream is rounded once rather
 than once per TLP. Modeled-link bytes include configured TLP/DLL/framing
 overhead only. DLLPs, UpdateFC packets, replay, SKP, FEC and other lower-layer
 traffic remain explicit future events, so these are not raw physical-wire byte
+counts.
+
+`link_queue_ps` measures contention from previously scheduled transactions,
+not serialization by earlier TLPs of the same transaction. Let `R[k]` be a
+fragment's root readiness, `P[k]` the end of the preceding same-direction TLP
+in this public transaction, `E[k] = max(R[k], P[k])` its accounting
+eligibility, and `L[k]` the directional link cursor. The link-ready time before
+any separately accounted credit or finite-resource stall is
+`I[k] = max(R[k], L[k])`. The transaction accumulates `I[k] - E[k]` and then
+updates `P` from the actual reservation end:
+
+```text
+Q_link          = sum over fragments (I[k] - E[k])
+R_request[k]    = transaction eligibility
+E_request[k]    = max(R_request[k], preceding request end)
+R_cpld[k]       = response_ready for the parent MRd
+E_cpld[k]       = max(R_cpld[k], preceding CplD end in this transaction)
+```
+
+The completion chain spans all MRd fragments belonging to one logical read.
+Root readiness, rather than the integer accounting eligibility, continues to
+drive the rational serializer reservation so that one continuous stream is
+rounded only once.
+Therefore a single uncontended transaction has zero link-queue wait regardless
+of its MPS, MRRS or CplD count. A later transaction submitted against an
+occupied serializer charges its external wait once, on the first affected
+fragment. Credit, outstanding-read and completion-buffer stalls retain their
+own ledgers and are not relabeled as link queueing.
+
+## Evidence accounting
+
+The study reports evidence classes separately. Counts from different classes
+are never added into one headline denominator.
+
+| Cohort | Run rows | Exact-oracle rows | Relation families | Predicate instances |
+|---|---:|---:|---:|---:|
+| A through D | 29 | 29 | 4 | 10 |
+| E | 6 | 6 | 6 | 8 |
+| Total | 35 | 35 | 10 | 18 |
+
+The ten behavioral relation families are generation equivalence, lane scaling,
+read-window improvement, MPS ordering, Gaussian mean straddling, sigma-range
+widening, tail selection, tail-count monotonicity, aggregate-delay
+monotonicity and intermittent incidence. Conservation identities,
+operation-inactive fields, disabled-profile fields, configured zero penalties
+and uncontended waits are fatal structural invariants, but are unscored and do
+not increase a behavioral denominator. The directed native requirements and
+the three CTest executables are reported separately from both row and relation
 counts.
 
 ## Sweep A: MPS and MRRS byte conservation
@@ -156,7 +221,7 @@ local, remote NUMA, IOMMU and remote plus IOMMU. Configure a 100,000 ps NUMA
 penalty and a 200,000 ps IOMMU penalty, with MPS = MRRS = 512, zero read
 response latency and all other path penalties zero.
 
-Pre-registered exact expectations:
+Fixed regression expectations:
 
 | Path | NUMA attribution (ps) | IOMMU attribution (ps) | JCT delta (ps) |
 |---|---:|---:|---:|
@@ -173,7 +238,7 @@ remote or translated path may outperform its otherwise identical local path.
 Issue 4,096 independent 8-byte host stores at time zero. Host stores isolate
 the sampled path distribution from PCIe serializer arbitration. Apply the
 profile only to the NUMA component and keep fixed service and other path delay
-at zero. Sweep these pre-registered profiles:
+at zero. Sweep these fixed regression profiles:
 
 | Profile | Incidence | Body mean | Body sigma | Tail probability | Tail mean | Tail sigma |
 |---|---:|---:|---:|---:|---:|---:|
@@ -213,10 +278,15 @@ The native harness must additionally prove:
 5. A completion buffer reserves one MRd fragment's DWORD-padded response span
    until its final CplD, and an undersized buffer is rejected instead of
    deadlocking.
-6. Visibility-dependency domains preserve simulator publication dependencies;
-   they are not a claim of full PCIe RO/IDO/TC/VC ordering. Domain zero is the
-   generic global conservative domain. Marking an unrelated transaction
-   independent never removes an explicit WQ publication dependency.
+6. Visibility-dependency domains preserve simulator publication dependencies
+   without violating PCIe forward progress. Host stores and posted writes
+   advance the posted-publication horizon. A non-posted read waits for that
+   horizon and advances a separate non-posted-completion horizon. A later
+   posted write never waits for the non-posted horizon, has zero ordering wait
+   in the directed long-read case and completes before that read's delayed
+   completion. Posted-to-posted and non-posted-to-non-posted order remains
+   conservative. Domain zero is the generic global domain; independent work
+   bypasses both horizons.
 7. Invalid versions, paths, generation/width, MPS/MRRS/RCB, sizes and address
    overflow fail before transaction IDs, counters, credits or time mutate.
    Per-class and cross-class aggregate overflow obey the same rule.
@@ -237,3 +307,20 @@ The native harness must additionally prove:
 12. Per-component profile evaluations, occurrences and tail selections sum
     exactly from transactions into class and global ledgers. A failed,
     discarded or stale plan consumes no shared analytical sample.
+13. `link_queue_ps` follows the fragment-eligibility recurrence above. The
+    single-transaction rows in sweeps A, B and D have exactly zero link-queue
+    wait, as do host-store rows in sweep E. Every read-window row matches an
+    independent external-contention oracle. Directed multi-MWr, multi-MRd and
+    multi-CplD cases prove that adding fragments to one uncontended transaction
+    cannot create the triangular `N * (N - 1) / 2` overcount.
+14. A ready posted request can fill a serializer gap before a resource-blocked
+    non-posted request. The directed Gen5 x16 case uses MPS = MRRS = 128, one
+    outstanding read, a 128-byte completion buffer, 1,000,000 ps response
+    latency and ample credits. Independent D2H transactions A = MRd(128),
+    B = MRd(128) and P = MWr(4) are submitted at time zero in that call order.
+    A's request ends at 381 ps and A completes at 1,002,730 ps. B cannot issue
+    before 1,002,730 ps. P starts at 381 ps, completes at 826 ps, attributes
+    381 ps of external link queueing and completes before B starts. A posted
+    request too large for such a pre-reserved gap must raise an asserted model
+    error before IDs, reservations, counters or time commit; it must never be
+    silently serialized behind the blocked non-posted request.
