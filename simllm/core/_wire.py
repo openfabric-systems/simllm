@@ -65,21 +65,41 @@ def _optional_string(value: Any, path: str) -> str | None:
     return _string(value, path)
 
 
-def _integer(value: Any, path: str, *, nonnegative: bool = False) -> int:
+def _integer(
+    value: Any,
+    path: str,
+    *,
+    nonnegative: bool = False,
+    minimum: int | None = None,
+) -> int:
     if type(value) is not int:
         _fail(path, "expected an integer")
     if nonnegative and value < 0:
         _fail(path, "must be nonnegative")
+    if minimum is not None and value < minimum:
+        _fail(path, f"must be at least {minimum}")
     return value
 
 
-def _optional_integer(value: Any, path: str, *, nonnegative: bool = False) -> int | None:
+def _optional_integer(
+    value: Any,
+    path: str,
+    *,
+    nonnegative: bool = False,
+    minimum: int | None = None,
+) -> int | None:
     if value is None:
         return None
-    return _integer(value, path, nonnegative=nonnegative)
+    return _integer(value, path, nonnegative=nonnegative, minimum=minimum)
 
 
-def _number(value: Any, path: str, *, nonnegative: bool = False) -> float:
+def _number(
+    value: Any,
+    path: str,
+    *,
+    nonnegative: bool = False,
+    minimum: float | None = None,
+) -> float:
     if type(value) not in (int, float):
         _fail(path, "expected a finite number")
     try:
@@ -90,13 +110,27 @@ def _number(value: Any, path: str, *, nonnegative: bool = False) -> float:
         _fail(path, "must be finite")
     if nonnegative and result < 0:
         _fail(path, "must be nonnegative")
+    if minimum is not None and result < minimum:
+        _fail(path, f"must be at least {minimum}")
     return result
 
 
-def _optional_number(value: Any, path: str, *, nonnegative: bool = False) -> float | None:
+def _optional_number(
+    value: Any,
+    path: str,
+    *,
+    nonnegative: bool = False,
+    minimum: float | None = None,
+) -> float | None:
     if value is None:
         return None
-    return _number(value, path, nonnegative=nonnegative)
+    return _number(value, path, nonnegative=nonnegative, minimum=minimum)
+
+
+def _boolean(value: Any, path: str) -> bool:
+    if type(value) is not bool:
+        _fail(path, "expected a boolean")
+    return value
 
 
 def _enum_value(cls: type[_EnumT], value: Any, path: str) -> _EnumT:

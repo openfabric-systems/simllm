@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the pre-registered GPU service-model structural sweeps."""
+"""Render the post-specified GPU service-model structural sweeps."""
 
 from __future__ import annotations
 
@@ -63,9 +63,10 @@ def main() -> None:
             axis.set_xscale("log", base=2)
         axis.legend(title=legend_title, frameon=False)
 
+    max_residual = max(abs(int(row["residual"])) for row in rows)
     fig.suptitle(
-        "GPU service model: replay (colored) vs frozen prediction (black dashed), "
-        "max |residual| = 0"
+        "GPU service model: replay (colored) vs closed form (black dashed), "
+        f"max |residual| = {max_residual}"
     )
     PLOTS.mkdir(exist_ok=True)
     fig.savefig(PLOTS / "gpu_service_structural_checks.png", dpi=180)

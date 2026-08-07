@@ -1,9 +1,11 @@
-# GPU service model: pre-registered expectations
+# GPU service model: post-specified regression expectations
 
-Written and frozen on 2026-08-06 before implementation and before the first
-model run. The exact checks use a synthetic 1 GHz GPU, so one cycle is exactly
-1,000 ps. Kernel launch overhead is zero. These checks validate mechanisms,
-not A100/H100 timing accuracy.
+This file, the initial implementation, the runner and the first results were
+added together in commit `12bfe8b` on 2026-08-06. There is no earlier public
+expectations-only ancestor, so these checks are post-specified regression
+expectations, not preregistration. They use a synthetic 1 GHz GPU, so one cycle
+is exactly 1,000 ps. Kernel launch overhead is zero. These checks validate
+mechanisms, not A100/H100 timing accuracy.
 
 ## Boundary under test
 

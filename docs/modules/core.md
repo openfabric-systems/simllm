@@ -206,24 +206,26 @@ NVLink-class resource. General fabric discovery and arbitrary GPU-to-NIC
 mapping are not prerequisites for this profile.
 
 GPU fidelity is split at the operation boundary. `simllm.compute` owns the
-isolated service of one kernel or one copy descriptor. Its trace-driven model
-admits CTAs under register, warp, thread, block and shared-memory limits,
-assigns them to SMs, issues ready warps through dependency scoreboards, and
-services their HBM demand. The isolated copy model supplies descriptor setup
-and directional bandwidth service. These mechanisms can be calibrated or
-replaced without changing `ExecutionGraph`.
+service of one kernel, an explicitly supplied set of concurrent kernel tasks,
+or one isolated copy descriptor. Its trace-driven model admits CTAs under
+register, warp, thread, block and shared-memory limits, assigns them to SMs,
+issues ready warps through dependency scoreboards, and services their shared
+HBM and NVLink demand. The isolated copy model supplies descriptor setup and
+directional bandwidth service. These mechanisms can be calibrated or replaced
+without changing `ExecutionGraph`.
 
 CORE-4 owns everything between semantic operations: launch and CUDA-stream
-FIFO order, event dependencies, selection and queueing of copy engines,
-simultaneous kernel and copy execution, cross-operation HBM contention,
+FIFO order, event dependencies, selection of the kernel set passed to
+concurrent compute service, selection and queueing of copy engines,
+simultaneous kernel and copy execution, kernel-versus-DMA HBM arbitration,
 graph-level NCCL expansion, GPU-affine RNIC selection and semantic submission,
 and completion-event/projection plumbing. In bypass mode it delegates SQ/RQ/CQ
 and WQE state to the sole timing-neutral `AtlahsWqeLedger` authority. In
 structural mode it delegates WQE lifecycle, WQ/CQ state, NIC arbitration and
 completion to the native RNIC session owned by BACK-8, BACK-9 and BACK-12. It
 must call the compute service model rather than grow a second SM or SASS model
-in `simllm.core`. The first compute slice therefore does not claim
-whole-task execution timing or compute/copy overlap.
+in `simllm.core`. The compute slice therefore does not claim whole-task
+execution timing or compute/copy overlap.
 
 ## Status
 
@@ -316,18 +318,19 @@ does not claim to produce these resource-contention measurements.
 - CORE-4 (Completeness; P1; L): implement the first coarse `DeviceRuntime`:
   framework launch FIFO,
   per-CUDA-stream FIFO and event dependencies, non-preemptive GPU work queue
-  and dispatch into the `simllm.compute` kernel service model, shared
-  cross-operation HBM arbitration, directional copy-engine selection and
-  queueing for explicit DMA descriptors, NCCL channel queues, GPU-affine RNIC
-  selection and semantic submission, completion-event/projection plumbing and
-  a control queue whose class is accounting-only under identity. Start with the
-  fixed eight-GPU, eight-RNIC node above. Expose the CORE-8 policy seam and use
-  only identity; CORE-10 owns non-identity policies. In bypass mode delegate
-  SQ/RQ/CQ and WQE state to the sole `AtlahsWqeLedger` authority. In structural
-  mode delegate WQE lifecycle, WQ/CQ state, RNIC arbitration and completion to
-  the BACK-8/BACK-9/BACK-12 native session. Do not duplicate the SASS
-  scheduler, SM-residency or isolated copy-service
-  mechanisms owned by `simllm.compute`. Append concrete NCCL
+  and selection of the co-runnable task set dispatched into the
+  `simllm.compute` kernel service model, shared kernel-versus-DMA HBM
+  arbitration, directional copy-engine selection and queueing for explicit
+  DMA descriptors, NCCL channel queues, GPU-affine RNIC selection and semantic
+  submission, completion-event/projection plumbing and a control queue whose
+  class is accounting-only under identity. Start with the fixed eight-GPU,
+  eight-RNIC node above. Expose the CORE-8 policy seam and use only identity;
+  CORE-10 owns non-identity policies. In bypass mode delegate SQ/RQ/CQ and WQE
+  state to the sole `AtlahsWqeLedger` authority. In structural mode delegate
+  WQE lifecycle, WQ/CQ state, RNIC arbitration and completion to the
+  BACK-8/BACK-9/BACK-12 native session. Do not duplicate the SASS scheduler,
+  SM-residency or isolated
+  copy-service mechanisms owned by `simllm.compute`. Append concrete NCCL
   command, SQ/RQ/CQ, WQE and QP/link-pair
   projections to `RequestBookkeeper`; the timing-neutral immediate-CQ and
   identity-only RQ behavior remains a compatibility path until BACK-9 supplies

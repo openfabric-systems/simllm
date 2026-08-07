@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Run the frozen structural checks for the isolated GPU service model."""
+"""Run the post-specified structural checks for the isolated GPU service model."""
 
 from __future__ import annotations
 
 import argparse
 import csv
+import itertools
 from pathlib import Path
 
 from simllm.compute import (
@@ -301,6 +302,7 @@ def run() -> list[dict[str, str | int]]:
             unit="cycles",
         )
 
+    throughput_by_bandwidth: dict[float, list[tuple[int, float]]] = {}
     for byte_count, bandwidth, expected in COPY_CASES:
         arch = architecture(bandwidth_bytes_per_cycle=bandwidth)
         estimate = CopyEngineServiceModel(arch, "ce0").estimate(
@@ -312,8 +314,13 @@ def run() -> list[dict[str, str | int]]:
                 destination="gpu:0:hbm",
             )
         )
+        # Regression tripwire only: duration is setup + ceil(bytes / rate),
+        # so this inequality holds by arithmetic and cannot fail today.
         if estimate.effective_bandwidth_bytes_per_cycle > bandwidth:
             raise AssertionError("effective copy bandwidth exceeded the configured service rate")
+        throughput_by_bandwidth.setdefault(bandwidth, []).append(
+            (byte_count, estimate.effective_bandwidth_bytes_per_cycle)
+        )
         add_row(
             rows,
             check="copy",
@@ -325,6 +332,18 @@ def run() -> list[dict[str, str | int]]:
             expected=expected,
             unit="copy_engine_cycles",
         )
+
+    # The registered clause the tripwire above does not cover: at a fixed
+    # service rate, effective throughput must strictly rise with size,
+    # because the fixed setup cost is amortized over more bytes.
+    for bandwidth, samples in throughput_by_bandwidth.items():
+        ordered = sorted(samples)
+        for (smaller, low), (larger, high) in itertools.pairwise(ordered):
+            if high <= low:
+                raise AssertionError(
+                    f"effective copy throughput at {bandwidth} bytes per cycle did not rise "
+                    f"from {smaller} to {larger} bytes: {low} then {high}"
+                )
 
     replay_arch = architecture(sm_count=2, schedulers=4)
     replay_launch = launch(

@@ -464,10 +464,26 @@ attributed held-out residual selects the next fidelity improvement.
 The first trace-driven GPU slice validates mechanisms before claiming device
 accuracy. Exact synthetic fixtures cover partial CTA waves, scheduler width,
 dependency chains, occupancy minima, HBM latency plus serialization, and
-copy-descriptor setup plus bandwidth. The frozen study is
+copy-descriptor setup plus bandwidth. The post-specified regression study is
 [examples/gpu_service_model](../examples/gpu_service_model/expectations.md).
 It varies at least two parameters in every component sweep and requires zero
 cycle residual for the closed forms.
+
+The GPU service primitive can also schedule several explicitly supplied
+kernels at once. `estimate_concurrent`
+replays compute, memory and NCCL network tasks together: they share SM
+residency, per-SM issue budgets, pipelines, the HBM cursor and a per-GPU
+NVLink egress cursor, and a later task backfills capacity an earlier one
+cannot use. A collective is therefore an ordinary kernel here, built by
+`simllm.compute.nccl` as the per-GPU egress half of a ring all-reduce, so
+it contends for the same GPU as the work it overlaps with rather than
+being priced alone. The intra-node NVLink path deliberately stays inside
+this model instead of reaching the fabric backend, which is the split
+TRAF-10 owns; only inter-node segments become GOAL traffic. The post-specified
+regression study is [examples/gpu_task_mix](../examples/gpu_task_mix/expectations.md),
+and COMP-11 owns peer topology, ingress service and reduction lanes. The
+primitive does not select runnable graph operations; CORE-4 still owns that
+DeviceRuntime policy and dispatch.
 
 Open public evidence seeds the A100 SXM 80 GB and H100 SXM 80 GB profiles:
 
@@ -491,11 +507,11 @@ These sources do not establish production-kernel timing accuracy. Public
 measurements can initialize a parameter with explicit uncertainty, but exact
 framework kernel identity, copy-engine topology, cache state, launch mode and
 silicon durations must come from a capture ledger.
-`simllm-gpu-model-artifact-v1` binds a target-architecture calibration and a
+`simllm-gpu-model-artifact-v2` binds a target-architecture calibration and a
 structured capture envelope to trace, kernel and copy identities, stream
 order, numeric observed core/memory clocks, simulated cycles, optional
 measured samples, calibration split, uncertainty and replay counters. Its
-strict loader reruns deterministic v1 estimates and rejects target, clock,
+strict loader reruns deterministic estimates and rejects target, clock,
 identity or sample-summary drift. Bulk raw traces stay outside Git under
 `/data3/yifeng/`. COMP-1,
 COMP-5, COMP-6 and advanced instruction/cache semantics in COMP-10 remain

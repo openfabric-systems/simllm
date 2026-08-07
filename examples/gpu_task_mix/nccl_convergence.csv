@@ -1,0 +1,5 @@
+warps_per_channel,duration_cycles,excess_over_egress_bound
+1,26327,22031
+2,13287,8991
+4,6791,2495
+8,4397,101

@@ -141,6 +141,20 @@ def test_profile_table_json_round_trip(tmp_path):
     assert loaded.estimate(mid, H100ish) == provider.estimate(mid, H100ish)
 
 
+@pytest.mark.parametrize("reference", (None, 7, True, {}))
+def test_profile_table_rejects_non_string_provenance_references(reference):
+    payload = {
+        "source": "capture",
+        "version": "v1",
+        "gpu": "h100-bf16",
+        "created": "2026-08-07",
+        "references": [reference],
+    }
+
+    with pytest.raises(ValueError, match=r"references\[0\].*nonblank string"):
+        ProfileTableProvenance.from_json(payload)
+
+
 def test_profile_table_save_requires_provenance(tmp_path):
     with pytest.raises(ValueError, match="provenance"):
         _table_provider().save(tmp_path / "table.json")
