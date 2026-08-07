@@ -5,6 +5,7 @@
 #include <limits>
 #include <map>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace simllm::rnic {
@@ -15,6 +16,16 @@ Picoseconds checkedAdd(Picoseconds lhs, Picoseconds rhs) {
         throw std::overflow_error("RNIC timestamp overflow");
     }
     return lhs + rhs;
+}
+
+void validateServiceTime(Picoseconds value, const char* field_name) {
+    constexpr Picoseconds max_service_time =
+        static_cast<Picoseconds>(std::numeric_limits<std::int64_t>::max());
+    if (value > max_service_time) {
+        throw std::invalid_argument(
+            std::string("RNIC ") + field_name
+            + " must be between 0 and INT64_MAX ps");
+    }
 }
 
 bool validDropLocation(DropLocation location) {
@@ -61,6 +72,16 @@ public:
             throw std::invalid_argument(
                 "RNIC policy-context token must be nonzero");
         }
+        validateServiceTime(
+            config_.doorbell_service_ps, "doorbell_service_ps");
+        validateServiceTime(
+            config_.wqe_fetch_service_ps, "wqe_fetch_service_ps");
+        validateServiceTime(
+            config_.qpc_lookup_service_ps, "qpc_lookup_service_ps");
+        validateServiceTime(
+            config_.scheduler_service_ps, "scheduler_service_ps");
+        validateServiceTime(
+            config_.cqe_write_service_ps, "cqe_write_service_ps");
     }
 
     PostResult postSend(const WorkRequest& request, Picoseconds now_ps) {
@@ -117,50 +138,77 @@ public:
     }
 
     DoorbellBatch ringDoorbell(Picoseconds now_ps) {
-        observeTime(now_ps);
+        validateTime(now_ps);
         if (unpublished_.empty()) {
+            last_observed_time_ps_ = now_ps;
             return DoorbellBatch{0, 0, now_ps, now_ps};
         }
         if (fatal_) {
             throw std::logic_error("cannot ring RNIC doorbell after fatal error");
         }
 
-        const std::uint64_t batch_id = next_batch_id_++;
+        if (next_batch_id_ == std::numeric_limits<std::uint64_t>::max()) {
+            throw std::overflow_error("RNIC doorbell batch ID overflow");
+        }
+        const std::uint64_t batch_id = next_batch_id_;
         const Picoseconds doorbell_base = std::max(now_ps, doorbell_cursor_ps_);
         const Picoseconds observed_at =
             checkedAdd(doorbell_base, config_.doorbell_service_ps);
-        doorbell_cursor_ps_ = observed_at;
         const std::size_t count = unpublished_.size();
 
-        while (!unpublished_.empty()) {
-            const WqeId wqe_id = unpublished_.front();
-            unpublished_.pop_front();
-            WqeRecord& record = mutableWqe(wqe_id);
-            record.doorbell_batch_id = batch_id;
-            record.timeline.doorbelled_at_ps = now_ps;
-            record.timeline.doorbell_seen_at_ps = observed_at;
-
+        struct PlannedDoorbellWqe {
+            WqeId wqe_id{0};
+            Picoseconds fetch_begin{0};
+            Picoseconds fetch_end{0};
+            Picoseconds qpc_ready{0};
+            Picoseconds admitted{0};
+        };
+        std::vector<PlannedDoorbellWqe> plan;
+        plan.reserve(count);
+        std::deque<WqeId> planned_ready = ready_;
+        Picoseconds planned_fetch_cursor = wqe_fetch_cursor_ps_;
+        Picoseconds planned_scheduler_cursor = scheduler_cursor_ps_;
+        for (const WqeId wqe_id : unpublished_) {
+            const WqeRecord& record = wqe(wqe_id);
+            if (record.state != WqeState::Posted) {
+                throw std::logic_error(
+                    "unpublished RNIC WQE is not in Posted state");
+            }
             const Picoseconds fetch_begin =
-                std::max(observed_at, wqe_fetch_cursor_ps_);
+                std::max(observed_at, planned_fetch_cursor);
             const Picoseconds fetch_end =
                 checkedAdd(fetch_begin, config_.wqe_fetch_service_ps);
-            wqe_fetch_cursor_ps_ = fetch_end;
+            planned_fetch_cursor = fetch_end;
             const Picoseconds qpc_ready =
                 checkedAdd(fetch_end, config_.qpc_lookup_service_ps);
             const Picoseconds scheduler_begin =
-                std::max(qpc_ready, scheduler_cursor_ps_);
+                std::max(qpc_ready, planned_scheduler_cursor);
             const Picoseconds admitted =
                 checkedAdd(scheduler_begin, config_.scheduler_service_ps);
-            scheduler_cursor_ps_ = admitted;
-
-            record.timeline.wqe_fetch_begin_at_ps = fetch_begin;
-            record.timeline.wqe_fetch_end_at_ps = fetch_end;
-            record.timeline.qpc_ready_at_ps = qpc_ready;
-            record.timeline.admitted_at_ps = admitted;
-            record.state = WqeState::Doorbelled;
-            ready_.push_back(wqe_id);
+            planned_scheduler_cursor = admitted;
+            plan.push_back(PlannedDoorbellWqe{
+                wqe_id, fetch_begin, fetch_end, qpc_ready, admitted});
+            planned_ready.push_back(wqe_id);
         }
 
+        for (const PlannedDoorbellWqe& item : plan) {
+            WqeRecord& record = mutableWqe(item.wqe_id);
+            record.doorbell_batch_id = batch_id;
+            record.timeline.doorbelled_at_ps = now_ps;
+            record.timeline.doorbell_seen_at_ps = observed_at;
+            record.timeline.wqe_fetch_begin_at_ps = item.fetch_begin;
+            record.timeline.wqe_fetch_end_at_ps = item.fetch_end;
+            record.timeline.qpc_ready_at_ps = item.qpc_ready;
+            record.timeline.admitted_at_ps = item.admitted;
+            record.state = WqeState::Doorbelled;
+        }
+        ready_.swap(planned_ready);
+        unpublished_.clear();
+        ++next_batch_id_;
+        last_observed_time_ps_ = now_ps;
+        doorbell_cursor_ps_ = observed_at;
+        wqe_fetch_cursor_ps_ = planned_fetch_cursor;
+        scheduler_cursor_ps_ = planned_scheduler_cursor;
         ++counters_.doorbells;
         counters_.doorbelled_wqes += count;
         return DoorbellBatch{batch_id, count, now_ps, observed_at};
@@ -254,6 +302,26 @@ public:
                     throw std::logic_error(
                         "rejected RNIC network result lacks controlled evidence");
                 }
+                NetworkEvent event;
+                event.kind = NetworkEventKind::Dropped;
+                event.wqe_id = record.wqe_id;
+                event.event_time_ps = now_ps;
+                event.drop_location = result.rejection_location;
+                event.drop_reason = result.rejection_reason;
+                const CandidateOutcome candidate{
+                    record.wqe_id,
+                    PendingOutcome{
+                        event, CompletionStatus::NetworkRejected}};
+                RetirementPlan retirement_plan =
+                    planRetirements(&candidate);
+                evidence_.reserve(evidence_.size() + 1);
+                const auto inserted = pending_outcomes_.emplace(
+                    candidate.wqe_id, candidate.outcome);
+                if (!inserted.second) {
+                    throw std::logic_error(
+                        "duplicate RNIC WQE network outcome");
+                }
+
                 ready_.pop_front();
                 ++counters_.network_rejected;
                 evidence_.push_back(EvidenceEvent{
@@ -265,18 +333,9 @@ public:
                     result.rejection_location,
                     result.rejection_reason,
                 });
-                NetworkEvent event;
-                event.kind = NetworkEventKind::Dropped;
-                event.wqe_id = record.wqe_id;
-                event.event_time_ps = now_ps;
-                event.drop_location = result.rejection_location;
-                event.drop_reason = result.rejection_reason;
                 record.timeline.network_outcome_at_ps = now_ps;
-                pending_outcomes_.emplace(
-                    record.wqe_id,
-                    PendingOutcome{event, CompletionStatus::NetworkRejected});
                 record.state = WqeState::AwaitingOrderedRetirement;
-                retireReadyWqes();
+                commitRetirements(std::move(retirement_plan));
                 ++changes;
                 continue;
             }
@@ -318,7 +377,7 @@ public:
         default:
             throw std::invalid_argument("invalid RNIC network event kind");
         }
-        observeTime(event.event_time_ps);
+        validateTime(event.event_time_ps);
         const auto inflight_it = inflight_.find(event.token);
         if (inflight_it == inflight_.end()) {
             throw std::logic_error("unknown or duplicate RNIC network token");
@@ -333,16 +392,29 @@ public:
                 < *record.timeline.network_accepted_at_ps) {
             throw std::logic_error("RNIC network event predates acceptance");
         }
+        CompletionStatus status = CompletionStatus::Success;
+        if (event.kind == NetworkEventKind::Dropped) {
+            status = CompletionStatus::TransportError;
+        }
+        const CandidateOutcome candidate{
+            record.wqe_id, PendingOutcome{event, status}};
+        RetirementPlan retirement_plan = planRetirements(&candidate);
+        if (event.kind == NetworkEventKind::Dropped) {
+            evidence_.reserve(evidence_.size() + 1);
+        }
+        const auto inserted = pending_outcomes_.emplace(
+            candidate.wqe_id, candidate.outcome);
+        if (!inserted.second) {
+            throw std::logic_error("duplicate RNIC WQE network outcome");
+        }
+        last_observed_time_ps_ = event.event_time_ps;
         inflight_.erase(inflight_it);
         record.timeline.network_outcome_at_ps = event.event_time_ps;
         record.state = WqeState::AwaitingOrderedRetirement;
         record.ecn_marked = record.ecn_marked || event.ecn_marked;
-
-        CompletionStatus status = CompletionStatus::Success;
         if (event.kind == NetworkEventKind::Delivered) {
             ++counters_.network_delivered;
         } else {
-            status = CompletionStatus::TransportError;
             ++counters_.network_dropped;
             evidence_.push_back(EvidenceEvent{
                 EvidenceTier::Controlled,
@@ -354,12 +426,7 @@ public:
                 event.drop_reason,
             });
         }
-        const auto inserted = pending_outcomes_.emplace(
-            record.wqe_id, PendingOutcome{event, status});
-        if (!inserted.second) {
-            throw std::logic_error("duplicate RNIC WQE network outcome");
-        }
-        retireReadyWqes();
+        commitRetirements(std::move(retirement_plan));
     }
 
     std::vector<CompletionEntry> pollCompletionQueue(
@@ -459,6 +526,61 @@ public:
             throw std::logic_error("RNIC posted counter disagrees with records");
         }
 
+        std::vector<std::size_t> owner_counts(records_.size(), 0);
+        const auto mark_owned = [this, &owner_counts](
+                                    WqeId wqe_id,
+                                    WqeState expected_state) {
+            const WqeRecord& record = wqe(wqe_id);
+            if (record.state != expected_state) {
+                throw std::logic_error(
+                    "RNIC WQE state disagrees with its owner container");
+            }
+            std::size_t& count = owner_counts[static_cast<std::size_t>(
+                wqe_id - 1)];
+            ++count;
+            if (count != 1) {
+                throw std::logic_error(
+                    "RNIC WQE appears in multiple owner containers");
+            }
+        };
+        for (const WqeId wqe_id : unpublished_) {
+            mark_owned(wqe_id, WqeState::Posted);
+        }
+        for (const WqeId wqe_id : ready_) {
+            mark_owned(wqe_id, WqeState::Doorbelled);
+        }
+        for (const auto& token_and_wqe : inflight_) {
+            const WqeRecord& record = wqe(token_and_wqe.second);
+            if (!record.network_token.has_value()
+                || *record.network_token != token_and_wqe.first) {
+                throw std::logic_error(
+                    "RNIC in-flight token accounting mismatch");
+            }
+            mark_owned(token_and_wqe.second, WqeState::InFlight);
+        }
+        for (const auto& wqe_and_outcome : pending_outcomes_) {
+            if (wqe_and_outcome.first
+                != wqe_and_outcome.second.event.wqe_id) {
+                throw std::logic_error(
+                    "RNIC pending outcome/WQE identity mismatch");
+            }
+            mark_owned(
+                wqe_and_outcome.first,
+                WqeState::AwaitingOrderedRetirement);
+        }
+        for (const auto& key_and_entry : pending_cqes_) {
+            const CompletionEntry& entry = key_and_entry.second;
+            if (key_and_entry.first.first != entry.visible_at_ps
+                || key_and_entry.first.second != entry.cqe_sequence) {
+                throw std::logic_error(
+                    "RNIC pending CQE key disagrees with its entry");
+            }
+            mark_owned(entry.wqe_id, WqeState::CompletionPending);
+        }
+        for (const CompletionEntry& entry : cq_) {
+            mark_owned(entry.wqe_id, WqeState::CqeVisible);
+        }
+
         std::size_t unreclaimed = 0;
         std::size_t reclaimed = 0;
         for (std::size_t index = 0; index < records_.size(); ++index) {
@@ -473,6 +595,28 @@ public:
                 }
             } else {
                 ++unreclaimed;
+            }
+            bool needs_owner = false;
+            switch (record.state) {
+            case WqeState::Posted:
+            case WqeState::Doorbelled:
+            case WqeState::InFlight:
+            case WqeState::AwaitingOrderedRetirement:
+            case WqeState::CompletionPending:
+            case WqeState::CqeVisible:
+                needs_owner = true;
+                break;
+            case WqeState::RetiredUnsignaled:
+            case WqeState::Reclaimed:
+            case WqeState::Completed:
+            case WqeState::Error:
+                break;
+            default:
+                throw std::logic_error("invalid RNIC WQE state");
+            }
+            if (owner_counts[index] != (needs_owner ? 1U : 0U)) {
+                throw std::logic_error(
+                    "RNIC WQE owner-container conservation failed");
             }
         }
         if (unreclaimed != occupied_sq_entries_
@@ -494,14 +638,6 @@ public:
                 throw std::logic_error("RNIC reclaimed its first lost CQE");
             }
         }
-        for (const auto& token_and_wqe : inflight_) {
-            const WqeRecord& record = wqe(token_and_wqe.second);
-            if (!record.network_token.has_value()
-                || *record.network_token != token_and_wqe.first
-                || record.state != WqeState::InFlight) {
-                throw std::logic_error("RNIC in-flight token accounting mismatch");
-            }
-        }
     }
 
 private:
@@ -512,10 +648,35 @@ private:
 
     using PendingCqeKey = std::pair<Picoseconds, std::uint64_t>;
 
-    void observeTime(Picoseconds now_ps) {
+    struct CandidateOutcome {
+        WqeId wqe_id{0};
+        PendingOutcome outcome;
+    };
+
+    struct PlannedRetirement {
+        WqeId wqe_id{0};
+        Picoseconds retired_at_ps{0};
+        CompletionStatus status{CompletionStatus::Success};
+        bool completion_pending{false};
+    };
+
+    struct RetirementPlan {
+        std::vector<PlannedRetirement> retirements;
+        std::map<PendingCqeKey, CompletionEntry> pending_cqes;
+        Picoseconds retirement_cursor_ps{0};
+        Picoseconds cqe_write_cursor_ps{0};
+        std::uint64_t next_cqe_sequence{1};
+        std::uint64_t next_retire_sequence{1};
+    };
+
+    void validateTime(Picoseconds now_ps) const {
         if (now_ps < last_observed_time_ps_) {
             throw std::logic_error("RNIC model time regressed");
         }
+    }
+
+    void observeTime(Picoseconds now_ps) {
+        validateTime(now_ps);
         last_observed_time_ps_ = now_ps;
     }
 
@@ -523,45 +684,14 @@ private:
         return const_cast<WqeRecord&>(wqe(wqe_id));
     }
 
-    void retireReadyWqes() {
-        while (next_retire_sequence_ <= records_.size()) {
-            WqeRecord& record = records_[next_retire_sequence_ - 1];
-            const auto outcome_it = pending_outcomes_.find(record.wqe_id);
-            if (outcome_it == pending_outcomes_.end()) {
-                break;
-            }
-            const PendingOutcome outcome = outcome_it->second;
-            pending_outcomes_.erase(outcome_it);
-
-            if (!record.timeline.network_outcome_at_ps.has_value()
-                || *record.timeline.network_outcome_at_ps
-                    != outcome.event.event_time_ps) {
-                throw std::logic_error(
-                    "RNIC retirement lacks its recorded network outcome");
-            }
-            const Picoseconds retired_at =
-                std::max(outcome.event.event_time_ps, retirement_cursor_ps_);
-            retirement_cursor_ps_ = retired_at;
-            record.timeline.transport_retired_at_ps = retired_at;
-            record.completion_status = outcome.status;
-
-            if (record.request.signaled
-                || outcome.status != CompletionStatus::Success) {
-                scheduleCqe(record, outcome.status, retired_at);
-                record.state = WqeState::CompletionPending;
-            } else {
-                record.state = WqeState::RetiredUnsignaled;
-            }
-            ++next_retire_sequence_;
-        }
-    }
-
-    void scheduleCqe(
-        WqeRecord& record,
+    CompletionEntry makeCqe(
+        const WqeRecord& record,
         CompletionStatus status,
-        Picoseconds retired_at_ps) {
+        Picoseconds retired_at_ps,
+        Picoseconds cqe_write_cursor_ps,
+        std::uint64_t cqe_sequence) const {
         CompletionEntry entry;
-        entry.cqe_sequence = next_cqe_sequence_++;
+        entry.cqe_sequence = cqe_sequence;
         entry.wr_id = record.request.wr_id;
         entry.wqe_id = record.wqe_id;
         entry.sq_sequence = record.sq_sequence;
@@ -579,12 +709,114 @@ private:
             entry.vendor_syndrome = 2;
         }
         const Picoseconds write_begin =
-            std::max(retired_at_ps, cqe_write_cursor_ps_);
+            std::max(retired_at_ps, cqe_write_cursor_ps);
         entry.visible_at_ps =
             checkedAdd(write_begin, config_.cqe_write_service_ps);
-        cqe_write_cursor_ps_ = entry.visible_at_ps;
-        pending_cqes_.emplace(
-            PendingCqeKey{entry.visible_at_ps, entry.cqe_sequence}, entry);
+        return entry;
+    }
+
+    RetirementPlan planRetirements(
+        const CandidateOutcome* candidate = nullptr) const {
+        RetirementPlan plan;
+        plan.retirement_cursor_ps = retirement_cursor_ps_;
+        plan.cqe_write_cursor_ps = cqe_write_cursor_ps_;
+        plan.next_cqe_sequence = next_cqe_sequence_;
+        plan.next_retire_sequence = next_retire_sequence_;
+        if (next_retire_sequence_ <= records_.size()) {
+            plan.retirements.reserve(
+                records_.size()
+                - static_cast<std::size_t>(next_retire_sequence_) + 1);
+        }
+
+        while (plan.next_retire_sequence <= records_.size()) {
+            const WqeRecord& record =
+                records_[plan.next_retire_sequence - 1];
+            const PendingOutcome* outcome = nullptr;
+            const bool is_candidate =
+                candidate != nullptr && candidate->wqe_id == record.wqe_id;
+            if (is_candidate) {
+                if (pending_outcomes_.count(record.wqe_id) != 0) {
+                    throw std::logic_error(
+                        "duplicate RNIC WQE network outcome");
+                }
+                outcome = &candidate->outcome;
+            } else {
+                const auto outcome_it =
+                    pending_outcomes_.find(record.wqe_id);
+                if (outcome_it == pending_outcomes_.end()) {
+                    break;
+                }
+                outcome = &outcome_it->second;
+            }
+
+            if (is_candidate) {
+                if (record.timeline.network_outcome_at_ps.has_value()) {
+                    throw std::logic_error(
+                        "candidate RNIC retirement already has an outcome");
+                }
+            } else if (record.state
+                           != WqeState::AwaitingOrderedRetirement
+                       || !record.timeline.network_outcome_at_ps.has_value()
+                       || *record.timeline.network_outcome_at_ps
+                           != outcome->event.event_time_ps) {
+                throw std::logic_error(
+                    "RNIC retirement lacks its recorded network outcome");
+            }
+
+            const Picoseconds retired_at = std::max(
+                outcome->event.event_time_ps,
+                plan.retirement_cursor_ps);
+            const bool completion_pending = record.request.signaled
+                || outcome->status != CompletionStatus::Success;
+            if (completion_pending) {
+                if (plan.next_cqe_sequence
+                    == std::numeric_limits<std::uint64_t>::max()) {
+                    throw std::overflow_error(
+                        "RNIC CQE sequence overflow");
+                }
+                CompletionEntry entry = makeCqe(
+                    record,
+                    outcome->status,
+                    retired_at,
+                    plan.cqe_write_cursor_ps,
+                    plan.next_cqe_sequence);
+                const PendingCqeKey key{
+                    entry.visible_at_ps, entry.cqe_sequence};
+                if (pending_cqes_.count(key) != 0
+                    || !plan.pending_cqes.emplace(key, entry).second) {
+                    throw std::logic_error(
+                        "duplicate RNIC pending CQE key");
+                }
+                plan.cqe_write_cursor_ps = entry.visible_at_ps;
+                ++plan.next_cqe_sequence;
+            }
+            plan.retirement_cursor_ps = retired_at;
+            plan.retirements.push_back(PlannedRetirement{
+                record.wqe_id,
+                retired_at,
+                outcome->status,
+                completion_pending,
+            });
+            ++plan.next_retire_sequence;
+        }
+        return plan;
+    }
+
+    void commitRetirements(RetirementPlan&& plan) {
+        pending_cqes_.merge(plan.pending_cqes);
+        for (const PlannedRetirement& item : plan.retirements) {
+            pending_outcomes_.erase(item.wqe_id);
+            WqeRecord& record = mutableWqe(item.wqe_id);
+            record.timeline.transport_retired_at_ps = item.retired_at_ps;
+            record.completion_status = item.status;
+            record.state = item.completion_pending
+                ? WqeState::CompletionPending
+                : WqeState::RetiredUnsignaled;
+        }
+        retirement_cursor_ps_ = plan.retirement_cursor_ps;
+        cqe_write_cursor_ps_ = plan.cqe_write_cursor_ps;
+        next_cqe_sequence_ = plan.next_cqe_sequence;
+        next_retire_sequence_ = plan.next_retire_sequence;
     }
 
     std::size_t publishCqes(

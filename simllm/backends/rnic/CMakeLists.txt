@@ -86,3 +86,33 @@ if(SIMLLM_RNIC_BUILD_TOOLS)
         endif()
     endif()
 endif()
+
+if(SIMLLM_RNIC_BUILD_TESTS AND SIMLLM_RNIC_BUILD_TOOLS)
+    set(SIMLLM_RNIC_NEGATIVE_PROBE_CHECK
+        "${CMAKE_CURRENT_BINARY_DIR}/check_negative_probe_$<CONFIG>.cmake")
+    file(GENERATE
+        OUTPUT "${SIMLLM_RNIC_NEGATIVE_PROBE_CHECK}"
+        CONTENT [=[
+execute_process(
+    COMMAND "$<TARGET_FILE:simllm_rnic_wq_probe>"
+            "--doorbell-service-ps" "-1"
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE output
+    ERROR_VARIABLE error
+)
+if(NOT result STREQUAL "2")
+    message(FATAL_ERROR
+        "negative probe returned ${result}, expected 2\n${output}\n${error}")
+endif()
+set(expected "--doorbell-service-ps must be an unsigned integer")
+string(FIND "${error}" "${expected}" match)
+if(match EQUAL -1)
+    message(FATAL_ERROR
+        "negative probe missed parser diagnostic\n${output}\n${error}")
+endif()
+]=]
+    )
+    add_test(NAME simllm_rnic_wq_probe_rejects_negative_service
+             COMMAND ${CMAKE_COMMAND}
+                     -P "${SIMLLM_RNIC_NEGATIVE_PROBE_CHECK}")
+endif()

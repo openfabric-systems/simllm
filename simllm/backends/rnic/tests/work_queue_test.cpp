@@ -17,10 +17,12 @@ using simllm::rnic::DropLocation;
 using simllm::rnic::DropReason;
 using simllm::rnic::EvidenceKind;
 using simllm::rnic::NetworkEventKind;
+using simllm::rnic::Picoseconds;
 using simllm::rnic::PostStatus;
 using simllm::rnic::WorkQueue;
 using simllm::rnic::WorkQueueConfig;
 using simllm::rnic::WorkRequest;
+using simllm::rnic::WqeState;
 using simllm::rnic::testing::FakeNetworkPort;
 
 class TestRunner {
@@ -39,6 +41,22 @@ public:
             check(false, message);
         } catch (const std::exception&) {
             check(true, message);
+        }
+    }
+
+    template <typename Expected, typename Callable>
+    void expectThrowAs(Callable&& callable, const std::string& message) {
+        try {
+            callable();
+            check(false, message);
+        } catch (const Expected&) {
+            check(true, message);
+        } catch (const std::exception& error) {
+            check(
+                false,
+                message + "; wrong exception type: " + error.what());
+        } catch (...) {
+            check(false, message + "; wrong non-standard exception type");
         }
     }
 
@@ -70,6 +88,193 @@ WorkQueueConfig config(std::size_t sq_depth, std::size_t cq_depth) {
     result.qpn = 17;
     result.policy_context_token = 9001;
     return result;
+}
+
+void testServiceTimeValidation(TestRunner& test) {
+    FakeNetworkPort network(1, 0);
+    struct ServiceField {
+        Picoseconds WorkQueueConfig::* member;
+        const char* name;
+    };
+    const ServiceField fields[]{
+        {&WorkQueueConfig::doorbell_service_ps, "doorbell service"},
+        {&WorkQueueConfig::wqe_fetch_service_ps, "WQE-fetch service"},
+        {&WorkQueueConfig::qpc_lookup_service_ps, "QPC-lookup service"},
+        {&WorkQueueConfig::scheduler_service_ps, "scheduler service"},
+        {&WorkQueueConfig::cqe_write_service_ps, "CQE-write service"},
+    };
+    const Picoseconds wrapped_negative = static_cast<Picoseconds>(-1);
+    for (const ServiceField& field : fields) {
+        WorkQueueConfig invalid = config(1, 1);
+        invalid.*field.member = wrapped_negative;
+        test.expectThrowAs<std::invalid_argument>(
+            [&network, invalid]() {
+                WorkQueue queue(invalid, network);
+                (void)queue;
+            },
+            std::string(field.name)
+                + " rejects a signed negative wrapped into uint64");
+    }
+
+    WorkQueueConfig boundary = config(1, 1);
+    const Picoseconds max_valid = static_cast<Picoseconds>(
+        std::numeric_limits<std::int64_t>::max());
+    boundary.doorbell_service_ps = max_valid;
+    boundary.wqe_fetch_service_ps = max_valid;
+    boundary.qpc_lookup_service_ps = max_valid;
+    boundary.scheduler_service_ps = max_valid;
+    boundary.cqe_write_service_ps = max_valid;
+    WorkQueue boundary_queue(boundary, network);
+    test.check(
+        boundary_queue.config().cqe_write_service_ps == max_valid,
+        "INT64_MAX remains a valid configured service duration");
+}
+
+void testDoorbellTimestampOverflowIsAtomic(TestRunner& test) {
+    FakeNetworkPort network(1, 0);
+    WorkQueueConfig cfg = config(1, 1);
+    cfg.doorbell_service_ps = 1;
+    WorkQueue queue(cfg, network);
+    const auto posted = queue.postSend(request(91, true), 0);
+    const Picoseconds max_time = std::numeric_limits<Picoseconds>::max();
+
+    test.expectThrowAs<std::overflow_error>(
+        [&queue, max_time]() { queue.ringDoorbell(max_time); },
+        "doorbell timestamp overflow has the exact asserted error type");
+    const auto& record = queue.wqe(posted.wqe_id);
+    test.check(
+        queue.unpublishedWqeCount() == 1
+            && queue.occupiedSqEntries() == 1
+            && record.state == WqeState::Posted
+            && record.doorbell_batch_id == 0
+            && !record.timeline.doorbelled_at_ps.has_value()
+            && !record.timeline.wqe_fetch_begin_at_ps.has_value()
+            && queue.counters().doorbells == 0
+            && queue.counters().doorbelled_wqes == 0,
+        "failed doorbell leaves its WQE, timeline and counters untouched");
+    queue.validateInvariants();
+
+    const auto retry = queue.ringDoorbell(0);
+    test.check(
+        retry.batch_id == 1 && retry.wqe_count == 1
+            && retry.observed_at_ps == 1,
+        "failed doorbell consumes neither model time nor batch identity");
+    queue.validateInvariants();
+}
+
+void testMidBatchFetchOverflowIsAtomic(TestRunner& test) {
+    FakeNetworkPort network(2, 0);
+    WorkQueueConfig cfg = config(2, 2);
+    cfg.wqe_fetch_service_ps = 1;
+    WorkQueue queue(cfg, network);
+    const Picoseconds near_max =
+        std::numeric_limits<Picoseconds>::max() - 1;
+    queue.postSendBatch(
+        {request(92, true), request(93, true)}, near_max);
+
+    test.expectThrowAs<std::overflow_error>(
+        [&queue, near_max]() { queue.ringDoorbell(near_max); },
+        "second-WQE fetch overflow aborts the complete doorbell batch");
+    test.check(
+        queue.unpublishedWqeCount() == 2
+            && queue.occupiedSqEntries() == 2
+            && queue.counters().doorbells == 0
+            && queue.counters().doorbelled_wqes == 0
+            && !queue.nextEventTime().has_value(),
+        "mid-batch overflow publishes no WQE or service event");
+    for (const auto& record : queue.records()) {
+        test.check(
+            record.state == WqeState::Posted
+                && record.doorbell_batch_id == 0
+                && !record.timeline.doorbelled_at_ps.has_value()
+                && !record.timeline.wqe_fetch_end_at_ps.has_value()
+                && !record.timeline.admitted_at_ps.has_value(),
+            "mid-batch overflow preserves each Posted WQE exactly");
+    }
+    queue.validateInvariants();
+}
+
+void testCqeTimestampOverflowIsAtomic(TestRunner& test) {
+    FakeNetworkPort network(1, 0);
+    WorkQueueConfig cfg = config(1, 1);
+    cfg.cqe_write_service_ps = 1;
+    WorkQueue queue(cfg, network);
+    const auto posted = queue.postSend(request(94, true), 0);
+    queue.ringDoorbell(0);
+    queue.progress(0);
+    const auto token = network.tokenForWqe(posted.wqe_id);
+
+    simllm::rnic::NetworkEvent overflow_event;
+    overflow_event.kind = NetworkEventKind::Delivered;
+    overflow_event.token = token;
+    overflow_event.wqe_id = posted.wqe_id;
+    overflow_event.event_time_ps =
+        std::numeric_limits<Picoseconds>::max();
+    test.expectThrowAs<std::overflow_error>(
+        [&queue, &overflow_event]() {
+            queue.onNetworkEvent(overflow_event);
+        },
+        "CQE timestamp overflow has the exact asserted error type");
+
+    const auto& failed = queue.wqe(posted.wqe_id);
+    test.check(
+        failed.state == WqeState::InFlight
+            && failed.network_token == token
+            && !failed.timeline.network_outcome_at_ps.has_value()
+            && !failed.timeline.transport_retired_at_ps.has_value()
+            && !failed.completion_status.has_value()
+            && queue.counters().network_delivered == 0
+            && queue.counters().cqes_visible == 0
+            && queue.completionQueueDepth() == 0,
+        "failed CQE plan consumes no token, outcome, counter or timestamp");
+    queue.validateInvariants();
+
+    queue.onNetworkEvent(network.take(
+        token, NetworkEventKind::Delivered, 0));
+    queue.progress(1);
+    const auto cqes = queue.pollCompletionQueue(1, 1);
+    test.check(
+        cqes.size() == 1 && cqes[0].wqe_id == posted.wqe_id
+            && cqes[0].cqe_sequence == 1
+            && queue.occupiedSqEntries() == 0,
+        "CQE-overflow rollback preserves a successful retry and CQE identity");
+    queue.validateInvariants();
+}
+
+void testRetirementPrefixOverflowIsAtomic(TestRunner& test) {
+    FakeNetworkPort network(2, 0);
+    WorkQueueConfig cfg = config(2, 2);
+    cfg.cqe_write_service_ps = 1;
+    WorkQueue queue(cfg, network);
+    queue.postSendBatch({request(95, true), request(96, true)}, 0);
+    queue.ringDoorbell(0);
+    queue.progress(0);
+    const auto first = network.tokenForWqe(1);
+    const auto second = network.tokenForWqe(2);
+    const Picoseconds near_max =
+        std::numeric_limits<Picoseconds>::max() - 1;
+    queue.onNetworkEvent(network.take(
+        second, NetworkEventKind::Delivered, near_max));
+
+    simllm::rnic::NetworkEvent first_event;
+    first_event.kind = NetworkEventKind::Delivered;
+    first_event.token = first;
+    first_event.wqe_id = 1;
+    first_event.event_time_ps = near_max;
+    test.expectThrowAs<std::overflow_error>(
+        [&queue, &first_event]() { queue.onNetworkEvent(first_event); },
+        "overflow on CQE two aborts the entire newly unlocked prefix");
+    test.check(
+        queue.wqe(1).state == WqeState::InFlight
+            && !queue.wqe(1).timeline.network_outcome_at_ps.has_value()
+            && queue.wqe(2).state
+                == WqeState::AwaitingOrderedRetirement
+            && !queue.wqe(2).timeline.transport_retired_at_ps.has_value()
+            && queue.counters().network_delivered == 1
+            && queue.counters().cqes_visible == 0
+            && queue.completionQueueDepth() == 0,
+        "prefix overflow commits neither the head callback nor any retirement");
+    queue.validateInvariants();
 }
 
 void testAcceptedPrefixAndDoorbell(TestRunner& test) {
@@ -499,6 +704,11 @@ void testUnknownNetworkTokenThrows(TestRunner& test) {
 
 int main() {
     TestRunner test;
+    testServiceTimeValidation(test);
+    testDoorbellTimestampOverflowIsAtomic(test);
+    testMidBatchFetchOverflowIsAtomic(test);
+    testCqeTimestampOverflowIsAtomic(test);
+    testRetirementPrefixOverflowIsAtomic(test);
     testAcceptedPrefixAndDoorbell(test);
     testUnsignaledOrderedRetirement(test);
     testAllUnsignaledExhaustsSq(test);

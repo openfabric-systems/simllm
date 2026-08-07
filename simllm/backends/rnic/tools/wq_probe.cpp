@@ -1,6 +1,7 @@
 #include "fake_network.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -34,10 +35,17 @@ struct Options {
 };
 
 std::uint64_t parseUnsigned(const std::string& text, const char* option) {
-    std::size_t consumed = 0;
-    const std::uint64_t value = std::stoull(text, &consumed, 10);
-    if (consumed != text.size()) {
-        throw std::invalid_argument(std::string(option) + " is not an integer");
+    std::uint64_t value = 0;
+    const auto parsed = std::from_chars(
+        text.data(), text.data() + text.size(), value, 10);
+    if (parsed.ec == std::errc::result_out_of_range) {
+        throw std::out_of_range(
+            std::string(option) + " is outside the uint64 range");
+    }
+    if (text.empty() || parsed.ec != std::errc{}
+        || parsed.ptr != text.data() + text.size()) {
+        throw std::invalid_argument(
+            std::string(option) + " must be an unsigned integer");
     }
     return value;
 }
@@ -79,6 +87,13 @@ Options parseOptions(int argc, char** argv) {
     }
     if (options.wqes > options.sq_depth) {
         throw std::invalid_argument("RNIC probe requires SQ depth >= WQE count");
+    }
+    constexpr std::uint64_t max_size =
+        static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max());
+    if (options.wqes > max_size || options.network_capacity > max_size
+        || options.sq_depth > max_size || options.cq_depth > max_size) {
+        throw std::out_of_range(
+            "RNIC probe size exceeds the platform size_t range");
     }
     return options;
 }

@@ -69,6 +69,10 @@ struct WorkQueueConfig {
     PolicyContextToken policy_context_token{1};
     std::size_t sq_depth{64};
     std::size_t cq_depth{64};
+    // Service durations use the nonnegative signed-64-bit domain. Keeping the
+    // storage unsigned preserves timestamp arithmetic, while construction
+    // rejects values above INT64_MAX so a negative signed input cannot wrap
+    // into a multi-day service time.
     Picoseconds doorbell_service_ps{0};
     Picoseconds wqe_fetch_service_ps{0};
     Picoseconds qpc_lookup_service_ps{0};
