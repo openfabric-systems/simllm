@@ -1,18 +1,20 @@
 # RNIC hardware calibration and boundary plan
 
 This is the public evidence and calibration plan for the SimLLM RNIC hardware
-model. The numbered implementation tasks are BACK-8 through BACK-15 and
-HTSIM-5, HTSIM-6 and HTSIM-9 in
-[the backend module registry](../modules/backends.md). Source PDFs are kept in
-the gitignored `papers/` directory; this file records what may be claimed from
-them and how measurements will be used.
+model. The numbered implementation tasks are CORE-4, CORE-5, CORE-8, CORE-9,
+BACK-8 through BACK-17, HTSIM-5, HTSIM-6 and HTSIM-9 in the
+[core](../modules/core.md) and [backend](../modules/backends.md) module
+registries. Source PDFs are kept in the gitignored `papers/` directory; this
+file records what may be claimed from them and how measurements will be used.
 
 ## Architecture decision
 
 RNIC hardware and transport/congestion control are independent model axes.
 The structural hardware model is SimLLM-owned C++ under
-`simllm/backends/rnic/`. It is compiled into the directly invoked simulator
-process so the packet event loop has no Python callback. htsim retains the
+`simllm/backends/rnic/`. The target composition links it into the directly
+invoked simulator process so the packet event loop has no Python callback.
+That link is not live today; native tests and probes are component evidence
+only until BACK-8 and HTSIM-9 connect the library to htsim. htsim retains the
 selectable `rnic-nn`, `rnic-cn` and DCQCN policies and the packet fabric.
 
 ```text
@@ -43,6 +45,13 @@ State ownership is deliberately narrow:
 - The htsim fabric owns links, switch queues, ECN marking, propagation,
   wire/switch drops and PFC-frame transport. A SimLLM RNIC originates or
   consumes a PFC frame from its modeled per-priority buffers.
+
+Structural mode has exactly one mutable WQE authority: the native SimLLM RNIC
+session. htsim returns network events through opaque tokens and never mutates
+WQ, WQE or CQ state. Bookkeeping facts and completion rows are loss-checked
+projections of the native result. Hardware-bypass mode instead uses the
+timing-neutral htsim ledger and constructs no structural RNIC state. The two
+modes are mutually exclusive.
 
 This split prevents a DCQCN result from paying a different doorbell, cache or
 DMA cost than `rnic-nn` or `rnic-cn`. It also permits one hardware calibration
@@ -120,9 +129,12 @@ The capture point must reflect how mlx5 applications really submit work:
 3. Keep a generic `LD_PRELOAD` verbs wrapper as a convenient application
    experiment, not the signoff oracle. Direct operation tables, inlining and
    provider extensions can bypass it.
-4. Normalize capture and SimLLM lowering into one BACK-9 schema. Preserve WR
-   ID, opcode, SGEs, flags, queue identity, QP state, batch position and all
-   observable timestamps. Payload bytes are excluded by default.
+4. Normalize capture and SimLLM lowering into one BACK-9 native-session result
+   schema. Preserve the session-stable endpoint, WQ kind, WQ identity and post
+   sequence key plus WR ID, opcode, SGEs, flags, QP state, batch position and
+   all observable timestamps. Bookkeeping and CSV forms are derived
+   projections, not alternate lifecycle records. Payload bytes are excluded by
+   default.
 5. Correlate CQ polling to the normalized CQE. `wr_id` is normally recovered
    by the provider from its WQ metadata rather than read as a literal raw CQE
    field, so the schema records both the raw-source fields and provider-derived
@@ -136,8 +148,9 @@ attribute mismatch and teardown.
 
 ## Structural RDMA Work Queue
 
-The landed `AtlahsWqeLedger` is only a timing-neutral compatibility view. The
-replacement is a queueing model with explicit transactions and credits:
+The landed `AtlahsWqeLedger` is the timing-neutral authority only in explicit
+hardware-bypass mode, not a structural projection. Its replacement is a
+queueing model with explicit transactions and credits:
 
 | Object/stage | Required behavior |
 |---|---|
@@ -150,13 +163,16 @@ replacement is a queueing model with explicit transactions and credits:
 
 The normalized CQE contains WR ID, QPN or source QP, opcode, status, byte
 count, immediate/invalidate data, flags, syndrome and vendor syndrome, with
-provenance for every provider-derived field. Unsignaled sends retire SQ space
-without requiring one CQE per WQE; receives and errors still follow their
+provenance for every provider-derived field. Successful unsignaled sends
+produce no CQE. Transport retirement advances the NIC consumer, while
+provider-visible WR-slot reclamation follows a later signaled completion or an
+explicit modeled drain or teardown rule; receives and errors follow their
 documented completion rules.
 
 Each WQE records at least:
 
 ```text
+ibverbs_entry_at            [optional joined capture timestamp]
 posted_at
 doorbelled_at
 doorbell_seen_at
@@ -177,6 +193,12 @@ BlueFlame copy, are explicitly `not_applicable`, never silently zero.
 calibration to identify whether a boundary came from CPU posting, MMIO, DMA,
 context locality, hardware scheduling, transport or CQ service instead of
 fitting all of them into one number.
+When capture provenance supplies `ibverbs_entry_at`, the full verbs-to-NIC
+start latency is derived as `first_packet_at - ibverbs_entry_at`. The native
+host-post interval is `first_packet_at - posted_at`; the device-observed
+interval is `first_packet_at - doorbell_seen_at`. The native model never
+invents the capture timestamp, and none of these differences is scheduled as
+an additional htsim delay.
 
 ## Evidence corpus
 
@@ -228,19 +250,27 @@ to the identical `rnic-nn` GOAL where starts are aligned.
 
 ## Work order and closure
 
-1. BACK-13 and BACK-14 establish the provenance schema and capture path early,
-   so implementation parameters come from evidence rather than retrospective
-   fitting.
-2. BACK-8 and HTSIM-9 establish the C++ hardware/policy ABI and prove that all
-   full-RNIC profiles share one hardware configuration.
-3. The landed BACK-10 fabric supplies shared PCIe/MMIO/DMA transactions;
+1. CORE-8 and CORE-9 establish the queue semantics and the loss-checked public
+   projection. The frozen expectations precede those behavioral changes.
+2. BACK-8 supplies the SimLLM session half and HTSIM-9 supplies the combined
+   `AtlahsFlowRuntime` and htsim adapter. Together they establish the C++
+   hardware/policy ABI and prove that all full-RNIC profiles share one hardware
+   configuration. CORE-4 then invokes that composition from `ExecutionGraph`,
+   and CORE-5 reduces its single completion boundary into `ExecutionResult`,
+   `StepResult`, TTFT and TPOT. A native service parameter must traverse that
+   full chain before further native precision work can close.
+3. BACK-13 and BACK-14 establish the provenance schema and capture path so
+   implementation parameters come from evidence rather than retrospective
+   fitting. Capture work may proceed in parallel, but it cannot substitute for
+   the live-reachability gate.
+4. The landed BACK-10 fabric supplies shared PCIe/MMIO/DMA transactions;
    BACK-9 completes WQ/CQ structure and BACK-16 calibrates the active hardware
    path against the no-loss message-size and batching anchors.
-4. BACK-11 adds QP pairing, lifecycle and separate QPC/WQE/translation
+5. BACK-11 adds QP pairing, lifecycle and separate QPC/WQE/translation
    locality; its cache tiers remain generic and evidence-labelled.
-5. BACK-12 adds TX/RX reliability, named loss boundaries and PFC hardware.
+6. BACK-12 adds TX/RX reliability, named loss boundaries and PFC hardware.
    HTSIM-5 closes persistent DCQCN state first, then HTSIM-6 closes `rnic-cn`
    lookahead.
-6. BACK-15 runs the full cross-layer campaign. Closure requires defended
+7. BACK-15 runs the full cross-layer campaign. Closure requires defended
    queue knees and first-failure evidence, not only passing unit tests or a
    visually similar bandwidth curve.

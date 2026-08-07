@@ -118,9 +118,15 @@ linked task IDs own the detail.
    couple to resource contention.
 4. **Resource queues and data movement.** The first coarse
    `DeviceRuntime`: launch and stream queues, GPU/HBM, copy engines and
-   DMA, NCCL channels, per-GPU WQE queues, GPU-affine RNICs, completion
-   and control queues: [CORE-4](modules/core.md#open-tasks). Structural
-   RNIC service then lands under BACK-8 through BACK-12.
+   DMA, NCCL channels, GPU-affine RNIC submission, completion-event plumbing
+   and a labeled control queue: [CORE-4](modules/core.md#open-tasks). CORE-8
+   fixes one cross-language queue-visit meaning and identity arbitration
+   baseline;
+   CORE-9 corrects the structural WQE projection. BACK-8 and HTSIM-9 compose
+   native RNIC timing with htsim; CORE-4 invokes that path from the graph and
+   CORE-5 reduces its completion into `ExecutionResult`, `StepResult` and
+   TTFT/TPOT before further native precision work can close. BACK-9 through
+   BACK-12 complete the RNIC mechanisms behind that path.
 5. **Dependency-driven overlap.** Replace the serial step chain only
    after KV and resource queues exist; framework lowering declares
    dependencies, runtime arbitration determines realized overlap:
@@ -137,7 +143,7 @@ One line per module; the linked doc is the source of truth.
 
 | Module | Status | Open tasks |
 |---|---|---|
-| [core](modules/core.md) | Implemented: virtual clock, step records, execution-graph/completion/result/bookkeeping contracts with strict JSON, serial lowerer, graph-only replay | CORE-3/4/5/6/7, BRIDGE-1 |
+| [core](modules/core.md) | Implemented: virtual clock, step records, execution-graph/completion/result/bookkeeping contracts with strict JSON, serial lowerer, graph-only replay | CORE-3/4/5/6/7/8/9/10, BRIDGE-1 |
 | [workload](modules/workload.md) | Partial: Poisson/trace arrivals, fixed/lognormal/trace lengths | WORK-1 (shared prefixes), WORK-2 (bursty/MMPP) |
 | [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven isolated-kernel and copy service with A100/H100 bootstrap profiles | COMP-1/2/4/5/6/7/8/9/10 |
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | PLACE-1/2/3 |

@@ -156,6 +156,11 @@ RNIC hardware and congestion control are separate model axes. A full-RNIC
 comparison holds the hardware profile fixed and swaps only the htsim
 transport/CC policy. The analytical fluid baseline keeps an explicit hardware
 bypass so closed-form validation remains available.
+The native WQ and PCIe slices are currently standalone component models: the
+live packet and TTFT/TPOT path still uses htsim's timing-neutral compatibility
+ledger until BACK-8 and HTSIM-9 link the native hardware session into the
+directly invoked simulator, CORE-4 invokes that composition from the execution
+graph, and CORE-5 reduces its completion into `StepResult` and TTFT/TPOT.
 
 #### RNIC hardware
 

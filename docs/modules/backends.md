@@ -97,12 +97,13 @@ GOAL Send
   -> GOAL completion
 ```
 
-The SimLLM sources build a C++ library linked into the directly invoked htsim
-binary; there is no Python callback in the packet event loop. The composed
-runtime still presents `AtlahsFlowRuntime` to `AtlahsHtsimApi`. HTSIM-9 owns
-the backend extension that lets a SimLLM hardware runtime call an htsim
-policy and fabric through opaque flow and packet tokens. QP, WQE, CQ, QPC,
-PCIe and DMA objects never cross that boundary.
+The target composition links the SimLLM C++ library into the directly invoked
+htsim binary, with no Python callback in the packet event loop. The composed
+runtime will present `AtlahsFlowRuntime` to `AtlahsHtsimApi`. That link is not
+live today: current htsim binaries do not contain `simllm::rnic`. HTSIM-9 owns
+the combined outer wrapper and backend extension through which the SimLLM
+hardware runtime calls an htsim policy and fabric using opaque flow and packet
+tokens. QP, WQE, CQ, QPC, PCIe and DMA objects never cross that boundary.
 
 State ownership is explicit:
 
@@ -119,12 +120,66 @@ State ownership is explicit:
   watermarks that originate PFC and the paused priority state that consumes
   it.
 
-The current `AtlahsWqeLedger` remains a compatibility accounting view until
-BACK-9 replaces its timing-neutral transitions with the structural RDMA Work
-Queue. A WQE will no longer have one ambiguous start time. The model records
-post, doorbell publication and observation, WQE fetch or BlueFlame transfer,
-QPC readiness, scheduler admission, first and last packet, transport
-retirement, CQE visibility and CQ polling separately.
+### WQE authority and projection contract
+
+One session has one mutable WQE authority. Accounting records are projections
+of that authority, not peer implementations of the lifecycle:
+
+| Surface | Contract | May mutate WQ/WQE/CQ state? |
+|---|---|---|
+| SimLLM native C++ RNIC session | Sole structural authority for WR/WQE/CQE contents, WQ and CQ occupancy, identities, lifecycle and timestamps | Yes |
+| htsim policy and fabric port | Network service behind opaque extent and policy-context tokens; returns admission, delivery, drop and feedback events | No |
+| `simllm-request-bookkeeping-*` | Immutable public correlation projection of the selected session result into request and execution facts | No |
+| `AtlahsWqeLedger` | Sole timing-neutral compatibility authority in explicit hardware-bypass mode | Yes, only while the native structural RNIC is disabled |
+| Backend result and legacy CSV columns | Immutable output projection of the selected structural or bypass authority | No |
+
+Structural and bypass modes are mutually exclusive. In structural mode the
+native RNIC allocates every queue and WQE identity and supplies every WQE
+timestamp; `AtlahsWqeLedger` is neither constructed nor mutated. In bypass
+mode no structural RNIC object exists. The run record sets
+`hardware_mode=bypass` and names the timing-neutral ledger as authority. A run
+must never merge two independently produced lifecycle records or choose
+between their timestamps after simulation.
+
+The stable reconciliation key is the session and endpoint plus the owning WQ
+kind, WQ identity and post sequence. A provider WR ID, GOAL flow ID, local
+implementation index and htsim token are correlations, not substitute WQE
+identities. One WQE may produce several logical network extents. Every extent
+has a stable extent index; every transmission or retry has a distinct attempt
+index and opaque token that terminates in one delivery or drop event. A dropped
+attempt does not terminate its logical extent if reliability schedules a retry.
+At quiescence, native posts and terminal states, WQ and CQ producer/consumer
+sequences, all network attempt tokens, public bookkeeping facts and result rows
+must reconcile exactly under the WQE and logical-extent keys. Applicable
+timestamps are monotonic through post, publication, fetch, QPC readiness,
+admission, first and last packet, transport retirement, CQE visibility and
+poll. A bypassed stage is `not_applicable`, never an invented zero.
+
+A send WQE belongs to its local SQ and send CQ. It does not own or parent the
+remote RQ. A receive WQE is posted separately to exactly one RQ or SRQ and is
+associated with a receive CQ; RX matching later links the send and receive
+WQE keys. An SRQ receive WQE is not QP-specific until that match, and
+one-sided operations do not invent a receive WQE. A successful signaled send
+produces its requested CQE; a successful unsignaled send produces none.
+Transport retirement advances the NIC consumer, while provider-visible WR-slot
+reclamation follows a later signaled completion or an explicit modeled drain
+or teardown rule. Error and receive completions follow their own documented
+rules. The current bookkeeping-v1 rule and legacy CSV `rq_id` are compatibility
+forms, not structural semantics. A structural public projection must use a
+versioned schema with these cardinalities while preserving a v1 reader.
+
+The current `AtlahsWqeLedger` remains the bypass authority until BACK-8,
+BACK-9, BACK-12 and HTSIM-9 connect the structural path. A WQE has no single
+scheduled start constant. The model records post, doorbell publication and
+observation, WQE fetch or BlueFlame transfer, QPC readiness, scheduler
+admission, first and last packet, transport retirement, CQE visibility and CQ
+polling separately.
+NIC start is first-packet issue. A reduced per-WQE start latency is derived
+from the native timeline for calibration and never charged again by htsim.
+The pre-implementation composition expectations were first frozen in
+[examples/rnic_live_v1](../../examples/rnic_live_v1/expectations.md) at commit
+`65b5609`; commit `facb26d` clarified retry identity, and commit `947399c`
+records the final pre-run drain and audit wording.
 The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 [the RNIC hardware calibration plan](../papers/rnic-hardware-calibration.md).
 
@@ -198,6 +253,12 @@ accounted. See
 The incidence draws are independent analytical surrogates: they do not claim
 that the model detects a NUMA route, IOMMU or DDIO miss, ACS redirect or GPU
 Direct event. Defaults remain synthetic, not a ConnectX-7 profile.
+Service class is an accounting label in this closed slice; it does not affect
+scheduling. The existing deterministic reservation order, including mandatory
+posted forward progress, is the baseline that CORE-8's identity policy must
+preserve. BACK-16 adds event-time mechanism precision without class-based
+reordering. Optional class-aware policies remain CORE-10 completeness work,
+and selecting identity must reproduce the accepted BACK-10 rows byte for byte.
 BACK-16 owns active-path timing precision and calibration; BACK-17 owns
 optional PCIe feature completeness.
 
@@ -271,11 +332,17 @@ is difficult.
   correlation and measured calibration. Topology selects NUMA, ACS and GPU
   Direct routes; cache and translation state decide DDIO and IOMMU events,
   consuming ATS/ATC events from BACK-17 when that optional feature is enabled.
-  Add class-specific DMA/MMIO queues, deferred chronological arbitration that
-  can displace pending reservations before returning results, and occupancy.
+  Add event-time DMA/MMIO resource arbitration and occupancy so chronological
+  arrivals can affect pending reservations. Reuse CORE-8's exact
+  reservation-timeline and finite-capacity semantics. Apply PCIe legality and
+  forward-progress rules before baseline selection; a resource-blocked
+  non-posted read is not a legal ready candidate, so an eligible posted write
+  can use the idle link. Identity ignores service class and must preserve every
+  accepted BACK-10 row, timestamp, counter and random draw exactly. CORE-10
+  owns optional non-identity class reordering.
   Add variable measured replay, the remaining PCIe RO/IDO/TC/VC ordering
-  matrix, negotiated read-tag capacity including 10-bit tag scaling, and
-  provenance-bearing CX-7 calibration. Preserve deterministic replay and
+  matrix and provenance-bearing CX-7 calibration. Calibrate tag-capacity knees
+  for every mode enabled by BACK-17. Preserve deterministic replay and
   transactional sample state; extend run records with calibration provenance
   and exact draw ranges.
   Acceptance includes per-class attribution, calibrated queue and tag knees,
@@ -299,19 +366,40 @@ is difficult.
   and of any one CC policy, compose with htsim through HTSIM-9, and preserve
   direct binary invocation. Define versioned configuration and result
   records, deterministic event ordering, opaque policy/fabric tokens and a
-  hardware-bypass mode. Acceptance requires the same hardware configuration
-  hash across `rnic-nn`, `rnic-cn` and DCQCN comparison rows, plus exact
-  preservation of the current null/fluid closed forms in bypass mode.
+  hardware-bypass mode. The native session is the sole mutable WQE authority
+  in structural mode and emits the versioned records from which bookkeeping
+  and compatibility rows are projected. Acceptance requires the same hardware
+  configuration hash across `rnic-nn`, `rnic-cn` and DCQCN comparison rows.
+  Every bypass profile retained after composition, including packetized
+  profiles, must preserve its accepted artifacts byte for byte; an
+  intentionally unsupported legacy bypass must fail configuration explicitly.
+  A directly invoked htsim run and a step-level run must prove live
+  reachability: changing one nonzero native hardware service parameter changes
+  the corresponding WQE timeline, per-flow FCT, JCT, step latency and at least
+  one TTFT or TPOT outcome by the frozen relation. The test must fail if the
+  native library is unlinked, the wrapper is bypassed or a second lifecycle
+  authority is active.
   The standalone C++17 library, opaque flow-level `NetworkPort`, strict native
-  build and deterministic fake adapter are complete. Remaining scope is the
-  outer `AtlahsFlowRuntime` wrapper, live htsim composition, run records,
-  configuration hash and bypass equivalence.
+  build and deterministic fake adapter are complete. Remaining SimLLM scope is
+  the native session composition entry point and port binding, run records,
+  configuration hash, sole-authority projection and bypass equivalence.
+  HTSIM-9 owns the outer `AtlahsFlowRuntime` wrapper and htsim-side adapter;
+  CORE-4 and CORE-5 own graph invocation and completion reduction.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
   the structural **RDMA
   Work Queue**, merging the old WQE lifecycle and per-WQE-start work. Model
   verbs WR chains, WQE construction, SQ/RQ/SRQ rings, many-WQ CQ sharing,
   doorbell batches, WQEBB and WR indices, fences, inline data, signaled and
   unsignaled sends, receive consumption, finite depth, wrap and reclamation.
+  The native RNIC session owns a registry of SQ, RQ, SRQ and standalone CQ
+  objects. A send WQE has one SQ and send CQ; a receive WQE has one RQ or SRQ
+  and receive CQ. Matching is a later event, not a remote-RQ parent on the send
+  WQE. Multiple WQs may share one CQ, so CQ state must not remain embedded in
+  one SQ object. Canonical result records use the stable endpoint, owning-WQ
+  and post-sequence key and project exactly into the public bookkeeping
+  schema. Successful unsignaled sends emit no CQE. One-sided operations emit
+  no receive WQE, while SEND consumes one posted receive WQE or produces the
+  modeled RNR outcome.
   CQ is a real host-memory queue with requester/responder/error CQEs, owner
   phase, producer/consumer indices, 64/128-byte format profiles, compression,
   moderation policy, polling, completion-channel notification requests and
@@ -320,16 +408,24 @@ is difficult.
   Normalized CQE content includes WR ID, QPN/source QP, opcode, status,
   opcode-valid byte count, immediate/invalidate data, flags, syndrome and
   vendor syndrome; provider-derived fields and valid bits stay explicit.
-  Record `posted_at`, `doorbelled_at`, `doorbell_seen_at`, WQE-fetch begin/end,
-  `qpc_ready_at`, `admitted_at`, first/last packet, transport retirement,
-  CQE visibility and poll time. Define NIC start as first-packet issue, never
-  as `ibv_post_send` return.
+  Record optional capture-provenance `ibverbs_entry_at`, then native
+  `posted_at`, `doorbelled_at`, `doorbell_seen_at`, WQE-fetch begin/end,
+  `qpc_ready_at`, `admitted_at`, first/last packet, transport retirement, CQE
+  visibility and poll time. Define NIC start as first-packet issue, never as
+  `ibv_post_send` return. Reported per-WQE start latency is a derived difference
+  over available timestamps, not a separately scheduled constant. The native
+  model never fabricates an `ibverbs_entry_at` value when no capture is joined.
   The first one-SQ/one-CQ send slice is complete, including prefix acceptance,
   finite depth, batching, ordered retirement, signaling, poll-time reclaim,
   CQ wrap/owner generation and controlled first-failure evidence. Remaining
   scope includes RQ/SRQ, multiple WQs and shared CQs, WQEBB encoding, fences,
   inline WQE encodings, CQE format profiles, compression, moderation and
-  completion-channel notification semantics.
+  completion-channel notification semantics, including an explicit modeled
+  drain or teardown rule for an all-unsignaled tail. Acceptance includes two
+  WQs sharing one CQ, RQ and SRQ receive matching, a one-sided no-RQ case, an
+  unsignaled no-CQE case, later-signaled and modeled-drain or teardown
+  reclamation, and exact native-result to public-projection reconciliation at
+  quiescence.
 - BACK-11 (Completeness; P1; L): implement QP lifecycle, RNIC pairing and
   context placement. Cover
   RESET, INIT, RTR, RTS, SQD/SQE, ERR and teardown; PD/MR/MPT/MTT ownership;
@@ -363,8 +459,9 @@ is difficult.
 - BACK-17 (Completeness; P2; L): add optional PCIe mechanisms behind explicit
   enable, disable and rejection profiles. Cover mlx5 BlueFlame write-combining
   semantics and WQE-fetch bypass; ATS negotiation, ATC translation caching and
-  fault production; MSI-X vector routing, interrupt-side coalescing and
-  interrupt writes that execute BACK-9's logical notification policy;
+  fault production; negotiated read-tag capacity including optional 10-bit tag
+  scaling; MSI-X vector routing, interrupt-side coalescing and interrupt writes
+  that execute BACK-9's logical notification policy;
   QPC/ICM, MTT/MPT, payload, command and fault transaction adapters;
   and lower-layer DLLP, UpdateFC, replay, SKP and FEC events. Every disabled
   mode must preserve the accepted BACK-10 baseline exactly. Once enabled,
@@ -445,7 +542,14 @@ is difficult.
   the same SimLLM hardware implementation for `rnic-nn`, `rnic-cn` and DCQCN,
   transport PFC frames through htsim queues, and keep the fluid bypass
   explicit. No WQ, CQ, QP, QPC, PCIe, DMA or hardware scheduling state may
-  live in this adapter.
+  live in this adapter. In structural mode `AtlahsHtsimApi` must not construct
+  or mutate `AtlahsWqeLedger`; it delegates WR/WQE progression and completion
+  to the SimLLM wrapper and returns only opaque network events. The legacy
+  ledger remains available only in an explicitly labeled bypass run. Native
+  and legacy WQE counters must never both advance in one session. Acceptance
+  includes a mode-exclusivity assertion, exact token conservation and a
+  directly invoked binary test in which a controlled htsim delay, drop or
+  rate update reaches the native WQE timeline and final reported metric.
   Develop it only in the HTSIM repo's dated append-only addon branch, then
   update the SimLLM submodule pin.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
