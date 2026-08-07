@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="resources/logo/openfabric-logo-mark.png" width="80" alt="OpenFabric">
+</p>
+
 <h1 align="center">SimLLM</h1>
 
 <h3 align="center">
