@@ -24,7 +24,9 @@ rank 1 {
 Optional `cpu` / `nic` clauses pin operations to resources.
 
 Conversion: `to_binary(goal_path)` runs `txt2bin`, discovered via
-`SIMLLM_TXT2BIN`, the checked-in binary in the htsim submodule, then `PATH`.
+`SIMLLM_TXT2BIN`, the CMake build tree (including MSVC configuration
+directories), the legacy checked-in source-tree executable on Unix, then
+`PATH`.
 
 ## Status
 

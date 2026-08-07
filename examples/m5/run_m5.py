@@ -135,7 +135,7 @@ def run_a2av(out: Path, profile: str, per_pair: int, world: int) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="/data3/yifeng/simllm-dev/m5-runs")
+    parser.add_argument("--out", default="runs/m5")
     parser.add_argument("--sections", default="a,b,c")
     args = parser.parse_args()
     out = Path(args.out)

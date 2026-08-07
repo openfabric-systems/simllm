@@ -70,10 +70,9 @@ FROZEN_B_INPUTS: dict[tuple[str, int], tuple[int, int]] = {
 FROZEN_TTFT_PS = 42_318_915_840
 FROZEN_DECODE_PS = 2_485_904_640
 
-SMOKE_JSONLS = {
-    "vllm-m2": Path("/data3/yifeng/simllm-dev/m2-smoke-steps-v2.jsonl"),
-    "sglang-m3": Path("/data3/yifeng/simllm-dev/m3-smoke-steps.jsonl"),
-}
+_HERE = Path(__file__).resolve().parent
+DEFAULT_VLLM_JSONL = _HERE / "fixtures" / "vllm-m2-steps.jsonl"
+DEFAULT_SGLANG_JSONL = _HERE / "fixtures" / "sglang-m3-steps.jsonl"
 
 
 def dims_tp(tp: int) -> ModelDims:
@@ -152,6 +151,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default="runs/m4")
     parser.add_argument("--sections", default="a,b,c,d,e")
+    parser.add_argument("--vllm-jsonl", default=DEFAULT_VLLM_JSONL)
+    parser.add_argument("--sglang-jsonl", default=DEFAULT_SGLANG_JSONL)
     args = parser.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -243,7 +244,11 @@ def main() -> None:
              final_virtual_time_ps=virtual_time)
 
     if "e" in sections:
-        for label, path in SMOKE_JSONLS.items():
+        smoke_jsonls = {
+            "vllm-m2": Path(args.vllm_jsonl),
+            "sglang-m3": Path(args.sglang_jsonl),
+        }
+        for label, path in smoke_jsonls.items():
             records = step_records_from_jsonl(path)
             times = [r.virtual_time_ps for r in records]
             assert times == sorted(times) and len(set(times)) == len(times), (

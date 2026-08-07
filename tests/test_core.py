@@ -15,8 +15,9 @@ from simllm.core import (
     write_step_records,
 )
 
-M2_SMOKE_JSONL = Path("/data3/yifeng/simllm-dev/m2-smoke-steps-v2.jsonl")
-M3_SMOKE_JSONL = Path("/data3/yifeng/simllm-dev/m3-smoke-steps.jsonl")
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+M2_SMOKE_JSONL = _REPO_ROOT / "examples" / "m4" / "fixtures" / "vllm-m2-steps.jsonl"
+M3_SMOKE_JSONL = _REPO_ROOT / "examples" / "m4" / "fixtures" / "sglang-m3-steps.jsonl"
 
 
 def test_step_record_totals():
@@ -95,8 +96,6 @@ def test_step_records_jsonl_names_bad_line(tmp_path):
     ids=["vllm-m2", "sglang-m3"],
 )
 def test_real_smoke_jsonl_loads(path, expected_records):
-    if not path.is_file():
-        pytest.skip(f"recorded smoke JSONL not on this machine: {path}")
     records = step_records_from_jsonl(path)
     assert len(records) == expected_records
     times = [r.virtual_time_ps for r in records]

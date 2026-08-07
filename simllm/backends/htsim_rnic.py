@@ -7,35 +7,35 @@ manifold), ``rnic-nn-fluid`` (continuous fluid manifold), ``rnic-cn``
 valid only if the simulator reports ``physical_quiescence=verified``.
 
 Binary discovery order: ``SIMLLM_HTSIM_RNIC`` environment variable, then
-``build/htsim/datacenter/htsim_rnic`` under the repo root (the README build
-location), then ``PATH``.
+the single- or multi-configuration ``build/htsim`` CMake layout under the
+repo root, then ``PATH``.
 """
 
 from __future__ import annotations
 
 import csv
-import os
 import re
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from simllm._native import cmake_binary_candidates, find_native_binary
+
 RNIC_PROFILES = ("rnic-nn", "rnic-nn-fluid", "rnic-cn")
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_DEFAULT_BUILD_BINARY = _REPO_ROOT / "build" / "htsim" / "datacenter" / "htsim_rnic"
+_DEFAULT_BUILD_ROOT = _REPO_ROOT / "build" / "htsim"
 _GOAL_FINISH_RE = re.compile(r"^Maximum finishing time at host \d+: (\d+)(?:\s|$)")
 
 
 def find_htsim_rnic() -> Path | None:
-    env = os.environ.get("SIMLLM_HTSIM_RNIC")
-    if env and Path(env).is_file():
-        return Path(env)
-    if _DEFAULT_BUILD_BINARY.is_file() and os.access(_DEFAULT_BUILD_BINARY, os.X_OK):
-        return _DEFAULT_BUILD_BINARY
-    on_path = shutil.which("htsim_rnic")
-    return Path(on_path) if on_path else None
+    return find_native_binary(
+        "SIMLLM_HTSIM_RNIC",
+        "htsim_rnic",
+        cmake_binary_candidates(
+            _DEFAULT_BUILD_ROOT, "htsim_rnic", subdirectory="datacenter"
+        ),
+    )
 
 
 @dataclass

@@ -65,13 +65,25 @@ fractional nflow, sender egress composition, BJP-derived resequencing
 window) are merged. The SimLLM pin for HTSim is now on the append-only
 `2026_08_05/simllm-addon` branch because the WQE bookkeeping commit has not
 been merged into backend main. A submodule pin to an addon branch is an
-intentional supported state:
+intentional supported state. The same HTSIM sources build on Linux with
+GCC/Clang and on Windows with MSVC. From the SimLLM root, the supported
+helper commands are:
 
-```
-cmake -S third_party/htsim/htsim/sim -B build/htsim -DCMAKE_BUILD_TYPE=Release
-cmake --build build/htsim --parallel
+```bash
+./scripts/build_htsim.sh build/htsim --test
 build/htsim/datacenter/htsim_rnic -goal trace.bin -linkspeed_bps 400000000000 -rnic_profile rnic-cn
 ```
+
+```powershell
+.\scripts\build_htsim.ps1 -BuildDirectory build\htsim -RunTests
+build\htsim\datacenter\Release\htsim_rnic.exe -goal trace.bin -linkspeed_bps 400000000000 -rnic_profile rnic-cn
+```
+
+Binary discovery checks `SIMLLM_HTSIM_RNIC`, `SIMLLM_HTSIM_DCQCN`, or
+`SIMLLM_TXT2BIN` first, then both the single-configuration build layout
+and the MSVC `Release`/`RelWithDebInfo`/`Debug`/`MinSizeRel` layouts,
+then `PATH`. The framework adapters and traffic-model layer stay in
+Python and use this platform-neutral discovery path.
 
 Changes to the backends go through their own repos on
 `<YYYY_MM_DD>/simllm-addon` branches; SimLLM only bumps pins.
