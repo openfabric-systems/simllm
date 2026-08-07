@@ -14,12 +14,17 @@ implementation, tests or regenerated results. That parent-child order is the
 public freeze audit trail for the correction. Future study extensions must use
 the same expectations-only commit boundary before implementation or execution.
 
-An adversarial review of that frozen correction found three uncovered edges:
-link contention reached only after a credit stall, a future completion that a
-ready posted request cannot fit before, and the two dependency-horizon arms
-that make reads wait for prior posted visibility and prior read completion.
-Their exact expectations are added here in a second expectations-only commit,
-before the corresponding implementation, tests or execution.
+An adversarial review of that frozen correction found uncovered edges in link
+contention reached only after a credit stall and in the two dependency-horizon
+arms that make reads wait for prior posted visibility and prior read
+completion. Their exact expectations were added in expectations-only commits
+before the corresponding implementation and directed tests. An intermediate
+expectation also generalized transactional displacement failure to future
+completions. The first native regression showed that this overconstrained a
+legal posted-after-completion order. This expectations-only correction retracts
+that generalization before the implementation lands. The mandatory
+forward-progress exception here remains posted versus blocked non-posted
+requests; completion arbitration remains part of the deferred ordering matrix.
 
 ## Scope and evidence boundary
 
@@ -74,10 +79,11 @@ a later posted request cannot inherit the completion wait of an earlier
 non-posted request. This implements the mandatory posted-over-blocked-
 non-posted dependency rule. The serializer also lets a ready posted TLP fill an
 idle gap before an already scheduled, resource-blocked non-posted request. If
-correct arbitration would have to displace a result already returned by the
-eager v1 API, the model must fail transactionally instead of reporting an
-illegal order. Fully deferred cross-class arbitration, Relaxed Ordering,
-ID-based ordering, Traffic Classes and Virtual Channels remain precision work.
+that mandatory arbitration would have to displace a non-posted result already
+returned by the eager v1 API, the model must fail transactionally instead of
+reporting an illegal order. Fully deferred cross-class and completion
+arbitration, Relaxed Ordering, ID-based ordering, Traffic Classes and Virtual
+Channels remain precision work.
 
 The analytical sampler is counter based and uses only specified unsigned
 integer operations. A fabric seed, path ID, component ID and component-local
@@ -345,13 +351,7 @@ The native harness must additionally prove:
     381 ps of external link queueing and completes before B starts. A posted
     request too large for such a pre-reserved gap must raise an asserted model
     error before IDs, reservations, counters or time commit; it must never be
-    silently serialized behind the blocked non-posted request. The same
-    transactional rule applies to a future completion: with MPS = MRRS = 128
-    and 10,000 ps response latency, MRd(128) in H2D schedules its D2H CplD from
-    10,381 to 12,730 ps. A subsequently submitted D2H MWr(1,024) cannot fit
-    before that returned reservation and must fail without committing any of
-    its fragments. A following MWr(4) uses transaction ID 2 and the idle D2H
-    interval from 0 to 445 ps.
+    silently serialized behind the blocked non-posted request.
 15. Link contention reached after a posted-credit stall is attributed exactly.
     The directed Gen5 x16 case uses MPS = MRRS = 128, one D2H posted-header
     credit, one outstanding read, a 128-byte completion buffer, 1,000,000 ps
