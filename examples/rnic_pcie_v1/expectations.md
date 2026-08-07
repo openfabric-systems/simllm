@@ -14,6 +14,13 @@ implementation, tests or regenerated results. That parent-child order is the
 public freeze audit trail for the correction. Future study extensions must use
 the same expectations-only commit boundary before implementation or execution.
 
+An adversarial review of that frozen correction found three uncovered edges:
+link contention reached only after a credit stall, a future completion that a
+ready posted request cannot fit before, and the two dependency-horizon arms
+that make reads wait for prior posted visibility and prior read completion.
+Their exact expectations are added here in a second expectations-only commit,
+before the corresponding implementation, tests or execution.
+
 ## Scope and evidence boundary
 
 This study is the closure evidence for BACK-10: deterministic, full-duplex
@@ -140,6 +147,18 @@ of its MPS, MRRS or CplD count. A later transaction submitted against an
 occupied serializer charges its external wait once, on the first affected
 fragment. Credit, outstanding-read and completion-buffer stalls retain their
 own ledgers and are not relabeled as link queueing.
+
+If a separately accounted resource stall moves a TLP beyond `I[k]`, the link
+is arbitrated again at resource-ready time `A[k]`. Let `S[k]` be the resulting
+reservation start. The additional external queue wait is
+`S[k] - A[k]`; it is zero unless another reservation owns the link after the
+resource becomes available. Thus the complete per-fragment charge is:
+
+```text
+Q_link[k] = I[k] - E[k] + S[k] - A[k]
+```
+
+The second term must not be dropped or folded into credit wait.
 
 ## Evidence accounting
 
@@ -285,8 +304,11 @@ The native harness must additionally prove:
    posted write never waits for the non-posted horizon, has zero ordering wait
    in the directed long-read case and completes before that read's delayed
    completion. Posted-to-posted and non-posted-to-non-posted order remains
-   conservative. Domain zero is the generic global domain; independent work
-   bypasses both horizons.
+   conservative. In the directed Gen5 x16, MPS = MRRS = 128 dependency case,
+   MWr(4) completes at 445 ps, the following MRd(128) attributes 445 ps of
+   ordering wait and completes at 3,175 ps, and a second MRd(128) attributes
+   3,175 ps of ordering wait and completes at 5,905 ps. Domain zero is the
+   generic global domain; independent work bypasses both horizons.
 7. Invalid versions, paths, generation/width, MPS/MRRS/RCB, sizes and address
    overflow fail before transaction IDs, counters, credits or time mutate.
    Per-class and cross-class aggregate overflow obey the same rule.
@@ -323,4 +345,20 @@ The native harness must additionally prove:
     381 ps of external link queueing and completes before B starts. A posted
     request too large for such a pre-reserved gap must raise an asserted model
     error before IDs, reservations, counters or time commit; it must never be
-    silently serialized behind the blocked non-posted request.
+    silently serialized behind the blocked non-posted request. The same
+    transactional rule applies to a future completion: with MPS = MRRS = 128
+    and 10,000 ps response latency, MRd(128) in H2D schedules its D2H CplD from
+    10,381 to 12,730 ps. A subsequently submitted D2H MWr(1,024) cannot fit
+    before that returned reservation and must fail without committing any of
+    its fragments. A following MWr(4) uses transaction ID 2 and the idle D2H
+    interval from 0 to 445 ps.
+15. Link contention reached after a posted-credit stall is attributed exactly.
+    The directed Gen5 x16 case uses MPS = MRRS = 128, one D2H posted-header
+    credit, one outstanding read, a 128-byte completion buffer, 1,000,000 ps
+    response latency and 1,003,000 ps credit-return latency. Submit independent
+    D2H transactions P0 = MWr(4), A = MRd(128), B = MRd(128), P1 = MWr(4), all
+    at time zero. P0 releases its posted credit at 1,003,445 ps. Before credit
+    arbitration, P1 is link-ready at 826 ps. Its credit wait is 1,002,619 ps,
+    which makes it ready during B's request reservation. P1 therefore starts
+    at 1,003,556 ps, completes at 1,004,001 ps and charges 937 ps of link queue:
+    826 ps before the credit stall plus 111 ps after credit availability.
