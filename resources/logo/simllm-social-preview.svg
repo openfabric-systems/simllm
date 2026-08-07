@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title description">
+  <title id="title">SimLLM social preview</title>
+  <desc id="description">SimLLM, network-faithful simulation for LLM serving and training, an OpenFabric project.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#061633"/>
+      <stop offset="0.58" stop-color="#0A214B"/>
+      <stop offset="1" stop-color="#123C8A"/>
+    </linearGradient>
+    <radialGradient id="cobalt-glow" cx="0.82" cy="0.46" r="0.65">
+      <stop offset="0" stop-color="#204CFF" stop-opacity="0.72"/>
+      <stop offset="0.42" stop-color="#204CFF" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#204CFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#9EC3FF"/>
+    </linearGradient>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" fill="none" stroke="#E1ECFF" stroke-opacity="0.055" stroke-width="1"/>
+    </pattern>
+    <filter id="soft-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <mask id="open-ring" maskUnits="userSpaceOnUse" x="0" y="0" width="26" height="26">
+      <rect width="26" height="26" fill="#000"/>
+      <circle cx="13" cy="13" r="13" fill="#fff"/>
+      <circle cx="13" cy="13" r="11" fill="#000"/>
+      <path d="M13 13 0 0V26Z" fill="#000"/>
+    </mask>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#background)"/>
+  <rect width="1280" height="640" fill="url(#cobalt-glow)"/>
+  <rect width="1280" height="640" fill="url(#grid)"/>
+  <path d="M780 0H1280V640H910Z" fill="#9EC3FF" fill-opacity="0.035"/>
+
+  <g fill="none" stroke="#9EC3FF" stroke-opacity="0.19" stroke-width="1.5">
+    <path d="M742 82 838 144 930 92 1026 158 1130 98 1238 164"/>
+    <path d="M738 194 832 248 930 202 1022 266 1128 212 1238 276"/>
+    <path d="M742 306 838 360 932 314 1028 378 1134 326 1240 388"/>
+    <path d="M748 418 842 472 938 426 1034 490 1140 438 1244 500"/>
+    <path d="M838 144 832 248 838 360 842 472"/>
+    <path d="M930 92 930 202 932 314 938 426"/>
+    <path d="M1026 158 1022 266 1028 378 1034 490"/>
+    <path d="M1130 98 1128 212 1134 326 1140 438"/>
+    <path d="M1238 164 1238 276 1240 388 1244 500"/>
+  </g>
+  <g fill="#9EC3FF" fill-opacity="0.46">
+    <circle cx="742" cy="82" r="4"/><circle cx="838" cy="144" r="4"/><circle cx="930" cy="92" r="4"/>
+    <circle cx="1026" cy="158" r="4"/><circle cx="1130" cy="98" r="4"/><circle cx="1238" cy="164" r="4"/>
+    <circle cx="738" cy="194" r="4"/><circle cx="832" cy="248" r="4"/><circle cx="930" cy="202" r="4"/>
+    <circle cx="1022" cy="266" r="4"/><circle cx="1128" cy="212" r="4"/><circle cx="1238" cy="276" r="4"/>
+    <circle cx="742" cy="306" r="4"/><circle cx="838" cy="360" r="4"/><circle cx="932" cy="314" r="4"/>
+    <circle cx="1028" cy="378" r="4"/><circle cx="1134" cy="326" r="4"/><circle cx="1240" cy="388" r="4"/>
+    <circle cx="748" cy="418" r="4"/><circle cx="842" cy="472" r="4"/><circle cx="938" cy="426" r="4"/>
+    <circle cx="1034" cy="490" r="4"/><circle cx="1140" cy="438" r="4"/><circle cx="1244" cy="500" r="4"/>
+  </g>
+
+  <g transform="translate(870 144) scale(13.2)" filter="url(#soft-glow)">
+    <rect width="26" height="26" fill="url(#mark)" mask="url(#open-ring)"/>
+    <rect x="5" y="11" width="4" height="4" rx="1" fill="url(#mark)"/>
+    <rect x="11" y="11" width="4" height="4" rx="1" fill="url(#mark)"/>
+    <rect x="17" y="11" width="4" height="4" rx="1" fill="url(#mark)"/>
+  </g>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="82" y="242" fill="#FFFFFF" font-size="116" font-weight="700" letter-spacing="-4">SimLLM</text>
+    <text x="88" y="320" fill="#E1ECFF" font-size="29" font-weight="400">Network-faithful simulation for LLM serving and training</text>
+    <line x1="88" y1="478" x2="650" y2="478" stroke="#9EC3FF" stroke-opacity="0.48" stroke-width="1"/>
+    <text x="88" y="526" fill="#9EC3FF" font-size="19" font-weight="700" letter-spacing="3.5">AN OPENFABRIC PROJECT</text>
+  </g>
+</svg>
