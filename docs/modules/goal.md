@@ -25,7 +25,8 @@ Optional `cpu` / `nic` clauses pin operations to resources.
 
 Conversion: `to_binary(goal_path)` runs `txt2bin`, discovered via
 `SIMLLM_TXT2BIN`, the CMake build tree (including MSVC configuration
-directories), the legacy source-tree symlink on Unix, then `PATH`.
+directories), the legacy checked-in source-tree executable on Unix, then
+`PATH`.
 
 ## Status
 

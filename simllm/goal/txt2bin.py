@@ -2,7 +2,7 @@
 
 The ``txt2bin`` tool builds with the htsim backend; discovery order is the
 ``SIMLLM_TXT2BIN`` environment variable, the CMake build tree, the legacy
-source-tree symlink on Unix, then ``PATH``.
+checked-in source-tree executable on Unix, then ``PATH``.
 """
 
 from __future__ import annotations
