@@ -1,0 +1,77 @@
+check,evidence_class,family,case,expected,measured,residual,status
+A1,exact_oracle,pipeline throughput closed form,interval=1,11,11,0,PASS
+A1,exact_oracle,pipeline throughput closed form,interval=2,18,18,0,PASS
+A1,exact_oracle,pipeline throughput closed form,interval=4,32,32,0,PASS
+A2,exact_oracle,dependent-chain closed form,interval=1,32,32,0,PASS
+A2,exact_oracle,dependent-chain closed form,interval=4,32,32,0,PASS
+A3,exact_oracle,two-SM compute closed form,"interval=1,sm_count=2",7,7,0,PASS
+B1,exact_oracle,HBM serialization closed form,"bytes=64,bw=32,sms=1",164,164,0,PASS
+B2,behavioral_relation,HBM duration is SM-count invariant,"bytes=64,bw=32,sms=2",164,164,0,PASS
+B1,exact_oracle,HBM serialization closed form,"bytes=64,bw=64,sms=1",132,132,0,PASS
+B2,behavioral_relation,HBM duration is SM-count invariant,"bytes=64,bw=64,sms=2",132,132,0,PASS
+B1,exact_oracle,HBM serialization closed form,"bytes=128,bw=32,sms=1",228,228,0,PASS
+B2,behavioral_relation,HBM duration is SM-count invariant,"bytes=128,bw=32,sms=2",228,228,0,PASS
+B1,exact_oracle,HBM serialization closed form,"bytes=128,bw=64,sms=1",164,164,0,PASS
+B2,behavioral_relation,HBM duration is SM-count invariant,"bytes=128,bw=64,sms=2",164,164,0,PASS
+B3,behavioral_relation,HBM serialization scales inversely with bandwidth,serialization ratio,64,64,0,PASS
+C1,exact_oracle,ring egress byte closed form,"payload=65536,world=2,egress",65536,65536,0,PASS
+C1,structural_invariant,ring load-store byte symmetry,"payload=65536,world=2,loaded",65536,65536,0,PASS
+C1,exact_oracle,ring egress byte closed form,"payload=65536,world=4,egress",98304,98304,0,PASS
+C1,structural_invariant,ring load-store byte symmetry,"payload=65536,world=4,loaded",98304,98304,0,PASS
+C1,exact_oracle,ring egress byte closed form,"payload=65536,world=8,egress",114688,114688,0,PASS
+C1,structural_invariant,ring load-store byte symmetry,"payload=65536,world=8,loaded",114688,114688,0,PASS
+C1,exact_oracle,ring egress byte closed form,"payload=131072,world=2,egress",131072,131072,0,PASS
+C1,structural_invariant,ring load-store byte symmetry,"payload=131072,world=2,loaded",131072,131072,0,PASS
+C1,exact_oracle,ring egress byte closed form,"payload=131072,world=4,egress",196608,196608,0,PASS
+C1,structural_invariant,ring load-store byte symmetry,"payload=131072,world=4,loaded",196608,196608,0,PASS
+C1,exact_oracle,ring egress byte closed form,"payload=131072,world=8,egress",229376,229376,0,PASS
+C1,structural_invariant,ring load-store byte symmetry,"payload=131072,world=8,loaded",229376,229376,0,PASS
+C2,exact_oracle,NVLink serialization closed form,"chunk=64,bw=8",456,456,0,PASS
+C2,exact_oracle,NVLink serialization closed form,"chunk=64,bw=16",328,328,0,PASS
+C2,exact_oracle,NVLink serialization closed form,"chunk=128,bw=8",712,712,0,PASS
+C2,exact_oracle,NVLink serialization closed form,"chunk=128,bw=16",456,456,0,PASS
+C3,structural_invariant,single-server egress lower bound,"warps=1,at-or-above-bound",1,1,0,PASS
+C3,structural_invariant,single-server egress lower bound,"warps=2,at-or-above-bound",1,1,0,PASS
+C3,structural_invariant,single-server egress lower bound,"warps=4,at-or-above-bound",1,1,0,PASS
+C3,structural_invariant,single-server egress lower bound,"warps=8,at-or-above-bound",1,1,0,PASS
+C3,behavioral_relation,NCCL excess decreases with channel warps,warps=1->2,1,1,0,PASS
+C3,behavioral_relation,NCCL excess decreases with channel warps,warps=2->4,1,1,0,PASS
+C3,behavioral_relation,NCCL excess decreases with channel warps,warps=4->8,1,1,0,PASS
+D1,exact_oracle,two HBM tasks share one cursor,two memory tasks,132,132,0,PASS
+D2,exact_oracle,memory-first mixed-task regression,memory beside network,329,329,0,PASS
+D3,exact_oracle,half-SM shared-memory mixed-task regression,"compute beside memory,half-SM demand",243,243,0,PASS
+D4,structural_invariant,per-task attribution conservation,D1 issued instructions,32,32,0,PASS
+D4,structural_invariant,per-task attribution conservation,D1 hbm bytes,2048,2048,0,PASS
+D4,structural_invariant,per-task attribution conservation,D1 nvlink bytes,0,0,0,PASS
+D4,structural_invariant,per-task attribution conservation,D2 issued instructions,64,64,0,PASS
+D4,structural_invariant,per-task attribution conservation,D2 hbm bytes,2048,2048,0,PASS
+D4,structural_invariant,per-task attribution conservation,D2 nvlink bytes,2048,2048,0,PASS
+D4,structural_invariant,per-task attribution conservation,D3 issued instructions,64,64,0,PASS
+D4,structural_invariant,per-task attribution conservation,D3 hbm bytes,2048,2048,0,PASS
+D4,structural_invariant,per-task attribution conservation,D3 nvlink bytes,0,0,0,PASS
+E1,structural_invariant,task-kind wiring,ring task kind is network,1,1,0,PASS
+E1,exact_oracle,ring task byte and request oracles,ring HBM requested bytes,65536,65536,0,PASS
+E1,exact_oracle,ring task byte and request oracles,ring HBM transacted bytes,65536,65536,0,PASS
+E1,exact_oracle,ring task byte and request oracles,ring HBM requests,1024,1024,0,PASS
+E1,exact_oracle,ring task byte and request oracles,ring NVLink requested bytes,65536,65536,0,PASS
+E1,exact_oracle,ring task byte and request oracles,ring NVLink transacted bytes,65536,65536,0,PASS
+E1,exact_oracle,ring task byte and request oracles,ring NVLink requests,1024,1024,0,PASS
+E2,exact_oracle,mixed-task counter oracles,mixed issued instructions,2080,2080,0,PASS
+E2,exact_oracle,mixed-task counter oracles,mixed HBM requested bytes,67584,67584,0,PASS
+E2,exact_oracle,mixed-task counter oracles,mixed HBM transacted bytes,67584,67584,0,PASS
+E2,exact_oracle,mixed-task counter oracles,mixed HBM requests,1056,1056,0,PASS
+E2,exact_oracle,mixed-task counter oracles,mixed NVLink requested bytes,65536,65536,0,PASS
+E2,exact_oracle,mixed-task counter oracles,mixed NVLink transacted bytes,65536,65536,0,PASS
+E2,exact_oracle,mixed-task counter oracles,mixed NVLink requests,1024,1024,0,PASS
+E2,structural_invariant,per-task attribution conservation,all per-task counters conserve,1,1,0,PASS
+E3,behavioral_relation,ring and memory overlap band,mixed at or above ring control,1,1,0,PASS
+E3,behavioral_relation,ring and memory overlap band,mixed below serialized controls,1,1,0,PASS
+D2R,behavioral_relation,D2 shared issue-path mechanism,memory-first is network-first plus one cycle,329,329,0,PASS
+D2R,behavioral_relation,D2 shared issue-path mechanism,scheduler widening alone preserves delay,329,329,0,PASS
+D2R,behavioral_relation,D2 shared issue-path mechanism,load-store widening alone preserves delay,329,329,0,PASS
+D2R,behavioral_relation,D2 shared issue-path mechanism,widening both issue resources removes delay,328,328,0,PASS
+D3R,behavioral_relation,D3 shared-memory residency mechanism,half-SM tasks serialize,243,243,0,PASS
+D3R,behavioral_relation,D3 shared-memory residency mechanism,memory admits after constrained compute,14,14,0,PASS
+D3R,behavioral_relation,D3 shared-memory residency mechanism,unconstrained tasks overlap plus issue delay,133,133,0,PASS
+H-D2,historical_ledger,superseded initial registration,memory beside network,328,329,1,HISTORICAL_FAIL
+H-D3,historical_ledger,superseded initial registration,compute hides under memory,132,243,111,HISTORICAL_FAIL

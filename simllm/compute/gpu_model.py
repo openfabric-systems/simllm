@@ -16,11 +16,13 @@ from simllm.compute.provider import (
     ProfileKey,
 )
 
-GPU_MODEL_IMPLEMENTATION = "simllm-isolated-gpu-service-v1"
+GPU_MODEL_IMPLEMENTATION = "simllm-gpu-service-v2"
 
 
 class PipelineKind(str, Enum):
     ALU = "alu"
+    INT = "int"
+    FP64 = "fp64"
     TENSOR = "tensor"
     LOAD_STORE = "load_store"
     SPECIAL_FUNCTION = "special_function"
@@ -32,6 +34,10 @@ class MemorySpace(str, Enum):
     L2 = "l2"
     L1 = "l1"
     SHARED = "shared"
+    NVLINK = "nvlink"
+
+
+_NVLINK_EGRESS_OPCODES = frozenset({"ST", "STG"})
 
 
 class CopyDirection(str, Enum):
@@ -100,6 +106,27 @@ class MemoryHierarchyProfile:
         )
         for name in ("l2_latency_cycles", "l1_latency_cycles", "shared_latency_cycles"):
             _require_nonnegative_int(name, getattr(self, name))
+
+
+@dataclass(frozen=True, kw_only=True)
+class NvlinkProfile:
+    """Flat same-generation NVLink egress service seen by one GPU.
+
+    The first cut is a single per-GPU egress serializer: every NVLINK store
+    from any SM shares one bandwidth cursor, mirroring the HBM cursor. The
+    intra-node path stays inside this model rather than reaching the fabric
+    backend, which is the split TRAF-10 owns. Peer topology, per-link
+    routing and ingress service are deferred under COMP-11.
+    """
+
+    latency_cycles: int
+    bandwidth_bytes_per_cycle: float
+
+    def __post_init__(self) -> None:
+        _require_nonnegative_int("latency_cycles", self.latency_cycles)
+        _require_positive_number(
+            "bandwidth_bytes_per_cycle", self.bandwidth_bytes_per_cycle
+        )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -175,6 +202,7 @@ class GpuCalibrationProfile:
     copy_engines: tuple[CopyEngineProfile, ...]
     warp_scheduler_policy: WarpSchedulerPolicy
     relative_uncertainty: float
+    nvlink: NvlinkProfile | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "pipelines", tuple(self.pipelines))
@@ -191,6 +219,8 @@ class GpuCalibrationProfile:
             raise TypeError("pipelines must contain PipelineProfile records")
         if not isinstance(self.memory, MemoryHierarchyProfile):
             raise TypeError("memory must be a MemoryHierarchyProfile")
+        if self.nvlink is not None and not isinstance(self.nvlink, NvlinkProfile):
+            raise TypeError("nvlink must be an NvlinkProfile or None")
         if any(not isinstance(item, CopyEngineProfile) for item in self.copy_engines):
             raise TypeError("copy_engines must contain CopyEngineProfile records")
         _require_enum("warp_scheduler_policy", self.warp_scheduler_policy, WarpSchedulerPolicy)
@@ -458,12 +488,25 @@ class GpuKernelEstimate:
     hbm_serviced_bytes: int
     hbm_request_instructions: int
     completed_blocks: int
+    #: per-SM final instruction-completion cycle (end of the busy span,
+    #: including interior idle gaps), not an activity count. The historical
+    #: field name remains the stored constructor field for Python API
+    #: compatibility; use ``sm_last_completion_cycles`` in new code.
     sm_active_cycles: tuple[int, ...]
     sm_scheduler_pressure_cycles: tuple[int, ...]
     sm_dependency_idle_cycles: tuple[int, ...]
     sm_pipeline_idle_cycles: tuple[int, ...]
     sm_completion_drain_cycles: tuple[int, ...]
     relative_uncertainty: float
+    nvlink_requested_bytes: int = 0
+    nvlink_transacted_bytes: int = 0
+    nvlink_request_instructions: int = 0
+
+    @property
+    def sm_last_completion_cycles(self) -> tuple[int, ...]:
+        """Return the accurately named view of the legacy SM counter."""
+
+        return self.sm_active_cycles
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -498,6 +541,91 @@ class CopyServiceEstimate:
     relative_uncertainty: float
 
 
+class GpuTaskKind(str, Enum):
+    """Coarse workload class of one concurrently scheduled kernel task."""
+
+    COMPUTE = "compute"
+    MEMORY = "memory"
+    NETWORK = "network"
+
+
+@dataclass(frozen=True, kw_only=True)
+class GpuTask:
+    """One kernel launch submitted to the concurrent GPU scheduler.
+
+    ``kind`` is an attribution label for reporting; the replay prices every
+    task by its instructions and resources, never by its label.
+    """
+
+    task_id: str
+    kind: GpuTaskKind
+    launch: KernelLaunch
+
+    def __post_init__(self) -> None:
+        _require_text("task_id", self.task_id)
+        _require_enum("kind", self.kind, GpuTaskKind)
+        if not isinstance(self.launch, KernelLaunch):
+            raise TypeError("launch must be a KernelLaunch")
+
+
+@dataclass(frozen=True, kw_only=True)
+class GpuTaskEstimate:
+    """Per-task attribution inside one concurrent replay."""
+
+    task_id: str
+    kind: GpuTaskKind
+    implementation_id: str
+    trace_id: str
+    #: residency this launch would receive alone; a concurrent replay shares
+    #: the SM's currencies, so admitted_cycle is what shows real admission
+    isolated_resident_blocks_per_sm: int
+    admitted_cycle: int
+    completion_cycle: int
+    issued_instructions: int
+    hbm_requested_bytes: int
+    hbm_transacted_bytes: int
+    hbm_request_instructions: int
+    nvlink_requested_bytes: int
+    nvlink_transacted_bytes: int
+    nvlink_request_instructions: int
+
+    @property
+    def hbm_serviced_bytes(self) -> int:
+        """Return serviced HBM bytes, equal to transacted bytes in this model."""
+
+        return self.hbm_transacted_bytes
+
+
+@dataclass(frozen=True, kw_only=True)
+class GpuConcurrentEstimate:
+    """Makespan and shared-resource attribution of one concurrent replay."""
+
+    model_implementation: str
+    architecture_profile_id: str
+    calibration_id: str
+    duration_cycles: int
+    duration_ps: int
+    issued_instructions: int
+    scheduler_stall_cycles: int
+    dependency_stall_cycles: int
+    pipeline_stall_cycles: int
+    completion_drain_cycles: int
+    hbm_requested_bytes: int
+    hbm_transacted_bytes: int
+    hbm_request_instructions: int
+    nvlink_requested_bytes: int
+    nvlink_transacted_bytes: int
+    nvlink_request_instructions: int
+    tasks: tuple[GpuTaskEstimate, ...]
+    relative_uncertainty: float
+
+    @property
+    def hbm_serviced_bytes(self) -> int:
+        """Return serviced HBM bytes, equal to transacted bytes in this model."""
+
+        return self.hbm_transacted_bytes
+
+
 # Mutable replay state is deliberately private. Public workload and profile
 # records above remain immutable and portable.
 @dataclass
@@ -514,6 +642,7 @@ class _WarpState:
 
 @dataclass
 class _BlockState:
+    task_index: int
     block_id: int
     warps: list[_WarpState]
 
@@ -523,7 +652,56 @@ class _SmState:
     sm_id: int
     blocks: list[_BlockState] = field(default_factory=list)
     pipeline_available: dict[PipelineKind, list[int]] = field(default_factory=dict)
-    last_issued_warp: tuple[int, int] | None = None
+    last_issued_warp: tuple[int, int, int] | None = None
+    used_warps: int = 0
+    used_threads: int = 0
+    used_registers: int = 0
+    used_shared: int = 0
+
+
+@dataclass
+class _TaskRun:
+    launch: KernelLaunch
+    expanded_by_block: dict[int, tuple[tuple[int, tuple[SassInstruction, ...]], ...]]
+    pending_block_ids: list[int]
+    next_pending: int = 0
+    warps_per_block: int = 0
+    threads_per_block: int = 0
+    registers_per_block: int = 0
+    shared_per_block: int = 0
+    admitted_cycle: int | None = None
+    completion_cycle: int = 0
+    issued_instructions: int = 0
+    hbm_requested_bytes: int = 0
+    hbm_transacted_bytes: int = 0
+    hbm_request_instructions: int = 0
+    nvlink_requested_bytes: int = 0
+    nvlink_transacted_bytes: int = 0
+    nvlink_request_instructions: int = 0
+
+
+@dataclass
+class _ReplayOutcome:
+    duration_cycles: int
+    issued_instructions: int
+    scheduler_stall_cycles: int
+    dependency_stall_cycles: int
+    pipeline_stall_cycles: int
+    completion_drain_cycles: int
+    pipeline_issue_counts: dict[PipelineKind, int]
+    hbm_requested_bytes: int
+    hbm_transacted_bytes: int
+    hbm_request_instructions: int
+    nvlink_requested_bytes: int
+    nvlink_transacted_bytes: int
+    nvlink_request_instructions: int
+    completed_blocks: int
+    sm_last_completion: list[int]
+    sm_scheduler_pressure: list[int]
+    sm_dependency_idle: list[int]
+    sm_pipeline_idle: list[int]
+    sm_completion_drain: list[int]
+    runs: list[_TaskRun]
 
 
 class SmSchedulerModel:
@@ -571,13 +749,137 @@ class SmSchedulerModel:
 
         resident = self.resident_blocks_per_sm(launch)
         arch = self.architecture
-        expanded_by_block: dict[int, tuple[tuple[int, tuple[SassInstruction, ...]], ...]] = {}
-        for cta_trace in launch.cta_traces:
-            expanded = tuple(
-                (trace.warp_id, trace.expanded_instructions()) for trace in cta_trace.warp_traces
+        outcome = self._replay((launch,))
+        return GpuKernelEstimate(
+            model_implementation=GPU_MODEL_IMPLEMENTATION,
+            architecture_profile_id=arch.profile_id,
+            calibration_id=arch.calibration.calibration_id,
+            implementation_id=launch.implementation_id,
+            trace_id=launch.trace_id,
+            duration_cycles=outcome.duration_cycles,
+            duration_ps=_cycles_to_ps(outcome.duration_cycles, arch.clock_hz),
+            resident_blocks_per_sm=resident,
+            cta_waves=_ceil_div(launch.grid_blocks, arch.sm_count * resident),
+            issued_instructions=outcome.issued_instructions,
+            scheduler_stall_cycles=outcome.scheduler_stall_cycles,
+            dependency_stall_cycles=outcome.dependency_stall_cycles,
+            pipeline_stall_cycles=outcome.pipeline_stall_cycles,
+            completion_drain_cycles=outcome.completion_drain_cycles,
+            pipeline_issue_counts=tuple(
+                (kind, outcome.pipeline_issue_counts[kind])
+                for kind in PipelineKind
+                if kind in outcome.pipeline_issue_counts
+            ),
+            hbm_requested_bytes=outcome.hbm_requested_bytes,
+            hbm_transacted_bytes=outcome.hbm_transacted_bytes,
+            hbm_serviced_bytes=outcome.hbm_transacted_bytes,
+            hbm_request_instructions=outcome.hbm_request_instructions,
+            nvlink_requested_bytes=outcome.nvlink_requested_bytes,
+            nvlink_transacted_bytes=outcome.nvlink_transacted_bytes,
+            nvlink_request_instructions=outcome.nvlink_request_instructions,
+            completed_blocks=outcome.completed_blocks,
+            sm_active_cycles=tuple(outcome.sm_last_completion),
+            sm_scheduler_pressure_cycles=tuple(outcome.sm_scheduler_pressure),
+            sm_dependency_idle_cycles=tuple(outcome.sm_dependency_idle),
+            sm_pipeline_idle_cycles=tuple(outcome.sm_pipeline_idle),
+            sm_completion_drain_cycles=tuple(outcome.sm_completion_drain),
+            relative_uncertainty=arch.calibration.relative_uncertainty,
+        )
+
+    def estimate_concurrent(self, tasks: tuple[GpuTask, ...]) -> GpuConcurrentEstimate:
+        """Replay several kernel tasks contending for one GPU.
+
+        Tasks model concurrent stream launches: every task's blocks admit in
+        their own linear order, but a later task may backfill SM capacity a
+        stalled earlier task cannot use. SM residency limits, scheduler issue
+        budgets, pipelines, the HBM cursor and the NVLink cursor are shared.
+        """
+
+        tasks = tuple(tasks)
+        _require_nonempty("tasks", tasks)
+        for task in tasks:
+            if not isinstance(task, GpuTask):
+                raise TypeError("tasks must contain GpuTask records")
+        _require_unique("task IDs", tuple(task.task_id for task in tasks))
+        residents = [self.resident_blocks_per_sm(task.launch) for task in tasks]
+        arch = self.architecture
+        outcome = self._replay(tuple(task.launch for task in tasks))
+        task_estimates = tuple(
+            GpuTaskEstimate(
+                task_id=task.task_id,
+                kind=task.kind,
+                implementation_id=task.launch.implementation_id,
+                trace_id=task.launch.trace_id,
+                isolated_resident_blocks_per_sm=residents[index],
+                admitted_cycle=run.admitted_cycle if run.admitted_cycle is not None else 0,
+                completion_cycle=run.completion_cycle,
+                issued_instructions=run.issued_instructions,
+                hbm_requested_bytes=run.hbm_requested_bytes,
+                hbm_transacted_bytes=run.hbm_transacted_bytes,
+                hbm_request_instructions=run.hbm_request_instructions,
+                nvlink_requested_bytes=run.nvlink_requested_bytes,
+                nvlink_transacted_bytes=run.nvlink_transacted_bytes,
+                nvlink_request_instructions=run.nvlink_request_instructions,
             )
-            for block_id in cta_trace.block_ids:
-                expanded_by_block[block_id] = expanded
+            for index, (task, run) in enumerate(zip(tasks, outcome.runs, strict=True))
+        )
+        return GpuConcurrentEstimate(
+            model_implementation=GPU_MODEL_IMPLEMENTATION,
+            architecture_profile_id=arch.profile_id,
+            calibration_id=arch.calibration.calibration_id,
+            duration_cycles=outcome.duration_cycles,
+            duration_ps=_cycles_to_ps(outcome.duration_cycles, arch.clock_hz),
+            issued_instructions=outcome.issued_instructions,
+            scheduler_stall_cycles=outcome.scheduler_stall_cycles,
+            dependency_stall_cycles=outcome.dependency_stall_cycles,
+            pipeline_stall_cycles=outcome.pipeline_stall_cycles,
+            completion_drain_cycles=outcome.completion_drain_cycles,
+            hbm_requested_bytes=outcome.hbm_requested_bytes,
+            hbm_transacted_bytes=outcome.hbm_transacted_bytes,
+            hbm_request_instructions=outcome.hbm_request_instructions,
+            nvlink_requested_bytes=outcome.nvlink_requested_bytes,
+            nvlink_transacted_bytes=outcome.nvlink_transacted_bytes,
+            nvlink_request_instructions=outcome.nvlink_request_instructions,
+            tasks=task_estimates,
+            relative_uncertainty=arch.calibration.relative_uncertainty,
+        )
+
+    def _replay(self, launches: tuple[KernelLaunch, ...]) -> _ReplayOutcome:
+        arch = self.architecture
+        runs: list[_TaskRun] = []
+        for launch in launches:
+            self._validate_launch(launch)
+            expanded_by_block: dict[
+                int, tuple[tuple[int, tuple[SassInstruction, ...]], ...]
+            ] = {}
+            for cta_trace in launch.cta_traces:
+                expanded = tuple(
+                    (trace.warp_id, trace.expanded_instructions())
+                    for trace in cta_trace.warp_traces
+                )
+                for block_id in cta_trace.block_ids:
+                    expanded_by_block[block_id] = expanded
+            warps = _ceil_div(launch.threads_per_block, arch.warp_size)
+            registers_per_warp = _round_up(
+                launch.registers_per_thread * arch.warp_size,
+                arch.register_allocation_granularity_per_warp,
+            )
+            shared = _round_up(
+                launch.static_shared_memory_bytes + launch.dynamic_shared_memory_bytes,
+                arch.shared_memory_allocation_granularity,
+            )
+            runs.append(
+                _TaskRun(
+                    launch=launch,
+                    expanded_by_block=expanded_by_block,
+                    pending_block_ids=list(range(launch.grid_blocks)),
+                    warps_per_block=warps,
+                    threads_per_block=launch.threads_per_block,
+                    registers_per_block=registers_per_warp * warps,
+                    shared_per_block=shared,
+                )
+            )
+        total_blocks = sum(run.launch.grid_blocks for run in runs)
         profiles = {profile.kind: profile for profile in arch.pipelines}
         sms = [
             _SmState(
@@ -588,10 +890,10 @@ class SmSchedulerModel:
             )
             for sm_id in range(arch.sm_count)
         ]
-        next_block = 0
         completed_blocks = 0
         current = 0
         hbm_available = current
+        nvlink_available = current
         issued = 0
         scheduler_stalls = 0
         dependency_stalls = 0
@@ -600,6 +902,9 @@ class SmSchedulerModel:
         hbm_requested_bytes = 0
         hbm_transacted_bytes = 0
         hbm_request_instructions = 0
+        nvlink_requested_bytes = 0
+        nvlink_transacted_bytes = 0
+        nvlink_request_instructions = 0
         pipeline_issues = {kind: 0 for kind in profiles}
         sm_last_completion = [0] * arch.sm_count
         sm_scheduler_pressure = [0] * arch.sm_count
@@ -607,36 +912,64 @@ class SmSchedulerModel:
         sm_pipeline_idle = [0] * arch.sm_count
         sm_completion_drain = [0] * arch.sm_count
 
+        def fits(sm: _SmState, run: _TaskRun) -> bool:
+            return (
+                len(sm.blocks) < arch.max_blocks_per_sm
+                and sm.used_warps + run.warps_per_block <= arch.max_warps_per_sm
+                and sm.used_threads + run.threads_per_block <= arch.max_threads_per_sm
+                and sm.used_registers + run.registers_per_block <= arch.registers_per_sm
+                and sm.used_shared + run.shared_per_block <= arch.shared_memory_per_sm
+            )
+
         def admit() -> None:
-            nonlocal next_block
             made_progress = True
-            while next_block < launch.grid_blocks and made_progress:
+            while made_progress:
                 made_progress = False
                 for sm in sms:
-                    if next_block >= launch.grid_blocks:
+                    for task_index, run in enumerate(runs):
+                        if run.next_pending >= len(run.pending_block_ids):
+                            continue
+                        if not fits(sm, run):
+                            continue
+                        block_id = run.pending_block_ids[run.next_pending]
+                        warps = [
+                            _WarpState(warp_id=warp_id, instructions=instructions)
+                            for warp_id, instructions in run.expanded_by_block[block_id]
+                        ]
+                        sm.blocks.append(
+                            _BlockState(task_index=task_index, block_id=block_id, warps=warps)
+                        )
+                        sm.used_warps += run.warps_per_block
+                        sm.used_threads += run.threads_per_block
+                        sm.used_registers += run.registers_per_block
+                        sm.used_shared += run.shared_per_block
+                        run.next_pending += 1
+                        if run.admitted_cycle is None:
+                            run.admitted_cycle = current
+                        made_progress = True
                         break
-                    if len(sm.blocks) >= resident:
-                        continue
-                    warps = [
-                        _WarpState(warp_id=warp_id, instructions=instructions)
-                        for warp_id, instructions in expanded_by_block[next_block]
-                    ]
-                    sm.blocks.append(_BlockState(block_id=next_block, warps=warps))
-                    next_block += 1
-                    made_progress = True
 
         admit()
-        while completed_blocks < launch.grid_blocks:
+        while completed_blocks < total_blocks:
             for sm in sms:
                 retained: list[_BlockState] = []
                 for block in sm.blocks:
                     if self._block_finished(block, current):
                         completed_blocks += 1
+                        run = runs[block.task_index]
+                        run.completion_cycle = max(
+                            run.completion_cycle,
+                            max(warp.last_completion for warp in block.warps),
+                        )
+                        sm.used_warps -= run.warps_per_block
+                        sm.used_threads -= run.threads_per_block
+                        sm.used_registers -= run.registers_per_block
+                        sm.used_shared -= run.shared_per_block
                     else:
                         retained.append(block)
                 sm.blocks = retained
             admit()
-            if completed_blocks == launch.grid_blocks:
+            if completed_blocks == total_blocks:
                 break
 
             issued_this_cycle = 0
@@ -648,13 +981,13 @@ class SmSchedulerModel:
                 budget = arch.scheduler_count_per_sm * arch.dispatch_width_per_scheduler
                 candidates = sorted(
                     (
-                        (block.block_id, warp.warp_id, warp)
+                        (block.task_index, block.block_id, warp.warp_id, warp)
                         for block in sm.blocks
                         for warp in block.warps
                         if warp.pc < len(warp.instructions)
                         and self._warp_ready_cycle(warp) <= current
                     ),
-                    key=lambda item: (item[0], item[1]),
+                    key=lambda item: (item[0], item[1], item[2]),
                 )
                 candidates = self._order_candidates(sm, candidates)
                 ready_without_pipeline |= bool(candidates)
@@ -664,7 +997,7 @@ class SmSchedulerModel:
                 has_unissued_work |= sm_has_unissued_work
                 sm_issued = 0
                 sm_scheduler_limited = False
-                for block_id, warp_id, warp in candidates:
+                for task_index, block_id, warp_id, warp in candidates:
                     if sm_issued >= budget:
                         sm_scheduler_limited = True
                         scheduler_limited = True
@@ -677,14 +1010,28 @@ class SmSchedulerModel:
                         continue
                     completion = current + profile.latency_for(instruction.opcode)
                     if instruction.memory_space is not None:
-                        memory_completion, hbm_available = self._memory_completion(
-                            instruction, current, hbm_available
+                        memory_completion, hbm_available, nvlink_available = (
+                            self._memory_completion(
+                                instruction, current, hbm_available, nvlink_available
+                            )
                         )
                         completion = max(completion, memory_completion)
                         if instruction.memory_space is MemorySpace.HBM:
                             hbm_requested_bytes += instruction.requested_bytes
                             hbm_transacted_bytes += instruction.transacted_bytes
                             hbm_request_instructions += 1
+                            runs[task_index].hbm_requested_bytes += instruction.requested_bytes
+                            runs[task_index].hbm_transacted_bytes += instruction.transacted_bytes
+                            runs[task_index].hbm_request_instructions += 1
+                        elif instruction.memory_space is MemorySpace.NVLINK:
+                            nvlink_requested_bytes += instruction.requested_bytes
+                            nvlink_transacted_bytes += instruction.transacted_bytes
+                            nvlink_request_instructions += 1
+                            runs[task_index].nvlink_requested_bytes += instruction.requested_bytes
+                            runs[task_index].nvlink_transacted_bytes += (
+                                instruction.transacted_bytes
+                            )
+                            runs[task_index].nvlink_request_instructions += 1
                     slots[lane] = current + profile.initiation_interval_cycles
                     warp.pc += 1
                     warp.next_issue_cycle = current + 1
@@ -695,9 +1042,10 @@ class SmSchedulerModel:
                         warp.register_ready[register] = completion
                     issued += 1
                     pipeline_issues[instruction.pipeline] += 1
+                    runs[task_index].issued_instructions += 1
                     sm_issued += 1
                     issued_this_cycle += 1
-                    sm.last_issued_warp = (block_id, warp_id)
+                    sm.last_issued_warp = (task_index, block_id, warp_id)
                     sm_last_completion[sm.sm_id] = max(sm_last_completion[sm.sm_id], completion)
                 if sm_scheduler_limited:
                     sm_scheduler_pressure[sm.sm_id] += 1
@@ -743,36 +1091,27 @@ class SmSchedulerModel:
                     sm_completion_drain[sm_id] += delta
             current = next_cycle
 
-        duration_cycles = current
-        return GpuKernelEstimate(
-            model_implementation=GPU_MODEL_IMPLEMENTATION,
-            architecture_profile_id=arch.profile_id,
-            calibration_id=arch.calibration.calibration_id,
-            implementation_id=launch.implementation_id,
-            trace_id=launch.trace_id,
-            duration_cycles=duration_cycles,
-            duration_ps=_cycles_to_ps(duration_cycles, arch.clock_hz),
-            resident_blocks_per_sm=resident,
-            cta_waves=_ceil_div(launch.grid_blocks, arch.sm_count * resident),
+        return _ReplayOutcome(
+            duration_cycles=current,
             issued_instructions=issued,
             scheduler_stall_cycles=scheduler_stalls,
             dependency_stall_cycles=dependency_stalls,
             pipeline_stall_cycles=pipeline_stalls,
             completion_drain_cycles=completion_drain,
-            pipeline_issue_counts=tuple(
-                (kind, pipeline_issues[kind]) for kind in PipelineKind if kind in profiles
-            ),
+            pipeline_issue_counts=pipeline_issues,
             hbm_requested_bytes=hbm_requested_bytes,
             hbm_transacted_bytes=hbm_transacted_bytes,
-            hbm_serviced_bytes=hbm_transacted_bytes,
             hbm_request_instructions=hbm_request_instructions,
+            nvlink_requested_bytes=nvlink_requested_bytes,
+            nvlink_transacted_bytes=nvlink_transacted_bytes,
+            nvlink_request_instructions=nvlink_request_instructions,
             completed_blocks=completed_blocks,
-            sm_active_cycles=tuple(max(0, completion) for completion in sm_last_completion),
-            sm_scheduler_pressure_cycles=tuple(sm_scheduler_pressure),
-            sm_dependency_idle_cycles=tuple(sm_dependency_idle),
-            sm_pipeline_idle_cycles=tuple(sm_pipeline_idle),
-            sm_completion_drain_cycles=tuple(sm_completion_drain),
-            relative_uncertainty=arch.calibration.relative_uncertainty,
+            sm_last_completion=sm_last_completion,
+            sm_scheduler_pressure=sm_scheduler_pressure,
+            sm_dependency_idle=sm_dependency_idle,
+            sm_pipeline_idle=sm_pipeline_idle,
+            sm_completion_drain=sm_completion_drain,
+            runs=runs,
         )
 
     def _validate_launch(self, launch: KernelLaunch) -> None:
@@ -823,6 +1162,22 @@ class SmSchedulerModel:
                         raise ValueError(
                             "barrier instructions are not supported by isolated replay"
                         )
+                    if (
+                        instruction.memory_space is MemorySpace.NVLINK
+                        and arch.calibration.nvlink is None
+                    ):
+                        raise ValueError(
+                            "NVLINK instructions require an nvlink profile in the "
+                            "calibration; this calibration has none"
+                        )
+                    if (
+                        instruction.memory_space is MemorySpace.NVLINK
+                        and instruction.opcode not in _NVLINK_EGRESS_OPCODES
+                    ):
+                        raise ValueError(
+                            "NVLINK memory space only supports normalized egress "
+                            "store opcodes ST and STG"
+                        )
                     owner = opcode_owner.get(instruction.opcode)
                     if owner is None:
                         raise ValueError(f"unknown normalized opcode {instruction.opcode!r}")
@@ -862,8 +1217,8 @@ class SmSchedulerModel:
     def _order_candidates(
         self,
         sm: _SmState,
-        candidates: list[tuple[int, int, _WarpState]],
-    ) -> list[tuple[int, int, _WarpState]]:
+        candidates: list[tuple[int, int, int, _WarpState]],
+    ) -> list[tuple[int, int, int, _WarpState]]:
         if not candidates or sm.last_issued_warp is None:
             return candidates
         policy = self.architecture.calibration.warp_scheduler_policy
@@ -871,13 +1226,14 @@ class SmSchedulerModel:
             return sorted(
                 candidates,
                 key=lambda item: (
-                    (item[0], item[1]) != sm.last_issued_warp,
+                    (item[0], item[1], item[2]) != sm.last_issued_warp,
                     item[0],
                     item[1],
+                    item[2],
                 ),
             )
-        for index, (block_id, warp_id, _) in enumerate(candidates):
-            if (block_id, warp_id) > sm.last_issued_warp:
+        for index, (task_index, block_id, warp_id, _) in enumerate(candidates):
+            if (task_index, block_id, warp_id) > sm.last_issued_warp:
                 return candidates[index:] + candidates[:index]
         return candidates
 
@@ -886,20 +1242,36 @@ class SmSchedulerModel:
         instruction: SassInstruction,
         issue_cycle: int,
         hbm_available: int,
-    ) -> tuple[int, int]:
+        nvlink_available: int,
+    ) -> tuple[int, int, int]:
         memory = self.architecture.memory
         if instruction.memory_space is MemorySpace.HBM:
             start = max(issue_cycle, hbm_available)
-            service = math.ceil(instruction.transacted_bytes / memory.hbm_bandwidth_bytes_per_cycle)
+            service = _checked_service_cycles(
+                transacted_bytes=instruction.transacted_bytes,
+                bandwidth_bytes_per_cycle=memory.hbm_bandwidth_bytes_per_cycle,
+                resource="HBM",
+            )
             service_end = start + service
             completion = service_end + memory.hbm_latency_cycles
-            return completion, service_end
+            return completion, service_end, nvlink_available
+        if instruction.memory_space is MemorySpace.NVLINK:
+            nvlink = self.architecture.calibration.nvlink
+            start = max(issue_cycle, nvlink_available)
+            service = _checked_service_cycles(
+                transacted_bytes=instruction.transacted_bytes,
+                bandwidth_bytes_per_cycle=nvlink.bandwidth_bytes_per_cycle,
+                resource="NVLink",
+            )
+            service_end = start + service
+            completion = service_end + nvlink.latency_cycles
+            return completion, hbm_available, service_end
         latency = {
             MemorySpace.L2: memory.l2_latency_cycles,
             MemorySpace.L1: memory.l1_latency_cycles,
             MemorySpace.SHARED: memory.shared_latency_cycles,
         }[instruction.memory_space]
-        return issue_cycle + latency, hbm_available
+        return issue_cycle + latency, hbm_available, nvlink_available
 
     def _next_event_cycle(self, sms: list[_SmState], current: int) -> int | None:
         events: list[int] = []
@@ -1031,7 +1403,7 @@ def h100_sxm_80gb_seed_profile() -> GpuArchitectureProfile:
 def _seed_profile(gpu: str) -> GpuArchitectureProfile:
     if gpu == "a100":
         gpu_name = "NVIDIA A100-SXM4-80GB"
-        profile_id = "a100-sxm-80gb-public-seed-v1"
+        profile_id = "a100-sxm-80gb-public-seed-v2"
         aliases = ("a100", "A100", "A100-SXM-80GB")
         sm_count = 108
         clock_hz = 1_410_000_000
@@ -1042,7 +1414,7 @@ def _seed_profile(gpu: str) -> GpuArchitectureProfile:
             "NVIDIA A100 SXM public structural specifications plus non-SKU-matched "
             "A100 microbenchmark timing priors transferred at high uncertainty"
         )
-        provenance_version = "a100-public-structure-transferred-timing-v1"
+        provenance_version = "a100-public-structure-transferred-timing-v2"
         references = (
             (
                 "https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/"
@@ -1058,7 +1430,7 @@ def _seed_profile(gpu: str) -> GpuArchitectureProfile:
         )
     elif gpu == "h100":
         gpu_name = "NVIDIA H100 SXM 80GB HBM3"
-        profile_id = "h100-sxm-80gb-public-seed-v1"
+        profile_id = "h100-sxm-80gb-public-seed-v2"
         aliases = ("h100", "H100", "H100-SXM-80GB")
         sm_count = 132
         clock_hz = 1_980_000_000
@@ -1069,7 +1441,7 @@ def _seed_profile(gpu: str) -> GpuArchitectureProfile:
             "NVIDIA H100 SXM public structural specifications plus H800 PCIe "
             "microbenchmark timing priors transferred at high uncertainty"
         )
-        provenance_version = "h100-public-structure-h800-timing-transfer-v1"
+        provenance_version = "h100-public-structure-h800-timing-transfer-v2"
         references = (
             "https://resources.nvidia.com/en-us-tensor-core/nvidia-h100-datasheet",
             "https://docs.nvidia.com/cuda/hopper-tuning-guide/index.html",
@@ -1080,30 +1452,58 @@ def _seed_profile(gpu: str) -> GpuArchitectureProfile:
         raise ValueError(f"unknown built-in seed profile {gpu!r}")
 
     is_hopper = gpu == "h100"
+    # Initiation intervals are sustained-throughput priors derived from the
+    # whitepaper per-SM unit counts by one rule: units per SM divided by the
+    # 32 threads of a warp gives sustained warp-instructions per cycle, and
+    # issue_width (4, the four subcore pipes) divided by the initiation
+    # interval must equal that rate. A100 64 FP32 cores/SM sustain 2 (4/2),
+    # H100 128 sustain 4 (4/1); INT32 64/SM sustains 2 on both; FP64 32/SM
+    # sustains 1 on A100 and 64/SM sustains 2 on H100; 32 LD/ST units/SM
+    # sustain 1 (4/4) and 16 SFU units/SM sustain 0.5 (4/8). Tensor
+    # initiation is a high-uncertainty throughput prior pending real
+    # captures, like every other seed number here.
     pipelines = (
         PipelineProfile(
             kind=PipelineKind.ALU,
-            opcodes=("ALU", "FP32", "FP64", "INT", "LOGIC"),
+            opcodes=("ALU", "FP32", "LOGIC"),
             latency_cycles=4,
             issue_width_per_sm=4,
+            initiation_interval_cycles=1 if is_hopper else 2,
+        ),
+        PipelineProfile(
+            kind=PipelineKind.INT,
+            opcodes=("INT",),
+            latency_cycles=4,
+            issue_width_per_sm=4,
+            initiation_interval_cycles=2,
+        ),
+        PipelineProfile(
+            kind=PipelineKind.FP64,
+            opcodes=("FP64",),
+            latency_cycles=4,
+            issue_width_per_sm=4,
+            initiation_interval_cycles=2 if is_hopper else 4,
         ),
         PipelineProfile(
             kind=PipelineKind.TENSOR,
             opcodes=("TENSOR", "HMMA"),
             latency_cycles=24 if is_hopper else 25,
             issue_width_per_sm=4,
+            initiation_interval_cycles=4,
         ),
         PipelineProfile(
             kind=PipelineKind.LOAD_STORE,
             opcodes=("MEMORY", "LD", "ST", "LDG", "STG"),
             latency_cycles=1,
             issue_width_per_sm=4,
+            initiation_interval_cycles=4,
         ),
         PipelineProfile(
             kind=PipelineKind.SPECIAL_FUNCTION,
             opcodes=("SFU", "MUFU"),
             latency_cycles=8,
             issue_width_per_sm=4,
+            initiation_interval_cycles=8,
         ),
         PipelineProfile(
             kind=PipelineKind.CONTROL,
@@ -1215,6 +1615,22 @@ def _round_up(value: int, granularity: int) -> int:
     return _ceil_div(value, granularity) * granularity
 
 
+def _checked_service_cycles(
+    *,
+    transacted_bytes: int,
+    bandwidth_bytes_per_cycle: float,
+    resource: str,
+) -> int:
+    """Return the existing float-based service price with explicit overflow."""
+
+    try:
+        return math.ceil(transacted_bytes / bandwidth_bytes_per_cycle)
+    except OverflowError as exc:
+        raise ValueError(
+            f"{resource} service cycle count exceeds the supported numeric range"
+        ) from exc
+
+
 def _cycles_to_ps(cycles: int, clock_hz: int) -> int:
     return _ceil_div(cycles * PS_PER_SECOND, clock_hz)
 
@@ -1230,11 +1646,16 @@ __all__ = [
     "CtaTrace",
     "GpuArchitectureProfile",
     "GpuCalibrationProfile",
+    "GpuConcurrentEstimate",
     "GpuKernelEstimate",
     "GpuModelProvenance",
+    "GpuTask",
+    "GpuTaskEstimate",
+    "GpuTaskKind",
     "KernelLaunch",
     "MemoryHierarchyProfile",
     "MemorySpace",
+    "NvlinkProfile",
     "PipelineKind",
     "PipelineProfile",
     "SassInstruction",

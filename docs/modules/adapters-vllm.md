@@ -169,7 +169,7 @@ row-for-row.
   compute table and CORE-3/4/5 are ready. Use the identical vLLM commit,
   model, parallel configuration, request trace, seed and warm-up policy in
   simulation and silicon. Stage the comparison as single-GPU compute,
-  eight-GPU intra-node, two-node shared-NIC, offered-load sweep, KV pressure,
+  eight-GPU intra-node, two-node rail-RNIC, offered-load sweep, KV pressure,
   chunked prefill/preemption, and mixed/bursty arrivals. Report p50, p90, p99
   and p99.9 TTFT/TPOT plus request queue, KV wait, kernel, collective, DMA,
   WQE/NIC, flow-completion and control-delay components. Calibrate only the

@@ -126,7 +126,7 @@ sink seam is the same contract but has not driven htsim live yet (SGL-8).
   after the calibrated compute table and CORE-3/4/5, using the same commit,
   model, parallel configuration, request trace, seed and warm-up policy on
   silicon and in simulation. Stage single-GPU compute, eight-GPU intra-node,
-  two-node shared-NIC, offered-load, KV-pressure, chunked/retraction and
+  two-node rail-RNIC, offered-load, KV-pressure, chunked/retraction and
   mixed/bursty cases. Report p50 through p99.9 TTFT/TPOT and attributed queue,
   KV, kernel, collective, DMA, WQE/NIC, flow and control residuals. Calibrate
   early stages and reserve later stages as holdouts.

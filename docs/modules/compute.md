@@ -76,7 +76,7 @@ has four replaceable mechanisms:
    behavior independently. Warp selection is an explicit calibration choice;
    v1 provides deterministic loose round-robin and greedy-then-oldest policies.
    The bootstrap profiles use loose round-robin without claiming NVIDIA's
-   undisclosed subpartition policy. The v1 model handles synchronous
+   undisclosed subpartition policy. The current model handles synchronous
    normalized per-warp instructions only. Barriers, `cp.async`, TMA, warpgroup
    async issue/commit/wait, cooperative launches and thread-block clusters
    fail closed under COMP-10.
@@ -84,11 +84,15 @@ has four replaceable mechanisms:
    The first slice separates logical lane-request bytes from physical
    transacted bytes, then applies a fixed return latency plus sustained service
    bandwidth to the latter. It reports requested, transacted and serviced
-   bytes plus request-instruction count. An input trace may label L1, L2 or
-   shared-memory service and receive an explicit fixed latency, but v1 does not
-   predict cache hits, partitions or bank conflicts. Those mechanisms and
-   cross-kernel HBM contention are unsupported under COMP-10, not hidden
-   efficiency factors.
+   bytes plus request-instruction count. One flat GPU-wide cursor serializes
+   HBM demand across every kernel passed to `estimate_concurrent`, which is the
+   first explicit cross-kernel contention mechanism. An input trace may label
+   L1, L2 or shared-memory service and receive an explicit fixed latency, but
+   v1 does not predict cache hits, partitions or bank conflicts. Those deeper
+   mechanisms remain unsupported under COMP-10, not hidden efficiency factors.
+   CORE-4 decides which graph operations are released together and arbitrates
+   kernel traffic against explicit DMA; the compute model prices the kernel set
+   it is given.
 4. **Copy service.** A copy descriptor declares direction, endpoints and
    bytes. Isolated service is setup time plus byte serialization in the copy
    engine's own declared clock domain and directional bandwidth. API launch
@@ -96,6 +100,45 @@ has four replaceable mechanisms:
    overlap and shared-HBM arbitration belong to CORE-4. This is external
    device DMA service. In-kernel async copy and TMA are not approximated as
    external DMA.
+5. **NVLink egress service.** A store may name the `nvlink` memory space,
+   which serializes on one per-GPU egress cursor with its own latency and
+   bandwidth, exactly as HBM stores serialize on the HBM cursor. This is
+   the intra-node path that keeps NVLink traffic off the fabric backend
+   (TRAF-10). It is one flat same-generation egress serializer: peer
+   topology, per-link routing, ingress service and reduction lanes are
+   absent under COMP-11. A calibration without an `nvlink` profile rejects
+   NVLink instructions rather than pricing them as HBM.
+
+### Concurrent task scheduling
+
+`estimate_concurrent` replays several `GpuTask` records on one GPU.
+A task is a kernel launch plus a `GpuTaskKind` label (compute, memory or
+network) used only for attribution: the replay prices every task by its
+instructions and the resources it touches, never by its label. Tasks
+share SM residency, per-SM issue budgets, pipelines, the HBM cursor and
+the NVLink cursor, and CTAs of a later task backfill capacity an earlier
+task cannot use. The result carries the makespan plus per-task admitted
+and completion cycles, issued instructions and byte counts.
+
+NCCL collectives enter through `simllm.compute.nccl`, which builds the
+per-GPU egress kernel of a ring all-reduce: `2 * (W - 1) * P / W` bytes
+per GPU, chunked across channel CTAs and their warps, each chunk loaded
+from HBM and stored to NVLink. This makes a collective a schedulable
+kernel like any other, so it contends with compute and memory work
+instead of being priced in isolation. Proxy operations, ingress and
+multi-ring topologies are COMP-11.
+
+The [task-mix study](../../examples/gpu_task_mix/RESULTS.md) measures
+what limits each kind: compute scales with SMs and with the pipeline
+initiation interval, memory is pinned to the HBM cursor and gains nothing
+from more SMs, and a double-buffered ring egress kernel falls from 6.1
+times its own egress bound with one warp per channel to within 2.4 percent
+at eight warps. At that point a ring-first run hides a 132-cycle memory task
+under its NVLink drain while conserving all HBM and NVLink counters.
+The study also ledgers two registration misses that name real shared
+resources: concurrent tasks contend for the issue path, and SM residency is
+itself contended, so a co-scheduled kernel is free only while the SM has room
+for it.
 
 The result reports total cycles and picoseconds together with occupancy,
 instruction issue, HBM demand and per-SM counters. Scheduler pressure counts
@@ -162,7 +205,7 @@ run must eventually close this production ledger before COMP-1 can close:
 | Copy | API kind, direction and endpoints, bytes, stream/event order, reported device engine capabilities, setup samples, sustained bandwidth and concurrent-copy experiment |
 | Fit | immutable train/held-out split, raw samples, sample count, fitted parameters, residuals by component, uncertainty and creation date |
 
-The v1 artifact enforces the capture environment, model/GPU identity,
+The v2 artifact enforces the capture environment, model/GPU identity,
 framework/tool/library versions, clock and warm-up policy, numeric observed
 core and memory clocks, hashes, semantic attributes, launch resources,
 CTA/warp traces, stream order, requested and transacted bytes, copy
@@ -182,10 +225,13 @@ provider interfaces.
 
 ### Artifact boundary
 
-`simllm-gpu-model-artifact-v1` is the versioned interchange record for this
+`simllm-gpu-model-artifact-v2` is the versioned interchange record for this
 model. It complements `simllm-profile-table-v1`: the GPU-model artifact keeps
 one replay auditable, while the profile table is the compact online lookup
-surface produced after calibration. A GPU-model artifact retains:
+surface produced after calibration. The reader promotes v1 artifacts by
+renaming the clarified per-SM completion counter and filling the absent NVLink
+profile and counters with `null` and zero; writers always emit v2. A GPU-model
+artifact retains:
 
 - the architecture-profile identity, exact SKU, structural limits, fitted
   parameter set, source links and declared uncertainty;
@@ -207,7 +253,7 @@ surface produced after calibration. A GPU-model artifact retains:
 
 The strict loader normalizes hash spellings, rejects duplicate semantic keys
 and stream orders, recomputes sample summaries, checks capture split isolation,
-and reruns every deterministic v1 kernel/copy estimate before accepting it.
+and reruns every deterministic kernel/copy estimate before accepting it.
 Changing an identity, source, fit or split produces a new artifact. Small
 synthetic fixtures may live with tests and studies. Raw production SASS traces,
 profiler exports and bulk replay outputs live under `/data3/yifeng/`, never in
@@ -216,11 +262,20 @@ Git; the public artifact records their content hashes and provenance.
 ## Status
 
 Both providers, the transformer step model (fused and family-decomposed),
-the host model, and the trace-driven isolated-kernel and copy service are
-implemented and tested. The
+the host model, and the trace-driven GPU service are implemented and
+tested. The service covers isolated-kernel replay, copy descriptors, the
+NVLink egress cursor, concurrent multi-task scheduling
+(`estimate_concurrent`) and the NCCL ring-collective builder. The
 [service-model study](../../examples/gpu_service_model/RESULTS.md) validates
-22 frozen mechanism cells to zero-cycle residual; the built-in A100/H100 profiles are
-unvalidated bootstrap seeds and do not establish production accuracy.
+22 frozen mechanism cells to zero-cycle residual, and the
+[task-mix study](../../examples/gpu_task_mix/RESULTS.md) reports 36 passing
+exact-oracle rows and 6 passing behavioral relation families over 17
+instances. Its 21 structural invariants are unscored, and its two superseded
+registration misses remain visible as the chronology behind findings G1 and
+G2 (COMP-12). The built-in
+A100/H100 profiles are unvalidated bootstrap seeds and do not establish
+production accuracy: their pipeline initiation intervals are derived from
+published per-SM unit counts, not measured.
 
 The M5 first slice landed the COMP-1 groundwork: `step_kernels`, the
 `simllm-profile-table-v1` artifact with provenance, and 1D log-linear
@@ -257,7 +312,7 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   against silicon using train shapes, then evaluate held-out shapes. Launch
   overhead, host delay and queueing are measured separately from kernel
   service, so the SASS table cannot hide a missing runtime queue.
-- Populate `simllm-gpu-model-artifact-v1` with capture hash, kernel hash, GPU,
+- Populate `simllm-gpu-model-artifact-v2` with capture hash, kernel hash, GPU,
   tool versions, shape, measured samples, simulated cycles, calibrated
   duration, uncertainty, calibration split and creation date. Derive the
   compact `simllm-profile-table-v1` lookup entry from that record and retain
@@ -325,3 +380,32 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   calibrated cache partitions, bank conflicts and hit/miss behavior. Until
   each mechanism lands with capture evidence, its opcode or launch form must
   fail closed rather than borrow a scalar latency.
+- COMP-11 (Precision; P1; L): deepen the active NVLink and NCCL ring model.
+  The v1 egress path is one
+  flat per-GPU serializer and the ring builder emits only the egress half
+  of an all-reduce. Add peer topology and per-link routing, ingress
+  service and its interaction with the receiving GPU's HBM, reduction
+  lanes so a collective's arithmetic is priced, and proxy operations.
+  Calibrate the egress latency and bandwidth from real
+  captures rather than the current synthetic profiles, and reconcile the
+  intra-node split with TRAF-10 so one collective is never counted both
+  here and on the fabric backend.
+- COMP-12 (Precision; P1; M): register the corrected mixed-makespan forms measured by the
+  [task-mix study](../../examples/gpu_task_mix/RESULTS.md). Findings G1
+  and G2 there show that a concurrent makespan is
+  `max(isolated durations)` plus a submission-order issue delay, and that
+  tasks whose CTAs exhaust an SM's shared memory serialize on residency
+  instead of backfilling. Both need a pre-registered form of their own,
+  including how the issue-order delay should behave once CORE-4 owns
+  submission policy.
+- COMP-13 (Completeness; P1; M): extend `simllm-gpu-model-artifact-v2` with a narrow concurrent
+  replay record for `GpuTask` inputs and `GpuConcurrentEstimate` outputs,
+  including task order, per-task admission/completion, requested and
+  transacted HBM/NVLink bytes, request counts and deterministic replay
+  validation. Until that record lands, concurrent demo CSVs are reviewed
+  evidence but are not GPU-model artifacts.
+- COMP-14 (Completeness; P2; L): add optional NCCL algorithm builders for
+  tree all-reduce, all-to-all, reduce-scatter and all-gather behind an
+  explicit algorithm selection. The ring builder remains the identity
+  baseline: selecting or omitting the default ring path must preserve every
+  accepted ring timestamp, counter and task order exactly.

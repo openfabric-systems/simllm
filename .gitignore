@@ -20,6 +20,9 @@ runs/
 *.npz
 *.csv
 !tests/data/*.csv
+!examples/gpu_task_mix/results.csv
+!examples/gpu_task_mix/nccl_convergence.csv
+!examples/gpu_task_mix/diagnostics.csv
 !examples/rnic_wq_v1/results.csv
 !examples/rnic_pcie_v1/results.csv
 

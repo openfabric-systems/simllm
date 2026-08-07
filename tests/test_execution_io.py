@@ -1,5 +1,6 @@
 import json
 from dataclasses import replace
+from types import MappingProxyType
 
 import pytest
 
@@ -241,6 +242,16 @@ def test_completion_event_and_result_round_trip():
 def test_wire_readers_reject_wrong_schemas(decoder, payload):
     with pytest.raises(ValueError, match="schema"):
         decoder(payload)
+
+
+def test_core_wire_readers_require_concrete_json_objects_and_arrays():
+    payload = execution_graph_to_json(_all_work_graph())
+    with pytest.raises(ValueError, match="graph: expected an object"):
+        execution_graph_from_json(MappingProxyType(payload))
+
+    payload["operations"] = tuple(payload["operations"])
+    with pytest.raises(ValueError, match="graph.operations: expected an array"):
+        execution_graph_from_json(payload)
 
 
 def test_graph_reader_rejects_unknown_fields_and_work_kinds():

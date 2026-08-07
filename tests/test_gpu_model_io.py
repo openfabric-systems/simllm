@@ -1,6 +1,7 @@
 import json
 import statistics
 from dataclasses import replace
+from types import MappingProxyType
 
 import pytest
 
@@ -16,6 +17,7 @@ from simllm.compute.gpu_model import (
     GpuModelProvenance,
     KernelLaunch,
     MemoryHierarchyProfile,
+    NvlinkProfile,
     PipelineKind,
     PipelineProfile,
     SassInstruction,
@@ -26,6 +28,7 @@ from simllm.compute.gpu_model import (
     h100_sxm_80gb_seed_profile,
 )
 from simllm.compute.gpu_model_io import (
+    GPU_MODEL_ARTIFACT_SCHEMA,
     CalibrationSplit,
     GpuCaptureEnvironment,
     GpuCopyReplayRecord,
@@ -254,7 +257,57 @@ def test_complete_artifact_round_trips_kernel_copy_capture_and_measurements(tmp_
     assert loaded == artifact
     assert loaded.captures[0].observed_core_clock_hz == 1_000_000_000
     assert loaded.captures[0].observed_memory_clock_hz == 1_200_000_000
-    assert json.loads(path.read_text())["schema"] == "simllm-gpu-model-artifact-v1"
+    assert json.loads(path.read_text())["schema"] == "simllm-gpu-model-artifact-v2"
+
+
+def test_artifact_save_load_save_is_byte_identical(tmp_path):
+    artifact = complete_artifact()
+    integer_spelled_measurements = tuple(
+        replace(
+            measurement,
+            mean_duration_ps=int(measurement.mean_duration_ps),
+            p50_duration_ps=int(measurement.p50_duration_ps),
+        )
+        for measurement in artifact.measurements
+    )
+    first = replace(artifact, measurements=integer_spelled_measurements).save(
+        tmp_path / "first.json"
+    )
+    second = load_gpu_model_artifact(first).save(tmp_path / "second.json")
+
+    assert first.read_bytes() == second.read_bytes()
+
+
+def test_v1_artifact_is_promoted_to_v2_without_inventing_nvlink_traffic():
+    payload = complete_artifact().to_json()
+    payload["schema"] = "simllm-gpu-model-artifact-v1"
+    payload["architecture"]["calibration"].pop("nvlink")
+    for replay in payload["replays"]:
+        estimate = replay["estimate"]
+        estimate["model_implementation"] = "simllm-isolated-gpu-service-v1"
+        estimate["sm_active_cycles"] = estimate.pop("sm_last_completion_cycles")
+        estimate.pop("nvlink_requested_bytes")
+        estimate.pop("nvlink_transacted_bytes")
+        estimate.pop("nvlink_request_instructions")
+
+    migrated = gpu_model_artifact_from_json(payload)
+
+    assert migrated.to_json()["schema"] == GPU_MODEL_ARTIFACT_SCHEMA
+    assert migrated.architecture.calibration.nvlink is None
+    assert migrated.replays[0].estimate.model_implementation == "simllm-gpu-service-v2"
+    assert migrated.replays[0].estimate.sm_active_cycles == (
+        migrated.replays[0].estimate.sm_last_completion_cycles
+    )
+    assert migrated.replays[0].estimate.nvlink_requested_bytes == 0
+    assert migrated.replays[0].estimate.nvlink_transacted_bytes == 0
+    assert migrated.replays[0].estimate.nvlink_request_instructions == 0
+
+
+def test_artifact_from_json_accepts_mapping_and_tuple_views():
+    payload = complete_artifact().to_json()
+    payload["captures"] = tuple(payload["captures"])
+
+    assert gpu_model_artifact_from_json(MappingProxyType(payload)) == complete_artifact()
 
 
 def test_artifact_records_freeze_caller_owned_sequences():
@@ -530,3 +583,59 @@ def test_loader_rejects_duplicate_json_object_keys(tmp_path):
 
     with pytest.raises(ValueError, match="duplicate JSON object key"):
         load_gpu_model_artifact(path)
+
+
+def test_schema_version_is_reported_before_structural_shape():
+    payload = complete_artifact().to_json()
+    payload["schema"] = "simllm-gpu-model-artifact-v3"
+    payload["future_field"] = 1
+    payload.pop("measurements")
+
+    with pytest.raises(ValueError, match="artifact.schema: unsupported"):
+        gpu_model_artifact_from_json(payload)
+
+
+def test_oversized_integer_in_a_float_field_reports_its_json_path():
+    payload = complete_artifact().to_json()
+    payload["architecture"]["calibration"]["relative_uncertainty"] = 10**400
+
+    with pytest.raises(ValueError, match=r"relative_uncertainty: must be finite"):
+        gpu_model_artifact_from_json(payload)
+
+
+def test_nvlink_profile_round_trips_and_defaults_to_absent():
+    artifact = complete_artifact()
+    assert artifact.to_json()["architecture"]["calibration"]["nvlink"] is None
+    assert GpuModelArtifact.from_json(artifact.to_json()) == artifact
+
+    nvlink = NvlinkProfile(latency_cycles=700, bandwidth_bytes_per_cycle=32.0)
+    architecture_with_nvlink = replace(
+        artifact.architecture,
+        calibration=replace(artifact.architecture.calibration, nvlink=nvlink),
+    )
+    updated = replace(artifact, architecture=architecture_with_nvlink)
+    payload = updated.to_json()
+
+    assert payload["architecture"]["calibration"]["nvlink"] == {
+        "latency_cycles": 700,
+        "bandwidth_bytes_per_cycle": 32.0,
+    }
+    assert GpuModelArtifact.from_json(payload) == updated
+
+
+def test_provenance_references_survive_compilation_to_a_profile_table():
+    artifact = complete_artifact()
+    references = ("https://example.invalid/whitepaper", "https://arxiv.org/abs/2501.12084")
+    architecture = replace(
+        artifact.architecture,
+        calibration=replace(
+            artifact.architecture.calibration,
+            provenance=replace(
+                artifact.architecture.calibration.provenance, references=references
+            ),
+        ),
+    )
+
+    provider = gpu_model_artifact_to_profile_table(replace(artifact, architecture=architecture))
+
+    assert provider.provenance.references == references
