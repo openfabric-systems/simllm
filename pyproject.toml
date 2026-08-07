@@ -36,6 +36,17 @@ simllm = "simllm.adapters.sglang.plugin:register"
 [tool.setuptools.packages.find]
 include = ["simllm*"]
 
+[tool.setuptools.package-data]
+"simllm.backends.rnic" = [
+    "CMakeLists.txt",
+    "README.md",
+    "include/simllm/rnic/*.h",
+    "src/*.cpp",
+    "tests/*.h",
+    "tests/*.cpp",
+    "tools/*.cpp",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"

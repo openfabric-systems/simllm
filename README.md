@@ -124,13 +124,14 @@ script, and an audited `RESULTS.md`. Start with these:
 | Study | Question | Headline result |
 |---|---|---|
 | [m4](examples/m4/RESULTS.md) | Does the closed loop work end to end? | A live vLLM engine at `tensor_parallel_size=8` runs under the `SimExecutor` with `htsim_rnic` inside the step loop; all 36 pre-registered checks pass, fluid closed forms to 0 ps |
-| [dcqcn_micro](examples/dcqcn_micro/RESULTS.md) | **NIC calibration: message size and incast.** How does goodput scale with message size, and is incast bandwidth shared fairly? | Model tracks the real-NIC (UCCL) message-size anchors from above at saturation but undershoots at 64 to 256 KB (0.79x at 64 KB): the calibration target for HTSIM-5; incast fair share is near-ideal (Jain 0.993 to 1.000 across fan-in 2 to 20) |
+| [dcqcn_micro](examples/dcqcn_micro/RESULTS.md) | **NIC calibration: message size and incast.** How does goodput scale with message size, and is incast bandwidth shared fairly? | Model tracks the real-NIC (UCCL) message-size anchors at saturation but undershoots at 64 to 256 KB (0.79x at 64 KB): common WQ/PCIe calibration is BACK-9/10 and persistent post-CNP DCQCN state is HTSIM-5; incast fair share is near-ideal (Jain 0.993 to 1.000 across fan-in 2 to 20) |
 | [dcqcn_vs_cn](examples/dcqcn_vs_cn/RESULTS.md) | When does DCQCN collapse, and when does it honestly win? | Buffer-exceeding incast collapses DCQCN by 2 to 3 orders of magnitude (32x64 KiB: p99 slowdown 1161x vs rnic-cn 1.60); buffer-absorbed incast is a registered DCQCN win (1.07 vs 1.68) |
 | [cn_ladder](examples/cn_ladder/RESULTS.md) | Does the explicit-rate `rnic-cn` endpoint meet its acceptance bar? | 46 of 49 incast ladder cells within the 20% target of the ideal baseline; under a lossy all-to-all, DCQCN p99 slowdown is 1902x vs rnic-cn 19.3x (lossless, deterministic) |
 | [breakdown](examples/breakdown/RESULTS.md) | Where does request time actually go? | Network share of request time rises from 52% (TP=2) to 89% (TP=8) at 400G, 96% at 100G |
 | [m1](examples/m1/RESULTS.md) | Standalone core: workload to GOAL to htsim to metrics | Ten runs reproduce their closed forms with 0 ps residual |
 | [m5](examples/m5/RESULTS.md) | MoE expert-parallel all-to-all | Pairwise all-to-allv closed forms exact to 0 ps across size and width |
 | [core2_lowering](examples/core2_lowering/RESULTS.md) | Execution lowering and WQE bookkeeping | Legacy path, graph-only replay and frozen closed form agree to 0 ps on all rows; flow and WQE ledgers field-identical |
+| [rnic_wq_v1](examples/rnic_wq_v1/RESULTS.md) | **RNIC queueing: what do doorbell batches, signaling and network credits change?** | All 11 native C++ sweep cells match their closed forms exactly; batching cuts 32 doorbells to 2, signaling cuts 32 CQEs to 2 independently, and four network credits cut JCT from 16,110 ps to 4,140 ps |
 
 The message-size calibration curve and the definitive comparator figure:
 
@@ -142,6 +143,9 @@ The message-size calibration curve and the definitive comparator figure:
 The NIC calibration anchors themselves (UCCL, DCQCN, HPCC, Kalia et al.
 measurements distilled into parameter sets) are recorded in
 [docs/papers/msg-size-vs-bandwidth.md](docs/papers/msg-size-vs-bandwidth.md).
+The hardware/CC boundary, mlx5 hook, CX-7 evidence rules and full boundary
+campaign are in
+[docs/papers/rnic-hardware-calibration.md](docs/papers/rnic-hardware-calibration.md).
 
 ## Models
 
@@ -150,14 +154,29 @@ the module doc that owns it.
 
 ### Network and NIC
 
+RNIC hardware and congestion control are separate model axes. A full-RNIC
+comparison holds the hardware profile fixed and swaps only the htsim
+transport/CC policy. The analytical fluid baseline keeps an explicit hardware
+bypass so closed-form validation remains available.
+
+#### RNIC hardware
+
 | Model | Status | What it is |
 |---|---|---|
-| `rnic-nn` | available | Packetized ideal-NIC baseline (no congestion control); the reference every profile normalizes to |
-| `rnic-nn-fluid` | available | Continuous fluid baseline with deterministic closed forms; the 0 ps validation anchor |
-| `rnic-cn` | available | Explicit-rate collective-network endpoint: deterministic reservation ledger, per-packet spraying with resequencing, lossless without PFC |
-| DCQCN | available | RoCEv2 comparator with mlx5-faithful loss recovery (go-back-N + CNP rate cut, optional limited selective repeat), ECN-only and ECN+PFC modes, PFC storm metrics |
-| WQE lifecycle | available | SQ/RQ/CQ queues and per-WQE transport identities (DCQCN QP or rnic-cn link pair), timing-neutral bookkeeping in the backend |
-| Per-WQE start behavior | planned ([HTSIM-5/6](docs/modules/backends.md)) | WQE initiation latency, shared per-pair rate state and submission-queue pipelining/lookahead, calibrated against the real-NIC message-size anchors |
+| RDMA Work Queue | partial, first native slice available ([study](examples/rnic_wq_v1/RESULTS.md), [BACK-8/9](docs/modules/backends.md)) | SimLLM C++ now models one finite SQ/CQ pair, WR-prefix posting, doorbell batches, ordered retirement, signaling, polling, owner wrap, network backpressure and controlled queue failures; RQ/SRQ, shared CQs and mlx5 encoding remain planned |
+| PCIe, MMIO and DMA | planned ([BACK-10](docs/modules/backends.md)) | Doorbell and BlueFlame paths, WQE and context fetches, payload reads/writes, CQE writes, PCIe ordering, NUMA, IOMMU and GPU Direct topology |
+| QP, QPC and context memory | planned ([BACK-11](docs/modules/backends.md)) | QP pairing and state transitions plus QPC, MTT/MPT and WQE-cache residency in a measured device-cache and host-ICM hierarchy |
+| TX/RX hardware pipelines | planned ([BACK-12](docs/modules/backends.md)) | Packetization, schedulers, port buffers, ACK/NAK/RNR/retry, CQE completion, PFC gates and location-specific fault injection |
+| CX-7 observable state | planned ([BACK-13/14/15](docs/modules/backends.md)) | Versioned driver-visible registers, counters and traces, verbs capture/replay, and Collie-seeded boundary calibration; undocumented internals stay explicit calibrated abstractions |
+
+#### Congestion-control and transport policies
+
+| Model | Status | What it is |
+|---|---|---|
+| `rnic-nn` | available, hardware adapter planned ([HTSIM-9](docs/modules/backends.md)) | Packetized no-CC policy and the reference for normalized FCT; full-RNIC runs use the same hardware path as physical policies |
+| `rnic-nn-fluid` | available | Continuous fluid policy with deterministic closed forms and the explicit hardware-bypass 0 ps anchor |
+| `rnic-cn` | available, hardware adapter planned ([HTSIM-6/9](docs/modules/backends.md)) | Explicit-rate policy with deterministic reservations, packet spraying and resequencing, lossless without PFC |
+| DCQCN | available, hardware adapter planned ([HTSIM-5/9](docs/modules/backends.md)) | RoCEv2 comparator with per-QP CNP state, rate reduction/recovery and ECN plus optional PFC; DCQCN calibration lands before programmable CC |
 | LogGOPSim flow level | planned ([BACK-2](docs/modules/backends.md)) | Fast flow-level sweeps before packet-level runs |
 
 Fabrics are two-tier Clos topologies with detailed switch models (VoQ

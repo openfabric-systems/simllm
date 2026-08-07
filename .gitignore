@@ -20,6 +20,7 @@ runs/
 *.npz
 *.csv
 !tests/data/*.csv
+!examples/rnic_wq_v1/results.csv
 
 # Local agent rule files (kept out of the public repo on purpose)
 CLAUDE.md

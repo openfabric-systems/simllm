@@ -19,6 +19,16 @@ ruff check .
 pytest -q
 ```
 
+Changes under `simllm/backends/rnic/` also run the dependency-free native
+gate:
+
+```bash
+cmake -S simllm/backends/rnic -B build/rnic -DCMAKE_BUILD_TYPE=Debug \
+  -DSIMLLM_RNIC_WARNINGS_AS_ERRORS=ON
+cmake --build build/rnic --parallel
+ctest --test-dir build/rnic --output-on-failure
+```
+
 ## Where to contribute
 
 - **Workload generators** (`simllm/workload/`): arrival processes, length
