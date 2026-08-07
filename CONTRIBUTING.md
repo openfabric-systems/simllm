@@ -6,7 +6,7 @@ every size are welcome, from a topology config to a new frontend adapter.
 ## Development setup
 
 ```bash
-git clone https://github.com/yifeng-ethz/simllm.git
+git clone https://github.com/openfabric-systems/simllm.git
 cd simllm
 git submodule update --init third_party/atlahs third_party/htsim
 pip install -e .[dev]

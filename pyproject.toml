@@ -24,8 +24,8 @@ plot = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yifeng-ethz/simllm"
-Issues = "https://github.com/yifeng-ethz/simllm/issues"
+Homepage = "https://github.com/openfabric-systems/simllm"
+Issues = "https://github.com/openfabric-systems/simllm/issues"
 
 # SGLang discovers and runs this before constructing its Scheduler. The
 # callable is a no-op unless SIMLLM_SGLANG_ENABLE=1, so an installed simllm

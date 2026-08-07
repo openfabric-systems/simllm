@@ -86,7 +86,7 @@ seams, the manifest schemas and the GOAL trace format, is in
 ## Getting Started
 
 ```bash
-git clone https://github.com/yifeng-ethz/simllm.git
+git clone https://github.com/openfabric-systems/simllm.git
 cd simllm
 
 # Backends (~250 MB). Do NOT use --recursive: ATLAHS carries large nested
