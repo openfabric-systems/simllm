@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the frozen structural checks for the isolated GPU service model."""
+"""Run the post-specified structural checks for the isolated GPU service model."""
 
 from __future__ import annotations
 

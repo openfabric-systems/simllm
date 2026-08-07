@@ -464,7 +464,7 @@ attributed held-out residual selects the next fidelity improvement.
 The first trace-driven GPU slice validates mechanisms before claiming device
 accuracy. Exact synthetic fixtures cover partial CTA waves, scheduler width,
 dependency chains, occupancy minima, HBM latency plus serialization, and
-copy-descriptor setup plus bandwidth. The frozen study is
+copy-descriptor setup plus bandwidth. The post-specified regression study is
 [examples/gpu_service_model](../examples/gpu_service_model/expectations.md).
 It varies at least two parameters in every component sweep and requires zero
 cycle residual for the closed forms.
@@ -479,8 +479,8 @@ cannot use. A collective is therefore an ordinary kernel here, built by
 it contends for the same GPU as the work it overlaps with rather than
 being priced alone. The intra-node NVLink path deliberately stays inside
 this model instead of reaching the fabric backend, which is the split
-TRAF-10 owns; only inter-node segments become GOAL traffic. The frozen
-study is [examples/gpu_task_mix](../examples/gpu_task_mix/expectations.md),
+TRAF-10 owns; only inter-node segments become GOAL traffic. The post-specified
+regression study is [examples/gpu_task_mix](../examples/gpu_task_mix/expectations.md),
 and COMP-11 owns peer topology, ingress service and reduction lanes. The
 primitive does not select runnable graph operations; CORE-4 still owns that
 DeviceRuntime policy and dispatch.

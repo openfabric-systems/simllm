@@ -119,8 +119,9 @@ sink seam is the same contract but has not driven htsim live yet (SGL-8).
 
 - SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic
   vs shared-prefix workload structure.
-- SGL-4 (remaining half): a paced-mode run checked against SGLang's own
-  wall-clock metrics, a workload that actually exercises radix hits
+- SGL-4 (Precision; P1; L) (remaining half): a paced-mode run checked against
+  SGLang's own wall-clock metrics, a workload that actually exercises radix
+  hits
   (repeated shared prefixes) and retraction under KV pressure, and a
   `launch_server` (HTTP) run in addition to the offline `Engine` smoke. Run
   after the calibrated compute table and CORE-3/4/5, using the same commit,

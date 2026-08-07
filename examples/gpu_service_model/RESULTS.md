@@ -1,8 +1,11 @@
 # GPU service model: structural validation results
 
-The 2026-08-06 run passed all 22 pre-registered cells with zero residual.
-These are mechanism checks on a synthetic 1 GHz profile. They validate the
-event model's equations and boundaries, not A100 or H100 timing accuracy.
+The 2026-08-06 run passed all 22 post-specified exact-oracle rows with zero
+residual. The expectations, implementation, runner and first results all
+landed together in commit `12bfe8b`, so this study is regression evidence, not
+preregistration. These are mechanism checks on a synthetic 1 GHz profile. They
+validate the event model's equations and boundaries, not A100 or H100 timing
+accuracy.
 
 Reproduce from the repository root:
 
@@ -24,7 +27,7 @@ sweeps.
 
 ## Exact results
 
-| Check | Parameter A | Parameter B | replay | frozen | residual |
+| Check | Parameter A | Parameter B | replay | closed form | residual |
 |---|---:|---:|---:|---:|---:|
 | CTA waves | 4 CTAs | 1 SM | 1,024 cycles | 1,024 | 0 |
 | CTA waves | 4 CTAs | 4 SMs | 256 cycles | 256 | 0 |
@@ -124,7 +127,7 @@ byte-identically after the change.
 
 ### By-construction disclosures, 2026-08-06
 
-Three registered clauses carry no evidential weight as experiments and
+Three post-specified clauses carry no evidential weight as experiments and
 survive only as regression tripwires, following the precedent set in
 [examples/m4](../m4/RESULTS.md):
 
@@ -132,8 +135,8 @@ survive only as regression tripwires, following the precedent set in
   bandwidth" clause is true by arithmetic: duration is
   `setup + ceil(bytes / rate)`, which is at least `bytes / rate`, so the
   assertion cannot fail for any input. Its companion clause, that
-  throughput must rise with descriptor size, was registered but was not
-  enforced by the harness until 2026-08-06; it is now a real
+  throughput must rise with descriptor size, was specified but was not
+  enforced by the initial harness; it is now a real
   cross-case assertion and it passes.
 - The HBM check's "serviced bytes equal submitted bytes" identity holds
   by assignment: the estimate sets `hbm_serviced_bytes` from

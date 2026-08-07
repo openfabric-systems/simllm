@@ -158,10 +158,11 @@ row-for-row.
 
 - VLLM-3: sim-native metrics export via a `vllm.stat_logger_plugins` stat
   logger for virtual-time runs.
-- VLLM-4 (remaining half): a paced-mode run whose TTFT/TPOT are compared
-  with a real capture, a `vllm serve` run confirming the drain record lands
-  under the `EngineCore` busy loop (source-verified only; the in-process
-  loop is confirmed to never issue it), and the scheduler-side invariants
+- VLLM-4 (Precision; P1; L) (remaining half): a paced-mode run whose TTFT/TPOT
+  are compared with a real capture, a `vllm serve` run confirming the drain
+  record lands under the `EngineCore` busy loop (source-verified only; the
+  in-process loop is confirmed to never issue it), and the scheduler-side
+  invariants
   under the fabricated executor: prefix-cache hit accounting with shared
   prefixes longer than one KV block (the 2026-08-04 smoke's shared prefix
   was shorter than the 16-token block, so hits were legitimately zero), and

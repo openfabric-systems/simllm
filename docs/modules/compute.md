@@ -267,7 +267,7 @@ tested. The service covers isolated-kernel replay, copy descriptors, the
 NVLink egress cursor, concurrent multi-task scheduling
 (`estimate_concurrent`) and the NCCL ring-collective builder. The
 [service-model study](../../examples/gpu_service_model/RESULTS.md) validates
-22 frozen mechanism cells to zero-cycle residual, and the
+22 post-specified exact-oracle rows to zero-cycle residual, and the
 [task-mix study](../../examples/gpu_task_mix/RESULTS.md) reports 36 passing
 exact-oracle rows and 6 passing behavioral relation families over 17
 instances. Its 21 structural invariants are unscored, and its two superseded
@@ -343,8 +343,8 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
 
 ## Open tasks
 
-- COMP-1: run the offline SASS pipeline above and ship the first
-  populated per-family table (groundwork landed with M5: `step_kernels`,
+- COMP-1 (Precision; P1; L): run the offline SASS pipeline above and ship the
+  first populated per-family table (groundwork landed with M5: `step_kernels`,
   the table artifact and interpolation; the trace-driven service-model
   mechanisms and bootstrap profiles are also landed, but production capture,
   calibration and a populated table remain blocked on COMP-5).
@@ -390,16 +390,18 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   captures rather than the current synthetic profiles, and reconcile the
   intra-node split with TRAF-10 so one collective is never counted both
   here and on the fabric backend.
-- COMP-12 (Precision; P1; M): register the corrected mixed-makespan forms measured by the
-  [task-mix study](../../examples/gpu_task_mix/RESULTS.md). Findings G1
+- COMP-12 (Precision; P1; M): register the corrected mixed-makespan forms
+  measured by the [task-mix study](../../examples/gpu_task_mix/RESULTS.md).
+  Findings G1
   and G2 there show that a concurrent makespan is
   `max(isolated durations)` plus a submission-order issue delay, and that
   tasks whose CTAs exhaust an SM's shared memory serialize on residency
   instead of backfilling. Both need a pre-registered form of their own,
   including how the issue-order delay should behave once CORE-4 owns
   submission policy.
-- COMP-13 (Completeness; P1; M): extend `simllm-gpu-model-artifact-v2` with a narrow concurrent
-  replay record for `GpuTask` inputs and `GpuConcurrentEstimate` outputs,
+- COMP-13 (Completeness; P1; M): extend `simllm-gpu-model-artifact-v2` with a
+  narrow concurrent replay record for `GpuTask` inputs and
+  `GpuConcurrentEstimate` outputs,
   including task order, per-task admission/completion, requested and
   transacted HBM/NVLink bytes, request counts and deterministic replay
   validation. Until that record lands, concurrent demo CSVs are reviewed
