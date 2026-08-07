@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "simllm/rnic/pcie_fabric.h"
 #include "simllm/rnic/work_queue.h"
 
 namespace {
@@ -18,12 +19,61 @@ using simllm::rnic::DropReason;
 using simllm::rnic::EvidenceKind;
 using simllm::rnic::NetworkEventKind;
 using simllm::rnic::Picoseconds;
+using simllm::rnic::PcieDirection;
+using simllm::rnic::PcieClassAccounting;
+using simllm::rnic::PcieFabric;
+using simllm::rnic::PcieOperation;
+using simllm::rnic::PcieServiceClass;
 using simllm::rnic::PostStatus;
 using simllm::rnic::WorkQueue;
 using simllm::rnic::WorkQueueConfig;
+using simllm::rnic::WorkQueuePcieBinding;
 using simllm::rnic::WorkRequest;
 using simllm::rnic::WqeState;
+using simllm::rnic::defaultPcieFabricConfig;
 using simllm::rnic::testing::FakeNetworkPort;
+
+bool samePcieAccounting(
+    const PcieClassAccounting& lhs,
+    const PcieClassAccounting& rhs) {
+    return lhs.transactions == rhs.transactions
+        && lhs.useful_bytes == rhs.useful_bytes
+        && lhs.transferred_bytes == rhs.transferred_bytes
+        && lhs.host_store_bytes == rhs.host_store_bytes
+        && lhs.host_to_device.tlps == rhs.host_to_device.tlps
+        && lhs.host_to_device.payload_bytes
+            == rhs.host_to_device.payload_bytes
+        && lhs.host_to_device.overhead_bytes
+            == rhs.host_to_device.overhead_bytes
+        && lhs.host_to_device.modeled_link_bytes
+            == rhs.host_to_device.modeled_link_bytes
+        && lhs.device_to_host.tlps == rhs.device_to_host.tlps
+        && lhs.device_to_host.payload_bytes
+            == rhs.device_to_host.payload_bytes
+        && lhs.device_to_host.overhead_bytes
+            == rhs.device_to_host.overhead_bytes
+        && lhs.device_to_host.modeled_link_bytes
+            == rhs.device_to_host.modeled_link_bytes
+        && lhs.waits.ordering_ps == rhs.waits.ordering_ps
+        && lhs.waits.outstanding_read_ps == rhs.waits.outstanding_read_ps
+        && lhs.waits.completion_buffer_ps == rhs.waits.completion_buffer_ps
+        && lhs.waits.credit_ps == rhs.waits.credit_ps
+        && lhs.waits.link_queue_ps == rhs.waits.link_queue_ps
+        && lhs.service_delay.host_store_ps
+            == rhs.service_delay.host_store_ps
+        && lhs.service_delay.posted_write_visibility_ps
+            == rhs.service_delay.posted_write_visibility_ps
+        && lhs.service_delay.read_completion_ps
+            == rhs.service_delay.read_completion_ps
+        && lhs.path_delay.base_ps == rhs.path_delay.base_ps
+        && lhs.path_delay.numa_ps == rhs.path_delay.numa_ps
+        && lhs.path_delay.iommu_ps == rhs.path_delay.iommu_ps
+        && lhs.path_delay.acs_ps == rhs.path_delay.acs_ps
+        && lhs.path_delay.switch_ps == rhs.path_delay.switch_ps
+        && lhs.path_delay.ddio_miss_ps == rhs.path_delay.ddio_miss_ps
+        && lhs.path_delay.gpu_direct_ps == rhs.path_delay.gpu_direct_ps
+        && lhs.latency_samples_used == rhs.latency_samples_used;
+}
 
 class TestRunner {
 public:
@@ -700,6 +750,229 @@ void testUnknownNetworkTokenThrows(TestRunner& test) {
         "unknown network token is an asserted programming failure");
 }
 
+void testPcieFabricWorkQueuePath(TestRunner& test) {
+    auto fabric_config = defaultPcieFabricConfig();
+    fabric_config.max_payload_size_bytes = 128;
+    fabric_config.max_read_request_size_bytes = 128;
+    fabric_config.host_store_latency_ps.samples_ps = {10};
+    fabric_config.posted_write_visibility_latency_ps.samples_ps = {20};
+    fabric_config.read_completion_latency_ps.samples_ps = {30};
+    fabric_config.paths[0].base_latency_ps = 5;
+    fabric_config.paths[1].base_latency_ps = 7;
+    PcieFabric fabric(fabric_config);
+    FakeNetworkPort network(2, 100);
+    WorkQueueConfig cfg = config(2, 2);
+    cfg.qpc_lookup_service_ps = 11;
+    cfg.scheduler_service_ps = 13;
+    WorkQueue queue(cfg, network, fabric);
+    const auto binding = queue.pcieBinding();
+    test.check(
+        binding.has_value()
+            && binding->version
+                == simllm::rnic::kWorkQueuePcieBindingVersion
+            && binding->pcie_doorbell_record_bytes == 4
+            && binding->pcie_uar_doorbell_bytes == 8
+            && binding->pcie_submission_ordering_domain
+                == ((cfg.sq_id << 1) | 1)
+            && binding->pcie_completion_ordering_domain
+                == (cfg.cq_id << 1)
+            && binding->pcie_submission_ordering_domain
+                != binding->pcie_completion_ordering_domain,
+        "PCIe WQ exposes resolved defaults and SQ/CQ-scoped domains");
+
+    queue.postSendBatch({request(801, true), request(802, true)}, 0);
+    const auto batch = queue.ringDoorbell(0);
+    const auto& first = queue.wqe(1);
+    const auto& second = queue.wqe(2);
+    test.check(
+        batch.wqe_count == 2 && batch.observed_at_ps > 0
+            && first.timeline.doorbell_seen_at_ps == batch.observed_at_ps
+            && second.timeline.doorbell_seen_at_ps == batch.observed_at_ps,
+        "PCIe UAR completion supplies the shared doorbell observation");
+    test.check(
+        first.timeline.wqe_fetch_begin_at_ps.has_value()
+            && first.timeline.wqe_fetch_end_at_ps.has_value()
+            && second.timeline.wqe_fetch_begin_at_ps.has_value()
+            && second.timeline.wqe_fetch_end_at_ps.has_value()
+            && *first.timeline.wqe_fetch_begin_at_ps
+                < *first.timeline.wqe_fetch_end_at_ps
+            && *second.timeline.wqe_fetch_begin_at_ps
+                < *first.timeline.wqe_fetch_end_at_ps,
+        "PCIe WQE MRds populate fetch boundaries and overlap by read tags");
+    test.check(
+        first.timeline.qpc_ready_at_ps
+                == *first.timeline.wqe_fetch_end_at_ps + 11
+            && first.timeline.admitted_at_ps
+                == *first.timeline.qpc_ready_at_ps + 13
+            && second.timeline.qpc_ready_at_ps
+                == *second.timeline.wqe_fetch_end_at_ps + 11
+            && second.timeline.admitted_at_ps
+                == *second.timeline.qpc_ready_at_ps + 13,
+        "QPC lookup and scheduler remain local after external WQE DMA");
+
+    queue.progress(*first.timeline.admitted_at_ps);
+    const auto first_token = network.tokenForWqe(1);
+    const Picoseconds first_outcome =
+        *first.timeline.admitted_at_ps + 100;
+    queue.onNetworkEvent(network.take(
+        first_token, NetworkEventKind::Delivered, first_outcome));
+    queue.progress(*second.timeline.admitted_at_ps);
+    const auto second_token = network.tokenForWqe(2);
+    const Picoseconds second_outcome =
+        *second.timeline.admitted_at_ps + 100;
+    queue.onNetworkEvent(network.take(
+        second_token, NetworkEventKind::Delivered, second_outcome));
+
+    Picoseconds final_cqe = *queue.nextEventTime();
+    queue.progress(final_cqe);
+    if (queue.completionQueueDepth() != 2) {
+        final_cqe = *queue.nextEventTime();
+        queue.progress(final_cqe);
+    }
+    const auto cqes = queue.pollCompletionQueue(2, final_cqe);
+    test.check(
+        cqes.size() == 2
+            && cqes[0].visible_at_ps < cqes[1].visible_at_ps
+            && queue.occupiedSqEntries() == 0,
+        "PCIe CQE writes serialize visibility and polling reclaims the SQ");
+
+    const auto& db = fabric.accounting(PcieServiceClass::DoorbellRecord);
+    const auto& uar = fabric.accounting(PcieServiceClass::UarDoorbell);
+    const auto& wqe = fabric.accounting(PcieServiceClass::WqeRead);
+    const auto& cqe = fabric.accounting(PcieServiceClass::CqeWrite);
+    test.check(
+        db.transactions == 1 && db.host_store_bytes == 4
+            && db.host_to_device.modeled_link_bytes == 0
+            && db.device_to_host.modeled_link_bytes == 0,
+        "one batch charges one DB-record host store and no invented DMA");
+    test.check(
+        uar.transactions == 1
+            && uar.host_to_device.payload_bytes == 8
+            && uar.host_to_device.overhead_bytes == 24,
+        "one batch charges one UAR posted write");
+    test.check(
+        wqe.transactions == 2
+            && wqe.device_to_host.tlps == 2
+            && wqe.device_to_host.payload_bytes == 0
+            && wqe.host_to_device.payload_bytes == 128,
+        "two WQEs charge two MRd headers and two CplD payloads");
+    test.check(
+        cqe.transactions == 2
+            && cqe.device_to_host.payload_bytes == 128
+            && cqe.device_to_host.overhead_bytes == 48,
+        "two signaled completions charge two CQE posted writes");
+    test.check(
+        fabric.totalAccounting().transactions == 6
+            && fabric.accounting(PcieServiceClass::PayloadRead).transactions == 0
+            && fabric.accounting(PcieServiceClass::PayloadWrite).transactions == 0,
+        "WQ integration has exactly six class-attributed transactions");
+    queue.validateInvariants();
+    fabric.validateInvariants();
+}
+
+void testPcieWorkQueueValidationAndAtomicOverflow(TestRunner& test) {
+    auto fabric_config = defaultPcieFabricConfig();
+    PcieFabric fabric(fabric_config);
+    FakeNetworkPort network(1, 0);
+    WorkQueueConfig double_charge = config(1, 1);
+    double_charge.doorbell_service_ps = 1;
+    test.expectThrowAs<std::invalid_argument>(
+        [&network, &fabric, double_charge]() {
+            WorkQueue queue(double_charge, network, fabric);
+            (void)queue;
+        },
+        "PCIe WQ rejects double-charged scalar I/O service");
+
+    WorkQueuePcieBinding wrong_endpoint;
+    wrong_endpoint.pcie_uar_path_id = 2;
+    test.expectThrowAs<std::invalid_argument>(
+        [&network, &fabric, wrong_endpoint]() {
+            WorkQueue queue(
+                config(1, 1), network, fabric, wrong_endpoint);
+            (void)queue;
+        },
+        "PCIe WQ rejects a host-memory path used as its UAR BAR");
+
+    auto overflow_config = defaultPcieFabricConfig();
+    overflow_config.host_store_latency_ps.samples_ps = {
+        static_cast<Picoseconds>(std::numeric_limits<std::int64_t>::max())};
+    overflow_config.paths[1].base_latency_ps =
+        static_cast<Picoseconds>(std::numeric_limits<std::int64_t>::max());
+    PcieFabric overflow_fabric(overflow_config);
+    WorkQueue overflow_queue(config(1, 1), network, overflow_fabric);
+    const auto posted = overflow_queue.postSend(request(803, true), 0);
+    test.expectThrowAs<std::overflow_error>(
+        [&overflow_queue]() { overflow_queue.ringDoorbell(0); },
+        "PCIe doorbell overflow has the asserted error type");
+    test.check(
+        overflow_queue.unpublishedWqeCount() == 1
+            && overflow_queue.occupiedSqEntries() == 1
+            && overflow_queue.wqe(posted.wqe_id).state == WqeState::Posted
+            && overflow_queue.counters().doorbells == 0
+            && overflow_fabric.generation() == 0
+            && overflow_fabric.totalAccounting().transactions == 0,
+        "failed PCIe doorbell mutates neither WQ nor shared fabric");
+    overflow_queue.validateInvariants();
+    overflow_fabric.validateInvariants();
+}
+
+void testPcieCqeOverflowIsAtomicAndRetryable(TestRunner& test) {
+    PcieFabric fabric(defaultPcieFabricConfig());
+    FakeNetworkPort network(1, 0);
+    WorkQueue queue(config(1, 1), network, fabric);
+    const auto posted = queue.postSend(request(804, true), 0);
+    (void)queue.ringDoorbell(0);
+    const Picoseconds admitted = *queue.wqe(posted.wqe_id)
+        .timeline.admitted_at_ps;
+    (void)queue.progress(admitted);
+    const auto token = network.tokenForWqe(posted.wqe_id);
+    auto event = network.take(
+        token,
+        NetworkEventKind::Delivered,
+        std::numeric_limits<Picoseconds>::max());
+
+    const std::uint64_t generation_before = fabric.generation();
+    const auto accounting_before = fabric.totalAccounting();
+    const auto counters_before = queue.counters();
+    test.expectThrowAs<std::overflow_error>(
+        [&queue, &event]() { queue.onNetworkEvent(event); },
+        "PCIe CQE-write overflow has the asserted error type");
+
+    const auto& after_failure = queue.wqe(posted.wqe_id);
+    test.check(
+        after_failure.state == WqeState::InFlight
+            && after_failure.network_token == token
+            && !after_failure.timeline.network_outcome_at_ps.has_value()
+            && !after_failure.timeline.transport_retired_at_ps.has_value()
+            && !after_failure.completion_status.has_value()
+            && queue.completionQueueDepth() == 0
+            && queue.occupiedSqEntries() == 1
+            && queue.counters().network_delivered
+                == counters_before.network_delivered
+            && queue.counters().cqes_visible == counters_before.cqes_visible
+            && fabric.generation() == generation_before
+            && samePcieAccounting(
+                fabric.totalAccounting(), accounting_before)
+            && fabric.accounting(PcieServiceClass::CqeWrite).transactions == 0,
+        "failed PCIe CQE planning mutates neither WQ nor shared fabric");
+    queue.validateInvariants();
+    fabric.validateInvariants();
+
+    event.event_time_ps = admitted;
+    queue.onNetworkEvent(event);
+    const Picoseconds visible_at = *queue.nextEventTime();
+    (void)queue.progress(visible_at);
+    const auto cqes = queue.pollCompletionQueue(1, visible_at);
+    test.check(
+        cqes.size() == 1 && cqes.front().cqe_sequence == 1
+            && cqes.front().wqe_id == posted.wqe_id
+            && fabric.generation() == generation_before + 1
+            && fabric.accounting(PcieServiceClass::CqeWrite).transactions == 1,
+        "valid retry publishes CQE sequence one and commits exactly once");
+    queue.validateInvariants();
+    fabric.validateInvariants();
+}
+
 }  // namespace
 
 int main() {
@@ -723,6 +996,9 @@ int main() {
     testFakeNetworkTimestampOverflow(test);
     testCqWrapOwnerGeneration(test);
     testUnknownNetworkTokenThrows(test);
+    testPcieFabricWorkQueuePath(test);
+    testPcieWorkQueueValidationAndAtomicOverflow(test);
+    testPcieCqeOverflowIsAtomicAndRetryable(test);
     if (test.failures() != 0) {
         std::cerr << test.failures() << " RNIC WQ checks failed\n";
         return 1;

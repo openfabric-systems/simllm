@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 
+#include "simllm/rnic/pcie_fabric.h"
+
 namespace simllm::rnic {
 namespace {
 
@@ -26,6 +28,22 @@ void validateServiceTime(Picoseconds value, const char* field_name) {
             std::string("RNIC ") + field_name
             + " must be between 0 and INT64_MAX ps");
     }
+}
+
+std::uint32_t ringByteOffset(
+    std::uint32_t base_offset,
+    std::uint64_t sequence,
+    std::size_t depth,
+    std::uint64_t entry_bytes) {
+    if (sequence == 0 || depth == 0) {
+        throw std::logic_error("invalid RNIC ring-offset input");
+    }
+    const std::uint64_t slot = (sequence - 1) % depth;
+    const std::uint64_t offset = (
+        base_offset
+        + (slot % 4096) * (entry_bytes % 4096))
+        % 4096;
+    return static_cast<std::uint32_t>(offset);
 }
 
 bool validDropLocation(DropLocation location) {
@@ -57,8 +75,15 @@ bool validDropReason(DropReason reason) {
 
 class WorkQueue::Impl {
 public:
-    Impl(WorkQueueConfig config, NetworkPort& network_port)
-        : config_(std::move(config)), network_port_(network_port) {
+    Impl(
+        WorkQueueConfig config,
+        NetworkPort& network_port,
+        PcieFabric* pcie_fabric,
+        std::optional<WorkQueuePcieBinding> pcie_binding)
+        : config_(std::move(config)),
+          network_port_(network_port),
+          pcie_fabric_(pcie_fabric),
+          pcie_binding_(std::move(pcie_binding)) {
         if (config_.version != kWorkQueueConfigVersion) {
             throw std::invalid_argument("unsupported RNIC work-queue config version");
         }
@@ -82,6 +107,83 @@ public:
             config_.scheduler_service_ps, "scheduler_service_ps");
         validateServiceTime(
             config_.cqe_write_service_ps, "cqe_write_service_ps");
+        if (pcie_fabric_ != nullptr) {
+            if (!pcie_binding_.has_value()
+                || pcie_binding_->version
+                    != kWorkQueuePcieBindingVersion) {
+                throw std::invalid_argument(
+                    "unsupported RNIC WQ PCIe binding version");
+            }
+            if (config_.doorbell_service_ps != 0
+                || config_.wqe_fetch_service_ps != 0
+                || config_.cqe_write_service_ps != 0) {
+                throw std::invalid_argument(
+                    "RNIC PCIe mode cannot also charge doorbell, WQE-fetch "
+                    "or CQE-write scalar service");
+            }
+            if (config_.sq_id == 0 || config_.cq_id == 0
+                || config_.sq_id
+                    > (std::numeric_limits<std::uint64_t>::max() >> 1)
+                || config_.cq_id
+                    > (std::numeric_limits<std::uint64_t>::max() >> 1)) {
+                throw std::invalid_argument(
+                    "RNIC PCIe mode requires nonzero 63-bit SQ and CQ IDs");
+            }
+            if (pcie_binding_->pcie_submission_ordering_domain == 0) {
+                pcie_binding_->pcie_submission_ordering_domain =
+                    (config_.sq_id << 1) | 1;
+            }
+            if (pcie_binding_->pcie_completion_ordering_domain == 0) {
+                pcie_binding_->pcie_completion_ordering_domain =
+                    config_.cq_id << 1;
+            }
+            if (pcie_binding_->pcie_doorbell_record_bytes == 0
+                || pcie_binding_->pcie_uar_doorbell_bytes == 0
+                || pcie_binding_->pcie_wqe_bytes == 0
+                || pcie_binding_->pcie_cqe_bytes == 0) {
+                throw std::invalid_argument(
+                    "RNIC PCIe WQ transfer sizes must be positive");
+            }
+            if (pcie_binding_->pcie_uar_first_byte_offset >= 4096
+                || pcie_binding_->pcie_doorbell_record_first_byte_offset
+                    >= 4096
+                || pcie_binding_->pcie_sq_first_byte_offset >= 4096
+                || pcie_binding_->pcie_cq_first_byte_offset >= 4096) {
+                throw std::invalid_argument(
+                    "RNIC PCIe WQ byte offsets must be below 4096");
+            }
+            const PcieFabricConfig pcie_config = pcie_fabric_->config();
+            const auto find_enabled_path = [&pcie_config](
+                                               std::uint32_t path_id) {
+                const auto path = std::find_if(
+                    pcie_config.paths.begin(),
+                    pcie_config.paths.end(),
+                    [path_id](const PciePathConfig& path) {
+                        return path.path_id == path_id && path.enabled;
+                    });
+                return path == pcie_config.paths.end() ? nullptr : &*path;
+            };
+            const PciePathConfig* uar_path = find_enabled_path(
+                pcie_binding_->pcie_uar_path_id);
+            const PciePathConfig* db_path = find_enabled_path(
+                pcie_binding_->pcie_doorbell_record_path_id);
+            const PciePathConfig* sq_path = find_enabled_path(
+                pcie_binding_->pcie_sq_memory_path_id);
+            const PciePathConfig* cq_path = find_enabled_path(
+                pcie_binding_->pcie_cq_memory_path_id);
+            if (uar_path == nullptr || db_path == nullptr
+                || sq_path == nullptr || cq_path == nullptr) {
+                throw std::invalid_argument(
+                    "RNIC PCIe WQ references an unknown or disabled path");
+            }
+            if (uar_path->endpoint != PcieEndpointKind::MmioBar
+                || db_path->endpoint != PcieEndpointKind::HostPinnedMemory
+                || sq_path->endpoint != PcieEndpointKind::HostPinnedMemory
+                || cq_path->endpoint != PcieEndpointKind::HostPinnedMemory) {
+                throw std::invalid_argument(
+                    "RNIC PCIe WQ path endpoint kind is incompatible");
+            }
+        }
     }
 
     PostResult postSend(const WorkRequest& request, Picoseconds now_ps) {
@@ -151,10 +253,56 @@ public:
             throw std::overflow_error("RNIC doorbell batch ID overflow");
         }
         const std::uint64_t batch_id = next_batch_id_;
-        const Picoseconds doorbell_base = std::max(now_ps, doorbell_cursor_ps_);
-        const Picoseconds observed_at =
-            checkedAdd(doorbell_base, config_.doorbell_service_ps);
         const std::size_t count = unpublished_.size();
+
+        std::optional<PcieFabric::Plan> pcie_plan;
+        Picoseconds observed_at = 0;
+        if (pcie_fabric_ != nullptr) {
+            pcie_plan.emplace(pcie_fabric_->beginPlan());
+            PcieTransactionRequest db_record;
+            db_record.client_id = config_.qpn;
+            db_record.client_token = batch_id;
+            db_record.service_class = PcieServiceClass::DoorbellRecord;
+            db_record.operation = PcieOperation::HostStore;
+            db_record.request_direction = PcieDirection::HostToDevice;
+            db_record.ordering = PcieOrdering::VisibilityDependency;
+            db_record.path_id =
+                pcie_binding_->pcie_doorbell_record_path_id;
+            db_record.ordering_domain =
+                pcie_binding_->pcie_submission_ordering_domain;
+            db_record.useful_bytes =
+                pcie_binding_->pcie_doorbell_record_bytes;
+            db_record.transfer_bytes =
+                pcie_binding_->pcie_doorbell_record_bytes;
+            db_record.first_byte_offset =
+                pcie_binding_->pcie_doorbell_record_first_byte_offset;
+            db_record.submitted_at_ps = now_ps;
+            const PcieTransactionResult db_result = pcie_fabric_->schedule(
+                *pcie_plan, db_record);
+
+            PcieTransactionRequest uar;
+            uar.client_id = config_.qpn;
+            uar.client_token = batch_id;
+            uar.service_class = PcieServiceClass::UarDoorbell;
+            uar.operation = PcieOperation::PostedWrite;
+            uar.request_direction = PcieDirection::HostToDevice;
+            uar.ordering = PcieOrdering::VisibilityDependency;
+            uar.path_id = pcie_binding_->pcie_uar_path_id;
+            uar.ordering_domain =
+                pcie_binding_->pcie_submission_ordering_domain;
+            uar.useful_bytes = pcie_binding_->pcie_uar_doorbell_bytes;
+            uar.transfer_bytes = pcie_binding_->pcie_uar_doorbell_bytes;
+            uar.first_byte_offset =
+                pcie_binding_->pcie_uar_first_byte_offset;
+            uar.submitted_at_ps = db_result.completed_at_ps;
+            observed_at = pcie_fabric_->schedule(
+                *pcie_plan, uar).completed_at_ps;
+        } else {
+            const Picoseconds doorbell_base = std::max(
+                now_ps, doorbell_cursor_ps_);
+            observed_at = checkedAdd(
+                doorbell_base, config_.doorbell_service_ps);
+        }
 
         struct PlannedDoorbellWqe {
             WqeId wqe_id{0};
@@ -174,11 +322,41 @@ public:
                 throw std::logic_error(
                     "unpublished RNIC WQE is not in Posted state");
             }
-            const Picoseconds fetch_begin =
-                std::max(observed_at, planned_fetch_cursor);
-            const Picoseconds fetch_end =
-                checkedAdd(fetch_begin, config_.wqe_fetch_service_ps);
-            planned_fetch_cursor = fetch_end;
+            Picoseconds fetch_begin = 0;
+            Picoseconds fetch_end = 0;
+            if (pcie_fabric_ != nullptr) {
+                PcieTransactionRequest wqe_read;
+                wqe_read.client_id = config_.qpn;
+                wqe_read.client_token = wqe_id;
+                wqe_read.service_class = PcieServiceClass::WqeRead;
+                wqe_read.operation = PcieOperation::NonPostedRead;
+                wqe_read.request_direction = PcieDirection::DeviceToHost;
+                wqe_read.ordering = PcieOrdering::Independent;
+                wqe_read.path_id =
+                    pcie_binding_->pcie_sq_memory_path_id;
+                wqe_read.ordering_domain =
+                    pcie_binding_->pcie_submission_ordering_domain;
+                wqe_read.useful_bytes = pcie_binding_->pcie_wqe_bytes;
+                wqe_read.transfer_bytes = pcie_binding_->pcie_wqe_bytes;
+                wqe_read.first_byte_offset = ringByteOffset(
+                    pcie_binding_->pcie_sq_first_byte_offset,
+                    record.sq_sequence,
+                    config_.sq_depth,
+                    pcie_binding_->pcie_wqe_bytes);
+                wqe_read.submitted_at_ps = observed_at;
+                const PcieTransactionResult fetch = pcie_fabric_->schedule(
+                    *pcie_plan, wqe_read);
+                fetch_begin = fetch.first_issue_at_ps;
+                fetch_end = fetch.completed_at_ps;
+                planned_fetch_cursor = std::max(
+                    planned_fetch_cursor, fetch_end);
+            } else {
+                fetch_begin = std::max(
+                    observed_at, planned_fetch_cursor);
+                fetch_end = checkedAdd(
+                    fetch_begin, config_.wqe_fetch_service_ps);
+                planned_fetch_cursor = fetch_end;
+            }
             const Picoseconds qpc_ready =
                 checkedAdd(fetch_end, config_.qpc_lookup_service_ps);
             const Picoseconds scheduler_begin =
@@ -191,6 +369,9 @@ public:
             planned_ready.push_back(wqe_id);
         }
 
+        if (pcie_plan.has_value()) {
+            pcie_fabric_->commit(std::move(*pcie_plan));
+        }
         for (const PlannedDoorbellWqe& item : plan) {
             WqeRecord& record = mutableWqe(item.wqe_id);
             record.doorbell_batch_id = batch_id;
@@ -321,6 +502,12 @@ public:
                     throw std::logic_error(
                         "duplicate RNIC WQE network outcome");
                 }
+                try {
+                    commitRetirementPcie(retirement_plan);
+                } catch (...) {
+                    pending_outcomes_.erase(candidate.wqe_id);
+                    throw;
+                }
 
                 ready_.pop_front();
                 ++counters_.network_rejected;
@@ -406,6 +593,12 @@ public:
             candidate.wqe_id, candidate.outcome);
         if (!inserted.second) {
             throw std::logic_error("duplicate RNIC WQE network outcome");
+        }
+        try {
+            commitRetirementPcie(retirement_plan);
+        } catch (...) {
+            pending_outcomes_.erase(candidate.wqe_id);
+            throw;
         }
         last_observed_time_ps_ = event.event_time_ps;
         inflight_.erase(inflight_it);
@@ -498,6 +691,9 @@ public:
         return unpublished_.size();
     }
     const WorkQueueConfig& config() const noexcept { return config_; }
+    std::optional<WorkQueuePcieBinding> pcieBinding() const {
+        return pcie_binding_;
+    }
     const WorkQueueCounters& counters() const noexcept { return counters_; }
     const std::vector<WqeRecord>& records() const noexcept { return records_; }
     const std::vector<EvidenceEvent>& evidence() const noexcept {
@@ -663,6 +859,7 @@ private:
     struct RetirementPlan {
         std::vector<PlannedRetirement> retirements;
         std::map<PendingCqeKey, CompletionEntry> pending_cqes;
+        std::optional<PcieFabric::Plan> pcie_plan;
         Picoseconds retirement_cursor_ps{0};
         Picoseconds cqe_write_cursor_ps{0};
         std::uint64_t next_cqe_sequence{1};
@@ -689,7 +886,8 @@ private:
         CompletionStatus status,
         Picoseconds retired_at_ps,
         Picoseconds cqe_write_cursor_ps,
-        std::uint64_t cqe_sequence) const {
+        std::uint64_t cqe_sequence,
+        RetirementPlan& retirement_plan) const {
         CompletionEntry entry;
         entry.cqe_sequence = cqe_sequence;
         entry.wr_id = record.request.wr_id;
@@ -708,10 +906,39 @@ private:
         } else if (status == CompletionStatus::NetworkRejected) {
             entry.vendor_syndrome = 2;
         }
-        const Picoseconds write_begin =
-            std::max(retired_at_ps, cqe_write_cursor_ps);
-        entry.visible_at_ps =
-            checkedAdd(write_begin, config_.cqe_write_service_ps);
+        if (pcie_fabric_ != nullptr) {
+            if (!retirement_plan.pcie_plan.has_value()) {
+                retirement_plan.pcie_plan.emplace(
+                    pcie_fabric_->beginPlan());
+            }
+            PcieTransactionRequest cqe_write;
+            cqe_write.client_id = config_.qpn;
+            cqe_write.client_token = record.wqe_id;
+            cqe_write.service_class = PcieServiceClass::CqeWrite;
+            cqe_write.operation = PcieOperation::PostedWrite;
+            cqe_write.request_direction = PcieDirection::DeviceToHost;
+            cqe_write.ordering = PcieOrdering::VisibilityDependency;
+            cqe_write.path_id =
+                pcie_binding_->pcie_cq_memory_path_id;
+            cqe_write.ordering_domain =
+                pcie_binding_->pcie_completion_ordering_domain;
+            cqe_write.useful_bytes = pcie_binding_->pcie_cqe_bytes;
+            cqe_write.transfer_bytes = pcie_binding_->pcie_cqe_bytes;
+            cqe_write.first_byte_offset = ringByteOffset(
+                pcie_binding_->pcie_cq_first_byte_offset,
+                cqe_sequence,
+                config_.cq_depth,
+                pcie_binding_->pcie_cqe_bytes);
+            cqe_write.submitted_at_ps = retired_at_ps;
+            entry.visible_at_ps = pcie_fabric_->schedule(
+                *retirement_plan.pcie_plan,
+                cqe_write).completed_at_ps;
+        } else {
+            const Picoseconds write_begin =
+                std::max(retired_at_ps, cqe_write_cursor_ps);
+            entry.visible_at_ps =
+                checkedAdd(write_begin, config_.cqe_write_service_ps);
+        }
         return entry;
     }
 
@@ -779,7 +1006,8 @@ private:
                     outcome->status,
                     retired_at,
                     plan.cqe_write_cursor_ps,
-                    plan.next_cqe_sequence);
+                    plan.next_cqe_sequence,
+                    plan);
                 const PendingCqeKey key{
                     entry.visible_at_ps, entry.cqe_sequence};
                 if (pending_cqes_.count(key) != 0
@@ -802,7 +1030,18 @@ private:
         return plan;
     }
 
+    void commitRetirementPcie(RetirementPlan& plan) {
+        if (plan.pcie_plan.has_value()) {
+            pcie_fabric_->commit(std::move(*plan.pcie_plan));
+            plan.pcie_plan.reset();
+        }
+    }
+
     void commitRetirements(RetirementPlan&& plan) {
+        if (plan.pcie_plan.has_value()) {
+            throw std::logic_error(
+                "RNIC retirement PCIe plan was not committed first");
+        }
         pending_cqes_.merge(plan.pending_cqes);
         for (const PlannedRetirement& item : plan.retirements) {
             pending_outcomes_.erase(item.wqe_id);
@@ -902,6 +1141,8 @@ private:
 
     WorkQueueConfig config_;
     NetworkPort& network_port_;
+    PcieFabric* pcie_fabric_{nullptr};
+    std::optional<WorkQueuePcieBinding> pcie_binding_;
     WorkQueueCounters counters_;
     std::vector<WqeRecord> records_;
     std::vector<EvidenceEvent> evidence_;
@@ -933,7 +1174,19 @@ private:
 };
 
 WorkQueue::WorkQueue(WorkQueueConfig config, NetworkPort& network_port)
-    : impl_(std::make_unique<Impl>(std::move(config), network_port)) {}
+    : impl_(std::make_unique<Impl>(
+          std::move(config), network_port, nullptr, std::nullopt)) {}
+
+WorkQueue::WorkQueue(
+    WorkQueueConfig config,
+    NetworkPort& network_port,
+    PcieFabric& pcie_fabric,
+    WorkQueuePcieBinding pcie_binding)
+    : impl_(std::make_unique<Impl>(
+          std::move(config),
+          network_port,
+          &pcie_fabric,
+          std::move(pcie_binding))) {}
 
 WorkQueue::~WorkQueue() = default;
 WorkQueue::WorkQueue(WorkQueue&&) noexcept = default;
@@ -993,6 +1246,10 @@ std::size_t WorkQueue::unpublishedWqeCount() const noexcept {
 
 const WorkQueueConfig& WorkQueue::config() const noexcept {
     return impl_->config();
+}
+
+std::optional<WorkQueuePcieBinding> WorkQueue::pcieBinding() const {
+    return impl_->pcieBinding();
 }
 
 const WorkQueueCounters& WorkQueue::counters() const noexcept {

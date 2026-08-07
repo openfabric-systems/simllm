@@ -228,14 +228,27 @@ and its ECMP-collision and slow-start behavior is the phenomenon under study.
   scope includes RQ/SRQ, multiple WQs and shared CQs, WQEBB encoding, fences,
   inline/BlueFlame paths, CQE format profiles, compression, moderation,
   completion channels and interrupts.
-- BACK-10: implement the shared PCIe/MMIO/DMA queueing model. Keep distinct
+- BACK-10: complete the shared PCIe/MMIO/DMA queueing model. Keep distinct
   service classes for UAR doorbells, BlueFlame write-combining copies, DB
-  records, WQE reads, QPC/ICM and MTT/MPT fetches, payload reads/writes, CQE
-  writes, command queues, interrupts and ODP/IOMMU faults. Parameters include
-  PCIe generation/width, TLP overhead, MPS/MRRS, posted-write and read
-  completion latency distributions, outstanding-read limits, credits,
-  completion buffering, relaxed ordering, ACS routing, IOMMU, DDIO, NUMA and
-  GPU Direct topology. Every byte and wait must be attributed to one class.
+  records, WQE reads, QPC/ICM and MTT/MPT fetches, payload reads, payload
+  writes, CQE writes, command queues, interrupts and ODP/IOMMU faults.
+  The first deterministic shared-link slice is complete: CPU host-store
+  dependency events; MWr/MRd/CplD segmentation; configured modeled-link
+  overhead; Gen1 through Gen5 directional serialization; DWORD, 4 KiB,
+  MPS/MRRS and eager-RCB splitting; typed flow-control pools; outstanding-read
+  and completion-buffer limits; fixed latency profiles; transactional
+  plan/commit; and per-class byte, wait, service-delay and labeled path-delay
+  accounting. The one-SQ path emits a 4-byte mlx5 send DB-record store, regular
+  8-byte UAR write, WQE reads and CQE writes. All defaults are synthetic and
+  are not a ConnectX-7 profile. The pre-registered evidence is in
+  [examples/rnic_pcie_v1](../../examples/rnic_pcie_v1/RESULTS.md).
+  Remaining scope includes BlueFlame production and fetch bypass;
+  class-specific DMA/MMIO queues, chronological arbitration and occupancy;
+  QPC/MTT/payload/command/interrupt/fault producers; variable measured latency
+  replay; PCIe Relaxed Ordering; lower-layer DLLP/UpdateFC/replay/SKP/FEC
+  events; topology and cache/fault behavior for ACS, IOMMU, DDIO, NUMA and GPU
+  Direct; and a provenance-bearing CX-7 calibration. Every modeled byte and
+  wait must remain attributed to one class.
 - BACK-11: implement QP lifecycle, RNIC pairing and context placement. Cover
   RESET, INIT, RTR, RTS, SQD/SQE, ERR and teardown; PD/MR/MPT/MTT ownership;
   peer QPN/PSN/GID/path exchange; retry/RNR parameters; and failed or timed-out

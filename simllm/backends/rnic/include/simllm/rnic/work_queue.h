@@ -12,6 +12,9 @@
 namespace simllm::rnic {
 
 inline constexpr std::uint32_t kWorkQueueConfigVersion = 1;
+inline constexpr std::uint32_t kWorkQueuePcieBindingVersion = 1;
+
+class PcieFabric;
 
 enum class WqeOpcode {
     Send,
@@ -78,6 +81,28 @@ struct WorkQueueConfig {
     Picoseconds qpc_lookup_service_ps{0};
     Picoseconds scheduler_service_ps{0};
     Picoseconds cqe_write_service_ps{0};
+};
+
+struct WorkQueuePcieBinding {
+    std::uint32_t version{kWorkQueuePcieBindingVersion};
+    // Path IDs refer to the shared fabric config. Byte offsets are low address
+    // bits used for DWORD, RCB and 4 KiB segmentation.
+    std::uint32_t pcie_uar_path_id{1};
+    std::uint32_t pcie_doorbell_record_path_id{2};
+    std::uint32_t pcie_sq_memory_path_id{2};
+    std::uint32_t pcie_cq_memory_path_id{2};
+    // A zero domain derives a nonzero namespace from SQ/CQ identity. Explicit
+    // values support intentional sharing across WorkQueue objects.
+    std::uint64_t pcie_submission_ordering_domain{0};
+    std::uint64_t pcie_completion_ordering_domain{0};
+    std::uint64_t pcie_doorbell_record_bytes{4};
+    std::uint64_t pcie_uar_doorbell_bytes{8};
+    std::uint64_t pcie_wqe_bytes{64};
+    std::uint64_t pcie_cqe_bytes{64};
+    std::uint32_t pcie_uar_first_byte_offset{0};
+    std::uint32_t pcie_doorbell_record_first_byte_offset{0};
+    std::uint32_t pcie_sq_first_byte_offset{0};
+    std::uint32_t pcie_cq_first_byte_offset{0};
 };
 
 struct WorkRequest {
@@ -193,6 +218,11 @@ struct WorkQueueCounters {
 class WorkQueue {
 public:
     WorkQueue(WorkQueueConfig config, NetworkPort& network_port);
+    WorkQueue(
+        WorkQueueConfig config,
+        NetworkPort& network_port,
+        PcieFabric& pcie_fabric,
+        WorkQueuePcieBinding pcie_binding = {});
     ~WorkQueue();
 
     WorkQueue(const WorkQueue&) = delete;
@@ -228,6 +258,7 @@ public:
     std::size_t unpublishedWqeCount() const noexcept;
 
     const WorkQueueConfig& config() const noexcept;
+    std::optional<WorkQueuePcieBinding> pcieBinding() const;
     const WorkQueueCounters& counters() const noexcept;
     const std::vector<WqeRecord>& records() const noexcept;
     const std::vector<EvidenceEvent>& evidence() const noexcept;

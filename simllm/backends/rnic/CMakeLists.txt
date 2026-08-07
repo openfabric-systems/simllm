@@ -19,6 +19,7 @@ option(SIMLLM_RNIC_WARNINGS_AS_ERRORS
        OFF)
 
 add_library(simllm_rnic STATIC
+    src/pcie_fabric.cpp
     src/work_queue.cpp
 )
 add_library(simllm::rnic ALIAS simllm_rnic)
@@ -46,6 +47,23 @@ endif()
 
 if(SIMLLM_RNIC_BUILD_TESTS)
     enable_testing()
+    add_executable(simllm_rnic_pcie_fabric_test
+        tests/pcie_fabric_test.cpp
+    )
+    target_link_libraries(simllm_rnic_pcie_fabric_test PRIVATE simllm::rnic)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_pcie_fabric_test PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_pcie_fabric_test PRIVATE -Werror)
+        endif()
+    endif()
+    add_test(NAME simllm_rnic_pcie_fabric_test
+             COMMAND simllm_rnic_pcie_fabric_test)
+
     add_executable(simllm_rnic_work_queue_test
         tests/work_queue_test.cpp
     )
@@ -68,6 +86,21 @@ if(SIMLLM_RNIC_BUILD_TESTS)
 endif()
 
 if(SIMLLM_RNIC_BUILD_TOOLS)
+    add_executable(simllm_rnic_pcie_probe
+        tools/pcie_probe.cpp
+    )
+    target_link_libraries(simllm_rnic_pcie_probe PRIVATE simllm::rnic)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_pcie_probe PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_pcie_probe PRIVATE -Werror)
+        endif()
+    endif()
+
     add_executable(simllm_rnic_wq_probe
         tools/wq_probe.cpp
     )

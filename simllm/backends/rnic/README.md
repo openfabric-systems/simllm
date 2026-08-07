@@ -9,6 +9,52 @@ accepted-prefix WR posting, explicit doorbell batches, serialized fetch and
 CQE-write service, ordered retirement, signaled and unsignaled reclaim, CQ
 owner wrap, polling, network retry gates and controlled queue failures.
 
+## PCIe fabric boundary
+
+`PcieFabric` is the shared transaction-level PCIe resource used by WorkQueue
+and later RNIC clients. Semantic class is independent of operation. Its v1
+inventory has separate labels for UAR, BlueFlame, doorbell records, WQE,
+QPC/ICM, MTT/MPT, payload reads, payload writes, CQE, command, interrupt and
+ODP/IOMMU-fault traffic.
+
+The executable v1 operations are a CPU host-store dependency, posted Memory
+Write and non-posted Memory Read with Completion with Data. MWr, MRd and CplD
+segmentation accounts for DWORD padding, 4 KiB boundaries, MPS, MRRS and an
+eager Read Completion Boundary policy. Full-duplex Gen1 through Gen5 link
+serializers retain rational time. Standard posted, non-posted and completion
+credit pools, read tags and completion-buffer reservations are finite. Every
+transaction returns class-attributed useful/transfer/host-store bytes,
+directional TLP payload/overhead/modeled-link bytes, queue waits, fixed service
+delay and labeled path delay.
+
+Planning is transactional. `beginPlan`, `schedule` and `commit` let a client
+calculate a complete state transition against a private snapshot. A failed or
+discarded plan changes no shared IDs, credits, counters or link time. The
+fabric is single-threaded; multiple clients share it through deterministic
+event-loop call order. Its address is stable in v1: a fabric cannot be copied
+or moved and must outlive every plan and WorkQueue bound to it.
+Visibility-dependency domain zero is the generic global conservative domain;
+clients use nonzero namespaces to separate unrelated queues.
+
+All default queue depths and delay values are synthetic. The default envelope
+charges 24 B for MWr/MRd and 20 B for CplD, and calls the resulting total
+modeled-link bytes. It is not a raw physical-wire byte count and does not
+include unmodeled DLLPs, UpdateFC, replay, SKP or FEC traffic. V1 accepts one
+fixed latency sample per profile and reserves one FIFO serializer per
+direction. Chronological multi-sample arbitration, class-specific queues,
+PCIe Relaxed Ordering and topology-derived NUMA/IOMMU/ACS/DDIO/GPU Direct
+effects remain BACK-10 work.
+
+The PCIe WorkQueue overload takes a separately versioned
+`WorkQueuePcieBinding`. In the regular mlx5 submission path it records one
+4-byte SQ doorbell-record host store and one 8-byte UAR posted write per batch,
+then one WQE MRd/CplD transaction per WQE. A required completion emits one CQE
+posted write. `doorbell_seen_at`, WQE-fetch begin/end and CQE visibility come
+from these transactions. QPC lookup and scheduler service remain local RNIC
+stages. BlueFlame production and its WQE-fetch bypass are not yet connected.
+The frozen equations, raw configuration and measured sweeps are in
+[`examples/rnic_pcie_v1`](../../../examples/rnic_pcie_v1/RESULTS.md).
+
 ## Network boundary
 
 `NetworkPort` is independent of Python, htsim and any congestion-control
