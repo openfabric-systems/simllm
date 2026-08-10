@@ -285,3 +285,107 @@ B, mixing physical quiescence with logical completion or visit sums can fail
 C, and consulting priority in the off path can fail D. `RESULTS.md` must state
 the observed genuine-risk fraction per family and explain why each counted
 relation was not guaranteed merely by constructing the fixture.
+
+## Integration-review amendment before corrective implementation
+
+This appendix records the corrections requested by the integration review
+after the first CORE-4 implementation. It is intentionally later than the
+original expectations-only commit `d43cddb`, which remains unchanged in Git
+history, and must precede every corrective implementation edit and corrected
+study run. The original family-C JCT, quiescence, synchronous penalty, and
+additive-wait literals remain unchanged.
+
+The registered amendment dry run is:
+
+```bash
+.venv/bin/python examples/core4_runtime/run_study.py --check-only
+```
+
+It must be executed before the amendment commit. It parses the registered
+study inputs and produces no measured result or generated artifact. These
+review corrections mirror no external runtime, NCCL release, or hardware
+specification, so there is no new external-source referent to audit.
+
+### Transactional structural authority
+
+Structural mode stages semantic submissions in a transaction supplied by the
+sole `NativeRnicSession`. Scheduling and every projection check complete
+before that transaction commits. In the regression fixture, the second
+submission returns an invalid projection after one valid submission has been
+staged. The execution must fail, the session's committed submission list and
+sequence counter must remain byte-identical to their pre-execution values,
+and retrying the same graph with the fault removed must commit exactly two
+WQEs with sequences `[1, 2]`. A result of `[2, 3]`, duplicate records, or any
+committed record after the failed attempt is fatal and unscored.
+
+This remains component evidence until CORE-15 connects the transaction seam
+to the HTSIM-9 composed native session and changes an `ExecutionGraph`
+completion time.
+
+### Realized critical-path clipping
+
+Add two dependency-chain cells with framework-launch service `L` in
+`{10, 20} ps`. At release zero, operation A is a `100 ps` compute. A zero-cost
+filler on another GPU is second in graph order and has `not_before_ps =
+100 + L`. Operation B is third in graph order, depends on A, and is a `20 ps`
+compute. Only B is a required completion. All three launches use the same
+node framework-launch FIFO.
+
+The filler occupies the launch service immediately after A completes. B's
+launch was submitted at release, but only the final `L ps` of its much larger
+recorded queue-wait interval occurs after A's completion and lies on the
+realized dependency path. The exact rows are:
+
+| L (ps) | JCT (ps) | realized critical-path queue (ps) |
+|---:|---:|---:|
+| 10 | 150 | 10 |
+| 20 | 180 | 20 |
+
+For each cell, summing `operation_latency_ps` over the reported A to B
+critical chain must equal graph JCT exactly. Each operation breakdown must
+also conserve its own clipped chain segment. Launch wait or service completed
+before the preceding chain boundary contributes zero. The uncorrected queue
+totals of `120` and `140 ps` are additive visit work, not critical-path wait.
+
+The existing family-C fixed cells additionally require
+`critical_path_queue_ps = 0` for asynchronous control and
+`critical_path_queue_ps = 20,971,520` for synchronous control, for both class
+labels. These four values are scored because an implementation can plausibly
+select physical quiescence or sum all eight RNIC waits instead.
+
+Decision consequence: if clipping cannot make both chain conservation and
+the exact queue literals hold, `critical_path_queue_ps` cannot feed CORE-5.
+The chain-summed representation must then be replaced by an interval-union or
+explicit predecessor-edge representation before TTFT or TPOT attribution.
+
+### Destination arrivals and fail-closed inputs
+
+An asynchronous control send from rank 0 to rank 8 publishes rank 0 at local
+handoff and rank 8 at transfer completion. A rank-8 operation with a
+participant-local dependency starts no earlier than that destination
+timestamp. A peer-to-peer DMA from `gpu:0` to `gpu:1` likewise publishes both
+rank arrivals, and a rank-1 participant-local successor starts no earlier than
+DMA completion. Source-only publication is fatal and unscored.
+
+Until CORE-3 supplies byte-carrying KV semantics, a READ or WRITE with
+`byte_count > 0` must fail during preflight with an error naming CORE-3. Zero
+byte lifecycle observations remain timing-neutral. Ring all-reduce accepts
+only a positive payload evenly divisible among its ranks; zero, sub-rank, and
+non-divisible payloads fail preflight without mutating runtime or RNIC state.
+CORE-16 owns exact remainder chunking and wider control-tag allocation.
+
+At most 1,024 destinations fit one control operation's reserved GOAL-tag
+block. The block begins at `goal_base_tag + 1,000,000 + operation_index *
+1,024`; collective tags must stay below the `goal_base_tag + 1,000,000`
+boundary. Either overflow fails preflight before authority mutation.
+
+### Replaceable arbitration policy
+
+Any object satisfying `ArbitrationPolicy` is accepted. A recording policy
+must observe the complete legal ready set and may choose a member of that set;
+choosing any other record fails before authority commit. The shipped identity
+policy continues to preserve the byte-exact class-permutation baseline.
+Mandatory launch and logical-queue FIFO, protocol ordering, deterministic
+copy-engine routing, all-member co-runnable compute dispatch, and native RNIC
+legality remain policy-free and must be documented as such because they are
+not optional arbitration points.
