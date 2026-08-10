@@ -187,9 +187,16 @@ transport/CC policy. The analytical fluid baseline keeps an explicit hardware
 bypass so closed-form validation remains available.
 The native WQ and PCIe slices are currently standalone component models: the
 live packet and TTFT/TPOT path still uses htsim's timing-neutral compatibility
-ledger until BACK-8 and HTSIM-9 link the native hardware session into the
-directly invoked simulator, CORE-4 invokes that composition from the execution
-graph, and CORE-5 reduces its completion into `StepResult` and TTFT/TPOT.
+ledger until BACK-8, BACK-18 and HTSIM-9 link the native hardware session
+into the directly invoked simulator, CORE-4 invokes that composition from
+the execution graph, and CORE-5 reduces its completion into `StepResult` and
+TTFT/TPOT.
+The RNIC device itself is built from modules behind one construction entry
+point: the work-queue core plus optional DMA (PCIe), QPC (connection and
+context) and network transport modules
+([BACK-18](docs/modules/backends.md)). Disabling a module keeps the same
+interface, with its parameters inert or explicitly rejected, so one entry
+point serves everything from a bare work queue to the full device.
 
 #### RNIC hardware
 
@@ -197,7 +204,8 @@ graph, and CORE-5 reduces its completion into `StepResult` and TTFT/TPOT.
 |---|---|---|
 | RDMA Work Queue | partial, first native slice available ([study](examples/rnic_wq_v1/RESULTS.md), [BACK-8/9](docs/modules/backends.md)) | SimLLM C++ now models one finite SQ/CQ pair, WR-prefix posting, doorbell batches, ordered retirement, signaling, polling, owner wrap, network backpressure and controlled queue failures; RQ/SRQ, shared CQs and mlx5 encoding remain planned |
 | PCIe, MMIO and DMA | available, deterministic transaction slice ([study](examples/rnic_pcie_v1/RESULTS.md), [BACK-16/17](docs/modules/backends.md)) | Shared host-store, MWr/MRd/CplD scheduling with finite credits, tags and buffers, class ledgers and analytical path profiles; measured calibration and optional BlueFlame, ATS/ATC and MSI-X remain planned |
-| QP, QPC and context memory | planned ([BACK-11](docs/modules/backends.md)) | QP pairing and state transitions plus QPC, MTT/MPT and WQE-cache residency in a measured device-cache and host-ICM hierarchy |
+| QP, QPC and context memory | planned ([BACK-11/19](docs/modules/backends.md)) | QP pairing and state transitions plus QPC, MTT/MPT and WQE-cache residency in a measured device-cache and host-ICM hierarchy; connection setup registers the QP context in an explicitly tracked model of host memory |
+| Host and GPU submission | planned ([BACK-20](docs/modules/backends.md)) | Who submits work and consumes completions: a host CPU driver ringing doorbells, a CPU proxy fed from GPU queues, or GPU-initiated rings (the GPU posts its own network work) with a GPU-owned completion queue |
 | TX/RX hardware pipelines | planned ([BACK-12](docs/modules/backends.md)) | Packetization, schedulers, port buffers, ACK/NAK/RNR/retry, CQE completion, PFC gates and location-specific fault injection |
 | CX-7 observable state | planned ([BACK-13/14/15](docs/modules/backends.md)) | Versioned driver-visible registers, counters and traces, verbs capture/replay, and Collie-seeded boundary calibration; undocumented internals stay explicit calibrated abstractions |
 
@@ -240,7 +248,9 @@ Planned on this axis: explicit KV-lifecycle capture
 ([CORE-3](docs/modules/core.md), [VLLM-11](docs/modules/adapters-vllm.md),
 [SGL-9](docs/modules/adapters-sglang.md)), device-schedule capture
 ([VLLM-12](docs/modules/adapters-vllm.md),
-[SGL-10](docs/modules/adapters-sglang.md)), and PD-disaggregation /
+[SGL-10](docs/modules/adapters-sglang.md)), coupling at the vLLM model
+runner under a real GPU worker, matching where the SGLang adapter already
+sits ([VLLM-13](docs/modules/adapters-vllm.md)), and PD-disaggregation /
 KV-transfer traffic (M6).
 
 ## Modules
@@ -271,9 +281,12 @@ fidelity plan).
 - [x] M1: standalone core (workload to GOAL to `htsim_rnic` to metrics)
 - [x] M2: vLLM adapter, pinned to v0.26.0, no fork
 - [x] M3: SGLang adapter, plugin entry point, no fork
-- [ ] M4 (in progress): closed loop and the execution/resource runtime
+- [ ] M4 (in progress): the closed loop, the execution/resource runtime
+      and the composed native RNIC path driving TTFT/TPOT
 - [ ] M5 (in progress): MoE all-to-all studies + SASS compute calibration
 - [ ] M6: PD-disaggregation and KV-transfer traffic modeling
+- [ ] M7: the full RNIC module set (QPC, DMA, transport), the vLLM
+      model-runner seam and GPU-initiated networking
 
 Everything deeper lives in the developer guide
 [docs/README.md](docs/README.md): the open task registry, the full

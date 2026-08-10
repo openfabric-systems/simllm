@@ -332,10 +332,12 @@ RNIC hardware extension under `simllm/backends/rnic/`: RDMA WQ/CQ, QP/QPC,
 MMIO/PCIe/DMA and TX/RX hardware. htsim owns selectable transport/CC policies
 and the packet fabric. A versioned C++ adapter passes opaque packet or flow
 tokens and feedback events between them; no QP, queue, context or DMA object
-crosses that boundary. BACK-8 and HTSIM-9 will link the SimLLM static library
-into the directly invoked htsim binaries and present the composition through
-the existing `AtlahsFlowRuntime` interface. There is no Python callback in the
-packet event loop.
+crosses that boundary. BACK-8, BACK-18 and HTSIM-9 will link the SimLLM
+static library into the directly invoked htsim binaries and present the
+composition through the existing `AtlahsFlowRuntime` interface; BACK-18 owns
+the modular construction entry point through which the work-queue core and
+the optional QPC, DMA and network modules are assembled. There is no Python
+callback in the packet event loop.
 
 That composition is not live today. The wheel carries the CMake files and C++
 sources but builds no Python extension, and the current `htsim_rnic` binaries
@@ -346,8 +348,9 @@ FCT, `ExecutionResult`, `StepResult` or TTFT/TPOT. The descriptor carries GOAL
 flow/tag identity and a separate policy-context token, while completion uses a
 network-owned token. It does not equate flow acceptance or delivery with
 first/last packet issue. The standalone slice is validated in
-[examples/rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md); its live wrapper and
-packet-level adapter remain BACK-8 and HTSIM-9. The detailed evidence and
+[examples/rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md); its live wrapper,
+composition entry point and packet-level adapter remain BACK-8, BACK-18 and
+HTSIM-9. The detailed evidence and
 calibration plan is
 [papers/rnic-hardware-calibration.md](papers/rnic-hardware-calibration.md).
 
