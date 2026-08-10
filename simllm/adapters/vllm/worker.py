@@ -47,6 +47,7 @@ from simllm.adapters.vllm.executor import (
     fabricate_sampled_tokens,
     model_dims_from_vllm_config,
 )
+from simllm.adapters.vllm.replay import ReplayTokenSource, sample_adapter_tokens
 from simllm.core import VirtualClock
 
 logger = logging.getLogger(__name__)
@@ -253,6 +254,7 @@ class SimModelRunner:
         runtime: _SimStepRuntime,
         answers: _ModelAnswers,
         token_id: int,
+        replay: ReplayTokenSource | None,
         call_ledger: _CallLedger,
     ) -> None:
         self.vllm_config = vllm_config
@@ -262,6 +264,7 @@ class SimModelRunner:
         self.runtime = runtime
         self.answers = answers
         self.token_id = token_id
+        self.replay = replay
         self.call_ledger = call_ledger
         self.execute_model_state: _ExecuteModelState | None = None
         self.kv_cache_config: Any | None = None
@@ -344,6 +347,8 @@ class SimModelRunner:
             if not (
                 getattr(updated_scheduler_output, "num_scheduled_tokens", None) or {}
             ):
+                if self.replay is not None:
+                    self.replay.observe_completions(updated_scheduler_output)
                 self.runtime.drain(updated_scheduler_output)
                 return _model_runner_output([], {})
 
@@ -360,12 +365,19 @@ class SimModelRunner:
             )
             return None
 
-    def _sample(self, translated: Any) -> tuple[list[str], dict[str, int], list[list[int]]]:
+    def _sample(
+        self,
+        translated: Any,
+        scheduler_output: Any,
+    ) -> tuple[list[str], dict[str, int], list[list[int]]]:
         with self.call_ledger.record("runner._sample"):
-            return fabricate_sampled_tokens(
+            return sample_adapter_tokens(
+                self.replay,
                 translated.req_ids,
                 translated.produces_token,
                 self.token_id,
+                scheduler_output,
+                fabricate=fabricate_sampled_tokens,
             )
 
     def _update_states_after_model_execute(self, sampled_token_ids: Any, scheduler_output: Any) -> None:
@@ -392,7 +404,7 @@ class SimModelRunner:
                     "execute/sample call order changed"
                 )
             self.execute_model_state = None
-            sampled = self._sample(state.translated)
+            sampled = self._sample(state.translated, state.scheduler_output)
             self._update_states_after_model_execute(
                 sampled[2],
                 state.scheduler_output,
@@ -511,6 +523,11 @@ class SimWorker(_GpuWorkerBase):
             pp_size=pp_size,
         )
         self.token_id = _resolve_token_id(self.dims.vocab_size, self.sim_config.token_id)
+        self.replay = (
+            ReplayTokenSource.from_path(self.sim_config.replay_run_path)
+            if self.sim_config.replay_run_path
+            else None
+        )
         # External-launch executors mark the local worker as a driver in every
         # process. Global rank zero is the only safe clock, sink, and stream
         # authority across those processes.
@@ -558,6 +575,7 @@ class SimWorker(_GpuWorkerBase):
                 self._runtime,
                 self._answers,
                 self.token_id,
+                self.replay,
                 self._call_ledger,
             )
 
