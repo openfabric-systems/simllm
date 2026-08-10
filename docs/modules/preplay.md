@@ -1,4 +1,4 @@
-# simllm.preplay (design)
+# simllm.preplay
 
 Offline CPU inference oracle, a separate module beside the simulator: run
 the actual model, slowly and exactly, to pre-compute each request's
@@ -21,18 +21,22 @@ request's route, length and output are predefined, which is what lets the
 skeleton coupling mode (VLLM-13) run its name-mirrored virtual functions
 and still produce a real simulation.
 
-## Design (this module is design-only today; PLAY-1 lands the first slice)
+## Design
 
 - **Runner.** Given the model identity (name, revision, dtype, tokenizer
   hash) and a request set, run inference on CPU with greedy decoding or
   seeded sampling. Capture per request: the output token ids, the output
   length and stop reason, and per token, per MoE layer, the top-k expert
-  assignments.
+  assignments. `TransformersCpuRunner` is the implemented runner. Torch and
+  Transformers load only when that execution entry is constructed.
 - **Artifact.** `simllm-preplay-trace-v1`: versioned and
   provenance-carrying (model identity, sampling configuration and seed,
   capture host, schema version), keyed by a stable request identity. Bulk
   rows live off-repo, since large generated artifacts never live in this
-  repo; the repo carries the schema and small fixtures only.
+  repo; the repo carries the schema and small fixtures only. Its JSONL
+  header, request, token and footer rows stream one completed request at a
+  time. The strict reader rejects unknown fields, incomplete requests,
+  duplicate identities, inconsistent route shapes and missing footers.
 - **Join.** A workload arrival realization assigns each request its
   arrival timestamp at the framework entry point. The join produces
   per-request tracking records in the core bookkeeping (request identity,
@@ -59,25 +63,23 @@ defined by PLAY-2 and PLAY-4).
 
 ## Status
 
-Design-only: this doc specifies the oracle, the trace artifact and the
-replay join. No code exists yet.
+PLAY-1 is implemented. `simllm.preplay` provides the strict
+`simllm-preplay-trace-v1` schema, a request-streaming writer, a strict reader
+and a pinned Transformers CPU runner with greedy and seeded sampling. The
+runner records EOS, length-cap and stop-string termination plus every
+generated token's top-k expert IDs and normalized gate weights at each MoE
+layer. The Granite 3.0 1B A400M study passed seeded byte determinism, all
+three stop modes, exact schema round trips and fatal routing-shape checks;
+see [the PLAY-1 results](../../examples/preplay_trace_v1/RESULTS.md).
+
+The arrival join, framework replay and traffic projection remain open under
+PLAY-2 through PLAY-4. The independent framework CPU runner is optional
+follow-up PLAY-6.
 
 ## Open tasks
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
 
-- PLAY-1 (Completeness; P1; L): implement the CPU inference runner and the
-  `simllm-preplay-trace-v1` artifact. A transformers-backed CPU run with
-  greedy and seeded-sampling modes captures output token ids, stop reason
-  (EOS, length cap, stop string) and per-token per-MoE-layer top-k expert
-  ids; the writer streams rows to disk so a long request set never holds
-  the trace in memory (bulk rows live off-repo, since large generated
-  artifacts never live in this repo; the repo carries the schema and small
-  fixtures only), and the strict reader validates schema, provenance
-  and per-request completeness. Record the sampling mode, seed and model
-  identity in every trace. An optional framework-CPU-backend runner (the
-  same capture through vLLM or SGLang on CPU) is a later variant of this
-  task, valuable because it exercises the deployment's own sampler.
 - PLAY-2 (Completeness; P1; M): join arrivals with the trace into the core
   bookkeeping. Given a workload arrival realization and a trace, emit
   per-request tracking records (request identity, arrival timestamp at the
@@ -117,3 +119,9 @@ Tags follow the legend in [backends.md](backends.md#open-tasks).
   and its all-to-all sizes must match the captured routing; freeze the
   expectations in their own commit before implementation per the
   development process.
+- PLAY-6 (Completeness; P2; L): add an optional framework CPU backend runner
+  that captures the same artifact through vLLM or SGLang on CPU, exercising
+  the deployment framework's sampler. The Transformers runner remains the
+  supported baseline and must stay byte-identical when no framework runner
+  is selected. Missing framework dependencies and unsupported CPU backends
+  must be rejected before a trace writer opens.
