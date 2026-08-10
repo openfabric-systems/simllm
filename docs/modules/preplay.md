@@ -110,8 +110,11 @@ prefill and decode input-token attribution, source-trace schema and hash,
 and the exact per-layer expert identities while deliberately omitting gate
 weights that the traffic expansion does not consume. Its canonical reader
 rejects unknown fields and inconsistent phase, token, layer or expert shapes.
-The captured-routing Granite oracle is frozen in
-[the routing supply expectations](../../examples/routed_supply_v1/expectations.md).
+The captured-routing Granite oracle passed both tracked and full sources,
+including six real decode forwards, exact canonical hashes and stable
+request association under reversed join order. The same tracked assignments
+then reached exact live traffic and JCT, closing PLAY-4; see
+[the routing supply results](../../examples/routed_supply_v1/RESULTS.md).
 
 The vLLM replay adapter consumes that joined run in both `SimExecutor` and the
 flagged skeleton worker. It validates the named trace bytes, binds vLLM's
@@ -127,26 +130,13 @@ byte fixture in pytest, and `reset_configuration()` separates independent
 in-process runs. The chronology and evidence are recorded in
 [the PLAY-3 results](../../examples/preplay_adapter_replay_v1/RESULTS.md).
 
-PLAY-4 remains open only until TRAF-2 consumes this projection through the
-step sink and passes the combined routing supply study. The independent
-framework CPU runner is optional follow-up PLAY-6, and SGLang replay is the
-explicit PLAY-7 follow-up.
+PLAY-4 is complete. The independent framework CPU runner is optional
+follow-up PLAY-6, and SGLang replay is the explicit PLAY-7 follow-up.
 
 ## Open tasks
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
 
-- PLAY-4 (Completeness; P1; M): supply captured routing to the traffic
-  half. The implemented `simllm-routed-experts-v1` projection preserves the
-  trace's prefill and decode phases and its input-token attribution, including
-  the absence of a terminal-token forward pass. Close this task when TRAF-2
-  consumes the projection through the live step path and the combined study
-  proves traffic volume is derived only from executed routing.
-  The boundary is explicit: this task owns the capture-side supply, TRAF-2
-  keeps the traffic-side expansion that replaces uniform routing
-  (including its EPLB placement-epoch handling), CORE-6 owns the graph
-  representation of the resulting non-uniform per-pair sizes, and COMP-7
-  consumes the same assignments for routed-load compute imbalance.
 - PLAY-5 (Completeness; P1; M): pre-registered validation study. First,
   oracle consistency: the same requests and seed through the PLAY-1 runner
   and through an independent framework CPU run must agree on lengths, stop

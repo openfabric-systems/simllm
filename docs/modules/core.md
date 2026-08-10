@@ -173,6 +173,11 @@ The field is omitted from JSON when empty, so old
 meaning. The strict reader rejects duplicate, self, out-of-group, nonpositive,
 unsorted and scalar-plus-table entries. Both the serial GOAL renderer and the
 coarse runtime consume the same table.
+The combined captured-routing study populated that table from real Granite
+assignments, carried it through the step graph and GOAL, and changed live
+fluid JCT by every frozen exact relation. It also retained the old v1 scalar
+wire and GOAL hashes, closing CORE-6; see
+[the routed supply results](../../examples/routed_supply_v1/RESULTS.md).
 The coarse ring path currently requires a positive payload evenly divisible
 by its rank count, so every round sends an exact integer chunk and never
 fabricates a byte. CORE-16 owns remainder chunking. Control sends reserve
@@ -399,12 +404,6 @@ does not claim to produce these resource-contention measurements.
   end-to-end latency. Support synchronous waits and asynchronous control or
   collective progress. Preserve v1 readers if the queue-visit projection needs
   a versioned event extension.
-- CORE-6 (Completeness; P1; M): finish the routed-supply validation of the
-  implemented optional `CollectiveWork.pair_payload_bytes` table. The graph
-  reader, writer, serial renderer and coarse runtime now agree on the sparse
-  representation while retaining exact v1 scalar bytes. Close this entry only
-  when the TRAF-2 captured-routing path populates the same table and changes a
-  step-sink JCT by the frozen exact relation in `examples/routed_supply_v1`.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into

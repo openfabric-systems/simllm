@@ -82,9 +82,10 @@ JSONL collective-trace consumer is not yet implemented (TRAF-5).
 The captured-routing half of TRAF-2 is implemented behind the explicit
 `RoutedMoeSupply` seam. Its absent path retains the old scalar payload, while
 its enabled path is live through `SerialStepLowerer`, `render_step_goal` and
-`HtsimStepSink`. The combined Granite pair-distribution and fluid-JCT study is
-frozen in [the routing supply expectations](../../examples/routed_supply_v1/expectations.md).
-TRAF-2 remains open only until that result-producing study passes.
+`HtsimStepSink`. The combined Granite study passed exact graph and GOAL pair
+tables at two placement epochs, four fluid-JCT cells with 0 ps residual and
+the frozen uniform GOAL hash, closing TRAF-2; see
+[the routing supply results](../../examples/routed_supply_v1/RESULTS.md).
 
 CORE-2 additionally proved that serial GOAL rendered only from a
 JSON-round-tripped `ExecutionGraph` is byte- and timing-equivalent to the
@@ -103,14 +104,6 @@ residual; see
   closed by examples/m5): end-to-end closed-form validation of binomial
   broadcast against the fluid backend, extending the M1/M4/M5 study
   pattern.
-- TRAF-2 (Completeness; P1; M; second half, first half landed with M5): close
-  the frozen live-chain validation of the implemented captured-routing path.
-  `RoutedMoeSupply` already replaces the uniform, floor-divided payload with
-  observed per-token destinations, deduplicates dispatch to one hidden vector
-  per `(token, destination rank)`, pre-reduces combine and selects immutable
-  EPLB epoch snapshots. Remove this entry when the routing supply study proves
-  its exact per-pair graph and GOAL tables, signed fluid-JCT delta and
-  byte-identical absent-supply path.
 - TRAF-3: KV-transfer records for PD-disaggregation and cache-miss
   re-prefill (milestone M6).
 - TRAF-5: the JSONL collective-trace consumer (parse
