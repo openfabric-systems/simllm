@@ -2,11 +2,15 @@
 
 Runs of 2026-08-04, one `run_breakdown.py` invocation (22 check rows in
 `summary.csv`, per-step data in `steps.csv`, per-config sums in
-`components.csv`, raw GOALs and completion CSVs under
-`/data3/yifeng/simllm-dev/breakdown-runs`). Backend binary: `htsim_rnic`
-from `/data3/yifeng/simllm-dev/build-htsim` (HTSIM-rnic-private at
-`c03e1f2`, as in examples/m4); GOAL conversion with the prebuilt
-`txt2bin`; the simllm code revision is the commit this study lands in.
+`components.csv`). The raw GOALs and completion CSVs remain outside Git in
+the machine-local directory used for the historical run; its resolved historical path is
+intentionally omitted. New runs default to
+`${SIMLLM_DATA_ROOT}/breakdown`. The backend binary was `htsim_rnic` from
+a machine-local HTSIM-rnic-private build pinned at `c03e1f2`, as in
+examples/m4; its resolved historical build path is intentionally omitted. Current
+reproductions select the build root with `SIMLLM_HTSIM_BUILD`. GOAL conversion
+used the prebuilt `txt2bin`; the simllm code revision is the commit this study
+lands in.
 Backends deterministic, every number reproduces exactly. The registered
 predictions are in [expectations.md](expectations.md) (kept frozen;
 deviations are disclosed here, never edited there). An external

@@ -10,19 +10,21 @@ configuration: `htsim_rnic` does not allow a physical topology file with
 corrected fluid comparison and the actual `rnic-cn` topology comparison are
 reported separately as post-specified regression checks.
 
-Raw GOAL, binary and completion-ledger artifacts plus `summary.csv` are under
-`/data3/yifeng/simllm-dev/wave1-runs/back567_step_sink_precision/`. They are
-not Git content. The directory also retains the first-attempt leftovers
+Raw GOAL, binary and completion-ledger artifacts plus `summary.csv` remain
+outside Git in the machine-local directory used for the historical run; its
+resolved historical path is intentionally omitted. That directory also retains the
+first-attempt leftovers
 `c-w2-explicit`, `c-w2-workaround` and `baseline-prechange`; they do not add
-rows to the evidence summary.
+rows to the evidence summary. New runs default to
+`${SIMLLM_DATA_ROOT}/step_sink_precision/`.
 
 ## Reproduction
 
 ```bash
-SIMLLM_HTSIM_RNIC=/data3/yifeng/simllm-dev/build-htsim/datacenter/htsim_rnic \
-SIMLLM_TXT2BIN=/data3/yifeng/simllm-dev/tools/txt2bin.prebuilt \
+SIMLLM_HTSIM_RNIC="${SIMLLM_HTSIM_BUILD:?configure SIMLLM_HTSIM_BUILD}/datacenter/htsim_rnic" \
+SIMLLM_TXT2BIN="${SIMLLM_TXT2BIN:?configure SIMLLM_TXT2BIN}" \
 .venv/bin/python examples/step_sink_precision/run_study.py \
-  --out /data3/yifeng/simllm-dev/wave1-runs/back567_step_sink_precision
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/step_sink_precision"
 ```
 
 Every successful backend row reported `physical_quiescence=verified`; the

@@ -9,15 +9,17 @@ import io
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from simllm._local_config import path_from_env
+
 SOURCE_DIR = REPO_ROOT / "simllm" / "backends" / "rnic"
-DEFAULT_OUT = Path(
-    "/data3/yifeng/simllm-dev/wave2-runs/"
-    "codex/back8_session_records/back24"
-)
 INVALID_TERMINALS = (
     "unknown_token",
     "duplicate_token",
@@ -100,7 +102,7 @@ SCORED_BOOLEAN_FIELDS = (
 )
 
 
-def _validate_registry(out: Path) -> None:
+def _validate_registry(out: Path, data_root: Path | None = None) -> None:
     cells = {
         (terminal, event_time_ps)
         for terminal in INVALID_TERMINALS
@@ -123,11 +125,13 @@ def _validate_registry(out: Path) -> None:
             raise AssertionError(
                 f"frozen artifact digest drifted for {name}: {digest}"
             )
-    data_root = Path("/data3/yifeng").resolve()
-    try:
-        out.resolve().relative_to(data_root)
-    except ValueError as error:
-        raise ValueError("study output must remain under /data3/yifeng") from error
+    if data_root is not None:
+        try:
+            out.resolve().relative_to(data_root)
+        except ValueError as error:
+            raise ValueError(
+                f"study output must remain under SIMLLM_DATA_ROOT ({data_root})"
+            ) from error
 
 
 def _native_executable(build_dir: Path) -> Path:
@@ -313,14 +317,20 @@ def _run(out: Path) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--out", type=Path)
     parser.add_argument(
         "--check-only",
         action="store_true",
         help="validate the frozen registry without creating outputs",
     )
     arguments = parser.parse_args()
-    _validate_registry(arguments.out)
+    data_root = None
+    if arguments.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        arguments.out = data_root / "rnic_session_records_v1" / "back24"
+    _validate_registry(arguments.out, data_root)
     if arguments.check_only:
         print("BACK-24 study registry check passed; no results produced")
         return

@@ -52,7 +52,7 @@ Every behavioral change follows the same discipline:
    (a carve-out, a stubbed mode, a `NotImplementedError`), the same
    change adds a numbered task to the owning module doc using the
    module's stable prefix (CORE-, WORK-, COMP-, PLACE-, TRAF-, GOAL-,
-   PLAY-, BACK-, VLLM-, SGL-, BRIDGE-, and HTSIM-/ATLAHS- for backend-repo
+   PLAY-, BACK-, VLLM-, SGL-, BRIDGE-, HTSIM-, and ATLAHS- for backend-repo
    follow-ups). IDs are never renumbered or reused; the change that
    completes a task removes its entry. Nothing is deferred silently.
 6. **Backends are pinned, not edited here.** `third_party/atlahs` and
@@ -66,6 +66,59 @@ Every behavioral change follows the same discipline:
 
 Gates before every push: `ruff check .` and `pytest -q` pass, and CI
 stays green.
+
+## Local path configuration
+
+Machine-specific paths belong only in the gitignored `.env.local.sh` on
+Linux or `.env.local.ps1` on Windows. Configure the variables needed by the
+selected workflow, for example:
+
+```bash
+export SIMLLM_DATA_ROOT='<configure-me>'
+export SIMLLM_HTSIM_BUILD='<configure-me>'
+export SIMLLM_VLLM_PYTHON='<configure-me>'
+export SIMLLM_VLLM_ENV='<configure-me>'
+export SIMLLM_SGLANG_ENV='<configure-me>'
+export HF_HOME='<configure-me>'
+export SIMLLM_VLLM_PACKAGE_ROOT='<configure-me>'
+export SIMLLM_TIER_A_RUN_ROOT='<configure-me>'
+export SIMLLM_TXT2BIN='<configure-me>'
+```
+
+Load the Linux file from the repository root with
+`source .env.local.sh`. The equivalent PowerShell file uses aligned names:
+
+```powershell
+$env:SIMLLM_DATA_ROOT = '<configure-me>'
+$env:SIMLLM_HTSIM_BUILD = '<configure-me>'
+$env:SIMLLM_VLLM_PYTHON = '<configure-me>'
+$env:SIMLLM_VLLM_ENV = '<configure-me>'
+$env:SIMLLM_SGLANG_ENV = '<configure-me>'
+$env:HF_HOME = '<configure-me>'
+$env:SIMLLM_VLLM_PACKAGE_ROOT = '<configure-me>'
+$env:SIMLLM_TIER_A_RUN_ROOT = '<configure-me>'
+$env:SIMLLM_TXT2BIN = '<configure-me>'
+```
+
+Dot-source it from the repository root with `. .\.env.local.ps1`.
+`SIMLLM_DATA_ROOT` owns external study inputs and outputs and must resolve to
+an absolute directory outside the checkout;
+`SIMLLM_HTSIM_BUILD` is the htsim build root; `SIMLLM_VLLM_PYTHON` selects
+the vLLM interpreter; `SIMLLM_VLLM_ENV` and `SIMLLM_SGLANG_ENV` identify the
+framework environments; `HF_HOME` owns the model cache;
+`SIMLLM_VLLM_PACKAGE_ROOT` identifies the installed `vllm` package directory;
+`SIMLLM_TIER_A_RUN_ROOT` owns Tier A artifacts; and `SIMLLM_TXT2BIN` selects the
+GOAL converter. A CLI that needs an unset variable must prompt for it or fail
+with an actionable message naming that variable. It must never guess a
+machine-specific fallback.
+
+Historical expectation and result records redact resolved machine-local path
+spellings. A displayed environment-variable command is a portable rendering
+made after the recorded run unless the record explicitly says otherwise. This
+presentation change does not relocate archived artifacts, alter executable
+options or parameters, or retroactively become part of a pre-registration.
+When the original artifact location matters, the record keeps its immutable
+identity by content hash and intentionally omits the resolved local path.
 
 ## Open task registry
 
@@ -303,6 +356,7 @@ slices land.
 | [core4_runtime](../examples/core4_runtime/RESULTS.md) | The coarse DeviceRuntime: dependency versus overlap, eight affine RNICs, tail-attribution conservation, identity arbitration | 22/22 exact-oracle rows against frozen integer literals, 23/23 behavioral instances and 18 unscored structural cells across 18 configurations; the review round made every authority transactional and re-froze the corrected critical-path reduction before the fix |
 | [rnic_session_records_v1](../examples/rnic_session_records_v1/RESULTS.md) | Session run records: the policy-invariant hardware hash, mode-exclusivity counters, structural projection and the bypass byte-identity checker | 12/12 policy-invariant hashes, 4/4 distinct and 4/4 adjacent hardware cells, a 72-field effective census, bypass artifacts equal accepted with all mutations rejected; the review round made terminal rejection transactional with a pre-fix diagnostic and 6/6 exact clock continuations |
 | [rnic_live_v1 Tier A preparation](../examples/rnic_live_v1/tier_a_harness_results.md) | The composed-session acceptance harness against the deterministic fake port, with the wrapper-bypass negative control | 8 exact-oracle rows and 4/4/4 scored family instances pass; all seven fatal invariant families hold including terminal atomicity and wrapper-bypass sensitivity; the composed Tier A result slot stays reserved for the future htsim run |
+| [routed_supply_v1](../examples/routed_supply_v1/RESULTS.md) | Captured MoE routing drives the all-to-all: graph contract, pre-play projection and traffic expansion in one chain | Per-pair tables and GOAL phases exact for both placement epochs; real granite routing moves fluid JCT by the frozen closed forms (about -59 percent at 200G and -52 percent at 400G versus uniform); the uniform path stays byte-locked when no capture is joined |
 | vLLM `GPUModelRunner.execute_model` | CPU | skeleton mirror landed, driven by a live engine | [VLLM-13](modules/adapters-vllm.md#open-tasks) | [vllm_skeleton_v1](../examples/vllm_skeleton_v1/RESULTS.md) |
 | vLLM `GroupCoordinator.all_reduce` and peers | CPU | zero-time simulated coordinator landed, wired to the NCCL stack; projection and timing open | [VLLM-14](modules/adapters-vllm.md#open-tasks) | [vllm_group_coordinator_v1](../examples/vllm_group_coordinator_v1/RESULTS.md) |
 | SGLang `TpModelWorker.forward_batch_generation` | CPU | implemented, `SimTpModelWorker` | [adapters-sglang](modules/adapters-sglang.md) | live CPU-engine smoke (module doc) |
@@ -328,9 +382,9 @@ One line per module; the linked doc is the source of truth.
 | [workload](modules/workload.md) | Partial: Poisson/trace arrivals, fixed/lognormal/trace lengths | WORK-1 (shared prefixes), WORK-2 (bursty/MMPP) |
 | [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven GPU service primitive with concurrent compute/memory/NCCL scheduling and A100/H100 bootstrap profiles, plus the audited zero-time NCCL stack skeleton with real-source-verified names | COMP-1/2/4/5/6/7/8/9/10/11/12/13/14/15/17 |
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | PLACE-1/2/3 |
-| [traffic](modules/traffic.md) | Implemented: collective patterns, TP step mapping, MoE all-to-all, GOAL renderers for steps and execution graphs | TRAF-2/3/4/5/6/7/8/9/10 |
+| [traffic](modules/traffic.md) | Implemented: collective patterns, TP step mapping, MoE all-to-all with captured non-uniform routing expansion, GOAL renderers for steps and execution graphs | TRAF-3/4/5/6/7/8/9/10/11/12/13 |
 | [goal](modules/goal.md) | Implemented: GOAL trace + txt2bin helper | none |
-| [preplay](modules/preplay.md) | Capture and replay implemented: CPU oracle traces join workload arrivals into the bookkeeping and the vLLM adapter paths serve predefined tokens with the fabricated-token off path byte-locked; routing supply and broader validation remain open | PLAY-4/5/6/7 |
+| [preplay](modules/preplay.md) | Capture, replay and routing supply implemented: CPU oracle traces join arrivals into the bookkeeping, the vLLM adapters serve predefined tokens, and the per-token routing projection feeds the traffic expansion; broader validation remains open | PLAY-5/6/7/10/11/12 |
 | [backends](modules/backends.md) | Implemented: htsim invocation/parsing with per-layer, exact-sampling and GOAL-padding step-sink precision, plus native C++ RNIC SQ/CQ, network-port and shared PCIe transaction slices; the modular device entry point and versioned session run records with the policy-invariant hardware hash are landed; htsim composition remains open with its Tier A acceptance harness, wrapper design and maintainer approval package prepared | BACK-2/8-9/11-17/19-20; backend-repo HTSIM-1/2/4-9, ATLAHS-1 |
 | [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop and exact sample attribution and the simulated GroupCoordinator, plus the flagged SimWorker skeleton through the worker-cls seam with a live engine smoke | VLLM-3 through VLLM-14, VLLM-16, VLLM-19 through VLLM-21 |
 | [adapters-sglang](modules/adapters-sglang.md) | Implemented: SimTpModelWorker via plugin entry point at pinned commit, live CPU-engine smoke | SGL-3 through SGL-12 |

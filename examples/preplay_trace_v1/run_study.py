@@ -11,6 +11,7 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.preplay import (
     PreplayRequest,
     SamplingConfig,
@@ -23,8 +24,6 @@ from simllm.preplay import (
 
 MODEL_ID = "ibm-granite/granite-3.0-1b-a400m-instruct"
 MODEL_REVISION = "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
-DEFAULT_CACHE = Path("/home/yifeng/packages/vllm-rnic-capture/hf-cache")
-DEFAULT_OUTPUT = Path("/data3/yifeng/simllm-dev/wave1-runs/play1_preplay_runner")
 EXPECTATIONS_COMMITS = {
     "original": "1fee0891dc127da91c2e75a10da1151164ae3d7f",
     "integration_review_amendment": "24116f1aedafb11ad9dc6698d8d70eeefde85cfb",
@@ -296,11 +295,27 @@ def run(args: argparse.Namespace) -> dict[str, object]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cache-dir", type=Path, default=DEFAULT_CACHE)
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
+    hf_home = os.environ.get("HF_HOME")
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=Path(hf_home).expanduser() if hf_home else None,
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+    )
     parser.add_argument("--torch-threads", type=int, default=8)
     parser.add_argument("--fixture-output", type=Path)
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.cache_dir is None:
+        parser.error("--cache-dir is required when HF_HOME is not set")
+    if args.output_dir is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--output-dir is required when SIMLLM_DATA_ROOT is not set")
+        args.output_dir = data_root / "preplay_trace_v1"
+    return args
 
 
 if __name__ == "__main__":

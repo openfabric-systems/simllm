@@ -14,6 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+from simllm._local_config import path_from_env
 from simllm.adapters.vllm import (
     SimModelRunner,
     SimWorker,
@@ -22,10 +23,6 @@ from simllm.adapters.vllm import (
 from simllm.core import VirtualClock
 
 RESULTS = Path(__file__).with_name("results.csv")
-DEFAULT_RUN_DIR = Path(
-    "/data3/yifeng/simllm-dev/wave1-runs/"
-    "codex_vllm13_skeleton_mode/vllm_skeleton_v1"
-)
 CLOCK_START_PS = 123_000
 
 EXPECTED_INIT_CALL_SEQUENCE = (
@@ -372,13 +369,18 @@ def render_csv(rows: list[dict[str, int | str]]) -> bytes:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR)
+    parser.add_argument("--run-dir", type=Path)
     parser.add_argument(
         "--check",
         action="store_true",
         help="fail if measured CSV differs from the tracked results",
     )
     arguments = parser.parse_args()
+    if arguments.run_dir is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--run-dir is required when SIMLLM_DATA_ROOT is not set")
+        arguments.run_dir = data_root / "vllm_skeleton_v1"
     arguments.run_dir.mkdir(parents=True, exist_ok=True)
 
     if "vllm" in sys.modules:

@@ -12,7 +12,7 @@ Simulated execution (`simllm/adapters/vllm/executor.py`):
 
 ```
 SIMLLM_VLLM_MODE=virtual SIMLLM_VLLM_GPU=b100 \
-SIMLLM_VLLM_STEP_RECORDS=/data3/yifeng/simllm/steps.jsonl \
+SIMLLM_VLLM_STEP_RECORDS="${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/simllm/steps.jsonl" \
 vllm serve meta-llama/Llama-3.1-8B \
     --distributed-executor-backend simllm.adapters.vllm.SimExecutor \
     --num-gpu-blocks-override 8192
@@ -256,8 +256,9 @@ v0.26.0 `Worker`; the test module never imports vLLM directly. The executor
 class itself, its RPC table and the streaming JSONL dump are exercised by a
 real end-to-end run, not by a complete unit stand-in (VLLM-5 tracks that CI
 harness):
-on 2026-08-04 a live vLLM v0.26.0 (`/data3/yifeng/simllm-dev/venv-vllm`,
-in-process `LLM(...)` with `VLLM_ENABLE_V1_MULTIPROCESSING=0`) drove
+on 2026-08-04 a live vLLM v0.26.0 from a machine-local pinned environment,
+whose resolved historical path is intentionally omitted, used in-process
+`LLM(...)` with `VLLM_ENABLE_V1_MULTIPROCESSING=0` and drove
 `SimExecutor` in virtual mode with granite-3.0-1b-a400m-instruct: engine
 init served every init RPC, `num_gpu_blocks_override=2048` pinned the KV
 pool, 8 steps produced 24 scheduled entries and 35 new tokens, and the step
@@ -267,6 +268,9 @@ through the shutdown RPC, so each record is appended the moment its step
 completes and `shutdown` only logs. The record JSON is the schema-tagged
 form from `simllm.core.step` (`atlahs-closed-loop-step-v1`), shared with
 the closed-loop wire format by construction.
+
+For a current reproduction, `SIMLLM_VLLM_PYTHON` selects the compatible vLLM
+interpreter.
 
 The closed-loop seam is validated live as of the M4 first slice
 (examples/m4/RESULTS.md): the same in-process pattern with
@@ -502,4 +506,3 @@ omit the optional field; v1 readers and that compatibility path are unchanged.
   matrix. Hold out at least one model and group size; require modeled median
   and p95 call cost within a pre-registered relative or additive band, then
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
-

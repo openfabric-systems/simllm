@@ -5,14 +5,17 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from simllm._local_config import path_from_env
+
 SOURCE_DIR = REPO_ROOT / "simllm" / "backends" / "rnic"
-DEFAULT_OUT = Path(
-    "/data3/yifeng/simllm-dev/wave2-runs/codex/back8_session_records"
-)
 RESULTS = Path(__file__).with_name("results.json")
 HTSIM_COMMIT = "8c3f8b231a6a9311ffc1e7969a003dcba724b50d"
 SIMLLM_BASE_COMMIT = "6aa3a76"
@@ -27,7 +30,7 @@ ARTIFACT_NAMES = (
 )
 
 
-def _validate_registry(out: Path) -> None:
+def _validate_registry(out: Path, data_root: Path | None = None) -> None:
     cells = {
         (sq_depth, doorbell_service_ps, policy)
         for sq_depth in SQ_DEPTHS
@@ -38,11 +41,28 @@ def _validate_registry(out: Path) -> None:
         raise AssertionError("frozen hash sweep must contain 12 rows")
     if len(ARTIFACT_NAMES) != 4 or len(set(ARTIFACT_NAMES)) != 4:
         raise AssertionError("frozen bypass inventory must contain four unique artifacts")
-    data_root = Path("/data3/yifeng").resolve()
-    try:
-        out.resolve().relative_to(data_root)
-    except ValueError as error:
-        raise ValueError("study output must remain under /data3/yifeng") from error
+    if data_root is not None:
+        try:
+            out.resolve().relative_to(data_root)
+        except ValueError as error:
+            raise ValueError(
+                f"study output must remain under SIMLLM_DATA_ROOT ({data_root})"
+            ) from error
+    base_commit_known = (
+        subprocess.run(
+            ["git", "cat-file", "-e", f"{SIMLLM_BASE_COMMIT}^{{commit}}"],
+            cwd=REPO_ROOT,
+            check=False,
+            capture_output=True,
+        ).returncode
+        == 0
+    )
+    if not base_commit_known:
+        print(
+            "pinned HTSim source audit skipped: the frozen base commit is "
+            "not present in this clone (shallow checkout)"
+        )
+        return
     pinned_htsim = subprocess.run(
         ["git", "rev-parse", f"{SIMLLM_BASE_COMMIT}:third_party/htsim"],
         cwd=REPO_ROOT,
@@ -147,14 +167,20 @@ def _run(out: Path) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--out", type=Path)
     parser.add_argument(
         "--check-only",
         action="store_true",
         help="validate the frozen registry without creating outputs",
     )
     arguments = parser.parse_args()
-    _validate_registry(arguments.out)
+    data_root = None
+    if arguments.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        arguments.out = data_root / "rnic_session_records_v1"
+    _validate_registry(arguments.out, data_root)
     if arguments.check_only:
         print("RNIC session-record study registry check passed; no results produced")
         return

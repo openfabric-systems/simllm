@@ -11,13 +11,24 @@ from vllm import LLM, SamplingParams
 
 from simllm.adapters.vllm import SimModelRunner, latest_worker
 
-MODEL = Path(
-    "/home/yifeng/packages/vllm-rnic-capture/hf-cache/hub/"
-    "models--ibm-granite--granite-3.0-1b-a400m-instruct/snapshots/"
-    "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
+MODEL_CACHE_PATH = (
+    Path("hub")
+    / "models--ibm-granite--granite-3.0-1b-a400m-instruct"
+    / "snapshots"
+    / "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
 )
 EXPECTED_STEP_SCHEMA = "atlahs-closed-loop-step-v1"
 EXPECTED_OUTPUT_TOKENS = 2
+
+
+def _model_path() -> Path:
+    hf_home = os.environ.get("HF_HOME")
+    if not hf_home:
+        raise RuntimeError("HF_HOME must be set to the model-cache root")
+    model = Path(hf_home).expanduser() / MODEL_CACHE_PATH
+    if not model.is_dir():
+        raise RuntimeError(f"cached model is missing: {model}")
+    return model
 
 
 def worker_reached() -> bool:
@@ -25,7 +36,8 @@ def worker_reached() -> bool:
 
 
 def main() -> None:
-    print(f"SMOKE_MODEL={MODEL}")
+    model = _model_path()
+    print(f"SMOKE_MODEL={model}")
     print("SMOKE_WORKER_CLS=simllm.adapters.vllm.SimWorker")
     try:
         stream_value = os.environ.get("SIMLLM_VLLM_STEP_RECORDS")
@@ -36,7 +48,7 @@ def main() -> None:
             raise RuntimeError(f"refusing stale smoke evidence at {stream_path}")
 
         llm = LLM(
-            model=str(MODEL),
+            model=str(model),
             worker_cls="simllm.adapters.vllm.SimWorker",
             enforce_eager=True,
             max_model_len=64,

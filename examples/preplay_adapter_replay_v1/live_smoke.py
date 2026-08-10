@@ -13,6 +13,7 @@ REPOSITORY_ROOT = Path(__file__).parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
+from simllm._local_config import path_from_env
 from simllm.adapters.vllm import reset_configuration
 from simllm.core import RequestBookkeeper
 from simllm.preplay import (
@@ -22,17 +23,21 @@ from simllm.preplay import (
     write_preplay_replay_run,
 )
 
-MODEL = Path(
-    "/home/yifeng/packages/vllm-rnic-capture/hf-cache/hub/"
-    "models--ibm-granite--granite-3.0-1b-a400m-instruct/snapshots/"
-    "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
-)
-DEFAULT_RUN_DIR = Path(
-    "/data3/yifeng/simllm-dev/wave2-runs/"
-    "codex_play23_arrival_replay/preplay_adapter_replay_live"
+MODEL_CACHE_PATH = (
+    Path("hub")
+    / "models--ibm-granite--granite-3.0-1b-a400m-instruct"
+    / "snapshots"
+    / "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
 )
 EXPECTED_TOKEN_IDS = (38,)
 EXPECTED_STEP_SCHEMA = "atlahs-closed-loop-step-v1"
+
+
+def _model_path() -> Path:
+    hf_home = os.environ.get("HF_HOME")
+    if not hf_home:
+        raise RuntimeError("HF_HOME must be set to the model-cache root")
+    return Path(hf_home).expanduser() / MODEL_CACHE_PATH
 
 
 def build_joined_run(run_dir: Path) -> tuple[Path, tuple[int, ...]]:
@@ -73,7 +78,7 @@ def run_smoke(run_dir: Path) -> dict:
         from simllm.adapters.vllm import SimModelRunner, latest_worker
 
         llm = LLM(
-            model=str(MODEL),
+            model=str(_model_path()),
             worker_cls="simllm.adapters.vllm.SimWorker",
             enforce_eager=True,
             max_model_len=64,
@@ -189,13 +194,18 @@ def run_smoke(run_dir: Path) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check-only", action="store_true")
-    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR)
+    parser.add_argument("--run-dir", type=Path)
     args = parser.parse_args()
     fixture = Path(__file__).parents[1] / "preplay_trace_v1/granite_length_cap.jsonl"
-    if not MODEL.is_dir() or not fixture.is_file():
+    if not _model_path().is_dir() or not fixture.is_file():
         raise SystemExit("cached model or tracked fixture is missing")
     if args.check_only:
         return
+    if args.run_dir is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--run-dir is required when SIMLLM_DATA_ROOT is not set")
+        args.run_dir = data_root / "preplay_adapter_replay_v1" / "live_review"
     summary = run_smoke(args.run_dir)
     print(json.dumps(summary, indent=2, sort_keys=True))
 

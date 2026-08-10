@@ -134,7 +134,10 @@ congestion event.
 
 Single cross-leaf flow on the 64-node Clos at 400G, one WQE and a
 serialized 16-WQE queue (each send requires the previous, i.e. one
-outstanding), no contention, `/data3/yifeng/simllm-dev/wqe-ladder`:
+outstanding), no contention. The probe artifacts remain outside Git in the
+machine-local directory used for the historical run; its resolved historical path is
+intentionally omitted. New probes default to
+`${SIMLLM_DATA_ROOT}/msg-size-vs-bandwidth/wqe-ladder`.
 
 | S | fluid GB/s | rnic-cn GB/s | dcqcn GB/s |
 |---|---|---|---|

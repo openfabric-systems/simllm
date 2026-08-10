@@ -7,7 +7,7 @@ registered qualitative directions (a2av growth with EP width, fluid vs nn
 ordering on the check-A grid, decode/prefill makespan monotonicity). One
 CSV row per (run, metric) goes to <out>/summary.csv; raw GOALs and
 completion CSVs land under <out> as well (keep <out> on a data volume,
-e.g. /data3/yifeng/simllm-dev/m5-runs).
+configured by SIMLLM_DATA_ROOT).
 
 Every expected value is a frozen constant from expectations.md, never a
 runtime-derived number (the M4 audit rule); the runtime roofline estimate
@@ -15,8 +15,8 @@ and calc split are additionally checked against the frozen inputs per
 cell.
 
 Usage:
-    SIMLLM_HTSIM_RNIC=... SIMLLM_TXT2BIN=... \\
-    python examples/m5/run_m5.py --out /data3/yifeng/simllm-dev/m5-runs
+    SIMLLM_HTSIM_RNIC=... SIMLLM_TXT2BIN=... SIMLLM_DATA_ROOT=... \\
+    python examples/m5/run_m5.py
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ import csv
 from itertools import pairwise
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.backends import (
     HtsimRnicConfig,
     HtsimStepSink,
@@ -135,10 +136,15 @@ def run_a2av(out: Path, profile: str, per_pair: int, world: int) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="runs/m5")
+    parser.add_argument("--out", type=Path)
     parser.add_argument("--sections", default="a,b,c")
     args = parser.parse_args()
-    out = Path(args.out)
+    if args.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        args.out = data_root / "m5"
+    out = args.out
     out.mkdir(parents=True, exist_ok=True)
     sections = set(args.sections.split(","))
     rows: list[dict] = []

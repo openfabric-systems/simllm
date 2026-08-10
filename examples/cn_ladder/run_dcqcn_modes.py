@@ -20,6 +20,7 @@ from pathlib import Path
 
 from run_ladder import mixed_all_to_all_goal  # same frozen workload
 
+from simllm._local_config import path_from_env
 from simllm.backends import HtsimRnicConfig, run_htsim_rnic
 from simllm.backends.htsim_dcqcn import HtsimDcqcnConfig, run_htsim_dcqcn
 from simllm.goal import to_binary
@@ -51,10 +52,15 @@ def manifest_counters(result, keys):
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="/data3/yifeng/simllm-dev/dcqcn-modes")
+    parser.add_argument("--out", type=Path)
     parser.add_argument("--seeds", type=int, default=8)
     args = parser.parse_args()
-    out = Path(args.out)
+    if args.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        args.out = data_root / "cn_ladder" / "dcqcn_modes"
+    out = args.out
     out.mkdir(parents=True, exist_ok=True)
 
     goal_bin = to_binary(mixed_all_to_all_goal().write(out / "a2a16.goal"))

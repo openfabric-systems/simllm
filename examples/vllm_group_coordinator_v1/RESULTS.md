@@ -21,8 +21,8 @@ measured value, or result artifact existed at the freeze.
 All implementation and result-producing runs followed `29221e4`. Both defect
 catches in the first implementation round were post-freeze, during
 implementation and verification. The first result-producing live launch found
-that script execution resolved an older installed SimLLM copy under
-`/home/yifeng/packages` rather than this worktree. It stopped before engine
+that script execution resolved an older installed SimLLM copy from a parent
+checkout rather than this worktree. It stopped before engine
 construction, then the launcher was bound explicitly to its repository root.
 
 The next live launch constructed the pinned engine and passed. Subsequent
@@ -183,19 +183,24 @@ therefore excluded from this risk fraction and the scored denominator.
 
 ## Reproduction and stored evidence
 
-From the repository root:
+The historical run used the same executable basenames, scripts, options and
+pinned inputs; resolved machine-local paths are intentionally omitted. The
+following is a portable post-run rendering, not a verbatim transcript. Source
+the local configuration first, then run it from the repository root:
 
 ```bash
 .venv/bin/python examples/vllm_group_coordinator_v1/run_study.py --check
-/data3/yifeng/simllm-dev/venv-vllm/bin/python \
+"${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" \
   examples/vllm_group_coordinator_v1/live_smoke.py --run
 ```
 
-The final machine-readable outputs are outside the repository at
-`/data3/yifeng/simllm-dev/wave2-runs/codex_vllm14_group_coordinator/`
-`vllm_group_coordinator_v1/`. `component_results.json` contains the component
+The final machine-readable outputs remain outside Git in the machine-local
+directory used for the historical run; its resolved historical path is intentionally
+omitted. `component_results.json` contains the component
 cells and guards. `live/live_evidence.json` contains the scored live
 projection; `live/live_steps.jsonl` contains the two unchanged step records.
+New runs default to
+`${SIMLLM_DATA_ROOT}/vllm_group_coordinator_v1/`.
 
 ## Deliberate exclusions and residual work
 
