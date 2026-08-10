@@ -74,6 +74,8 @@ def run_config(profile: str, tp: int, link: str, workdir: Path,
     if topology is None:
         tp_ranks = declared_manifest(tp=tp, pp=1, dp=1).group_ranks(0, "tp")
     else:
+        # This frozen study predates HtsimStepSinkConfig.num_goal_ranks and
+        # retains its original rank placement so its artifacts stay comparable.
         # rnic-cn enforces that the resolved GOAL layout matches the
         # topology's node count (64 here). render_step_goal sizes the GOAL
         # as max(rank) + 1, so placing the TP group on the last node's
