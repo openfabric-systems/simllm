@@ -710,6 +710,65 @@ def test_replay_source_drains_through_skeleton_worker(monkeypatch, tmp_path):
     assert snapshot.drained_request_ids == ("request-golden",)
 
 
+def test_replay_resolves_vllm_internal_request_suffix(tmp_path):
+    source = ReplayTokenSource.from_path(joined_replay_path(tmp_path))
+    runtime_id = "request-golden-deadbeef"
+    scheduler_output = FakeSchedulerOutput(
+        scheduled_new_reqs=[
+            FakeNewRequest(
+                runtime_id,
+                [10],
+                sampling_params=replay_sampling_params(),
+            )
+        ],
+        num_scheduled_tokens={runtime_id: 1},
+    )
+
+    assert source.sample([runtime_id], [True], scheduler_output) == (
+        [runtime_id],
+        {runtime_id: 0},
+        [[20]],
+    )
+    source.observe_completions(FakeSchedulerOutput(finished_req_ids={runtime_id}))
+    snapshot = source.snapshot()
+    assert snapshot.served_token_ids == (("request-golden", (20,)),)
+    assert snapshot.drained_request_ids == ("request-golden",)
+
+
+def test_replay_rejects_unknown_suffix_and_second_runtime_binding(tmp_path):
+    source = ReplayTokenSource.from_path(joined_replay_path(tmp_path))
+    first_id = "request-golden-deadbeef"
+    first = FakeSchedulerOutput(
+        scheduled_new_reqs=[
+            FakeNewRequest(
+                first_id,
+                [10],
+                sampling_params=replay_sampling_params(),
+            )
+        ],
+        num_scheduled_tokens={first_id: 1},
+    )
+    assert source.sample([first_id], [True], first)[2] == [[20]]
+
+    second_id = "request-golden-cafebabe"
+    second = FakeSchedulerOutput(
+        scheduled_new_reqs=[
+            FakeNewRequest(
+                second_id,
+                [10],
+                sampling_params=replay_sampling_params(),
+            )
+        ],
+        num_scheduled_tokens={second_id: 1},
+    )
+    with pytest.raises(RuntimeError, match="already bound"):
+        source.sample([second_id], [True], second)
+    with pytest.raises(RuntimeError, match="missing from the joined replay run"):
+        source.request("request-golden-not-hex")
+    with pytest.raises(RuntimeError, match="missing from the joined replay run"):
+        source.request("unknown-deadbeef")
+
+
 def test_replay_rejects_unpinned_unknown_and_exhausted_requests(tmp_path):
     replay_path = joined_replay_path(tmp_path)
 

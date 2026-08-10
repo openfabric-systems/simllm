@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,8 @@ from simllm.preplay import (
     read_preplay_trace,
     validate_preplay_replay_run,
 )
+
+_VLLM_INTERNAL_SUFFIX_RE = re.compile(r"[0-9a-f]{8}\Z")
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -42,6 +45,8 @@ class ReplayTokenSource:
         self._served: dict[str, list[int]] = {
             request.request_id: [] for request in run.requests
         }
+        self._runtime_to_joined: dict[str, str] = {}
+        self._joined_to_runtime: dict[str, str] = {}
         self._completed: set[str] = set()
         self._drained: set[str] = set()
         self._validate_trace_authority()
@@ -89,53 +94,100 @@ class ReplayTokenSource:
     def trace_sha256(self) -> str:
         return self.run.trace.sha256
 
+    def _resolve_joined_id(self, runtime_request_id: str) -> str:
+        joined_id = self._runtime_to_joined.get(runtime_request_id)
+        if joined_id is not None:
+            return joined_id
+        if runtime_request_id in self._requests:
+            return runtime_request_id
+        external_id, separator, suffix = runtime_request_id.rpartition("-")
+        if (
+            separator
+            and _VLLM_INTERNAL_SUFFIX_RE.fullmatch(suffix) is not None
+            and external_id in self._requests
+        ):
+            return external_id
+        raise RuntimeError(
+            f"vLLM request {runtime_request_id!r} is missing from the joined replay run"
+        )
+
+    def _validate_bindings(self, bindings: dict[str, str]) -> None:
+        joined_to_runtime = dict(self._joined_to_runtime)
+        for runtime_id, joined_id in bindings.items():
+            existing_joined = self._runtime_to_joined.get(runtime_id)
+            if existing_joined is not None and existing_joined != joined_id:
+                raise RuntimeError(
+                    f"vLLM request {runtime_id!r} changed joined identity from "
+                    f"{existing_joined!r} to {joined_id!r}"
+                )
+            existing_runtime = joined_to_runtime.get(joined_id)
+            if existing_runtime is not None and existing_runtime != runtime_id:
+                raise RuntimeError(
+                    f"joined request {joined_id!r} is already bound to vLLM request "
+                    f"{existing_runtime!r}, not {runtime_id!r}"
+                )
+            joined_to_runtime[joined_id] = runtime_id
+
+    def _commit_bindings(self, bindings: dict[str, str]) -> None:
+        self._validate_bindings(bindings)
+        for runtime_id, joined_id in bindings.items():
+            self._runtime_to_joined[runtime_id] = joined_id
+            self._joined_to_runtime[joined_id] = runtime_id
+
     def request(self, request_id: str) -> JoinedRequest:
-        """Return the joined outcome or reject an unpinned scheduler request."""
+        """Return the joined outcome for an external or vLLM-internal ID."""
 
-        try:
-            return self._requests[request_id]
-        except KeyError as exc:
-            raise RuntimeError(
-                f"vLLM request {request_id!r} is missing from the joined replay run"
-            ) from exc
+        return self._requests[self._resolve_joined_id(request_id)]
 
-    def _validate_sampling_contract(self, request_id: str, sampling_params: Any) -> None:
-        request = self.request(request_id)
+    def _validate_sampling_contract(
+        self,
+        runtime_request_id: str,
+        joined_id: str,
+        sampling_params: Any,
+    ) -> None:
+        request = self._requests[joined_id]
         if sampling_params is None:
             raise RuntimeError(
-                f"replay request {request_id!r} is not a plain generation request"
+                f"replay request {runtime_request_id!r} is not a plain generation "
+                "request"
             )
         max_tokens = getattr(sampling_params, "max_tokens", None)
         if max_tokens != request.output_length:
             raise RuntimeError(
-                f"replay request {request_id!r} must enter vLLM with max_tokens="
+                f"replay request {runtime_request_id!r} must enter vLLM with max_tokens="
                 f"{request.output_length}, got {max_tokens!r}"
             )
         min_tokens = int(getattr(sampling_params, "min_tokens", 0) or 0)
         if min_tokens > request.output_length:
             raise RuntimeError(
-                f"replay request {request_id!r} has min_tokens={min_tokens} beyond "
-                f"its oracle length {request.output_length}"
+                f"replay request {runtime_request_id!r} has min_tokens={min_tokens} "
+                f"beyond its oracle length {request.output_length}"
             )
         stop_token_ids = set(getattr(sampling_params, "stop_token_ids", ()) or ())
         early_stop_ids = stop_token_ids.intersection(request.output_token_ids[:-1])
         if early_stop_ids and min_tokens < request.output_length:
             raise RuntimeError(
-                f"replay request {request_id!r} can stop before its oracle length "
-                f"on token IDs {sorted(early_stop_ids)}"
+                f"replay request {runtime_request_id!r} can stop before its oracle "
+                f"length on token IDs {sorted(early_stop_ids)}"
             )
 
-    def validate_new_requests(self, scheduler_output: Any) -> None:
-        """Validate every newly admitted request before serving any token."""
+    def validate_new_requests(self, scheduler_output: Any) -> dict[str, str]:
+        """Validate admissions and return uncommitted runtime-ID bindings."""
 
+        bindings: dict[str, str] = {}
         for new_request in getattr(scheduler_output, "scheduled_new_reqs", ()) or ():
-            request_id = getattr(new_request, "req_id", None)
-            if not isinstance(request_id, str) or not request_id:
+            runtime_id = getattr(new_request, "req_id", None)
+            if not isinstance(runtime_id, str) or not runtime_id:
                 raise RuntimeError("replay scheduler output has an invalid request ID")
+            joined_id = self._resolve_joined_id(runtime_id)
             self._validate_sampling_contract(
-                request_id,
+                runtime_id,
+                joined_id,
                 getattr(new_request, "sampling_params", None),
             )
+            bindings[runtime_id] = joined_id
+        self._validate_bindings(bindings)
+        return bindings
 
     @staticmethod
     def _reported_output_indices(scheduler_output: Any) -> dict[str, int]:
@@ -175,59 +227,63 @@ class ReplayTokenSource:
         if len(req_id_to_index) != len(ordered):
             raise ValueError("duplicate request id in a single step")
         self.observe_completions(scheduler_output)
-        self.validate_new_requests(scheduler_output)
+        bindings = self.validate_new_requests(scheduler_output)
         output_indices = self._reported_output_indices(scheduler_output)
-        decisions: list[tuple[str, int | None]] = []
-        for request_id, produced in zip(ordered, produces_token, strict=True):
-            request = self.request(request_id)
+        decisions: list[tuple[str, str, int | None]] = []
+        for runtime_id, produced in zip(ordered, produces_token, strict=True):
+            joined_id = self._resolve_joined_id(runtime_id)
+            bindings[runtime_id] = joined_id
+            request = self._requests[joined_id]
             if not produced:
-                decisions.append((request_id, None))
+                decisions.append((runtime_id, joined_id, None))
                 continue
-            if request_id not in output_indices:
+            if runtime_id not in output_indices:
                 raise RuntimeError(
-                    f"replay request {request_id!r} has no scheduler-reported "
+                    f"replay request {runtime_id!r} has no scheduler-reported "
                     "output index"
                 )
-            output_index = output_indices[request_id]
-            served = self._served[request_id]
+            output_index = output_indices[runtime_id]
+            served = self._served[joined_id]
             if output_index != len(served):
                 raise RuntimeError(
-                    f"replay request {request_id!r} reported output index "
+                    f"replay request {runtime_id!r} reported output index "
                     f"{output_index}, expected {len(served)}"
                 )
             if output_index >= request.output_length:
                 raise RuntimeError(
-                    f"replay request {request_id!r} exhausted its oracle at "
+                    f"replay request {runtime_id!r} exhausted its oracle at "
                     f"output index {output_index}"
                 )
             token_id = request.output_token_ids[output_index]
-            decisions.append((request_id, token_id))
+            decisions.append((runtime_id, joined_id, token_id))
 
+        self._commit_bindings(bindings)
         sampled: list[list[int]] = []
-        for request_id, token_id in decisions:
+        for _, joined_id, token_id in decisions:
             if token_id is None:
                 sampled.append([])
                 continue
-            request = self._requests[request_id]
-            served = self._served[request_id]
+            request = self._requests[joined_id]
+            served = self._served[joined_id]
             served.append(token_id)
             sampled.append([token_id])
             if len(served) == request.output_length:
-                self._completed.add(request_id)
+                self._completed.add(joined_id)
         return ordered, req_id_to_index, sampled
 
     def observe_completions(self, scheduler_output: Any) -> None:
         """Validate delayed scheduler completions without owning their timing."""
 
-        for request_id in getattr(scheduler_output, "finished_req_ids", ()) or ():
-            request = self.request(request_id)
-            served = self._served[request_id]
+        for runtime_id in getattr(scheduler_output, "finished_req_ids", ()) or ():
+            joined_id = self._resolve_joined_id(runtime_id)
+            request = self._requests[joined_id]
+            served = self._served[joined_id]
             if tuple(served) != request.output_token_ids:
                 raise RuntimeError(
-                    f"replay request {request_id!r} drained after {len(served)} "
+                    f"replay request {runtime_id!r} drained after {len(served)} "
                     f"tokens, expected {request.output_length}"
                 )
-            self._drained.add(request_id)
+            self._drained.add(joined_id)
 
     def snapshot(self) -> ReplayServingSnapshot:
         """Return deterministic replay evidence without exposing mutable lists."""
