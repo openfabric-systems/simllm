@@ -158,8 +158,9 @@ M1-F2 per-DECLARE constant and is not registered as one.
   immaterial to every check. On fluid and nn the identity is exact.
 - The cn runs place the TP group on the last node's GPUs (`ranks 64-TP to
   63`) so the GOAL pads to the topology's 64 nodes; rnic-cn enforces that
-  the resolved GOAL layout matches the topology node count, and the sink
-  does not yet expose an explicit GOAL-rank padding knob (BACK-7).
+  the resolved GOAL layout matches the topology node count. This study
+  predates the explicit `HtsimStepSinkConfig.num_goal_ranks` knob and retains
+  its historical workaround so the frozen artifacts remain comparable.
 - Sub-packet decode chunks at TP 4 and 8 are exactly the regime the M1
   incast ladder flagged under contention; here every round is contention
   free by construction, which is why the point form is exact.

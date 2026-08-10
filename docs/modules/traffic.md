@@ -38,8 +38,10 @@ the flow-level work the GOAL emitter renders.
   the two TP allreduces when the TP world produces them, then for MoE dims
   with `ep_ranks` given the dispatch and combine all-to-allvs) through the
   existing `ring_allreduce` and `pairwise_all_to_allv` patterns; tags are
-  disjoint per collective and a step without MoE work renders
-  byte-identically to the pre-M5 emitter (golden test).
+  disjoint per collective. The calc input may be one compatibility scalar or
+  an ordered value per layer, and `num_goal_ranks` idle-fills a larger GOAL
+  layout. A scalar step without MoE work renders byte-identically to the
+  pre-M5 emitter (golden test).
 - `render_serial_execution_graph_goal` is the CORE-2 graph-only diagnostic
   replay. It accepts validated per-rank compute, ring allreduce and pairwise
   all-to-allv operations, preserves `participant_local_depends_on` edges and
@@ -77,6 +79,12 @@ CORE-2 additionally proved that serial GOAL rendered only from a
 JSON-round-tripped `ExecutionGraph` is byte- and timing-equivalent to the
 legacy step path over TP width and link-rate sweeps, including a MoE sentinel
 ([results](../../examples/core2_lowering/RESULTS.md)).
+
+The BACK-5/BACK-7 step-sink study additionally validates unequal ordered calc
+values over layer-count and TP-width sweeps, plus explicit 64-rank padding on
+the fluid and physical-topology paths. Every valid comparison has 0 ps timing
+residual; see
+[examples/step_sink_precision/RESULTS.md](../../examples/step_sink_precision/RESULTS.md).
 
 ## Open tasks
 

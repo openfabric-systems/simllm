@@ -60,6 +60,43 @@ def test_step_record_json_round_trip():
     assert back.scheduled[0].phase is RequestPhase.PREFILL
 
 
+def test_step_record_optional_sample_count_is_v1_compatible():
+    legacy = StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest("p", RequestPhase.PREFILL, 4, context_length=8),
+            ScheduledRequest("d", RequestPhase.DECODE, 1, context_length=32),
+        ],
+    )
+    legacy_payload = step_record_to_json(legacy)
+    assert "num_sampled" not in legacy_payload
+    assert step_record_from_json(legacy_payload) == legacy
+
+    exact = StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=legacy.scheduled,
+        num_sampled=1,
+    )
+    exact_payload = step_record_to_json(exact)
+    assert exact_payload["schema"] == STEP_SCHEMA
+    assert exact_payload["num_sampled"] == 1
+    assert step_record_from_json(exact_payload) == exact
+
+
+@pytest.mark.parametrize("num_sampled", [-1, 2, True, 1.0])
+def test_step_record_rejects_invalid_sample_count(num_sampled):
+    error = TypeError if isinstance(num_sampled, (bool, float)) else ValueError
+    with pytest.raises(error, match="num_sampled"):
+        StepRecord(
+            step_index=0,
+            virtual_time_ps=0,
+            scheduled=[ScheduledRequest("d", RequestPhase.DECODE, 1)],
+            num_sampled=num_sampled,
+        )
+
+
 def test_step_record_from_json_rejects_unknown_schema():
     record = StepRecord(step_index=0, virtual_time_ps=0)
     payload = step_record_to_json(record)
