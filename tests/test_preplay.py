@@ -1,6 +1,7 @@
 import importlib
 import json
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
@@ -27,7 +28,14 @@ from simllm.preplay import (
     validate_sampling_config,
     write_preplay_trace,
 )
-from simllm.preplay.runner import _classify_stop_reason, _resolve_model_source
+from simllm.preplay.runner import (
+    _classify_stop_reason,
+    _resolve_model_source,
+    _tokenizer_sha256,
+)
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_GRANITE_FIXTURE = _REPO_ROOT / "examples/preplay_trace_v1/granite_length_cap.jsonl"
 
 
 def provenance(*, sampling=None):
@@ -170,6 +178,20 @@ def test_trace_golden_rows_and_round_trip(tmp_path):
     assert trace.by_request_id("request-eos").output_token_ids == (25, 0)
     with pytest.raises(KeyError, match="missing"):
         trace.by_request_id("missing")
+
+
+def test_tracked_granite_fixture_is_complete_and_dependency_free():
+    trace = read_preplay_trace(_GRANITE_FIXTURE)
+
+    assert trace.provenance.model_id == "ibm-granite/granite-3.0-1b-a400m-instruct"
+    assert trace.provenance.model_revision == "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
+    assert trace.provenance.top_k == 8
+    assert trace.provenance.expert_count == 32
+    assert trace.provenance.moe_layer_indices == tuple(range(24))
+    request = trace.by_request_id("length-cap")
+    assert request.stop_reason is StopReason.LENGTH_CAP
+    assert request.output_token_ids == (38,)
+    assert len(request.tokens[0].routing) == 24
 
 
 def test_read_write_round_trip_is_byte_identical(tmp_path):
@@ -436,9 +458,6 @@ def test_preplay_request_freezes_and_validates_stop_strings():
 
 
 def test_runner_dependency_error_is_lazy_and_clear(monkeypatch, tmp_path):
-    snapshot = tmp_path / "hub/models--org--model/snapshots/revision"
-    snapshot.mkdir(parents=True)
-    (snapshot / "config.json").write_text("{}")
     real_import_module = importlib.import_module
 
     def missing_runtime(name, package=None):
@@ -464,3 +483,31 @@ def test_model_source_resolves_exact_hf_home_revision(tmp_path):
 
     with pytest.raises(FileNotFoundError, match="not available offline"):
         _resolve_model_source("org/model", "missing-revision", tmp_path)
+
+
+def test_tokenizer_hash_covers_pinned_files_and_chat_template_fallback(tmp_path):
+    class FakeTokenizer:
+        def __init__(self):
+            self.backend_tokenizer = None
+            self.chat_template = "template-a"
+            self.special_tokens_map = {"eos_token": "<eos>"}
+
+        @staticmethod
+        def get_vocab():
+            return {"token": 1}
+
+        @staticmethod
+        def get_added_vocab():
+            return {"<eos>": 0}
+
+    tokenizer = FakeTokenizer()
+    fallback = _tokenizer_sha256(tokenizer, tmp_path)
+    tokenizer.chat_template = "template-b"
+    assert _tokenizer_sha256(tokenizer, tmp_path) != fallback
+
+    (tmp_path / "tokenizer.json").write_text("tokenizer-a")
+    file_hash = _tokenizer_sha256(tokenizer, tmp_path)
+    tokenizer.chat_template = "ignored-when-files-are-pinned"
+    assert _tokenizer_sha256(tokenizer, tmp_path) == file_hash
+    (tmp_path / "tokenizer.json").write_text("tokenizer-b")
+    assert _tokenizer_sha256(tokenizer, tmp_path) != file_hash

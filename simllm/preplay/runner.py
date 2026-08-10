@@ -32,6 +32,18 @@ from simllm.preplay.schema import (
 from simllm.preplay.trace import PreplayTraceWriter
 
 _LAYER_INDEX_RE = re.compile(r"(?:^|\.)layers\.(\d+)(?:\.|$)")
+_TOKENIZER_FILENAMES = (
+    "added_tokens.json",
+    "chat_template.jinja",
+    "merges.txt",
+    "sentencepiece.bpe.model",
+    "special_tokens_map.json",
+    "spiece.model",
+    "tokenizer.json",
+    "tokenizer.model",
+    "tokenizer_config.json",
+    "vocab.json",
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -97,14 +109,34 @@ def _resolve_model_source(model_id: str, revision: str, cache_dir: Path) -> Path
     )
 
 
-def _tokenizer_sha256(tokenizer: Any) -> str:
-    backend = getattr(tokenizer, "backend_tokenizer", None)
-    if backend is not None and hasattr(backend, "to_str"):
-        tokenizer_state: Any = backend.to_str()
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _tokenizer_sha256(tokenizer: Any, model_source: Path) -> str:
+    files = tuple(
+        (filename, _file_sha256(model_source / filename))
+        for filename in _TOKENIZER_FILENAMES
+        if (model_source / filename).is_file()
+    )
+    if files:
+        tokenizer_state: Any = {"files": files}
     else:
+        backend = getattr(tokenizer, "backend_tokenizer", None)
+        if backend is not None and hasattr(backend, "to_str"):
+            backend_state: Any = backend.to_str()
+        else:
+            backend_state = {
+                "vocabulary": sorted(tokenizer.get_vocab().items()),
+                "added_vocabulary": sorted(tokenizer.get_added_vocab().items()),
+            }
         tokenizer_state = {
-            "vocabulary": sorted(tokenizer.get_vocab().items()),
-            "added_vocabulary": sorted(tokenizer.get_added_vocab().items()),
+            "backend": backend_state,
+            "chat_template": getattr(tokenizer, "chat_template", None),
             "special_tokens": {
                 key: str(value)
                 for key, value in sorted(tokenizer.special_tokens_map.items())
@@ -196,8 +228,8 @@ class TransformersCpuRunner:
         self.model_id = model_id
         self.revision = revision
         self.cache_dir = Path(cache_dir)
-        self.model_source = _resolve_model_source(model_id, revision, self.cache_dir)
         self._torch, self._transformers = _load_optional_runtime()
+        self.model_source = _resolve_model_source(model_id, revision, self.cache_dir)
 
         dtype_by_name = {
             "float32": self._torch.float32,
@@ -222,9 +254,14 @@ class TransformersCpuRunner:
             str(self.model_source),
             **load_kwargs,
         )
+        dtype_argument = (
+            "dtype"
+            if int(str(self._transformers.__version__).split(".", maxsplit=1)[0]) >= 5
+            else "torch_dtype"
+        )
         self.model = auto_model.from_pretrained(
             str(self.model_source),
-            torch_dtype=dtype_by_name[dtype],
+            **{dtype_argument: dtype_by_name[dtype]},
             **load_kwargs,
         )
         self.model.to("cpu")
@@ -245,7 +282,7 @@ class TransformersCpuRunner:
         self.pad_token_id = self.tokenizer.pad_token_id
         if type(self.pad_token_id) is not int:
             self.pad_token_id = self.eos_token_id
-        self.tokenizer_sha256 = _tokenizer_sha256(self.tokenizer)
+        self.tokenizer_sha256 = _tokenizer_sha256(self.tokenizer, self.model_source)
         self.routers = _discover_routers(self.model)
         self.top_k = self.routers[0].top_k
         self.expert_count = self.routers[0].expert_count
