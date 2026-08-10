@@ -52,6 +52,7 @@ from simllm.core.execution import (
     ResourceRef,
 )
 from simllm.core.execution_io import execution_result_to_json, validate_execution_graph
+from simllm.core.step import LatencyAttribution
 
 PS_PER_SECOND = 1_000_000_000_000
 DEFAULT_GPUS_PER_NODE = 8
@@ -289,6 +290,8 @@ class RuntimeOperationRecord:
     physical_completed_at_ps: int
     participant_completed_at_ps: tuple[tuple[int, int], ...]
     breakdown: CriticalPathBreakdown
+    attribution: LatencyAttribution
+    critical_predecessor_id: str | None
     sum_visit_wait_ps: int
 
 
@@ -1546,9 +1549,17 @@ class CoarseDeviceRuntime:
         if work.collective == "all-reduce" and work.algorithm_hint == "ring":
             chunk_bytes = work.payload_bytes // len(work.ranks)
             frontier = dict(readiness)
+            frontier_paths = {rank: [launch] for rank in work.ranks}
             for round_index, goal_tag in enumerate(goal_tags):
                 round_records: list[
-                    tuple[int, int, QueueVisit, QueueVisit, WqeLifecycleProjection | None]
+                    tuple[
+                        int,
+                        int,
+                        QueueVisit,
+                        QueueVisit,
+                        WqeLifecycleProjection | None,
+                        list[QueueVisit],
+                    ]
                 ] = []
                 for index, source_rank in enumerate(work.ranks):
                     destination_rank = work.ranks[(index + 1) % len(work.ranks)]
@@ -1578,7 +1589,11 @@ class CoarseDeviceRuntime:
                     )
                     extent_index += 1
                     visits.extend((channel_visit, transfer_visit))
-                    paths.append([launch, channel_visit, transfer_visit])
+                    source_path = [
+                        *frontier_paths[source_rank],
+                        channel_visit,
+                        transfer_visit,
+                    ]
                     if projection is not None:
                         wqes.append(projection)
                     round_records.append(
@@ -1588,18 +1603,27 @@ class CoarseDeviceRuntime:
                             channel_visit,
                             transfer_visit,
                             projection,
+                            source_path,
                         )
                     )
                 next_frontier = dict(frontier)
-                for source_rank, destination_rank, _, transfer_visit, _ in round_records:
-                    next_frontier[source_rank] = max(
-                        next_frontier[source_rank], transfer_visit.completed_at_ps
-                    )
-                    next_frontier[destination_rank] = max(
-                        next_frontier[destination_rank], transfer_visit.completed_at_ps
-                    )
+                next_frontier_paths = dict(frontier_paths)
+                for (
+                    source_rank,
+                    destination_rank,
+                    _,
+                    transfer_visit,
+                    _,
+                    source_path,
+                ) in round_records:
+                    for rank in (source_rank, destination_rank):
+                        if transfer_visit.completed_at_ps >= next_frontier[rank]:
+                            next_frontier[rank] = transfer_visit.completed_at_ps
+                            next_frontier_paths[rank] = source_path
                 frontier = next_frontier
+                frontier_paths = next_frontier_paths
             participant_completed = frontier
+            paths = list(frontier_paths.values())
         elif work.collective == "all-to-allv" and work.algorithm_hint == "pairwise":
             goal_tag = goal_tags[0]
             for source_rank in work.ranks:
@@ -1997,6 +2021,17 @@ class CoarseDeviceRuntime:
                 operation_latency_ps=operation_latency_ps,
                 critical_path_queue_ps=launch_wait_ps + device_queue_ps,
             )
+            attribution = self._critical_path_attribution(
+                operation,
+                path,
+                segment_start_ps,
+                outcome.logical_completed_at_ps,
+            )
+            if attribution.total_ps != operation_latency_ps:
+                raise ValueError(
+                    f"operation {operation.operation_id!r} attribution does not "
+                    "conserve its critical-path segment"
+                )
             record = RuntimeOperationRecord(
                 operation_id=operation.operation_id,
                 class_label=operation.priority,
@@ -2008,6 +2043,8 @@ class CoarseDeviceRuntime:
                     sorted(outcome.participant_completed_at_ps.items())
                 ),
                 breakdown=breakdown,
+                attribution=attribution,
+                critical_predecessor_id=predecessor_id,
                 sum_visit_wait_ps=sum(visit.queue_wait_ps for visit in outcome.visits),
             )
             operation_records.append(record)
@@ -2070,6 +2107,76 @@ class CoarseDeviceRuntime:
             class_service_bytes=tuple(sorted(class_bytes.items())),
             random_draw_count=wqe_authority.random_draw_count,
         )
+
+    @staticmethod
+    def _attribution_field(
+        operation: ExecutionOperation,
+        resource_kind: ResourceKind,
+    ) -> str:
+        if resource_kind in {ResourceKind.HOST_LAUNCH_QUEUE, ResourceKind.CONTROL_QUEUE}:
+            return "control_ps"
+        if resource_kind is ResourceKind.CUDA_STREAM:
+            return "control_ps"
+        if resource_kind in {ResourceKind.GPU_WORK_QUEUE, ResourceKind.GPU_SCHEDULER}:
+            return "kernel_ps"
+        if resource_kind is ResourceKind.HBM_QUEUE:
+            if isinstance(operation.work, KvCacheWork):
+                return "kv_ps"
+            if isinstance(operation.work, DmaWork):
+                return "dma_ps"
+            if isinstance(operation.work, ComputeWork):
+                return "kernel_ps"
+            raise ValueError("HBM critical-path visit has no supported semantic owner")
+        if resource_kind is ResourceKind.COPY_ENGINE:
+            return "dma_ps"
+        if resource_kind in {ResourceKind.NCCL_CHANNEL, ResourceKind.NVLINK}:
+            return "collective_ps"
+        if resource_kind in {
+            ResourceKind.NIC_SEND_QUEUE,
+            ResourceKind.NIC_RECEIVE_QUEUE,
+            ResourceKind.NIC,
+            ResourceKind.COMPLETION_QUEUE,
+        }:
+            return "nic_ps"
+        raise ValueError(
+            f"resource kind {resource_kind.value!r} has no attribution owner"
+        )
+
+    def _critical_path_attribution(
+        self,
+        operation: ExecutionOperation,
+        path: Sequence[QueueVisit],
+        segment_start_ps: int,
+        operation_completed_at_ps: int,
+    ) -> LatencyAttribution:
+        values = {
+            "queue_ps": 0,
+            "kv_ps": 0,
+            "kernel_ps": 0,
+            "dma_ps": 0,
+            "collective_ps": 0,
+            "nic_ps": 0,
+            "control_ps": 0,
+        }
+        cursor_ps = segment_start_ps
+        for visit in path:
+            values["queue_ps"] += max(0, visit.eligible_at_ps - cursor_ps)
+            values["queue_ps"] += max(
+                0,
+                visit.started_at_ps - max(visit.eligible_at_ps, cursor_ps),
+            )
+            field = self._attribution_field(operation, visit.resource.kind)
+            values[field] += max(
+                0,
+                visit.finished_at_ps - max(visit.started_at_ps, cursor_ps),
+            )
+            values[field] += max(
+                0,
+                visit.completed_at_ps - max(visit.finished_at_ps, cursor_ps),
+            )
+            cursor_ps = max(cursor_ps, visit.completed_at_ps)
+        values["queue_ps"] += max(0, operation_completed_at_ps - cursor_ps)
+        return LatencyAttribution(**values)
 
     def _validate_bookkeeping_append(
         self,

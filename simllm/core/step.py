@@ -19,6 +19,7 @@ import enum
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +61,8 @@ class StepRecord:
     num_sampled: int | None = None
     #: physical model-input tokens after framework padding; None means unobserved
     num_tokens_after_padding: int | None = None
+    #: exact identities sampled this step; None retains the legacy count-only form
+    sampled_request_ids: list[str] | None = None
 
     def __post_init__(self) -> None:
         if self.num_sampled is not None:
@@ -79,10 +82,165 @@ class StepRecord:
                     f"num_tokens_after_padding={value} must be at least "
                     f"total_new_tokens={self.total_new_tokens}"
                 )
+        if self.sampled_request_ids is not None:
+            if not isinstance(self.sampled_request_ids, list):
+                raise TypeError("sampled_request_ids must be a list or None")
+            if any(
+                not isinstance(request_id, str) or not request_id.strip()
+                for request_id in self.sampled_request_ids
+            ):
+                raise ValueError("sampled_request_ids must contain nonblank strings")
+            if len(self.sampled_request_ids) != len(set(self.sampled_request_ids)):
+                raise ValueError("sampled_request_ids must be unique")
+            scheduled_ids = {request.request_id for request in self.scheduled}
+            unknown = sorted(set(self.sampled_request_ids) - scheduled_ids)
+            if unknown:
+                raise ValueError(
+                    f"sampled_request_ids contains unscheduled requests: {unknown}"
+                )
+            if (
+                self.num_sampled is not None
+                and len(self.sampled_request_ids) != self.num_sampled
+            ):
+                raise ValueError(
+                    "sampled_request_ids cardinality must equal num_sampled"
+                )
 
     @property
     def total_new_tokens(self) -> int:
         return sum(r.num_new_tokens for r in self.scheduled)
+
+
+def _require_nonnegative_int(name: str, value: object) -> int:
+    if isinstance(value, bool) or type(value) is not int:
+        raise TypeError(f"{name} must be an integer")
+    if value < 0:
+        raise ValueError(f"{name} must be nonnegative")
+    return value
+
+
+@dataclass(frozen=True)
+class LatencyAttribution:
+    """One realized request interval partitioned by semantic owner."""
+
+    queue_ps: int = 0
+    kv_ps: int = 0
+    kernel_ps: int = 0
+    dma_ps: int = 0
+    collective_ps: int = 0
+    nic_ps: int = 0
+    control_ps: int = 0
+
+    def __post_init__(self) -> None:
+        for name in (
+            "queue_ps",
+            "kv_ps",
+            "kernel_ps",
+            "dma_ps",
+            "collective_ps",
+            "nic_ps",
+            "control_ps",
+        ):
+            _require_nonnegative_int(name, getattr(self, name))
+
+    @property
+    def total_ps(self) -> int:
+        """Return the conserved elapsed time represented by this partition."""
+
+        return (
+            self.queue_ps
+            + self.kv_ps
+            + self.kernel_ps
+            + self.dma_ps
+            + self.collective_ps
+            + self.nic_ps
+            + self.control_ps
+        )
+
+    def __add__(self, other: object) -> LatencyAttribution:
+        if not isinstance(other, LatencyAttribution):
+            return NotImplemented
+        return LatencyAttribution(
+            queue_ps=self.queue_ps + other.queue_ps,
+            kv_ps=self.kv_ps + other.kv_ps,
+            kernel_ps=self.kernel_ps + other.kernel_ps,
+            dma_ps=self.dma_ps + other.dma_ps,
+            collective_ps=self.collective_ps + other.collective_ps,
+            nic_ps=self.nic_ps + other.nic_ps,
+            control_ps=self.control_ps + other.control_ps,
+        )
+
+
+@dataclass(frozen=True)
+class AdditiveVisitTotals:
+    """Work sums over visits, never an additive wall-latency decomposition."""
+
+    queue_wait_ps: int = 0
+    service_ps: int = 0
+    visibility_ps: int = 0
+    visit_count: int = 0
+
+    def __post_init__(self) -> None:
+        for name in (
+            "queue_wait_ps",
+            "service_ps",
+            "visibility_ps",
+            "visit_count",
+        ):
+            _require_nonnegative_int(name, getattr(self, name))
+
+    @property
+    def total_ps(self) -> int:
+        """Return additive visit work, which may exceed wall time."""
+
+        return self.queue_wait_ps + self.service_ps + self.visibility_ps
+
+    def __add__(self, other: object) -> AdditiveVisitTotals:
+        if not isinstance(other, AdditiveVisitTotals):
+            return NotImplemented
+        return AdditiveVisitTotals(
+            queue_wait_ps=self.queue_wait_ps + other.queue_wait_ps,
+            service_ps=self.service_ps + other.service_ps,
+            visibility_ps=self.visibility_ps + other.visibility_ps,
+            visit_count=self.visit_count + other.visit_count,
+        )
+
+
+@dataclass(frozen=True)
+class RequestMetric:
+    """Latest sampled-token boundary and exact per-request latency metrics."""
+
+    request_id: str
+    phase: RequestPhase
+    token_index: int
+    completed_at_ps: int
+    latency_ps: int
+    ttft_ps: int
+    tpot_ps: Fraction | None
+    attribution: LatencyAttribution
+    additive_visit_totals: AdditiveVisitTotals
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.request_id, str) or not self.request_id.strip():
+            raise ValueError("request_id must be a nonblank string")
+        if not isinstance(self.phase, RequestPhase):
+            raise TypeError("phase must be a RequestPhase")
+        _require_nonnegative_int("token_index", self.token_index)
+        if self.token_index == 0:
+            raise ValueError("token_index must be positive")
+        for name in ("completed_at_ps", "latency_ps", "ttft_ps"):
+            _require_nonnegative_int(name, getattr(self, name))
+        if self.tpot_ps is not None:
+            if not isinstance(self.tpot_ps, Fraction):
+                raise TypeError("tpot_ps must be a Fraction or None")
+            if self.tpot_ps < 0:
+                raise ValueError("tpot_ps must be nonnegative")
+        if not isinstance(self.attribution, LatencyAttribution):
+            raise TypeError("attribution must be a LatencyAttribution")
+        if self.attribution.total_ps != self.latency_ps:
+            raise ValueError("request attribution does not conserve latency_ps")
+        if not isinstance(self.additive_visit_totals, AdditiveVisitTotals):
+            raise TypeError("additive_visit_totals must be AdditiveVisitTotals")
 
 
 @dataclass
@@ -94,6 +252,28 @@ class StepResult:
     step_latency_ps: int
     #: virtual time at which the step completed
     completed_at_ps: int
+    #: sampled request boundaries completed in this step
+    request_metrics: tuple[RequestMetric, ...] = ()
+    #: graph-wide visit work, kept separate from request critical paths
+    additive_visit_totals: AdditiveVisitTotals | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("step_index", "step_latency_ps", "completed_at_ps"):
+            _require_nonnegative_int(name, getattr(self, name))
+        if not isinstance(self.request_metrics, tuple):
+            raise TypeError("request_metrics must be a tuple")
+        if any(not isinstance(metric, RequestMetric) for metric in self.request_metrics):
+            raise TypeError("request_metrics must contain RequestMetric records")
+        request_ids = [metric.request_id for metric in self.request_metrics]
+        if len(request_ids) != len(set(request_ids)):
+            raise ValueError("request_metrics must contain at most one row per request")
+        if any(metric.completed_at_ps > self.completed_at_ps for metric in self.request_metrics):
+            raise ValueError("request metric completes after its StepResult")
+        if self.additive_visit_totals is not None and not isinstance(
+            self.additive_visit_totals,
+            AdditiveVisitTotals,
+        ):
+            raise TypeError("additive_visit_totals must be AdditiveVisitTotals or None")
 
 
 def step_record_to_json(record: StepRecord) -> dict[str, Any]:
@@ -131,6 +311,8 @@ def step_record_to_json(record: StepRecord) -> dict[str, Any]:
         payload["num_sampled"] = record.num_sampled
     if record.num_tokens_after_padding is not None:
         payload["num_tokens_after_padding"] = record.num_tokens_after_padding
+    if record.sampled_request_ids is not None:
+        payload["sampled_request_ids"] = list(record.sampled_request_ids)
     return payload
 
 
@@ -170,6 +352,11 @@ def step_record_from_json(payload: dict[str, Any]) -> StepRecord:
         finished_request_ids=list(payload.get("finished_request_ids", [])),
         num_sampled=payload.get("num_sampled"),
         num_tokens_after_padding=payload.get("num_tokens_after_padding"),
+        sampled_request_ids=(
+            list(payload["sampled_request_ids"])
+            if "sampled_request_ids" in payload
+            else None
+        ),
     )
 
 
