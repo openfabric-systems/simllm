@@ -11,6 +11,11 @@ per serving step.
 ## Interface
 
 - `ComputeProvider.estimate(kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate`
+- `ComputeProvider.estimate_layers(kernel, gpu, num_layers)`: optional ordered
+  layer estimates for the same fused kernel. The default returns `None` and
+  preserves scalar callers exactly. An implemented breakdown must contain one
+  nonnegative duration per layer and sum to `estimate()` exactly; consumers
+  validate both invariants before using it.
 - `ProfileTableProvider`: measured (kernel name, config, GPU) duration
   tables from real captures or offline SASS simulation. Exact-match
   lookups return the entry; a miss interpolates log-linearly along one

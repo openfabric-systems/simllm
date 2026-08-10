@@ -28,15 +28,11 @@ combine all-to-alls of every layer
 (:func:`simllm.traffic.step_moe_alltoalls`); a non-MoE configuration
 renders byte-identically to the pre-MoE sink.
 
-Modeling approximations (numbered in docs/modules/backends.md):
-
-- BACK-5: the whole-step compute estimate is split evenly across layers,
-  ``per_layer_calc_ns = estimate_step_latency_ps(...) // (L * 1000)`` (the
-  division also truncates ps to whole GOAL ns units). Real per-layer times
-  differ (the LM head and sampling live in the last layer's share).
-- BACK-6: ``num_sampled`` is approximated as the number of scheduled
-  requests; a mid-prompt chunked prefill does not actually sample. The LM
-  head term this inflates is small against the step total.
+Providers may opt into an exact per-layer duration breakdown. The sink checks
+that it sums to the fused estimate and emits the unequal layer costs. Existing
+providers inherit the optional hook's ``None`` result, retaining the original
+even split byte for byte. Sampling attribution remains the BACK-6
+approximation until the record carries an exact count.
 """
 
 from __future__ import annotations
@@ -53,7 +49,7 @@ from simllm.compute import (
     HostInitiationModel,
     ModelDims,
     RooflineProvider,
-    estimate_step_latency_ps,
+    step_kernel,
 )
 from simllm.core import StepRecord, StepResult
 from simllm.goal import to_binary
@@ -104,15 +100,21 @@ class StepNetworkOutcome:
     step_index: int
     #: the adapter-equivalent compute-only whole-step estimate, ps
     compute_estimate_ps: int
-    #: the even-split per-layer calc cost handed to GOAL, ns (BACK-5)
-    per_layer_calc_ns: int
+    #: uniform calc cost handed to GOAL, or None for an unequal breakdown
+    per_layer_calc_ns: int | None
+    #: emitted GOAL calc units in layer order, ns
+    layer_calc_ns: tuple[int, ...]
     #: simulated makespan of the step's GOAL program, ps
     makespan_ps: int
     num_flows: int
 
     def network_share_for(self, num_layers: int) -> float:
-        """1 - (L * per-layer calc) / makespan, the step's network fraction."""
-        calc_ps = num_layers * max(self.per_layer_calc_ns, 1) * 1000
+        """One minus represented calc time over makespan."""
+        if len(self.layer_calc_ns) != num_layers:
+            raise ValueError(
+                f"outcome has {len(self.layer_calc_ns)} layer calcs, expected {num_layers}"
+            )
+        calc_ps = sum(max(calc_ns, 1) for calc_ns in self.layer_calc_ns) * 1000
         return 1.0 - calc_ps / self.makespan_ps
 
 
@@ -125,16 +127,51 @@ class HtsimStepSink:
         #: one entry per simulated (non-None) step, in call order
         self.outcomes: list[StepNetworkOutcome] = []
 
+    def _compute_estimate(
+        self, record: StepRecord
+    ) -> tuple[int, tuple[int, ...] | None]:
+        """Return the whole-step estimate and optional exact layer durations."""
+        cfg = self.config
+        kernel = step_kernel(cfg.dims, record, num_sampled=len(record.scheduled))
+        fused = cfg.provider.estimate(kernel, cfg.gpu)
+        host_delay_ps = cfg.host_model.delay_ps()
+        estimate_ps = fused.duration_ps + host_delay_ps
+        estimates = cfg.provider.estimate_layers(kernel, cfg.gpu, cfg.dims.num_layers)
+        if estimates is None:
+            return estimate_ps, None
+
+        if len(estimates) != cfg.dims.num_layers:
+            raise ValueError(
+                "provider layer breakdown length "
+                f"{len(estimates)} does not match num_layers={cfg.dims.num_layers}"
+            )
+        layer_ps = tuple(estimate.duration_ps for estimate in estimates)
+        if any(duration_ps < 0 for duration_ps in layer_ps):
+            raise ValueError("provider layer breakdown durations must be nonnegative")
+        if sum(layer_ps) != fused.duration_ps:
+            raise ValueError(
+                "provider layer breakdown sum "
+                f"{sum(layer_ps)} ps does not match fused estimate {fused.duration_ps} ps"
+            )
+        return estimate_ps, (layer_ps[0] + host_delay_ps, *layer_ps[1:])
+
     def compute_estimate_ps(self, record: StepRecord) -> int:
-        """The compute-only whole-step estimate the sink splits into calcs."""
-        return estimate_step_latency_ps(
-            self.config.dims,
-            record,
-            num_sampled=len(record.scheduled),
-            provider=self.config.provider,
-            gpu=self.config.gpu,
-            host_model=self.config.host_model,
-        )
+        """The compute-only whole-step estimate represented by the sink."""
+        estimate_ps, _ = self._compute_estimate(record)
+        return estimate_ps
+
+    @staticmethod
+    def _to_goal_layer_calc_ns(layer_duration_ps: Sequence[int]) -> tuple[int, ...]:
+        """Truncate cumulative layer boundaries to whole GOAL nanoseconds."""
+        previous_boundary_ns = 0
+        cumulative_ps = 0
+        layer_calc_ns = []
+        for duration_ps in layer_duration_ps:
+            cumulative_ps += duration_ps
+            boundary_ns = cumulative_ps // 1000
+            layer_calc_ns.append(boundary_ns - previous_boundary_ns)
+            previous_boundary_ns = boundary_ns
+        return tuple(layer_calc_ns)
 
     def __call__(self, record: StepRecord) -> StepResult | None:
         cfg = self.config
@@ -144,13 +181,24 @@ class HtsimStepSink:
         )
         if not tp_ops and not moe_ops:
             return None
-        estimate_ps = self.compute_estimate_ps(record)
-        per_layer_calc_ns = estimate_ps // (cfg.dims.num_layers * 1000)
+        estimate_ps, layer_duration_ps = self._compute_estimate(record)
+        if layer_duration_ps is None:
+            per_layer_calc_ns = estimate_ps // (cfg.dims.num_layers * 1000)
+            layer_calc_ns = (per_layer_calc_ns,) * cfg.dims.num_layers
+            rendered_calc_ns: int | Sequence[int] = per_layer_calc_ns
+        else:
+            layer_calc_ns = self._to_goal_layer_calc_ns(layer_duration_ps)
+            per_layer_calc_ns = (
+                layer_calc_ns[0]
+                if all(value == layer_calc_ns[0] for value in layer_calc_ns)
+                else None
+            )
+            rendered_calc_ns = layer_calc_ns
         trace = render_step_goal(
             record,
             cfg.dims,
             cfg.tp_ranks,
-            per_layer_calc_ns,
+            rendered_calc_ns,
             ep_ranks=cfg.ep_ranks,
             num_goal_ranks=cfg.num_goal_ranks,
             base_tag=cfg.base_tag,
@@ -172,6 +220,7 @@ class HtsimStepSink:
                 step_index=record.step_index,
                 compute_estimate_ps=estimate_ps,
                 per_layer_calc_ns=per_layer_calc_ns,
+                layer_calc_ns=layer_calc_ns,
                 makespan_ps=makespan_ps,
                 num_flows=len(run.flows),
             )

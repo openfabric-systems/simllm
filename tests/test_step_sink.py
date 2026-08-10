@@ -1,12 +1,18 @@
 """Tests for the closed-loop htsim step sink (simllm.backends.step_sink)."""
 
+import hashlib
 from types import SimpleNamespace
 
 import pytest
 
 import simllm.backends.step_sink as step_sink_module
 from simllm.backends import HtsimStepSink, HtsimStepSinkConfig, find_htsim_rnic
-from simllm.compute import ModelDims
+from simllm.compute import (
+    ComputeProvider,
+    DurationEstimate,
+    HostInitiationModel,
+    ModelDims,
+)
 from simllm.core import RequestPhase, ScheduledRequest, StepRecord
 from simllm.goal import find_txt2bin
 
@@ -39,6 +45,37 @@ SMALL_MOE_DIMS = ModelDims(
 # M1-calibrated fluid constants (examples/m1/RESULTS.md C1/C2)
 PS_PER_BYTE_400G = 20
 PROPAGATION_PS = 2_000_000
+DEFAULT_GOAL_SHA256 = "f8aade109ba8e3a581b7d965b3a0c76c1247016a1e37491fa84efbbf377677a5"
+
+
+class LayerProvider(ComputeProvider):
+    def __init__(self, layer_ps, fused_adjustment=0):
+        self.layer_ps = tuple(layer_ps)
+        self.fused_adjustment = fused_adjustment
+
+    def estimate(self, kernel, gpu):
+        return DurationEstimate(
+            duration_ps=sum(self.layer_ps) + self.fused_adjustment,
+            bound="measured",
+        )
+
+    def estimate_layers(self, kernel, gpu, num_layers):
+        return tuple(
+            DurationEstimate(duration_ps=duration_ps, bound="measured")
+            for duration_ps in self.layer_ps
+        )
+
+
+def stub_backend(monkeypatch, makespan_ps=100_000):
+    monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
+    monkeypatch.setattr(
+        step_sink_module,
+        "run_htsim_rnic",
+        lambda _config: SimpleNamespace(
+            job_completion_time_ps=lambda: makespan_ps,
+            flows=[],
+        ),
+    )
 
 
 def decode_record() -> StepRecord:
@@ -93,15 +130,7 @@ def test_sink_config_rejects_unknown_profile(tmp_path):
 
 
 def test_sink_passes_explicit_goal_rank_count(tmp_path, monkeypatch):
-    monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
-    monkeypatch.setattr(
-        step_sink_module,
-        "run_htsim_rnic",
-        lambda _config: SimpleNamespace(
-            job_completion_time_ps=lambda: 1_000,
-            flows=[],
-        ),
-    )
+    stub_backend(monkeypatch)
     s = HtsimStepSink(
         HtsimStepSinkConfig(
             profile="rnic-nn-fluid",
@@ -116,6 +145,92 @@ def test_sink_passes_explicit_goal_rank_count(tmp_path, monkeypatch):
     assert (tmp_path / "padded" / "step-000004.goal").read_text().startswith(
         "num_ranks 8\n"
     )
+
+
+def test_sink_uses_valid_provider_layer_breakdown(tmp_path, monkeypatch):
+    stub_backend(monkeypatch)
+    s = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SMALL_DIMS,
+            workdir=tmp_path / "layered",
+            provider=LayerProvider((2_600, 4_600)),
+        )
+    )
+
+    assert s(decode_record()) is not None
+    outcome = s.outcomes[0]
+    assert outcome.compute_estimate_ps == 7_200
+    assert outcome.per_layer_calc_ns is None
+    assert outcome.layer_calc_ns == (2, 5)
+    text = (tmp_path / "layered" / "step-000004.goal").read_text()
+    assert text.count("calc 2") == 2
+    assert text.count("calc 5") == 2
+
+
+def test_sink_assigns_host_delay_before_first_layer_boundary(tmp_path, monkeypatch):
+    stub_backend(monkeypatch)
+    s = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SMALL_DIMS,
+            workdir=tmp_path / "host-delay",
+            provider=LayerProvider((600, 600)),
+            host_model=HostInitiationModel(initiation_delay_ps=800),
+        )
+    )
+
+    assert s(decode_record()) is not None
+    assert s.outcomes[0].compute_estimate_ps == 2_000
+    assert s.outcomes[0].layer_calc_ns == (1, 1)
+
+
+@pytest.mark.parametrize(
+    ("provider", "message"),
+    [
+        (LayerProvider((1_000,)), "length"),
+        (LayerProvider((-1, 1_001)), "nonnegative"),
+        (LayerProvider((1_000, 2_000), fused_adjustment=1), "sum"),
+    ],
+)
+def test_sink_rejects_invalid_provider_layer_breakdown(tmp_path, provider, message):
+    s = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SMALL_DIMS,
+            workdir=tmp_path / message,
+            provider=provider,
+        )
+    )
+
+    with pytest.raises(ValueError, match=message):
+        s(decode_record())
+
+
+def test_sink_default_goal_is_byte_identical_to_frozen_baseline(tmp_path, monkeypatch):
+    stub_backend(monkeypatch, makespan_ps=82_003_040)
+    record = StepRecord(
+        0,
+        0,
+        [ScheduledRequest("prefill", RequestPhase.PREFILL, 256, context_length=256)],
+    )
+    s = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SMALL_DIMS,
+            workdir=tmp_path / "baseline",
+        )
+    )
+
+    assert s(record) is not None
+    goal_bytes = (tmp_path / "baseline" / "step-000000.goal").read_bytes()
+    assert hashlib.sha256(goal_bytes).hexdigest() == DEFAULT_GOAL_SHA256
+    assert s.outcomes[0].per_layer_calc_ns == 12_030
+    assert s.outcomes[0].layer_calc_ns == (12_030, 12_030)
 
 
 @pytest.mark.skipif(
@@ -151,6 +266,7 @@ def test_sink_end_to_end_matches_closed_form(tmp_path):
     outcome = s.outcomes[0]
     assert outcome.compute_estimate_ps == estimate_ps
     assert outcome.per_layer_calc_ns == per_layer_ns
+    assert outcome.layer_calc_ns == (per_layer_ns,) * SMALL_DIMS.num_layers
     assert outcome.makespan_ps == expected
     # 2L allreduces x 2(W-1) rounds x W sends per round
     assert outcome.num_flows == 2 * SMALL_DIMS.num_layers * rounds_per_allreduce * 2

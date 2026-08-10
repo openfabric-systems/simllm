@@ -92,6 +92,32 @@ def test_render_step_goal_rejects_too_few_goal_ranks():
         )
 
 
+def test_render_step_goal_accepts_unequal_layer_calcs():
+    trace = render_step_goal(
+        decode_record(),
+        TINY_DIMS,
+        [0, 1],
+        per_layer_calc_ns=(3, 7),
+    )
+    text = trace.render()
+    assert text.count("calc 3") == 2
+    assert text.count("calc 7") == 2
+
+
+@pytest.mark.parametrize(
+    ("layer_calc_ns", "message"),
+    [((1,), "received 1"), ((1, -1), "nonnegative")],
+)
+def test_render_step_goal_rejects_invalid_layer_calcs(layer_calc_ns, message):
+    with pytest.raises(ValueError, match=message):
+        render_step_goal(
+            decode_record(),
+            TINY_DIMS,
+            [0, 1],
+            per_layer_calc_ns=layer_calc_ns,
+        )
+
+
 def test_render_step_goal_structure():
     trace = render_step_goal(decode_record(), TINY_DIMS, [0, 1, 2, 3],
                              per_layer_calc_ns=42)
