@@ -79,11 +79,13 @@ public:
         WorkQueueConfig config,
         NetworkPort& network_port,
         PcieFabric* pcie_fabric,
-        std::optional<WorkQueuePcieBinding> pcie_binding)
+        std::optional<WorkQueuePcieBinding> pcie_binding,
+        bool qpc_lookup_enabled)
         : config_(std::move(config)),
           network_port_(network_port),
           pcie_fabric_(pcie_fabric),
-          pcie_binding_(std::move(pcie_binding)) {
+          pcie_binding_(std::move(pcie_binding)),
+          qpc_lookup_enabled_(qpc_lookup_enabled) {
         if (config_.version != kWorkQueueConfigVersion) {
             throw std::invalid_argument("unsupported RNIC work-queue config version");
         }
@@ -107,6 +109,10 @@ public:
             config_.scheduler_service_ps, "scheduler_service_ps");
         validateServiceTime(
             config_.cqe_write_service_ps, "cqe_write_service_ps");
+        if (!qpc_lookup_enabled_ && config_.qpc_lookup_service_ps != 0) {
+            throw std::invalid_argument(
+                "RNIC disabled QPC cannot charge scalar lookup service");
+        }
         if (pcie_fabric_ != nullptr) {
             if (!pcie_binding_.has_value()
                 || pcie_binding_->version
@@ -308,7 +314,7 @@ public:
             WqeId wqe_id{0};
             Picoseconds fetch_begin{0};
             Picoseconds fetch_end{0};
-            Picoseconds qpc_ready{0};
+            std::optional<Picoseconds> qpc_ready;
             Picoseconds admitted{0};
         };
         std::vector<PlannedDoorbellWqe> plan;
@@ -357,10 +363,15 @@ public:
                     fetch_begin, config_.wqe_fetch_service_ps);
                 planned_fetch_cursor = fetch_end;
             }
-            const Picoseconds qpc_ready =
-                checkedAdd(fetch_end, config_.qpc_lookup_service_ps);
+            std::optional<Picoseconds> qpc_ready;
+            if (qpc_lookup_enabled_) {
+                qpc_ready = checkedAdd(
+                    fetch_end, config_.qpc_lookup_service_ps);
+            }
             const Picoseconds scheduler_begin =
-                std::max(qpc_ready, planned_scheduler_cursor);
+                std::max(
+                    qpc_ready.value_or(fetch_end),
+                    planned_scheduler_cursor);
             const Picoseconds admitted =
                 checkedAdd(scheduler_begin, config_.scheduler_service_ps);
             planned_scheduler_cursor = admitted;
@@ -1143,6 +1154,7 @@ private:
     NetworkPort& network_port_;
     PcieFabric* pcie_fabric_{nullptr};
     std::optional<WorkQueuePcieBinding> pcie_binding_;
+    bool qpc_lookup_enabled_{true};
     WorkQueueCounters counters_;
     std::vector<WqeRecord> records_;
     std::vector<EvidenceEvent> evidence_;
@@ -1174,19 +1186,37 @@ private:
 };
 
 WorkQueue::WorkQueue(WorkQueueConfig config, NetworkPort& network_port)
-    : impl_(std::make_unique<Impl>(
-          std::move(config), network_port, nullptr, std::nullopt)) {}
+    : WorkQueue(
+          std::move(config),
+          network_port,
+          nullptr,
+          std::nullopt,
+          true) {}
 
 WorkQueue::WorkQueue(
     WorkQueueConfig config,
     NetworkPort& network_port,
     PcieFabric& pcie_fabric,
     WorkQueuePcieBinding pcie_binding)
-    : impl_(std::make_unique<Impl>(
+    : WorkQueue(
           std::move(config),
           network_port,
           &pcie_fabric,
-          std::move(pcie_binding))) {}
+          std::move(pcie_binding),
+          true) {}
+
+WorkQueue::WorkQueue(
+    WorkQueueConfig config,
+    NetworkPort& network_port,
+    PcieFabric* pcie_fabric,
+    std::optional<WorkQueuePcieBinding> pcie_binding,
+    bool qpc_lookup_enabled)
+    : impl_(std::make_unique<Impl>(
+          std::move(config),
+          network_port,
+          pcie_fabric,
+          std::move(pcie_binding),
+          qpc_lookup_enabled)) {}
 
 WorkQueue::~WorkQueue() = default;
 WorkQueue::WorkQueue(WorkQueue&&) noexcept = default;
