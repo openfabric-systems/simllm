@@ -81,13 +81,13 @@ class HtsimStepSinkConfig:
     ep_ranks: Sequence[int] | None = None
     linkspeed_bps: int = 400_000_000_000
     topology: Path | None = None
-    #: explicit GOAL rank count for topology padding; None keeps inferred sizing
-    num_goal_ranks: int | None = None
     provider: ComputeProvider = field(default_factory=lambda: RooflineProvider(efficiency=0.7))
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel)
     #: first GOAL tag; each allreduce takes a disjoint 2(W-1)-tag block
     base_tag: int = 1000
+    #: explicit GOAL rank count for topology padding; None keeps inferred sizing
+    num_goal_ranks: int | None = None
 
     def __post_init__(self) -> None:
         if self.profile not in RNIC_PROFILES:
@@ -101,20 +101,25 @@ class StepNetworkOutcome:
     step_index: int
     #: the adapter-equivalent compute-only whole-step estimate, ps
     compute_estimate_ps: int
-    #: sample count used for the fused estimate
-    num_sampled: int
-    #: whether num_sampled came from an exact record field
-    sample_count_exact: bool
     #: uniform calc cost handed to GOAL, or None for an unequal breakdown
     per_layer_calc_ns: int | None
-    #: emitted GOAL calc units in layer order, ns
-    layer_calc_ns: tuple[int, ...]
     #: simulated makespan of the step's GOAL program, ps
     makespan_ps: int
     num_flows: int
+    #: emitted GOAL calc units in layer order, ns; empty on legacy construction
+    layer_calc_ns: tuple[int, ...] = ()
+    #: sample count used for the fused estimate
+    num_sampled: int = 0
+    #: whether num_sampled came from an exact record field
+    sample_count_exact: bool = False
 
     def network_share_for(self, num_layers: int) -> float:
         """One minus represented calc time over makespan."""
+        if not self.layer_calc_ns:
+            if self.per_layer_calc_ns is None:
+                raise ValueError("outcome has neither uniform nor ordered layer calcs")
+            calc_ps = num_layers * max(self.per_layer_calc_ns, 1) * 1000
+            return 1.0 - calc_ps / self.makespan_ps
         if len(self.layer_calc_ns) != num_layers:
             raise ValueError(
                 f"outcome has {len(self.layer_calc_ns)} layer calcs, expected {num_layers}"

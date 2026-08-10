@@ -6,7 +6,12 @@ from types import SimpleNamespace
 import pytest
 
 import simllm.backends.step_sink as step_sink_module
-from simllm.backends import HtsimStepSink, HtsimStepSinkConfig, find_htsim_rnic
+from simllm.backends import (
+    HtsimStepSink,
+    HtsimStepSinkConfig,
+    StepNetworkOutcome,
+    find_htsim_rnic,
+)
 from simllm.compute import (
     ComputeProvider,
     DurationEstimate,
@@ -143,6 +148,30 @@ def test_sink_returns_none_with_ep_ranks_but_dense_dims(tmp_path):
 def test_sink_config_rejects_unknown_profile(tmp_path):
     with pytest.raises(ValueError, match="profile"):
         sink(tmp_path, profile="rnic-ss")
+
+
+def test_sink_config_preserves_provider_positional_argument(tmp_path):
+    provider = LayerProvider((2_600, 4_600))
+    config = HtsimStepSinkConfig(
+        "rnic-nn-fluid",
+        (0, 1),
+        SMALL_DIMS,
+        tmp_path,
+        None,
+        400_000_000_000,
+        None,
+        provider,
+    )
+    assert config.provider is provider
+    assert config.num_goal_ranks is None
+
+
+def test_step_network_outcome_preserves_legacy_positional_shape():
+    outcome = StepNetworkOutcome(1, 2_000, 1, 4_000, 2)
+    assert outcome.layer_calc_ns == ()
+    assert outcome.num_sampled == 0
+    assert not outcome.sample_count_exact
+    assert outcome.network_share_for(2) == 0.5
 
 
 def test_sink_passes_explicit_goal_rank_count(tmp_path, monkeypatch):
