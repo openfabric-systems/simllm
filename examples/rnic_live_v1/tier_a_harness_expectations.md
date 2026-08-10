@@ -257,6 +257,7 @@ never enter a behavioral total.
   event loop progresses before delivering a same-time terminal, or a later WQE
   bypasses the SQ head.
 
-These are mechanism-bearing relations, not configuration echoes. RESULTS.md
-must report, per scored family, how many instances a competent implementation
-could plausibly have failed and why.
+These are mechanism-bearing relations, not configuration echoes. The
+[preparation results](tier_a_harness_results.md) must report, per scored
+family, how many instances a competent implementation could plausibly have
+failed and why.

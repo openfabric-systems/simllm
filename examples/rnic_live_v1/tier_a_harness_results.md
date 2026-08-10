@@ -17,7 +17,7 @@ The executable preparation behavior, matrix, signed relations, exact bands,
 negative control, raw schema and evidence classes were frozen in
 `35c2ee4a2f9feb159ac4a884c90bd7dcc6237a6b` before implementation began. Both
 registered commands passed `--check-only` before that commit and produced no
-output.
+observation or summary files.
 
 The first nonfinal producer smoke exposed a Python machinery defect in the
 one-token-per-WQE check: `Counter(cell_wqes)` treated raw WQE dictionaries as

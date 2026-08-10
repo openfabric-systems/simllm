@@ -142,10 +142,11 @@ State ownership is explicit:
 
 ### HTSIM-9 preparation seam
 
-The SimLLM-side executable preparation package is in
-[examples/rnic_live_v1](../../examples/rnic_live_v1/RESULTS.md). Its generic
-scenario runner receives a `PortFactory` that supplies the versioned
-`NetworkPort`, an external-event pump and read-only issue and terminal traces.
+The SimLLM-side executable preparation package is in the
+[Tier A harness results](../../examples/rnic_live_v1/tier_a_harness_results.md).
+Its generic scenario runner receives a `PortFactory` that supplies the
+versioned `NetworkPort`, an external-event pump and read-only issue and
+terminal traces.
 The physical factory configuration contains capacity, link rate, zero-header
 and zero-propagation fixture controls and controlled-drop selection. It does
 not contain native doorbell service D or a precomputed serialization time.
