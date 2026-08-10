@@ -11,6 +11,11 @@ per serving step.
 ## Interface
 
 - `ComputeProvider.estimate(kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate`
+- `ComputeProvider.estimate_layers(kernel, gpu, num_layers)`: optional ordered
+  layer estimates for the same fused kernel. The default returns `None` and
+  preserves scalar callers exactly. An implemented breakdown must contain one
+  nonnegative duration per layer and sum to `estimate()` exactly; consumers
+  validate both invariants before using it.
 - `ProfileTableProvider`: measured (kernel name, config, GPU) duration
   tables from real captures or offline SASS simulation. Exact-match
   lookups return the entry; a miss interpolates log-linearly along one
@@ -495,3 +500,12 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   must connect to this stack. Function and event identities must remain stable
   so later captures, timing calibration and adapter traces align with this
   first slice.
+- COMP-16 (Precision; P1; M): populate `ComputeProvider.estimate_layers` in
+  the live providers so the step sink can replace its current even per-layer
+  split with real layer durations. Implement the roofline breakdown first,
+  with nonnegative layer estimates whose exact sum equals the fused estimate;
+  add profile-table and trace-calibrated breakdowns after COMP-6 supplies the
+  per-layer kernel shapes seen by captures. Sweep layer count and TP width and
+  require the rendered cumulative-nanosecond calc values to match the provider
+  breakdown under the registered truncation rule. Providers without the
+  breakdown must retain the byte-identical even-split fallback.

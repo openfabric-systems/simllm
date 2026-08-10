@@ -37,6 +37,12 @@ def test_roofline_rejects_bad_efficiency():
         RooflineProvider(efficiency=0.0)
 
 
+def test_compute_provider_layer_breakdown_is_optional():
+    provider = RooflineProvider(efficiency=1.0)
+    kernel = KernelSpec(name="gemm", flops=1e9, bytes_moved=1e6)
+    assert provider.estimate_layers(kernel, H100ish, num_layers=2) is None
+
+
 def test_profile_table():
     cfg = (("batch_tokens", 512), ("hidden", 7168))
     provider = ProfileTableProvider({("moe_forward", cfg, "h100-bf16"): 123_000_000})
