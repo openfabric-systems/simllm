@@ -438,6 +438,62 @@ def test_serial_goal_renderer_rejects_single_rank_pairwise_all_to_allv():
         render_serial_execution_graph_goal(graph)
 
 
+def test_serial_goal_renderer_rejects_uncovered_sparse_rank():
+    graph = ExecutionGraph(
+        "uncovered-a2a-rank",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "a2a",
+                0,
+                "cuda:0:nccl:ep",
+                CollectiveWork(
+                    "all-to-allv",
+                    (0, 1, 2),
+                    0,
+                    algorithm_hint="pairwise",
+                    pair_payload_bytes=((0, 1, 4096),),
+                ),
+            ),
+        ),
+        ("a2a",),
+    )
+    with pytest.raises(ValueError, match="uncovered ranks 2"):
+        render_serial_execution_graph_goal(graph)
+
+
+def test_serial_renderer_uses_sparse_pair_payload_sizes_exactly():
+    graph = ExecutionGraph(
+        "sparse-a2av",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "a2av",
+                0,
+                "cuda:0:nccl:ep",
+                CollectiveWork(
+                    "all-to-allv",
+                    (0, 1),
+                    0,
+                    "pairwise",
+                    pair_payload_bytes=((0, 1, 2048), (1, 0, 4096)),
+                ),
+            ),
+        ),
+        ("a2av",),
+    )
+
+    text = render_serial_execution_graph_goal(_round_trip(graph)).render()
+    assert "send 2048b to 1 tag 1000" in text
+    assert "recv 2048b from 0 tag 1000" in text
+    assert "send 4096b to 0 tag 1000" in text
+    assert "recv 4096b from 1 tag 1000" in text
+    assert text.count(": send ") == 2
+    assert text.count(": recv ") == 2
+
+
 def test_serial_lowerer_config_rejects_bad_rank_sets():
     with pytest.raises(ValueError, match="at least one"):
         SerialStepLowererConfig(SMALL_DIMS, ())

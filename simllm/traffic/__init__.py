@@ -30,6 +30,12 @@ from simllm.traffic.patterns import (
     ring_allreduce,
     scatter,
 )
+from simllm.traffic.routed_moe import (
+    ExpertPlacementSnapshot,
+    RoutedMoeSupply,
+    validate_expert_placement_snapshot,
+    validate_routed_moe_supply,
+)
 from simllm.traffic.step_comm import (
     MOE_A2A_PHASES,
     TP_ALLREDUCE_SITES,
@@ -44,7 +50,9 @@ __all__ = [
     "COLLECTIVE_TRACE_SCHEMA",
     "MOE_A2A_PHASES",
     "TP_ALLREDUCE_SITES",
+    "ExpertPlacementSnapshot",
     "MoeAllToAll",
+    "RoutedMoeSupply",
     "TpAllReduce",
     "binomial_broadcast",
     "gather",
@@ -55,4 +63,6 @@ __all__ = [
     "scatter",
     "step_moe_alltoalls",
     "step_tp_allreduces",
+    "validate_expert_placement_snapshot",
+    "validate_routed_moe_supply",
 ]

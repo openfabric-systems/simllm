@@ -100,8 +100,13 @@ def test_markdown_and_cpp_paths_are_portable() -> None:
 
 def test_scripts_have_no_personal_path_defaults() -> None:
     violations: list[str] = []
+    # This source necessarily contains the matcher text and synthetic fixtures.
+    scanner_path = Path(__file__).resolve().relative_to(REPO_ROOT)
     for relative_path in _tracked_files():
-        if relative_path.suffix.lower() not in SCRIPT_SUFFIXES:
+        if (
+            relative_path == scanner_path
+            or relative_path.suffix.lower() not in SCRIPT_SUFFIXES
+        ):
             continue
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
         for line_number, match in _line_matches(text, PERSONAL_SCRIPT_PATH):
