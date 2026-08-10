@@ -52,6 +52,7 @@ def _validate_registry(out: Path, data_root: Path | None = None) -> None:
         subprocess.run(
             ["git", "cat-file", "-e", f"{SIMLLM_BASE_COMMIT}^{{commit}}"],
             cwd=REPO_ROOT,
+            check=False,
             capture_output=True,
         ).returncode
         == 0
