@@ -106,7 +106,7 @@ SHAPE_EXPECTATIONS = {
         "cq_consumer_id": "8102",
     },
     "gpu_initiated": {
-        "producer_kind": "gpu_initiated",
+        "producer_kind": "gpu",
         "producer_id": "7103",
         "descriptor_writer_kind": "none",
         "descriptor_writer_id": "0",

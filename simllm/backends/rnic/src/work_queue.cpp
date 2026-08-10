@@ -111,6 +111,7 @@ public:
         bool qpc_lookup_enabled,
         VirtualHostMemory* host_memory,
         std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
+        HostMemoryDeviceOwnerId host_memory_device_owner_id,
         std::optional<RnicSubmissionProfile> submission_profile)
         : config_(std::move(config)),
           network_port_(network_port),
@@ -119,6 +120,7 @@ public:
           qpc_lookup_enabled_(qpc_lookup_enabled),
           host_memory_(host_memory),
           host_memory_binding_(std::move(host_memory_binding)),
+          host_memory_device_owner_id_(host_memory_device_owner_id),
           submission_profile_(std::move(submission_profile)) {
         if (config_.version != kWorkQueueConfigVersion) {
             throw std::invalid_argument("unsupported RNIC work-queue config version");
@@ -248,6 +250,7 @@ public:
         if (host_memory_ != nullptr) {
             if (pcie_fabric_ == nullptr || !pcie_binding_.has_value()
                 || !host_memory_binding_.has_value()
+                || host_memory_device_owner_id_ == 0
                 || host_memory_binding_->version
                     != kWorkQueueHostMemoryBindingVersion) {
                 throw std::invalid_argument(
@@ -267,7 +270,8 @@ public:
                 throw std::invalid_argument(
                     "RNIC host-memory WQ allocation identities must be positive");
             }
-        } else if (host_memory_binding_.has_value()) {
+        } else if (host_memory_binding_.has_value()
+                   || host_memory_device_owner_id_ != 0) {
             throw std::invalid_argument(
                 "RNIC host-memory binding requires an attached registry");
         }
@@ -1282,9 +1286,11 @@ private:
         const HostMemoryAllocation& allocation = host_memory_->allocation(
             request.data_memory->allocation_id);
         if (allocation.object_kind != HostMemoryObjectKind::DataRegion
+            || allocation.device_owner_id != host_memory_device_owner_id_
             || allocation.mkey != request.data_memory->mkey) {
             throw std::invalid_argument(
-                "RNIC WQE data descriptor does not match its allocation");
+                "RNIC WQE data descriptor does not match its device "
+                "allocation");
         }
         if (request.data_memory->allocation_offset_bytes
                 > allocation.length_bytes
@@ -1611,6 +1617,7 @@ private:
     bool qpc_lookup_enabled_{true};
     VirtualHostMemory* host_memory_{nullptr};
     std::optional<WorkQueueHostMemoryBinding> host_memory_binding_;
+    HostMemoryDeviceOwnerId host_memory_device_owner_id_{0};
     std::optional<RnicSubmissionProfile> submission_profile_;
     WorkQueueCounters counters_;
     std::vector<WqeRecord> records_;
@@ -1654,6 +1661,7 @@ WorkQueue::WorkQueue(WorkQueueConfig config, NetworkPort& network_port)
           true,
           nullptr,
           std::nullopt,
+          0,
           std::nullopt) {}
 
 WorkQueue::WorkQueue(
@@ -1669,6 +1677,7 @@ WorkQueue::WorkQueue(
           true,
           nullptr,
           std::nullopt,
+          0,
           std::nullopt) {}
 
 WorkQueue::WorkQueue(
@@ -1679,6 +1688,7 @@ WorkQueue::WorkQueue(
     bool qpc_lookup_enabled,
     VirtualHostMemory* host_memory,
     std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
+    HostMemoryDeviceOwnerId host_memory_device_owner_id,
     std::optional<RnicSubmissionProfile> submission_profile)
     : impl_(std::make_unique<Impl>(
           std::move(config),
@@ -1688,6 +1698,7 @@ WorkQueue::WorkQueue(
           qpc_lookup_enabled,
           host_memory,
           std::move(host_memory_binding),
+          host_memory_device_owner_id,
           std::move(submission_profile))) {}
 
 WorkQueue::~WorkQueue() = default;

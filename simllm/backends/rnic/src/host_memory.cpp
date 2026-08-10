@@ -296,15 +296,69 @@ public:
     std::uint64_t next_event_sequence{1};
 };
 
+class VirtualHostMemory::DeviceOwnerClaims {
+public:
+    void claim(
+        const RnicDevice* owner,
+        HostMemoryDeviceOwnerId device_owner_id) {
+        if (owner == nullptr || device_owner_id == 0) {
+            throw std::invalid_argument(
+                "RNIC host-memory owner claim requires a device and identity");
+        }
+        if (!claims_.emplace(device_owner_id, owner).second) {
+            throw std::invalid_argument(
+                "RNIC host-memory device owner is already claimed");
+        }
+    }
+
+    void release(
+        const RnicDevice* owner,
+        HostMemoryDeviceOwnerId device_owner_id) noexcept {
+        const auto found = claims_.find(device_owner_id);
+        if (found != claims_.end() && found->second == owner) {
+            claims_.erase(found);
+        }
+    }
+
+    bool claimed(HostMemoryDeviceOwnerId device_owner_id) const noexcept {
+        return claims_.count(device_owner_id) != 0;
+    }
+
+    bool claimedBy(
+        const RnicDevice* owner,
+        HostMemoryDeviceOwnerId device_owner_id) const noexcept {
+        const auto found = claims_.find(device_owner_id);
+        return found != claims_.end() && found->second == owner;
+    }
+
+    void validateInvariants() const {
+        for (const auto& claim : claims_) {
+            if (claim.first == 0 || claim.second == nullptr) {
+                throw std::logic_error(
+                    "RNIC host-memory owner claim invariant failed");
+            }
+        }
+    }
+
+private:
+    std::map<HostMemoryDeviceOwnerId, const RnicDevice*> claims_;
+};
+
 class VirtualHostMemory::RegistrationPlan::Impl {
 public:
     Impl(std::unique_ptr<VirtualHostMemory::Impl> candidate_value,
-         std::uint64_t base_generation_value)
+         std::uint64_t base_generation_value,
+         const RnicDevice* owner_value,
+         std::vector<HostMemoryDeviceOwnerId> owner_ids_value)
         : candidate(std::move(candidate_value)),
-          base_generation(base_generation_value) {}
+          base_generation(base_generation_value),
+          owner(owner_value),
+          owner_ids(std::move(owner_ids_value)) {}
 
     std::unique_ptr<VirtualHostMemory::Impl> candidate;
     std::uint64_t base_generation{0};
+    const RnicDevice* owner{nullptr};
+    std::vector<HostMemoryDeviceOwnerId> owner_ids;
 };
 
 VirtualHostMemory::RegistrationPlan::RegistrationPlan(
@@ -319,16 +373,46 @@ VirtualHostMemory::RegistrationPlan::operator=(
     RegistrationPlan&&) noexcept = default;
 
 VirtualHostMemory::VirtualHostMemory(VirtualHostMemoryConfig config)
-    : impl_(std::make_unique<Impl>(std::move(config))) {}
+    : impl_(std::make_unique<Impl>(std::move(config))),
+      device_owner_claims_(std::make_unique<DeviceOwnerClaims>()) {}
 
 VirtualHostMemory::~VirtualHostMemory() = default;
 
 VirtualHostMemory::RegistrationPlan VirtualHostMemory::planRegistrations(
     const std::vector<HostMemoryAllocation>& allocations,
     Picoseconds registered_at_ps) const {
+    return planRegistrationsImpl(nullptr, allocations, registered_at_ps);
+}
+
+VirtualHostMemory::RegistrationPlan
+VirtualHostMemory::planClaimedRegistrations(
+    const RnicDevice* owner,
+    const std::vector<HostMemoryAllocation>& allocations,
+    Picoseconds registered_at_ps) const {
+    return planRegistrationsImpl(owner, allocations, registered_at_ps);
+}
+
+VirtualHostMemory::RegistrationPlan
+VirtualHostMemory::planRegistrationsImpl(
+    const RnicDevice* owner,
+    const std::vector<HostMemoryAllocation>& allocations,
+    Picoseconds registered_at_ps) const {
     if (allocations.empty()) {
         throw std::invalid_argument(
             "RNIC host-memory registration batch must not be empty");
+    }
+    std::set<HostMemoryDeviceOwnerId> owner_ids;
+    for (const HostMemoryAllocation& allocation : allocations) {
+        const bool claim_matches = owner == nullptr
+            ? !device_owner_claims_->claimed(allocation.device_owner_id)
+            : device_owner_claims_->claimedBy(
+                  owner, allocation.device_owner_id);
+        if (!claim_matches) {
+            throw std::invalid_argument(
+                "RNIC host-memory registration does not own its device "
+                "identity claim");
+        }
+        owner_ids.insert(allocation.device_owner_id);
     }
     auto candidate = std::make_unique<Impl>(impl_->config);
     candidate->allocations = impl_->allocations;
@@ -421,7 +505,11 @@ VirtualHostMemory::RegistrationPlan VirtualHostMemory::planRegistrations(
     }
     ++candidate->generation;
     return RegistrationPlan(std::make_unique<RegistrationPlan::Impl>(
-        std::move(candidate), impl_->generation));
+        std::move(candidate),
+        impl_->generation,
+        owner,
+        std::vector<HostMemoryDeviceOwnerId>(
+            owner_ids.begin(), owner_ids.end())));
 }
 
 void VirtualHostMemory::commit(RegistrationPlan&& plan) {
@@ -433,11 +521,63 @@ void VirtualHostMemory::commit(RegistrationPlan&& plan) {
         throw std::logic_error(
             "RNIC host-memory registration plan is stale");
     }
+    for (const HostMemoryDeviceOwnerId device_owner_id
+         : plan.impl_->owner_ids) {
+        const bool claim_matches = plan.impl_->owner == nullptr
+            ? !device_owner_claims_->claimed(device_owner_id)
+            : device_owner_claims_->claimedBy(
+                  plan.impl_->owner, device_owner_id);
+        if (!claim_matches) {
+            throw std::logic_error(
+                "RNIC host-memory registration claim changed before commit");
+        }
+    }
     impl_.swap(plan.impl_->candidate);
     plan.impl_.reset();
 }
 
+void VirtualHostMemory::claimDeviceOwner(
+    const RnicDevice* owner,
+    HostMemoryDeviceOwnerId device_owner_id) {
+    if (device_owner_claims_->claimed(device_owner_id)) {
+        throw std::invalid_argument(
+            "RNIC host-memory device owner is already claimed");
+    }
+    if (liveAllocationCount(device_owner_id) != 0) {
+        throw std::invalid_argument(
+            "RNIC host-memory device owner has unclaimed live allocations");
+    }
+    device_owner_claims_->claim(owner, device_owner_id);
+}
+
+void VirtualHostMemory::releaseDeviceOwner(
+    const RnicDevice* owner,
+    HostMemoryDeviceOwnerId device_owner_id) noexcept {
+    device_owner_claims_->release(owner, device_owner_id);
+}
+
 void VirtualHostMemory::teardownOwner(
+    HostMemoryDeviceOwnerId device_owner_id,
+    Picoseconds teardown_at_ps) {
+    if (device_owner_claims_->claimed(device_owner_id)) {
+        throw std::invalid_argument(
+            "RNIC host-memory teardown caller does not own the device claim");
+    }
+    teardownOwnerImpl(device_owner_id, teardown_at_ps);
+}
+
+void VirtualHostMemory::teardownClaimedOwner(
+    const RnicDevice* owner,
+    HostMemoryDeviceOwnerId device_owner_id,
+    Picoseconds teardown_at_ps) {
+    if (!device_owner_claims_->claimedBy(owner, device_owner_id)) {
+        throw std::invalid_argument(
+            "RNIC host-memory teardown caller does not own the device claim");
+    }
+    teardownOwnerImpl(device_owner_id, teardown_at_ps);
+}
+
+void VirtualHostMemory::teardownOwnerImpl(
     HostMemoryDeviceOwnerId device_owner_id,
     Picoseconds teardown_at_ps) {
     if (device_owner_id == 0) {
@@ -492,6 +632,12 @@ void VirtualHostMemory::teardownOwner(
     }
     impl_->last_owner_event_time[device_owner_id] = teardown_at_ps;
     ++impl_->generation;
+}
+
+bool VirtualHostMemory::deviceOwnerClaimedBy(
+    const RnicDevice* owner,
+    HostMemoryDeviceOwnerId device_owner_id) const noexcept {
+    return device_owner_claims_->claimedBy(owner, device_owner_id);
 }
 
 HostMemoryAccessResult VirtualHostMemory::scheduleAccess(
@@ -658,6 +804,7 @@ VirtualHostMemory::lifecycleEvents() const noexcept {
 
 void VirtualHostMemory::validateInvariants() const {
     validateConfig(impl_->config);
+    device_owner_claims_->validateInvariants();
     std::set<std::pair<HostMemoryDeviceOwnerId, HostMemoryMkey>> mkeys;
     std::set<std::pair<PcieEndpointKind, std::uint64_t>> physical_pages;
     for (auto lhs = impl_->allocations.begin();

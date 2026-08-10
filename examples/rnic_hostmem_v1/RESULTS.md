@@ -85,6 +85,29 @@ path and extent validation, lifecycle conservation and effective-hardware hash
 sensitivity. These are structural invariants and do not increase either
 scored denominator.
 
+## Post-specified integration-review regressions
+
+Integration review after BACK-20 found two host-memory correctness failures
+that were not exercised by the original frozen study. They are labeled
+post-specified regression checks and do not increase either scored
+denominator.
+
+- A shared registry now grants an exclusive live claim on each
+  `device_owner_id` before any registration. A second device with distinct
+  allocation identities but the same device owner rejects before changing
+  the registry. An unclaimed caller cannot tear down a claimed owner's
+  allocations. Explicit owner teardown releases the claim, and the following
+  device destructor is safe.
+- Data descriptor validation now includes the posting device owner. Two live
+  devices may reuse the same numeric MKey in their per-device namespaces, but
+  either device rejects the other device's `DataRegion` without changing WQE
+  state, allocations or registry generation.
+
+The directed probe holds twelve allocations across two valid owners, rejects
+the cross-owner access, tears down the first owner from twelve allocations to
+six, and validates the victim before its own destructor removes the remaining
+six.
+
 ## Native and study gates
 
 The registered Release build treats warnings as errors. It reports:
@@ -119,7 +142,7 @@ Fractions remain separate by scored evidence class:
 
 This is component evidence. It creates no htsim composition,
 `CompletionEvent`, `StepResult`, TTFT or TPOT claim. HTSIM-9 is the successor
-for native RNIC to packet-simulator composition. The wave-4 compute coupling
-is the successor for GPU-submitted producer work. BACK-11 retains QP lifecycle,
-pairing and cache residency. No backend submodule, live acceptance harness,
-`README.md` or `docs/README_PRO.md` was changed.
+for native RNIC to packet-simulator composition. BACK-27 is the wave-4
+successor for GPU-submitted producer and CQ-consumer work. BACK-11 retains QP
+lifecycle, pairing and cache residency. No backend submodule, live acceptance
+harness, `README.md` or `docs/README_PRO.md` was changed by BACK-19.

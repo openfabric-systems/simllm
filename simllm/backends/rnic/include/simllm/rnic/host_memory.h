@@ -187,8 +187,36 @@ public:
     void validateInvariants() const;
 
 private:
+    RegistrationPlan planClaimedRegistrations(
+        const RnicDevice* owner,
+        const std::vector<HostMemoryAllocation>& allocations,
+        Picoseconds registered_at_ps) const;
+    RegistrationPlan planRegistrationsImpl(
+        const RnicDevice* owner,
+        const std::vector<HostMemoryAllocation>& allocations,
+        Picoseconds registered_at_ps) const;
+    void claimDeviceOwner(
+        const RnicDevice* owner,
+        HostMemoryDeviceOwnerId device_owner_id);
+    void releaseDeviceOwner(
+        const RnicDevice* owner,
+        HostMemoryDeviceOwnerId device_owner_id) noexcept;
+    void teardownClaimedOwner(
+        const RnicDevice* owner,
+        HostMemoryDeviceOwnerId device_owner_id,
+        Picoseconds teardown_at_ps);
+    void teardownOwnerImpl(
+        HostMemoryDeviceOwnerId device_owner_id,
+        Picoseconds teardown_at_ps);
+    bool deviceOwnerClaimedBy(
+        const RnicDevice* owner,
+        HostMemoryDeviceOwnerId device_owner_id) const noexcept;
+
     class Impl;
+    class DeviceOwnerClaims;
     std::unique_ptr<Impl> impl_;
+    std::unique_ptr<DeviceOwnerClaims> device_owner_claims_;
+    friend class RnicDevice;
 };
 
 const char* toString(HostMemoryObjectKind kind) noexcept;

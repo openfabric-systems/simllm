@@ -586,8 +586,11 @@ RnicDevice::RnicDevice(
                 host_memory_ = std::make_shared<VirtualHostMemory>(
                     config_.host_memory.registry);
             }
-            memory_plan.emplace(host_memory_->planRegistrations(
-                config_.host_memory.allocations, 0));
+            host_memory_->claimDeviceOwner(
+                this, config_.host_memory.device_owner_id);
+            claimed_host_memory_owner_ = true;
+            memory_plan.emplace(host_memory_->planClaimedRegistrations(
+                this, config_.host_memory.allocations, 0));
         }
 
         work_queue_.reset(new WorkQueue(
@@ -601,6 +604,9 @@ RnicDevice::RnicDevice(
                 ? std::optional<WorkQueueHostMemoryBinding>(
                       config_.host_memory.work_queue)
                 : std::nullopt,
+            config_.host_memory.enabled
+                ? config_.host_memory.device_owner_id
+                : 0,
             std::move(submission_profile)));
         if (memory_plan.has_value()) {
             host_memory_->commit(std::move(*memory_plan));
@@ -608,6 +614,11 @@ RnicDevice::RnicDevice(
         }
     } catch (...) {
         work_queue_.reset();
+        if (claimed_host_memory_owner_) {
+            host_memory_->releaseDeviceOwner(
+                this, config_.host_memory.device_owner_id);
+            claimed_host_memory_owner_ = false;
+        }
         if (claimed_ordering_domains_) {
             pcie_fabric_->releaseOrderingDomains(
                 this,
@@ -623,13 +634,19 @@ RnicDevice::~RnicDevice() {
     work_queue_.reset();
     if (host_memory_registered_) {
         try {
-            host_memory_->teardownOwner(
+            host_memory_->teardownClaimedOwner(
+                this,
                 config_.host_memory.device_owner_id,
                 last_caller_time_ps_);
             host_memory_registered_ = false;
         } catch (...) {
             std::terminate();
         }
+    }
+    if (claimed_host_memory_owner_) {
+        host_memory_->releaseDeviceOwner(
+            this, config_.host_memory.device_owner_id);
+        claimed_host_memory_owner_ = false;
     }
     if (claimed_ordering_domains_) {
         pcie_fabric_->releaseOrderingDomains(
@@ -727,9 +744,12 @@ void RnicDevice::teardownHostMemory(Picoseconds now_ps) {
         throw std::logic_error(
             "RNIC host memory cannot be torn down with live queue state");
     }
-    host_memory_->teardownOwner(
-        config_.host_memory.device_owner_id, now_ps);
+    host_memory_->teardownClaimedOwner(
+        this, config_.host_memory.device_owner_id, now_ps);
     host_memory_registered_ = false;
+    host_memory_->releaseDeviceOwner(
+        this, config_.host_memory.device_owner_id);
+    claimed_host_memory_owner_ = false;
     last_caller_time_ps_ = now_ps;
 }
 
@@ -859,13 +879,21 @@ void RnicDevice::validateInvariants() const {
         const std::size_t expected_live = host_memory_registered_
             ? config_.host_memory.allocations.size()
             : 0;
+        if (claimed_host_memory_owner_ != host_memory_registered_
+            || host_memory_->deviceOwnerClaimedBy(
+                   this, config_.host_memory.device_owner_id)
+                != claimed_host_memory_owner_) {
+            throw std::logic_error(
+                "RNIC host-memory device-owner claim mismatch");
+        }
         if (host_memory_->liveAllocationCount(
                 config_.host_memory.device_owner_id)
             != expected_live) {
             throw std::logic_error(
                 "RNIC host-memory live allocation count mismatch");
         }
-    } else if (host_memory_ || host_memory_registered_
+    } else if (host_memory_ || claimed_host_memory_owner_
+               || host_memory_registered_
                || !memoryAccesses().empty()) {
         throw std::logic_error(
             "disabled RNIC host memory retained structural state");

@@ -21,8 +21,18 @@ before freeze against SimLLM commit
 `5067397c2676d5aed50042fc39e5c8ee96eb0027`. Exact source files and lines are
 recorded in [expectations.md](expectations.md).
 
+Integration review after implementation commit `805944f` found that the CSV
+emitter projected `RnicProducerShape` into both `producer_shape` and
+`producer_kind`. The GPU agent therefore appeared as `gpu_initiated` instead
+of taxonomy kind `gpu`. This is a post-specified evidence correction, not a
+frozen expectation or a pre-registered result. It changes only the two GPU
+cells' `producer_kind` value and the result digest. The row schema, six-cell
+grid, identities, translation relation, bands, counts and six predecessor
+artifact digests are unchanged. The validator now requires kind `gpu`, and
+the corrected study was rerun on the merged integration-review state.
+
 The byte-locked native result is [results.csv](results.csv), SHA-256
-`9bdb24c18b2bb248b8bb3dde3520e100ed0446795a7e23bcfb62f91075dd6828`.
+`8f74c6fd92d012f2c70c1c2b09d6f49a4d99bcc35fd418a239f7b577777edbc7`.
 
 ## Decision-relevant translation asymmetry
 
@@ -67,7 +77,8 @@ The native reader retains strict v2 compatibility.
 
 ## Fatal unscored evidence
 
-The six rows match the frozen producer matrix exactly. Across fifteen WQEs,
+The six rows match the frozen producer-shape matrix and corrected agent-kind
+projection exactly. Across fifteen WQEs,
 the component emits fifteen submission records and fifteen CQ-consumption
 records. Every record joins the existing WQE or CQE identity and timestamp.
 Each CQ uses one configured owner. Producer IDs 7101 through 7103, CQ consumer

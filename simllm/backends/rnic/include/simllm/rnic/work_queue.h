@@ -305,6 +305,7 @@ private:
         bool qpc_lookup_enabled,
         VirtualHostMemory* host_memory,
         std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
+        HostMemoryDeviceOwnerId host_memory_device_owner_id,
         std::optional<RnicSubmissionProfile> submission_profile);
 
     class Impl;

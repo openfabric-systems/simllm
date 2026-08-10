@@ -3,5 +3,5 @@ host_cpu_driver,1,host_cpu_driver,7101,none,0,none,host_pinned_memory,host_pinne
 host_cpu_driver,4,host_cpu_driver,7101,none,0,none,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_cpu,host_cpu_driver,8101,9100,19,4,4,4,4,4,0,0,0,4,4,4,1,1,1,1
 cpu_proxy,1,cpu_proxy,7102,gpu,7202,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_pinned_memory,gpu_memory,host_cpu,cpu_proxy,8102,9100,19,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1
 cpu_proxy,4,cpu_proxy,7102,gpu,7202,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_pinned_memory,gpu_memory,host_cpu,cpu_proxy,8102,9100,19,4,4,4,4,4,0,0,0,4,4,4,1,1,1,1
-gpu_initiated,1,gpu_initiated,7103,none,0,none,gpu_memory,gpu_memory,gpu_memory,gpu_memory,gpu,gpu,8103,9100,19,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1
-gpu_initiated,4,gpu_initiated,7103,none,0,none,gpu_memory,gpu_memory,gpu_memory,gpu_memory,gpu,gpu,8103,9100,19,4,4,4,4,4,0,0,0,4,4,4,1,1,1,1
+gpu_initiated,1,gpu,7103,none,0,none,gpu_memory,gpu_memory,gpu_memory,gpu_memory,gpu,gpu,8103,9100,19,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1
+gpu_initiated,4,gpu,7103,none,0,none,gpu_memory,gpu_memory,gpu_memory,gpu_memory,gpu,gpu,8103,9100,19,4,4,4,4,4,0,0,0,4,4,4,1,1,1,1

@@ -200,6 +200,7 @@ private:
     bool claimed_ordering_domains_{false};
     std::uint64_t claimed_submission_domain_{0};
     std::uint64_t claimed_completion_domain_{0};
+    bool claimed_host_memory_owner_{false};
     bool host_memory_registered_{false};
     Picoseconds last_caller_time_ps_{0};
 };

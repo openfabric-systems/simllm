@@ -488,6 +488,23 @@ void testValidationAndAtomicity(TestRunner& test) {
         [&]() { RnicDevice device(gpu_mismatch); },
         "GPU producer rejects a host SQ");
 
+    RnicDeviceConfig inactive_rq = submissionConfig(
+        RnicProducerShape::HostCpuDriver);
+    inactive_rq.host_memory.allocations[2].endpoint =
+        PcieEndpointKind::GpuMemory;
+    inactive_rq.host_memory.allocations[2].path_id = 3;
+    try {
+        RnicDevice device(inactive_rq);
+        device.validateInvariants();
+        test.check(
+            true,
+            "send-only RQ placement remains an explicit inactive latitude");
+    } catch (const std::exception& error) {
+        test.check(
+            false,
+            std::string("send-only RQ placement latitude; ") + error.what());
+    }
+
     RnicDeviceConfig qpc_gpu = submissionConfig(
         RnicProducerShape::GpuInitiated);
     qpc_gpu.host_memory.allocations[0].endpoint = PcieEndpointKind::GpuMemory;
@@ -656,7 +673,7 @@ void printStudyCsv(const std::vector<StudyRow>& rows) {
     for (const StudyRow& row : rows) {
         const RnicSubmissionProfile& profile = row.profile;
         std::cout << toString(row.producer_shape) << ',' << row.batch_size
-                  << ',' << toString(profile.producer_shape) << ','
+                  << ',' << toString(profile.producer.kind) << ','
                   << profile.producer.id << ','
                   << (profile.descriptor_writer.has_value()
                           ? toString(profile.descriptor_writer->kind)

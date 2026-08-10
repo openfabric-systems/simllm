@@ -21,6 +21,7 @@ namespace {
 using simllm::rnic::CompletionEntry;
 using simllm::rnic::HostMemoryAccessRecord;
 using simllm::rnic::HostMemoryAllocation;
+using simllm::rnic::HostMemoryDeviceOwnerId;
 using simllm::rnic::HostMemoryLifecycleKind;
 using simllm::rnic::HostMemoryObjectKind;
 using simllm::rnic::HostMemoryOwnerKind;
@@ -197,6 +198,60 @@ RnicDeviceConfig hostMemoryConfig(std::uint64_t page_size_bytes) {
     config.host_memory.work_queue.doorbell_record_allocation_id =
         kDoorbellAllocation;
     config.host_memory.allocations = makeAllocations(page_size_bytes);
+    return config;
+}
+
+RnicDeviceConfig secondHostMemoryConfig(
+    HostMemoryDeviceOwnerId device_owner_id) {
+    constexpr std::uint64_t allocation_delta = 100;
+    constexpr std::uint64_t address_delta = UINT64_C(0x1000000000);
+    constexpr std::uint32_t qpn = 29;
+    constexpr std::uint64_t sq_id = 301;
+    constexpr std::uint64_t rq_id = 302;
+    constexpr std::uint64_t cq_id = 303;
+
+    RnicDeviceConfig config = hostMemoryConfig(4096);
+    config.identity.qpn = qpn;
+    config.identity.policy_context_token = 2900;
+    config.work_queue.sq_id = sq_id;
+    config.work_queue.cq_id = cq_id;
+    config.work_queue.qpn = qpn;
+    config.work_queue.policy_context_token = 2900;
+    config.host_memory.device_owner_id = device_owner_id;
+    config.host_memory.work_queue.qpc_icm_allocation_id += allocation_delta;
+    config.host_memory.work_queue.sq_ring_allocation_id += allocation_delta;
+    config.host_memory.work_queue.rq_ring_allocation_id += allocation_delta;
+    config.host_memory.work_queue.cq_ring_allocation_id += allocation_delta;
+    config.host_memory.work_queue.doorbell_record_allocation_id +=
+        allocation_delta;
+    for (HostMemoryAllocation& allocation : config.host_memory.allocations) {
+        allocation.allocation_id += allocation_delta;
+        allocation.device_owner_id = device_owner_id;
+        allocation.virtual_address += address_delta;
+        for (std::uint64_t& page : allocation.pages.physical_page_addresses) {
+            page += address_delta;
+        }
+        switch (allocation.object_kind) {
+        case HostMemoryObjectKind::QpcIcm:
+            allocation.owner_id = qpn;
+            break;
+        case HostMemoryObjectKind::SqRing:
+        case HostMemoryObjectKind::DoorbellRecord:
+            allocation.owner_id = sq_id;
+            break;
+        case HostMemoryObjectKind::RqRing:
+            allocation.owner_id = rq_id;
+            break;
+        case HostMemoryObjectKind::CqRing:
+            allocation.owner_id = cq_id;
+            break;
+        case HostMemoryObjectKind::DataRegion:
+            break;
+        default:
+            throw std::logic_error(
+                "unexpected alternate host-memory allocation kind");
+        }
+    }
     return config;
 }
 
@@ -545,6 +600,110 @@ void testConstructionRollback(TestRunner& test) {
             && shared->liveAllocationCount() == 1
             && shared->lifecycleEvents().size() == events,
         "failed device construction preserves shared registry");
+    shared->teardownOwner(901, 0);
+    {
+        RnicDeviceAttachments retry_attachments;
+        retry_attachments.shared_host_memory = shared;
+        RnicDevice retry(hostMemoryConfig(4096), retry_attachments);
+        test.check(
+            shared->liveAllocationCount(kDeviceOwner) == 6,
+            "failed construction releases its device-owner claim");
+    }
+}
+
+void testDeviceOwnerClaims(TestRunner& test) {
+    auto shared = std::make_shared<VirtualHostMemory>();
+    {
+        RnicDeviceAttachments first_attachments;
+        first_attachments.shared_host_memory = shared;
+        RnicDevice first(hostMemoryConfig(4096), first_attachments);
+        const std::uint64_t generation = shared->generation();
+        const std::size_t events = shared->lifecycleEvents().size();
+
+        RnicDeviceAttachments duplicate_attachments;
+        duplicate_attachments.shared_host_memory = shared;
+        test.expectThrowAs<std::invalid_argument>(
+            [&]() {
+                RnicDevice duplicate(
+                    secondHostMemoryConfig(kDeviceOwner),
+                    duplicate_attachments);
+            },
+            "duplicate device-owner claim rejects before registration");
+        test.check(
+            shared->generation() == generation
+                && shared->liveAllocationCount() == 6
+                && shared->liveAllocationCount(kDeviceOwner) == 6
+                && shared->lifecycleEvents().size() == events,
+            "duplicate owner claim preserves every live allocation");
+
+        test.expectThrowAs<std::invalid_argument>(
+            [&]() { shared->teardownOwner(kDeviceOwner, 0); },
+            "foreign teardown of a claimed owner rejects");
+        test.check(
+            shared->generation() == generation
+                && shared->liveAllocationCount() == 6
+                && shared->lifecycleEvents().size() == events,
+            "foreign claimed-owner teardown is atomic");
+
+        first.teardownHostMemory(0);
+        test.check(
+            shared->liveAllocationCount() == 0,
+            "owning device teardown removes only its allocations");
+    }
+
+    {
+        RnicDeviceAttachments replacement_attachments;
+        replacement_attachments.shared_host_memory = shared;
+        RnicDevice replacement(
+            hostMemoryConfig(4096), replacement_attachments);
+        test.check(
+            shared->liveAllocationCount(kDeviceOwner) == 6,
+            "explicit teardown releases the owner identity for reuse");
+    }
+    test.check(
+        shared->liveAllocationCount() == 0,
+        "teardown followed by both destructors remains safe");
+}
+
+void testCrossDeviceMkeyIsolation(TestRunner& test) {
+    auto shared = std::make_shared<VirtualHostMemory>();
+    RnicDeviceAttachments first_attachments;
+    first_attachments.shared_host_memory = shared;
+    RnicDevice first(hostMemoryConfig(4096), first_attachments);
+
+    constexpr HostMemoryDeviceOwnerId second_owner = 901;
+    RnicDeviceConfig second_config = secondHostMemoryConfig(second_owner);
+    RnicDeviceAttachments second_attachments;
+    second_attachments.shared_host_memory = shared;
+    RnicDevice second(second_config, second_attachments);
+    const std::uint64_t generation = shared->generation();
+
+    WorkRequest foreign;
+    foreign.wr_id = 1;
+    foreign.flow_id = 1;
+    foreign.destination = 2;
+    foreign.payload_bytes = 64;
+    foreign.data_memory = WorkRequestDataMemory{};
+    foreign.data_memory->allocation_id = kDataAllocation;
+    foreign.data_memory->mkey = kMkey;
+    foreign.data_memory->allocation_offset_bytes = 4096;
+    test.expectThrowAs<std::invalid_argument>(
+        [&]() { static_cast<void>(second.postSend(foreign, 0)); },
+        "WQE rejects another device's allocation in the same MKey namespace");
+    test.check(
+        shared->generation() == generation
+            && shared->liveAllocationCount() == 12
+            && first.records().empty() && second.records().empty(),
+        "cross-device MKey rejection preserves both devices");
+    first.validateInvariants();
+    second.validateInvariants();
+    first.teardownHostMemory(0);
+    test.check(
+        shared->liveAllocationCount() == 6
+            && shared->liveAllocationCount(kDeviceOwner) == 0
+            && shared->liveAllocationCount(second_owner) == 6,
+        "one owner teardown preserves the other device's allocations");
+    second.validateInvariants();
 }
 
 void testRequestRejectionAtomicity(TestRunner& test) {
@@ -676,6 +835,8 @@ int main(int argc, char** argv) {
         testStaleRegistrationPlan(test);
         testMultiBatchTeardownCapacity(test);
         testConstructionRollback(test);
+        testDeviceOwnerClaims(test);
+        testCrossDeviceMkeyIsolation(test);
         testRequestRejectionAtomicity(test);
         testDisabledIdentityMode(test);
         testEffectiveHardwareRecord(test);

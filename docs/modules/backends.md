@@ -224,6 +224,13 @@ plan that supplies their timestamps. Explicit teardown requires a quiescent
 queue, records one teardown event per live device-owned allocation and makes
 later device operations reject. Default construction does not allocate a
 registry and preserves the accepted device and session-record bytes.
+Each enabled device claims its nonzero `device_owner_id` in the registry
+before planning any registration. A shared registry rejects a duplicate live
+claim or a claim over pre-existing live allocations. Claimed registrations
+and teardown require the same device identity, and a failed foreign operation
+leaves allocations, lifecycle evidence and generation unchanged. WQE data
+descriptors must resolve to a `DataRegion` owned by the posting device even
+when another device uses the same numeric MKey in its own namespace.
 The submission profile selects a host CPU driver, a CPU proxy fed by one
 GPU-written host-visible descriptor queue, or a GPU-initiated producer. It
 names the producer, RNIC requester and sole CQ consumer independently from the
@@ -233,10 +240,19 @@ MMIO UAR mapping as GPU-owned. QPC/ICM remains host-pinned in every shape.
 Successful doorbells and CQ polls append read-only submission and consumption
 records joined to the existing WQE and CQ lifecycle; they never become a
 second authority.
+The required RQ allocation is only a typed registration placeholder in this
+one-SQ/one-CQ SEND slice. There is no active RQ identity, fetch path or receive
+consumer yet, so its nonzero `owner_id` and host/GPU endpoint are recorded but
+are deliberately not matched to the send producer shape. The allocation must
+still name the device owner and use the `ReceiveQueue` owner kind. BACK-9 owns
+the RQ/SRQ registry, active receive path and the endpoint and identity checks
+that become mandatory when receive execution is enabled.
 The absent-network path owns an inert port that accepts with a fresh token and
 delivers on the device progress pump; HTSIM-9 supplies the future concrete
 external port. BACK-27 connects the landed GPU-side records to concurrent
-compute tasks.
+compute tasks. VLLM-13 and CORE-5 consume the recorded CQ-owner decision once
+that coupling is live. COMP-2's fixed CPU-proxy and GPU-initiated constants
+remain the analytical fallback while structural submission is disabled.
 
 ### WQE authority and projection contract
 
@@ -431,6 +447,11 @@ retains all five predecessor artifacts exactly. The frozen study passes 4 of
 byte-identity instances and 5 of 5 native CTest entries. Evidence classes and
 reproduction commands are in
 [examples/rnic_hostmem_v1/RESULTS.md](../../examples/rnic_hostmem_v1/RESULTS.md).
+The integration-review correction adds an exclusive registry claim for every
+live device owner and rejects cross-device data allocations even when their
+numeric MKeys match. Directed tests preserve the registry generation and all
+allocations on duplicate claims and foreign teardown, then exercise explicit
+teardown followed by destruction without termination.
 
 On 2026-08-10 BACK-20 closed with the versioned submission profile and its
 read-only submission and CQ-consumption ledgers. The profile selects host CPU
@@ -448,6 +469,9 @@ translation-asymmetry cells, fifteen translation-free QPC fetches, 6 of 6
 byte-identity instances and 6 of 6 native CTest entries. Evidence classes and
 reproduction commands are in
 [examples/rnic_submission_v1/RESULTS.md](../../examples/rnic_submission_v1/RESULTS.md).
+The post-specified integration-review correction makes the CSV
+`producer_kind` field project the producer agent taxonomy, so GPU-initiated
+rows now record kind `gpu` while retaining shape `gpu_initiated`.
 
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
