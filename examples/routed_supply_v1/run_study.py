@@ -229,6 +229,184 @@ def run_core(out: Path) -> dict[str, object]:
     return summary
 
 
+def _canonical_projection_bytes(projection) -> bytes:
+    from simllm.preplay import routed_experts_to_json
+
+    return (
+        json.dumps(
+            routed_experts_to_json(projection),
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+        + b"\n"
+    )
+
+
+def _join_projection(trace_path: Path, request_ids: tuple[str, ...]):
+    from simllm.core import RequestBookkeeper
+    from simllm.preplay import (
+        RequestArrival,
+        join_preplay_arrivals,
+        project_preplay_routing,
+    )
+
+    run = join_preplay_arrivals(
+        tuple(
+            RequestArrival(request_id=request_id, arrived_at_ps=index * 1_000)
+            for index, request_id in enumerate(request_ids)
+        ),
+        trace_path,
+        RequestBookkeeper(),
+    )
+    return project_preplay_routing(run)
+
+
+def _projection_counts(projection) -> tuple[int, int, int, int, int]:
+    requests = len(projection.requests)
+    prefill = sum(len(request.prefill_tokens) for request in projection.requests)
+    decode = sum(len(request.decode_tokens) for request in projection.requests)
+    layers = sum(
+        len(token.layers)
+        for request in projection.requests
+        for token in request.tokens
+    )
+    assignments = sum(
+        len(layer.expert_ids)
+        for request in projection.requests
+        for token in request.tokens
+        for layer in token.layers
+    )
+    return requests, prefill, decode, layers, assignments
+
+
+def _projection_oracle(projection) -> dict[str, object]:
+    payload = _canonical_projection_bytes(projection)
+    return {
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "counts": list(_projection_counts(projection)),
+    }
+
+
+def run_play(out: Path, decode_trace: Path) -> dict[str, object]:
+    from simllm.preplay import read_preplay_trace, routed_experts_to_json
+
+    out.mkdir(parents=True, exist_ok=True)
+    tracked_trace = (
+        Path(__file__).resolve().parents[1]
+        / "preplay_trace_v1/granite_length_cap.jsonl"
+    )
+    full_trace = read_preplay_trace(decode_trace)
+    full_order = tuple(request.request_id for request in full_trace.requests)
+    reversed_order = tuple(reversed(full_order))
+    tracked = _join_projection(tracked_trace, ("length-cap",))
+    full = _join_projection(decode_trace, full_order)
+    reversed_projection = _join_projection(decode_trace, reversed_order)
+    projections = {
+        "tracked": tracked,
+        "full": full,
+        "reversed": reversed_projection,
+    }
+    oracles = {
+        name: _projection_oracle(projection)
+        for name, projection in projections.items()
+    }
+    for name, projection in projections.items():
+        (out / f"play_{name}.json").write_bytes(
+            _canonical_projection_bytes(projection)
+        )
+
+    expected_counts = {
+        "tracked": PLAY_ROW_COUNTS["tracked"],
+        "full": PLAY_ROW_COUNTS["full"],
+    }
+    exact_checks = {
+        name: (
+            oracles[name]["bytes"] == PLAY_PROJECTION_ORACLES[name][0]
+            and oracles[name]["sha256"] == PLAY_PROJECTION_ORACLES[name][1]
+        )
+        for name in projections
+    }
+    exact_checks["tracked_trace_sha256"] = (
+        tracked.trace_sha256 == PLAY_TRACE_SHA256["tracked"]
+    )
+    exact_checks["full_trace_sha256"] = (
+        full.trace_sha256 == PLAY_TRACE_SHA256["full"]
+    )
+    exact_checks["tracked_counts"] = (
+        _projection_counts(tracked) == expected_counts["tracked"]
+    )
+    exact_checks["full_counts"] = (
+        _projection_counts(full) == expected_counts["full"]
+    )
+
+    terminal_rows = []
+    for request in full.requests:
+        terminal_rows.append(
+            {
+                "request_id": request.request_id,
+                "prompt_tokens": request.prompt_token_count,
+                "output_tokens": request.output_token_count,
+                "prefill_forwards": len(request.prefill_tokens),
+                "decode_forwards": len(request.decode_tokens),
+                "passed": (
+                    len(request.prefill_tokens) == request.prompt_token_count
+                    and len(request.decode_tokens)
+                    == request.output_token_count - 1
+                ),
+            }
+        )
+
+    full_payloads = {
+        request["request_id"]: request
+        for request in routed_experts_to_json(full)["requests"]
+    }
+    reversed_payloads = {
+        request["request_id"]: request
+        for request in routed_experts_to_json(reversed_projection)["requests"]
+    }
+    association = {
+        "full_order": list(full_order),
+        "reversed_order": list(reversed_order),
+        "reversed_projection_order": [
+            request.request_id for request in reversed_projection.requests
+        ],
+        "per_request_payloads_equal": full_payloads == reversed_payloads,
+    }
+    association["passed"] = (
+        association["reversed_projection_order"] == list(reversed_order)
+        and association["per_request_payloads_equal"]
+    )
+    summary = {
+        "freeze_commit": "a778cd9fea3e0ed1d2ec5250c148c068396aa497",
+        "behavioral": {
+            "PLAY-B1": {
+                "rows": terminal_rows,
+                "passed": all(row["passed"] for row in terminal_rows),
+            },
+            "PLAY-B2": association,
+        },
+        "exact_oracle": {
+            "PLAY-E1": {
+                "projections": oracles,
+                "checks": exact_checks,
+                "passed": all(exact_checks.values()),
+            }
+        },
+    }
+    (out / "play_summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n"
+    )
+    passed = (
+        summary["behavioral"]["PLAY-B1"]["passed"]
+        and summary["behavioral"]["PLAY-B2"]["passed"]
+        and summary["exact_oracle"]["PLAY-E1"]["passed"]
+    )
+    if not passed:
+        raise AssertionError("PLAY section failed its frozen acceptance bar")
+    return summary
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--sections", type=parse_sections, default=SECTIONS)
@@ -236,13 +414,17 @@ def main() -> None:
     parser.add_argument("--decode-trace", type=Path)
     parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args()
+    if "play" in args.sections and args.decode_trace is None:
+        parser.error("--decode-trace is required for the PLAY section")
     if args.check_only:
         check_only(args)
         return
     summaries = {}
     if "core" in args.sections:
         summaries["core"] = run_core(args.out)
-    unsupported = tuple(section for section in args.sections if section != "core")
+    if "play" in args.sections:
+        summaries["play"] = run_play(args.out, args.decode_trace)
+    unsupported = tuple(section for section in args.sections if section == "traffic")
     if unsupported:
         raise SystemExit(
             "result-producing sections land only after their expectation freezes: "
