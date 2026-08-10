@@ -60,6 +60,8 @@ HostMemoryOwnerKind requiredOwnerKind(HostMemoryObjectKind kind) {
         return HostMemoryOwnerKind::CompletionQueue;
     case HostMemoryObjectKind::DataRegion:
         return HostMemoryOwnerKind::MemoryRegion;
+    case HostMemoryObjectKind::DescriptorQueue:
+        return HostMemoryOwnerKind::SubmissionProducer;
     default:
         throw std::invalid_argument("invalid RNIC host-memory object kind");
     }
@@ -247,6 +249,9 @@ void validateAccessShape(
                 "RNIC data-region access shape or MKey is incompatible");
         }
         break;
+    case HostMemoryObjectKind::DescriptorQueue:
+        throw std::invalid_argument(
+            "RNIC proxy descriptor queue has no device access shape");
     default:
         throw std::invalid_argument("invalid RNIC host-memory object kind");
     }
@@ -541,6 +546,8 @@ HostMemoryAccessResult VirtualHostMemory::scheduleAccess(
     HostMemoryAccessResult result;
     result.record.allocation_id = target.allocation_id;
     result.record.object_kind = target.object_kind;
+    result.record.client_id = request.client_id;
+    result.record.client_token = request.client_token;
     result.record.page_index = page_index;
     result.record.submitted_at_ps = request.submitted_at_ps;
     Picoseconds access_ready_at_ps = request.submitted_at_ps;
@@ -749,6 +756,8 @@ const char* toString(HostMemoryObjectKind kind) noexcept {
         return "doorbell_record";
     case HostMemoryObjectKind::DataRegion:
         return "data_region";
+    case HostMemoryObjectKind::DescriptorQueue:
+        return "descriptor_queue";
     default:
         return "invalid";
     }
@@ -766,6 +775,8 @@ const char* toString(HostMemoryOwnerKind kind) noexcept {
         return "completion_queue";
     case HostMemoryOwnerKind::MemoryRegion:
         return "memory_region";
+    case HostMemoryOwnerKind::SubmissionProducer:
+        return "submission_producer";
     default:
         return "invalid";
     }

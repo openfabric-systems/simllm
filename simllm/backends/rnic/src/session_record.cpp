@@ -693,7 +693,8 @@ std::map<std::uint32_t, ValidatedEffectivePath> validateFabric(
 
 void validateBinding(
     const EffectiveJsonValue& value,
-    const std::map<std::uint32_t, ValidatedEffectivePath>& paths) {
+    const std::map<std::uint32_t, ValidatedEffectivePath>& paths,
+    std::string_view queue_endpoint) {
     const EffectiveJsonObject& binding =
         effectiveObject(value, "work-queue PCIe binding");
     requireEffectiveFields(
@@ -724,23 +725,24 @@ void validateBinding(
                 std::string(field) + " must be below 4096");
         }
     }
-    for (const auto& expected : {
-             std::pair<const char*, const char*>{
-                 "pcie_uar_path_id", "mmio_bar"},
-             {"pcie_doorbell_record_path_id", "host_pinned_memory"},
-             {"pcie_sq_memory_path_id", "host_pinned_memory"},
-             {"pcie_cq_memory_path_id", "host_pinned_memory"}}) {
+    for (const char* field : {
+             "pcie_uar_path_id", "pcie_doorbell_record_path_id",
+             "pcie_sq_memory_path_id", "pcie_cq_memory_path_id"}) {
+        const std::string_view expected =
+            std::string_view(field) == "pcie_uar_path_id"
+            ? std::string_view("mmio_bar")
+            : queue_endpoint;
         const std::uint64_t path_id = effectiveInteger(
-            effectiveField(binding, expected.first), expected.first);
+            effectiveField(binding, field), field);
         if (path_id > std::numeric_limits<std::uint32_t>::max()) {
             invalidEffectiveHardware(
-                std::string(expected.first) + " exceeds uint32");
+                std::string(field) + " exceeds uint32");
         }
         const auto path = paths.find(static_cast<std::uint32_t>(path_id));
         if (path == paths.end() || !path->second.enabled
-            || path->second.endpoint != expected.second) {
+            || std::string_view(path->second.endpoint) != expected) {
             invalidEffectiveHardware(
-                std::string(expected.first)
+                std::string(field)
                 + " references an incompatible path");
         }
     }
@@ -755,9 +757,103 @@ void validateModule(
         effectiveField(module, "enabled"), field));
 }
 
+struct ValidatedSubmission {
+    std::string producer_shape;
+    std::string queue_endpoint;
+    std::uint64_t descriptor_writer_id{0};
+    std::uint64_t descriptor_queue_allocation_id{0};
+};
+
+ValidatedSubmission validateSubmission(const EffectiveJsonValue& value) {
+    const EffectiveJsonObject& submission =
+        effectiveObject(value, "submission");
+    requireEffectiveFields(
+        submission,
+        {"cq_consumer_id", "cq_consumer_kind",
+         "descriptor_queue_allocation_id", "descriptor_queue_endpoint",
+         "descriptor_writer_id", "descriptor_writer_kind", "producer_id",
+         "producer_kind", "producer_shape", "queue_endpoint",
+         "rnic_requester_id", "uar_mapping_owner"});
+    for (const char* field : {
+             "producer_id", "cq_consumer_id", "rnic_requester_id"}) {
+        const std::uint64_t identity = effectiveInteger(
+            effectiveField(submission, field), field);
+        if (identity == 0
+            || identity > std::numeric_limits<std::uint32_t>::max()) {
+            invalidEffectiveHardware(
+                std::string(field) + " must be a nonzero uint32");
+        }
+    }
+
+    ValidatedSubmission result;
+    result.producer_shape = effectiveString(
+        effectiveField(submission, "producer_shape"), "producer_shape");
+    result.queue_endpoint = effectiveString(
+        effectiveField(submission, "queue_endpoint"), "queue_endpoint");
+    result.descriptor_writer_id = effectiveInteger(
+        effectiveField(submission, "descriptor_writer_id"),
+        "descriptor_writer_id");
+    result.descriptor_queue_allocation_id = effectiveInteger(
+        effectiveField(submission, "descriptor_queue_allocation_id"),
+        "descriptor_queue_allocation_id");
+    const std::string& producer_kind = effectiveString(
+        effectiveField(submission, "producer_kind"), "producer_kind");
+    const std::string& writer_kind = effectiveString(
+        effectiveField(submission, "descriptor_writer_kind"),
+        "descriptor_writer_kind");
+    const std::string& descriptor_endpoint = effectiveString(
+        effectiveField(submission, "descriptor_queue_endpoint"),
+        "descriptor_queue_endpoint");
+    const std::string& consumer_kind = effectiveString(
+        effectiveField(submission, "cq_consumer_kind"),
+        "cq_consumer_kind");
+    const std::string& uar_owner = effectiveString(
+        effectiveField(submission, "uar_mapping_owner"),
+        "uar_mapping_owner");
+
+    if (result.producer_shape == "host_cpu_driver") {
+        if (producer_kind != "host_cpu_driver" || writer_kind != "none"
+            || result.descriptor_writer_id != 0
+            || result.descriptor_queue_allocation_id != 0
+            || descriptor_endpoint != "none"
+            || result.queue_endpoint != "host_pinned_memory"
+            || consumer_kind != "host_cpu_driver"
+            || uar_owner != "host_cpu") {
+            invalidEffectiveHardware(
+                "host CPU submission fields are inconsistent");
+        }
+    } else if (result.producer_shape == "cpu_proxy") {
+        if (producer_kind != "cpu_proxy" || writer_kind != "gpu"
+            || result.descriptor_writer_id == 0
+            || result.descriptor_writer_id
+                > std::numeric_limits<std::uint32_t>::max()
+            || result.descriptor_queue_allocation_id == 0
+            || descriptor_endpoint != "host_pinned_memory"
+            || result.queue_endpoint != "host_pinned_memory"
+            || consumer_kind != "cpu_proxy" || uar_owner != "host_cpu") {
+            invalidEffectiveHardware(
+                "CPU-proxy submission fields are inconsistent");
+        }
+    } else if (result.producer_shape == "gpu_initiated") {
+        if (producer_kind != "gpu" || writer_kind != "none"
+            || result.descriptor_writer_id != 0
+            || result.descriptor_queue_allocation_id != 0
+            || descriptor_endpoint != "none"
+            || result.queue_endpoint != "gpu_memory"
+            || consumer_kind != "gpu" || uar_owner != "gpu") {
+            invalidEffectiveHardware(
+                "GPU-initiated submission fields are inconsistent");
+        }
+    } else {
+        invalidEffectiveHardware("has an unknown producer shape");
+    }
+    return result;
+}
+
 void validateHostMemory(
     const EffectiveJsonValue& value,
-    const std::map<std::uint32_t, ValidatedEffectivePath>& paths) {
+    const std::map<std::uint32_t, ValidatedEffectivePath>& paths,
+    const ValidatedSubmission* submission) {
     const EffectiveJsonObject& memory =
         effectiveObject(value, "host memory");
     requireEffectiveFields(
@@ -766,7 +862,7 @@ void validateHostMemory(
          "work_queue"});
     if (!effectiveBoolean(
             effectiveField(memory, "enabled"), "host memory enabled")) {
-        invalidEffectiveHardware("v2 host memory must be enabled");
+        invalidEffectiveHardware("host memory schema must be enabled");
     }
     requirePositive(
         effectiveInteger(
@@ -828,6 +924,9 @@ void validateHostMemory(
             "host-memory allocations must not be empty");
     }
     std::map<std::uint64_t, std::string> object_by_id;
+    std::map<std::uint64_t, std::uint64_t> owner_by_id;
+    std::map<std::uint64_t, std::string> endpoint_by_id;
+    std::size_t descriptor_queue_count = 0;
     std::uint64_t previous_id = 0;
     for (const EffectiveJsonValue& value : allocations) {
         const EffectiveJsonObject& allocation = effectiveObject(
@@ -869,7 +968,7 @@ void validateHostMemory(
         }
         const std::string& owner_kind = effectiveString(
             effectiveField(allocation, "owner_kind"), "owner_kind");
-        const std::map<std::string, std::string> expected_owners{
+        std::map<std::string, std::string> expected_owners{
             {"qpc_icm", "queue_pair"},
             {"sq_ring", "send_queue"},
             {"rq_ring", "receive_queue"},
@@ -877,6 +976,10 @@ void validateHostMemory(
             {"doorbell_record", "send_queue"},
             {"data_region", "memory_region"},
         };
+        if (submission != nullptr) {
+            expected_owners.emplace(
+                "descriptor_queue", "submission_producer");
+        }
         const auto expected_owner = expected_owners.find(object_kind);
         if (expected_owner == expected_owners.end()
             || owner_kind != expected_owner->second) {
@@ -892,6 +995,12 @@ void validateHostMemory(
         if (object_kind == "qpc_icm" && endpoint != "host_pinned_memory") {
             invalidEffectiveHardware("QPC ICM must be host-pinned");
         }
+        const std::uint64_t owner_id = effectiveInteger(
+            effectiveField(allocation, "owner_id"), "owner_id");
+        owner_by_id.emplace(allocation_id, owner_id);
+        endpoint_by_id.emplace(allocation_id, endpoint);
+        descriptor_queue_count += static_cast<std::size_t>(
+            object_kind == "descriptor_queue");
         const std::uint64_t path_id = effectiveInteger(
             effectiveField(allocation, "path_id"), "path_id");
         if (path_id > std::numeric_limits<std::uint32_t>::max()) {
@@ -948,6 +1057,31 @@ void validateHostMemory(
                 std::string(field_and_kind.first)
                 + " has a missing or mistyped allocation");
         }
+        const std::string_view bound_kind(field_and_kind.second);
+        if (submission != nullptr && bound_kind != "qpc_icm"
+            && bound_kind != "rq_ring"
+            && endpoint_by_id.at(allocation_id)
+                != submission->queue_endpoint) {
+            invalidEffectiveHardware(
+                std::string(field_and_kind.first)
+                + " disagrees with the submission endpoint");
+        }
+    }
+    if (submission != nullptr
+        && submission->producer_shape == "cpu_proxy") {
+        const auto object = object_by_id.find(
+            submission->descriptor_queue_allocation_id);
+        if (descriptor_queue_count != 1 || object == object_by_id.end()
+            || object->second != "descriptor_queue"
+            || owner_by_id.at(object->first)
+                != submission->descriptor_writer_id
+            || endpoint_by_id.at(object->first) != "host_pinned_memory") {
+            invalidEffectiveHardware(
+                "CPU-proxy descriptor allocation is incompatible");
+        }
+    } else if (submission != nullptr && descriptor_queue_count != 0) {
+        invalidEffectiveHardware(
+            "non-proxy submission cannot carry a descriptor queue");
     }
 }
 
@@ -957,12 +1091,19 @@ void validateEffectiveHardwareJson(std::string_view bytes) {
         effectiveObject(root, "root");
     const std::string& schema = effectiveString(
         effectiveField(hardware, "schema"), "schema");
-    const bool host_memory_schema =
-        schema == kRnicEffectiveHardwareHostMemorySchema;
+    const bool submission_schema =
+        schema == kRnicEffectiveHardwareSubmissionSchema;
+    const bool host_memory_schema = submission_schema
+        || schema == kRnicEffectiveHardwareHostMemorySchema;
     if (schema != kRnicEffectiveHardwareSchema && !host_memory_schema) {
         invalidEffectiveHardware("has an unsupported schema");
     }
-    if (host_memory_schema) {
+    if (submission_schema) {
+        requireEffectiveFields(
+            hardware,
+            {"dma", "host_memory", "network", "qpc", "schema",
+             "submission", "work_queue"});
+    } else if (host_memory_schema) {
         requireEffectiveFields(
             hardware,
             {"dma", "host_memory", "network", "qpc", "schema",
@@ -979,6 +1120,12 @@ void validateEffectiveHardwareJson(std::string_view bytes) {
     const bool qpc_enabled = effectiveBoolean(
         effectiveField(qpc, "enabled"), "qpc enabled");
 
+    std::optional<ValidatedSubmission> submission;
+    if (submission_schema) {
+        submission = validateSubmission(
+            effectiveField(hardware, "submission"));
+    }
+
     const EffectiveJsonObject& dma = effectiveObject(
         effectiveField(hardware, "dma"), "dma");
     const bool dma_enabled = effectiveBoolean(
@@ -993,7 +1140,12 @@ void validateEffectiveHardwareJson(std::string_view bytes) {
             invalidEffectiveHardware("fabric_scope must be owned or shared");
         }
         paths = validateFabric(effectiveField(dma, "fabric"));
-        validateBinding(effectiveField(dma, "work_queue"), paths);
+        validateBinding(
+            effectiveField(dma, "work_queue"),
+            paths,
+            submission.has_value()
+                ? std::string_view(submission->queue_endpoint)
+                : std::string_view("host_pinned_memory"));
     } else {
         requireEffectiveFields(dma, {"enabled"});
     }
@@ -1002,7 +1154,9 @@ void validateEffectiveHardwareJson(std::string_view bytes) {
             invalidEffectiveHardware("host memory requires DMA and QPC");
         }
         validateHostMemory(
-            effectiveField(hardware, "host_memory"), paths);
+            effectiveField(hardware, "host_memory"),
+            paths,
+            submission.has_value() ? &*submission : nullptr);
     }
 
     const EffectiveJsonObject& queue = effectiveObject(
@@ -1335,6 +1489,43 @@ std::string hostMemoryConfigJson(const RnicHostMemoryConfig& memory) {
             {"rq_ring_allocation_id", jsonInteger(memory.work_queue.rq_ring_allocation_id)},
             {"sq_ring_allocation_id", jsonInteger(memory.work_queue.sq_ring_allocation_id)},
         })},
+    });
+}
+
+std::string submissionProfileJson(const RnicSubmissionProfile& profile) {
+    if (profile.version != kRnicSubmissionProfileVersion
+        || profile.producer.version != kRnicSubmissionAgentVersion
+        || profile.cq_consumer.version != kRnicSubmissionAgentVersion) {
+        throw std::logic_error(
+            "constructed RNIC device has an invalid submission profile");
+    }
+    return jsonObject({
+        {"cq_consumer_id", jsonInteger(profile.cq_consumer.id)},
+        {"cq_consumer_kind", jsonString(toString(profile.cq_consumer.kind))},
+        {"descriptor_queue_allocation_id",
+         jsonInteger(profile.descriptor_queue_allocation_id)},
+        {"descriptor_queue_endpoint",
+         jsonString(
+             profile.descriptor_queue_endpoint.has_value()
+                 ? endpointName(*profile.descriptor_queue_endpoint)
+                 : "none")},
+        {"descriptor_writer_id",
+         jsonInteger(
+             profile.descriptor_writer.has_value()
+                 ? profile.descriptor_writer->id
+                 : 0)},
+        {"descriptor_writer_kind",
+         jsonString(
+             profile.descriptor_writer.has_value()
+                 ? toString(profile.descriptor_writer->kind)
+                 : "none")},
+        {"producer_id", jsonInteger(profile.producer.id)},
+        {"producer_kind", jsonString(toString(profile.producer.kind))},
+        {"producer_shape", jsonString(toString(profile.producer_shape))},
+        {"queue_endpoint", jsonString(endpointName(profile.queue_endpoint))},
+        {"rnic_requester_id", jsonInteger(profile.rnic_requester_id)},
+        {"uar_mapping_owner",
+         jsonString(toString(profile.uar_mapping_owner))},
     });
 }
 
@@ -1710,10 +1901,17 @@ std::string renderEffectiveHardwareConfigJson(const RnicDevice& device) {
         {"work_queue", workQueueHardwareJson(config)},
     };
     if (config.host_memory.enabled) {
+        if (!device.submissionProfile().has_value()) {
+            throw std::logic_error(
+                "constructed host-memory RNIC lost its submission profile");
+        }
         hardware.emplace_back(
             "host_memory", hostMemoryConfigJson(config.host_memory));
         hardware.emplace_back(
-            "schema", jsonString(kRnicEffectiveHardwareHostMemorySchema));
+            "schema", jsonString(kRnicEffectiveHardwareSubmissionSchema));
+        hardware.emplace_back(
+            "submission",
+            submissionProfileJson(*device.submissionProfile()));
     } else {
         hardware.emplace_back(
             "schema", jsonString(kRnicEffectiveHardwareSchema));

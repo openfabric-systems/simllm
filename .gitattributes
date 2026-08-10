@@ -6,3 +6,4 @@ examples/vllm_skeleton_v1/*.csv text eol=lf
 examples/rnic_device_v1/*.csv text eol=lf
 examples/rnic_session_records_v1/*.json text eol=lf
 examples/rnic_hostmem_v1/*.csv text eol=lf
+examples/rnic_submission_v1/*.csv text eol=lf

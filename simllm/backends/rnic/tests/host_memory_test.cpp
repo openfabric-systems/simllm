@@ -602,11 +602,13 @@ void testEffectiveHardwareRecord(TestRunner& test) {
     test.check(
         record.effective_hardware_json.has_value()
             && record.effective_hardware_json->find(
-                   "simllm-rnic-effective-hardware-v2")
+                   "simllm-rnic-effective-hardware-v3")
                 != std::string::npos
             && record.effective_hardware_json->find("\"host_memory\"")
+                != std::string::npos
+            && record.effective_hardware_json->find("\"submission\"")
                 != std::string::npos,
-        "enabled host memory uses the strict effective-hardware v2 record");
+        "enabled host memory uses the strict effective-hardware v3 record");
     test.check(
         effectiveHardwareConfigSha256(small_pages)
             != effectiveHardwareConfigSha256(huge_pages),

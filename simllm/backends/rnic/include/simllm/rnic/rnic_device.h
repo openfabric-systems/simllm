@@ -13,7 +13,7 @@
 
 namespace simllm::rnic {
 
-inline constexpr std::uint32_t kRnicDeviceConfigVersion = 1;
+inline constexpr std::uint32_t kRnicDeviceConfigVersion = 2;
 inline constexpr std::uint32_t kRnicDeviceIdentityVersion = 1;
 inline constexpr std::uint32_t kRnicQpcConfigVersion = 1;
 inline constexpr std::uint32_t kRnicDmaConfigVersion = 1;
@@ -70,6 +70,7 @@ struct RnicDeviceConfig {
     RnicDmaConfig dma;
     RnicNetworkConfig network;
     RnicHostMemoryConfig host_memory;
+    RnicSubmissionConfig submission;
 };
 
 struct RnicDeviceAttachments {
@@ -173,6 +174,12 @@ public:
     const std::vector<WqeRecord>& records() const noexcept;
     const std::vector<EvidenceEvent>& evidence() const noexcept;
     const std::vector<HostMemoryAccessRecord>& memoryAccesses() const noexcept;
+    const std::optional<RnicSubmissionProfile>& submissionProfile()
+        const noexcept;
+    const std::vector<RnicSubmissionRecord>& submissionRecords()
+        const noexcept;
+    const std::vector<RnicCqConsumptionRecord>& cqConsumptionRecords()
+        const noexcept;
     const WqeRecord& wqe(WqeId wqe_id) const;
 
     void validateInvariants() const;

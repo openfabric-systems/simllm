@@ -62,10 +62,12 @@ All five accepted artifacts retain their frozen bytes:
 
 This is 5 of 5 scored byte-identity instances with exactly zero changed bytes.
 Default construction creates no registry, lifecycle event or memory-access
-record and makes the new stages not applicable. An enabled host-memory device
-uses the strict `simllm-rnic-effective-hardware-v2` projection, so allocation,
-page and translation configuration contributes to its hardware hash. Disabled
-devices retain the accepted v1 projection exactly.
+record and makes the new stages not applicable. At the BACK-19 result commit,
+an enabled host-memory device used the strict
+`simllm-rnic-effective-hardware-v2` projection, so allocation, page and
+translation configuration contributed to its hardware hash. BACK-20 now
+renders strict v3 for enabled devices while retaining native v2 validation.
+Disabled devices retain the accepted v1 projection exactly.
 
 ## Fatal unscored evidence
 

@@ -25,10 +25,13 @@ backend submodules.
   `AtlahsWqeLedger` and carry no native hash. Native WQE state projects into
   immutable bookkeeping and the accepted completion CSV without a second
   lifecycle authority. Host-memory-enabled devices use the strict
-  `simllm-rnic-effective-hardware-v2` projection, including allocation and
-  page geometry; disabled devices retain the accepted v1 bytes. The reusable
-  bypass checker guards the full reference input tuple and compares the four
-  frozen behavioral artifact classes byte for byte.
+  `simllm-rnic-effective-hardware-v3` projection, including allocation and
+  page geometry plus the resolved submission producer, requester and CQ
+  consumer. The native reader retains strict v2 compatibility, and disabled
+  devices retain the accepted v1 bytes. The Python reader retains strict v1
+  ingestion until BACK-28 lands. The reusable bypass checker guards the full
+  reference input tuple and compares the four frozen behavioral artifact
+  classes byte for byte.
 - `simllm.backends.fct.normalized_fct`: per-flow FCT normalized to the
   `rnic-nn` baseline of the identical GOAL, matched by
   (source, destination, tag). Valid for aligned-start flows; for phases
@@ -188,7 +191,8 @@ The native device is assembled through the versioned `RnicDeviceConfig` and
 `RnicDevice` composition entry point. It joins the work-queue core with the
 scalar QPC compatibility module, optional DMA (`PcieFabric` plus
 `WorkQueuePcieBinding`), optional `VirtualHostMemory`, and either an injected
-versioned `NetworkPort` or an owned inert port. The QP number and
+versioned `NetworkPort` or an owned inert port. DMA composition also resolves
+one versioned submission profile for the queue. The QP number and
 policy-context token remain device-level identity, including when QPC is
 disabled. Both native probes and every composed-session test construct
 through this entry point; direct module construction remains only in
@@ -220,10 +224,19 @@ plan that supplies their timestamps. Explicit teardown requires a quiescent
 queue, records one teardown event per live device-owned allocation and makes
 later device operations reject. Default construction does not allocate a
 registry and preserves the accepted device and session-record bytes.
+The submission profile selects a host CPU driver, a CPU proxy fed by one
+GPU-written host-visible descriptor queue, or a GPU-initiated producer. It
+names the producer, RNIC requester and sole CQ consumer independently from the
+QP number. Host and proxy shapes keep SQ, CQ and doorbell records in pinned
+host memory. The GPU shape requires those objects in GPU memory and marks the
+MMIO UAR mapping as GPU-owned. QPC/ICM remains host-pinned in every shape.
+Successful doorbells and CQ polls append read-only submission and consumption
+records joined to the existing WQE and CQ lifecycle; they never become a
+second authority.
 The absent-network path owns an inert port that accepts with a fresh token and
 delivers on the device progress pump; HTSIM-9 supplies the future concrete
-external port. BACK-20 adds selection of the queue submission source and CQ
-consumer when DMA is present.
+external port. BACK-27 connects the landed GPU-side records to concurrent
+compute tasks.
 
 ### WQE authority and projection contract
 
@@ -410,12 +423,31 @@ accesses resolve their recorded queue page lists, while data reads use the
 MKey, MPT and MTT chain; all physical transactions commit through the shared
 `PcieFabric` plan. The doorbell record is addressed through its allocation,
 and explicit teardown rejects live queue state and all later device use.
-Enabled configurations project every allocation into strict effective-
-hardware v2 bytes, while the disabled path retains all five predecessor
-artifacts exactly. The frozen study passes 4 of 4 translation-asymmetry cells,
-ten translation-free QPC fetches, 5 of 5 byte-identity instances and 5 of 5
-native CTest entries. Evidence classes and reproduction commands are in
+Enabled configurations projected every allocation into strict effective-
+hardware v2 bytes at that commit. BACK-20 supersedes newly rendered enabled
+records with strict v3 bytes while retaining v2 validation. The disabled path
+retains all five predecessor artifacts exactly. The frozen study passes 4 of
+4 translation-asymmetry cells, ten translation-free QPC fetches, 5 of 5
+byte-identity instances and 5 of 5 native CTest entries. Evidence classes and
+reproduction commands are in
 [examples/rnic_hostmem_v1/RESULTS.md](../../examples/rnic_hostmem_v1/RESULTS.md).
+
+On 2026-08-10 BACK-20 closed with the versioned submission profile and its
+read-only submission and CQ-consumption ledgers. The profile selects host CPU
+driver, CPU proxy or GPU-initiated ownership per composed queue. CPU proxy
+mode registers the GPU writer's host-visible descriptor queue. GPU-initiated
+mode accepts GPU-memory SQ, CQ and doorbell allocations and a GPU-owned UAR
+mapping; QPC/ICM remains host-pinned and direct in all modes. Producer, RNIC
+requester, CQ consumer and QP identities are independent fields. The default
+host CPU shape resolves zero compatibility identities to the QP number, so
+existing PCIe requester bytes and all six accepted predecessor artifacts stay
+unchanged. Enabled host-memory devices render strict effective-hardware v3
+records with the resolved profile, while the native parser retains strict v2
+compatibility. The frozen `producer-shape x batch-size` study passes 6 of 6
+translation-asymmetry cells, fifteen translation-free QPC fetches, 6 of 6
+byte-identity instances and 6 of 6 native CTest entries. Evidence classes and
+reproduction commands are in
+[examples/rnic_submission_v1/RESULTS.md](../../examples/rnic_submission_v1/RESULTS.md).
 
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
@@ -612,28 +644,6 @@ is difficult.
   BACK-11 and BACK-12 own when semantic lookup, DMA, CQE and fault events
   occur; BACK-17 only lowers optional events not already represented by the
   landed base transaction path into shared-fabric PCIe service classes.
-- BACK-20 (Completeness; P1; L): model the WQE submission source and the CQ
-  consumer when the DMA module is enabled. Three producer shapes, selected
-  per queue: a host CPU driver thread that writes WQEs into host-pinned
-  rings, updates the doorbell record and rings the UAR register (the landed
-  BACK-10 path); a CPU proxy fed by GPU-written descriptor queues in
-  host-visible memory (the classic NCCL shape: the GPU never touches the
-  NIC and completions return through host-mapped counters); and
-  GPU-initiated submission (NCCL GIN, GDAKI/IBGDA), where GPU threads write
-  WQEs and the doorbell record into GPU-memory rings, ring the GPU-mapped
-  UAR register, and the NIC fetches WQEs and data through GPUDirect reads
-  and writes CQEs into GPU memory. Every CQ names exactly one owning
-  consumer, host driver or GPU, and the completion callback into the model
-  runner is charged on that owner's path (VLLM-13 and CORE-5 consume the
-  decision). Requires relaxing the current host-pinned-only endpoint
-  validation for the SQ, CQ and doorbell-record paths to GPU memory,
-  attributing initiator identity separately from the QP number, and driving
-  the GPU-side producer as an explicitly submitted GPU task through the
-  compute model's concurrent service, the same shape as its NCCL egress
-  kernels (COMP-11 deepens that surrounding NCCL/NVLink model but does not
-  own this producer). The QPC stays host ICM in every mode. COMP-2's fixed
-  CPU-proxy versus GPU-initiated constants remain the analytical fallback
-  while this structural path is disabled.
 - BACK-25 (Completeness; P1; L): add a versioned packet-attempt lifecycle to
   `NetworkPort` without exposing RNIC-owned objects. Carry logical extent,
   packet index, transmission-attempt index, payload offset, payload and wire
@@ -655,6 +665,24 @@ is difficult.
   The disabled control and dynamic-link paths preserve v1 timestamps, bytes,
   token order and random draws exactly; unsupported dynamic transitions reject
   explicitly until htsim supplies a timestamped producer.
+- BACK-27 (Completeness; P1; L): connect the landed GPU-initiated producer and
+  GPU-owned CQ consumer to explicitly submitted tasks on the compute model's
+  concurrent service, using the NCCL egress-kernel shape. Join each task to
+  the existing submission or consumption record without creating a second
+  WQE authority, and charge runner callback work to the recorded owner. The
+  current structural component accepts an explicit caller timestamp and
+  records ownership but does not invent GPU-kernel or callback time. The host
+  CPU default and the explicit caller-timestamp path are the bypasses; both
+  must preserve the BACK-20 rows, predecessor bytes and random draws exactly.
+  COMP-11 deepens the surrounding NCCL and NVLink model but does not own this
+  RNIC producer coupling.
+- BACK-28 (Completeness; P1; M): extend
+  `simllm.backends.rnic_records` to ingest and freeze the native strict
+  effective-hardware v2 and v3 objects. Validate allocation and page geometry,
+  submission-shape endpoint agreement, descriptor ownership, sole CQ
+  consumer and canonical hashes with the same rejection set as the native
+  reader. The current Python reader deliberately rejects non-v1 effective
+  hardware, so v1 structural and bypass ingestion remains the exact off path.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 

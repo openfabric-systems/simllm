@@ -9,6 +9,7 @@
 
 #include "simllm/rnic/host_memory.h"
 #include "simllm/rnic/network_port.h"
+#include "simllm/rnic/submission.h"
 
 namespace simllm::rnic {
 
@@ -285,6 +286,12 @@ public:
     const std::vector<WqeRecord>& records() const noexcept;
     const std::vector<EvidenceEvent>& evidence() const noexcept;
     const std::vector<HostMemoryAccessRecord>& memoryAccesses() const noexcept;
+    const std::optional<RnicSubmissionProfile>& submissionProfile()
+        const noexcept;
+    const std::vector<RnicSubmissionRecord>& submissionRecords()
+        const noexcept;
+    const std::vector<RnicCqConsumptionRecord>& cqConsumptionRecords()
+        const noexcept;
     const WqeRecord& wqe(WqeId wqe_id) const;
 
     void validateInvariants() const;
@@ -297,7 +304,8 @@ private:
         std::optional<WorkQueuePcieBinding> pcie_binding,
         bool qpc_lookup_enabled,
         VirtualHostMemory* host_memory,
-        std::optional<WorkQueueHostMemoryBinding> host_memory_binding);
+        std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
+        std::optional<RnicSubmissionProfile> submission_profile);
 
     class Impl;
     std::unique_ptr<Impl> impl_;

@@ -18,6 +18,8 @@ inline constexpr const char* kRnicEffectiveHardwareSchema =
     "simllm-rnic-effective-hardware-v1";
 inline constexpr const char* kRnicEffectiveHardwareHostMemorySchema =
     "simllm-rnic-effective-hardware-v2";
+inline constexpr const char* kRnicEffectiveHardwareSubmissionSchema =
+    "simllm-rnic-effective-hardware-v3";
 inline constexpr const char* kRnicSessionConfigSchema =
     "simllm-rnic-session-config-v1";
 inline constexpr const char* kRnicSessionResultSchema =

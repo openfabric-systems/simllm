@@ -166,7 +166,9 @@ void validateAllocationPath(
     }
 }
 
-void validateHostMemoryLayout(const RnicDeviceConfig& config) {
+void validateHostMemoryLayout(
+    const RnicDeviceConfig& config,
+    const RnicSubmissionProfile& submission) {
     const RnicHostMemoryConfig& memory = config.host_memory;
     const WorkQueueHostMemoryBinding& binding = memory.work_queue;
     const WorkQueuePcieBinding& pcie = config.dma.work_queue;
@@ -196,10 +198,19 @@ void validateHostMemoryLayout(const RnicDeviceConfig& config) {
                 "RNIC host-memory layout requires one allocation per queue object");
         }
     }
+    const bool cpu_proxy = submission.producer_shape
+        == RnicProducerShape::CpuProxy;
+    const auto descriptor_item = kind_counts.find(
+        HostMemoryObjectKind::DescriptorQueue);
+    const std::size_t descriptor_count = descriptor_item == kind_counts.end()
+        ? 0U
+        : descriptor_item->second;
     if (kind_counts[HostMemoryObjectKind::DataRegion] == 0
-        || kind_counts.size() != 6) {
+        || descriptor_count != (cpu_proxy ? 1U : 0U)
+        || kind_counts.size() != (cpu_proxy ? 7U : 6U)) {
         throw std::invalid_argument(
-            "RNIC host-memory layout requires at least one data allocation");
+            "RNIC host-memory layout has an incompatible data or descriptor "
+            "allocation set");
     }
     const auto require = [&by_id](
                              HostMemoryAllocationId allocation_id,
@@ -228,6 +239,26 @@ void validateHostMemoryLayout(const RnicDeviceConfig& config) {
         || doorbell->owner_id != config.work_queue.sq_id) {
         throw std::invalid_argument(
             "RNIC host-memory object owner disagrees with the device");
+    }
+    if (qpc->endpoint != PcieEndpointKind::HostPinnedMemory
+        || sq->endpoint != submission.queue_endpoint
+        || cq->endpoint != submission.queue_endpoint
+        || doorbell->endpoint != submission.queue_endpoint) {
+        throw std::invalid_argument(
+            "RNIC host-memory queue endpoint disagrees with the submission "
+            "shape");
+    }
+    if (cpu_proxy) {
+        const HostMemoryAllocation* descriptor = require(
+            submission.descriptor_queue_allocation_id,
+            HostMemoryObjectKind::DescriptorQueue);
+        if (!submission.descriptor_writer.has_value()
+            || descriptor->owner_id != submission.descriptor_writer->id
+            || descriptor->endpoint != PcieEndpointKind::HostPinnedMemory) {
+            throw std::invalid_argument(
+                "RNIC proxy descriptor queue has incompatible ownership or "
+                "placement");
+        }
     }
     for (const HostMemoryAllocation& allocation : memory.allocations) {
         if (allocation.object_kind == HostMemoryObjectKind::DataRegion
@@ -367,6 +398,10 @@ RnicDevice::RnicDevice(
         throw std::invalid_argument(
             "unsupported RNIC host-memory config version");
     }
+    if (config_.submission.version != kRnicSubmissionConfigVersion) {
+        throw std::invalid_argument(
+            "unsupported RNIC submission config version");
+    }
     if (config_.work_queue.version != kWorkQueueConfigVersion) {
         throw std::invalid_argument(
             "unsupported RNIC work-queue config version");
@@ -388,6 +423,21 @@ RnicDevice::RnicDevice(
             != config_.work_queue.policy_context_token) {
         throw std::invalid_argument(
             "RNIC work-queue identity must match the device identity");
+    }
+    std::optional<RnicSubmissionProfile> submission_profile;
+    if (config_.dma.enabled) {
+        submission_profile = resolveRnicSubmissionProfile(
+            config_.submission, config_.identity.qpn);
+    } else if (!isDefaultRnicSubmissionConfig(config_.submission)) {
+        throw std::invalid_argument(
+            "RNIC DMA-disabled device rejects active submission fields");
+    }
+    if (submission_profile.has_value()
+        && submission_profile->producer_shape
+            != RnicProducerShape::HostCpuDriver
+        && !config_.host_memory.enabled) {
+        throw std::invalid_argument(
+            "RNIC non-host producer requires registered host memory");
     }
     if (!config_.qpc.enabled
         && config_.work_queue.qpc_lookup_service_ps != 0) {
@@ -419,7 +469,7 @@ RnicDevice::RnicDevice(
             throw std::invalid_argument(
                 "RNIC host memory requires DMA, QPC and non-scalar bindings");
         }
-        validateHostMemoryLayout(config_);
+        validateHostMemoryLayout(config_, *submission_profile);
     }
     if (config_.network.enabled && attachments.network_port == nullptr) {
         throw std::invalid_argument(
@@ -550,7 +600,8 @@ RnicDevice::RnicDevice(
             config_.host_memory.enabled
                 ? std::optional<WorkQueueHostMemoryBinding>(
                       config_.host_memory.work_queue)
-                : std::nullopt));
+                : std::nullopt,
+            std::move(submission_profile)));
         if (memory_plan.has_value()) {
             host_memory_->commit(std::move(*memory_plan));
             host_memory_registered_ = true;
@@ -775,6 +826,21 @@ RnicDevice::memoryAccesses() const noexcept {
     return work_queue_->memoryAccesses();
 }
 
+const std::optional<RnicSubmissionProfile>&
+RnicDevice::submissionProfile() const noexcept {
+    return work_queue_->submissionProfile();
+}
+
+const std::vector<RnicSubmissionRecord>&
+RnicDevice::submissionRecords() const noexcept {
+    return work_queue_->submissionRecords();
+}
+
+const std::vector<RnicCqConsumptionRecord>&
+RnicDevice::cqConsumptionRecords() const noexcept {
+    return work_queue_->cqConsumptionRecords();
+}
+
 const WqeRecord& RnicDevice::wqe(WqeId wqe_id) const {
     return work_queue_->wqe(wqe_id);
 }
@@ -813,11 +879,17 @@ void RnicDevice::validateInvariants() const {
         }
     }
     if (config_.dma.enabled) {
-        if (!pcieBinding().has_value()) {
-            throw std::logic_error("enabled RNIC DMA has no WQ binding");
+        if (!pcieBinding().has_value()
+            || !submissionProfile().has_value()) {
+            throw std::logic_error(
+                "enabled RNIC DMA has no WQ binding or submission profile");
         }
-    } else if (pcie_fabric_ || pcieBinding().has_value()) {
-        throw std::logic_error("disabled RNIC DMA retained fabric state");
+    } else if (pcie_fabric_ || pcieBinding().has_value()
+               || submissionProfile().has_value()
+               || !submissionRecords().empty()
+               || !cqConsumptionRecords().empty()) {
+        throw std::logic_error(
+            "disabled RNIC DMA retained fabric or submission state");
     }
 }
 

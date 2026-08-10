@@ -85,6 +85,20 @@ bool validDropReason(DropReason reason) {
     }
 }
 
+bool sameAgent(
+    const RnicSubmissionAgent& lhs,
+    const RnicSubmissionAgent& rhs) noexcept {
+    return lhs.version == rhs.version && lhs.kind == rhs.kind
+        && lhs.id == rhs.id;
+}
+
+bool sameOptionalAgent(
+    const std::optional<RnicSubmissionAgent>& lhs,
+    const std::optional<RnicSubmissionAgent>& rhs) noexcept {
+    return lhs.has_value() == rhs.has_value()
+        && (!lhs.has_value() || sameAgent(*lhs, *rhs));
+}
+
 }  // namespace
 
 class WorkQueue::Impl {
@@ -96,14 +110,16 @@ public:
         std::optional<WorkQueuePcieBinding> pcie_binding,
         bool qpc_lookup_enabled,
         VirtualHostMemory* host_memory,
-        std::optional<WorkQueueHostMemoryBinding> host_memory_binding)
+        std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
+        std::optional<RnicSubmissionProfile> submission_profile)
         : config_(std::move(config)),
           network_port_(network_port),
           pcie_fabric_(pcie_fabric),
           pcie_binding_(std::move(pcie_binding)),
           qpc_lookup_enabled_(qpc_lookup_enabled),
           host_memory_(host_memory),
-          host_memory_binding_(std::move(host_memory_binding)) {
+          host_memory_binding_(std::move(host_memory_binding)),
+          submission_profile_(std::move(submission_profile)) {
         if (config_.version != kWorkQueueConfigVersion) {
             throw std::invalid_argument("unsupported RNIC work-queue config version");
         }
@@ -132,6 +148,22 @@ public:
                 "RNIC disabled QPC cannot charge scalar lookup service");
         }
         if (pcie_fabric_ != nullptr) {
+            if (!submission_profile_.has_value()) {
+                submission_profile_ = resolveRnicSubmissionProfile(
+                    RnicSubmissionConfig{}, config_.qpn);
+            }
+            if (submission_profile_->version
+                    != kRnicSubmissionProfileVersion
+                || submission_profile_->producer.version
+                    != kRnicSubmissionAgentVersion
+                || submission_profile_->producer.id == 0
+                || submission_profile_->cq_consumer.version
+                    != kRnicSubmissionAgentVersion
+                || submission_profile_->cq_consumer.id == 0
+                || submission_profile_->rnic_requester_id == 0) {
+                throw std::invalid_argument(
+                    "RNIC PCIe WQ requires a valid submission profile");
+            }
             if (!pcie_binding_.has_value()
                 || pcie_binding_->version
                     != kWorkQueuePcieBindingVersion) {
@@ -200,13 +232,18 @@ public:
                 throw std::invalid_argument(
                     "RNIC PCIe WQ references an unknown or disabled path");
             }
+            const PcieEndpointKind queue_endpoint =
+                submission_profile_->queue_endpoint;
             if (uar_path->endpoint != PcieEndpointKind::MmioBar
-                || db_path->endpoint != PcieEndpointKind::HostPinnedMemory
-                || sq_path->endpoint != PcieEndpointKind::HostPinnedMemory
-                || cq_path->endpoint != PcieEndpointKind::HostPinnedMemory) {
+                || db_path->endpoint != queue_endpoint
+                || sq_path->endpoint != queue_endpoint
+                || cq_path->endpoint != queue_endpoint) {
                 throw std::invalid_argument(
                     "RNIC PCIe WQ path endpoint kind is incompatible");
             }
+        } else if (submission_profile_.has_value()) {
+            throw std::invalid_argument(
+                "RNIC submission profile requires PCIe DMA");
         }
         if (host_memory_ != nullptr) {
             if (pcie_fabric_ == nullptr || !pcie_binding_.has_value()
@@ -316,7 +353,7 @@ public:
                 HostMemoryAccessRequest db_record;
                 db_record.allocation_id =
                     host_memory_binding_->doorbell_record_allocation_id;
-                db_record.client_id = config_.qpn;
+                db_record.client_id = submission_profile_->producer.id;
                 db_record.client_token = batch_id;
                 db_record.service_class = PcieServiceClass::DoorbellRecord;
                 db_record.operation = PcieOperation::HostStore;
@@ -335,7 +372,7 @@ public:
                 planned_memory_accesses.push_back(std::move(result.record));
             } else {
                 PcieTransactionRequest db_record;
-                db_record.client_id = config_.qpn;
+                db_record.client_id = submission_profile_->producer.id;
                 db_record.client_token = batch_id;
                 db_record.service_class = PcieServiceClass::DoorbellRecord;
                 db_record.operation = PcieOperation::HostStore;
@@ -356,7 +393,7 @@ public:
             }
 
             PcieTransactionRequest uar;
-            uar.client_id = config_.qpn;
+            uar.client_id = submission_profile_->producer.id;
             uar.client_token = batch_id;
             uar.service_class = PcieServiceClass::UarDoorbell;
             uar.operation = PcieOperation::PostedWrite;
@@ -405,7 +442,8 @@ public:
                     HostMemoryAccessRequest wqe_read;
                     wqe_read.allocation_id =
                         host_memory_binding_->sq_ring_allocation_id;
-                    wqe_read.client_id = config_.qpn;
+                    wqe_read.client_id =
+                        submission_profile_->rnic_requester_id;
                     wqe_read.client_token = wqe_id;
                     wqe_read.service_class = PcieServiceClass::WqeRead;
                     wqe_read.operation = PcieOperation::NonPostedRead;
@@ -428,7 +466,8 @@ public:
                         std::move(result.record));
                 } else {
                     PcieTransactionRequest wqe_read;
-                    wqe_read.client_id = config_.qpn;
+                    wqe_read.client_id =
+                        submission_profile_->rnic_requester_id;
                     wqe_read.client_token = wqe_id;
                     wqe_read.service_class = PcieServiceClass::WqeRead;
                     wqe_read.operation = PcieOperation::NonPostedRead;
@@ -466,7 +505,8 @@ public:
                     HostMemoryAccessRequest qpc_read;
                     qpc_read.allocation_id =
                         host_memory_binding_->qpc_icm_allocation_id;
-                    qpc_read.client_id = config_.qpn;
+                    qpc_read.client_id =
+                        submission_profile_->rnic_requester_id;
                     qpc_read.client_token = wqe_id;
                     qpc_read.service_class = PcieServiceClass::QpcIcm;
                     qpc_read.operation = PcieOperation::NonPostedRead;
@@ -497,7 +537,8 @@ public:
                 HostMemoryAccessRequest payload_read;
                 payload_read.allocation_id = data.allocation_id;
                 payload_read.mkey = data.mkey;
-                payload_read.client_id = config_.qpn;
+                payload_read.client_id =
+                    submission_profile_->rnic_requester_id;
                 payload_read.client_token = wqe_id;
                 payload_read.service_class = PcieServiceClass::PayloadRead;
                 payload_read.operation = PcieOperation::NonPostedRead;
@@ -527,6 +568,39 @@ public:
             planned_ready.push_back(wqe_id);
         }
 
+        std::vector<RnicSubmissionRecord> planned_submission_records;
+        if (submission_profile_.has_value()) {
+            if (submission_records_.size()
+                > std::numeric_limits<std::size_t>::max() - count) {
+                throw std::overflow_error(
+                    "RNIC submission-record capacity overflow");
+            }
+            submission_records_.reserve(submission_records_.size() + count);
+            planned_submission_records.reserve(count);
+            std::uint64_t sequence = submission_records_.size() + 1U;
+            for (const PlannedDoorbellWqe& item : plan) {
+                const WqeRecord& record = wqe(item.wqe_id);
+                planned_submission_records.push_back(RnicSubmissionRecord{
+                    kRnicSubmissionRecordVersion,
+                    sequence++,
+                    record.wqe_id,
+                    config_.sq_id,
+                    config_.qpn,
+                    batch_id,
+                    submission_profile_->producer,
+                    submission_profile_->descriptor_writer,
+                    submission_profile_->descriptor_queue_allocation_id,
+                    submission_profile_->descriptor_queue_endpoint,
+                    submission_profile_->queue_endpoint,
+                    submission_profile_->queue_endpoint,
+                    submission_profile_->uar_mapping_owner,
+                    record.timeline.posted_at_ps,
+                    now_ps,
+                    observed_at,
+                });
+            }
+        }
+
         if (pcie_plan.has_value()) {
             memory_accesses_.reserve(
                 memory_accesses_.size() + planned_memory_accesses.size());
@@ -545,6 +619,9 @@ public:
             record.timeline.qpc_ready_at_ps = item.qpc_ready;
             record.timeline.admitted_at_ps = item.admitted;
             record.state = WqeState::Doorbelled;
+        }
+        for (RnicSubmissionRecord& record : planned_submission_records) {
+            submission_records_.push_back(std::move(record));
         }
         ready_.swap(planned_ready);
         unpublished_.clear();
@@ -793,7 +870,17 @@ public:
             publishCqesBefore(now_ps);
         }
         std::vector<CompletionEntry> result;
-        result.reserve(std::min(max_entries, cq_.size()));
+        const std::size_t consume_count = std::min(max_entries, cq_.size());
+        result.reserve(consume_count);
+        if (submission_profile_.has_value()) {
+            if (cq_consumption_records_.size()
+                > std::numeric_limits<std::size_t>::max() - consume_count) {
+                throw std::overflow_error(
+                    "RNIC CQ-consumption record capacity overflow");
+            }
+            cq_consumption_records_.reserve(
+                cq_consumption_records_.size() + consume_count);
+        }
         while (result.size() < max_entries && !cq_.empty()) {
             CompletionEntry entry = cq_.front();
             cq_.pop_front();
@@ -803,6 +890,20 @@ public:
             record.state = WqeState::Completed;
             reclaimThrough(entry.sq_sequence, now_ps);
             ++counters_.cqes_polled;
+            if (submission_profile_.has_value()) {
+                cq_consumption_records_.push_back(RnicCqConsumptionRecord{
+                    kRnicCqConsumptionRecordVersion,
+                    cq_consumption_records_.size() + 1U,
+                    entry.cqe_sequence,
+                    entry.wqe_id,
+                    config_.cq_id,
+                    config_.qpn,
+                    submission_profile_->cq_consumer,
+                    submission_profile_->queue_endpoint,
+                    entry.visible_at_ps,
+                    now_ps,
+                });
+            }
             result.push_back(entry);
         }
         return result;
@@ -865,6 +966,18 @@ public:
     const std::vector<HostMemoryAccessRecord>& memoryAccesses() const noexcept {
         return memory_accesses_;
     }
+    const std::optional<RnicSubmissionProfile>& submissionProfile()
+        const noexcept {
+        return submission_profile_;
+    }
+    const std::vector<RnicSubmissionRecord>& submissionRecords()
+        const noexcept {
+        return submission_records_;
+    }
+    const std::vector<RnicCqConsumptionRecord>& cqConsumptionRecords()
+        const noexcept {
+        return cq_consumption_records_;
+    }
 
     const WqeRecord& wqe(WqeId wqe_id) const {
         if (wqe_id == 0 || wqe_id > records_.size()) {
@@ -894,6 +1007,7 @@ public:
         for (const HostMemoryAccessRecord& access : memory_accesses_) {
             if (access.version != kHostMemoryAccessRecordVersion
                 || access.allocation_id == 0
+                || access.client_id == 0
                 || access.access_transaction_id == 0
                 || access.completed_at_ps < access.submitted_at_ps) {
                 throw std::logic_error(
@@ -910,6 +1024,92 @@ public:
                 throw std::logic_error(
                     "RNIC QPC access consumed a translation event");
             }
+        }
+
+        if (submission_profile_.has_value()) {
+            const RnicSubmissionProfile& profile = *submission_profile_;
+            if (pcie_fabric_ == nullptr
+                || profile.version != kRnicSubmissionProfileVersion
+                || profile.producer.id == 0
+                || profile.cq_consumer.id == 0
+                || profile.rnic_requester_id == 0) {
+                throw std::logic_error(
+                    "RNIC submission profile is not live and valid");
+            }
+            if (submission_records_.size() != counters_.doorbelled_wqes) {
+                throw std::logic_error(
+                    "RNIC submission ledger disagrees with doorbelled WQEs");
+            }
+            for (std::size_t index = 0;
+                 index < submission_records_.size(); ++index) {
+                const RnicSubmissionRecord& submission =
+                    submission_records_[index];
+                const WqeRecord& record = wqe(submission.wqe_id);
+                if (submission.version != kRnicSubmissionRecordVersion
+                    || submission.sequence != index + 1U
+                    || submission.sq_id != config_.sq_id
+                    || submission.qpn != config_.qpn
+                    || submission.doorbell_batch_id
+                        != record.doorbell_batch_id
+                    || !sameAgent(submission.producer, profile.producer)
+                    || !sameOptionalAgent(
+                        submission.descriptor_writer,
+                        profile.descriptor_writer)
+                    || submission.descriptor_queue_allocation_id
+                        != profile.descriptor_queue_allocation_id
+                    || submission.descriptor_queue_endpoint
+                        != profile.descriptor_queue_endpoint
+                    || submission.sq_endpoint != profile.queue_endpoint
+                    || submission.doorbell_endpoint
+                        != profile.queue_endpoint
+                    || submission.uar_mapping_owner
+                        != profile.uar_mapping_owner
+                    || submission.posted_at_ps
+                        != record.timeline.posted_at_ps
+                    || !record.timeline.doorbelled_at_ps.has_value()
+                    || submission.submitted_at_ps
+                        != *record.timeline.doorbelled_at_ps
+                    || !record.timeline.doorbell_seen_at_ps.has_value()
+                    || submission.visible_to_rnic_at_ps
+                        != *record.timeline.doorbell_seen_at_ps) {
+                    throw std::logic_error(
+                        "RNIC submission record is not a faithful projection");
+                }
+            }
+            if (cq_consumption_records_.size() != counters_.cqes_polled) {
+                throw std::logic_error(
+                    "RNIC CQ-consumption ledger disagrees with polled CQEs");
+            }
+            std::uint64_t previous_cqe_sequence = 0;
+            for (std::size_t index = 0;
+                 index < cq_consumption_records_.size(); ++index) {
+                const RnicCqConsumptionRecord& consumption =
+                    cq_consumption_records_[index];
+                const WqeRecord& record = wqe(consumption.wqe_id);
+                if (consumption.version
+                        != kRnicCqConsumptionRecordVersion
+                    || consumption.sequence != index + 1U
+                    || consumption.cqe_sequence <= previous_cqe_sequence
+                    || consumption.cq_id != config_.cq_id
+                    || consumption.qpn != config_.qpn
+                    || !sameAgent(
+                        consumption.consumer, profile.cq_consumer)
+                    || consumption.cq_endpoint != profile.queue_endpoint
+                    || !record.timeline.cqe_visible_at_ps.has_value()
+                    || consumption.visible_at_ps
+                        != *record.timeline.cqe_visible_at_ps
+                    || !record.timeline.polled_at_ps.has_value()
+                    || consumption.consumed_at_ps
+                        != *record.timeline.polled_at_ps) {
+                    throw std::logic_error(
+                        "RNIC CQ-consumption record is not a faithful projection");
+                }
+                previous_cqe_sequence = consumption.cqe_sequence;
+            }
+        } else if (!submission_records_.empty()
+                   || !cq_consumption_records_.empty()) {
+            throw std::logic_error(
+                "RNIC WQ without a submission profile retained projections");
         }
 
         std::vector<std::size_t> owner_counts(records_.size(), 0);
@@ -1145,7 +1345,8 @@ private:
                 HostMemoryAccessRequest cqe_write;
                 cqe_write.allocation_id =
                     host_memory_binding_->cq_ring_allocation_id;
-                cqe_write.client_id = config_.qpn;
+                cqe_write.client_id =
+                    submission_profile_->rnic_requester_id;
                 cqe_write.client_token = record.wqe_id;
                 cqe_write.service_class = PcieServiceClass::CqeWrite;
                 cqe_write.operation = PcieOperation::PostedWrite;
@@ -1168,7 +1369,8 @@ private:
                     std::move(result.record));
             } else {
                 PcieTransactionRequest cqe_write;
-                cqe_write.client_id = config_.qpn;
+                cqe_write.client_id =
+                    submission_profile_->rnic_requester_id;
                 cqe_write.client_token = record.wqe_id;
                 cqe_write.service_class = PcieServiceClass::CqeWrite;
                 cqe_write.operation = PcieOperation::PostedWrite;
@@ -1409,10 +1611,13 @@ private:
     bool qpc_lookup_enabled_{true};
     VirtualHostMemory* host_memory_{nullptr};
     std::optional<WorkQueueHostMemoryBinding> host_memory_binding_;
+    std::optional<RnicSubmissionProfile> submission_profile_;
     WorkQueueCounters counters_;
     std::vector<WqeRecord> records_;
     std::vector<EvidenceEvent> evidence_;
     std::vector<HostMemoryAccessRecord> memory_accesses_;
+    std::vector<RnicSubmissionRecord> submission_records_;
+    std::vector<RnicCqConsumptionRecord> cq_consumption_records_;
     std::deque<WqeId> unpublished_;
     std::deque<WqeId> ready_;
     std::map<NetworkToken, WqeId> inflight_;
@@ -1448,6 +1653,7 @@ WorkQueue::WorkQueue(WorkQueueConfig config, NetworkPort& network_port)
           std::nullopt,
           true,
           nullptr,
+          std::nullopt,
           std::nullopt) {}
 
 WorkQueue::WorkQueue(
@@ -1462,6 +1668,7 @@ WorkQueue::WorkQueue(
           std::move(pcie_binding),
           true,
           nullptr,
+          std::nullopt,
           std::nullopt) {}
 
 WorkQueue::WorkQueue(
@@ -1471,7 +1678,8 @@ WorkQueue::WorkQueue(
     std::optional<WorkQueuePcieBinding> pcie_binding,
     bool qpc_lookup_enabled,
     VirtualHostMemory* host_memory,
-    std::optional<WorkQueueHostMemoryBinding> host_memory_binding)
+    std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
+    std::optional<RnicSubmissionProfile> submission_profile)
     : impl_(std::make_unique<Impl>(
           std::move(config),
           network_port,
@@ -1479,7 +1687,8 @@ WorkQueue::WorkQueue(
           std::move(pcie_binding),
           qpc_lookup_enabled,
           host_memory,
-          std::move(host_memory_binding))) {}
+          std::move(host_memory_binding),
+          std::move(submission_profile))) {}
 
 WorkQueue::~WorkQueue() = default;
 WorkQueue::WorkQueue(WorkQueue&&) noexcept = default;
@@ -1560,6 +1769,21 @@ const std::vector<EvidenceEvent>& WorkQueue::evidence() const noexcept {
 const std::vector<HostMemoryAccessRecord>&
 WorkQueue::memoryAccesses() const noexcept {
     return impl_->memoryAccesses();
+}
+
+const std::optional<RnicSubmissionProfile>&
+WorkQueue::submissionProfile() const noexcept {
+    return impl_->submissionProfile();
+}
+
+const std::vector<RnicSubmissionRecord>&
+WorkQueue::submissionRecords() const noexcept {
+    return impl_->submissionRecords();
+}
+
+const std::vector<RnicCqConsumptionRecord>&
+WorkQueue::cqConsumptionRecords() const noexcept {
+    return impl_->cqConsumptionRecords();
 }
 
 const WqeRecord& WorkQueue::wqe(WqeId wqe_id) const {

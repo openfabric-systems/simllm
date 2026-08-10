@@ -16,7 +16,7 @@ inline constexpr std::uint32_t kHostMemoryAllocationVersion = 1;
 inline constexpr std::uint32_t kHostMemoryPageGeometryVersion = 1;
 inline constexpr std::uint32_t kHostMemoryLifecycleEventVersion = 1;
 inline constexpr std::uint32_t kHostMemoryAccessRequestVersion = 1;
-inline constexpr std::uint32_t kHostMemoryAccessRecordVersion = 1;
+inline constexpr std::uint32_t kHostMemoryAccessRecordVersion = 2;
 
 using HostMemoryAllocationId = std::uint64_t;
 using HostMemoryOwnerId = std::uint64_t;
@@ -30,6 +30,7 @@ enum class HostMemoryObjectKind : std::uint8_t {
     CqRing,
     DoorbellRecord,
     DataRegion,
+    DescriptorQueue,
 };
 
 enum class HostMemoryOwnerKind : std::uint8_t {
@@ -38,6 +39,7 @@ enum class HostMemoryOwnerKind : std::uint8_t {
     ReceiveQueue,
     CompletionQueue,
     MemoryRegion,
+    SubmissionProducer,
 };
 
 enum class HostMemoryLifecycleKind : std::uint8_t {
@@ -119,6 +121,8 @@ struct HostMemoryAccessRecord {
     std::uint32_t version{kHostMemoryAccessRecordVersion};
     HostMemoryAllocationId allocation_id{0};
     HostMemoryObjectKind object_kind{HostMemoryObjectKind::QpcIcm};
+    std::uint32_t client_id{0};
+    std::uint64_t client_token{0};
     std::uint64_t page_index{0};
     std::vector<HostMemoryTranslationStage> translation_stages;
     std::vector<std::uint64_t> translation_transaction_ids;

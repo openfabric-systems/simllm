@@ -23,6 +23,7 @@ add_library(simllm_rnic STATIC
     src/pcie_fabric.cpp
     src/rnic_device.cpp
     src/session_record.cpp
+    src/submission.cpp
     src/work_queue.cpp
 )
 add_library(simllm::rnic ALIAS simllm_rnic)
@@ -103,6 +104,23 @@ if(SIMLLM_RNIC_BUILD_TESTS)
     endif()
     add_test(NAME simllm_rnic_host_memory_test
              COMMAND simllm_rnic_host_memory_test)
+
+    add_executable(simllm_rnic_submission_test
+        tests/submission_test.cpp
+    )
+    target_link_libraries(simllm_rnic_submission_test PRIVATE simllm::rnic)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_submission_test PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_submission_test PRIVATE -Werror)
+        endif()
+    endif()
+    add_test(NAME simllm_rnic_submission_test
+             COMMAND simllm_rnic_submission_test)
 
     add_executable(simllm_rnic_device_test
         tests/rnic_device_test.cpp
