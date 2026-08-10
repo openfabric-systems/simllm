@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -12,10 +13,21 @@ import sys
 from importlib.metadata import version
 from pathlib import Path
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
+from simllm._local_config import path_from_env
+
 FREEZE_COMMIT = "b0c5b731dccfdf86e9a07c3425c95c60f9980f39"
 PINNED_SGLANG_COMMIT = "8f2a3ad6d7d68c58ae65b61a75bb2115449addca"
 PINNED_SGLANG_VERSION = "0.0.0.dev1+g8f2a3ad6d"
-REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+MODEL_CACHE_PATH = (
+    Path("hub")
+    / "models--ibm-granite--granite-3.0-1b-a400m-instruct"
+    / "snapshots"
+    / "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
+)
 
 EXPECTED_METHODS = {
     "all_reduce": {
@@ -105,6 +117,39 @@ EXPECTED_TP_STACK = (
     "genericOp",
     "simllmKernelComplete",
 )
+
+
+def _required_env_directory(name: str) -> Path:
+    configured = path_from_env(name)
+    if configured is None:
+        raise RuntimeError(f"{name} must be set to an existing directory")
+    if not configured.is_dir():
+        raise RuntimeError(f"{name} must name an existing directory: {configured}")
+    return configured
+
+
+def _model_path() -> Path:
+    return _required_env_directory("HF_HOME") / MODEL_CACHE_PATH
+
+
+def _sglang_source_root() -> Path:
+    spec = importlib.util.find_spec("sglang")
+    if spec is None or spec.origin is None:
+        raise RuntimeError(
+            "SIMLLM_SGLANG_ENV must select an environment with SGLang installed"
+        )
+    package_directory = Path(spec.origin).resolve().parent
+    completed = subprocess.run(
+        ["git", "-C", str(package_directory), "rev-parse", "--show-toplevel"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode:
+        raise RuntimeError(
+            "SIMLLM_SGLANG_ENV must select the editable pinned SGLang checkout"
+        )
+    return Path(completed.stdout.strip()).resolve()
 
 
 def _annotation(node: ast.expr | None) -> str | None:
@@ -573,33 +618,38 @@ def run_live_smoke(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source-root", type=Path, required=True)
-    parser.add_argument("--model", type=Path, required=True)
+    parser.add_argument("--source-root", type=Path)
+    parser.add_argument("--model", type=Path)
     parser.add_argument("--run-dir", type=Path)
     parser.add_argument("--case", choices=("baseline", "enabled"), help=argparse.SUPPRESS)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check-only", action="store_true")
     mode.add_argument("--run", action="store_true")
     args = parser.parse_args()
-    check_expectation_registry(args.source_root, args.model)
+    source_root = args.source_root or _sglang_source_root()
+    model = args.model or _model_path()
+    check_expectation_registry(source_root, model)
     if args.check_only:
         if args.run_dir is not None:
             parser.error("--check-only does not accept --run-dir")
         print("live expectation registry check passed; no engine or artifact was created")
         return
     if args.run_dir is None:
-        parser.error("--run requires --run-dir")
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--run-dir is required when SIMLLM_DATA_ROOT is not set")
+        args.run_dir = data_root / "sgl_communicator_v1" / "live"
     if args.case is not None:
         _run_child_case(
             case=args.case,
-            source_root=args.source_root,
-            model=args.model,
+            source_root=source_root,
+            model=model,
             run_dir=args.run_dir,
         )
         return
     evidence = run_live_smoke(
-        source_root=args.source_root,
-        model=args.model,
+        source_root=source_root,
+        model=model,
         run_dir=args.run_dir,
     )
     print("SMOKE_SIMWORKER_REACHED=True")

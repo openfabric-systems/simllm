@@ -55,6 +55,16 @@ The next full invocation passed and rewrote `live_evidence.json`. This failure
 and correction followed the freeze and are not represented as pre-registered
 evidence.
 
+After merging the filesystem-portability rule through commit `70d87df`, a
+post-specified portability round moved new-run defaults to the shared local
+configuration contract and replaced the unfrozen reproduction text with a
+portable rendering. The frozen registered-command body remains intact; its
+appended note labels the current rendering as post-specified. The new scanner
+initially matched path literals embedded in its own matcher fixtures, so it
+now excludes exactly its own source while continuing to scan every other
+tracked script. These changes followed the freeze and do not alter the study
+relations or archived evidence.
+
 ## Post-specified source-audit correction
 
 The frozen expectations incorrectly cite
@@ -92,10 +102,11 @@ Evidence classes remain separate.
 | AST-derived pinned call-site audit | pass | Post-specified fatal source guard |
 | Real SGLang output-list helper | pass | Post-specified unscored external-call guard |
 | Event-stream ownership | truncation and duplicate-open guards pass | Post-specified fatal durability guard |
+| Path-portability scanner | 6/6 pass | Post-specified repository gate |
 | Base-environment affected tests | 48 passed, 1 skipped | Separate executable |
 | Pinned-SGLang affected tests | 47 passed, 2 skipped | Separate executable |
-| Full base-environment suite | 582 passed, 4 skipped | Separate executable |
-| Full pinned-SGLang suite | 581 passed, 5 skipped | Separate executable |
+| Full base-environment suite | 596 passed, 4 skipped | Separate executable |
+| Full pinned-SGLang suite | 595 passed, 5 skipped | Separate executable |
 
 Test counts and structural guards are not added to the seven scored relation
 instances.
@@ -220,27 +231,27 @@ limited to the communicator seam over the accepted SGL-1 engine baseline.
 
 ## Reproduction and stored evidence
 
-From the repository root, set `SIMLLM_WAVE3_RUN_ROOT`,
-`SIMLLM_SGLANG_PYTHON`, `SIMLLM_SGLANG_SOURCE_ROOT`, and
-`SIMLLM_SGLANG_MODEL`, then run:
+The historical run used the same executable basename, scripts, options, and
+pinned inputs; resolved machine-local paths are intentionally omitted. The
+following is a portable post-run rendering, not a verbatim transcript. Source
+the local configuration first, then run it from the repository root:
 
 ```bash
-.venv/bin/python examples/sgl_communicator_v1/run_study.py \
-  --check --run-dir "$SIMLLM_WAVE3_RUN_ROOT/sgl_communicator_v1"
+.venv/bin/python examples/sgl_communicator_v1/run_study.py --check
 
-"$SIMLLM_SGLANG_PYTHON" examples/sgl_communicator_v1/live_smoke.py \
-  --run \
-  --source-root "$SIMLLM_SGLANG_SOURCE_ROOT" \
-  --model "$SIMLLM_SGLANG_MODEL" \
-  --run-dir "$SIMLLM_WAVE3_RUN_ROOT/sgl_communicator_v1/live"
+"${SIMLLM_SGLANG_ENV:?configure SIMLLM_SGLANG_ENV}/bin/python" \
+  examples/sgl_communicator_v1/live_smoke.py --run
 ```
 
-Machine-readable outputs remain outside Git under
-`$SIMLLM_WAVE3_RUN_ROOT/sgl_communicator_v1`. `component_results.json`
-contains the shape cells and component guards. `live/live_evidence.json`
-contains the paired live relation; each case directory contains its own step
-records and case evidence, and only `live/enabled` contains communicator
-events.
+The final machine-readable outputs remain outside Git in the machine-local
+directory used for the historical run; its resolved historical path is
+intentionally omitted. `component_results.json` contains the shape cells and
+component guards. `live/live_evidence.json` contains the paired live relation;
+each case directory contains its own step records and case evidence, and only
+`live/enabled` contains communicator events. New runs default to
+`${SIMLLM_DATA_ROOT}/sgl_communicator_v1/`; the live smoke finds the editable
+pinned source through the selected SGLang environment and the model under
+`HF_HOME`.
 
 ## Deliberate exclusions and residual work
 

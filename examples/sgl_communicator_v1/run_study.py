@@ -8,6 +8,7 @@ import json
 import sys
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.adapters.sglang import FLOAT32, ShapeTensor, SimGroupCoordinator
 from simllm.adapters.vllm import SimGroupCoordinator as VllmSimGroupCoordinator
 from simllm.compute import NcclStackConfig
@@ -289,7 +290,10 @@ def main() -> None:
         print("expectation registry check passed; no study artifact was produced")
         return
     if args.run_dir is None:
-        parser.error("--check requires --run-dir")
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--run-dir is required when SIMLLM_DATA_ROOT is not set")
+        args.run_dir = data_root / "sgl_communicator_v1"
     args.run_dir.mkdir(parents=True, exist_ok=True)
     evidence = run_study()
     output = args.run_dir / "component_results.json"

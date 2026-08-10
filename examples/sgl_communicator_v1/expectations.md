@@ -214,3 +214,23 @@ Its pre-freeze dry run replaces `--run` with `--check-only` and omits
 `--run-dir`. The result report must cite the final expectations-only commit,
 record exact chronology, keep scored and structural evidence separate, and
 estimate the genuine-risk fraction for every scored family.
+
+## Post-specified portability rendering
+
+The registered-command body above is frozen historical text and is not
+rewritten. Its machine-local variable spellings predate the repository local
+configuration contract. Resolved historical paths are intentionally omitted,
+and the commands below are portable post-freeze renderings rather than a
+retroactive pre-registration. Source the local configuration first.
+
+```bash
+.venv/bin/python examples/sgl_communicator_v1/run_study.py --check
+
+"${SIMLLM_SGLANG_ENV:?configure SIMLLM_SGLANG_ENV}/bin/python" \
+  examples/sgl_communicator_v1/live_smoke.py --run
+```
+
+New component and live outputs default below
+`${SIMLLM_DATA_ROOT}/sgl_communicator_v1/`. The live harness discovers the
+editable pinned checkout through the selected SGLang environment and resolves
+the frozen offline model below `HF_HOME`.
