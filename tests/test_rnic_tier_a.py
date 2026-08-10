@@ -11,7 +11,6 @@ EXPECTATIONS = (
     REPO_ROOT / "examples" / "rnic_live_v1" / "tier_a_expectations.json"
 )
 CHECKER = REPO_ROOT / "examples" / "rnic_live_v1" / "tier_a_acceptance.py"
-RUN_ROOT = Path("/data3/yifeng/simllm-dev/wave2-runs")
 
 _SPEC = importlib.util.spec_from_file_location("tier_a_acceptance", CHECKER)
 assert _SPEC is not None and _SPEC.loader is not None
@@ -50,6 +49,22 @@ def test_same_d_predicate_accepts_composition_and_rejects_bypass():
 
     with pytest.raises(tier_a.AcceptanceError, match="D-additivity"):
         tier_a._validate_d_pair(low, _d_row(0), expectations, "bypass")
+
+
+def test_run_paths_require_an_absolute_configured_root(tmp_path, monkeypatch):
+    monkeypatch.delenv("SIMLLM_TIER_A_RUN_ROOT", raising=False)
+    with pytest.raises(
+        tier_a.AcceptanceError,
+        match="SIMLLM_TIER_A_RUN_ROOT must be set",
+    ):
+        tier_a._validate_run_path(tmp_path, "run directory")
+
+    monkeypatch.setenv("SIMLLM_TIER_A_RUN_ROOT", "relative-run-root")
+    with pytest.raises(
+        tier_a.AcceptanceError,
+        match="SIMLLM_TIER_A_RUN_ROOT must be an absolute path",
+    ):
+        tier_a._validate_run_path(tmp_path, "run directory")
 
 
 @pytest.mark.parametrize("factory", ["fake", "htsim"])

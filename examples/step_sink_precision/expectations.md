@@ -18,7 +18,9 @@ The study keeps these classes separate:
 All backend rows use `rnic-nn-fluid` at 400 Gbit/s. The reused M1 constants
 are 20 ps per payload byte, fixed propagation `P = 2,000,000 ps`, and one
 GOAL `calc` unit equal to 1,000 ps. Raw outputs belong under
-`/data3/yifeng/simllm-dev/wave1-runs/back567_step_sink_precision/`.
+a machine-local external directory outside Git; the resolved historical target
+is intentionally omitted. As a post-freeze portability convention, new runs
+default to `${SIMLLM_DATA_ROOT}/step_sink_precision/`.
 
 ## Check A: unequal provider layer durations
 

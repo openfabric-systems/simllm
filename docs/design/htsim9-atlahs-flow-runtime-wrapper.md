@@ -233,7 +233,9 @@ SimLLM change:
    backend files from the SimLLM checkout and do not merge backend main.
 3. Build the directly invoked htsim binaries with the repository helper, run
    backend CTest, then run the frozen Tier-A checker with `--factory htsim`.
-   Store bulk build and study output under `/data3/yifeng/`, not in Git.
+   Store the htsim build under the root configured by
+   `SIMLLM_HTSIM_BUILD` and study output under the external root configured
+   by `SIMLLM_DATA_ROOT`, not in Git.
 4. Run `.venv/bin/ruff check .` and `.venv/bin/pytest -q`, including the live
    backend tests when the toolchain is available. Compare bypass artifacts
    against the old gitlink before accepting the new run record.

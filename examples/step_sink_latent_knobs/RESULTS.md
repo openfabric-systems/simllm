@@ -29,20 +29,22 @@ output directory remained absent, so those dry runs produced no measured
 values or result artifacts. The vLLM source audit and its installed-source
 digests are frozen in [expectations.md](expectations.md).
 
-Raw GOAL, binary, completion-ledger, JSONL, and summary artifacts are under
-`/data3/yifeng/simllm-dev/wave2-runs/comp16_latent_knobs/`. The directory has
-36 files totaling 272 KiB. None is Git content.
+Raw GOAL, binary, completion-ledger, JSONL, and summary artifacts remain
+outside Git in the machine-local directory used for the historical run; its
+resolved historical path is intentionally omitted. That directory has 36 files totaling
+272 KiB. New runs default to
+`${SIMLLM_DATA_ROOT}/step_sink_latent_knobs/`.
 
 ## Reproduction
 
 Deterministic provider, adapter, backend, and compatibility checks:
 
 ```bash
-SIMLLM_HTSIM_RNIC=/data3/yifeng/simllm-dev/build-htsim/datacenter/htsim_rnic \
-SIMLLM_TXT2BIN=/data3/yifeng/simllm-dev/tools/txt2bin.prebuilt \
+SIMLLM_HTSIM_RNIC="${SIMLLM_HTSIM_BUILD:?configure SIMLLM_HTSIM_BUILD}/datacenter/htsim_rnic" \
+SIMLLM_TXT2BIN="${SIMLLM_TXT2BIN:?configure SIMLLM_TXT2BIN}" \
 .venv/bin/python examples/step_sink_latent_knobs/run_study.py \
   --mode deterministic \
-  --out /data3/yifeng/simllm-dev/wave2-runs/comp16_latent_knobs
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/step_sink_latent_knobs"
 ```
 
 Pinned external-runtime smoke:
@@ -51,12 +53,12 @@ Pinned external-runtime smoke:
 env PYTHONPATH=. VLLM_ENABLE_V1_MULTIPROCESSING=0 \
   VLLM_USE_V2_MODEL_RUNNER=0 SIMLLM_VLLM_WORKER_MODE=skeleton \
   SIMLLM_VLLM_MODE=virtual HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
-  HF_HOME=/home/yifeng/packages/vllm-rnic-capture/hf-cache \
+  HF_HOME="${HF_HOME:?configure HF_HOME}" \
   CUDA_VISIBLE_DEVICES= \
-  /data3/yifeng/simllm-dev/venv-vllm/bin/python \
+  "${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" \
   examples/step_sink_latent_knobs/run_study.py \
   --mode live-vllm \
-  --out /data3/yifeng/simllm-dev/wave2-runs/comp16_latent_knobs
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/step_sink_latent_knobs"
 ```
 
 Every successful backend row emitted `physical_quiescence=True`, copied from

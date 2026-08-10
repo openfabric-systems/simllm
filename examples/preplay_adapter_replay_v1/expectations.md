@@ -8,8 +8,12 @@ TTFT and TPOT.
 
 ## Frozen external-source audit
 
-The mirrored runtime is the installed vLLM v0.26.0 under
-`/data3/yifeng/simllm-dev/venv-vllm/lib/python3.12/site-packages/vllm`.
+The mirrored runtime is the installed vLLM v0.26.0 package from the
+machine-local environment audited before the freeze; its resolved historical
+path is intentionally omitted. The complete hashes below identify the audited
+source. For a current reproduction, `SIMLLM_VLLM_PYTHON` selects the
+compatible interpreter.
+
 The source was audited before this freeze. The relevant files and complete
 file SHA-256 values are:
 
@@ -199,22 +203,28 @@ sampled tokens and call names. This identity-off check is fatal and unscored.
 
 ## Registered commands and pre-freeze dry runs
 
-The registered commands are:
+The historical dry runs used the same executable basenames, scripts, options
+and pinned inputs; resolved machine-local paths are intentionally omitted. The
+following is a portable post-freeze rendering, not a verbatim transcript.
+Source the local configuration first:
 
 ```text
 .venv/bin/python examples/preplay_adapter_replay_v1/run_study.py --check-only
-/data3/yifeng/simllm-dev/venv-vllm/bin/python examples/preplay_adapter_replay_v1/live_smoke.py --check-only
+"${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" examples/preplay_adapter_replay_v1/live_smoke.py --check-only
 ```
 
-Before this freeze, both exact commands were executed against argument-parser
-skeletons. They exited zero after resolving the tracked trace, cached model,
-runtime and external output-root defaults. They produced no result rows,
-model construction or output files. The parser skeletons were then removed,
-so this expectations-only freeze contains no PLAY-3 implementation or study
-harness.
+Before this freeze, the historical resolved forms of both commands were
+executed against argument-parser skeletons. They exited zero after resolving
+the tracked trace, cached model, runtime and external output-root defaults.
+They produced no result rows, model construction or output files. The parser
+skeletons were then removed, so this expectations-only freeze contains no
+PLAY-3 implementation or study harness.
 
-The scored runs replace `--check-only` with fresh paths under
-`/data3/yifeng/simllm-dev/wave2-runs/codex_play23_arrival_replay/`.
+The frozen storage requirement is that the scored runs replace `--check-only`
+with fresh paths in a machine-local directory outside Git; the resolved
+historical target is intentionally omitted. As a post-freeze portability
+convention, new runs default to
+`${SIMLLM_DATA_ROOT}/preplay_adapter_replay_v1/`.
 
 ## Deliberate omission
 

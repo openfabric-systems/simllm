@@ -38,13 +38,16 @@ Reproduce from the repository root:
 ```bash
 .venv/bin/python examples/core4_runtime/run_study.py --check-only
 .venv/bin/python examples/core4_runtime/run_study.py \
-  --output-dir /data3/yifeng/simllm-dev/wave2-runs/codex/core4_device_runtime
+  --output-dir "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/core4_runtime"
 ```
 
-The parse-only command produces no result. The measured summary remains on the
-data volume at the path above. Its SHA-256 is
+The parse-only command produces no result. The measured summary remains
+outside Git in the machine-local directory used for the historical run; its
+resolved historical path is intentionally omitted. Its SHA-256 is
 `1772189585247b2353683b25e0f6fd2de15ba36bf1e8b6d23c157a4ab0e16855`.
-No bulk output is tracked in the repository.
+No bulk output is tracked in the repository. The current result-producing
+command shown above writes new runs below
+`${SIMLLM_DATA_ROOT}/core4_runtime`.
 
 ## Evidence accounting
 

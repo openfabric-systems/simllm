@@ -185,19 +185,24 @@ behavioral counts are not added to this study's denominator.
 
 ## Registered commands and dry run
 
-The result-producing command is:
+The historical dry run used the same executable basename, script, options and
+pinned inputs; resolved machine-local paths are intentionally omitted. The
+following blocks are portable post-freeze renderings, not verbatim
+transcripts. Source the local configuration first. The result-producing
+rendering is:
 
 ```bash
 .venv/bin/python examples/rnic_session_records_v1/run_study.py \
-  --out /data3/yifeng/simllm-dev/wave2-runs/codex/back8_session_records
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/rnic_session_records_v1"
 ```
 
-Before this freeze, the same registered command was executed in its
-non-result-producing mode:
+Before this freeze, the historical resolved form of the same registered
+command was executed in its non-result-producing mode. Its portable rendering
+is:
 
 ```bash
 .venv/bin/python examples/rnic_session_records_v1/run_study.py \
-  --out /data3/yifeng/simllm-dev/wave2-runs/codex/back8_session_records \
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/rnic_session_records_v1" \
   --check-only
 ```
 

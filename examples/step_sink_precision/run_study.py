@@ -1,10 +1,9 @@
 """Run the checks frozen in expectations.md for BACK-5, BACK-6 and BACK-7.
 
 Usage:
-    SIMLLM_HTSIM_RNIC=/path/to/htsim_rnic \
-    SIMLLM_TXT2BIN=/path/to/txt2bin \
-    python examples/step_sink_precision/run_study.py \
-      --out /data3/yifeng/simllm-dev/wave1-runs/back567_step_sink_precision
+    SIMLLM_HTSIM_RNIC=... \
+    SIMLLM_TXT2BIN=... \
+    SIMLLM_DATA_ROOT=... python examples/step_sink_precision/run_study.py
 """
 
 from __future__ import annotations
@@ -15,6 +14,7 @@ import hashlib
 import re
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.backends import HtsimStepSink, HtsimStepSinkConfig, parse_completion_csv
 from simllm.compute import ComputeProvider, DurationEstimate, ModelDims
 from simllm.core import (
@@ -27,9 +27,6 @@ from simllm.core import (
 
 EXPECTATIONS_COMMIT = "9a8c05e"
 DEFAULT_GOAL_SHA256 = "f8aade109ba8e3a581b7d965b3a0c76c1247016a1e37491fa84efbbf377677a5"
-DEFAULT_OUT = Path(
-    "/data3/yifeng/simllm-dev/wave1-runs/back567_step_sink_precision"
-)
 TOPOLOGY = Path(__file__).resolve().parents[1] / "m1" / "topologies" / "clos_64_400g.topo"
 
 G = 1_000_000_000
@@ -471,8 +468,13 @@ def run_check_d(out: Path, emit) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--out", type=Path)
     args = parser.parse_args()
+    if args.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        args.out = data_root / "step_sink_precision"
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
     rows = []

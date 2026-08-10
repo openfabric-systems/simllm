@@ -11,7 +11,7 @@ Simulated execution (`simllm/adapters/sglang/worker.py`):
 
 ```
 SIMLLM_SGLANG_ENABLE=1 SIMLLM_SGLANG_MODE=virtual SIMLLM_SGLANG_GPU=b100 \
-SIMLLM_SGLANG_STEP_RECORDS=/data3/yifeng/simllm/steps.jsonl \
+SIMLLM_SGLANG_STEP_RECORDS="${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/simllm/steps.jsonl" \
 python -m sglang.launch_server --model-path meta-llama/Llama-3.1-8B \
     --disable-overlap-schedule --max-total-tokens 32768
 ```
@@ -93,18 +93,22 @@ The pure surfaces (batch observation for extend/decode/mixed/idle, the
 report-once radix-hit translation, the SGLang geometry reader, the config)
 are unit-tested without importing SGLang in `tests/test_adapters_sglang.py`.
 The worker, runner stub and plugin hook are validated by a live end-to-end
-run: on 2026-08-04 a real SGLang at the pinned commit
-(`/data3/yifeng/simllm-dev/venv-sglang`, editable install of the fresh
-clone, `SGLANG_BUILD_RUST_EXTS=none`) ran the offline `Engine` on the CPU
-engine (`device="cpu"`, torch_native attention selection, gloo process
-groups) with the plugin active via its entry point: the scheduler
-subprocess constructed `SimTpModelWorker`, three requests generated 8
+run: on 2026-08-04 a real SGLang at pinned commit `8f2a3ad`, installed as an
+editable fresh clone in a machine-local environment whose resolved historical
+path is intentionally omitted, ran the offline `Engine` on the CPU engine
+(`device="cpu"`, torch_native attention selection, gloo process groups,
+`SGLANG_BUILD_RUST_EXTS=none`) with the plugin active via its entry point:
+the scheduler subprocess constructed `SimTpModelWorker`, three requests generated 8
 fabricated tokens each, and the streamed JSONL held 9 schema-tagged records
 with exactly 3 prefill and 21 decode rows and monotonic virtual time.
 RadixCache ran live (0 hits, correctly: first-contact prompts shorter than
 any reusable prefix). The overlap path is out of scope for the first
 iteration: run with `--disable-overlap-schedule` (nothing forces overlap
 on, and PP asserts it off anyway).
+
+For a current reproduction, `SIMLLM_SGLANG_ENV` may document a compatible
+environment in local configuration, but it does not define the identity of the
+recorded run.
 
 Joined pre-play token replay is not implemented in this adapter. It remains
 the explicit PLAY-7 follow-up in [preplay.md](preplay.md#open-tasks), including

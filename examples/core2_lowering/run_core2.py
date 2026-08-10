@@ -5,9 +5,8 @@ GOAL rendered only from a JSON-round-tripped execution graph, and frozen
 closed forms from expectations.md. Raw artifacts belong on a data volume.
 
 Usage:
-    SIMLLM_HTSIM_RNIC=/path/to/htsim_rnic \
-    python -m examples.core2_lowering.run_core2 \
-        --out /data3/yifeng/simllm-dev/core2-lowering-runs
+    SIMLLM_HTSIM_RNIC=... SIMLLM_DATA_ROOT=... \
+    python -m examples.core2_lowering.run_core2
 """
 
 from __future__ import annotations
@@ -17,6 +16,7 @@ import csv
 import json
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.backends import (
     FlowCompletion,
     HtsimRnicConfig,
@@ -251,10 +251,15 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--out",
-        default="/data3/yifeng/simllm-dev/core2-lowering-runs",
+        type=Path,
     )
     args = parser.parse_args()
-    out = Path(args.out)
+    if args.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        args.out = data_root / "core2_lowering"
+    out = args.out
     out.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, object]] = []
     graph_json_by_world: dict[int, str] = {}

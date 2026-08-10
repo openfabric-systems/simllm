@@ -1,9 +1,7 @@
 """Render the DCQCN vs rnic-cn figures from the study CSVs.
 
 Usage:
-    python examples/dcqcn_vs_cn/plot_study.py \\
-        --runs /data3/yifeng/simllm-dev/dcqcn-vs-cn-runs \\
-        --out examples/dcqcn_vs_cn/plots
+    SIMLLM_DATA_ROOT=... python examples/dcqcn_vs_cn/plot_study.py
 """
 
 from __future__ import annotations
@@ -14,6 +12,8 @@ from collections import defaultdict
 from pathlib import Path
 
 import matplotlib
+
+from simllm._local_config import path_from_env
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -49,10 +49,15 @@ def style(ax, title, xlabel):
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runs", default="/data3/yifeng/simllm-dev/dcqcn-vs-cn-runs")
+    parser.add_argument("--runs", type=Path)
     parser.add_argument("--out", default=str(Path(__file__).parent / "plots"))
     args = parser.parse_args()
-    runs = Path(args.runs)
+    if args.runs is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--runs is required when SIMLLM_DATA_ROOT is not set")
+        args.runs = data_root / "dcqcn_vs_cn"
+    runs = args.runs
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     dists = load_dists(runs / "distributions.csv")

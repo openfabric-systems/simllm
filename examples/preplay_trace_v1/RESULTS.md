@@ -143,10 +143,11 @@ relations.
 
 ## Artifacts
 
-Detailed captures and their round trips remain outside the repository under
-`/data3/yifeng/simllm-dev/wave1-runs/play1_preplay_runner/`. The run summary
-is `summary.json`, SHA-256
+Detailed captures and their round trips remain outside Git in the
+machine-local directory used for the historical run; its resolved historical path is
+intentionally omitted. The run summary is `summary.json`, SHA-256
 `78d38d67d06e415c9915ea5dc5bca10c77fc8cfd26107b9a823e2112a72dc0f3`.
+New runs default to `${SIMLLM_DATA_ROOT}/preplay_trace_v1/`.
 
 The tracked Granite fixture is one complete `length-cap` request with 22
 prefill records, one terminal generated token and zero decode records. It is

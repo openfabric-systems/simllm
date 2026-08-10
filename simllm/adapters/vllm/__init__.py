@@ -4,7 +4,7 @@ vLLM's v1 engine resolves its executor class from a dotted import path, so
 SimLLM plugs in without a fork::
 
     SIMLLM_VLLM_MODE=virtual SIMLLM_VLLM_GPU=b100 \\
-    SIMLLM_VLLM_STEP_RECORDS=/data3/yifeng/simllm/steps.jsonl \\
+    SIMLLM_VLLM_STEP_RECORDS=... \\
     vllm serve meta-llama/Llama-3.1-8B \\
         --distributed-executor-backend simllm.adapters.vllm.SimExecutor \\
         --num-gpu-blocks-override 8192

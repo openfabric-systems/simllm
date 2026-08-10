@@ -70,8 +70,13 @@ would require redesign before the GPU-present VLLM-13 half adopts it.
 
 ## Check-only commands
 
+The historical review checks used the same executable basenames, scripts,
+options and pinned inputs; resolved machine-local paths are intentionally
+omitted. The following is a portable post-freeze rendering, not a verbatim
+transcript. Source the local configuration first:
+
 ```bash
 .venv/bin/python examples/vllm_group_coordinator_v1/run_study.py --check-only
-/data3/yifeng/simllm-dev/venv-vllm/bin/python \
+"${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" \
   examples/vllm_group_coordinator_v1/live_smoke.py --check-only
 ```

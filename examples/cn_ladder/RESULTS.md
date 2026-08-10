@@ -6,7 +6,9 @@ k to k+2 snapshots, ppm-native fractional declarations, own-fraction
 scaling, deterministic reservation ledger). 98 cells (fan-in 1, 2, 4, 8,
 16, 32, 63 crossed with 16 MiB down to 4096 B, at K = 10 us and 4.5 us),
 each against the rnic-nn baseline on the identical GOAL. Raw data:
-`/data3/yifeng/simllm-dev/cn-ladder/ladder.csv`.
+the historical `ladder.csv` remains outside Git in the machine-local
+directory used for the run; its resolved historical path is intentionally omitted. New
+runs default to `${SIMLLM_DATA_ROOT}/cn_ladder/ladder.csv`.
 
 ## Invariants (frozen disqualifiers): all hold
 

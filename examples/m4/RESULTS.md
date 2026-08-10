@@ -1,14 +1,18 @@
 # M4 closed-loop slice: results against pre-registered expectations
 
-Runs of 2026-08-04. Backend binary: `htsim_rnic` from
-`/data3/yifeng/simllm-dev/build-htsim` (HTSIM-rnic-private working tree at
-`c03e1f2`, stacked on the merged 2026-08-03 simllm-addon rounds; the
-`rnic-nn` / `rnic-nn-fluid` profiles exercised here reproduce the
-M1-calibrated constants exactly, which checks A and C bound empirically).
+Runs of 2026-08-04. Backend binary: `htsim_rnic` from a machine-local
+HTSIM-rnic-private build pinned at `c03e1f2`, stacked on the merged
+2026-08-03 simllm-addon rounds; the resolved historical build path is
+intentionally omitted. Current reproductions select the build root with
+`SIMLLM_HTSIM_BUILD`. The `rnic-nn` / `rnic-nn-fluid` profiles exercised
+here reproduce the
+M1-calibrated constants exactly, which checks A and C bound empirically.
 GOAL conversion with the prebuilt `txt2bin`. All sections ran in one
-`run_m4.py` invocation (36 rows in `summary.csv` under
-`/data3/yifeng/simllm-dev/m4-runs`, raw GOALs and completion CSVs beside
-it); the backends are deterministic, so every number reproduces exactly.
+`run_m4.py` invocation (36 rows in `summary.csv`, with raw GOALs and
+completion CSVs beside it). Those artifacts remain outside Git in the
+machine-local directory used for the historical run; its resolved historical path is
+intentionally omitted. New runs default to `${SIMLLM_DATA_ROOT}/m4`.
+The backends are deterministic, so every number reproduces exactly.
 Checks A1-A6, B1-B6 (plus B-q1/B-q2), C1-C6, D1-D2 and E1-E3 are the
 registered predictions of [expectations.md](expectations.md) (kept frozen;
 deviations would be disclosed here, never edited there).
@@ -159,5 +163,7 @@ reported 2,346,303,573 ps by dropping the first delta, caught in audit and
 rerun with the fixed script), final virtual time 18,935,536,640 ps.
 Wall-clock cost was ~8 s per step, the documented per-step-subprocess
 diagnostic-mode overhead (BRIDGE-1 tracks the persistent co-simulator that
-removes it). Artifacts under
-`/data3/yifeng/simllm-dev/m4-runs/live-vllm-tp8`.
+removes it). The live artifacts remain outside Git in the machine-local
+directory used for the historical run; its resolved historical path is intentionally
+omitted. New live runs default to
+`${SIMLLM_DATA_ROOT}/m4/live-vllm-tp8`.
