@@ -22,6 +22,10 @@ dev = [
 plot = [
     "matplotlib>=3.7",
 ]
+preplay = [
+    "torch>=2.1",
+    "transformers>=4.46",
+]
 
 [project.urls]
 Homepage = "https://github.com/openfabric-systems/simllm"
