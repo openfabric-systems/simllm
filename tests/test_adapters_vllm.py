@@ -425,7 +425,6 @@ def test_sim_worker_split_step_uses_one_clock_and_stream(monkeypatch, tmp_path):
         call.started_at_ps == call.completed_at_ps == 123_000
         for call in worker.mirrored_calls
     )
-
     streamed = [json.loads(line) for line in stream_path.read_text().splitlines()]
     assert streamed == step_records_to_json(worker.step_records)
     assert {entry["schema"] for entry in streamed} == {"atlahs-closed-loop-step-v1"}
@@ -466,6 +465,57 @@ def test_no_replay_worker_stream_is_byte_locked(monkeypatch, tmp_path):
         assert stream_path.read_bytes() == expected_path.read_bytes()
     finally:
         reset_configuration()
+def test_sim_runner_serves_dp_coordination_then_tp_collective(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    config = fake_vllm_config()
+    config.parallel_config.tensor_parallel_size = 4
+    config.parallel_config.data_parallel_size = 4
+    config.parallel_config.data_parallel_rank = 0
+    config.parallel_config.world_size = 4
+    worker = make_sim_worker(VirtualClock(start_ps=123_000), vllm_config=config)
+    worker.init_device()
+
+    step = FakeSchedulerOutput(
+        scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+        num_scheduled_tokens={"r0": 4},
+    )
+    assert worker.execute_model(step) is None
+    events = worker.coordinator_events
+
+    assert tuple((event.operation, event.group, event.payload_bytes) for event in events) == (
+        ("all_reduce", "dp", 64),
+        ("all_reduce", "tp", 4_096),
+    )
+    assert tuple(len(event.stack_events) for event in events) == (32, 14)
+    assert all(event.timestamp_ps == 123_000 for event in events)
+    assert worker.step_records[0].num_tokens_after_padding == 4
+    assert step_records_to_json(worker.step_records)[0]["num_tokens_after_padding"] == 4
+    assert worker.sample_tokens(None).sampled_token_ids == [[512]]
+    assert worker.clock.now_ps == 123_000
+
+
+def test_dp_coordinator_return_controls_the_padding_record_field(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    config = fake_vllm_config()
+    config.parallel_config.data_parallel_size = 4
+    worker = make_sim_worker(VirtualClock(start_ps=123_000), vllm_config=config)
+    worker.init_device()
+    original_all_reduce = worker.dp_group.all_reduce
+
+    def return_different_padding(input_):
+        output = original_all_reduce(input_)
+        return replace(output, num_tokens_across_dp=(9, 9, 9, 9))
+
+    monkeypatch.setattr(worker.dp_group, "all_reduce", return_different_padding)
+    step = FakeSchedulerOutput(
+        scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+        num_scheduled_tokens={"r0": 4},
+    )
+
+    assert worker.execute_model(step) is None
+    assert worker.step_records[0].num_tokens_after_padding == 9
+    assert step_records_to_json(worker.step_records)[0]["num_tokens_after_padding"] == 9
+    assert worker.sample_tokens(None).sampled_token_ids == [[512]]
 
 
 def test_sim_worker_empty_completion_preserves_v1_update_order(monkeypatch):
@@ -517,6 +567,18 @@ def test_only_global_rank_zero_owns_records_and_stream(monkeypatch, tmp_path):
     assert worker.step_records == []
     assert worker.step_results == []
     assert not stream_path.exists()
+
+
+def test_nonzero_data_parallel_rank_is_not_a_time_authority(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    config = fake_vllm_config()
+    config.parallel_config.data_parallel_size = 2
+    config.parallel_config.data_parallel_rank = 1
+    worker = make_sim_worker(vllm_config=config, rank=0)
+
+    assert not worker.is_time_authority
+    assert worker.dp_group.rank == 1
+    assert worker.dp_group.ranks == [0, 1]
 
 
 def test_worker_extension_exposes_exactly_one_public_name():

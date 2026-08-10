@@ -186,6 +186,41 @@ stream authority, including when every process is locally marked as a driver.
 Records use the unchanged
 `atlahs-closed-loop-step-v1` JSONL path.
 
+Simulated communication (`simllm/adapters/vllm/communicator.py`) is a separate
+trimmed layer. `SimGroupCoordinator` mirrors the pinned v0.26.0 signatures for
+`all_reduce`, `all_gather`, `broadcast`, `send`, and `recv`, plus `rank`,
+`ranks`, `world_size`, `local_rank`, `rank_in_group`, and the six rank
+navigation properties. Its constructor accepts resolved ranks and the
+runner-owned `VirtualClock`; it never constructs a torch process group. The
+module is torch-optional: it remains importable without torch, but `recv`
+uses a guarded runtime torch import when the caller supplies a real
+`torch.dtype`. The copied runner uses `ShapeTensor` for its deliberate
+empty-computation calls.
+
+Every successful boundary produces one immutable event with operation, group,
+rank membership, payload bytes, virtual timestamp, semantic `CollectiveWork`,
+and the nested COMP-15 events. A multi-rank call enters the landed
+`ncclAllReduce`-shaped stack skeleton. A singleton emits the upper observation
+but takes the exact identity path and emits no ring event. The V1 runner issues
+one shape-only TP call during `_model_forward`; when DP size exceeds one it
+first issues the pinned runner helper's `(4, dp_size)` int32 coordination
+all-reduce. Both groups share one observer and clock, so their zero-time call
+order stays deterministic.
+
+The COMP-15 compatibility entry constrains the currently servable nonzero
+payloads. Payload bytes must divide evenly over world size, channels and warps,
+and each per-lane share must contain an integral, nonzero number of configured
+chunks. An unservable call raises before consuming its operation ID. A
+zero-byte call emits an upper event with
+`stack_disposition="zero_payload_bypass"` and no nested stack event. VLLM-20
+owns removal of this compatibility-domain restriction.
+
+This first slice is observability only. It does not create a runtime authority,
+emit a `CompletionEvent`, change a `StepResult`, or model communication time.
+It therefore makes no TTFT or TPOT claim. VLLM-19, VLLM-20, and VLLM-21 own
+the explicit residuals; CORE-4 and CORE-5 must land before runtime projection
+or timing work begins.
+
 Placement capture (`simllm/adapters/vllm/worker_ext.py`), used on *real* runs:
 
 ```
@@ -307,6 +342,23 @@ integer-only output sort; both remain explicit in
 along with their post-specified regression status. Speculative decoding and
 structured output remain refused. SGLang replay is not implied by this status
 and remains PLAY-7 in [preplay.md](preplay.md#open-tasks).
+The VLLM-14 zero-time coordinator slice is implemented as of 2026-08-10. Its
+expectations-only commit is `29221e4`, which precedes implementation and every
+result-producing target run. The import-free study in
+`examples/vllm_group_coordinator_v1/RESULTS.md` passes all 4 shape cells and
+both payload-scaling instances. The fixed 4,096-byte all-reduce emits one
+coordinator event, 14 nested COMP-15 events, and the frozen 17-event full stack
+including communicator setup. Singleton identity and the accepted VLLM-13
+step/token/clock baseline both pass as fatal unscored guards.
+
+The scored in-process vLLM v0.26.0 smoke reached `SimWorker` and
+`SimModelRunner` without a vLLM fork. Two model steps emitted the frozen
+coordinator order `DP, TP, DP, TP` with payloads `64, 4096, 64, 4096` bytes and
+nested stack counts `32, 14, 32, 14`. The request returned token id `24577`
+twice and retained exactly two `atlahs-closed-loop-step-v1` records. As in the
+earlier skeleton smoke, this host exposed a GTX 1660 Ti despite
+`CUDA_VISIBLE_DEVICES=`, so the run is external-runtime seam evidence but not
+GPU-invisible-host evidence.
 
 VLLM-15 is complete. Expectations were frozen at commit `25d098c` before the
 implementation and runs. The
@@ -382,37 +434,34 @@ omit the optional field; v1 readers and that compatibility path are unchanged.
   NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
   The simulated executor binds step shapes and framework KV events to this
   template; it does not invent concurrency from aggregate phase timings.
-- VLLM-13 (Completeness; P1; L) (remaining after the flagged skeleton): add
-  the GPU-present mode that runs stock `Worker.init_device`, preserves its
+- VLLM-13 (Completeness; P1; L) (remaining GPU-present half after the flagged
+  skeleton): the skeleton DP coordination half has landed through
+  `SimGroupCoordinator`, including consumption of its local padded-token
+  projection into `StepRecord.num_tokens_after_padding`. Add the GPU-present
+  mode that runs stock `Worker.init_device`, preserves its
   distributed groups and memory snapshot, respects the upstream V1/V2 runner
   selection, and then rebinds `self.model_runner`. Couple runner work to the
   simulated GPU service and NCCL path, including BACK-20 submission in
-  GPU-initiated mode. Serve or emulate runner-internal DP coordination above
-  one. Enable and validate device-free async multiprocessing, Ray, and
-  external-launch execution, which this first slice rejects before their
-  device or ownership assumptions can run. Every run must declare the CQ
-  consumer and how completion reaches the model runner through BACK-20 and
+  GPU-initiated mode, then serve runner-internal DP coordination through those
+  preserved real groups. Enable and validate device-free async multiprocessing,
+  Ray, and external-launch execution, which this first slice rejects before
+  their device or ownership assumptions can run. Every run must declare the
+  CQ consumer and how completion reaches the model runner through BACK-20 and
   CORE-5. The executor-level `SimExecutor` and the gated skeleton remain
-  supported without behavior changes. VLLM-12 device-schedule capture uses
-  the same seam.
-- VLLM-14 (Completeness; P1; L): simulate the `GroupCoordinator` behavior
-  behind its own interface for the model-runner coupling mode. The simulated
-  coordinator keeps the real class's functional names and call signatures
-  (`all_reduce`, `all_gather`, `broadcast`, send and recv, and the rank and
-  group-membership surface the model layers and the runner read) and returns
-  shape-correct results, but the implementation is trimmed to the main path:
-  no real NCCL, no custom-allreduce or symmetric-memory fast paths, and side
-  calls off the main path are omitted or served inertly. Every call boundary
-  emits an observability event (operation, group, payload bytes, virtual
-  timestamps) that lowers into `CollectiveWork` and the COMP-15 NCCL stack
-  model. Beyond the trimmed simulation, study the effect of the actual
-  communication function on end-to-end performance: the real communicator
-  call path (Python dispatch, custom-op indirection, synchronization
-  stalls) can itself bottleneck vLLM and SGLang, so the study compares the
-  real call-path cost against the simulated one and folds the calibrated
-  cost into the model. SGL-11 is the SGLang half; the trimmed-interface
-  principle is shared, and the simulated communication stack section in
-  [docs/README_PRO.md](../README_PRO.md) shows where both sit.
+  supported without behavior changes. VLLM-12 device-schedule capture uses the
+  same seam.
+- VLLM-14 (Completeness; P1; L) (remaining after the zero-time first slice):
+  the name-mirrored `SimGroupCoordinator`, shape-only results, rank-membership
+  surface, boundary observations, `CollectiveWork` lowering, COMP-15 call, and
+  copied-runner TP and DP calls have landed. Keep that narrow interface aligned
+  with the pinned supported model paths and bind it into VLLM-13's later
+  GPU-present runner mode without changing the skeleton or executor bypasses.
+  Custom-allreduce, symmetric-memory fast paths, and off-main-path calls remain
+  omitted or inert unless a supported study opts into them. SGL-11 remains the
+  untouched SGLang half and should reuse this torch-optional shape/event base.
+  This ID explicitly excludes runtime projection and every timing claim:
+  VLLM-19, VLLM-20, and VLLM-21 own those residuals, and CORE-4/5 gate live
+  projection.
 - VLLM-16 (Completeness; P1; M): run the flagged in-process skeleton smoke on
   a genuinely GPU-invisible host where CUDA platform selection is unavailable
   and no physical GPU is discoverable before or during worker construction.
@@ -422,3 +471,35 @@ omit the optional field; v1 readers and that compatibility path are unchanged.
   expected `atlahs-closed-loop-step-v1` records. The 2026-08-10 host does not
   close this task because vLLM identified a GTX 1660 Ti despite
   `CUDA_VISIBLE_DEVICES=`.
+- VLLM-15 (Precision; P1; S): populate `StepRecord.num_sampled` from the
+  translator's existing exact `produces_token` flags. Cover mid-prompt and
+  prompt-completing chunked prefill, prefix-cache completion, decode and the
+  attach-mid-flight fallback. The emitted count must equal the fabricated
+  `ModelRunnerOutput` rows that actually sample; an absent field remains the
+  explicit compatibility path.
+- VLLM-19 (Completeness; P1; L): after CORE-4 and CORE-5 land, project each
+  coordinator `CollectiveWork` through the single runtime authority into
+  `CompletionEvent`, `StepResult`, and TTFT/TPOT. The current component event is
+  not metric-live and must not be timed in parallel with another authority.
+  Freeze a fixed-workload signed TTFT/TPOT relation and quantitative band before
+  implementation. The disabled projection must preserve every accepted
+  VLLM-13 timestamp, token, record, and completion order exactly.
+- VLLM-20 (Precision; P1; M): replace the current `ncclAllReduce`-shaped
+  compatibility lowering for `all_gather`, `broadcast`, `send`, and `recv`
+  with native COMP stack entries when those entries exist. The surrogate is an
+  all-reduce-shaped zero-time trace; the identifying observables are the
+  operation-specific stack names, peer roles, byte counts, and shape results.
+  Remove the current ring-layout servable-domain restriction: native entries
+  must represent zero payloads explicitly and accept operation-legal nonzero
+  byte counts without requiring even all-reduce lane or chunk division.
+  Acceptance requires exact semantic operation identity for every enabled call
+  while the compatibility off path remains byte-for-byte and timestamp-for-
+  timestamp identical to this slice.
+- VLLM-21 (Precision; P1; L): calibrate real coordinator dispatch cost after
+  VLLM-19 makes it metric-live. The current surrogate is exactly zero dispatch
+  time. Measure pinned-vLLM Python dispatch, custom-op indirection, and
+  synchronization stalls over a frozen payload, group-size, and call-mode
+  matrix. Hold out at least one model and group size; require modeled median
+  and p95 call cost within a pre-registered relative or additive band, then
+  verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
+
