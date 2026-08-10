@@ -468,6 +468,7 @@ class StepTranslator:
             scheduled=scheduled,
             preempted_request_ids=sorted(preempted_req_ids),
             finished_request_ids=finished,
+            num_sampled=sum(produces_token),
         )
         self.forget(finished)
         return TranslatedStep(record=record, req_ids=req_ids, produces_token=produces_token)

@@ -1,9 +1,15 @@
+import hashlib
 from dataclasses import replace
 
 import pytest
 
-from simllm.backends import SerialStepLowerer, SerialStepLowererConfig
-from simllm.compute import ModelDims
+from simllm.backends import (
+    HtsimStepSink,
+    HtsimStepSinkConfig,
+    SerialStepLowerer,
+    SerialStepLowererConfig,
+)
+from simllm.compute import ComputeProvider, DurationEstimate, ModelDims
 from simllm.core import (
     CollectiveWork,
     ComputeWork,
@@ -38,6 +44,24 @@ SMALL_MOE_DIMS = replace(
     moe_intermediate_size=512,
     local_num_experts=2,
 )
+
+SAMPLE_DIMS = ModelDims(
+    num_layers=2,
+    hidden_size=64,
+    intermediate_size=128,
+    num_heads=4,
+    num_kv_heads=4,
+    head_size=16,
+    vocab_size=256,
+    dtype_bytes=2,
+)
+
+B1_ABSENT_REPLAY_SHA256 = "7087db6780f7e34f5a559a6505eeccc15d984c7b478cd8f0bc5838053825d4b6"
+
+
+class FlopProvider(ComputeProvider):
+    def estimate(self, kernel, gpu):
+        return DurationEstimate(duration_ps=int(kernel.flops), bound="compute")
 
 
 def prefill_record() -> StepRecord:
@@ -103,6 +127,65 @@ def test_dense_graph_only_goal_is_byte_identical_to_legacy_goal():
         per_layer_calc_ns=12_030,
     )
     assert replay.render() == legacy.render()
+
+
+def test_b1_exact_sample_count_keeps_live_sink_and_serial_replay_equal(tmp_path):
+    scheduled = [
+        ScheduledRequest(
+            "p",
+            RequestPhase.PREFILL,
+            4,
+            num_cached_tokens=4,
+            context_length=8,
+        ),
+        ScheduledRequest("d", RequestPhase.DECODE, 1, context_length=32),
+    ]
+    exact_record = StepRecord(0, 0, scheduled, num_sampled=1)
+    absent_record = replace(exact_record, num_sampled=None)
+    provider = FlopProvider()
+    sink = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SAMPLE_DIMS,
+            workdir=tmp_path / "live",
+            provider=provider,
+        )
+    )
+    lowerer = SerialStepLowerer(
+        SerialStepLowererConfig(SAMPLE_DIMS, (0, 1), provider=provider)
+    )
+
+    exact_estimate_ps = sink.compute_estimate_ps(exact_record)
+    exact_calc_ns = exact_estimate_ps // (SAMPLE_DIMS.num_layers * 1000)
+    exact_replay = render_serial_execution_graph_goal(lowerer.lower(exact_record))
+    exact_live = render_step_goal(
+        exact_record,
+        SAMPLE_DIMS,
+        (0, 1),
+        per_layer_calc_ns=exact_calc_ns,
+    )
+    assert exact_estimate_ps == 880_128
+    assert exact_calc_ns == 440
+    assert exact_replay.render() == exact_live.render()
+
+    absent_estimate_ps = sink.compute_estimate_ps(absent_record)
+    absent_calc_ns = absent_estimate_ps // (SAMPLE_DIMS.num_layers * 1000)
+    absent_replay = render_serial_execution_graph_goal(lowerer.lower(absent_record))
+    absent_live = render_step_goal(
+        absent_record,
+        SAMPLE_DIMS,
+        (0, 1),
+        per_layer_calc_ns=absent_calc_ns,
+    )
+    assert absent_estimate_ps == 912_896
+    assert absent_calc_ns == 456
+    assert absent_estimate_ps - exact_estimate_ps == 32_768
+    assert absent_replay.render() == absent_live.render()
+    assert (
+        hashlib.sha256(absent_replay.render().encode()).hexdigest()
+        == B1_ABSENT_REPLAY_SHA256
+    )
 
 
 def test_dense_tp1_lowers_and_renders_as_compute_only_work():
