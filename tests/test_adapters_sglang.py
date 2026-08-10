@@ -260,12 +260,16 @@ def test_config_from_env_reads_every_knob():
             "SIMLLM_SGLANG_HOST_INIT_PS": "1234",
             "SIMLLM_SGLANG_TOKEN_ID": "99",
             "SIMLLM_SGLANG_STEP_RECORDS": "/tmp/steps.jsonl",
+            "SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE": "4",
+            "SIMLLM_SGLANG_COMMUNICATOR_EVENTS": "/tmp/events.jsonl",
         }
     )
     assert config.mode == "paced"
     assert config.efficiency == 0.5
     assert config.host_initiation_ps == 1234
     assert config.token_id == 99
+    assert config.communicator_tp_size == 4
+    assert config.communicator_events_path == "/tmp/events.jsonl"
     gpu = config.gpu_spec()
     assert gpu.name == "h200"
     assert gpu.peak_flops == 1e15  # override applied
@@ -277,3 +281,11 @@ def test_config_rejects_bad_values():
         SimWorkerConfig.from_env({"SIMLLM_SGLANG_MODE": "fast"})
     with pytest.raises(ValueError, match="unknown SIMLLM_SGLANG_GPU"):
         SimWorkerConfig.from_env({"SIMLLM_SGLANG_GPU": "mi300"}).gpu_spec()
+    with pytest.raises(ValueError, match="must be positive"):
+        SimWorkerConfig.from_env({"SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE": "0"})
+    with pytest.raises(ValueError, match="must divide"):
+        SimWorkerConfig.from_env({"SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE": "3"})
+    with pytest.raises(ValueError, match="requires"):
+        SimWorkerConfig.from_env(
+            {"SIMLLM_SGLANG_COMMUNICATOR_EVENTS": "/tmp/events.jsonl"}
+        )
