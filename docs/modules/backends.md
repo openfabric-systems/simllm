@@ -242,7 +242,10 @@ On 2026-08-10 BACK-5, BACK-6 and BACK-7 closed. The sink now consumes an
 optional exact provider layer breakdown, an optional exact step sample count
 and an explicit GOAL-rank count while preserving the default M4 and CORE-2
 GOAL bytes. The precision study matched all four unequal-layer closed forms,
-both sample-attribution relations and the default digest exactly. Its
+both sample-attribution relations and the default digest exactly. The shipped
+providers still use the byte-identical even split; COMP-16 owns real
+per-layer values, with the roofline provider first and profile tables after
+COMP-6 supplies per-layer kernel shapes. The study's
 registered fluid-plus-topology command was invalid because htsim accepts
 physical topology files only for physical profiles. The expectation was not
 rewritten: post-specified checks instead showed 0 ps residual and exact

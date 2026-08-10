@@ -94,7 +94,10 @@ def run_config(profile: str, tp: int, link: str, workdir: Path,
         result = sink(record)
         assert result is not None
         outcome = sink.outcomes[-1]
-        kernel_ps = LAYERS * max(outcome.per_layer_calc_ns, 1) * 1000
+        per_layer_calc_ns = outcome.per_layer_calc_ns
+        if per_layer_calc_ns is None:
+            per_layer_calc_ns = outcome.compute_estimate_ps // (LAYERS * 1000)
+        kernel_ps = LAYERS * max(per_layer_calc_ns, 1) * 1000
         bound = provider.estimate(step_kernel(sink.config.dims, record, 1), gpu).bound
         rows.append({
             "profile": profile, "tp": tp, "link": link,

@@ -12,7 +12,9 @@ reported separately as post-specified regression checks.
 
 Raw GOAL, binary and completion-ledger artifacts plus `summary.csv` are under
 `/data3/yifeng/simllm-dev/wave1-runs/back567_step_sink_precision/`. They are
-not Git content.
+not Git content. The directory also retains the first-attempt leftovers
+`c-w2-explicit`, `c-w2-workaround` and `baseline-prechange`; they do not add
+rows to the evidence summary.
 
 ## Reproduction
 
@@ -112,10 +114,18 @@ and a present field round-tripped through v1. Three invalid provider
 breakdowns were rejected: wrong count, negative duration and fused-sum
 mismatch.
 
+The SHA-256 literal was first recorded in commit `7a9d09f`, while the frozen
+expectation pinned byte equality against `4d486d1`. The default-path diff
+argument and the rerun both satisfy that frozen equality.
+
 These checks are fatal but unscored. They do not increase any behavioral
 denominator.
 
 ## Repository gates
+
+The quoted 325-pass pytest transcript requires `SIMLLM_HTSIM_RNIC` and
+`SIMLLM_TXT2BIN` to be set. Without them, the three backend-toolchain tests
+self-skip and the gate reports 322 passed plus 3 skipped.
 
 ```text
 $ .venv/bin/ruff check .
