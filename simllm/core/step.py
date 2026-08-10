@@ -56,6 +56,19 @@ class StepRecord:
     scheduled: list[ScheduledRequest] = field(default_factory=list)
     preempted_request_ids: list[str] = field(default_factory=list)
     finished_request_ids: list[str] = field(default_factory=list)
+    #: exact number of scheduled requests that sample this step; None means unknown
+    num_sampled: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.num_sampled is None:
+            return
+        if isinstance(self.num_sampled, bool) or not isinstance(self.num_sampled, int):
+            raise TypeError("num_sampled must be an integer or None")
+        if not 0 <= self.num_sampled <= len(self.scheduled):
+            raise ValueError(
+                f"num_sampled={self.num_sampled} must be between 0 and "
+                f"len(scheduled)={len(self.scheduled)}"
+            )
 
     @property
     def total_new_tokens(self) -> int:
@@ -87,7 +100,7 @@ def step_record_to_json(record: StepRecord) -> dict[str, Any]:
     completion times joins a finished id to the preceding record's virtual
     time.
     """
-    return {
+    payload = {
         "schema": STEP_SCHEMA,
         "step_index": record.step_index,
         "virtual_time_ps": record.virtual_time_ps,
@@ -104,6 +117,9 @@ def step_record_to_json(record: StepRecord) -> dict[str, Any]:
         "preempted_request_ids": list(record.preempted_request_ids),
         "finished_request_ids": list(record.finished_request_ids),
     }
+    if record.num_sampled is not None:
+        payload["num_sampled"] = record.num_sampled
+    return payload
 
 
 def step_records_to_json(records: Sequence[StepRecord]) -> list[dict[str, Any]]:
@@ -140,6 +156,7 @@ def step_record_from_json(payload: dict[str, Any]) -> StepRecord:
         scheduled=scheduled,
         preempted_request_ids=list(payload.get("preempted_request_ids", [])),
         finished_request_ids=list(payload.get("finished_request_ids", [])),
+        num_sampled=payload.get("num_sampled"),
     )
 
 
@@ -156,7 +173,7 @@ def step_records_from_jsonl(path: str | Path) -> list[StepRecord]:
                 continue
             try:
                 records.append(step_record_from_json(json.loads(line)))
-            except (ValueError, KeyError) as exc:
+            except (TypeError, ValueError, KeyError) as exc:
                 raise ValueError(f"{path}:{line_number}: {exc}") from exc
     return records
 
