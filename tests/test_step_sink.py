@@ -1,7 +1,10 @@
 """Tests for the closed-loop htsim step sink (simllm.backends.step_sink)."""
 
+from types import SimpleNamespace
+
 import pytest
 
+import simllm.backends.step_sink as step_sink_module
 from simllm.backends import HtsimStepSink, HtsimStepSinkConfig, find_htsim_rnic
 from simllm.compute import ModelDims
 from simllm.core import RequestPhase, ScheduledRequest, StepRecord
@@ -87,6 +90,32 @@ def test_sink_returns_none_with_ep_ranks_but_dense_dims(tmp_path):
 def test_sink_config_rejects_unknown_profile(tmp_path):
     with pytest.raises(ValueError, match="profile"):
         sink(tmp_path, profile="rnic-ss")
+
+
+def test_sink_passes_explicit_goal_rank_count(tmp_path, monkeypatch):
+    monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
+    monkeypatch.setattr(
+        step_sink_module,
+        "run_htsim_rnic",
+        lambda _config: SimpleNamespace(
+            job_completion_time_ps=lambda: 1_000,
+            flows=[],
+        ),
+    )
+    s = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SMALL_DIMS,
+            workdir=tmp_path / "padded",
+            num_goal_ranks=8,
+        )
+    )
+
+    assert s(decode_record()) is not None
+    assert (tmp_path / "padded" / "step-000004.goal").read_text().startswith(
+        "num_ranks 8\n"
+    )
 
 
 @pytest.mark.skipif(

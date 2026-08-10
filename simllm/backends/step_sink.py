@@ -84,6 +84,8 @@ class HtsimStepSinkConfig:
     ep_ranks: Sequence[int] | None = None
     linkspeed_bps: int = 400_000_000_000
     topology: Path | None = None
+    #: explicit GOAL rank count for topology padding; None keeps inferred sizing
+    num_goal_ranks: int | None = None
     provider: ComputeProvider = field(default_factory=lambda: RooflineProvider(efficiency=0.7))
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel)
@@ -150,6 +152,7 @@ class HtsimStepSink:
             cfg.tp_ranks,
             per_layer_calc_ns,
             ep_ranks=cfg.ep_ranks,
+            num_goal_ranks=cfg.num_goal_ranks,
             base_tag=cfg.base_tag,
         )
         name = f"step-{record.step_index:06d}"

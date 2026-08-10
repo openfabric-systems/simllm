@@ -81,6 +81,17 @@ def test_render_step_goal_refuses_empty_step():
         render_step_goal(decode_record(), TINY_DIMS, [0], per_layer_calc_ns=1)
 
 
+def test_render_step_goal_rejects_too_few_goal_ranks():
+    with pytest.raises(ValueError, match="cannot contain rank 3"):
+        render_step_goal(
+            decode_record(),
+            TINY_DIMS,
+            [2, 3],
+            per_layer_calc_ns=1,
+            num_goal_ranks=3,
+        )
+
+
 def test_render_step_goal_structure():
     trace = render_step_goal(decode_record(), TINY_DIMS, [0, 1, 2, 3],
                              per_layer_calc_ns=42)

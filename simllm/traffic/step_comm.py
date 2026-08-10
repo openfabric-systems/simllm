@@ -194,6 +194,11 @@ def render_step_goal(
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
     if num_goal_ranks is None:
         num_goal_ranks = max(participants) + 1
+    minimum_ranks = max(participants) + 1
+    if num_goal_ranks < minimum_ranks:
+        raise ValueError(
+            f"num_goal_ranks={num_goal_ranks} cannot contain rank {minimum_ranks - 1}"
+        )
     trace = GoalTrace(num_goal_ranks)
 
     previous: dict[int, str] = {}
