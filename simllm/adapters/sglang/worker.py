@@ -44,6 +44,14 @@ Environment variable            Meaning (default)
 ``SIMLLM_SGLANG_STEP_RECORDS``  JSONL path for the step records; each record
                                 is appended the moment its step completes
                                 (unset).
+``SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE``
+                                logical TP group size for the optional
+                                zero-time communicator observation; unset
+                                preserves the existing worker exactly.
+``SIMLLM_SGLANG_COMMUNICATOR_EVENTS``
+                                JSONL path for communicator events from the
+                                scheduler process; requires the logical TP
+                                size (unset).
 ==============================  ==============================================
 
 The simulated KV pool size comes from SGLang's own ``--max-total-tokens``
@@ -74,6 +82,15 @@ from dataclasses import dataclass
 from typing import Any
 
 from simllm.adapters.sglang._version import PINNED_SGLANG_COMMIT
+from simllm.adapters.sglang.communicator import (
+    FLOAT32,
+    SGLANG_TP_PAYLOAD_BYTES,
+    GroupCoordinatorEvent,
+    GroupCoordinatorEventStream,
+    GroupCoordinatorObserver,
+    ShapeTensor,
+    SimGroupCoordinator,
+)
 from simllm.compute import (
     GPU_ENVELOPES,
     PS_PER_SECOND,
@@ -81,6 +98,7 @@ from simllm.compute import (
     GpuSpec,
     HostInitiationModel,
     ModelDims,
+    NcclStackConfig,
     RooflineProvider,
     estimate_step_latency_ps,
 )
@@ -193,11 +211,26 @@ class SimWorkerConfig:
     host_initiation_ps: int = 0
     token_id: int | None = None
     step_records_path: str | None = None
+    communicator_tp_size: int | None = None
+    communicator_events_path: str | None = None
 
     def __post_init__(self) -> None:
         if self.mode not in ("virtual", "paced"):
             raise ValueError(
                 f"SIMLLM_SGLANG_MODE must be virtual or paced, got {self.mode!r}"
+            )
+        if self.communicator_tp_size is not None:
+            if self.communicator_tp_size <= 0:
+                raise ValueError("SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE must be positive")
+            if SGLANG_TP_PAYLOAD_BYTES % self.communicator_tp_size:
+                raise ValueError(
+                    "SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE must divide the fixed "
+                    f"{SGLANG_TP_PAYLOAD_BYTES}-byte TP observation"
+                )
+        if self.communicator_events_path and self.communicator_tp_size is None:
+            raise ValueError(
+                "SIMLLM_SGLANG_COMMUNICATOR_EVENTS requires "
+                "SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE"
             )
 
     @classmethod
@@ -212,6 +245,12 @@ class SimWorkerConfig:
             host_initiation_ps=_env_int(env, "SIMLLM_SGLANG_HOST_INIT_PS", 0) or 0,
             token_id=_env_int(env, "SIMLLM_SGLANG_TOKEN_ID", None),
             step_records_path=_env_str(env, "SIMLLM_SGLANG_STEP_RECORDS", None),
+            communicator_tp_size=_env_int(
+                env, "SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE", None
+            ),
+            communicator_events_path=_env_str(
+                env, "SIMLLM_SGLANG_COMMUNICATOR_EVENTS", None
+            ),
         )
 
     def gpu_spec(self) -> GpuSpec:
@@ -549,6 +588,42 @@ class SimModelRunnerStub(_ModelRunnerBase):
     canary_manager = None
     prefill_aware_swa = False
 
+    def bind_simulated_tp_group(
+        self,
+        group: SimGroupCoordinator,
+        *,
+        event_stream: GroupCoordinatorEventStream | None = None,
+    ) -> None:
+        """Bind the optional logical TP group after base runner construction."""
+
+        if not isinstance(group, SimGroupCoordinator):
+            raise TypeError("group must be an SGLang SimGroupCoordinator")
+        self.simulated_tp_group = group
+        self._coordinator_event_stream = event_stream
+
+    @property
+    def coordinator_events(self) -> tuple[GroupCoordinatorEvent, ...]:
+        group = getattr(self, "simulated_tp_group", None)
+        return () if group is None else group.events
+
+    def observe_tp_step(self) -> GroupCoordinatorEvent | None:
+        """Emit the fixed shape-only TP boundary for one model step."""
+
+        group = getattr(self, "simulated_tp_group", None)
+        if group is None:
+            return None
+        tensor = ShapeTensor(
+            (1, SGLANG_TP_PAYLOAD_BYTES // FLOAT32.itemsize),
+            dtype=FLOAT32,
+            element_size_bytes=FLOAT32.itemsize,
+        )
+        group.all_reduce(tensor)
+        event = group.events[-1]
+        stream = getattr(self, "_coordinator_event_stream", None)
+        if stream is not None:
+            stream.append(event)
+        return event
+
     def load_model(self) -> None:
         """Metadata only; no weights. ``support_pp`` probes the forward
         signature, so a stand-in model with a no-arg ``forward`` resolves it
@@ -743,10 +818,14 @@ class SimTpModelWorker(_TpWorkerBase):
         self.clock = VirtualClock()
         self.translator = SglStepTranslator()
         self.step_index = 0
+        self.simulated_tp_group: SimGroupCoordinator | None = None
+        self.coordinator_observer: GroupCoordinatorObserver | None = None
+        self._coordinator_event_stream: GroupCoordinatorEventStream | None = None
         super().__init__(*args, **kwargs)
         tp_size = int(getattr(self.server_args, "tp_size", 1) or 1)
         self.dims = model_dims_from_sglang(self.model_config, tp_size)
         self.token_id = self._resolve_token_id()
+        self._configure_simulated_communicator()
         _LATEST[:] = [self]
         logger.info(
             "SimTpModelWorker: mode=%s, gpu=%s, pinned SGLang commit %s",
@@ -754,6 +833,43 @@ class SimTpModelWorker(_TpWorkerBase):
             self.sim_gpu.name,
             PINNED_SGLANG_COMMIT,
         )
+
+    def _configure_simulated_communicator(self) -> None:
+        logical_size = self.sim_config.communicator_tp_size
+        if logical_size is None:
+            return
+        logical_rank = int(getattr(self.ps, "tp_rank", 0) or 0)
+        if logical_rank >= logical_size:
+            raise ValueError(
+                f"SGLang TP rank {logical_rank} is outside simulated TP size "
+                f"{logical_size}"
+            )
+        self.coordinator_observer = GroupCoordinatorObserver(self.clock)
+        self.simulated_tp_group = SimGroupCoordinator(
+            group_name="tp",
+            ranks=tuple(range(logical_size)),
+            rank=logical_rank,
+            local_rank=int(getattr(self.ps, "gpu_id", self.gpu_id) or 0),
+            clock=self.clock,
+            observer=self.coordinator_observer,
+            stack_config=NcclStackConfig(
+                channel_count=1,
+                chunk_bytes=SGLANG_TP_PAYLOAD_BYTES // logical_size,
+                fifo_slots_per_channel=2,
+            ),
+        )
+        if self.sim_config.communicator_events_path:
+            self._coordinator_event_stream = GroupCoordinatorEventStream(
+                self.sim_config.communicator_events_path
+            )
+        self._model_runner.bind_simulated_tp_group(
+            self.simulated_tp_group,
+            event_stream=self._coordinator_event_stream,
+        )
+
+    @property
+    def coordinator_events(self) -> tuple[GroupCoordinatorEvent, ...]:
+        return self._model_runner.coordinator_events
 
     def _init_model_runner(self) -> None:
         try:
@@ -837,6 +953,7 @@ class SimTpModelWorker(_TpWorkerBase):
             rows=rows,
         )
         self.step_index += 1
+        self._model_runner.observe_tp_step()
         self._settle(record, num_sampled=len(rows))
 
         device = getattr(batch, "device", None) or "cpu"
