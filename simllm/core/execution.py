@@ -73,6 +73,7 @@ class ResourceKind(enum.Enum):
     GPU_SCHEDULER = "gpu-scheduler"
     HBM_QUEUE = "hbm-queue"
     COPY_ENGINE = "copy-engine"
+    NVLINK = "nvlink"
     NCCL_CHANNEL = "nccl-channel"
     NIC_SEND_QUEUE = "nic-send-queue"
     NIC_RECEIVE_QUEUE = "nic-receive-queue"
