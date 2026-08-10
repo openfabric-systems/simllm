@@ -31,8 +31,9 @@ renders byte-identically to the pre-MoE sink.
 Providers may opt into an exact per-layer duration breakdown. The sink checks
 that it sums to the fused estimate and emits the unequal layer costs. Existing
 providers inherit the optional hook's ``None`` result, retaining the original
-even split byte for byte. Sampling attribution remains the BACK-6
-approximation until the record carries an exact count.
+even split byte for byte. An optional exact sample count on the record prices
+the LM head correctly; its absence retains the historical scheduled-request
+approximation.
 """
 
 from __future__ import annotations
@@ -100,6 +101,10 @@ class StepNetworkOutcome:
     step_index: int
     #: the adapter-equivalent compute-only whole-step estimate, ps
     compute_estimate_ps: int
+    #: sample count used for the fused estimate
+    num_sampled: int
+    #: whether num_sampled came from an exact record field
+    sample_count_exact: bool
     #: uniform calc cost handed to GOAL, or None for an unequal breakdown
     per_layer_calc_ns: int | None
     #: emitted GOAL calc units in layer order, ns
@@ -127,12 +132,19 @@ class HtsimStepSink:
         #: one entry per simulated (non-None) step, in call order
         self.outcomes: list[StepNetworkOutcome] = []
 
+    @staticmethod
+    def _num_sampled(record: StepRecord) -> int:
+        if record.num_sampled is not None:
+            return record.num_sampled
+        return len(record.scheduled)
+
     def _compute_estimate(
         self, record: StepRecord
     ) -> tuple[int, tuple[int, ...] | None]:
         """Return the whole-step estimate and optional exact layer durations."""
         cfg = self.config
-        kernel = step_kernel(cfg.dims, record, num_sampled=len(record.scheduled))
+        num_sampled = self._num_sampled(record)
+        kernel = step_kernel(cfg.dims, record, num_sampled=num_sampled)
         fused = cfg.provider.estimate(kernel, cfg.gpu)
         host_delay_ps = cfg.host_model.delay_ps()
         estimate_ps = fused.duration_ps + host_delay_ps
@@ -219,6 +231,8 @@ class HtsimStepSink:
             StepNetworkOutcome(
                 step_index=record.step_index,
                 compute_estimate_ps=estimate_ps,
+                num_sampled=self._num_sampled(record),
+                sample_count_exact=record.num_sampled is not None,
                 per_layer_calc_ns=per_layer_calc_ns,
                 layer_calc_ns=layer_calc_ns,
                 makespan_ps=makespan_ps,

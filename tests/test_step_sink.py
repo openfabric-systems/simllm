@@ -42,6 +42,17 @@ SMALL_MOE_DIMS = ModelDims(
     local_num_experts=2,
 )
 
+SAMPLE_DIMS = ModelDims(
+    num_layers=2,
+    hidden_size=64,
+    intermediate_size=128,
+    num_heads=4,
+    num_kv_heads=4,
+    head_size=16,
+    vocab_size=256,
+    dtype_bytes=2,
+)
+
 # M1-calibrated fluid constants (examples/m1/RESULTS.md C1/C2)
 PS_PER_BYTE_400G = 20
 PROPAGATION_PS = 2_000_000
@@ -64,6 +75,11 @@ class LayerProvider(ComputeProvider):
             DurationEstimate(duration_ps=duration_ps, bound="measured")
             for duration_ps in self.layer_ps
         )
+
+
+class FlopProvider(ComputeProvider):
+    def estimate(self, kernel, gpu):
+        return DurationEstimate(duration_ps=int(kernel.flops), bound="compute")
 
 
 def stub_backend(monkeypatch, makespan_ps=100_000):
@@ -231,6 +247,74 @@ def test_sink_default_goal_is_byte_identical_to_frozen_baseline(tmp_path, monkey
     assert hashlib.sha256(goal_bytes).hexdigest() == DEFAULT_GOAL_SHA256
     assert s.outcomes[0].per_layer_calc_ns == 12_030
     assert s.outcomes[0].layer_calc_ns == (12_030, 12_030)
+
+
+def test_sink_uses_exact_sample_count_for_chunked_prefill(tmp_path, monkeypatch):
+    stub_backend(monkeypatch)
+    scheduled = [
+        ScheduledRequest("p", RequestPhase.PREFILL, 4, context_length=8),
+        ScheduledRequest("d", RequestPhase.DECODE, 1, context_length=32),
+    ]
+    approximate_record = StepRecord(0, 0, scheduled)
+    exact_record = StepRecord(0, 0, scheduled, num_sampled=1)
+
+    approximate = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SAMPLE_DIMS,
+            workdir=tmp_path / "approximate",
+            provider=FlopProvider(),
+        )
+    )
+    exact = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SAMPLE_DIMS,
+            workdir=tmp_path / "exact",
+            provider=FlopProvider(),
+        )
+    )
+
+    assert approximate.compute_estimate_ps(approximate_record) == 912_896
+    assert exact.compute_estimate_ps(exact_record) == 880_128
+    assert approximate(approximate_record) is not None
+    assert exact(exact_record) is not None
+    assert approximate.outcomes[0].num_sampled == 2
+    assert not approximate.outcomes[0].sample_count_exact
+    assert approximate.outcomes[0].layer_calc_ns == (456, 456)
+    assert exact.outcomes[0].num_sampled == 1
+    assert exact.outcomes[0].sample_count_exact
+    assert exact.outcomes[0].layer_calc_ns == (440, 440)
+
+
+def test_sink_sample_count_identity_when_every_request_samples(tmp_path, monkeypatch):
+    stub_backend(monkeypatch)
+    scheduled = [
+        ScheduledRequest("d0", RequestPhase.DECODE, 1, context_length=32),
+        ScheduledRequest("d1", RequestPhase.DECODE, 1, context_length=32),
+    ]
+    records = [StepRecord(0, 0, scheduled), StepRecord(0, 0, scheduled, num_sampled=2)]
+    goals = []
+    estimates = []
+    for label, record in zip(("absent", "exact"), records, strict=True):
+        s = HtsimStepSink(
+            HtsimStepSinkConfig(
+                profile="rnic-nn-fluid",
+                tp_ranks=(0, 1),
+                dims=SAMPLE_DIMS,
+                workdir=tmp_path / label,
+                provider=FlopProvider(),
+            )
+        )
+        assert s(record) is not None
+        goals.append((tmp_path / label / "step-000000.goal").read_bytes())
+        estimates.append(s.outcomes[0].compute_estimate_ps)
+        assert s.outcomes[0].layer_calc_ns == (212, 212)
+
+    assert estimates == [424_960, 424_960]
+    assert goals[0] == goals[1]
 
 
 @pytest.mark.skipif(

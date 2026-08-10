@@ -165,6 +165,12 @@ sink seam is the same contract but has not driven htsim live yet (SGL-8).
   and the COMP-15 NCCL stack model. The VLLM-14 call-path bottleneck study
   has an SGLang half here: the real communicator function's own cost is
   measured and compared against the simulated path.
+- SGL-12 (Precision; P1; M): source and populate exact
+  `StepRecord.num_sampled` at the worker seam. Distinguish a mid-prompt extend
+  row from the extend step that reaches `origin_input_ids`, including radix
+  hits, retracted prefills and MIXED batches; prove the count matches the rows
+  for which SGLang consumes a generated token. Keep the absent field as the
+  explicit compatibility path.
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
 worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin
