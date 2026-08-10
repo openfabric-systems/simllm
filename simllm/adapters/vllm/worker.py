@@ -1,0 +1,651 @@
+"""Flagged vLLM v1 worker skeleton with no physical GPU state.
+
+Select this class through vLLM's dotted worker seam and enable the deliberate
+empty-compute path explicitly::
+
+    SIMLLM_VLLM_WORKER_MODE=skeleton \\
+    SIMLLM_VLLM_MODE=virtual \\
+    VLLM_USE_V2_MODEL_RUNNER=0 \\
+    vllm serve <model> \\
+        --no-async-scheduling \\
+        --worker-cls simllm.adapters.vllm.SimWorker
+
+``SIMLLM_VLLM_WORKER_MODE`` has no permissive default. Constructing
+:class:`SimWorker` unless its value is exactly ``skeleton`` raises before the
+stock worker can initialize a device. The remaining ``SIMLLM_VLLM_*``
+variables are shared with :class:`simllm.adapters.vllm.SimExecutor` and are
+documented in :mod:`simllm.adapters.vllm.executor`.
+
+The class subclasses vLLM v0.26.0's GPU ``Worker`` when vLLM is present, but
+overrides every ordinary initialization and step entry that would reach CUDA.
+Its model runner mirrors the selected v1 algorithm names and call order while
+leaving ``_model_forward`` empty. One adapter-local lifecycle owns the
+:class:`simllm.core.VirtualClock`, step records, results, sink, and streaming
+writer. The runner settles a step exactly once during ``execute_model`` and
+returns the fabricated output from ``sample_tokens`` without advancing time a
+second time.
+
+This module stays importable without vLLM. Import-free tests use transcribed
+configuration and scheduler stand-ins, matching the executor adapter's
+precedent.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import Any
+
+from simllm.adapters.vllm.executor import (
+    _HOOKS,
+    _ModelAnswers,
+    _resolve_token_id,
+    _SimStepRuntime,
+    fabricate_sampled_tokens,
+    model_dims_from_vllm_config,
+)
+from simllm.core import VirtualClock
+
+logger = logging.getLogger(__name__)
+
+WORKER_MODE_ENV = "SIMLLM_VLLM_WORKER_MODE"
+SKELETON_WORKER_MODE = "skeleton"
+
+SKELETON_INIT_CALL_SEQUENCE = (
+    "worker.init_device",
+    "worker.load_model",
+    "worker.get_kv_cache_spec",
+    "worker.determine_available_memory",
+    "worker.initialize_from_config",
+    "worker.compile_or_warm_up_model",
+    "worker.reset_mm_cache",
+    "worker.get_supported_tasks",
+)
+
+SKELETON_STEP_CALL_SEQUENCE = (
+    "worker.execute_model",
+    "runner.execute_model",
+    "runner._update_states",
+    "runner._prepare_inputs",
+    "runner._determine_batch_execution_and_padding",
+    "runner._build_attention_metadata",
+    "runner._preprocess",
+    "runner._model_forward",
+    "worker.sample_tokens",
+    "runner.sample_tokens",
+    "runner._sample",
+    "runner._update_states_after_model_execute",
+    "runner._bookkeeping_sync",
+    "runner.eplb_step",
+)
+
+SKELETON_EMPTY_STEP_CALL_SEQUENCE = (
+    "worker.execute_model",
+    "runner.execute_model",
+    "runner._update_states",
+)
+
+__all__ = [
+    "SKELETON_EMPTY_STEP_CALL_SEQUENCE",
+    "SKELETON_INIT_CALL_SEQUENCE",
+    "SKELETON_STEP_CALL_SEQUENCE",
+    "SKELETON_WORKER_MODE",
+    "WORKER_MODE_ENV",
+    "MirroredCall",
+    "SimModelRunner",
+    "SimModelRunnerOutput",
+    "SimWorker",
+    "latest_worker",
+    "skeleton_mode_enabled",
+]
+
+
+def skeleton_mode_enabled(env: Mapping[str, str] | None = None) -> bool:
+    """Whether the explicit worker entry gate selects the skeleton."""
+    env = os.environ if env is None else env
+    return env.get(WORKER_MODE_ENV) == SKELETON_WORKER_MODE
+
+
+def _require_skeleton_mode(env: Mapping[str, str] | None = None) -> None:
+    if skeleton_mode_enabled(env):
+        return
+    env = os.environ if env is None else env
+    actual = env.get(WORKER_MODE_ENV)
+    raise RuntimeError(
+        "SimWorker is the flagged empty-compute path and requires "
+        f"{WORKER_MODE_ENV}={SKELETON_WORKER_MODE}; got {actual!r}. "
+        "Without that exact flag it will not fall through to a partial real worker."
+    )
+
+
+def _v1_multiprocessing_enabled(env: Mapping[str, str] | None = None) -> bool:
+    env = os.environ if env is None else env
+    value = env.get("VLLM_ENABLE_V1_MULTIPROCESSING", "1")
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+try:
+    from vllm.v1.worker.gpu_worker import Worker as _GpuWorkerBase
+
+    _VLLM_WORKER_IMPORT_ERROR: ImportError | None = None
+except ImportError as exc:
+    _VLLM_WORKER_IMPORT_ERROR = exc
+
+    class _GpuWorkerBase:  # type: ignore[no-redef]
+        """Transcribed construction surface used only when vLLM is absent."""
+
+        def __init__(
+            self,
+            vllm_config: Any,
+            local_rank: int,
+            rank: int,
+            distributed_init_method: str,
+            is_driver_worker: bool = False,
+        ) -> None:
+            self.vllm_config = vllm_config
+            self.model_config = vllm_config.model_config
+            self.cache_config = vllm_config.cache_config
+            self.parallel_config = vllm_config.parallel_config
+            self.parallel_config.rank = rank
+            self.scheduler_config = vllm_config.scheduler_config
+            self.device_config = vllm_config.device_config
+            self.speculative_config = getattr(vllm_config, "speculative_config", None)
+            self.local_rank = local_rank
+            self.rank = rank
+            self.distributed_init_method = distributed_init_method
+            self.is_driver_worker = is_driver_worker
+            self.device = None
+            self.model_runner = None
+
+
+@dataclass
+class MirroredCall:
+    """One name-mirrored call timestamped by the shared virtual clock."""
+
+    name: str
+    started_at_ps: int
+    completed_at_ps: int
+
+
+class _CallLedger:
+    def __init__(self, clock: VirtualClock) -> None:
+        self.clock = clock
+        self.records: list[MirroredCall] = []
+
+    @contextmanager
+    def record(self, name: str) -> Iterator[None]:
+        started_at_ps = self.clock.now_ps
+        call = MirroredCall(
+            name=name,
+            started_at_ps=started_at_ps,
+            completed_at_ps=started_at_ps,
+        )
+        self.records.append(call)
+        try:
+            yield
+        finally:
+            call.completed_at_ps = self.clock.now_ps
+
+
+@dataclass
+class SimModelRunnerOutput:
+    """Import-free stand-in for vLLM's required output fields."""
+
+    req_ids: list[str]
+    req_id_to_index: dict[str, int]
+    sampled_token_ids: list[list[int]] | None = None
+
+
+def _model_runner_output(
+    req_ids: list[str],
+    req_id_to_index: dict[str, int],
+    sampled_token_ids: list[list[int]] | None = None,
+) -> Any:
+    try:
+        from vllm.v1.outputs import ModelRunnerOutput
+    except ImportError:
+        ModelRunnerOutput = SimModelRunnerOutput
+    kwargs: dict[str, Any] = {
+        "req_ids": req_ids,
+        "req_id_to_index": req_id_to_index,
+    }
+    if sampled_token_ids is not None:
+        kwargs["sampled_token_ids"] = sampled_token_ids
+    return ModelRunnerOutput(**kwargs)
+
+
+@dataclass
+class _ExecuteModelState:
+    translated: Any
+    scheduler_output: Any
+
+
+class SimModelRunner:
+    """GPUModelRunner-shaped copy whose model computation is empty."""
+
+    def __init__(
+        self,
+        vllm_config: Any,
+        runtime: _SimStepRuntime,
+        answers: _ModelAnswers,
+        token_id: int,
+        call_ledger: _CallLedger,
+    ) -> None:
+        self.vllm_config = vllm_config
+        self.model_config = vllm_config.model_config
+        self.cache_config = vllm_config.cache_config
+        self.parallel_config = vllm_config.parallel_config
+        self.runtime = runtime
+        self.answers = answers
+        self.token_id = token_id
+        self.call_ledger = call_ledger
+        self.execute_model_state: _ExecuteModelState | None = None
+        self.kv_cache_config: Any | None = None
+        self.loaded = False
+        self._loras: set[int] = set()
+        self.is_pooling_model = False
+        self.uniform_decode_query_len = 1
+        with self.call_ledger.record("runner.__init__"):
+            pass
+
+    def load_model(self, *, load_dummy_weights: bool = False) -> None:
+        with self.call_ledger.record("runner.load_model"):
+            self.loaded = True
+
+    def profile_run(self) -> None:
+        with self.call_ledger.record("runner.profile_run"):
+            pass
+
+    def get_kv_cache_spec(self) -> dict[str, Any]:
+        with self.call_ledger.record("runner.get_kv_cache_spec"):
+            return self.answers.get_kv_cache_spec(self.answers.vllm_config.parallel_config.rank)
+
+    def initialize_kv_cache(self, kv_cache_config: Any) -> None:
+        with self.call_ledger.record("runner.initialize_kv_cache"):
+            self.kv_cache_config = kv_cache_config
+
+    def update_max_model_len(self, max_model_len: int) -> None:
+        with self.call_ledger.record("runner.update_max_model_len"):
+            self.model_config.max_model_len = max_model_len
+
+    def get_supported_tasks(self) -> tuple[str, ...]:
+        with self.call_ledger.record("runner.get_supported_tasks"):
+            return self.answers.supported_tasks()
+
+    def reset_mm_cache(self) -> None:
+        with self.call_ledger.record("runner.reset_mm_cache"):
+            pass
+
+    def reset_encoder_cache(self) -> None:
+        with self.call_ledger.record("runner.reset_encoder_cache"):
+            pass
+
+    def _update_states(self, scheduler_output: Any) -> Any:
+        with self.call_ledger.record("runner._update_states"):
+            return scheduler_output
+
+    def _prepare_inputs(self, translated: Any) -> Any:
+        with self.call_ledger.record("runner._prepare_inputs"):
+            return translated
+
+    def _determine_batch_execution_and_padding(self, translated: Any) -> Any:
+        with self.call_ledger.record("runner._determine_batch_execution_and_padding"):
+            return translated
+
+    def _build_attention_metadata(self, translated: Any) -> Any:
+        with self.call_ledger.record("runner._build_attention_metadata"):
+            return translated
+
+    def _preprocess(self, translated: Any) -> Any:
+        with self.call_ledger.record("runner._preprocess"):
+            return translated
+
+    def _model_forward(self, translated: Any) -> None:
+        with self.call_ledger.record("runner._model_forward"):
+            return
+
+    def execute_model(self, scheduler_output: Any, intermediate_tensors: Any = None) -> Any:
+        with self.call_ledger.record("runner.execute_model"):
+            if self.execute_model_state is not None:
+                raise RuntimeError(
+                    "State error: sample_tokens() must be called after "
+                    "execute_model() returns None."
+                )
+            structured = getattr(scheduler_output, "structured_output_request_ids", None)
+            if structured or getattr(scheduler_output, "has_structured_output_requests", False):
+                raise RuntimeError(
+                    "SimWorker does not support structured output: the grammar "
+                    "would reject its fabricated token id (VLLM-8)."
+                )
+            updated_scheduler_output = self._update_states(scheduler_output)
+            if not (
+                getattr(updated_scheduler_output, "num_scheduled_tokens", None) or {}
+            ):
+                self.runtime.drain(updated_scheduler_output)
+                return _model_runner_output([], {})
+
+            translated = self.runtime.translate(updated_scheduler_output)
+            prepared = self._prepare_inputs(translated)
+            padded = self._determine_batch_execution_and_padding(prepared)
+            metadata = self._build_attention_metadata(padded)
+            preprocessed = self._preprocess(metadata)
+            self._model_forward(preprocessed)
+            self.runtime.settle(translated)
+            self.execute_model_state = _ExecuteModelState(
+                translated=translated,
+                scheduler_output=scheduler_output,
+            )
+            return None
+
+    def _sample(self, translated: Any) -> tuple[list[str], dict[str, int], list[list[int]]]:
+        with self.call_ledger.record("runner._sample"):
+            return fabricate_sampled_tokens(
+                translated.req_ids,
+                translated.produces_token,
+                self.token_id,
+            )
+
+    def _update_states_after_model_execute(self, sampled_token_ids: Any, scheduler_output: Any) -> None:
+        with self.call_ledger.record("runner._update_states_after_model_execute"):
+            pass
+
+    def _bookkeeping_sync(
+        self, sampled: tuple[list[str], dict[str, int], list[list[int]]]
+    ) -> Any:
+        with self.call_ledger.record("runner._bookkeeping_sync"):
+            req_ids, req_id_to_index, sampled_token_ids = sampled
+            return _model_runner_output(req_ids, req_id_to_index, sampled_token_ids)
+
+    def eplb_step(self) -> None:
+        with self.call_ledger.record("runner.eplb_step"):
+            pass
+
+    def sample_tokens(self, grammar_output: Any = None) -> Any:
+        with self.call_ledger.record("runner.sample_tokens"):
+            state = self.execute_model_state
+            if state is None:
+                raise RuntimeError(
+                    "sample_tokens called with no pending model output: the "
+                    "execute/sample call order changed"
+                )
+            self.execute_model_state = None
+            sampled = self._sample(state.translated)
+            self._update_states_after_model_execute(
+                sampled[2],
+                state.scheduler_output,
+            )
+            output = self._bookkeeping_sync(sampled)
+            self.eplb_step()
+            return output
+
+    def take_draft_token_ids(self) -> None:
+        with self.call_ledger.record("runner.take_draft_token_ids"):
+            return
+
+    def _dummy_run(self, *args: Any, **kwargs: Any) -> None:
+        with self.call_ledger.record("runner._dummy_run"):
+            return
+
+    def add_lora(self, lora_request: Any) -> bool:
+        with self.call_ledger.record("runner.add_lora"):
+            lora_id = int(getattr(lora_request, "lora_int_id", lora_request))
+            self._loras.add(lora_id)
+            return True
+
+    def remove_lora(self, lora_id: int) -> bool:
+        with self.call_ledger.record("runner.remove_lora"):
+            self._loras.discard(int(lora_id))
+            return True
+
+    def pin_lora(self, lora_id: int) -> bool:
+        with self.call_ledger.record("runner.pin_lora"):
+            return int(lora_id) in self._loras
+
+    def list_loras(self) -> set[int]:
+        with self.call_ledger.record("runner.list_loras"):
+            return set(self._loras)
+
+    def shutdown(self) -> None:
+        with self.call_ledger.record("runner.shutdown"):
+            self.execute_model_state = None
+
+
+_LATEST_WORKERS: list[SimWorker] = []
+
+
+def latest_worker() -> SimWorker | None:
+    """The most recently constructed skeleton worker in this process."""
+    return _LATEST_WORKERS[-1] if _LATEST_WORKERS else None
+
+
+class SimWorker(_GpuWorkerBase):
+    """vLLM GPU Worker subclass whose selected path creates no GPU state."""
+
+    def __init__(
+        self,
+        vllm_config: Any,
+        local_rank: int,
+        rank: int,
+        distributed_init_method: str,
+        is_driver_worker: bool = False,
+        *,
+        _simllm_clock: VirtualClock | None = None,
+    ) -> None:
+        _require_skeleton_mode()
+        if bool(getattr(vllm_config, "use_v2_model_runner", False)):
+            raise RuntimeError(
+                "SimWorker skeleton mirrors the V1 runner and requires "
+                "VLLM_USE_V2_MODEL_RUNNER=0; V2 rebinding remains in VLLM-13."
+            )
+        parallel_config = vllm_config.parallel_config
+        backend = getattr(parallel_config, "distributed_executor_backend", None)
+        if backend in {"ray", "external_launcher"}:
+            raise RuntimeError(
+                "SimWorker skeleton does not support the "
+                f"{backend!r} executor backend in this slice; use the in-process "
+                "or non-async multiprocessing executor (VLLM-13)."
+            )
+        async_scheduling = bool(
+            getattr(vllm_config.scheduler_config, "async_scheduling", False)
+        )
+        if async_scheduling and _v1_multiprocessing_enabled():
+            raise RuntimeError(
+                "SimWorker has no device for vLLM's multiprocessing async-output "
+                "thread. Pass --no-async-scheduling or set "
+                "VLLM_ENABLE_V1_MULTIPROCESSING=0 (VLLM-13)."
+            )
+        super().__init__(
+            vllm_config=vllm_config,
+            local_rank=local_rank,
+            rank=rank,
+            distributed_init_method=distributed_init_method,
+            is_driver_worker=is_driver_worker,
+        )
+        if getattr(vllm_config, "speculative_config", None) is not None:
+            raise RuntimeError(
+                "SimWorker does not support speculative decoding because its "
+                "fabricated token would model zero draft acceptance (VLLM-8)."
+            )
+        parallel_config = self.parallel_config
+        pp_size = int(getattr(parallel_config, "pipeline_parallel_size", 1) or 1)
+        dp_size = int(getattr(parallel_config, "data_parallel_size", 1) or 1)
+        if pp_size != 1:
+            raise RuntimeError("SimWorker skeleton requires pipeline_parallel_size=1 (VLLM-10).")
+        if dp_size != 1:
+            raise RuntimeError(
+                "SimWorker skeleton requires data_parallel_size=1 until VLLM-13 "
+                "adds runner-internal DP coordination."
+            )
+
+        self.sim_config = _HOOKS.config or self._config_from_env()
+        self.dims = model_dims_from_vllm_config(vllm_config)
+        tp_size = int(getattr(parallel_config, "tensor_parallel_size", 1) or 1)
+        self._answers = _ModelAnswers(
+            vllm_config=vllm_config,
+            dims=self.dims,
+            config=self.sim_config,
+            tp_size=tp_size,
+            pp_size=pp_size,
+        )
+        self.token_id = _resolve_token_id(self.dims.vocab_size, self.sim_config.token_id)
+        # External-launch executors mark the local worker as a driver in every
+        # process. Global rank zero is the only safe clock, sink, and stream
+        # authority across those processes.
+        is_authority = rank == 0
+        self._runtime = _SimStepRuntime(
+            config=self.sim_config,
+            step_sink=_HOOKS.step_sink,
+            fallback_latency=lambda translated: 0,
+            clock=_simllm_clock,
+            is_authority=is_authority,
+        )
+        self.clock = self._runtime.clock
+        self.step_records = self._runtime.step_records
+        self.step_results = self._runtime.step_results
+        self._call_ledger = _CallLedger(self.clock)
+        self.model_runner = None
+        self.is_time_authority = is_authority
+        _LATEST_WORKERS[:] = [self]
+
+    @staticmethod
+    def _config_from_env() -> Any:
+        from simllm.adapters.vllm.executor import SimExecutorConfig
+
+        return SimExecutorConfig.from_env()
+
+    @property
+    def mirrored_calls(self) -> list[MirroredCall]:
+        return list(self._call_ledger.records)
+
+    @property
+    def mirrored_call_names(self) -> list[str]:
+        return [call.name for call in self._call_ledger.records]
+
+    def _runner(self) -> SimModelRunner:
+        runner = self.model_runner
+        if runner is None:
+            raise RuntimeError("SimWorker.init_device must run before worker RPCs")
+        return runner
+
+    def init_device(self) -> None:
+        with self._call_ledger.record("worker.init_device"):
+            self.device = None
+            self.model_runner = SimModelRunner(
+                self.vllm_config,
+                self._runtime,
+                self._answers,
+                self.token_id,
+                self._call_ledger,
+            )
+
+    def load_model(self, *, load_dummy_weights: bool = False) -> None:
+        with self._call_ledger.record("worker.load_model"):
+            self._runner().load_model(load_dummy_weights=load_dummy_weights)
+
+    def get_kv_cache_spec(self) -> dict[str, Any]:
+        with self._call_ledger.record("worker.get_kv_cache_spec"):
+            return self._runner().get_kv_cache_spec()
+
+    def determine_available_memory(self) -> int:
+        with self._call_ledger.record("worker.determine_available_memory"):
+            self._runner().profile_run()
+            return self._answers.determine_available_memory()
+
+    def update_max_model_len(self, max_model_len: int) -> None:
+        with self._call_ledger.record("worker.update_max_model_len"):
+            self.model_config.max_model_len = max_model_len
+            self._runner().update_max_model_len(max_model_len)
+
+    def initialize_from_config(self, kv_cache_config: Any) -> None:
+        with self._call_ledger.record("worker.initialize_from_config"):
+            num_blocks = getattr(kv_cache_config, "num_blocks", None)
+            if num_blocks is not None:
+                self.cache_config.num_gpu_blocks = num_blocks
+            self._runner().initialize_kv_cache(kv_cache_config)
+
+    def compile_or_warm_up_model(self) -> Any:
+        with self._call_ledger.record("worker.compile_or_warm_up_model"):
+            return self._answers.compilation_times()
+
+    def get_kv_connector_handshake_metadata(self) -> None:
+        with self._call_ledger.record("worker.get_kv_connector_handshake_metadata"):
+            return
+
+    def reset_mm_cache(self) -> None:
+        with self._call_ledger.record("worker.reset_mm_cache"):
+            self._runner().reset_mm_cache()
+
+    def reset_encoder_cache(self) -> None:
+        with self._call_ledger.record("worker.reset_encoder_cache"):
+            self._runner().reset_encoder_cache()
+
+    def reset_prefix_cache(self) -> None:
+        with self._call_ledger.record("worker.reset_prefix_cache"):
+            return
+
+    def get_supported_tasks(self) -> tuple[str, ...]:
+        with self._call_ledger.record("worker.get_supported_tasks"):
+            return self._runner().get_supported_tasks()
+
+    def execute_model(self, scheduler_output: Any) -> Any:
+        with self._call_ledger.record("worker.execute_model"):
+            return self._runner().execute_model(scheduler_output)
+
+    def sample_tokens(self, grammar_output: Any = None) -> Any:
+        with self._call_ledger.record("worker.sample_tokens"):
+            return self._runner().sample_tokens(grammar_output)
+
+    def take_draft_token_ids(self) -> None:
+        with self._call_ledger.record("worker.take_draft_token_ids"):
+            return self._runner().take_draft_token_ids()
+
+    def execute_dummy_batch(self) -> None:
+        with self._call_ledger.record("worker.execute_dummy_batch"):
+            self._runner()._dummy_run(1)
+
+    def profile(self, is_start: bool = True, profile_prefix: str | None = None) -> None:
+        with self._call_ledger.record("worker.profile"):
+            return
+
+    def add_lora(self, lora_request: Any) -> bool:
+        with self._call_ledger.record("worker.add_lora"):
+            return self._runner().add_lora(lora_request)
+
+    def remove_lora(self, lora_id: int) -> bool:
+        with self._call_ledger.record("worker.remove_lora"):
+            return self._runner().remove_lora(lora_id)
+
+    def pin_lora(self, lora_id: int) -> bool:
+        with self._call_ledger.record("worker.pin_lora"):
+            return self._runner().pin_lora(lora_id)
+
+    def list_loras(self) -> set[int]:
+        with self._call_ledger.record("worker.list_loras"):
+            return self._runner().list_loras()
+
+    def sleep(self, level: int = 1) -> None:
+        with self._call_ledger.record("worker.sleep"):
+            return
+
+    def wake_up(self, tags: list[str] | None = None) -> None:
+        with self._call_ledger.record("worker.wake_up"):
+            return
+
+    def check_health(self) -> None:
+        with self._call_ledger.record("worker.check_health"):
+            return
+
+    def get_model(self) -> Any:
+        raise RuntimeError("SimWorker skeleton has no physical model object")
+
+    def get_draft_model(self) -> None:
+        return None
+
+    def shutdown(self) -> None:
+        with self._call_ledger.record("worker.shutdown"):
+            runner = self.model_runner
+            if isinstance(runner, SimModelRunner):
+                runner.shutdown()

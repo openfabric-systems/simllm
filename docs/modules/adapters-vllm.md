@@ -4,7 +4,7 @@ vLLM frontend adapter, pinned to **vLLM v0.26.0**. No fork required: the v1
 engine resolves its executor class from a dotted import path, and injects an
 arbitrary worker-extension class for the capture side. The engine also
 resolves the worker class itself from a dotted path, which is the seam for
-the planned model-runner-level coupling mode (VLLM-13).
+the flagged model-runner skeleton and the later coupling modes (VLLM-13).
 
 ## Interface
 
@@ -99,6 +99,76 @@ model, a sink) go through `configure()`, which reaches the executor only when
 the engine core runs in the same process (`LLM(...)`, or
 `VLLM_ENABLE_V1_MULTIPROCESSING=0`).
 
+Flagged worker-boundary skeleton
+(`simllm/adapters/vllm/worker.py`):
+
+```
+SIMLLM_VLLM_WORKER_MODE=skeleton \
+SIMLLM_VLLM_MODE=virtual \
+VLLM_USE_V2_MODEL_RUNNER=0 \
+vllm serve <model> \
+    --no-async-scheduling \
+    --worker-cls simllm.adapters.vllm.SimWorker
+```
+
+`SimWorker` is a real subclass of v0.26.0's GPU `Worker` when vLLM is
+installed, selected through the same dotted worker-class seam the stock
+executor uses. `WorkerWrapperBase.init_worker` loads general plugins, accepts
+only a string, resolves it, and rejects a class object
+(`vllm/v1/worker/worker_base.py:245-259,317-320`). Construction requires the
+exact high-level flag `SIMLLM_VLLM_WORKER_MODE=skeleton`; an absent, empty, or
+different value raises before the stock worker can initialize a device.
+
+In skeleton mode, the override of `init_device` does not call the stock body.
+It leaves `device` unset and constructs `SimModelRunner`, while the stock body
+would select and construct either its hardcoded V2 or V1 runner at the end of
+device initialization (`vllm/v1/worker/gpu_worker.py:297-416`; there is no
+model-runner class parameter). This first copied path mirrors the V1 runner
+algorithm, so live validation pins `VLLM_USE_V2_MODEL_RUNNER=0`; respecting
+both upstream runner variants belongs to the later GPU-present rebind mode.
+A V2-selected configuration is rejected before stock worker construction.
+
+This device-free slice also rejects Ray and external-launch executors. A
+multiprocess worker must use `--no-async-scheduling`, because v0.26.0's async
+output thread calls `current_platform.set_device(self.worker.device)` at
+`vllm/v1/executor/multiproc_executor.py:968-980`. In-process execution with
+`VLLM_ENABLE_V1_MULTIPROCESSING=0` may retain async scheduling because it does
+not start that device-setting worker thread. Ray's compiled-DAG path likewise
+requires a non-null worker device at `vllm/v1/executor/ray_utils.py:109-145`.
+These combinations fail at construction with a direct remediation message.
+
+The ordinary construction surface is mirrored in source order:
+`init_device`, `load_model`, `get_kv_cache_spec`,
+`determine_available_memory`, `initialize_from_config`,
+`compile_or_warm_up_model`, `reset_mm_cache`, and `get_supported_tasks`.
+The order comes from
+`vllm/v1/executor/uniproc_executor.py:48-69`,
+`vllm/v1/engine/core.py:243-324`,
+`vllm/v1/executor/abstract.py:118-150`,
+`vllm/v1/engine/llm_engine.py:123-142,205-210`, and
+`vllm/entrypoints/llm.py:338-348`. Conditional and control methods are also
+served: max-length update, KV handshake, cache resets, dummy batch, profile,
+LoRA, sleep/wake, health, draft-token query, and shutdown.
+
+The model runner keeps the selected V1 algorithm names and order from state
+update through input/attention preparation, empty `_model_forward`, sampling,
+bookkeeping, and EPLB update
+(`vllm/v1/worker/gpu_model_runner.py:4111-4479,4497-4736`). As in the stock
+path, nonempty `execute_model` returns `None` and the engine immediately calls
+`sample_tokens` (`vllm/v1/engine/core.py:576-606`). Worker RPCs reach the
+runner through `self.model_runner` in the stock source as well
+(`vllm/v1/worker/gpu_worker.py:701-713,923-927,955-956,1080-1178`).
+
+`SimExecutor` and `SimWorker` share the same model-derived KV specification,
+configured available-memory answer, compilation-time answer, task answer,
+token fabrication, translation, settlement, and streaming helpers. The
+worker and runner share exactly one core `VirtualClock`; empty model compute
+has zero fallback latency, while a configured closed-loop sink can still
+provide a nonzero `StepResult`. Only global rank zero is the mutable time and
+stream authority, including when every process is locally marked as a driver.
+Records use the unchanged
+`atlahs-closed-loop-step-v1` JSONL path.
+
 Placement capture (`simllm/adapters/vllm/worker_ext.py`), used on *real* runs:
 
 ```
@@ -155,6 +225,23 @@ sim-native TTFT/TPOT reported off the virtual clock. The recorded smoke
 JSONL also replays through the same sink offline
 (`simllm.core.step_records_from_jsonl`), reproducing the live latencies
 row-for-row.
+
+The VLLM-13 flagged skeleton first slice is implemented and live-reachable as
+of 2026-08-10. The expectations were frozen in commit `582d3de` before code or
+runs. The four-cell request-count by prompt-length study in
+`examples/vllm_skeleton_v1/RESULTS.md` passes 4/4 exact-oracle rows and 4/4
+behavioral relation instances. All mirrored calls, records, and results use
+one injected nonzero virtual clock; the deliberate zero-compute and schema
+checks pass as fatal unscored invariants.
+
+Exactly one in-process vLLM v0.26.0 smoke used the cached Granite model,
+`VLLM_ENABLE_V1_MULTIPROCESSING=0`, offline Hugging Face mode, the dotted
+`worker_cls`, and a 64-block logical KV pool. It reached `SimWorker`, completed
+engine initialization in 0.00 seconds, generated one request with two output
+tokens, and streamed two schema-tagged step records. The host was not actually
+GPU-invisible: extension setup warned that no CUDA runtime was found, but
+vLLM then identified a GTX 1660 Ti and selected its CUDA platform. There was
+no pre-worker platform blocker, and no retry was made.
 
 ## Open tasks
 
@@ -219,40 +306,19 @@ row-for-row.
   NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
   The simulated executor binds step shapes and framework KV events to this
   template; it does not invent concurrency from aggregate phase timings.
-- VLLM-13 (Completeness; P1; L): couple at the model-runner boundary, first
-  as a flagged skeleton, later under a real GPU worker. The verified
-  v0.26.0 seam is the worker class itself:
-  `parallel_config.worker_cls` is resolved as a dotted path
-  (`vllm/v1/worker/worker_base.py:250`), so a subclass of
-  `vllm.v1.worker.gpu_worker.Worker` can run the stock `init_device`
-  (real `torch.distributed` init, `GroupCoordinator` construction, NCCL
-  communicator creation, memory snapshot) and then rebind
-  `self.model_runner`, which the stock worker constructs at the end of
-  `init_device` (`gpu_worker.py:401`; v0.26.0 exposes no model-runner class
-  knob, only the binary V1/V2 stock-runner selector, which the subclass
-  must respect). Every worker RPC reaches the runner through
-  `self.model_runner.*`, so one rebind intercepts the whole per-step
-  surface while the worker's distributed structure stays live. This mirrors
-  the SGLang adapter's `SimTpModelWorker` overriding `_init_model_runner`,
-  so both adapters end up coupled at the model-runner boundary. The first
-  slice is a skeleton run behind a high-level entry flag, routed through
-  the same worker-cls seam: when the flag selects simulation, the subclass
-  skips the stock `init_device` entirely, so no physical GPU worker state
-  or GPU model runner is
-  constructed; the adapter's own copied Python path takes effect, mirroring
-  the original functions by name and keeping the same algorithm and call
-  order, with the deliberate computation left empty and every timestamp
-  issued centrally by the simllm core virtual clock. The GPUs-present
-  variant of the same seam (stock `init_device`, rebound runner) is the
-  later capture and validation mode, since the stock path requires CUDA;
-  the executor-level `SimExecutor` remains supported and its accepted
-  behavior must not change. The sim model runner couples to the simulated
-  GPU service model, which launches the NCCL work and, in GPU-initiated
-  mode, drives the BACK-20 submission path; the run declares which agent
-  consumes each CQ and how completion reaches the model runner (BACK-20,
-  CORE-5). Under data parallelism above one, the runner-internal DP
-  coordination collective must be served or emulated. VLLM-12's
-  device-schedule capture uses the same seam.
+- VLLM-13 (Completeness; P1; L) (remaining after the flagged skeleton): add
+  the GPU-present mode that runs stock `Worker.init_device`, preserves its
+  distributed groups and memory snapshot, respects the upstream V1/V2 runner
+  selection, and then rebinds `self.model_runner`. Couple runner work to the
+  simulated GPU service and NCCL path, including BACK-20 submission in
+  GPU-initiated mode. Serve or emulate runner-internal DP coordination above
+  one. Enable and validate device-free async multiprocessing, Ray, and
+  external-launch execution, which this first slice rejects before their
+  device or ownership assumptions can run. Every run must declare the CQ
+  consumer and how completion reaches the model runner through BACK-20 and
+  CORE-5. The executor-level `SimExecutor` and the gated skeleton remain
+  supported without behavior changes. VLLM-12 device-schedule capture uses
+  the same seam.
 - VLLM-14 (Completeness; P1; L): simulate the `GroupCoordinator` behavior
   behind its own interface for the model-runner coupling mode. The simulated
   coordinator keeps the real class's functional names and call signatures

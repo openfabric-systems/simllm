@@ -6,15 +6,21 @@ import importlib.util
 import json
 import sys
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import ClassVar
 
 import pytest
 
 from simllm.adapters.vllm import (
+    SKELETON_EMPTY_STEP_CALL_SEQUENCE,
+    SKELETON_INIT_CALL_SEQUENCE,
+    SKELETON_STEP_CALL_SEQUENCE,
     ModelDims,
     PlacementExporter,
     SimExecutor,
     SimExecutorConfig,
+    SimModelRunner,
+    SimWorker,
     StepTranslator,
     fabricate_sampled_tokens,
     manifest_from_worker_entries,
@@ -24,7 +30,7 @@ from simllm.adapters.vllm import (
     write_step_records,
 )
 from simllm.compute import GpuSpec, HostInitiationModel, RooflineProvider
-from simllm.core import RequestPhase
+from simllm.core import RequestPhase, VirtualClock
 from simllm.placement import PlacementManifest
 
 VLLM_INSTALLED = importlib.util.find_spec("vllm") is not None
@@ -82,6 +88,87 @@ def llama8b_dims() -> ModelDims:
     )
 
 
+class FakeDType:
+    itemsize = 2
+
+
+class FakeModelConfig:
+    runner_type = "generate"
+    dtype = FakeDType()
+    hf_text_config = SimpleNamespace(intermediate_size=256)
+    max_model_len = 4096
+
+    @staticmethod
+    def get_hidden_size():
+        return 128
+
+    @staticmethod
+    def get_num_layers(parallel_config):
+        return 4
+
+    @staticmethod
+    def get_num_attention_heads(parallel_config):
+        return 8
+
+    @staticmethod
+    def get_num_kv_heads(parallel_config):
+        return 2
+
+    @staticmethod
+    def get_head_size():
+        return 16
+
+    @staticmethod
+    def get_vocab_size():
+        return 1024
+
+    @staticmethod
+    def get_total_num_hidden_layers():
+        return 4
+
+
+def fake_vllm_config():
+    return SimpleNamespace(
+        model_config=FakeModelConfig(),
+        cache_config=SimpleNamespace(
+            block_size=16,
+            cache_dtype="auto",
+            num_gpu_blocks=None,
+        ),
+        parallel_config=SimpleNamespace(
+            tensor_parallel_size=1,
+            pipeline_parallel_size=1,
+            data_parallel_size=1,
+            world_size=1,
+            rank=0,
+        ),
+        scheduler_config=SimpleNamespace(),
+        device_config=SimpleNamespace(device="cuda"),
+        speculative_config=None,
+        quant_config=None,
+        use_v2_model_runner=False,
+    )
+
+
+def make_sim_worker(
+    clock=None,
+    *,
+    vllm_config=None,
+    rank=0,
+    is_driver_worker=True,
+):
+    if vllm_config is None:
+        vllm_config = fake_vllm_config()
+    return SimWorker(
+        vllm_config,
+        local_rank=0,
+        rank=rank,
+        distributed_init_method="tcp://127.0.0.1:1",
+        is_driver_worker=is_driver_worker,
+        _simllm_clock=clock,
+    )
+
+
 # Import surface
 
 @pytest.mark.skipif(VLLM_INSTALLED, reason="the executor's guarded import pulls vLLM in when present")
@@ -134,6 +221,171 @@ def test_construction_without_vllm_raises_a_clear_error():
     message = str(excinfo.value)
     assert "vLLM v0.26.0" in message
     assert "distributed-executor-backend" in message
+
+
+def test_sim_worker_requires_the_explicit_skeleton_flag(monkeypatch):
+    for value in (None, "", "virtual"):
+        if value is None:
+            monkeypatch.delenv("SIMLLM_VLLM_WORKER_MODE", raising=False)
+        else:
+            monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", value)
+        with pytest.raises(RuntimeError) as excinfo:
+            make_sim_worker()
+        assert "SIMLLM_VLLM_WORKER_MODE=skeleton" in str(excinfo.value)
+
+
+def test_sim_worker_rejects_v2_and_device_requiring_executor_paths(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+
+    v2_config = fake_vllm_config()
+    v2_config.use_v2_model_runner = True
+    with pytest.raises(RuntimeError, match="VLLM_USE_V2_MODEL_RUNNER=0"):
+        make_sim_worker(vllm_config=v2_config)
+
+    for backend in ("ray", "external_launcher"):
+        backend_config = fake_vllm_config()
+        backend_config.parallel_config.distributed_executor_backend = backend
+        with pytest.raises(RuntimeError, match=backend):
+            make_sim_worker(vllm_config=backend_config)
+
+    async_config = fake_vllm_config()
+    async_config.scheduler_config.async_scheduling = True
+    monkeypatch.delenv("VLLM_ENABLE_V1_MULTIPROCESSING", raising=False)
+    with pytest.raises(RuntimeError, match="no-async-scheduling"):
+        make_sim_worker(vllm_config=async_config)
+
+    monkeypatch.setenv("VLLM_ENABLE_V1_MULTIPROCESSING", "0")
+    assert make_sim_worker(vllm_config=async_config).is_time_authority
+
+
+def test_sim_worker_mirrors_the_source_frozen_init_sequence(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    worker = make_sim_worker(VirtualClock(start_ps=123_000))
+    assert worker.device is None
+    assert worker.model_runner is None
+
+    worker.init_device()
+    worker.load_model()
+    specs = worker.get_kv_cache_spec()
+    available = worker.determine_available_memory()
+    worker.initialize_from_config(SimpleNamespace(num_blocks=64))
+    compilation = worker.compile_or_warm_up_model()
+    worker.reset_mm_cache()
+    tasks = worker.get_supported_tasks()
+
+    assert isinstance(worker.model_runner, SimModelRunner)
+    assert worker.device is None
+    assert len(specs) == 4
+    assert available == 64 * 1024**3
+    assert worker.cache_config.num_gpu_blocks == 64
+    assert (compilation.language_model, compilation.encoder) == (0.0, 0.0)
+    assert tasks == ("generate",)
+    worker_calls = tuple(
+        name for name in worker.mirrored_call_names if name.startswith("worker.")
+    )
+    assert worker_calls == SKELETON_INIT_CALL_SEQUENCE
+    assert all(
+        call.started_at_ps == call.completed_at_ps == 123_000
+        for call in worker.mirrored_calls
+    )
+
+
+def test_sim_worker_split_step_uses_one_clock_and_stream(monkeypatch, tmp_path):
+    stream_path = tmp_path / "skeleton_steps.jsonl"
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    monkeypatch.setenv("SIMLLM_VLLM_STEP_RECORDS", str(stream_path))
+    worker = make_sim_worker(VirtualClock(start_ps=123_000))
+    worker.init_device()
+    runner = worker.model_runner
+    assert isinstance(runner, SimModelRunner)
+    assert runner.runtime.clock is worker.clock
+
+    prefill = FakeSchedulerOutput(
+        scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+        num_scheduled_tokens={"r0": 4},
+    )
+    call_start = len(worker.mirrored_calls)
+    assert worker.execute_model(prefill) is None
+    prefill_output = worker.sample_tokens(None)
+    assert tuple(worker.mirrored_call_names[call_start:]) == SKELETON_STEP_CALL_SEQUENCE
+    assert prefill_output.req_ids == ["r0"]
+    assert prefill_output.sampled_token_ids == [[512]]
+
+    decode = FakeSchedulerOutput(
+        scheduled_cached_reqs=FakeCachedRequests(["r0"], [4], [1]),
+        num_scheduled_tokens={"r0": 1},
+    )
+    call_start = len(worker.mirrored_calls)
+    assert worker.execute_model(decode) is None
+    decode_output = worker.sample_tokens(None)
+    assert tuple(worker.mirrored_call_names[call_start:]) == SKELETON_STEP_CALL_SEQUENCE
+    assert decode_output.sampled_token_ids == [[512]]
+
+    assert [record.step_index for record in worker.step_records] == [0, 1]
+    assert [record.virtual_time_ps for record in worker.step_records] == [123_000, 123_000]
+    assert [record.total_new_tokens for record in worker.step_records] == [4, 1]
+    assert [result.step_latency_ps for result in worker.step_results] == [0, 0]
+    assert [result.completed_at_ps for result in worker.step_results] == [123_000, 123_000]
+    assert worker.clock.now_ps == 123_000
+    assert all(
+        call.started_at_ps == call.completed_at_ps == 123_000
+        for call in worker.mirrored_calls
+    )
+
+    streamed = [json.loads(line) for line in stream_path.read_text().splitlines()]
+    assert streamed == step_records_to_json(worker.step_records)
+    assert {entry["schema"] for entry in streamed} == {"atlahs-closed-loop-step-v1"}
+
+
+def test_sim_worker_empty_completion_preserves_v1_update_order(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    worker = make_sim_worker(VirtualClock(start_ps=123_000))
+    worker.init_device()
+    prefill = FakeSchedulerOutput(
+        scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+        num_scheduled_tokens={"r0": 4},
+    )
+    assert worker.execute_model(prefill) is None
+    worker.sample_tokens(None)
+
+    drain = FakeSchedulerOutput(finished_req_ids={"r0"})
+    call_start = len(worker.mirrored_calls)
+    output = worker.execute_model(drain)
+    assert output.req_ids == []
+    assert tuple(worker.mirrored_call_names[call_start:]) == (
+        SKELETON_EMPTY_STEP_CALL_SEQUENCE
+    )
+    assert [record.step_index for record in worker.step_records] == [0, 1]
+    assert worker.step_records[1].finished_request_ids == ["r0"]
+    assert worker.step_results[1].step_latency_ps == 0
+    assert worker.clock.now_ps == 123_000
+
+
+def test_only_global_rank_zero_owns_records_and_stream(monkeypatch, tmp_path):
+    stream_path = tmp_path / "non_authority.jsonl"
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    monkeypatch.setenv("SIMLLM_VLLM_STEP_RECORDS", str(stream_path))
+    config = fake_vllm_config()
+    config.parallel_config.tensor_parallel_size = 2
+    config.parallel_config.world_size = 2
+    worker = make_sim_worker(
+        VirtualClock(start_ps=123_000),
+        vllm_config=config,
+        rank=1,
+        is_driver_worker=True,
+    )
+    worker.init_device()
+    prefill = FakeSchedulerOutput(
+        scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+        num_scheduled_tokens={"r0": 4},
+    )
+    assert worker.execute_model(prefill) is None
+    worker.sample_tokens(None)
+
+    assert not worker.is_time_authority
+    assert worker.step_records == []
+    assert worker.step_results == []
+    assert not stream_path.exists()
 
 
 def test_worker_extension_exposes_exactly_one_public_name():
