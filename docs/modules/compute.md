@@ -287,19 +287,60 @@ landed with the same slice and is exercised by the examples/m5 studies
 together with the MoE traffic mapping
 ([traffic](traffic.md), [M5 results](../../examples/m5/RESULTS.md)).
 
-The COMP-15 first slice is implemented in `simllm.compute.nccl_stack`. It adds
-name-mirrored `ncclCommInitRank` and `ncclAllReduce` entry points, exact ring
-traffic planning, logical channels and chunks, per-channel GPU FIFO slots with
-ready flags and head/tail counters, the CPU proxy loop, `ncclNet` send, receive
-and test seams, and ibverbs post and CQ-poll seams. The intra-node route stays
-inside the collective kernel. The inter-node route closes the GPU FIFO to CPU
-proxy to net plugin to verbs to GPU tail-poll loop. Every call, proactive
-signal store, and successful poll observation emits a strict
+The COMP-15 first slice is implemented in `simllm.compute.nccl_stack`. Its
+function identities were audited against NVIDIA NCCL release `v2.30.7-1`,
+commit `73cf112295c33aee2b895f329f592f2a9b4b0f97`. It adds name-mirrored
+`ncclCommInitRank` and `ncclAllReduce` entry points and a planner with the same
+explicit `2 * (world_size - 1)` ring-step decomposition and strict lane
+divisibility as `simllm.compute.nccl`. The send connector follows NCCL's
+head/tail convention: the GPU publishes ready state and advances `tail`, while
+the CPU proxy advances `head` only after a separately produced network
+completion is observed. `ncclProxySaveOp` queues operations before kernel
+launch, independent proxy progression permits FIFO occupancy above one, and a
+doorbell separates verbs posting from the fake external completion source.
+
+The intra-node route stays inside `ncclKernelMain`, `runRing` and `genericOp`.
+The inter-node route traverses the GPU send FIFO, CPU proxy, `ncclNet.isend`,
+verbs post, doorbell, external CQE, `ncclNet.test`, CQ poll and head-credit
+return. The receive leg is explicitly absent from this slice. Every call,
+proactive signal store, and successful poll observation emits a strict
 `simllm-nccl-stack-event-v1` record from one caller-supplied `VirtualClock`.
 The [NCCL stack skeleton study](../../examples/nccl_stack_v1/RESULTS.md)
 reports 5 of 5 passing behavioral relation families over all 35 instances and
-8 of 8 fatal unscored structural invariants. This zero-time component stream
+10 of 10 fatal unscored structural invariants. This zero-time component stream
 is not yet projected onto the live TTFT/TPOT metric chain.
+
+### NCCL stack name audit
+
+SimLLM mirrors names and causal boundaries only. It copies no NCCL source.
+Every event function is either an audited NCCL symbol or has a `simllm` prefix
+and an explicit reason:
+
+| Mirrored event name | NCCL source and symbol, or SimLLM reason |
+|---|---|
+| `ncclCommInitRank` | `src/init.cc`, `ncclCommInitRank` |
+| `ncclBuildRings` | `src/graph/rings.cc`, `ncclBuildRings` |
+| `initChannel` | `src/channel.cc`, `initChannel` |
+| `ncclAllReduce` | `src/collectives.cc`, `ncclAllReduce` |
+| `ncclEnqueueCheck` | `src/enqueue.cc`, `ncclEnqueueCheck` |
+| `scheduleCollTasksToPlan` | `src/enqueue.cc`, `scheduleCollTasksToPlan` |
+| `calcCollChunking` | `src/enqueue.cc`, `calcCollChunking` |
+| `ncclProxySaveOp` | `src/proxy.cc`, `ncclProxySaveOp`; upload call in `src/enqueue.cc` |
+| `ncclLaunchKernel` | `src/enqueue.cc`, `ncclLaunchKernel` |
+| `ncclKernelMain` | `src/device/common.h`, `ncclKernelMain` |
+| `runRing` | `src/device/all_reduce.h`, `runRing` |
+| `waitPeer` | `src/device/prims_simple.h`, `waitPeer` |
+| `genericOp` | `src/device/prims_simple.h`, `genericOp` |
+| `postPeer` | `src/device/prims_simple.h`, `postPeer` |
+| `ncclProxyProgress` | `src/proxy.cc`, `ncclProxyProgress` |
+| `sendProxyProgress` | `src/transport/net.cc`, `sendProxyProgress` |
+| `ncclNet.isend` | `src/include/plugin/net/net_v12.h`, `isend` member; `ncclIbIsend` in `src/transport/net_ib/p2p.cc` is the audited IB implementation |
+| `ncclNet.test` | `src/include/plugin/net/net_v12.h`, `test` member; called by `sendProxyProgress` in `src/transport/net.cc` |
+| `wrap_ibv_post_send` | `src/include/ibvwrap.h`, `wrap_ibv_post_send`; called by `ncclIbIsend` in `src/transport/net_ib/p2p.cc` |
+| `wrap_ibv_poll_cq` | `src/include/ibvwrap.h`, `wrap_ibv_poll_cq`; called by `ncclIbTest` in `src/transport/net_ib/p2p.cc` |
+| `simllmRnicRingDoorbell` | simllm-invented: exposes the RNIC notification hidden inside the verbs provider's post operation |
+| `simllmNetworkComplete` | simllm-invented: deterministic external completion injection until a native RNIC session supplies CQEs |
+| `simllmKernelComplete` | simllm-invented: stack-internal kernel-completion observation until runtime projection lands |
 
 ## COMP-1: offline SASS calibration plan
 
@@ -427,17 +468,24 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   accepted ring timestamp, counter and task order exactly.
 - COMP-15 (Completeness; P1; L): model the NCCL software stack with the real
   stack's functional names and interfaces, trimmed to the main path. The
-  zero-time first slice is landed: communicator setup, ring channel
-  construction, chunking and assignment, per-channel GPU FIFO slots,
-  ready/head/tail signals and polls, the CPU proxy, `ncclNet` isend, irecv and
-  test seams, ibverbs post and CQ-poll seams, and distinct intra-node and
-  inter-node call loops all emit strict events on one caller-owned clock. The
+  audited zero-time first slice is landed: communicator and ring setup,
+  explicit ring-step chunk planning, GPU send-FIFO tail publication,
+  `ncclProxySaveOp` queueing, independent CPU proxy progression,
+  `ncclNet.isend`, verbs post, RNIC doorbell, external CQE production, CQ poll,
+  proxy head-credit return, and distinct intra-node and inter-node call loops
+  all emit strict events on one caller-owned clock. The
   [study](../../examples/nccl_stack_v1/RESULTS.md) freezes and validates the
-  exact call sequences and planner count relations.
-  Remaining work is to replace the deliberate zero-time boundaries and
-  metadata-only byte movement with service-time mechanisms connected to the
-  existing GPU, PCIe, native RNIC and fabric authorities, then calibrate those
-  mechanisms from captures without introducing a second timing authority.
+  exact call sequences and planner relations.
+  Remaining work is to replace deliberate zero-time boundaries and
+  metadata-only movement with calibrated service mechanisms connected to the
+  existing GPU, PCIe, native RNIC and fabric authorities; add the
+  GPU-initiated leg; project selected events through the supported runtime and
+  metric chain; and land the VLLM-14 and SGL-11 adapter callers. Receive-leg
+  progression must wire `recvProxyProgress`, `ncclNet.irecv`, `ncclIbIrecv`,
+  `wrap_ibv_post_recv`, receive completion through `ncclNet.test` and
+  `wrap_ibv_poll_cq`, receive-connector tail publication, and GPU `waitPeer`
+  plus `postPeer` head-credit return. These additions must retain one timing
+  authority and the explicit bypass behavior.
   Intra-node collectives must compose with the NVLink-class egress model and
   stay off the fabric. Inter-node transfer and receive completion must project
   through CORE-4 and CORE-5 to `CompletionEvent`, `StepResult`, TTFT and TPOT.
