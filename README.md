@@ -250,7 +250,10 @@ Planned on this axis: explicit KV-lifecycle capture
 ([VLLM-12](docs/modules/adapters-vllm.md),
 [SGL-10](docs/modules/adapters-sglang.md)), coupling at the vLLM model
 runner, matching where the SGLang adapter already
-sits ([VLLM-13](docs/modules/adapters-vllm.md)), and PD-disaggregation /
+sits ([VLLM-13](docs/modules/adapters-vllm.md)), an offline CPU pre-play
+oracle that runs the real model slowly to fix each request's output
+length and expert routing, then replays them with outcomes predefined
+([preplay](docs/modules/preplay.md)), and PD-disaggregation /
 KV-transfer traffic (M6).
 
 ## Modules
@@ -266,6 +269,7 @@ status and numbered open tasks; the README stays a map.
 | `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
 | `simllm/traffic` | Semantic collectives to physical flows | [traffic](docs/modules/traffic.md) |
 | `simllm/goal` | GOAL dependency-graph trace emission | [goal](docs/modules/goal.md) |
+| `simllm/preplay` (design) | Offline CPU inference oracle: pre-computes each request's true output and expert routing for replay | [preplay](docs/modules/preplay.md) |
 | `simllm/backends` | htsim / LogGOPSim invocation + result parsing, submodule pins | [backends](docs/modules/backends.md) |
 | `simllm/adapters/vllm` | `SimExecutor` (pluggable, no fork) + placement exporter | [adapters-vllm](docs/modules/adapters-vllm.md) |
 | `simllm/adapters/sglang` | `SimTpModelWorker` + placement exporter | [adapters-sglang](docs/modules/adapters-sglang.md) |
@@ -283,7 +287,8 @@ fidelity plan).
 - [x] M3: SGLang adapter, plugin entry point, no fork
 - [ ] M4 (in progress): the closed loop, the execution/resource runtime
       and the composed native RNIC path driving TTFT/TPOT
-- [ ] M5 (in progress): MoE all-to-all studies + SASS compute calibration
+- [ ] M5 (in progress): MoE all-to-all studies + offline calibration
+      (SASS compute, CPU pre-play oracle)
 - [ ] M6: PD-disaggregation and KV-transfer traffic modeling
 - [ ] M7: the full RNIC module set (QPC, DMA, transport), the vLLM
       model-runner seam and GPU-initiated networking

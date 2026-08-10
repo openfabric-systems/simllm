@@ -52,7 +52,7 @@ Every behavioral change follows the same discipline:
    (a carve-out, a stubbed mode, a `NotImplementedError`), the same
    change adds a numbered task to the owning module doc using the
    module's stable prefix (CORE-, WORK-, COMP-, PLACE-, TRAF-, GOAL-,
-   BACK-, VLLM-, SGL-, BRIDGE-, and HTSIM-/ATLAHS- for backend-repo
+   PLAY-, BACK-, VLLM-, SGL-, BRIDGE-, and HTSIM-/ATLAHS- for backend-repo
    follow-ups). IDs are never renumbered or reused; the change that
    completes a task removes its entry. Nothing is deferred silently.
 6. **Backends are pinned, not edited here.** `third_party/atlahs` and
@@ -82,6 +82,7 @@ the task text:
 - [placement](modules/placement.md): PLACE-*
 - [traffic](modules/traffic.md): TRAF-*
 - [goal](modules/goal.md): GOAL-*
+- [preplay](modules/preplay.md): PLAY-*
 - [backends](modules/backends.md): BACK-*, plus backend-repo follow-ups
   HTSIM-* and ATLAHS-*
 - [adapters-vllm](modules/adapters-vllm.md): VLLM-*
@@ -202,7 +203,11 @@ every timestamp is issued centrally by the simllm core virtual clock. The
 real communicator call path is also a study subject in its own right: the
 communication function itself (Python dispatch, custom-op indirection,
 synchronization stalls) can bottleneck vLLM and SGLang, so its measured
-cost is compared against the simulated path (VLLM-14, SGL-11).
+cost is compared against the simulated path (VLLM-14, SGL-11). The
+skeleton's data-dependent outcomes (token ids, stop positions, expert
+routing) are planned to come predefined from the CPU pre-play oracle when
+a trace is joined ([preplay](modules/preplay.md), design-only today), so
+the empty calls still drive a real simulation.
 
 ### Full call loop (default setup)
 
@@ -313,6 +318,7 @@ One line per module; the linked doc is the source of truth.
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | PLACE-1/2/3 |
 | [traffic](modules/traffic.md) | Implemented: collective patterns, TP step mapping, MoE all-to-all, GOAL renderers for steps and execution graphs | TRAF-2/3/4/5/6/7/8/9/10 |
 | [goal](modules/goal.md) | Implemented: GOAL trace + txt2bin helper | none |
+| [preplay](modules/preplay.md) | Design-only: offline CPU inference oracle, trace artifact and replay join specified, no code yet | PLAY-1/2/3/4/5 |
 | [backends](modules/backends.md) | Implemented: htsim invocation/parsing plus native C++ RNIC SQ/CQ, network-port and shared PCIe transaction slices; htsim composition and the modular device entry point remain open | BACK-2/5-9/11-20; backend-repo HTSIM-1/2/4-9, ATLAHS-1 |
 | [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop | VLLM-3 through VLLM-14 |
 | [adapters-sglang](modules/adapters-sglang.md) | Implemented: SimTpModelWorker via plugin entry point at pinned commit, live CPU-engine smoke | SGL-3 through SGL-11 |
@@ -380,7 +386,13 @@ Reproduce with
   isolated-kernel and copy-service mechanisms plus A100/H100 bootstrap
   profiles are now available; production SASS calibration and populated
   profile tables remain blocked on capture hardware under COMP-5 (plan in
-  [modules/compute.md](modules/compute.md)). Training workloads are pending.
+  [modules/compute.md](modules/compute.md)). A second offline calibration
+  axis joins here: the CPU pre-play oracle
+  ([modules/preplay.md](modules/preplay.md), PLAY-1 through PLAY-5) runs
+  the real model slowly on CPU to fix each request's true output length,
+  stop reason and expert routing, then replays them against the workload
+  arrival model with every request's outcome pinned in the bookkeeping.
+  Training workloads are pending.
   Slingshot is out of simllm scope (`rnic-ss` remains a backend-repo
   follow-up only).
 - **M6 (not started).** PD-disaggregation and KV-transfer traffic
