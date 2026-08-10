@@ -10,8 +10,7 @@ mechanism signature, not just the FCT ordering.
 
 Usage:
     SIMLLM_HTSIM_RNIC=... SIMLLM_HTSIM_DCQCN=... SIMLLM_TXT2BIN=... \\
-    python examples/dcqcn_vs_cn/run_study.py \\
-        --out /data3/yifeng/simllm-dev/dcqcn-vs-cn-runs
+    SIMLLM_DATA_ROOT=... python examples/dcqcn_vs_cn/run_study.py
 """
 
 from __future__ import annotations
@@ -21,6 +20,7 @@ import csv
 import statistics
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.backends import (
     HtsimDcqcnConfig,
     HtsimRnicConfig,
@@ -181,11 +181,16 @@ def nfct_stats(result: RnicRunResult, ideal: RnicRunResult) -> dict[str, float]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="runs/dcqcn_vs_cn")
+    parser.add_argument("--out", type=Path)
     parser.add_argument("--a2a-seeds", type=int, default=8)
     parser.add_argument("--inc-seeds", type=int, default=5)
     args = parser.parse_args()
-    out = Path(args.out)
+    if args.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        args.out = data_root / "dcqcn_vs_cn"
+    out = args.out
     out.mkdir(parents=True, exist_ok=True)
     checks: list[dict] = []
     dist_rows: list[dict] = []

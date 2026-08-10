@@ -205,11 +205,15 @@ WorkQueue retirement transaction.
 
 The corrected `RnicDevice` first validates monotonic caller time, delegates
 the complete WorkQueue terminal transaction, and commits its caller time only
-after that transaction returns. The registered study command was:
+after that transaction returns. The historical registered study used the same
+executable basename, script, options and pinned inputs; resolved machine-local
+paths are intentionally omitted. The
+following is a portable post-run rendering, not a verbatim transcript. Source
+the local configuration first:
 
 ```bash
 .venv/bin/python examples/rnic_device_v1/run_back24_study.py \
-  --out /data3/yifeng/simllm-dev/wave2-runs/codex/back8_session_records/back24
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/rnic_session_records_v1/back24"
 ```
 
 It passed 4 of 4 Release CTest entries and wrote external result record
@@ -227,10 +231,13 @@ evidence equality, complete port-ledger equality, physical-state equality,
 PCIe-state applicability, inert post-probe and invariant validation. These
 guards do not increase the six-relation scored denominator.
 
-The portability correction was exercised from `/tmp` with no `--build-dir`
-and with `SIMLLM_RNIC_DEVICE_BUILD_DIR` explicitly unset. The temporary root
-was placed under the wave-2 output directory; the runner derived its own
-location-keyed cache below that root. All 4 CTest entries passed, and the
+The portability correction was exercised with the working directory set to
+the operating system temporary directory, whose resolved historical path is intentionally
+omitted, with no `--build-dir` and with
+`SIMLLM_RNIC_DEVICE_BUILD_DIR` explicitly unset. The temporary root was
+placed under the historical wave-2 output directory, whose resolved historical path is
+also intentionally omitted; the runner derived its own location-keyed cache
+below that root. All 4 CTest entries passed, and the
 tracked files retained exact SHA-256 values
 `7a0b8423d0a99de9538047f307bb7fd2f20c8d19bd408ef90fe02199da868934`
 for `results.csv` and

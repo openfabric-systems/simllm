@@ -13,6 +13,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
+from simllm._local_config import path_from_env
 from simllm.adapters.vllm import (
     StepTranslator,
     fabricate_sampled_tokens,
@@ -38,11 +39,11 @@ from simllm.core import (
 
 EXPECTATIONS_COMMIT = "25d098c997f078eb92dcf155cd36c44d9d6b2313"
 REVIEW_EXPECTATIONS_COMMIT = "396fd9e32df363cd2367f6ffc072ab49966bb20e"
-DEFAULT_OUT = Path("/data3/yifeng/simllm-dev/wave2-runs/comp16_latent_knobs")
-MODEL = Path(
-    "/home/yifeng/packages/vllm-rnic-capture/hf-cache/hub/"
-    "models--ibm-granite--granite-3.0-1b-a400m-instruct/snapshots/"
-    "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
+MODEL_CACHE_PATH = (
+    Path("hub")
+    / "models--ibm-granite--granite-3.0-1b-a400m-instruct"
+    / "snapshots"
+    / "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
 )
 
 G = 1_000_000_000
@@ -73,6 +74,13 @@ FROZEN_A = {
         192,
     ),
 }
+
+
+def _model_path() -> Path:
+    hf_home = os.environ.get("HF_HOME")
+    if not hf_home:
+        raise RuntimeError("HF_HOME must be set to the model-cache root")
+    return Path(hf_home).expanduser() / MODEL_CACHE_PATH
 
 
 class FlopProvider(ComputeProvider):
@@ -647,7 +655,7 @@ def run_live_vllm(out: Path) -> None:
     os.environ["SIMLLM_VLLM_STEP_RECORDS"] = str(record_path)
 
     llm = LLM(
-        model=str(MODEL),
+        model=str(_model_path()),
         worker_cls="simllm.adapters.vllm.SimWorker",
         enforce_eager=True,
         max_model_len=64,
@@ -706,28 +714,35 @@ def require_file_env(name: str) -> None:
         raise RuntimeError(f"{name} must name an existing file")
 
 
-def check_only(mode: str, out: Path) -> None:
+def check_only(mode: str, out: Path | None) -> None:
     if mode == "deterministic":
         require_file_env("SIMLLM_HTSIM_RNIC")
         require_file_env("SIMLLM_TXT2BIN")
     else:
         if importlib.metadata.version("vllm") != "0.26.0":
             raise RuntimeError("live-vllm mode requires vLLM 0.26.0")
-        if not MODEL.is_dir():
-            raise RuntimeError(f"cached model is missing: {MODEL}")
+        model = _model_path()
+        if not model.is_dir():
+            raise RuntimeError(f"cached model is missing: {model}")
     print(f"check-only mode={mode} out={out}; no results produced")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=("deterministic", "live-vllm"), required=True)
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--out", type=Path)
     parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args()
 
     if args.check_only:
         check_only(args.mode, args.out)
-    elif args.mode == "deterministic":
+        return
+    if args.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        args.out = data_root / "step_sink_latent_knobs"
+    if args.mode == "deterministic":
         run_deterministic(args.out)
     else:
         run_live_vllm(args.out)

@@ -8,14 +8,11 @@ import json
 import sys
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.adapters.vllm import FLOAT32, ShapeTensor, SimGroupCoordinator
 from simllm.compute import NcclStackConfig
 from simllm.core import CollectiveWork, VirtualClock
 
-DEFAULT_RUN_DIR = Path(
-    "/data3/yifeng/simllm-dev/wave2-runs/"
-    "codex_vllm14_group_coordinator/vllm_group_coordinator_v1"
-)
 CLOCK_START_PS = 123_000
 
 EXPECTED_REFERENCE_COORDINATOR = (
@@ -304,7 +301,7 @@ def run_study(run_dir: Path) -> dict[str, object]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR)
+    parser.add_argument("--run-dir", type=Path)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check-only", action="store_true")
     mode.add_argument("--check", action="store_true")
@@ -313,6 +310,11 @@ def main() -> None:
     if args.check_only:
         print("expectation registry check passed; no study result was produced")
         return
+    if args.run_dir is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--run-dir is required when SIMLLM_DATA_ROOT is not set")
+        args.run_dir = data_root / "vllm_group_coordinator_v1"
     args.run_dir.mkdir(parents=True, exist_ok=True)
     evidence = run_study(args.run_dir)
     output = args.run_dir / "component_results.json"

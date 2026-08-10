@@ -55,16 +55,20 @@ of 11. The post-specified shape regression remains outside this denominator.
 ## Registered review commands
 
 The deterministic study command remains the command in `RESULTS.md`. The
-touched Python gates are:
+touched Python gates used the same executable basenames, scripts, options and
+pinned inputs as shown below; resolved machine-local paths are intentionally
+omitted. This is a portable post-freeze rendering, not a verbatim transcript.
+Source the local configuration first:
 
 ```bash
 .venv/bin/pytest -q tests/test_step_lowerer.py tests/test_step_sink.py
-/data3/yifeng/simllm-dev/venv-vllm/bin/python -m pytest -q \
+"${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" -m pytest -q \
   tests/test_step_lowerer.py tests/test_step_sink.py
 ```
 
-Before this amendment is committed, the study command is executed with
-`--check-only`, and both test commands are executed with `--collect-only`.
-These modes parse the registered surfaces and produce no study results.
+Before this amendment was committed, the historical resolved form of the
+study command was executed with `--check-only`, and the historical resolved
+forms of both test commands were executed with `--collect-only`. These modes
+parse the registered surfaces and produce no study results.
 There is no external-system expectation in this amendment, so no new
 external-source audit applies.

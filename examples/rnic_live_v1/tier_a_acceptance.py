@@ -4,21 +4,22 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
+import sys
 from collections import Counter
 from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from simllm._local_config import path_from_env
+
 STUDY_DIR = Path(__file__).resolve().parent
 DEFAULT_EXPECTATIONS = STUDY_DIR / "tier_a_expectations.json"
-RUN_ROOT = Path(
-    os.environ.get(
-        "SIMLLM_TIER_A_RUN_ROOT", "/data3/yifeng/simllm-dev/wave2-runs"
-    )
-)
 
 
 class AcceptanceError(RuntimeError):
@@ -398,12 +399,20 @@ def _validate_expectations(expectations: dict[str, Any]) -> None:
 
 def _validate_run_path(path: Path, name: str) -> Path:
     _require(path.is_absolute(), f"{name} must be absolute")
+    try:
+        run_root = path_from_env("SIMLLM_TIER_A_RUN_ROOT")
+    except ValueError as error:
+        raise AcceptanceError(str(error)) from error
+    if run_root is None:
+        raise AcceptanceError(
+            "SIMLLM_TIER_A_RUN_ROOT must be set to the external Tier A run root"
+        )
     resolved = path.resolve(strict=False)
     try:
-        resolved.relative_to(RUN_ROOT)
+        resolved.relative_to(run_root)
     except ValueError as error:
         raise AcceptanceError(
-            f"{name} must be under the external wave-2 run root {RUN_ROOT}"
+            f"{name} must be under SIMLLM_TIER_A_RUN_ROOT ({run_root})"
         ) from error
     return resolved
 

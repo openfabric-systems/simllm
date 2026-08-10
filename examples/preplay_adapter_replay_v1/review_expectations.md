@@ -13,8 +13,12 @@ stop, identity and pre-settlement regressions.
 
 ## External-source audit before freeze
 
-The review study uses the installed vLLM v0.26.0 under
-`/data3/yifeng/simllm-dev/venv-vllm/lib/python3.12/site-packages/vllm`.
+The review study uses the installed vLLM v0.26.0 package from the
+machine-local environment audited before this amendment; its resolved
+historical path is intentionally omitted. The complete hashes below identify
+the audited source. For a current reproduction, `SIMLLM_VLLM_PYTHON`
+selects the compatible interpreter.
+
 These complete source-file hashes and line ranges were audited before this
 amendment:
 
@@ -188,21 +192,27 @@ These are evidence and navigation guards, not behavioral scores.
 
 ## Registered command and dry run
 
-The review study command is:
+The historical dry run used the same executable basename, script, options and
+pinned inputs; resolved machine-local paths are intentionally omitted. The
+following is a portable post-freeze rendering, not a verbatim transcript.
+Source the local configuration first:
 
 ```text
-/data3/yifeng/simllm-dev/venv-vllm/bin/python examples/preplay_adapter_replay_v1/run_engine_scheduler_study.py --check-only
+"${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" examples/preplay_adapter_replay_v1/run_engine_scheduler_study.py --check-only
 ```
 
-Before this freeze, that exact command ran against a temporary parser
-skeleton. It verified the tracked trace, cached model and external output-root
-default, exited zero, constructed no engine, produced no result rows and did
-not create the run directory. The temporary skeleton was then removed. This
-amendment contains no review implementation, fixture or generated result.
+Before this freeze, the historical resolved form of that command ran against
+a temporary parser skeleton. It verified the tracked trace, cached model and
+external output-root default, exited zero, constructed no engine, produced no
+result rows and did not create the run directory. The temporary skeleton was
+then removed. This amendment contains no review implementation, fixture or
+generated result.
 
-The scored run replaces `--check-only` with a fresh `--run-dir` below
-`/data3/yifeng/simllm-dev/wave2-runs/codex_play23_arrival_replay/` and runs
-only after the review implementation commit.
+The frozen storage requirement is that the scored run replace `--check-only`
+with a fresh `--run-dir` outside Git and run only after the review
+implementation commit; the resolved historical target is intentionally
+omitted. As a post-freeze portability convention, new runs default below
+`${SIMLLM_DATA_ROOT}/preplay_adapter_replay_v1/`.
 
 ## Genuine-risk estimate before implementation
 

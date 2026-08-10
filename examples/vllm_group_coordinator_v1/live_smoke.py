@@ -11,20 +11,18 @@ import traceback
 from importlib.metadata import version
 from pathlib import Path
 
-VLLM_SOURCE = Path(
-    "/data3/yifeng/simllm-dev/venv-vllm/lib64/python3.12/"
-    "site-packages/vllm/distributed/parallel_state.py"
-)
-MODEL = Path(
-    "/home/yifeng/packages/vllm-rnic-capture/hf-cache/hub/"
-    "models--ibm-granite--granite-3.0-1b-a400m-instruct/snapshots/"
-    "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
-)
-DEFAULT_RUN_DIR = Path(
-    "/data3/yifeng/simllm-dev/wave2-runs/"
-    "codex_vllm14_group_coordinator/vllm_group_coordinator_v1/live"
-)
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
+from simllm._local_config import path_from_env
+
+MODEL_CACHE_PATH = (
+    Path("hub")
+    / "models--ibm-granite--granite-3.0-1b-a400m-instruct"
+    / "snapshots"
+    / "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
+)
 
 EXPECTED_SIGNATURE_LINES = {
     "all_reduce": 641,
@@ -96,8 +94,33 @@ EXPECTED_DP_STACK = (
 )
 
 
+def _required_env_path(name: str) -> Path:
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"{name} must be set to an existing directory")
+    path = Path(value).expanduser()
+    if not path.is_dir():
+        raise RuntimeError(f"{name} must name an existing directory: {path}")
+    return path
+
+
+def _model_path() -> Path:
+    return _required_env_path("HF_HOME") / MODEL_CACHE_PATH
+
+
+def _vllm_source_path() -> Path:
+    configured = _required_env_path("SIMLLM_VLLM_PACKAGE_ROOT")
+    relative = Path("distributed") / "parallel_state.py"
+    candidate = configured / relative
+    if candidate.is_file():
+        return candidate
+    raise RuntimeError(
+        "SIMLLM_VLLM_PACKAGE_ROOT must name the installed vllm package directory"
+    )
+
+
 def _audited_method_lines() -> dict[str, int]:
-    tree = ast.parse(VLLM_SOURCE.read_text())
+    tree = ast.parse(_vllm_source_path().read_text())
     coordinator = next(
         node
         for node in tree.body
@@ -113,9 +136,11 @@ def _audited_method_lines() -> dict[str, int]:
 def check_expectation_registry() -> None:
     """Audit sources and literals without constructing a vLLM engine."""
 
+    vllm_source = _vllm_source_path()
+    model = _model_path()
     assert version("vllm") == "0.26.0"
-    assert VLLM_SOURCE.is_file()
-    assert MODEL.joinpath("config.json").is_file()
+    assert vllm_source.is_file()
+    assert model.joinpath("config.json").is_file()
     assert _audited_method_lines() == EXPECTED_SIGNATURE_LINES
     assert len(EXPECTED_LIVE_COORDINATOR) == 4
     assert len(EXPECTED_TP_STACK) == 14
@@ -157,14 +182,14 @@ def run_live_smoke(run_dir: Path) -> dict[str, object]:
         "SIMLLM_VLLM_STEP_RECORDS": str(stream_path),
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
-        "HF_HOME": "/home/yifeng/packages/vllm-rnic-capture/hf-cache",
+        "HF_HOME": str(_required_env_path("HF_HOME")),
         "CUDA_VISIBLE_DEVICES": "",
     }
     previous = {name: os.environ.get(name) for name in environment}
     os.environ.update(environment)
     try:
         llm = LLM(
-            model=str(MODEL),
+            model=str(_model_path()),
             worker_cls="simllm.adapters.vllm.SimWorker",
             enforce_eager=True,
             max_model_len=64,
@@ -280,7 +305,7 @@ def run_live_smoke(run_dir: Path) -> dict[str, object]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR)
+    parser.add_argument("--run-dir", type=Path)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check-only", action="store_true")
     mode.add_argument("--run", action="store_true")
@@ -289,7 +314,12 @@ def main() -> None:
     if args.check_only:
         print("live expectation registry check passed; no engine was constructed")
         return
-    print(f"SMOKE_MODEL={MODEL}")
+    if args.run_dir is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--run-dir is required when SIMLLM_DATA_ROOT is not set")
+        args.run_dir = data_root / "vllm_group_coordinator_v1" / "live"
+    print(f"SMOKE_MODEL={_model_path()}")
     print("SMOKE_WORKER_CLS=simllm.adapters.vllm.SimWorker")
     try:
         evidence = run_live_smoke(args.run_dir)

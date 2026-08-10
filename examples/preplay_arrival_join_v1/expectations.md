@@ -121,8 +121,11 @@ output-root argument default, and it produced no result rows or output files.
 The parser skeleton was then removed, so this expectations-only commit
 contains no implementation or study harness.
 
-The eventual scored invocation replaces `--check-only` with `--run-dir`
-under `/data3/yifeng/simllm-dev/wave2-runs/codex_play23_arrival_replay/`.
+The frozen requirement is that the eventual scored invocation replace
+`--check-only` with a fresh `--run-dir` outside Git; the resolved historical
+target is intentionally omitted. As a post-freeze portability convention, new
+runs default to
+`${SIMLLM_DATA_ROOT}/preplay_arrival_join_v1/`.
 Gate commands are the repository-standard ruff and pytest invocations and are
 not study commands.
 

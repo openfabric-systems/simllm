@@ -31,7 +31,7 @@ Reproduce the deterministic study from the repository root:
 
 The four small tracked rows are in [results.csv](results.csv). Per-cell JSONL
 streams are runtime evidence rather than repository content and are written
-under the runner's `--run-dir`, whose default is on `/data3/yifeng/`.
+under the runner's `--run-dir`, whose default is under `SIMLLM_DATA_ROOT`.
 
 ## Evidence accounting
 
@@ -142,17 +142,22 @@ is not presented as independent behavioral evidence.
 
 Exactly one live attempt ran on 2026-08-10 with the cached Granite snapshot,
 offline Hugging Face mode, in-process V1 execution, the upstream V1 runner
-selector, and the dotted worker-class argument:
+selector, and the dotted worker-class argument.
+
+The historical run used the same executable basename, script, options and
+pinned inputs; resolved machine-local paths are intentionally omitted. The
+following is a portable post-run rendering, not a verbatim transcript. Source
+the local configuration first:
 
 ```bash
-env PYTHONPATH=/data3/yifeng/simllm-dev/worktrees/vllm13 \
+env PYTHONPATH=. \
   VLLM_ENABLE_V1_MULTIPROCESSING=0 VLLM_USE_V2_MODEL_RUNNER=0 \
   SIMLLM_VLLM_WORKER_MODE=skeleton SIMLLM_VLLM_MODE=virtual \
-  SIMLLM_VLLM_STEP_RECORDS=/data3/yifeng/simllm-dev/wave1-runs/codex_vllm13_skeleton_mode/vllm_skeleton_v1/live_steps.jsonl \
+  SIMLLM_VLLM_STEP_RECORDS="${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/vllm_skeleton_v1/live_steps.jsonl" \
   HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
-  HF_HOME=/home/yifeng/packages/vllm-rnic-capture/hf-cache \
+  HF_HOME="${HF_HOME:?configure HF_HOME}" \
   CUDA_VISIBLE_DEVICES= \
-  /data3/yifeng/simllm-dev/venv-vllm/bin/python \
+  "${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" \
   examples/vllm_skeleton_v1/live_smoke.py
 ```
 
@@ -187,9 +192,10 @@ constructor. The repository environment passes all 37 tests. The real-vLLM
 environment passes all 35 applicable tests, with only the two tests whose
 purpose requires vLLM to be absent skipped. The pinned environment does not
 bundle pytest, so the local run exposed only pytest, `_pytest`, pluggy,
-iniconfig, and `py.py` from a test-runner overlay under `/data3/yifeng/`; the
-interpreter, torch, vLLM, and all runtime dependencies remained those of
-`venv-vllm`.
+iniconfig, and `py.py` from a locally configured test-runner overlay; the
+interpreter, torch, vLLM, and all runtime dependencies remained those of the
+historical machine-local vLLM v0.26.0 environment, whose resolved historical path is
+intentionally omitted.
 
 The review also identified a silent failure in the documented VLLM-8 guard.
 On v0.26.0, the executor-visible signal is
@@ -213,17 +219,22 @@ flag-gate negative controls: 3/3 PASS
 
 Exactly one strengthened live attempt ran in this review round. It used a
 fresh JSONL path and otherwise retained the initial cached-model and offline
-configuration:
+configuration.
+
+The historical run used the same executable basename, script, options and
+pinned inputs; resolved machine-local paths are intentionally omitted. The
+following is a portable post-run rendering, not a verbatim transcript. Source
+the local configuration first:
 
 ```bash
-env PYTHONPATH=/data3/yifeng/simllm-dev/worktrees/vllm13 \
+env PYTHONPATH=. \
   VLLM_ENABLE_V1_MULTIPROCESSING=0 VLLM_USE_V2_MODEL_RUNNER=0 \
   SIMLLM_VLLM_WORKER_MODE=skeleton SIMLLM_VLLM_MODE=virtual \
-  SIMLLM_VLLM_STEP_RECORDS=/data3/yifeng/simllm-dev/wave1-runs/codex_vllm13_skeleton_mode/vllm_skeleton_v1/live_steps_review_round.jsonl \
+  SIMLLM_VLLM_STEP_RECORDS="${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/vllm_skeleton_v1/live_steps_review_round.jsonl" \
   HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
-  HF_HOME=/home/yifeng/packages/vllm-rnic-capture/hf-cache \
+  HF_HOME="${HF_HOME:?configure HF_HOME}" \
   CUDA_VISIBLE_DEVICES= \
-  /data3/yifeng/simllm-dev/venv-vllm/bin/python \
+  "${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" \
   examples/vllm_skeleton_v1/live_smoke.py
 ```
 

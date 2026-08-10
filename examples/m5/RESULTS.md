@@ -1,12 +1,16 @@
 # M5 MoE slice: results against pre-registered expectations
 
-Runs of 2026-08-04. Backend binary: `htsim_rnic` from
-`/data3/yifeng/simllm-dev/build-htsim` (HTSIM-rnic-private working tree at
-`c03e1f2`, the same build the M4 studies used). GOAL conversion with the
-prebuilt `txt2bin`. All sections ran in one `run_m5.py` invocation
-(22 rows in `summary.csv` under `/data3/yifeng/simllm-dev/m5-runs`, raw
-GOALs and completion CSVs beside it); the backends are deterministic, so
-every number below reproduces exactly. Checks A1-A6, B1-B6 and C-q1/q2/q3
+Runs of 2026-08-04. Backend binary: `htsim_rnic` from a machine-local
+HTSIM-rnic-private build pinned at `c03e1f2`, the same build the M4 studies
+used; the resolved historical build path is intentionally omitted. Current
+reproductions select the build root with `SIMLLM_HTSIM_BUILD`. GOAL
+conversion used the prebuilt `txt2bin`. All sections ran in one `run_m5.py`
+invocation
+(22 rows in `summary.csv`, with raw GOALs and completion CSVs beside it).
+Those artifacts remain outside Git in the machine-local directory used for
+the historical run; its resolved historical path is intentionally omitted. New runs
+default to `${SIMLLM_DATA_ROOT}/m5`. The backends are deterministic, so every
+number below reproduces exactly. Checks A1-A6, B1-B6 and C-q1/q2/q3
 are the registered predictions of [expectations.md](expectations.md)
 (kept frozen; deviations are disclosed here, never edited there). The
 harness compares every measurement against the frozen constants, never
@@ -98,9 +102,10 @@ and registering plus validating it belongs with the TRAF-4 remainder.
 
 ## Artifacts
 
-`/data3/yifeng/simllm-dev/m5-runs`: `summary.csv` (22 rows), per-run
-GOAL text/binary and completion CSVs (`a2av-*` for checks A and C-q2,
-`moe-*` for check B).
+The historical external artifact directory, whose resolved historical path is
+intentionally omitted, contains `summary.csv` (22 rows), per-run GOAL
+text/binary and completion CSVs (`a2av-*` for checks A and C-q2, `moe-*`
+for check B). New runs default to `${SIMLLM_DATA_ROOT}/m5`.
 
 ## Audit note (2026-08-04, folded after the independent verify pass)
 
