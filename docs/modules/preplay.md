@@ -45,7 +45,12 @@ and still produce a real simulation.
   arrival timestamp at the framework entry point. The join produces
   per-request tracking records in the core bookkeeping (request identity,
   arrival time, predefined route, length and output), so a replay run
-  knows every request's outcome up front without recomputing it.
+  knows every request's outcome up front without recomputing it. The strict
+  `simllm-preplay-replay-run-v1` record names the resolved trace path and
+  SHA-256, while each request carries a
+  `simllm-preplay-routing-reference-v1` pointer to its trace row. One atomic
+  `RequestBookkeeper.extend` call pins all framework-request objects only
+  after the complete join validates.
 - **Replay.** The adapters serve the predefined token ids instead of a
   fabricated token and honor the oracle's stop position, so the scheduler
   sees the true completion step; the traffic layer consumes the captured
@@ -82,7 +87,7 @@ defined by PLAY-2 and PLAY-4).
 
 ## Status
 
-PLAY-1 is implemented. `simllm.preplay` provides the strict
+PLAY-1 and PLAY-2 are implemented. `simllm.preplay` provides the strict
 `simllm-preplay-trace-v1` schema, a request-streaming writer, a strict reader
 and a pinned Transformers CPU runner with greedy and seeded sampling. The
 runner records EOS, length-cap and stop-string termination plus every
@@ -92,22 +97,19 @@ top-k expert IDs and normalized gate weights at each MoE layer. The Granite
 exact schema round trips and fatal routing-shape and attribution checks; its
 evidence is recorded in [the PLAY-1 results](../../examples/preplay_trace_v1/RESULTS.md).
 
-The arrival join, framework replay and traffic projection remain open under
-PLAY-2 through PLAY-4. The independent framework CPU runner is optional
-follow-up PLAY-6.
+The arrival join adds strict replay-run and routing-reference schemas,
+canonical run-record I/O and an atomic projection into existing core
+bookkeeping. Its one-request and two-request study passed exact field
+projection, a 7,000 ps arrival shift, trace-hash authority, cardinality scaling
+and rollback gates; the evidence is recorded in
+[the PLAY-2 results](../../examples/preplay_arrival_join_v1/RESULTS.md).
+Framework replay and traffic projection remain open under PLAY-3 and PLAY-4.
+The independent framework CPU runner is optional follow-up PLAY-6.
 
 ## Open tasks
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
 
-- PLAY-2 (Completeness; P1; M): join arrivals with the trace into the core
-  bookkeeping. Given a workload arrival realization and a trace, emit
-  per-request tracking records (request identity, arrival timestamp at the
-  framework entry point, predefined output length, stop reason, token ids
-  and routing reference) into `RequestBookkeeper`, so the run's request
-  futures are pinned before the first scheduler step. Joining must fail
-  loudly on a request missing from the trace, and the run record names the
-  trace it replayed.
 - PLAY-3 (Completeness; P1; M): replay predefined outputs through the
   adapters. `SimExecutor`, the skeleton coupling mode and
   `SimTpModelWorker` serve the trace's token ids instead of the fabricated
