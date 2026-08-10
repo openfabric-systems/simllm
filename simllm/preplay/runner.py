@@ -3,6 +3,17 @@
 Importing this module does not import Torch or Transformers. Constructing a
 ``TransformersCpuRunner`` is the execution boundary that loads the optional
 runtime and the model.
+
+Routing is recomputed as top-k plus softmax over router logits captured by
+forward hooks. It is not observed from the model's expert dispatch. Router
+discovery depends on Transformers-internal module names and attributes. This
+mechanism is version-sensitive and has been verified only with Transformers
+5.14.1 and the pinned Granite snapshot used by the PLAY-1 study.
+
+Routing is attributed to the executed forward pass whose input is token
+``t`` and whose output predicts token ``t + 1``. Prompt tokens are captured
+during prefill. A generated token is captured only when it is forwarded to
+predict another token, so a terminal generated token has no routing record.
 """
 
 from __future__ import annotations
@@ -19,13 +30,14 @@ from typing import Any
 
 from simllm.core._wire import _integer, _string, _validate_unique
 from simllm.preplay.schema import (
+    ForwardPhase,
+    ForwardTokenTrace,
     LayerRouting,
     PromptFormat,
     RequestTrace,
     SamplingConfig,
     SamplingMode,
     StopReason,
-    TokenTrace,
     TraceProvenance,
     validate_sampling_config,
 )
@@ -195,7 +207,7 @@ def _classify_stop_reason(
     eos_token_id: int,
     max_new_tokens: int,
     stop_strings: tuple[str, ...],
-) -> tuple[StopReason, str | None]:
+) -> tuple[StopReason, str | None] | None:
     if not output_token_ids:
         raise RuntimeError("model produced no output tokens")
     if output_token_ids[-1] == eos_token_id:
@@ -205,9 +217,7 @@ def _classify_stop_reason(
             return StopReason.STOP_STRING, stop_string
     if len(output_token_ids) == max_new_tokens:
         return StopReason.LENGTH_CAP, None
-    raise RuntimeError(
-        "generation stopped without EOS, a configured stop string, or the length cap"
-    )
+    return None
 
 
 class TransformersCpuRunner:
@@ -313,8 +323,8 @@ class TransformersCpuRunner:
         input_ids: Any,
         *,
         past_key_values: Any,
-    ) -> tuple[Any, tuple[LayerRouting, ...]]:
-        captures: dict[int, LayerRouting] = {}
+    ) -> tuple[Any, tuple[tuple[LayerRouting, ...], ...]]:
+        captures: dict[int, tuple[LayerRouting, ...]] = {}
         handles: list[Any] = []
 
         def make_hook(router: _Router):
@@ -345,13 +355,17 @@ class TransformersCpuRunner:
                     dim=-1,
                 )
                 gate_weights = self._torch.softmax(top_logits, dim=-1)
-                token_row = shape[0] - 1
-                captures[router.layer_index] = LayerRouting(
-                    layer_index=router.layer_index,
-                    expert_ids=tuple(int(value) for value in expert_ids[token_row].tolist()),
-                    gate_weights=tuple(
-                        float(value) for value in gate_weights[token_row].tolist()
-                    ),
+                captures[router.layer_index] = tuple(
+                    LayerRouting(
+                        layer_index=router.layer_index,
+                        expert_ids=tuple(int(value) for value in row_expert_ids),
+                        gate_weights=tuple(float(value) for value in row_gate_weights),
+                    )
+                    for row_expert_ids, row_gate_weights in zip(
+                        expert_ids.tolist(),
+                        gate_weights.tolist(),
+                        strict=True,
+                    )
                 )
 
             return capture
@@ -373,7 +387,11 @@ class TransformersCpuRunner:
                 "router hooks did not capture every configured MoE layer; "
                 f"captured {tuple(sorted(captures))}, expected {self.moe_layer_indices}"
             )
-        return outputs, tuple(captures[layer] for layer in self.moe_layer_indices)
+        routing_by_token = tuple(
+            tuple(captures[layer][token_index] for layer in self.moe_layer_indices)
+            for token_index in range(input_ids.numel())
+        )
+        return outputs, routing_by_token
 
     def _select_token(self, logits: Any, sampling: SamplingConfig, generator: Any) -> int:
         if sampling.mode is SamplingMode.GREEDY:
@@ -407,10 +425,22 @@ class TransformersCpuRunner:
         prompt_token_ids = tuple(int(value) for value in input_ids[0].tolist())
         prompt_sha256 = hashlib.sha256(request.prompt.encode("utf-8")).hexdigest()
         output_token_ids: list[int] = []
-        token_traces: list[TokenTrace] = []
+        decode_tokens: list[ForwardTokenTrace] = []
 
         with self._torch.inference_mode():
-            outputs, _ = self._forward_with_routing(input_ids, past_key_values=None)
+            outputs, prompt_routing = self._forward_with_routing(
+                input_ids,
+                past_key_values=None,
+            )
+            prefill_tokens = tuple(
+                ForwardTokenTrace(
+                    phase=ForwardPhase.PREFILL,
+                    token_index=token_index,
+                    token_id=token_id,
+                    routing=prompt_routing[token_index],
+                )
+                for token_index, token_id in enumerate(prompt_token_ids)
+            )
             past_key_values = outputs.past_key_values
             while True:
                 next_token = self._select_token(outputs.logits[:, -1, :], sampling, generator)
@@ -420,33 +450,31 @@ class TransformersCpuRunner:
                     skip_special_tokens=True,
                     clean_up_tokenization_spaces=False,
                 )
-                stop_reason, matched_stop_string = _classify_stop_reason(
+                stop = _classify_stop_reason(
                     tuple(output_token_ids),
                     output_text,
                     eos_token_id=self.eos_token_id,
                     max_new_tokens=request.max_new_tokens,
                     stop_strings=request.stop_strings,
-                ) if (
-                    next_token == self.eos_token_id
-                    or len(output_token_ids) == request.max_new_tokens
-                    or any(value in output_text for value in request.stop_strings)
-                ) else (None, None)
+                )
+                if stop is not None:
+                    stop_reason, matched_stop_string = stop
+                    break
 
                 token_input = self._torch.tensor([[next_token]], dtype=self._torch.long)
-                outputs, routing = self._forward_with_routing(
+                outputs, routing_by_token = self._forward_with_routing(
                     token_input,
                     past_key_values=past_key_values,
                 )
-                token_traces.append(
-                    TokenTrace(
-                        token_index=len(token_traces),
+                decode_tokens.append(
+                    ForwardTokenTrace(
+                        phase=ForwardPhase.DECODE,
+                        token_index=len(decode_tokens),
                         token_id=next_token,
-                        routing=routing,
+                        routing=routing_by_token[0],
                     )
                 )
                 past_key_values = outputs.past_key_values
-                if stop_reason is not None:
-                    break
 
         return RequestTrace(
             request_id=request.request_id,
@@ -456,9 +484,11 @@ class TransformersCpuRunner:
             max_new_tokens=request.max_new_tokens,
             stop_strings=request.stop_strings,
             output_text=output_text,
+            output_token_ids=tuple(output_token_ids),
             stop_reason=stop_reason,
             matched_stop_string=matched_stop_string,
-            tokens=tuple(token_traces),
+            prefill_tokens=prefill_tokens,
+            decode_tokens=tuple(decode_tokens),
         )
 
     def capture(
@@ -467,8 +497,12 @@ class TransformersCpuRunner:
         output_path: str | Path,
         *,
         sampling: SamplingConfig,
+        overwrite: bool = False,
     ) -> Path:
-        """Run requests in order and flush each completed trace to disk."""
+        """Run requests in order and flush each completed trace to disk.
+
+        Existing output paths are protected unless ``overwrite=True``.
+        """
 
         validate_sampling_config(sampling)
         provenance = TraceProvenance(
@@ -497,7 +531,11 @@ class TransformersCpuRunner:
         deterministic_before = self._torch.are_deterministic_algorithms_enabled()
         self._torch.use_deterministic_algorithms(True)
         try:
-            with PreplayTraceWriter(output_path, provenance) as writer:
+            with PreplayTraceWriter(
+                output_path,
+                provenance,
+                overwrite=overwrite,
+            ) as writer:
                 for request in requests:
                     if not isinstance(request, PreplayRequest):
                         raise TypeError("requests must yield PreplayRequest values")
@@ -518,8 +556,9 @@ def run_transformers_preplay(
     dtype: str = "float32",
     torch_num_threads: int | None = None,
     capture_host: str | None = None,
+    overwrite: bool = False,
 ) -> Path:
-    """Load a pinned CPU model and write one complete pre-play trace."""
+    """Load a pinned CPU model and write one protected pre-play trace."""
 
     runner = TransformersCpuRunner(
         model_id=model_id,
@@ -529,4 +568,9 @@ def run_transformers_preplay(
         torch_num_threads=torch_num_threads,
         capture_host=capture_host,
     )
-    return runner.capture(requests, output_path, sampling=sampling)
+    return runner.capture(
+        requests,
+        output_path,
+        sampling=sampling,
+        overwrite=overwrite,
+    )

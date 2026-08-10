@@ -2,6 +2,11 @@
 
 The contract contains only standard-library types. Torch and Transformers are
 runtime choices of the CPU runner, not dependencies of the trace boundary.
+
+Routing is attributed to an executed forward input token. The prefill phase
+records every prompt token. Decode record ``i`` is generated token ``i`` used
+as input to produce token ``i + 1``. A terminal generated token is not
+forwarded and therefore has no routing record.
 """
 
 from __future__ import annotations
@@ -47,6 +52,13 @@ class PromptFormat(str, Enum):
 
     TEXT = "text"
     CHAT = "chat"
+
+
+class ForwardPhase(str, Enum):
+    """Execution phase of one forwarded input token."""
+
+    PREFILL = "prefill"
+    DECODE = "decode"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -106,7 +118,7 @@ class TraceProvenance:
 
 @dataclass(frozen=True, kw_only=True)
 class LayerRouting:
-    """One generated token's selected experts at one MoE layer."""
+    """One forwarded input token's selected experts at one MoE layer."""
 
     layer_index: int
     expert_ids: tuple[int, ...]
@@ -118,9 +130,15 @@ class LayerRouting:
 
 
 @dataclass(frozen=True, kw_only=True)
-class TokenTrace:
-    """One output token and all routing decisions caused by that token."""
+class ForwardTokenTrace:
+    """One executed input token and its recomputed per-layer routing.
 
+    The routing belongs to the pass that consumes ``token_id`` and predicts
+    the next token. A terminal generated token cannot appear in decode
+    records because no deployment forward consumes it.
+    """
+
+    phase: ForwardPhase
     token_index: int
     token_id: int
     routing: tuple[LayerRouting, ...]
@@ -131,7 +149,12 @@ class TokenTrace:
 
 @dataclass(frozen=True, kw_only=True)
 class RequestTrace:
-    """Complete output realization for one stable request identity."""
+    """Complete output plus the prompt and decode tokens actually forwarded.
+
+    ``prefill_tokens`` exactly mirrors ``input_token_ids``. ``decode_tokens``
+    exactly mirrors ``output_token_ids[:-1]`` because a deployment does not
+    execute a forward pass for the terminal output token.
+    """
 
     request_id: str
     prompt_sha256: str
@@ -140,20 +163,18 @@ class RequestTrace:
     max_new_tokens: int
     stop_strings: tuple[str, ...]
     output_text: str
+    output_token_ids: tuple[int, ...]
     stop_reason: StopReason
     matched_stop_string: str | None
-    tokens: tuple[TokenTrace, ...]
+    prefill_tokens: tuple[ForwardTokenTrace, ...]
+    decode_tokens: tuple[ForwardTokenTrace, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "input_token_ids", tuple(self.input_token_ids))
         object.__setattr__(self, "stop_strings", tuple(self.stop_strings))
-        object.__setattr__(self, "tokens", tuple(self.tokens))
-
-    @property
-    def output_token_ids(self) -> tuple[int, ...]:
-        """Generated token IDs in decode order."""
-
-        return tuple(token.token_id for token in self.tokens)
+        object.__setattr__(self, "output_token_ids", tuple(self.output_token_ids))
+        object.__setattr__(self, "prefill_tokens", tuple(self.prefill_tokens))
+        object.__setattr__(self, "decode_tokens", tuple(self.decode_tokens))
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -298,6 +319,55 @@ def validate_layer_routing(
         )
 
 
+def _validate_forward_tokens(
+    tokens: tuple[ForwardTokenTrace, ...],
+    *,
+    phase: ForwardPhase,
+    expected_token_ids: tuple[int, ...],
+    provenance: TraceProvenance,
+    path: str,
+) -> None:
+    values = _require_tuple(tokens, path)
+    if len(values) != len(expected_token_ids):
+        _fail(
+            path,
+            f"expected {len(expected_token_ids)} {phase.value} forward-token records, "
+            f"got {len(values)}",
+        )
+    for token_index, (token, expected_token_id) in enumerate(
+        zip(values, expected_token_ids, strict=True)
+    ):
+        token_path = f"{path}[{token_index}]"
+        if not isinstance(token, ForwardTokenTrace):
+            _fail(token_path, "expected ForwardTokenTrace")
+        if token.phase is not phase:
+            _fail(f"{token_path}.phase", f"expected {phase.value!r}")
+        if token.token_index != token_index:
+            _fail(
+                f"{token_path}.token_index",
+                f"expected contiguous index {token_index}",
+            )
+        _integer(token.token_id, f"{token_path}.token_id", nonnegative=True)
+        if token.token_id != expected_token_id:
+            _fail(
+                f"{token_path}.token_id",
+                f"expected forwarded token ID {expected_token_id}",
+            )
+        routing = _require_tuple(token.routing, f"{token_path}.routing")
+        layer_indices = tuple(layer.layer_index for layer in routing)
+        if layer_indices != provenance.moe_layer_indices:
+            _fail(
+                f"{token_path}.routing",
+                "layer indices must exactly match provenance.moe_layer_indices",
+            )
+        for route_index, route in enumerate(routing):
+            validate_layer_routing(
+                route,
+                provenance,
+                f"{token_path}.routing[{route_index}]",
+            )
+
+
 def validate_request_trace(
     request: RequestTrace,
     provenance: TraceProvenance,
@@ -326,42 +396,38 @@ def validate_request_trace(
         _string(stop_string, f"{path}.stop_strings[{index}]")
     _validate_unique(stop_strings, f"{path}.stop_strings")
     _string(request.output_text, f"{path}.output_text", nonblank=False)
+    output_token_ids = _require_tuple(
+        request.output_token_ids,
+        f"{path}.output_token_ids",
+    )
+    if not output_token_ids:
+        _fail(f"{path}.output_token_ids", "must not be empty")
+    if len(output_token_ids) > max_new_tokens:
+        _fail(f"{path}.output_token_ids", "output exceeds max_new_tokens")
+    for index, token_id in enumerate(output_token_ids):
+        _integer(token_id, f"{path}.output_token_ids[{index}]", nonnegative=True)
     if not isinstance(request.stop_reason, StopReason):
         _fail(f"{path}.stop_reason", "expected StopReason")
     _optional_string(request.matched_stop_string, f"{path}.matched_stop_string")
 
-    tokens = _require_tuple(request.tokens, f"{path}.tokens")
-    if not tokens:
-        _fail(f"{path}.tokens", "must not be empty")
-    if len(tokens) > max_new_tokens:
-        _fail(f"{path}.tokens", "output exceeds max_new_tokens")
-    for token_index, token in enumerate(tokens):
-        token_path = f"{path}.tokens[{token_index}]"
-        if not isinstance(token, TokenTrace):
-            _fail(token_path, "expected TokenTrace")
-        if token.token_index != token_index:
-            _fail(
-                f"{token_path}.token_index",
-                f"expected contiguous index {token_index}",
-            )
-        _integer(token.token_id, f"{token_path}.token_id", nonnegative=True)
-        routing = _require_tuple(token.routing, f"{token_path}.routing")
-        layer_indices = tuple(layer.layer_index for layer in routing)
-        if layer_indices != provenance.moe_layer_indices:
-            _fail(
-                f"{token_path}.routing",
-                "layer indices must exactly match provenance.moe_layer_indices",
-            )
-        for route_index, route in enumerate(routing):
-            validate_layer_routing(
-                route,
-                provenance,
-                f"{token_path}.routing[{route_index}]",
-            )
+    _validate_forward_tokens(
+        request.prefill_tokens,
+        phase=ForwardPhase.PREFILL,
+        expected_token_ids=input_token_ids,
+        provenance=provenance,
+        path=f"{path}.prefill_tokens",
+    )
+    _validate_forward_tokens(
+        request.decode_tokens,
+        phase=ForwardPhase.DECODE,
+        expected_token_ids=output_token_ids[:-1],
+        provenance=provenance,
+        path=f"{path}.decode_tokens",
+    )
 
     matched = request.matched_stop_string
     configured_matches = tuple(value for value in stop_strings if value in request.output_text)
-    final_token_id = tokens[-1].token_id
+    final_token_id = output_token_ids[-1]
     if request.stop_reason is StopReason.EOS:
         if final_token_id != provenance.eos_token_id:
             _fail(f"{path}.stop_reason", "eos output must end in eos_token_id")
@@ -370,7 +436,7 @@ def validate_request_trace(
         if configured_matches:
             _fail(f"{path}.stop_reason", "a configured stop string appeared before EOS")
     elif request.stop_reason is StopReason.LENGTH_CAP:
-        if len(tokens) != max_new_tokens:
+        if len(output_token_ids) != max_new_tokens:
             _fail(f"{path}.stop_reason", "length-cap output must reach max_new_tokens")
         if final_token_id == provenance.eos_token_id:
             _fail(f"{path}.stop_reason", "EOS takes precedence over length cap")
@@ -419,3 +485,9 @@ def prompt_format_from_json(value: object, path: str) -> PromptFormat:
     """Parse a prompt format through the shared strict enum helper."""
 
     return _enum_value(PromptFormat, value, path)
+
+
+def forward_phase_from_json(value: object, path: str) -> ForwardPhase:
+    """Parse a forward phase through the shared strict enum helper."""
+
+    return _enum_value(ForwardPhase, value, path)

@@ -7,6 +7,8 @@ from simllm.preplay.runner import (
 )
 from simllm.preplay.schema import (
     PREPLAY_TRACE_SCHEMA,
+    ForwardPhase,
+    ForwardTokenTrace,
     LayerRouting,
     PreplayTrace,
     PromptFormat,
@@ -14,7 +16,6 @@ from simllm.preplay.schema import (
     SamplingConfig,
     SamplingMode,
     StopReason,
-    TokenTrace,
     TraceProvenance,
     validate_preplay_trace,
     validate_request_trace,
@@ -32,6 +33,8 @@ from simllm.preplay.trace import (
 
 __all__ = [
     "PREPLAY_TRACE_SCHEMA",
+    "ForwardPhase",
+    "ForwardTokenTrace",
     "LayerRouting",
     "PreplayRequest",
     "PreplayTrace",
@@ -42,7 +45,6 @@ __all__ = [
     "SamplingConfig",
     "SamplingMode",
     "StopReason",
-    "TokenTrace",
     "TraceProvenance",
     "TransformersCpuRunner",
     "read_preplay_trace",

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import math
 import os
 import time
 from dataclasses import replace
@@ -23,7 +25,10 @@ MODEL_ID = "ibm-granite/granite-3.0-1b-a400m-instruct"
 MODEL_REVISION = "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
 DEFAULT_CACHE = Path("/home/yifeng/packages/vllm-rnic-capture/hf-cache")
 DEFAULT_OUTPUT = Path("/data3/yifeng/simllm-dev/wave1-runs/play1_preplay_runner")
-EXPECTATIONS_COMMIT = "1fee089"
+EXPECTATIONS_COMMITS = {
+    "original": "1fee0891dc127da91c2e75a10da1151164ae3d7f",
+    "integration_review_amendment": "24116f1aedafb11ad9dc6698d8d70eeefde85cfb",
+}
 
 
 def frozen_requests() -> tuple[PreplayRequest, ...]:
@@ -54,22 +59,39 @@ def _capture(
     sampling: SamplingConfig,
 ) -> float:
     started = time.perf_counter()
-    runner.capture(requests, path, sampling=sampling)
+    runner.capture(requests, path, sampling=sampling, overwrite=True)
     return time.perf_counter() - started
 
 
 def _round_trip(path: Path) -> tuple[bool, Path]:
     trace = read_preplay_trace(path)
     target = path.with_name(f"{path.stem}-roundtrip.jsonl")
-    write_preplay_trace(target, trace.provenance, trace.requests)
+    write_preplay_trace(target, trace.provenance, trace.requests, overwrite=True)
     return path.read_bytes() == target.read_bytes(), target
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _structural_check(trace) -> dict[str, object]:
     provenance = trace.provenance
     expected_layers = tuple(range(24))
     request_ids = tuple(request.request_id for request in trace.requests)
-    token_count = sum(len(request.tokens) for request in trace.requests)
+    output_token_count = sum(len(request.output_token_ids) for request in trace.requests)
+    prefill_forward_token_count = sum(
+        len(request.prefill_tokens) for request in trace.requests
+    )
+    decode_forward_token_count = sum(
+        len(request.decode_tokens) for request in trace.requests
+    )
+    layer_route_count = 0
+    max_weight_sum_error = 0.0
+    expert_ids: list[int] = []
     valid = (
         provenance.top_k == 8
         and provenance.expert_count == 32
@@ -77,17 +99,49 @@ def _structural_check(trace) -> dict[str, object]:
         and len(request_ids) == len(set(request_ids))
     )
     for request in trace.requests:
-        for token in request.tokens:
+        valid = valid and tuple(
+            (token.phase.value, token.token_index, token.token_id)
+            for token in request.prefill_tokens
+        ) == tuple(
+            ("prefill", token_index, token_id)
+            for token_index, token_id in enumerate(request.input_token_ids)
+        )
+        valid = valid and tuple(
+            (token.phase.value, token.token_index, token.token_id)
+            for token in request.decode_tokens
+        ) == tuple(
+            ("decode", token_index, token_id)
+            for token_index, token_id in enumerate(request.output_token_ids[:-1])
+        )
+        for token in (*request.prefill_tokens, *request.decode_tokens):
             valid = valid and len(token.routing) == 24
+            layer_route_count += len(token.routing)
             for route in token.routing:
                 valid = valid and len(route.expert_ids) == 8
+                valid = valid and len(set(route.expert_ids)) == 8
                 valid = valid and len(route.gate_weights) == 8
                 valid = valid and all(0 <= expert_id < 32 for expert_id in route.expert_ids)
-                valid = valid and abs(sum(route.gate_weights) - 1.0) <= 1e-5
+                valid = valid and all(
+                    math.isfinite(weight) and weight >= 0.0
+                    for weight in route.gate_weights
+                )
+                weight_sum_error = abs(sum(route.gate_weights) - 1.0)
+                max_weight_sum_error = max(max_weight_sum_error, weight_sum_error)
+                valid = valid and weight_sum_error <= 1e-5
+                expert_ids.extend(route.expert_ids)
     return {
         "passed": valid,
         "request_count": len(trace.requests),
-        "token_count": token_count,
+        "output_token_count": output_token_count,
+        "prefill_forward_token_count": prefill_forward_token_count,
+        "decode_forward_token_count": decode_forward_token_count,
+        "forward_token_count": (
+            prefill_forward_token_count + decode_forward_token_count
+        ),
+        "layer_route_count": layer_route_count,
+        "max_weight_sum_error": max_weight_sum_error,
+        "expert_id_min": min(expert_ids),
+        "expert_id_max": max(expert_ids),
         "top_k": provenance.top_k,
         "expert_count": provenance.expert_count,
         "moe_layer_count": len(provenance.moe_layer_indices),
@@ -149,7 +203,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         greedy_by_id["eos-brief"].stop_reason is StopReason.EOS
         and greedy_by_id["eos-brief"].output_token_ids[-1] == 0
         and greedy_by_id["length-cap"].stop_reason is StopReason.LENGTH_CAP
-        and len(greedy_by_id["length-cap"].tokens) == 1
+        and len(greedy_by_id["length-cap"].output_token_ids) == 1
         and greedy_by_id["stop-string"].stop_reason is StopReason.STOP_STRING
         and greedy_by_id["stop-string"].matched_stop_string == "SIMLLM_STOP"
     )
@@ -162,10 +216,11 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             args.fixture_output,
             greedy_provenance,
             (greedy_by_id["length-cap"],),
+            overwrite=True,
         )
 
     summary = {
-        "expectations_commit": EXPECTATIONS_COMMIT,
+        "expectations_commits": EXPECTATIONS_COMMITS,
         "model_id": MODEL_ID,
         "model_revision": MODEL_REVISION,
         "runtime": {
@@ -180,6 +235,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
                 "path": str(path),
                 "duration_seconds": durations[name],
                 "bytes": path.stat().st_size,
+                "sha256": _sha256(path),
             }
             for name, path in paths.items()
         },
@@ -201,7 +257,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
                 "observed": {
                     request.request_id: {
                         "stop_reason": request.stop_reason.value,
-                        "output_token_count": len(request.tokens),
+                        "output_token_count": len(request.output_token_ids),
                         "matched_stop_string": request.matched_stop_string,
                     }
                     for request in traces["greedy"].requests
@@ -215,6 +271,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
                     name: {
                         "passed": passed,
                         "roundtrip_path": str(roundtrip_path),
+                        "sha256": _sha256(roundtrip_path),
                     }
                     for name, (passed, roundtrip_path) in round_trips.items()
                 },
