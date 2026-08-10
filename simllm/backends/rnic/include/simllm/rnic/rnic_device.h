@@ -7,16 +7,18 @@
 #include <optional>
 #include <vector>
 
+#include "simllm/rnic/host_memory.h"
 #include "simllm/rnic/pcie_fabric.h"
 #include "simllm/rnic/work_queue.h"
 
 namespace simllm::rnic {
 
-inline constexpr std::uint32_t kRnicDeviceConfigVersion = 1;
+inline constexpr std::uint32_t kRnicDeviceConfigVersion = 2;
 inline constexpr std::uint32_t kRnicDeviceIdentityVersion = 1;
 inline constexpr std::uint32_t kRnicQpcConfigVersion = 1;
 inline constexpr std::uint32_t kRnicDmaConfigVersion = 1;
 inline constexpr std::uint32_t kRnicNetworkConfigVersion = 1;
+inline constexpr std::uint32_t kRnicHostMemoryConfigVersion = 1;
 
 struct RnicDeviceIdentity {
     std::uint32_t version{kRnicDeviceIdentityVersion};
@@ -51,6 +53,15 @@ struct RnicNetworkConfig {
     bool enabled{false};
 };
 
+struct RnicHostMemoryConfig {
+    std::uint32_t version{kRnicHostMemoryConfigVersion};
+    bool enabled{false};
+    HostMemoryDeviceOwnerId device_owner_id{0};
+    VirtualHostMemoryConfig registry;
+    WorkQueueHostMemoryBinding work_queue;
+    std::vector<HostMemoryAllocation> allocations;
+};
+
 struct RnicDeviceConfig {
     std::uint32_t version{kRnicDeviceConfigVersion};
     RnicDeviceIdentity identity;
@@ -58,6 +69,8 @@ struct RnicDeviceConfig {
     RnicQpcConfig qpc;
     RnicDmaConfig dma;
     RnicNetworkConfig network;
+    RnicHostMemoryConfig host_memory;
+    RnicSubmissionConfig submission;
 };
 
 struct RnicDeviceAttachments {
@@ -65,6 +78,9 @@ struct RnicDeviceAttachments {
     // explicit. A null pointer asks the device to heap-own its configured
     // fabric when DMA is enabled.
     std::shared_ptr<PcieFabric> shared_pcie_fabric;
+    // The attached registry retains lifecycle evidence after device teardown.
+    // A null pointer asks an enabled device to own its registry.
+    std::shared_ptr<VirtualHostMemory> shared_host_memory;
     // The caller owns an injected port and must outlive this device.
     NetworkPort* network_port{nullptr};
 };
@@ -88,6 +104,12 @@ struct RnicDeviceStageReport {
     RnicStageApplicability pcie_uar_doorbell{
         RnicStageApplicability::NotApplicable};
     RnicStageApplicability pcie_wqe_read{
+        RnicStageApplicability::NotApplicable};
+    RnicStageApplicability pcie_qpc_icm{
+        RnicStageApplicability::NotApplicable};
+    RnicStageApplicability pcie_mtt_mpt{
+        RnicStageApplicability::NotApplicable};
+    RnicStageApplicability pcie_payload_read{
         RnicStageApplicability::NotApplicable};
     RnicStageApplicability pcie_cqe_write{
         RnicStageApplicability::NotApplicable};
@@ -126,6 +148,7 @@ public:
     std::vector<CompletionEntry> pollCompletionQueue(
         std::size_t max_entries,
         Picoseconds now_ps);
+    void teardownHostMemory(Picoseconds now_ps);
 
     // Standalone module probes submit through the device so the same caller
     // clock covers direct fabric traffic and queue traffic. Rejected fabric
@@ -145,10 +168,18 @@ public:
     bool usesSharedPcieFabric() const noexcept;
     std::optional<WorkQueuePcieBinding> pcieBinding() const;
     const PcieFabric* pcieFabric() const noexcept;
+    const VirtualHostMemory* hostMemory() const noexcept;
     const WorkQueueConfig& workQueueConfig() const noexcept;
     const WorkQueueCounters& counters() const noexcept;
     const std::vector<WqeRecord>& records() const noexcept;
     const std::vector<EvidenceEvent>& evidence() const noexcept;
+    const std::vector<HostMemoryAccessRecord>& memoryAccesses() const noexcept;
+    const std::optional<RnicSubmissionProfile>& submissionProfile()
+        const noexcept;
+    const std::vector<RnicSubmissionRecord>& submissionRecords()
+        const noexcept;
+    const std::vector<RnicCqConsumptionRecord>& cqConsumptionRecords()
+        const noexcept;
     const WqeRecord& wqe(WqeId wqe_id) const;
 
     void validateInvariants() const;
@@ -157,16 +188,20 @@ private:
     class InertNetworkPort;
     void validateCallerTime(Picoseconds now_ps) const;
     void observeCallerTime(Picoseconds now_ps);
+    void requireHostMemoryLive() const;
 
     RnicDeviceConfig config_;
     RnicDeviceStageReport stage_report_;
     std::shared_ptr<PcieFabric> pcie_fabric_;
+    std::shared_ptr<VirtualHostMemory> host_memory_;
     std::unique_ptr<InertNetworkPort> inert_network_port_;
     NetworkPort* network_port_{nullptr};
     std::unique_ptr<WorkQueue> work_queue_;
     bool claimed_ordering_domains_{false};
     std::uint64_t claimed_submission_domain_{0};
     std::uint64_t claimed_completion_domain_{0};
+    bool claimed_host_memory_owner_{false};
+    bool host_memory_registered_{false};
     Picoseconds last_caller_time_ps_{0};
 };
 

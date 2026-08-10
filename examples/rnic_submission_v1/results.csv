@@ -1,0 +1,7 @@
+producer_shape,batch_size,producer_kind,producer_id,descriptor_writer_kind,descriptor_writer_id,descriptor_queue_endpoint,sq_endpoint,cq_endpoint,doorbell_endpoint,data_endpoint,uar_mapping_owner,cq_consumer_kind,cq_consumer_id,rnic_requester_id,qpn,submission_records,cq_consumption_records,completed_wqes,qpc_fetches,qpc_icm_transactions,qpc_mkey_events,qpc_mpt_events,qpc_mtt_events,data_mkey_events,data_mpt_events,data_mtt_events,qpc_stays_host_icm,exactly_one_cq_consumer,identities_separate_from_qpn,invariants_valid
+host_cpu_driver,1,host_cpu_driver,7101,none,0,none,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_cpu,host_cpu_driver,8101,9100,19,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1
+host_cpu_driver,4,host_cpu_driver,7101,none,0,none,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_cpu,host_cpu_driver,8101,9100,19,4,4,4,4,4,0,0,0,4,4,4,1,1,1,1
+cpu_proxy,1,cpu_proxy,7102,gpu,7202,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_pinned_memory,gpu_memory,host_cpu,cpu_proxy,8102,9100,19,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1
+cpu_proxy,4,cpu_proxy,7102,gpu,7202,host_pinned_memory,host_pinned_memory,host_pinned_memory,host_pinned_memory,gpu_memory,host_cpu,cpu_proxy,8102,9100,19,4,4,4,4,4,0,0,0,4,4,4,1,1,1,1
+gpu_initiated,1,gpu,7103,none,0,none,gpu_memory,gpu_memory,gpu_memory,gpu_memory,gpu,gpu,8103,9100,19,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1
+gpu_initiated,4,gpu,7103,none,0,none,gpu_memory,gpu_memory,gpu_memory,gpu_memory,gpu,gpu,8103,9100,19,4,4,4,4,4,0,0,0,4,4,4,1,1,1,1

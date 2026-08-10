@@ -7,12 +7,16 @@
 #include <optional>
 #include <vector>
 
+#include "simllm/rnic/host_memory.h"
 #include "simllm/rnic/network_port.h"
+#include "simllm/rnic/submission.h"
 
 namespace simllm::rnic {
 
 inline constexpr std::uint32_t kWorkQueueConfigVersion = 1;
 inline constexpr std::uint32_t kWorkQueuePcieBindingVersion = 1;
+inline constexpr std::uint32_t kWorkQueueHostMemoryBindingVersion = 1;
+inline constexpr std::uint32_t kWorkRequestDataMemoryVersion = 1;
 
 class PcieFabric;
 class RnicDevice;
@@ -106,6 +110,23 @@ struct WorkQueuePcieBinding {
     std::uint32_t pcie_cq_first_byte_offset{0};
 };
 
+struct WorkQueueHostMemoryBinding {
+    std::uint32_t version{kWorkQueueHostMemoryBindingVersion};
+    HostMemoryAllocationId qpc_icm_allocation_id{0};
+    HostMemoryAllocationId sq_ring_allocation_id{0};
+    HostMemoryAllocationId rq_ring_allocation_id{0};
+    HostMemoryAllocationId cq_ring_allocation_id{0};
+    HostMemoryAllocationId doorbell_record_allocation_id{0};
+    std::uint64_t qpc_context_bytes{256};
+};
+
+struct WorkRequestDataMemory {
+    std::uint32_t version{kWorkRequestDataMemoryVersion};
+    HostMemoryAllocationId allocation_id{0};
+    HostMemoryMkey mkey{0};
+    std::uint64_t allocation_offset_bytes{0};
+};
+
 struct WorkRequest {
     std::uint64_t wr_id{0};
     FlowId flow_id{0};
@@ -115,6 +136,7 @@ struct WorkRequest {
     std::uint8_t traffic_class{0};
     WqeOpcode opcode{WqeOpcode::Send};
     bool signaled{true};
+    std::optional<WorkRequestDataMemory> data_memory;
 };
 
 struct WqeTimeline {
@@ -263,6 +285,13 @@ public:
     const WorkQueueCounters& counters() const noexcept;
     const std::vector<WqeRecord>& records() const noexcept;
     const std::vector<EvidenceEvent>& evidence() const noexcept;
+    const std::vector<HostMemoryAccessRecord>& memoryAccesses() const noexcept;
+    const std::optional<RnicSubmissionProfile>& submissionProfile()
+        const noexcept;
+    const std::vector<RnicSubmissionRecord>& submissionRecords()
+        const noexcept;
+    const std::vector<RnicCqConsumptionRecord>& cqConsumptionRecords()
+        const noexcept;
     const WqeRecord& wqe(WqeId wqe_id) const;
 
     void validateInvariants() const;
@@ -273,7 +302,11 @@ private:
         NetworkPort& network_port,
         PcieFabric* pcie_fabric,
         std::optional<WorkQueuePcieBinding> pcie_binding,
-        bool qpc_lookup_enabled);
+        bool qpc_lookup_enabled,
+        VirtualHostMemory* host_memory,
+        std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
+        HostMemoryDeviceOwnerId host_memory_device_owner_id,
+        std::optional<RnicSubmissionProfile> submission_profile);
 
     class Impl;
     std::unique_ptr<Impl> impl_;
