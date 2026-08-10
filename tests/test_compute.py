@@ -1,6 +1,7 @@
 import pytest
 
 from simllm.compute import (
+    GPU_ENVELOPES,
     PROFILE_TABLE_SCHEMA,
     GpuSpec,
     HostInitiationModel,
@@ -43,12 +44,19 @@ def test_compute_provider_layer_breakdown_is_optional():
     assert provider.estimate_layers(kernel, H100ish, num_layers=2) is None
 
 
+def test_enabled_roofline_needs_family_metadata():
+    provider = RooflineProvider(efficiency=1.0, enable_layer_breakdown=True)
+    kernel = KernelSpec(name="gemm", flops=1e9, bytes_moved=1e6)
+    assert provider.estimate_layers(kernel, H100ish, num_layers=2) is None
+
+
 def test_profile_table():
     cfg = (("batch_tokens", 512), ("hidden", 7168))
     provider = ProfileTableProvider({("moe_forward", cfg, "h100-bf16"): 123_000_000})
     est = provider.estimate(KernelSpec("moe_forward", 0, 0, cfg), H100ish)
     assert est.duration_ps == 123_000_000
     assert est.bound == "measured"
+    assert provider.estimate_layers(KernelSpec("moe_forward", 0, 0, cfg), H100ish, 2) is None
     with pytest.raises(KeyError):
         provider.estimate(KernelSpec("moe_forward", 0, 0, ()), H100ish)
 
@@ -238,6 +246,7 @@ def test_step_kernels_sum_to_fused_exactly(dims):
     families = step_kernels(dims, record, num_sampled=2)
     assert sum(k.flops for k in families) == fused.flops
     assert sum(k.bytes_moved for k in families) == fused.bytes_moved
+    assert fused.family_kernels == tuple(families)
 
 
 def test_step_kernels_sum_exact_with_fractional_weight_bytes():
@@ -275,6 +284,105 @@ def test_step_kernels_families_and_configs():
     assert (families["attn_gemm"].bytes_moved + families["mlp_gemm"].bytes_moved
             == DENSE_DIMS.weight_bytes)
     assert families["lm_head"].bytes_moved == DENSE_DIMS.lm_head_bytes
+
+
+@pytest.mark.parametrize(
+    ("num_layers", "expected_fused_ps", "expected_layer_ps"),
+    [
+        (2, 35_474, (14_811, 20_663)),
+        (4, 65_097, (14_811, 14_811, 14_812, 20_663)),
+    ],
+)
+def test_roofline_layer_breakdown_matches_frozen_memory_bound_rows(
+    num_layers, expected_fused_ps, expected_layer_ps
+):
+    dims = ModelDims(
+        num_layers=num_layers,
+        hidden_size=64,
+        intermediate_size=128,
+        num_heads=4,
+        num_kv_heads=4,
+        head_size=16,
+        vocab_size=256,
+        dtype_bytes=2,
+    )
+    record = StepRecord(
+        0,
+        0,
+        [ScheduledRequest("d", RequestPhase.DECODE, 1, context_length=4)],
+        num_sampled=1,
+    )
+    kernel = step_kernel(dims, record, num_sampled=1)
+    provider = RooflineProvider(efficiency=0.7, enable_layer_breakdown=True)
+
+    fused = provider.estimate(kernel, GPU_ENVELOPES["b100"])
+    estimates = provider.estimate_layers(kernel, GPU_ENVELOPES["b100"], num_layers)
+
+    assert fused.bound == "memory"
+    assert fused.duration_ps == expected_fused_ps
+    assert estimates is not None
+    assert tuple(estimate.duration_ps for estimate in estimates) == expected_layer_ps
+    assert sum(estimate.duration_ps for estimate in estimates) == fused.duration_ps
+    assert all(estimate.bound == fused.bound for estimate in estimates)
+    assert all(estimate.uncertainty == fused.uncertainty for estimate in estimates)
+
+
+def test_roofline_compute_bound_split_puts_lm_head_on_last_layer():
+    families = (
+        KernelSpec("body", flops=90.0, bytes_moved=0.0),
+        KernelSpec("lm_head", flops=30.0, bytes_moved=0.0),
+    )
+    kernel = KernelSpec(
+        "llm_step",
+        flops=120.0,
+        bytes_moved=0.0,
+        family_kernels=families,
+    )
+    gpu = GpuSpec("one-flop-per-ps", peak_flops=1e12, mem_bandwidth=1e12)
+    provider = RooflineProvider(efficiency=1.0, enable_layer_breakdown=True)
+
+    estimates = provider.estimate_layers(kernel, gpu, num_layers=3)
+
+    assert estimates is not None
+    assert tuple(estimate.duration_ps for estimate in estimates) == (30, 30, 60)
+
+
+def test_roofline_layer_breakdown_rejects_invalid_contract_inputs():
+    family = KernelSpec("body", flops=10.0, bytes_moved=10.0)
+    kernel = KernelSpec(
+        "llm_step",
+        flops=11.0,
+        bytes_moved=10.0,
+        family_kernels=(family,),
+    )
+    provider = RooflineProvider(efficiency=1.0, enable_layer_breakdown=True)
+
+    with pytest.raises(ValueError, match="conserve"):
+        provider.estimate_layers(kernel, H100ish, num_layers=2)
+    with pytest.raises(ValueError, match="nonnegative"):
+        provider.estimate_layers(
+            KernelSpec(
+                "llm_step",
+                flops=-1.0,
+                bytes_moved=1.0,
+                family_kernels=(
+                    KernelSpec("body", flops=-1.0, bytes_moved=1.0),
+                ),
+            ),
+            H100ish,
+            num_layers=2,
+        )
+    with pytest.raises(ValueError, match="positive"):
+        provider.estimate_layers(
+            KernelSpec(
+                "llm_step",
+                flops=10.0,
+                bytes_moved=10.0,
+                family_kernels=(family,),
+            ),
+            H100ish,
+            num_layers=0,
+        )
 
 
 # ---- MoE geometry on ModelDims ----

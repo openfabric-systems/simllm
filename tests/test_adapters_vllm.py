@@ -8,7 +8,7 @@ mirror tests run in both environments.
 import importlib.util
 import json
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from types import SimpleNamespace
 from typing import ClassVar
 
@@ -351,6 +351,7 @@ def test_sim_worker_split_step_uses_one_clock_and_stream(monkeypatch, tmp_path):
     assert [record.step_index for record in worker.step_records] == [0, 1]
     assert [record.virtual_time_ps for record in worker.step_records] == [123_000, 123_000]
     assert [record.total_new_tokens for record in worker.step_records] == [4, 1]
+    assert [record.num_sampled for record in worker.step_records] == [1, 1]
     assert [result.step_latency_ps for result in worker.step_results] == [0, 0]
     assert [result.completed_at_ps for result in worker.step_results] == [123_000, 123_000]
     assert worker.clock.now_ps == 123_000
@@ -358,10 +359,62 @@ def test_sim_worker_split_step_uses_one_clock_and_stream(monkeypatch, tmp_path):
         call.started_at_ps == call.completed_at_ps == 123_000
         for call in worker.mirrored_calls
     )
-
     streamed = [json.loads(line) for line in stream_path.read_text().splitlines()]
     assert streamed == step_records_to_json(worker.step_records)
     assert {entry["schema"] for entry in streamed} == {"atlahs-closed-loop-step-v1"}
+
+
+def test_sim_runner_serves_dp_coordination_then_tp_collective(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    config = fake_vllm_config()
+    config.parallel_config.tensor_parallel_size = 4
+    config.parallel_config.data_parallel_size = 4
+    config.parallel_config.data_parallel_rank = 0
+    config.parallel_config.world_size = 4
+    worker = make_sim_worker(VirtualClock(start_ps=123_000), vllm_config=config)
+    worker.init_device()
+
+    step = FakeSchedulerOutput(
+        scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+        num_scheduled_tokens={"r0": 4},
+    )
+    assert worker.execute_model(step) is None
+    events = worker.coordinator_events
+
+    assert tuple((event.operation, event.group, event.payload_bytes) for event in events) == (
+        ("all_reduce", "dp", 64),
+        ("all_reduce", "tp", 4_096),
+    )
+    assert tuple(len(event.stack_events) for event in events) == (32, 14)
+    assert all(event.timestamp_ps == 123_000 for event in events)
+    assert worker.step_records[0].num_tokens_after_padding == 4
+    assert step_records_to_json(worker.step_records)[0]["num_tokens_after_padding"] == 4
+    assert worker.sample_tokens(None).sampled_token_ids == [[512]]
+    assert worker.clock.now_ps == 123_000
+
+
+def test_dp_coordinator_return_controls_the_padding_record_field(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    config = fake_vllm_config()
+    config.parallel_config.data_parallel_size = 4
+    worker = make_sim_worker(VirtualClock(start_ps=123_000), vllm_config=config)
+    worker.init_device()
+    original_all_reduce = worker.dp_group.all_reduce
+
+    def return_different_padding(input_):
+        output = original_all_reduce(input_)
+        return replace(output, num_tokens_across_dp=(9, 9, 9, 9))
+
+    monkeypatch.setattr(worker.dp_group, "all_reduce", return_different_padding)
+    step = FakeSchedulerOutput(
+        scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+        num_scheduled_tokens={"r0": 4},
+    )
+
+    assert worker.execute_model(step) is None
+    assert worker.step_records[0].num_tokens_after_padding == 9
+    assert step_records_to_json(worker.step_records)[0]["num_tokens_after_padding"] == 9
+    assert worker.sample_tokens(None).sampled_token_ids == [[512]]
 
 
 def test_sim_worker_empty_completion_preserves_v1_update_order(monkeypatch):
@@ -415,6 +468,18 @@ def test_only_global_rank_zero_owns_records_and_stream(monkeypatch, tmp_path):
     assert not stream_path.exists()
 
 
+def test_nonzero_data_parallel_rank_is_not_a_time_authority(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    config = fake_vllm_config()
+    config.parallel_config.data_parallel_size = 2
+    config.parallel_config.data_parallel_rank = 1
+    worker = make_sim_worker(vllm_config=config, rank=0)
+
+    assert not worker.is_time_authority
+    assert worker.dp_group.rank == 1
+    assert worker.dp_group.ranks == [0, 1]
+
+
 def test_worker_extension_exposes_exactly_one_public_name():
     # vLLM asserts that no non-dunder attribute of the extension class exists
     # on the worker class, so every added public name is a collision risk.
@@ -439,6 +504,7 @@ def test_chunked_prefill_then_decode_translation():
     assert request.context_length == 640
     assert step0.produces_token == [False]
     assert step0.num_sampled == 0
+    assert step0.record.num_sampled == 0
 
     second = FakeSchedulerOutput(
         scheduled_cached_reqs=FakeCachedRequests(["r0"], [640], [0]),
@@ -451,6 +517,7 @@ def test_chunked_prefill_then_decode_translation():
     # The prefix hit is reported once, on admission, not every step.
     assert request.num_cached_tokens == 0
     assert step1.produces_token == [True]
+    assert step1.record.num_sampled == 1
 
     third = FakeSchedulerOutput(
         scheduled_cached_reqs=FakeCachedRequests(["r0"], [1000], [1]),
@@ -461,6 +528,7 @@ def test_chunked_prefill_then_decode_translation():
     assert request.phase is RequestPhase.DECODE
     assert (request.num_new_tokens, request.context_length) == (1, 1001)
     assert step2.produces_token == [True]
+    assert step2.record.num_sampled == 1
     assert step2.record.total_new_tokens == 1
 
 
@@ -495,6 +563,7 @@ def test_mixed_batch_translation_and_bookkeeping():
         "short": True,
         "decoding": True,
     }
+    assert record.num_sampled == 2
     # Finished and preempted ids are sorted for reproducible traces.
     assert record.finished_request_ids == ["also-gone", "gone"]
     assert record.preempted_request_ids == ["evicted"]
@@ -540,6 +609,7 @@ def test_drain_step_translation_carries_the_last_completions():
     assert step.record.finished_request_ids == ["r0"]
     assert step.record.total_new_tokens == 0
     assert step.num_sampled == 0
+    assert step.record.num_sampled == 0
     assert len(translator) == 0
 
 
@@ -554,6 +624,7 @@ def test_request_seen_only_as_cached_reconstructs_its_prompt_length():
     step = translate_scheduler_output(translator, output, step_index=0, virtual_time_ps=0)
     assert step.record.scheduled[0].phase is RequestPhase.DECODE
     assert step.produces_token == [True]
+    assert step.record.num_sampled == 1
 
 
 def test_preemption_resets_the_computed_count():
@@ -573,6 +644,7 @@ def test_preemption_resets_the_computed_count():
     assert step.record.scheduled[0].phase is RequestPhase.PREFILL
     assert step.record.scheduled[0].context_length == 64
     assert step.produces_token == [True]
+    assert step.record.num_sampled == 1
 
 
 # ModelRunnerOutput fabrication
@@ -605,6 +677,7 @@ def test_fabricated_output_covers_every_scheduled_request():
     assert sampled[req_id_to_index["a"]] == [7]
     assert sampled[req_id_to_index["b"]] == []
     assert sampled[req_id_to_index["c"]] == [7]
+    assert sum(bool(tokens) for tokens in sampled) == step.record.num_sampled
 
 
 def test_fabricate_rejects_inconsistent_input():
@@ -825,8 +898,10 @@ def test_step_records_dump_is_json_round_trippable(tmp_path):
     assert {line["schema"] for line in lines} == {"atlahs-closed-loop-step-v1"}
     assert lines[0]["scheduled"][0]["phase"] == "prefill"
     assert lines[0]["scheduled"][0]["num_cached_tokens"] == 8
+    assert lines[0]["num_sampled"] == 1
     assert lines[1]["scheduled"][0]["phase"] == "decode"
     assert lines[1]["finished_request_ids"] == ["r0"]
+    assert lines[1]["num_sampled"] == 1
 
 
 # Placement manifest assembly
