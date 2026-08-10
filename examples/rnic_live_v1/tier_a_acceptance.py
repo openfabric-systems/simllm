@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 from collections import Counter
 from dataclasses import dataclass
@@ -13,7 +14,11 @@ from typing import Any
 
 STUDY_DIR = Path(__file__).resolve().parent
 DEFAULT_EXPECTATIONS = STUDY_DIR / "tier_a_expectations.json"
-RUN_ROOT = Path("/data3/yifeng/simllm-dev/wave2-runs")
+RUN_ROOT = Path(
+    os.environ.get(
+        "SIMLLM_TIER_A_RUN_ROOT", "/data3/yifeng/simllm-dev/wave2-runs"
+    )
+)
 
 
 class AcceptanceError(RuntimeError):

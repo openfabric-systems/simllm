@@ -53,7 +53,10 @@ def test_same_d_predicate_accepts_composition_and_rejects_bypass():
 
 
 @pytest.mark.parametrize("factory", ["fake", "htsim"])
-def test_registered_tier_a_command_contract_is_parse_only(factory, tmp_path):
+def test_registered_tier_a_command_contract_is_parse_only(
+    factory, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("SIMLLM_TIER_A_RUN_ROOT", str(tmp_path))
     run_dir = tmp_path / "tier_a" / factory
     producer_name = (
         "simllm_rnic_tier_a" if factory == "fake" else "htsim_rnic_tier_a"
