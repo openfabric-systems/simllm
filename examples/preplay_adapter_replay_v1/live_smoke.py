@@ -13,6 +13,7 @@ REPOSITORY_ROOT = Path(__file__).parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
+from simllm.adapters.vllm import reset_configuration
 from simllm.core import RequestBookkeeper
 from simllm.preplay import (
     RequestArrival,
@@ -55,6 +56,7 @@ def run_smoke(run_dir: Path) -> dict:
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
         "VLLM_ENABLE_V1_MULTIPROCESSING": "0",
+        "VLLM_DISABLE_REQUEST_ID_RANDOMIZATION": "1",
         "VLLM_USE_V1": "1",
         "VLLM_USE_V2_MODEL_RUNNER": "0",
         "SIMLLM_VLLM_WORKER_MODE": "skeleton",
@@ -63,6 +65,7 @@ def run_smoke(run_dir: Path) -> dict:
         "SIMLLM_VLLM_STEP_RECORDS": str(stream_path),
     }
     previous = {name: os.environ.get(name) for name in environment}
+    reset_configuration()
     try:
         os.environ.update(environment)
         from vllm import LLM, SamplingParams
@@ -88,9 +91,9 @@ def run_smoke(run_dir: Path) -> dict:
             ),
             use_tqdm=False,
         )
-        if len(internal_request_ids) != 1:
+        if internal_request_ids != ["length-cap"]:
             raise AssertionError(
-                f"expected one internal request ID, got {internal_request_ids}"
+                f"expected exact external request identity, got {internal_request_ids}"
             )
         outputs = []
         while llm.llm_engine.has_unfinished_requests():
@@ -108,6 +111,10 @@ def run_smoke(run_dir: Path) -> dict:
             raise AssertionError("SimWorker did not load the joined replay run")
         if len(outputs) != 1 or len(outputs[0].outputs) != 1:
             raise AssertionError("live replay did not return one completion")
+        if outputs[0].request_id != "length-cap":
+            raise AssertionError(
+                f"live output changed request identity to {outputs[0].request_id!r}"
+            )
         sampled = tuple(outputs[0].outputs[0].token_ids)
         if sampled != EXPECTED_TOKEN_IDS:
             raise AssertionError(f"sampled {sampled}, expected {EXPECTED_TOKEN_IDS}")
@@ -171,6 +178,7 @@ def run_smoke(run_dir: Path) -> dict:
         )
         return summary
     finally:
+        reset_configuration()
         for name, value in previous.items():
             if value is None:
                 os.environ.pop(name, None)

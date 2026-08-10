@@ -41,6 +41,7 @@ from typing import Any
 
 from simllm.adapters.vllm.executor import (
     _HOOKS,
+    SimExecutorConfig,
     _ModelAnswers,
     _resolve_token_id,
     _SimStepRuntime,
@@ -348,11 +349,19 @@ class SimModelRunner:
                 getattr(updated_scheduler_output, "num_scheduled_tokens", None) or {}
             ):
                 if self.replay is not None:
-                    self.replay.observe_completions(updated_scheduler_output)
+                    self.replay.validate_completions(updated_scheduler_output)
                 self.runtime.drain(updated_scheduler_output)
+                if self.replay is not None:
+                    self.replay.observe_completions(updated_scheduler_output)
                 return _model_runner_output([], {})
 
             translated = self.runtime.translate(updated_scheduler_output)
+            if self.replay is not None:
+                self.replay.validate_step(
+                    translated.req_ids,
+                    translated.produces_token,
+                    updated_scheduler_output,
+                )
             prepared = self._prepare_inputs(translated)
             padded = self._determine_batch_execution_and_padding(prepared)
             metadata = self._build_attention_metadata(padded)
@@ -465,6 +474,7 @@ class SimWorker(_GpuWorkerBase):
         is_driver_worker: bool = False,
         *,
         _simllm_clock: VirtualClock | None = None,
+        _simllm_config: SimExecutorConfig | None = None,
     ) -> None:
         _require_skeleton_mode()
         if bool(getattr(vllm_config, "use_v2_model_runner", False)):
@@ -512,7 +522,11 @@ class SimWorker(_GpuWorkerBase):
                 "adds runner-internal DP coordination."
             )
 
-        self.sim_config = _HOOKS.config or self._config_from_env()
+        self.sim_config = (
+            _simllm_config
+            if _simllm_config is not None
+            else (_HOOKS.config or self._config_from_env())
+        )
         self.dims = model_dims_from_vllm_config(vllm_config)
         tp_size = int(getattr(parallel_config, "tensor_parallel_size", 1) or 1)
         self._answers = _ModelAnswers(
@@ -524,7 +538,10 @@ class SimWorker(_GpuWorkerBase):
         )
         self.token_id = _resolve_token_id(self.dims.vocab_size, self.sim_config.token_id)
         self.replay = (
-            ReplayTokenSource.from_path(self.sim_config.replay_run_path)
+            ReplayTokenSource.from_path(
+                self.sim_config.replay_run_path,
+                max_model_len=int(self.model_config.max_model_len),
+            )
             if self.sim_config.replay_run_path
             else None
         )
@@ -594,6 +611,8 @@ class SimWorker(_GpuWorkerBase):
 
     def update_max_model_len(self, max_model_len: int) -> None:
         with self._call_ledger.record("worker.update_max_model_len"):
+            if self.replay is not None:
+                self.replay.update_max_model_len(max_model_len)
             self.model_config.max_model_len = max_model_len
             self._runner().update_max_model_len(max_model_len)
 

@@ -8,7 +8,7 @@ mirror tests run in both environments.
 import importlib.util
 import json
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import ClassVar
@@ -27,8 +27,10 @@ from simllm.adapters.vllm import (
     SimModelRunner,
     SimWorker,
     StepTranslator,
+    configure,
     fabricate_sampled_tokens,
     manifest_from_worker_entries,
+    reset_configuration,
     sample_adapter_tokens,
     step_kernel,
     step_records_to_json,
@@ -39,9 +41,12 @@ from simllm.compute import GpuSpec, HostInitiationModel, RooflineProvider
 from simllm.core import RequestBookkeeper, RequestPhase, VirtualClock
 from simllm.placement import PlacementManifest
 from simllm.preplay import (
+    ForwardPhase,
     RequestArrival,
     join_preplay_arrivals,
+    read_preplay_trace,
     write_preplay_replay_run,
+    write_preplay_trace,
 )
 
 VLLM_INSTALLED = importlib.util.find_spec("vllm") is not None
@@ -182,6 +187,7 @@ def make_sim_worker(
     vllm_config=None,
     rank=0,
     is_driver_worker=True,
+    simllm_config=None,
 ):
     if vllm_config is None:
         vllm_config = fake_vllm_config()
@@ -192,6 +198,7 @@ def make_sim_worker(
         distributed_init_method="tcp://127.0.0.1:1",
         is_driver_worker=is_driver_worker,
         _simllm_clock=clock,
+        _simllm_config=simllm_config,
     )
 
 
@@ -209,10 +216,38 @@ def joined_replay_path(tmp_path: Path, *, trace_path: Path | None = None) -> Pat
     return write_preplay_replay_run(run, tmp_path / "joined-replay.json")
 
 
+def joined_two_token_replay_path(tmp_path: Path) -> Path:
+    source_path = (
+        Path(__file__).parents[1]
+        / "examples/preplay_trace_v1/writer_golden.jsonl"
+    )
+    source = read_preplay_trace(source_path)
+    request = source.requests[0]
+    decode = replace(
+        request.prefill_tokens[0],
+        phase=ForwardPhase.DECODE,
+        token_index=0,
+        token_id=20,
+    )
+    request = replace(
+        request,
+        max_new_tokens=2,
+        output_token_ids=(20, 21),
+        decode_tokens=(decode,),
+    )
+    trace_path = write_preplay_trace(
+        tmp_path / "two-token-trace.jsonl",
+        source.provenance,
+        (request,),
+    )
+    return joined_replay_path(tmp_path, trace_path=trace_path)
+
+
 def replay_sampling_params(output_length: int = 1):
     return SimpleNamespace(
         max_tokens=output_length,
         min_tokens=0,
+        eos_token_id=None,
         stop_token_ids=[],
     )
 
@@ -393,6 +428,43 @@ def test_sim_worker_split_step_uses_one_clock_and_stream(monkeypatch, tmp_path):
     streamed = [json.loads(line) for line in stream_path.read_text().splitlines()]
     assert streamed == step_records_to_json(worker.step_records)
     assert {entry["schema"] for entry in streamed} == {"atlahs-closed-loop-step-v1"}
+
+
+def test_no_replay_worker_stream_is_byte_locked(monkeypatch, tmp_path):
+    stream_path = tmp_path / "steps.jsonl"
+    expected_path = (
+        Path(__file__).parent
+        / "fixtures/vllm/no_replay_r1_p4_steps.jsonl"
+    )
+    reset_configuration()
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    try:
+        worker = make_sim_worker(
+            VirtualClock(start_ps=123_000),
+            simllm_config=SimExecutorConfig(
+                mode="virtual",
+                token_id=512,
+                step_records_path=str(stream_path),
+                replay_run_path=None,
+            ),
+        )
+        worker.init_device()
+        prefill = FakeSchedulerOutput(
+            scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+            num_scheduled_tokens={"r0": 4},
+        )
+        assert worker.execute_model(prefill) is None
+        assert worker.sample_tokens(None).sampled_token_ids == [[512]]
+        decode = FakeSchedulerOutput(
+            scheduled_cached_reqs=FakeCachedRequests(["r0"], [4], [1]),
+            num_scheduled_tokens={"r0": 1},
+        )
+        assert worker.execute_model(decode) is None
+        assert worker.sample_tokens(None).sampled_token_ids == [[512]]
+
+        assert stream_path.read_bytes() == expected_path.read_bytes()
+    finally:
+        reset_configuration()
 
 
 def test_sim_worker_empty_completion_preserves_v1_update_order(monkeypatch):
@@ -648,7 +720,9 @@ def test_fabricate_rejects_inconsistent_input():
 # Pre-play replay serving
 
 def test_replay_source_serves_exact_tokens_through_executor_path(tmp_path):
-    source = ReplayTokenSource.from_path(joined_replay_path(tmp_path))
+    source = ReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_model_len=4096
+    )
     executor = object.__new__(SimExecutor)
     executor.replay = source
     executor.token_id = 512
@@ -710,8 +784,10 @@ def test_replay_source_drains_through_skeleton_worker(monkeypatch, tmp_path):
     assert snapshot.drained_request_ids == ("request-golden",)
 
 
-def test_replay_resolves_vllm_internal_request_suffix(tmp_path):
-    source = ReplayTokenSource.from_path(joined_replay_path(tmp_path))
+def test_replay_rejects_suffix_shaped_unjoined_identity_without_mutation(tmp_path):
+    source = ReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_model_len=4096
+    )
     runtime_id = "request-golden-deadbeef"
     scheduler_output = FakeSchedulerOutput(
         scheduled_new_reqs=[
@@ -724,45 +800,12 @@ def test_replay_resolves_vllm_internal_request_suffix(tmp_path):
         num_scheduled_tokens={runtime_id: 1},
     )
 
-    assert source.sample([runtime_id], [True], scheduler_output) == (
-        [runtime_id],
-        {runtime_id: 0},
-        [[20]],
-    )
-    source.observe_completions(FakeSchedulerOutput(finished_req_ids={runtime_id}))
+    with pytest.raises(RuntimeError, match="missing from the joined replay run"):
+        source.sample([runtime_id], [True], scheduler_output)
     snapshot = source.snapshot()
-    assert snapshot.served_token_ids == (("request-golden", (20,)),)
-    assert snapshot.drained_request_ids == ("request-golden",)
-
-
-def test_replay_rejects_unknown_suffix_and_second_runtime_binding(tmp_path):
-    source = ReplayTokenSource.from_path(joined_replay_path(tmp_path))
-    first_id = "request-golden-deadbeef"
-    first = FakeSchedulerOutput(
-        scheduled_new_reqs=[
-            FakeNewRequest(
-                first_id,
-                [10],
-                sampling_params=replay_sampling_params(),
-            )
-        ],
-        num_scheduled_tokens={first_id: 1},
-    )
-    assert source.sample([first_id], [True], first)[2] == [[20]]
-
-    second_id = "request-golden-cafebabe"
-    second = FakeSchedulerOutput(
-        scheduled_new_reqs=[
-            FakeNewRequest(
-                second_id,
-                [10],
-                sampling_params=replay_sampling_params(),
-            )
-        ],
-        num_scheduled_tokens={second_id: 1},
-    )
-    with pytest.raises(RuntimeError, match="already bound"):
-        source.sample([second_id], [True], second)
+    assert snapshot.served_token_ids == (("request-golden", ()),)
+    assert snapshot.completed_request_ids == ()
+    assert snapshot.drained_request_ids == ()
     with pytest.raises(RuntimeError, match="missing from the joined replay run"):
         source.request("request-golden-not-hex")
     with pytest.raises(RuntimeError, match="missing from the joined replay run"):
@@ -772,7 +815,7 @@ def test_replay_rejects_unknown_suffix_and_second_runtime_binding(tmp_path):
 def test_replay_rejects_unpinned_unknown_and_exhausted_requests(tmp_path):
     replay_path = joined_replay_path(tmp_path)
 
-    source = ReplayTokenSource.from_path(replay_path)
+    source = ReplayTokenSource.from_path(replay_path, max_model_len=4096)
     bad_limit = FakeSchedulerOutput(
         scheduled_new_reqs=[
             FakeNewRequest(
@@ -822,7 +865,9 @@ def test_replay_rejects_unpinned_unknown_and_exhausted_requests(tmp_path):
 
 
 def test_replay_batch_validation_is_atomic_on_a_late_index_error(tmp_path):
-    source = ReplayTokenSource.from_path(joined_replay_path(tmp_path))
+    source = ReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_model_len=4096
+    )
     invalid_batch = FakeSchedulerOutput(
         scheduled_cached_reqs=FakeCachedRequests(
             ["request-golden", "unknown"],
@@ -853,6 +898,92 @@ def test_replay_batch_validation_is_atomic_on_a_late_index_error(tmp_path):
     assert source.snapshot().served_token_ids == (("request-golden", ()),)
 
 
+def test_replay_rejects_early_eos_before_settlement(monkeypatch, tmp_path):
+    replay_path = joined_two_token_replay_path(tmp_path)
+    stream_path = tmp_path / "rejected-steps.jsonl"
+    params = replay_sampling_params(output_length=2)
+    params.eos_token_id = 20
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    worker = make_sim_worker(
+        VirtualClock(start_ps=123_000),
+        simllm_config=SimExecutorConfig(
+            step_records_path=str(stream_path),
+            replay_run_path=str(replay_path),
+        ),
+    )
+    worker.init_device()
+    scheduler_output = FakeSchedulerOutput(
+        scheduled_new_reqs=[
+            FakeNewRequest("request-golden", [10], sampling_params=params)
+        ],
+        num_scheduled_tokens={"request-golden": 1},
+    )
+
+    with pytest.raises(RuntimeError, match="hits eos_token_id before"):
+        worker.execute_model(scheduler_output)
+    assert worker.step_records == []
+    assert worker.step_results == []
+    assert worker.clock.now_ps == 123_000
+    assert not stream_path.exists()
+    assert worker.replay is not None
+    assert worker.replay.snapshot().served_token_ids == (("request-golden", ()),)
+
+
+def test_replay_allows_eos_at_the_oracle_final_position(tmp_path):
+    source = ReplayTokenSource.from_path(
+        joined_two_token_replay_path(tmp_path), max_model_len=3
+    )
+    params = replay_sampling_params(output_length=2)
+    params.eos_token_id = 21
+    admission = FakeSchedulerOutput(
+        scheduled_new_reqs=[
+            FakeNewRequest("request-golden", [10], sampling_params=params)
+        ],
+        num_scheduled_tokens={"request-golden": 1},
+    )
+    assert source.sample(["request-golden"], [True], admission)[2] == [[20]]
+    final = FakeSchedulerOutput(
+        scheduled_cached_reqs=FakeCachedRequests(
+            ["request-golden"], [2], [1]
+        ),
+        num_scheduled_tokens={"request-golden": 1},
+    )
+    assert source.sample(["request-golden"], [True], final)[2] == [[21]]
+    assert source.snapshot().completed_request_ids == ("request-golden",)
+
+
+def test_replay_rejects_early_stop_token_and_model_length_overflow(tmp_path):
+    replay_path = joined_two_token_replay_path(tmp_path)
+    source = ReplayTokenSource.from_path(replay_path, max_model_len=3)
+    params = replay_sampling_params(output_length=2)
+    params.stop_token_ids = [20]
+    early_stop = FakeSchedulerOutput(
+        scheduled_new_reqs=[
+            FakeNewRequest("request-golden", [10], sampling_params=params)
+        ],
+        num_scheduled_tokens={"request-golden": 1},
+    )
+    with pytest.raises(RuntimeError, match="hits a stop token before"):
+        source.validate_step(["request-golden"], [True], early_stop)
+
+    source = ReplayTokenSource.from_path(replay_path, max_model_len=3)
+    too_long = FakeSchedulerOutput(
+        scheduled_new_reqs=[
+            FakeNewRequest(
+                "request-golden",
+                [10, 11],
+                sampling_params=replay_sampling_params(output_length=2),
+            )
+        ],
+        num_scheduled_tokens={"request-golden": 2},
+    )
+    with pytest.raises(RuntimeError, match="beyond max_model_len=3"):
+        source.validate_step(["request-golden"], [False], too_long)
+
+    with pytest.raises(ValueError, match="beyond max_model_len=2"):
+        ReplayTokenSource.from_path(replay_path, max_model_len=2)
+
+
 def test_replay_rejects_changed_trace_bytes(tmp_path):
     source_trace = (
         Path(__file__).parents[1]
@@ -864,7 +995,7 @@ def test_replay_rejects_changed_trace_bytes(tmp_path):
     copied_trace.write_bytes(copied_trace.read_bytes() + b"\n")
 
     with pytest.raises(ValueError, match="SHA-256 mismatch"):
-        ReplayTokenSource.from_path(replay_path)
+        ReplayTokenSource.from_path(replay_path, max_model_len=4096)
 
 
 def test_absent_replay_calls_the_exact_fabricated_token_path():
@@ -1065,6 +1196,27 @@ def test_config_rejects_bad_values():
         SimExecutorConfig.from_env({"SIMLLM_VLLM_KV_MEMORY_BYTES": "lots"})
     with pytest.raises(ValueError, match="unknown SIMLLM_VLLM_GPU"):
         SimExecutorConfig.from_env({"SIMLLM_VLLM_GPU": "gtx280"}).gpu_spec()
+
+
+def test_reset_and_injected_config_prevent_replay_contamination(monkeypatch, tmp_path):
+    replay_path = joined_replay_path(tmp_path)
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    monkeypatch.delenv("SIMLLM_VLLM_REPLAY_RUN", raising=False)
+    reset_configuration()
+    try:
+        stale = SimExecutorConfig(replay_run_path=str(replay_path))
+        configure(config=stale)
+        injected = SimExecutorConfig(replay_run_path=None)
+        explicit_worker = make_sim_worker(simllm_config=injected)
+        assert explicit_worker.sim_config is injected
+        assert explicit_worker.replay is None
+
+        reset_configuration()
+        clean_worker = make_sim_worker()
+        assert clean_worker.sim_config.replay_run_path is None
+        assert clean_worker.replay is None
+    finally:
+        reset_configuration()
 
 
 # Record export

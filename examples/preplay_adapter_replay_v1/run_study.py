@@ -21,6 +21,7 @@ from simllm.adapters.vllm import (
     SimWorker,
     StepTranslator,
     configure,
+    reset_configuration,
     translate_scheduler_output,
 )
 from simllm.core import RequestBookkeeper, StepRecord, StepResult, VirtualClock
@@ -329,7 +330,11 @@ def drive_executor_probe(
     replay: bool,
 ) -> dict[str, tuple[int, ...]]:
     executor = object.__new__(SimExecutor)
-    executor.replay = ReplayTokenSource.from_path(replay_path) if replay else None
+    executor.replay = (
+        ReplayTokenSource.from_path(replay_path, max_model_len=4096)
+        if replay
+        else None
+    )
     executor.token_id = 512
     translator = StepTranslator()
     served: dict[str, list[int]] = {"r0": [], "r1": []}
@@ -366,34 +371,40 @@ def drive_worker(
         step_records_path=str(stream_path),
         replay_run_path=str(replay_path) if replay else None,
     )
+    reset_configuration()
     configure(step_sink=LinearStepSink(token_cost_ps), config=config)
     scheduler_outputs = schedule(replay)
     completion_times: dict[str, list[int]] = {"r0": [], "r1": []}
     served: dict[str, list[int]] = {"r0": [], "r1": []}
-    with skeleton_environment():
-        worker = SimWorker(
-            fake_vllm_config(),
-            local_rank=0,
-            rank=0,
-            distributed_init_method="tcp://127.0.0.1:1",
-            is_driver_worker=True,
-            _simllm_clock=VirtualClock(),
-        )
-        worker.init_device()
-        for scheduler_output in scheduler_outputs:
-            output = worker.execute_model(scheduler_output)
-            if scheduler_output.num_scheduled_tokens:
-                if output is not None:
-                    raise AssertionError("nonempty skeleton execute must split sampling")
-                output = worker.sample_tokens(None)
-            for request_id, token_ids in zip(
-                output.req_ids,
-                output.sampled_token_ids or (),
-                strict=True,
-            ):
-                served[request_id].extend(token_ids)
-                if token_ids:
-                    completion_times[request_id].append(worker.clock.now_ps)
+    try:
+        with skeleton_environment():
+            worker = SimWorker(
+                fake_vllm_config(),
+                local_rank=0,
+                rank=0,
+                distributed_init_method="tcp://127.0.0.1:1",
+                is_driver_worker=True,
+                _simllm_clock=VirtualClock(),
+            )
+            worker.init_device()
+            for scheduler_output in scheduler_outputs:
+                output = worker.execute_model(scheduler_output)
+                if scheduler_output.num_scheduled_tokens:
+                    if output is not None:
+                        raise AssertionError(
+                            "nonempty skeleton execute must split sampling"
+                        )
+                    output = worker.sample_tokens(None)
+                for request_id, token_ids in zip(
+                    output.req_ids,
+                    output.sampled_token_ids or (),
+                    strict=True,
+                ):
+                    served[request_id].extend(token_ids)
+                    if token_ids:
+                        completion_times[request_id].append(worker.clock.now_ps)
+    finally:
+        reset_configuration()
 
     r1_times = completion_times["r1"]
     ttft = r1_times[0] - ARRIVALS_PS["r1"]
@@ -533,8 +544,8 @@ def run_study(run_dir: Path) -> dict:
             }
         )
     summary = {
-        "scored": {"B1": b1, "B2": b2, "B3": b3},
-        "fatal_unscored": structural,
+        "scored": {"B1": b1, "B2": b2},
+        "fatal_unscored": {**structural, "B3_coefficient_scaling": b3},
         "rows": public_rows,
         "deltas": {
             str(token_cost): {

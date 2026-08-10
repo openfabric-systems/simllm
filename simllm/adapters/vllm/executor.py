@@ -135,6 +135,7 @@ __all__ = [
     "latest_executor",
     "model_dims_from_vllm_config",
     "observe_scheduler_output",
+    "reset_configuration",
     "step_kernel",
     "step_records_to_json",
     "translate_scheduler_output",
@@ -306,6 +307,22 @@ def configure(
         _HOOKS.host_model = host_model
     if config is not None:
         _HOOKS.config = config
+    return _HOOKS
+
+
+def reset_configuration() -> SimExecutorHooks:
+    """Clear every process-wide executor injection hook.
+
+    This is the explicit boundary between independent in-process engine runs.
+    It prevents a replay configuration or sink from one run becoming an
+    implicit input to the next one.
+    """
+
+    _HOOKS.step_sink = None
+    _HOOKS.compute_provider = None
+    _HOOKS.gpu = None
+    _HOOKS.host_model = None
+    _HOOKS.config = None
     return _HOOKS
 
 
@@ -947,7 +964,11 @@ class SimExecutor(_ExecutorBase):
     ) -> None:
         if _VLLM_IMPORT_ERROR is not None:
             raise _missing_vllm_error()
-        self.config = config or _HOOKS.config or SimExecutorConfig.from_env()
+        self.config = (
+            config
+            if config is not None
+            else (_HOOKS.config or SimExecutorConfig.from_env())
+        )
         self.gpu = gpu or _HOOKS.gpu or self.config.gpu_spec()
         self.compute_provider: ComputeProvider = (
             compute_provider
@@ -961,7 +982,10 @@ class SimExecutor(_ExecutorBase):
         )
         self.step_sink: StepSink | None = step_sink or _HOOKS.step_sink
         self.replay = (
-            ReplayTokenSource.from_path(self.config.replay_run_path)
+            ReplayTokenSource.from_path(
+                self.config.replay_run_path,
+                max_model_len=int(vllm_config.model_config.max_model_len),
+            )
             if self.config.replay_run_path
             else None
         )
@@ -1278,6 +1302,12 @@ class SimExecutor(_ExecutorBase):
             return self._drain_step(scheduler_output)
 
         translated = self._runtime.translate(scheduler_output)
+        if self.replay is not None:
+            self.replay.validate_step(
+                translated.req_ids,
+                translated.produces_token,
+                scheduler_output,
+            )
         self._settle(translated)
 
         from vllm.v1.outputs import ModelRunnerOutput
@@ -1309,8 +1339,10 @@ class SimExecutor(_ExecutorBase):
         record.
         """
         if self.replay is not None:
-            self.replay.observe_completions(scheduler_output)
+            self.replay.validate_completions(scheduler_output)
         self._runtime.drain(scheduler_output)
+        if self.replay is not None:
+            self.replay.observe_completions(scheduler_output)
         self._pending_output = self._empty_output()
         return self._pending_output
 
