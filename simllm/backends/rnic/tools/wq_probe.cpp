@@ -11,13 +11,15 @@
 #include <stdexcept>
 #include <string>
 
-#include "simllm/rnic/work_queue.h"
+#include "simllm/rnic/rnic_device.h"
 
 namespace {
 
 using simllm::rnic::Picoseconds;
 using simllm::rnic::PostStatus;
-using simllm::rnic::WorkQueue;
+using simllm::rnic::RnicDevice;
+using simllm::rnic::RnicDeviceAttachments;
+using simllm::rnic::RnicDeviceConfig;
 using simllm::rnic::WorkQueueConfig;
 using simllm::rnic::WorkRequest;
 using simllm::rnic::testing::FakeNetworkPort;
@@ -121,7 +123,12 @@ int run(const Options& options) {
     config.qpn = 1;
     config.doorbell_service_ps = options.doorbell_service_ps;
     config.wqe_fetch_service_ps = options.fetch_service_ps;
-    WorkQueue queue(config, network);
+    RnicDeviceConfig device_config;
+    device_config.work_queue = config;
+    device_config.network.enabled = true;
+    RnicDeviceAttachments attachments;
+    attachments.network_port = &network;
+    RnicDevice queue(device_config, attachments);
 
     for (std::uint64_t index = 1; index <= options.wqes; ++index) {
         WorkRequest request;

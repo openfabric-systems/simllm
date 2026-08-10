@@ -5,6 +5,7 @@
 #include <deque>
 #include <limits>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -1935,6 +1936,39 @@ private:
     friend class PcieFabric;
 };
 
+class PcieFabric::OrderingDomainClaims {
+public:
+    void claim(
+        std::uint64_t submission_domain,
+        std::uint64_t completion_domain) {
+        if (submission_domain == 0 || completion_domain == 0
+            || submission_domain == completion_domain) {
+            throw std::invalid_argument(
+                "shared RNIC PCIe ordering domains must be distinct and "
+                "nonzero");
+        }
+        if (domains_.count(submission_domain) != 0
+            || domains_.count(completion_domain) != 0) {
+            throw std::invalid_argument(
+                "shared RNIC PCIe ordering domain is already claimed");
+        }
+        std::set<std::uint64_t> candidate = domains_;
+        candidate.insert(submission_domain);
+        candidate.insert(completion_domain);
+        domains_.swap(candidate);
+    }
+
+    void release(
+        std::uint64_t submission_domain,
+        std::uint64_t completion_domain) noexcept {
+        domains_.erase(submission_domain);
+        domains_.erase(completion_domain);
+    }
+
+private:
+    std::set<std::uint64_t> domains_;
+};
+
 PcieFabric::Plan::Plan(std::unique_ptr<Plan::Impl> impl)
     : impl_(std::move(impl)) {}
 
@@ -1943,7 +1977,8 @@ PcieFabric::Plan::Plan(Plan&&) noexcept = default;
 PcieFabric::Plan& PcieFabric::Plan::operator=(Plan&&) noexcept = default;
 
 PcieFabric::PcieFabric(PcieFabricConfig config)
-    : impl_(std::make_unique<Impl>(std::move(config))) {}
+    : impl_(std::make_unique<Impl>(std::move(config))),
+      ordering_domain_claims_(std::make_unique<OrderingDomainClaims>()) {}
 
 PcieFabric::~PcieFabric() = default;
 
@@ -2010,6 +2045,20 @@ PcieClassAccounting PcieFabric::totalAccounting() const {
 
 void PcieFabric::validateInvariants() const {
     impl_->validateInvariants();
+}
+
+void PcieFabric::claimOrderingDomains(
+    std::uint64_t submission_domain,
+    std::uint64_t completion_domain) {
+    ordering_domain_claims_->claim(
+        submission_domain, completion_domain);
+}
+
+void PcieFabric::releaseOrderingDomains(
+    std::uint64_t submission_domain,
+    std::uint64_t completion_domain) noexcept {
+    ordering_domain_claims_->release(
+        submission_domain, completion_domain);
 }
 
 const char* toString(PcieServiceClass service_class) noexcept {

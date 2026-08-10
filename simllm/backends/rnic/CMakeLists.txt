@@ -20,6 +20,7 @@ option(SIMLLM_RNIC_WARNINGS_AS_ERRORS
 
 add_library(simllm_rnic STATIC
     src/pcie_fabric.cpp
+    src/rnic_device.cpp
     src/work_queue.cpp
 )
 add_library(simllm::rnic ALIAS simllm_rnic)
@@ -83,6 +84,26 @@ if(SIMLLM_RNIC_BUILD_TESTS)
     endif()
     add_test(NAME simllm_rnic_work_queue_test
              COMMAND simllm_rnic_work_queue_test)
+
+    add_executable(simllm_rnic_device_test
+        tests/rnic_device_test.cpp
+    )
+    target_link_libraries(simllm_rnic_device_test PRIVATE simllm::rnic)
+    target_include_directories(simllm_rnic_device_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_device_test PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_device_test PRIVATE -Werror)
+        endif()
+    endif()
+    add_test(NAME simllm_rnic_device_test
+             COMMAND simllm_rnic_device_test)
 endif()
 
 if(SIMLLM_RNIC_BUILD_TOOLS)

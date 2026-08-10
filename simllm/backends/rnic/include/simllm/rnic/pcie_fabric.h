@@ -12,6 +12,8 @@
 
 namespace simllm::rnic {
 
+class RnicDevice;
+
 inline constexpr std::uint32_t kPcieFabricConfigVersion = 1;
 inline constexpr std::uint32_t kPcieAnalyticalDelayProfileVersion = 1;
 inline constexpr std::uint32_t kPcieTransactionAbiVersion = 1;
@@ -319,8 +321,18 @@ public:
     void validateInvariants() const;
 
 private:
+    void claimOrderingDomains(
+        std::uint64_t submission_domain,
+        std::uint64_t completion_domain);
+    void releaseOrderingDomains(
+        std::uint64_t submission_domain,
+        std::uint64_t completion_domain) noexcept;
+
     class Impl;
+    class OrderingDomainClaims;
     std::unique_ptr<Impl> impl_;
+    std::unique_ptr<OrderingDomainClaims> ordering_domain_claims_;
+    friend class RnicDevice;
 };
 
 const char* toString(PcieServiceClass service_class) noexcept;

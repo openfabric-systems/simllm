@@ -9,6 +9,48 @@ accepted-prefix WR posting, explicit doorbell batches, serialized fetch and
 CQE-write service, ordered retirement, signaled and unsignaled reclaim, CQ
 owner wrap, polling, network retry gates and controlled queue failures.
 
+## Device composition
+
+`RnicDeviceConfig` and `RnicDevice` are the native composition entry point.
+The versioned config retains device identity and the independently versioned
+work-queue, QPC, DMA and network sub-configs. The QP number and opaque policy
+context token are device-level authorities; the matching `WorkQueueConfig`
+fields are checked projections. Every sub-config version is checked even when
+its module is disabled.
+
+The QPC v1 module is the existing scalar lookup stage. Disabling it requires
+zero scalar lookup service and leaves `qpc_ready_at_ps` unset. DMA disabled
+uses the accepted scalar doorbell, WQE-fetch and CQE-write services. DMA
+enabled makes those scalar stages not applicable and binds the queue to one
+`PcieFabric`; the existing double-charge validation is enforced before any
+fabric transaction can mutate. An owned fabric is heap allocated. An external
+fabric is accepted only as a `shared_ptr`, so its stable address outlives every
+bound queue and plan.
+
+Shared-fabric bindings use a nonzero device namespace to derive distinct
+submission and completion ordering domains when the binding leaves either
+domain at zero. Explicit domains pass through unchanged. Live domain pairs are
+claimed on the shared fabric, so a collision is rejected and a failed device
+construction releases its claim without changing fabric generation or
+accounting. A device with an owned fabric retains the accepted SQ/CQ-derived
+defaults.
+
+Network enabled requires an injected external `NetworkPort*`, which is the
+future HTSIM-9 seam. Network disabled rejects that pointer and owns an inert
+port. The inert port accepts each descriptor with a fresh token and returns a
+delivery on `RnicDevice::progress` at the caller's timestamp. It does not
+invent packet-issue timestamps. `RnicDeviceStageReport` records scalar,
+fabric, QPC, external-network and inert-network applicability explicitly.
+
+The caller remains the sole clock authority. Deliver external network events
+through `onNetworkEvent` before `progress` at the same timestamp, then choose
+device-first or host-first CQ priority by ordering `progress` and
+`pollCompletionQueue` as documented below. Both validation probes construct
+through `RnicDevice`. The composition test retains direct module construction
+only as an exact oracle and compares every public field, timestamp, counter
+and PCIe accounting record. Evidence is in
+[`examples/rnic_device_v1`](../../../examples/rnic_device_v1/RESULTS.md).
+
 ## PCIe fabric boundary
 
 `PcieFabric` is the shared transaction-level PCIe resource used by WorkQueue
