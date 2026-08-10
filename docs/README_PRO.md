@@ -296,6 +296,7 @@ slices land.
 |---|---|---|---|---|
 | vLLM `Executor.execute_model` RPC surface | CPU | implemented, executor-level `SimExecutor` | [adapters-vllm](modules/adapters-vllm.md) | [m4](../examples/m4/RESULTS.md) |
 | vLLM `Worker` init and step surface | CPU | mirrored skeleton landed behind the entry flag; GPUs-present variant open | [VLLM-13](modules/adapters-vllm.md#open-tasks) | [vllm_skeleton_v1](../examples/vllm_skeleton_v1/RESULTS.md), [m4](../examples/m4/RESULTS.md) |
+| [step_sink_latent_knobs](../examples/step_sink_latent_knobs/RESULTS.md) | The step-sink latent knobs go live: roofline per-layer breakdown and adapter-populated exact sampling | 11 deterministic rows exact including the cumulative-truncation relation and the -32,000 ps exact-sampling TTFT delta; a real vLLM v0.26.0 skeleton run attributes chunked prefill exactly; the default GOAL SHA lock holds; the honest genuine-risk fraction is 63.6 percent after review |
 | vLLM `GPUModelRunner.execute_model` | CPU | skeleton mirror landed, driven by a live engine | [VLLM-13](modules/adapters-vllm.md#open-tasks) | [vllm_skeleton_v1](../examples/vllm_skeleton_v1/RESULTS.md) |
 | vLLM `GroupCoordinator.all_reduce` and peers | CPU | planned | [VLLM-14](modules/adapters-vllm.md#open-tasks) | none yet |
 | SGLang `TpModelWorker.forward_batch_generation` | CPU | implemented, `SimTpModelWorker` | [adapters-sglang](modules/adapters-sglang.md) | live CPU-engine smoke (module doc) |
@@ -319,13 +320,13 @@ One line per module; the linked doc is the source of truth.
 |---|---|---|
 | [core](modules/core.md) | Implemented: virtual clock, step records, execution-graph/completion/result/bookkeeping contracts with strict JSON, serial lowerer, graph-only replay, incremental append validation with the full validator kept as the snapshot and wire reference | CORE-3/4/5/6/8/9/10, BRIDGE-1 |
 | [workload](modules/workload.md) | Partial: Poisson/trace arrivals, fixed/lognormal/trace lengths | WORK-1 (shared prefixes), WORK-2 (bursty/MMPP) |
-| [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven GPU service primitive with concurrent compute/memory/NCCL scheduling and A100/H100 bootstrap profiles, plus the audited zero-time NCCL stack skeleton with real-source-verified names | COMP-1/2/4/5/6/7/8/9/10/11/12/13/14/15/16 |
+| [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven GPU service primitive with concurrent compute/memory/NCCL scheduling and A100/H100 bootstrap profiles, plus the audited zero-time NCCL stack skeleton with real-source-verified names | COMP-1/2/4/5/6/7/8/9/10/11/12/13/14/15/17 |
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | PLACE-1/2/3 |
 | [traffic](modules/traffic.md) | Implemented: collective patterns, TP step mapping, MoE all-to-all, GOAL renderers for steps and execution graphs | TRAF-2/3/4/5/6/7/8/9/10 |
 | [goal](modules/goal.md) | Implemented: GOAL trace + txt2bin helper | none |
 | [preplay](modules/preplay.md) | First slice implemented: CPU inference runner and strict trace artifact with live MoE routing capture on the pinned granite model (prefill and decode routing, input-token attribution); the replay join, adapter replay and traffic supply remain open | PLAY-2/3/4/5/6 |
 | [backends](modules/backends.md) | Implemented: htsim invocation/parsing with per-layer, exact-sampling and GOAL-padding step-sink precision, plus native C++ RNIC SQ/CQ, network-port and shared PCIe transaction slices; the modular device entry point is landed and htsim composition remains open | BACK-2/8-9/11-17/19-20; backend-repo HTSIM-1/2/4-9, ATLAHS-1 |
-| [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop, plus the flagged SimWorker skeleton through the worker-cls seam with a live engine smoke | VLLM-3 through VLLM-16 |
+| [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop and exact sample attribution, plus the flagged SimWorker skeleton through the worker-cls seam with a live engine smoke | VLLM-3 through VLLM-14 plus VLLM-16 |
 | [adapters-sglang](modules/adapters-sglang.md) | Implemented: SimTpModelWorker via plugin entry point at pinned commit, live CPU-engine smoke | SGL-3 through SGL-12 |
 
 ## Study index
