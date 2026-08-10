@@ -463,18 +463,6 @@ is difficult.
   Acceptance includes per-class attribution, calibrated queue and tag knees,
   and defended p50 through p99.9 latency. Until those mechanisms land,
   analytical incidence must not be described as detected hardware behavior.
-- BACK-24 (Precision; P0; S): make external network-event validation
-  transactional at the `RnicDevice` boundary. The current device observes the
-  event timestamp before `WorkQueue` rejects an unknown, duplicate or
-  cross-WQE terminal, so a rejected future terminal can ratchet the
-  device-wide caller clock. Validate the event and plan its retirement before
-  committing caller time. Acceptance injects all three invalid terminal forms
-  at a future timestamp and proves exception identity plus exact equality of
-  caller-clock behavior, WQE records, counters, evidence, port ledger and
-  physical state before and after each rejection.
-
-### Completeness
-
 - BACK-2 (Completeness; P2; S): LogGOPSim invocation helper for fast
   flow-level sweeps.
 - BACK-8 (Completeness; P1; L): create the protocol-neutral SimLLM RNIC
