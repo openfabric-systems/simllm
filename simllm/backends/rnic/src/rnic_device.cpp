@@ -1,9 +1,11 @@
 #include "simllm/rnic/rnic_device.h"
 
 #include <algorithm>
+#include <exception>
 #include <limits>
 #include <map>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace simllm::rnic {
@@ -128,6 +130,144 @@ bool samePcieFabricConfig(
     return true;
 }
 
+std::uint64_t checkedMultiply(
+    std::uint64_t lhs,
+    std::uint64_t rhs,
+    const char* detail) {
+    if (lhs != 0 && rhs > std::numeric_limits<std::uint64_t>::max() / lhs) {
+        throw std::overflow_error(std::string("RNIC ") + detail);
+    }
+    return lhs * rhs;
+}
+
+const PciePathConfig& enabledPath(
+    const PcieFabricConfig& config,
+    std::uint32_t path_id) {
+    const auto found = std::find_if(
+        config.paths.begin(),
+        config.paths.end(),
+        [path_id](const PciePathConfig& path) {
+            return path.path_id == path_id && path.enabled;
+        });
+    if (found == config.paths.end()) {
+        throw std::invalid_argument(
+            "RNIC host-memory layout references an unknown PCIe path");
+    }
+    return *found;
+}
+
+void validateAllocationPath(
+    const HostMemoryAllocation& allocation,
+    const PcieFabricConfig& fabric) {
+    if (enabledPath(fabric, allocation.path_id).endpoint
+        != allocation.endpoint) {
+        throw std::invalid_argument(
+            "RNIC host-memory allocation endpoint disagrees with its path");
+    }
+}
+
+void validateHostMemoryLayout(const RnicDeviceConfig& config) {
+    const RnicHostMemoryConfig& memory = config.host_memory;
+    const WorkQueueHostMemoryBinding& binding = memory.work_queue;
+    const WorkQueuePcieBinding& pcie = config.dma.work_queue;
+    if (memory.allocations.size() < 6) {
+        throw std::invalid_argument(
+            "RNIC host-memory layout requires all queue and data objects");
+    }
+    std::map<HostMemoryAllocationId, const HostMemoryAllocation*> by_id;
+    std::map<HostMemoryObjectKind, std::size_t> kind_counts;
+    for (const HostMemoryAllocation& allocation : memory.allocations) {
+        if (allocation.device_owner_id != memory.device_owner_id
+            || !by_id.emplace(allocation.allocation_id, &allocation).second) {
+            throw std::invalid_argument(
+                "RNIC host-memory layout has a foreign or duplicate allocation");
+        }
+        ++kind_counts[allocation.object_kind];
+        validateAllocationPath(allocation, config.dma.fabric);
+    }
+    for (const HostMemoryObjectKind kind : {
+             HostMemoryObjectKind::QpcIcm,
+             HostMemoryObjectKind::SqRing,
+             HostMemoryObjectKind::RqRing,
+             HostMemoryObjectKind::CqRing,
+             HostMemoryObjectKind::DoorbellRecord}) {
+        if (kind_counts[kind] != 1) {
+            throw std::invalid_argument(
+                "RNIC host-memory layout requires one allocation per queue object");
+        }
+    }
+    if (kind_counts[HostMemoryObjectKind::DataRegion] == 0
+        || kind_counts.size() != 6) {
+        throw std::invalid_argument(
+            "RNIC host-memory layout requires at least one data allocation");
+    }
+    const auto require = [&by_id](
+                             HostMemoryAllocationId allocation_id,
+                             HostMemoryObjectKind kind) {
+        const auto found = by_id.find(allocation_id);
+        if (found == by_id.end() || found->second->object_kind != kind) {
+            throw std::invalid_argument(
+                "RNIC host-memory binding has a missing or mistyped object");
+        }
+        return found->second;
+    };
+    const HostMemoryAllocation* qpc = require(
+        binding.qpc_icm_allocation_id, HostMemoryObjectKind::QpcIcm);
+    const HostMemoryAllocation* sq = require(
+        binding.sq_ring_allocation_id, HostMemoryObjectKind::SqRing);
+    static_cast<void>(require(
+        binding.rq_ring_allocation_id, HostMemoryObjectKind::RqRing));
+    const HostMemoryAllocation* cq = require(
+        binding.cq_ring_allocation_id, HostMemoryObjectKind::CqRing);
+    const HostMemoryAllocation* doorbell = require(
+        binding.doorbell_record_allocation_id,
+        HostMemoryObjectKind::DoorbellRecord);
+    if (qpc->owner_id != config.identity.qpn
+        || sq->owner_id != config.work_queue.sq_id
+        || cq->owner_id != config.work_queue.cq_id
+        || doorbell->owner_id != config.work_queue.sq_id) {
+        throw std::invalid_argument(
+            "RNIC host-memory object owner disagrees with the device");
+    }
+    for (const HostMemoryAllocation& allocation : memory.allocations) {
+        if (allocation.object_kind == HostMemoryObjectKind::DataRegion
+            && (!allocation.mkey.has_value()
+                || allocation.owner_id != *allocation.mkey)) {
+            throw std::invalid_argument(
+                "RNIC data-region owner must equal its MKey");
+        }
+    }
+    if (sq->path_id != pcie.pcie_sq_memory_path_id
+        || cq->path_id != pcie.pcie_cq_memory_path_id
+        || doorbell->path_id != pcie.pcie_doorbell_record_path_id
+        || sq->virtual_address % 4096 != pcie.pcie_sq_first_byte_offset
+        || cq->virtual_address % 4096 != pcie.pcie_cq_first_byte_offset
+        || doorbell->virtual_address % 4096
+            != pcie.pcie_doorbell_record_first_byte_offset) {
+        throw std::invalid_argument(
+            "RNIC host-memory queue location disagrees with the PCIe binding");
+    }
+    if (qpc->length_bytes < binding.qpc_context_bytes
+        || sq->length_bytes < checkedMultiply(
+               config.work_queue.sq_depth,
+               pcie.pcie_wqe_bytes,
+               "SQ allocation size overflow")
+        || cq->length_bytes < checkedMultiply(
+               config.work_queue.cq_depth,
+               pcie.pcie_cqe_bytes,
+               "CQ allocation size overflow")
+        || doorbell->length_bytes < pcie.pcie_doorbell_record_bytes) {
+        throw std::invalid_argument(
+            "RNIC host-memory queue allocation is too small");
+    }
+    const PciePathConfig& translation_path = enabledPath(
+        config.dma.fabric, memory.registry.translation_path_id);
+    if (translation_path.endpoint != PcieEndpointKind::HostPinnedMemory) {
+        throw std::invalid_argument(
+            "RNIC host-memory translation path must be host-pinned");
+    }
+}
+
 std::optional<Picoseconds> earlier(
     std::optional<Picoseconds> lhs,
     std::optional<Picoseconds> rhs) {
@@ -223,6 +363,10 @@ RnicDevice::RnicDevice(
     if (config_.network.version != kRnicNetworkConfigVersion) {
         throw std::invalid_argument("unsupported RNIC network config version");
     }
+    if (config_.host_memory.version != kRnicHostMemoryConfigVersion) {
+        throw std::invalid_argument(
+            "unsupported RNIC host-memory config version");
+    }
     if (config_.work_queue.version != kWorkQueueConfigVersion) {
         throw std::invalid_argument(
             "unsupported RNIC work-queue config version");
@@ -262,6 +406,21 @@ RnicDevice::RnicDevice(
         throw std::invalid_argument(
             "RNIC DMA-disabled device cannot attach a PCIe fabric");
     }
+    if (!config_.host_memory.enabled && attachments.shared_host_memory) {
+        throw std::invalid_argument(
+            "RNIC host-memory-disabled device cannot attach a registry");
+    }
+    if (config_.host_memory.enabled) {
+        if (!config_.dma.enabled || !config_.qpc.enabled
+            || config_.work_queue.qpc_lookup_service_ps != 0
+            || config_.host_memory.device_owner_id == 0
+            || config_.host_memory.work_queue.version
+                != kWorkQueueHostMemoryBindingVersion) {
+            throw std::invalid_argument(
+                "RNIC host memory requires DMA, QPC and non-scalar bindings");
+        }
+        validateHostMemoryLayout(config_);
+    }
     if (config_.network.enabled && attachments.network_port == nullptr) {
         throw std::invalid_argument(
             "RNIC network-enabled device requires an external port");
@@ -298,6 +457,11 @@ RnicDevice::RnicDevice(
             RnicStageApplicability::Applicable;
         stage_report_.pcie_cqe_write =
             RnicStageApplicability::Applicable;
+    }
+    if (config_.host_memory.enabled) {
+        stage_report_.pcie_qpc_icm = RnicStageApplicability::Applicable;
+        stage_report_.pcie_mtt_mpt = RnicStageApplicability::Applicable;
+        stage_report_.pcie_payload_read = RnicStageApplicability::Applicable;
     }
     if (config_.network.enabled) {
         stage_report_.external_network = RnicStageApplicability::Applicable;
@@ -357,13 +521,42 @@ RnicDevice::RnicDevice(
     }
 
     try {
+        std::optional<VirtualHostMemory::RegistrationPlan> memory_plan;
+        if (config_.host_memory.enabled) {
+            if (attachments.shared_host_memory) {
+                if (!sameVirtualHostMemoryConfig(
+                        config_.host_memory.registry,
+                        attachments.shared_host_memory->config())) {
+                    throw std::invalid_argument(
+                        "shared RNIC host-memory config must match the "
+                        "device config");
+                }
+                host_memory_ = std::move(attachments.shared_host_memory);
+            } else {
+                host_memory_ = std::make_shared<VirtualHostMemory>(
+                    config_.host_memory.registry);
+            }
+            memory_plan.emplace(host_memory_->planRegistrations(
+                config_.host_memory.allocations, 0));
+        }
+
         work_queue_.reset(new WorkQueue(
             config_.work_queue,
             *network_port_,
             pcie_fabric_.get(),
             std::move(pcie_binding),
-            config_.qpc.enabled));
+            config_.qpc.enabled,
+            host_memory_.get(),
+            config_.host_memory.enabled
+                ? std::optional<WorkQueueHostMemoryBinding>(
+                      config_.host_memory.work_queue)
+                : std::nullopt));
+        if (memory_plan.has_value()) {
+            host_memory_->commit(std::move(*memory_plan));
+            host_memory_registered_ = true;
+        }
     } catch (...) {
+        work_queue_.reset();
         if (claimed_ordering_domains_) {
             pcie_fabric_->releaseOrderingDomains(
                 this,
@@ -377,6 +570,16 @@ RnicDevice::RnicDevice(
 
 RnicDevice::~RnicDevice() {
     work_queue_.reset();
+    if (host_memory_registered_) {
+        try {
+            host_memory_->teardownOwner(
+                config_.host_memory.device_owner_id,
+                last_caller_time_ps_);
+            host_memory_registered_ = false;
+        } catch (...) {
+            std::terminate();
+        }
+    }
     if (claimed_ordering_domains_) {
         pcie_fabric_->releaseOrderingDomains(
             this,
@@ -388,23 +591,33 @@ RnicDevice::~RnicDevice() {
 PostResult RnicDevice::postSend(
     const WorkRequest& request,
     Picoseconds now_ps) {
-    observeCallerTime(now_ps);
-    return work_queue_->postSend(request, now_ps);
+    requireHostMemoryLive();
+    validateCallerTime(now_ps);
+    PostResult result = work_queue_->postSend(request, now_ps);
+    last_caller_time_ps_ = now_ps;
+    return result;
 }
 
 PostBatchResult RnicDevice::postSendBatch(
     const std::vector<WorkRequest>& requests,
     Picoseconds now_ps) {
-    observeCallerTime(now_ps);
-    return work_queue_->postSendBatch(requests, now_ps);
+    requireHostMemoryLive();
+    validateCallerTime(now_ps);
+    PostBatchResult result = work_queue_->postSendBatch(requests, now_ps);
+    last_caller_time_ps_ = now_ps;
+    return result;
 }
 
 DoorbellBatch RnicDevice::ringDoorbell(Picoseconds now_ps) {
-    observeCallerTime(now_ps);
-    return work_queue_->ringDoorbell(now_ps);
+    requireHostMemoryLive();
+    validateCallerTime(now_ps);
+    DoorbellBatch result = work_queue_->ringDoorbell(now_ps);
+    last_caller_time_ps_ = now_ps;
+    return result;
 }
 
 void RnicDevice::onNetworkEvent(const NetworkEvent& event) {
+    requireHostMemoryLive();
     if (!config_.network.enabled) {
         throw std::logic_error(
             "external RNIC network event supplied to the inert port");
@@ -415,6 +628,7 @@ void RnicDevice::onNetworkEvent(const NetworkEvent& event) {
 }
 
 std::size_t RnicDevice::progress(Picoseconds now_ps) {
+    requireHostMemoryLive();
     observeCallerTime(now_ps);
     if (config_.network.enabled) {
         return work_queue_->progress(now_ps);
@@ -441,12 +655,36 @@ std::size_t RnicDevice::progress(Picoseconds now_ps) {
 std::vector<CompletionEntry> RnicDevice::pollCompletionQueue(
     std::size_t max_entries,
     Picoseconds now_ps) {
-    observeCallerTime(now_ps);
-    return work_queue_->pollCompletionQueue(max_entries, now_ps);
+    requireHostMemoryLive();
+    validateCallerTime(now_ps);
+    std::vector<CompletionEntry> result =
+        work_queue_->pollCompletionQueue(max_entries, now_ps);
+    last_caller_time_ps_ = now_ps;
+    return result;
+}
+
+void RnicDevice::teardownHostMemory(Picoseconds now_ps) {
+    if (!config_.host_memory.enabled || !host_memory_
+        || !host_memory_registered_) {
+        throw std::logic_error("RNIC device has no live host memory");
+    }
+    validateCallerTime(now_ps);
+    if (work_queue_->hasPendingPhysicalWork()
+        || work_queue_->occupiedSqEntries() != 0
+        || work_queue_->completionQueueDepth() != 0
+        || work_queue_->unpublishedWqeCount() != 0) {
+        throw std::logic_error(
+            "RNIC host memory cannot be torn down with live queue state");
+    }
+    host_memory_->teardownOwner(
+        config_.host_memory.device_owner_id, now_ps);
+    host_memory_registered_ = false;
+    last_caller_time_ps_ = now_ps;
 }
 
 PcieTransactionResult RnicDevice::submitPcie(
     const PcieTransactionRequest& request) {
+    requireHostMemoryLive();
     if (!config_.dma.enabled || !pcie_fabric_) {
         throw std::logic_error(
             "RNIC device has no enabled PCIe fabric");
@@ -463,6 +701,7 @@ PcieTransactionResult RnicDevice::submitPcie(
 }
 
 std::optional<Picoseconds> RnicDevice::nextEventTime() const {
+    requireHostMemoryLive();
     const std::optional<Picoseconds> queue_time =
         work_queue_->nextEventTime();
     if (config_.network.enabled) {
@@ -511,6 +750,10 @@ const PcieFabric* RnicDevice::pcieFabric() const noexcept {
     return pcie_fabric_.get();
 }
 
+const VirtualHostMemory* RnicDevice::hostMemory() const noexcept {
+    return host_memory_.get();
+}
+
 const WorkQueueConfig& RnicDevice::workQueueConfig() const noexcept {
     return work_queue_->config();
 }
@@ -527,6 +770,11 @@ const std::vector<EvidenceEvent>& RnicDevice::evidence() const noexcept {
     return work_queue_->evidence();
 }
 
+const std::vector<HostMemoryAccessRecord>&
+RnicDevice::memoryAccesses() const noexcept {
+    return work_queue_->memoryAccesses();
+}
+
 const WqeRecord& RnicDevice::wqe(WqeId wqe_id) const {
     return work_queue_->wqe(wqe_id);
 }
@@ -535,6 +783,26 @@ void RnicDevice::validateInvariants() const {
     work_queue_->validateInvariants();
     if (pcie_fabric_) {
         pcie_fabric_->validateInvariants();
+    }
+    if (config_.host_memory.enabled) {
+        if (!host_memory_) {
+            throw std::logic_error(
+                "enabled RNIC host memory has no registry");
+        }
+        host_memory_->validateInvariants();
+        const std::size_t expected_live = host_memory_registered_
+            ? config_.host_memory.allocations.size()
+            : 0;
+        if (host_memory_->liveAllocationCount(
+                config_.host_memory.device_owner_id)
+            != expected_live) {
+            throw std::logic_error(
+                "RNIC host-memory live allocation count mismatch");
+        }
+    } else if (host_memory_ || host_memory_registered_
+               || !memoryAccesses().empty()) {
+        throw std::logic_error(
+            "disabled RNIC host memory retained structural state");
     }
     if (!config_.qpc.enabled) {
         for (const WqeRecord& record : records()) {
@@ -562,6 +830,12 @@ void RnicDevice::validateCallerTime(Picoseconds now_ps) const {
 void RnicDevice::observeCallerTime(Picoseconds now_ps) {
     validateCallerTime(now_ps);
     last_caller_time_ps_ = now_ps;
+}
+
+void RnicDevice::requireHostMemoryLive() const {
+    if (config_.host_memory.enabled && !host_memory_registered_) {
+        throw std::logic_error("RNIC host memory was torn down");
+    }
 }
 
 const char* toString(RnicStageApplicability applicability) noexcept {

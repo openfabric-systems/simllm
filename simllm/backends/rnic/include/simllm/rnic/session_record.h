@@ -16,6 +16,8 @@ inline constexpr std::uint32_t kRnicSessionResultRecordVersion = 1;
 inline constexpr std::uint32_t kRnicBookkeepingProjectionVersion = 1;
 inline constexpr const char* kRnicEffectiveHardwareSchema =
     "simllm-rnic-effective-hardware-v1";
+inline constexpr const char* kRnicEffectiveHardwareHostMemorySchema =
+    "simllm-rnic-effective-hardware-v2";
 inline constexpr const char* kRnicSessionConfigSchema =
     "simllm-rnic-session-config-v1";
 inline constexpr const char* kRnicSessionResultSchema =

@@ -1,0 +1,5 @@
+page_size_bytes,batch_size,qpc_fetches,qpc_icm_transactions,qpc_mkey_events,qpc_mpt_events,qpc_mtt_events,sq_page_list_events,data_mkey_events,data_mpt_events,data_mtt_events,cq_page_list_events,mtt_mpt_transactions,wqe_read_transactions,payload_read_transactions,cqe_write_transactions,doorbell_record_transactions,uar_transactions,registration_events,teardown_events,second_data_page_selected,invariants_valid
+4096,1,1,1,0,0,0,1,1,1,1,1,4,1,1,1,1,1,6,6,1,1
+4096,4,4,4,0,0,0,4,4,4,4,4,16,4,4,4,1,1,6,6,1,1
+2097152,1,1,1,0,0,0,1,1,1,1,1,4,1,1,1,1,1,6,6,1,1
+2097152,4,4,4,0,0,0,4,4,4,4,4,16,4,4,4,1,1,6,6,1,1

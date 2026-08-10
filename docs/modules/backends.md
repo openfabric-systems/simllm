@@ -24,9 +24,11 @@ backend submodules.
   effective hardware and its SHA-256; bypass records explicitly name
   `AtlahsWqeLedger` and carry no native hash. Native WQE state projects into
   immutable bookkeeping and the accepted completion CSV without a second
-  lifecycle authority. The reusable bypass checker guards the full reference
-  input tuple and compares the four frozen behavioral artifact classes byte
-  for byte.
+  lifecycle authority. Host-memory-enabled devices use the strict
+  `simllm-rnic-effective-hardware-v2` projection, including allocation and
+  page geometry; disabled devices retain the accepted v1 bytes. The reusable
+  bypass checker guards the full reference input tuple and compares the four
+  frozen behavioral artifact classes byte for byte.
 - `simllm.backends.fct.normalized_fct`: per-flow FCT normalized to the
   `rnic-nn` baseline of the identical GOAL, matched by
   (source, destination, tag). Valid for aligned-start flows; for phases
@@ -185,11 +187,12 @@ maintainer-only clarification are in the
 The native device is assembled through the versioned `RnicDeviceConfig` and
 `RnicDevice` composition entry point. It joins the work-queue core with the
 scalar QPC compatibility module, optional DMA (`PcieFabric` plus
-`WorkQueuePcieBinding`) and either an injected versioned `NetworkPort` or an
-owned inert port. The QP number and policy-context token remain device-level
-identity, including when QPC is disabled. Both native probes and every
-composed-session test construct through this entry point; direct module
-construction remains only in component tests and exact oracle pairs.
+`WorkQueuePcieBinding`), optional `VirtualHostMemory`, and either an injected
+versioned `NetworkPort` or an owned inert port. The QP number and
+policy-context token remain device-level identity, including when QPC is
+disabled. Both native probes and every composed-session test construct
+through this entry point; direct module construction remains only in
+component tests and exact oracle pairs.
 
 A disabled module keeps the interface identical: its parameters are inert or
 rejected, never silently rescoped; its module stages report `not_applicable`;
@@ -208,6 +211,15 @@ reject domains claimed by another live device, while accepting either own
 claimed domain or an unclaimed domain. Failed construction and failed
 submission leave claims, caller time, transactional generation and accounting
 unchanged.
+An enabled host-memory module transactionally registers the configured QPC,
+SQ, RQ, CQ, doorbell-record and data allocations before the device becomes
+callable. An owned registry is heap-stable; an attached registry is retained
+by shared ownership and must have the same effective registry config. Queue
+and data accesses commit their read-only access records with the same PCIe
+plan that supplies their timestamps. Explicit teardown requires a quiescent
+queue, records one teardown event per live device-owned allocation and makes
+later device operations reject. Default construction does not allocate a
+registry and preserves the accepted device and session-record bytes.
 The absent-network path owns an inert port that accepts with a fresh token and
 delivers on the device progress pump; HTSIM-9 supplies the future concrete
 external port. BACK-20 adds selection of the queue submission source and CQ
@@ -389,6 +401,22 @@ gates remain byte identical through the composed probes: 11 of 11
 passes all 4 entries. Evidence classes and reproduction commands are in
 [examples/rnic_device_v1/RESULTS.md](../../examples/rnic_device_v1/RESULTS.md).
 
+On 2026-08-10 BACK-19 closed with the versioned `VirtualHostMemory` registry
+and its `RnicDevice` composition path. QPC/ICM, SQ, RQ, CQ, doorbell-record and
+data allocations carry typed ownership, endpoint and path, virtual extent,
+page geometry and transactional registration and teardown evidence. QPC
+fetches issue direct `QpcIcm` reads with no MKey, MPT or MTT stage. SQ and CQ
+accesses resolve their recorded queue page lists, while data reads use the
+MKey, MPT and MTT chain; all physical transactions commit through the shared
+`PcieFabric` plan. The doorbell record is addressed through its allocation,
+and explicit teardown rejects live queue state and all later device use.
+Enabled configurations project every allocation into strict effective-
+hardware v2 bytes, while the disabled path retains all five predecessor
+artifacts exactly. The frozen study passes 4 of 4 translation-asymmetry cells,
+ten translation-free QPC fetches, 5 of 5 byte-identity instances and 5 of 5
+native CTest entries. Evidence classes and reproduction commands are in
+[examples/rnic_hostmem_v1/RESULTS.md](../../examples/rnic_hostmem_v1/RESULTS.md).
+
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
 and its ECMP-collision and slow-start behavior is the phenomenon under study.
@@ -554,7 +582,7 @@ is difficult.
   model TCP connect and attribute exchange, CM events and QP firmware-command
   time as control-path events. Model QPC, WQE-cache and MTT/MPT locality
   separately. QPC registration, ring page lists and data-region registration
-  land in the BACK-19 host-memory model; QPC fetch never takes a per-access
+  use the landed `VirtualHostMemory` model. QPC fetch never takes a per-access
   MKey/MTT translation while WQE rings and data buffers do.
 - BACK-12 (Completeness; P1; L): implement the TX/RX hardware pipelines and
   cross-layer fault
@@ -575,33 +603,15 @@ is difficult.
   semantics and WQE-fetch bypass; ATS negotiation, ATC translation caching and
   fault production; negotiated read-tag capacity including optional 10-bit tag
   scaling; MSI-X vector routing, interrupt-side coalescing and interrupt writes
-  that execute BACK-9's logical notification policy;
-  QPC/ICM, MTT/MPT, payload, command and fault transaction adapters;
-  and lower-layer DLLP, UpdateFC, replay, SKP and FEC events. Every disabled
+  that execute BACK-9's logical notification policy; optional cache-hit bypass
+  and ATS/ATC behavior around the landed QPC/ICM, queue-page-list and MTT/MPT
+  transaction adapters; command and fault transaction adapters; and
+  lower-layer DLLP, UpdateFC, replay, SKP and FEC events. Every disabled
   mode must preserve the accepted BACK-10 baseline exactly. Once enabled,
   timing, occurrence and calibration defects move to BACK-16 precision scope.
   BACK-11 and BACK-12 own when semantic lookup, DMA, CQE and fault events
-  occur; BACK-17 only lowers still-unconnected events into their shared-fabric
-  PCIe service classes.
-- BACK-19 (Completeness; P1; L): add the virtual host-memory model that the
-  QPC and DMA modules register into. Track every device-visible host object
-  explicitly: QPC/ICM regions, SQ/RQ/CQ rings, doorbell records and data
-  memory regions, each with owner, endpoint kind (host-pinned or GPU
-  memory), page geometry and registration and teardown events, so BACK-11
-  link building registers the QPC as a tracked allocation rather than a
-  scalar lookup latency. Encode the translation asymmetry: QPC fetch is a
-  context read on the QPC/ICM service class over device-managed ICM pages
-  and never takes a per-access MKey/MPT/MTT translation; WQE rings are
-  reached through the per-queue page list recorded in the QPC at creation;
-  data buffers take the full MKey to MPT to MTT path. Translation and
-  ATS/ATC events (BACK-16, BACK-17) therefore apply to rings and data but
-  never to the QPC itself. The doorbell record is a located host-memory
-  object whose address is registered at queue creation. Grounding: the
-  public ConnectX PRM ICM and posting chapters, the upstream mlx5 QPC
-  layout and the device-cache taxonomy recorded in
-  [the RNIC hardware calibration plan](../papers/rnic-hardware-calibration.md).
-  BACK-11 keeps QP lifecycle, pairing and cache residency; this model gives
-  those caches their backing store and miss targets.
+  occur; BACK-17 only lowers optional events not already represented by the
+  landed base transaction path into shared-fabric PCIe service classes.
 - BACK-20 (Completeness; P1; L): model the WQE submission source and the CQ
   consumer when the DMA module is enabled. Three producer shapes, selected
   per queue: a host CPU driver thread that writes WQEs into host-pinned

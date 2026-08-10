@@ -46,6 +46,20 @@ std::uint32_t ringByteOffset(
     return static_cast<std::uint32_t>(offset);
 }
 
+std::uint64_t ringAllocationOffset(
+    std::uint64_t sequence,
+    std::size_t depth,
+    std::uint64_t entry_bytes) {
+    if (sequence == 0 || depth == 0 || entry_bytes == 0) {
+        throw std::logic_error("invalid RNIC ring-allocation offset input");
+    }
+    const std::uint64_t slot = (sequence - 1) % depth;
+    if (slot > std::numeric_limits<std::uint64_t>::max() / entry_bytes) {
+        throw std::overflow_error("RNIC ring-allocation offset overflow");
+    }
+    return slot * entry_bytes;
+}
+
 bool validDropLocation(DropLocation location) {
     switch (location) {
     case DropLocation::None:
@@ -80,12 +94,16 @@ public:
         NetworkPort& network_port,
         PcieFabric* pcie_fabric,
         std::optional<WorkQueuePcieBinding> pcie_binding,
-        bool qpc_lookup_enabled)
+        bool qpc_lookup_enabled,
+        VirtualHostMemory* host_memory,
+        std::optional<WorkQueueHostMemoryBinding> host_memory_binding)
         : config_(std::move(config)),
           network_port_(network_port),
           pcie_fabric_(pcie_fabric),
           pcie_binding_(std::move(pcie_binding)),
-          qpc_lookup_enabled_(qpc_lookup_enabled) {
+          qpc_lookup_enabled_(qpc_lookup_enabled),
+          host_memory_(host_memory),
+          host_memory_binding_(std::move(host_memory_binding)) {
         if (config_.version != kWorkQueueConfigVersion) {
             throw std::invalid_argument("unsupported RNIC work-queue config version");
         }
@@ -190,9 +208,36 @@ public:
                     "RNIC PCIe WQ path endpoint kind is incompatible");
             }
         }
+        if (host_memory_ != nullptr) {
+            if (pcie_fabric_ == nullptr || !pcie_binding_.has_value()
+                || !host_memory_binding_.has_value()
+                || host_memory_binding_->version
+                    != kWorkQueueHostMemoryBindingVersion) {
+                throw std::invalid_argument(
+                    "RNIC host-memory WQ requires PCIe and a valid binding");
+            }
+            if (!qpc_lookup_enabled_ || config_.qpc_lookup_service_ps != 0) {
+                throw std::invalid_argument(
+                    "RNIC host-memory QPC requires enabled non-scalar lookup");
+            }
+            const auto& binding = *host_memory_binding_;
+            if (binding.qpc_icm_allocation_id == 0
+                || binding.sq_ring_allocation_id == 0
+                || binding.rq_ring_allocation_id == 0
+                || binding.cq_ring_allocation_id == 0
+                || binding.doorbell_record_allocation_id == 0
+                || binding.qpc_context_bytes == 0) {
+                throw std::invalid_argument(
+                    "RNIC host-memory WQ allocation identities must be positive");
+            }
+        } else if (host_memory_binding_.has_value()) {
+            throw std::invalid_argument(
+                "RNIC host-memory binding requires an attached registry");
+        }
     }
 
     PostResult postSend(const WorkRequest& request, Picoseconds now_ps) {
+        validateRequestMemory(request);
         observeTime(now_ps);
         if (fatal_) {
             return PostResult{PostStatus::Fatal, 0, 0};
@@ -262,29 +307,53 @@ public:
         const std::size_t count = unpublished_.size();
 
         std::optional<PcieFabric::Plan> pcie_plan;
+        std::vector<HostMemoryAccessRecord> planned_memory_accesses;
         Picoseconds observed_at = 0;
         if (pcie_fabric_ != nullptr) {
             pcie_plan.emplace(pcie_fabric_->beginPlan());
-            PcieTransactionRequest db_record;
-            db_record.client_id = config_.qpn;
-            db_record.client_token = batch_id;
-            db_record.service_class = PcieServiceClass::DoorbellRecord;
-            db_record.operation = PcieOperation::HostStore;
-            db_record.request_direction = PcieDirection::HostToDevice;
-            db_record.ordering = PcieOrdering::VisibilityDependency;
-            db_record.path_id =
-                pcie_binding_->pcie_doorbell_record_path_id;
-            db_record.ordering_domain =
-                pcie_binding_->pcie_submission_ordering_domain;
-            db_record.useful_bytes =
-                pcie_binding_->pcie_doorbell_record_bytes;
-            db_record.transfer_bytes =
-                pcie_binding_->pcie_doorbell_record_bytes;
-            db_record.first_byte_offset =
-                pcie_binding_->pcie_doorbell_record_first_byte_offset;
-            db_record.submitted_at_ps = now_ps;
-            const PcieTransactionResult db_result = pcie_fabric_->schedule(
-                *pcie_plan, db_record);
+            PcieTransactionResult db_result;
+            if (host_memory_ != nullptr) {
+                HostMemoryAccessRequest db_record;
+                db_record.allocation_id =
+                    host_memory_binding_->doorbell_record_allocation_id;
+                db_record.client_id = config_.qpn;
+                db_record.client_token = batch_id;
+                db_record.service_class = PcieServiceClass::DoorbellRecord;
+                db_record.operation = PcieOperation::HostStore;
+                db_record.request_direction = PcieDirection::HostToDevice;
+                db_record.ordering = PcieOrdering::VisibilityDependency;
+                db_record.ordering_domain =
+                    pcie_binding_->pcie_submission_ordering_domain;
+                db_record.useful_bytes =
+                    pcie_binding_->pcie_doorbell_record_bytes;
+                db_record.transfer_bytes =
+                    pcie_binding_->pcie_doorbell_record_bytes;
+                db_record.submitted_at_ps = now_ps;
+                HostMemoryAccessResult result = host_memory_->scheduleAccess(
+                    *pcie_fabric_, *pcie_plan, db_record);
+                db_result = result.access_transaction;
+                planned_memory_accesses.push_back(std::move(result.record));
+            } else {
+                PcieTransactionRequest db_record;
+                db_record.client_id = config_.qpn;
+                db_record.client_token = batch_id;
+                db_record.service_class = PcieServiceClass::DoorbellRecord;
+                db_record.operation = PcieOperation::HostStore;
+                db_record.request_direction = PcieDirection::HostToDevice;
+                db_record.ordering = PcieOrdering::VisibilityDependency;
+                db_record.path_id =
+                    pcie_binding_->pcie_doorbell_record_path_id;
+                db_record.ordering_domain =
+                    pcie_binding_->pcie_submission_ordering_domain;
+                db_record.useful_bytes =
+                    pcie_binding_->pcie_doorbell_record_bytes;
+                db_record.transfer_bytes =
+                    pcie_binding_->pcie_doorbell_record_bytes;
+                db_record.first_byte_offset =
+                    pcie_binding_->pcie_doorbell_record_first_byte_offset;
+                db_record.submitted_at_ps = now_ps;
+                db_result = pcie_fabric_->schedule(*pcie_plan, db_record);
+            }
 
             PcieTransactionRequest uar;
             uar.client_id = config_.qpn;
@@ -331,27 +400,54 @@ public:
             Picoseconds fetch_begin = 0;
             Picoseconds fetch_end = 0;
             if (pcie_fabric_ != nullptr) {
-                PcieTransactionRequest wqe_read;
-                wqe_read.client_id = config_.qpn;
-                wqe_read.client_token = wqe_id;
-                wqe_read.service_class = PcieServiceClass::WqeRead;
-                wqe_read.operation = PcieOperation::NonPostedRead;
-                wqe_read.request_direction = PcieDirection::DeviceToHost;
-                wqe_read.ordering = PcieOrdering::Independent;
-                wqe_read.path_id =
-                    pcie_binding_->pcie_sq_memory_path_id;
-                wqe_read.ordering_domain =
-                    pcie_binding_->pcie_submission_ordering_domain;
-                wqe_read.useful_bytes = pcie_binding_->pcie_wqe_bytes;
-                wqe_read.transfer_bytes = pcie_binding_->pcie_wqe_bytes;
-                wqe_read.first_byte_offset = ringByteOffset(
-                    pcie_binding_->pcie_sq_first_byte_offset,
-                    record.sq_sequence,
-                    config_.sq_depth,
-                    pcie_binding_->pcie_wqe_bytes);
-                wqe_read.submitted_at_ps = observed_at;
-                const PcieTransactionResult fetch = pcie_fabric_->schedule(
-                    *pcie_plan, wqe_read);
+                PcieTransactionResult fetch;
+                if (host_memory_ != nullptr) {
+                    HostMemoryAccessRequest wqe_read;
+                    wqe_read.allocation_id =
+                        host_memory_binding_->sq_ring_allocation_id;
+                    wqe_read.client_id = config_.qpn;
+                    wqe_read.client_token = wqe_id;
+                    wqe_read.service_class = PcieServiceClass::WqeRead;
+                    wqe_read.operation = PcieOperation::NonPostedRead;
+                    wqe_read.request_direction = PcieDirection::DeviceToHost;
+                    wqe_read.ordering = PcieOrdering::Independent;
+                    wqe_read.ordering_domain =
+                        pcie_binding_->pcie_submission_ordering_domain;
+                    wqe_read.allocation_offset_bytes = ringAllocationOffset(
+                        record.sq_sequence,
+                        config_.sq_depth,
+                        pcie_binding_->pcie_wqe_bytes);
+                    wqe_read.useful_bytes = pcie_binding_->pcie_wqe_bytes;
+                    wqe_read.transfer_bytes = pcie_binding_->pcie_wqe_bytes;
+                    wqe_read.submitted_at_ps = observed_at;
+                    HostMemoryAccessResult result =
+                        host_memory_->scheduleAccess(
+                            *pcie_fabric_, *pcie_plan, wqe_read);
+                    fetch = result.access_transaction;
+                    planned_memory_accesses.push_back(
+                        std::move(result.record));
+                } else {
+                    PcieTransactionRequest wqe_read;
+                    wqe_read.client_id = config_.qpn;
+                    wqe_read.client_token = wqe_id;
+                    wqe_read.service_class = PcieServiceClass::WqeRead;
+                    wqe_read.operation = PcieOperation::NonPostedRead;
+                    wqe_read.request_direction = PcieDirection::DeviceToHost;
+                    wqe_read.ordering = PcieOrdering::Independent;
+                    wqe_read.path_id =
+                        pcie_binding_->pcie_sq_memory_path_id;
+                    wqe_read.ordering_domain =
+                        pcie_binding_->pcie_submission_ordering_domain;
+                    wqe_read.useful_bytes = pcie_binding_->pcie_wqe_bytes;
+                    wqe_read.transfer_bytes = pcie_binding_->pcie_wqe_bytes;
+                    wqe_read.first_byte_offset = ringByteOffset(
+                        pcie_binding_->pcie_sq_first_byte_offset,
+                        record.sq_sequence,
+                        config_.sq_depth,
+                        pcie_binding_->pcie_wqe_bytes);
+                    wqe_read.submitted_at_ps = observed_at;
+                    fetch = pcie_fabric_->schedule(*pcie_plan, wqe_read);
+                }
                 fetch_begin = fetch.first_issue_at_ps;
                 fetch_end = fetch.completed_at_ps;
                 planned_fetch_cursor = std::max(
@@ -364,13 +460,64 @@ public:
                 planned_fetch_cursor = fetch_end;
             }
             std::optional<Picoseconds> qpc_ready;
+            Picoseconds data_ready = fetch_end;
             if (qpc_lookup_enabled_) {
-                qpc_ready = checkedAdd(
-                    fetch_end, config_.qpc_lookup_service_ps);
+                if (host_memory_ != nullptr) {
+                    HostMemoryAccessRequest qpc_read;
+                    qpc_read.allocation_id =
+                        host_memory_binding_->qpc_icm_allocation_id;
+                    qpc_read.client_id = config_.qpn;
+                    qpc_read.client_token = wqe_id;
+                    qpc_read.service_class = PcieServiceClass::QpcIcm;
+                    qpc_read.operation = PcieOperation::NonPostedRead;
+                    qpc_read.request_direction = PcieDirection::DeviceToHost;
+                    qpc_read.ordering = PcieOrdering::Independent;
+                    qpc_read.ordering_domain =
+                        pcie_binding_->pcie_submission_ordering_domain;
+                    qpc_read.useful_bytes =
+                        host_memory_binding_->qpc_context_bytes;
+                    qpc_read.transfer_bytes =
+                        host_memory_binding_->qpc_context_bytes;
+                    qpc_read.submitted_at_ps = fetch_end;
+                    HostMemoryAccessResult result =
+                        host_memory_->scheduleAccess(
+                            *pcie_fabric_, *pcie_plan, qpc_read);
+                    qpc_ready = result.access_transaction.completed_at_ps;
+                    planned_memory_accesses.push_back(
+                        std::move(result.record));
+                } else {
+                    qpc_ready = checkedAdd(
+                        fetch_end, config_.qpc_lookup_service_ps);
+                }
+                data_ready = *qpc_ready;
+            }
+            if (host_memory_ != nullptr && record.request.payload_bytes != 0) {
+                const WorkRequestDataMemory& data =
+                    *record.request.data_memory;
+                HostMemoryAccessRequest payload_read;
+                payload_read.allocation_id = data.allocation_id;
+                payload_read.mkey = data.mkey;
+                payload_read.client_id = config_.qpn;
+                payload_read.client_token = wqe_id;
+                payload_read.service_class = PcieServiceClass::PayloadRead;
+                payload_read.operation = PcieOperation::NonPostedRead;
+                payload_read.request_direction = PcieDirection::DeviceToHost;
+                payload_read.ordering = PcieOrdering::Independent;
+                payload_read.ordering_domain =
+                    pcie_binding_->pcie_submission_ordering_domain;
+                payload_read.allocation_offset_bytes =
+                    data.allocation_offset_bytes;
+                payload_read.useful_bytes = record.request.payload_bytes;
+                payload_read.transfer_bytes = record.request.payload_bytes;
+                payload_read.submitted_at_ps = data_ready;
+                HostMemoryAccessResult result = host_memory_->scheduleAccess(
+                    *pcie_fabric_, *pcie_plan, payload_read);
+                data_ready = result.access_transaction.completed_at_ps;
+                planned_memory_accesses.push_back(std::move(result.record));
             }
             const Picoseconds scheduler_begin =
                 std::max(
-                    qpc_ready.value_or(fetch_end),
+                    data_ready,
                     planned_scheduler_cursor);
             const Picoseconds admitted =
                 checkedAdd(scheduler_begin, config_.scheduler_service_ps);
@@ -381,7 +528,12 @@ public:
         }
 
         if (pcie_plan.has_value()) {
+            memory_accesses_.reserve(
+                memory_accesses_.size() + planned_memory_accesses.size());
             pcie_fabric_->commit(std::move(*pcie_plan));
+            for (HostMemoryAccessRecord& access : planned_memory_accesses) {
+                memory_accesses_.push_back(std::move(access));
+            }
         }
         for (const PlannedDoorbellWqe& item : plan) {
             WqeRecord& record = mutableWqe(item.wqe_id);
@@ -710,6 +862,9 @@ public:
     const std::vector<EvidenceEvent>& evidence() const noexcept {
         return evidence_;
     }
+    const std::vector<HostMemoryAccessRecord>& memoryAccesses() const noexcept {
+        return memory_accesses_;
+    }
 
     const WqeRecord& wqe(WqeId wqe_id) const {
         if (wqe_id == 0 || wqe_id > records_.size()) {
@@ -731,6 +886,30 @@ public:
         }
         if (counters_.posted_wqes != records_.size()) {
             throw std::logic_error("RNIC posted counter disagrees with records");
+        }
+        if (host_memory_ == nullptr && !memory_accesses_.empty()) {
+            throw std::logic_error(
+                "RNIC compatibility WQ retained host-memory accesses");
+        }
+        for (const HostMemoryAccessRecord& access : memory_accesses_) {
+            if (access.version != kHostMemoryAccessRecordVersion
+                || access.allocation_id == 0
+                || access.access_transaction_id == 0
+                || access.completed_at_ps < access.submitted_at_ps) {
+                throw std::logic_error(
+                    "RNIC host-memory access record is invalid");
+            }
+            if (access.translation_transaction_ids.size()
+                > access.translation_stages.size()) {
+                throw std::logic_error(
+                    "RNIC host-memory translation projection is invalid");
+            }
+            if (access.object_kind == HostMemoryObjectKind::QpcIcm
+                && (!access.translation_stages.empty()
+                    || !access.translation_transaction_ids.empty())) {
+                throw std::logic_error(
+                    "RNIC QPC access consumed a translation event");
+            }
         }
 
         std::vector<std::size_t> owner_counts(records_.size(), 0);
@@ -871,11 +1050,51 @@ private:
         std::vector<PlannedRetirement> retirements;
         std::map<PendingCqeKey, CompletionEntry> pending_cqes;
         std::optional<PcieFabric::Plan> pcie_plan;
+        std::vector<HostMemoryAccessRecord> memory_accesses;
         Picoseconds retirement_cursor_ps{0};
         Picoseconds cqe_write_cursor_ps{0};
         std::uint64_t next_cqe_sequence{1};
         std::uint64_t next_retire_sequence{1};
     };
+
+    void validateRequestMemory(const WorkRequest& request) const {
+        if (host_memory_ == nullptr) {
+            if (request.data_memory.has_value()) {
+                throw std::invalid_argument(
+                    "RNIC data-memory descriptor requires host memory");
+            }
+            return;
+        }
+        if (request.payload_bytes == 0) {
+            if (request.data_memory.has_value()) {
+                throw std::invalid_argument(
+                    "zero-byte RNIC WQE cannot carry data memory");
+            }
+            return;
+        }
+        if (!request.data_memory.has_value()
+            || request.data_memory->version != kWorkRequestDataMemoryVersion
+            || request.data_memory->allocation_id == 0
+            || request.data_memory->mkey == 0) {
+            throw std::invalid_argument(
+                "RNIC host-memory WQE requires a valid data descriptor");
+        }
+        const HostMemoryAllocation& allocation = host_memory_->allocation(
+            request.data_memory->allocation_id);
+        if (allocation.object_kind != HostMemoryObjectKind::DataRegion
+            || allocation.mkey != request.data_memory->mkey) {
+            throw std::invalid_argument(
+                "RNIC WQE data descriptor does not match its allocation");
+        }
+        if (request.data_memory->allocation_offset_bytes
+                > allocation.length_bytes
+            || request.payload_bytes
+                > allocation.length_bytes
+                    - request.data_memory->allocation_offset_bytes) {
+            throw std::out_of_range(
+                "RNIC WQE data descriptor exceeds its allocation");
+        }
+    }
 
     void validateTime(Picoseconds now_ps) const {
         if (now_ps < last_observed_time_ps_) {
@@ -922,28 +1141,55 @@ private:
                 retirement_plan.pcie_plan.emplace(
                     pcie_fabric_->beginPlan());
             }
-            PcieTransactionRequest cqe_write;
-            cqe_write.client_id = config_.qpn;
-            cqe_write.client_token = record.wqe_id;
-            cqe_write.service_class = PcieServiceClass::CqeWrite;
-            cqe_write.operation = PcieOperation::PostedWrite;
-            cqe_write.request_direction = PcieDirection::DeviceToHost;
-            cqe_write.ordering = PcieOrdering::VisibilityDependency;
-            cqe_write.path_id =
-                pcie_binding_->pcie_cq_memory_path_id;
-            cqe_write.ordering_domain =
-                pcie_binding_->pcie_completion_ordering_domain;
-            cqe_write.useful_bytes = pcie_binding_->pcie_cqe_bytes;
-            cqe_write.transfer_bytes = pcie_binding_->pcie_cqe_bytes;
-            cqe_write.first_byte_offset = ringByteOffset(
-                pcie_binding_->pcie_cq_first_byte_offset,
-                cqe_sequence,
-                config_.cq_depth,
-                pcie_binding_->pcie_cqe_bytes);
-            cqe_write.submitted_at_ps = retired_at_ps;
-            entry.visible_at_ps = pcie_fabric_->schedule(
-                *retirement_plan.pcie_plan,
-                cqe_write).completed_at_ps;
+            if (host_memory_ != nullptr) {
+                HostMemoryAccessRequest cqe_write;
+                cqe_write.allocation_id =
+                    host_memory_binding_->cq_ring_allocation_id;
+                cqe_write.client_id = config_.qpn;
+                cqe_write.client_token = record.wqe_id;
+                cqe_write.service_class = PcieServiceClass::CqeWrite;
+                cqe_write.operation = PcieOperation::PostedWrite;
+                cqe_write.request_direction = PcieDirection::DeviceToHost;
+                cqe_write.ordering = PcieOrdering::VisibilityDependency;
+                cqe_write.ordering_domain =
+                    pcie_binding_->pcie_completion_ordering_domain;
+                cqe_write.allocation_offset_bytes = ringAllocationOffset(
+                    cqe_sequence,
+                    config_.cq_depth,
+                    pcie_binding_->pcie_cqe_bytes);
+                cqe_write.useful_bytes = pcie_binding_->pcie_cqe_bytes;
+                cqe_write.transfer_bytes = pcie_binding_->pcie_cqe_bytes;
+                cqe_write.submitted_at_ps = retired_at_ps;
+                HostMemoryAccessResult result = host_memory_->scheduleAccess(
+                    *pcie_fabric_, *retirement_plan.pcie_plan, cqe_write);
+                entry.visible_at_ps =
+                    result.access_transaction.completed_at_ps;
+                retirement_plan.memory_accesses.push_back(
+                    std::move(result.record));
+            } else {
+                PcieTransactionRequest cqe_write;
+                cqe_write.client_id = config_.qpn;
+                cqe_write.client_token = record.wqe_id;
+                cqe_write.service_class = PcieServiceClass::CqeWrite;
+                cqe_write.operation = PcieOperation::PostedWrite;
+                cqe_write.request_direction = PcieDirection::DeviceToHost;
+                cqe_write.ordering = PcieOrdering::VisibilityDependency;
+                cqe_write.path_id =
+                    pcie_binding_->pcie_cq_memory_path_id;
+                cqe_write.ordering_domain =
+                    pcie_binding_->pcie_completion_ordering_domain;
+                cqe_write.useful_bytes = pcie_binding_->pcie_cqe_bytes;
+                cqe_write.transfer_bytes = pcie_binding_->pcie_cqe_bytes;
+                cqe_write.first_byte_offset = ringByteOffset(
+                    pcie_binding_->pcie_cq_first_byte_offset,
+                    cqe_sequence,
+                    config_.cq_depth,
+                    pcie_binding_->pcie_cqe_bytes);
+                cqe_write.submitted_at_ps = retired_at_ps;
+                entry.visible_at_ps = pcie_fabric_->schedule(
+                    *retirement_plan.pcie_plan,
+                    cqe_write).completed_at_ps;
+            }
         } else {
             const Picoseconds write_begin =
                 std::max(retired_at_ps, cqe_write_cursor_ps);
@@ -1043,8 +1289,14 @@ private:
 
     void commitRetirementPcie(RetirementPlan& plan) {
         if (plan.pcie_plan.has_value()) {
+            memory_accesses_.reserve(
+                memory_accesses_.size() + plan.memory_accesses.size());
             pcie_fabric_->commit(std::move(*plan.pcie_plan));
             plan.pcie_plan.reset();
+            for (HostMemoryAccessRecord& access : plan.memory_accesses) {
+                memory_accesses_.push_back(std::move(access));
+            }
+            plan.memory_accesses.clear();
         }
     }
 
@@ -1155,9 +1407,12 @@ private:
     PcieFabric* pcie_fabric_{nullptr};
     std::optional<WorkQueuePcieBinding> pcie_binding_;
     bool qpc_lookup_enabled_{true};
+    VirtualHostMemory* host_memory_{nullptr};
+    std::optional<WorkQueueHostMemoryBinding> host_memory_binding_;
     WorkQueueCounters counters_;
     std::vector<WqeRecord> records_;
     std::vector<EvidenceEvent> evidence_;
+    std::vector<HostMemoryAccessRecord> memory_accesses_;
     std::deque<WqeId> unpublished_;
     std::deque<WqeId> ready_;
     std::map<NetworkToken, WqeId> inflight_;
@@ -1191,7 +1446,9 @@ WorkQueue::WorkQueue(WorkQueueConfig config, NetworkPort& network_port)
           network_port,
           nullptr,
           std::nullopt,
-          true) {}
+          true,
+          nullptr,
+          std::nullopt) {}
 
 WorkQueue::WorkQueue(
     WorkQueueConfig config,
@@ -1203,20 +1460,26 @@ WorkQueue::WorkQueue(
           network_port,
           &pcie_fabric,
           std::move(pcie_binding),
-          true) {}
+          true,
+          nullptr,
+          std::nullopt) {}
 
 WorkQueue::WorkQueue(
     WorkQueueConfig config,
     NetworkPort& network_port,
     PcieFabric* pcie_fabric,
     std::optional<WorkQueuePcieBinding> pcie_binding,
-    bool qpc_lookup_enabled)
+    bool qpc_lookup_enabled,
+    VirtualHostMemory* host_memory,
+    std::optional<WorkQueueHostMemoryBinding> host_memory_binding)
     : impl_(std::make_unique<Impl>(
           std::move(config),
           network_port,
           pcie_fabric,
           std::move(pcie_binding),
-          qpc_lookup_enabled)) {}
+          qpc_lookup_enabled,
+          host_memory,
+          std::move(host_memory_binding))) {}
 
 WorkQueue::~WorkQueue() = default;
 WorkQueue::WorkQueue(WorkQueue&&) noexcept = default;
@@ -1292,6 +1555,11 @@ const std::vector<WqeRecord>& WorkQueue::records() const noexcept {
 
 const std::vector<EvidenceEvent>& WorkQueue::evidence() const noexcept {
     return impl_->evidence();
+}
+
+const std::vector<HostMemoryAccessRecord>&
+WorkQueue::memoryAccesses() const noexcept {
+    return impl_->memoryAccesses();
 }
 
 const WqeRecord& WorkQueue::wqe(WqeId wqe_id) const {
