@@ -14,6 +14,28 @@ CORE_UNIFORM_WIRE_SHA256 = (
 CORE_UNIFORM_GOAL_SHA256 = (
     "46ca1ea42952c5e0c66ea9eebb8947e770f7090f6cbdea6c711b4e764b412f5b"
 )
+PLAY_TRACE_SHA256 = {
+    "tracked": "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341",
+    "full": "5d0ee3a1af045c404f9aa9baa7d063dc446584da60282f4492a1e72f08e081b5",
+}
+PLAY_PROJECTION_ORACLES = {
+    "tracked": (
+        30_874,
+        "e3af45f896ff0a7005c4da0d6b4d3cfba7a00c868653e9aea581f49c37392e7a",
+    ),
+    "full": (
+        87_845,
+        "7d1875ac46de07f7ed2ed814dc8596ecc500a74f51c626a9b98b2ecb38d949d5",
+    ),
+    "reversed": (
+        87_845,
+        "18a5f737d1680aac22df3ca4a095d2f4ef5205c2433379de86ed96afc77687c1",
+    ),
+}
+PLAY_ROW_COUNTS = {
+    "tracked": (1, 22, 0, 528, 4224),
+    "full": (3, 57, 6, 1512, 12096),
+}
 
 
 def parse_sections(value: str) -> tuple[str, ...]:
@@ -32,6 +54,14 @@ def check_only(args: argparse.Namespace) -> None:
         for value in (CORE_UNIFORM_WIRE_SHA256, CORE_UNIFORM_GOAL_SHA256)
     ):
         raise AssertionError("frozen CORE SHA-256 literals must contain 64 digits")
+    if any(len(value) != 64 for value in PLAY_TRACE_SHA256.values()):
+        raise AssertionError("frozen PLAY trace hashes must contain 64 digits")
+    if any(len(value[1]) != 64 or value[0] <= 0 for value in PLAY_PROJECTION_ORACLES.values()):
+        raise AssertionError("frozen PLAY projection oracles are malformed")
+    if any(any(count < 0 for count in counts) for counts in PLAY_ROW_COUNTS.values()):
+        raise AssertionError("frozen PLAY row counts must be nonnegative")
+    if "play" in args.sections and args.decode_trace is None:
+        raise SystemExit("--decode-trace is required for the PLAY section")
     print(
         f"check-only sections={','.join(args.sections)} out={args.out}; "
         "validated frozen literals and produced no artifacts"
@@ -203,6 +233,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--sections", type=parse_sections, default=SECTIONS)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--decode-trace", type=Path)
     parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args()
     if args.check_only:
