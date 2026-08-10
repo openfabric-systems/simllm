@@ -36,6 +36,90 @@ PLAY_ROW_COUNTS = {
     "tracked": (1, 22, 0, 528, 4224),
     "full": (3, 57, 6, 1512, 12096),
 }
+TRAF_UNIFORM_GOAL_ORACLE = (
+    13_200,
+    "d708e998685b617478e891b316728d14b8ac6185a62b73817f80af1c5adff518",
+)
+TRAF_VECTOR_BYTES = 2_048
+TRAF_UNIFORM_PAIR_BYTES = 180_224
+TRAF_EPOCH1_LAYER13_RANK0_EXPERTS = (
+    2,
+    7,
+    8,
+    10,
+    11,
+    13,
+    14,
+    15,
+    16,
+    18,
+    20,
+    21,
+    22,
+    24,
+    25,
+    27,
+)
+TRAF_DISPATCH_BYTES = {
+    0: (
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 43_008),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+    ),
+    1: (
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 43_008),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (40_960, 38_912),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+        (45_056, 45_056),
+    ),
+}
+TRAF_JCT_ORACLES = {
+    (0, 200_000_000_000): (182_531_520, 442_054_080, -259_522_560),
+    (0, 400_000_000_000): (139_277_760, 269_039_040, -129_761_280),
+    (1, 200_000_000_000): (182_203_840, 442_054_080, -259_850_240),
+    (1, 400_000_000_000): (139_113_920, 269_039_040, -129_925_120),
+}
 
 
 def parse_sections(value: str) -> tuple[str, ...]:
@@ -60,6 +144,28 @@ def check_only(args: argparse.Namespace) -> None:
         raise AssertionError("frozen PLAY projection oracles are malformed")
     if any(any(count < 0 for count in counts) for counts in PLAY_ROW_COUNTS.values()):
         raise AssertionError("frozen PLAY row counts must be nonnegative")
+    if TRAF_UNIFORM_GOAL_ORACLE[0] <= 0 or len(TRAF_UNIFORM_GOAL_ORACLE[1]) != 64:
+        raise AssertionError("frozen TRAF uniform GOAL oracle is malformed")
+    if set(TRAF_DISPATCH_BYTES) != {0, 1} or any(
+        len(table) != 24
+        or any(
+            len(pair) != 2
+            or any(size <= 0 or size % TRAF_VECTOR_BYTES for size in pair)
+            for pair in table
+        )
+        for table in TRAF_DISPATCH_BYTES.values()
+    ):
+        raise AssertionError("frozen TRAF dispatch tables are malformed")
+    if any(
+        routed - uniform != delta or delta >= 0
+        for routed, uniform, delta in TRAF_JCT_ORACLES.values()
+    ):
+        raise AssertionError("frozen TRAF JCT relations are malformed")
+    if (
+        len(TRAF_EPOCH1_LAYER13_RANK0_EXPERTS) != 16
+        or len(set(TRAF_EPOCH1_LAYER13_RANK0_EXPERTS)) != 16
+    ):
+        raise AssertionError("frozen TRAF epoch-1 ownership is malformed")
     if "play" in args.sections and args.decode_trace is None:
         raise SystemExit("--decode-trace is required for the PLAY section")
     print(
