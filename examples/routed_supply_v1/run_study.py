@@ -446,22 +446,28 @@ def run_play(out: Path, decode_trace: Path) -> dict[str, object]:
         _projection_counts(full) == expected_counts["full"]
     )
 
-    terminal_rows = []
-    for request in full.requests:
-        terminal_rows.append(
-            {
-                "request_id": request.request_id,
-                "prompt_tokens": request.prompt_token_count,
-                "output_tokens": request.output_token_count,
-                "prefill_forwards": len(request.prefill_tokens),
-                "decode_forwards": len(request.decode_tokens),
-                "passed": (
-                    len(request.prefill_tokens) == request.prompt_token_count
-                    and len(request.decode_tokens)
-                    == request.output_token_count - 1
-                ),
-            }
-        )
+    terminal_sources = {}
+    for source, projection in (("tracked", tracked), ("full", full)):
+        rows = []
+        for request in projection.requests:
+            rows.append(
+                {
+                    "request_id": request.request_id,
+                    "prompt_tokens": request.prompt_token_count,
+                    "output_tokens": request.output_token_count,
+                    "prefill_forwards": len(request.prefill_tokens),
+                    "decode_forwards": len(request.decode_tokens),
+                    "passed": (
+                        len(request.prefill_tokens) == request.prompt_token_count
+                        and len(request.decode_tokens)
+                        == request.output_token_count - 1
+                    ),
+                }
+            )
+        terminal_sources[source] = {
+            "rows": rows,
+            "passed": all(row["passed"] for row in rows),
+        }
 
     full_payloads = {
         request["request_id"]: request
@@ -487,8 +493,10 @@ def run_play(out: Path, decode_trace: Path) -> dict[str, object]:
         "freeze_commit": "a778cd9fea3e0ed1d2ec5250c148c068396aa497",
         "behavioral": {
             "PLAY-B1": {
-                "rows": terminal_rows,
-                "passed": all(row["passed"] for row in terminal_rows),
+                "sources": terminal_sources,
+                "passed": all(
+                    source["passed"] for source in terminal_sources.values()
+                ),
             },
             "PLAY-B2": association,
         },
