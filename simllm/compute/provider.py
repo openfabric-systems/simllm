@@ -6,6 +6,7 @@ import abc
 import json
 import math
 from dataclasses import dataclass
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,8 @@ class KernelSpec:
     bytes_moved: float
     #: free-form shape/config key, e.g. {"batch_tokens": 512, "hidden": 7168}
     config: tuple[tuple[str, int], ...] = ()
+    #: optional exact family decomposition of this fused kernel
+    family_kernels: tuple[KernelSpec, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -87,10 +90,16 @@ class RooflineProvider(ComputeProvider):
     (real kernels rarely reach 100% of either roof).
     """
 
-    def __init__(self, efficiency: float = 0.7):
+    def __init__(
+        self,
+        efficiency: float = 0.7,
+        *,
+        enable_layer_breakdown: bool = False,
+    ):
         if not 0.0 < efficiency <= 1.0:
             raise ValueError("efficiency must be in (0, 1]")
         self.efficiency = efficiency
+        self.enable_layer_breakdown = enable_layer_breakdown
 
     def estimate(self, kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate:
         t_compute = kernel.flops / (gpu.peak_flops * self.efficiency)
@@ -102,6 +111,81 @@ class RooflineProvider(ComputeProvider):
             bound=bound,
             uncertainty=0.5,
         )
+
+    def estimate_layers(
+        self,
+        kernel: KernelSpec,
+        gpu: GpuSpec,
+        num_layers: int,
+    ) -> tuple[DurationEstimate, ...] | None:
+        """Split a fused estimate using work on its selected roof.
+
+        Transformer families aggregate work over all layers except for the
+        LM head. The repeated work is shared equally; the complete LM-head
+        family belongs to the final layer. Integer cumulative boundaries make
+        the returned durations sum to the fused estimate exactly.
+        """
+        if not self.enable_layer_breakdown or not kernel.family_kernels:
+            return None
+        if isinstance(num_layers, bool) or not isinstance(num_layers, int):
+            raise TypeError("num_layers must be an integer")
+        if num_layers <= 0:
+            raise ValueError("num_layers must be positive")
+
+        family_flops = sum(family.flops for family in kernel.family_kernels)
+        family_bytes = sum(family.bytes_moved for family in kernel.family_kernels)
+        if any(
+            family.flops < 0 or family.bytes_moved < 0
+            for family in kernel.family_kernels
+        ):
+            raise ValueError("family work must be nonnegative")
+        if family_flops != kernel.flops or family_bytes != kernel.bytes_moved:
+            raise ValueError("family kernels must conserve fused flops and bytes exactly")
+
+        fused = self.estimate(kernel, gpu)
+        selected = "flops" if fused.bound == "compute" else "bytes_moved"
+        weighted_families = tuple(
+            (family.name, Fraction(getattr(family, selected)))
+            for family in kernel.family_kernels
+        )
+        head_weight = sum(
+            (weight for name, weight in weighted_families if name == "lm_head"),
+            start=Fraction(0),
+        )
+        repeated_weight = sum(
+            (weight for name, weight in weighted_families if name != "lm_head"),
+            start=Fraction(0),
+        )
+        layer_weights = [repeated_weight] * num_layers
+        layer_weights[-1] += head_weight * num_layers
+        total_weight = sum(layer_weights, start=Fraction(0))
+        if total_weight == 0:
+            if fused.duration_ps != 0:
+                raise ValueError("zero family work cannot apportion a nonzero estimate")
+            return tuple(
+                DurationEstimate(0, fused.bound, fused.uncertainty)
+                for _ in range(num_layers)
+            )
+
+        cumulative_weight = Fraction(0)
+        previous_boundary_ps = 0
+        estimates = []
+        for index, weight in enumerate(layer_weights):
+            cumulative_weight += weight
+            boundary_ps = (
+                fused.duration_ps
+                if index == num_layers - 1
+                else (fused.duration_ps * cumulative_weight) // total_weight
+            )
+            estimates.append(
+                DurationEstimate(
+                    duration_ps=boundary_ps - previous_boundary_ps,
+                    bound=fused.bound,
+                    uncertainty=fused.uncertainty,
+                )
+            )
+            previous_boundary_ps = boundary_ps
+        return tuple(estimates)
 
 
 #: table key: (kernel name, config tuple, gpu name)

@@ -58,17 +58,27 @@ class StepRecord:
     finished_request_ids: list[str] = field(default_factory=list)
     #: exact number of scheduled requests that sample this step; None means unknown
     num_sampled: int | None = None
+    #: physical model-input tokens after framework padding; None means unobserved
+    num_tokens_after_padding: int | None = None
 
     def __post_init__(self) -> None:
-        if self.num_sampled is None:
-            return
-        if isinstance(self.num_sampled, bool) or not isinstance(self.num_sampled, int):
-            raise TypeError("num_sampled must be an integer or None")
-        if not 0 <= self.num_sampled <= len(self.scheduled):
-            raise ValueError(
-                f"num_sampled={self.num_sampled} must be between 0 and "
-                f"len(scheduled)={len(self.scheduled)}"
-            )
+        if self.num_sampled is not None:
+            if isinstance(self.num_sampled, bool) or not isinstance(self.num_sampled, int):
+                raise TypeError("num_sampled must be an integer or None")
+            if not 0 <= self.num_sampled <= len(self.scheduled):
+                raise ValueError(
+                    f"num_sampled={self.num_sampled} must be between 0 and "
+                    f"len(scheduled)={len(self.scheduled)}"
+                )
+        if self.num_tokens_after_padding is not None:
+            value = self.num_tokens_after_padding
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError("num_tokens_after_padding must be an integer or None")
+            if value < self.total_new_tokens:
+                raise ValueError(
+                    f"num_tokens_after_padding={value} must be at least "
+                    f"total_new_tokens={self.total_new_tokens}"
+                )
 
     @property
     def total_new_tokens(self) -> int:
@@ -119,6 +129,8 @@ def step_record_to_json(record: StepRecord) -> dict[str, Any]:
     }
     if record.num_sampled is not None:
         payload["num_sampled"] = record.num_sampled
+    if record.num_tokens_after_padding is not None:
+        payload["num_tokens_after_padding"] = record.num_tokens_after_padding
     return payload
 
 
@@ -157,6 +169,7 @@ def step_record_from_json(payload: dict[str, Any]) -> StepRecord:
         preempted_request_ids=list(payload.get("preempted_request_ids", [])),
         finished_request_ids=list(payload.get("finished_request_ids", [])),
         num_sampled=payload.get("num_sampled"),
+        num_tokens_after_padding=payload.get("num_tokens_after_padding"),
     )
 
 
