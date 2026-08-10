@@ -101,6 +101,8 @@ def test_markdown_and_cpp_paths_are_portable() -> None:
 
 def test_scripts_have_no_personal_path_defaults() -> None:
     violations: list[str] = []
+    # This source necessarily contains the matcher text and synthetic fixtures.
+    scanner_path = Path(__file__).resolve().relative_to(REPO_ROOT)
     for relative_path in _tracked_files():
         # This scanner contains intentional matcher fixtures tested below.
         if relative_path == SCANNER_PATH:

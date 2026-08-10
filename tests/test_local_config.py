@@ -34,7 +34,12 @@ def test_path_from_env_resolves_an_absolute_path(tmp_path, monkeypatch):
 
 
 def test_path_from_env_expands_user_syntax(tmp_path, monkeypatch):
-    monkeypatch.setenv("HOME", str(tmp_path))
+    if sys.platform == "win32":
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        monkeypatch.delenv("HOMEDRIVE", raising=False)
+        monkeypatch.delenv("HOMEPATH", raising=False)
+    else:
+        monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv(VARIABLE, str(Path("~") / "raw-traces"))
 
     assert path_from_env(VARIABLE) == (tmp_path / "raw-traces").resolve(

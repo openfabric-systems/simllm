@@ -154,6 +154,48 @@ def _validate_work(work: WorkPayload, path: str) -> None:
             _integer(rank, f"{path}.ranks[{index}]", nonnegative=True)
         _validate_unique(ranks, f"{path}.ranks")
         _integer(work.payload_bytes, f"{path}.payload_bytes", nonnegative=True)
+        pair_payloads = _require_tuple(
+            work.pair_payload_bytes,
+            f"{path}.pair_payload_bytes",
+        )
+        pair_keys: list[tuple[int, int]] = []
+        for index, entry in enumerate(pair_payloads):
+            entry_path = f"{path}.pair_payload_bytes[{index}]"
+            if not isinstance(entry, tuple) or len(entry) != 3:
+                _fail(entry_path, "expected a three-item tuple")
+            source_rank = _integer(entry[0], f"{entry_path}[0]", nonnegative=True)
+            destination_rank = _integer(
+                entry[1],
+                f"{entry_path}[1]",
+                nonnegative=True,
+            )
+            _integer(entry[2], f"{entry_path}[2]", minimum=1)
+            if source_rank == destination_rank:
+                _fail(entry_path, "source and destination ranks must differ")
+            if source_rank not in ranks or destination_rank not in ranks:
+                _fail(entry_path, "source and destination must belong to ranks")
+            pair_keys.append((source_rank, destination_rank))
+        if len(pair_keys) != len(set(pair_keys)):
+            _fail(f"{path}.pair_payload_bytes", "ordered rank pairs must be unique")
+        if pair_keys != sorted(pair_keys):
+            _fail(
+                f"{path}.pair_payload_bytes",
+                "entries must be in source-major order",
+            )
+        if pair_payloads:
+            if (work.collective, work.algorithm_hint) != (
+                "all-to-allv",
+                "pairwise",
+            ):
+                _fail(
+                    f"{path}.pair_payload_bytes",
+                    "table is valid only for pairwise all-to-allv",
+                )
+            if work.payload_bytes != 0:
+                _fail(
+                    path,
+                    "pair_payload_bytes and payload_bytes cannot both be authoritative",
+                )
         for field_name in ("algorithm_hint", "channel_hint"):
             value = getattr(work, field_name)
             if value is not None:
@@ -351,7 +393,7 @@ def _work_to_json(work: WorkPayload) -> dict[str, Any]:
             "byte_count": work.byte_count,
         }
     if isinstance(work, CollectiveWork):
-        return {
+        payload = {
             "kind": "collective",
             "collective": work.collective,
             "ranks": list(work.ranks),
@@ -359,6 +401,11 @@ def _work_to_json(work: WorkPayload) -> dict[str, Any]:
             "algorithm_hint": work.algorithm_hint,
             "channel_hint": work.channel_hint,
         }
+        if work.pair_payload_bytes:
+            payload["pair_payload_bytes"] = [
+                list(entry) for entry in work.pair_payload_bytes
+            ]
+        return payload
     if isinstance(work, ControlWork):
         return {
             "kind": "control",
@@ -501,8 +548,25 @@ def _work_from_json(value: Any, path: str) -> WorkPayload:
             payload,
             path,
             required={"kind", "collective", "ranks", "payload_bytes"},
-            optional={"algorithm_hint", "channel_hint"},
+            optional={"algorithm_hint", "channel_hint", "pair_payload_bytes"},
         )
+        raw_pair_payloads = _array(
+            payload.get("pair_payload_bytes", []),
+            f"{path}.pair_payload_bytes",
+        )
+        pair_payloads: list[tuple[int, int, int]] = []
+        for index, raw_entry in enumerate(raw_pair_payloads):
+            entry_path = f"{path}.pair_payload_bytes[{index}]"
+            entry = _array(raw_entry, entry_path)
+            if len(entry) != 3:
+                _fail(entry_path, "expected a three-item array")
+            pair_payloads.append(
+                (
+                    _integer(entry[0], f"{entry_path}[0]", nonnegative=True),
+                    _integer(entry[1], f"{entry_path}[1]", nonnegative=True),
+                    _integer(entry[2], f"{entry_path}[2]", minimum=1),
+                )
+            )
         work = CollectiveWork(
             collective=_string(payload["collective"], f"{path}.collective"),
             ranks=_int_tuple(payload["ranks"], f"{path}.ranks"),
@@ -515,6 +579,7 @@ def _work_from_json(value: Any, path: str) -> WorkPayload:
             channel_hint=_optional_string(
                 payload.get("channel_hint"), f"{path}.channel_hint"
             ),
+            pair_payload_bytes=tuple(pair_payloads),
         )
         _validate_work(work, path)
         return work

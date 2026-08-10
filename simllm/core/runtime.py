@@ -1000,7 +1000,11 @@ class CoarseDeviceRuntime:
                             "ring all-reduce payload must divide evenly among ranks; "
                             "CORE-16 owns remainder chunking"
                         )
-                if work.collective == "all-to-allv" and work.payload_bytes == 0:
+                if (
+                    work.collective == "all-to-allv"
+                    and work.payload_bytes == 0
+                    and not work.pair_payload_bytes
+                ):
                     raise ValueError("pairwise all-to-allv requires a nonzero payload")
             elif isinstance(work, ControlWork):
                 if len(work.destination_ranks) > CONTROL_GOAL_TAG_STRIDE:
@@ -1626,45 +1630,51 @@ class CoarseDeviceRuntime:
             paths = list(frontier_paths.values())
         elif work.collective == "all-to-allv" and work.algorithm_hint == "pairwise":
             goal_tag = goal_tags[0]
-            for source_rank in work.ranks:
-                for destination_rank in work.ranks:
-                    if source_rank == destination_rank:
-                        continue
-                    channel_visit = self._schedule_nccl_channel(
-                        graph,
-                        operation,
-                        source_rank,
-                        channel,
-                        launch.completed_at_ps,
-                        readiness[source_rank],
-                        state,
-                    )
-                    transfer_visit, projection = self._schedule_semantic_send(
-                        graph=graph,
-                        operation=operation,
-                        source_rank=source_rank,
-                        destination_rank=destination_rank,
-                        payload_bytes=work.payload_bytes,
-                        goal_tag=goal_tag,
-                        extent_index=extent_index,
-                        channel_id=channel,
-                        submitted_at_ps=channel_visit.completed_at_ps,
-                        eligible_at_ps=channel_visit.completed_at_ps,
-                        nccl_command_id=command_id,
-                        state=state,
-                        wqe_authority=wqe_authority,
-                    )
-                    extent_index += 1
-                    visits.extend((channel_visit, transfer_visit))
-                    paths.append([launch, channel_visit, transfer_visit])
-                    if projection is not None:
-                        wqes.append(projection)
-                    participant_completed[source_rank] = max(
-                        participant_completed[source_rank], transfer_visit.completed_at_ps
-                    )
-                    participant_completed[destination_rank] = max(
-                        participant_completed[destination_rank], transfer_visit.completed_at_ps
-                    )
+            if work.pair_payload_bytes:
+                pair_payloads = work.pair_payload_bytes
+            else:
+                pair_payloads = tuple(
+                    (source_rank, destination_rank, work.payload_bytes)
+                    for source_rank in work.ranks
+                    for destination_rank in work.ranks
+                    if source_rank != destination_rank
+                )
+            for source_rank, destination_rank, payload_bytes in pair_payloads:
+                channel_visit = self._schedule_nccl_channel(
+                    graph,
+                    operation,
+                    source_rank,
+                    channel,
+                    launch.completed_at_ps,
+                    readiness[source_rank],
+                    state,
+                )
+                transfer_visit, projection = self._schedule_semantic_send(
+                    graph=graph,
+                    operation=operation,
+                    source_rank=source_rank,
+                    destination_rank=destination_rank,
+                    payload_bytes=payload_bytes,
+                    goal_tag=goal_tag,
+                    extent_index=extent_index,
+                    channel_id=channel,
+                    submitted_at_ps=channel_visit.completed_at_ps,
+                    eligible_at_ps=channel_visit.completed_at_ps,
+                    nccl_command_id=command_id,
+                    state=state,
+                    wqe_authority=wqe_authority,
+                )
+                extent_index += 1
+                visits.extend((channel_visit, transfer_visit))
+                paths.append([launch, channel_visit, transfer_visit])
+                if projection is not None:
+                    wqes.append(projection)
+                participant_completed[source_rank] = max(
+                    participant_completed[source_rank], transfer_visit.completed_at_ps
+                )
+                participant_completed[destination_rank] = max(
+                    participant_completed[destination_rank], transfer_visit.completed_at_ps
+                )
         else:
             raise AssertionError("collective tag preflight accepted an unsupported algorithm")
 
@@ -1830,7 +1840,11 @@ class CoarseDeviceRuntime:
             return work.byte_count
         if isinstance(work, KvCacheWork):
             return work.byte_count
-        if isinstance(work, CollectiveWork | ControlWork):
+        if isinstance(work, CollectiveWork):
+            if work.pair_payload_bytes:
+                return sum(entry[2] for entry in work.pair_payload_bytes)
+            return work.payload_bytes
+        if isinstance(work, ControlWork):
             return work.payload_bytes
         return None
 

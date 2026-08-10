@@ -153,8 +153,12 @@ class CollectiveWork:
     ``(collective, algorithm_hint)``: a ring all-reduce carries the full
     reduced payload, while a pairwise all-to-allv carries the bytes each
     rank sends to each other rank (one uniform ordered-pair share).
-    Captured all-to-allv patterns with per-pair size variation are not
-    representable by this scalar; CORE-6 owns that contract extension.
+
+    ``pair_payload_bytes`` is the sparse variable-size form for pairwise
+    all-to-allv. Each entry is ``(source_rank, destination_rank, bytes)``;
+    omitted pairs carry zero bytes. A nonempty table is authoritative and
+    requires ``payload_bytes == 0``. An empty table retains the uniform scalar
+    interpretation and its original v1 wire encoding.
     """
 
     collective: str
@@ -162,6 +166,7 @@ class CollectiveWork:
     payload_bytes: int
     algorithm_hint: str | None = None
     channel_hint: str | None = None
+    pair_payload_bytes: tuple[tuple[int, int, int], ...] = ()
 
 
 @dataclass(frozen=True)

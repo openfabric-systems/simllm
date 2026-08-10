@@ -39,6 +39,7 @@ from simllm.core.step import StepRecord
 from simllm.traffic import (
     MOE_A2A_PHASES,
     TP_ALLREDUCE_SITES,
+    RoutedMoeSupply,
     step_moe_alltoalls,
     step_tp_allreduces,
 )
@@ -48,8 +49,10 @@ from simllm.traffic import (
 class SerialStepLowererConfig:
     """Framework-neutral inputs for the serial compatibility schedule.
 
-    ``tp_ranks`` and ``ep_ranks`` are semantic global ranks.  A later
+    ``tp_ranks`` and ``ep_ranks`` are semantic global ranks. A later
     backend mapping step may translate them to simulator endpoint ranks.
+    ``routed_moe_supply`` optionally replaces the uniform MoE compatibility
+    payload with captured ordered-pair sizes and the selected placement epoch.
     """
 
     dims: ModelDims
@@ -60,6 +63,7 @@ class SerialStepLowererConfig:
     )
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel)
+    routed_moe_supply: RoutedMoeSupply | None = None
 
     def __post_init__(self) -> None:
         tp_ranks = tuple(self.tp_ranks)
@@ -77,6 +81,10 @@ class SerialStepLowererConfig:
                 raise ValueError("ep_ranks must be non-negative")
         if self.dims.num_layers <= 0:
             raise ValueError("dims.num_layers must be positive")
+        if self.routed_moe_supply is not None and not isinstance(
+            self.routed_moe_supply, RoutedMoeSupply
+        ):
+            raise TypeError("routed_moe_supply must be RoutedMoeSupply or None")
         object.__setattr__(self, "tp_ranks", tp_ranks)
         object.__setattr__(self, "ep_ranks", ep_ranks)
 
@@ -137,6 +145,7 @@ class SerialStepLowerer(ExecutionLowerer):
             record,
             cfg.dims,
             cfg.ep_ranks if cfg.ep_ranks is not None else (),
+            routed_supply=cfg.routed_moe_supply,
         )
 
         participants = list(cfg.tp_ranks)
@@ -240,8 +249,10 @@ class SerialStepLowerer(ExecutionLowerer):
                             payload_bytes=moe_op.per_pair_bytes,
                             algorithm_hint="pairwise",
                             channel_hint=phase,
+                            pair_payload_bytes=moe_op.pair_payload_bytes,
                         ),
                         correlation=correlation,
+                        placement_epoch=moe_op.placement_epoch,
                         participant_local_depends_on=dependencies,
                     )
                 )

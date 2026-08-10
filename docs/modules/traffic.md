@@ -23,17 +23,21 @@ the flow-level work the GOAL emitter renders.
   layer (attention output, MLP output), each of payload
   `total_new_tokens * hidden_size * dtype_bytes`; a TP world of size 1 or
   a zero-token drain record produces no ops.
-- `step_moe_alltoalls` (M5, TRAF-2 first half): the same record plus MoE
+- `step_moe_alltoalls`: the same record plus MoE
   `ModelDims` plus an expert-parallel group of W GOAL ranks maps to the
   step's MoE traffic: per MoE layer, a dispatch pairwise all-to-allv then
-  a combine pairwise all-to-allv, each rank sending
+  a combine pairwise all-to-allv. Without an optional `RoutedMoeSupply`,
+  each rank uses the M5 compatibility payload
   `total_new_tokens * top_k * hidden_size * dtype_bytes // W` to every
   other rank. This is the uniform-routing assumption: the router spreads
   (token, expert) assignments evenly over the EP group and each rank's
-  own 1/W share stays local, off the fabric; replacing it with per-token
-  routed-experts captures (including EPLB placement-epoch snapshots) is
-  the TRAF-2 second half. Dense dims, an EP world below 2 or a zero-token
-  record produce no ops.
+  own 1/W share stays local, off the fabric. `RoutedMoeSupply` instead joins
+  the strict `simllm-routed-experts-v1` projection to immutable placement
+  manifest snapshots and a step-to-epoch map. It slices each scheduled
+  prefill or decode phase, emits one hidden vector per token and remote
+  destination rank, pre-reduces combine to the transposed pair table and
+  records the selected epoch on the graph operation. Dense dims, an EP world
+  below 2 or a zero-token record produce no ops.
 - `render_step_goal` renders the serial per-rank chain (per layer: `calc`,
   the two TP allreduces when the TP world produces them, then for MoE dims
   with `ep_ranks` given the dispatch and combine all-to-allvs) through the
@@ -47,8 +51,9 @@ the flow-level work the GOAL emitter renders.
   all-to-allv operations, preserves `participant_local_depends_on` edges and
   FIFO predecessors, and never reduces a separate `depends_on`
   whole-operation barrier through rank-local ancestry. It fails loudly on
-  cross-rank barriers, work or timing semantics the serial GOAL subset cannot
-  represent. It consumes no `StepRecord` after lowering.
+  cross-rank barriers, sparse pair tables that leave a declared rank without
+  a send or receive, and work or timing semantics the serial GOAL subset
+  cannot represent. It consumes no `StepRecord` after lowering.
 
 Deliberately out of scope: exact TP weight-storage intervals (packed QKV,
 gate/up packing, quantization padding); group memberships plus activation
@@ -75,6 +80,14 @@ half of TRAF-2) landed with M5 and is validated by the examples/m5 step
 grid (fluid MoE step makespans exact to 0 ps across EP x step-shape). The
 JSONL collective-trace consumer is not yet implemented (TRAF-5).
 
+The captured-routing half of TRAF-2 is implemented behind the explicit
+`RoutedMoeSupply` seam. Its absent path retains the old scalar payload, while
+its enabled path is live through `SerialStepLowerer`, `render_step_goal` and
+`HtsimStepSink`. The combined Granite study passed exact graph and GOAL pair
+tables at two placement epochs, four fluid-JCT cells with 0 ps residual and
+the frozen uniform GOAL hash, closing TRAF-2; see
+[the routing supply results](../../examples/routed_supply_v1/RESULTS.md).
+
 CORE-2 additionally proved that serial GOAL rendered only from a
 JSON-round-tripped `ExecutionGraph` is byte- and timing-equivalent to the
 legacy step path over TP width and link-rate sweeps, including a MoE sentinel
@@ -92,16 +105,6 @@ residual; see
   closed by examples/m5): end-to-end closed-form validation of binomial
   broadcast against the fluid backend, extending the M1/M4/M5 study
   pattern.
-- TRAF-2 (second half; first half landed with M5): MoE dispatch/combine
-  from routed-experts captures, including EPLB epoch-snapshot handling in
-  trace records, replacing the uniform-routing assumption of
-  `step_moe_alltoalls` (and its floor-divided equal per-pair payload)
-  with observed per-token destinations. Named sub-approximation (audit
-  finding): the current mapping sends one hidden-vector copy per (token,
-  expert) assignment, while real dispatch kernels dedupe to at most one
-  copy per (token, destination rank) and pre-reduce the combine, so with
-  top_k > W the emitted a2av bytes are inflated by up to top_k / W; the
-  routed-captures half removes this along with uniform routing.
 - TRAF-3: KV-transfer records for PD-disaggregation and cache-miss
   re-prefill (milestone M6).
 - TRAF-5: the JSONL collective-trace consumer (parse
