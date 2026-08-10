@@ -292,6 +292,61 @@ landed with the same slice and is exercised by the examples/m5 studies
 together with the MoE traffic mapping
 ([traffic](traffic.md), [M5 results](../../examples/m5/RESULTS.md)).
 
+The COMP-15 first slice is implemented in `simllm.compute.nccl_stack`. Its
+function identities were audited against NVIDIA NCCL release `v2.30.7-1`,
+commit `73cf112295c33aee2b895f329f592f2a9b4b0f97`. It adds name-mirrored
+`ncclCommInitRank` and `ncclAllReduce` entry points and a planner with the same
+explicit `2 * (world_size - 1)` ring-step decomposition and strict lane
+divisibility as `simllm.compute.nccl`. The send connector follows NCCL's
+head/tail convention: the GPU publishes ready state and advances `tail`, while
+the CPU proxy advances `head` only after a separately produced network
+completion is observed. `ncclProxySaveOp` queues operations before kernel
+launch, independent proxy progression permits FIFO occupancy above one, and a
+doorbell separates verbs posting from the fake external completion source.
+
+The intra-node route stays inside `ncclKernelMain`, `runRing` and `genericOp`.
+The inter-node route traverses the GPU send FIFO, CPU proxy, `ncclNet.isend`,
+verbs post, doorbell, external CQE, `ncclNet.test`, CQ poll and head-credit
+return. The receive leg is explicitly absent from this slice. Every call,
+proactive signal store, and successful poll observation emits a strict
+`simllm-nccl-stack-event-v1` record from one caller-supplied `VirtualClock`.
+The [NCCL stack skeleton study](../../examples/nccl_stack_v1/RESULTS.md)
+reports 5 of 5 passing behavioral relation families over all 35 instances and
+10 of 10 fatal unscored structural invariants. This zero-time component stream
+is not yet projected onto the live TTFT/TPOT metric chain.
+
+### NCCL stack name audit
+
+SimLLM mirrors names and causal boundaries only. It copies no NCCL source.
+Every event function is either an audited NCCL symbol or has a `simllm` prefix
+and an explicit reason:
+
+| Mirrored event name | NCCL source and symbol, or SimLLM reason |
+|---|---|
+| `ncclCommInitRank` | `src/init.cc`, `ncclCommInitRank` |
+| `ncclBuildRings` | `src/graph/rings.cc`, `ncclBuildRings` |
+| `initChannel` | `src/channel.cc`, `initChannel` |
+| `ncclAllReduce` | `src/collectives.cc`, `ncclAllReduce` |
+| `ncclEnqueueCheck` | `src/enqueue.cc`, `ncclEnqueueCheck` |
+| `scheduleCollTasksToPlan` | `src/enqueue.cc`, `scheduleCollTasksToPlan` |
+| `calcCollChunking` | `src/enqueue.cc`, `calcCollChunking` |
+| `ncclProxySaveOp` | `src/proxy.cc`, `ncclProxySaveOp`; upload call in `src/enqueue.cc` |
+| `ncclLaunchKernel` | `src/enqueue.cc`, `ncclLaunchKernel` |
+| `ncclKernelMain` | `src/device/common.h`, `ncclKernelMain` |
+| `runRing` | `src/device/all_reduce.h`, `runRing` |
+| `waitPeer` | `src/device/prims_simple.h`, `waitPeer` |
+| `genericOp` | `src/device/prims_simple.h`, `genericOp` |
+| `postPeer` | `src/device/prims_simple.h`, `postPeer` |
+| `ncclProxyProgress` | `src/proxy.cc`, `ncclProxyProgress` |
+| `sendProxyProgress` | `src/transport/net.cc`, `sendProxyProgress` |
+| `ncclNet.isend` | `src/include/plugin/net/net_v12.h`, `isend` member; `ncclIbIsend` in `src/transport/net_ib/p2p.cc` is the audited IB implementation |
+| `ncclNet.test` | `src/include/plugin/net/net_v12.h`, `test` member; called by `sendProxyProgress` in `src/transport/net.cc` |
+| `wrap_ibv_post_send` | `src/include/ibvwrap.h`, `wrap_ibv_post_send`; called by `ncclIbIsend` in `src/transport/net_ib/p2p.cc` |
+| `wrap_ibv_poll_cq` | `src/include/ibvwrap.h`, `wrap_ibv_poll_cq`; called by `ncclIbTest` in `src/transport/net_ib/p2p.cc` |
+| `simllmRnicRingDoorbell` | simllm-invented: exposes the RNIC notification hidden inside the verbs provider's post operation |
+| `simllmNetworkComplete` | simllm-invented: deterministic external completion injection until a native RNIC session supplies CQEs |
+| `simllmKernelComplete` | simllm-invented: stack-internal kernel-completion observation until runtime projection lands |
+
 ## COMP-1: offline SASS calibration plan
 
 Strictly offline; the step loop never invokes a cycle-level simulator.
@@ -417,33 +472,34 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   baseline: selecting or omitting the default ring path must preserve every
   accepted ring timestamp, counter and task order exactly.
 - COMP-15 (Completeness; P1; L): model the NCCL software stack with the real
-  stack's functional names and interfaces, trimmed to the main path.
-  Intra-node collectives execute as NCCL collective kernels on the
-  NVLink-class egress model (the existing ring egress kernel, deepened by
-  COMP-11) and stay off the fabric. Inter-node transfers follow the proxy
-  model: the proxy progression loop calls a `ncclNet`-shaped plugin surface
-  (isend, irecv, test), which calls an ibverbs-shaped surface (post send,
-  poll CQ), which submits to the native RNIC session; this is the concrete
-  BACK-20 CPU-proxy producer shape, and CORE-4 owns the channel queues the
-  proxy drains. Function and interface names track the real stack so
-  captures and traces line up; the implementations are trimmed, side calls
-  off the main path are omitted or served inertly, and every boundary
-  crossing emits an observability event with virtual timestamps.
-  The model covers NCCL and its traffic planner together: communicator
-  setup, logical channel construction, chunking and channel assignment,
-  the creation and polling of the GPU-resident send and receive staging
-  buffers, and the interactions of the calls between layers. Both the data
-  path and the signal path are simulated: buffer bytes as data movement,
-  and the ready flags and head/tail counters as their own observable
-  events, so a consumer that polls and a producer that proactively signals
-  are distinguishable in the timeline.
-  GPU-initiated mode replaces the proxy leg with the BACK-20 GPU-initiated
-  path behind the same upper interface. The simulated framework
-  communicators (VLLM-14, SGL-11) are the callers of this stack. The first
-  slice is the complete mental model as name-mirrored empty function calls
-  with observability and centralized virtual timestamps; mechanisms fill
-  in step by step per the sizing plan in
-  [docs/README_PRO.md](../README_PRO.md).
+  stack's functional names and interfaces, trimmed to the main path. The
+  audited zero-time first slice is landed: communicator and ring setup,
+  explicit ring-step chunk planning, GPU send-FIFO tail publication,
+  `ncclProxySaveOp` queueing, independent CPU proxy progression,
+  `ncclNet.isend`, verbs post, RNIC doorbell, external CQE production, CQ poll,
+  proxy head-credit return, and distinct intra-node and inter-node call loops
+  all emit strict events on one caller-owned clock. The
+  [study](../../examples/nccl_stack_v1/RESULTS.md) freezes and validates the
+  exact call sequences and planner relations.
+  Remaining work is to replace deliberate zero-time boundaries and
+  metadata-only movement with calibrated service mechanisms connected to the
+  existing GPU, PCIe, native RNIC and fabric authorities; add the
+  GPU-initiated leg; project selected events through the supported runtime and
+  metric chain; and land the VLLM-14 and SGL-11 adapter callers. Receive-leg
+  progression must wire `recvProxyProgress`, `ncclNet.irecv`, `ncclIbIrecv`,
+  `wrap_ibv_post_recv`, receive completion through `ncclNet.test` and
+  `wrap_ibv_poll_cq`, receive-connector tail publication, and GPU `waitPeer`
+  plus `postPeer` head-credit return. These additions must retain one timing
+  authority and the explicit bypass behavior.
+  Intra-node collectives must compose with the NVLink-class egress model and
+  stay off the fabric. Inter-node transfer and receive completion must project
+  through CORE-4 and CORE-5 to `CompletionEvent`, `StepResult`, TTFT and TPOT.
+  Add the BACK-20 GPU-initiated leg behind the same upper interface while
+  preserving the CPU-host proxy path as the default identity baseline. The
+  VLLM-14 and SGL-11 simulated communicators remain the adapter callers that
+  must connect to this stack. Function and event identities must remain stable
+  so later captures, timing calibration and adapter traces align with this
+  first slice.
 - COMP-16 (Precision; P1; M): populate `ComputeProvider.estimate_layers` in
   the live providers so the step sink can replace its current even per-layer
   split with real layer durations. Implement the roofline breakdown first,
