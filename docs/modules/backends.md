@@ -149,6 +149,37 @@ State ownership is explicit:
   watermarks that originate PFC and the paused priority state that consumes
   it.
 
+### HTSIM-9 preparation seam
+
+The SimLLM-side executable preparation package is in the
+[Tier A harness results](../../examples/rnic_live_v1/tier_a_harness_results.md).
+Its generic scenario runner receives a `PortFactory` that supplies the
+versioned `NetworkPort`, an external-event pump and read-only issue and
+terminal traces.
+The physical factory configuration contains capacity, link rate, zero-header
+and zero-propagation fixture controls and controlled-drop selection. It does
+not contain native doorbell service D or a precomputed serialization time.
+The fake implementation composes the existing deterministic fake port. The
+HTSIM-9 binary compiles the same runner and main and replaces only the factory
+translation unit.
+
+Preparation behavior was frozen at `35c2ee4` before implementation. A first
+nonfinal smoke exposed a two-expression Python `Counter` defect; the
+post-specified machinery-only correction is `21f9a4c`, and its chronology is
+[recorded separately](../../examples/rnic_live_v1/tier_a_checker_correction.md).
+Implementation `f8eeb34` and the subsequent registered fake run pass all four
+instances in each of the D-additivity, inverse-rate and FIFO families, eight
+separate exact rows and all fatal unscored families. This remains component
+evidence. It creates no htsim composition, `CompletionEvent`, `StepResult`,
+TTFT or TPOT result.
+
+The complete source-cited event map, ABI gap assignment and requested addon
+branch procedure are in the
+[HTSIM-9 wrapper design and approval package](../design/htsim9-atlahs-flow-runtime-wrapper.md).
+The original frozen gate is unchanged; its landed-surface review and proposed
+maintainer-only clarification are in the
+[post-specified fixture audit](../../examples/rnic_live_v1/FIXTURE_AUDIT_2026-08-10.md).
+
 ### Modular construction
 
 The native device is assembled through the versioned `RnicDeviceConfig` and
@@ -240,8 +271,9 @@ NIC start is first-packet issue. A reduced per-WQE start latency is derived
 from the native timeline for calibration and never charged again by htsim.
 The pre-implementation composition expectations were first frozen in
 [examples/rnic_live_v1](../../examples/rnic_live_v1/expectations.md) at commit
-`65b5609`; commit `facb26d` clarified retry identity, and commit `947399c`
-records the final pre-run drain and audit wording.
+`65b5609`; commit `facb26d` clarified retry identity, commit `947399c`
+recorded the drain and audit wording, and commit `d5d98a2` is the final pre-run
+amendment to that gate.
 The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 [the RNIC hardware calibration plan](../papers/rnic-hardware-calibration.md).
 
@@ -431,9 +463,6 @@ is difficult.
   Acceptance includes per-class attribution, calibrated queue and tag knees,
   and defended p50 through p99.9 latency. Until those mechanisms land,
   analytical incidence must not be described as detected hardware behavior.
-
-### Completeness
-
 - BACK-2 (Completeness; P2; S): LogGOPSim invocation helper for fast
   flow-level sweeps.
 - BACK-8 (Completeness; P1; L): create the protocol-neutral SimLLM RNIC
@@ -595,6 +624,28 @@ is difficult.
   own this producer). The QPC stays host ICM in every mode. COMP-2's fixed
   CPU-proxy versus GPU-initiated constants remain the analytical fallback
   while this structural path is disabled.
+- BACK-25 (Completeness; P1; L): add a versioned packet-attempt lifecycle to
+  `NetworkPort` without exposing RNIC-owned objects. Carry logical extent,
+  packet index, transmission-attempt index, payload offset, payload and wire
+  bytes, and control/data kind. Add explicit TX-start, TX-finish and native-RX
+  arrival observations while retaining Delivered and Dropped as the only
+  terminal attempt events. Tokens are unique for the whole session, one token
+  has exactly one terminal, and intermediate observations never consume it.
+  Include stable drop-resource and evidence provenance. Preserve the v1
+  flow-extent path as an explicit compatibility mode and prove its accepted
+  rows byte identical.
+- BACK-26 (Completeness; P1; L): add versioned transport-control vocabulary to
+  `NetworkPort`. Carry packet-keyed ECN and CNP feedback,
+  policy-context-keyed eligibility and rate updates with effective timestamps,
+  PFC control-frame submission and pause or resume reception with endpoint or
+  link identity, priority and quanta or duration, plus capability-negotiated
+  link-state transitions with stable link identity, up or down state,
+  transition time and optional effective rate. Busy remains resource
+  backpressure, and `DropReason::LinkDown` remains a per-attempt consequence.
+  The disabled control and dynamic-link paths preserve v1 timestamps, bytes,
+  token order and random draws exactly; unsupported dynamic transitions reject
+  explicitly until htsim supplies a timestamped producer.
+
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
 - HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
@@ -676,7 +727,11 @@ is difficult.
   directly invoked binary test in which a controlled htsim delay, drop or
   rate update reaches the native WQE timeline and final reported metric.
   Develop it only in the HTSIM repo's dated append-only addon branch, then
-  update the SimLLM submodule pin.
+  update the SimLLM submodule pin. The SimLLM preparation harness and approval
+  package are complete at `f8eeb34`, but they do not close this task. An ABI-v1
+  compatibility pin is only a checkpoint. Closure still requires the enabled
+  packet TX/RX, ECN/rate, PFC and supported link-state mappings registered
+  here, after BACK-25 and BACK-26 expose their versioned surfaces.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.
