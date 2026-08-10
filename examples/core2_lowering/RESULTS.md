@@ -5,16 +5,17 @@ Date: 2026-08-05
 The study passed every pre-registered check in
 [expectations.md](expectations.md). The tested HTSIM backend commit is
 `d778326` (`Add WQE queue bookkeeping`). Raw GOAL, graph JSON, completion CSV
-and summary artifacts are under
-`/data3/yifeng/simllm-dev/core2-lowering-runs`; they are not Git content.
+and summary artifacts remain outside Git in the machine-local directory used
+for the historical run; its resolved historical path is intentionally omitted. New runs
+default to `${SIMLLM_DATA_ROOT}/core2_lowering`.
 
 ## Reproduction
 
 ```bash
-SIMLLM_HTSIM_RNIC=/path/to/htsim_rnic \
+SIMLLM_HTSIM_RNIC="${SIMLLM_HTSIM_BUILD:?configure SIMLLM_HTSIM_BUILD}/datacenter/htsim_rnic" \
 uv run --isolated --no-project --offline \
 python -m examples.core2_lowering.run_core2 \
-  --out /data3/yifeng/simllm-dev/core2-lowering-runs
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/core2_lowering"
 ```
 
 The runner lowers each step, round-trips only the execution graph through
@@ -100,9 +101,8 @@ Both drivers used the committed 64-node 400G Clos topology and default model
 flags:
 
 ```bash
-HTSIM_BUILD=/path/to/htsim-build/datacenter
-HTSIM_SRC=/path/to/htsim
-TOPOLOGY="$HTSIM_SRC/experiments/rnic_multibaseline/topologies/clos_64_400g.topo"
+HTSIM_BUILD="${SIMLLM_HTSIM_BUILD:?configure SIMLLM_HTSIM_BUILD}/datacenter"
+TOPOLOGY=third_party/htsim/experiments/rnic_multibaseline/topologies/clos_64_400g.topo
 
 "$HTSIM_BUILD/htsim_rnic" \
   -goal physical-smoke.bin -linkspeed_bps 400000000000 \

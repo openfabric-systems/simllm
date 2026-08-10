@@ -16,6 +16,7 @@ import csv
 import statistics
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.backends import (
     HtsimRnicConfig,
     RnicRunResult,
@@ -112,10 +113,15 @@ def run_cell(name: str, goal: GoalTrace, out: Path, writer, repeat_check: bool =
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="/data3/yifeng/simllm-dev/cn-ladder")
+    parser.add_argument("--out", type=Path)
     parser.add_argument("--mixed", action="store_true")
     args = parser.parse_args()
-    out = Path(args.out)
+    if args.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        args.out = data_root / "cn_ladder"
+    out = args.out
     out.mkdir(parents=True, exist_ok=True)
 
     fields = ["cell", "variant", "flows", "slow_min", "slow_med", "slow_max",

@@ -19,8 +19,10 @@ end-to-end performance claim is admissible.
 
 ## External-source audit before freeze
 
-The audited install is vLLM v0.26.0 at
-`/data3/yifeng/simllm-dev/venv-vllm/lib64/python3.12/site-packages/vllm`.
+The audited install is the vLLM v0.26.0 package from a machine-local pinned
+environment whose resolved historical path is intentionally omitted. For a
+current reproduction, `SIMLLM_VLLM_PYTHON` selects the compatible
+interpreter.
 All paths and line numbers below refer to that pinned install and were checked
 before this freeze.
 
@@ -195,21 +197,26 @@ Evidence classes remain separate:
 
 ## Registered commands
 
+The historical dry runs used the same executable basenames, scripts, options
+and pinned inputs; resolved machine-local paths are intentionally omitted. The
+following blocks are portable post-freeze renderings, not verbatim
+transcripts. Source the local configuration first.
+
 The deterministic component study is registered as:
 
 ```bash
 .venv/bin/python examples/vllm_group_coordinator_v1/run_study.py --check
 ```
 
-Its pre-freeze dry run is the same command with `--check-only`. The live smoke
-is registered as:
+Its pre-freeze dry run used the historical resolved form of the same command
+with `--check-only`. The live-smoke rendering is:
 
 ```bash
-/data3/yifeng/simllm-dev/venv-vllm/bin/python \
+"${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" \
   examples/vllm_group_coordinator_v1/live_smoke.py --run
 ```
 
-Its pre-freeze dry run uses `--check-only`. The result report must cite the
-final expectations-only commit, record the exact chronology, keep structural
-and scored counts separate, and estimate the genuine-risk fraction for each
-scored family.
+Its pre-freeze dry run used the historical resolved form with `--check-only`.
+The result report must cite the final expectations-only commit, record the
+exact chronology, keep structural and scored counts separate, and estimate the
+genuine-risk fraction for each scored family.

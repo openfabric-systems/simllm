@@ -3,11 +3,15 @@
 Runs of 2026-08-04, one `run_study.py` invocation (23 check rows in
 `summary.csv`, per-flow distributions in `distributions.csv`, request
 totals in `tp_totals.csv`, per-run mechanism counters in `counters.csv`,
-raw GOALs and completion CSVs under
-`/data3/yifeng/simllm-dev/dcqcn-vs-cn-runs`). Binaries: `htsim_rnic` and
-`htsim_dcqcn_atlahs` from `/data3/yifeng/simllm-dev/build-htsim`
-(HTSIM-rnic-private at `c03e1f2`); the simllm code revision is the commit
-this study lands in (it uses the M5 `render_step_goal`). The registered
+raw GOALs and completion CSVs). Those artifacts remain outside Git in the
+machine-local directory used for the historical run; its resolved historical path is
+intentionally omitted. New runs default to
+`${SIMLLM_DATA_ROOT}/dcqcn_vs_cn`. Binaries `htsim_rnic` and
+`htsim_dcqcn_atlahs` came from a machine-local HTSIM-rnic-private build pinned
+at `c03e1f2`; its resolved historical build path is intentionally omitted. Current
+reproductions select the build root with `SIMLLM_HTSIM_BUILD`. The simllm
+code revision is the commit this study lands in (it uses the M5
+`render_step_goal`). The registered
 predictions are in [expectations.md](expectations.md), frozen at the
 first simulation run (R5 was added before that point, as its section
 states); deviations are disclosed here, never edited there.

@@ -8,9 +8,8 @@ compared against the frozen tables of expectations.md. Emits
 component sums feeding the plots).
 
 Usage:
-    SIMLLM_HTSIM_RNIC=... SIMLLM_TXT2BIN=... \\
-    python examples/breakdown/run_breakdown.py \\
-        --out /data3/yifeng/simllm-dev/breakdown-runs
+    SIMLLM_HTSIM_RNIC=... SIMLLM_TXT2BIN=... SIMLLM_DATA_ROOT=... \\
+    python examples/breakdown/run_breakdown.py
 """
 
 from __future__ import annotations
@@ -19,6 +18,7 @@ import argparse
 import csv
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.backends import HtsimStepSink, HtsimStepSinkConfig
 from simllm.compute import (
     GPU_ENVELOPES,
@@ -119,9 +119,14 @@ def components(rows: list[dict]) -> tuple[int, int, int, int]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="runs/breakdown")
+    parser.add_argument("--out", type=Path)
     args = parser.parse_args()
-    out = Path(args.out)
+    if args.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        args.out = data_root / "breakdown"
+    out = args.out
     out.mkdir(parents=True, exist_ok=True)
     checks: list[dict] = []
     all_steps: list[dict] = []

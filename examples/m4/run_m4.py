@@ -7,11 +7,11 @@ HtsimStepSink, (c) the same grid on rnic-nn against the banded point form,
 (e) replays of the recorded vLLM/SGLang smoke JSONLs behind a declared
 tp=8 manifest. One CSV row per (run, metric) goes to <out>/summary.csv;
 raw GOALs and completion CSVs land under <out> as well (keep <out> on a
-data volume, e.g. /data3/yifeng/simllm-dev/m4-runs).
+data volume configured by SIMLLM_DATA_ROOT).
 
 Usage:
-    SIMLLM_HTSIM_RNIC=... SIMLLM_TXT2BIN=... \\
-    python examples/m4/run_m4.py --out /data3/yifeng/simllm-dev/m4-runs
+    SIMLLM_HTSIM_RNIC=... SIMLLM_TXT2BIN=... SIMLLM_DATA_ROOT=... \\
+    python examples/m4/run_m4.py
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ import argparse
 import csv
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.backends import (
     HtsimRnicConfig,
     HtsimStepSink,
@@ -149,12 +150,17 @@ def make_sink(profile: str, tp: int, workdir: Path) -> HtsimStepSink:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="runs/m4")
+    parser.add_argument("--out", type=Path)
     parser.add_argument("--sections", default="a,b,c,d,e")
     parser.add_argument("--vllm-jsonl", default=DEFAULT_VLLM_JSONL)
     parser.add_argument("--sglang-jsonl", default=DEFAULT_SGLANG_JSONL)
     args = parser.parse_args()
-    out = Path(args.out)
+    if args.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        args.out = data_root / "m4"
+    out = args.out
     out.mkdir(parents=True, exist_ok=True)
     sections = set(args.sections.split(","))
     rows: list[dict] = []

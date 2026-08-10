@@ -4,9 +4,10 @@ Written and frozen before the COMP-16 and VLLM-15 implementation and before
 any run of this study. The immutable pre-change reference is SimLLM commit
 `6aa3a76`. No value below is fitted to an implementation or study result.
 
-Raw outputs belong under
-`/data3/yifeng/simllm-dev/wave2-runs/comp16_latent_knobs/`. They are not Git
-content.
+The frozen requirement is that raw outputs remain outside Git in a
+machine-local external directory. The resolved historical target is
+intentionally omitted. As a post-freeze portability convention, new runs
+default to `${SIMLLM_DATA_ROOT}/step_sink_latent_knobs/`.
 
 ## Freeze audit and registered commands
 
@@ -15,14 +16,19 @@ file was frozen. Check-only mode parses the complete command, validates its
 input paths and version pin, does not construct a provider, adapter, sink, or
 vLLM engine, and does not create the output directory or any result file.
 
+The historical dry runs used the same executable basenames, scripts, options
+and pinned inputs; resolved machine-local paths are intentionally omitted. The
+following blocks are portable post-freeze renderings, not verbatim
+transcripts. Source the local configuration first.
+
 Deterministic study:
 
 ```bash
-SIMLLM_HTSIM_RNIC=/data3/yifeng/simllm-dev/build-htsim/datacenter/htsim_rnic \
-SIMLLM_TXT2BIN=/data3/yifeng/simllm-dev/tools/txt2bin.prebuilt \
+SIMLLM_HTSIM_RNIC="${SIMLLM_HTSIM_BUILD:?configure SIMLLM_HTSIM_BUILD}/datacenter/htsim_rnic" \
+SIMLLM_TXT2BIN="${SIMLLM_TXT2BIN:?configure SIMLLM_TXT2BIN}" \
 .venv/bin/python examples/step_sink_latent_knobs/run_study.py \
   --mode deterministic \
-  --out /data3/yifeng/simllm-dev/wave2-runs/comp16_latent_knobs
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/step_sink_latent_knobs"
 ```
 
 Pinned-runtime smoke:
@@ -31,15 +37,16 @@ Pinned-runtime smoke:
 env PYTHONPATH=. VLLM_ENABLE_V1_MULTIPROCESSING=0 \
   VLLM_USE_V2_MODEL_RUNNER=0 SIMLLM_VLLM_WORKER_MODE=skeleton \
   SIMLLM_VLLM_MODE=virtual HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
-  HF_HOME=/home/yifeng/packages/vllm-rnic-capture/hf-cache \
+  HF_HOME="${HF_HOME:?configure HF_HOME}" \
   CUDA_VISIBLE_DEVICES= \
-  /data3/yifeng/simllm-dev/venv-vllm/bin/python \
+  "${SIMLLM_VLLM_PYTHON:?configure SIMLLM_VLLM_PYTHON}" \
   examples/step_sink_latent_knobs/run_study.py \
   --mode live-vllm \
-  --out /data3/yifeng/simllm-dev/wave2-runs/comp16_latent_knobs
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/step_sink_latent_knobs"
 ```
 
-The dry runs used these exact commands with `--check-only` appended.
+The dry runs used the historical resolved forms of these commands with
+`--check-only` appended.
 
 ## External-source audit before freeze
 

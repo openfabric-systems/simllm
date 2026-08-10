@@ -33,6 +33,10 @@ runs/
 CLAUDE.md
 AGENTS.md
 
+# Personal environment configuration (Linux and Windows PowerShell)
+/.env.local.sh
+/.env.local.ps1
+
 # Editors
 .vscode/
 .idea/

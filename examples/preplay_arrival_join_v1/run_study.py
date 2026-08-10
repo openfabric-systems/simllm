@@ -8,6 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.core import CreatedObjectRecord, RequestBookkeeper
 from simllm.preplay import (
     ForwardPhase,
@@ -28,10 +29,6 @@ from simllm.preplay import (
 
 EXPECTED_GRANITE_SHA256 = (
     "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341"
-)
-DEFAULT_RUN_DIR = Path(
-    "/data3/yifeng/simllm-dev/wave2-runs/"
-    "codex_play23_arrival_replay/preplay_arrival_join_v1"
 )
 
 
@@ -332,13 +329,18 @@ def run_study(run_dir: Path) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check-only", action="store_true")
-    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR)
+    parser.add_argument("--run-dir", type=Path)
     args = parser.parse_args()
     fixture = Path(__file__).parents[1] / "preplay_trace_v1/granite_length_cap.jsonl"
     if not fixture.is_file():
         raise SystemExit(f"missing tracked fixture: {fixture}")
     if args.check_only:
         return
+    if args.run_dir is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--run-dir is required when SIMLLM_DATA_ROOT is not set")
+        args.run_dir = data_root / "preplay_arrival_join_v1"
     summary = run_study(args.run_dir)
     print(json.dumps(summary, indent=2, sort_keys=True))
 

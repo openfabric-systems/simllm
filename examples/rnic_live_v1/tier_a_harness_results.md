@@ -31,22 +31,25 @@ commit.
 
 ## Method and external evidence
 
-The exact build and run commands were:
+The historical run used the same executable basenames, scripts, options and
+pinned inputs; resolved machine-local paths are intentionally omitted. The
+following is a portable post-run rendering, not a verbatim transcript. Source
+the local configuration first:
 
 ```bash
 cmake -S examples/rnic_live_v1/native \
-  -B /data3/yifeng/simllm-dev/wave2-runs/codex/htsim9_prep_harness/tier_a/fake/build \
+  -B "${SIMLLM_TIER_A_RUN_ROOT:?configure SIMLLM_TIER_A_RUN_ROOT}/fake/build" \
   -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 cmake --build \
-  /data3/yifeng/simllm-dev/wave2-runs/codex/htsim9_prep_harness/tier_a/fake/build \
+  "${SIMLLM_TIER_A_RUN_ROOT:?configure SIMLLM_TIER_A_RUN_ROOT}/fake/build" \
   --config Release --parallel
 ctest --test-dir \
-  /data3/yifeng/simllm-dev/wave2-runs/codex/htsim9_prep_harness/tier_a/fake/build \
+  "${SIMLLM_TIER_A_RUN_ROOT:?configure SIMLLM_TIER_A_RUN_ROOT}/fake/build" \
   -C Release --output-on-failure
 .venv/bin/python examples/rnic_live_v1/tier_a_acceptance.py \
   --factory fake \
-  --producer /data3/yifeng/simllm-dev/wave2-runs/codex/htsim9_prep_harness/tier_a/fake/build/simllm_rnic_tier_a \
-  --run-dir /data3/yifeng/simllm-dev/wave2-runs/codex/htsim9_prep_harness/tier_a/fake
+  --producer "${SIMLLM_TIER_A_RUN_ROOT:?configure SIMLLM_TIER_A_RUN_ROOT}/fake/build/simllm_rnic_tier_a" \
+  --run-dir "${SIMLLM_TIER_A_RUN_ROOT}/fake"
 ```
 
 Bulk evidence remains outside Git:

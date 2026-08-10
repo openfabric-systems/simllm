@@ -8,6 +8,7 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from simllm._local_config import path_from_env
 from simllm.compute import (
     CopyDirection,
     CopyDirectionProfile,
@@ -60,10 +61,6 @@ FROZEN_B_THROUGHPUT_BPS = {
     (8, 200): 1_600_000_000_000,
     (8, 400): 3_200_000_000_000,
 }
-DEFAULT_OUTPUT = Path(
-    "/data3/yifeng/simllm-dev/wave2-runs/codex/core4_device_runtime"
-)
-
 EXACT_ORACLE = "exact-oracle"
 BEHAVIORAL_RELATION = "behavioral-relation"
 STRUCTURAL = "fatal-structural"
@@ -804,7 +801,7 @@ def check_only() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--output-dir", type=Path)
     parser.add_argument(
         "--check-only",
         action="store_true",
@@ -815,6 +812,11 @@ def main() -> None:
     if args.check_only:
         print("CORE-4 study inputs: parse-only PASS")
         return
+    if args.output_dir is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--output-dir is required when SIMLLM_DATA_ROOT is not set")
+        args.output_dir = data_root / "core4_runtime"
 
     rows: list[EvidenceRow] = []
     configurations: list[dict[str, object]] = []

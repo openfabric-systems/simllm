@@ -52,7 +52,7 @@ Every behavioral change follows the same discipline:
    (a carve-out, a stubbed mode, a `NotImplementedError`), the same
    change adds a numbered task to the owning module doc using the
    module's stable prefix (CORE-, WORK-, COMP-, PLACE-, TRAF-, GOAL-,
-   PLAY-, BACK-, VLLM-, SGL-, BRIDGE-, and HTSIM-/ATLAHS- for backend-repo
+   PLAY-, BACK-, VLLM-, SGL-, BRIDGE-, HTSIM-, and ATLAHS- for backend-repo
    follow-ups). IDs are never renumbered or reused; the change that
    completes a task removes its entry. Nothing is deferred silently.
 6. **Backends are pinned, not edited here.** `third_party/atlahs` and
@@ -66,6 +66,59 @@ Every behavioral change follows the same discipline:
 
 Gates before every push: `ruff check .` and `pytest -q` pass, and CI
 stays green.
+
+## Local path configuration
+
+Machine-specific paths belong only in the gitignored `.env.local.sh` on
+Linux or `.env.local.ps1` on Windows. Configure the variables needed by the
+selected workflow, for example:
+
+```bash
+export SIMLLM_DATA_ROOT='<configure-me>'
+export SIMLLM_HTSIM_BUILD='<configure-me>'
+export SIMLLM_VLLM_PYTHON='<configure-me>'
+export SIMLLM_VLLM_ENV='<configure-me>'
+export SIMLLM_SGLANG_ENV='<configure-me>'
+export HF_HOME='<configure-me>'
+export SIMLLM_VLLM_PACKAGE_ROOT='<configure-me>'
+export SIMLLM_TIER_A_RUN_ROOT='<configure-me>'
+export SIMLLM_TXT2BIN='<configure-me>'
+```
+
+Load the Linux file from the repository root with
+`source .env.local.sh`. The equivalent PowerShell file uses aligned names:
+
+```powershell
+$env:SIMLLM_DATA_ROOT = '<configure-me>'
+$env:SIMLLM_HTSIM_BUILD = '<configure-me>'
+$env:SIMLLM_VLLM_PYTHON = '<configure-me>'
+$env:SIMLLM_VLLM_ENV = '<configure-me>'
+$env:SIMLLM_SGLANG_ENV = '<configure-me>'
+$env:HF_HOME = '<configure-me>'
+$env:SIMLLM_VLLM_PACKAGE_ROOT = '<configure-me>'
+$env:SIMLLM_TIER_A_RUN_ROOT = '<configure-me>'
+$env:SIMLLM_TXT2BIN = '<configure-me>'
+```
+
+Dot-source it from the repository root with `. .\.env.local.ps1`.
+`SIMLLM_DATA_ROOT` owns external study inputs and outputs and must resolve to
+an absolute directory outside the checkout;
+`SIMLLM_HTSIM_BUILD` is the htsim build root; `SIMLLM_VLLM_PYTHON` selects
+the vLLM interpreter; `SIMLLM_VLLM_ENV` and `SIMLLM_SGLANG_ENV` identify the
+framework environments; `HF_HOME` owns the model cache;
+`SIMLLM_VLLM_PACKAGE_ROOT` identifies the installed `vllm` package directory;
+`SIMLLM_TIER_A_RUN_ROOT` owns Tier A artifacts; and `SIMLLM_TXT2BIN` selects the
+GOAL converter. A CLI that needs an unset variable must prompt for it or fail
+with an actionable message naming that variable. It must never guess a
+machine-specific fallback.
+
+Historical expectation and result records redact resolved machine-local path
+spellings. A displayed environment-variable command is a portable rendering
+made after the recorded run unless the record explicitly says otherwise. This
+presentation change does not relocate archived artifacts, alter executable
+options or parameters, or retroactively become part of a pre-registration.
+When the original artifact location matters, the record keeps its immutable
+identity by content hash and intentionally omits the resolved local path.
 
 ## Open task registry
 

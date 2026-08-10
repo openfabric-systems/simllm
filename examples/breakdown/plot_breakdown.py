@@ -1,9 +1,7 @@
 """Render the request-time breakdown figures from the study CSVs.
 
 Usage:
-    python examples/breakdown/plot_breakdown.py \\
-        --runs /data3/yifeng/simllm-dev/breakdown-runs \\
-        --out examples/breakdown/plots
+    SIMLLM_DATA_ROOT=... python examples/breakdown/plot_breakdown.py
 """
 
 from __future__ import annotations
@@ -13,6 +11,8 @@ import csv
 from pathlib import Path
 
 import matplotlib
+
+from simllm._local_config import path_from_env
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -60,10 +60,15 @@ def style(ax, title):
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runs", default="/data3/yifeng/simllm-dev/breakdown-runs")
+    parser.add_argument("--runs", type=Path)
     parser.add_argument("--out", default=str(Path(__file__).parent / "plots"))
     args = parser.parse_args()
-    table = load_components(Path(args.runs) / "components.csv")
+    if args.runs is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--runs is required when SIMLLM_DATA_ROOT is not set")
+        args.runs = data_root / "breakdown"
+    table = load_components(args.runs / "components.csv")
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 

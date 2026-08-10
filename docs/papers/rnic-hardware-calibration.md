@@ -222,7 +222,8 @@ control-plane pairing, CQ service, GPU Direct and CX-7 provenance.
 
 Each campaign gets its own frozen `expectations.md` before execution. Every
 claim sweeps at least two parameters, retains raw results outside Git under
-`/data3/yifeng/`, and reports both median behavior and tail/first-failure
+the external measurement root configured by `SIMLLM_DATA_ROOT`, and reports
+both median behavior and tail/first-failure
 evidence.
 
 | Campaign | Minimum sweep | Expected invariant or boundary |
