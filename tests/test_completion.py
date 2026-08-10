@@ -418,6 +418,84 @@ def test_partial_sample_identity_fails_atomically_until_explicit():
     assert clock.now_ps == T0 + 100
 
 
+def test_zero_latency_execution_replay_is_rejected_before_minting_a_token():
+    graph = ExecutionGraph(
+        "zero-latency",
+        0,
+        T0,
+        (
+            ExecutionOperation(
+                "zero",
+                0,
+                "zero",
+                ComputeWork("zero", nominal_duration_ps=0),
+                correlation=_correlation("request"),
+            ),
+        ),
+        ("zero",),
+    )
+    record = StepRecord(
+        0,
+        T0,
+        [ScheduledRequest("request", RequestPhase.PREFILL, 1)],
+        num_sampled=1,
+        sampled_request_ids=["request"],
+    )
+    clock = VirtualClock(T0)
+    reducer = CompletionReducer(clock)
+    runtime = CoarseDeviceRuntime(_profile(400))
+    execution = runtime.execute(graph)
+    assert runtime.last_report is not None
+
+    first = reducer.reduce(record, graph, execution, runtime.last_report)
+    assert first.request_metrics[0].token_index == 1
+    assert first.request_metrics[0].tpot_ps is None
+    before = reducer.latest_request_metrics
+
+    with pytest.raises(ValueError, match="execution ID has already been reduced"):
+        reducer.reduce(record, graph, execution, runtime.last_report)
+
+    assert clock.now_ps == T0
+    assert reducer.latest_request_metrics == before
+    assert reducer.latest_request_metrics[0].token_index == 1
+    assert reducer.latest_request_metrics[0].tpot_ps is None
+
+
+def test_zero_sample_count_is_empty_even_for_scheduled_decode_rows():
+    graph = ExecutionGraph(
+        "zero-sampled-decode",
+        0,
+        T0,
+        (
+            ExecutionOperation(
+                "decode",
+                0,
+                "decode",
+                ComputeWork("decode", nominal_duration_ps=100),
+                correlation=_correlation("request"),
+            ),
+        ),
+        ("decode",),
+    )
+    record = StepRecord(
+        0,
+        T0,
+        [ScheduledRequest("request", RequestPhase.DECODE, 1)],
+        num_sampled=0,
+    )
+    clock = VirtualClock(T0)
+    reducer = CompletionReducer(clock)
+    runtime = CoarseDeviceRuntime(_profile(400))
+    execution = runtime.execute(graph)
+    assert runtime.last_report is not None
+
+    step = reducer.reduce(record, graph, execution, runtime.last_report)
+
+    assert step.request_metrics == ()
+    assert reducer.latest_request_metrics == ()
+    assert clock.now_ps == T0 + 100
+
+
 def test_non_sampling_prefill_accumulates_into_first_token_ttft():
     correlation = _correlation("request")
     clock = VirtualClock(0)
@@ -557,3 +635,20 @@ def test_sampled_request_identity_is_optional_in_the_v1_record_reader():
     payload = step_record_to_json(exact)
     assert payload["sampled_request_ids"] == ["request"]
     assert step_record_from_json(payload) == exact
+
+
+def test_explicit_null_sampled_request_ids_loads_as_absent():
+    payload = step_record_to_json(
+        StepRecord(
+            0,
+            0,
+            [ScheduledRequest("request", RequestPhase.PREFILL, 1)],
+            num_sampled=1,
+        )
+    )
+    payload["sampled_request_ids"] = None
+
+    loaded = step_record_from_json(payload)
+
+    assert loaded.sampled_request_ids is None
+    assert "sampled_request_ids" not in step_record_to_json(loaded)

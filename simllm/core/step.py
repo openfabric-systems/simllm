@@ -354,7 +354,7 @@ def step_record_from_json(payload: dict[str, Any]) -> StepRecord:
         num_tokens_after_padding=payload.get("num_tokens_after_padding"),
         sampled_request_ids=(
             list(payload["sampled_request_ids"])
-            if "sampled_request_ids" in payload
+            if payload.get("sampled_request_ids") is not None
             else None
         ),
     )

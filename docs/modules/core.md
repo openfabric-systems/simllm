@@ -323,8 +323,11 @@ advances the scheduler clock without confusing physical quiescence with
 framework completion. Per-request TTFT and exact rational TPOT retain queue,
 KV, kernel, DMA, collective, NIC and control components. Graph and request
 visit-work totals remain separately typed. Zero-sample prefill work accumulates
-into the later first-token interval; exact partial sampling requires explicit
-request identities and fails closed when a count alone is ambiguous.
+into the later first-token interval, and a zero sampled count remains empty
+for decode rows too. Exact partial sampling requires explicit request
+identities and fails closed when a count alone is ambiguous. The reducer
+consumes each execution ID once, including zero-latency results, and the v1
+reader treats an explicit null sampled-identity field as absent.
 
 CORE-4 is complete for the coordinated first coarse bypass profile;
 structural completion remains explicitly conditional on CORE-15.
@@ -358,15 +361,21 @@ The pre-registered
 requests through three `ExecutionGraph -> CoarseDeviceRuntime ->
 ExecutionResult -> StepResult` steps across dependency shape and 200/400
 Gbit/s RNIC rate. All four exact JCT rows, 18 scored behavioral instances and
-48 fatal structural guards passed. The serial dependency penalty was exactly
+60 live in-harness structural predicates passed. Two expected validator
+rejections and two compatibility accepts are reported as separate unscored
+evidence classes. The serial dependency penalty was exactly
 10,000 ps at both rates; the 200-to-400 Gbit/s delta was exactly 163,840 ps in
 both shapes. Every request component row summed to TTFT or TPOT exactly while
 the 21-visit request work sum exceeded wall latency. Asynchronous control and
 collective cells advanced the scheduler by 10,000 ps while their physical
 quiescence remained 20,971,520 ps. The separately frozen
 [Tier B expectations](../../examples/rnic_live_v1/tier_b_expectations.md)
+and their
+[review supplement](../../examples/rnic_live_v1/tier_b_review_supplement.md)
 retain the composed native live gate until HTSIM-9 and CORE-15 supply its
-producer.
+producer. The supplement pins the raw producer schema, four bypass profiles,
+both objectively selected doorbell-owner mappings, and the two-WQE live FIFO
+relation.
 
 ## Pre-registered runtime sanity experiments
 
@@ -519,6 +528,6 @@ does not claim to produce these resource-contention measurements.
 - BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
   process for closed loop, replacing per-step subprocess spawns. Its
   incremental flow-injection transport should carry `ExecutionGraph` and
-  `CompletionEvent` and bookkeeping facts once CORE-5 lands. The M4 diagnostic
-  mode currently pays
+  the landed CORE-5 `CompletionEvent`, `ExecutionResult`, `StepResult` and
+  bookkeeping projections. The M4 diagnostic mode currently pays
   about 8 seconds of process/parse overhead per live tp=8 step.

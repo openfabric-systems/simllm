@@ -2,17 +2,33 @@
 
 ## Outcome and chronology
 
-All frozen CORE-5 checks passed. The expectations-only commit is `fc3836d`
-(`Freeze completion reduction and Tier B expectations`). It contains only
-`expectations.md` and the separate Tier B expectations file. Its commit message
-records that the then-untracked `run_study.py` encoded only frozen literals and
-check-only validation. Both registered check-only commands ran before the
-freeze, printed their registry confirmations by design, and produced no
-artifacts.
+All original CORE-5 relations and all integration-review regressions passed.
+The original expectations-only commit is `fc3836d` (`Freeze completion
+reduction and Tier B expectations`). It contains only `expectations.md` and
+the separate Tier B expectations file. Its commit message records that the
+then-untracked `run_study.py` encoded only frozen literals and check-only
+validation. Both original check-only commands printed their registry
+confirmations by design and produced no artifacts.
 
-The completion reducer, runtime attribution projection, tests and
-result-producing study were implemented after `fc3836d`. The first measured
-run then used the registered command:
+The first implementation was `cb3c982`. Integrator probes then exposed the
+replay, zero-sample, JSON-null and evidence-accounting defects documented in
+the review. Before correcting them or running corrected evidence, commit
+`067cbfb` (`Supplement Tier B review expectations`) froze the additive Tier B
+producer/schema contract and the post-specified CORE-5 regression checks. It
+did not change either frozen Tier A file or weaken the original Tier B file.
+Immediately before that freeze, the index held only expectation records,
+their declarative JSON and its LF attribute; the tracked working tree had no
+unstaged changes. The sole untracked file was
+`examples/rnic_live_v1/tier_b_review_check.py`, which encoded only frozen
+literals and check-only validation. Both review check-only commands printed
+registry confirmations by design and produced no artifacts.
+
+The corrections, executable review checker, tests and measured-evidence
+records followed `067cbfb`. The full lint and Python gates passed before the
+final measured run. The three final check-only commands again printed their
+registry confirmations and produced no artifacts. The final run used the
+registered command with `SIMLLM_CORE5_RUN_ROOT` set to the fresh branch-local
+external `review-final-2` directory:
 
 ```bash
 .venv/bin/python examples/core5_reduction/run_study.py \
@@ -20,7 +36,7 @@ run then used the registered command:
 ```
 
 The external `results.json` has SHA-256
-`9283ce48a8768f25703ca3086cac22d3f2670976ce208bbe6cb3b4f68c5a5421`.
+`38830b099166c46369e933162a3c2f88b857c69196927d8698bdf3a616493a7c`.
 No measured artifact or bulk output is tracked in Git.
 
 ## Exact two-request rows
@@ -50,7 +66,9 @@ J(shape, 200) - J(shape, 400) = +163,840 ps
 ```
 
 in both dependency shapes. All four signed effects matched the frozen 0 ps
-residual band.
+residual band. These effects were subtracted from measured
+`StepResult.step_latency_ps` rows. Frozen JCT values appeared only on the
+expected side of each scored record.
 
 ## Conserved request components
 
@@ -111,13 +129,28 @@ Evidence remained separated as frozen:
 - run configurations: 4;
 - exact JCT oracle rows: 4;
 - scored behavioral instances: 18 of 18 passed;
-- fatal structural guards: 48 of 48 passed, unscored;
-- full Python suite: 575 passed and 4 skipped;
+- live in-harness structural predicates: 60 of 60 passed, unscored;
+- expected validator rejection probes: 2 of 2 passed, unscored;
+- compatibility acceptance probes: 2 of 2 passed, unscored;
+- full Python suite: 578 passed and 4 skipped;
 - lint gate: passed.
 
 The scored total is the sum of only the five behavioral families below. It
 does not include configurations, exact row publication, conservation,
 inactive fields, event membership, callback identity, unit tests or gates.
+Every family total and genuine-risk numerator was derived from its executed
+check records. Each record carries measured observations, frozen expected
+values or predicates, its pass result and its genuine-risk classification.
+
+The corrected structural count is 12 executed graphs times five recorded
+predicates: callback count, callback object identity, event-phase membership,
+graph additive queue wait and selected critical-path queue wait. The former
+48 count came from incrementing four after a combined callback expression; it
+was not an honest count of separately evaluated predicates. Validator raises
+are now a different evidence class: duplicate zero-latency replay and
+ambiguous partial sampling both rejected atomically. Zero sampled decode rows
+and explicit JSON null loaded successfully in the separate compatibility
+class. None of these four probes enters a behavioral denominator.
 
 | Behavioral family | Passed | Genuine-risk fraction | Why failure was plausible |
 |---|---:|---:|---|
@@ -136,7 +169,7 @@ The final repository gates were:
 All checks passed!
 
 .venv/bin/pytest -q
-575 passed, 4 skipped in 14.13s
+578 passed, 4 skipped in 13.83s
 ```
 
 No C++ source changed, so native CMake and CTest gates are not applicable.
@@ -144,9 +177,19 @@ No C++ source changed, so native CMake and CTest gates are not applicable.
 CORE-17 (Completeness; P1; M) remains for framework adapters to populate exact
 sampled request identities in a mixed partial-sampling batch. CORE-5 fails
 closed for that ambiguous count-only case while preserving zero-sample,
-all-sample and absent-count legacy behavior.
+all-sample and absent-count legacy behavior. CORE-18 and CORE-19 were not used
+for residual work and are not claimed as open tasks.
 
 Tier B was frozen but not executed. The composed HTSIM-9 and CORE-15 producer
 does not exist in this worktree, and this result makes no structural native
-live-reachability claim. The Tier B check-only registry passes and is ready for
-that producer without changing the frozen Tier A files.
+live-reachability claim. Its existing residual owners are CORE-15
+(Completeness; P1; L) and HTSIM-9 (Completeness; P1; L); duplicating those gaps
+under CORE-18 or CORE-19 would make the module registry inexact. The Tier B
+check-only registries pass with the exact producer invocation, raw schema,
+four retained bypass profiles, two objective doorbell-owner mappings,
+preceding-release completion form, zero-service SimLLM profile and two-WQE
+FIFO relation frozen without changing the Tier A files.
+
+No framework adapter was changed, no composed binary was fabricated, and no
+Tier B result was scored. No C++ source changed, so native CMake and CTest
+gates remain deliberately inapplicable.

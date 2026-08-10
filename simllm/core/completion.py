@@ -62,6 +62,7 @@ class CompletionReducer:
             raise TypeError("clock must be a VirtualClock")
         self.clock = clock
         self._requests: dict[str, _RequestMetricState] = {}
+        self._consumed_execution_ids: set[str] = set()
 
     @property
     def latest_request_metrics(self) -> tuple[RequestMetric, ...]:
@@ -96,6 +97,8 @@ class CompletionReducer:
 
         if record.num_sampled is None:
             return set(scheduled_ids)
+        if record.num_sampled == 0:
+            return set()
         if record.num_sampled == len(scheduled_ids):
             return set(scheduled_ids)
 
@@ -259,6 +262,13 @@ class CompletionReducer:
     ) -> StepResult:
         """Return one scheduler result and atomically commit metric history."""
 
+        if (
+            isinstance(graph, ExecutionGraph)
+            and graph.execution_id in self._consumed_execution_ids
+        ):
+            raise ValueError(
+                f"execution ID has already been reduced: {graph.execution_id!r}"
+            )
         by_id, required_ids = self._validate_inputs(
             record,
             graph,
@@ -379,6 +389,7 @@ class CompletionReducer:
         )
         self.clock.advance_to(result.completed_at_ps)
         self._requests = states
+        self._consumed_execution_ids.add(graph.execution_id)
         return step_result
 
 
