@@ -41,6 +41,8 @@ EXPECTED_LIVE_COORDINATOR = (
     ("all_reduce", "tp", 4_096),
 )
 
+POSTSPEC_EXPECTED_DP_PADDED_TOKENS = (4, 1)
+
 EXPECTED_TP_STACK = (
     "ncclAllReduce",
     "ncclEnqueueCheck",
@@ -118,6 +120,7 @@ def check_expectation_registry() -> None:
     assert len(EXPECTED_LIVE_COORDINATOR) == 4
     assert len(EXPECTED_TP_STACK) == 14
     assert len(EXPECTED_DP_STACK) == 32
+    assert POSTSPEC_EXPECTED_DP_PADDED_TOKENS == (4, 1)
 
 
 def worker_reached() -> bool:

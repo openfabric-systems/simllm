@@ -45,6 +45,9 @@ EXPECTED_FULL_STACK_PREFIX = (
     "initChannel",
 )
 
+POSTSPEC_ZERO_PAYLOAD_STACK_DISPOSITION = "zero_payload_bypass"
+POSTSPEC_FIRST_VALID_OPERATION_ID = "tp:all_reduce:0"
+
 
 def check_expectation_registry() -> None:
     """Validate frozen literals without executing the target behavior."""
@@ -53,6 +56,8 @@ def check_expectation_registry() -> None:
     assert len(EXPECTED_REFERENCE_STACK) == 14
     assert EXPECTED_REFERENCE_STACK.count("genericOp") == 6
     assert len(EXPECTED_FULL_STACK_PREFIX + EXPECTED_REFERENCE_STACK) == 17
+    assert POSTSPEC_ZERO_PAYLOAD_STACK_DISPOSITION == "zero_payload_bypass"
+    assert POSTSPEC_FIRST_VALID_OPERATION_ID == "tp:all_reduce:0"
 
 
 def _make_group(
