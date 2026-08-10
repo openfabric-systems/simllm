@@ -35,6 +35,46 @@ surface without changing the shared implementation. This was a post-freeze
 interface correction, not an outcome-dependent expectations edit. Both final
 studies and both full test environments passed after the correction.
 
+Integration review after commit `9884001` found one CI blocker and four
+evidence-honesty gaps. This fix round is entirely post-specified. The original
+expectations file remains unchanged, with SHA-256
+`433d5a4ef77dece7927aeaab101cf9631edcde222d06ed1530c594f523854bd7`.
+The repairs add a CI-runnable frozen-byte identity test, replace two
+self-comparing source-line rows with AST-derived observations, correct the
+output-list caller citation below, route the output-list observation through
+the shared base, and narrow the genuine-risk claims.
+Commit `922cd21` carries these post-specified implementation and regression
+repairs.
+
+The first fix-round live attempt completed both engine cases and refreshed
+their case artifacts, then failed before rewriting aggregate evidence. The new
+parent-side SGLang helper probe resolved an older installed SimLLM copy because
+script execution had not put this repository first on the parent's import
+path. The probe now binds the repository root before importing the adapter.
+The next full invocation passed and rewrote `live_evidence.json`. This failure
+and correction followed the freeze and are not represented as pre-registered
+evidence.
+
+## Post-specified source-audit correction
+
+The frozen expectations incorrectly cite
+`python/sglang/srt/model_executor/model_runner.py:880-916` as the reason to
+preserve `output_tensor_list`. The calls at lines 913-916 are ordinary
+`all_gather(tensor, dim=0)` calls and do not supply an output list. The two
+actual pinned callers identified during integration review are:
+
+- `python/sglang/srt/layers/dp_attention.py:993-994`, where
+  `attn_tp_all_gather(output_list, input)` calls
+  `get_attn_tp_group().all_gather(input, output_tensor_list=output_list)`;
+- `python/sglang/srt/layers/attention/mamba/mixer2_rms_norm_gated.py:93-95`,
+  where `forward_native` calls the attention-TP group with caller-owned parts.
+
+The frozen file is not rewritten. The live check now derives both corrected
+rows from AST. It also derives the model-runner line 913 and non-overlap
+scheduler line 3633 from their actual call nodes rather than assigning the
+expected literals to the observed table. A pin bump that moves or removes any
+of these calls now fails check-only mode.
+
 ## Evidence accounting
 
 Evidence classes remain separate.
@@ -48,10 +88,14 @@ Evidence classes remain separate.
 | Frozen COMP-15 reference | pass, 14 nested and 17 full events | Fatal unscored component guard |
 | Singleton and flag-off bypass | pass | Fatal unscored identity guards |
 | VLLM source and behavior parity | pass | Fatal unscored compatibility guard |
-| Base-environment affected tests | 47 passed, 1 skipped | Separate executable |
-| Pinned-SGLang affected tests | 46 passed, 2 skipped | Separate executable |
-| Full base-environment suite | 581 passed, 4 skipped | Separate executable |
-| Full pinned-SGLang suite | 580 passed, 5 skipped | Separate executable |
+| Frozen flag identity fixture | both flag states equal 545 tracked LF bytes | Post-specified fatal CI guard |
+| AST-derived pinned call-site audit | pass | Post-specified fatal source guard |
+| Real SGLang output-list helper | pass | Post-specified unscored external-call guard |
+| Event-stream ownership | truncation and duplicate-open guards pass | Post-specified fatal durability guard |
+| Base-environment affected tests | 48 passed, 1 skipped | Separate executable |
+| Pinned-SGLang affected tests | 47 passed, 2 skipped | Separate executable |
+| Full base-environment suite | 582 passed, 4 skipped | Separate executable |
+| Full pinned-SGLang suite | 581 passed, 5 skipped | Separate executable |
 
 Test counts and structural guards are not added to the seven scored relation
 instances.
@@ -75,6 +119,12 @@ At both group sizes, increasing `E` from 8 to 16 doubles all six input-payload
 observations from 128 to 256 bytes exactly. Increasing `G` from 2 to 4 doubles
 only the gathered axis and output-list length; all input payloads and
 non-gather result shapes remain fixed.
+
+Integration review noted that the frozen doubling relation alone cannot
+distinguish bytes from elements or input bytes from a different quantity that
+is also linear in `E`. The component study now additionally requires every
+event's absolute payload to equal `16 * E`. That absolute check is a
+post-specified fatal guard and does not alter the frozen payload score.
 
 ## COMP-15, parity, and bypass guards
 
@@ -109,6 +159,19 @@ Matching four-rank SGLang and vLLM all-reduces produced identical shape,
 coordinator-event, and stack-event values. These are fatal compatibility
 guards, not scored behavior.
 
+The SGLang output-list branch now delegates observation to the shared base
+all-gather path after validating caller-owned shapes. The event stream
+documents that its first append truncates an existing sidecar. A process-wide
+resolved-path claim makes a second stream instance fail before truncation, and
+the unit test verifies that the first stream's bytes remain intact.
+
+The CI identity test drives two records through `SglStepTranslator` and
+`StepRecordStream` in both flag states. `observe_tp_step()` is interposed before
+each append on the same `VirtualClock` used by the enabled coordinator. Both
+streams equal the tracked 545-byte LF fixture exactly, while only the enabled
+state emits events at `123000 ps` and `124000 ps`. This closes the review
+blocker without relying on the live smoke.
+
 ## Scored live SGLang relation
 
 The paired smoke used SGLang `0.0.0.dev1+g8f2a3ad6d`, the cached offline
@@ -131,6 +194,13 @@ and both 542-byte step files have SHA-256
 `6dfface7ab3d55c5344baa01ce9c4f5b797074bf64c9f3ea3e986ba5b726e18a`.
 The byte comparison passed exactly.
 
+As a post-specified external-call guard, the same pinned-runtime invocation
+calls SGLang's real `attn_tp_all_gather` helper with two caller-owned
+shape-only outputs. It returns `None` and reaches one
+`("all_gather", "attn_tp", 128)` coordinator observation. This verifies the
+SGLang-only call form through an upstream helper, but it is not added to the
+frozen scored denominator.
+
 ## Genuine-risk fraction
 
 The estimates below count only scored relations. They are not additional
@@ -139,13 +209,14 @@ scores.
 | Family | Risk-bearing fraction | Plausible failure mode |
 |---|---:|---|
 | Shape relation | 4/4 instances, 100% | The SGLang-only output list could have been treated as a concatenated return, the wrong axis could have been multiplied, dtype could have been lost, or caller-owned part validation could have occurred after event emission. |
-| Payload scaling | 2/2 instances, 100% | The adapter could have counted elements or gathered-output bytes instead of input bytes, breaking exact doubling or group-size invariance. |
-| Real SGLang reachability | 1/1 instance, 100% | Plugin discovery, scheduler subprocess construction, stub binding, event streaming, or call placement could have bypassed the coordinator, reordered observations, changed step bytes, or terminated the pinned Engine. |
+| Payload scaling | 0/2 instances, 0% | The frozen relation checks only doubling with `E`. Element counts, input bytes, and several wrong linearly scaled quantities all double, so the previously named failures cannot make this relation fail. The new absolute-byte guard is post-specified and unscored. |
+| Real SGLang reachability | 1/1 instance, 100% | The accepted SGL-1 smoke already established plugin discovery, scheduler construction, and fabricated generation. The genuine new risk here is only the communicator seam: logical-group binding, one observation per step, sidecar order, timestamp equality, and unchanged step bytes. |
 
-All three scored families and all seven scored instances therefore exercised a
-genuine failure risk. The live family is the strongest evidence because it
-depends on the pinned external runtime rather than only adapter-authored
-objects.
+Two of three scored families and five of seven scored instances therefore
+exercise a genuine failure risk, for a total risk-bearing fraction of `5/7`,
+or about 71.4%. The payload score remains reported because it was frozen, but
+it is not counted as risk-bearing. The live family's incremental evidence is
+limited to the communicator seam over the accepted SGL-1 engine baseline.
 
 ## Reproduction and stored evidence
 

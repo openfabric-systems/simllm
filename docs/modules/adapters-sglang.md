@@ -98,6 +98,12 @@ VLLM-14 torch-optional base, so both adapters share shape values, the
 historical event schema, `CollectiveWork`, and the COMP-15 compatibility
 stack.
 
+The event sidecar truncates its target on first append so stale events cannot
+mix with a new run. Only one stream instance may reach first append for a
+resolved path in one process; a second instance raises before truncation. This
+is stricter than silent multi-writer append and preserves a single event-order
+authority per sidecar.
+
 Each nonempty simulated model step currently observes one fixed 4,096-byte TP
 all-reduce before compute settlement. The observation and all nested stack
 events read the step's starting virtual time without advancing it. No
@@ -148,6 +154,14 @@ both configurations. The flag-off and enabled step JSONL files were
 byte-identical; only the enabled run emitted the frozen two-event TP order,
 with 14 nested stack events per call and timestamps equal to the corresponding
 step starts.
+
+Post-specified integration review added a tracked LF byte fixture under
+`tests/fixtures/sglang`. A CI-runnable test drives `SglStepTranslator`,
+`observe_tp_step`, and `StepRecordStream` on one shared clock in both flag
+states; both streams must equal the fixture exactly. The pinned call-site
+audit now derives every observed row from AST, and the correction supplement
+in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
+`output_tensor_list` callers without rewriting the frozen expectations file.
 
 ## Open tasks
 
