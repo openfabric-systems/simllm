@@ -48,6 +48,20 @@ def _validate_registry(out: Path, data_root: Path | None = None) -> None:
             raise ValueError(
                 f"study output must remain under SIMLLM_DATA_ROOT ({data_root})"
             ) from error
+    base_commit_known = (
+        subprocess.run(
+            ["git", "cat-file", "-e", f"{SIMLLM_BASE_COMMIT}^{{commit}}"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+        ).returncode
+        == 0
+    )
+    if not base_commit_known:
+        print(
+            "pinned HTSim source audit skipped: the frozen base commit is "
+            "not present in this clone (shallow checkout)"
+        )
+        return
     pinned_htsim = subprocess.run(
         ["git", "rev-parse", f"{SIMLLM_BASE_COMMIT}:third_party/htsim"],
         cwd=REPO_ROOT,
