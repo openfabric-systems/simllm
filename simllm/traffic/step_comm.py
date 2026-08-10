@@ -16,8 +16,10 @@ operations.
 
 Expert parallel (:func:`step_moe_alltoalls`): per MoE layer, a dispatch
 pairwise all-to-allv (tokens to their experts' owner ranks) followed by a
-combine pairwise all-to-allv (expert outputs back), under the uniform
-routing assumption documented on the function.
+combine pairwise all-to-allv (expert outputs back). An optional captured
+routing supply selects per-token destinations at an explicit placement epoch;
+its absence retains the uniform compatibility assumption documented on the
+function.
 
 This is a deliberately first-order model of step traffic; each
 simplification is a numbered task in docs/modules/traffic.md:
@@ -29,7 +31,6 @@ simplification is a numbered task in docs/modules/traffic.md:
   collectives are a strict serial chain): TRAF-7;
 - no pipeline-parallel activation traffic (records carry no PP stage
   information yet): TRAF-8;
-- uniform MoE routing instead of routed-experts captures: TRAF-2;
 - the MoE layer is rendered as one calc, then the TP allreduces, then
   dispatch and combine back to back, instead of splitting the layer's
   compute around the all-to-alls: TRAF-9.
@@ -45,9 +46,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from simllm.compute import ModelDims
-from simllm.core import StepRecord
+from simllm.core import RequestPhase, StepRecord
 from simllm.goal import GoalTrace
 from simllm.traffic.patterns import pairwise_all_to_allv, ring_allreduce
+from simllm.traffic.routed_moe import RoutedMoeSupply
 
 #: the two allreduce sites of one transformer layer, in execution order
 TP_ALLREDUCE_SITES = ("attention", "mlp")
@@ -98,10 +100,181 @@ class MoeAllToAll:
     ranks: tuple[int, ...]
     #: bytes each rank sends to EACH other rank (uniform routing)
     per_pair_bytes: int
+    #: sparse ordered-pair bytes when captured routing is authoritative
+    pair_payload_bytes: tuple[tuple[int, int, int], ...] = ()
+    #: expert ownership epoch used to derive the sparse table
+    placement_epoch: int = 0
+
+
+def _scheduled_routed_tokens(record: StepRecord, supply: RoutedMoeSupply):
+    from simllm.preplay.routing import RoutedToken
+
+    request_ids = [request.request_id for request in record.scheduled]
+    if len(request_ids) != len(set(request_ids)):
+        raise ValueError("record.scheduled: duplicate request identity")
+    tokens: list[RoutedToken] = []
+    for index, scheduled in enumerate(record.scheduled):
+        path = f"record.scheduled[{index}]"
+        if (
+            isinstance(scheduled.num_new_tokens, bool)
+            or not isinstance(scheduled.num_new_tokens, int)
+        ):
+            raise TypeError(f"{path}.num_new_tokens: expected an integer")
+        if scheduled.num_new_tokens < 0:
+            raise ValueError(f"{path}.num_new_tokens: expected a nonnegative integer")
+        if (
+            isinstance(scheduled.context_length, bool)
+            or not isinstance(scheduled.context_length, int)
+        ):
+            raise TypeError(f"{path}.context_length: expected an integer")
+        try:
+            routed_request = supply.routed_experts.by_request_id(
+                scheduled.request_id
+            )
+        except KeyError as exc:
+            raise ValueError(
+                f"{path}.request_id: absent from routed-experts projection"
+            ) from exc
+        if scheduled.num_new_tokens == 0:
+            continue
+        if scheduled.phase is RequestPhase.PREFILL:
+            end = scheduled.context_length
+            start = end - scheduled.num_new_tokens
+            phase_tokens = routed_request.prefill_tokens
+            phase = "prefill"
+        elif scheduled.phase is RequestPhase.DECODE:
+            start = (
+                scheduled.context_length
+                - scheduled.num_new_tokens
+                - routed_request.prompt_token_count
+            )
+            end = start + scheduled.num_new_tokens
+            phase_tokens = routed_request.decode_tokens
+            phase = "decode"
+        else:
+            raise TypeError(f"{path}.phase: expected RequestPhase")
+        if start < 0 or end > len(phase_tokens) or start >= end:
+            raise ValueError(
+                f"{path}: {phase} token slice [{start}, {end}) is outside "
+                f"captured count {len(phase_tokens)}"
+            )
+        tokens.extend(phase_tokens[start:end])
+    if len(tokens) != record.total_new_tokens:
+        raise ValueError(
+            "record.scheduled: captured token count disagrees with total_new_tokens"
+        )
+    return tuple(tokens)
+
+
+def _routed_moe_alltoalls(
+    record: StepRecord,
+    dims: ModelDims,
+    ranks: tuple[int, ...],
+    supply: RoutedMoeSupply,
+) -> list[MoeAllToAll]:
+    if len(ranks) != len(set(ranks)):
+        raise ValueError("ep_ranks: contains duplicate ranks")
+    if any(isinstance(rank, bool) or not isinstance(rank, int) or rank < 0 for rank in ranks):
+        raise ValueError("ep_ranks: expected distinct nonnegative integer ranks")
+    routing = supply.routed_experts
+    if routing.expert_count != dims.num_experts:
+        raise ValueError(
+            "routed_experts.expert_count: disagrees with model num_experts"
+        )
+    if routing.top_k != dims.top_k:
+        raise ValueError("routed_experts.top_k: disagrees with model top_k")
+    expected_layers = tuple(range(dims.num_layers))
+    if routing.moe_layer_indices != expected_layers:
+        raise ValueError(
+            "routed_experts.moe_layer_indices: disagree with model layers"
+        )
+    placement = supply.placement_for_step(record.step_index)
+    owners = placement.owner_map()
+    expected_keys = {
+        (layer, expert)
+        for layer in expected_layers
+        for expert in range(dims.num_experts)
+    }
+    owner_keys = set(owners)
+    missing = expected_keys - owner_keys
+    extra = owner_keys - expected_keys
+    if missing:
+        layer, expert = min(missing)
+        raise ValueError(
+            f"placement epoch {placement.placement_epoch}: missing owner for "
+            f"layer {layer} expert {expert}"
+        )
+    if extra:
+        layer, expert = min(extra)
+        raise ValueError(
+            f"placement epoch {placement.placement_epoch}: unexpected owner for "
+            f"layer {layer} expert {expert}"
+        )
+    invalid_ranks = set(owners.values()) - set(ranks)
+    if invalid_ranks:
+        raise ValueError(
+            "placement snapshot: owner ranks outside ep_ranks: "
+            + ", ".join(str(rank) for rank in sorted(invalid_ranks))
+        )
+
+    tokens = _scheduled_routed_tokens(record, supply)
+    vector_bytes = dims.hidden_size * dims.dtype_bytes
+    operations = []
+    for layer in expected_layers:
+        send_bytes: dict[tuple[int, int], int] = {}
+        for source in ranks:
+            for token in tokens:
+                layer_routing = token.layers[layer]
+                destinations = {
+                    owners[(layer, expert)]
+                    for expert in layer_routing.expert_ids
+                }
+                for destination in destinations:
+                    if destination == source:
+                        continue
+                    pair = (source, destination)
+                    send_bytes[pair] = send_bytes.get(pair, 0) + vector_bytes
+        dispatch = tuple(
+            (source, destination, size)
+            for (source, destination), size in sorted(send_bytes.items())
+        )
+        if not dispatch:
+            continue
+        combine = tuple(
+            sorted(
+                (destination, source, size)
+                for source, destination, size in dispatch
+            )
+        )
+        operations.extend(
+            (
+                MoeAllToAll(
+                    layer=layer,
+                    phase="dispatch",
+                    ranks=ranks,
+                    per_pair_bytes=0,
+                    pair_payload_bytes=dispatch,
+                    placement_epoch=placement.placement_epoch,
+                ),
+                MoeAllToAll(
+                    layer=layer,
+                    phase="combine",
+                    ranks=ranks,
+                    per_pair_bytes=0,
+                    pair_payload_bytes=combine,
+                    placement_epoch=placement.placement_epoch,
+                ),
+            )
+        )
+    return operations
 
 
 def step_moe_alltoalls(
-    record: StepRecord, dims: ModelDims, ep_ranks: Sequence[int]
+    record: StepRecord,
+    dims: ModelDims,
+    ep_ranks: Sequence[int],
+    *,
+    routed_supply: RoutedMoeSupply | None = None,
 ) -> list[MoeAllToAll]:
     """The step's MoE all-to-alls, empty when the step produces none.
 
@@ -110,7 +283,13 @@ def step_moe_alltoalls(
     owner ranks, then a combine pairwise all-to-allv returning the expert
     outputs, both over the expert-parallel group ``ep_ranks`` of W ranks.
 
-    Uniform routing assumption: the router spreads the
+    With ``routed_supply``, the scheduled request slices select exact captured
+    input tokens. Expert ownership at the step's explicit placement epoch maps
+    each token to destination ranks. Dispatch deduplicates several selected
+    experts on the same destination into one hidden vector, and combine is the
+    exact reverse table after owner-side pre-reduction.
+
+    Without a routed supply, the compatibility assumption spreads the
     ``total_new_tokens * top_k`` (token, expert) assignments evenly over
     the W ranks, so each rank sends
 
@@ -118,18 +297,20 @@ def step_moe_alltoalls(
                          * dtype_bytes // W
 
     to every OTHER rank in both phases; the 1/W share routed to a rank's
-    own resident experts stays local and never touches the fabric. The
-    floor division is part of the same approximation. Replacing uniform
-    routing with per-token routed-experts captures (including EPLB
-    placement-epoch snapshots) is the second half of TRAF-2.
+    own resident experts stays local and never touches the fabric. The floor
+    division remains part of this explicit compatibility path.
 
     Empty means: dense dims (``num_experts == 0``), an EP world smaller
-    than 2, or a step whose uniform per-pair share rounds to zero bytes
-    (in particular any zero-new-token drain record).
+    than 2, or a zero-new-token drain record. The uniform path also returns
+    empty when its per-pair share rounds to zero bytes.
     """
     ranks = tuple(ep_ranks)
     if dims.num_experts <= 0 or len(ranks) < 2:
         return []
+    if record.total_new_tokens <= 0:
+        return []
+    if routed_supply is not None:
+        return _routed_moe_alltoalls(record, dims, ranks, routed_supply)
     per_pair = (
         record.total_new_tokens * dims.top_k * dims.hidden_size * dims.dtype_bytes
     ) // len(ranks)
@@ -149,6 +330,7 @@ def render_step_goal(
     per_layer_calc_ns: int | Sequence[int],
     *,
     ep_ranks: Sequence[int] | None = None,
+    routed_supply: RoutedMoeSupply | None = None,
     num_goal_ranks: int | None = None,
     base_tag: int = 1000,
 ) -> GoalTrace:
@@ -179,7 +361,12 @@ def render_step_goal(
     stands).
     """
     tp_ops = step_tp_allreduces(record, dims, tp_ranks)
-    moe_ops = step_moe_alltoalls(record, dims, ep_ranks if ep_ranks is not None else [])
+    moe_ops = step_moe_alltoalls(
+        record,
+        dims,
+        ep_ranks if ep_ranks is not None else [],
+        routed_supply=routed_supply,
+    )
     if not tp_ops and not moe_ops:
         raise ValueError(
             "step has no tensor-parallel collectives and no MoE all-to-alls "
@@ -204,6 +391,7 @@ def render_step_goal(
                 participants.append(rank)
     tag_stride = 2 * (len(ranks) - 1) if tp_ops else 0
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
+    moe_by_key = {(op.layer, op.phase): op for op in moe_ops}
     if num_goal_ranks is None:
         num_goal_ranks = max(participants) + 1
     minimum_ranks = max(participants) + 1
@@ -239,13 +427,21 @@ def render_step_goal(
         if moe_ops:
             for phase_index in range(len(MOE_A2A_PHASES)):
                 moe_index = layer * len(MOE_A2A_PHASES) + phase_index
-                op = moe_ops[moe_index]
-                send_bytes = {
-                    (s, d): op.per_pair_bytes
-                    for s in op.ranks
-                    for d in op.ranks
-                    if s != d
-                }
+                op = moe_by_key.get((layer, MOE_A2A_PHASES[phase_index]))
+                if op is None:
+                    continue
+                if op.pair_payload_bytes:
+                    send_bytes = {
+                        (source, destination): size
+                        for source, destination, size in op.pair_payload_bytes
+                    }
+                else:
+                    send_bytes = {
+                        (s, d): op.per_pair_bytes
+                        for s in op.ranks
+                        for d in op.ranks
+                        if s != d
+                    }
                 done = pairwise_all_to_allv(
                     trace,
                     ranks=list(op.ranks),

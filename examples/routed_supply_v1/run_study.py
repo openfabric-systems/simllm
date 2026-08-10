@@ -513,6 +513,373 @@ def run_play(out: Path, decode_trace: Path) -> dict[str, object]:
     return summary
 
 
+def _traffic_dims():
+    from simllm.compute import ModelDims
+
+    return ModelDims(
+        num_layers=24,
+        hidden_size=1024,
+        intermediate_size=512,
+        num_heads=16,
+        num_kv_heads=8,
+        head_size=64,
+        vocab_size=49_152,
+        dtype_bytes=2,
+        num_experts=32,
+        top_k=8,
+        moe_intermediate_size=512,
+        local_num_experts=16,
+    )
+
+
+def _traffic_record(step_index: int):
+    from simllm.core import RequestPhase, ScheduledRequest, StepRecord
+
+    return StepRecord(
+        step_index=step_index,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest(
+                "length-cap",
+                RequestPhase.PREFILL,
+                22,
+                context_length=22,
+            )
+        ],
+        num_sampled=1,
+    )
+
+
+def _traffic_manifest(epoch: int):
+    from simllm.placement import PlacementManifest, RankPlacement
+
+    local_by_rank = ({}, {})
+    special = set(TRAF_EPOCH1_LAYER13_RANK0_EXPERTS)
+    for layer in range(24):
+        rank0 = special if epoch == 1 and layer == 13 else set(range(16))
+        local_by_rank[0][layer] = [
+            expert for expert in range(32) if expert in rank0
+        ]
+        local_by_rank[1][layer] = [
+            expert for expert in range(32) if expert not in rank0
+        ]
+    return PlacementManifest(
+        ranks=[
+            RankPlacement(
+                global_rank=rank,
+                hostname="study-host",
+                local_rank=rank,
+                local_expert_ids=local_by_rank[rank],
+                placement_epoch=epoch,
+            )
+            for rank in (0, 1)
+        ]
+    )
+
+
+def _traffic_supply(tracked_projection, manifests):
+    from simllm.traffic import ExpertPlacementSnapshot, RoutedMoeSupply
+
+    return RoutedMoeSupply(
+        routed_experts=tracked_projection,
+        placements=tuple(
+            ExpertPlacementSnapshot.from_manifest(manifest, (0, 1))
+            for manifest in manifests
+        ),
+        step_placement_epochs=((0, 0), (1, 1)),
+    )
+
+
+def _goal_sends_by_tag(text: str) -> dict[int, dict[tuple[int, int], int]]:
+    result: dict[int, dict[tuple[int, int], int]] = {}
+    rank = -1
+    for line in text.splitlines():
+        if line.startswith("rank "):
+            rank = int(line.split()[1])
+        if ": send " not in line:
+            continue
+        words = line.split()
+        size = int(words[2].removesuffix("b"))
+        destination = int(words[4])
+        tag = int(words[6])
+        result.setdefault(tag, {})[(rank, destination)] = size
+    return result
+
+
+def _expected_phase_table(epoch: int, layer: int, phase: str):
+    first, second = TRAF_DISPATCH_BYTES[epoch][layer]
+    if phase == "dispatch":
+        return ((0, 1, first), (1, 0, second))
+    return ((0, 1, second), (1, 0, first))
+
+
+def _check_traffic_graph(graph, epoch: int) -> dict[str, object]:
+    from simllm.core import CollectiveWork
+
+    operations = [
+        operation
+        for operation in graph.operations
+        if isinstance(operation.work, CollectiveWork)
+        and operation.work.collective == "all-to-allv"
+    ]
+    mismatches = []
+    for operation in operations:
+        layer = operation.correlation.layer
+        phase = operation.work.channel_hint
+        assert layer is not None and phase is not None
+        expected = _expected_phase_table(epoch, layer, phase)
+        if (
+            operation.work.payload_bytes != 0
+            or operation.work.pair_payload_bytes != expected
+            or operation.placement_epoch != epoch
+        ):
+            mismatches.append(f"layer-{layer}:{phase}")
+    return {
+        "operation_count": len(operations),
+        "mismatches": mismatches,
+        "passed": len(operations) == 48 and not mismatches,
+    }
+
+
+def _check_traffic_goal(text: str, epoch: int) -> dict[str, object]:
+    sends = _goal_sends_by_tag(text)
+    mismatches = []
+    for layer in range(24):
+        for phase_index, phase in enumerate(("dispatch", "combine")):
+            tag = 1000 + layer * 2 + phase_index
+            expected = {
+                (source, destination): size
+                for source, destination, size in _expected_phase_table(
+                    epoch, layer, phase
+                )
+            }
+            if sends.get(tag) != expected:
+                mismatches.append(f"layer-{layer}:{phase}")
+    return {
+        "send_count": sum(len(pairs) for pairs in sends.values()),
+        "mismatches": mismatches,
+        "passed": len(sends) == 48 and not mismatches,
+    }
+
+
+def run_traffic(out: Path) -> dict[str, object]:
+    from simllm.backends import (
+        HtsimStepSink,
+        HtsimStepSinkConfig,
+        SerialStepLowerer,
+        SerialStepLowererConfig,
+    )
+    from simllm.compute import ComputeProvider, DurationEstimate
+    from simllm.traffic import render_step_goal
+
+    class FixedProvider(ComputeProvider):
+        def estimate(self, kernel, gpu):
+            return DurationEstimate(duration_ps=24_000, bound="measured")
+
+    traffic_out = out / "traffic"
+    traffic_out.mkdir(parents=True, exist_ok=True)
+    tracked_trace = (
+        Path(__file__).resolve().parents[1]
+        / "preplay_trace_v1/granite_length_cap.jsonl"
+    )
+    tracked_projection = _join_projection(tracked_trace, ("length-cap",))
+    manifests = tuple(_traffic_manifest(epoch) for epoch in (0, 1))
+    for manifest, epoch in zip(manifests, (0, 1), strict=True):
+        manifest.save(traffic_out / f"placement_epoch_{epoch}.json")
+    supply = _traffic_supply(tracked_projection, manifests)
+    dims = _traffic_dims()
+    records = tuple(_traffic_record(epoch) for epoch in (0, 1))
+    provider = FixedProvider()
+
+    graph_checks = {}
+    for epoch, record in enumerate(records):
+        graph = SerialStepLowerer(
+            SerialStepLowererConfig(
+                dims=dims,
+                tp_ranks=(0,),
+                ep_ranks=(0, 1),
+                provider=provider,
+                routed_moe_supply=supply,
+            )
+        ).lower(record)
+        graph_checks[str(epoch)] = _check_traffic_graph(graph, epoch)
+
+    uniform_goal = render_step_goal(
+        records[0],
+        dims,
+        (0,),
+        1,
+        ep_ranks=(0, 1),
+    ).render().encode()
+    uniform_oracle = {
+        "bytes": len(uniform_goal),
+        "sha256": hashlib.sha256(uniform_goal).hexdigest(),
+        "matches_frozen": (
+            len(uniform_goal) == TRAF_UNIFORM_GOAL_ORACLE[0]
+            and hashlib.sha256(uniform_goal).hexdigest()
+            == TRAF_UNIFORM_GOAL_ORACLE[1]
+        ),
+    }
+
+    measured_uniform = {}
+    measured_routed = {}
+    goal_checks: dict[str, dict[str, object]] = {}
+    routed_outcomes = {}
+    uniform_outcomes = {}
+    for bandwidth in (200_000_000_000, 400_000_000_000):
+        label = f"{bandwidth // 1_000_000_000}g"
+        uniform_sink = HtsimStepSink(
+            HtsimStepSinkConfig(
+                profile="rnic-nn-fluid",
+                tp_ranks=(0,),
+                dims=dims,
+                workdir=traffic_out / label / "uniform",
+                ep_ranks=(0, 1),
+                linkspeed_bps=bandwidth,
+                provider=provider,
+            )
+        )
+        uniform_result = uniform_sink(records[0])
+        assert uniform_result is not None
+        measured_uniform[bandwidth] = uniform_result.step_latency_ps
+        uniform_outcomes[label] = {
+            "jct_ps": uniform_result.step_latency_ps,
+            "num_flows": uniform_sink.outcomes[0].num_flows,
+            "routing_mode": uniform_sink.outcomes[0].routing_mode,
+            "placement_epoch": uniform_sink.outcomes[0].placement_epoch,
+            "quiescent": uniform_sink.outcomes[0].quiescent,
+        }
+        emitted_uniform = (
+            traffic_out / label / "uniform/step-000000.goal"
+        ).read_bytes()
+        uniform_oracle[f"{label}_sink_matches"] = emitted_uniform == uniform_goal
+
+        routed_sink = HtsimStepSink(
+            HtsimStepSinkConfig(
+                profile="rnic-nn-fluid",
+                tp_ranks=(0,),
+                dims=dims,
+                workdir=traffic_out / label / "routed",
+                ep_ranks=(0, 1),
+                linkspeed_bps=bandwidth,
+                provider=provider,
+                routed_moe_supply=supply,
+            )
+        )
+        for epoch, record in enumerate(records):
+            routed_result = routed_sink(record)
+            assert routed_result is not None
+            measured_routed[(epoch, bandwidth)] = routed_result.step_latency_ps
+            outcome = routed_sink.outcomes[-1]
+            routed_outcomes[f"epoch-{epoch}:{label}"] = {
+                "jct_ps": routed_result.step_latency_ps,
+                "num_flows": outcome.num_flows,
+                "routing_mode": outcome.routing_mode,
+                "placement_epoch": outcome.placement_epoch,
+                "quiescent": outcome.quiescent,
+            }
+            goal_path = (
+                traffic_out / label / "routed" / f"step-{epoch:06d}.goal"
+            )
+            goal_checks[f"epoch-{epoch}:{label}"] = _check_traffic_goal(
+                goal_path.read_text(), epoch
+            )
+
+    cells = []
+    for (epoch, bandwidth), (expected_routed, expected_uniform, expected_delta) in (
+        TRAF_JCT_ORACLES.items()
+    ):
+        routed = measured_routed[(epoch, bandwidth)]
+        uniform = measured_uniform[bandwidth]
+        cells.append(
+            {
+                "epoch": epoch,
+                "bandwidth_bps": bandwidth,
+                "routed_jct_ps": routed,
+                "uniform_jct_ps": uniform,
+                "delta_ps": routed - uniform,
+                "expected_routed_jct_ps": expected_routed,
+                "expected_uniform_jct_ps": expected_uniform,
+                "expected_delta_ps": expected_delta,
+                "passed": (
+                    routed == expected_routed
+                    and uniform == expected_uniform
+                    and routed - uniform == expected_delta
+                ),
+            }
+        )
+    epoch_relation = {
+        str(bandwidth): (
+            measured_routed[(1, bandwidth)]
+            - measured_routed[(0, bandwidth)]
+        )
+        for bandwidth in (200_000_000_000, 400_000_000_000)
+    }
+    bandwidth_relation = {
+        str(epoch): (
+            measured_routed[(epoch, 200_000_000_000)]
+            - measured_routed[(epoch, 400_000_000_000)]
+        )
+        for epoch in (0, 1)
+    }
+    b1_passed = (
+        all(check["passed"] for check in graph_checks.values())
+        and all(check["passed"] for check in goal_checks.values())
+        and all(
+            outcome["num_flows"] == 96
+            and outcome["routing_mode"] == "captured"
+            and outcome["placement_epoch"]
+            == int(label.split(":")[0].removeprefix("epoch-"))
+            and outcome["quiescent"]
+            for label, outcome in routed_outcomes.items()
+        )
+    )
+    b2_passed = (
+        all(cell["passed"] for cell in cells)
+        and epoch_relation
+        == {"200000000000": -327_680, "400000000000": -163_840}
+        and bandwidth_relation == {"0": 43_253_760, "1": 43_089_920}
+    )
+    uniform_oracle["passed"] = all(
+        value for key, value in uniform_oracle.items() if key.endswith("matches")
+    ) and uniform_oracle["matches_frozen"] and all(
+        outcome["num_flows"] == 96
+        and outcome["routing_mode"] == "uniform"
+        and outcome["placement_epoch"] is None
+        and outcome["quiescent"]
+        for outcome in uniform_outcomes.values()
+    )
+    summary = {
+        "freeze_commit": "365efe54241a894e83dd1065fb1a93502e6a7a9f",
+        "behavioral": {
+            "TRAF-B1": {
+                "graph_checks": graph_checks,
+                "goal_checks": goal_checks,
+                "routed_outcomes": routed_outcomes,
+                "passed": b1_passed,
+            },
+            "TRAF-B2": {
+                "cells": cells,
+                "epoch_delta_ps": epoch_relation,
+                "bandwidth_decrease_ps": bandwidth_relation,
+                "passed": b2_passed,
+            },
+        },
+        "exact_oracle": {
+            "TRAF-E1": {
+                **uniform_oracle,
+                "outcomes": uniform_outcomes,
+            }
+        },
+    }
+    (out / "traffic_summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n"
+    )
+    if not b1_passed or not b2_passed or not uniform_oracle["passed"]:
+        raise AssertionError("TRAF section failed its frozen acceptance bar")
+    return summary
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--sections", type=parse_sections, default=SECTIONS)
@@ -530,12 +897,8 @@ def main() -> None:
         summaries["core"] = run_core(args.out)
     if "play" in args.sections:
         summaries["play"] = run_play(args.out, args.decode_trace)
-    unsupported = tuple(section for section in args.sections if section == "traffic")
-    if unsupported:
-        raise SystemExit(
-            "result-producing sections land only after their expectation freezes: "
-            + ",".join(unsupported)
-        )
+    if "traffic" in args.sections:
+        summaries["traffic"] = run_traffic(args.out)
     print(json.dumps(summaries, indent=2, sort_keys=True))
 
 

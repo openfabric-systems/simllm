@@ -54,7 +54,12 @@ from simllm.compute import (
 )
 from simllm.core import StepRecord, StepResult
 from simllm.goal import to_binary
-from simllm.traffic import render_step_goal, step_moe_alltoalls, step_tp_allreduces
+from simllm.traffic import (
+    RoutedMoeSupply,
+    render_step_goal,
+    step_moe_alltoalls,
+    step_tp_allreduces,
+)
 
 
 @dataclass
@@ -69,7 +74,10 @@ class HtsimStepSinkConfig:
     ``ep_ranks`` are given, every step's GOAL includes the per-layer MoE
     dispatch and combine all-to-alls over these ranks; leaving it ``None``
     (or using dense dims) keeps the per-step GOAL byte-identical to the
-    pre-MoE sink. ``topology`` is optional: the null-network profiles
+    pre-MoE sink. ``routed_moe_supply`` optionally replaces uniform pair
+    sizes with captured request routing at an explicit expert-placement
+    epoch; its absence retains the uniform GOAL bytes. ``topology`` is
+    optional: the null-network profiles
     (``rnic-nn``, ``rnic-nn-fluid``) run on the generated manifold,
     ``rnic-cn`` takes a Clos topology file.
     """
@@ -88,10 +96,16 @@ class HtsimStepSinkConfig:
     base_tag: int = 1000
     #: explicit GOAL rank count for topology padding; None keeps inferred sizing
     num_goal_ranks: int | None = None
+    #: optional captured routing and explicit placement-epoch supply
+    routed_moe_supply: RoutedMoeSupply | None = None
 
     def __post_init__(self) -> None:
         if self.profile not in RNIC_PROFILES:
             raise ValueError(f"profile must be one of {RNIC_PROFILES}")
+        if self.routed_moe_supply is not None and not isinstance(
+            self.routed_moe_supply, RoutedMoeSupply
+        ):
+            raise TypeError("routed_moe_supply must be RoutedMoeSupply or None")
 
 
 @dataclass(frozen=True)
@@ -114,6 +128,10 @@ class StepNetworkOutcome:
     sample_count_exact: bool = False
     #: whether the backend wrapper verified physical quiescence
     quiescent: bool = False
+    #: routing authority used for this outcome
+    routing_mode: str = "uniform"
+    #: selected expert placement epoch, absent on uniform routing
+    placement_epoch: int | None = None
 
     def network_share_for(self, num_layers: int) -> float:
         """One minus represented calc time over makespan."""
@@ -196,7 +214,10 @@ class HtsimStepSink:
         cfg = self.config
         tp_ops = step_tp_allreduces(record, cfg.dims, cfg.tp_ranks)
         moe_ops = step_moe_alltoalls(
-            record, cfg.dims, cfg.ep_ranks if cfg.ep_ranks is not None else []
+            record,
+            cfg.dims,
+            cfg.ep_ranks if cfg.ep_ranks is not None else [],
+            routed_supply=cfg.routed_moe_supply,
         )
         if not tp_ops and not moe_ops:
             return None
@@ -219,6 +240,7 @@ class HtsimStepSink:
             cfg.tp_ranks,
             rendered_calc_ns,
             ep_ranks=cfg.ep_ranks,
+            routed_supply=cfg.routed_moe_supply,
             num_goal_ranks=cfg.num_goal_ranks,
             base_tag=cfg.base_tag,
         )
@@ -245,6 +267,14 @@ class HtsimStepSink:
                 makespan_ps=makespan_ps,
                 num_flows=len(run.flows),
                 quiescent=run.quiescent,
+                routing_mode=(
+                    "captured" if cfg.routed_moe_supply is not None else "uniform"
+                ),
+                placement_epoch=(
+                    moe_ops[0].placement_epoch
+                    if cfg.routed_moe_supply is not None and moe_ops
+                    else None
+                ),
             )
         )
         return StepResult(
