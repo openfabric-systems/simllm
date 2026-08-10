@@ -126,7 +126,8 @@ linked task IDs own the detail.
    native RNIC timing with htsim; CORE-4 invokes that path from the graph and
    CORE-5 reduces its completion into `ExecutionResult`, `StepResult` and
    TTFT/TPOT before further native precision work can close. BACK-9 through
-   BACK-12 complete the RNIC mechanisms behind that path.
+   BACK-12 complete the RNIC mechanisms behind that path, and BACK-18
+   assembles them behind one modular composition entry point.
 5. **Dependency-driven overlap.** Replace the serial step chain only
    after KV and resource queues exist; framework lowering declares
    dependencies, runtime arbitration determines realized overlap:
@@ -136,6 +137,18 @@ linked task IDs own the detail.
    stages; the largest attributed residual selects the next fidelity
    investment: [VLLM-4](modules/adapters-vllm.md#open-tasks),
    [SGL-4](modules/adapters-sglang.md#open-tasks).
+7. **Model-runner coupling and GPU-initiated networking.** Move the vLLM
+   seam from the executor RPC surface to the model runner under a real GPU
+   worker (the SGLang adapter already couples at that boundary), let the
+   simulated GPU launch the NCCL work, and select host-driven or GPU-driven
+   submission and CQ consumption per queue, with the QPC and the rings
+   registered in the tracked host-memory model:
+   [VLLM-13](modules/adapters-vllm.md#open-tasks),
+   [BACK-19](modules/backends.md#open-tasks),
+   [BACK-20](modules/backends.md#open-tasks),
+   [COMP-11](modules/compute.md#open-tasks). This deepens the visibility
+   available to the stage 6 comparisons; the executor-level mode stays the
+   GPU-less path.
 
 ## Module status
 
@@ -149,8 +162,8 @@ One line per module; the linked doc is the source of truth.
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | PLACE-1/2/3 |
 | [traffic](modules/traffic.md) | Implemented: collective patterns, TP step mapping, MoE all-to-all, GOAL renderers for steps and execution graphs | TRAF-2/3/4/5/6/7/8/9/10 |
 | [goal](modules/goal.md) | Implemented: GOAL trace + txt2bin helper | none |
-| [backends](modules/backends.md) | Implemented: htsim invocation/parsing plus native C++ RNIC SQ/CQ, network-port and shared PCIe transaction slices; htsim composition remains open | BACK-2/5-9/11-17; backend-repo HTSIM-1/2/4-9, ATLAHS-1 |
-| [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop | VLLM-3 through VLLM-12 |
+| [backends](modules/backends.md) | Implemented: htsim invocation/parsing plus native C++ RNIC SQ/CQ, network-port and shared PCIe transaction slices; htsim composition and the modular device entry point remain open | BACK-2/5-9/11-20; backend-repo HTSIM-1/2/4-9, ATLAHS-1 |
+| [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop | VLLM-3 through VLLM-13 |
 | [adapters-sglang](modules/adapters-sglang.md) | Implemented: SimTpModelWorker via plugin entry point at pinned commit, live CPU-engine smoke | SGL-3 through SGL-10 |
 
 ## Study index
@@ -204,8 +217,11 @@ Reproduce with
   vLLM tp=8 run at 0 ps residual ([m4](../examples/m4/RESULTS.md)),
   and the execution/completion boundary (stage 1 above) with
   [core2_lowering](../examples/core2_lowering/RESULTS.md). Remaining:
+  the composed native RNIC and htsim session (BACK-8, BACK-18, HTSIM-9;
+  pre-run expectations frozen in
+  [examples/rnic_live_v1](../examples/rnic_live_v1/expectations.md)),
   the persistent co-simulator (BRIDGE-1), KV lifecycle and the resource
-  runtime (CORE-3 through CORE-5), calibration against real captures.
+  runtime (CORE-3 through CORE-5), and calibration against real captures.
   General fabric manifests (PLACE-1/2) stay deferred behind the fixed
   eight-GPU profile with one 400G RNIC per GPU.
 - **M5 (in progress).** All-to-all traffic studies (MoE expert
@@ -218,3 +234,16 @@ Reproduce with
   follow-up only).
 - **M6 (not started).** PD-disaggregation and KV-transfer traffic
   modeling.
+- **M7 (not started).** Deep coupling: the full modular RNIC device and
+  GPU-initiated networking. The M4 composition entry point (BACK-18) is
+  populated with the DMA, QPC and network modules; QP link building
+  registers the QPC in the tracked virtual host-memory model, where the
+  WQE rings and data buffers are reached through tracked pages and the
+  QPC itself is not (BACK-11, BACK-19); and the submission source becomes
+  explicit per queue: a host CPU driver, a CPU proxy fed from GPU
+  descriptor queues, or GPU-initiated rings with a GPU-owned CQ (BACK-20).
+  On the framework side the vLLM seam moves from the executor RPC surface
+  to the model runner under a real GPU worker (VLLM-13; the SGLang
+  adapter already couples at that boundary), so the simulated GPU
+  launches the NCCL work and completion returns to the model runner
+  through the declared CQ consumer.

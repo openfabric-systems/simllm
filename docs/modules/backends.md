@@ -132,6 +132,22 @@ State ownership is explicit:
   watermarks that originate PFC and the paused priority state that consumes
   it.
 
+### Modular construction
+
+The native device is assembled from modules behind one composition entry
+point (BACK-18): the work-queue core, a DMA module (the shared PCIe fabric
+and its binding), a QPC module (QP lifecycle, pairing and context residency;
+BACK-11 backed by the BACK-19 host-memory model) and the network module (the
+htsim transport/CC policy and fabric behind the versioned `NetworkPort`;
+HTSIM-9). Every probe, study and composed binary constructs through the same
+entry point. A disabled module keeps the interface identical: its parameters
+are inert or rejected, never silently rescoped; its timeline stages report
+`not_applicable`; and its off state preserves the accepted baseline
+artifacts byte for byte. When the DMA module is present, the configuration
+also selects who produces each queue's submissions (host CPU driver, CPU
+proxy fed from GPU descriptor queues, or GPU-initiated rings) and which
+agent consumes each CQ (BACK-20).
+
 ### WQE authority and projection contract
 
 One session has one mutable WQE authority. Accounting records are projections
@@ -393,8 +409,9 @@ is difficult.
   authority is active.
   The standalone C++17 library, opaque flow-level `NetworkPort`, strict native
   build and deterministic fake adapter are complete. Remaining SimLLM scope is
-  the native session composition entry point and port binding, run records,
-  configuration hash, sole-authority projection and bypass equivalence.
+  run records, configuration hash, sole-authority projection and bypass
+  equivalence; the modular composition entry point and port binding are
+  BACK-18.
   HTSIM-9 owns the outer `AtlahsFlowRuntime` wrapper and htsim-side adapter;
   CORE-4 and CORE-5 own graph invocation and completion reduction.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
@@ -453,7 +470,9 @@ is difficult.
   ledger without breaking its reader. Pair two RNIC endpoints explicitly;
   model TCP connect and attribute exchange, CM events and QP firmware-command
   time as control-path events. Model QPC, WQE-cache and MTT/MPT locality
-  separately.
+  separately. QPC registration, ring page lists and data-region registration
+  land in the BACK-19 host-memory model; QPC fetch never takes a per-access
+  MKey/MTT translation while WQE rings and data buffers do.
 - BACK-12 (Completeness; P1; L): implement the TX/RX hardware pipelines and
   cross-layer fault
   boundary. Include WQE decode, context/translation lookup, opcode-specific
@@ -481,6 +500,69 @@ is difficult.
   BACK-11 and BACK-12 own when semantic lookup, DMA, CQE and fault events
   occur; BACK-17 only lowers still-unconnected events into their shared-fabric
   PCIe service classes.
+- BACK-18 (Completeness; P1; M): give the native RNIC one modular composition
+  entry point. A single versioned device configuration assembles the session
+  from the work-queue core plus optional QPC (BACK-11, BACK-19), DMA
+  (`PcieFabric` and its work-queue binding) and network (HTSIM-9 port)
+  modules, and every probe, study and composed binary constructs through it.
+  Disabling a module keeps the same interface: its parameters are inert or
+  rejected, never silently rescoped; its timeline stages report
+  `not_applicable`; and each module's off state preserves the accepted
+  baselines byte for byte (DMA off reproduces the accepted rnic_wq_v1 scalar
+  rows, the standalone fabric reproduces the accepted rnic_pcie_v1 rows).
+  The composer owns the cross-module rules the current constructors enforce
+  pairwise: scalar service and fabric-charged stages stay mutually exclusive
+  so no stage is double-charged; one caller-driven clock and the documented
+  same-timestamp call order apply device-wide; with DMA enabled the
+  work-queue doorbell, fetch and CQE cursors are read-only mirrors of fabric
+  results, never a second scheduler; device identity (QP number, policy
+  context token) stays at device level so a disabled QPC module never erases
+  identity; ordering domains are namespaced when several devices share one
+  fabric; and the fabric's stable-address lifetime and two-phase plan/commit
+  atomicity are preserved. BACK-8 keeps run records, configuration hash,
+  sole-authority projection and bypass equivalence; this task owns only the
+  construction surface and port binding.
+- BACK-19 (Completeness; P1; L): add the virtual host-memory model that the
+  QPC and DMA modules register into. Track every device-visible host object
+  explicitly: QPC/ICM regions, SQ/RQ/CQ rings, doorbell records and data
+  memory regions, each with owner, endpoint kind (host-pinned or GPU
+  memory), page geometry and registration and teardown events, so BACK-11
+  link building registers the QPC as a tracked allocation rather than a
+  scalar lookup latency. Encode the translation asymmetry: QPC fetch is a
+  context read on the QPC/ICM service class over device-managed ICM pages
+  and never takes a per-access MKey/MPT/MTT translation; WQE rings are
+  reached through the per-queue page list recorded in the QPC at creation;
+  data buffers take the full MKey to MPT to MTT path. Translation and
+  ATS/ATC events (BACK-16, BACK-17) therefore apply to rings and data but
+  never to the QPC itself. The doorbell record is a located host-memory
+  object whose address is registered at queue creation. Grounding: the
+  public ConnectX PRM ICM and posting chapters, the upstream mlx5 QPC
+  layout and the device-cache taxonomy recorded in
+  [the RNIC hardware calibration plan](../papers/rnic-hardware-calibration.md).
+  BACK-11 keeps QP lifecycle, pairing and cache residency; this model gives
+  those caches their backing store and miss targets.
+- BACK-20 (Completeness; P1; L): model the WQE submission source and the CQ
+  consumer when the DMA module is enabled. Three producer shapes, selected
+  per queue: a host CPU driver thread that writes WQEs into host-pinned
+  rings, updates the doorbell record and rings the UAR register (the landed
+  BACK-10 path); a CPU proxy fed by GPU-written descriptor queues in
+  host-visible memory (the classic NCCL shape: the GPU never touches the
+  NIC and completions return through host-mapped counters); and
+  GPU-initiated submission (NCCL GIN, GDAKI/IBGDA), where GPU threads write
+  WQEs and the doorbell record into GPU-memory rings, ring the GPU-mapped
+  UAR register, and the NIC fetches WQEs and data through GPUDirect reads
+  and writes CQEs into GPU memory. Every CQ names exactly one owning
+  consumer, host driver or GPU, and the completion callback into the model
+  runner is charged on that owner's path (VLLM-13 and CORE-5 consume the
+  decision). Requires relaxing the current host-pinned-only endpoint
+  validation for the SQ, CQ and doorbell-record paths to GPU memory,
+  attributing initiator identity separately from the QP number, and driving
+  the GPU-side producer as an explicitly submitted GPU task through the
+  compute model's concurrent service, the same shape as its NCCL egress
+  kernels (COMP-11 deepens that surrounding NCCL/NVLink model but does not
+  own this producer). The QPC stays host ICM in every mode. COMP-2's fixed
+  CPU-proxy versus GPU-initiated constants remain the analytical fallback
+  while this structural path is disabled.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 

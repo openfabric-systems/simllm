@@ -2,7 +2,9 @@
 
 vLLM frontend adapter, pinned to **vLLM v0.26.0**. No fork required: the v1
 engine resolves its executor class from a dotted import path, and injects an
-arbitrary worker-extension class for the capture side.
+arbitrary worker-extension class for the capture side. The engine also
+resolves the worker class itself from a dotted path, which is the seam for
+the planned model-runner-level coupling mode (VLLM-13).
 
 ## Interface
 
@@ -217,3 +219,27 @@ row-for-row.
   NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
   The simulated executor binds step shapes and framework KV events to this
   template; it does not invent concurrency from aggregate phase timings.
+- VLLM-13 (Completeness; P1; L): couple at the model-runner boundary under a
+  real GPU worker. The verified v0.26.0 seam is the worker class itself:
+  `parallel_config.worker_cls` is resolved as a dotted path
+  (`vllm/v1/worker/worker_base.py:250`), so a subclass of
+  `vllm.v1.worker.gpu_worker.Worker` can run the stock `init_device`
+  (real `torch.distributed` init, `GroupCoordinator` construction, NCCL
+  communicator creation, memory snapshot) and then rebind
+  `self.model_runner`, which the stock worker constructs at the end of
+  `init_device` (`gpu_worker.py:401`; v0.26.0 exposes no model-runner class
+  knob, only the binary V1/V2 stock-runner selector, which the subclass
+  must respect). Every worker RPC reaches the runner through
+  `self.model_runner.*`, so one rebind intercepts the whole per-step
+  surface while the worker's distributed structure stays live. This mirrors
+  the SGLang adapter's `SimTpModelWorker` overriding `_init_model_runner`,
+  so both adapters end up coupled at the model-runner boundary. This mode
+  runs only with GPUs present, since `init_device` and the stock runner
+  require CUDA; the executor-level `SimExecutor` remains the GPU-less mode
+  and its accepted behavior must not change. The sim model runner couples to the simulated
+  GPU service model, which launches the NCCL work and, in GPU-initiated
+  mode, drives the BACK-20 submission path; the run declares which agent
+  consumes each CQ and how completion reaches the model runner (BACK-20,
+  CORE-5). Under data parallelism above one, the runner-internal DP
+  coordination collective must be served or emulated. VLLM-12's
+  device-schedule capture uses the same seam.
