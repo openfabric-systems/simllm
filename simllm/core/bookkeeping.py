@@ -479,6 +479,219 @@ def validate_bookkeeping_ledger(ledger: BookkeepingLedger) -> None:
                 completed_wqes.add(subject_id)
 
 
+@dataclass
+class _BookkeepingValidationIndex:
+    """Cross-entry state retained after one complete reference validation."""
+
+    objects: dict[str, CreatedObjectRecord] = field(default_factory=dict)
+    subject_timestamps: dict[str, int] = field(default_factory=dict)
+    completed_wqes: set[str] = field(default_factory=set)
+
+    @classmethod
+    def from_validated_ledger(
+        cls,
+        ledger: BookkeepingLedger,
+    ) -> _BookkeepingValidationIndex:
+        """Build an index from a ledger already accepted by the reference."""
+
+        index = cls()
+        for entry in ledger.entries:
+            fact = entry.fact
+            if isinstance(fact, CreatedObjectRecord):
+                index.objects[fact.ref.object_id] = fact
+                continue
+            if not isinstance(fact, CompletionEvent) or fact.subject_object_id is None:
+                continue
+            subject_id = fact.subject_object_id
+            index.subject_timestamps[subject_id] = fact.timestamp_ps
+            subject = index.objects[subject_id]
+            if (
+                subject.ref.kind is CreatedObjectKind.NETWORK_WQE
+                and fact.phase is EventPhase.COMPLETED
+            ):
+                index.completed_wqes.add(subject_id)
+        return index
+
+    def transaction(self) -> _BookkeepingValidationTransaction:
+        """Return an isolated batch overlay that can be committed atomically."""
+
+        return _BookkeepingValidationTransaction(self)
+
+
+@dataclass
+class _BookkeepingValidationTransaction:
+    """Copy-on-write validation state for one append or extend call."""
+
+    base: _BookkeepingValidationIndex
+    objects: dict[str, CreatedObjectRecord] = field(default_factory=dict)
+    subject_timestamps: dict[str, int] = field(default_factory=dict)
+    completed_wqes: set[str] = field(default_factory=set)
+
+    def object_for(self, object_id: str) -> CreatedObjectRecord | None:
+        return self.objects.get(object_id) or self.base.objects.get(object_id)
+
+    def has_object(self, object_id: str) -> bool:
+        return object_id in self.objects or object_id in self.base.objects
+
+    def subject_timestamp(self, object_id: str) -> int:
+        if object_id in self.subject_timestamps:
+            return self.subject_timestamps[object_id]
+        return self.base.subject_timestamps.get(object_id, -1)
+
+    def wqe_is_completed(self, object_id: str) -> bool:
+        return object_id in self.completed_wqes or object_id in self.base.completed_wqes
+
+    def commit(self) -> None:
+        self.base.objects.update(self.objects)
+        self.base.subject_timestamps.update(self.subject_timestamps)
+        self.base.completed_wqes.update(self.completed_wqes)
+
+
+def _validate_incremental_entry(
+    entry: BookkeepingEntry,
+    expected_sequence: int,
+    state: _BookkeepingValidationTransaction,
+) -> None:
+    """Validate one generated entry against prior indexed ledger state."""
+
+    path = f"ledger.entries[{expected_sequence}]"
+    if not isinstance(entry, BookkeepingEntry):
+        raise TypeError(f"{path}: expected BookkeepingEntry")
+    _require_integer(entry.sequence, f"{path}.sequence", nonnegative=True)
+    if entry.sequence != expected_sequence:
+        raise ValueError(f"{path}.sequence: expected contiguous value {expected_sequence}")
+    fact = entry.fact
+    timestamp = _fact_timestamp(fact)
+    _require_integer(timestamp, f"{path}.timestamp_ps", nonnegative=True)
+
+    if isinstance(fact, CreatedObjectRecord):
+        _validate_ref(fact.ref, f"{path}.fact.ref")
+        if state.has_object(fact.ref.object_id):
+            raise ValueError(f"{path}.fact.ref.object_id: duplicate object ID")
+        if not isinstance(fact.owner, ObjectOwner):
+            raise TypeError(f"{path}.fact.owner: expected ObjectOwner")
+        _validate_scope(fact.scope, f"{path}.fact.scope")
+        if fact.native_id is not None:
+            _require_text(fact.native_id, f"{path}.fact.native_id")
+        _validate_ref_tuple(fact.parent_refs, f"{path}.fact.parent_refs")
+        if fact.ref in fact.parent_refs:
+            raise ValueError(f"{path}.fact.parent_refs: object cannot parent itself")
+        parent_records: list[CreatedObjectRecord] = []
+        for parent_index, parent in enumerate(fact.parent_refs):
+            prior = state.object_for(parent.object_id)
+            if prior is None or prior.ref != parent:
+                raise ValueError(
+                    f"{path}.fact.parent_refs[{parent_index}]: unknown object reference"
+                )
+            if fact.created_at_ps < prior.created_at_ps:
+                raise ValueError(
+                    f"{path}.fact.parent_refs[{parent_index}]: child predates parent"
+                )
+            parent_records.append(prior)
+        _validate_scope_lineage(
+            tuple(parent_records),
+            fact.scope,
+            f"{path}.fact.parent_refs",
+        )
+        _validate_metadata(fact.metadata, f"{path}.fact.metadata")
+        if fact.ref.kind is CreatedObjectKind.NETWORK_WQE:
+            parent_kinds = [parent.kind for parent in fact.parent_refs]
+            for queue_kind, queue_name in (
+                (CreatedObjectKind.SEND_QUEUE, "send queue"),
+                (CreatedObjectKind.RECEIVE_QUEUE, "receive queue"),
+                (CreatedObjectKind.COMPLETION_QUEUE, "completion queue"),
+            ):
+                if parent_kinds.count(queue_kind) != 1:
+                    raise ValueError(
+                        f"{path}.fact.parent_refs: WQE requires exactly one {queue_name}"
+                    )
+            transports = parent_kinds.count(
+                CreatedObjectKind.DCQCN_QP
+            ) + parent_kinds.count(CreatedObjectKind.RNIC_CN_LINK_PAIR)
+            if transports > 1:
+                raise ValueError(
+                    f"{path}.fact.parent_refs: WQE permits at most one QP or link pair"
+                )
+            transport_metadata = _metadata_dict(fact.metadata).get("transport_kind")
+            if transports == 0 and transport_metadata != "none":
+                raise ValueError(
+                    f"{path}.fact.metadata: transport-free WQE requires transport_kind=none"
+                )
+            if transports == 1 and transport_metadata == "none":
+                raise ValueError(
+                    f"{path}.fact.metadata: physical WQE cannot use transport_kind=none"
+                )
+        state.objects[fact.ref.object_id] = fact
+        return
+
+    if isinstance(fact, StageRecord):
+        if not isinstance(fact.stage, ProcessingStage):
+            raise TypeError(f"{path}.fact.stage: expected ProcessingStage")
+        if not isinstance(fact.phase, StagePhase):
+            raise TypeError(f"{path}.fact.phase: expected StagePhase")
+        _validate_scope(fact.scope, f"{path}.fact.scope")
+        _validate_ref_tuple(fact.object_refs, f"{path}.fact.object_refs")
+        referenced_records: list[CreatedObjectRecord] = []
+        for ref_index, ref in enumerate(fact.object_refs):
+            prior = state.object_for(ref.object_id)
+            if prior is None or prior.ref != ref:
+                raise ValueError(
+                    f"{path}.fact.object_refs[{ref_index}]: unknown object reference"
+                )
+            if fact.timestamp_ps < prior.created_at_ps:
+                raise ValueError(
+                    f"{path}.fact.object_refs[{ref_index}]: stage predates object"
+                )
+            referenced_records.append(prior)
+        _validate_scope_lineage(
+            tuple(referenced_records),
+            fact.scope,
+            f"{path}.fact.object_refs",
+        )
+        return
+
+    if not isinstance(fact, CompletionEvent):
+        raise TypeError(f"{path}.fact: unsupported fact {type(fact).__name__}")
+    _validate_completion_event(fact, f"{path}.fact")
+    subject_id = fact.subject_object_id
+    if subject_id is None:
+        return
+    subject = state.object_for(subject_id)
+    if subject is None:
+        raise ValueError(f"{path}.fact.subject_object_id: unknown object ID")
+    scope = subject.scope
+    if scope.execution_id is not None and scope.execution_id != fact.execution_id:
+        raise ValueError(f"{path}.fact.execution_id: does not match subject scope")
+    if scope.operation_id is not None and scope.operation_id != fact.operation_id:
+        raise ValueError(f"{path}.fact.operation_id: does not match subject scope")
+    if fact.timestamp_ps < subject.created_at_ps:
+        raise ValueError(f"{path}.fact.timestamp_ps: completion predates subject")
+    prior_timestamp = state.subject_timestamp(subject_id)
+    if fact.timestamp_ps < prior_timestamp:
+        raise ValueError(f"{path}.fact.timestamp_ps: subject timestamps must be nondecreasing")
+    state.subject_timestamps[subject_id] = fact.timestamp_ps
+    if subject.ref.kind is CreatedObjectKind.NETWORK_WQE:
+        if state.wqe_is_completed(subject_id):
+            if fact.phase is EventPhase.COMPLETED:
+                raise ValueError(f"{path}.fact: WQE has more than one completion")
+            raise ValueError(f"{path}.fact: WQE accepts no events after its completion")
+        if fact.phase is EventPhase.COMPLETED:
+            completion_queues = tuple(
+                parent
+                for parent in subject.parent_refs
+                if parent.kind is CreatedObjectKind.COMPLETION_QUEUE
+            )
+            expected_resource = ResourceRef(
+                ResourceKind.COMPLETION_QUEUE,
+                completion_queues[0].object_id,
+            )
+            if fact.resource != expected_resource:
+                raise ValueError(
+                    f"{path}.fact.resource: WQE completion must name its completion queue"
+                )
+            state.completed_wqes.add(subject_id)
+
+
 def _escape_object_id_component(value: str) -> str:
     """Escape the composite-ID separator so distinct pairs never collide."""
 
@@ -492,6 +705,7 @@ class RequestBookkeeper:
         initial = ledger or BookkeepingLedger()
         validate_bookkeeping_ledger(initial)
         self._entries = list(initial.entries)
+        self._validation_index = _BookkeepingValidationIndex.from_validated_ledger(initial)
 
     def append(self, fact: BookkeepingFact) -> BookkeepingEntry:
         """Append one fact and return its ledger-assigned entry."""
@@ -499,14 +713,16 @@ class RequestBookkeeper:
         return self.extend((fact,))[0]
 
     def extend(self, facts: Iterable[BookkeepingFact]) -> tuple[BookkeepingEntry, ...]:
-        """Atomically append facts after validating the full candidate ledger."""
+        """Atomically append facts after incremental validation."""
 
         start = len(self._entries)
         additions = tuple(
             BookkeepingEntry(start + offset, fact) for offset, fact in enumerate(facts)
         )
-        candidate = BookkeepingLedger((*self._entries, *additions))
-        validate_bookkeeping_ledger(candidate)
+        transaction = self._validation_index.transaction()
+        for offset, entry in enumerate(additions):
+            _validate_incremental_entry(entry, start + offset, transaction)
+        transaction.commit()
         self._entries.extend(additions)
         return additions
 
