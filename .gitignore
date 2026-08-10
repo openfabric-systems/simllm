@@ -25,6 +25,7 @@ runs/
 !examples/gpu_task_mix/diagnostics.csv
 !examples/rnic_wq_v1/results.csv
 !examples/rnic_pcie_v1/results.csv
+!examples/vllm_skeleton_v1/results.csv
 !examples/rnic_device_v1/results.csv
 !examples/rnic_device_v1/native_tests.csv
 

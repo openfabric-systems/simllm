@@ -22,12 +22,23 @@ to extract a placement manifest without a fork::
     vllm serve <model> -tp 8 \\
         --worker-extension-cls simllm.adapters.vllm.PlacementExporter
 
+``SimWorker`` is the explicitly gated model-runner-boundary skeleton::
+
+    SIMLLM_VLLM_WORKER_MODE=skeleton \\
+    VLLM_USE_V2_MODEL_RUNNER=0 \\
+    vllm serve <model> --no-async-scheduling \\
+        --worker-cls simllm.adapters.vllm.SimWorker
+
+It skips stock ``Worker.init_device``, creates no physical GPU state, and
+uses one core virtual clock for mirrored calls and step records.
+
 Environment variables read by the executor (full table in
 :mod:`simllm.adapters.vllm.executor`): ``SIMLLM_VLLM_MODE``,
 ``SIMLLM_VLLM_KV_MEMORY_BYTES``, ``SIMLLM_VLLM_GPU``,
 ``SIMLLM_VLLM_PEAK_FLOPS``, ``SIMLLM_VLLM_MEM_BANDWIDTH``,
 ``SIMLLM_VLLM_EFFICIENCY``, ``SIMLLM_VLLM_HOST_INIT_PS``,
 ``SIMLLM_VLLM_TOKEN_ID``, ``SIMLLM_VLLM_STEP_RECORDS``.
+The worker-only entry gate is ``SIMLLM_VLLM_WORKER_MODE=skeleton``.
 
 Exports are resolved lazily through the module ``__getattr__``, so importing
 this package pulls in neither the executor module nor vLLM until a name is
@@ -58,6 +69,20 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "step_records_to_json": ("executor", "step_records_to_json"),
     "vllm_is_available": ("executor", "vllm_is_available"),
     "write_step_records": ("executor", "write_step_records"),
+    "MirroredCall": ("worker", "MirroredCall"),
+    "SKELETON_EMPTY_STEP_CALL_SEQUENCE": (
+        "worker",
+        "SKELETON_EMPTY_STEP_CALL_SEQUENCE",
+    ),
+    "SKELETON_INIT_CALL_SEQUENCE": ("worker", "SKELETON_INIT_CALL_SEQUENCE"),
+    "SKELETON_STEP_CALL_SEQUENCE": ("worker", "SKELETON_STEP_CALL_SEQUENCE"),
+    "SKELETON_WORKER_MODE": ("worker", "SKELETON_WORKER_MODE"),
+    "SimModelRunner": ("worker", "SimModelRunner"),
+    "SimModelRunnerOutput": ("worker", "SimModelRunnerOutput"),
+    "SimWorker": ("worker", "SimWorker"),
+    "WORKER_MODE_ENV": ("worker", "WORKER_MODE_ENV"),
+    "latest_worker": ("worker", "latest_worker"),
+    "skeleton_mode_enabled": ("worker", "skeleton_mode_enabled"),
     "PlacementExporter": ("worker_ext", "PlacementExporter"),
     "manifest_from_worker_entries": ("worker_ext", "manifest_from_worker_entries"),
     "placement_entry": ("worker_ext", "placement_entry"),
@@ -67,20 +92,31 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
 __all__ = [
     "GPU_ENVELOPES",
     "PINNED_VLLM_VERSION",
+    "SKELETON_EMPTY_STEP_CALL_SEQUENCE",
+    "SKELETON_INIT_CALL_SEQUENCE",
+    "SKELETON_STEP_CALL_SEQUENCE",
+    "SKELETON_WORKER_MODE",
+    "WORKER_MODE_ENV",
+    "MirroredCall",
     "ModelDims",
     "PlacementExporter",
     "SimExecutor",
     "SimExecutorConfig",
     "SimExecutorHooks",
+    "SimModelRunner",
+    "SimModelRunnerOutput",
+    "SimWorker",
     "StepTranslator",
     "TranslatedStep",
     "configure",
     "estimate_step_latency_ps",
     "fabricate_sampled_tokens",
     "latest_executor",
+    "latest_worker",
     "manifest_from_worker_entries",
     "observe_scheduler_output",
     "placement_entry",
+    "skeleton_mode_enabled",
     "step_kernel",
     "step_records_to_json",
     "translate_scheduler_output",

@@ -48,6 +48,10 @@ Environment variable            Meaning (default)
 ``SIMLLM_VLLM_STEP_RECORDS``    JSONL path for the step records; each record
                                 is appended the moment its step completes
                                 (unset).
+``SIMLLM_VLLM_WORKER_MODE``     ``skeleton`` enables the flagged
+                                :class:`simllm.adapters.vllm.SimWorker` path.
+                                Any other value is rejected when that worker
+                                class is selected (unset).
 ==============================  ==============================================
 
 The fabricated token id is a fixed mid-vocabulary id, so generation never
@@ -701,10 +705,207 @@ class _CompilationTimesFallback:
     encoder: float = 0.0
 
 
+@dataclass(frozen=True)
+class _FullAttentionSpecFallback:
+    """Import-free stand-in for the fields the engine consumes in tests."""
+
+    block_size: int
+    num_kv_heads: int
+    head_size: int
+    dtype: Any
+
+
+def _make_compilation_times() -> Any:
+    """One zero-valued vLLM ``CompilationTimes`` answer.
+
+    Both adapter modes use this constructor so the engine-facing value stays
+    identical. The fallback keeps import-free tests independent of vLLM.
+    """
+    try:
+        from vllm.v1.worker.worker_base import CompilationTimes
+    except ImportError:
+        CompilationTimes = _CompilationTimesFallback
+    return CompilationTimes(language_model=0.0, encoder=0.0)
+
+
+def _resolve_token_id(vocab_size: int, configured_token_id: int | None) -> int:
+    """Resolve the existing fixed-token policy without a framework type."""
+    vocab_size = max(int(vocab_size), 2)
+    if configured_token_id is not None:
+        return max(0, min(int(configured_token_id), vocab_size - 1))
+    return vocab_size // 2
+
+
+@dataclass
+class _ModelAnswers:
+    """Model-derived answers shared by executor and worker simulation modes."""
+
+    vllm_config: Any
+    dims: ModelDims
+    config: SimExecutorConfig
+    tp_size: int
+    pp_size: int
+
+    def pp_layer_range(self, rank: int) -> tuple[int, int]:
+        """Layers owned by ``rank``, using vLLM's uneven PP partitioning."""
+        model_config = self.vllm_config.model_config
+        total = int(_safe(model_config.get_total_num_hidden_layers, self.dims.num_layers))
+        pp_rank = (rank // max(self.tp_size, 1)) % max(self.pp_size, 1)
+
+        def _indices() -> tuple[int, int]:
+            from vllm.distributed.utils import get_pp_indices
+
+            return get_pp_indices(total, pp_rank, self.pp_size)
+
+        even = total // max(self.pp_size, 1)
+        fallback = (
+            pp_rank * even,
+            total if pp_rank == self.pp_size - 1 else (pp_rank + 1) * even,
+        )
+        return _safe(_indices, fallback)
+
+    def kv_cache_dtype(self) -> Any:
+        """Resolve the cache dtype exactly as the accepted executor path did."""
+        try:
+            import torch
+        except ImportError:
+            return getattr(self.vllm_config.model_config, "dtype", "bfloat16")
+
+        cache_config = self.vllm_config.cache_config
+        model_config = self.vllm_config.model_config
+        cache_dtype = getattr(cache_config, "cache_dtype", "auto")
+        quantized = {
+            "fp8": "float8_e4m3fn",
+            "fp8_e4m3": "float8_e4m3fn",
+            "fp8_e5m2": "float8_e5m2",
+        }.get(str(cache_dtype))
+        if quantized is not None:
+            resolved = getattr(torch, quantized, None)
+            if resolved is not None:
+                return resolved
+        model_dtype = getattr(model_config, "dtype", None)
+        return model_dtype if isinstance(model_dtype, torch.dtype) else torch.bfloat16
+
+    def get_kv_cache_spec(self, rank: int) -> dict[str, Any]:
+        """One full-attention spec per layer owned by ``rank``."""
+        try:
+            from vllm.v1.kv_cache_interface import FullAttentionSpec
+        except ImportError:
+            FullAttentionSpec = _FullAttentionSpecFallback
+
+        cache_config = self.vllm_config.cache_config
+        block_size = int(getattr(cache_config, "block_size", None) or 16)
+        spec = FullAttentionSpec(
+            block_size=block_size,
+            num_kv_heads=self.dims.num_kv_heads,
+            head_size=self.dims.head_size,
+            dtype=self.kv_cache_dtype(),
+        )
+        start, end = self.pp_layer_range(rank)
+        return {f"model.layers.{layer}.self_attn.attn": spec for layer in range(start, end)}
+
+    def determine_available_memory(self) -> int:
+        return self.config.kv_memory_bytes
+
+    def compilation_times(self) -> Any:
+        return _make_compilation_times()
+
+    def supported_tasks(self) -> tuple[str, ...]:
+        runner_type = getattr(self.vllm_config.model_config, "runner_type", "generate")
+        return ("embed",) if runner_type == "pooling" else ("generate",)
+
+
 def _completed_future(value: Any) -> Future:
     future: Future = Future()
     future.set_result(value)
     return future
+
+
+class _SimStepRuntime:
+    """Shared step-record lifecycle with one central virtual clock.
+
+    The executor supplies its accepted roofline fallback. The worker skeleton
+    supplies zero, since its copied model computation is deliberately empty.
+    A sink remains authoritative when it returns a ``StepResult``.
+    """
+
+    def __init__(
+        self,
+        *,
+        config: SimExecutorConfig,
+        step_sink: StepSink | None,
+        fallback_latency: Callable[[TranslatedStep], int],
+        clock: VirtualClock | None = None,
+        is_authority: bool = True,
+    ) -> None:
+        self.config = config
+        self.step_sink = step_sink if is_authority else None
+        self.fallback_latency = fallback_latency
+        self.clock = VirtualClock() if clock is None else clock
+        self.is_authority = is_authority
+        self.translator = StepTranslator()
+        self.step_index = 0
+        self.step_records: list[StepRecord] = []
+        self.step_results: list[StepResult] = []
+        self.record_stream = (
+            StepRecordStream(config.step_records_path)
+            if is_authority and config.step_records_path
+            else None
+        )
+
+    def translate(self, scheduler_output: Any) -> TranslatedStep:
+        translated = translate_scheduler_output(
+            self.translator,
+            scheduler_output,
+            step_index=self.step_index,
+            virtual_time_ps=self.clock.now_ps,
+        )
+        self.step_index += 1
+        return translated
+
+    def settle(self, translated: TranslatedStep) -> StepResult:
+        """Apply the accepted sink, fallback, append, advance, pace order."""
+        record = translated.record
+        result = self.step_sink(record) if self.step_sink is not None else None
+        if result is None:
+            latency_ps = self.fallback_latency(translated)
+            result = StepResult(
+                step_index=record.step_index,
+                step_latency_ps=latency_ps,
+                completed_at_ps=self.clock.now_ps + latency_ps,
+            )
+        if self.is_authority:
+            self.step_records.append(record)
+            self.step_results.append(result)
+            if self.record_stream is not None:
+                self.record_stream.append(record)
+            self.clock.advance_to(max(result.completed_at_ps, self.clock.now_ps))
+            if self.config.mode == "paced" and result.step_latency_ps > 0:
+                time.sleep(result.step_latency_ps / PS_PER_SECOND)
+        return result
+
+    def drain(self, scheduler_output: Any) -> bool:
+        """Record an empty completion-bearing step with zero elapsed time."""
+        finished = getattr(scheduler_output, "finished_req_ids", ()) or ()
+        preempted = getattr(scheduler_output, "preempted_req_ids", None) or ()
+        if not (finished or preempted):
+            return False
+        translated = self.translate(scheduler_output)
+        record = translated.record
+        if self.step_sink is not None:
+            self.step_sink(record)
+        if self.is_authority:
+            self.step_records.append(record)
+            self.step_results.append(
+                StepResult(
+                    step_index=record.step_index,
+                    step_latency_ps=0,
+                    completed_at_ps=self.clock.now_ps,
+                )
+            )
+            if self.record_stream is not None:
+                self.record_stream.append(record)
+        return True
 
 
 class SimExecutor(_ExecutorBase):
@@ -751,16 +952,18 @@ class SimExecutor(_ExecutorBase):
             or HostInitiationModel(initiation_delay_ps=self.config.host_initiation_ps)
         )
         self.step_sink: StepSink | None = step_sink or _HOOKS.step_sink
-        #: every translated step, in order; the offline mode renders these
-        self.step_records: list[StepRecord] = []
-        self._record_stream = (
-            StepRecordStream(self.config.step_records_path)
-            if self.config.step_records_path
-            else None
+        self._runtime = _SimStepRuntime(
+            config=self.config,
+            step_sink=self.step_sink,
+            fallback_latency=self._estimate_latency,
         )
+        #: every translated step, in order; the offline mode renders these
+        self.step_records = self._runtime.step_records
         #: simulated outcome per recorded step, parallel to step_records
-        self.step_results: list[StepResult] = []
-        self.clock = VirtualClock()
+        self.step_results = self._runtime.step_results
+        self.clock = self._runtime.clock
+        self.translator = self._runtime.translator
+        self._record_stream = self._runtime.record_stream
         super().__init__(vllm_config)
         _LATEST[:] = [self]
 
@@ -783,8 +986,14 @@ class SimExecutor(_ExecutorBase):
             getattr(parallel_config, "world_size", 0) or self.tp_size * self.pp_size
         )
         self.dims = model_dims_from_vllm_config(self.vllm_config)
-        self.translator = StepTranslator()
         self.step_index = 0
+        self._model_answers = _ModelAnswers(
+            vllm_config=self.vllm_config,
+            dims=self.dims,
+            config=self.config,
+            tp_size=self.tp_size,
+            pp_size=self.pp_size,
+        )
         self.token_id = self._resolve_token_id()
         self.unhandled_rpcs: dict[str, int] = {}
         # Simulated workers all live on one nominal node, so the local index
@@ -812,6 +1021,24 @@ class SimExecutor(_ExecutorBase):
             self.config.mode,
             self.gpu.name,
             PINNED_VLLM_VERSION,
+        )
+
+    @property
+    def step_index(self) -> int:
+        return self._runtime.step_index
+
+    @step_index.setter
+    def step_index(self, value: int) -> None:
+        self._runtime.step_index = int(value)
+
+    def _estimate_latency(self, translated: TranslatedStep) -> int:
+        return estimate_step_latency_ps(
+            self.dims,
+            translated.record,
+            translated.num_sampled,
+            self.compute_provider,
+            self.gpu,
+            self.host_model,
         )
 
     @classmethod
@@ -846,7 +1073,6 @@ class SimExecutor(_ExecutorBase):
             "profile": self._rpc_profile,
             "reset_mm_cache": self._rpc_none,
             "reset_encoder_cache": self._rpc_none,
-            "reset_prefix_cache": self._rpc_none,
             "save_sharded_state": self._rpc_none,
             "sleep": self._rpc_none,
             "wake_up": self._rpc_none,
@@ -902,33 +1128,10 @@ class SimExecutor(_ExecutorBase):
 
     def _pp_layer_range(self, rank: int) -> tuple[int, int]:
         """Layers owned by ``rank``, using vLLM's own uneven PP partitioning."""
-        total = int(_safe(self.model_config.get_total_num_hidden_layers, self.dims.num_layers))
-        pp_rank = (rank // max(self.tp_size, 1)) % max(self.pp_size, 1)
-
-        def _indices() -> tuple[int, int]:
-            from vllm.distributed.utils import get_pp_indices
-
-            return get_pp_indices(total, pp_rank, self.pp_size)
-
-        even = total // max(self.pp_size, 1)
-        fallback = (pp_rank * even, total if pp_rank == self.pp_size - 1 else (pp_rank + 1) * even)
-        return _safe(_indices, fallback)
+        return self._model_answers.pp_layer_range(rank)
 
     def _kv_cache_dtype(self) -> Any:
-        import torch
-
-        cache_dtype = getattr(self.cache_config, "cache_dtype", "auto")
-        quantized = {
-            "fp8": "float8_e4m3fn",
-            "fp8_e4m3": "float8_e4m3fn",
-            "fp8_e5m2": "float8_e5m2",
-        }.get(str(cache_dtype))
-        if quantized is not None:
-            resolved = getattr(torch, quantized, None)
-            if resolved is not None:
-                return resolved
-        model_dtype = getattr(self.model_config, "dtype", None)
-        return model_dtype if isinstance(model_dtype, torch.dtype) else torch.bfloat16
+        return self._model_answers.kv_cache_dtype()
 
     def _rpc_get_kv_cache_spec(self, rank: int) -> dict[str, Any]:
         """One full-attention spec per layer this rank owns.
@@ -937,20 +1140,10 @@ class SimExecutor(_ExecutorBase):
         ``get_kv_cache_configs`` merges the workers' specs by name and then
         projects the groups back onto each worker.
         """
-        from vllm.v1.kv_cache_interface import FullAttentionSpec
-
-        block_size = int(getattr(self.cache_config, "block_size", None) or 16)
-        spec = FullAttentionSpec(
-            block_size=block_size,
-            num_kv_heads=self.dims.num_kv_heads,
-            head_size=self.dims.head_size,
-            dtype=self._kv_cache_dtype(),
-        )
-        start, end = self._pp_layer_range(rank)
-        return {f"model.layers.{layer}.self_attn.attn": spec for layer in range(start, end)}
+        return self._model_answers.get_kv_cache_spec(rank)
 
     def _rpc_determine_available_memory(self, rank: int) -> int:
-        return self.config.kv_memory_bytes
+        return self._model_answers.determine_available_memory()
 
     def _rpc_update_max_model_len(self, rank: int, max_model_len: int) -> None:
         """Auto-fit shrank the context; nothing to resize on a fake worker."""
@@ -975,17 +1168,10 @@ class SimExecutor(_ExecutorBase):
         (``max()`` on an empty sequence) would crash it. If the import moves,
         a duck-typed stand-in with the same two fields serves the reduction.
         """
-        try:
-            from vllm.v1.worker.worker_base import CompilationTimes
-        except ImportError:
-            CompilationTimes = _CompilationTimesFallback
-        return [
-            CompilationTimes(language_model=0.0, encoder=0.0) for _ in range(self.world_size)
-        ]
+        return [self._model_answers.compilation_times() for _ in range(self.world_size)]
 
     def _rpc_get_supported_tasks(self, rank: int) -> tuple[str, ...]:
-        runner_type = getattr(self.model_config, "runner_type", "generate")
-        return ("embed",) if runner_type == "pooling" else ("generate",)
+        return self._model_answers.supported_tasks()
 
     def _rpc_profile(self, rank: int, is_start: bool = True, profile_prefix: str | None = None):
         if rank == 0:
@@ -1049,14 +1235,10 @@ class SimExecutor(_ExecutorBase):
 
     def _resolve_token_id(self) -> int:
         """Fabricated token id: mid-vocabulary, never a stop token."""
-        vocab_size = max(self.dims.vocab_size, 2)
-        if self.config.token_id is not None:
-            return max(0, min(self.config.token_id, vocab_size - 1))
-        return vocab_size // 2
+        return _resolve_token_id(self.dims.vocab_size, self.config.token_id)
 
     def _run_step(self, scheduler_output: Any) -> Any:
-        structured = getattr(scheduler_output, "structured_output_request_ids", None)
-        if structured:
+        if getattr(scheduler_output, "has_structured_output_requests", False):
             raise RuntimeError(
                 "SimExecutor does not support structured output: the grammar "
                 "would reject the fabricated token id, so every such request "
@@ -1066,13 +1248,7 @@ class SimExecutor(_ExecutorBase):
         if not (getattr(scheduler_output, "num_scheduled_tokens", None) or {}):
             return self._drain_step(scheduler_output)
 
-        translated = translate_scheduler_output(
-            self.translator,
-            scheduler_output,
-            step_index=self.step_index,
-            virtual_time_ps=self.clock.now_ps,
-        )
-        self.step_index += 1
+        translated = self._runtime.translate(scheduler_output)
         self._settle(translated)
 
         from vllm.v1.outputs import ModelRunnerOutput
@@ -1103,65 +1279,23 @@ class SimExecutor(_ExecutorBase):
         record consumer infers completion from a request's last scheduled
         record.
         """
-        finished = getattr(scheduler_output, "finished_req_ids", ()) or ()
-        preempted = getattr(scheduler_output, "preempted_req_ids", None) or ()
-        if finished or preempted:
-            translated = translate_scheduler_output(
-                self.translator,
-                scheduler_output,
-                step_index=self.step_index,
-                virtual_time_ps=self.clock.now_ps,
-            )
-            self.step_index += 1
-            record = translated.record
-            if self.step_sink is not None:
-                self.step_sink(record)
-            self.step_records.append(record)
-            self.step_results.append(
-                StepResult(
-                    step_index=record.step_index,
-                    step_latency_ps=0,
-                    completed_at_ps=self.clock.now_ps,
-                )
-            )
-            self._append_step_record(record)
+        self._runtime.drain(scheduler_output)
         self._pending_output = self._empty_output()
         return self._pending_output
 
     def _settle(self, translated: TranslatedStep) -> StepResult:
         """Record the step, ask the sink or the provider for its duration."""
-        record = translated.record
-        result = self.step_sink(record) if self.step_sink is not None else None
-        if result is None:
-            latency_ps = estimate_step_latency_ps(
-                self.dims,
-                record,
-                translated.num_sampled,
-                self.compute_provider,
-                self.gpu,
-                self.host_model,
-            )
-            result = StepResult(
-                step_index=record.step_index,
-                step_latency_ps=latency_ps,
-                completed_at_ps=self.clock.now_ps + latency_ps,
-            )
-        self.step_records.append(record)
-        self.step_results.append(result)
-        self._append_step_record(record)
-        self.clock.advance_to(max(result.completed_at_ps, self.clock.now_ps))
-        if self.config.mode == "paced" and result.step_latency_ps > 0:
-            time.sleep(result.step_latency_ps / PS_PER_SECOND)
-        return result
+        return self._runtime.settle(translated)
 
     # Export
 
     def _append_step_record(self, record: StepRecord) -> None:
-        """Append one record to the configured JSONL path as it happens.
+        """Compatibility helper for appending one record immediately.
 
         vLLM does not reliably route in-process engine teardown through the
         shutdown RPC (observed on v0.26.0), so the dump must never depend on
-        a teardown callback: each step is durable the moment it completes.
+        a teardown callback. The shared runtime calls the same stream writer
+        directly so each step is durable the moment it completes.
         """
         if self._record_stream is not None:
             self._record_stream.append(record)
@@ -1178,9 +1312,8 @@ class SimExecutor(_ExecutorBase):
         """Rewrite the full accumulated record set, for a caller-chosen path.
 
         The configured ``SIMLLM_VLLM_STEP_RECORDS`` path is already written
-        incrementally by :meth:`_append_step_record` (the sole producer for
-        it); this helper exports the same records to a different location
-        from in-process drivers.
+        incrementally by the shared step runtime; this helper exports the same
+        records to a different location from in-process drivers.
         """
         target = path or self.config.step_records_path
         if not target or not self.step_records:
