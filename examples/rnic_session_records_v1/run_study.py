@@ -15,6 +15,7 @@ DEFAULT_OUT = Path(
 )
 RESULTS = Path(__file__).with_name("results.json")
 HTSIM_COMMIT = "8c3f8b231a6a9311ffc1e7969a003dcba724b50d"
+SIMLLM_BASE_COMMIT = "6aa3a76"
 POLICIES = ("rnic-nn", "rnic-cn", "dcqcn")
 SQ_DEPTHS = (32, 64)
 DOORBELL_SERVICES_PS = (0, 1000)
@@ -42,8 +43,17 @@ def _validate_registry(out: Path) -> None:
         out.resolve().relative_to(data_root)
     except ValueError as error:
         raise ValueError("study output must remain under /data3/yifeng") from error
-    if HTSIM_COMMIT != "8c3f8b231a6a9311ffc1e7969a003dcba724b50d":
-        raise AssertionError("pinned HTSim source audit drifted")
+    pinned_htsim = subprocess.run(
+        ["git", "rev-parse", f"{SIMLLM_BASE_COMMIT}:third_party/htsim"],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if pinned_htsim != HTSIM_COMMIT:
+        raise AssertionError(
+            f"pinned HTSim source audit drifted: expected {HTSIM_COMMIT}, got {pinned_htsim}"
+        )
     for relative in (
         "simllm/backends/rnic/include/simllm/rnic/rnic_device.h",
         "simllm/backends/rnic/include/simllm/rnic/work_queue.h",

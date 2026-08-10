@@ -498,6 +498,10 @@ const RnicDeviceStageReport& RnicDevice::stageReport() const noexcept {
     return stage_report_;
 }
 
+bool RnicDevice::usesSharedPcieFabric() const noexcept {
+    return claimed_ordering_domains_;
+}
+
 std::optional<WorkQueuePcieBinding> RnicDevice::pcieBinding() const {
     return work_queue_->pcieBinding();
 }

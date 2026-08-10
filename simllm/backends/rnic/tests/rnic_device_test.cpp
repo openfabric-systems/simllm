@@ -17,6 +17,8 @@
 #include "fake_network.h"
 #include "simllm/rnic/rnic_device.h"
 
+int runRnicSessionRecordChecks();
+
 namespace {
 
 using simllm::rnic::CompletionEntry;
@@ -1411,6 +1413,11 @@ int main(int argc, char** argv) {
     testFailedSharedConstructionReleasesClaim(test);
     testComposedPcieOperationAtomicity(test);
     testInertDeliveryFailureRetainsEvent(test);
+    const int session_record_failures =
+        runRnicSessionRecordChecks();
+    test.check(
+        session_record_failures == 0,
+        "embedded RNIC session-record checks pass");
     if (test.failures() != 0) {
         std::cerr << test.failures() << " RNIC device check(s) failed\n";
         return 1;
