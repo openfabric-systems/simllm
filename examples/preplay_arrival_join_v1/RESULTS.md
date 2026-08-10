@@ -1,9 +1,9 @@
 # Pre-play arrival join v1 results
 
 All frozen PLAY-2 checks passed. The expectations-only commit
-`c4c17cfb3cf8adba0fcade21a9e51662755a4b5b` preceded implementation and the
+`c4c17cff81e550053e090af430e3041e9efde057` preceded implementation and the
 first study run. The implementation and study harness landed as
-`017a721fd67c24a4090aa6871a16c078e0575172`. The scored run was executed only
+`017a7219a22b24f56d44bbfac60df8b35a25be5e`. The scored run was executed only
 after that implementation commit.
 
 ## Run configuration

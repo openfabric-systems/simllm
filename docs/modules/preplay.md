@@ -87,7 +87,7 @@ defined by PLAY-2 and PLAY-4).
 
 ## Status
 
-PLAY-1 and PLAY-2 are implemented. `simllm.preplay` provides the strict
+PLAY-1, PLAY-2 and PLAY-3 are implemented. `simllm.preplay` provides the strict
 `simllm-preplay-trace-v1` schema, a request-streaming writer, a strict reader
 and a pinned Transformers CPU runner with greedy and seeded sampling. The
 runner records EOS, length-cap and stop-string termination plus every
@@ -103,24 +103,25 @@ bookkeeping. Its one-request and two-request study passed exact field
 projection, a 7,000 ps arrival shift, trace-hash authority, cardinality scaling
 and rollback gates; the evidence is recorded in
 [the PLAY-2 results](../../examples/preplay_arrival_join_v1/RESULTS.md).
-Framework replay and traffic projection remain open under PLAY-3 and PLAY-4.
-The independent framework CPU runner is optional follow-up PLAY-6.
+
+The vLLM replay adapter consumes that joined run in both `SimExecutor` and the
+flagged skeleton worker. It validates the named trace bytes, binds vLLM's
+version-pinned internal request identity to exactly one joined request, serves
+tokens by scheduler-reported output index and requires the scheduler admission
+limit to equal the oracle length. Its two-parameter study changed TTFT and TPOT
+by the frozen exact relations, its live Granite smoke returned token ID 38 and
+its absent-replay path reproduced all four accepted VLLM-13 JSONL hashes. The
+chronology and evidence are recorded in
+[the PLAY-3 results](../../examples/preplay_adapter_replay_v1/RESULTS.md).
+
+Traffic projection remains open under PLAY-4. The independent framework CPU
+runner is optional follow-up PLAY-6, and SGLang replay is the explicit PLAY-7
+follow-up.
 
 ## Open tasks
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
 
-- PLAY-3 (Completeness; P1; M): replay predefined outputs through the
-  adapters. `SimExecutor`, the skeleton coupling mode and
-  `SimTpModelWorker` serve the trace's token ids instead of the fabricated
-  mid-vocabulary token and stop each request at the oracle's stop
-  position, so scheduler-visible completion, batch composition and
-  prefix-cache content match the real model's behavior. The
-  fabricated-token baseline is the preserved off path: without a joined
-  trace, behavior stays byte-identical to today's accepted runs. With a
-  joined trace, plain generation no longer depends on a fabricated id; the
-  speculative-decoding and structured-output refusals (VLLM-8) stay in
-  place until their semantics are modeled explicitly.
 - PLAY-4 (Completeness; P1; M): supply captured routing to the traffic
   half. Define the versioned per-token expert-assignment projection of the
   trace and join it per request, in the form TRAF-2's expansion consumes.
