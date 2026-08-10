@@ -106,6 +106,10 @@ any reusable prefix). The overlap path is out of scope for the first
 iteration: run with `--disable-overlap-schedule` (nothing forces overlap
 on, and PP asserts it off anyway).
 
+Joined pre-play token replay is not implemented in this adapter. It remains
+the explicit PLAY-7 follow-up in [preplay.md](preplay.md#open-tasks), including
+the fabricated-token identity off path and a real in-process smoke.
+
 The recorded smoke JSONL is exercised against the closed-loop sink as of
 the M4 first slice: all 9 records load through
 `simllm.core.step_records_from_jsonl` and replay through
