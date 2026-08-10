@@ -74,6 +74,11 @@ EXPECTED_CALL_LINES = {
     "tp_worker_forward": 537,
 }
 
+EXPECTED_OUTPUT_LIST_CALL_LINES = {
+    "dp_attention": 994,
+    "mamba_mixer": 94,
+}
+
 EXPECTED_LIVE_COORDINATOR = (
     ("all_reduce", "tp", 4_096),
     ("all_reduce", "tp", 4_096),
@@ -139,15 +144,27 @@ def _method_surface(source: Path) -> dict[str, dict[str, object]]:
 
 
 def _top_level_function_line(source: Path, name: str) -> int:
+    return _top_level_function_node(source, name).lineno
+
+
+def _top_level_function_node(
+    source: Path, name: str
+) -> ast.FunctionDef | ast.AsyncFunctionDef:
     tree = ast.parse(source.read_text())
     return next(
-        node.lineno
+        node
         for node in tree.body
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name
     )
 
 
 def _class_method_line(source: Path, class_name: str, method_name: str) -> int:
+    return _class_method_node(source, class_name, method_name).lineno
+
+
+def _class_method_node(
+    source: Path, class_name: str, method_name: str
+) -> ast.FunctionDef | ast.AsyncFunctionDef:
     tree = ast.parse(source.read_text())
     owner = next(
         node
@@ -155,11 +172,41 @@ def _class_method_line(source: Path, class_name: str, method_name: str) -> int:
         if isinstance(node, ast.ClassDef) and node.name == class_name
     )
     return next(
-        node.lineno
+        node
         for node in owner.body
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         and node.name == method_name
     )
+
+
+def _attribute_call_lines(
+    owner: ast.AST,
+    *,
+    receiver: str,
+    method: str,
+    has_keyword_unpack: bool | None = None,
+    keyword_unpack_name: str | None = None,
+) -> tuple[int, ...]:
+    lines = []
+    for node in ast.walk(owner):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != method or ast.unparse(node.func.value) != receiver:
+            continue
+        observed_keyword_unpack = any(keyword.arg is None for keyword in node.keywords)
+        if (
+            has_keyword_unpack is not None
+            and observed_keyword_unpack is not has_keyword_unpack
+        ):
+            continue
+        if keyword_unpack_name is not None and not any(
+            keyword.arg is None
+            and ast.unparse(keyword.value) == keyword_unpack_name
+            for keyword in node.keywords
+        ):
+            continue
+        lines.append(node.lineno)
+    return tuple(sorted(lines))
 
 
 def check_expectation_registry(source_root: Path, model: Path) -> None:
@@ -176,16 +223,38 @@ def check_expectation_registry(source_root: Path, model: Path) -> None:
     parallel_state = package_root / "distributed" / "parallel_state.py"
     assert _method_surface(parallel_state) == EXPECTED_METHODS
 
+    model_runner = package_root / "model_executor" / "model_runner.py"
+    model_runner_all_gather_lines = _attribute_call_lines(
+        _class_method_node(
+            model_runner,
+            "ModelRunner",
+            "_prepare_replicated_q_proj",
+        ),
+        receiver="dcp_group",
+        method="all_gather",
+    )
+    assert len(model_runner_all_gather_lines) == 2
+
+    scheduler = package_root / "managers" / "scheduler.py"
+    scheduler_forward_lines = _attribute_call_lines(
+        _class_method_node(scheduler, "Scheduler", "run_batch"),
+        receiver="self.model_worker",
+        method="forward_batch_generation",
+        has_keyword_unpack=True,
+        keyword_unpack_name="kwargs",
+    )
+    assert len(scheduler_forward_lines) == 1
+
     observed_call_lines = {
         "communication_op_all_reduce": _top_level_function_line(
             package_root / "distributed" / "communication_op.py",
             "tensor_model_parallel_all_reduce",
         ),
-        "model_runner_all_gather": 913,
+        "model_runner_all_gather": model_runner_all_gather_lines[0],
         "row_parallel_forward": _class_method_line(
             package_root / "layers" / "linear.py", "RowParallelLinear", "forward"
         ),
-        "scheduler_forward": 3633,
+        "scheduler_forward": scheduler_forward_lines[0],
         "tp_worker_forward": _class_method_line(
             package_root / "managers" / "tp_worker.py",
             "TpModelWorker",
@@ -193,6 +262,33 @@ def check_expectation_registry(source_root: Path, model: Path) -> None:
         ),
     }
     assert observed_call_lines == EXPECTED_CALL_LINES
+
+    output_list_call_lines = {
+        "dp_attention": _attribute_call_lines(
+            _top_level_function_node(
+                package_root / "layers" / "dp_attention.py",
+                "attn_tp_all_gather",
+            ),
+            receiver="get_attn_tp_group()",
+            method="all_gather",
+        ),
+        "mamba_mixer": _attribute_call_lines(
+            _class_method_node(
+                package_root
+                / "layers"
+                / "attention"
+                / "mamba"
+                / "mixer2_rms_norm_gated.py",
+                "Mixer2RMSNormGated",
+                "forward_native",
+            ),
+            receiver="get_parallel().attn_tp_group",
+            method="all_gather",
+        ),
+    }
+    assert {
+        name: lines[0] for name, lines in output_list_call_lines.items() if len(lines) == 1
+    } == EXPECTED_OUTPUT_LIST_CALL_LINES
     assert len(EXPECTED_LIVE_COORDINATOR) == 2
     assert EXPECTED_LIVE_OPERATION_IDS == (
         "tp:all_reduce:0",
@@ -226,18 +322,18 @@ def _run_case(model: Path, case_dir: Path, *, enabled: bool) -> dict[str, object
         "SGLANG_USE_CPU_ENGINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
     }
+    communicator_environment = {
+        "SIMLLM_SGLANG_COMMUNICATOR_EVENTS": str(events_path),
+        "SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE": "4",
+    }
+    mutated_names = set(environment) | set(communicator_environment)
+    previous = {name: os.environ.get(name) for name in mutated_names}
     if enabled:
-        environment.update(
-            {
-                "SIMLLM_SGLANG_COMMUNICATOR_EVENTS": str(events_path),
-                "SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE": "4",
-            }
-        )
+        environment.update(communicator_environment)
     else:
-        os.environ.pop("SIMLLM_SGLANG_COMMUNICATOR_EVENTS", None)
-        os.environ.pop("SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE", None)
+        for name in communicator_environment:
+            os.environ.pop(name, None)
 
-    previous = {name: os.environ.get(name) for name in environment}
     os.environ.update(environment)
     engine = None
     try:
@@ -344,6 +440,62 @@ def _run_child_case(
     print(f"CASE_COORDINATOR_EVENTS={len(evidence['coordinator_projection'])}")
 
 
+def _run_sglang_output_list_probe() -> dict[str, object]:
+    """Call the pinned SGLang helper that supplies ``output_tensor_list``."""
+
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+    from sglang.srt.layers import dp_attention
+
+    from simllm.adapters.sglang import FLOAT32, ShapeTensor, SimGroupCoordinator
+    from simllm.compute import NcclStackConfig
+    from simllm.core import VirtualClock
+
+    clock = VirtualClock(start_ps=321_000)
+    group = SimGroupCoordinator(
+        group_name="attn_tp",
+        ranks=(0, 1),
+        rank=0,
+        local_rank=0,
+        clock=clock,
+        stack_config=NcclStackConfig(
+            channel_count=1,
+            chunk_bytes=4,
+            fifo_slots_per_channel=2,
+        ),
+    )
+    input_ = ShapeTensor((4, 8), dtype=FLOAT32, element_size_bytes=4)
+    output_list = [input_.new_empty(input_.shape) for _ in group.ranks]
+    original_get_group = dp_attention.get_attn_tp_group
+    dp_attention.get_attn_tp_group = lambda: group
+    try:
+        result = dp_attention.attn_tp_all_gather(output_list, input_)
+    finally:
+        dp_attention.get_attn_tp_group = original_get_group
+
+    assert result is None
+    assert [output.shape for output in output_list] == [(4, 8), (4, 8)]
+    assert len(group.events) == 1
+    event = group.events[0]
+    assert (event.operation, event.group, event.payload_bytes) == (
+        "all_gather",
+        "attn_tp",
+        128,
+    )
+    assert event.timestamp_ps == clock.now_ps == 321_000
+    return {
+        "caller": "sglang.srt.layers.dp_attention.attn_tp_all_gather",
+        "source_line": EXPECTED_OUTPUT_LIST_CALL_LINES["dp_attention"],
+        "output_shapes": [list(output.shape) for output in output_list],
+        "coordinator_projection": [
+            event.operation,
+            event.group,
+            event.payload_bytes,
+        ],
+        "result_is_none": result is None,
+        "probe": "PASS",
+    }
+
+
 def run_live_smoke(
     *,
     source_root: Path,
@@ -388,6 +540,8 @@ def run_live_smoke(
             )
         print(completed.stdout, end="")
 
+    output_list_probe = _run_sglang_output_list_probe()
+
     baseline_path = run_dir / "baseline" / "case_evidence.json"
     enabled_path = run_dir / "enabled" / "case_evidence.json"
     baseline = json.loads(baseline_path.read_text())
@@ -408,6 +562,7 @@ def run_live_smoke(
         "sglang_version": PINNED_SGLANG_VERSION,
         "baseline": baseline,
         "enabled": enabled,
+        "sglang_output_list_probe": output_list_probe,
         "step_records_byte_identical": byte_identical,
         "live_relation": "PASS",
     }
@@ -459,6 +614,7 @@ def main() -> None:
         )
     )
     print("SMOKE_FLAG_OFF_BYTE_IDENTITY=PASS")
+    print("SMOKE_SGLANG_OUTPUT_LIST_CALL=PASS")
     print("SMOKE_LIVE_RELATION=PASS")
 
 

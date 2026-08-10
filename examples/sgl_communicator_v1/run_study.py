@@ -121,6 +121,7 @@ def _shape_cell(group_size: int, extent: int) -> dict[str, object]:
         and tuple(event.sequence for event in group.events) == tuple(range(6))
         and {event.schema for event in group.events}
         == {"simllm-vllm-group-coordinator-event-v1"}
+        and all(event.payload_bytes == expected_payload for event in group.events)
         and all(event.timestamp_ps == CLOCK_START_PS for event in group.events)
         and all(event.stack_events for event in group.events)
         and group.clock.now_ps == CLOCK_START_PS

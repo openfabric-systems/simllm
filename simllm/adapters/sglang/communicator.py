@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, List, Optional
+from threading import Lock
+from typing import TYPE_CHECKING, Any, ClassVar, List, Optional
 
 from simllm.adapters.vllm.communicator import (
     FLOAT32,
@@ -29,7 +30,6 @@ from simllm.adapters.vllm.communicator import (
     GroupCoordinatorObserver,
     ShapeDType,
     ShapeTensor,
-    _payload_bytes,
     _shape,
 )
 from simllm.adapters.vllm.communicator import (
@@ -76,7 +76,9 @@ class SimGroupCoordinator(_SharedSimGroupCoordinator):
                     f"output_tensor_list[{index}] shape {output_shape} "
                     f"does not match input shape {input_shape}"
                 )
-        self._observe("all_gather", _payload_bytes(input_))
+        # The pinned output-list branch ignores ``dim``. Delegate with the
+        # base default so payload validation and observation have one owner.
+        super().all_gather(input_)
         return None
 
     def broadcast(self, input_: torch.Tensor, src: int = 0):
@@ -132,7 +134,16 @@ def coordinator_event_to_json(event: GroupCoordinatorEvent) -> dict[str, Any]:
 
 
 class GroupCoordinatorEventStream:
-    """Append coordinator events durably from SGLang's scheduler subprocess."""
+    """Append coordinator events durably from SGLang's scheduler subprocess.
+
+    The first append creates the parent directory and truncates any existing
+    file before writing the first event. Only one stream instance may reach
+    first append for a resolved path in one process. A second instance raises
+    before truncation so it cannot silently clobber the first stream.
+    """
+
+    _opened_paths: ClassVar[set[Path]] = set()
+    _opened_paths_lock: ClassVar[Lock] = Lock()
 
     def __init__(self, path: str | Path) -> None:
         self._path = Path(path)
@@ -144,6 +155,14 @@ class GroupCoordinatorEventStream:
 
     def append(self, event: GroupCoordinatorEvent) -> None:
         if not self._started:
+            resolved_path = self._path.resolve()
+            with self._opened_paths_lock:
+                if resolved_path in self._opened_paths:
+                    raise RuntimeError(
+                        "a GroupCoordinatorEventStream already opened "
+                        f"{self._path} in this process"
+                    )
+                self._opened_paths.add(resolved_path)
             self._path.parent.mkdir(parents=True, exist_ok=True)
             self._path.write_text("")
             self._started = True

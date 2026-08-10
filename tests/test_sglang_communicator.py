@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
+from pathlib import Path
 
 import pytest
 
@@ -11,10 +12,19 @@ from simllm.adapters.sglang import (
     ShapeTensor,
     SimGroupCoordinator,
 )
-from simllm.adapters.sglang.worker import SimModelRunnerStub
+from simllm.adapters.sglang.worker import (
+    BatchRow,
+    SglStepTranslator,
+    SimModelRunnerStub,
+    SimWorkerConfig,
+)
 from simllm.adapters.vllm import SimGroupCoordinator as VllmSimGroupCoordinator
 from simllm.compute import NcclStackConfig
-from simllm.core import CollectiveWork, VirtualClock
+from simllm.core import CollectiveWork, StepRecordStream, VirtualClock
+
+FROZEN_FLAG_IDENTITY_FIXTURE = (
+    Path(__file__).parent / "fixtures" / "sglang" / "communicator_flag_identity.jsonl"
+)
 
 
 def make_group(
@@ -28,7 +38,7 @@ def make_group(
         ranks=tuple(range(size)),
         rank=0,
         local_rank=0,
-        clock=clock or VirtualClock(start_ps=123_000),
+        clock=clock if clock is not None else VirtualClock(start_ps=123_000),
         stack_config=NcclStackConfig(
             channel_count=1,
             chunk_bytes=chunk_bytes,
@@ -204,7 +214,9 @@ def test_matching_vllm_and_sglang_calls_have_identical_shared_events():
 def test_stub_runner_emits_and_streams_the_bound_tp_event(tmp_path):
     clock = VirtualClock(start_ps=123_000)
     group = make_group(4, clock=clock, chunk_bytes=1_024)
-    stream = GroupCoordinatorEventStream(tmp_path / "events.jsonl")
+    event_path = tmp_path / "events.jsonl"
+    event_path.write_text("stale event that first append must remove\n")
+    stream = GroupCoordinatorEventStream(event_path)
     runner = object.__new__(SimModelRunnerStub)
     runner.bind_simulated_tp_group(group, event_stream=stream)
 
@@ -228,9 +240,80 @@ def test_stub_runner_emits_and_streams_the_bound_tp_event(tmp_path):
     }
     assert len(rows[0]["stack_events"]) == 14
 
+    first_stream_bytes = stream.path.read_bytes()
+    second_stream = GroupCoordinatorEventStream(stream.path)
+    with pytest.raises(RuntimeError, match="already opened"):
+        second_stream.append(event)
+    assert stream.path.read_bytes() == first_stream_bytes
+
 
 def test_stub_runner_without_a_bound_group_is_the_identity_bypass():
     runner = object.__new__(SimModelRunnerStub)
 
     assert runner.observe_tp_step() is None
     assert runner.coordinator_events == ()
+
+
+def _stream_frozen_steps(path: Path, *, env: dict[str, str]):
+    clock = VirtualClock(start_ps=123_000)
+    runner = object.__new__(SimModelRunnerStub)
+    config = SimWorkerConfig.from_env(env)
+    if config.communicator_tp_size is not None:
+        runner.bind_simulated_tp_group(
+            make_group(
+                config.communicator_tp_size,
+                clock=clock,
+                chunk_bytes=1_024,
+            )
+        )
+    translator = SglStepTranslator()
+    stream = StepRecordStream(path)
+    rows_by_step = (
+        [
+            BatchRow(
+                rid="sgl11-byte",
+                is_decode=False,
+                num_new_tokens=4,
+                context_length=6,
+                cached_tokens=2,
+            )
+        ],
+        [
+            BatchRow(
+                rid="sgl11-byte",
+                is_decode=True,
+                num_new_tokens=1,
+                context_length=7,
+            )
+        ],
+    )
+    for step_index, rows in enumerate(rows_by_step):
+        record = translator.translate(
+            step_index=step_index,
+            virtual_time_ps=clock.now_ps,
+            rows=rows,
+        )
+        runner.observe_tp_step()
+        stream.append(record)
+        clock.advance_to(clock.now_ps + 1_000)
+    return stream.path.read_bytes(), runner.coordinator_events
+
+
+def test_flag_states_preserve_frozen_step_record_bytes(tmp_path):
+    expected = FROZEN_FLAG_IDENTITY_FIXTURE.read_bytes()
+
+    baseline_bytes, baseline_events = _stream_frozen_steps(
+        tmp_path / "flag_off.jsonl",
+        env={},
+    )
+    enabled_bytes, enabled_events = _stream_frozen_steps(
+        tmp_path / "flag_on.jsonl",
+        env={"SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE": "4"},
+    )
+
+    assert b"\r\n" not in expected
+    assert baseline_bytes == expected
+    assert enabled_bytes == expected
+    assert baseline_bytes == enabled_bytes
+    assert baseline_events == ()
+    assert [event.timestamp_ps for event in enabled_events] == [123_000, 124_000]
