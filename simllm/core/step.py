@@ -195,7 +195,7 @@ def write_step_records(records: Sequence[StepRecord], path: str | Path) -> Path:
     """Write one JSON object per step record, newline delimited."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as handle:
+    with open(path, "w", newline="\n") as handle:
         handle.writelines(json.dumps(entry) + "\n" for entry in step_records_to_json(records))
     return path
 
@@ -222,5 +222,5 @@ class StepRecordStream:
             self._path.parent.mkdir(parents=True, exist_ok=True)
             self._path.write_text("")
             self._started = True
-        with open(self._path, "a") as handle:
+        with open(self._path, "a", newline="\n") as handle:
             handle.write(json.dumps(step_record_to_json(record)) + "\n")

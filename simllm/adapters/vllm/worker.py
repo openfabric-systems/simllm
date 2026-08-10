@@ -49,12 +49,14 @@ from simllm.adapters.vllm.communicator import (
 )
 from simllm.adapters.vllm.executor import (
     _HOOKS,
+    SimExecutorConfig,
     _ModelAnswers,
     _resolve_token_id,
     _SimStepRuntime,
     fabricate_sampled_tokens,
     model_dims_from_vllm_config,
 )
+from simllm.adapters.vllm.replay import ReplayTokenSource, sample_adapter_tokens
 from simllm.compute.nccl_stack import NcclStackConfig
 from simllm.core import VirtualClock
 
@@ -292,6 +294,7 @@ class SimModelRunner:
         runtime: _SimStepRuntime,
         answers: _ModelAnswers,
         token_id: int,
+        replay: ReplayTokenSource | None,
         call_ledger: _CallLedger,
         tp_group: SimGroupCoordinator,
         dp_group: SimGroupCoordinator,
@@ -303,6 +306,7 @@ class SimModelRunner:
         self.runtime = runtime
         self.answers = answers
         self.token_id = token_id
+        self.replay = replay
         self.call_ledger = call_ledger
         self.tp_group = tp_group
         self.dp_group = dp_group
@@ -438,10 +442,20 @@ class SimModelRunner:
             if not (
                 getattr(updated_scheduler_output, "num_scheduled_tokens", None) or {}
             ):
+                if self.replay is not None:
+                    self.replay.validate_completions(updated_scheduler_output)
                 self.runtime.drain(updated_scheduler_output)
+                if self.replay is not None:
+                    self.replay.observe_completions(updated_scheduler_output)
                 return _model_runner_output([], {})
 
             translated = self.runtime.translate(updated_scheduler_output)
+            if self.replay is not None:
+                self.replay.validate_step(
+                    translated.req_ids,
+                    translated.produces_token,
+                    updated_scheduler_output,
+                )
             prepared = self._prepare_inputs(translated)
             padded = self._determine_batch_execution_and_padding(prepared)
             metadata = self._build_attention_metadata(padded)
@@ -454,12 +468,19 @@ class SimModelRunner:
             )
             return None
 
-    def _sample(self, translated: Any) -> tuple[list[str], dict[str, int], list[list[int]]]:
+    def _sample(
+        self,
+        translated: Any,
+        scheduler_output: Any,
+    ) -> tuple[list[str], dict[str, int], list[list[int]]]:
         with self.call_ledger.record("runner._sample"):
-            return fabricate_sampled_tokens(
+            return sample_adapter_tokens(
+                self.replay,
                 translated.req_ids,
                 translated.produces_token,
                 self.token_id,
+                scheduler_output,
+                fabricate=fabricate_sampled_tokens,
             )
 
     def _update_states_after_model_execute(self, sampled_token_ids: Any, scheduler_output: Any) -> None:
@@ -486,7 +507,7 @@ class SimModelRunner:
                     "execute/sample call order changed"
                 )
             self.execute_model_state = None
-            sampled = self._sample(state.translated)
+            sampled = self._sample(state.translated, state.scheduler_output)
             self._update_states_after_model_execute(
                 sampled[2],
                 state.scheduler_output,
@@ -547,6 +568,7 @@ class SimWorker(_GpuWorkerBase):
         is_driver_worker: bool = False,
         *,
         _simllm_clock: VirtualClock | None = None,
+        _simllm_config: SimExecutorConfig | None = None,
     ) -> None:
         _require_skeleton_mode()
         if bool(getattr(vllm_config, "use_v2_model_runner", False)):
@@ -588,7 +610,11 @@ class SimWorker(_GpuWorkerBase):
         dp_size = int(getattr(parallel_config, "data_parallel_size", 1) or 1)
         if pp_size != 1:
             raise RuntimeError("SimWorker skeleton requires pipeline_parallel_size=1 (VLLM-10).")
-        self.sim_config = _HOOKS.config or self._config_from_env()
+        self.sim_config = (
+            _simllm_config
+            if _simllm_config is not None
+            else (_HOOKS.config or self._config_from_env())
+        )
         self.dims = model_dims_from_vllm_config(vllm_config)
         tp_size = int(getattr(parallel_config, "tensor_parallel_size", 1) or 1)
         worker_world_size = int(
@@ -604,6 +630,14 @@ class SimWorker(_GpuWorkerBase):
             pp_size=pp_size,
         )
         self.token_id = _resolve_token_id(self.dims.vocab_size, self.sim_config.token_id)
+        self.replay = (
+            ReplayTokenSource.from_path(
+                self.sim_config.replay_run_path,
+                max_model_len=int(self.model_config.max_model_len),
+            )
+            if self.sim_config.replay_run_path
+            else None
+        )
         # External-launch executors mark the local worker as a driver in every
         # process. Global rank zero is the only safe clock, sink, and stream
         # authority across those processes.
@@ -693,6 +727,7 @@ class SimWorker(_GpuWorkerBase):
                 self._runtime,
                 self._answers,
                 self.token_id,
+                self.replay,
                 self._call_ledger,
                 self.tp_group,
                 self.dp_group,
@@ -713,6 +748,8 @@ class SimWorker(_GpuWorkerBase):
 
     def update_max_model_len(self, max_model_len: int) -> None:
         with self._call_ledger.record("worker.update_max_model_len"):
+            if self.replay is not None:
+                self.replay.update_max_model_len(max_model_len)
             self.model_config.max_model_len = max_model_len
             self._runner().update_max_model_len(max_model_len)
 
