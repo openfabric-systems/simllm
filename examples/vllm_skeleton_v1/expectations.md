@@ -1,10 +1,14 @@
 # vLLM worker skeleton v1 expectations
 
-This expectations-only specification precedes the VLLM-13 worker skeleton
-implementation and every study run. The results report will cite the frozen
-commit. The study targets the pinned vLLM v0.26.0 source and the first,
-GPU-less slice only. It makes no claim about the later GPU-present rebound
-runner, data-parallel coordination, simulated communicators, or CQ consumers.
+The original expectations in this specification were frozen in commit
+`582d3de` before the VLLM-13 worker skeleton implementation and every initial
+study run. The review-triggered amendment at the end is intentionally later:
+it follows integration review but precedes the fix-round implementation and
+every fix-round run. It is not a retroactive pre-registration claim for the
+initial implementation. The study targets the pinned vLLM v0.26.0 source and
+the first, GPU-less slice only. It makes no claim about the later GPU-present
+rebound runner, data-parallel coordination, simulated communicators, or CQ
+consumers.
 
 ## Source-frozen boundary
 
@@ -158,3 +162,71 @@ timestamps, unique request ids, and record/result count equality are fatal
 unscored invariants. They can fail the study but never increase its behavioral
 pass count. Unit-test counts and the live vLLM smoke outcome are separate
 evidence classes and are not added to the four-row headline.
+
+## Review-triggered fix-round amendment
+
+This amendment freezes the expectations raised by integration review before
+their implementation or any fix-round execution.
+
+### Independent call-sequence oracle
+
+The deterministic study harness must define the eight initialization names
+and fourteen non-empty step names above as literal tuples in the harness. It
+must not import either sequence constant from `simllm.adapters.vllm.worker`.
+The recorded implementation calls are compared against those independent
+literals in every sweep cell. The implementation may retain exported
+constants for consumers, but they are not study oracles.
+
+### Dual-environment worker construction
+
+The same SimWorker mirror tests must execute in both environments:
+
+- the repository `.venv`, where vLLM is absent and the transcribed worker
+  stand-in is active;
+- the pinned `venv-vllm`, where `SimWorker` subclasses the real v0.26.0
+  `Worker` and its real constructor runs.
+
+The fake configuration and fallback constructor must expose equivalent
+constructor-facing attributes. No mirror test may be skipped merely because
+vLLM is installed. Flag refusal, V1 selection, backend refusal, source-order
+initialization, non-empty and drain steps, central clock timestamps, record
+streaming, and rank-zero authority must keep the same asserted outcomes in
+both environments.
+
+### Structured-output refusal and worker surface
+
+Both simulation entry paths must reject a scheduler output whose
+`has_structured_output_requests` value is true before fabricating a token. The
+executor guard must not depend only on `structured_output_request_ids`, which
+is not the v0.26.0 scheduler-output signal. The refusal is a fatal VLLM-8
+correctness gate and remains unscored.
+
+The mirrored worker surface must contain only source-supported worker methods.
+`reset_prefix_cache` is scheduler-only in v0.26.0 and must not be exposed as a
+worker mirror without a pinned worker call site.
+
+### Strengthened live smoke
+
+Exactly one live in-process smoke is attempted in this fix round with the same
+cached Granite model, offline environment, dotted worker class, V1 selection,
+and multiprocessing disabled. A successful smoke must assert all of the
+following before it exits zero:
+
+- exactly one generated request with exactly two sampled token ids;
+- every sampled token id equals the constructed worker's configured
+  fabricated token id;
+- the reached worker owns a `SimModelRunner`, not a stock runner;
+- the configured step-record JSONL exists and contains exactly two objects;
+- both objects carry schema `atlahs-closed-loop-step-v1`.
+
+These live assertions are separate integration evidence. They do not change
+the four-row behavioral denominator.
+
+### Remaining GPU-invisible validation
+
+The owning registry must add the next stable task, VLLM-15
+`(Completeness; P1; M)`, for one equivalent in-process skeleton smoke on a
+host where CUDA platform selection is genuinely unavailable and no GPU is
+discoverable. Masking a host that still exposes a GPU does not close that
+task. The task must require the worker, runner, token, record-count, and schema
+assertions above.
