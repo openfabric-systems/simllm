@@ -53,10 +53,30 @@ class DurationEstimate:
 
 
 class ComputeProvider(abc.ABC):
-    """Maps a kernel (or fused region) to a simulated duration."""
+    """Maps a kernel (or fused region) to a simulated duration.
+
+    A provider may also expose an ordered layer breakdown for a fused step
+    through :meth:`estimate_layers`. The default returns ``None`` so existing
+    providers and their callers retain the scalar estimate exactly.
+    """
 
     @abc.abstractmethod
     def estimate(self, kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate: ...
+
+    def estimate_layers(
+        self,
+        kernel: KernelSpec,
+        gpu: GpuSpec,
+        num_layers: int,
+    ) -> tuple[DurationEstimate, ...] | None:
+        """Optional ordered layer durations for ``kernel``.
+
+        When present, the result must contain ``num_layers`` nonnegative
+        durations whose picosecond sum equals :meth:`estimate` exactly. A
+        caller must validate that contract before using the breakdown.
+        ``None`` selects the caller's scalar compatibility behavior.
+        """
+        return None
 
 
 class RooflineProvider(ComputeProvider):

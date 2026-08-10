@@ -146,7 +146,7 @@ def render_step_goal(
     record: StepRecord,
     dims: ModelDims,
     tp_ranks: Sequence[int],
-    per_layer_calc_ns: int,
+    per_layer_calc_ns: int | Sequence[int],
     *,
     ep_ranks: Sequence[int] | None = None,
     num_goal_ranks: int | None = None,
@@ -155,15 +155,16 @@ def render_step_goal(
     """Render one step as a GOAL program over the TP (and optionally EP) groups.
 
     Every participating rank executes the serial chain over layers: ``calc``
-    of ``per_layer_calc_ns`` GOAL units (ns), then the layer's attention
-    allreduce, then its MLP allreduce (both only when the TP world produces
-    collectives), then, for MoE dims with ``ep_ranks`` given, the dispatch
-    and combine all-to-allvs over the EP group; the next layer's calc waits
-    for the previous layer's last collective (no overlap, TRAF-7; the fixed
-    calc/allreduce/dispatch/combine order is TRAF-9). Participants are the
-    TP ranks plus, when MoE all-to-alls exist, the EP ranks; other ranks
-    below ``num_goal_ranks`` get one zero-cost calc so every rank block is
-    populated.
+    of the corresponding ``per_layer_calc_ns`` GOAL units (ns), then the
+    layer's attention allreduce, then its MLP allreduce (both only when the TP
+    world produces collectives), then, for MoE dims with ``ep_ranks`` given,
+    the dispatch and combine all-to-allvs over the EP group; the next layer's
+    calc waits for the previous layer's last collective (no overlap, TRAF-7;
+    the fixed calc/allreduce/dispatch/combine order is TRAF-9). A scalar calc
+    repeats on every layer for compatibility; a sequence supplies unequal
+    layer costs. Participants are the TP ranks plus, when MoE all-to-alls
+    exist, the EP ranks; other ranks below ``num_goal_ranks`` get one
+    zero-cost calc so every rank block is populated.
 
     Tags: allreduce k (layer * 2 + site index) takes the disjoint block
     ``base_tag + k * 2(W-1)`` onward, one tag per round, exactly as before;
@@ -184,6 +185,17 @@ def render_step_goal(
             "step has no tensor-parallel collectives and no MoE all-to-alls "
             "to render (TP world < 2 or zero new tokens, and no expert traffic)"
         )
+    if isinstance(per_layer_calc_ns, int):
+        layer_calc_ns = (per_layer_calc_ns,) * dims.num_layers
+    else:
+        layer_calc_ns = tuple(per_layer_calc_ns)
+    if len(layer_calc_ns) != dims.num_layers:
+        raise ValueError(
+            f"received {len(layer_calc_ns)} layer calc values for "
+            f"num_layers={dims.num_layers}"
+        )
+    if any(value < 0 for value in layer_calc_ns):
+        raise ValueError("layer calc values must be nonnegative")
     ranks = list(tp_ranks)
     participants = list(ranks)
     if moe_ops:
@@ -194,6 +206,11 @@ def render_step_goal(
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
     if num_goal_ranks is None:
         num_goal_ranks = max(participants) + 1
+    minimum_ranks = max(participants) + 1
+    if num_goal_ranks < minimum_ranks:
+        raise ValueError(
+            f"num_goal_ranks={num_goal_ranks} cannot contain rank {minimum_ranks - 1}"
+        )
     trace = GoalTrace(num_goal_ranks)
 
     previous: dict[int, str] = {}
@@ -202,7 +219,7 @@ def render_step_goal(
         # layer's last collective
         calc_done: dict[int, str] = {}
         for rank in participants:
-            calc = trace.rank(rank).calc(per_layer_calc_ns)
+            calc = trace.rank(rank).calc(layer_calc_ns[layer])
             if rank in previous:
                 trace.rank(rank).requires(calc, previous[rank])
             calc_done[rank] = calc
