@@ -21,6 +21,7 @@ option(SIMLLM_RNIC_WARNINGS_AS_ERRORS
 add_library(simllm_rnic STATIC
     src/pcie_fabric.cpp
     src/rnic_device.cpp
+    src/session_record.cpp
     src/work_queue.cpp
 )
 add_library(simllm::rnic ALIAS simllm_rnic)
@@ -87,8 +88,12 @@ if(SIMLLM_RNIC_BUILD_TESTS)
 
     add_executable(simllm_rnic_device_test
         tests/rnic_device_test.cpp
+        tests/session_record_test.cpp
     )
     target_link_libraries(simllm_rnic_device_test PRIVATE simllm::rnic)
+    target_compile_definitions(simllm_rnic_device_test PRIVATE
+        SIMLLM_RNIC_SESSION_RECORD_EMBEDDED=1
+    )
     target_include_directories(simllm_rnic_device_test PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
     )
@@ -137,6 +142,24 @@ if(SIMLLM_RNIC_BUILD_TOOLS)
         )
         if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
             target_compile_options(simllm_rnic_wq_probe PRIVATE -Werror)
+        endif()
+    endif()
+
+    add_executable(simllm_rnic_session_record_test
+        tests/session_record_test.cpp
+    )
+    target_link_libraries(simllm_rnic_session_record_test PRIVATE simllm::rnic)
+    target_include_directories(simllm_rnic_session_record_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_session_record_test PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_session_record_test PRIVATE -Werror)
         endif()
     endif()
 endif()

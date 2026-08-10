@@ -28,8 +28,10 @@ implementation and runs; see
 ## Method
 
 The study builds the dependency-free C++17 library with warnings as errors in
-an external wave-1 build directory, runs CTest, then invokes the composition
-test executable in its behavioral CSV mode:
+an external build directory, runs CTest, then invokes the composition test
+executable in its behavioral CSV mode. The build directory comes from
+`SIMLLM_RNIC_DEVICE_BUILD_DIR` when set. Otherwise it is a portable external
+temporary path keyed by the resolved study output location:
 
 ```bash
 .venv/bin/python examples/rnic_device_v1/run_rnic_device_v1.py
@@ -177,8 +179,77 @@ directed-equivalence counts.
 ## Scope after BACK-18
 
 The composition surface, inert port, external port injection seam, stable
-fabric lifetime and cross-module validation are complete. BACK-8 retains run
-records, configuration hash, sole-authority projection and bypass equivalence.
-HTSIM-9 retains the concrete htsim `NetworkPort` adapter. QPC lifecycle and
-host-memory backing remain BACK-11 and BACK-19; submission-source and CQ-owner
-selection remain BACK-20.
+fabric lifetime and cross-module validation are complete. The BACK-8 component
+record remainder is reported separately in
+[`rnic_session_records_v1`](../rnic_session_records_v1/RESULTS.md). BACK-8 now
+retains only the frozen live-reachability gate. HTSIM-9 retains the concrete
+htsim `NetworkPort` adapter. QPC lifecycle and host-memory backing remain
+BACK-11 and BACK-19; submission-source and CQ-owner selection remain BACK-20.
+
+## BACK-24 transactional rejection correction
+
+Expectations-only commit
+`b81ceed2ecd9e6dd6acb0f44c5c4040dde9b46ec` precedes the corrective source
+change and every result-producing run. Its registered `--check-only` command
+passed without creating the output directory. At freeze time the working tree
+contained no BACK-24 implementation or portability-fix files; the pre-existing
+untracked reviewer build directory was disclosed and left untouched. See
+[`back24_expectations.md`](back24_expectations.md).
+
+The pre-fix diagnostic produced all six frozen rows. In every row the exact
+exception identity, WQE records, counters, evidence, complete fake-port ledger
+and public physical state remained equal, but the future terminal ratcheted
+the device caller clock. The `progress(10)` probe and valid `20 ps`
+continuation then failed in all six rows. This isolates the defect from the
+WorkQueue retirement transaction.
+
+The corrected `RnicDevice` first validates monotonic caller time, delegates
+the complete WorkQueue terminal transaction, and commits its caller time only
+after that transaction returns. The registered study command was:
+
+```bash
+.venv/bin/python examples/rnic_device_v1/run_back24_study.py \
+  --out /data3/yifeng/simllm-dev/wave2-runs/codex/back8_session_records/back24
+```
+
+It passed 4 of 4 Release CTest entries and wrote external result record
+`back24_results.json`, SHA-256
+`9ae8dfbd0184fc86fde6632c0385dad68e5bd2522a80a7b8fa8839540891f7e0`.
+All 6 of 6 scored paired-control continuations passed. Unknown, duplicate and
+cross-WQE terminals were each exercised at `110 ps` and `1010 ps` after an
+accepted `10 ps` boundary. The valid continuation at `20 ps` matched its
+control exactly, with native terminal and CQE-visible timestamp deltas both
+`0 ps` in the frozen `[0 ps, 0 ps]` band.
+
+The fatal unscored guards passed in every cell: exact dynamic exception type
+and message, inert pre-probe, immediate WQE-record equality, counter equality,
+evidence equality, complete port-ledger equality, physical-state equality,
+PCIe-state applicability, inert post-probe and invariant validation. These
+guards do not increase the six-relation scored denominator.
+
+The portability correction was exercised from `/tmp` with no `--build-dir`
+and with `SIMLLM_RNIC_DEVICE_BUILD_DIR` explicitly unset. The temporary root
+was placed under the wave-2 output directory; the runner derived its own
+location-keyed cache below that root. All 4 CTest entries passed, and the
+tracked files retained exact SHA-256 values
+`7a0b8423d0a99de9538047f307bb7fd2f20c8d19bd408ef90fe02199da868934`
+for `results.csv` and
+`969963477314bfb723770556a02e4f038c7220820d522ae60dfa8c80744a202d`
+for `native_tests.csv`. Focused unit checks separately prove exact environment
+override use, stable fallback derivation and distinct cache keys for distinct
+resolved study locations.
+
+### Genuine-risk fraction
+
+The post-rejection clock-continuity family has 6 of 6 plausible-failure
+relations, or 100 percent. A competent implementation can preserve every
+WorkQueue mutation guard while still committing the enclosing device clock
+before delegation, which is the reproduced defect. Exception, snapshot,
+artifact and portability guards are fatal and unscored, so they are excluded
+from this fraction.
+
+This remains component evidence. HTSIM-9 provides live external-port delivery,
+while CORE-4 and CORE-5 join completion into `CompletionEvent`, `StepResult`,
+TTFT and TPOT. No htsim submodule, live-runtime path, acceptance harness,
+`README.md`, `docs/README_PRO.md` or frozen `rnic_live_v1` expectation was
+changed. BACK-24 is closed; no new task ID was needed.

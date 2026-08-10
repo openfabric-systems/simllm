@@ -11,11 +11,14 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <typeinfo>
 #include <utility>
 #include <vector>
 
 #include "fake_network.h"
 #include "simllm/rnic/rnic_device.h"
+
+int runRnicSessionRecordChecks();
 
 namespace {
 
@@ -47,7 +50,9 @@ using simllm::rnic::WorkRequest;
 using simllm::rnic::WqeId;
 using simllm::rnic::WqeRecord;
 using simllm::rnic::defaultPcieFabricConfig;
+using simllm::rnic::testing::FakeNetworkPortState;
 using simllm::rnic::testing::FakeNetworkPort;
+using simllm::rnic::testing::FakeSubmission;
 
 static_assert(!std::is_copy_constructible_v<RnicDevice>);
 static_assert(!std::is_copy_assignable_v<RnicDevice>);
@@ -219,6 +224,54 @@ void appendRequest(std::ostringstream& output, const WorkRequest& request) {
     appendValue(output, request.traffic_class);
     appendValue(output, request.opcode);
     appendValue(output, request.signaled);
+}
+
+void appendNetworkDescriptor(
+    std::ostringstream& output,
+    const simllm::rnic::NetworkTxDescriptor& descriptor) {
+    appendValue(output, descriptor.abi_version);
+    appendValue(output, descriptor.wqe_id);
+    appendValue(output, descriptor.wr_id);
+    appendValue(output, descriptor.flow_id);
+    appendValue(output, descriptor.flow_tag);
+    appendValue(output, descriptor.policy_context_token);
+    appendValue(output, descriptor.source);
+    appendValue(output, descriptor.destination);
+    appendValue(output, descriptor.qpn);
+    appendValue(output, descriptor.traffic_class);
+    appendValue(output, descriptor.payload_bytes);
+    appendValue(output, descriptor.extent_index);
+    appendValue(output, descriptor.extent_count);
+    appendValue(output, descriptor.eligible_at_ps);
+}
+
+void appendFakeSubmission(
+    std::ostringstream& output,
+    const FakeSubmission& submission) {
+    appendValue(output, submission.token);
+    appendNetworkDescriptor(output, submission.descriptor);
+    appendValue(output, submission.submitted_at_ps);
+    appendValue(output, submission.completion_at_ps);
+}
+
+std::string canonicalPortState(const FakeNetworkPort& port) {
+    const FakeNetworkPortState state = port.state();
+    std::ostringstream output;
+    appendValue(output, state.capacity);
+    appendValue(output, state.latency_ps);
+    appendValue(output, state.next_token);
+    appendValue(output, state.reject_next);
+    appendOptional(output, state.forced_busy_until_ps);
+    appendValue(output, state.inflight.size());
+    for (const auto& token_and_submission : state.inflight) {
+        appendValue(output, token_and_submission.first);
+        appendFakeSubmission(output, token_and_submission.second);
+    }
+    appendValue(output, state.history.size());
+    for (const FakeSubmission& submission : state.history) {
+        appendFakeSubmission(output, submission);
+    }
+    return output.str();
 }
 
 void appendRecord(std::ostringstream& output, const WqeRecord& record) {
@@ -604,6 +657,431 @@ RnicDeviceConfig deviceConfig(WorkQueueConfig work_queue) {
         work_queue.policy_context_token;
     config.work_queue = std::move(work_queue);
     return config;
+}
+
+struct DeviceAuditSnapshot {
+    std::string wqe_records;
+    std::string counters;
+    std::string evidence;
+    std::string port_ledger;
+    std::string physical_state;
+    std::string pcie_state;
+};
+
+std::string canonicalWqeRecords(const RnicDevice& device) {
+    std::ostringstream output;
+    appendValue(output, device.records().size());
+    for (const WqeRecord& record : device.records()) {
+        appendRecord(output, record);
+    }
+    return output.str();
+}
+
+std::string canonicalCounters(const RnicDevice& device) {
+    std::ostringstream output;
+    appendCounters(output, device.counters());
+    return output.str();
+}
+
+std::string canonicalEvidence(const RnicDevice& device) {
+    std::ostringstream output;
+    appendValue(output, device.evidence().size());
+    for (const EvidenceEvent& event : device.evidence()) {
+        appendEvidence(output, event);
+    }
+    return output.str();
+}
+
+std::string canonicalPhysicalState(const RnicDevice& device) {
+    std::ostringstream output;
+    const RnicDeviceConfig& config = device.config();
+    appendValue(output, config.version);
+    appendValue(output, config.identity.version);
+    appendValue(output, config.identity.qpn);
+    appendValue(output, config.identity.policy_context_token);
+    appendWorkQueueConfig(output, device.workQueueConfig());
+    appendValue(output, config.qpc.version);
+    appendValue(output, config.qpc.enabled);
+    appendValue(output, config.dma.version);
+    appendValue(output, config.dma.enabled);
+    appendValue(output, config.dma.shared_ordering_domain_namespace);
+    appendValue(output, config.network.version);
+    appendValue(output, config.network.enabled);
+    appendValue(output, device.stageReport().scalar_doorbell_service);
+    appendValue(output, device.stageReport().scalar_wqe_fetch_service);
+    appendValue(output, device.stageReport().qpc_lookup);
+    appendValue(output, device.stageReport().scalar_cqe_write_service);
+    appendValue(output, device.stageReport().pcie_doorbell_record);
+    appendValue(output, device.stageReport().pcie_uar_doorbell);
+    appendValue(output, device.stageReport().pcie_wqe_read);
+    appendValue(output, device.stageReport().pcie_cqe_write);
+    appendValue(output, device.stageReport().external_network);
+    appendValue(output, device.stageReport().inert_network);
+    appendValue(output, device.usesSharedPcieFabric());
+    appendPcieBinding(output, device.pcieBinding());
+    appendOptional(output, device.nextEventTime());
+    appendValue(output, device.hasPendingPhysicalWork());
+    appendValue(output, device.fatal());
+    appendValue(output, device.occupiedSqEntries());
+    appendValue(output, device.completionQueueDepth());
+    appendValue(output, device.unpublishedWqeCount());
+    return output.str();
+}
+
+std::string canonicalPcieState(const RnicDevice& device) {
+    std::ostringstream output;
+    const PcieFabric* fabric = device.pcieFabric();
+    appendValue(output, fabric != nullptr);
+    if (fabric != nullptr) {
+        appendValue(output, fabric->generation());
+    }
+    return output.str();
+}
+
+DeviceAuditSnapshot captureDeviceSnapshot(
+    const RnicDevice& device,
+    const FakeNetworkPort& port) {
+    return DeviceAuditSnapshot{
+        canonicalWqeRecords(device),
+        canonicalCounters(device),
+        canonicalEvidence(device),
+        canonicalPortState(port),
+        canonicalPhysicalState(device),
+        canonicalPcieState(device),
+    };
+}
+
+bool sameDeviceSnapshot(
+    const DeviceAuditSnapshot& lhs,
+    const DeviceAuditSnapshot& rhs) {
+    return lhs.wqe_records == rhs.wqe_records
+        && lhs.counters == rhs.counters
+        && lhs.evidence == rhs.evidence
+        && lhs.port_ledger == rhs.port_ledger
+        && lhs.physical_state == rhs.physical_state
+        && lhs.pcie_state == rhs.pcie_state;
+}
+
+struct ExceptionObservation {
+    bool threw{false};
+    bool exact_logic_error{false};
+    std::string type{"none"};
+    std::string message;
+};
+
+template <typename Callable>
+ExceptionObservation captureLogicError(Callable&& callable) {
+    try {
+        callable();
+        return {};
+    } catch (const std::logic_error& error) {
+        const bool exact = typeid(error) == typeid(std::logic_error);
+        return ExceptionObservation{
+            true,
+            exact,
+            exact ? "std::logic_error" : "derived_std::logic_error",
+            error.what(),
+        };
+    } catch (const std::exception& error) {
+        return ExceptionObservation{
+            true, false, "other_std::exception", error.what()};
+    } catch (...) {
+        return ExceptionObservation{
+            true, false, "non_standard_exception", {}};
+    }
+}
+
+struct ActionObservation {
+    bool succeeded{false};
+    std::size_t changes{0};
+};
+
+template <typename Callable>
+ActionObservation captureAction(Callable&& callable) {
+    try {
+        return ActionObservation{true, callable()};
+    } catch (...) {
+        return {};
+    }
+}
+
+enum class InvalidTerminalForm {
+    UnknownToken,
+    DuplicateToken,
+    CrossWqe,
+};
+
+const char* invalidTerminalName(InvalidTerminalForm form) {
+    switch (form) {
+    case InvalidTerminalForm::UnknownToken:
+        return "unknown_token";
+    case InvalidTerminalForm::DuplicateToken:
+        return "duplicate_token";
+    case InvalidTerminalForm::CrossWqe:
+        return "cross_wqe";
+    default:
+        return "invalid";
+    }
+}
+
+const char* invalidTerminalMessage(InvalidTerminalForm form) {
+    if (form == InvalidTerminalForm::CrossWqe) {
+        return "RNIC network token/WQE mismatch";
+    }
+    return "unknown or duplicate RNIC network token";
+}
+
+RnicDeviceConfig back24Config() {
+    WorkQueueConfig work_queue;
+    work_queue.sq_depth = 8;
+    work_queue.cq_depth = 8;
+    work_queue.qpn = 24;
+    work_queue.policy_context_token = 2400;
+    RnicDeviceConfig config = deviceConfig(work_queue);
+    config.network.enabled = true;
+    return config;
+}
+
+RnicDeviceAttachments externalNetworkAttachments(FakeNetworkPort& port) {
+    RnicDeviceAttachments attachments;
+    attachments.network_port = &port;
+    return attachments;
+}
+
+struct Back24Fixture {
+    explicit Back24Fixture(
+        InvalidTerminalForm form,
+        Picoseconds future_event_time_ps)
+        : port(8, 0),
+          device(back24Config(), externalNetworkAttachments(port)) {
+        const std::size_t wqe_count =
+            form == InvalidTerminalForm::UnknownToken ? 1 : 2;
+        for (std::size_t index = 0; index < wqe_count; ++index) {
+            WorkRequest request;
+            request.wr_id = index + 1;
+            request.flow_id = 2400 + index;
+            request.destination = 2;
+            request.payload_bytes = 1024;
+            posts.push_back(device.postSend(request, 10));
+        }
+        device.ringDoorbell(10);
+        (void)device.progress(10);
+
+        if (form == InvalidTerminalForm::DuplicateToken) {
+            NetworkEvent first = port.take(
+                *device.wqe(posts[0].wqe_id).network_token,
+                simllm::rnic::NetworkEventKind::Delivered,
+                10);
+            device.onNetworkEvent(first);
+            (void)device.progress(10);
+            invalid = first;
+            invalid.event_time_ps = future_event_time_ps;
+            continuation = port.take(
+                *device.wqe(posts[1].wqe_id).network_token,
+                simllm::rnic::NetworkEventKind::Delivered,
+                20);
+            continuation_wqe_id = posts[1].wqe_id;
+            return;
+        }
+
+        continuation = port.take(
+            *device.wqe(posts[0].wqe_id).network_token,
+            simllm::rnic::NetworkEventKind::Delivered,
+            20);
+        continuation_wqe_id = posts[0].wqe_id;
+        invalid = continuation;
+        invalid.event_time_ps = future_event_time_ps;
+        if (form == InvalidTerminalForm::UnknownToken) {
+            invalid.token = 1000000 + future_event_time_ps;
+        } else {
+            invalid.wqe_id = posts[1].wqe_id;
+        }
+    }
+
+    FakeNetworkPort port;
+    RnicDevice device;
+    std::vector<PostResult> posts;
+    NetworkEvent invalid;
+    NetworkEvent continuation;
+    WqeId continuation_wqe_id{0};
+};
+
+std::optional<std::int64_t> signedTimestampDelta(
+    const std::optional<Picoseconds>& actual,
+    const std::optional<Picoseconds>& control) {
+    if (!actual.has_value() || !control.has_value()) {
+        return std::nullopt;
+    }
+    if (*actual >= *control) {
+        return static_cast<std::int64_t>(*actual - *control);
+    }
+    return -static_cast<std::int64_t>(*control - *actual);
+}
+
+void appendSignedDelta(
+    std::ostream& output,
+    const std::optional<std::int64_t>& delta) {
+    if (delta.has_value()) {
+        output << *delta;
+    } else {
+        output << "missing";
+    }
+}
+
+void testRejectedNetworkTerminalsAreTransactional(
+    TestRunner& test,
+    std::ostream* study_rows = nullptr) {
+    if (study_rows != nullptr) {
+        *study_rows
+            << "invalid_terminal,future_event_time_ps,exception_type,"
+               "exception_message,exception_identity,pre_probe_zero,"
+               "wqe_records_equal,counters_equal,evidence_equal,"
+               "port_ledger_equal,physical_state_equal,pcie_state_equal,"
+               "post_probe_zero,continuation_succeeded,"
+               "continuation_surface_equal,terminal_delta_ps,"
+               "cqe_delta_ps,invariants_valid\n";
+    }
+    for (const InvalidTerminalForm form : {
+             InvalidTerminalForm::UnknownToken,
+             InvalidTerminalForm::DuplicateToken,
+             InvalidTerminalForm::CrossWqe,
+         }) {
+        for (const Picoseconds future_event_time_ps : {110ULL, 1010ULL}) {
+            Back24Fixture subject(form, future_event_time_ps);
+            Back24Fixture control(form, future_event_time_ps);
+
+            const ActionObservation subject_pre_probe = captureAction(
+                [&subject]() { return subject.device.progress(10); });
+            const ActionObservation control_pre_probe = captureAction(
+                [&control]() { return control.device.progress(10); });
+            const bool pre_probe_zero = subject_pre_probe.succeeded
+                && subject_pre_probe.changes == 0
+                && control_pre_probe.succeeded
+                && control_pre_probe.changes == 0;
+            const DeviceAuditSnapshot before = captureDeviceSnapshot(
+                subject.device, subject.port);
+            const ExceptionObservation exception = captureLogicError(
+                [&subject]() {
+                    subject.device.onNetworkEvent(subject.invalid);
+                });
+            const DeviceAuditSnapshot after = captureDeviceSnapshot(
+                subject.device, subject.port);
+
+            const bool exception_identity = exception.threw
+                && exception.exact_logic_error
+                && exception.message == invalidTerminalMessage(form);
+            const bool wqe_records_equal =
+                before.wqe_records == after.wqe_records;
+            const bool counters_equal = before.counters == after.counters;
+            const bool evidence_equal = before.evidence == after.evidence;
+            const bool port_ledger_equal =
+                before.port_ledger == after.port_ledger;
+            const bool physical_state_equal =
+                before.physical_state == after.physical_state;
+            const bool pcie_state_equal =
+                before.pcie_state == after.pcie_state;
+
+            bool immediate_invariants = true;
+            try {
+                subject.device.validateInvariants();
+                control.device.validateInvariants();
+            } catch (...) {
+                immediate_invariants = false;
+            }
+
+            const ActionObservation post_probe = captureAction(
+                [&subject]() { return subject.device.progress(10); });
+            const bool post_probe_zero =
+                post_probe.succeeded && post_probe.changes == 0;
+
+            const ActionObservation subject_continuation = captureAction(
+                [&subject]() {
+                    subject.device.onNetworkEvent(subject.continuation);
+                    return subject.device.progress(20);
+                });
+            const ActionObservation control_continuation = captureAction(
+                [&control]() {
+                    control.device.onNetworkEvent(control.continuation);
+                    return control.device.progress(20);
+                });
+            const bool continuation_succeeded =
+                subject_continuation.succeeded
+                && control_continuation.succeeded;
+            const DeviceAuditSnapshot subject_final = captureDeviceSnapshot(
+                subject.device, subject.port);
+            const DeviceAuditSnapshot control_final = captureDeviceSnapshot(
+                control.device, control.port);
+            const bool continuation_surface_equal = sameDeviceSnapshot(
+                subject_final, control_final);
+
+            const WqeRecord& subject_record =
+                subject.device.wqe(subject.continuation_wqe_id);
+            const WqeRecord& control_record =
+                control.device.wqe(control.continuation_wqe_id);
+            const auto terminal_delta = signedTimestampDelta(
+                subject_record.timeline.network_outcome_at_ps,
+                control_record.timeline.network_outcome_at_ps);
+            const auto cqe_delta = signedTimestampDelta(
+                subject_record.timeline.cqe_visible_at_ps,
+                control_record.timeline.cqe_visible_at_ps);
+            bool final_invariants = true;
+            try {
+                subject.device.validateInvariants();
+                control.device.validateInvariants();
+            } catch (...) {
+                final_invariants = false;
+            }
+            const bool invariants_valid =
+                immediate_invariants && final_invariants;
+
+            const std::string cell = std::string(invalidTerminalName(form))
+                + " at " + std::to_string(future_event_time_ps) + " ps";
+            test.check(exception_identity, cell + " keeps exception identity");
+            test.check(pre_probe_zero, cell + " has an inert pre-probe");
+            test.check(wqe_records_equal, cell + " preserves WQE records");
+            test.check(counters_equal, cell + " preserves counters");
+            test.check(evidence_equal, cell + " preserves evidence");
+            test.check(port_ledger_equal, cell + " preserves the port ledger");
+            test.check(
+                physical_state_equal, cell + " preserves physical state");
+            test.check(pcie_state_equal, cell + " preserves PCIe state");
+            test.check(post_probe_zero, cell + " preserves caller-clock behavior");
+            test.check(
+                continuation_succeeded, cell + " accepts the valid continuation");
+            test.check(
+                continuation_surface_equal,
+                cell + " matches the paired-control continuation");
+            test.check(
+                terminal_delta.has_value() && *terminal_delta == 0,
+                cell + " preserves the native terminal timestamp");
+            test.check(
+                cqe_delta.has_value() && *cqe_delta == 0,
+                cell + " preserves the completion-visible timestamp");
+            test.check(invariants_valid, cell + " preserves invariants");
+
+            if (study_rows != nullptr) {
+                *study_rows << invalidTerminalName(form) << ','
+                            << future_event_time_ps << ','
+                            << exception.type << ','
+                            << exception.message << ','
+                            << (exception_identity ? 1 : 0) << ','
+                            << (pre_probe_zero ? 1 : 0) << ','
+                            << (wqe_records_equal ? 1 : 0) << ','
+                            << (counters_equal ? 1 : 0) << ','
+                            << (evidence_equal ? 1 : 0) << ','
+                            << (port_ledger_equal ? 1 : 0) << ','
+                            << (physical_state_equal ? 1 : 0) << ','
+                            << (pcie_state_equal ? 1 : 0) << ','
+                            << (post_probe_zero ? 1 : 0) << ','
+                            << (continuation_succeeded ? 1 : 0) << ','
+                            << (continuation_surface_equal ? 1 : 0) << ',';
+                appendSignedDelta(*study_rows, terminal_delta);
+                *study_rows << ',';
+                appendSignedDelta(*study_rows, cqe_delta);
+                *study_rows << ',' << (invariants_valid ? 1 : 0) << '\n';
+            }
+        }
+    }
 }
 
 void testScalarSweepExactEquivalence(
@@ -1395,8 +1873,14 @@ int main(int argc, char** argv) {
         testScalarSweepExactEquivalence(test, &std::cout);
         return test.failures() == 0 ? 0 : 1;
     }
+    if (argc == 2 && std::string(argv[1]) == "--back24-csv") {
+        testRejectedNetworkTerminalsAreTransactional(test, &std::cout);
+        return test.failures() == 0 ? 0 : 1;
+    }
     if (argc != 1) {
-        std::cerr << "usage: simllm_rnic_device_test [--scalar-csv]\n";
+        std::cerr
+            << "usage: simllm_rnic_device_test "
+               "[--scalar-csv|--back24-csv]\n";
         return 2;
     }
     testScalarSweepExactEquivalence(test);
@@ -1411,6 +1895,12 @@ int main(int argc, char** argv) {
     testFailedSharedConstructionReleasesClaim(test);
     testComposedPcieOperationAtomicity(test);
     testInertDeliveryFailureRetainsEvent(test);
+    testRejectedNetworkTerminalsAreTransactional(test);
+    const int session_record_failures =
+        runRnicSessionRecordChecks();
+    test.check(
+        session_record_failures == 0,
+        "embedded RNIC session-record checks pass");
     if (test.failures() != 0) {
         std::cerr << test.failures() << " RNIC device check(s) failed\n";
         return 1;

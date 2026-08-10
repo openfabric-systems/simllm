@@ -155,6 +155,49 @@ strictly older than the timestamp; CQEs due exactly at that timestamp remain
 host-first. A fatal CQ overrun remains non-quiescent but exposes no next event,
 so event loops must test `fatal()` and abort rather than spin.
 
+## Session records and projections
+
+`session_record.h` defines schema-tagged configuration, result and
+bookkeeping records for one composed RNIC session. Structural mode names
+`SimllmNativeRnicSession` as the sole WQE authority and carries the canonical
+effective-hardware object plus its SHA-256 digest. Bypass mode names
+`AtlahsWqeLedger`, omits native hardware and its hash, and keeps the legacy
+ledger as the only lifecycle authority. `RnicAuthorityAudit` rejects both or
+neither authority at construction and records native posts or legacy
+mutations only in the selected mode.
+
+The effective-hardware hash includes active queue capacities and services,
+module selection, resolved PCIe domains and bindings, fabric limits, active
+paths and active analytical-profile parameters. It excludes session, policy,
+QP correlation and disabled-module payload. Path declarations are sorted by
+path ID. Disabled-path payload and the PCIe non-posted data-credit placeholder
+are omitted because neither can affect a supported transaction. Shared and
+owned fabrics remain distinct resource scopes, while shared-device hashes use
+the attached fabric configuration and resolved ordering domains.
+
+At quiescence, `projectStructuralSessionResult` reads native WQE records and
+returned CQ entries without advancing either object. It rejects projection
+loss, duplicate identities, counter disagreement, timestamp drift and
+nonterminal records. The stable send key is the session, source endpoint,
+`send`, SQ ID and post sequence. A send projection names its SQ and completion
+queue and leaves `rq_id` absent. The completion renderer preserves the pinned
+legacy CSV prefix, column order and LF bytes.
+
+`simllm-rnic-bookkeeping-v1` is the public structural WQE projection of that
+same result, not another mutable ledger. It intentionally preserves send
+cardinality without fabricating the receive-queue parent required by the older
+`simllm-request-bookkeeping-v1` compatibility rule. CORE-4 and CORE-5 own the
+later request and execution-scope join into `CompletionEvent` and step metrics.
+HTSIM-9 owns the concrete network port and live token reconciliation.
+
+The Python readers in `simllm.backends.rnic_records` strictly validate the
+schemas, recompute hashes, freeze nested configuration objects and reconcile
+bookkeeping and completion projections. Their reusable bypass checker guards
+GOAL and topology bytes, profile, seed and canonical semantic baseline
+parameters, then
+compares completion CSV, canonical completions, `StepResult` tuples and replay
+TTFT or TPOT summaries byte for byte.
+
 ## Standalone build
 
 ```bash

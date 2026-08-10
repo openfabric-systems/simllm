@@ -48,6 +48,10 @@ Environment variable            Meaning (default)
 ``SIMLLM_VLLM_STEP_RECORDS``    JSONL path for the step records; each record
                                 is appended the moment its step completes
                                 (unset).
+``SIMLLM_VLLM_REPLAY_RUN``      joined ``simllm-preplay-replay-run-v1`` JSON
+                                whose exact tokens replace fabrication; every
+                                request must enter with its oracle length
+                                pinned as ``max_tokens`` (unset).
 ``SIMLLM_VLLM_WORKER_MODE``     ``skeleton`` enables the flagged
                                 :class:`simllm.adapters.vllm.SimWorker` path.
                                 Any other value is rejected when that worker
@@ -86,6 +90,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
+from simllm.adapters.vllm.replay import ReplayTokenSource, sample_adapter_tokens
 from simllm.compute import (
     GPU_ENVELOPES,
     PS_PER_SECOND,
@@ -118,6 +123,7 @@ __all__ = [
     "PINNED_VLLM_VERSION",
     "PS_PER_SECOND",
     "ModelDims",
+    "ReplayTokenSource",
     "SimExecutor",
     "SimExecutorConfig",
     "SimExecutorHooks",
@@ -129,6 +135,7 @@ __all__ = [
     "latest_executor",
     "model_dims_from_vllm_config",
     "observe_scheduler_output",
+    "reset_configuration",
     "step_kernel",
     "step_records_to_json",
     "translate_scheduler_output",
@@ -219,6 +226,7 @@ class SimExecutorConfig:
     host_initiation_ps: int = 0
     token_id: int | None = None
     step_records_path: str | None = None
+    replay_run_path: str | None = None
 
     def __post_init__(self) -> None:
         if self.mode not in ("virtual", "paced"):
@@ -239,6 +247,7 @@ class SimExecutorConfig:
             host_initiation_ps=_env_int(env, "SIMLLM_VLLM_HOST_INIT_PS", 0) or 0,
             token_id=_env_int(env, "SIMLLM_VLLM_TOKEN_ID", None),
             step_records_path=_env_str(env, "SIMLLM_VLLM_STEP_RECORDS", None),
+            replay_run_path=_env_str(env, "SIMLLM_VLLM_REPLAY_RUN", None),
         )
 
     def gpu_spec(self) -> GpuSpec:
@@ -298,6 +307,22 @@ def configure(
         _HOOKS.host_model = host_model
     if config is not None:
         _HOOKS.config = config
+    return _HOOKS
+
+
+def reset_configuration() -> SimExecutorHooks:
+    """Clear every process-wide executor injection hook.
+
+    This is the explicit boundary between independent in-process engine runs.
+    It prevents a replay configuration or sink from one run becoming an
+    implicit input to the next one.
+    """
+
+    _HOOKS.step_sink = None
+    _HOOKS.compute_provider = None
+    _HOOKS.gpu = None
+    _HOOKS.host_model = None
+    _HOOKS.config = None
     return _HOOKS
 
 
@@ -443,6 +468,7 @@ class StepTranslator:
             scheduled=scheduled,
             preempted_request_ids=sorted(preempted_req_ids),
             finished_request_ids=finished,
+            num_sampled=sum(produces_token),
         )
         self.forget(finished)
         return TranslatedStep(record=record, req_ids=req_ids, produces_token=produces_token)
@@ -939,7 +965,11 @@ class SimExecutor(_ExecutorBase):
     ) -> None:
         if _VLLM_IMPORT_ERROR is not None:
             raise _missing_vllm_error()
-        self.config = config or _HOOKS.config or SimExecutorConfig.from_env()
+        self.config = (
+            config
+            if config is not None
+            else (_HOOKS.config or SimExecutorConfig.from_env())
+        )
         self.gpu = gpu or _HOOKS.gpu or self.config.gpu_spec()
         self.compute_provider: ComputeProvider = (
             compute_provider
@@ -952,6 +982,14 @@ class SimExecutor(_ExecutorBase):
             or HostInitiationModel(initiation_delay_ps=self.config.host_initiation_ps)
         )
         self.step_sink: StepSink | None = step_sink or _HOOKS.step_sink
+        self.replay = (
+            ReplayTokenSource.from_path(
+                self.config.replay_run_path,
+                max_model_len=int(vllm_config.model_config.max_model_len),
+            )
+            if self.config.replay_run_path
+            else None
+        )
         self._runtime = _SimStepRuntime(
             config=self.config,
             step_sink=self.step_sink,
@@ -1146,8 +1184,10 @@ class SimExecutor(_ExecutorBase):
         return self._model_answers.determine_available_memory()
 
     def _rpc_update_max_model_len(self, rank: int, max_model_len: int) -> None:
-        """Auto-fit shrank the context; nothing to resize on a fake worker."""
+        """Apply an auto-fit context shrink to replay admission guards."""
         if rank == 0:
+            if self.replay is not None:
+                self.replay.update_max_model_len(max_model_len)
             logger.info("SimExecutor: max_model_len updated to %d", max_model_len)
 
     def _rpc_initialize_from_config(self, rank: int, kv_cache_configs: Any = None) -> None:
@@ -1237,6 +1277,22 @@ class SimExecutor(_ExecutorBase):
         """Fabricated token id: mid-vocabulary, never a stop token."""
         return _resolve_token_id(self.dims.vocab_size, self.config.token_id)
 
+    def _sample_output_fields(
+        self,
+        translated: TranslatedStep,
+        scheduler_output: Any,
+    ) -> tuple[list[str], dict[str, int], list[list[int]]]:
+        """Select joined replay or the exact fabricated-token off path."""
+
+        return sample_adapter_tokens(
+            self.replay,
+            translated.req_ids,
+            translated.produces_token,
+            self.token_id,
+            scheduler_output,
+            fabricate=fabricate_sampled_tokens,
+        )
+
     def _run_step(self, scheduler_output: Any) -> Any:
         if getattr(scheduler_output, "has_structured_output_requests", False):
             raise RuntimeError(
@@ -1249,12 +1305,18 @@ class SimExecutor(_ExecutorBase):
             return self._drain_step(scheduler_output)
 
         translated = self._runtime.translate(scheduler_output)
+        if self.replay is not None:
+            self.replay.validate_step(
+                translated.req_ids,
+                translated.produces_token,
+                scheduler_output,
+            )
         self._settle(translated)
 
         from vllm.v1.outputs import ModelRunnerOutput
 
-        req_ids, req_id_to_index, sampled = fabricate_sampled_tokens(
-            translated.req_ids, translated.produces_token, self.token_id
+        req_ids, req_id_to_index, sampled = self._sample_output_fields(
+            translated, scheduler_output
         )
         self._pending_output = ModelRunnerOutput(
             req_ids=req_ids,
@@ -1279,7 +1341,11 @@ class SimExecutor(_ExecutorBase):
         record consumer infers completion from a request's last scheduled
         record.
         """
+        if self.replay is not None:
+            self.replay.validate_completions(scheduler_output)
         self._runtime.drain(scheduler_output)
+        if self.replay is not None:
+            self.replay.observe_completions(scheduler_output)
         self._pending_output = self._empty_output()
         return self._pending_output
 

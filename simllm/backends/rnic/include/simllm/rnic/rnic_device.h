@@ -142,6 +142,7 @@ public:
 
     const RnicDeviceConfig& config() const noexcept;
     const RnicDeviceStageReport& stageReport() const noexcept;
+    bool usesSharedPcieFabric() const noexcept;
     std::optional<WorkQueuePcieBinding> pcieBinding() const;
     const PcieFabric* pcieFabric() const noexcept;
     const WorkQueueConfig& workQueueConfig() const noexcept;

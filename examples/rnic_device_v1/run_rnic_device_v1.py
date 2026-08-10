@@ -4,20 +4,39 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import io
 import json
+import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_DIR = REPO_ROOT / "simllm" / "backends" / "rnic"
-DEFAULT_BUILD_DIR = Path(
-    "/data3/yifeng/simllm-dev/wave1-runs/codex/back18_rnic_device/"
-    "rnic_device_v1-build"
-)
 RESULTS = Path(__file__).with_name("results.csv")
 NATIVE_TESTS = Path(__file__).with_name("native_tests.csv")
+BUILD_DIR_ENV = "SIMLLM_RNIC_DEVICE_BUILD_DIR"
+
+
+def _default_build_dir(output_dir: Path = RESULTS.parent) -> Path:
+    override = os.environ.get(BUILD_DIR_ENV)
+    if override is not None:
+        return Path(override)
+
+    resolved_output_dir = output_dir.resolve()
+    output_key = hashlib.sha256(
+        str(resolved_output_dir).encode("utf-8")
+    ).hexdigest()
+    return (
+        Path(tempfile.gettempdir())
+        / "simllm-rnic-device-v1-builds"
+        / output_key
+    )
+
+
+DEFAULT_BUILD_DIR = _default_build_dir()
 
 
 def _native_executable(build_dir: Path, name: str) -> Path:

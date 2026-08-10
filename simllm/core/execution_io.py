@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 from collections import defaultdict, deque
 from typing import Any
 
@@ -48,6 +49,26 @@ from simllm.core.execution import (
     WorkPayload,
 )
 from simllm.core.step import StepRecord
+
+_DEVICE_PARTICIPANT_RE = re.compile(
+    r"^(?:gpu|cuda|rank):(\d+)(?::|$)",
+    re.IGNORECASE,
+)
+
+
+def _operation_participant_ranks(operation: ExecutionOperation) -> set[int]:
+    ranks = {operation.rank}
+    work = operation.work
+    if isinstance(work, CollectiveWork):
+        ranks.update(work.ranks)
+    elif isinstance(work, ControlWork):
+        ranks.update(work.destination_ranks)
+    elif isinstance(work, DmaWork):
+        for endpoint in (work.source, work.destination):
+            match = _DEVICE_PARTICIPANT_RE.match(endpoint.strip())
+            if match is not None:
+                ranks.add(int(match.group(1)))
+    return ranks
 
 
 def _validate_config(config: tuple[tuple[str, Any], ...], path: str) -> None:
@@ -210,16 +231,8 @@ def validate_execution_graph(graph: ExecutionGraph) -> None:
                     )
         for dep_index, dependency in enumerate(operation.participant_local_depends_on):
             predecessor = operation_by_id[dependency]
-            target_ranks = (
-                set(operation.work.ranks)
-                if isinstance(operation.work, CollectiveWork)
-                else {operation.rank}
-            )
-            predecessor_ranks = (
-                set(predecessor.work.ranks)
-                if isinstance(predecessor.work, CollectiveWork)
-                else {predecessor.rank}
-            )
+            target_ranks = _operation_participant_ranks(operation)
+            predecessor_ranks = _operation_participant_ranks(predecessor)
             if target_ranks.isdisjoint(predecessor_ranks):
                 _fail(
                     f"graph.operations[{index}].participant_local_depends_on[{dep_index}]",

@@ -95,6 +95,7 @@ def stub_backend(monkeypatch, makespan_ps=100_000):
         lambda _config: SimpleNamespace(
             job_completion_time_ps=lambda: makespan_ps,
             flows=[],
+            quiescent=True,
         ),
     )
 
@@ -171,6 +172,7 @@ def test_step_network_outcome_preserves_legacy_positional_shape():
     assert outcome.layer_calc_ns == ()
     assert outcome.num_sampled == 0
     assert not outcome.sample_count_exact
+    assert not outcome.quiescent
     assert outcome.network_share_for(2) == 0.5
 
 
@@ -316,6 +318,7 @@ def test_sink_uses_exact_sample_count_for_chunked_prefill(tmp_path, monkeypatch)
     assert exact.outcomes[0].num_sampled == 1
     assert exact.outcomes[0].sample_count_exact
     assert exact.outcomes[0].layer_calc_ns == (440, 440)
+    assert exact.outcomes[0].quiescent
 
 
 def test_sink_sample_count_identity_when_every_request_samples(tmp_path, monkeypatch):

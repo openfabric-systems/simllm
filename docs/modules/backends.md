@@ -18,6 +18,15 @@ backend submodules.
   `RnicRunResult.job_completion_time_ps()` takes the maximum of exact WQE
   completion rows and the driver's whole-nanosecond GOAL completion summary.
   This covers compute-only schedules and trailing compute after the last WQE.
+- `simllm::rnic` session records + `simllm.backends.rnic_records`: strict
+  `simllm-rnic-session-config-v1`, `simllm-rnic-session-result-v1` and
+  structural-bookkeeping records. Structural records carry canonical
+  effective hardware and its SHA-256; bypass records explicitly name
+  `AtlahsWqeLedger` and carry no native hash. Native WQE state projects into
+  immutable bookkeeping and the accepted completion CSV without a second
+  lifecycle authority. The reusable bypass checker guards the full reference
+  input tuple and compares the four frozen behavioral artifact classes byte
+  for byte.
 - `simllm.backends.fct.normalized_fct`: per-flow FCT normalized to the
   `rnic-nn` baseline of the identical GOAL, matched by
   (source, destination, tag). Valid for aligned-start flows; for phases
@@ -292,9 +301,11 @@ optional exact provider layer breakdown, an optional exact step sample count
 and an explicit GOAL-rank count while preserving the default M4 and CORE-2
 GOAL bytes. The precision study matched all four unequal-layer closed forms,
 both sample-attribution relations and the default digest exactly. The shipped
-providers still use the byte-identical even split; COMP-16 owns real
-per-layer values, with the roofline provider first and profile tables after
-COMP-6 supplies per-layer kernel shapes. The study's
+roofline provider now supplies real per-layer values when its breakdown is
+enabled. COMP-17 owns the remaining profile-table and trace-calibrated
+breakdowns after COMP-6 supplies per-layer kernel shapes. The serial replay
+lowerer uses the same optional exact sample count as the live sink and retains
+the scheduled-row fallback when the field is absent. The study's
 registered fluid-plus-topology command was invalid because htsim accepts
 physical topology files only for physical profiles. The expectation was not
 rewritten: post-specified checks instead showed 0 ps residual and exact
@@ -486,12 +497,18 @@ is difficult.
   native library is unlinked, the wrapper is bypassed or a second lifecycle
   authority is active.
   The standalone C++17 library, opaque flow-level `NetworkPort`, strict native
-  build and deterministic fake adapter are complete. Remaining SimLLM scope is
-  run records, configuration hash, sole-authority projection and bypass
-  equivalence. The modular composition entry point and external port injection
-  seam are complete. HTSIM-9 owns the outer `AtlahsFlowRuntime` wrapper and
-  concrete htsim-side adapter; CORE-4 and CORE-5 own graph invocation and
-  completion reduction.
+  build and deterministic fake adapter are complete. The SimLLM-owned
+  component record layer is also complete: schema-tagged structural and bypass
+  configuration/result records, canonical effective-hardware SHA-256,
+  sole-authority bookkeeping and completion-CSV projections, exact authority
+  counters, and the reusable bypass byte checker are complete. The frozen
+  component study is
+  [rnic_session_records_v1](../../examples/rnic_session_records_v1/RESULTS.md).
+  BACK-8 remains open for the frozen live-reachability gate. HTSIM-9 owns the
+  outer `AtlahsFlowRuntime` wrapper and concrete htsim-side adapter; CORE-4 and
+  CORE-5 own graph invocation, `CompletionEvent`, step-result and TTFT/TPOT
+  reduction. The modular composition entry point and external port injection
+  seam are complete.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
   the structural **RDMA
   Work Queue**, merging the old WQE lifecycle and per-WQE-start work. Model

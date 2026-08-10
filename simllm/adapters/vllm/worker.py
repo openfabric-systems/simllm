@@ -36,23 +36,64 @@ import logging
 import os
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
+from simllm.adapters.vllm.communicator import (
+    FLOAT32,
+    INT32,
+    GroupCoordinatorEvent,
+    GroupCoordinatorObserver,
+    ShapeTensor,
+    SimGroupCoordinator,
+)
 from simllm.adapters.vllm.executor import (
     _HOOKS,
+    SimExecutorConfig,
     _ModelAnswers,
     _resolve_token_id,
     _SimStepRuntime,
     fabricate_sampled_tokens,
     model_dims_from_vllm_config,
 )
+from simllm.adapters.vllm.replay import ReplayTokenSource, sample_adapter_tokens
+from simllm.compute.nccl_stack import NcclStackConfig
 from simllm.core import VirtualClock
 
 logger = logging.getLogger(__name__)
 
 WORKER_MODE_ENV = "SIMLLM_VLLM_WORKER_MODE"
 SKELETON_WORKER_MODE = "skeleton"
+SKELETON_TP_PAYLOAD_BYTES = 4_096
+
+
+@dataclass(frozen=True)
+class _DpCoordinationTensor(ShapeTensor):
+    """Shape tensor carrying the skeleton's projected padded-token row."""
+
+    num_tokens_across_dp: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.shape != (4, len(self.num_tokens_across_dp)):
+            raise ValueError(
+                "DP coordination shape must be (4, len(num_tokens_across_dp))"
+            )
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in self.num_tokens_across_dp
+        ):
+            raise ValueError("DP padded-token values must be nonnegative integers")
+
+    def new_empty(self, size: Any) -> _DpCoordinationTensor:
+        return _DpCoordinationTensor(
+            tuple(size),
+            dtype=self.dtype,
+            element_size_bytes=self.element_size_bytes,
+            device=self.device,
+            num_tokens_across_dp=self.num_tokens_across_dp,
+        )
+
 
 SKELETON_INIT_CALL_SEQUENCE = (
     "worker.init_device",
@@ -253,7 +294,10 @@ class SimModelRunner:
         runtime: _SimStepRuntime,
         answers: _ModelAnswers,
         token_id: int,
+        replay: ReplayTokenSource | None,
         call_ledger: _CallLedger,
+        tp_group: SimGroupCoordinator,
+        dp_group: SimGroupCoordinator,
     ) -> None:
         self.vllm_config = vllm_config
         self.model_config = vllm_config.model_config
@@ -262,7 +306,13 @@ class SimModelRunner:
         self.runtime = runtime
         self.answers = answers
         self.token_id = token_id
+        self.replay = replay
         self.call_ledger = call_ledger
+        self.tp_group = tp_group
+        self.dp_group = dp_group
+        if self.tp_group.observer is not self.dp_group.observer:
+            raise ValueError("TP and DP groups must share one coordinator observer")
+        self.coordinator_observer = self.tp_group.observer
         self.execute_model_state: _ExecuteModelState | None = None
         self.kv_cache_config: Any | None = None
         self.loaded = False
@@ -314,6 +364,26 @@ class SimModelRunner:
 
     def _determine_batch_execution_and_padding(self, translated: Any) -> Any:
         with self.call_ledger.record("runner._determine_batch_execution_and_padding"):
+            if self.dp_group.world_size > 1:
+                local_num_tokens = translated.record.total_new_tokens
+                coordination = _DpCoordinationTensor(
+                    (4, self.dp_group.world_size),
+                    dtype=INT32,
+                    element_size_bytes=INT32.itemsize,
+                    num_tokens_across_dp=(local_num_tokens,) * self.dp_group.world_size,
+                )
+                reduced = self.dp_group.all_reduce(coordination)
+                if not isinstance(reduced, _DpCoordinationTensor):
+                    raise TypeError(
+                        "DP coordinator must preserve the padded-token projection"
+                    )
+                num_tokens_after_padding = reduced.num_tokens_across_dp[
+                    self.dp_group.rank_in_group
+                ]
+                translated.record = replace(
+                    translated.record,
+                    num_tokens_after_padding=num_tokens_after_padding,
+                )
             return translated
 
     def _build_attention_metadata(self, translated: Any) -> Any:
@@ -326,7 +396,35 @@ class SimModelRunner:
 
     def _model_forward(self, translated: Any) -> None:
         with self.call_ledger.record("runner._model_forward"):
+            tensor = ShapeTensor(
+                (SKELETON_TP_PAYLOAD_BYTES // FLOAT32.itemsize,),
+                dtype=FLOAT32,
+                element_size_bytes=FLOAT32.itemsize,
+            )
+            self.tp_group.all_reduce(tensor)
             return
+
+    @property
+    def coordinator_events(self) -> tuple[GroupCoordinatorEvent, ...]:
+        return self.coordinator_observer.events
+
+    def bind_simulated_groups(
+        self,
+        *,
+        tp_group: SimGroupCoordinator,
+        dp_group: SimGroupCoordinator,
+    ) -> None:
+        """Bind explicit logical groups before the first model step."""
+
+        if self.execute_model_state is not None:
+            raise RuntimeError("cannot replace simulated groups with a pending step")
+        if tp_group.clock is not self.runtime.clock or dp_group.clock is not self.runtime.clock:
+            raise ValueError("simulated groups must share the runner's virtual clock")
+        if tp_group.observer is not dp_group.observer:
+            raise ValueError("TP and DP groups must share one coordinator observer")
+        self.tp_group = tp_group
+        self.dp_group = dp_group
+        self.coordinator_observer = tp_group.observer
 
     def execute_model(self, scheduler_output: Any, intermediate_tensors: Any = None) -> Any:
         with self.call_ledger.record("runner.execute_model"):
@@ -344,10 +442,20 @@ class SimModelRunner:
             if not (
                 getattr(updated_scheduler_output, "num_scheduled_tokens", None) or {}
             ):
+                if self.replay is not None:
+                    self.replay.validate_completions(updated_scheduler_output)
                 self.runtime.drain(updated_scheduler_output)
+                if self.replay is not None:
+                    self.replay.observe_completions(updated_scheduler_output)
                 return _model_runner_output([], {})
 
             translated = self.runtime.translate(updated_scheduler_output)
+            if self.replay is not None:
+                self.replay.validate_step(
+                    translated.req_ids,
+                    translated.produces_token,
+                    updated_scheduler_output,
+                )
             prepared = self._prepare_inputs(translated)
             padded = self._determine_batch_execution_and_padding(prepared)
             metadata = self._build_attention_metadata(padded)
@@ -360,12 +468,19 @@ class SimModelRunner:
             )
             return None
 
-    def _sample(self, translated: Any) -> tuple[list[str], dict[str, int], list[list[int]]]:
+    def _sample(
+        self,
+        translated: Any,
+        scheduler_output: Any,
+    ) -> tuple[list[str], dict[str, int], list[list[int]]]:
         with self.call_ledger.record("runner._sample"):
-            return fabricate_sampled_tokens(
+            return sample_adapter_tokens(
+                self.replay,
                 translated.req_ids,
                 translated.produces_token,
                 self.token_id,
+                scheduler_output,
+                fabricate=fabricate_sampled_tokens,
             )
 
     def _update_states_after_model_execute(self, sampled_token_ids: Any, scheduler_output: Any) -> None:
@@ -392,7 +507,7 @@ class SimModelRunner:
                     "execute/sample call order changed"
                 )
             self.execute_model_state = None
-            sampled = self._sample(state.translated)
+            sampled = self._sample(state.translated, state.scheduler_output)
             self._update_states_after_model_execute(
                 sampled[2],
                 state.scheduler_output,
@@ -453,6 +568,7 @@ class SimWorker(_GpuWorkerBase):
         is_driver_worker: bool = False,
         *,
         _simllm_clock: VirtualClock | None = None,
+        _simllm_config: SimExecutorConfig | None = None,
     ) -> None:
         _require_skeleton_mode()
         if bool(getattr(vllm_config, "use_v2_model_runner", False)):
@@ -494,15 +610,18 @@ class SimWorker(_GpuWorkerBase):
         dp_size = int(getattr(parallel_config, "data_parallel_size", 1) or 1)
         if pp_size != 1:
             raise RuntimeError("SimWorker skeleton requires pipeline_parallel_size=1 (VLLM-10).")
-        if dp_size != 1:
-            raise RuntimeError(
-                "SimWorker skeleton requires data_parallel_size=1 until VLLM-13 "
-                "adds runner-internal DP coordination."
-            )
-
-        self.sim_config = _HOOKS.config or self._config_from_env()
+        self.sim_config = (
+            _simllm_config
+            if _simllm_config is not None
+            else (_HOOKS.config or self._config_from_env())
+        )
         self.dims = model_dims_from_vllm_config(vllm_config)
         tp_size = int(getattr(parallel_config, "tensor_parallel_size", 1) or 1)
+        worker_world_size = int(
+            getattr(parallel_config, "world_size", tp_size * pp_size) or tp_size * pp_size
+        )
+        dp_rank = int(getattr(parallel_config, "data_parallel_rank", 0) or 0)
+        global_rank = dp_rank * worker_world_size + rank
         self._answers = _ModelAnswers(
             vllm_config=vllm_config,
             dims=self.dims,
@@ -511,10 +630,18 @@ class SimWorker(_GpuWorkerBase):
             pp_size=pp_size,
         )
         self.token_id = _resolve_token_id(self.dims.vocab_size, self.sim_config.token_id)
+        self.replay = (
+            ReplayTokenSource.from_path(
+                self.sim_config.replay_run_path,
+                max_model_len=int(self.model_config.max_model_len),
+            )
+            if self.sim_config.replay_run_path
+            else None
+        )
         # External-launch executors mark the local worker as a driver in every
         # process. Global rank zero is the only safe clock, sink, and stream
         # authority across those processes.
-        is_authority = rank == 0
+        is_authority = global_rank == 0
         self._runtime = _SimStepRuntime(
             config=self.sim_config,
             step_sink=_HOOKS.step_sink,
@@ -526,6 +653,41 @@ class SimWorker(_GpuWorkerBase):
         self.step_records = self._runtime.step_records
         self.step_results = self._runtime.step_results
         self._call_ledger = _CallLedger(self.clock)
+        self._coordinator_observer = GroupCoordinatorObserver(self.clock)
+        tp_base = global_rank - (rank % tp_size)
+        tp_ranks = tuple(range(tp_base, tp_base + tp_size))
+        dp_ranks = tuple(rank + index * worker_world_size for index in range(dp_size))
+        tp_chunk_bytes = (
+            SKELETON_TP_PAYLOAD_BYTES // tp_size
+            if SKELETON_TP_PAYLOAD_BYTES % tp_size == 0
+            else 1
+        )
+        self.tp_group = SimGroupCoordinator(
+            group_name="tp",
+            ranks=tp_ranks,
+            rank=global_rank,
+            local_rank=local_rank,
+            clock=self.clock,
+            observer=self._coordinator_observer,
+            stack_config=NcclStackConfig(
+                channel_count=1,
+                chunk_bytes=tp_chunk_bytes,
+                fifo_slots_per_channel=2,
+            ),
+        )
+        self.dp_group = SimGroupCoordinator(
+            group_name="dp",
+            ranks=dp_ranks,
+            rank=global_rank,
+            local_rank=local_rank,
+            clock=self.clock,
+            observer=self._coordinator_observer,
+            stack_config=NcclStackConfig(
+                channel_count=1,
+                chunk_bytes=INT32.itemsize,
+                fifo_slots_per_channel=2,
+            ),
+        )
         self.model_runner = None
         self.is_time_authority = is_authority
         _LATEST_WORKERS[:] = [self]
@@ -544,6 +706,13 @@ class SimWorker(_GpuWorkerBase):
     def mirrored_call_names(self) -> list[str]:
         return [call.name for call in self._call_ledger.records]
 
+    @property
+    def coordinator_events(self) -> tuple[GroupCoordinatorEvent, ...]:
+        runner = self.model_runner
+        if isinstance(runner, SimModelRunner):
+            return runner.coordinator_events
+        return self._coordinator_observer.events
+
     def _runner(self) -> SimModelRunner:
         runner = self.model_runner
         if runner is None:
@@ -558,7 +727,10 @@ class SimWorker(_GpuWorkerBase):
                 self._runtime,
                 self._answers,
                 self.token_id,
+                self.replay,
                 self._call_ledger,
+                self.tp_group,
+                self.dp_group,
             )
 
     def load_model(self, *, load_dummy_weights: bool = False) -> None:
@@ -576,6 +748,8 @@ class SimWorker(_GpuWorkerBase):
 
     def update_max_model_len(self, max_model_len: int) -> None:
         with self._call_ledger.record("worker.update_max_model_len"):
+            if self.replay is not None:
+                self.replay.update_max_model_len(max_model_len)
             self.model_config.max_model_len = max_model_len
             self._runner().update_max_model_len(max_model_len)
 

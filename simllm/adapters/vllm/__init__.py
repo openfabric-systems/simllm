@@ -32,12 +32,20 @@ to extract a placement manifest without a fork::
 It skips stock ``Worker.init_device``, creates no physical GPU state, and
 uses one core virtual clock for mirrored calls and step records.
 
+``SimGroupCoordinator`` is the shape-only communication companion for that
+skeleton. It mirrors vLLM's all-reduce, all-gather, broadcast, send, receive,
+and rank-membership surface without importing vLLM or requiring torch. Each
+successful call emits a zero-time boundary event, lowers to ``CollectiveWork``,
+and enters the COMP-15 stack skeleton for multi-rank groups. Runtime completion
+projection and communication timing are intentionally not part of this slice.
+
 Environment variables read by the executor (full table in
 :mod:`simllm.adapters.vllm.executor`): ``SIMLLM_VLLM_MODE``,
 ``SIMLLM_VLLM_KV_MEMORY_BYTES``, ``SIMLLM_VLLM_GPU``,
 ``SIMLLM_VLLM_PEAK_FLOPS``, ``SIMLLM_VLLM_MEM_BANDWIDTH``,
 ``SIMLLM_VLLM_EFFICIENCY``, ``SIMLLM_VLLM_HOST_INIT_PS``,
-``SIMLLM_VLLM_TOKEN_ID``, ``SIMLLM_VLLM_STEP_RECORDS``.
+``SIMLLM_VLLM_TOKEN_ID``, ``SIMLLM_VLLM_STEP_RECORDS``,
+``SIMLLM_VLLM_REPLAY_RUN``.
 The worker-only entry gate is ``SIMLLM_VLLM_WORKER_MODE=skeleton``.
 
 Exports are resolved lazily through the module ``__getattr__``, so importing
@@ -52,6 +60,17 @@ from typing import Any
 from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+    "FLOAT32": ("communicator", "FLOAT32"),
+    "GROUP_COORDINATOR_EVENT_SCHEMA": (
+        "communicator",
+        "GROUP_COORDINATOR_EVENT_SCHEMA",
+    ),
+    "INT32": ("communicator", "INT32"),
+    "GroupCoordinatorEvent": ("communicator", "GroupCoordinatorEvent"),
+    "GroupCoordinatorObserver": ("communicator", "GroupCoordinatorObserver"),
+    "ShapeDType": ("communicator", "ShapeDType"),
+    "ShapeTensor": ("communicator", "ShapeTensor"),
+    "SimGroupCoordinator": ("communicator", "SimGroupCoordinator"),
     "GPU_ENVELOPES": ("executor", "GPU_ENVELOPES"),
     "ModelDims": ("executor", "ModelDims"),
     "SimExecutor": ("executor", "SimExecutor"),
@@ -60,6 +79,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "StepTranslator": ("executor", "StepTranslator"),
     "TranslatedStep": ("executor", "TranslatedStep"),
     "configure": ("executor", "configure"),
+    "reset_configuration": ("executor", "reset_configuration"),
     "estimate_step_latency_ps": ("executor", "estimate_step_latency_ps"),
     "fabricate_sampled_tokens": ("executor", "fabricate_sampled_tokens"),
     "latest_executor": ("executor", "latest_executor"),
@@ -69,6 +89,9 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "step_records_to_json": ("executor", "step_records_to_json"),
     "vllm_is_available": ("executor", "vllm_is_available"),
     "write_step_records": ("executor", "write_step_records"),
+    "ReplayServingSnapshot": ("replay", "ReplayServingSnapshot"),
+    "ReplayTokenSource": ("replay", "ReplayTokenSource"),
+    "sample_adapter_tokens": ("replay", "sample_adapter_tokens"),
     "MirroredCall": ("worker", "MirroredCall"),
     "SKELETON_EMPTY_STEP_CALL_SEQUENCE": (
         "worker",
@@ -90,19 +113,29 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 __all__ = [
+    "FLOAT32",
     "GPU_ENVELOPES",
+    "GROUP_COORDINATOR_EVENT_SCHEMA",
+    "INT32",
     "PINNED_VLLM_VERSION",
     "SKELETON_EMPTY_STEP_CALL_SEQUENCE",
     "SKELETON_INIT_CALL_SEQUENCE",
     "SKELETON_STEP_CALL_SEQUENCE",
     "SKELETON_WORKER_MODE",
     "WORKER_MODE_ENV",
+    "GroupCoordinatorEvent",
+    "GroupCoordinatorObserver",
     "MirroredCall",
     "ModelDims",
     "PlacementExporter",
+    "ReplayServingSnapshot",
+    "ReplayTokenSource",
+    "ShapeDType",
+    "ShapeTensor",
     "SimExecutor",
     "SimExecutorConfig",
     "SimExecutorHooks",
+    "SimGroupCoordinator",
     "SimModelRunner",
     "SimModelRunnerOutput",
     "SimWorker",
@@ -116,6 +149,8 @@ __all__ = [
     "manifest_from_worker_entries",
     "observe_scheduler_output",
     "placement_entry",
+    "reset_configuration",
+    "sample_adapter_tokens",
     "skeleton_mode_enabled",
     "step_kernel",
     "step_records_to_json",

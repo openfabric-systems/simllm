@@ -42,9 +42,16 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
   `compile_or_warm_up_model` (a list of `None` crashes the engine's
   `max(t.language_model ...)` reduction) and reads `cache_config.num_gpu_blocks`
   instead of the removed `initialize_cache` RPC;
-- fabricates `ModelRunnerOutput(req_ids, req_id_to_index, sampled_token_ids)`
-  per step: one fake mid-vocabulary token for every request whose prompt is
-  complete this step, an empty list for a request still mid-prefill.
+- returns `ModelRunnerOutput(req_ids, req_id_to_index, sampled_token_ids)` per
+  step. Without a joined replay run, it uses the accepted fake
+  mid-vocabulary token for every request whose prompt is complete and an empty
+  list for a request still mid-prefill. With `SIMLLM_VLLM_REPLAY_RUN` set, it
+  verifies the joined trace hash, requires an exact joined scheduler request
+  ID and serves the oracle token selected by the scheduler-reported output
+  index. Replay admission requires `max_tokens` to equal the joined oracle
+  length and rejects an early EOS or stop token and a
+  prompt-plus-oracle length beyond `max_model_len`. The complete replay batch
+  validates before the sink, record stream or virtual clock changes;
   `execute_model` returns an already-completed `Future` when `non_block=True`
   (`EngineCore.step()` always calls it that way and immediately reads
   `.result()`); `sample_tokens` is served defensively (it raises if no
@@ -66,9 +73,12 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
   The scheduler sets that signal before executor dispatch at
   `vllm/v1/core/sched/scheduler.py:1236-1259`; both refusals are VLLM-8;
 - translates each step into a `simllm.core.StepRecord` (phase, new tokens,
-  prefix-cache hit at admission, context length), hands it to an injected
-  sink, and accumulates it on `step_records` for the offline GOAL emission
-  (VLLM-9). An empty-batch step that carries completions is recorded as a
+  prefix-cache hit at admission, context length, and exact `num_sampled`),
+  hands it to an injected sink, and accumulates it on `step_records` for the
+  offline GOAL emission (VLLM-9). The exact count is the sum of the same
+  `produces_token` flags used to fabricate `ModelRunnerOutput` rows, including
+  zero for a mid-prompt chunk and a drain record. An empty-batch step that
+  carries completions is recorded as a
   zero-cost drain record rather than dropped: under the `EngineCore` busy
   loop (`vllm serve`) the scheduler stays live while its finished set is
   non-empty, so the last requests' completions arrive on exactly such a
@@ -95,11 +105,13 @@ Timing has two modes: `paced` (sleep the simulated latency, stock vLLM
 metrics stay meaningful) and `virtual` (return immediately, report sim-native
 metrics). Configuration that no vLLM flag carries comes from `SIMLLM_VLLM_*`
 environment variables (`MODE`, `KV_MEMORY_BYTES`, `GPU`, `PEAK_FLOPS`,
-`MEM_BANDWIDTH`, `EFFICIENCY`, `HOST_INIT_PS`, `TOKEN_ID`, `STEP_RECORDS`),
-documented in the executor module docstring. Objects (a provider, a host
-model, a sink) go through `configure()`, which reaches the executor only when
-the engine core runs in the same process (`LLM(...)`, or
-`VLLM_ENABLE_V1_MULTIPROCESSING=0`).
+`MEM_BANDWIDTH`, `EFFICIENCY`, `HOST_INIT_PS`, `TOKEN_ID`, `STEP_RECORDS`,
+`REPLAY_RUN`), documented in the executor module docstring. Objects (a
+provider, a host model, a sink) go through `configure()`, which reaches the
+executor only when the engine core runs in the same process (`LLM(...)`, or
+`VLLM_ENABLE_V1_MULTIPROCESSING=0`). Call `reset_configuration()` between
+independent in-process engines to clear every accumulated hook. An explicit
+constructor config takes priority over hooks and the environment.
 
 Flagged worker-boundary skeleton
 (`simllm/adapters/vllm/worker.py`):
@@ -165,13 +177,49 @@ runner through `self.model_runner` in the stock source as well
 
 `SimExecutor` and `SimWorker` share the same model-derived KV specification,
 configured available-memory answer, compilation-time answer, task answer,
-token fabrication, translation, settlement, and streaming helpers. The
-worker and runner share exactly one core `VirtualClock`; empty model compute
+conditional replay or token fabrication, translation, settlement, and
+streaming helpers. The worker and runner share exactly one core
+`VirtualClock`; empty model compute
 has zero fallback latency, while a configured closed-loop sink can still
 provide a nonzero `StepResult`. Only global rank zero is the mutable time and
 stream authority, including when every process is locally marked as a driver.
 Records use the unchanged
 `atlahs-closed-loop-step-v1` JSONL path.
+
+Simulated communication (`simllm/adapters/vllm/communicator.py`) is a separate
+trimmed layer. `SimGroupCoordinator` mirrors the pinned v0.26.0 signatures for
+`all_reduce`, `all_gather`, `broadcast`, `send`, and `recv`, plus `rank`,
+`ranks`, `world_size`, `local_rank`, `rank_in_group`, and the six rank
+navigation properties. Its constructor accepts resolved ranks and the
+runner-owned `VirtualClock`; it never constructs a torch process group. The
+module is torch-optional: it remains importable without torch, but `recv`
+uses a guarded runtime torch import when the caller supplies a real
+`torch.dtype`. The copied runner uses `ShapeTensor` for its deliberate
+empty-computation calls.
+
+Every successful boundary produces one immutable event with operation, group,
+rank membership, payload bytes, virtual timestamp, semantic `CollectiveWork`,
+and the nested COMP-15 events. A multi-rank call enters the landed
+`ncclAllReduce`-shaped stack skeleton. A singleton emits the upper observation
+but takes the exact identity path and emits no ring event. The V1 runner issues
+one shape-only TP call during `_model_forward`; when DP size exceeds one it
+first issues the pinned runner helper's `(4, dp_size)` int32 coordination
+all-reduce. Both groups share one observer and clock, so their zero-time call
+order stays deterministic.
+
+The COMP-15 compatibility entry constrains the currently servable nonzero
+payloads. Payload bytes must divide evenly over world size, channels and warps,
+and each per-lane share must contain an integral, nonzero number of configured
+chunks. An unservable call raises before consuming its operation ID. A
+zero-byte call emits an upper event with
+`stack_disposition="zero_payload_bypass"` and no nested stack event. VLLM-20
+owns removal of this compatibility-domain restriction.
+
+This first slice is observability only. It does not create a runtime authority,
+emit a `CompletionEvent`, change a `StepResult`, or model communication time.
+It therefore makes no TTFT or TPOT claim. VLLM-19, VLLM-20, and VLLM-21 own
+the explicit residuals; CORE-4 and CORE-5 must land before runtime projection
+or timing work begins.
 
 Placement capture (`simllm/adapters/vllm/worker_ext.py`), used on *real* runs:
 
@@ -267,6 +315,62 @@ Exactly one strengthened smoke ran in the review round. It reached
 1660 Ti despite masking, so VLLM-16 keeps the genuinely GPU-invisible version
 of this asserted smoke open.
 
+PLAY-3 joined-token replay is implemented in `SimExecutor` and the flagged
+skeleton as of 2026-08-10. Expectations were frozen in commit `edcb2b9`
+before implementation or any replay run. A joined
+`simllm-preplay-replay-run-v1` is selected with
+`SIMLLM_VLLM_REPLAY_RUN`; construction verifies the named trace bytes, and
+sampling maps each scheduler-reported output index to the exact oracle token.
+The adapter accepts only an exact joined scheduler request ID. Live replay
+sets vLLM's audited request-ID no-randomization mode, and a suffix-shaped
+lookalike fails as unjoined. Unknown IDs, cursor gaps, exhaustion, early stop
+channels, model-length overflow and admission lengths that differ from the
+oracle all fail before settlement. `reset_configuration()` prevents replay
+state from leaking into a later in-process engine.
+
+The four-cell metric study served exact oracle sequences through both adapter
+paths. A review-amendment study then submitted the same two requests to the
+real in-process vLLM scheduler in baseline and replay modes. The scheduler
+itself moved `r0` completion from step 3 to step 0; the engine-produced records
+changed TTFT and TPOT by every frozen exact relation. The absent-replay path
+has a tracked LF-locked JSONL pytest fixture. A final in-process vLLM v0.26.0
+Granite smoke asserted external and internal identity `length-cap`, returned
+token ID 38 and retained a zero-latency completion drain. Earlier live
+attempts exposed internal-ID randomization and the offline wrapper's
+integer-only output sort; both remain explicit in
+[the PLAY-3 results](../../examples/preplay_adapter_replay_v1/RESULTS.md),
+along with their post-specified regression status. Speculative decoding and
+structured output remain refused. SGLang replay is not implied by this status
+and remains PLAY-7 in [preplay.md](preplay.md#open-tasks).
+The VLLM-14 zero-time coordinator slice is implemented as of 2026-08-10. Its
+expectations-only commit is `29221e4`, which precedes implementation and every
+result-producing target run. The import-free study in
+`examples/vllm_group_coordinator_v1/RESULTS.md` passes all 4 shape cells and
+both payload-scaling instances. The fixed 4,096-byte all-reduce emits one
+coordinator event, 14 nested COMP-15 events, and the frozen 17-event full stack
+including communicator setup. Singleton identity and the accepted VLLM-13
+step/token/clock baseline both pass as fatal unscored guards.
+
+The scored in-process vLLM v0.26.0 smoke reached `SimWorker` and
+`SimModelRunner` without a vLLM fork. Two model steps emitted the frozen
+coordinator order `DP, TP, DP, TP` with payloads `64, 4096, 64, 4096` bytes and
+nested stack counts `32, 14, 32, 14`. The request returned token id `24577`
+twice and retained exactly two `atlahs-closed-loop-step-v1` records. As in the
+earlier skeleton smoke, this host exposed a GTX 1660 Ti despite
+`CUDA_VISIBLE_DEVICES=`, so the run is external-runtime seam evidence but not
+GPU-invisible-host evidence.
+
+VLLM-15 is complete. Expectations were frozen at commit `25d098c` before the
+implementation and runs. The
+[latent-knob study](../../examples/step_sink_latent_knobs/RESULTS.md) covers
+mid-prompt and prompt-completing chunks, prefix-cache completion, decode, and
+attach-mid-flight translation. Every record count equals the nonempty
+fabricated output rows. The adapter-produced mixed batch reduces live fluid
+TTFT by the frozen 32,000 ps relative to the absent-field bypass, and a real
+vLLM v0.26.0 chunked-prefill smoke emits sample counts `(0, 1, 1)` for
+scheduled-token counts `(2, 1, 1)`. Manually constructed records may still
+omit the optional field; v1 readers and that compatibility path are unchanged.
+
 ## Open tasks
 
 - VLLM-3: sim-native metrics export via a `vllm.stat_logger_plugins` stat
@@ -330,37 +434,34 @@ of this asserted smoke open.
   NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
   The simulated executor binds step shapes and framework KV events to this
   template; it does not invent concurrency from aggregate phase timings.
-- VLLM-13 (Completeness; P1; L) (remaining after the flagged skeleton): add
-  the GPU-present mode that runs stock `Worker.init_device`, preserves its
+- VLLM-13 (Completeness; P1; L) (remaining GPU-present half after the flagged
+  skeleton): the skeleton DP coordination half has landed through
+  `SimGroupCoordinator`, including consumption of its local padded-token
+  projection into `StepRecord.num_tokens_after_padding`. Add the GPU-present
+  mode that runs stock `Worker.init_device`, preserves its
   distributed groups and memory snapshot, respects the upstream V1/V2 runner
   selection, and then rebinds `self.model_runner`. Couple runner work to the
   simulated GPU service and NCCL path, including BACK-20 submission in
-  GPU-initiated mode. Serve or emulate runner-internal DP coordination above
-  one. Enable and validate device-free async multiprocessing, Ray, and
-  external-launch execution, which this first slice rejects before their
-  device or ownership assumptions can run. Every run must declare the CQ
-  consumer and how completion reaches the model runner through BACK-20 and
+  GPU-initiated mode, then serve runner-internal DP coordination through those
+  preserved real groups. Enable and validate device-free async multiprocessing,
+  Ray, and external-launch execution, which this first slice rejects before
+  their device or ownership assumptions can run. Every run must declare the
+  CQ consumer and how completion reaches the model runner through BACK-20 and
   CORE-5. The executor-level `SimExecutor` and the gated skeleton remain
-  supported without behavior changes. VLLM-12 device-schedule capture uses
-  the same seam.
-- VLLM-14 (Completeness; P1; L): simulate the `GroupCoordinator` behavior
-  behind its own interface for the model-runner coupling mode. The simulated
-  coordinator keeps the real class's functional names and call signatures
-  (`all_reduce`, `all_gather`, `broadcast`, send and recv, and the rank and
-  group-membership surface the model layers and the runner read) and returns
-  shape-correct results, but the implementation is trimmed to the main path:
-  no real NCCL, no custom-allreduce or symmetric-memory fast paths, and side
-  calls off the main path are omitted or served inertly. Every call boundary
-  emits an observability event (operation, group, payload bytes, virtual
-  timestamps) that lowers into `CollectiveWork` and the COMP-15 NCCL stack
-  model. Beyond the trimmed simulation, study the effect of the actual
-  communication function on end-to-end performance: the real communicator
-  call path (Python dispatch, custom-op indirection, synchronization
-  stalls) can itself bottleneck vLLM and SGLang, so the study compares the
-  real call-path cost against the simulated one and folds the calibrated
-  cost into the model. SGL-11 is the SGLang half; the trimmed-interface
-  principle is shared, and the simulated communication stack section in
-  [docs/README_PRO.md](../README_PRO.md) shows where both sit.
+  supported without behavior changes. VLLM-12 device-schedule capture uses the
+  same seam.
+- VLLM-14 (Completeness; P1; L) (remaining after the zero-time first slice):
+  the name-mirrored `SimGroupCoordinator`, shape-only results, rank-membership
+  surface, boundary observations, `CollectiveWork` lowering, COMP-15 call, and
+  copied-runner TP and DP calls have landed. Keep that narrow interface aligned
+  with the pinned supported model paths and bind it into VLLM-13's later
+  GPU-present runner mode without changing the skeleton or executor bypasses.
+  Custom-allreduce, symmetric-memory fast paths, and off-main-path calls remain
+  omitted or inert unless a supported study opts into them. SGL-11 remains the
+  untouched SGLang half and should reuse this torch-optional shape/event base.
+  This ID explicitly excludes runtime projection and every timing claim:
+  VLLM-19, VLLM-20, and VLLM-21 own those residuals, and CORE-4/5 gate live
+  projection.
 - VLLM-16 (Completeness; P1; M): run the flagged in-process skeleton smoke on
   a genuinely GPU-invisible host where CUDA platform selection is unavailable
   and no physical GPU is discoverable before or during worker construction.
@@ -376,3 +477,29 @@ of this asserted smoke open.
   attach-mid-flight fallback. The emitted count must equal the fabricated
   `ModelRunnerOutput` rows that actually sample; an absent field remains the
   explicit compatibility path.
+- VLLM-19 (Completeness; P1; L): after CORE-4 and CORE-5 land, project each
+  coordinator `CollectiveWork` through the single runtime authority into
+  `CompletionEvent`, `StepResult`, and TTFT/TPOT. The current component event is
+  not metric-live and must not be timed in parallel with another authority.
+  Freeze a fixed-workload signed TTFT/TPOT relation and quantitative band before
+  implementation. The disabled projection must preserve every accepted
+  VLLM-13 timestamp, token, record, and completion order exactly.
+- VLLM-20 (Precision; P1; M): replace the current `ncclAllReduce`-shaped
+  compatibility lowering for `all_gather`, `broadcast`, `send`, and `recv`
+  with native COMP stack entries when those entries exist. The surrogate is an
+  all-reduce-shaped zero-time trace; the identifying observables are the
+  operation-specific stack names, peer roles, byte counts, and shape results.
+  Remove the current ring-layout servable-domain restriction: native entries
+  must represent zero payloads explicitly and accept operation-legal nonzero
+  byte counts without requiring even all-reduce lane or chunk division.
+  Acceptance requires exact semantic operation identity for every enabled call
+  while the compatibility off path remains byte-for-byte and timestamp-for-
+  timestamp identical to this slice.
+- VLLM-21 (Precision; P1; L): calibrate real coordinator dispatch cost after
+  VLLM-19 makes it metric-live. The current surrogate is exactly zero dispatch
+  time. Measure pinned-vLLM Python dispatch, custom-op indirection, and
+  synchronization stalls over a frozen payload, group-size, and call-mode
+  matrix. Hold out at least one model and group size; require modeled median
+  and p95 call cost within a pre-registered relative or additive band, then
+  verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
+
