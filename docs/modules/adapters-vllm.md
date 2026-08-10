@@ -60,9 +60,11 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
 - refuses configurations the fabricated token would silently corrupt:
   speculative decoding raises at construction (every draft would be
   rejected, i.e. an unstated 0% acceptance rate) and structured output
-  raises at the first step that schedules one (the grammar would reject the
-  fabricated id and kill every such request at its first token). Both are
-  VLLM-8;
+  raises at the first step whose
+  `SchedulerOutput.has_structured_output_requests` is true (the grammar would
+  reject the fabricated id and kill every such request at its first token).
+  The scheduler sets that signal before executor dispatch at
+  `vllm/v1/core/sched/scheduler.py:1236-1259`; both refusals are VLLM-8;
 - translates each step into a `simllm.core.StepRecord` (phase, new tokens,
   prefix-cache hit at admission, context length), hands it to an injected
   sink, and accumulates it on `step_records` for the offline GOAL emission
@@ -147,8 +149,10 @@ The order comes from
 `vllm/v1/executor/abstract.py:118-150`,
 `vllm/v1/engine/llm_engine.py:123-142,205-210`, and
 `vllm/entrypoints/llm.py:338-348`. Conditional and control methods are also
-served: max-length update, KV handshake, cache resets, dummy batch, profile,
-LoRA, sleep/wake, health, draft-token query, and shutdown.
+served: max-length update, KV handshake, multimodal and encoder cache resets,
+dummy batch, profile, LoRA, sleep/wake, health, draft-token query, and
+shutdown. Prefix-cache reset remains scheduler-only, matching
+`vllm/v1/engine/core.py:779-784`.
 
 The model runner keeps the selected V1 algorithm names and order from state
 update through input/attention preparation, empty `_model_forward`, sampling,
@@ -198,9 +202,12 @@ bookkeeping in the scheduler process and run unmodified.
 The pure surfaces (step translation, drain records, output fabrication, the
 roofline cost model with independent weight/KV dtype sizing, record
 serialization, manifest assembly, the discovery helpers) are unit-tested
-without importing vLLM in `tests/test_adapters_vllm.py`. The executor class
-itself, its RPC table and the streaming JSONL dump are exercised by a real
-end-to-end run, not by unit tests (VLLM-5 tracks the CI stand-in harness):
+from transcribed inputs in `tests/test_adapters_vllm.py`. The mirror tests use
+those same inputs against both the no-vLLM stand-in and the installed real
+v0.26.0 `Worker`; the test module never imports vLLM directly. The executor
+class itself, its RPC table and the streaming JSONL dump are exercised by a
+real end-to-end run, not by a complete unit stand-in (VLLM-5 tracks that CI
+harness):
 on 2026-08-04 a live vLLM v0.26.0 (`/data3/yifeng/simllm-dev/venv-vllm`,
 in-process `LLM(...)` with `VLLM_ENABLE_V1_MULTIPROCESSING=0`) drove
 `SimExecutor` in virtual mode with granite-3.0-1b-a400m-instruct: engine
@@ -234,7 +241,7 @@ behavioral relation instances. All mirrored calls, records, and results use
 one injected nonzero virtual clock; the deliberate zero-compute and schema
 checks pass as fatal unscored invariants.
 
-Exactly one in-process vLLM v0.26.0 smoke used the cached Granite model,
+Exactly one initial in-process vLLM v0.26.0 smoke used the cached Granite model,
 `VLLM_ENABLE_V1_MULTIPROCESSING=0`, offline Hugging Face mode, the dotted
 `worker_cls`, and a 64-block logical KV pool. It reached `SimWorker`, completed
 engine initialization in 0.00 seconds, generated one request with two output
@@ -242,6 +249,23 @@ tokens, and streamed two schema-tagged step records. The host was not actually
 GPU-invisible: extension setup warned that no CUDA runtime was found, but
 vLLM then identified a GTX 1660 Ti and selected its CUDA platform. There was
 no pre-worker platform blocker, and no retry was made.
+
+The review-triggered expectations were frozen in commit `17b7bd1` before the
+fix implementation and review-round runs. The same mirror test file now
+passes 37/37 tests without vLLM and all 35 applicable tests against the real
+v0.26.0 worker, with two absence-only tests skipped in that environment. The
+deterministic study uses literal call-sequence oracles rather than importing
+implementation constants and still passes 4/4 rows and 4/4 behavioral
+relation instances. The executor's documented VLLM-8 refusal now keys on the
+real `SchedulerOutput.has_structured_output_requests` signal, and the phantom
+worker `reset_prefix_cache` projection is removed.
+
+Exactly one strengthened smoke ran in the review round. It reached
+`SimWorker`, asserted that the runner was `SimModelRunner`, generated token id
+`24577` twice to match the worker's fabricated id, and asserted exactly two
+`atlahs-closed-loop-step-v1` JSONL records. The host still exposed the GTX
+1660 Ti despite masking, so VLLM-15 keeps the genuinely GPU-invisible version
+of this asserted smoke open.
 
 ## Open tasks
 
@@ -337,3 +361,12 @@ no pre-worker platform blocker, and no retry was made.
   cost into the model. SGL-11 is the SGLang half; the trimmed-interface
   principle is shared, and the simulated communication stack section in
   [docs/README_PRO.md](../README_PRO.md) shows where both sit.
+- VLLM-15 (Completeness; P1; M): run the flagged in-process skeleton smoke on
+  a genuinely GPU-invisible host where CUDA platform selection is unavailable
+  and no physical GPU is discoverable before or during worker construction.
+  Confirm that vLLM reaches the dotted `SimWorker` seam, constructs
+  `SimModelRunner` without stock `Worker.init_device` or physical GPU state,
+  generates only the configured fabricated token, and emits exactly the
+  expected `atlahs-closed-loop-step-v1` records. The 2026-08-10 host does not
+  close this task because vLLM identified a GTX 1660 Ti despite
+  `CUDA_VISIBLE_DEVICES=`.

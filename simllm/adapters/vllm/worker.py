@@ -148,17 +148,38 @@ except ImportError as exc:
             self.vllm_config = vllm_config
             self.model_config = vllm_config.model_config
             self.cache_config = vllm_config.cache_config
+            self.lora_config = vllm_config.lora_config
+            self.load_config = vllm_config.load_config
             self.parallel_config = vllm_config.parallel_config
-            self.parallel_config.rank = rank
             self.scheduler_config = vllm_config.scheduler_config
             self.device_config = vllm_config.device_config
-            self.speculative_config = getattr(vllm_config, "speculative_config", None)
+            self.speculative_config = vllm_config.speculative_config
+            self.observability_config = vllm_config.observability_config
+            self.kv_transfer_config = vllm_config.kv_transfer_config
+            self.compilation_config = vllm_config.compilation_config
+            self.parallel_config.rank = rank
             self.local_rank = local_rank
             self.rank = rank
             self.distributed_init_method = distributed_init_method
             self.is_driver_worker = is_driver_worker
             self.device = None
             self.model_runner = None
+            vllm_config.kernel_config.ir_op_priority.set_default()
+
+            self.elastic_ep_executor = None
+            self._sleep_saved_buffers: dict[str, Any] = {}
+            self._sleep_rebuild_draft_metadata_buffers = False
+            self.weight_transfer_engine = None
+            self._weight_update_active = False
+            self.profiler = None
+            self.profiler_config = vllm_config.profiler_config
+            if self.profiler_config.profiler not in ("torch", "cuda", None):
+                raise ValueError(
+                    f"Unknown profiler type: {self.profiler_config.profiler}"
+                )
+            self.use_v2_model_runner = vllm_config.use_v2_model_runner
+            self._pp_send_work: list[Any] = []
+            self._sleep_mode_backend = None
 
 
 @dataclass
@@ -314,8 +335,7 @@ class SimModelRunner:
                     "State error: sample_tokens() must be called after "
                     "execute_model() returns None."
                 )
-            structured = getattr(scheduler_output, "structured_output_request_ids", None)
-            if structured or getattr(scheduler_output, "has_structured_output_requests", False):
+            if getattr(scheduler_output, "has_structured_output_requests", False):
                 raise RuntimeError(
                     "SimWorker does not support structured output: the grammar "
                     "would reject its fabricated token id (VLLM-8)."
@@ -582,10 +602,6 @@ class SimWorker(_GpuWorkerBase):
         with self._call_ledger.record("worker.reset_encoder_cache"):
             self._runner().reset_encoder_cache()
 
-    def reset_prefix_cache(self) -> None:
-        with self._call_ledger.record("worker.reset_prefix_cache"):
-            return
-
     def get_supported_tasks(self) -> tuple[str, ...]:
         with self._call_ledger.record("worker.get_supported_tasks"):
             return self._runner().get_supported_tasks()
@@ -639,7 +655,7 @@ class SimWorker(_GpuWorkerBase):
             return
 
     def get_model(self) -> Any:
-        raise RuntimeError("SimWorker skeleton has no physical model object")
+        raise RuntimeError("SimWorker skeleton has no physical model object (VLLM-13)")
 
     def get_draft_model(self) -> None:
         return None

@@ -1,6 +1,9 @@
-"""vLLM adapter tests. Nothing here imports vLLM: the adapter's whole point
-is that the translation, fabrication and export logic are plain Python that
-runs (and is checked) without a GPU stack installed."""
+"""vLLM adapter tests using only transcribed inputs.
+
+The tests never import vLLM directly. Adapter imports select the real worker
+when vLLM is installed and the transcribed worker base otherwise, so the same
+mirror tests run in both environments.
+"""
 
 import importlib.util
 import json
@@ -65,6 +68,7 @@ class FakeSchedulerOutput:
     num_scheduled_tokens: dict[str, int] = field(default_factory=dict)
     finished_req_ids: set = field(default_factory=set)
     preempted_req_ids: set | None = None
+    has_structured_output_requests: bool = False
 
     @property
     def total_num_scheduled_tokens(self) -> int:
@@ -90,6 +94,12 @@ def llama8b_dims() -> ModelDims:
 
 class FakeDType:
     itemsize = 2
+
+
+class FakeIrOpPriority:
+    @staticmethod
+    def set_default():
+        return
 
 
 class FakeModelConfig:
@@ -145,6 +155,13 @@ def fake_vllm_config():
         scheduler_config=SimpleNamespace(),
         device_config=SimpleNamespace(device="cuda"),
         speculative_config=None,
+        lora_config=None,
+        load_config=None,
+        observability_config=None,
+        kv_transfer_config=None,
+        compilation_config=SimpleNamespace(ir_enable_torch_wrap=True),
+        kernel_config=SimpleNamespace(ir_op_priority=FakeIrOpPriority()),
+        profiler_config=SimpleNamespace(profiler=None),
         quant_config=None,
         use_v2_model_runner=False,
     )
@@ -232,6 +249,16 @@ def test_sim_worker_requires_the_explicit_skeleton_flag(monkeypatch):
         with pytest.raises(RuntimeError) as excinfo:
             make_sim_worker()
         assert "SIMLLM_VLLM_WORKER_MODE=skeleton" in str(excinfo.value)
+
+
+def test_sim_executor_refuses_structured_scheduler_output():
+    executor = object.__new__(SimExecutor)
+    scheduler_output = FakeSchedulerOutput(
+        num_scheduled_tokens={"r0": 1},
+        has_structured_output_requests=True,
+    )
+    with pytest.raises(RuntimeError, match="VLLM-8"):
+        executor.execute_model(scheduler_output)
 
 
 def test_sim_worker_rejects_v2_and_device_requiring_executor_paths(monkeypatch):

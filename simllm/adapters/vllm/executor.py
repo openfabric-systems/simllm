@@ -1073,7 +1073,6 @@ class SimExecutor(_ExecutorBase):
             "profile": self._rpc_profile,
             "reset_mm_cache": self._rpc_none,
             "reset_encoder_cache": self._rpc_none,
-            "reset_prefix_cache": self._rpc_none,
             "save_sharded_state": self._rpc_none,
             "sleep": self._rpc_none,
             "wake_up": self._rpc_none,
@@ -1239,8 +1238,7 @@ class SimExecutor(_ExecutorBase):
         return _resolve_token_id(self.dims.vocab_size, self.config.token_id)
 
     def _run_step(self, scheduler_output: Any) -> Any:
-        structured = getattr(scheduler_output, "structured_output_request_ids", None)
-        if structured:
+        if getattr(scheduler_output, "has_structured_output_requests", False):
             raise RuntimeError(
                 "SimExecutor does not support structured output: the grammar "
                 "would reject the fabricated token id, so every such request "

@@ -4,16 +4,24 @@ The flagged VLLM-13 skeleton passes all four exact-oracle sweep rows and all
 four behavioral relation instances. Every ordinary step followed the frozen
 14-call V1 sequence, emitted the existing schema-tagged `StepRecord`, and
 kept the injected virtual clock at `123000 ps` because model computation was
-deliberately empty. The single live vLLM v0.26.0 smoke also succeeded through
-the dotted worker-class seam and generated one request with two output tokens.
+deliberately empty. Both the initial and review-round live vLLM v0.26.0 smokes
+succeeded through the dotted worker-class seam and generated one request with
+two output tokens.
 
 ## Expectations and chronology
 
-The final expectations-only ancestor is commit `582d3de` (`docs: complete
-vLLM skeleton expectations`). It follows the initial expectations-only commit
-`6ef1910` and precedes the implementation, the scripted study, and the live
-smoke. The checks below are therefore auditable pre-registered expectations,
-not post-specified regression checks.
+The original final expectations-only ancestor is commit `582d3de` (`docs:
+complete vLLM skeleton expectations`). It follows the initial expectations
+commit `6ef1910` and precedes the initial implementation, scripted study, and
+live smoke. Those original checks are therefore auditable pre-registered
+expectations, not post-specified regression checks.
+
+Integration review then requested stronger structural checks and one
+correctness repair. Commit `17b7bd1` (`docs: add review-triggered vLLM
+expectations`) freezes those expectations after the initial evidence, but
+before the fix implementation and every fix-round run. They are explicitly
+review-triggered expectations and are not presented as retroactive
+pre-registration for the initial implementation.
 
 Reproduce the deterministic study from the repository root:
 
@@ -39,7 +47,9 @@ contract.
 | Mirrored call-sequence comparison | pass in all 4 cells | Separate exact structural check |
 | Fatal structural cells | 4/4 pass | Unscored invariants |
 | Flag-gate negative controls | 3/3 pass | Unscored off-path invariants |
-| Live vLLM smoke | 1 success | Separate integration disposition |
+| Mirror tests without vLLM | 37/37 pass | Separate unit-test executable |
+| Mirror tests with real vLLM | 35/35 applicable pass | Separate unit-test executable |
+| Live vLLM smokes | 2 successes, one per round | Separate integration disposition |
 
 Zero latency, schema identity, clock equality, record/result cardinality, no
 physical device, and no stock runner are configuration-forced or structural
@@ -111,6 +121,10 @@ execute/sample loop, and
 `vllm/v1/worker/gpu_model_runner.py:4111-4479,4497-4736` for the selected V1
 runner algorithm.
 
+The study harness owns literal copies of both sequences. It does not import
+the implementation's sequence constants, so changing implementation and
+oracle together cannot make this structural comparison pass circularly.
+
 ## Virtual-clock and stream invariants
 
 All four fixtures inject one `VirtualClock(start_ps=123000)`. Every mirrored
@@ -124,7 +138,7 @@ schema `atlahs-closed-loop-step-v1`. These are fatal unscored invariants. In
 particular, `completed_at = virtual_time + zero` is true by construction and
 is not presented as independent behavioral evidence.
 
-## Live in-process smoke
+## Initial live in-process smoke
 
 Exactly one live attempt ran on 2026-08-10 with the cached Granite snapshot,
 offline Hugging Face mode, in-process V1 execution, the upstream V1 runner
@@ -165,6 +179,70 @@ skeleton's `init_device` override never calls that body. Worker-to-runner
 forwarding is source-visible at `gpu_worker.py:701-713,923-927,955-956,
 1080-1178`.
 
+## Review-triggered fix round
+
+The mirror tests now exercise the same fake `VllmConfig` against both the
+transcribed no-vLLM worker base and the real pinned v0.26.0 `Worker`
+constructor. The repository environment passes all 37 tests. The real-vLLM
+environment passes all 35 applicable tests, with only the two tests whose
+purpose requires vLLM to be absent skipped. The pinned environment does not
+bundle pytest, so the local run exposed only pytest, `_pytest`, pluggy,
+iniconfig, and `py.py` from a test-runner overlay under `/data3/yifeng/`; the
+interpreter, torch, vLLM, and all runtime dependencies remained those of
+`venv-vllm`.
+
+The review also identified a silent failure in the documented VLLM-8 guard.
+On v0.26.0, the executor-visible signal is
+`SchedulerOutput.has_structured_output_requests`; request ids belong to the
+later `GrammarOutput`. The executor and worker now refuse the scheduler
+boolean before token fabrication, and the dual-environment test suite covers
+the executor's public `execute_model` path. The source-inaccurate
+`reset_prefix_cache` worker projection was removed; prefix-cache reset is a
+scheduler-only operation at `vllm/v1/engine/core.py:779-784`.
+
+The independent-literal deterministic study reproduced without changing the
+tracked CSV:
+
+```text
+tracked results match 4 measured rows
+exact-oracle rows: 4/4 PASS
+behavioral relation instances: 4/4 PASS
+fatal structural cells: 4/4 PASS
+flag-gate negative controls: 3/3 PASS
+```
+
+Exactly one strengthened live attempt ran in this review round. It used a
+fresh JSONL path and otherwise retained the initial cached-model and offline
+configuration:
+
+```bash
+env PYTHONPATH=/data3/yifeng/simllm-dev/worktrees/vllm13 \
+  VLLM_ENABLE_V1_MULTIPROCESSING=0 VLLM_USE_V2_MODEL_RUNNER=0 \
+  SIMLLM_VLLM_WORKER_MODE=skeleton SIMLLM_VLLM_MODE=virtual \
+  SIMLLM_VLLM_STEP_RECORDS=/data3/yifeng/simllm-dev/wave1-runs/codex_vllm13_skeleton_mode/vllm_skeleton_v1/live_steps_review_round.jsonl \
+  HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
+  HF_HOME=/home/yifeng/packages/vllm-rnic-capture/hf-cache \
+  CUDA_VISIBLE_DEVICES= \
+  /data3/yifeng/simllm-dev/venv-vllm/bin/python \
+  examples/vllm_skeleton_v1/live_smoke.py
+```
+
+All strengthened assertions passed:
+
+```text
+SMOKE_SIMWORKER_REACHED=True
+SMOKE_SIMRUNNER_MIRROR=True
+SMOKE_OUTPUT_COUNT=1
+SMOKE_FABRICATED_TOKEN_ID=24577
+SMOKE_SAMPLED_TOKEN_IDS=24577,24577
+SMOKE_STEP_RECORD_COUNT=2
+SMOKE_STEP_SCHEMA=atlahs-closed-loop-step-v1
+```
+
+The host again exposed the GTX 1660 Ti despite `CUDA_VISIBLE_DEVICES=`. This
+run validates the asserted worker, runner, token, record-count, and schema
+path, but it is not evidence for a genuinely GPU-invisible platform.
+
 ## Scope and residual work
 
 This result validates the flagged GPU-state-free worker path and its live
@@ -172,4 +250,5 @@ reachability only. It does not validate the later GPU-present stock-init and
 runner-rebind mode, simulated GPU or NCCL service, DP coordination above one,
 device-free async multiprocessing, Ray or external-launch execution, CQ
 consumer ownership, completion delivery, or device-schedule capture. Those
-remain in VLLM-13 and its linked backend and core tasks.
+remain in VLLM-13 and its linked backend and core tasks. VLLM-15 separately
+tracks the equivalent asserted smoke on a genuinely GPU-invisible host.

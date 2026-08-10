@@ -15,8 +15,6 @@ from types import SimpleNamespace
 from typing import Any
 
 from simllm.adapters.vllm import (
-    SKELETON_INIT_CALL_SEQUENCE,
-    SKELETON_STEP_CALL_SEQUENCE,
     SimModelRunner,
     SimWorker,
     step_records_to_json,
@@ -29,6 +27,34 @@ DEFAULT_RUN_DIR = Path(
     "codex_vllm13_skeleton_mode/vllm_skeleton_v1"
 )
 CLOCK_START_PS = 123_000
+
+EXPECTED_INIT_CALL_SEQUENCE = (
+    "worker.init_device",
+    "worker.load_model",
+    "worker.get_kv_cache_spec",
+    "worker.determine_available_memory",
+    "worker.initialize_from_config",
+    "worker.compile_or_warm_up_model",
+    "worker.reset_mm_cache",
+    "worker.get_supported_tasks",
+)
+
+EXPECTED_STEP_CALL_SEQUENCE = (
+    "worker.execute_model",
+    "runner.execute_model",
+    "runner._update_states",
+    "runner._prepare_inputs",
+    "runner._determine_batch_execution_and_padding",
+    "runner._build_attention_metadata",
+    "runner._preprocess",
+    "runner._model_forward",
+    "worker.sample_tokens",
+    "runner.sample_tokens",
+    "runner._sample",
+    "runner._update_states_after_model_execute",
+    "runner._bookkeeping_sync",
+    "runner.eplb_step",
+)
 
 
 @dataclass
@@ -60,6 +86,12 @@ class FakeSchedulerOutput:
 
 class FakeDType:
     itemsize = 2
+
+
+class FakeIrOpPriority:
+    @staticmethod
+    def set_default():
+        return
 
 
 class FakeModelConfig:
@@ -115,6 +147,13 @@ def fake_vllm_config():
         scheduler_config=SimpleNamespace(),
         device_config=SimpleNamespace(device="cuda"),
         speculative_config=None,
+        lora_config=None,
+        load_config=None,
+        observability_config=None,
+        kv_transfer_config=None,
+        compilation_config=SimpleNamespace(ir_enable_torch_wrap=True),
+        kernel_config=SimpleNamespace(ir_op_priority=FakeIrOpPriority()),
+        profiler_config=SimpleNamespace(profiler=None),
         quant_config=None,
         use_v2_model_runner=False,
     )
@@ -225,11 +264,11 @@ def run_cell(request_count: int, prompt_tokens: int, run_dir: Path) -> dict[str,
             exact_failures.append(f"{name}={actual} expected {expected}")
 
     structural_failures: list[str] = []
-    if tuple(init_sequence) != SKELETON_INIT_CALL_SEQUENCE:
+    if tuple(init_sequence) != EXPECTED_INIT_CALL_SEQUENCE:
         structural_failures.append("init sequence mismatch")
-    if tuple(prefill_calls) != SKELETON_STEP_CALL_SEQUENCE:
+    if tuple(prefill_calls) != EXPECTED_STEP_CALL_SEQUENCE:
         structural_failures.append("prefill sequence mismatch")
-    if tuple(decode_calls) != SKELETON_STEP_CALL_SEQUENCE:
+    if tuple(decode_calls) != EXPECTED_STEP_CALL_SEQUENCE:
         structural_failures.append("decode sequence mismatch")
     if worker.device is not None or not isinstance(runner, SimModelRunner):
         structural_failures.append("physical device or non-sim runner present")
