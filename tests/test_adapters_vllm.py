@@ -984,6 +984,20 @@ def test_replay_rejects_early_stop_token_and_model_length_overflow(tmp_path):
         ReplayTokenSource.from_path(replay_path, max_model_len=2)
 
 
+def test_executor_late_model_length_shrink_revalidates_replay(tmp_path):
+    source = ReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_model_len=4096
+    )
+    executor = object.__new__(SimExecutor)
+    executor.replay = source
+
+    executor._rpc_update_max_model_len(0, 2)
+    assert source.max_model_len == 2
+    with pytest.raises(ValueError, match="beyond max_model_len=1"):
+        executor._rpc_update_max_model_len(0, 1)
+    assert source.max_model_len == 2
+
+
 def test_replay_rejects_changed_trace_bytes(tmp_path):
     source_trace = (
         Path(__file__).parents[1]

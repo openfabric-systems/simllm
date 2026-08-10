@@ -1183,8 +1183,10 @@ class SimExecutor(_ExecutorBase):
         return self._model_answers.determine_available_memory()
 
     def _rpc_update_max_model_len(self, rank: int, max_model_len: int) -> None:
-        """Auto-fit shrank the context; nothing to resize on a fake worker."""
+        """Apply an auto-fit context shrink to replay admission guards."""
         if rank == 0:
+            if self.replay is not None:
+                self.replay.update_max_model_len(max_model_len)
             logger.info("SimExecutor: max_model_len updated to %d", max_model_len)
 
     def _rpc_initialize_from_config(self, rank: int, kv_cache_configs: Any = None) -> None:
