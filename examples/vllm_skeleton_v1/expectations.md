@@ -21,6 +21,9 @@ The pinned source establishes these control-flow facts:
   memory when a KV cache exists, allocates the cache, and then compiles or
   warms the model (`vllm/v1/engine/core.py:243-324` and
   `vllm/v1/executor/abstract.py:118-136`).
+- In-process `LLM` construction then resets the worker multimodal cache and
+  queries the supported tasks (`vllm/v1/engine/llm_engine.py:123-142,205-210`
+  and `vllm/entrypoints/llm.py:338-348`).
 - The ordinary engine step calls `execute_model`; when the V1 runner returns
   `None`, it immediately calls `sample_tokens`
   (`vllm/v1/engine/core.py:576-606`). The stock worker delegates both calls
@@ -35,13 +38,17 @@ initialization sequence for the study fixture:
 4. `determine_available_memory`
 5. `initialize_from_config`
 6. `compile_or_warm_up_model`
+7. `reset_mm_cache`
+8. `get_supported_tasks`
 
-The fixture does not use `max_model_len=-1`, KV transfer, speculative
+The first six calls are the engine-core initialization prefix. Calls 7 and 8
+complete the ordinary in-process `LLM` construction sequence. The fixture
+does not use `max_model_len=-1`, KV transfer, speculative
 decoding, structured output, pooling, pipeline parallelism, data parallelism,
-LoRA, profiling, sleep, or reset controls. Their worker names must remain
-callable or fail explicitly as documented, but they do not enter the scored
-sequence. In particular, the conditional `update_max_model_len` call is absent
-from this fixed configuration.
+LoRA, profiling, sleep, encoder reset, or prefix reset. Their worker names
+must remain callable or fail explicitly as documented, but they do not enter
+the scored sequence. In particular, the conditional `update_max_model_len`
+call is absent from this fixed configuration.
 
 For each non-empty generation step, the exact mirrored call sequence is:
 
@@ -60,12 +67,15 @@ For each non-empty generation step, the exact mirrored call sequence is:
 13. `runner._bookkeeping_sync`
 14. `runner.eplb_step`
 
-This is the main V1 algorithm shape at
+This is the selected copied V1 model-runner algorithm shape at
 `vllm/v1/worker/gpu_model_runner.py:4111-4479,4497-4736`, trimmed to the
 ordinary text-generation path. `_model_forward` is deliberately empty in
 this slice. Sampling preserves the existing SimExecutor fabricated-token
 contract so the real CPU scheduler can continue, but no model computation or
-device state is created.
+device state is created. The live Granite smoke sets
+`VLLM_USE_V2_MODEL_RUNNER=0` so the upstream selector agrees with this copied
+path. Supporting or rebinding both stock runner variants under the later
+GPU-present mode remains outside this slice.
 
 ## Entry-gate expectations
 
@@ -112,25 +122,28 @@ step-index order `{0, 1}` with schema `atlahs-closed-loop-step-v1`.
 ## Exact virtual-clock relation
 
 Let `T_i` be the SimLLM core `VirtualClock.now_ps` when step `i` is released,
-and let `L_i` be the skeleton result latency. With deliberate model compute
-empty and no downstream sink in this study:
+and let `L_i` be the skeleton result latency. The scripted fixture injects one
+central clock starting at `T_0 = 123000 ps`, which makes a hardcoded zero
+timestamp observable. With deliberate model compute empty and no downstream
+sink in this study:
 
-    T_0 = 0
+    T_0 = 123000 ps
     L_i = 0 ps
     completed_at_i = T_i + L_i
     T_(i+1) = completed_at_i
 
 Therefore both steps in all four cells must have:
 
-- `StepRecord.virtual_time_ps = 0`;
+- `StepRecord.virtual_time_ps = 123000`;
 - `StepResult.step_latency_ps = 0`;
-- `StepResult.completed_at_ps = 0`;
-- final virtual-clock time `0 ps`.
+- `StepResult.completed_at_ps = 123000`;
+- final virtual-clock time `123000 ps`.
 
 Every mirrored call record must obtain its start and completion timestamps
 from that same `VirtualClock`. Since the bodies are empty, both timestamps are
-exactly zero and completion never precedes start. Request count and prompt
-length may change bookkeeping volume, but cannot change skeleton latency.
+exactly `123000 ps` and completion never precedes start. Request count and
+prompt length may change bookkeeping volume, but cannot change skeleton
+latency.
 
 ## Evidence accounting
 
