@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import io
 import json
 from collections import Counter
@@ -287,6 +288,10 @@ def _compact(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
+def _digest(value: Any) -> str:
+    return hashlib.sha256(_compact(value).encode()).hexdigest()
+
+
 def _row(
     evidence_class: str,
     family: str,
@@ -371,13 +376,13 @@ def run_study() -> list[dict[str, str]]:
                     f"{route.value}_event_sequence",
                     f"rank_{rank}",
                     {"rank": rank, "route": route.value},
-                    [len(expected), "exact_events_and_fields"],
-                    [len(measured), "exact_events_and_fields"],
+                    {"event_count": len(expected), "sha256": _digest(expected)},
+                    {"event_count": len(measured), "sha256": _digest(measured)},
                     measured == expected,
                 )
             )
 
-    planner_measured: dict[tuple[int, int], tuple[int, int, tuple[int, ...]]] = {}
+    planner_layout_holds: dict[tuple[int, int], bool] = {}
     rows.append(
         _row(
             "run_configuration",
@@ -414,9 +419,15 @@ def run_study() -> list[dict[str, str]]:
             payload_bytes=payload_bytes,
             operation_id=f"planner-p{payload_bytes}-c{channel_count}",
         )
-        measured = (plan.wire_bytes, len(plan.chunks), plan.chunks_per_channel())
-        planner_measured[(payload_bytes, channel_count)] = measured
         expected_wire, expected_chunks, expected_assignment = planner_expectation
+        expected_last = 512 if payload_bytes == 5_120 else 1_024
+        planner_layout_holds[(payload_bytes, channel_count)] = (
+            sum(chunk.byte_count for chunk in plan.chunks) == plan.wire_bytes
+            and [chunk.offset_bytes for chunk in plan.chunks]
+            == [chunk_id * 1_024 for chunk_id in range(len(plan.chunks))]
+            and all(chunk.byte_count == 1_024 for chunk in plan.chunks[:-1])
+            and plan.chunks[-1].byte_count == expected_last
+        )
         parameters = {
             "payload_bytes": payload_bytes,
             "channel_count": channel_count,
@@ -509,11 +520,7 @@ def run_study() -> list[dict[str, str]]:
         clock.now_ps == 0 and all(event.timestamp_ps == 0 for event in stack.events)
         for clock, stack, _, _ in all_route_runs
     )
-    planner_chunk_bytes_hold = all(
-        wire_bytes == expected[0]
-        for key, (wire_bytes, _, _) in planner_measured.items()
-        for expected in (PLANNER_EXPECTATIONS[key],)
-    )
+    planner_chunk_bytes_hold = all(planner_layout_holds.values())
     structural = (
         ("event_schema_round_trip", "8/8", "8/8" if round_trip_holds else "failure", round_trip_holds),
         ("monotonic_sequence_and_time", "8/8", "8/8" if monotonic_holds else "failure", monotonic_holds),

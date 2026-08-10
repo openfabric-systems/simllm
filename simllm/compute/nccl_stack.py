@@ -21,6 +21,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from simllm.compute.nccl import nccl_ring_egress_bytes
 from simllm.core._wire import (
     _array,
     _enum_value,
@@ -531,13 +532,16 @@ class NcclTrafficPlanner:
         operation_id: str,
     ) -> NcclCollectivePlan:
         payload_bytes = _require_positive_integer("payload_bytes", payload_bytes)
-        per_rank_payload, remainder = divmod(payload_bytes, communicator.world_size)
+        _, remainder = divmod(payload_bytes, communicator.world_size)
         if remainder:
             raise ValueError(
                 "payload_bytes must divide evenly by communicator world_size "
                 "for an exact ring plan"
             )
-        wire_bytes = 2 * (communicator.world_size - 1) * per_rank_payload
+        wire_bytes = nccl_ring_egress_bytes(
+            payload_bytes=payload_bytes,
+            world_size=communicator.world_size,
+        )
         self._observer.call(
             "ncclPlanAllReduce",
             NcclStackLane.CPU,
