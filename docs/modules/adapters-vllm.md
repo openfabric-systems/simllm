@@ -66,9 +66,12 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
   The scheduler sets that signal before executor dispatch at
   `vllm/v1/core/sched/scheduler.py:1236-1259`; both refusals are VLLM-8;
 - translates each step into a `simllm.core.StepRecord` (phase, new tokens,
-  prefix-cache hit at admission, context length), hands it to an injected
-  sink, and accumulates it on `step_records` for the offline GOAL emission
-  (VLLM-9). An empty-batch step that carries completions is recorded as a
+  prefix-cache hit at admission, context length, and exact `num_sampled`),
+  hands it to an injected sink, and accumulates it on `step_records` for the
+  offline GOAL emission (VLLM-9). The exact count is the sum of the same
+  `produces_token` flags used to fabricate `ModelRunnerOutput` rows, including
+  zero for a mid-prompt chunk and a drain record. An empty-batch step that
+  carries completions is recorded as a
   zero-cost drain record rather than dropped: under the `EngineCore` busy
   loop (`vllm serve`) the scheduler stays live while its finished set is
   non-empty, so the last requests' completions arrive on exactly such a
@@ -267,6 +270,17 @@ Exactly one strengthened smoke ran in the review round. It reached
 1660 Ti despite masking, so VLLM-16 keeps the genuinely GPU-invisible version
 of this asserted smoke open.
 
+VLLM-15 is complete. Expectations were frozen at commit `25d098c` before the
+implementation and runs. The
+[latent-knob study](../../examples/step_sink_latent_knobs/RESULTS.md) covers
+mid-prompt and prompt-completing chunks, prefix-cache completion, decode, and
+attach-mid-flight translation. Every record count equals the nonempty
+fabricated output rows. The adapter-produced mixed batch reduces live fluid
+TTFT by the frozen 32,000 ps relative to the absent-field bypass, and a real
+vLLM v0.26.0 chunked-prefill smoke emits sample counts `(0, 1, 1)` for
+scheduled-token counts `(2, 1, 1)`. Manually constructed records may still
+omit the optional field; v1 readers and that compatibility path are unchanged.
+
 ## Open tasks
 
 - VLLM-3: sim-native metrics export via a `vllm.stat_logger_plugins` stat
@@ -370,9 +384,3 @@ of this asserted smoke open.
   expected `atlahs-closed-loop-step-v1` records. The 2026-08-10 host does not
   close this task because vLLM identified a GTX 1660 Ti despite
   `CUDA_VISIBLE_DEVICES=`.
-- VLLM-15 (Precision; P1; S): populate `StepRecord.num_sampled` from the
-  translator's existing exact `produces_token` flags. Cover mid-prompt and
-  prompt-completing chunked prefill, prefix-cache completion, decode and the
-  attach-mid-flight fallback. The emitted count must equal the fabricated
-  `ModelRunnerOutput` rows that actually sample; an absent field remains the
-  explicit compatibility path.
