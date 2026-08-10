@@ -88,7 +88,7 @@ and a pinned Transformers CPU runner with greedy and seeded sampling. The
 runner records EOS, length-cap and stop-string termination plus every
 prompt token's prefill routing and every executed nonterminal decode token's
 top-k expert IDs and normalized gate weights at each MoE layer. The Granite
-3.0 1B A400M study covers seeded byte determinism, all three stop modes,
+3.0 1B A400M study passed seeded byte determinism, all three stop modes,
 exact schema round trips and fatal routing-shape and attribution checks; its
 evidence is recorded in [the PLAY-1 results](../../examples/preplay_trace_v1/RESULTS.md).
 

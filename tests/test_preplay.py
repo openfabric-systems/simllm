@@ -37,6 +37,7 @@ from simllm.preplay.runner import (
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _WRITER_GOLDEN = _REPO_ROOT / "examples/preplay_trace_v1/writer_golden.jsonl"
+_GRANITE_FIXTURE = _REPO_ROOT / "examples/preplay_trace_v1/granite_length_cap.jsonl"
 
 
 def provenance(*, sampling=None):
@@ -177,6 +178,26 @@ def test_writer_matches_frozen_byte_fixture(tmp_path):
         provenance=provenance(),
         requests=(golden_request(),),
     )
+
+
+def test_tracked_granite_fixture_covers_prefill_without_a_terminal_forward():
+    trace = read_preplay_trace(_GRANITE_FIXTURE)
+
+    assert trace.provenance.model_id == "ibm-granite/granite-3.0-1b-a400m-instruct"
+    assert trace.provenance.model_revision == "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
+    assert trace.provenance.transformers_version == "5.14.1"
+    assert trace.provenance.top_k == 8
+    assert trace.provenance.expert_count == 32
+    assert trace.provenance.moe_layer_indices == tuple(range(24))
+
+    request = trace.by_request_id("length-cap")
+    assert request.stop_reason is StopReason.LENGTH_CAP
+    assert request.output_token_ids == (38,)
+    assert tuple(
+        token.token_id for token in request.prefill_tokens
+    ) == request.input_token_ids
+    assert len(request.prefill_tokens) == 22
+    assert request.decode_tokens == ()
 
 
 def test_writer_protects_existing_path_unless_overwrite_is_explicit(tmp_path):
