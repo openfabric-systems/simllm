@@ -595,6 +595,15 @@ is difficult.
   own this producer). The QPC stays host ICM in every mode. COMP-2's fixed
   CPU-proxy versus GPU-initiated constants remain the analytical fallback
   while this structural path is disabled.
+- BACK-24 (Precision; P0; S): make external network-event validation
+  transactional at the `RnicDevice` boundary. The current device observes the
+  event timestamp before `WorkQueue` rejects an unknown, duplicate or
+  cross-WQE terminal, so a rejected future terminal can ratchet the
+  device-wide caller clock. Validate the event and plan its retirement before
+  committing caller time. Acceptance injects all three invalid terminal forms
+  at a future timestamp and proves exception identity plus exact equality of
+  caller-clock behavior, WQE records, counters, evidence, port ledger and
+  physical state before and after each rejection.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
