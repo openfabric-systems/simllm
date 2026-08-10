@@ -219,8 +219,9 @@ row-for-row.
   NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
   The simulated executor binds step shapes and framework KV events to this
   template; it does not invent concurrency from aggregate phase timings.
-- VLLM-13 (Completeness; P1; L): couple at the model-runner boundary under a
-  real GPU worker. The verified v0.26.0 seam is the worker class itself:
+- VLLM-13 (Completeness; P1; L): couple at the model-runner boundary, first
+  as a flagged skeleton, later under a real GPU worker. The verified
+  v0.26.0 seam is the worker class itself:
   `parallel_config.worker_cls` is resolved as a dotted path
   (`vllm/v1/worker/worker_base.py:250`), so a subclass of
   `vllm.v1.worker.gpu_worker.Worker` can run the stock `init_device`
@@ -233,13 +234,40 @@ row-for-row.
   `self.model_runner.*`, so one rebind intercepts the whole per-step
   surface while the worker's distributed structure stays live. This mirrors
   the SGLang adapter's `SimTpModelWorker` overriding `_init_model_runner`,
-  so both adapters end up coupled at the model-runner boundary. This mode
-  runs only with GPUs present, since `init_device` and the stock runner
-  require CUDA; the executor-level `SimExecutor` remains the GPU-less mode
-  and its accepted behavior must not change. The sim model runner couples to the simulated
+  so both adapters end up coupled at the model-runner boundary. The first
+  slice is a skeleton run behind a high-level entry flag, routed through
+  the same worker-cls seam: when the flag selects simulation, the subclass
+  skips the stock `init_device` entirely, so no physical GPU worker state
+  or GPU model runner is
+  constructed; the adapter's own copied Python path takes effect, mirroring
+  the original functions by name and keeping the same algorithm and call
+  order, with the deliberate computation left empty and every timestamp
+  issued centrally by the simllm core virtual clock. The GPUs-present
+  variant of the same seam (stock `init_device`, rebound runner) is the
+  later capture and validation mode, since the stock path requires CUDA;
+  the executor-level `SimExecutor` remains supported and its accepted
+  behavior must not change. The sim model runner couples to the simulated
   GPU service model, which launches the NCCL work and, in GPU-initiated
   mode, drives the BACK-20 submission path; the run declares which agent
   consumes each CQ and how completion reaches the model runner (BACK-20,
   CORE-5). Under data parallelism above one, the runner-internal DP
   coordination collective must be served or emulated. VLLM-12's
   device-schedule capture uses the same seam.
+- VLLM-14 (Completeness; P1; L): simulate the `GroupCoordinator` behavior
+  behind its own interface for the model-runner coupling mode. The simulated
+  coordinator keeps the real class's functional names and call signatures
+  (`all_reduce`, `all_gather`, `broadcast`, send and recv, and the rank and
+  group-membership surface the model layers and the runner read) and returns
+  shape-correct results, but the implementation is trimmed to the main path:
+  no real NCCL, no custom-allreduce or symmetric-memory fast paths, and side
+  calls off the main path are omitted or served inertly. Every call boundary
+  emits an observability event (operation, group, payload bytes, virtual
+  timestamps) that lowers into `CollectiveWork` and the COMP-15 NCCL stack
+  model. Beyond the trimmed simulation, study the effect of the actual
+  communication function on end-to-end performance: the real communicator
+  call path (Python dispatch, custom-op indirection, synchronization
+  stalls) can itself bottleneck vLLM and SGLang, so the study compares the
+  real call-path cost against the simulated one and folds the calibrated
+  cost into the model. SGL-11 is the SGLang half; the trimmed-interface
+  principle is shared, and the simulated communication stack section in
+  [docs/README_PRO.md](../README_PRO.md) shows where both sit.
