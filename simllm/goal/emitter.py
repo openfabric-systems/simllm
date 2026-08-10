@@ -88,5 +88,5 @@ class GoalTrace:
 
     def write(self, path: str | Path) -> Path:
         path = Path(path)
-        path.write_text(self.render())
+        path.write_text(self.render(), newline="\n")
         return path

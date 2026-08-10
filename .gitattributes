@@ -1,1 +1,5 @@
 examples/gpu_task_mix/*.csv text eol=lf
+examples/nccl_stack_v1/*.csv text eol=lf
+examples/preplay_trace_v1/*.jsonl text eol=lf
+examples/vllm_skeleton_v1/*.csv text eol=lf
+examples/rnic_device_v1/*.csv text eol=lf
