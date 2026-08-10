@@ -87,6 +87,31 @@ RadixCache prefix matching, eviction and the token/request pool accounting
 are scheduler-side index bookkeeping and stay real, so radix hit rates and
 vRAM pressure respond to the workload exactly as in production.
 
+Simulated communication (`simllm/adapters/sglang/communicator.py`) is a
+separate opt-in. `SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE` binds one logical TP
+group to `SimModelRunnerStub`; `SIMLLM_SGLANG_COMMUNICATOR_EVENTS` optionally
+streams its immutable events from the scheduler process. The public surface
+mirrors the pinned SGLang `all_reduce`, `all_gather`, `broadcast`, `send`, and
+`recv` signatures, including SGLang's caller-owned
+`all_gather(..., output_tensor_list=...)` form. It subclasses the unchanged
+VLLM-14 torch-optional base, so both adapters share shape values, the
+historical event schema, `CollectiveWork`, and the COMP-15 compatibility
+stack.
+
+The event sidecar truncates its target on first append so stale events cannot
+mix with a new run. Only one stream instance may reach first append for a
+resolved path in one process; a second instance raises before truncation. This
+is stricter than silent multi-writer append and preserves a single event-order
+authority per sidecar.
+
+Each nonempty simulated model step currently observes one fixed 4,096-byte TP
+all-reduce before compute settlement. The observation and all nested stack
+events read the step's starting virtual time without advancing it. No
+communication service time, runtime projection, `CompletionEvent`, or
+`StepResult` contribution exists in this slice. With the TP-size flag absent,
+no group or event sidecar is created and `observe_tp_step` is the identity
+bypass.
+
 ## Status
 
 The pure surfaces (batch observation for extend/decode/mixed/idle, the
@@ -122,6 +147,25 @@ monotonic virtual time and every step's simulated latency above the
 compute-only estimate (examples/m4/RESULTS.md check E). The live
 closed-loop run of that slice used the vLLM adapter; the SGLang worker's
 sink seam is the same contract but has not driven htsim live yet (SGL-8).
+
+The SGL-11 zero-time communicator slice is frozen by expectations-only commit
+`b0c5b73` and reported in
+`examples/sgl_communicator_v1/RESULTS.md`. On 2026-08-10 the import-free study
+passed 4/4 shape instances, 2/2 payload-scaling instances, the literal 14-name
+nested stack, singleton identity, and unchanged VLLM-14 parity. A paired
+offline CPU-engine run at the pinned SGLang commit produced two model steps in
+both configurations. The flag-off and enabled step JSONL files were
+byte-identical; only the enabled run emitted the frozen two-event TP order,
+with 14 nested stack events per call and timestamps equal to the corresponding
+step starts.
+
+Post-specified integration review added a tracked LF byte fixture under
+`tests/fixtures/sglang`. A CI-runnable test drives `SglStepTranslator`,
+`observe_tp_step`, and `StepRecordStream` on one shared clock in both flag
+states; both streams must equal the fixture exactly. The pinned call-site
+audit now derives every observed row from AST, and the correction supplement
+in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
+`output_tensor_list` callers without rewriting the frozen expectations file.
 
 ## Open tasks
 
@@ -163,22 +207,46 @@ sink seam is the same contract but has not driven htsim live yet (SGL-8).
   identity envelope as its compute table. Bind batch shapes, radix events and
   overlap-scheduler dependencies at runtime; never infer device concurrency
   from a single elapsed phase duration.
-- SGL-11 (Completeness; P1; L): simulate SGLang's communicator behavior
-  behind its own interface. SGLang vendors vLLM's `GroupCoordinator` design
-  (`sglang.srt.distributed.parallel_state`) with its own device-communicator
-  stack (pynccl and peers); keep those functional names and call signatures,
-  trim the implementation to the main path (no real NCCL, fast paths and
-  side calls omitted or served inertly), and emit the same observability
-  events as VLLM-14 so both adapters lower into one `CollectiveWork` stream
-  and the COMP-15 NCCL stack model. The VLLM-14 call-path bottleneck study
-  has an SGLang half here: the real communicator function's own cost is
-  measured and compared against the simulated path.
+- SGL-11 (Completeness; P1; L) (remaining after the zero-time first slice):
+  extend the SGLang-shaped mirror only as accepted adapter modes make further
+  pinned `GroupCoordinator` calls reachable. In particular, DCP attention and
+  MoE paths still invoke `all_gather_into_tensor`, `reduce_scatter_tensor`,
+  `all_gatherv`, and `reduce_scatterv`; the current dense TP worker neither
+  claims nor silently fabricates them. Freeze each supported call site's
+  signature, shape contract, enabled behavior, and exact disabled baseline
+  before adding it. The landed slice mirrors `all_reduce`, `all_gather`,
+  `broadcast`, `send`, and `recv`, including SGLang's added
+  `all_gather(..., output_tensor_list=None)` form, on the shared VLLM-14
+  zero-time event base. SGL-13 owns runtime projection, SGL-14 owns native
+  operation-specific lowerings, and SGL-15 preserves the real-call
+  bottleneck-study clause.
 - SGL-12 (Precision; P1; M): source and populate exact
   `StepRecord.num_sampled` at the worker seam. Distinguish a mid-prompt extend
   row from the extend step that reaches `origin_input_ids`, including radix
   hits, retracted prefills and MIXED batches; prove the count matches the rows
   for which SGLang consumes a generated token. Keep the absent field as the
   explicit compatibility path.
+- SGL-13 (Completeness; P1; L): after CORE-4 and CORE-5 land, project each
+  simulated SGLang communicator `CollectiveWork` through the single runtime
+  authority into `CompletionEvent`, `StepResult`, and TTFT/TPOT. Freeze a
+  fixed-workload signed metric relation and quantitative band first. The
+  disabled projection must preserve every accepted SGLang worker timestamp,
+  token, record byte, and completion order exactly.
+- SGL-14 (Precision; P1; M): replace the zero-time
+  `ncclAllReduce`-shaped compatibility call for SGLang all-gather, broadcast,
+  send, and receive with native COMP stack entries when those entries exist.
+  Identify the replacement with operation names, peer roles, payloads, shape
+  results, and the SGLang-only output-list form. Remove the ring-layout
+  servable-domain restriction while preserving the compatibility off path
+  byte for byte and timestamp for timestamp.
+- SGL-15 (Precision; P1; L): complete the SGLang half of the communicator
+  bottleneck study after SGL-13 makes the call metric-live. The zero-time
+  surrogate is the explicit baseline. Measure pinned-SGLang Python dispatch,
+  custom-op routing, device-communicator selection, and synchronization stalls
+  over a frozen payload, group-size, and call-mode matrix. Hold out at least
+  one model and group size, require modeled median and p95 call cost within a
+  pre-registered band, then verify the signed TTFT/TPOT effect and exact
+  zero-cost bypass.
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
 worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin

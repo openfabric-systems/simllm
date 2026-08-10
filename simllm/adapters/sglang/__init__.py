@@ -15,7 +15,13 @@ Environment variables read by the worker (full table in
 ``SIMLLM_SGLANG_MODE``, ``SIMLLM_SGLANG_GPU``, ``SIMLLM_SGLANG_PEAK_FLOPS``,
 ``SIMLLM_SGLANG_MEM_BANDWIDTH``, ``SIMLLM_SGLANG_EFFICIENCY``,
 ``SIMLLM_SGLANG_HOST_INIT_PS``, ``SIMLLM_SGLANG_TOKEN_ID``,
-``SIMLLM_SGLANG_STEP_RECORDS``.
+``SIMLLM_SGLANG_STEP_RECORDS``, ``SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE``,
+``SIMLLM_SGLANG_COMMUNICATOR_EVENTS``.
+
+``SimGroupCoordinator`` is the SGLang-shaped communication companion. It
+reuses VLLM-14's torch-optional shape and immutable event base, adds SGLang's
+``output_tensor_list`` all-gather form, and emits zero-time semantic
+``CollectiveWork`` through the COMP-15 compatibility stack.
 
 Exports are resolved lazily through the module ``__getattr__``, so importing
 this package pulls in neither the worker module nor SGLang until a name is
@@ -28,7 +34,20 @@ from simllm.adapters.sglang._version import PINNED_SGLANG_COMMIT
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "BatchRow": ("worker", "BatchRow"),
+    "FLOAT32": ("communicator", "FLOAT32"),
+    "GROUP_COORDINATOR_EVENT_SCHEMA": (
+        "communicator",
+        "GROUP_COORDINATOR_EVENT_SCHEMA",
+    ),
+    "INT32": ("communicator", "INT32"),
+    "GroupCoordinatorEvent": ("communicator", "GroupCoordinatorEvent"),
+    "GroupCoordinatorEventStream": ("communicator", "GroupCoordinatorEventStream"),
+    "GroupCoordinatorObserver": ("communicator", "GroupCoordinatorObserver"),
+    "SGLANG_TP_PAYLOAD_BYTES": ("communicator", "SGLANG_TP_PAYLOAD_BYTES"),
     "SglStepTranslator": ("worker", "SglStepTranslator"),
+    "ShapeDType": ("communicator", "ShapeDType"),
+    "ShapeTensor": ("communicator", "ShapeTensor"),
+    "SimGroupCoordinator": ("communicator", "SimGroupCoordinator"),
     "SimTpModelWorker": ("worker", "SimTpModelWorker"),
     "SimWorkerConfig": ("worker", "SimWorkerConfig"),
     "SimWorkerHooks": ("worker", "SimWorkerHooks"),
@@ -42,9 +61,19 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 __all__ = [
+    "FLOAT32",
+    "GROUP_COORDINATOR_EVENT_SCHEMA",
+    "INT32",
     "PINNED_SGLANG_COMMIT",
+    "SGLANG_TP_PAYLOAD_BYTES",
     "BatchRow",
+    "GroupCoordinatorEvent",
+    "GroupCoordinatorEventStream",
+    "GroupCoordinatorObserver",
     "SglStepTranslator",
+    "ShapeDType",
+    "ShapeTensor",
+    "SimGroupCoordinator",
     "SimTpModelWorker",
     "SimWorkerConfig",
     "SimWorkerHooks",
