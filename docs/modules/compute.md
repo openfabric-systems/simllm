@@ -411,3 +411,31 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   explicit algorithm selection. The ring builder remains the identity
   baseline: selecting or omitting the default ring path must preserve every
   accepted ring timestamp, counter and task order exactly.
+- COMP-15 (Completeness; P1; L): model the NCCL software stack with the real
+  stack's functional names and interfaces, trimmed to the main path.
+  Intra-node collectives execute as NCCL collective kernels on the
+  NVLink-class egress model (the existing ring egress kernel, deepened by
+  COMP-11) and stay off the fabric. Inter-node transfers follow the proxy
+  model: the proxy progression loop calls a `ncclNet`-shaped plugin surface
+  (isend, irecv, test), which calls an ibverbs-shaped surface (post send,
+  poll CQ), which submits to the native RNIC session; this is the concrete
+  BACK-20 CPU-proxy producer shape, and CORE-4 owns the channel queues the
+  proxy drains. Function and interface names track the real stack so
+  captures and traces line up; the implementations are trimmed, side calls
+  off the main path are omitted or served inertly, and every boundary
+  crossing emits an observability event with virtual timestamps.
+  The model covers NCCL and its traffic planner together: communicator
+  setup, logical channel construction, chunking and channel assignment,
+  the creation and polling of the GPU-resident send and receive staging
+  buffers, and the interactions of the calls between layers. Both the data
+  path and the signal path are simulated: buffer bytes as data movement,
+  and the ready flags and head/tail counters as their own observable
+  events, so a consumer that polls and a producer that proactively signals
+  are distinguishable in the timeline.
+  GPU-initiated mode replaces the proxy leg with the BACK-20 GPU-initiated
+  path behind the same upper interface. The simulated framework
+  communicators (VLLM-14, SGL-11) are the callers of this stack. The first
+  slice is the complete mental model as name-mirrored empty function calls
+  with observability and centralized virtual timestamps; mechanisms fill
+  in step by step per the sizing plan in
+  [docs/README_PRO.md](../README_PRO.md).

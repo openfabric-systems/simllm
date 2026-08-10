@@ -155,6 +155,16 @@ sink seam is the same contract but has not driven htsim live yet (SGL-8).
   identity envelope as its compute table. Bind batch shapes, radix events and
   overlap-scheduler dependencies at runtime; never infer device concurrency
   from a single elapsed phase duration.
+- SGL-11 (Completeness; P1; L): simulate SGLang's communicator behavior
+  behind its own interface. SGLang vendors vLLM's `GroupCoordinator` design
+  (`sglang.srt.distributed.parallel_state`) with its own device-communicator
+  stack (pynccl and peers); keep those functional names and call signatures,
+  trim the implementation to the main path (no real NCCL, fast paths and
+  side calls omitted or served inertly), and emit the same observability
+  events as VLLM-14 so both adapters lower into one `CollectiveWork` stream
+  and the COMP-15 NCCL stack model. The VLLM-14 call-path bottleneck study
+  has an SGLang half here: the real communicator function's own cost is
+  measured and compared against the simulated path.
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
 worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin

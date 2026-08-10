@@ -9,7 +9,7 @@ Network-faithful simulation of LLM serving and training deployments
 </h3>
 
 <p align="center">
-| <a href="#about"><b>About</b></a> | <a href="#architecture"><b>Architecture</b></a> | <a href="#getting-started"><b>Getting Started</b></a> | <a href="#demo"><b>Demo</b></a> | <a href="#models"><b>Models</b></a> | <a href="#modules"><b>Modules</b></a> | <a href="#development"><b>Development</b></a> | <a href="#contributing"><b>Contributing</b></a> |
+| <a href="#about"><b>About</b></a> | <a href="#architecture"><b>Architecture</b></a> | <a href="#getting-started"><b>Getting Started</b></a> | <a href="#demo"><b>Demo</b></a> | <a href="#models"><b>Models</b></a> | <a href="#modules"><b>Modules</b></a> | <a href="#development"><b>Development</b></a> | <a href="#contributing"><b>Contributing</b></a> | <a href="docs/README_PRO.md"><b>Pro Guide</b></a> |
 </p>
 
 ## About
@@ -84,7 +84,7 @@ design, including the exact vLLM/SGLang integration
 seams, the manifest schemas and the GOAL trace format, is in
 [docs/architecture.md](docs/architecture.md). The developer map
 (module status, contracts, open tasks, development process) is in
-[docs/README.md](docs/README.md).
+[docs/README_PRO.md](docs/README_PRO.md).
 
 ## Getting Started
 
@@ -249,7 +249,7 @@ Planned on this axis: explicit KV-lifecycle capture
 [SGL-9](docs/modules/adapters-sglang.md)), device-schedule capture
 ([VLLM-12](docs/modules/adapters-vllm.md),
 [SGL-10](docs/modules/adapters-sglang.md)), coupling at the vLLM model
-runner under a real GPU worker, matching where the SGLang adapter already
+runner, matching where the SGLang adapter already
 sits ([VLLM-13](docs/modules/adapters-vllm.md)), and PD-disaggregation /
 KV-transfer traffic (M6).
 
@@ -274,7 +274,7 @@ status and numbered open tasks; the README stays a map.
 
 SimLLM is built in validated stages; every stage ships with
 pre-registered studies whose numbers are defended in the open (see
-[docs/README.md](docs/README.md) for the process and the stage-by-stage
+[docs/README_PRO.md](docs/README_PRO.md) for the process and the stage-by-stage
 fidelity plan).
 
 - [x] M0: repo scaffold, backend submodules, CI, per-module docs
@@ -289,7 +289,7 @@ fidelity plan).
       model-runner seam and GPU-initiated networking
 
 Everything deeper lives in the developer guide
-[docs/README.md](docs/README.md): the open task registry, the full
+[docs/README_PRO.md](docs/README_PRO.md): the open task registry, the full
 roadmap and milestone detail, the execution-fidelity order, and the
 development workflow (pre-registered studies, audited results, numbered
 deferrals).
