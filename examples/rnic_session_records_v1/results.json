@@ -1,0 +1,607 @@
+{
+  "active_sensitivity": {
+    "adjacent_axis_changes_passed": 4,
+    "adjacent_axis_changes_total": 4,
+    "census_passed": 72,
+    "census_total": 72,
+    "groups": [
+      "analytical",
+      "dma_binding",
+      "pcie_fabric",
+      "pcie_path",
+      "scalar"
+    ]
+  },
+  "authority_counters": {
+    "bypass": [
+      0,
+      1,
+      0,
+      4
+    ],
+    "structural": [
+      1,
+      0,
+      2,
+      0
+    ]
+  },
+  "bypass_identity": {
+    "equal_artifacts_passed": 4,
+    "equal_artifacts_total": 4,
+    "input_mutation_rejections_passed": 6,
+    "input_mutation_rejections_total": 6,
+    "mutation_rejections_passed": 4,
+    "mutation_rejections_total": 4
+  },
+  "fatal_guards": {
+    "authority_negative_controls": {
+      "both_rejected": true,
+      "failed_counters_unchanged": true,
+      "neither_rejected": true,
+      "wrong_legacy_rejected": true,
+      "wrong_native_rejected": true
+    },
+    "inactive_hash_guards": {
+      "correlation_identity": true,
+      "disabled_dma_payload": true,
+      "disabled_path_payload": true,
+      "path_declaration_order": true,
+      "policy_permutation": true,
+      "session_id": true,
+      "unused_nonposted_data_credits": true
+    },
+    "projection_checks": {
+      "native_timestamps": true,
+      "no_structural_rq": true,
+      "one_to_one": true,
+      "stable_keys": true
+    }
+  },
+  "hardware_hashes": [
+    {
+      "doorbell_service_ps": 0,
+      "hardware_config_sha256": "bad2b566d1f02a69b908181d6325dec827a5b9408d73b2f3a7249799a2698e99",
+      "sq_depth": 32
+    },
+    {
+      "doorbell_service_ps": 1000,
+      "hardware_config_sha256": "e56a1c71fe0a49043160fe309ca5dc81af7228f2b261b016ebb416509f28ba00",
+      "sq_depth": 32
+    },
+    {
+      "doorbell_service_ps": 0,
+      "hardware_config_sha256": "4a0031034d3de8b9833135309dd42d3dfc5e92999f33d3629d8d0fa603ef3caa",
+      "sq_depth": 64
+    },
+    {
+      "doorbell_service_ps": 1000,
+      "hardware_config_sha256": "5d405a8f1f04eee806500752c0888393aa5bacbcfb25ee5a1b30df161999f0d3",
+      "sq_depth": 64
+    }
+  ],
+  "policy_hash_rows": [
+    {
+      "doorbell_service_ps": 0,
+      "hardware_config_sha256": "bad2b566d1f02a69b908181d6325dec827a5b9408d73b2f3a7249799a2698e99",
+      "policy": "rnic-nn",
+      "sq_depth": 32
+    },
+    {
+      "doorbell_service_ps": 0,
+      "hardware_config_sha256": "bad2b566d1f02a69b908181d6325dec827a5b9408d73b2f3a7249799a2698e99",
+      "policy": "rnic-cn",
+      "sq_depth": 32
+    },
+    {
+      "doorbell_service_ps": 0,
+      "hardware_config_sha256": "bad2b566d1f02a69b908181d6325dec827a5b9408d73b2f3a7249799a2698e99",
+      "policy": "dcqcn",
+      "sq_depth": 32
+    },
+    {
+      "doorbell_service_ps": 1000,
+      "hardware_config_sha256": "e56a1c71fe0a49043160fe309ca5dc81af7228f2b261b016ebb416509f28ba00",
+      "policy": "rnic-nn",
+      "sq_depth": 32
+    },
+    {
+      "doorbell_service_ps": 1000,
+      "hardware_config_sha256": "e56a1c71fe0a49043160fe309ca5dc81af7228f2b261b016ebb416509f28ba00",
+      "policy": "rnic-cn",
+      "sq_depth": 32
+    },
+    {
+      "doorbell_service_ps": 1000,
+      "hardware_config_sha256": "e56a1c71fe0a49043160fe309ca5dc81af7228f2b261b016ebb416509f28ba00",
+      "policy": "dcqcn",
+      "sq_depth": 32
+    },
+    {
+      "doorbell_service_ps": 0,
+      "hardware_config_sha256": "4a0031034d3de8b9833135309dd42d3dfc5e92999f33d3629d8d0fa603ef3caa",
+      "policy": "rnic-nn",
+      "sq_depth": 64
+    },
+    {
+      "doorbell_service_ps": 0,
+      "hardware_config_sha256": "4a0031034d3de8b9833135309dd42d3dfc5e92999f33d3629d8d0fa603ef3caa",
+      "policy": "rnic-cn",
+      "sq_depth": 64
+    },
+    {
+      "doorbell_service_ps": 0,
+      "hardware_config_sha256": "4a0031034d3de8b9833135309dd42d3dfc5e92999f33d3629d8d0fa603ef3caa",
+      "policy": "dcqcn",
+      "sq_depth": 64
+    },
+    {
+      "doorbell_service_ps": 1000,
+      "hardware_config_sha256": "5d405a8f1f04eee806500752c0888393aa5bacbcfb25ee5a1b30df161999f0d3",
+      "policy": "rnic-nn",
+      "sq_depth": 64
+    },
+    {
+      "doorbell_service_ps": 1000,
+      "hardware_config_sha256": "5d405a8f1f04eee806500752c0888393aa5bacbcfb25ee5a1b30df161999f0d3",
+      "policy": "rnic-cn",
+      "sq_depth": 64
+    },
+    {
+      "doorbell_service_ps": 1000,
+      "hardware_config_sha256": "5d405a8f1f04eee806500752c0888393aa5bacbcfb25ee5a1b30df161999f0d3",
+      "policy": "dcqcn",
+      "sq_depth": 64
+    }
+  ],
+  "policy_invariance": {
+    "hardware_cells": 4,
+    "pair_checks_passed": 12,
+    "pair_checks_total": 12,
+    "unique_cell_hashes": 4
+  },
+  "projection_wqes": 2,
+  "reader_projection": {
+    "bypass_mode": "bypass",
+    "bypass_wqes": 2,
+    "completion_csv_sha256": "70f7e9d8a0c66753f970ed7debc5dcd60bd3f8f4b9b284784381adb80ba73e63",
+    "dma_config_sha256": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+    "structural_mode": "structural",
+    "structural_wqes": 2
+  },
+  "schema": "simllm-rnic-session-record-study-results-v1",
+  "sensitivity_rows": [
+    {
+      "after_hash": "67b0f6f1b4f2388b8d28cf93a926c228c17cbbca1eb92e3d67df135f575c3980",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "work_queue.sq_depth",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "ab3278e8ba3ae60b4937d6e2a0f393170239c904ffd4181006e76ba5470cbaea",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "work_queue.cq_depth",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "98ac8fb9c36a95deaf062bba27f31985ecafc26bbc7c9c9059e2ea922dbc81ea",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "work_queue.doorbell_service_ps",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "da246e4c37692a722fd0e0339f56aa70c0f9028eed09e9cf89eeeedb9406c48e",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "work_queue.wqe_fetch_service_ps",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "2cc0f4840549b84fa6edb0f5a5248157d6cb88cf47a7194c93e196eb1c299263",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "work_queue.qpc_lookup_service_ps",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "617e3106a09cb74598ddd25e3dd3e159a1d86aef38b534868bc15b2278f6635d",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "work_queue.scheduler_service_ps",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "5d77e836e7226ff9949a55c1dabacac5552bd6dec0c71521a8e6e9f2dc08452f",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "work_queue.cqe_write_service_ps",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "93f866aa93c2061e5cf1a2bcd3af6cf76729ae6aef659d074e2c76456631dc20",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "qpc.enabled",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "4a0031034d3de8b9833135309dd42d3dfc5e92999f33d3629d8d0fa603ef3caa",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "network.enabled",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "becb42b77ccf1e53b6620b785ec7b4c74fe5a6460423098615848d602ec90330",
+      "before_hash": "7c6b8467cf238afb5919b55aa4976b8317ab1271c1dca06fba4bf283e236544e",
+      "field": "dma.enabled.activation",
+      "group": "scalar"
+    },
+    {
+      "after_hash": "2ee893c80ec2c4a811a51c6360624b6dadc3430d6239b498a10d4804f53ec0cd",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_uar_path_id",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "2428e8331f7ed15f967401248c55c887e0e3994937923bebf50f194dcb8e2b0d",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_doorbell_record_path_id",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "7373eea148a11d835ad3b16af437054ee397b373dc57cdcd3f9e4ff7b804d7c6",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_sq_memory_path_id",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "441ee218558a3ccd1c707bb62ed58db5d5ccee7cca4a017824a3282d23f783e2",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_cq_memory_path_id",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "0e8cbf34ee6c86c47cb9b10a0fe0d9204f28ec3085bba00870be2a9e54519eef",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_submission_ordering_domain",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "76df0bef66e2095e9d33f71cf5d9bd35665c37857cb85e7a02a54353c43036c0",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_completion_ordering_domain",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "c6cdc7bb71ebac0674a5af7762beaff06c6aa856c4151375a0647896156c0a76",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_doorbell_record_bytes",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "12211e9dcd31f33f7379c99eb22126db9349e092fd3654a5ebcd977def75361e",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_uar_doorbell_bytes",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "ab8d77d0457d4217a1e11c3a30ddd13259b8a7908891c730def8c6053058a25c",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_wqe_bytes",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "5e260717c4f2df55052dcd6c5bad4802f9d5930d90fc089751b8d256ddb9bbc1",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_cqe_bytes",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "5a05b521057f12918aa8e66e7fd32cf7427ddcba452189bba3f045a77cfa5e6f",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_uar_first_byte_offset",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "a9ff0385888a6e6d49385850fe14aa91953a3cdd50eaeb5f3f106de67ace4d1d",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_doorbell_record_first_byte_offset",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "736e00a767aaf45c0c632efc239e45e7039776ca6ed798feb0d61427379f3be2",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_sq_first_byte_offset",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "3bfa70ddd659bc29eb49d2d22337b0b5129af4e7df329501934f93f3c140ae93",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "pcie_cq_first_byte_offset",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "b01ebce78065e93fad0b5db37a8a0481c01e58cae9218621a85e76d8f6002118",
+      "before_hash": "e712feb9117f196ac54622bd5f7de2dede6cd4743675486a175abd5cce745b3c",
+      "field": "shared_ordering_domain_namespace",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "e712feb9117f196ac54622bd5f7de2dede6cd4743675486a175abd5cce745b3c",
+      "before_hash": "8aeb228aa730d4a83e1f46c051697f9c7f54c4d79be5066d5b9d96c44d9424c3",
+      "field": "fabric_scope",
+      "group": "dma_binding"
+    },
+    {
+      "after_hash": "d928df129dac262e7daa80422ac003140ecc8b36205b612b125703682453559c",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "generation",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "2fc792f6b48c951b92f3421e7488c4e879383cfa033a12aa2a5827f3218bef9e",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "lane_count",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "c5e3afa24d53ea3db5d9d28838a9ef6d17ca6044bc4adf0a97b86bbbd8391318",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "max_payload_size_bytes",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "96f7c243d7fa7fb50b084ef524d212972adbe037ab3f3700824c4b3aabbcb893",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "max_read_request_size_bytes",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "40cf3a1eb8af15408bd91e1a2ae4c045da904b2b34886c0330ee21b7aae7375e",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "read_completion_boundary_bytes",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "50df23f844fdb0f53bf4c57e49e1333ed46657baee0e0bcb2c6eade5bbefefd7",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "posted_write_overhead_bytes",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "6d1c77c351fb1b5c29e22ac6e39994f9cf9510a36bc06af39ec6d9100c0a6fa9",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "read_request_overhead_bytes",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "868369bf78e0fbc5614953ae3e1dec5258462e28f3c638ac512ef077c0697388",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "completion_overhead_bytes",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "e00ed712db3d0e4800fe92d80f0e1cc4650fb75e118b2afde0712e66746bfebe",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "data_credit_unit_bytes",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "1dfbc19959dc846c95193dd473a86995866803ee7df28f8472a0965b11e78da3",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "host_to_device_credits.posted_header_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "72596c6cf45bc795372ff30386024c79df8e05b961b1db66f7e72a8b08eec410",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "host_to_device_credits.posted_data_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "77c68b8a3e87a3384edc19325c10923341565cb094baa2876d536293531c38f9",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "host_to_device_credits.nonposted_header_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "4b705dd2d2033d48faf9a7e93c5cebe9d11eb2ed9837b8695c01ddacd34af1f2",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "host_to_device_credits.completion_header_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "bedd2bf3b2e929f254c2e492ab8705618bdd3fad2389b6e8b62b62cd8bebaecf",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "host_to_device_credits.completion_data_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "41b704f5c6f9905401a05f4ebf28a65f1f979ecab2754708f0d9d00dede80eca",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "device_to_host_credits.posted_header_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "03d19084133e922b809c53028081ce319682f7b4f81bd253e44a75e1634e2616",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "device_to_host_credits.posted_data_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "9bd988e528f8c59875cf93c4fb97ee86dabf292f2e0f24b76e0e6f9c8cfe939d",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "device_to_host_credits.nonposted_header_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "19c6e9aa6162e03cbe1d5bd6f88b4a621a6945e3f55e961749b0cb911aa742ff",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "device_to_host_credits.completion_header_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "ef9816e96f0fd3c2fd2090a90c7e7d47f3fc978ec7ed048a330b6cda56c0d86b",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "device_to_host_credits.completion_data_credits",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "804f4bf1537bfd0aa9492f6ccdd9d88daa50be416f00f301837f4d1ecba79cf2",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "max_outstanding_read_requests",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "4db2547ea0021d635154a37d759a7d9e90a93108ece9c8eb18d2e6768d736460",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "completion_buffer_bytes",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "9a7c406f521f1a56620e5cf9aa3be10e68e1f2236f5240e30a8f1e9fcbdb15eb",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "max_tlps_per_transaction",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "ea1828deac997f7b34488e045c09acc4d6be307f646ad4ba198f07c30626348c",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "credit_return_latency_ps",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "90bf78771e3dd65bcd948938dfc3ee610401b9eb598d75723bb966a3b1a515b1",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "completion_buffer_release_latency_ps",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "2b7bef5a7a99ed659f236cac35cb0b7443ab86882e92d37fe42dbe14baf31493",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "analytical_seed",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "35083beacdbb9e057aa27881e462e72cf96eb68db33dfd9887db47c0520353d5",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "host_store_latency_ps",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "4db1e0397bf6ade1ae91bd3166721910a9b69bafc2549be8ecdc3ad23bb5f1c1",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "posted_write_visibility_latency_ps",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "6205f339058f7d232ddd62fb710cbf2b1c94a7d828ded76f3b85ed3f395a7c29",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "read_completion_latency_ps",
+      "group": "pcie_fabric"
+    },
+    {
+      "after_hash": "9f43e145e3153fe233726c4bd0a74b9b31b98cfbacf3e8087226cfb94ff33452",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "path_id",
+      "group": "pcie_path"
+    },
+    {
+      "after_hash": "b737aa4f995bff1cbe09b255089af2d8edf076ae48e24e2234badc8ce4295009",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "endpoint",
+      "group": "pcie_path"
+    },
+    {
+      "after_hash": "bf022e9a57a1d8aca03520d05778c938a8be4a429ede2529517a1a3b4f72e4f9",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "enabled",
+      "group": "pcie_path"
+    },
+    {
+      "after_hash": "764dfddf414ed109e33af42a3df4abccb8fdfb91301fa8b67af2cc874b22a3d0",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "base_latency_ps",
+      "group": "pcie_path"
+    },
+    {
+      "after_hash": "5b2994a5441fc5d2652c58cfa379bb0e7b8535b9e96ec91a7c871d1691627e58",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "component.numa.activation",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "ec47dd2e0a9bd2f186916a66eeca835c1d5083a68840517363019db107c3ec3c",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "component.iommu.activation",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "fb1e9c935d3786ec665b41850b48725c95b720e8bab222a971033dc0957f2479",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "component.acs.activation",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "1223b681cc0d362ec46ccf8e2c50a10b7312c3c4f44c9bd394eff48329949108",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "component.switch_path.activation",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "927da38d43523c003a31fbedd337d09c3b5c643dac5a812c4916a58954c944b8",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "component.ddio_miss.activation",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "c91c55e95243f2036cf8855e847468a35f95c9d999e8663896ce64fc64314881",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "component.gpu_direct.activation",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "c5a094155edc5736378021e4563867acd2e7b04efcccf29d89f52032b1d58e2e",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "profile.gaussian.activation",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "e046d7ecdbabbe9c8420fa86536000dc7dae5087ea8b6dff6bf97104a5a4068a",
+      "before_hash": "a2f8bbe7f2daf3c1718f74e4dbbdc1a8df398ff0a847a8a97415ee543e7041c2",
+      "field": "profile.gaussian_tail_mixture.activation",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "94c4bb7bf914e58547cf282de4ec40d9ee67e1f3a8436efc4a396d461814b5de",
+      "before_hash": "e046d7ecdbabbe9c8420fa86536000dc7dae5087ea8b6dff6bf97104a5a4068a",
+      "field": "profile.incidence_probability_ppm",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "97532da94c4ced42e071e39eab206c8523b6015d1038e5e4b5cfc2d10ba4c619",
+      "before_hash": "e046d7ecdbabbe9c8420fa86536000dc7dae5087ea8b6dff6bf97104a5a4068a",
+      "field": "profile.mean_ps",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "900ba737916033cbe6444985c57334943dec54e1d6d1cd8f654f91414c3d06c5",
+      "before_hash": "e046d7ecdbabbe9c8420fa86536000dc7dae5087ea8b6dff6bf97104a5a4068a",
+      "field": "profile.standard_deviation_ps",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "17621679fdb494ee575521e8a365614e390a4a50f8c46934e10a8bd78251a8ee",
+      "before_hash": "e046d7ecdbabbe9c8420fa86536000dc7dae5087ea8b6dff6bf97104a5a4068a",
+      "field": "profile.tail_probability_ppm",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "899ba88e2866dbeacdf635e39ebaf86a8143ffec333d4962a5cbc41c15e46fa7",
+      "before_hash": "e046d7ecdbabbe9c8420fa86536000dc7dae5087ea8b6dff6bf97104a5a4068a",
+      "field": "profile.tail_mean_ps",
+      "group": "analytical"
+    },
+    {
+      "after_hash": "aaf9eaa5436353aaff6cbb53d6b7d3d0bc26d27f687922f4ae2f824df4355d62",
+      "before_hash": "e046d7ecdbabbe9c8420fa86536000dc7dae5087ea8b6dff6bf97104a5a4068a",
+      "field": "profile.tail_standard_deviation_ps",
+      "group": "analytical"
+    }
+  ]
+}

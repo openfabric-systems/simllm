@@ -22,6 +22,16 @@ struct FakeSubmission {
     Picoseconds completion_at_ps{0};
 };
 
+struct FakeNetworkPortState {
+    std::size_t capacity{0};
+    Picoseconds latency_ps{0};
+    NetworkToken next_token{0};
+    bool reject_next{false};
+    std::optional<Picoseconds> forced_busy_until_ps;
+    std::map<NetworkToken, FakeSubmission> inflight;
+    std::vector<FakeSubmission> history;
+};
+
 class FakeNetworkPort final : public NetworkPort {
 public:
     FakeNetworkPort(std::size_t capacity, Picoseconds latency_ps)
@@ -136,6 +146,17 @@ public:
     std::size_t inflightCount() const noexcept { return inflight_.size(); }
     const std::vector<FakeSubmission>& history() const noexcept {
         return history_;
+    }
+    FakeNetworkPortState state() const {
+        return FakeNetworkPortState{
+            capacity_,
+            latency_ps_,
+            next_token_,
+            reject_next_,
+            forced_busy_until_ps_,
+            inflight_,
+            history_,
+        };
     }
 
 private:
