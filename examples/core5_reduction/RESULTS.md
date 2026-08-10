@@ -26,13 +26,14 @@ registry confirmations by design and produced no artifacts.
 The corrections, executable review checker, tests and measured-evidence
 records followed `067cbfb`. The full lint and Python gates passed before the
 final measured run. The three final check-only commands again printed their
-registry confirmations and produced no artifacts. The final run used the
-registered command with `SIMLLM_CORE5_RUN_ROOT` set to the fresh branch-local
-external `review-final-2` directory:
+registry confirmations and produced no artifacts. The resolved machine-local
+historical directory is intentionally omitted. The command below is a
+post-specified portable reproduction rendering with the same executable and
+options; it writes a new run under the configured external data root:
 
 ```bash
 .venv/bin/python examples/core5_reduction/run_study.py \
-  --out "$SIMLLM_CORE5_RUN_ROOT"
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/core5_reduction/review-final-2"
 ```
 
 The external `results.json` has SHA-256
@@ -162,7 +163,7 @@ class. None of these four probes enters a behavioral denominator.
 
 ## Gates and residual scope
 
-The final repository gates were:
+The pre-portability correction gates were:
 
 ```text
 .venv/bin/ruff check .
@@ -171,6 +172,23 @@ All checks passed!
 .venv/bin/pytest -q
 578 passed, 4 skipped in 13.83s
 ```
+
+After merging portability commit `561b4d0`, the post-specified path-only round
+passed the new scanner and the full merged-state gates:
+
+```text
+.venv/bin/pytest -q tests/test_path_portability.py
+6 passed in 0.30s
+
+.venv/bin/ruff check .
+All checks passed!
+
+.venv/bin/pytest -q
+592 passed, 4 skipped in 14.17s
+```
+
+The runner's explicit `--out` behavior and every study relation are unchanged,
+so this portability-only round did not regenerate the measured artifact.
 
 No C++ source changed, so native CMake and CTest gates are not applicable.
 

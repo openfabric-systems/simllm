@@ -8,6 +8,8 @@ from dataclasses import asdict
 from fractions import Fraction
 from pathlib import Path
 
+from simllm._local_config import path_from_env
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SHAPES = ("parallel", "serial")
 RATES_GBPS = (200, 400)
@@ -1059,11 +1061,18 @@ def _run(out: Path) -> dict[str, object]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--out", type=Path)
     parser.add_argument("--tier-b-only", action="store_true")
     parser.add_argument("--tier-b-producer")
     parser.add_argument("--check-only", action="store_true")
     arguments = parser.parse_args()
+    if arguments.out is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--out is required when SIMLLM_DATA_ROOT is not set")
+        arguments.out = data_root / "core5_reduction"
+        if arguments.tier_b_only:
+            arguments.out /= "tier_b"
     _validate_registry(arguments.out, arguments.tier_b_only, arguments.tier_b_producer)
     if not arguments.check_only:
         if arguments.tier_b_only:

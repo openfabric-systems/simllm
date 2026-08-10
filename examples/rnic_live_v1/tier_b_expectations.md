@@ -191,3 +191,19 @@ as an opaque value, prints a registry confirmation by design, and creates no
 directory, result or measured artifact. The untracked pre-freeze harness may
 encode only frozen literals and check-only validation; it must not inspect or
 invoke the producer.
+
+## Post-specified filesystem portability note
+
+This note postdates the freeze and does not change its matrix, relations,
+producer contract, or chronology. The one-off environment-variable spellings
+above remain frozen text. After loading `.env.local.sh`, the current portable
+rendering is:
+
+```bash
+.venv/bin/python examples/core5_reduction/run_study.py \
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/core5_reduction/tier_b" \
+  --tier-b-only \
+  --tier-b-producer "${SIMLLM_DATA_ROOT}/core5_reduction/tier_b/build/htsim_rnic_tier_b"
+```
+
+The resolved historical machine-local paths are intentionally omitted.

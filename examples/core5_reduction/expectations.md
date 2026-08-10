@@ -296,3 +296,19 @@ registry confirmation by design, and creates no directory, result or measured
 artifact. At freeze time the untracked command harness may contain only these
 frozen literals and check-only validation. It must not import the not-yet-
 implemented reduction API.
+
+## Post-specified filesystem portability note
+
+This note was added after the frozen study and does not alter its sweep,
+relations, chronology, or historical command execution. The one-off
+`SIMLLM_CORE5_RUN_ROOT` spelling above is retained as frozen text, but it is
+not part of the current local-configuration contract. After loading
+`.env.local.sh`, the portable current rendering is:
+
+```bash
+.venv/bin/python examples/core5_reduction/run_study.py \
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/core5_reduction"
+```
+
+The runner also derives that directory when `--out` is omitted. The resolved
+historical machine-local path is intentionally omitted.

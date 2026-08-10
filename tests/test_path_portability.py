@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SCANNER_PATH = Path("tests/test_path_portability.py")
 ARCHITECTURE_PATH = Path("docs/architecture.md")
 ARCHITECTURE_STORAGE_LITERAL = "/" + "data3/yifeng/"
 ARCHITECTURE_STORAGE_CONTEXT = (
@@ -101,6 +102,9 @@ def test_markdown_and_cpp_paths_are_portable() -> None:
 def test_scripts_have_no_personal_path_defaults() -> None:
     violations: list[str] = []
     for relative_path in _tracked_files():
+        # This scanner contains intentional matcher fixtures tested below.
+        if relative_path == SCANNER_PATH:
+            continue
         if relative_path.suffix.lower() not in SCRIPT_SUFFIXES:
             continue
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")

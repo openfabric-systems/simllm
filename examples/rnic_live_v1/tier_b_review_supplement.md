@@ -244,3 +244,25 @@ The second command is a freeze-time harness. At freeze it may be untracked and
 may encode only the literals and validations in this supplement. Neither
 command creates a directory, invokes the producer, or emits a measured
 artifact in check-only mode. Both print registry confirmations by design.
+
+## Post-specified filesystem portability note
+
+This note was added after the supplementary freeze and changes no schema,
+relation, producer argument, chronology, or historical dry run. The one-off
+environment-variable spellings above remain frozen text. After loading
+`.env.local.sh`, the current portable renderings are:
+
+```bash
+.venv/bin/python examples/core5_reduction/run_study.py \
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/core5_reduction/tier_b" \
+  --tier-b-only \
+  --tier-b-producer "${SIMLLM_DATA_ROOT}/core5_reduction/tier_b/build/htsim_rnic_tier_b" \
+  --check-only
+
+.venv/bin/python examples/rnic_live_v1/tier_b_review_check.py \
+  --out "${SIMLLM_DATA_ROOT}/core5_reduction/tier_b" \
+  --producer "${SIMLLM_DATA_ROOT}/core5_reduction/tier_b/build/htsim_rnic_tier_b" \
+  --check-only
+```
+
+The resolved historical machine-local paths are intentionally omitted.
