@@ -46,6 +46,7 @@ from simllm.core.execution import (
     ExecutionGraph,
     ExecutionOperation,
     ExecutionResult,
+    KvCacheAction,
     KvCacheWork,
     ResourceKind,
     ResourceRef,
@@ -58,6 +59,8 @@ DEFAULT_RNICS_PER_NODE = 8
 DEFAULT_RNIC_RATE_BPS = 400_000_000_000
 DEFAULT_NVLINK_RATE_BPS = 900_000_000_000
 DEFAULT_GOAL_BASE_TAG = 1000
+CONTROL_GOAL_TAG_OFFSET = 1_000_000
+CONTROL_GOAL_TAG_STRIDE = 1024
 
 
 def _require_int(name: str, value: object, *, positive: bool = False) -> int:
@@ -401,6 +404,37 @@ class WqeLifecycleProjection:
 
 
 @runtime_checkable
+class NativeRnicTransaction(Protocol):
+    """Isolated native submission plan with an atomic prepare/commit boundary."""
+
+    @property
+    def authority_name(self) -> str:
+        """Return the sole session authority represented by this transaction."""
+        ...
+
+    @property
+    def random_draw_count(self) -> int:
+        """Return random draws consumed by this staged transaction."""
+        ...
+
+    def submit(self, submission: SemanticWqeSubmission) -> WqeLifecycleProjection:
+        """Stage and project one semantic WQE without mutating the session."""
+        ...
+
+    def prepare(self) -> None:
+        """Validate that the subsequent atomic commit cannot fail."""
+        ...
+
+    def commit(self) -> None:
+        """Atomically install every staged WQE in the sole native session."""
+        ...
+
+    def abort(self) -> None:
+        """Discard staged state without changing the sole native session."""
+        ...
+
+
+@runtime_checkable
 class NativeRnicSession(Protocol):
     """Structural session seam that HTSIM-9 will connect to the native RNIC."""
 
@@ -409,8 +443,8 @@ class NativeRnicSession(Protocol):
         """Return the native authority identifier recorded in run evidence."""
         ...
 
-    def submit(self, submission: SemanticWqeSubmission) -> WqeLifecycleProjection:
-        """Own and complete one semantic WQE without a compatibility ledger."""
+    def begin_transaction(self) -> NativeRnicTransaction:
+        """Return isolated state whose prepared commit is atomic and infallible."""
         ...
 
 
@@ -574,24 +608,37 @@ class _ScheduledOperation:
 _DEVICE_ENDPOINT_RE = re.compile(r"^(?:gpu|cuda|rank):(\d+)(?::|$)", re.IGNORECASE)
 
 
+def _dma_endpoint(value: str, local_rank: int) -> tuple[str, int | None]:
+    lowered = value.strip().lower()
+    if lowered == "host" or lowered.startswith("host:"):
+        return "host", None
+    match = _DEVICE_ENDPOINT_RE.match(lowered)
+    if match is not None:
+        return "device", int(match.group(1))
+    if lowered in {"device", "hbm", "local", "local:hbm"}:
+        return "device", local_rank
+    raise ValueError(
+        f"DMA endpoint {value!r} must identify host or a gpu/cuda/rank endpoint"
+    )
+
+
+def _dma_endpoints(
+    work: DmaWork,
+    local_rank: int,
+) -> tuple[tuple[str, int | None], tuple[str, int | None]]:
+    return (
+        _dma_endpoint(work.source, local_rank),
+        _dma_endpoint(work.destination, local_rank),
+    )
+
+
 def _dma_direction(work: DmaWork, local_rank: int) -> CopyDirection:
     from simllm.compute import CopyDirection
 
-    def endpoint(value: str) -> tuple[str, int | None]:
-        lowered = value.strip().lower()
-        if lowered == "host" or lowered.startswith("host:"):
-            return "host", None
-        match = _DEVICE_ENDPOINT_RE.match(lowered)
-        if match is not None:
-            return "device", int(match.group(1))
-        if lowered in {"device", "hbm", "local", "local:hbm"}:
-            return "device", local_rank
-        raise ValueError(
-            f"DMA endpoint {value!r} must identify host or a gpu/cuda/rank endpoint"
-        )
-
-    source_kind, source_rank = endpoint(work.source)
-    destination_kind, destination_rank = endpoint(work.destination)
+    (source_kind, source_rank), (destination_kind, destination_rank) = _dma_endpoints(
+        work,
+        local_rank,
+    )
     if source_kind == "host" and destination_kind == "device":
         return CopyDirection.HOST_TO_DEVICE
     if source_kind == "device" and destination_kind == "host":
@@ -636,6 +683,13 @@ def collective_goal_tags(
             )
     for offset, operation in enumerate(pairwise):
         result[operation.operation_id] = (next_ring_tag + offset,)
+    collective_tag_limit = base_tag + CONTROL_GOAL_TAG_OFFSET
+    allocated_tags = tuple(tag for tags in result.values() for tag in tags)
+    if allocated_tags and max(allocated_tags) >= collective_tag_limit:
+        raise ValueError(
+            "collective GOAL tags overlap the control-tag range reserved at "
+            f"base + {CONTROL_GOAL_TAG_OFFSET}"
+        )
     return result
 
 
@@ -660,9 +714,10 @@ class CoarseDeviceRuntime:
         if not isinstance(authority_mode, RnicAuthorityMode):
             raise TypeError("authority_mode must be a RnicAuthorityMode")
         if arbitration_policy is not None and not isinstance(
-            arbitration_policy, IdentityArbitrationPolicy
+            arbitration_policy,
+            ArbitrationPolicy,
         ):
-            raise ValueError("CORE-4 exposes only identity arbitration; CORE-10 owns policies")
+            raise TypeError("arbitration_policy must implement ArbitrationPolicy")
         self.authority_mode = authority_mode
         self.arbitration_policy = arbitration_policy
         self.kernel_services = dict(kernel_services or {})
@@ -724,124 +779,176 @@ class CoarseDeviceRuntime:
 
         state = self._state.clone()
         bypass = self._bypass_ledger.clone() if self._bypass_ledger is not None else None
-        tags = collective_goal_tags(graph, base_tag=self.profile.goal_base_tag)
-        operation_by_id = {operation.operation_id: operation for operation in graph.operations}
-        operation_index = {
-            operation.operation_id: index for index, operation in enumerate(graph.operations)
-        }
-        queue_predecessor = self._queue_predecessors(graph)
-        launch_visits = self._schedule_launches(graph, state)
-        scheduled: dict[str, _ScheduledOperation] = {}
-        unscheduled = {operation.operation_id for operation in graph.operations}
-        all_wqes: list[WqeLifecycleProjection] = []
-
-        while unscheduled:
-            ready_data: dict[
-                str, tuple[dict[int, int], int, str | None]
-            ] = {}
-            for operation in graph.operations:
-                operation_id = operation.operation_id
-                if operation_id not in unscheduled:
-                    continue
-                predecessors = set(operation.depends_on)
-                predecessors.update(operation.participant_local_depends_on)
-                previous = queue_predecessor.get(operation_id)
-                if previous is not None:
-                    predecessors.add(previous)
-                if not predecessors.issubset(scheduled):
-                    continue
-                by_rank, eligible_at_ps, critical_predecessor = self._operation_readiness(
-                    graph,
-                    operation,
-                    launch_visits[operation_id],
-                    scheduled,
-                    previous,
+        native_transaction = (
+            self._native_session.begin_transaction()
+            if self._native_session is not None
+            else None
+        )
+        if native_transaction is not None:
+            if not isinstance(native_transaction, NativeRnicTransaction):
+                raise TypeError(
+                    "native session begin_transaction() must return "
+                    "NativeRnicTransaction"
                 )
-                ready_data[operation_id] = (
-                    by_rank,
-                    eligible_at_ps,
-                    critical_predecessor,
-                )
-            if not ready_data:
-                raise RuntimeError("validated graph made no scheduling progress")
+            if native_transaction.authority_name != self.authority_name:
+                raise ValueError("native transaction authority does not match its session")
+        wqe_authority: AtlahsWqeLedger | NativeRnicTransaction | None = (
+            bypass if bypass is not None else native_transaction
+        )
+        assert wqe_authority is not None
+        native_committed = False
+        try:
+            tags = collective_goal_tags(graph, base_tag=self.profile.goal_base_tag)
+            operation_by_id = {
+                operation.operation_id: operation for operation in graph.operations
+            }
+            operation_index = {
+                operation.operation_id: index
+                for index, operation in enumerate(graph.operations)
+            }
+            queue_predecessor = self._queue_predecessors(graph)
+            launch_visits = self._schedule_launches(graph, state)
+            scheduled: dict[str, _ScheduledOperation] = {}
+            unscheduled = {operation.operation_id for operation in graph.operations}
+            all_wqes: list[WqeLifecycleProjection] = []
 
-            selected_id = self._select_ready_operation(
-                ready_data,
-                operation_by_id,
-                operation_index,
-            )
-            selected = operation_by_id[selected_id]
-            if isinstance(selected.work, ComputeWork):
-                group_ids = self._compute_group(
-                    selected,
+            while unscheduled:
+                ready_data: dict[
+                    str, tuple[dict[int, int], int, str | None]
+                ] = {}
+                for operation in graph.operations:
+                    operation_id = operation.operation_id
+                    if operation_id not in unscheduled:
+                        continue
+                    predecessors = set(operation.depends_on)
+                    predecessors.update(operation.participant_local_depends_on)
+                    previous = queue_predecessor.get(operation_id)
+                    if previous is not None:
+                        predecessors.add(previous)
+                    if not predecessors.issubset(scheduled):
+                        continue
+                    by_rank, eligible_at_ps, critical_predecessor = (
+                        self._operation_readiness(
+                            graph,
+                            operation,
+                            launch_visits[operation_id],
+                            scheduled,
+                            previous,
+                        )
+                    )
+                    ready_data[operation_id] = (
+                        by_rank,
+                        eligible_at_ps,
+                        critical_predecessor,
+                    )
+                if not ready_data:
+                    raise RuntimeError("validated graph made no scheduling progress")
+
+                selected_id = self._select_ready_operation(
                     ready_data,
                     operation_by_id,
                     operation_index,
-                    state,
                 )
-                group = self._schedule_compute_group(
+                selected = operation_by_id[selected_id]
+                if isinstance(selected.work, ComputeWork):
+                    group_ids = self._compute_group(
+                        selected,
+                        ready_data,
+                        operation_by_id,
+                        operation_index,
+                        state,
+                    )
+                    group = self._schedule_compute_group(
+                        graph,
+                        tuple(
+                            operation_by_id[operation_id]
+                            for operation_id in group_ids
+                        ),
+                        ready_data,
+                        launch_visits,
+                        state,
+                    )
+                    for operation_id, outcome in group.items():
+                        scheduled[operation_id] = outcome
+                        unscheduled.remove(operation_id)
+                    continue
+
+                by_rank, eligible_at_ps, critical_predecessor = ready_data[selected_id]
+                outcome = self._schedule_noncompute(
                     graph,
-                    tuple(operation_by_id[operation_id] for operation_id in group_ids),
-                    ready_data,
-                    launch_visits,
+                    selected,
+                    by_rank,
+                    eligible_at_ps,
+                    critical_predecessor,
+                    launch_visits[selected_id],
+                    tags,
                     state,
+                    wqe_authority,
+                    operation_index[selected_id],
                 )
-                for operation_id, outcome in group.items():
-                    scheduled[operation_id] = outcome
-                    unscheduled.remove(operation_id)
-                continue
+                scheduled[selected_id] = outcome
+                unscheduled.remove(selected_id)
+                all_wqes.extend(outcome.wqes)
 
-            by_rank, eligible_at_ps, critical_predecessor = ready_data[selected_id]
-            outcome = self._schedule_noncompute(
-                graph,
-                selected,
-                by_rank,
-                eligible_at_ps,
-                critical_predecessor,
-                launch_visits[selected_id],
-                tags,
-                state,
-                bypass,
-                operation_index[selected_id],
+            required_ids = graph.completion_operation_ids or tuple(operation_by_id)
+            completed_at_ps = max(
+                (
+                    scheduled[operation_id].logical_completed_at_ps
+                    for operation_id in required_ids
+                ),
+                default=graph.released_at_ps,
             )
-            scheduled[selected_id] = outcome
-            unscheduled.remove(selected_id)
-            all_wqes.extend(outcome.wqes)
+            quiesced_at_ps = max(
+                (outcome.physical_completed_at_ps for outcome in scheduled.values()),
+                default=graph.released_at_ps,
+            )
+            events = self._completion_events(graph, scheduled, all_wqes)
+            result = ExecutionResult(
+                execution_id=graph.execution_id,
+                completed_at_ps=completed_at_ps,
+                events=events,
+                quiesced_at_ps=quiesced_at_ps,
+            )
+            execution_result_to_json(result)
+            report = self._runtime_report(
+                graph,
+                scheduled,
+                all_wqes,
+                required_ids,
+                wqe_authority,
+            )
 
-        required_ids = graph.completion_operation_ids or tuple(operation_by_id)
-        completed_at_ps = max(
-            (scheduled[operation_id].logical_completed_at_ps for operation_id in required_ids),
-            default=graph.released_at_ps,
-        )
-        quiesced_at_ps = max(
-            (outcome.physical_completed_at_ps for outcome in scheduled.values()),
-            default=graph.released_at_ps,
-        )
-        events = self._completion_events(graph, scheduled, all_wqes)
-        result = ExecutionResult(
-            execution_id=graph.execution_id,
-            completed_at_ps=completed_at_ps,
-            events=events,
-            quiesced_at_ps=quiesced_at_ps,
-        )
-        execution_result_to_json(result)
-        report = self._runtime_report(
-            graph,
-            scheduled,
-            all_wqes,
-            required_ids,
-            bypass,
-        )
+            if bookkeeping is not None:
+                self._validate_bookkeeping_append(
+                    bookkeeping,
+                    graph,
+                    scheduled,
+                    all_wqes,
+                    events,
+                )
+            if native_transaction is not None:
+                native_transaction.prepare()
+            if bookkeeping is not None:
+                self._append_bookkeeping(
+                    bookkeeping,
+                    graph,
+                    scheduled,
+                    all_wqes,
+                    events,
+                )
+            if native_transaction is not None:
+                native_transaction.commit()
+                native_committed = True
 
-        if bookkeeping is not None:
-            self._validate_bookkeeping_append(bookkeeping, graph, scheduled, all_wqes, events)
-            self._append_bookkeeping(bookkeeping, graph, scheduled, all_wqes, events)
-
-        state.execution_ids.add(graph.execution_id)
-        self._state = state
-        if bypass is not None:
-            self._bypass_ledger = bypass
-        self.last_report = report
+            state.execution_ids.add(graph.execution_id)
+            self._state = state
+            if bypass is not None:
+                self._bypass_ledger = bypass
+            self.last_report = report
+        except BaseException:
+            if native_transaction is not None and not native_committed:
+                native_transaction.abort()
+            raise
         if on_event is not None:
             for event in events:
                 on_event(event)
@@ -862,6 +969,13 @@ class CoarseDeviceRuntime:
                     )
             elif isinstance(work, DmaWork):
                 direction = _dma_direction(work, operation.rank)
+                for endpoint_kind, endpoint_rank in _dma_endpoints(
+                    work,
+                    operation.rank,
+                ):
+                    if endpoint_kind == "device":
+                        assert endpoint_rank is not None
+                        self.profile.node_gpu(endpoint_rank)
                 candidates = self._copy_candidates(direction)
                 if not candidates:
                     raise ValueError(
@@ -871,12 +985,37 @@ class CoarseDeviceRuntime:
             elif isinstance(work, CollectiveWork):
                 for rank in work.ranks:
                     self.profile.node_gpu(rank)
+                if work.collective == "all-reduce" and work.algorithm_hint == "ring":
+                    rank_count = len(work.ranks)
+                    if work.payload_bytes < rank_count:
+                        raise ValueError(
+                            "ring all-reduce payload must provide at least one byte "
+                            "per rank; CORE-16 owns remainder chunking"
+                        )
+                    if work.payload_bytes % rank_count:
+                        raise ValueError(
+                            "ring all-reduce payload must divide evenly among ranks; "
+                            "CORE-16 owns remainder chunking"
+                        )
                 if work.collective == "all-to-allv" and work.payload_bytes == 0:
                     raise ValueError("pairwise all-to-allv requires a nonzero payload")
             elif isinstance(work, ControlWork):
+                if len(work.destination_ranks) > CONTROL_GOAL_TAG_STRIDE:
+                    raise ValueError(
+                        "control work supports at most 1024 destinations per "
+                        "reserved GOAL-tag block; CORE-16 owns wider allocation"
+                    )
                 for rank in work.destination_ranks:
                     self.profile.node_gpu(rank)
-            elif not isinstance(work, KvCacheWork):
+            elif isinstance(work, KvCacheWork):
+                if (
+                    work.action in {KvCacheAction.READ, KvCacheAction.WRITE}
+                    and work.byte_count > 0
+                ):
+                    raise ValueError(
+                        "byte-carrying KV READ/WRITE requires CORE-3 HBM lowering"
+                    )
+            else:
                 raise TypeError(f"unsupported work payload {type(work).__name__}")
 
     @staticmethod
@@ -1158,7 +1297,7 @@ class CoarseDeviceRuntime:
         launch: QueueVisit,
         tags: Mapping[str, tuple[int, ...]],
         state: _RuntimeState,
-        bypass: AtlahsWqeLedger | None,
+        wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
         operation_index: int,
     ) -> _ScheduledOperation:
         if isinstance(operation.work, DmaWork):
@@ -1190,7 +1329,7 @@ class CoarseDeviceRuntime:
                 critical_predecessor,
                 launch,
                 state,
-                bypass,
+                wqe_authority,
                 operation_index,
             )
         if isinstance(operation.work, CollectiveWork):
@@ -1202,7 +1341,7 @@ class CoarseDeviceRuntime:
                 launch,
                 tags[operation.operation_id],
                 state,
-                bypass,
+                wqe_authority,
             )
         raise AssertionError("preflight accepted unsupported work")
 
@@ -1273,11 +1412,18 @@ class CoarseDeviceRuntime:
             completed_at_ps=finished_at_ps,
             service_bytes=work.byte_count,
         )
+        participant_ranks = {operation.rank}
+        for endpoint_kind, endpoint_rank in _dma_endpoints(work, operation.rank):
+            if endpoint_kind == "device":
+                assert endpoint_rank is not None
+                participant_ranks.add(endpoint_rank)
         return _ScheduledOperation(
             operation=operation,
             logical_completed_at_ps=completed_at_ps,
             physical_completed_at_ps=completed_at_ps,
-            participant_completed_at_ps={operation.rank: completed_at_ps},
+            participant_completed_at_ps={
+                rank: completed_at_ps for rank in participant_ranks
+            },
             visits=[launch, copy_visit, hbm_visit],
             logical_paths=[[launch, copy_visit]],
             eligible_at_ps=eligible_at_ps,
@@ -1292,7 +1438,7 @@ class CoarseDeviceRuntime:
         critical_predecessor: str | None,
         launch: QueueVisit,
         state: _RuntimeState,
-        bypass: AtlahsWqeLedger | None,
+        wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
         operation_index: int,
     ) -> _ScheduledOperation:
         work = operation.work
@@ -1320,10 +1466,16 @@ class CoarseDeviceRuntime:
         physical_paths: list[list[QueueVisit]] = [[launch, control_visit]]
         wqes: list[WqeLifecycleProjection] = []
         physical_completed = control_visit.completed_at_ps
+        participant_completed = {rank: control_visit.completed_at_ps}
         for extent_index, destination in enumerate(work.destination_ranks):
             if destination == rank:
                 continue
-            tag = self.profile.goal_base_tag + 1_000_000 + operation_index * 1024 + extent_index
+            tag = (
+                self.profile.goal_base_tag
+                + CONTROL_GOAL_TAG_OFFSET
+                + operation_index * CONTROL_GOAL_TAG_STRIDE
+                + extent_index
+            )
             transfer_visit, projection = self._schedule_semantic_send(
                 graph=graph,
                 operation=operation,
@@ -1337,11 +1489,15 @@ class CoarseDeviceRuntime:
                 eligible_at_ps=control_visit.completed_at_ps,
                 nccl_command_id=None,
                 state=state,
-                bypass=bypass,
+                wqe_authority=wqe_authority,
             )
             visits.append(transfer_visit)
             physical_paths.append([launch, control_visit, transfer_visit])
             physical_completed = max(physical_completed, transfer_visit.completed_at_ps)
+            participant_completed[destination] = max(
+                participant_completed.get(destination, 0),
+                transfer_visit.completed_at_ps,
+            )
             if projection is not None:
                 wqes.append(projection)
         if work.mode is ControlMode.SYNCHRONOUS:
@@ -1350,11 +1506,12 @@ class CoarseDeviceRuntime:
         else:
             logical_completed = control_visit.completed_at_ps
             logical_paths = [[launch, control_visit]]
+        participant_completed[rank] = logical_completed
         return _ScheduledOperation(
             operation=operation,
             logical_completed_at_ps=logical_completed,
             physical_completed_at_ps=physical_completed,
-            participant_completed_at_ps={rank: logical_completed},
+            participant_completed_at_ps=participant_completed,
             visits=visits,
             logical_paths=logical_paths,
             eligible_at_ps=eligible_at_ps,
@@ -1371,7 +1528,7 @@ class CoarseDeviceRuntime:
         launch: QueueVisit,
         goal_tags: tuple[int, ...],
         state: _RuntimeState,
-        bypass: AtlahsWqeLedger | None,
+        wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
     ) -> _ScheduledOperation:
         work = operation.work
         assert isinstance(work, CollectiveWork)
@@ -1387,7 +1544,7 @@ class CoarseDeviceRuntime:
         extent_index = 0
 
         if work.collective == "all-reduce" and work.algorithm_hint == "ring":
-            chunk_bytes = max(1, work.payload_bytes // len(work.ranks))
+            chunk_bytes = work.payload_bytes // len(work.ranks)
             frontier = dict(readiness)
             for round_index, goal_tag in enumerate(goal_tags):
                 round_records: list[
@@ -1417,7 +1574,7 @@ class CoarseDeviceRuntime:
                         eligible_at_ps=channel_visit.completed_at_ps,
                         nccl_command_id=command_id,
                         state=state,
-                        bypass=bypass,
+                        wqe_authority=wqe_authority,
                     )
                     extent_index += 1
                     visits.extend((channel_visit, transfer_visit))
@@ -1471,7 +1628,7 @@ class CoarseDeviceRuntime:
                         eligible_at_ps=channel_visit.completed_at_ps,
                         nccl_command_id=command_id,
                         state=state,
-                        bypass=bypass,
+                        wqe_authority=wqe_authority,
                     )
                     extent_index += 1
                     visits.extend((channel_visit, transfer_visit))
@@ -1547,7 +1704,7 @@ class CoarseDeviceRuntime:
         eligible_at_ps: int,
         nccl_command_id: str | None,
         state: _RuntimeState,
-        bypass: AtlahsWqeLedger | None,
+        wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
     ) -> tuple[QueueVisit, WqeLifecycleProjection | None]:
         source_node, source_gpu = self.profile.node_gpu(source_rank)
         destination_node, _ = self.profile.node_gpu(destination_rank)
@@ -1594,11 +1751,7 @@ class CoarseDeviceRuntime:
             class_label=operation.priority,
             nccl_command_id=nccl_command_id,
         )
-        if bypass is not None:
-            projection = bypass.submit(submission)
-        else:
-            assert self._native_session is not None
-            projection = self._native_session.submit(submission)
+        projection = wqe_authority.submit(submission)
         self._validate_wqe_projection(submission, projection)
         return (
             QueueVisit(
@@ -1763,7 +1916,7 @@ class CoarseDeviceRuntime:
         scheduled: Mapping[str, _ScheduledOperation],
         wqes: Sequence[WqeLifecycleProjection],
         required_ids: tuple[str, ...],
-        bypass: AtlahsWqeLedger | None,
+        wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
     ) -> RuntimeReport:
         operation_records: list[RuntimeOperationRecord] = []
         all_visits: list[QueueVisit] = []
@@ -1779,15 +1932,50 @@ class CoarseDeviceRuntime:
                 ),
             )
             launch = path[0]
+            predecessor_id = outcome.critical_predecessor_id
+            segment_start_ps = (
+                scheduled[predecessor_id].logical_completed_at_ps
+                if predecessor_id is not None
+                else graph.released_at_ps
+            )
+            cursor_ps = segment_start_ps
+
+            launch_wait_ps = max(
+                0,
+                launch.started_at_ps - max(launch.eligible_at_ps, cursor_ps),
+            )
+            launch_service_ps = max(
+                0,
+                launch.finished_at_ps - max(launch.started_at_ps, cursor_ps),
+            )
+            launch_visibility_ps = max(
+                0,
+                launch.completed_at_ps - max(launch.finished_at_ps, cursor_ps),
+            )
             launch_queue_ps = (
-                launch.queue_wait_ps + launch.service_ps + launch.visibility_ps
+                launch_wait_ps + launch_service_ps + launch_visibility_ps
             )
-            device_queue_ps = sum(visit.queue_wait_ps for visit in path[1:])
-            service_ps = sum(visit.service_ps for visit in path[1:])
-            completion_delivery_ps = sum(visit.visibility_ps for visit in path[1:])
-            operation_latency_ps = (
-                outcome.logical_completed_at_ps - graph.released_at_ps
-            )
+            cursor_ps = max(cursor_ps, launch.completed_at_ps)
+
+            device_queue_ps = 0
+            service_ps = 0
+            completion_delivery_ps = 0
+            for visit in path[1:]:
+                device_queue_ps += max(
+                    0,
+                    visit.started_at_ps - max(visit.eligible_at_ps, cursor_ps),
+                )
+                service_ps += max(
+                    0,
+                    visit.finished_at_ps - max(visit.started_at_ps, cursor_ps),
+                )
+                completion_delivery_ps += max(
+                    0,
+                    visit.completed_at_ps - max(visit.finished_at_ps, cursor_ps),
+                )
+                cursor_ps = max(cursor_ps, visit.completed_at_ps)
+
+            operation_latency_ps = outcome.logical_completed_at_ps - segment_start_ps
             covered = (
                 launch_queue_ps
                 + device_queue_ps
@@ -1807,7 +1995,7 @@ class CoarseDeviceRuntime:
                 completion_delivery_ps=completion_delivery_ps,
                 external_dependency_ps=external_dependency_ps,
                 operation_latency_ps=operation_latency_ps,
-                critical_path_queue_ps=launch.queue_wait_ps + device_queue_ps,
+                critical_path_queue_ps=launch_wait_ps + device_queue_ps,
             )
             record = RuntimeOperationRecord(
                 operation_id=operation.operation_id,
@@ -1852,15 +2040,27 @@ class CoarseDeviceRuntime:
             by_operation_record[operation_id].breakdown.critical_path_queue_ps
             for operation_id in critical_chain
         )
+        if critical_chain:
+            chain_latency_ps = sum(
+                by_operation_record[operation_id].breakdown.operation_latency_ps
+                for operation_id in critical_chain
+            )
+            endpoint_latency_ps = (
+                scheduled[critical_chain[-1]].logical_completed_at_ps
+                - graph.released_at_ps
+            )
+            if chain_latency_ps != endpoint_latency_ps:
+                raise ValueError(
+                    "realized critical-path segments do not conserve graph JCT"
+                )
         class_bytes: dict[int, int] = defaultdict(int)
         for operation in graph.operations:
             if isinstance(operation.work, ControlWork):
                 fanout = max(1, len(operation.work.destination_ranks))
                 class_bytes[operation.priority] += operation.work.payload_bytes * fanout
-        random_draw_count = bypass.random_draw_count if bypass is not None else 0
         return RuntimeReport(
             execution_id=graph.execution_id,
-            authority=self.authority_name,
+            authority=wqe_authority.authority_name,
             operations=tuple(operation_records),
             visits=tuple(all_visits),
             wqes=tuple(wqes),
@@ -1868,7 +2068,7 @@ class CoarseDeviceRuntime:
             critical_path_queue_ps=critical_path_queue_ps,
             realized_critical_path_operation_ids=critical_chain,
             class_service_bytes=tuple(sorted(class_bytes.items())),
-            random_draw_count=random_draw_count,
+            random_draw_count=wqe_authority.random_draw_count,
         )
 
     def _validate_bookkeeping_append(

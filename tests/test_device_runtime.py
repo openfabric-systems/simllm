@@ -38,6 +38,8 @@ from simllm.core import (
     ExecutionGraph,
     ExecutionOperation,
     IdentityArbitrationPolicy,
+    KvCacheAction,
+    KvCacheWork,
     QueueVisit,
     RequestBookkeeper,
     ResourceKind,
@@ -216,7 +218,7 @@ def test_profile_and_authority_modes_are_explicit_and_exclusive():
         CoarseDeviceRuntime(authority_mode=RnicAuthorityMode.STRUCTURAL)
     with pytest.raises(ValueError, match="cannot also supply"):
         CoarseDeviceRuntime(native_session=object())
-    with pytest.raises(ValueError, match="CORE-10"):
+    with pytest.raises(TypeError, match="ArbitrationPolicy"):
         CoarseDeviceRuntime(arbitration_policy=object())
 
     runtime = CoarseDeviceRuntime()
@@ -394,7 +396,7 @@ def test_gpu_affine_rails_have_rate_scaling_and_per_qp_fifo(
     for rank in range(active_gpus):
         records = [wqe for wqe in runtime.last_report.wqes if wqe.source_rank == rank]
         assert [record.sq_post_sequence for record in records] == [1, 2]
-        assert records[0].completed_at_ps == records[1].started_at_ps
+        assert records[0].finished_at_ps == records[1].started_at_ps
         assert {record.rnic_id for record in records} == {f"node-0:rnic-{rank}"}
 
 
@@ -428,6 +430,7 @@ def test_tail_accounting_separates_visit_sum_from_critical_path():
     assert result.completed_at_ps - 5000 == 41_943_040
     assert report.sum_visit_wait_ps == 167_772_160
     assert report.sum_visit_wait_ps == 4 * (result.completed_at_ps - 5000)
+    assert report.critical_path_queue_ps == 20_971_520
     for operation in report.operations:
         breakdown = operation.breakdown
         assert (
@@ -438,6 +441,58 @@ def test_tail_accounting_separates_visit_sum_from_critical_path():
             + breakdown.external_dependency_ps
             == breakdown.operation_latency_ps
         )
+
+
+@pytest.mark.parametrize(
+    "launch_service_ps,expected_jct_ps,expected_queue_ps",
+    [(10, 150, 10), (20, 180, 20)],
+)
+def test_critical_path_clips_launch_work_before_predecessor_completion(
+    launch_service_ps,
+    expected_jct_ps,
+    expected_queue_ps,
+):
+    profile = replace(_profile(), launch_service_ps=launch_service_ps)
+    graph = ExecutionGraph(
+        f"critical-launch-{launch_service_ps}",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "a",
+                0,
+                "a",
+                ComputeWork("a", nominal_duration_ps=100),
+            ),
+            ExecutionOperation(
+                "filler",
+                1,
+                "filler",
+                ComputeWork("filler", nominal_duration_ps=0),
+                not_before_ps=100 + launch_service_ps,
+            ),
+            ExecutionOperation(
+                "b",
+                0,
+                "b",
+                ComputeWork("b", nominal_duration_ps=20),
+                depends_on=("a",),
+            ),
+        ),
+        completion_operation_ids=("b",),
+    )
+    runtime = CoarseDeviceRuntime(profile)
+    result = runtime.execute(graph)
+    report = runtime.last_report
+    assert report is not None
+    assert result.completed_at_ps == expected_jct_ps
+    assert report.realized_critical_path_operation_ids == ("a", "b")
+    assert report.critical_path_queue_ps == expected_queue_ps
+    by_id = {record.operation_id: record for record in report.operations}
+    assert sum(
+        by_id[operation_id].breakdown.operation_latency_ps
+        for operation_id in report.realized_critical_path_operation_ids
+    ) == expected_jct_ps
 
 
 def test_collective_goal_tags_and_bookkeeping_preserve_operation_identity():
@@ -555,19 +610,110 @@ def test_participant_local_collective_arrivals_remain_per_rank():
     assert first_by_source == {0: 10, 8: 40}
 
 
+def test_async_control_publishes_destination_arrival_for_local_dependency():
+    graph = ExecutionGraph(
+        "control-destination-arrival",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "control",
+                0,
+                "control",
+                ControlWork(
+                    "arrival",
+                    destination_ranks=(8,),
+                    payload_bytes=1,
+                    mode=ControlMode.ASYNCHRONOUS,
+                ),
+            ),
+            ExecutionOperation(
+                "destination",
+                8,
+                "compute",
+                ComputeWork("destination", nominal_duration_ps=1),
+                participant_local_depends_on=("control",),
+            ),
+        ),
+    )
+    runtime = CoarseDeviceRuntime(_profile())
+    runtime.execute(graph)
+    assert runtime.last_report is not None
+    by_id = {record.operation_id: record for record in runtime.last_report.operations}
+    destination_arrival = dict(by_id["control"].participant_completed_at_ps)[8]
+    assert by_id["control"].completed_at_ps == 0
+    assert destination_arrival > by_id["control"].completed_at_ps
+    assert by_id["destination"].eligible_at_ps == destination_arrival
+
+
+def test_peer_dma_publishes_destination_arrival_for_local_dependency():
+    graph = ExecutionGraph(
+        "peer-dma-destination-arrival",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "peer",
+                0,
+                "copy",
+                DmaWork("peer", "gpu:0:hbm", "gpu:1:hbm", 4),
+            ),
+            ExecutionOperation(
+                "destination",
+                1,
+                "compute",
+                ComputeWork("destination", nominal_duration_ps=1),
+                participant_local_depends_on=("peer",),
+            ),
+        ),
+    )
+    runtime = CoarseDeviceRuntime(_profile())
+    runtime.execute(graph)
+    assert runtime.last_report is not None
+    by_id = {record.operation_id: record for record in runtime.last_report.operations}
+    arrivals = dict(by_id["peer"].participant_completed_at_ps)
+    assert arrivals[0] == by_id["peer"].completed_at_ps
+    assert arrivals[1] == by_id["peer"].completed_at_ps
+    assert by_id["destination"].eligible_at_ps == arrivals[1]
+
+
 class _FakeNativeSession:
     authority_name = "fake-native-session"
 
     def __init__(self):
         self.submissions = []
+        self.commit_count = 0
+        self.abort_count = 0
+        self.fail_second_projection = False
+        self.random_draw_count = 7
+
+    def begin_transaction(self):
+        return _FakeNativeTransaction(self)
+
+
+class _FakeNativeTransaction:
+    authority_name = _FakeNativeSession.authority_name
+
+    def __init__(self, session: _FakeNativeSession):
+        self.session = session
+        self.pending = []
+        self.prepared = False
+        self.closed = False
+
+    @property
+    def random_draw_count(self):
+        return self.session.random_draw_count
 
     def submit(self, submission: SemanticWqeSubmission) -> WqeLifecycleProjection:
-        self.submissions.append(submission)
-        sequence = len(self.submissions)
+        self.pending.append(submission)
+        sequence = len(self.session.submissions) + len(self.pending)
+        operation_id = submission.operation_id
+        if self.session.fail_second_projection and len(self.pending) == 2:
+            operation_id = "invalid-second-projection"
         return WqeLifecycleProjection(
             authority=self.authority_name,
             execution_id=submission.execution_id,
-            operation_id=submission.operation_id,
+            operation_id=operation_id,
             wqe_id=f"native-wqe:{sequence}",
             native_wqe_id=f"native:{sequence}",
             sq_id=f"native:sq:{submission.source_rank}",
@@ -591,6 +737,23 @@ class _FakeNativeSession:
             nccl_command_id=submission.nccl_command_id,
         )
 
+    def prepare(self):
+        assert not self.closed
+        self.prepared = True
+
+    def commit(self):
+        assert self.prepared
+        assert not self.closed
+        self.session.submissions.extend(self.pending)
+        self.session.commit_count += 1
+        self.closed = True
+
+    def abort(self):
+        assert not self.closed
+        self.pending.clear()
+        self.session.abort_count += 1
+        self.closed = True
+
 
 def test_structural_mode_delegates_without_constructing_bypass_authority():
     session = _FakeNativeSession()
@@ -603,7 +766,38 @@ def test_structural_mode_delegates_without_constructing_bypass_authority():
     assert runtime.bypass_ledger is None
     assert runtime.authority_name == session.authority_name
     assert len(session.submissions) == 2
+    assert session.commit_count == 1
+    assert session.abort_count == 0
     assert result.completed_at_ps - 5000 == 123
+    assert runtime.last_report is not None
+    assert runtime.last_report.random_draw_count == 7
+
+
+def test_structural_native_failure_aborts_without_double_advancing_on_retry():
+    session = _FakeNativeSession()
+    session.fail_second_projection = True
+    runtime = CoarseDeviceRuntime(
+        _profile(),
+        authority_mode=RnicAuthorityMode.STRUCTURAL,
+        native_session=session,
+    )
+    graph = _control_graph("native-rollback", 1)
+
+    with pytest.raises(ValueError, match="operation_id"):
+        runtime.execute(graph)
+
+    assert session.submissions == []
+    assert session.commit_count == 0
+    assert session.abort_count == 1
+    assert runtime.last_report is None
+
+    session.fail_second_projection = False
+    runtime.execute(graph)
+    assert len(session.submissions) == 2
+    assert session.commit_count == 1
+    assert session.abort_count == 1
+    assert runtime.last_report is not None
+    assert [wqe.sq_post_sequence for wqe in runtime.last_report.wqes] == [1, 2]
 
 
 def _canonical_report(runtime: CoarseDeviceRuntime):
@@ -640,6 +834,114 @@ def test_omitted_and_explicit_identity_ignore_class_label_permutation_exactly():
             result = runtime.execute(_identity_graph("identity", labels))
             outcomes.append((result, _canonical_report(runtime)))
     assert all(outcome == outcomes[0] for outcome in outcomes[1:])
+
+
+class _LastReadyPolicy:
+    def __init__(self):
+        self.calls = []
+
+    def select(self, candidates):
+        self.calls.append(tuple(candidate.operation_id for candidate in candidates))
+        return max(candidates, key=lambda candidate: candidate.baseline_sequence)
+
+
+def test_conforming_arbitration_policy_is_accepted_and_selects_from_legal_ready_set():
+    policy = _LastReadyPolicy()
+    runtime = CoarseDeviceRuntime(_profile(), arbitration_policy=policy)
+    runtime.execute(_identity_graph("replaceable-policy", (3, 9)))
+    assert policy.calls[0] == ("control-0-0", "control-0-1")
+    assert runtime.last_report is not None
+    assert [wqe.operation_id for wqe in runtime.last_report.wqes] == [
+        "control-0-1",
+        "control-0-0",
+    ]
+
+
+@pytest.mark.parametrize("action", [KvCacheAction.READ, KvCacheAction.WRITE])
+def test_byte_carrying_kv_read_write_fails_closed_before_state_mutation(action):
+    runtime = CoarseDeviceRuntime(_profile())
+    graph = ExecutionGraph(
+        f"kv-{action.value}",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "kv",
+                0,
+                "kv",
+                KvCacheWork(action, "pool", byte_count=1),
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match="CORE-3"):
+        runtime.execute(graph)
+    assert runtime.last_report is None
+    assert runtime.bypass_ledger is not None
+    assert runtime.bypass_ledger.records == ()
+
+
+def test_zero_byte_kv_read_remains_a_timing_neutral_lifecycle_observation():
+    graph = ExecutionGraph(
+        "kv-zero-byte",
+        0,
+        7,
+        (
+            ExecutionOperation(
+                "kv",
+                0,
+                "kv",
+                KvCacheWork(KvCacheAction.READ, "pool", byte_count=0),
+            ),
+        ),
+    )
+    runtime = CoarseDeviceRuntime(_profile())
+    result = runtime.execute(graph)
+    assert result.completed_at_ps == 7
+    assert runtime.last_report is not None
+    assert runtime.last_report.wqes == ()
+
+
+@pytest.mark.parametrize("payload_bytes", [0, 1, 3])
+def test_ring_payload_without_exact_positive_chunks_fails_closed(payload_bytes):
+    runtime = CoarseDeviceRuntime(_profile())
+    graph = ExecutionGraph(
+        f"ring-payload-{payload_bytes}",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "ring",
+                0,
+                "nccl",
+                CollectiveWork("all-reduce", (0, 8), payload_bytes, "ring"),
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match="CORE-16"):
+        runtime.execute(graph)
+    assert runtime.last_report is None
+    assert runtime.bypass_ledger is not None
+    assert runtime.bypass_ledger.records == ()
+
+
+def test_control_destination_count_cannot_overflow_reserved_goal_tag_block():
+    runtime = CoarseDeviceRuntime(_profile())
+    graph = ExecutionGraph(
+        "control-tag-overflow",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "control",
+                0,
+                "control",
+                ControlWork("overflow", tuple(range(1, 1026)), 1),
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match="at most 1024 destinations"):
+        runtime.execute(graph)
+    assert runtime.last_report is None
 
 
 def test_failed_preflight_does_not_mutate_runtime_or_bookkeeper():

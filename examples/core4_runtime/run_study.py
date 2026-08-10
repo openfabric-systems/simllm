@@ -42,6 +42,24 @@ B = 1_048_576
 G = 1_000_000_000
 S_400_PS = 20_971_520
 S_200_PS = 41_943_040
+FROZEN_A_JCT_PS = {
+    (10_000_000, 40_000_000, False): 40_000_000,
+    (10_000_000, 40_000_000, True): 50_000_000,
+    (80_000_000, 40_000_000, False): 80_000_000,
+    (80_000_000, 40_000_000, True): 120_000_000,
+}
+FROZEN_B_JCT_PS = {
+    (1, 200): 83_886_080,
+    (1, 400): 41_943_040,
+    (8, 200): 83_886_080,
+    (8, 400): 41_943_040,
+}
+FROZEN_B_THROUGHPUT_BPS = {
+    (1, 200): 200_000_000_000,
+    (1, 400): 400_000_000_000,
+    (8, 200): 1_600_000_000_000,
+    (8, 400): 3_200_000_000_000,
+}
 DEFAULT_OUTPUT = Path(
     "/data3/yifeng/simllm-dev/wave2-runs/codex/core4_device_runtime"
 )
@@ -135,9 +153,14 @@ def _architecture() -> GpuArchitectureProfile:
 ARCHITECTURE = _architecture()
 
 
-def profile(rate_gbps: int = 400) -> CoarseDeviceProfile:
+def profile(
+    rate_gbps: int = 400,
+    *,
+    launch_service_ps: int = 0,
+) -> CoarseDeviceProfile:
     return CoarseDeviceProfile(
         rnic_rate_bps=rate_gbps * G,
+        launch_service_ps=launch_service_ps,
         copy_engines=(CopyEngineServiceModel(ARCHITECTURE, "ideal-copy"),),
     )
 
@@ -213,6 +236,37 @@ def control_graph(
     return ExecutionGraph(execution_id, 0, T0, tuple(operations))
 
 
+def critical_launch_graph(launch_service_ps: int) -> ExecutionGraph:
+    return ExecutionGraph(
+        f"critical-launch-{launch_service_ps}",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "a",
+                0,
+                "a",
+                ComputeWork("a", nominal_duration_ps=100),
+            ),
+            ExecutionOperation(
+                "filler",
+                1,
+                "filler",
+                ComputeWork("filler", nominal_duration_ps=0),
+                not_before_ps=100 + launch_service_ps,
+            ),
+            ExecutionOperation(
+                "b",
+                0,
+                "b",
+                ComputeWork("b", nominal_duration_ps=20),
+                depends_on=("a",),
+            ),
+        ),
+        completion_operation_ids=("b",),
+    )
+
+
 def add(
     rows: list[EvidenceRow],
     family: str,
@@ -243,7 +297,11 @@ def family_a(rows: list[EvidenceRow], configurations: list[dict[str, object]]) -
             graph = overlap_graph(case, compute_ps, dma_ps, dependency=dependency)
             result = CoarseDeviceRuntime(profile()).execute(graph)
             jct = result.completed_at_ps - graph.released_at_ps
-            expected = compute_ps + dma_ps if dependency else max(compute_ps, dma_ps)
+            closed_form = (
+                compute_ps + dma_ps if dependency else max(compute_ps, dma_ps)
+            )
+            expected = FROZEN_A_JCT_PS[(compute_ps, dma_ps, dependency)]
+            assert closed_form == expected
             measured[dependency] = jct
             configurations.append(
                 {
@@ -304,7 +362,9 @@ def family_b(rows: list[EvidenceRow], configurations: list[dict[str, object]]) -
             result = runtime.execute(graph)
             report = runtime.last_report
             assert report is not None
-            expected = 16_000 * B // rate_gbps
+            closed_form = 16_000 * B // rate_gbps
+            expected = FROZEN_B_JCT_PS[(active_gpus, rate_gbps)]
+            assert closed_form == expected
             jct = result.completed_at_ps - T0
             jcts[(active_gpus, rate_gbps)] = jct
             useful_bytes = sum(wqe.payload_bytes for wqe in report.wqes)
@@ -331,16 +391,20 @@ def family_b(rows: list[EvidenceRow], configurations: list[dict[str, object]]) -
                 "B",
                 EXACT_ORACLE,
                 f"throughput:N={active_gpus},R={rate_gbps}",
-                active_gpus * rate_gbps * G,
+                FROZEN_B_THROUGHPUT_BPS[(active_gpus, rate_gbps)],
                 useful_bps,
                 genuine_risk=True,
+            )
+            assert (
+                active_gpus * rate_gbps * G
+                == FROZEN_B_THROUGHPUT_BPS[(active_gpus, rate_gbps)]
             )
             by_source = {}
             for wqe in report.wqes:
                 by_source.setdefault(wqe.source_rank, []).append(wqe)
             fifo_ok = all(
                 [wqe.sq_post_sequence for wqe in records] == [1, 2]
-                and records[0].completed_at_ps == records[1].started_at_ps
+                and records[0].finished_at_ps == records[1].started_at_ps
                 and {wqe.rnic_id for wqe in records}
                 == {f"node-0:rnic-{source_rank}"}
                 for source_rank, records in by_source.items()
@@ -437,7 +501,16 @@ def family_c(rows: list[EvidenceRow], configurations: list[dict[str, object]]) -
             result = runtime.execute(graph)
             report = runtime.last_report
             assert report is not None
-            expected_jct = 10_000_000 if mode is ControlMode.ASYNCHRONOUS else 2 * S_400_PS
+            expected_jct = (
+                10_000_000
+                if mode is ControlMode.ASYNCHRONOUS
+                else 41_943_040
+            )
+            assert (
+                10_000_000
+                if mode is ControlMode.ASYNCHRONOUS
+                else 2 * S_400_PS
+            ) == expected_jct
             outcomes[(mode, class_label)] = (result, report)
             configurations.append(
                 {
@@ -461,17 +534,28 @@ def family_c(rows: list[EvidenceRow], configurations: list[dict[str, object]]) -
                 "C",
                 EXACT_ORACLE,
                 f"quiescence:{mode.value}:class={class_label}",
-                2 * S_400_PS,
+                41_943_040,
                 result.quiesced_at_ps - T0,
                 genuine_risk=True,
             )
+            assert 2 * S_400_PS == 41_943_040
             add(
                 rows,
                 "C",
                 BEHAVIORAL_RELATION,
                 f"additive-wait:{mode.value}:class={class_label}",
-                8 * S_400_PS,
+                167_772_160,
                 report.sum_visit_wait_ps,
+                genuine_risk=True,
+            )
+            assert 8 * S_400_PS == 167_772_160
+            add(
+                rows,
+                "C",
+                BEHAVIORAL_RELATION,
+                f"critical-path-queue:{mode.value}:class={class_label}",
+                0 if mode is ControlMode.ASYNCHRONOUS else 20_971_520,
+                report.critical_path_queue_ps,
                 genuine_risk=True,
             )
             conservation_ok = all(
@@ -517,6 +601,57 @@ def family_c(rows: list[EvidenceRow], configurations: list[dict[str, object]]) -
             31_943_040,
             sync_result.completed_at_ps - async_result.completed_at_ps,
             genuine_risk=True,
+        )
+
+    for launch_service_ps, expected_jct_ps, expected_queue_ps in (
+        (10, 150, 10),
+        (20, 180, 20),
+    ):
+        graph = critical_launch_graph(launch_service_ps)
+        runtime = CoarseDeviceRuntime(
+            profile(launch_service_ps=launch_service_ps)
+        )
+        result = runtime.execute(graph)
+        report = runtime.last_report
+        assert report is not None
+        configurations.append(
+            {
+                "family": "C",
+                "mode": "critical-launch-chain",
+                "launch_service_ps": launch_service_ps,
+            }
+        )
+        add(
+            rows,
+            "C",
+            EXACT_ORACLE,
+            f"critical-launch-jct:L={launch_service_ps}",
+            expected_jct_ps,
+            result.completed_at_ps,
+            genuine_risk=True,
+        )
+        add(
+            rows,
+            "C",
+            BEHAVIORAL_RELATION,
+            f"critical-launch-queue:L={launch_service_ps}",
+            expected_queue_ps,
+            report.critical_path_queue_ps,
+            genuine_risk=True,
+        )
+        by_id = {record.operation_id: record for record in report.operations}
+        chain_latency_ps = sum(
+            by_id[operation_id].breakdown.operation_latency_ps
+            for operation_id in report.realized_critical_path_operation_ids
+        )
+        add(
+            rows,
+            "C",
+            STRUCTURAL,
+            f"critical-launch-conservation:L={launch_service_ps}",
+            expected_jct_ps,
+            chain_latency_ps,
+            genuine_risk=False,
         )
     for mode in (ControlMode.ASYNCHRONOUS, ControlMode.SYNCHRONOUS):
         left_result, left_report = outcomes[(mode, 3)]
@@ -658,6 +793,12 @@ def check_only() -> None:
     assert 16_000 * B // 400 == 41_943_040
     assert 8 * S_400_PS == 167_772_160
     assert 2 * S_400_PS - 10_000_000 == 31_943_040
+    assert FROZEN_A_JCT_PS[(10_000_000, 40_000_000, False)] == 40_000_000
+    assert FROZEN_A_JCT_PS[(80_000_000, 40_000_000, True)] == 120_000_000
+    assert FROZEN_B_JCT_PS[(8, 400)] == 41_943_040
+    assert FROZEN_B_THROUGHPUT_BPS[(8, 400)] == 3_200_000_000_000
+    assert 120 + 3 * 10 == 150
+    assert 120 + 3 * 20 == 180
     assert profile().gpus_per_node == profile().rnics_per_node == 8
 
 
@@ -684,6 +825,7 @@ def main() -> None:
     failures = [row for row in rows if not row.passed]
     payload = {
         "expectation_commit": "d43cddb",
+        "review_amendment_commit": "67cabda",
         "configurations": configurations,
         "evidence": [
             {

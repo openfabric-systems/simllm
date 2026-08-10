@@ -114,6 +114,10 @@ resource critical path. Only the latter can participate in an additive TTFT,
 TPOT or JCT decomposition. GPU wall-idle classifications, PCIe transaction
 wait sums, WQ stage waits and last-completion makespans retain distinct names;
 no caller may compare or add them merely because each has units of time.
+For a dependency chain, each operation segment begins at its realized
+predecessor completion. Queue, service and visibility intervals that completed
+before that boundary contribute zero; intervals crossing it contribute only
+their remaining tail. Summed segment latency must equal graph JCT exactly.
 
 Every optional class or priority scheduler must sit behind a replaceable
 policy. Mandatory protocol legality and ordering constrain the ready set before
@@ -126,6 +130,17 @@ class labels are permuted. A non-identity policy may reorder only legal ready
 requests. For example, it cannot violate SQ ordering or PCIe forward-progress
 rules.
 
+The coarse runtime calls this seam only to select among simultaneously legal
+ready graph operations. Framework-launch FIFO, logical-queue FIFO, dependency
+release, NCCL round order and WQ protocol order are mandatory rather than
+optional arbitration. A co-runnable compute set is dispatched as one set, so
+there is no losing candidate to prioritize within that call. Compatible copy
+engines use deterministic earliest-availability routing after the operation
+has won the ready seam; native RNIC arbitration remains owned by its sole
+session. These policy-free points do not inspect class labels. Any object
+conforming to `ArbitrationPolicy` may replace identity at the ready seam, while
+CORE-10 owns the first supported non-identity behavior.
+
 The pre-implementation queue conformance expectations were first frozen in
 [examples/queue_contract_v1](../../examples/queue_contract_v1/expectations.md)
 at commit `65b5609`; commit `facb26d` clarified identity-policy scope, and
@@ -137,7 +152,7 @@ dictionary:
 | Payload | Semantic owner | Runtime lowering |
 |---|---|---|
 | `ComputeWork` | Model runner plus `ComputeProvider` | launch queue, CUDA stream, GPU work queue, hardware scheduler and HBM |
-| `KvCacheWork` | Real framework KV/prefix-cache manager | logical state transition; READ/WRITE becomes HBM work, SWAP/TRANSFER becomes DMA, RECOMPUTE becomes compute plus WRITE |
+| `KvCacheWork` | Real framework KV/prefix-cache manager | zero-byte lifecycle observation only in CORE-4; byte-carrying READ/WRITE fails preflight until CORE-3 supplies HBM lowering |
 | `DmaWork` | Data-mover planner | DMA descriptor, directional copy engine, source/destination memory queues |
 | `CollectiveWork` | Framework/NCCL observation plus traffic planner | NCCL channels, DMA/HBM work, WQEs and network flows |
 | `ControlWork` | Framework or runtime controller | synchronous or asynchronous labeled local/fabric control path; priority only under an opted-in policy |
@@ -149,6 +164,12 @@ rank sends to each other rank (one uniform ordered-pair share; the serial
 lowerer and the serial GOAL renderer agree on this decoding). An all-to-allv
 with per-pair size variation, e.g. captured routed-expert dispatch, is not
 representable by the single scalar; CORE-6 owns the contract extension.
+The coarse ring path currently requires a positive payload evenly divisible
+by its rank count, so every round sends an exact integer chunk and never
+fabricates a byte. CORE-16 owns remainder chunking. Control sends reserve
+1,024 tags per operation beginning 1,000,000 above the collective base; more
+than 1,024 destinations or a collective allocation reaching that boundary
+fails preflight before authority mutation.
 
 `ExecutionLowerer` and `DeviceRuntime` remain narrow protocols.
 `CoarseDeviceRuntime` is the first additive implementation. Its
@@ -280,26 +301,32 @@ Explicit KV state semantics remain CORE-3. BACK-8, BACK-9 and BACK-12 own
 structural RNIC objects and arbitration.
 Completion reduction and tail attribution remain CORE-5.
 
-CORE-4 is complete for the coordinated first coarse profile.
+CORE-4 is complete for the coordinated first coarse bypass profile;
+structural completion remains explicitly conditional on CORE-15.
 `CoarseDeviceRuntime` implements host-launch and CUDA-stream order, dependency
 release, co-runnable non-preemptive kernel dispatch into `simllm.compute`,
 directional copy-engine queues, coarse shared HBM arbitration, NCCL channels,
 NVLink-class intra-node service, GPU-affine cross-node semantic submission,
 synchronous/asynchronous control completion and completion/bookkeeping
 projection. `AtlahsWqeLedger` is the sole live bypass authority. Structural
-mode constructs no ledger and delegates through `NativeRnicSession`; HTSIM-9
-owns the composed native/htsim implementation that fills this seam.
+mode constructs no ledger and stages submissions through an isolated
+`NativeRnicTransaction`, whose prepared commit is the only mutation of its
+`NativeRnicSession`. HTSIM-9 owns the composed native/htsim implementation
+that fills this seam.
 
 The [CORE-4 runtime study](../../examples/core4_runtime/RESULTS.md) cites the
-older module expectations and the final expectations-only commit `d43cddb`.
-Across 16 configurations it passed 20/20 exact-oracle rows, 17/17 scored
-relations and 16/16 fatal structural guards. Independent compute and DMA
+older module expectations, the original expectations-only commit `d43cddb`,
+and the integration-review amendment `67cabda`. Across 18 configurations it
+passed 22/22 exact-oracle rows, 23/23 scored relations and 18/18 fatal
+structural guards. Independent compute and DMA
 matched `max(C, D)`, a dependency matched `C + D`, eight affine RNICs retained
 one-port makespan while aggregate throughput reached `8R`, additive visit wait
-was exactly four times wall JCT without entering the critical path, and
+was exactly four times wall JCT without entering the critical path, dependency
+chain launch intervals were clipped at the realized predecessor boundary, and
 omitted/explicit identity remained canonical-byte identical under class-label
-permutation. The four remaining coarse approximations are registered as
-CORE-11 through CORE-14 rather than being claimed as calibrated behavior.
+permutation. Remaining coarse approximations and completeness gaps are
+registered as CORE-11 through CORE-16 rather than being claimed as calibrated
+behavior.
 
 ## Pre-registered runtime sanity experiments
 
@@ -337,7 +364,7 @@ does not claim to produce these resource-contention measurements.
 
 ## Open tasks
 
-- CORE-3: implement explicit KV lifecycle accounting before resource
+- CORE-3 (Completeness; P1; L): implement explicit KV lifecycle accounting before resource
   contention. Consume adapter observations for RESERVE, ALLOCATE,
   BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
   TRANSFER and RECOMPUTE. Enforce allocation, ownership, reference-count and
@@ -348,7 +375,11 @@ does not claim to produce these resource-contention measurements.
   capacity, block size, arrival rate, length, sharing and concurrency; report
   live/reserved/reclaimable bytes, fragmentation, hits, eviction reason and
   age, reads/writes, transfers, recompute, preemption, capacity wait and
-  TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9.
+  TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9. Until this
+  lands, CORE-4 accepts zero-byte lifecycle observations but rejects every
+  byte-carrying READ or WRITE during preflight rather than reporting silent
+  zero-cost HBM work. Acceptance must enable those same fixtures through the
+  HBM service and preserve the explicit zero-byte path exactly.
 - CORE-5 (Completeness; P1; L): implement completion feedback and tail
   attribution. Stream queue,
   start, progress and completion events, reduce the required completion
@@ -429,6 +460,22 @@ does not claim to produce these resource-contention measurements.
   profile as an explicit off path. Enabling manifest discovery with the
   equivalent eight-by-eight mapping must preserve every accepted CORE-4 event,
   WQE, byte count and timestamp exactly.
+- CORE-15 (Completeness; P1; L): complete the structural runtime path after
+  HTSIM-9 supplies the composed transactional native session. The native path
+  must be live-reachable from an ExecutionGraph to a changed completion time;
+  its standalone probes do not close this task. Acceptance must compare a
+  fixed contended graph through bypass and composed native authority, observe
+  the registered signed JCT change, prove failed execution leaves native state
+  untouched, and preserve the bypass baseline exactly when structural mode is
+  disabled.
+- CORE-16 (Completeness; P2; M): replace CORE-4's fail-closed collective and
+  control expansion limits with exact ring remainder chunking and a collision-
+  free tag allocator wider than 1,024 control destinations. The present off
+  path rejects zero, sub-rank and non-divisible ring payloads, control fanout
+  above 1,024, and collective tags reaching the control range before any
+  authority mutates. Acceptance must cover remainder byte conservation and
+  tag uniqueness across adjacent collective and control operations while the
+  current divisible-payload and bounded-fanout baselines remain byte-identical.
 - BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
   process for closed loop, replacing per-step subprocess spawns. Its
   incremental flow-injection transport should carry `ExecutionGraph` and
