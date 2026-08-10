@@ -284,7 +284,8 @@ def _run(out: Path) -> dict[str, Any]:
     }
     out.mkdir(parents=True, exist_ok=True)
     executable, ctest = _build(out / "build")
-    raw_csv, checked = _read_native_rows(executable)
+    raw_csv, rows = _read_native_rows(executable)
+    checked = _validate_rows(rows)
     (out / "raw_results.csv").write_bytes(raw_csv.encode("utf-8"))
     RESULTS.write_bytes(raw_csv.encode("utf-8"))
     after = {
