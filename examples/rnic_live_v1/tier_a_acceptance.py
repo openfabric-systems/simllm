@@ -489,13 +489,13 @@ def _validate_token_ledger(
     )
     _require(
         len(issued_rows) == len(cell_wqes)
-        and Counter(issued_wqes.values()) == Counter(cell_wqes),
+        and Counter(issued_wqes.values()) == Counter(cell_wqes.keys()),
         f"{name} must issue exactly one token for each frozen WQE",
     )
     _require(
         len(terminal_rows) == len(cell_wqes)
         and Counter(int(row["wqe_id"]) for row in terminal_rows)
-        == Counter(cell_wqes),
+        == Counter(cell_wqes.keys()),
         f"{name} must terminate exactly one token for each frozen WQE",
     )
     for issued_row in issued_rows:
