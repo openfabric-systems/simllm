@@ -51,8 +51,9 @@ the flow-level work the GOAL emitter renders.
   all-to-allv operations, preserves `participant_local_depends_on` edges and
   FIFO predecessors, and never reduces a separate `depends_on`
   whole-operation barrier through rank-local ancestry. It fails loudly on
-  cross-rank barriers, work or timing semantics the serial GOAL subset cannot
-  represent. It consumes no `StepRecord` after lowering.
+  cross-rank barriers, sparse pair tables that leave a declared rank without
+  a send or receive, and work or timing semantics the serial GOAL subset
+  cannot represent. It consumes no `StepRecord` after lowering.
 
 Deliberately out of scope: exact TP weight-storage intervals (packed QKV,
 gate/up packing, quantization padding); group memberships plus activation

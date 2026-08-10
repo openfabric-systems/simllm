@@ -172,7 +172,10 @@ The field is omitted from JSON when empty, so old
 `simllm-execution-graph-v1` scalar payloads retain their exact bytes and
 meaning. The strict reader rejects duplicate, self, out-of-group, nonpositive,
 unsorted and scalar-plus-table entries. Both the serial GOAL renderer and the
-coarse runtime consume the same table.
+coarse runtime consume the same table when each declared rank sends or
+receives. The runtime also accepts a valid table with an uncovered rank; the
+diagnostic serial renderer rejects that case because it cannot emit the
+rank's collective-completion frontier.
 The combined captured-routing study populated that table from real Granite
 assignments, carried it through the step graph and GOAL, and changed live
 fluid JCT by every frozen exact relation. It also retained the old v1 scalar

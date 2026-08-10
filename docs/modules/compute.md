@@ -438,10 +438,12 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   over all layers of the step; SASS tables index per-invocation shapes,
   so the mapping needs a per-layer (per-invocation) split before tables
   can be keyed the way the tracer sees kernels.
-- COMP-7: MoE compute assumes perfectly balanced routing: every rank
-  computes `top_k` experts' flops for its own tokens and streams all
-  resident experts once. Routed-experts captures (TRAF-2 second half)
-  would drive per-rank effective expert load and hot-expert imbalance.
+- COMP-7 (Precision; P1; M): MoE compute assumes perfectly balanced routing:
+  every rank computes `top_k` experts' flops for its own tokens and streams all
+  resident experts once. Consume the landed `simllm-routed-experts-v1`
+  projection through `RoutedMoeSupply`, using the same selected placement
+  epoch as traffic, to drive per-rank effective expert load and hot-expert
+  imbalance.
 - COMP-8: the fused-vs-family sum invariant test compares in float; above
   2 to the 53rd flops (a 32k-token prefill chunk on a 100B-class dense
   rank) ULP effects could mask a real mismatch even though the integer

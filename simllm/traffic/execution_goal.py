@@ -131,8 +131,8 @@ def render_serial_execution_graph_goal(
     collective ranks. Operation-scoped edges are accepted only when both
     operations have one identical rank; cross-rank completion barriers require
     the stateful resource runtime. Logical KV work, DMA, control work, timing
-    gates and other collective algorithms are rejected instead of being
-    silently dropped.
+    gates, sparse pair tables with an uncovered rank and other collective
+    algorithms are rejected instead of being silently dropped.
 
     Ring tag blocks are reserved for every layer before pairwise tags are
     assigned.  This matches ``render_step_goal`` even though graph submission
@@ -182,6 +182,19 @@ def render_serial_execution_graph_goal(
                     f"operation {operation.operation_id!r} is a single-rank "
                     "pairwise all-to-allv; the serial GOAL renderer rejects it "
                     "instead of silently dropping the collective"
+                )
+            covered_ranks = {
+                rank
+                for source, destination, _ in work.pair_payload_bytes
+                for rank in (source, destination)
+            }
+            uncovered_ranks = sorted(set(work.ranks) - covered_ranks)
+            if work.pair_payload_bytes and uncovered_ranks:
+                ranks_text = ", ".join(str(rank) for rank in uncovered_ranks)
+                raise ValueError(
+                    f"operation {operation.operation_id!r} has sparse pairwise "
+                    f"all-to-allv payloads with uncovered ranks {ranks_text}; the "
+                    "serial GOAL renderer cannot emit their completion frontier"
                 )
             pairwise_operations.append(operation)
         else:

@@ -238,8 +238,8 @@ def _routed_moe_alltoalls(
             (source, destination, size)
             for (source, destination), size in sorted(send_bytes.items())
         )
-        if not dispatch:
-            continue
+        # A routed token has a destination owner, and at least one of the two
+        # or more EP sources is remote from that owner, so dispatch is nonempty.
         combine = tuple(
             sorted(
                 (destination, source, size)

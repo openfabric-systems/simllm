@@ -36,11 +36,15 @@ value. The final evidence below is the clean rerun after that correction.
 
 ## Reproduction and raw artifacts
 
-Set these local variables to the routed-supply output directory, the full
-Granite decode trace and the two provided executables:
+**Post-specified portability note.** Integration review rendered the output
+location through `SIMLLM_DATA_ROOT`. This presentation change does not alter
+the frozen command options, archived artifacts or canonical hashes.
+
+Set these local variables in the gitignored `.env.local.sh`: the external data
+root, the full Granite decode trace and the two provided executables:
 
 ```text
-SIMLLM_ROUTING_RUN_ROOT
+SIMLLM_DATA_ROOT
 SIMLLM_GRANITE_DECODE_TRACE
 SIMLLM_HTSIM_RNIC
 SIMLLM_TXT2BIN
@@ -49,15 +53,16 @@ SIMLLM_TXT2BIN
 Then run:
 
 ```bash
+source .env.local.sh
 .venv/bin/python examples/routed_supply_v1/run_study.py \
   --sections core,play,traffic \
-  --out "$SIMLLM_ROUTING_RUN_ROOT" \
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/wave3-runs/codex/routing_supply_set" \
   --decode-trace "$SIMLLM_GRANITE_DECODE_TRACE"
 ```
 
 Bulk GOAL, binary, completion-ledger, placement and projection artifacts stay
-outside Git under `$SIMLLM_ROUTING_RUN_ROOT`. The final summaries have these
-canonical hashes:
+outside Git under `${SIMLLM_DATA_ROOT}/wave3-runs/codex/routing_supply_set`.
+The final summaries have these canonical hashes:
 
 | Summary | Bytes | SHA-256 |
 |---|---:|---|
@@ -80,8 +85,9 @@ structural guards do not increase the behavioral denominator.
 | TRAF-B1 placement epochs | 2/2 pass | Scored graph and GOAL relation |
 | TRAF-B2 fluid cells | 4/4 pass | Scored live JCT relation |
 | CORE-E1, PLAY-E1 and TRAF-E1 | all pass | Fatal exact or identity oracles, unscored |
+| Path portability scanner | 6/6 pass | Fatal repository-policy checks, unscored |
 | Structural validation tests | all pass | Fatal and unscored |
-| Repository pytest | 603 passed, 1 skipped | Separate executable evidence; the skipped communicator test requires Torch |
+| Repository pytest | 619 passed, 1 skipped | Separate executable evidence; the skipped communicator test requires Torch |
 
 ## CORE-B1: variable all-to-allv graph contract
 
@@ -206,10 +212,18 @@ All checks passed!
 
 ```text
 $ .venv/bin/pytest -q
-........................................................................ [ 95%]
-......................s.....                                             [100%]
+........................................................................ [ 92%]
+......................................s.....                             [100%]
 SKIPPED [1] tests/test_vllm_communicator.py:226: torch is not installed
-603 passed, 1 skipped in 16.60s
+619 passed, 1 skipped
+```
+
+The portability scanner is part of that suite and also passes directly:
+
+```text
+$ .venv/bin/pytest -q tests/test_path_portability.py
+......                                                                   [100%]
+6 passed
 ```
 
 No native C++ source changed, so no CMake or CTest gate applies.

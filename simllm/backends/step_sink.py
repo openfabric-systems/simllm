@@ -128,9 +128,9 @@ class StepNetworkOutcome:
     sample_count_exact: bool = False
     #: whether the backend wrapper verified physical quiescence
     quiescent: bool = False
-    #: routing authority used for this outcome
+    #: realized MoE traffic mode: ``none``, ``uniform`` or ``captured``
     routing_mode: str = "uniform"
-    #: selected expert placement epoch, absent on uniform routing
+    #: selected expert placement epoch, present only for captured traffic
     placement_epoch: int | None = None
 
     def network_share_for(self, num_layers: int) -> float:
@@ -221,6 +221,14 @@ class HtsimStepSink:
         )
         if not tp_ops and not moe_ops:
             return None
+        if not moe_ops:
+            routing_mode = "none"
+        elif all(operation.pair_payload_bytes for operation in moe_ops):
+            routing_mode = "captured"
+        elif all(not operation.pair_payload_bytes for operation in moe_ops):
+            routing_mode = "uniform"
+        else:
+            raise AssertionError("one step cannot mix uniform and captured MoE traffic")
         estimate_ps, layer_duration_ps = self._compute_estimate(record)
         if layer_duration_ps is None:
             per_layer_calc_ns = estimate_ps // (cfg.dims.num_layers * 1000)
@@ -267,13 +275,9 @@ class HtsimStepSink:
                 makespan_ps=makespan_ps,
                 num_flows=len(run.flows),
                 quiescent=run.quiescent,
-                routing_mode=(
-                    "captured" if cfg.routed_moe_supply is not None else "uniform"
-                ),
+                routing_mode=routing_mode,
                 placement_epoch=(
-                    moe_ops[0].placement_epoch
-                    if cfg.routed_moe_supply is not None and moe_ops
-                    else None
+                    moe_ops[0].placement_epoch if routing_mode == "captured" else None
                 ),
             )
         )

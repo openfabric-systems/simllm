@@ -438,6 +438,31 @@ def test_serial_goal_renderer_rejects_single_rank_pairwise_all_to_allv():
         render_serial_execution_graph_goal(graph)
 
 
+def test_serial_goal_renderer_rejects_uncovered_sparse_rank():
+    graph = ExecutionGraph(
+        "uncovered-a2a-rank",
+        0,
+        0,
+        (
+            ExecutionOperation(
+                "a2a",
+                0,
+                "cuda:0:nccl:ep",
+                CollectiveWork(
+                    "all-to-allv",
+                    (0, 1, 2),
+                    0,
+                    algorithm_hint="pairwise",
+                    pair_payload_bytes=((0, 1, 4096),),
+                ),
+            ),
+        ),
+        ("a2a",),
+    )
+    with pytest.raises(ValueError, match="uncovered ranks 2"):
+        render_serial_execution_graph_goal(graph)
+
+
 def test_serial_renderer_uses_sparse_pair_payload_sizes_exactly():
     graph = ExecutionGraph(
         "sparse-a2av",

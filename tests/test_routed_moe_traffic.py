@@ -427,6 +427,41 @@ def test_step_sink_uses_captured_supply_and_reports_authority(tmp_path, monkeypa
     assert "send 16b to 0 tag 1000" in goal
 
 
+def test_step_sink_reports_no_realized_moe_traffic_with_supply(tmp_path, monkeypatch):
+    monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
+    monkeypatch.setattr(
+        step_sink_module,
+        "run_htsim_rnic",
+        lambda _config: SimpleNamespace(
+            job_completion_time_ps=lambda: 123_456,
+            flows=[object()] * 8,
+            quiescent=True,
+        ),
+    )
+    dense_dims = replace(
+        TINY_MOE_DIMS,
+        num_experts=0,
+        top_k=0,
+        moe_intermediate_size=None,
+        local_num_experts=0,
+    )
+    sink = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=dense_dims,
+            workdir=tmp_path,
+            ep_ranks=(0, 1),
+            provider=FixedProvider(2_000),
+            routed_moe_supply=_tiny_supply(),
+        )
+    )
+
+    assert sink(_prefill_record(1)) is not None
+    assert sink.outcomes[0].routing_mode == "none"
+    assert sink.outcomes[0].placement_epoch is None
+
+
 def test_uniform_path_keeps_frozen_goal_bytes():
     record = _granite_record(0)
     payload = render_step_goal(
