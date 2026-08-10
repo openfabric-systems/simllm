@@ -409,8 +409,9 @@ void RnicDevice::onNetworkEvent(const NetworkEvent& event) {
         throw std::logic_error(
             "external RNIC network event supplied to the inert port");
     }
-    observeCallerTime(event.event_time_ps);
+    validateCallerTime(event.event_time_ps);
     work_queue_->onNetworkEvent(event);
+    last_caller_time_ps_ = event.event_time_ps;
 }
 
 std::size_t RnicDevice::progress(Picoseconds now_ps) {
