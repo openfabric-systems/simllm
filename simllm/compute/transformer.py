@@ -234,6 +234,7 @@ def step_kernel(dims: ModelDims, record: StepRecord, num_sampled: int) -> Kernel
             ("sampled", num_sampled),
             ("kv_tokens", kv_read_tokens),
         ),
+        family_kernels=tuple(step_kernels(dims, record, num_sampled)),
     )
 
 

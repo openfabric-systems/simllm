@@ -260,9 +260,11 @@ optional exact provider layer breakdown, an optional exact step sample count
 and an explicit GOAL-rank count while preserving the default M4 and CORE-2
 GOAL bytes. The precision study matched all four unequal-layer closed forms,
 both sample-attribution relations and the default digest exactly. The shipped
-providers still use the byte-identical even split; COMP-16 owns real
-per-layer values, with the roofline provider first and profile tables after
-COMP-6 supplies per-layer kernel shapes. The study's
+roofline provider now supplies real per-layer values when its breakdown is
+enabled. COMP-17 owns the remaining profile-table and trace-calibrated
+breakdowns after COMP-6 supplies per-layer kernel shapes. The serial replay
+lowerer uses the same optional exact sample count as the live sink and retains
+the scheduled-row fallback when the field is absent. The study's
 registered fluid-plus-topology command was invalid because htsim accepts
 physical topology files only for physical profiles. The expectation was not
 rewritten: post-specified checks instead showed 0 ps residual and exact

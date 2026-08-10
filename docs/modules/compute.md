@@ -10,6 +10,9 @@ per serving step.
 
 ## Interface
 
+- `KernelSpec`: fused work plus its stable shape key. A fused transformer step
+  also carries the exact `family_kernels` projection used to apportion work;
+  ordinary kernels leave it empty.
 - `ComputeProvider.estimate(kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate`
 - `ComputeProvider.estimate_layers(kernel, gpu, num_layers)`: optional ordered
   layer estimates for the same fused kernel. The default returns `None` and
@@ -30,7 +33,12 @@ per serving step.
   library never reads the clock).
 - `RooflineProvider`: analytical `max(flops/peak, bytes/bw)` with an
   efficiency derate; classifies compute- vs memory-bound from the kernel
-  configuration alone.
+  configuration alone. `enable_layer_breakdown=True` apportions the fused
+  duration using family work on the selected roof. Repeated transformer
+  families divide evenly and the complete LM-head family belongs to the last
+  layer. Cumulative integer boundaries guarantee that the nonnegative layer
+  durations sum to the scalar estimate exactly. The default is disabled and
+  retains the scalar compatibility path byte for byte.
 - `TraceCalibratedGpuProvider`: validates and replays its exact trace catalog
   once at construction, then serves O(1) cached estimates behind the existing
   `ComputeProvider` interface. `gpu_model_artifact_to_profile_table` compiles
@@ -292,6 +300,15 @@ landed with the same slice and is exercised by the examples/m5 studies
 together with the MoE traffic mapping
 ([traffic](traffic.md), [M5 results](../../examples/m5/RESULTS.md)).
 
+COMP-16 is complete. The roofline provider now supplies an explicit opt-in
+layer breakdown from the fused step's exact family projection. The
+[latent-knob study](../../examples/step_sink_latent_knobs/RESULTS.md) sweeps
+two layer counts and two TP widths on the live fluid step sink: every enabled
+row moves first-token latency later by the frozen 1,000 ps with zero residual,
+while the default path retains the historical GOAL SHA-256 exactly. Profile
+table and trace-calibrated layer estimates still require COMP-6 and remain
+open as COMP-17.
+
 The COMP-15 first slice is implemented in `simllm.compute.nccl_stack`. Its
 function identities were audited against NVIDIA NCCL release `v2.30.7-1`,
 commit `73cf112295c33aee2b895f329f592f2a9b4b0f97`. It adds name-mirrored
@@ -500,12 +517,15 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   must connect to this stack. Function and event identities must remain stable
   so later captures, timing calibration and adapter traces align with this
   first slice.
-- COMP-16 (Precision; P1; M): populate `ComputeProvider.estimate_layers` in
-  the live providers so the step sink can replace its current even per-layer
-  split with real layer durations. Implement the roofline breakdown first,
-  with nonnegative layer estimates whose exact sum equals the fused estimate;
-  add profile-table and trace-calibrated breakdowns after COMP-6 supplies the
-  per-layer kernel shapes seen by captures. Sweep layer count and TP width and
-  require the rendered cumulative-nanosecond calc values to match the provider
-  breakdown under the registered truncation rule. Providers without the
-  breakdown must retain the byte-identical even-split fallback.
+- COMP-17 (Precision; P1; M): after COMP-6 supplies per-invocation captured
+  shapes, populate `estimate_layers` for `ProfileTableProvider` and
+  `TraceCalibratedGpuProvider`. The current surrogate is the step sink's even
+  split whenever these calibrated providers are selected. Use a real model's
+  measured per-layer profile, or a published layer-heterogeneity reference,
+  as the fidelity anchor and calibration target. Acceptance requires the
+  modeled normalized layer-to-layer shape to match that anchor within its
+  declared measurement uncertainty. Use measured per-layer kernel durations
+  as the identifying observable, reconcile their integer sum to the existing
+  fused estimate exactly, and require every rendered cumulative boundary to
+  remain within the declared capture uncertainty. The explicit no-breakdown
+  path must retain the accepted GOAL bytes and TTFT exactly.
