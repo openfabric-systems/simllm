@@ -77,6 +77,26 @@ def _load_optional_runtime() -> tuple[Any, Any]:
     return torch, transformers
 
 
+def _resolve_model_source(model_id: str, revision: str, cache_dir: Path) -> Path:
+    direct = Path(model_id).expanduser()
+    if direct.is_dir() and (direct / "config.json").is_file():
+        return direct.resolve()
+
+    repository_dir = f"models--{model_id.replace('/', '--')}"
+    candidates = (
+        cache_dir / "hub" / repository_dir / "snapshots" / revision,
+        cache_dir / repository_dir / "snapshots" / revision,
+    )
+    for candidate in candidates:
+        if candidate.is_dir() and (candidate / "config.json").is_file():
+            return candidate.resolve()
+    checked = ", ".join(str(candidate) for candidate in candidates)
+    raise FileNotFoundError(
+        f"pinned model snapshot {model_id}@{revision} is not available offline; "
+        f"checked {checked}"
+    )
+
+
 def _tokenizer_sha256(tokenizer: Any) -> str:
     backend = getattr(tokenizer, "backend_tokenizer", None)
     if backend is not None and hasattr(backend, "to_str"):
@@ -176,6 +196,7 @@ class TransformersCpuRunner:
         self.model_id = model_id
         self.revision = revision
         self.cache_dir = Path(cache_dir)
+        self.model_source = _resolve_model_source(model_id, revision, self.cache_dir)
         self._torch, self._transformers = _load_optional_runtime()
 
         dtype_by_name = {
@@ -194,14 +215,15 @@ class TransformersCpuRunner:
         auto_tokenizer = self._transformers.AutoTokenizer
         auto_model = self._transformers.AutoModelForCausalLM
         load_kwargs = {
-            "revision": revision,
-            "cache_dir": str(self.cache_dir),
             "local_files_only": True,
             "trust_remote_code": False,
         }
-        self.tokenizer = auto_tokenizer.from_pretrained(model_id, **load_kwargs)
+        self.tokenizer = auto_tokenizer.from_pretrained(
+            str(self.model_source),
+            **load_kwargs,
+        )
         self.model = auto_model.from_pretrained(
-            model_id,
+            str(self.model_source),
             torch_dtype=dtype_by_name[dtype],
             **load_kwargs,
         )

@@ -27,7 +27,7 @@ from simllm.preplay import (
     validate_sampling_config,
     write_preplay_trace,
 )
-from simllm.preplay.runner import _classify_stop_reason
+from simllm.preplay.runner import _classify_stop_reason, _resolve_model_source
 
 
 def provenance(*, sampling=None):
@@ -436,6 +436,9 @@ def test_preplay_request_freezes_and_validates_stop_strings():
 
 
 def test_runner_dependency_error_is_lazy_and_clear(monkeypatch, tmp_path):
+    snapshot = tmp_path / "hub/models--org--model/snapshots/revision"
+    snapshot.mkdir(parents=True)
+    (snapshot / "config.json").write_text("{}")
     real_import_module = importlib.import_module
 
     def missing_runtime(name, package=None):
@@ -450,3 +453,14 @@ def test_runner_dependency_error_is_lazy_and_clear(monkeypatch, tmp_path):
             revision="revision",
             cache_dir=tmp_path,
         )
+
+
+def test_model_source_resolves_exact_hf_home_revision(tmp_path):
+    snapshot = tmp_path / "hub/models--org--model/snapshots/pinned-revision"
+    snapshot.mkdir(parents=True)
+    (snapshot / "config.json").write_text("{}")
+
+    assert _resolve_model_source("org/model", "pinned-revision", tmp_path) == snapshot
+
+    with pytest.raises(FileNotFoundError, match="not available offline"):
+        _resolve_model_source("org/model", "missing-revision", tmp_path)
