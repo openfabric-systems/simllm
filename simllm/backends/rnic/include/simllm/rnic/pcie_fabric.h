@@ -322,11 +322,16 @@ public:
 
 private:
     void claimOrderingDomains(
+        const RnicDevice* owner,
         std::uint64_t submission_domain,
         std::uint64_t completion_domain);
     void releaseOrderingDomains(
+        const RnicDevice* owner,
         std::uint64_t submission_domain,
         std::uint64_t completion_domain) noexcept;
+    bool orderingDomainClaimedByOther(
+        const RnicDevice* owner,
+        std::uint64_t ordering_domain) const noexcept;
 
     class Impl;
     class OrderingDomainClaims;

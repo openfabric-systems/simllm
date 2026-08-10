@@ -152,10 +152,14 @@ fabric results, not a second scheduler. One caller-driven clock and the
 documented event, progress and CQ-poll order apply to the whole device.
 
 An owned fabric is heap-stable and an external fabric is retained by explicit
-shared ownership. Shared devices derive missing ordering domains from a
-nonzero device namespace and claim the resolved pair on the fabric, so equal
-SQ/CQ defaults cannot collide silently. Failed construction releases the
-claim without changing the fabric's transactional generation or accounting.
+shared ownership. The embedded fabric config must equal the attached fabric's
+effective config field by field. Shared devices derive missing ordering
+domains from a nonzero device namespace and claim the resolved pair on the
+fabric, so equal SQ/CQ defaults cannot collide silently. Device submissions
+reject domains claimed by another live device, while accepting either own
+claimed domain or an unclaimed domain. Failed construction and failed
+submission leave claims, caller time, transactional generation and accounting
+unchanged.
 The absent-network path owns an inert port that accepts with a fresh token and
 delivers on the device progress pump; HTSIM-9 supplies the future concrete
 external port. BACK-20 adds selection of the queue submission source and CQ
@@ -307,14 +311,16 @@ On 2026-08-10 BACK-18 closed with the versioned `RnicDevice` composition
 surface. The device owns or explicitly shares a stable-address fabric, owns an
 inert network stub or accepts an external port pointer, preserves device
 identity with QPC off, reports module-stage applicability and enforces scalar
-versus fabric service exclusivity before state can mutate. Shared-fabric
-ordering domains are namespaced and collision checked. The frozen
-`B x doorbell-service` study passes all 6 direct-versus-composed cells with
-exact field, timestamp and counter equality; separate PCIe and inert-network
-directed scenarios also pass exactly. The predecessor artifact gates remain
-byte identical through the composed probes: 11 of 11 `rnic_wq_v1` rows and 35
-of 35 `rnic_pcie_v1` exact-oracle rows. Native CTest passes all 4 entries.
-Evidence classes and reproduction commands are in
+versus fabric service exclusivity before state can mutate. A shared fabric's
+config remains truthful at the device surface, and its ordering-domain claims
+are enforced at construction and submission. Failed submissions do not
+advance caller time. The commit-granular, post-specified
+`B x doorbell-service` regression study passes all 6 direct-versus-composed
+cells with exact field, timestamp and counter equality; separate PCIe and
+inert-network directed scenarios also pass exactly. The predecessor artifact
+gates remain byte identical through the composed probes: 11 of 11
+`rnic_wq_v1` rows and 35 of 35 `rnic_pcie_v1` exact-oracle rows. Native CTest
+passes all 4 entries. Evidence classes and reproduction commands are in
 [examples/rnic_device_v1/RESULTS.md](../../examples/rnic_device_v1/RESULTS.md).
 
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation

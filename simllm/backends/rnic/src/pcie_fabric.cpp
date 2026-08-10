@@ -5,7 +5,6 @@
 #include <deque>
 #include <limits>
 #include <map>
-#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -1939,9 +1938,12 @@ private:
 class PcieFabric::OrderingDomainClaims {
 public:
     void claim(
+        const RnicDevice* owner,
         std::uint64_t submission_domain,
         std::uint64_t completion_domain) {
-        if (submission_domain == 0 || completion_domain == 0
+        if (owner == nullptr
+            || submission_domain == 0
+            || completion_domain == 0
             || submission_domain == completion_domain) {
             throw std::invalid_argument(
                 "shared RNIC PCIe ordering domains must be distinct and "
@@ -1952,21 +1954,38 @@ public:
             throw std::invalid_argument(
                 "shared RNIC PCIe ordering domain is already claimed");
         }
-        std::set<std::uint64_t> candidate = domains_;
-        candidate.insert(submission_domain);
-        candidate.insert(completion_domain);
+        std::map<std::uint64_t, const RnicDevice*> candidate = domains_;
+        candidate.emplace(submission_domain, owner);
+        candidate.emplace(completion_domain, owner);
         domains_.swap(candidate);
     }
 
     void release(
+        const RnicDevice* owner,
         std::uint64_t submission_domain,
         std::uint64_t completion_domain) noexcept {
-        domains_.erase(submission_domain);
-        domains_.erase(completion_domain);
+        releaseOne(owner, submission_domain);
+        releaseOne(owner, completion_domain);
+    }
+
+    bool claimedByOther(
+        const RnicDevice* owner,
+        std::uint64_t ordering_domain) const noexcept {
+        const auto found = domains_.find(ordering_domain);
+        return found != domains_.end() && found->second != owner;
     }
 
 private:
-    std::set<std::uint64_t> domains_;
+    void releaseOne(
+        const RnicDevice* owner,
+        std::uint64_t ordering_domain) noexcept {
+        const auto found = domains_.find(ordering_domain);
+        if (found != domains_.end() && found->second == owner) {
+            domains_.erase(found);
+        }
+    }
+
+    std::map<std::uint64_t, const RnicDevice*> domains_;
 };
 
 PcieFabric::Plan::Plan(std::unique_ptr<Plan::Impl> impl)
@@ -2048,17 +2067,25 @@ void PcieFabric::validateInvariants() const {
 }
 
 void PcieFabric::claimOrderingDomains(
+    const RnicDevice* owner,
     std::uint64_t submission_domain,
     std::uint64_t completion_domain) {
     ordering_domain_claims_->claim(
-        submission_domain, completion_domain);
+        owner, submission_domain, completion_domain);
 }
 
 void PcieFabric::releaseOrderingDomains(
+    const RnicDevice* owner,
     std::uint64_t submission_domain,
     std::uint64_t completion_domain) noexcept {
     ordering_domain_claims_->release(
-        submission_domain, completion_domain);
+        owner, submission_domain, completion_domain);
+}
+
+bool PcieFabric::orderingDomainClaimedByOther(
+    const RnicDevice* owner,
+    std::uint64_t ordering_domain) const noexcept {
+    return ordering_domain_claims_->claimedByOther(owner, ordering_domain);
 }
 
 const char* toString(PcieServiceClass service_class) noexcept {

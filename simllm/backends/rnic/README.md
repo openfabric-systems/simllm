@@ -25,15 +25,21 @@ enabled makes those scalar stages not applicable and binds the queue to one
 `PcieFabric`; the existing double-charge validation is enforced before any
 fabric transaction can mutate. An owned fabric is heap allocated. An external
 fabric is accepted only as a `shared_ptr`, so its stable address outlives every
-bound queue and plan.
+bound queue and plan. Its effective `PcieFabricConfig` must equal the embedded
+device fabric config field by field, so the retained device config never
+misreports a silently substituted shared fabric.
 
 Shared-fabric bindings use a nonzero device namespace to derive distinct
 submission and completion ordering domains when the binding leaves either
 domain at zero. Explicit domains pass through unchanged. Live domain pairs are
 claimed on the shared fabric, so a collision is rejected and a failed device
 construction releases its claim without changing fabric generation or
-accounting. A device with an owned fabric retains the accepted SQ/CQ-derived
-defaults.
+accounting. Standalone submissions through a device may use its own claimed
+pair or an unclaimed domain, but reject a domain claimed by another live
+device before changing the fabric. A device with an owned fabric retains the
+accepted SQ/CQ-derived defaults. The namespace field is inert with DMA off,
+must be zero for an owned fabric, and is accepted for a shared fabric only
+when at least one domain must be derived.
 
 Network enabled requires an injected external `NetworkPort*`, which is the
 future HTSIM-9 seam. Network disabled rejects that pointer and owns an inert
@@ -45,10 +51,11 @@ fabric, QPC, external-network and inert-network applicability explicitly.
 The caller remains the sole clock authority. Deliver external network events
 through `onNetworkEvent` before `progress` at the same timestamp, then choose
 device-first or host-first CQ priority by ordering `progress` and
-`pollCompletionQueue` as documented below. Both validation probes construct
-through `RnicDevice`. The composition test retains direct module construction
-only as an exact oracle and compares every public field, timestamp, counter
-and PCIe accounting record. Evidence is in
+`pollCompletionQueue` as documented below. A rejected standalone PCIe request
+does not advance the device clock. Both validation probes construct through
+`RnicDevice`. The composition test retains direct module construction only as
+an exact oracle and compares every public field, timestamp, counter and PCIe
+accounting record. Evidence is in
 [`examples/rnic_device_v1`](../../../examples/rnic_device_v1/RESULTS.md).
 
 ## PCIe fabric boundary

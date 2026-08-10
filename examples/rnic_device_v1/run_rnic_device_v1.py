@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import io
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -17,7 +18,6 @@ DEFAULT_BUILD_DIR = Path(
 )
 RESULTS = Path(__file__).with_name("results.csv")
 NATIVE_TESTS = Path(__file__).with_name("native_tests.csv")
-NATIVE_TEST_EXECUTABLES = 3
 
 
 def _native_executable(build_dir: Path, name: str) -> Path:
@@ -34,7 +34,50 @@ def _native_executable(build_dir: Path, name: str) -> Path:
     raise RuntimeError(f"native executable not found; checked {joined}")
 
 
-def _build(build_dir: Path) -> tuple[Path, tuple[int, int, int]]:
+def _listed_native_test_executables(build_dir: Path) -> tuple[str, ...]:
+    completed = subprocess.run(
+        [
+            "ctest",
+            "--test-dir",
+            str(build_dir),
+            "-C",
+            "Release",
+            "--show-only=json-v1",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    inventory = json.loads(completed.stdout)
+    build_root = build_dir.resolve()
+    names: list[str] = []
+    for test in inventory.get("tests", []):
+        command = test.get("command", [])
+        if not command:
+            continue
+        executable = Path(command[0])
+        if not executable.is_absolute():
+            executable = build_dir / executable
+        try:
+            executable.resolve().relative_to(build_root)
+        except ValueError:
+            continue
+        if executable.is_file():
+            name = (
+                executable.stem
+                if executable.suffix == ".exe"
+                else executable.name
+            )
+            if name not in names:
+                names.append(name)
+    if not names:
+        raise RuntimeError("CTest reported no native test executables")
+    return tuple(names)
+
+
+def _build(
+    build_dir: Path,
+) -> tuple[Path, tuple[int, int, int], tuple[str, ...]]:
     subprocess.run(
         [
             "cmake",
@@ -86,6 +129,7 @@ def _build(build_dir: Path) -> tuple[Path, tuple[int, int, int]]:
     return (
         _native_executable(build_dir, "simllm_rnic_device_test"),
         (passed, failed, total),
+        _listed_native_test_executables(build_dir),
     )
 
 
@@ -132,13 +176,21 @@ def main() -> None:
     parser.add_argument("--build-dir", type=Path, default=DEFAULT_BUILD_DIR)
     arguments = parser.parse_args()
 
-    executable, (passed, failed, total) = _build(arguments.build_dir)
+    executable, (passed, failed, total), native_executables = _build(
+        arguments.build_dir
+    )
     RESULTS.write_text(_run_sweep(executable), encoding="utf-8")
+    native_rows = "".join(
+        f"native_test_executable,{name},1,0,1\n"
+        for name in native_executables
+    )
+    executable_count = len(native_executables)
     NATIVE_TESTS.write_text(
-        "evidence_class,passed,failed,total\n"
-        f"native_test_executables,{NATIVE_TEST_EXECUTABLES},0,"
-        f"{NATIVE_TEST_EXECUTABLES}\n"
-        f"native_ctest_entries,{passed},{failed},{total}\n",
+        "evidence_class,name,passed,failed,total\n"
+        f"{native_rows}"
+        f"native_test_executables,all,{executable_count},0,"
+        f"{executable_count}\n"
+        f"native_ctest_entries,all,{passed},{failed},{total}\n",
         encoding="utf-8",
     )
     print(

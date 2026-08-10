@@ -7,9 +7,23 @@ byte identical: all 11 tracked `rnic_wq_v1` rows and all 35 tracked
 `rnic_pcie_v1` rows pass their existing `--check` runs through probes that now
 construct `RnicDevice`.
 
-The expectations were frozen in commit
-`2c7926040d6dd2a3b46af8b0bf41c841dfca8174` before the implementation and
-before the first study run.
+The initial expectation freeze is commit-granular. Commit
+`2c7926040d6dd2a3b46af8b0bf41c841dfca8174` precedes implementation commit
+`d1ed7dba23f3cd0b94b9157bd071f11be1213d91` by 21 minutes and 33 seconds in
+Git history, but that interval does not establish that the 2,470-line landing
+had not already been written in the working tree. The initial BACK-18
+assertions are therefore post-specified regression checks, not a public
+pre-registration claim.
+
+The mitigating facts are that the frozen scalar values are analytic closed
+forms, [expectations.md](expectations.md) is byte-identical to its first
+committed form, the expectation commit contains no measured results, and the
+integrator independently reproduced both exact baselines and the native
+suite. The adversarial-review corrections were separately frozen in
+expectations-only commit
+`110e503491f0aee19b13b9b5893bf1ac4099d026` before their corrective
+implementation and runs; see
+[review_expectations.md](review_expectations.md).
 
 ## Method
 
@@ -34,7 +48,9 @@ per-class and aggregate `PcieClassAccounting` record plus the fabric
 generation. Both fabrics run their invariant checks.
 
 Raw behavioral rows are in [results.csv](results.csv). Native executable
-counts are separate in [native_tests.csv](native_tests.csv).
+names and counts are separate in [native_tests.csv](native_tests.csv). The
+runner obtains those names from generated CTest JSON metadata and derives the
+count from the list, so no source constant can drift from the build.
 
 ## Parameterized behavioral cohort
 
@@ -86,8 +102,9 @@ The following checks are fatal and unscored:
 
 - DMA-off parameters are inert, and an attached fabric is rejected while DMA
   is off.
-- DMA-on rejects scalar doorbell, WQE-fetch and CQE-write service before the
-  shared fabric can mutate.
+- DMA-on separately rejects nonzero scalar doorbell, WQE-fetch and CQE-write
+  service before the shared fabric can mutate. All three constructor branches
+  are exercised independently.
 - QPC-off rejects scalar QPC service, reports its stage `not_applicable`, and
   retains the device-level QP number and policy-context token.
 - Network-off rejects an external pointer and uses only the owned inert stub;
@@ -97,9 +114,18 @@ The following checks are fatal and unscored:
   disabled modules.
 - Two devices with identical SQ and CQ IDs on one shared fabric derive the
   distinct domain pairs `{21, 20}` and `{23, 22}` from namespaces 10 and 11.
-  Explicit collision is rejected. An owned fabric retains the accepted
-  SQ/CQ-derived domain pair. An isolated shared run equals the owned run in
-  every queue and accounting field after masking only the resolved domains.
+  Explicit collision is rejected. Device submissions using either of the
+  other device's claimed domains are also rejected without fabric or clock
+  mutation, while both of the submitting device's own claimed domains are
+  accepted. An owned fabric retains the accepted SQ/CQ-derived domain pair.
+  An isolated shared run equals the owned run in every queue and accounting
+  field after masking only the resolved domains.
+- A shared attachment requires exact equality between its effective fabric
+  config and the embedded device config. The adversarial `lane_count = 0`
+  plus empty-path config is rejected without mutation, while a matching
+  non-default config constructs and remains visible through `device.config()`.
+- A fabric-invalid request at 100 ps does not ratchet the device clock: a
+  valid request at 50 ps immediately afterward is accepted and committed.
 - A shared fabric remains alive while any device retains it. The composer,
   fabric and bound queue are non-movable, or heap-stable where ownership is
   shared.
@@ -132,9 +158,10 @@ counts are not added to the six BACK-18 behavioral cells.
 
 ## Native component evidence
 
-The clean study build reports all 3 native test executables passing. The full
-CTest suite reports 4 of 4 entries because it separately wraps the negative
-probe parser check:
+The clean study build reports all 3 native test executables passing. Their
+names are discovered from CTest metadata and recorded individually, not
+represented by a hardcoded count. The full CTest suite reports 4 of 4 entries
+because it separately wraps the negative probe parser check:
 
 ```text
 1/4 simllm_rnic_pcie_fabric_test passed

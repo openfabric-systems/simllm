@@ -30,6 +30,7 @@ using simllm::rnic::PcieAnalyticalDelayAccounting;
 using simllm::rnic::PcieClassAccounting;
 using simllm::rnic::PcieFabric;
 using simllm::rnic::PcieServiceClass;
+using simllm::rnic::PcieTransactionRequest;
 using simllm::rnic::Picoseconds;
 using simllm::rnic::PostResult;
 using simllm::rnic::PostStatus;
@@ -907,6 +908,24 @@ void testCallerClockIsDeviceWide(TestRunner& test) {
     test.check(
         dma_device.pcieFabric()->generation() == 0,
         "rejected regressive fabric submission mutates no fabric state");
+
+    RnicDevice validation_device(dma_config);
+    PcieTransactionRequest invalid = transaction;
+    invalid.path_id = 999;
+    invalid.submitted_at_ps = 100;
+    test.expectThrowAs<std::invalid_argument>(
+        [&validation_device, &invalid]() {
+            (void)validation_device.submitPcie(invalid);
+        },
+        "failed fabric validation does not commit caller time");
+    PcieTransactionRequest valid = invalid;
+    valid.path_id = 2;
+    valid.submitted_at_ps = 50;
+    const auto accepted = validation_device.submitPcie(valid);
+    test.check(
+        accepted.submitted_at_ps == 50
+            && validation_device.pcieFabric()->generation() == 1,
+        "an earlier valid submission follows a later rejected request");
 }
 
 void testModuleAttachmentRejection(TestRunner& test) {
@@ -950,25 +969,43 @@ void testModuleAttachmentRejection(TestRunner& test) {
         },
         "QPC-disabled device rejects scalar QPC service");
 
-    config.qpc.enabled = true;
-    config.work_queue.qpc_lookup_service_ps = 0;
-    config.dma.enabled = true;
-    config.dma.shared_ordering_domain_namespace = 10;
-    config.work_queue.doorbell_service_ps = 1;
+    RnicDeviceConfig dma_base = deviceConfig(scalarConfig(0));
+    dma_base.work_queue.wqe_fetch_service_ps = 0;
+    dma_base.qpc.enabled = false;
+    dma_base.dma.enabled = true;
+    dma_base.dma.shared_ordering_domain_namespace = 10;
     const std::uint64_t generation_before = shared_fabric->generation();
     const PcieClassAccounting accounting_before =
         shared_fabric->totalAccounting();
+    RnicDeviceConfig invalid_doorbell = dma_base;
+    invalid_doorbell.work_queue.doorbell_service_ps = 1;
     test.expectThrowAs<std::invalid_argument>(
-        [&config, &fabric_attachment]() {
-            RnicDevice device(config, fabric_attachment);
+        [&invalid_doorbell, &fabric_attachment]() {
+            RnicDevice device(invalid_doorbell, fabric_attachment);
             (void)device;
         },
-        "DMA-enabled device rejects double-charged scalar service");
+        "DMA-enabled device rejects scalar doorbell service");
+    RnicDeviceConfig invalid_fetch = dma_base;
+    invalid_fetch.work_queue.wqe_fetch_service_ps = 1;
+    test.expectThrowAs<std::invalid_argument>(
+        [&invalid_fetch, &fabric_attachment]() {
+            RnicDevice device(invalid_fetch, fabric_attachment);
+            (void)device;
+        },
+        "DMA-enabled device rejects scalar WQE-fetch service");
+    RnicDeviceConfig invalid_cqe = dma_base;
+    invalid_cqe.work_queue.cqe_write_service_ps = 1;
+    test.expectThrowAs<std::invalid_argument>(
+        [&invalid_cqe, &fabric_attachment]() {
+            RnicDevice device(invalid_cqe, fabric_attachment);
+            (void)device;
+        },
+        "DMA-enabled device rejects scalar CQE-write service");
     test.check(
         shared_fabric->generation() == generation_before
             && samePcieAccounting(
                 shared_fabric->totalAccounting(), accounting_before),
-        "failed double-charge construction leaves shared fabric unchanged");
+        "all scalar double-charge failures leave shared fabric unchanged");
 }
 
 void expectConfigVersionFailure(
@@ -1053,6 +1090,64 @@ RnicDeviceConfig sharedDeviceConfig(std::uint64_t name_space) {
     return config;
 }
 
+PcieTransactionRequest hostStoreRequest(
+    std::uint64_t ordering_domain,
+    Picoseconds submitted_at_ps) {
+    PcieTransactionRequest request;
+    request.client_token = 1;
+    request.service_class = PcieServiceClass::DoorbellRecord;
+    request.operation = simllm::rnic::PcieOperation::HostStore;
+    request.ordering = simllm::rnic::PcieOrdering::VisibilityDependency;
+    request.path_id = 2;
+    request.ordering_domain = ordering_domain;
+    request.useful_bytes = 4;
+    request.transfer_bytes = 4;
+    request.submitted_at_ps = submitted_at_ps;
+    return request;
+}
+
+void testSharedFabricConfigAuthority(TestRunner& test) {
+    auto fabric_config = defaultPcieFabricConfig();
+    fabric_config.lane_count = 2;
+    fabric_config.host_store_latency_ps.samples_ps = {17};
+    fabric_config.paths[1].base_latency_ps = 23;
+    auto shared_fabric = std::make_shared<PcieFabric>(fabric_config);
+    RnicDeviceAttachments attachments;
+    attachments.shared_pcie_fabric = shared_fabric;
+
+    RnicDeviceConfig mismatched = sharedDeviceConfig(31);
+    mismatched.dma.fabric = fabric_config;
+    mismatched.dma.fabric.lane_count = 0;
+    mismatched.dma.fabric.paths.clear();
+    const std::uint64_t generation_before = shared_fabric->generation();
+    const PcieClassAccounting accounting_before =
+        shared_fabric->totalAccounting();
+    test.expectThrowAs<std::invalid_argument>(
+        [&mismatched, &attachments]() {
+            RnicDevice device(mismatched, attachments);
+            (void)device;
+        },
+        "shared fabric rejects a mismatched embedded config");
+    test.check(
+        shared_fabric->generation() == generation_before
+            && samePcieAccounting(
+                shared_fabric->totalAccounting(), accounting_before),
+        "shared config rejection mutates no fabric state");
+
+    RnicDeviceConfig matching = sharedDeviceConfig(31);
+    matching.dma.fabric = fabric_config;
+    RnicDevice device(matching, attachments);
+    test.check(
+        device.pcieFabric() == shared_fabric.get()
+            && device.config().dma.fabric.lane_count == 2
+            && device.config().dma.fabric.paths.size() == 2
+            && device.config().dma.fabric
+                    .host_store_latency_ps.samples_ps
+                == std::vector<Picoseconds>{17}
+            && device.config().dma.fabric.paths[1].base_latency_ps == 23,
+        "matching non-default shared config reports the effective fabric");
+}
+
 void testSharedOrderingDomainsAndLifetime(TestRunner& test) {
     auto shared_fabric =
         std::make_shared<PcieFabric>(defaultPcieFabricConfig());
@@ -1071,6 +1166,46 @@ void testSharedOrderingDomainsAndLifetime(TestRunner& test) {
                 && second_binding->pcie_submission_ordering_domain == 23
                 && second_binding->pcie_completion_ordering_domain == 22,
             "shared devices derive distinct namespaced ordering domains");
+
+        PcieTransactionRequest foreign_request = hostStoreRequest(
+            first_binding->pcie_submission_ordering_domain, 100);
+        const std::uint64_t generation_before = shared_fabric->generation();
+        const PcieClassAccounting accounting_before =
+            shared_fabric->totalAccounting();
+        test.expectThrowAs<std::invalid_argument>(
+            [&second, &foreign_request]() {
+                (void)second.submitPcie(foreign_request);
+            },
+            "device rejects another device's claimed submission domain");
+        PcieTransactionRequest foreign_completion_request = hostStoreRequest(
+            first_binding->pcie_completion_ordering_domain, 110);
+        test.expectThrowAs<std::invalid_argument>(
+            [&second, &foreign_completion_request]() {
+                (void)second.submitPcie(foreign_completion_request);
+            },
+            "device rejects another device's claimed completion domain");
+        test.check(
+            shared_fabric->generation() == generation_before
+                && samePcieAccounting(
+                    shared_fabric->totalAccounting(), accounting_before),
+            "foreign-domain rejection mutates no fabric state");
+
+        PcieTransactionRequest own_request = hostStoreRequest(
+            second_binding->pcie_submission_ordering_domain, 50);
+        const auto own_result = second.submitPcie(own_request);
+        PcieTransactionRequest own_completion_request = hostStoreRequest(
+            second_binding->pcie_completion_ordering_domain, 60);
+        const auto own_completion_result =
+            second.submitPcie(own_completion_request);
+        test.check(
+            own_result.ordering_domain
+                    == second_binding->pcie_submission_ordering_domain
+                && own_result.submitted_at_ps == 50
+                && own_completion_result.ordering_domain
+                    == second_binding->pcie_completion_ordering_domain
+                && own_completion_result.submitted_at_ps == 60
+                && shared_fabric->generation() == generation_before + 2,
+            "device accepts both of its own claimed ordering domains");
 
         RnicDeviceConfig collision = sharedDeviceConfig(12);
         collision.dma.shared_ordering_domain_namespace = 0;
@@ -1170,6 +1305,7 @@ void testComposedPcieOperationAtomicity(TestRunner& test) {
         static_cast<Picoseconds>(std::numeric_limits<std::int64_t>::max());
     auto fabric = std::make_shared<PcieFabric>(fabric_config);
     RnicDeviceConfig config = sharedDeviceConfig(55);
+    config.dma.fabric = fabric_config;
     RnicDeviceAttachments attachments;
     attachments.shared_pcie_fabric = fabric;
     RnicDevice device(config, attachments);
@@ -1271,6 +1407,7 @@ int main(int argc, char** argv) {
     testModuleAttachmentRejection(test);
     testVersionClosure(test);
     testSharedOrderingDomainsAndLifetime(test);
+    testSharedFabricConfigAuthority(test);
     testFailedSharedConstructionReleasesClaim(test);
     testComposedPcieOperationAtomicity(test);
     testInertDeliveryFailureRetainsEvent(test);

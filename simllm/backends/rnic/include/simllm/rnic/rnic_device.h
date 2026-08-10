@@ -37,8 +37,10 @@ struct RnicDmaConfig {
     bool enabled{false};
     PcieFabricConfig fabric{defaultPcieFabricConfig()};
     WorkQueuePcieBinding work_queue;
-    // Required when a shared fabric must derive either ordering domain.
-    // The resolved pair is 2 * namespace plus the submission/completion bit.
+    // DMA off leaves this field inert. Owned DMA requires zero. Shared DMA
+    // uses a nonzero value only when either ordering domain must be derived;
+    // an explicit pair requires zero. The resolved pair is 2 * namespace
+    // plus the submission/completion bit.
     std::uint64_t shared_ordering_domain_namespace{0};
 };
 
@@ -126,7 +128,8 @@ public:
         Picoseconds now_ps);
 
     // Standalone module probes submit through the device so the same caller
-    // clock covers direct fabric traffic and queue traffic.
+    // clock covers direct fabric traffic and queue traffic. Rejected fabric
+    // requests do not advance that clock.
     PcieTransactionResult submitPcie(
         const PcieTransactionRequest& request);
 
@@ -151,6 +154,7 @@ public:
 
 private:
     class InertNetworkPort;
+    void validateCallerTime(Picoseconds now_ps) const;
     void observeCallerTime(Picoseconds now_ps);
 
     RnicDeviceConfig config_;
