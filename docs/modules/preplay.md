@@ -106,12 +106,16 @@ and rollback gates; the evidence is recorded in
 
 The vLLM replay adapter consumes that joined run in both `SimExecutor` and the
 flagged skeleton worker. It validates the named trace bytes, binds vLLM's
-version-pinned internal request identity to exactly one joined request, serves
-tokens by scheduler-reported output index and requires the scheduler admission
-limit to equal the oracle length. Its two-parameter study changed TTFT and TPOT
-by the frozen exact relations, its live Granite smoke returned token ID 38 and
-its absent-replay path reproduced all four accepted VLLM-13 JSONL hashes. The
-chronology and evidence are recorded in
+exact scheduler request identity to one joined request, serves tokens by the
+scheduler-reported output index and requires the scheduler admission limit to
+equal the oracle length. Replay also rejects an early EOS or stop token and a
+prompt-plus-oracle length beyond `max_model_len` before a step settles. Its
+real-scheduler study let vLLM choose both schedules: replay moved `r0`'s finish
+from step 3 to step 0 and changed TTFT and TPOT by the frozen exact relations.
+The live Granite smoke returned token ID 38 under the same external and
+internal request ID. The absent-replay path is protected by a tracked JSONL
+byte fixture in pytest, and `reset_configuration()` separates independent
+in-process runs. The chronology and evidence are recorded in
 [the PLAY-3 results](../../examples/preplay_adapter_replay_v1/RESULTS.md).
 
 Traffic projection remains open under PLAY-4. The independent framework CPU

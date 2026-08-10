@@ -46,10 +46,12 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
   step. Without a joined replay run, it uses the accepted fake
   mid-vocabulary token for every request whose prompt is complete and an empty
   list for a request still mid-prefill. With `SIMLLM_VLLM_REPLAY_RUN` set, it
-  verifies the joined trace hash, maps the pinned vLLM internal request ID to
-  exactly one external joined identity and serves the oracle token selected by
-  the scheduler-reported output index. Replay admission requires
-  `max_tokens` to equal the joined oracle length;
+  verifies the joined trace hash, requires an exact joined scheduler request
+  ID and serves the oracle token selected by the scheduler-reported output
+  index. Replay admission requires `max_tokens` to equal the joined oracle
+  length and rejects an early EOS or stop token and a
+  prompt-plus-oracle length beyond `max_model_len`. The complete replay batch
+  validates before the sink, record stream or virtual clock changes;
   `execute_model` returns an already-completed `Future` when `non_block=True`
   (`EngineCore.step()` always calls it that way and immediately reads
   `.result()`); `sample_tokens` is served defensively (it raises if no
@@ -104,7 +106,9 @@ environment variables (`MODE`, `KV_MEMORY_BYTES`, `GPU`, `PEAK_FLOPS`,
 `REPLAY_RUN`), documented in the executor module docstring. Objects (a
 provider, a host model, a sink) go through `configure()`, which reaches the
 executor only when the engine core runs in the same process (`LLM(...)`, or
-`VLLM_ENABLE_V1_MULTIPROCESSING=0`).
+`VLLM_ENABLE_V1_MULTIPROCESSING=0`). Call `reset_configuration()` between
+independent in-process engines to clear every accumulated hook. An explicit
+constructor config takes priority over hooks and the environment.
 
 Flagged worker-boundary skeleton
 (`simllm/adapters/vllm/worker.py`):
@@ -279,19 +283,23 @@ before implementation or any replay run. A joined
 `simllm-preplay-replay-run-v1` is selected with
 `SIMLLM_VLLM_REPLAY_RUN`; construction verifies the named trace bytes, and
 sampling maps each scheduler-reported output index to the exact oracle token.
-The adapter accepts the vLLM v0.26.0 internal request form
-`<external-id>-<eight hex digits>` only when its external identity names one
-joined request, and keeps that binding one-to-one for the run. Unknown IDs,
-cursor gaps, exhaustion and admission lengths that differ from the oracle all
-fail loudly.
+The adapter accepts only an exact joined scheduler request ID. Live replay
+sets vLLM's audited request-ID no-randomization mode, and a suffix-shaped
+lookalike fails as unjoined. Unknown IDs, cursor gaps, exhaustion, early stop
+channels, model-length overflow and admission lengths that differ from the
+oracle all fail before settlement. `reset_configuration()` prevents replay
+state from leaking into a later in-process engine.
 
 The four-cell metric study served exact oracle sequences through both adapter
-paths. It moved TTFT and TPOT through `StepRecord` and `StepResult` by every
-frozen exact relation. The absent-replay VLLM-13 study reproduced all four
-pre-freeze JSONL hashes byte-for-byte. A final in-process vLLM v0.26.0 Granite
-smoke returned token ID 38 and retained a zero-latency completion drain. Two
-earlier live attempts exposed internal-ID randomization and the offline
-wrapper's integer-only output sort; both remain explicit in
+paths. A review-amendment study then submitted the same two requests to the
+real in-process vLLM scheduler in baseline and replay modes. The scheduler
+itself moved `r0` completion from step 3 to step 0; the engine-produced records
+changed TTFT and TPOT by every frozen exact relation. The absent-replay path
+has a tracked LF-locked JSONL pytest fixture. A final in-process vLLM v0.26.0
+Granite smoke asserted external and internal identity `length-cap`, returned
+token ID 38 and retained a zero-latency completion drain. Earlier live
+attempts exposed internal-ID randomization and the offline wrapper's
+integer-only output sort; both remain explicit in
 [the PLAY-3 results](../../examples/preplay_adapter_replay_v1/RESULTS.md),
 along with their post-specified regression status. Speculative decoding and
 structured output remain refused. SGLang replay is not implied by this status
