@@ -150,3 +150,9 @@ Tags follow the legend in [backends.md](backends.md#open-tasks).
   supported baseline and must stay byte-identical when no framework runner
   is selected. Missing framework dependencies and unsupported CPU backends
   must be rejected before a trace writer opens.
+- PLAY-7 (Completeness; P2; M): consume joined replay runs in the SGLang
+  adapter. Serve each request's predefined token IDs, pin scheduler-visible
+  completion to the oracle length, retain the speculative and structured
+  refusal boundaries that apply there, and prove an identity off mode against
+  the accepted fabricated-token baseline. Add an in-process live smoke before
+  claiming the path is live-reachable.
