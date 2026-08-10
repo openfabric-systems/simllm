@@ -77,7 +77,7 @@ backend submodules.
 | Submodule | Repo | Ref | Provides |
 |---|---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `2026_08_05/simllm-addon` | UEC htsim, RNIC model series, `htsim_rnic` executable and WQE bookkeeping |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` (UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping) |
 
 As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 (mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
@@ -770,30 +770,15 @@ is difficult.
   zero in every attempted case, and the script lacks fail-fast handling, so
   it reports a false success. Add checked-in baselines or remove that compare,
   fix zero-flow diagnostics, and make every failed command fail the gate.
-- HTSIM-9 (Completeness; P1; L): add the htsim side of the SimLLM RNIC
-  extension. The combined
-  session still implements `AtlahsFlowRuntime`, while the inner versioned port
-  carries only opaque flow/packet tokens, transmit descriptors, delivery,
-  drop/ECN, receive, pause and link-state events. Hardware submits an opaque
-  CC-context token plus packet metadata; the policy returns eligibility/rate
-  updates, and htsim returns delivery or feedback to the hardware. It must use
-  the same SimLLM hardware implementation for `rnic-nn`, `rnic-cn` and DCQCN,
-  transport PFC frames through htsim queues, and keep the fluid bypass
-  explicit. No WQ, CQ, QP, QPC, PCIe, DMA or hardware scheduling state may
-  live in this adapter. In structural mode `AtlahsHtsimApi` must not construct
-  or mutate `AtlahsWqeLedger`; it delegates WR/WQE progression and completion
-  to the SimLLM wrapper and returns only opaque network events. The legacy
-  ledger remains available only in an explicitly labeled bypass run. Native
-  and legacy WQE counters must never both advance in one session. Acceptance
-  includes a mode-exclusivity assertion, exact token conservation and a
-  directly invoked binary test in which a controlled htsim delay, drop or
-  rate update reaches the native WQE timeline and final reported metric.
-  Develop it only in the HTSIM repo's dated append-only addon branch, then
-  update the SimLLM submodule pin. The SimLLM preparation harness and approval
-  package are complete at `f8eeb34`, but they do not close this task. An ABI-v1
-  compatibility pin is only a checkpoint. Closure still requires the enabled
-  packet TX/RX, ECN/rate, PFC and supported link-state mappings registered
-  here, after BACK-25 and BACK-26 expose their versioned surfaces.
+- HTSIM-9 (Completeness; P1; L): the composed `AtlahsFlowRuntime` wrapper
+  landed on the backend main (its PR 11) as an ABI-v1 checkpoint: opaque
+  flow tokens, structural-mode exclusivity with observed counters, relayed
+  backpressure, stable transport identities, and the frozen Tier A gate
+  passing with the htsim factory. Remaining scope: the packetized TX/RX
+  event vocabulary (after BACK-25 and BACK-26) so first and last packet
+  issue populate the native timeline, and the Tier B live-reachability run
+  through CORE-15's chain. The entry closes when Tier B passes with
+  packet-issue evidence.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.
