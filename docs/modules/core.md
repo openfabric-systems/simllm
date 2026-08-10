@@ -245,6 +245,20 @@ JSON form retain opaque framework objects and WQE-level runtime lineage without
 making the graph mutable. Its lineage rules distinguish causal parents from
 reusable resource references, allow batched request scopes to split, and reject
 request identities not supplied by a causal parent.
+`RequestBookkeeper` supports sequential use only: append and extend do not
+re-audit committed history, while snapshot validation and wire loads retain
+the full reference validator.
+
+CORE-7 is complete. `RequestBookkeeper.append` and `extend` validate only new
+facts against private object, subject-timestamp and terminal-WQE indexes.
+Atomic batches use a copy-on-write state overlay, so failed validation changes
+neither the ledger nor its indexes. The complete validator remains the
+complete-scan authority for initial immutable ledgers and wire loads. The
+[incremental validation study](../../examples/core7_incremental/RESULTS.md)
+matched the full validator across all seeded valid and invalid families. A
+quadrupling from 1,000 to 4,000 and from 4,000 to 16,000 facts took at most
+4.27x on the incremental path, while the reproduced former path grew at least
+16.09x from 1,000 to 4,000 facts.
 
 The pre-registered
 [CORE-2 lowering study](../../examples/core2_lowering/RESULTS.md) compared the
@@ -360,12 +374,6 @@ does not claim to produce these resource-contention measurements.
   the uniform scalar form must stay readable either way. Coordinate with the
   TRAF-2 capture half so traffic expansion and the renderer consume the same
   representation.
-- CORE-7: make `RequestBookkeeper.append` and `extend` validation
-  incremental. Every append currently revalidates the entire candidate
-  ledger, so N single-fact appends cost quadratic work; CORE-4 streams
-  per-WQE events for 64-rank runs and needs amortized constant-time appends
-  with unchanged invariants. The full-ledger validator remains the reference
-  implementation for snapshots and wire loads.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
