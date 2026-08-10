@@ -191,10 +191,10 @@ ledger until BACK-8, BACK-18 and HTSIM-9 link the native hardware session
 into the directly invoked simulator, CORE-4 invokes that composition from
 the execution graph, and CORE-5 reduces its completion into `StepResult` and
 TTFT/TPOT.
-The RNIC device itself is built from modules behind one construction entry
-point: the work-queue core plus optional DMA (PCIe), QPC (connection and
-context) and network transport modules
-([BACK-18](docs/modules/backends.md)). Disabling a module keeps the same
+The RNIC device itself is now built from modules behind one construction
+entry point: the work-queue core plus optional DMA (PCIe), QPC (connection
+and context) and network transport modules
+([backends](docs/modules/backends.md)). Disabling a module keeps the same
 interface, with its parameters inert or explicitly rejected, so one entry
 point serves everything from a bare work queue to the full device.
 
