@@ -243,17 +243,20 @@ JSON form retain opaque framework objects and WQE-level runtime lineage without
 making the graph mutable. Its lineage rules distinguish causal parents from
 reusable resource references, allow batched request scopes to split, and reject
 request identities not supplied by a causal parent.
+`RequestBookkeeper` supports sequential use only: append and extend do not
+re-audit committed history, while snapshot validation and wire loads retain
+the full reference validator.
 
 CORE-7 is complete. `RequestBookkeeper.append` and `extend` validate only new
 facts against private object, subject-timestamp and terminal-WQE indexes.
 Atomic batches use a copy-on-write state overlay, so failed validation changes
 neither the ledger nor its indexes. The complete validator remains the
-independent authority for initial immutable ledgers and wire loads. The
+complete-scan authority for initial immutable ledgers and wire loads. The
 [incremental validation study](../../examples/core7_incremental/RESULTS.md)
 matched the full validator across all seeded valid and invalid families. A
 quadrupling from 1,000 to 4,000 and from 4,000 to 16,000 facts took at most
-4.38x on the incremental path, while the reproduced former path grew at least
-16.72x from 1,000 to 4,000 facts.
+4.27x on the incremental path, while the reproduced former path grew at least
+16.09x from 1,000 to 4,000 facts.
 
 The pre-registered
 [CORE-2 lowering study](../../examples/core2_lowering/RESULTS.md) compared the

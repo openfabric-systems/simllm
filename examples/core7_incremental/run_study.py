@@ -319,15 +319,30 @@ def run(out_dir: Path) -> dict[str, Any]:
         "stage": _stage_facts(maximum_size),
         "wqe": _wqe_facts(maximum_size),
     }
-    for fact_mix, stream in fact_streams.items():
-        validate_bookkeeping_ledger(_ledger_from_facts(stream))
-        if len(stream) != maximum_size:
-            raise AssertionError(f"{fact_mix}: generated {len(stream)} facts")
+    generated_streams_reference_valid = True
+    generated_stream_lengths_match = True
+    for stream in fact_streams.values():
+        try:
+            validate_bookkeeping_ledger(_ledger_from_facts(stream))
+        except (TypeError, ValueError):
+            generated_streams_reference_valid = False
+        generated_stream_lengths_match &= len(stream) == maximum_size
+    if not generated_streams_reference_valid:
+        raise AssertionError("a generated timing stream failed reference validation")
+    if not generated_stream_lengths_match:
+        raise AssertionError("a generated timing stream has the wrong length")
+
+    incremental_fact_streams = fact_streams
+    reference_fact_streams = fact_streams
+    same_fact_tuples_used_by_both_modes = all(
+        incremental_fact_streams[fact_mix] is reference_fact_streams[fact_mix]
+        for fact_mix in fact_streams
+    )
 
     measurements = _run_sweep(
         mode="incremental",
         function=_append_incrementally,
-        fact_streams=fact_streams,
+        fact_streams=incremental_fact_streams,
         sizes=INCREMENTAL_SIZES,
         repetitions=INCREMENTAL_REPETITIONS,
     )
@@ -335,13 +350,22 @@ def run(out_dir: Path) -> dict[str, Any]:
         _run_sweep(
             mode="reference",
             function=_append_with_full_candidates,
-            fact_streams=fact_streams,
+            fact_streams=reference_fact_streams,
             sizes=REFERENCE_SIZES,
             repetitions=REFERENCE_REPETITIONS,
         )
     )
     medians = _median_rows(measurements)
     relations = _relations(medians)
+    all_ledger_lengths_equal_requested_size = all(
+        int(row["ledger_length"]) == int(row["size"]) for row in measurements
+    )
+    structural_checks = {
+        "generated_streams_reference_valid": generated_streams_reference_valid,
+        "generated_stream_lengths_match": generated_stream_lengths_match,
+        "same_fact_tuples_used_by_both_modes": same_fact_tuples_used_by_both_modes,
+        "all_ledger_lengths_equal_requested_size": all_ledger_lengths_equal_requested_size,
+    }
     report = {
         "expectations_commit": EXPECTATIONS_COMMIT,
         "clock": "time.perf_counter_ns",
@@ -361,12 +385,9 @@ def run(out_dir: Path) -> dict[str, Any]:
         "measurements": measurements,
         "medians": medians,
         "relations": relations,
-        "structural_checks": {
-            "generated_streams_reference_valid": True,
-            "same_fact_tuples_used_by_both_modes": True,
-            "all_ledger_lengths_equal_requested_size": True,
-        },
-        "passed": all(bool(relation["passed"]) for relation in relations),
+        "structural_checks": structural_checks,
+        "passed": all(bool(relation["passed"]) for relation in relations)
+        and all(structural_checks.values()),
     }
     out_dir.mkdir(parents=True, exist_ok=True)
     output_path = out_dir / "measurements.json"

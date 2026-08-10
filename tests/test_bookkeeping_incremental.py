@@ -688,6 +688,226 @@ def test_seeded_invalid_injections_match_full_validator(seed: int):
         _assert_extend_equivalent(facts, seed + len(mutation))
 
 
+def _assert_reference_and_incremental_reject(
+    prefix: tuple[object, ...],
+    fact: object,
+    error_type: type[Exception],
+    match: str,
+) -> None:
+    with pytest.raises(error_type, match=match):
+        validate_bookkeeping_ledger(_ledger((*prefix, fact)))
+
+    bookkeeper = RequestBookkeeper(_ledger(prefix))
+    before = bookkeeper.snapshot()
+    with pytest.raises(error_type, match=match):
+        bookkeeper.append(fact)
+    assert bookkeeper.snapshot() == before
+
+
+def test_child_scope_must_inherit_parent_step_index_directly():
+    facts = _valid_fact_stream(7001, 32)
+    index = next(
+        index
+        for index, fact in enumerate(facts)
+        if isinstance(fact, CreatedObjectRecord)
+        and fact.ref.kind is CreatedObjectKind.NCCL_COMMAND
+    )
+    child = facts[index]
+    assert isinstance(child, CreatedObjectRecord)
+    assert child.scope.step_index is not None
+    invalid = replace(
+        child,
+        scope=replace(child.scope, step_index=child.scope.step_index + 1),
+    )
+
+    _assert_reference_and_incremental_reject(
+        facts[:index],
+        invalid,
+        ValueError,
+        "child scope does not inherit parent step_index",
+    )
+
+
+@pytest.mark.parametrize("field", ("parent_refs", "object_refs"))
+def test_reference_tuples_reject_duplicate_refs_directly(field: str):
+    facts = _valid_fact_stream(7002, 32)
+    if field == "parent_refs":
+        index = next(
+            index
+            for index, fact in enumerate(facts)
+            if isinstance(fact, CreatedObjectRecord) and fact.parent_refs
+        )
+        fact = facts[index]
+        assert isinstance(fact, CreatedObjectRecord)
+        invalid = replace(fact, parent_refs=(fact.parent_refs[0], fact.parent_refs[0]))
+    else:
+        index = next(
+            index for index, fact in enumerate(facts) if isinstance(fact, StageRecord)
+        )
+        fact = facts[index]
+        assert isinstance(fact, StageRecord)
+        invalid = replace(fact, object_refs=(fact.object_refs[0], fact.object_refs[0]))
+
+    _assert_reference_and_incremental_reject(
+        facts[:index],
+        invalid,
+        ValueError,
+        "contains duplicate values",
+    )
+
+
+@pytest.mark.parametrize(
+    "queue_kind",
+    (
+        CreatedObjectKind.SEND_QUEUE,
+        CreatedObjectKind.RECEIVE_QUEUE,
+        CreatedObjectKind.COMPLETION_QUEUE,
+    ),
+)
+def test_wqe_rejects_more_than_one_queue_of_each_required_kind(queue_kind):
+    facts = _valid_fact_stream(7003, 32)
+    index = next(
+        index
+        for index, fact in enumerate(facts)
+        if isinstance(fact, CreatedObjectRecord)
+        and fact.ref.kind is CreatedObjectKind.NETWORK_WQE
+    )
+    wqe = facts[index]
+    assert isinstance(wqe, CreatedObjectRecord)
+    extra_queue = _record(queue_kind, f"extra:{queue_kind.value}", 0)
+    prefix = (*facts[:index], extra_queue)
+    invalid = replace(wqe, parent_refs=(*wqe.parent_refs, extra_queue.ref))
+
+    _assert_reference_and_incremental_reject(
+        prefix,
+        invalid,
+        ValueError,
+        "WQE requires exactly one",
+    )
+
+
+@pytest.mark.parametrize(
+    "fact,match",
+    (
+        (
+            _record(CreatedObjectKind.FRAMEWORK_REQUEST, " ", 0),
+            "ref.object_id",
+        ),
+        (
+            CreatedObjectRecord(
+                CreatedObjectRef(CreatedObjectKind.FRAMEWORK_REQUEST, "object:native"),
+                ObjectOwner.FRAMEWORK,
+                0,
+                native_id=" ",
+            ),
+            "native_id",
+        ),
+        (
+            StageRecord(
+                ProcessingStage.REQUEST,
+                StagePhase.ENTERED,
+                0,
+                BookkeepingScope(
+                    correlation=OperationCorrelation(request_ids=(" ",))
+                ),
+            ),
+            "request_ids",
+        ),
+        (
+            StageRecord(
+                ProcessingStage.REQUEST,
+                StagePhase.ENTERED,
+                0,
+                BookkeepingScope(
+                    correlation=OperationCorrelation(batch_id=" ")
+                ),
+            ),
+            "batch_id",
+        ),
+        (
+            StageRecord(
+                ProcessingStage.EXECUTION,
+                StagePhase.ENTERED,
+                0,
+                BookkeepingScope(execution_id=" "),
+            ),
+            "execution_id",
+        ),
+        (
+            StageRecord(
+                ProcessingStage.EXECUTION,
+                StagePhase.ENTERED,
+                0,
+                BookkeepingScope(execution_id="execution", operation_id=" "),
+            ),
+            "operation_id",
+        ),
+        (
+            CompletionEvent(
+                " ",
+                "operation",
+                EventPhase.STARTED,
+                0,
+            ),
+            "execution_id",
+        ),
+        (
+            CompletionEvent(
+                "execution",
+                " ",
+                EventPhase.STARTED,
+                0,
+            ),
+            "operation_id",
+        ),
+        (
+            CompletionEvent(
+                "execution",
+                "operation",
+                EventPhase.STARTED,
+                0,
+                ResourceRef(ResourceKind.NIC_SEND_QUEUE, " "),
+            ),
+            "resource_id",
+        ),
+        (
+            CompletionEvent(
+                "execution",
+                "operation",
+                EventPhase.STARTED,
+                0,
+                subject_object_id=" ",
+            ),
+            "subject_object_id",
+        ),
+        (
+            CreatedObjectRecord(
+                CreatedObjectRef(CreatedObjectKind.FRAMEWORK_REQUEST, "object:metadata"),
+                ObjectOwner.FRAMEWORK,
+                0,
+                metadata=((" ", 1),),
+            ),
+            "metadata",
+        ),
+    ),
+)
+def test_blank_identity_fields_are_rejected_directly(fact: object, match: str):
+    _assert_reference_and_incremental_reject((), fact, ValueError, match)
+
+
+@pytest.mark.parametrize("field", ("layer", "microbatch", "iteration"))
+def test_noninteger_correlation_fields_are_rejected_directly(field: str):
+    correlation = replace(OperationCorrelation(), **{field: "not-an-integer"})
+    fact = StageRecord(
+        ProcessingStage.REQUEST,
+        StagePhase.ENTERED,
+        0,
+        BookkeepingScope(correlation=correlation),
+    )
+
+    _assert_reference_and_incremental_reject((), fact, ValueError, field)
+
+
 def test_initial_boolean_sequence_rejection_stays_on_reference_validator():
     stage = StageRecord(
         ProcessingStage.REQUEST,
