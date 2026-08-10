@@ -36,7 +36,7 @@ import logging
 import os
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from simllm.adapters.vllm.communicator import (
@@ -63,6 +63,35 @@ logger = logging.getLogger(__name__)
 WORKER_MODE_ENV = "SIMLLM_VLLM_WORKER_MODE"
 SKELETON_WORKER_MODE = "skeleton"
 SKELETON_TP_PAYLOAD_BYTES = 4_096
+
+
+@dataclass(frozen=True)
+class _DpCoordinationTensor(ShapeTensor):
+    """Shape tensor carrying the skeleton's projected padded-token row."""
+
+    num_tokens_across_dp: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.shape != (4, len(self.num_tokens_across_dp)):
+            raise ValueError(
+                "DP coordination shape must be (4, len(num_tokens_across_dp))"
+            )
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in self.num_tokens_across_dp
+        ):
+            raise ValueError("DP padded-token values must be nonnegative integers")
+
+    def new_empty(self, size: Any) -> _DpCoordinationTensor:
+        return _DpCoordinationTensor(
+            tuple(size),
+            dtype=self.dtype,
+            element_size_bytes=self.element_size_bytes,
+            device=self.device,
+            num_tokens_across_dp=self.num_tokens_across_dp,
+        )
+
 
 SKELETON_INIT_CALL_SEQUENCE = (
     "worker.init_device",
@@ -332,12 +361,25 @@ class SimModelRunner:
     def _determine_batch_execution_and_padding(self, translated: Any) -> Any:
         with self.call_ledger.record("runner._determine_batch_execution_and_padding"):
             if self.dp_group.world_size > 1:
-                coordination = ShapeTensor(
+                local_num_tokens = translated.record.total_new_tokens
+                coordination = _DpCoordinationTensor(
                     (4, self.dp_group.world_size),
                     dtype=INT32,
                     element_size_bytes=INT32.itemsize,
+                    num_tokens_across_dp=(local_num_tokens,) * self.dp_group.world_size,
                 )
-                self.dp_group.all_reduce(coordination)
+                reduced = self.dp_group.all_reduce(coordination)
+                if not isinstance(reduced, _DpCoordinationTensor):
+                    raise TypeError(
+                        "DP coordinator must preserve the padded-token projection"
+                    )
+                num_tokens_after_padding = reduced.num_tokens_across_dp[
+                    self.dp_group.rank_in_group
+                ]
+                translated.record = replace(
+                    translated.record,
+                    num_tokens_after_padding=num_tokens_after_padding,
+                )
             return translated
 
     def _build_attention_metadata(self, translated: Any) -> Any:

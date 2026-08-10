@@ -130,6 +130,7 @@ def test_shape_and_payload_sweep(group_size, extent):
     }
     assert all(event.timestamp_ps == 123_000 for event in group.events)
     assert all(event.stack_events for event in group.events)
+    assert {event.stack_disposition for event in group.events} == {"entered"}
     assert tuple(event.work.collective for event in group.events) == (
         "all-reduce",
         "all-gather",
@@ -187,7 +188,39 @@ def test_singleton_is_the_identity_stack_bypass():
     assert group.broadcast(input_) is input_
     assert group.stack_events == ()
     assert all(event.stack_events == () for event in group.events)
+    assert {event.stack_disposition for event in group.events} == {
+        "singleton_bypass"
+    }
     assert clock.now_ps == 123_000
+
+
+def test_zero_payload_emits_an_explicit_stack_bypass_event():
+    group = make_group(4, chunk_bytes=1)
+    output = group.all_reduce(ShapeTensor((0,), element_size_bytes=4))
+    event = group.events[0]
+
+    assert output.shape == (0,)
+    assert event.sequence == 0
+    assert event.operation_id == "tp:all_reduce:0"
+    assert event.payload_bytes == 0
+    assert event.stack_disposition == "zero_payload_bypass"
+    assert event.stack_events == ()
+    assert event.work == CollectiveWork("all-reduce", (0, 1, 2, 3), 0, "ring")
+
+
+def test_unservable_payload_does_not_consume_an_operation_id():
+    group = make_group(4, chunk_bytes=1)
+    invalid = ShapeTensor((5,), element_size_bytes=2)
+
+    with pytest.raises(ValueError, match="payload_bytes must divide evenly"):
+        group.all_reduce(invalid)
+
+    assert group.events == ()
+    group.all_reduce(ShapeTensor((1_024,), element_size_bytes=4))
+    event = group.events[0]
+    assert event.sequence == 0
+    assert event.operation_id == "tp:all_reduce:0"
+    assert event.stack_disposition == "entered"
 
 
 @pytest.mark.skipif(not TORCH_INSTALLED, reason="torch is not installed")

@@ -12,8 +12,11 @@ own modules.
 
 - `StepRecord`: what a framework scheduler decided to run in one engine step
   (per-request phase, new tokens, cached tokens, preemptions and finishes),
-  plus an optional exact `num_sampled` count. The absent count keeps legacy
-  v1 records valid and selects the consumer's documented approximation.
+  plus optional exact `num_sampled` and `num_tokens_after_padding` counts. The
+  latter is the physical model-input token count after framework padding and
+  must not replace the logical scheduled-token fields. Absent optional counts
+  keep legacy v1 records valid and select the consumer's documented
+  approximation.
 - `StepResult`: the scheduler-facing result (step latency and completion time
   on the virtual clock).
 - `RequestPhase`, `ScheduledRequest`: the per-request vocabulary.

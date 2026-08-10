@@ -8,7 +8,7 @@ mirror tests run in both environments.
 import importlib.util
 import json
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from types import SimpleNamespace
 from typing import ClassVar
 
@@ -386,8 +386,34 @@ def test_sim_runner_serves_dp_coordination_then_tp_collective(monkeypatch):
     )
     assert tuple(len(event.stack_events) for event in events) == (32, 14)
     assert all(event.timestamp_ps == 123_000 for event in events)
+    assert worker.step_records[0].num_tokens_after_padding == 4
+    assert step_records_to_json(worker.step_records)[0]["num_tokens_after_padding"] == 4
     assert worker.sample_tokens(None).sampled_token_ids == [[512]]
     assert worker.clock.now_ps == 123_000
+
+
+def test_dp_coordinator_return_controls_the_padding_record_field(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    config = fake_vllm_config()
+    config.parallel_config.data_parallel_size = 4
+    worker = make_sim_worker(VirtualClock(start_ps=123_000), vllm_config=config)
+    worker.init_device()
+    original_all_reduce = worker.dp_group.all_reduce
+
+    def return_different_padding(input_):
+        output = original_all_reduce(input_)
+        return replace(output, num_tokens_across_dp=(9, 9, 9, 9))
+
+    monkeypatch.setattr(worker.dp_group, "all_reduce", return_different_padding)
+    step = FakeSchedulerOutput(
+        scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+        num_scheduled_tokens={"r0": 4},
+    )
+
+    assert worker.execute_model(step) is None
+    assert worker.step_records[0].num_tokens_after_padding == 9
+    assert step_records_to_json(worker.step_records)[0]["num_tokens_after_padding"] == 9
+    assert worker.sample_tokens(None).sampled_token_ids == [[512]]
 
 
 def test_sim_worker_empty_completion_preserves_v1_update_order(monkeypatch):

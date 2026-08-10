@@ -199,6 +199,50 @@ def _singleton_guard() -> dict[str, object]:
     }
 
 
+def _payload_domain_guards() -> dict[str, object]:
+    gapless_group = _make_group(4, chunk_bytes=1)
+    invalid = ShapeTensor((5,), dtype=FLOAT32, element_size_bytes=2)
+    invalid_error = None
+    try:
+        gapless_group.all_reduce(invalid)
+    except ValueError as exc:
+        invalid_error = str(exc)
+    gapless_group.all_reduce(
+        ShapeTensor((1_024,), dtype=FLOAT32, element_size_bytes=4)
+    )
+    first_valid = gapless_group.events[0]
+    gapless_pass = (
+        invalid_error is not None
+        and "payload_bytes must divide evenly" in invalid_error
+        and len(gapless_group.events) == 1
+        and first_valid.sequence == 0
+        and first_valid.operation_id == POSTSPEC_FIRST_VALID_OPERATION_ID
+        and first_valid.stack_disposition == "entered"
+    )
+
+    zero_group = _make_group(4, chunk_bytes=1)
+    zero_output = zero_group.all_reduce(
+        ShapeTensor((0,), dtype=FLOAT32, element_size_bytes=4)
+    )
+    zero_event = zero_group.events[0]
+    zero_pass = (
+        zero_output.shape == (0,)
+        and zero_event.payload_bytes == 0
+        and zero_event.operation_id == POSTSPEC_FIRST_VALID_OPERATION_ID
+        and zero_event.stack_disposition == POSTSPEC_ZERO_PAYLOAD_STACK_DISPOSITION
+        and zero_event.stack_events == ()
+        and len(zero_group.stack_events) == len(EXPECTED_FULL_STACK_PREFIX)
+    )
+    return {
+        "invalid_error": invalid_error,
+        "first_valid_operation_id": first_valid.operation_id,
+        "gapless_operation_id_guard": "PASS" if gapless_pass else "FAIL",
+        "zero_payload_stack_disposition": zero_event.stack_disposition,
+        "zero_payload_nested_stack_count": len(zero_event.stack_events),
+        "zero_payload_guard": "PASS" if zero_pass else "FAIL",
+    }
+
+
 def _vllm13_baseline_guard(run_dir: Path) -> dict[str, object]:
     baseline_source = (
         Path(__file__).parents[1] / "vllm_skeleton_v1" / "run_vllm_skeleton_v1.py"
@@ -250,6 +294,7 @@ def run_study(run_dir: Path) -> dict[str, object]:
         "payload_relations": payload_rows,
         "reference_stack": _reference_stack_guard(),
         "singleton": _singleton_guard(),
+        "payload_domain": _payload_domain_guards(),
         "vllm13_baseline": _vllm13_baseline_guard(run_dir),
     }
     if "vllm" in sys.modules:
@@ -281,10 +326,13 @@ def main() -> None:
         all(row["structural_guard"] == "PASS" for row in shape_rows)
         and evidence["reference_stack"]["literal_stack_guard"] == "PASS"
         and evidence["singleton"]["singleton_guard"] == "PASS"
+        and evidence["payload_domain"]["gapless_operation_id_guard"] == "PASS"
+        and evidence["payload_domain"]["zero_payload_guard"] == "PASS"
         and evidence["vllm13_baseline"]["baseline_guard"] == "PASS"
     )
     print(f"shape relation instances: {shape_passes}/{len(shape_rows)} PASS")
     print(f"payload scaling instances: {payload_passes}/{len(payload_rows)} PASS")
+    print("post-specified payload guards: PASS")
     print(f"fatal structural guards: {'PASS' if structural else 'FAIL'}")
     print(f"evidence: {output}")
     if shape_passes != len(shape_rows) or payload_passes != len(payload_rows) or not structural:

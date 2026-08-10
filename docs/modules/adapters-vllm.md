@@ -179,8 +179,10 @@ trimmed layer. `SimGroupCoordinator` mirrors the pinned v0.26.0 signatures for
 `ranks`, `world_size`, `local_rank`, `rank_in_group`, and the six rank
 navigation properties. Its constructor accepts resolved ranks and the
 runner-owned `VirtualClock`; it never constructs a torch process group. The
-module remains importable without torch and uses `ShapeTensor` only for the
-copied runner's deliberate empty-computation calls.
+module is torch-optional: it remains importable without torch, but `recv`
+uses a guarded runtime torch import when the caller supplies a real
+`torch.dtype`. The copied runner uses `ShapeTensor` for its deliberate
+empty-computation calls.
 
 Every successful boundary produces one immutable event with operation, group,
 rank membership, payload bytes, virtual timestamp, semantic `CollectiveWork`,
@@ -191,6 +193,14 @@ one shape-only TP call during `_model_forward`; when DP size exceeds one it
 first issues the pinned runner helper's `(4, dp_size)` int32 coordination
 all-reduce. Both groups share one observer and clock, so their zero-time call
 order stays deterministic.
+
+The COMP-15 compatibility entry constrains the currently servable nonzero
+payloads. Payload bytes must divide evenly over world size, channels and warps,
+and each per-lane share must contain an integral, nonzero number of configured
+chunks. An unservable call raises before consuming its operation ID. A
+zero-byte call emits an upper event with
+`stack_disposition="zero_payload_bypass"` and no nested stack event. VLLM-20
+owns removal of this compatibility-domain restriction.
 
 This first slice is observability only. It does not create a runtime authority,
 emit a `CompletionEvent`, change a `StepResult`, or model communication time.
@@ -373,19 +383,22 @@ GPU-invisible-host evidence.
   NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
   The simulated executor binds step shapes and framework KV events to this
   template; it does not invent concurrency from aggregate phase timings.
-- VLLM-13 (Completeness; P1; L) (remaining after the flagged skeleton): add
-  the GPU-present mode that runs stock `Worker.init_device`, preserves its
+- VLLM-13 (Completeness; P1; L) (remaining GPU-present half after the flagged
+  skeleton): the skeleton DP coordination half has landed through
+  `SimGroupCoordinator`, including consumption of its local padded-token
+  projection into `StepRecord.num_tokens_after_padding`. Add the GPU-present
+  mode that runs stock `Worker.init_device`, preserves its
   distributed groups and memory snapshot, respects the upstream V1/V2 runner
   selection, and then rebinds `self.model_runner`. Couple runner work to the
   simulated GPU service and NCCL path, including BACK-20 submission in
-  GPU-initiated mode. Serve or emulate runner-internal DP coordination above
-  one. Enable and validate device-free async multiprocessing, Ray, and
-  external-launch execution, which this first slice rejects before their
-  device or ownership assumptions can run. Every run must declare the CQ
-  consumer and how completion reaches the model runner through BACK-20 and
+  GPU-initiated mode, then serve runner-internal DP coordination through those
+  preserved real groups. Enable and validate device-free async multiprocessing,
+  Ray, and external-launch execution, which this first slice rejects before
+  their device or ownership assumptions can run. Every run must declare the
+  CQ consumer and how completion reaches the model runner through BACK-20 and
   CORE-5. The executor-level `SimExecutor` and the gated skeleton remain
-  supported without behavior changes. VLLM-12 device-schedule capture uses
-  the same seam.
+  supported without behavior changes. VLLM-12 device-schedule capture uses the
+  same seam.
 - VLLM-14 (Completeness; P1; L) (remaining after the zero-time first slice):
   the name-mirrored `SimGroupCoordinator`, shape-only results, rank-membership
   surface, boundary observations, `CollectiveWork` lowering, COMP-15 call, and
@@ -394,9 +407,10 @@ GPU-invisible-host evidence.
   GPU-present runner mode without changing the skeleton or executor bypasses.
   Custom-allreduce, symmetric-memory fast paths, and off-main-path calls remain
   omitted or inert unless a supported study opts into them. SGL-11 remains the
-  untouched SGLang half and should reuse this torch-free shape/event base. This
-  ID explicitly excludes runtime projection and every timing claim: VLLM-19,
-  VLLM-20, and VLLM-21 own those residuals, and CORE-4/5 gate live projection.
+  untouched SGLang half and should reuse this torch-optional shape/event base.
+  This ID explicitly excludes runtime projection and every timing claim:
+  VLLM-19, VLLM-20, and VLLM-21 own those residuals, and CORE-4/5 gate live
+  projection.
 - VLLM-16 (Completeness; P1; M): run the flagged in-process skeleton smoke on
   a genuinely GPU-invisible host where CUDA platform selection is unavailable
   and no physical GPU is discoverable before or during worker construction.
@@ -424,6 +438,9 @@ GPU-invisible-host evidence.
   with native COMP stack entries when those entries exist. The surrogate is an
   all-reduce-shaped zero-time trace; the identifying observables are the
   operation-specific stack names, peer roles, byte counts, and shape results.
+  Remove the current ring-layout servable-domain restriction: native entries
+  must represent zero payloads explicitly and accept operation-legal nonzero
+  byte counts without requiring even all-reduce lane or chunk division.
   Acceptance requires exact semantic operation identity for every enabled call
   while the compatibility off path remains byte-for-byte and timestamp-for-
   timestamp identical to this slice.

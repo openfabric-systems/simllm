@@ -241,6 +241,13 @@ def run_live_smoke(run_dir: Path) -> dict[str, object]:
         assert {record.get("schema") for record in records} == {
             "atlahs-closed-loop-step-v1"
         }
+        postspecified_dp_padding = tuple(
+            record.get("num_tokens_after_padding") for record in records
+        )
+        assert postspecified_dp_padding == POSTSPEC_EXPECTED_DP_PADDED_TOKENS, (
+            "post-specified DP padding regression differs: "
+            f"{postspecified_dp_padding!r}"
+        )
 
         evidence = {
             "freeze_commit": "29221e4",
@@ -253,6 +260,11 @@ def run_live_smoke(run_dir: Path) -> dict[str, object]:
             "sampled_token_ids": list(sampled_token_ids),
             "step_record_count": len(records),
             "step_schemas": sorted({record["schema"] for record in records}),
+            "postspecified_dp_padding": {
+                "expected": list(POSTSPEC_EXPECTED_DP_PADDED_TOKENS),
+                "observed": list(postspecified_dp_padding),
+                "regression": "PASS",
+            },
             "final_clock_ps": worker.clock.now_ps,
             "live_relation": "PASS",
         }
@@ -292,6 +304,7 @@ def main() -> None:
         + ",".join(str(value) for value in evidence["stack_event_counts"])
     )
     print(f"SMOKE_STEP_RECORD_COUNT={evidence['step_record_count']}")
+    print("SMOKE_POSTSPEC_DP_PADDING=PASS")
     print("SMOKE_LIVE_RELATION=PASS")
 
 

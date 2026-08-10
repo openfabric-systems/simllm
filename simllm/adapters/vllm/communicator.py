@@ -9,6 +9,14 @@ Every successful boundary lowers to :class:`CollectiveWork`. Multi-rank calls
 also enter the existing COMP-15 ``ncclAllReduce``-shaped skeleton. That lower
 stack is structural only. Runtime projection, completion delivery, and any
 communication timing model remain outside this slice.
+
+The current nonzero multi-rank payload domain is exactly COMP-15's ring
+domain. Payload bytes must divide evenly over world size, channel count, and
+warps per channel; the resulting per-lane share must contain an integral,
+nonzero number of configured chunks. An unservable payload raises before an
+upper event or operation identifier is consumed. A zero-byte call remains a
+successful upper observation with ``stack_disposition="zero_payload_bypass"``
+and does not enter the positive-payload lower stack.
 """
 
 from __future__ import annotations
@@ -113,6 +121,7 @@ class GroupCoordinatorEvent:
     ranks: tuple[int, ...]
     payload_bytes: int
     work: CollectiveWork
+    stack_disposition: str
     stack_events: tuple[NcclStackEvent, ...]
 
 
@@ -140,6 +149,7 @@ class GroupCoordinatorObserver:
         ranks: tuple[int, ...],
         payload_bytes: int,
         work: CollectiveWork,
+        stack_disposition: str,
         stack_events: tuple[NcclStackEvent, ...],
     ) -> GroupCoordinatorEvent:
         event = GroupCoordinatorEvent(
@@ -152,6 +162,7 @@ class GroupCoordinatorObserver:
             ranks=ranks,
             payload_bytes=payload_bytes,
             work=work,
+            stack_disposition=stack_disposition,
             stack_events=stack_events,
         )
         self._events.append(event)
@@ -362,9 +373,12 @@ class SimGroupCoordinator:
             "ring",
         )
         operation_id = f"{self.group_name}:{operation}:{self._operation_count}"
-        self._operation_count += 1
         stack_events: tuple[NcclStackEvent, ...] = ()
-        if self._communicator is not None and payload_bytes > 0:
+        if payload_bytes == 0:
+            stack_disposition = "zero_payload_bypass"
+        elif self._communicator is None:
+            stack_disposition = "singleton_bypass"
+        else:
             result = ncclAllReduce(
                 self._communicator,
                 payload_bytes=payload_bytes,
@@ -372,6 +386,7 @@ class SimGroupCoordinator:
                 route=self.route,
             )
             stack_events = result.events
+            stack_disposition = "entered"
         event = self.observer.record(
             timestamp_ps=timestamp_ps,
             operation_id=operation_id,
@@ -381,9 +396,11 @@ class SimGroupCoordinator:
             ranks=tuple(self.ranks),
             payload_bytes=payload_bytes,
             work=work,
+            stack_disposition=stack_disposition,
             stack_events=stack_events,
         )
         self._events.append(event)
+        self._operation_count += 1
         return event
 
     def all_reduce(self, input_: torch.Tensor) -> torch.Tensor:

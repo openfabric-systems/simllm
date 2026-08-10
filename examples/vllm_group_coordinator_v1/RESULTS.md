@@ -18,19 +18,32 @@ stack oracles, scored relations, and check-only launchers. Both registered
 check-only commands passed before that commit. No engine, implementation file,
 measured value, or result artifact existed at the freeze.
 
-All implementation and result-producing runs followed `29221e4`. The first
-live `--run` launch stopped before engine construction because script execution
-resolved an older installed SimLLM copy under `/home/yifeng/packages` rather
-than this worktree. No engine was constructed and no target behavior ran. The
-launcher was then bound explicitly to its repository root.
+All implementation and result-producing runs followed `29221e4`. Both defect
+catches in the first implementation round were post-freeze, during
+implementation and verification. The first result-producing live launch found
+that script execution resolved an older installed SimLLM copy under
+`/home/yifeng/packages` rather than this worktree. It stopped before engine
+construction, then the launcher was bound explicitly to its repository root.
 
-The next live launch constructed the pinned engine and passed. Dual-environment
-tests then found one real optional-dependency defect: when torch was installed,
-shape-only `recv` tried to pass `ShapeDType` to `torch.empty`. The final code
-keeps `ShapeDType` on the torch-free tensor path and accepts a real
-`torch.dtype` separately. The complete component study, dual-environment
-tests, full repository tests, and live smoke were rerun after that repair. The
-numbers below describe the final rerun.
+The next live launch constructed the pinned engine and passed. Subsequent
+dual-environment verification found the second defect: when torch was
+installed, shape-only `recv` tried to pass `ShapeDType` to `torch.empty`. The
+repair keeps `ShapeDType` on the import-free tensor path and accepts a real
+`torch.dtype` through the guarded optional import. Neither post-freeze catch is
+represented as pre-registered evidence.
+
+After implementation commit `3ed8d0e`, integration review identified the
+silent COMP-15 payload domain, operation-ID gap on failed calls, and discarded
+DP coordinator return. Commit `4645d2c` records the corrective expectations as
+post-specified regressions before the corrective implementation. It does not
+change the original freeze or scored denominator.
+
+During final review verification, the first pinned-vLLM full-suite invocation
+let a legacy study subprocess resolve the same older installed SimLLM copy.
+The affected tests had already passed. Repeating the full gate with this
+worktree explicitly on `PYTHONPATH` passed; no unrelated launcher was changed.
+The single corrective live-smoke attempt then passed, including the new
+serialized DP-padding assertion.
 
 ## Evidence accounting
 
@@ -44,14 +57,17 @@ Evidence classes remain separate.
 | Real vLLM reachability family | 1/1 pass | Scored external-runtime behavior |
 | Frozen COMP-15 reference | pass, 14 nested and 17 full events | Fatal unscored component guard |
 | Singleton identity path | pass, 0 stack events | Fatal unscored bypass guard |
+| Payload-domain review guards | pass | Post-specified fatal structural guards |
+| Serialized DP padding | `(4, 1)` | Post-specified unscored live regression |
 | VLLM-13 accepted baseline | pass | Fatal unscored bypass guard |
-| Base-environment focused tests | 54 passed, 1 skipped | Separate executable |
-| Pinned-vLLM focused tests | 53 passed, 2 skipped | Separate executable |
-| Full base-environment suite | 464 passed, 4 skipped | Separate executable |
+| Base-environment affected tests | 75 passed, 1 skipped | Separate executable |
+| Pinned-vLLM affected tests | 74 passed, 2 skipped | Separate executable |
+| Full base-environment suite | 472 passed, 4 skipped | Separate executable |
+| Full pinned-vLLM suite, worktree-bound | 471 passed, 5 skipped | Separate executable |
 
-The skipped base test requires torch. The two pinned-vLLM skips are the
-existing absence-only adapter checks. Test counts are not added to the seven
-scored relation instances.
+The affected base skip requires torch. The two affected pinned-vLLM skips are
+the existing absence-only adapter checks. Test counts are not added to the
+seven scored relation instances.
 
 ## Shape and payload sweep
 
@@ -108,6 +124,13 @@ frozen mirrored call order, and final clock `123000 ps`.
 These facts are fatal structural guards. They do not increase the scored
 denominator.
 
+For the post-specified payload-domain guards, a four-rank zero-byte call emits
+one upper event with `stack_disposition="zero_payload_bypass"` and zero nested
+events. A rejected 10-byte call consumes neither an event sequence nor an
+operation ID; the next valid call is `tp:all_reduce:0`. Nonzero multi-rank
+payloads remain servable only when they satisfy COMP-15's documented lane and
+chunk divisibility rules. VLLM-20 owns removal of that compatibility limit.
+
 ## Scored live vLLM relation
 
 The final smoke used the cached Granite snapshot, vLLM v0.26.0,
@@ -130,6 +153,12 @@ the literal 14-name oracle. The request returned fabricated token id `24577`
 twice and wrote exactly two `atlahs-closed-loop-step-v1` records. Final virtual
 time remained zero because this slice has no communication service time.
 
+The copied runner now consumes the DP coordinator return's local-rank padded
+token value, matching the pinned upstream projection, and serializes it as
+`StepRecord.num_tokens_after_padding`. The final records contain `(4, 1)`.
+That exact pair is a clearly labeled post-specified regression from integration
+review, not a new scored instance.
+
 The host again exposed an NVIDIA GeForce GTX 1660 Ti despite
 `CUDA_VISIBLE_DEVICES=`. This run is scored evidence that the real external
 runtime reaches and survives the communicator seam. It is not evidence for a
@@ -149,7 +178,8 @@ scores.
 Thus all three scored families, and all seven scored instances, exercised a
 plausible failure mode. The live family is the strongest evidence because it
 depends on the pinned external runtime rather than only adapter-authored
-objects.
+objects. The payload-domain and DP-padding review checks are post-specified and
+therefore excluded from this risk fraction and the scored denominator.
 
 ## Reproduction and stored evidence
 
@@ -178,4 +208,4 @@ VLLM-19 owns runtime and TTFT/TPOT reachability after CORE-4/5. VLLM-20 owns
 native lower-stack operations for all-gather, broadcast, send, and receive in
 place of the current all-reduce-shaped compatibility call. VLLM-21 owns real
 dispatch-cost measurement and calibrated timing. SGL-11 remains untouched for
-the wave-3 worker that reuses the torch-free base.
+the wave-3 worker that reuses the torch-optional base.
