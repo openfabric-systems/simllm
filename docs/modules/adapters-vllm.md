@@ -42,9 +42,16 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
   `compile_or_warm_up_model` (a list of `None` crashes the engine's
   `max(t.language_model ...)` reduction) and reads `cache_config.num_gpu_blocks`
   instead of the removed `initialize_cache` RPC;
-- fabricates `ModelRunnerOutput(req_ids, req_id_to_index, sampled_token_ids)`
-  per step: one fake mid-vocabulary token for every request whose prompt is
-  complete this step, an empty list for a request still mid-prefill.
+- returns `ModelRunnerOutput(req_ids, req_id_to_index, sampled_token_ids)` per
+  step. Without a joined replay run, it uses the accepted fake
+  mid-vocabulary token for every request whose prompt is complete and an empty
+  list for a request still mid-prefill. With `SIMLLM_VLLM_REPLAY_RUN` set, it
+  verifies the joined trace hash, requires an exact joined scheduler request
+  ID and serves the oracle token selected by the scheduler-reported output
+  index. Replay admission requires `max_tokens` to equal the joined oracle
+  length and rejects an early EOS or stop token and a
+  prompt-plus-oracle length beyond `max_model_len`. The complete replay batch
+  validates before the sink, record stream or virtual clock changes;
   `execute_model` returns an already-completed `Future` when `non_block=True`
   (`EngineCore.step()` always calls it that way and immediately reads
   `.result()`); `sample_tokens` is served defensively (it raises if no
@@ -98,11 +105,13 @@ Timing has two modes: `paced` (sleep the simulated latency, stock vLLM
 metrics stay meaningful) and `virtual` (return immediately, report sim-native
 metrics). Configuration that no vLLM flag carries comes from `SIMLLM_VLLM_*`
 environment variables (`MODE`, `KV_MEMORY_BYTES`, `GPU`, `PEAK_FLOPS`,
-`MEM_BANDWIDTH`, `EFFICIENCY`, `HOST_INIT_PS`, `TOKEN_ID`, `STEP_RECORDS`),
-documented in the executor module docstring. Objects (a provider, a host
-model, a sink) go through `configure()`, which reaches the executor only when
-the engine core runs in the same process (`LLM(...)`, or
-`VLLM_ENABLE_V1_MULTIPROCESSING=0`).
+`MEM_BANDWIDTH`, `EFFICIENCY`, `HOST_INIT_PS`, `TOKEN_ID`, `STEP_RECORDS`,
+`REPLAY_RUN`), documented in the executor module docstring. Objects (a
+provider, a host model, a sink) go through `configure()`, which reaches the
+executor only when the engine core runs in the same process (`LLM(...)`, or
+`VLLM_ENABLE_V1_MULTIPROCESSING=0`). Call `reset_configuration()` between
+independent in-process engines to clear every accumulated hook. An explicit
+constructor config takes priority over hooks and the environment.
 
 Flagged worker-boundary skeleton
 (`simllm/adapters/vllm/worker.py`):
@@ -168,8 +177,9 @@ runner through `self.model_runner` in the stock source as well
 
 `SimExecutor` and `SimWorker` share the same model-derived KV specification,
 configured available-memory answer, compilation-time answer, task answer,
-token fabrication, translation, settlement, and streaming helpers. The
-worker and runner share exactly one core `VirtualClock`; empty model compute
+conditional replay or token fabrication, translation, settlement, and
+streaming helpers. The worker and runner share exactly one core
+`VirtualClock`; empty model compute
 has zero fallback latency, while a configured closed-loop sink can still
 provide a nonzero `StepResult`. Only global rank zero is the mutable time and
 stream authority, including when every process is locally marked as a driver.
@@ -305,6 +315,33 @@ Exactly one strengthened smoke ran in the review round. It reached
 1660 Ti despite masking, so VLLM-16 keeps the genuinely GPU-invisible version
 of this asserted smoke open.
 
+PLAY-3 joined-token replay is implemented in `SimExecutor` and the flagged
+skeleton as of 2026-08-10. Expectations were frozen in commit `edcb2b9`
+before implementation or any replay run. A joined
+`simllm-preplay-replay-run-v1` is selected with
+`SIMLLM_VLLM_REPLAY_RUN`; construction verifies the named trace bytes, and
+sampling maps each scheduler-reported output index to the exact oracle token.
+The adapter accepts only an exact joined scheduler request ID. Live replay
+sets vLLM's audited request-ID no-randomization mode, and a suffix-shaped
+lookalike fails as unjoined. Unknown IDs, cursor gaps, exhaustion, early stop
+channels, model-length overflow and admission lengths that differ from the
+oracle all fail before settlement. `reset_configuration()` prevents replay
+state from leaking into a later in-process engine.
+
+The four-cell metric study served exact oracle sequences through both adapter
+paths. A review-amendment study then submitted the same two requests to the
+real in-process vLLM scheduler in baseline and replay modes. The scheduler
+itself moved `r0` completion from step 3 to step 0; the engine-produced records
+changed TTFT and TPOT by every frozen exact relation. The absent-replay path
+has a tracked LF-locked JSONL pytest fixture. A final in-process vLLM v0.26.0
+Granite smoke asserted external and internal identity `length-cap`, returned
+token ID 38 and retained a zero-latency completion drain. Earlier live
+attempts exposed internal-ID randomization and the offline wrapper's
+integer-only output sort; both remain explicit in
+[the PLAY-3 results](../../examples/preplay_adapter_replay_v1/RESULTS.md),
+along with their post-specified regression status. Speculative decoding and
+structured output remain refused. SGLang replay is not implied by this status
+and remains PLAY-7 in [preplay.md](preplay.md#open-tasks).
 The VLLM-14 zero-time coordinator slice is implemented as of 2026-08-10. Its
 expectations-only commit is `29221e4`, which precedes implementation and every
 result-producing target run. The import-free study in

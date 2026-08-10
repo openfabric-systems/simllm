@@ -1,0 +1,2 @@
+{"schema": "atlahs-closed-loop-step-v1", "step_index": 0, "virtual_time_ps": 123000, "scheduled": [{"request_id": "r0", "phase": "prefill", "num_new_tokens": 4, "num_cached_tokens": 0, "context_length": 4}], "preempted_request_ids": [], "finished_request_ids": [], "num_sampled": 1}
+{"schema": "atlahs-closed-loop-step-v1", "step_index": 1, "virtual_time_ps": 123000, "scheduled": [{"request_id": "r0", "phase": "decode", "num_new_tokens": 1, "num_cached_tokens": 0, "context_length": 5}], "preempted_request_ids": [], "finished_request_ids": [], "num_sampled": 1}

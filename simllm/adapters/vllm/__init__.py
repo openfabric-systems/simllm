@@ -44,7 +44,8 @@ Environment variables read by the executor (full table in
 ``SIMLLM_VLLM_KV_MEMORY_BYTES``, ``SIMLLM_VLLM_GPU``,
 ``SIMLLM_VLLM_PEAK_FLOPS``, ``SIMLLM_VLLM_MEM_BANDWIDTH``,
 ``SIMLLM_VLLM_EFFICIENCY``, ``SIMLLM_VLLM_HOST_INIT_PS``,
-``SIMLLM_VLLM_TOKEN_ID``, ``SIMLLM_VLLM_STEP_RECORDS``.
+``SIMLLM_VLLM_TOKEN_ID``, ``SIMLLM_VLLM_STEP_RECORDS``,
+``SIMLLM_VLLM_REPLAY_RUN``.
 The worker-only entry gate is ``SIMLLM_VLLM_WORKER_MODE=skeleton``.
 
 Exports are resolved lazily through the module ``__getattr__``, so importing
@@ -78,6 +79,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "StepTranslator": ("executor", "StepTranslator"),
     "TranslatedStep": ("executor", "TranslatedStep"),
     "configure": ("executor", "configure"),
+    "reset_configuration": ("executor", "reset_configuration"),
     "estimate_step_latency_ps": ("executor", "estimate_step_latency_ps"),
     "fabricate_sampled_tokens": ("executor", "fabricate_sampled_tokens"),
     "latest_executor": ("executor", "latest_executor"),
@@ -87,6 +89,9 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "step_records_to_json": ("executor", "step_records_to_json"),
     "vllm_is_available": ("executor", "vllm_is_available"),
     "write_step_records": ("executor", "write_step_records"),
+    "ReplayServingSnapshot": ("replay", "ReplayServingSnapshot"),
+    "ReplayTokenSource": ("replay", "ReplayTokenSource"),
+    "sample_adapter_tokens": ("replay", "sample_adapter_tokens"),
     "MirroredCall": ("worker", "MirroredCall"),
     "SKELETON_EMPTY_STEP_CALL_SEQUENCE": (
         "worker",
@@ -123,6 +128,8 @@ __all__ = [
     "MirroredCall",
     "ModelDims",
     "PlacementExporter",
+    "ReplayServingSnapshot",
+    "ReplayTokenSource",
     "ShapeDType",
     "ShapeTensor",
     "SimExecutor",
@@ -142,6 +149,8 @@ __all__ = [
     "manifest_from_worker_entries",
     "observe_scheduler_output",
     "placement_entry",
+    "reset_configuration",
+    "sample_adapter_tokens",
     "skeleton_mode_enabled",
     "step_kernel",
     "step_records_to_json",
