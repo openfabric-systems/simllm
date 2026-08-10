@@ -16,9 +16,15 @@ own modules.
   latter is the physical model-input token count after framework padding and
   must not replace the logical scheduled-token fields. Absent optional counts
   keep legacy v1 records valid and select the consumer's documented
-  approximation.
+  approximation. Optional `sampled_request_ids` identifies an exact sampled
+  subset and must agree with `num_sampled`; legacy readers remain valid when
+  it is absent.
 - `StepResult`: the scheduler-facing result (step latency and completion time
-  on the virtual clock).
+  on the virtual clock), sampled per-request `RequestMetric` rows and a
+  graph-wide `AdditiveVisitTotals` work sum. Each request row carries exact
+  rational TPOT plus a conserved `LatencyAttribution` over queue, KV, kernel,
+  DMA, collective, NIC and control owners. Additive visit work is a different
+  type and never enters that identity.
 - `RequestPhase`, `ScheduledRequest`: the per-request vocabulary.
 - Closed-loop wire schemas: `atlahs-closed-loop-step-v1` and
   `atlahs-closed-loop-result-v1` are the JSON forms of `StepRecord` and
@@ -51,6 +57,12 @@ own modules.
   completion time and its ordered completion-event stream. A separate optional
   quiescence time distinguishes framework-visible completion from all physical
   work draining.
+- `CompletionReducer`: the stateful read-only projection from one validated
+  `ExecutionResult` plus its `RuntimeReport` to `StepResult`. It follows the
+  runtime's realized predecessor chain for each correlated request endpoint,
+  accumulates TTFT across non-sampling prefill chunks, computes exact TPOT,
+  advances `VirtualClock` only to framework completion and retains later
+  asynchronous events as physical evidence.
 - `simllm-request-bookkeeping-v1`: an append-only `BookkeepingLedger` of
   request-stage transitions, created-object records and the same
   `CompletionEvent` objects returned by the runtime. `RequestBookkeeper`
@@ -89,7 +101,8 @@ projections of that record, not independent WQE state machines; the
 live, a run may explicitly select `AtlahsWqeLedger` as its sole timing-neutral
 bypass authority. A run never enables both mutable authorities, and every
 projection must conserve identity, cardinality and timestamps available at its
-boundary.
+boundary. `CompletionReducer` owns only request metric history; it does not
+schedule, progress or complete a runtime object.
 
 The target contract requires all contended resources to use one queue-visit
 meaning even when Python and C++ use different mechanisms:
@@ -164,9 +177,23 @@ dictionary:
 branch on `(collective, algorithm_hint)`: a ring `all-reduce` carries the
 full reduced payload, while a `pairwise` `all-to-allv` carries the bytes each
 rank sends to each other rank (one uniform ordered-pair share; the serial
-lowerer and the serial GOAL renderer agree on this decoding). An all-to-allv
-with per-pair size variation, e.g. captured routed-expert dispatch, is not
-representable by the single scalar; CORE-6 owns the contract extension.
+lowerer and the serial GOAL renderer agree on this decoding). The optional
+`pair_payload_bytes` table is the variable-size form for pairwise all-to-allv:
+each source-major entry is `(source_rank, destination_rank, bytes)`, omitted
+pairs carry zero bytes, and a nonempty table requires the scalar to be zero.
+The field is omitted from JSON when empty, so old
+`simllm-execution-graph-v1` scalar payloads retain their exact bytes and
+meaning. The strict reader rejects duplicate, self, out-of-group, nonpositive,
+unsorted and scalar-plus-table entries. Both the serial GOAL renderer and the
+coarse runtime consume the same table when each declared rank sends or
+receives. The runtime also accepts a valid table with an uncovered rank; the
+diagnostic serial renderer rejects that case because it cannot emit the
+rank's collective-completion frontier.
+The combined captured-routing study populated that table from real Granite
+assignments, carried it through the step graph and GOAL, and changed live
+fluid JCT by every frozen exact relation. It also retained the old v1 scalar
+wire and GOAL hashes, closing CORE-6; see
+[the routed supply results](../../examples/routed_supply_v1/RESULTS.md).
 The coarse ring path currently requires a positive payload evenly divisible
 by its rank count, so every round sends an exact integer chunk and never
 fabricates a byte. CORE-16 owns remainder chunking. Control sends reserve
@@ -302,7 +329,19 @@ their concrete graph-operation/tag/WQE correlation.
 Actual framework observation producers remain VLLM-11/12 and SGL-9/10.
 Explicit KV state semantics remain CORE-3. BACK-8, BACK-9 and BACK-12 own
 structural RNIC objects and arbitration.
-Completion reduction and tail attribution remain CORE-5.
+
+CORE-5 is complete for the supported core path. `CompletionReducer` consumes
+the required graph boundary and the runtime's corrected critical-path
+segments, validates the streamed event projection, returns `StepResult`, and
+advances the scheduler clock without confusing physical quiescence with
+framework completion. Per-request TTFT and exact rational TPOT retain queue,
+KV, kernel, DMA, collective, NIC and control components. Graph and request
+visit-work totals remain separately typed. Zero-sample prefill work accumulates
+into the later first-token interval, and a zero sampled count remains empty
+for decode rows too. Exact partial sampling requires explicit request
+identities and fails closed when a count alone is ambiguous. The reducer
+consumes each execution ID once, including zero-latency results, and the v1
+reader treats an explicit null sampled-identity field as absent.
 
 CORE-4 is complete for the coordinated first coarse bypass profile;
 structural completion remains explicitly conditional on CORE-15.
@@ -330,6 +369,27 @@ omitted/explicit identity remained canonical-byte identical under class-label
 permutation. Remaining coarse approximations and completeness gaps are
 registered as CORE-11 through CORE-16 rather than being claimed as calibrated
 behavior.
+
+The pre-registered
+[CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
+requests through three `ExecutionGraph -> CoarseDeviceRuntime ->
+ExecutionResult -> StepResult` steps across dependency shape and 200/400
+Gbit/s RNIC rate. All four exact JCT rows, 18 scored behavioral instances and
+60 live in-harness structural predicates passed. Two expected validator
+rejections and two compatibility accepts are reported as separate unscored
+evidence classes. The serial dependency penalty was exactly
+10,000 ps at both rates; the 200-to-400 Gbit/s delta was exactly 163,840 ps in
+both shapes. Every request component row summed to TTFT or TPOT exactly while
+the 21-visit request work sum exceeded wall latency. Asynchronous control and
+collective cells advanced the scheduler by 10,000 ps while their physical
+quiescence remained 20,971,520 ps. The separately frozen
+[Tier B expectations](../../examples/rnic_live_v1/tier_b_expectations.md)
+and their
+[review supplement](../../examples/rnic_live_v1/tier_b_review_supplement.md)
+retain the composed native live gate until HTSIM-9 and CORE-15 supply its
+producer. The supplement pins the raw producer schema, four bypass profiles,
+both objectively selected doorbell-owner mappings, and the two-WQE live FIFO
+relation.
 
 ## Pre-registered runtime sanity experiments
 
@@ -383,6 +443,14 @@ does not claim to produce these resource-contention measurements.
   byte-carrying READ or WRITE during preflight rather than reporting silent
   zero-cost HBM work. Acceptance must enable those same fixtures through the
   HBM service and preserve the explicit zero-byte path exactly.
+- CORE-6: represent variable per-pair all-to-allv sizes in the graph
+  contract. `CollectiveWork.payload_bytes` carries one uniform ordered-pair
+  share for `pairwise` all-to-allv, so a captured, non-uniform dispatch
+  (routed experts under real gating) cannot be expressed. Decide between an
+  optional per-pair size table on the collective payload and a schema bump;
+  the uniform scalar form must stay readable either way. Coordinate with the
+  TRAF-2 capture half so traffic expansion and the renderer consume the same
+  representation.
 - CORE-5 (Completeness; P1; L): implement completion feedback and tail
   attribution. Stream queue,
   start, progress and completion events, reduce the required completion
@@ -393,14 +461,6 @@ does not claim to produce these resource-contention measurements.
   end-to-end latency. Support synchronous waits and asynchronous control or
   collective progress. Preserve v1 readers if the queue-visit projection needs
   a versioned event extension.
-- CORE-6: represent variable per-pair all-to-allv sizes in the graph
-  contract. `CollectiveWork.payload_bytes` carries one uniform ordered-pair
-  share for `pairwise` all-to-allv, so a captured, non-uniform dispatch
-  (routed experts under real gating) cannot be expressed. Decide between an
-  optional per-pair size table on the collective payload and a schema bump;
-  the uniform scalar form must stay readable either way. Coordinate with the
-  TRAF-2 capture half so traffic expansion and the renderer consume the same
-  representation.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
@@ -479,9 +539,19 @@ does not claim to produce these resource-contention measurements.
   authority mutates. Acceptance must cover remainder byte conservation and
   tag uniqueness across adjacent collective and control operations while the
   current divisible-payload and bounded-fanout baselines remain byte-identical.
+- CORE-17 (Completeness; P1; M): populate
+  `StepRecord.sampled_request_ids` from vLLM and SGLang whenever an exact
+  `num_sampled` is a strict subset of the scheduled batch. The current CORE-5
+  reducer accepts explicit identities, infers the decode-only subset when that
+  is uniquely determined, preserves the absent-count all-scheduled legacy
+  approximation, and rejects an ambiguous partial prefill subset instead of
+  assigning TTFT arbitrarily. Acceptance must use a mixed chunked-prefill,
+  completed-prefill and decode batch, match the framework's actual token
+  production mask request by request, and preserve zero-sample, all-sample and
+  legacy wire behavior exactly.
 - BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
   process for closed loop, replacing per-step subprocess spawns. Its
   incremental flow-injection transport should carry `ExecutionGraph` and
-  `CompletionEvent` and bookkeeping facts once CORE-5 lands. The M4 diagnostic
-  mode currently pays
+  the landed CORE-5 `CompletionEvent`, `ExecutionResult`, `StepResult` and
+  bookkeeping projections. The M4 diagnostic mode currently pays
   about 8 seconds of process/parse overhead per live tp=8 step.

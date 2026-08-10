@@ -24,6 +24,7 @@ from simllm.core.bookkeeping_io import (
     bookkeeping_ledger_to_json,
 )
 from simllm.core.clock import VirtualClock
+from simllm.core.completion import CompletionReducer
 from simllm.core.execution import (
     COMPLETION_EVENT_SCHEMA,
     EXECUTION_GRAPH_SCHEMA,
@@ -85,6 +86,9 @@ from simllm.core.runtime import (
 from simllm.core.step import (
     RESULT_SCHEMA,
     STEP_SCHEMA,
+    AdditiveVisitTotals,
+    LatencyAttribution,
+    RequestMetric,
     RequestPhase,
     ScheduledRequest,
     StepRecord,
@@ -109,6 +113,7 @@ __all__ = [
     "EXECUTION_RESULT_SCHEMA",
     "RESULT_SCHEMA",
     "STEP_SCHEMA",
+    "AdditiveVisitTotals",
     "ArbitrationCandidate",
     "ArbitrationPolicy",
     "AtlahsWqeLedger",
@@ -121,6 +126,7 @@ __all__ = [
     "CollectiveWork",
     "CompletionEvent",
     "CompletionHandler",
+    "CompletionReducer",
     "ComputeWork",
     "ControlMode",
     "ControlWork",
@@ -139,6 +145,7 @@ __all__ = [
     "IdentityArbitrationPolicy",
     "KvCacheAction",
     "KvCacheWork",
+    "LatencyAttribution",
     "NativeRnicSession",
     "NativeRnicTransaction",
     "ObjectOwner",
@@ -146,6 +153,7 @@ __all__ = [
     "ProcessingStage",
     "QueueVisit",
     "RequestBookkeeper",
+    "RequestMetric",
     "RequestPhase",
     "ResourceKind",
     "ResourceRef",

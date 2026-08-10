@@ -551,6 +551,57 @@ def test_collective_goal_tags_and_bookkeeping_preserve_operation_identity():
     assert all(left is right for left, right in zip(ledger_events, result.events, strict=True))
 
 
+def test_sparse_pair_payloads_drive_runtime_transfer_bytes_exactly():
+    def execute(second_payload_bytes: int):
+        graph = ExecutionGraph(
+            "sparse-runtime",
+            0,
+            0,
+            (
+                ExecutionOperation(
+                    "pairwise",
+                    0,
+                    "nccl",
+                    CollectiveWork(
+                        "all-to-allv",
+                        (0, 8),
+                        0,
+                        "pairwise",
+                        pair_payload_bytes=(
+                            (0, 8, 2048),
+                            (8, 0, second_payload_bytes),
+                        ),
+                    ),
+                ),
+            ),
+            ("pairwise",),
+        )
+        runtime = CoarseDeviceRuntime(_profile())
+        result = runtime.execute(graph)
+        assert runtime.last_report is not None
+        return result, runtime.last_report
+
+    first_result, first = execute(4096)
+    second_result, second = execute(6144)
+    assert {
+        (wqe.source_rank, wqe.destination_rank): wqe.payload_bytes
+        for wqe in first.wqes
+    } == {(0, 8): 2048, (8, 0): 4096}
+    assert {
+        (wqe.source_rank, wqe.destination_rank): wqe.payload_bytes
+        for wqe in second.wqes
+    } == {(0, 8): 2048, (8, 0): 6144}
+    assert second_result.completed_at_ps - first_result.completed_at_ps == 40_960
+    completed = [
+        event.completed_bytes
+        for event in second_result.events
+        if event.operation_id == "pairwise"
+        and event.phase is EventPhase.COMPLETED
+        and event.subject_object_id is None
+    ]
+    assert completed == [8192]
+
+
 def test_intra_node_collective_uses_nvlink_and_creates_no_wqe():
     graph = ExecutionGraph(
         "intra-node",
