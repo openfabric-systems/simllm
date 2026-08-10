@@ -37,6 +37,7 @@ from simllm.core import (
 )
 
 EXPECTATIONS_COMMIT = "25d098c997f078eb92dcf155cd36c44d9d6b2313"
+REVIEW_EXPECTATIONS_COMMIT = "396fd9e32df363cd2367f6ffc072ab49966bb20e"
 DEFAULT_OUT = Path("/data3/yifeng/simllm-dev/wave2-runs/comp16_latent_knobs")
 MODEL = Path(
     "/home/yifeng/packages/vllm-rnic-capture/hf-cache/hub/"
@@ -149,6 +150,29 @@ def layer_calcs(path: Path, rank: int) -> tuple[int, ...]:
     return tuple(int(value) for value in re.findall(r": calc (\d+)(?:\s|$)", match.group(1)))
 
 
+def backend_calc_boundary_ps(path: Path, before_tag: int, after_tag: int) -> int:
+    with path.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    before = {
+        int(row["source"]): int(row["completion_time_ps"])
+        for row in rows
+        if int(row["tag"]) == before_tag
+    }
+    after = {
+        int(row["source"]): int(row["start_time_ps"])
+        for row in rows
+        if int(row["tag"]) == after_tag
+    }
+    if before.keys() != after.keys() or not before:
+        raise AssertionError(
+            f"cannot join boundary tags {before_tag} and {after_tag} in {path}"
+        )
+    gaps = {after[source] - before[source] for source in before}
+    if len(gaps) != 1:
+        raise AssertionError(f"rank-dependent calc boundary gaps in {path}: {gaps}")
+    return gaps.pop()
+
+
 def frozen_jct(num_layers: int, world: int, calc_ns: tuple[int, ...]) -> int:
     chunk = 128 // world
     round_ps = chunk * PS_PER_BYTE_400G + PROPAGATION_PS
@@ -178,6 +202,7 @@ def make_sink(
 
 def run_check_a(out: Path, emit) -> None:
     measured_enabled: dict[tuple[int, int], int] = {}
+    shape_regression: dict[str, Any] | None = None
     for (num_layers, world), frozen in FROZEN_A.items():
         (
             expected_layer_ps,
@@ -237,15 +262,72 @@ def run_check_a(out: Path, emit) -> None:
         assert enabled_result.step_latency_ps - disabled_result.step_latency_ps == 1_000
         assert disabled_outcome.num_flows == expected_flows
         assert enabled_outcome.num_flows == expected_flows
+        assert disabled_outcome.quiescent
+        assert enabled_outcome.quiescent
+        rendered_boundary_deltas: set[int] = set()
         for rank in range(world):
-            assert layer_calcs(
+            disabled_goal_calc = layer_calcs(
                 out / f"a-l{num_layers}-w{world}-disabled" / "step-000000.goal",
                 rank,
-            ) == disabled_calc
-            assert layer_calcs(
+            )
+            enabled_goal_calc = layer_calcs(
                 out / f"a-l{num_layers}-w{world}-enabled" / "step-000000.goal",
                 rank,
-            ) == expected_calc_ns
+            )
+            assert disabled_goal_calc == disabled_calc
+            assert enabled_goal_calc == expected_calc_ns
+            rendered_boundary_deltas.add(
+                enabled_goal_calc[-1] - disabled_goal_calc[-1]
+            )
+
+        if (num_layers, world) == (2, 2):
+            assert len(rendered_boundary_deltas) == 1
+            boundary_delta_ns = rendered_boundary_deltas.pop()
+            assert boundary_delta_ns == 4
+            disabled_boundary_ps = backend_calc_boundary_ps(
+                out
+                / "a-l2-w2-disabled"
+                / "step-000000.rnic-nn-fluid.csv",
+                1003,
+                1004,
+            )
+            enabled_boundary_ps = backend_calc_boundary_ps(
+                out
+                / "a-l2-w2-enabled"
+                / "step-000000.rnic-nn-fluid.csv",
+                1003,
+                1004,
+            )
+            assert disabled_boundary_ps == disabled_calc[-1] * 1000
+            assert enabled_boundary_ps == expected_calc_ns[-1] * 1000
+            assert enabled_boundary_ps - disabled_boundary_ps == 4_000
+            shape_regression = {
+                "section": "post-specified-shape",
+                "classification": "unscored review regression",
+                "review_expectations_commit": REVIEW_EXPECTATIONS_COMMIT,
+                "layers": num_layers,
+                "world": world,
+                "even_final_calc_ns": disabled_calc[-1],
+                "lm_head_final_calc_ns": expected_calc_ns[-1],
+                "signed_boundary_delta_ns": boundary_delta_ns,
+                "expected_boundary_delta_ns": 4,
+                "boundary_residual_ns": boundary_delta_ns - 4,
+                "even_backend_boundary_ps": disabled_boundary_ps,
+                "lm_head_backend_boundary_ps": enabled_boundary_ps,
+                "signed_backend_boundary_delta_ps": (
+                    enabled_boundary_ps - disabled_boundary_ps
+                ),
+                "backend_boundary_residual_ps": (
+                    enabled_boundary_ps - disabled_boundary_ps - 4_000
+                ),
+                "disabled_ttft_ps": disabled_result.step_latency_ps,
+                "enabled_ttft_ps": enabled_result.step_latency_ps,
+                "signed_ttft_delta_ps": (
+                    enabled_result.step_latency_ps - disabled_result.step_latency_ps
+                ),
+                "even_physical_quiescence": disabled_outcome.quiescent,
+                "physical_quiescence": enabled_outcome.quiescent,
+            }
 
         measured_enabled[(num_layers, world)] = enabled_result.step_latency_ps
         emit(
@@ -262,13 +344,16 @@ def run_check_a(out: Path, emit) -> None:
             signed_delta_ps=enabled_result.step_latency_ps - disabled_result.step_latency_ps,
             residual_ps=enabled_result.step_latency_ps - expected_enabled_jct,
             flows=enabled_outcome.num_flows,
-            physical_quiescence="verified",
+            disabled_physical_quiescence=disabled_outcome.quiescent,
+            physical_quiescence=enabled_outcome.quiescent,
         )
 
     assert measured_enabled[(2, 2)] < measured_enabled[(4, 2)]
     assert measured_enabled[(2, 4)] < measured_enabled[(4, 4)]
     assert measured_enabled[(2, 2)] < measured_enabled[(2, 4)]
     assert measured_enabled[(4, 2)] < measured_enabled[(4, 4)]
+    assert shape_regression is not None
+    emit(**shape_regression)
 
 
 def translated_mixed_record() -> tuple[StepRecord, list[bool]]:
@@ -325,6 +410,8 @@ def run_check_b1(out: Path, emit) -> None:
 
     assert bypass_outcome.num_sampled == 2
     assert exact_outcome.num_sampled == 1
+    assert bypass_outcome.quiescent
+    assert exact_outcome.quiescent
     assert bypass_outcome.compute_estimate_ps == 912_896
     assert exact_outcome.compute_estimate_ps == 880_128
     assert bypass_outcome.layer_calc_ns == (456, 456)
@@ -347,7 +434,8 @@ def run_check_b1(out: Path, emit) -> None:
         signed_delta_ps=exact_result.step_latency_ps - bypass_result.step_latency_ps,
         expected_signed_delta_ps=-32_000,
         residual_ps=(exact_result.step_latency_ps - bypass_result.step_latency_ps) + 32_000,
-        physical_quiescence="verified",
+        bypass_physical_quiescence=bypass_outcome.quiescent,
+        physical_quiescence=exact_outcome.quiescent,
     )
 
 
@@ -509,7 +597,7 @@ def run_check_d(out: Path, emit) -> None:
         absent_sample_field_omitted=True,
         present_zero_round_trips=True,
         invalid_family_metadata_rejected=invalid_rejected,
-        physical_quiescence="verified",
+        physical_quiescence=sink.outcomes[0].quiescent,
     )
 
 
@@ -535,11 +623,13 @@ def run_deterministic(out: Path) -> None:
     run_check_b1(out, emit)
     run_check_b2(emit)
     run_check_d(out, emit)
+    assert len(rows) == 12
     summary = out / "summary.csv"
     write_rows(summary, rows)
     print(
-        f"completed {len(rows)} deterministic rows against expectations commit "
-        f"{EXPECTATIONS_COMMIT}; summary={summary}"
+        "completed 11 frozen deterministic rows plus 1 post-specified regression "
+        f"against expectations commits {EXPECTATIONS_COMMIT} and "
+        f"{REVIEW_EXPECTATIONS_COMMIT}; summary={summary}"
     )
 
 

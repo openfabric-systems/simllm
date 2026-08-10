@@ -112,6 +112,8 @@ class StepNetworkOutcome:
     num_sampled: int = 0
     #: whether num_sampled came from an exact record field
     sample_count_exact: bool = False
+    #: whether the backend wrapper verified physical quiescence
+    quiescent: bool = False
 
     def network_share_for(self, num_layers: int) -> float:
         """One minus represented calc time over makespan."""
@@ -242,6 +244,7 @@ class HtsimStepSink:
                 layer_calc_ns=layer_calc_ns,
                 makespan_ps=makespan_ps,
                 num_flows=len(run.flows),
+                quiescent=run.quiescent,
             )
         )
         return StepResult(

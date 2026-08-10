@@ -520,9 +520,12 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
 - COMP-17 (Precision; P1; M): after COMP-6 supplies per-invocation captured
   shapes, populate `estimate_layers` for `ProfileTableProvider` and
   `TraceCalibratedGpuProvider`. The current surrogate is the step sink's even
-  split whenever these calibrated providers are selected. Use measured
-  per-layer kernel durations as the identifying observable, reconcile their
-  integer sum to the existing fused estimate exactly, and require every
-  rendered cumulative boundary to remain within the declared capture
-  uncertainty. The explicit no-breakdown path must retain the accepted GOAL
-  bytes and TTFT exactly.
+  split whenever these calibrated providers are selected. Use a real model's
+  measured per-layer profile, or a published layer-heterogeneity reference,
+  as the fidelity anchor and calibration target. Acceptance requires the
+  modeled normalized layer-to-layer shape to match that anchor within its
+  declared measurement uncertainty. Use measured per-layer kernel durations
+  as the identifying observable, reconcile their integer sum to the existing
+  fused estimate exactly, and require every rendered cumulative boundary to
+  remain within the declared capture uncertainty. The explicit no-breakdown
+  path must retain the accepted GOAL bytes and TTFT exactly.

@@ -17,6 +17,13 @@ expectations`). It precedes every implementation edit and every result-producing
 run. Its commit message records that the working tree contained only the
 expectations file and no implementation file.
 
+The dry-run harness existed untracked at freeze time and encodes only the
+frozen literals; the freeze commit's file-only claim refers to tracked
+content. The review-triggered amendment is frozen separately in
+`396fd9e32df363cd2367f6ffc072ab49966bb20e` (`Freeze the review regression
+expectations`). It precedes the replay, quiescence, and post-specified shape
+regression edits.
+
 Before the freeze, both registered runner modes passed `--check-only`. The
 output directory remained absent, so those dry runs produced no measured
 values or result artifacts. The vLLM source audit and its installed-source
@@ -52,8 +59,9 @@ env PYTHONPATH=. VLLM_ENABLE_V1_MULTIPROCESSING=0 \
   --out /data3/yifeng/simllm-dev/wave2-runs/comp16_latent_knobs
 ```
 
-Every successful backend row reported `physical_quiescence=verified`; the
-backend wrapper rejects a run whose completion ledger is not quiescent.
+Every successful backend row emitted `physical_quiescence=True`, copied from
+the wrapper-reported `RnicRunResult.quiescent` value. The backend wrapper
+rejects a run whose completion ledger is not quiescent.
 
 ## Evidence accounting
 
@@ -66,13 +74,15 @@ Evidence classes remain separate.
 | Check B1 adapter-to-TTFT relation | 1/1 pass | Scored behavioral relation |
 | Check B2 attribution instances | 5/5 pass | Scored behavioral instances |
 | Check C real vLLM relation | 1/1 pass | Scored live integration relation |
+| Post-specified shape regression | 1/1 pass | Unscored review regression |
 | Check D and conservation guards | pass | Fatal, unscored structural invariants |
-| Repository unit and integration tests | 455/455 pass | Separate test executable |
+| Repository unit and integration tests | 456/456 pass | Separate test executable |
 | Pinned-vLLM adapter tests | 35/35 applicable pass | Separate external-runtime test executable |
 
 The scored headline is 11 of 11 passing relations or rows. Configuration
 echoes, exact-sum conservation, byte identity, schema behavior, source pin,
-and quiescence are not added to that denominator.
+quiescence, and the post-specified shape regression are not added to that
+denominator.
 
 ## Check A: roofline family split
 
@@ -93,6 +103,24 @@ All ranks rendered the listed calc sequence. Flow counts were exactly 16, 96,
 than two. At fixed layer count, TP width four had greater TTFT than width two.
 The final allreduce boundary moved later by exactly 1,000 ps in every cell, as
 registered.
+
+The scored Check A relation is the cumulative-truncation rule that produces
+that `+1,000 ps`. The exact unequal layer vectors and the folded direction
+assertions are structural guards; they do not score the realism or shape
+sensitivity of the breakdown.
+
+### Post-specified shape-sensitive regression
+
+The review-triggered regression isolates a value that depends on LM-head
+placement. In the two-layer, TP-width-two cell, the rendered final-layer calc
+service is `21 ns` with the LM head in the last layer and `17 ns` under the
+even split. The next final-layer allreduce boundary, measured from entry to
+that layer, therefore moves by exactly `+4 ns`, with zero residual. The
+completion ledgers independently measured `17,000 ps` and `21,000 ps` between
+the preceding layer's final flow completion and the final layer's first flow
+start. Both GOAL programs retained the separately frozen `+1,000 ps` absolute
+TTFT relation and reported wrapper quiescence. This check is post-specified
+and is not added to the 11-row scored denominator.
 
 The decision-relevant guard also passed: every family projection conserves
 both fused flops and bytes, every returned duration is nonnegative, and each
@@ -128,6 +156,13 @@ rows exactly:
 
 The equality to fabricated rows supports keeping attribution at the
 translator rather than moving it to a post-fabrication output seam.
+
+The review regression also lowered this exact B1 record through the serial
+replay path. Live and replay GOAL text matched byte for byte at `440 ns` per
+layer. Removing `num_sampled` retained the historical `456 ns` fallback and
+replay SHA-256
+`7087db6780f7e34f5a559a6505eeccc15d984c7b478cd8f0bc5838053825d4b6`.
+This replay check is post-specified and unscored.
 
 ## Check C: pinned live vLLM smoke
 
@@ -168,11 +203,11 @@ plausibly have failed, not which checks happened to fail.
 
 | Family | Plausibly at risk | Scored total | Fraction | Why it could fail |
 |---|---:|---:|---:|---|
-| A, roofline to TTFT | 4 | 4 | 100% | Summing per-family roofline maxima, rounding layers independently, or placing the LM head evenly would change boundaries or violate the closed form. |
+| A, cumulative truncation to TTFT | 4 | 4 | 100% | Independent flooring instead of cumulative boundaries could change the registered `+1,000 ps`; these rows do not score the breakdown shape. |
 | B1, adapter to TTFT | 1 | 1 | 100% | Leaving the record field absent would retain two samples and produce a zero TTFT delta instead of `-32,000 ps`. |
-| B2, attribution matrix | 5 | 5 | 100% | Prompt completion, cached admission, and attach-mid-flight state use different translator branches; a blanket scheduled-row count would fail at least the mid-prompt instance. |
+| B2, attribution matrix | 1 | 5 | 20% | Only the mid-prompt row distinguishes exact attribution from a blanket scheduled-row count; the other four all expect one sample from one row. |
 | C, real vLLM | 1 | 1 | 100% | The real worker or stream path could bypass the edited construction site, or vLLM could schedule a different chunk shape. |
-| Overall | 11 | 11 | 100% | Every scored row exercised behavior absent or materially different before this change. |
+| Overall | 7 | 11 | 63.6% | Four cumulative-truncation rows, B1, one discriminating B2 row, and the live relation could plausibly fail independently of structural guards. |
 
 ## Repository gates
 
@@ -187,15 +222,17 @@ $ SIMLLM_HTSIM_RNIC=... SIMLLM_TXT2BIN=... .venv/bin/pytest -q
 ........................................................................ [ 31%]
 ........................................................................ [ 47%]
 ........................................................................ [ 63%]
-........................................................................ [ 79%]
+........................................................................ [ 78%]
 ........................................................................ [ 94%]
-.......................                                                  [100%]
-455 passed in 13.76s
+........................                                                 [100%]
+456 passed in 13.70s
 ```
 
 The pinned-vLLM adapter test executable separately reported 35 passed and two
-absence-only skips in 7.14 seconds. No C++ source changed, so no native CMake
-or CTest gate applies.
+absence-only skips in 7.14 seconds. The review-touched lowerer and sink suite
+reported 32 passed in 0.35 seconds under `.venv` and 32 passed in 0.28 seconds
+under the pinned-vLLM environment. No C++ source changed, so no native CMake or
+CTest gate applies.
 
 ## Deliberate omissions and residual work
 

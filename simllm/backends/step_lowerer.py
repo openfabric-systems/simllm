@@ -145,7 +145,10 @@ class SerialStepLowerer(ExecutionLowerer):
                 if rank not in participants:
                     participants.append(rank)
 
-        kernel = step_kernel(cfg.dims, record, num_sampled=len(record.scheduled))
+        num_sampled = record.num_sampled
+        if num_sampled is None:
+            num_sampled = len(record.scheduled)
+        kernel = step_kernel(cfg.dims, record, num_sampled=num_sampled)
         estimate = cfg.provider.estimate(kernel, cfg.gpu)
         whole_step_ps = estimate.duration_ps + cfg.host_model.delay_ps()
         per_layer_calc_ns = whole_step_ps // (cfg.dims.num_layers * 1000)
