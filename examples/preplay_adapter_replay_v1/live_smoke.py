@@ -78,9 +78,9 @@ def run_smoke(run_dir: Path) -> dict:
             disable_log_stats=True,
         )
         llm.request_counter = iter(("length-cap",))
-        outputs = llm.generate(
-            [{"prompt_token_ids": list(prompt_token_ids)}],
-            SamplingParams(
+        internal_request_ids = llm._add_completion_requests(
+            prompts=[{"prompt_token_ids": list(prompt_token_ids)}],
+            params=SamplingParams(
                 temperature=0.0,
                 max_tokens=1,
                 min_tokens=0,
@@ -88,6 +88,17 @@ def run_smoke(run_dir: Path) -> dict:
             ),
             use_tqdm=False,
         )
+        if len(internal_request_ids) != 1:
+            raise AssertionError(
+                f"expected one internal request ID, got {internal_request_ids}"
+            )
+        outputs = []
+        while llm.llm_engine.has_unfinished_requests():
+            outputs.extend(
+                output
+                for output in llm.llm_engine.step()
+                if output.finished
+            )
         worker = latest_worker()
         if worker is None:
             raise AssertionError("SimWorker was not constructed")
@@ -145,6 +156,7 @@ def run_smoke(run_dir: Path) -> dict:
 
         summary = {
             "request_id": outputs[0].request_id,
+            "internal_request_id": internal_request_ids[0],
             "sampled_token_ids": list(sampled),
             "runner": type(worker.model_runner).__name__,
             "trace_sha256": worker.replay.trace_sha256,
