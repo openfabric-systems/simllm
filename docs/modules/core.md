@@ -151,6 +151,10 @@ with per-pair size variation, e.g. captured routed-expert dispatch, is not
 representable by the single scalar; CORE-6 owns the contract extension.
 
 `ExecutionLowerer` and `DeviceRuntime` remain narrow protocols.
+`CoarseDeviceRuntime` is the first additive implementation. Its
+`CoarseDeviceProfile` fixes the initial eight-GPU/eight-RNIC mapping, while
+`RuntimeReport`, `RuntimeOperationRecord` and `QueueVisit` expose diagnostics
+without widening `ExecutionResult` or changing the serial baselines.
 `SerialStepLowerer` implements the diagnostic compatibility schedule and
 `render_serial_execution_graph_goal` replays its supported subset using only
 the JSON-round-tripped graph. The lowerer places distributed sequencing in
@@ -159,7 +163,7 @@ cross-rank barriers instead of weakening them. The backend driver's GOAL
 completion summary participates in schedule JCT even when earlier WQE rows
 exist, so compute-only TP=1 graphs and graphs with trailing compute are both
 covered. A runtime can receive an optional central bookkeeper; the coarse
-resource scheduler itself remains CORE-4. Current adapters continue to use the existing
+resource scheduler is implemented alongside these baselines. Current adapters continue to use the existing
 `StepRecord -> StepResult | None` sink until their observation producers land.
 
 Nothing in this package may import vLLM or SGLang.
@@ -268,20 +272,34 @@ full completion rows were identical, and the MoE sentinel matched
 25,811,524 ps with 48 flows. The HTSIM WQE identity layer was then checked
 against the same frozen values; its post/dispatch and immediate-CQ accounting
 adds no packet timing behavior. The core ledger invariants and backend CSV
-rows are separately validated surfaces. CORE-4 owns their concrete
-graph-operation/tag/WQE correlation.
+rows are separately validated surfaces. `CoarseDeviceRuntime` now supplies
+their concrete graph-operation/tag/WQE correlation.
 
 Actual framework observation producers remain VLLM-11/12 and SGL-9/10.
-Explicit KV state semantics remain CORE-3. Non-RNIC device-resource arbitration
-and projection of NCCL, SQ/RQ/CQ, WQE and transport correlation records remain
-CORE-4; BACK-8, BACK-9 and BACK-12 own structural RNIC objects and arbitration.
+Explicit KV state semantics remain CORE-3. BACK-8, BACK-9 and BACK-12 own
+structural RNIC objects and arbitration.
 Completion reduction and tail attribution remain CORE-5.
 
-The trace-driven GPU service slice establishes the intra-kernel scheduler,
-SM, residency and HBM mechanisms plus isolated copy-descriptor service in
-`simllm.compute`. Its synthetic study validates those component laws only.
-It does not close CORE-4, because no inter-operation resource runtime or
-whole-graph overlap policy is added by that slice.
+CORE-4 is complete for the coordinated first coarse profile.
+`CoarseDeviceRuntime` implements host-launch and CUDA-stream order, dependency
+release, co-runnable non-preemptive kernel dispatch into `simllm.compute`,
+directional copy-engine queues, coarse shared HBM arbitration, NCCL channels,
+NVLink-class intra-node service, GPU-affine cross-node semantic submission,
+synchronous/asynchronous control completion and completion/bookkeeping
+projection. `AtlahsWqeLedger` is the sole live bypass authority. Structural
+mode constructs no ledger and delegates through `NativeRnicSession`; HTSIM-9
+owns the composed native/htsim implementation that fills this seam.
+
+The [CORE-4 runtime study](../../examples/core4_runtime/RESULTS.md) cites the
+older module expectations and the final expectations-only commit `d43cddb`.
+Across 16 configurations it passed 20/20 exact-oracle rows, 17/17 scored
+relations and 16/16 fatal structural guards. Independent compute and DMA
+matched `max(C, D)`, a dependency matched `C + D`, eight affine RNICs retained
+one-port makespan while aggregate throughput reached `8R`, additive visit wait
+was exactly four times wall JCT without entering the critical path, and
+omitted/explicit identity remained canonical-byte identical under class-label
+permutation. The four remaining coarse approximations are registered as
+CORE-11 through CORE-14 rather than being claimed as calibrated behavior.
 
 ## Pre-registered runtime sanity experiments
 
@@ -331,31 +349,6 @@ does not claim to produce these resource-contention measurements.
   live/reserved/reclaimable bytes, fragmentation, hits, eviction reason and
   age, reads/writes, transfers, recompute, preemption, capacity wait and
   TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9.
-- CORE-4 (Completeness; P1; L): implement the first coarse `DeviceRuntime`:
-  framework launch FIFO,
-  per-CUDA-stream FIFO and event dependencies, non-preemptive GPU work queue
-  and selection of the co-runnable task set dispatched into the
-  `simllm.compute` kernel service model, shared kernel-versus-DMA HBM
-  arbitration, directional copy-engine selection and queueing for explicit
-  DMA descriptors, NCCL channel queues, GPU-affine RNIC selection and semantic
-  submission, completion-event/projection plumbing and a control queue whose
-  class is accounting-only under identity. Start with the fixed eight-GPU,
-  eight-RNIC node above. Expose the CORE-8 policy seam and use only identity;
-  CORE-10 owns non-identity policies. In bypass mode delegate SQ/RQ/CQ and WQE
-  state to the sole `AtlahsWqeLedger` authority. In structural mode delegate
-  WQE lifecycle, WQ/CQ state, RNIC arbitration and completion to the
-  BACK-8/BACK-9/BACK-12 native session. Do not duplicate the SASS scheduler,
-  SM-residency or isolated
-  copy-service mechanisms owned by `simllm.compute`. Append concrete NCCL
-  command, SQ/RQ/CQ, WQE and QP/link-pair
-  projections to `RequestBookkeeper`; the timing-neutral immediate-CQ and
-  identity-only RQ behavior remains a compatibility path until BACK-9 supplies
-  structural WQ/CQ service through the SimLLM RNIC extension. The native path
-  must be live-reachable from an `ExecutionGraph` to a changed completion time;
-  its standalone probes do not close this task. Preserve
-  graph operation identity through collective expansion and rendered GOAL tags
-  so backend WQE rows correlate without inference. Run and defend all
-  pre-registered experiments above.
 - CORE-5 (Completeness; P1; L): implement completion feedback and tail
   attribution. Stream queue,
   start, progress and completion events, reduce the required completion
@@ -406,6 +399,36 @@ does not claim to produce these resource-contention measurements.
   keep per-SQ ordering and protocol forward-progress rules outside the policy.
   Every policy has an explicit identity setting whose class-label permutation
   leaves the accepted baseline byte-identical.
+- CORE-11 (Precision; P1; L): replace CORE-4's whole-operation exclusive HBM
+  reservation with calibrated kernel-versus-DMA shared-bandwidth service. The
+  current surrogate serializes an entire HBM-using kernel against an entire
+  copy descriptor, even when measured issue and transfer phases could share
+  bandwidth. Identify service from simultaneous kernel/copy traces with HBM
+  byte and throughput counters. Acceptance must freeze a compute-duration,
+  copy-size and bandwidth sweep, change graph JCT into the measured bands, and
+  retain the zero-HBM independent-lane baseline and identity path exactly.
+- CORE-12 (Precision; P1; M): admit a kernel that becomes legal while a
+  concurrent kernel batch is already active. The first coarse runtime freezes
+  the co-runnable set at dispatch and waits until batch completion before a
+  later arrival can enter. Identify admission and completion offsets from a
+  reproducible multi-stream trace. Acceptance must vary arrival offset and
+  residency pressure, match the observed overlap bands, and preserve the
+  simultaneous-arrival and single-kernel baselines exactly.
+- CORE-13 (Precision; P1; L): replace the flat per-source intra-node
+  NVLink-class serializer with calibrated compute-owned NCCL/NVLink service.
+  The current surrogate uses payload bytes and one configured rate; it does
+  not replay the network kernel, HBM reads or link/topology selection. Use
+  captured NCCL kernel traces plus NVLink byte/rate observations. Acceptance
+  must vary payload, participant count and competing kernel demand, change
+  end-to-end graph JCT into the measured bands, and retain the explicit
+  cross-node RNIC path exactly.
+- CORE-14 (Completeness; P2; L): generalize `CoarseDeviceProfile` beyond the
+  fixed eight GPUs, eight affine RNICs and arithmetic rank mapping. Consume the
+  repository placement and fabric manifests through the existing schemas,
+  reject incomplete mappings before runtime state mutates, and keep the fixed
+  profile as an explicit off path. Enabling manifest discovery with the
+  equivalent eight-by-eight mapping must preserve every accepted CORE-4 event,
+  WQE, byte count and timestamp exactly.
 - BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
   process for closed loop, replacing per-step subprocess spawns. Its
   incremental flow-injection transport should carry `ExecutionGraph` and
