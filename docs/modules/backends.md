@@ -231,8 +231,9 @@ NIC start is first-packet issue. A reduced per-WQE start latency is derived
 from the native timeline for calibration and never charged again by htsim.
 The pre-implementation composition expectations were first frozen in
 [examples/rnic_live_v1](../../examples/rnic_live_v1/expectations.md) at commit
-`65b5609`; commit `facb26d` clarified retry identity, and commit `947399c`
-records the final pre-run drain and audit wording.
+`65b5609`; commit `facb26d` clarified retry identity, commit `947399c`
+recorded the drain and audit wording, and commit `d5d98a2` is the final pre-run
+amendment to that gate.
 The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 [the RNIC hardware calibration plan](../papers/rnic-hardware-calibration.md).
 
@@ -420,6 +421,15 @@ is difficult.
   Acceptance includes per-class attribution, calibrated queue and tag knees,
   and defended p50 through p99.9 latency. Until those mechanisms land,
   analytical incidence must not be described as detected hardware behavior.
+- BACK-24 (Precision; P0; S): make external network-event validation
+  transactional at the `RnicDevice` boundary. The current device observes the
+  event timestamp before `WorkQueue` rejects an unknown, duplicate or
+  cross-WQE terminal, so a rejected future terminal can ratchet the
+  device-wide caller clock. Validate the event and plan its retirement before
+  committing caller time. Acceptance injects all three invalid terminal forms
+  at a future timestamp and proves exception identity plus exact equality of
+  caller-clock behavior, WQE records, counters, evidence, port ledger and
+  physical state before and after each rejection.
 
 ### Completeness
 
@@ -578,6 +588,27 @@ is difficult.
   own this producer). The QPC stays host ICM in every mode. COMP-2's fixed
   CPU-proxy versus GPU-initiated constants remain the analytical fallback
   while this structural path is disabled.
+- BACK-25 (Completeness; P1; L): add a versioned packet-attempt lifecycle to
+  `NetworkPort` without exposing RNIC-owned objects. Carry logical extent,
+  packet index, transmission-attempt index, payload offset, payload and wire
+  bytes, and control/data kind. Add explicit TX-start, TX-finish and native-RX
+  arrival observations while retaining Delivered and Dropped as the only
+  terminal attempt events. Tokens are unique for the whole session, one token
+  has exactly one terminal, and intermediate observations never consume it.
+  Include stable drop-resource and evidence provenance. Preserve the v1
+  flow-extent path as an explicit compatibility mode and prove its accepted
+  rows byte identical.
+- BACK-26 (Completeness; P1; L): add versioned transport-control vocabulary to
+  `NetworkPort`. Carry packet-keyed ECN and CNP feedback,
+  policy-context-keyed eligibility and rate updates with effective timestamps,
+  PFC control-frame submission and pause or resume reception with endpoint or
+  link identity, priority and quanta or duration, plus capability-negotiated
+  link-state transitions with stable link identity, up or down state,
+  transition time and optional effective rate. Busy remains resource
+  backpressure, and `DropReason::LinkDown` remains a per-attempt consequence.
+  The disabled control and dynamic-link paths preserve v1 timestamps, bytes,
+  token order and random draws exactly; unsupported dynamic transitions reject
+  explicitly until htsim supplies a timestamped producer.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 

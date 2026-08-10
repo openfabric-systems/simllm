@@ -1,0 +1,225 @@
+{
+  "schema": "simllm-rnic-tier-a-expectations-v1",
+  "observation_schema": "simllm-rnic-tier-a-observations-v1",
+  "factories": [
+    "fake",
+    "htsim"
+  ],
+  "single_wqe": {
+    "payload_bytes": [
+      4096,
+      1048576
+    ],
+    "link_rate_gbps": [
+      200,
+      400
+    ],
+    "doorbell_service_ps": [
+      0,
+      1000
+    ],
+    "wqe_count": 1,
+    "port_capacity": 1
+  },
+  "network_fixture": {
+    "data_header_bytes": 0,
+    "propagation_delay_ps": 0,
+    "control_frames": false,
+    "congestion": false
+  },
+  "fifo": {
+    "payload_bytes": 4096,
+    "link_rate_gbps": [
+      200,
+      400
+    ],
+    "doorbell_service_ps": [
+      0,
+      1000
+    ],
+    "wqe_count": 2,
+    "doorbell_count": 1,
+    "port_capacity": 1
+  },
+  "d_additivity": {
+    "delta_ps": 1000,
+    "fields": [
+      "eligible_at_ps",
+      "port_tx_at_ps",
+      "terminal_at_ps",
+      "cqe_visible_at_ps",
+      "polled_at_ps"
+    ]
+  },
+  "controlled_drop": {
+    "payload_bytes": 4096,
+    "link_rate_gbps": 400,
+    "doorbell_service_ps": 0,
+    "signaled": false,
+    "drop_location": "fabric",
+    "drop_reason": "injected"
+  },
+  "wrapper_bypass_control": {
+    "payload_bytes": 4096,
+    "link_rate_gbps": 400,
+    "doorbell_service_ps": [
+      0,
+      1000
+    ]
+  },
+  "terminal_controls": {
+    "payload_bytes": 4096,
+    "link_rate_gbps": 400,
+    "doorbell_service_ps": 0,
+    "wqe_count": 2,
+    "port_capacity": 2,
+    "kinds": [
+      "duplicate",
+      "unknown",
+      "cross_wqe"
+    ],
+    "invalid_event_time_ps": 200000,
+    "clock_probe_time_ps": 150000,
+    "exception_type": "std::invalid_argument",
+    "exception_messages": {
+      "duplicate": "terminal token already consumed",
+      "unknown": "terminal token was never issued",
+      "cross_wqe": "terminal token does not belong to WQE"
+    },
+    "clock_probe_exception_type": "",
+    "clock_probe_changes": 0,
+    "control_keys": [
+      "kind",
+      "invalid_event_time_ps",
+      "exception_type",
+      "exception_message",
+      "clock_probe_time_ps",
+      "clock_probe_exception_type",
+      "clock_probe_changes",
+      "before",
+      "after"
+    ],
+    "snapshot_required_keys": [
+      "caller_time_ps",
+      "device_records",
+      "device_counters",
+      "device_evidence",
+      "port_issued",
+      "port_terminals",
+      "port_live_tokens",
+      "occupied_sq_entries",
+      "completion_queue_depth",
+      "unpublished_wqes",
+      "has_pending_physical_work"
+    ],
+    "snapshot_record_keys": [
+      "wqe_id",
+      "state",
+      "network_token",
+      "network_accepted_at_ps",
+      "network_outcome_at_ps",
+      "completion_status"
+    ]
+  },
+  "authority_control": {
+    "exception_type": "std::invalid_argument",
+    "exception_message": "structural and bypass authorities are mutually exclusive",
+    "attempt_keys": [
+      "exception_type",
+      "exception_message",
+      "before",
+      "after"
+    ],
+    "snapshot_keys": [
+      "native_session_constructed",
+      "native_posts",
+      "legacy_ledger_constructed",
+      "legacy_posts",
+      "legacy_mutations"
+    ]
+  },
+  "behavioral_families": {
+    "d_additivity": 4,
+    "inverse_rate_serialization": 4,
+    "two_wqe_fifo": 4
+  },
+  "raw_observation_keys": [
+    "schema",
+    "factory",
+    "single_wqe",
+    "fifo",
+    "wrapper_bypass_control",
+    "authority_cases",
+    "terminal_controls",
+    "controlled_drop"
+  ],
+  "raw_cell_keys": [
+    "payload_bytes",
+    "link_rate_gbps",
+    "doorbell_service_ps",
+    "authority",
+    "device",
+    "port",
+    "wqes",
+    "cqe_order",
+    "jct_ps"
+  ],
+  "raw_drop_cell_keys": [
+    "payload_bytes",
+    "link_rate_gbps",
+    "doorbell_service_ps",
+    "authority",
+    "device",
+    "port",
+    "wqes",
+    "cqe_order",
+    "jct_ps",
+    "signaled",
+    "all_cqe_statuses",
+    "evidence"
+  ],
+  "raw_wqe_keys": [
+    "ordinal",
+    "wqe_id",
+    "eligible_at_ps",
+    "network_accepted_at_ps",
+    "port_tx_at_ps",
+    "terminal_kind",
+    "terminal_at_ps",
+    "cqe_status",
+    "cqe_visible_at_ps",
+    "polled_at_ps"
+  ],
+  "raw_device_keys": [
+    "counters",
+    "has_pending_physical_work",
+    "occupied_sq_entries",
+    "completion_queue_depth",
+    "unpublished_wqes",
+    "fatal"
+  ],
+  "raw_counter_keys": [
+    "posted_wqes",
+    "network_accepted",
+    "network_delivered",
+    "network_dropped"
+  ],
+  "raw_port_keys": [
+    "issued",
+    "terminals",
+    "live_tokens"
+  ],
+  "raw_issued_keys": [
+    "token",
+    "wqe_id",
+    "accepted_at_ps",
+    "port_tx_at_ps",
+    "payload_bytes"
+  ],
+  "raw_terminal_keys": [
+    "token",
+    "wqe_id",
+    "kind",
+    "at_ps"
+  ]
+}
