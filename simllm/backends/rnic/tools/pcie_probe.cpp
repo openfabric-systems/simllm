@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "simllm/rnic/pcie_fabric.h"
+#include "simllm/rnic/rnic_device.h"
 
 namespace {
 
@@ -23,6 +23,8 @@ using simllm::rnic::PcieOrdering;
 using simllm::rnic::PcieServiceClass;
 using simllm::rnic::PcieTransactionRequest;
 using simllm::rnic::Picoseconds;
+using simllm::rnic::RnicDevice;
+using simllm::rnic::RnicDeviceConfig;
 using simllm::rnic::defaultPcieFabricConfig;
 using simllm::rnic::toString;
 
@@ -319,7 +321,11 @@ int run(const Options& options) {
     penalties.switch_path = fixedPenalty(options.switch_ps);
     penalties.ddio_miss = fixedPenalty(options.ddio_ps);
     penalties.gpu_direct = fixedPenalty(options.gpu_direct_ps);
-    PcieFabric fabric(config);
+    RnicDeviceConfig device_config;
+    device_config.qpc.enabled = false;
+    device_config.dma.enabled = true;
+    device_config.dma.fabric = config;
+    RnicDevice device(device_config);
 
     const PcieServiceClass service_class =
         options.operation == PcieOperation::NonPostedRead
@@ -349,7 +355,7 @@ int run(const Options& options) {
         request.transfer_bytes = options.bytes;
         request.first_byte_offset = static_cast<std::uint32_t>(options.offset);
         request.submitted_at_ps = 0;
-        const auto result = fabric.submit(request);
+        const auto result = device.submitPcie(request);
         if (index == 0) {
             first_issue_at_ps = result.first_issue_at_ps;
         }
@@ -359,7 +365,8 @@ int run(const Options& options) {
         minimum_completion_ps = std::min(
             minimum_completion_ps, result.completed_at_ps);
     }
-    fabric.validateInvariants();
+    device.validateInvariants();
+    const PcieFabric& fabric = *device.pcieFabric();
     const auto accounting = fabric.accounting(service_class);
     const auto& selected_path = config.paths[1];
 

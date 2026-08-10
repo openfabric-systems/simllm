@@ -15,6 +15,7 @@ inline constexpr std::uint32_t kWorkQueueConfigVersion = 1;
 inline constexpr std::uint32_t kWorkQueuePcieBindingVersion = 1;
 
 class PcieFabric;
+class RnicDevice;
 
 enum class WqeOpcode {
     Send,
@@ -267,8 +268,16 @@ public:
     void validateInvariants() const;
 
 private:
+    WorkQueue(
+        WorkQueueConfig config,
+        NetworkPort& network_port,
+        PcieFabric* pcie_fabric,
+        std::optional<WorkQueuePcieBinding> pcie_binding,
+        bool qpc_lookup_enabled);
+
     class Impl;
     std::unique_ptr<Impl> impl_;
+    friend class RnicDevice;
 };
 
 }  // namespace simllm::rnic

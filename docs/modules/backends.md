@@ -31,10 +31,17 @@ backend submodules.
 - `HtsimStepSink` + `HtsimStepSinkConfig` (M4): the closed-loop step sink,
   a callable `StepRecord -> StepResult | None` matching the adapters' sink
   contract. Per step it renders the TP serial chain
-  (`simllm.traffic.render_step_goal`: per layer one
-  `calc(per_layer_compute_ns)` then the two ring allreduces, plus the MoE
+  (`simllm.traffic.render_step_goal`: per layer one `calc` then the two ring
+  allreduces, plus the MoE
   dispatch/combine all-to-alls when the config declares `ep_ranks` and
-  the dims declare experts, landed with the M5 slice), converts
+  the dims declare experts, landed with the M5 slice). A provider may return
+  an optional exact duration per layer; the sink validates count,
+  nonnegativity and the fused sum, then truncates cumulative boundaries to
+  GOAL ns. Providers without the hook retain the original even scalar split
+  byte for byte. An optional `StepRecord.num_sampled` prices the LM head from
+  exact attribution; absence retains `len(scheduled)`. The config's optional
+  `num_goal_ranks` pads topology-sized GOALs without moving the active group
+  to the highest rank. The sink converts
   with `txt2bin`, runs `htsim_rnic` on the configured profile/topology,
   parses the completion CSV and returns the simulated makespan as the
   step latency with `completed_at_ps = record.virtual_time_ps + makespan`.
@@ -42,8 +49,9 @@ backend submodules.
   record) returns `None`, so the adapter's own compute-only estimate
   stands. Per-step subprocess invocation is the documented diagnostic
   mode; the persistent co-simulator is BRIDGE-1 (core.md).
-  `StepNetworkOutcome` keeps per-step bookkeeping (compute estimate,
-  per-layer calc, makespan, network share) for reporting.
+  `StepNetworkOutcome` keeps per-step bookkeeping (compute estimate, sample
+  count and exactness, ordered layer calcs, makespan and network share) for
+  reporting.
 - `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
   from a `StepRecord` to per-layer compute plus semantic TP/EP collective
   operations. Explicit framework observations bypass the fallback schedule and
@@ -134,19 +142,36 @@ State ownership is explicit:
 
 ### Modular construction
 
-The native device is assembled from modules behind one composition entry
-point (BACK-18): the work-queue core, a DMA module (the shared PCIe fabric
-and its binding), a QPC module (QP lifecycle, pairing and context residency;
-BACK-11 backed by the BACK-19 host-memory model) and the network module (the
-htsim transport/CC policy and fabric behind the versioned `NetworkPort`;
-HTSIM-9). Every probe, study and composed binary constructs through the same
-entry point. A disabled module keeps the interface identical: its parameters
-are inert or rejected, never silently rescoped; its timeline stages report
-`not_applicable`; and its off state preserves the accepted baseline
-artifacts byte for byte. When the DMA module is present, the configuration
-also selects who produces each queue's submissions (host CPU driver, CPU
-proxy fed from GPU descriptor queues, or GPU-initiated rings) and which
-agent consumes each CQ (BACK-20).
+The native device is assembled through the versioned `RnicDeviceConfig` and
+`RnicDevice` composition entry point. It joins the work-queue core with the
+scalar QPC compatibility module, optional DMA (`PcieFabric` plus
+`WorkQueuePcieBinding`) and either an injected versioned `NetworkPort` or an
+owned inert port. The QP number and policy-context token remain device-level
+identity, including when QPC is disabled. Both native probes and every
+composed-session test construct through this entry point; direct module
+construction remains only in component tests and exact oracle pairs.
+
+A disabled module keeps the interface identical: its parameters are inert or
+rejected, never silently rescoped; its module stages report `not_applicable`;
+and its off state preserves the accepted baseline artifacts byte for byte.
+DMA-on rejects scalar doorbell, WQE-fetch and CQE-write service before fabric
+state can mutate. The resulting queue timestamps are mirrors of committed
+fabric results, not a second scheduler. One caller-driven clock and the
+documented event, progress and CQ-poll order apply to the whole device.
+
+An owned fabric is heap-stable and an external fabric is retained by explicit
+shared ownership. The embedded fabric config must equal the attached fabric's
+effective config field by field. Shared devices derive missing ordering
+domains from a nonzero device namespace and claim the resolved pair on the
+fabric, so equal SQ/CQ defaults cannot collide silently. Device submissions
+reject domains claimed by another live device, while accepting either own
+claimed domain or an unclaimed domain. Failed construction and failed
+submission leave claims, caller time, transactional generation and accounting
+unchanged.
+The absent-network path owns an inert port that accepts with a fresh token and
+delivers on the device progress pump; HTSIM-9 supplies the future concrete
+external port. BACK-20 adds selection of the queue submission source and CQ
+consumer when DMA is present.
 
 ### WQE authority and projection contract
 
@@ -230,6 +255,21 @@ plus a live closed loop: vLLM v0.26.0 in-process at tp=8 under
 loop, every step latency matching the closed form to 0 ps
 (examples/m4/RESULTS.md).
 
+On 2026-08-10 BACK-5, BACK-6 and BACK-7 closed. The sink now consumes an
+optional exact provider layer breakdown, an optional exact step sample count
+and an explicit GOAL-rank count while preserving the default M4 and CORE-2
+GOAL bytes. The precision study matched all four unequal-layer closed forms,
+both sample-attribution relations and the default digest exactly. The shipped
+providers still use the byte-identical even split; COMP-16 owns real
+per-layer values, with the roofline provider first and profile tables after
+COMP-6 supplies per-layer kernel shapes. The study's
+registered fluid-plus-topology command was invalid because htsim accepts
+physical topology files only for physical profiles. The expectation was not
+rewritten: post-specified checks instead showed 0 ps residual and exact
+normalized flow ledgers for both a 64-rank fluid comparison and the actual
+64-node `rnic-cn` topology comparison at TP widths 2 and 4. See
+[examples/step_sink_precision/RESULTS.md](../../examples/step_sink_precision/RESULTS.md).
+
 On 2026-08-05 HTSIM commit `d778326` added one timing-neutral WQE lifecycle
 layer shared by the injected runtimes. It creates deterministic per-node
 SQ/RQ/CQ identities, posts and FIFO-dispatches the SQ at the existing send
@@ -290,6 +330,22 @@ and selecting identity must reproduce the accepted BACK-10 rows byte for byte.
 BACK-16 owns active-path timing precision and calibration; BACK-17 owns
 optional PCIe feature completeness.
 
+On 2026-08-10 BACK-18 closed with the versioned `RnicDevice` composition
+surface. The device owns or explicitly shares a stable-address fabric, owns an
+inert network stub or accepts an external port pointer, preserves device
+identity with QPC off, reports module-stage applicability and enforces scalar
+versus fabric service exclusivity before state can mutate. A shared fabric's
+config remains truthful at the device surface, and its ordering-domain claims
+are enforced at construction and submission. Failed submissions do not
+advance caller time. The commit-granular, post-specified
+`B x doorbell-service` regression study passes all 6 direct-versus-composed
+cells with exact field, timestamp and counter equality; separate PCIe and
+inert-network directed scenarios also pass exactly. The predecessor artifact
+gates remain byte identical through the composed probes: 11 of 11
+`rnic_wq_v1` rows and 35 of 35 `rnic_pcie_v1` exact-oracle rows. Native CTest
+passes all 4 entries. Evidence classes and reproduction commands are in
+[examples/rnic_device_v1/RESULTS.md](../../examples/rnic_device_v1/RESULTS.md).
+
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
 and its ECMP-collision and slow-start behavior is the phenomenon under study.
@@ -312,18 +368,6 @@ is difficult.
 
 ### Precision
 
-- BACK-5 (Precision; P1; M): `HtsimStepSink` splits the whole-step compute
-  estimate evenly
-  across layers (`estimate_step_latency_ps(...) // (L * 1000)`, which
-  also truncates to whole GOAL ns units). Real per-layer durations differ
-  (LM head and sampling live in the last layer's share); a per-layer
-  provider breakdown would replace the even split.
-- BACK-6 (Precision; P1; M): `HtsimStepSink` approximates `num_sampled` as
-  the number of
-  scheduled requests; a mid-prompt chunked-prefill request does not
-  actually sample. The inflated LM-head term is small against the step
-  total; exact sampling attribution needs prompt-completion knowledge in
-  the record.
 - BACK-13 (Precision; P1; L): build a versioned CX-7 observable-state model
   and capture schema. Inventory only public Linux mlx5, rdma-core, NVIDIA
   MFT/DOCA and device-reported fields. Tag each as `documented`,
@@ -381,13 +425,6 @@ is difficult.
 
 - BACK-2 (Completeness; P2; S): LogGOPSim invocation helper for fast
   flow-level sweeps.
-- BACK-7 (Completeness; P2; S): `HtsimStepSinkConfig` has no explicit
-  GOAL-rank padding knob.
-  `rnic-cn` enforces that the resolved GOAL layout matches the topology's
-  node count, so a topology run today must place its TP group on the
-  highest-numbered node's GPUs to pad the GOAL implicitly (see
-  examples/breakdown/RESULTS.md method notes); the sink should pass
-  `num_goal_ranks` through to `render_step_goal` when a topology is set.
 - BACK-8 (Completeness; P1; L): create the protocol-neutral SimLLM RNIC
   hardware extension under
   `simllm/backends/rnic/`. Its C++ event core must be independent of Python
@@ -410,10 +447,10 @@ is difficult.
   The standalone C++17 library, opaque flow-level `NetworkPort`, strict native
   build and deterministic fake adapter are complete. Remaining SimLLM scope is
   run records, configuration hash, sole-authority projection and bypass
-  equivalence; the modular composition entry point and port binding are
-  BACK-18.
-  HTSIM-9 owns the outer `AtlahsFlowRuntime` wrapper and htsim-side adapter;
-  CORE-4 and CORE-5 own graph invocation and completion reduction.
+  equivalence. The modular composition entry point and external port injection
+  seam are complete. HTSIM-9 owns the outer `AtlahsFlowRuntime` wrapper and
+  concrete htsim-side adapter; CORE-4 and CORE-5 own graph invocation and
+  completion reduction.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
   the structural **RDMA
   Work Queue**, merging the old WQE lifecycle and per-WQE-start work. Model
@@ -500,28 +537,6 @@ is difficult.
   BACK-11 and BACK-12 own when semantic lookup, DMA, CQE and fault events
   occur; BACK-17 only lowers still-unconnected events into their shared-fabric
   PCIe service classes.
-- BACK-18 (Completeness; P1; M): give the native RNIC one modular composition
-  entry point. A single versioned device configuration assembles the session
-  from the work-queue core plus optional QPC (BACK-11, BACK-19), DMA
-  (`PcieFabric` and its work-queue binding) and network (HTSIM-9 port)
-  modules, and every probe, study and composed binary constructs through it.
-  Disabling a module keeps the same interface: its parameters are inert or
-  rejected, never silently rescoped; its timeline stages report
-  `not_applicable`; and each module's off state preserves the accepted
-  baselines byte for byte (DMA off reproduces the accepted rnic_wq_v1 scalar
-  rows, the standalone fabric reproduces the accepted rnic_pcie_v1 rows).
-  The composer owns the cross-module rules the current constructors enforce
-  pairwise: scalar service and fabric-charged stages stay mutually exclusive
-  so no stage is double-charged; one caller-driven clock and the documented
-  same-timestamp call order apply device-wide; with DMA enabled the
-  work-queue doorbell, fetch and CQE cursors are read-only mirrors of fabric
-  results, never a second scheduler; device identity (QP number, policy
-  context token) stays at device level so a disabled QPC module never erases
-  identity; ordering domains are namespaced when several devices share one
-  fabric; and the fabric's stable-address lifetime and two-phase plan/commit
-  atomicity are preserved. BACK-8 keeps run records, configuration hash,
-  sole-authority projection and bypass equivalence; this task owns only the
-  construction surface and port binding.
 - BACK-19 (Completeness; P1; L): add the virtual host-memory model that the
   QPC and DMA modules register into. Track every device-visible host object
   explicitly: QPC/ICM regions, SQ/RQ/CQ rings, doorbell records and data

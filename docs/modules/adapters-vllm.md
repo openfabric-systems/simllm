@@ -264,7 +264,7 @@ Exactly one strengthened smoke ran in the review round. It reached
 `SimWorker`, asserted that the runner was `SimModelRunner`, generated token id
 `24577` twice to match the worker's fabricated id, and asserted exactly two
 `atlahs-closed-loop-step-v1` JSONL records. The host still exposed the GTX
-1660 Ti despite masking, so VLLM-15 keeps the genuinely GPU-invisible version
+1660 Ti despite masking, so VLLM-16 keeps the genuinely GPU-invisible version
 of this asserted smoke open.
 
 ## Open tasks
@@ -361,7 +361,7 @@ of this asserted smoke open.
   cost into the model. SGL-11 is the SGLang half; the trimmed-interface
   principle is shared, and the simulated communication stack section in
   [docs/README_PRO.md](../README_PRO.md) shows where both sit.
-- VLLM-15 (Completeness; P1; M): run the flagged in-process skeleton smoke on
+- VLLM-16 (Completeness; P1; M): run the flagged in-process skeleton smoke on
   a genuinely GPU-invisible host where CUDA platform selection is unavailable
   and no physical GPU is discoverable before or during worker construction.
   Confirm that vLLM reaches the dotted `SimWorker` seam, constructs
@@ -370,3 +370,9 @@ of this asserted smoke open.
   expected `atlahs-closed-loop-step-v1` records. The 2026-08-10 host does not
   close this task because vLLM identified a GTX 1660 Ti despite
   `CUDA_VISIBLE_DEVICES=`.
+- VLLM-15 (Precision; P1; S): populate `StepRecord.num_sampled` from the
+  translator's existing exact `produces_token` flags. Cover mid-prompt and
+  prompt-completing chunked prefill, prefix-cache completion, decode and the
+  attach-mid-flight fallback. The emitted count must equal the fabricated
+  `ModelRunnerOutput` rows that actually sample; an absent field remains the
+  explicit compatibility path.

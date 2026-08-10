@@ -1,0 +1,7 @@
+doorbell_batch,doorbell_service_ps,direct_jct_ps,composed_jct_ps,direct_doorbells,composed_doorbells,direct_cqes,composed_cqes,exact_surface_equal,closed_form_match,structural_invariants
+1,0,320,320,32,32,32,32,1,1,1
+4,0,320,320,8,8,32,32,1,1,1
+16,0,320,320,2,2,32,32,1,1,1
+1,1000,32010,32010,32,32,32,32,1,1,1
+4,1000,8040,8040,8,8,32,32,1,1,1
+16,1000,2160,2160,2,2,32,32,1,1,1

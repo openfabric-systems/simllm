@@ -250,5 +250,5 @@ reachability only. It does not validate the later GPU-present stock-init and
 runner-rebind mode, simulated GPU or NCCL service, DP coordination above one,
 device-free async multiprocessing, Ray or external-launch execution, CQ
 consumer ownership, completion delivery, or device-schedule capture. Those
-remain in VLLM-13 and its linked backend and core tasks. VLLM-15 separately
+remain in VLLM-13 and its linked backend and core tasks. VLLM-16 separately
 tracks the equivalent asserted smoke on a genuinely GPU-invisible host.

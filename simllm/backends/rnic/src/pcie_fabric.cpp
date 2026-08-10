@@ -1935,6 +1935,59 @@ private:
     friend class PcieFabric;
 };
 
+class PcieFabric::OrderingDomainClaims {
+public:
+    void claim(
+        const RnicDevice* owner,
+        std::uint64_t submission_domain,
+        std::uint64_t completion_domain) {
+        if (owner == nullptr
+            || submission_domain == 0
+            || completion_domain == 0
+            || submission_domain == completion_domain) {
+            throw std::invalid_argument(
+                "shared RNIC PCIe ordering domains must be distinct and "
+                "nonzero");
+        }
+        if (domains_.count(submission_domain) != 0
+            || domains_.count(completion_domain) != 0) {
+            throw std::invalid_argument(
+                "shared RNIC PCIe ordering domain is already claimed");
+        }
+        std::map<std::uint64_t, const RnicDevice*> candidate = domains_;
+        candidate.emplace(submission_domain, owner);
+        candidate.emplace(completion_domain, owner);
+        domains_.swap(candidate);
+    }
+
+    void release(
+        const RnicDevice* owner,
+        std::uint64_t submission_domain,
+        std::uint64_t completion_domain) noexcept {
+        releaseOne(owner, submission_domain);
+        releaseOne(owner, completion_domain);
+    }
+
+    bool claimedByOther(
+        const RnicDevice* owner,
+        std::uint64_t ordering_domain) const noexcept {
+        const auto found = domains_.find(ordering_domain);
+        return found != domains_.end() && found->second != owner;
+    }
+
+private:
+    void releaseOne(
+        const RnicDevice* owner,
+        std::uint64_t ordering_domain) noexcept {
+        const auto found = domains_.find(ordering_domain);
+        if (found != domains_.end() && found->second == owner) {
+            domains_.erase(found);
+        }
+    }
+
+    std::map<std::uint64_t, const RnicDevice*> domains_;
+};
+
 PcieFabric::Plan::Plan(std::unique_ptr<Plan::Impl> impl)
     : impl_(std::move(impl)) {}
 
@@ -1943,7 +1996,8 @@ PcieFabric::Plan::Plan(Plan&&) noexcept = default;
 PcieFabric::Plan& PcieFabric::Plan::operator=(Plan&&) noexcept = default;
 
 PcieFabric::PcieFabric(PcieFabricConfig config)
-    : impl_(std::make_unique<Impl>(std::move(config))) {}
+    : impl_(std::make_unique<Impl>(std::move(config))),
+      ordering_domain_claims_(std::make_unique<OrderingDomainClaims>()) {}
 
 PcieFabric::~PcieFabric() = default;
 
@@ -2010,6 +2064,28 @@ PcieClassAccounting PcieFabric::totalAccounting() const {
 
 void PcieFabric::validateInvariants() const {
     impl_->validateInvariants();
+}
+
+void PcieFabric::claimOrderingDomains(
+    const RnicDevice* owner,
+    std::uint64_t submission_domain,
+    std::uint64_t completion_domain) {
+    ordering_domain_claims_->claim(
+        owner, submission_domain, completion_domain);
+}
+
+void PcieFabric::releaseOrderingDomains(
+    const RnicDevice* owner,
+    std::uint64_t submission_domain,
+    std::uint64_t completion_domain) noexcept {
+    ordering_domain_claims_->release(
+        owner, submission_domain, completion_domain);
+}
+
+bool PcieFabric::orderingDomainClaimedByOther(
+    const RnicDevice* owner,
+    std::uint64_t ordering_domain) const noexcept {
+    return ordering_domain_claims_->claimedByOther(owner, ordering_domain);
 }
 
 const char* toString(PcieServiceClass service_class) noexcept {

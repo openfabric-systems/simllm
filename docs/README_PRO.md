@@ -213,14 +213,17 @@ the empty calls still drive a real simulation.
 
 The default setup is NCCL with a CPU-host proxy, not GPU-initiated
 networking. Placement is explicit: the proxy is fed by GPU-written
-descriptors and head counters in host-visible pinned memory (the BACK-20
+descriptors and tail counters in host-visible pinned memory (the BACK-20
 CPU-proxy shape), while the per-channel data FIFO (the net staging buffer)
 is hosted in GPU memory, registered so the NIC's payload DMA reads it
-directly over PCIe (GPUDirect-style); the tail counters and ready flags
-are host-visible as well. In the graph, "signal" is a proactive store
-by the producer and "poll" is a consumer that spins until the value
-changes. The lanes show how one upper-layer call from the worker side
-closes its full loop.
+directly over PCIe (GPUDirect-style); the head counters and ready flags
+are host-visible as well. The counter roles follow real NCCL's
+`prims_simple` convention: the GPU producer advances the send TAIL when
+it publishes work, and the proxy advances the send HEAD after network
+completion, which the kernel polls to reuse slots. In the graph, "signal"
+is a proactive store by the producer and "poll" is a consumer that spins
+until the value changes. The lanes show how one upper-layer call from the
+worker side closes its full loop.
 
 ```text
 CPU host lane                      GPU device lane                RNIC and fabric lane
@@ -239,9 +242,9 @@ EngineCore.step()
                                     path only, no proxy
                                     inter-node share: copy chunk
                                     into the GPU-memory data
-                                    FIFO, then signal: store the
-                                    head counter to host memory
- proxy loop: poll head <..........  (head counter is host-visible)
+                                    FIFO, then signal: advance
+                                    the tail counter (postPeer)
+ proxy loop: poll tail <..........  (tail counter is host-visible)
   ncclNet.isend()
   ibverbs post send,
   ring doorbell ..................................................>  WQE fetch (DMA read),
@@ -250,11 +253,11 @@ EngineCore.step()
                                                                      packets to the fabric
  proxy loop: poll CQ <.............................................  CQE written at
   ncclNet.test() done                                                completion
-  signal: store the tail
-  counter to host-mapped
-  memory .......................>  collective kernel: poll tail,
-                                   release the FIFO slot,
-                                   complete the kernel
+  signal: advance the head
+  counter in host-mapped
+  memory .......................>  collective kernel: poll head
+                                   (waitPeer), release the FIFO
+                                   slot, complete the kernel
  stream event sync
  (worker polls or waits) <........  kernel completion event
  StepResult on the simllm
@@ -297,14 +300,15 @@ slices land.
 | vLLM `GroupCoordinator.all_reduce` and peers | CPU | planned | [VLLM-14](modules/adapters-vllm.md#open-tasks) | none yet |
 | SGLang `TpModelWorker.forward_batch_generation` | CPU | implemented, `SimTpModelWorker` | [adapters-sglang](modules/adapters-sglang.md) | live CPU-engine smoke (module doc) |
 | SGLang vendored `GroupCoordinator` and device communicators | CPU | planned | [SGL-11](modules/adapters-sglang.md#open-tasks) | none yet |
-| `ncclCommInitRank` and channel setup | CPU | planned | [COMP-15](modules/compute.md#open-tasks) | none yet |
-| `ncclAllReduce` and the traffic planner | CPU | ring builder first cut; planner planned | [COMP-15](modules/compute.md#open-tasks) | [gpu_task_mix](../examples/gpu_task_mix/RESULTS.md) |
-| NCCL collective kernel (FIFO copy, counters) | GPU | egress half first cut; FIFO and signals planned | [COMP-15](modules/compute.md#open-tasks) | [gpu_task_mix](../examples/gpu_task_mix/RESULTS.md) |
+| `ncclCommInitRank` and channel setup | CPU | skeleton landed (`ncclBuildRings`, `initChannel`) | [COMP-15](modules/compute.md#open-tasks) | [nccl_stack_v1](../examples/nccl_stack_v1/RESULTS.md) |
+| [rnic_device_v1](../examples/rnic_device_v1/RESULTS.md) | The modular RNIC composition entry point: direct-versus-composed equality and cross-module contract enforcement | 6/6 direct-versus-composed sweep cells exact plus directed PCIe-bound and inert-network equality; rnic_wq_v1 and rnic_pcie_v1 tracked rows byte-identical through the entry point; shared-fabric config equality, foreign-domain rejection and all three scalar double-charge rejections enforced; the initial study is labeled post-specified and commit-granular with the correction round separately frozen |
+| `ncclAllReduce` and the traffic planner | CPU | ring builder first cut; planner skeleton landed (`ncclEnqueueCheck`, `scheduleCollTasksToPlan`, `calcCollChunking`) | [COMP-15](modules/compute.md#open-tasks) | [nccl_stack_v1](../examples/nccl_stack_v1/RESULTS.md), [gpu_task_mix](../examples/gpu_task_mix/RESULTS.md) |
+| NCCL collective kernel (FIFO copy, counters) | GPU | egress half first cut; FIFO, tail publication and head-credit polling skeleton landed (`runRing`, `postPeer`, `waitPeer`) | [COMP-15](modules/compute.md#open-tasks) | [nccl_stack_v1](../examples/nccl_stack_v1/RESULTS.md), [gpu_task_mix](../examples/gpu_task_mix/RESULTS.md) |
 | Compute kernel service (SM, HBM, NVLink) | GPU | implemented bootstrap | [compute](modules/compute.md) | [gpu_service_model](../examples/gpu_service_model/RESULTS.md) |
-| Proxy progression loop | CPU | planned | [COMP-15](modules/compute.md#open-tasks), [BACK-20](modules/backends.md#open-tasks) | none yet |
-| `ncclNet` isend, irecv, test | CPU | planned | [COMP-15](modules/compute.md#open-tasks) | none yet |
+| Proxy progression loop | CPU | send-leg skeleton landed (`ncclProxySaveOp`, `ncclProxyProgress`, `sendProxyProgress`); receive leg open | [COMP-15](modules/compute.md#open-tasks), [BACK-20](modules/backends.md#open-tasks) | [nccl_stack_v1](../examples/nccl_stack_v1/RESULTS.md) |
+| `ncclNet` isend, irecv, test | CPU | isend and test skeleton landed with the verbs seam (`wrap_ibv_post_send`, `wrap_ibv_poll_cq`); irecv open | [COMP-15](modules/compute.md#open-tasks) | [nccl_stack_v1](../examples/nccl_stack_v1/RESULTS.md) |
 | ibverbs post send, poll CQ | CPU | native WQ/CQ slice, standalone | [BACK-9](modules/backends.md#open-tasks), [BACK-20](modules/backends.md#open-tasks) | [rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md) |
-| NIC WQE fetch, payload DMA, CQE write | NIC | PCIe transaction slice standalone; composition open | [BACK-8/18](modules/backends.md#open-tasks), [HTSIM-9](modules/backends.md#open-tasks) | [rnic_pcie_v1](../examples/rnic_pcie_v1/RESULTS.md) |
+| NIC WQE fetch, payload DMA, CQE write | NIC | PCIe transaction slice standalone; the modular device entry point is landed, htsim binding open | [BACK-8](modules/backends.md#open-tasks), [HTSIM-9](modules/backends.md#open-tasks) | [rnic_device_v1](../examples/rnic_device_v1/RESULTS.md), [rnic_pcie_v1](../examples/rnic_pcie_v1/RESULTS.md) |
 
 ## Module status
 
@@ -312,16 +316,16 @@ One line per module; the linked doc is the source of truth.
 
 | Module | Status | Open tasks |
 |---|---|---|
-| [core](modules/core.md) | Implemented: virtual clock, step records, execution-graph/completion/result/bookkeeping contracts with strict JSON, serial lowerer, graph-only replay | CORE-3/4/5/6/7/8/9/10, BRIDGE-1 |
+| [core](modules/core.md) | Implemented: virtual clock, step records, execution-graph/completion/result/bookkeeping contracts with strict JSON, serial lowerer, graph-only replay, incremental append validation with the full validator kept as the snapshot and wire reference | CORE-3/4/5/6/8/9/10, BRIDGE-1 |
 | [workload](modules/workload.md) | Partial: Poisson/trace arrivals, fixed/lognormal/trace lengths | WORK-1 (shared prefixes), WORK-2 (bursty/MMPP) |
-| [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven GPU service primitive with concurrent compute/memory/NCCL scheduling and A100/H100 bootstrap profiles | COMP-1/2/4/5/6/7/8/9/10/11/12/13/14/15 |
+| [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven GPU service primitive with concurrent compute/memory/NCCL scheduling and A100/H100 bootstrap profiles, plus the audited zero-time NCCL stack skeleton with real-source-verified names | COMP-1/2/4/5/6/7/8/9/10/11/12/13/14/15/16 |
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | PLACE-1/2/3 |
 | [traffic](modules/traffic.md) | Implemented: collective patterns, TP step mapping, MoE all-to-all, GOAL renderers for steps and execution graphs | TRAF-2/3/4/5/6/7/8/9/10 |
 | [goal](modules/goal.md) | Implemented: GOAL trace + txt2bin helper | none |
-| [preplay](modules/preplay.md) | Design-only: offline CPU inference oracle, trace artifact and replay join specified, no code yet | PLAY-1/2/3/4/5 |
-| [backends](modules/backends.md) | Implemented: htsim invocation/parsing plus native C++ RNIC SQ/CQ, network-port and shared PCIe transaction slices; htsim composition and the modular device entry point remain open | BACK-2/5-9/11-20; backend-repo HTSIM-1/2/4-9, ATLAHS-1 |
-| [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop | VLLM-3 through VLLM-14 |
-| [adapters-sglang](modules/adapters-sglang.md) | Implemented: SimTpModelWorker via plugin entry point at pinned commit, live CPU-engine smoke | SGL-3 through SGL-11 |
+| [preplay](modules/preplay.md) | First slice implemented: CPU inference runner and strict trace artifact with live MoE routing capture on the pinned granite model (prefill and decode routing, input-token attribution); the replay join, adapter replay and traffic supply remain open | PLAY-2/3/4/5/6 |
+| [backends](modules/backends.md) | Implemented: htsim invocation/parsing with per-layer, exact-sampling and GOAL-padding step-sink precision, plus native C++ RNIC SQ/CQ, network-port and shared PCIe transaction slices; the modular device entry point is landed and htsim composition remains open | BACK-2/8-9/11-17/19-20; backend-repo HTSIM-1/2/4-9, ATLAHS-1 |
+| [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop | VLLM-3 through VLLM-15 |
+| [adapters-sglang](modules/adapters-sglang.md) | Implemented: SimTpModelWorker via plugin entry point at pinned commit, live CPU-engine smoke | SGL-3 through SGL-12 |
 
 ## Study index
 
@@ -345,6 +349,10 @@ Reproduce with
 | [gpu_task_mix](../examples/gpu_task_mix/RESULTS.md) | What limits a compute, a memory and an NCCL/NVLink kernel, and what two of them do to each other when scheduled together | 36/36 exact-oracle rows and 6/6 behavioral relation families over 17 instances pass; 21 structural invariants are unscored; the historical D2/D3 misses remain visible and their corrected shared-issue and residency families pass |
 | [rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md) | Native RNIC SQ/CQ structure, doorbell batching, signaling and network-credit backpressure | 11/11 post-specified cells exact; controlled SQ-full, drop and CQ-overrun boundaries pass in the native harness |
 | [rnic_pcie_v1](../examples/rnic_pcie_v1/RESULTS.md) | Shared PCIe transactions, finite credits/tags/buffers and deterministic analytical path penalties | 35/35 deterministic row oracles and 10/10 behavioral relation families over 18 instances pass; structural invariants are unscored, corrected link-queue accounting leaves JCT unchanged, and posted traffic fills the frozen blocked-read gap |
+| [step_sink_precision](../examples/step_sink_precision/RESULTS.md) | Step-sink precision: per-layer provider breakdown, exact sample attribution and the explicit GOAL-rank padding knob | 4/4 unequal-layer oracle rows exact; the registered 32,768 ps fused and 32,000 ps rendered deltas hold; the padding knob reproduces the historical workaround to 0 ps; the default path is locked byte-identical; the frozen fluid-plus-topology cell is disclosed as a pre-registration defect with post-specified replacements |
+| [core7_incremental](../examples/core7_incremental/RESULTS.md) | Incremental bookkeeping-ledger validation: equivalence with the reference validator and amortized append scaling | Seeded valid and invalid stream families match the reference on decisions, exception classes and final state; incremental quadrupling ratios stay near 4 within the frozen bound of 6 while the reproduced reference path grows about 16x, above the frozen quadratic bound of 8 |
+| [preplay_trace_v1](../examples/preplay_trace_v1/RESULTS.md) | The pre-play oracle's first slice: live CPU capture on the pinned granite MoE model with routing, stop-reason and determinism evidence | Same-seed captures byte-identical and independently reproduced; EOS, length-cap and stop-string terminations exact; every prompt and executed decode token carries top-8 routing across 24 MoE layers with ids in range and normalized weights; strict round trips and the frozen-byte writer fixture exact |
+| [nccl_stack_v1](../examples/nccl_stack_v1/RESULTS.md) | The NCCL stack skeleton: real-source-verified mirrored names, proxy-op enqueue and progression, tail/head counter causality, poll versus signal events | 5/5 scored families over 35 instances pass and the frozen call sequences reproduce exactly; 10 fatal invariant families (including FIFO depth-two reachability, foreign-observer rejection and all 88 causal poll links) hold unscored; the naming amendment is a separate review-triggered record with the original freeze untouched |
 
 ## Milestones
 
@@ -388,10 +396,13 @@ Reproduce with
   profile tables remain blocked on capture hardware under COMP-5 (plan in
   [modules/compute.md](modules/compute.md)). A second offline calibration
   axis joins here: the CPU pre-play oracle
-  ([modules/preplay.md](modules/preplay.md), PLAY-1 through PLAY-5) runs
+  ([modules/preplay.md](modules/preplay.md)) runs
   the real model slowly on CPU to fix each request's true output length,
   stop reason and expert routing, then replays them against the workload
   arrival model with every request's outcome pinned in the bookkeeping.
+  The capture half is live
+  ([preplay_trace_v1](../examples/preplay_trace_v1/RESULTS.md)); the
+  replay join and consumers remain PLAY-2 through PLAY-4.
   Training workloads are pending.
   Slingshot is out of simllm scope (`rnic-ss` remains a backend-repo
   follow-up only).

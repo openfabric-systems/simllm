@@ -1,0 +1,6 @@
+evidence_class,name,passed,failed,total
+native_test_executable,simllm_rnic_pcie_fabric_test,1,0,1
+native_test_executable,simllm_rnic_work_queue_test,1,0,1
+native_test_executable,simllm_rnic_device_test,1,0,1
+native_test_executables,all,3,0,3
+native_ctest_entries,all,4,0,4

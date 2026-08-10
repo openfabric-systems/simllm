@@ -26,6 +26,8 @@ runs/
 !examples/rnic_wq_v1/results.csv
 !examples/rnic_pcie_v1/results.csv
 !examples/vllm_skeleton_v1/results.csv
+!examples/rnic_device_v1/results.csv
+!examples/rnic_device_v1/native_tests.csv
 
 # Local agent rule files (kept out of the public repo on purpose)
 CLAUDE.md
