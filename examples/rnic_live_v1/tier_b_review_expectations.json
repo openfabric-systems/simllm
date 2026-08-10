@@ -1,0 +1,263 @@
+{
+  "schema": "simllm-rnic-tier-b-expectations-v1",
+  "observation_schema": "simllm-rnic-tier-b-observations-v1",
+  "factory": "htsim",
+  "simllm_base_commit": "fc282efc91573638de7dcfae2befee1cf022011b",
+  "producer_argument_names": [
+    "--factory",
+    "--expectations",
+    "--observations"
+  ],
+  "single_wqe": {
+    "payload_bytes": [
+      4096,
+      1048576
+    ],
+    "link_rate_gbps": [
+      200,
+      400
+    ],
+    "doorbell_service_ps": [
+      0,
+      1000
+    ],
+    "step_count": 3,
+    "wqe_count": 1,
+    "port_capacity": 1,
+    "first_release_ps": 7000
+  },
+  "fifo": {
+    "payload_bytes": 4096,
+    "link_rate_gbps": [
+      200,
+      400
+    ],
+    "doorbell_service_ps": [
+      0,
+      1000
+    ],
+    "step_count": 3,
+    "wqe_count": 2,
+    "doorbell_count": 1,
+    "port_capacity": 1,
+    "first_release_ps": 7000
+  },
+  "network_fixture": {
+    "data_header_bytes": 0,
+    "propagation_delay_ps": 0,
+    "control_frames": false,
+    "congestion": false
+  },
+  "simllm_zero_service": {
+    "gpus_per_node": 8,
+    "rnics_per_node": 8,
+    "launch_service_ps": 0,
+    "control_service_ps": 0,
+    "nccl_channel_service_ps": 0,
+    "completion_delivery_ps": 0,
+    "copy_engines": [],
+    "goal_base_tag": 1000,
+    "nvlink_rate_bps": 100000000000,
+    "kv_work": false,
+    "compute_work": false,
+    "dma_work": false,
+    "intra_node_collective_work": false
+  },
+  "retained_bypass_profiles": [
+    "rnic-nn-fluid",
+    "rnic-nn",
+    "rnic-cn",
+    "dcqcn"
+  ],
+  "doorbell_owner_mappings": {
+    "queue_owner": {
+      "resource_kind": "nic_send_queue",
+      "queue_wait_ps": "D",
+      "service_ps": 0,
+      "single_wqe_queue_ps": "D",
+      "single_wqe_nic_ps": "L",
+      "fifo_queue_ps": "D + L",
+      "fifo_nic_ps": "L"
+    },
+    "nic_owner": {
+      "resource_kind": "nic",
+      "queue_wait_ps": 0,
+      "service_ps": "D",
+      "single_wqe_queue_ps": 0,
+      "single_wqe_nic_ps": "D + L",
+      "fifo_queue_ps": "L",
+      "fifo_nic_ps": "D + L"
+    }
+  },
+  "raw_top_keys": [
+    "schema",
+    "factory",
+    "simllm_base_commit",
+    "structural_single_wqe",
+    "structural_fifo",
+    "bypass"
+  ],
+  "raw_structural_cell_keys": [
+    "payload_bytes",
+    "link_rate_gbps",
+    "doorbell_service_ps",
+    "hardware_mode",
+    "authority",
+    "simllm_profile",
+    "steps",
+    "request_summary"
+  ],
+  "raw_step_keys": [
+    "step_index",
+    "execution_graph",
+    "callback_event_indices",
+    "completion_events",
+    "execution_result",
+    "runtime_report",
+    "step_result"
+  ],
+  "raw_graph_keys": [
+    "execution_id",
+    "step_index",
+    "released_at_ps",
+    "operation_ids",
+    "completion_operation_ids",
+    "request_ids"
+  ],
+  "raw_event_keys": [
+    "event_index",
+    "schema",
+    "execution_id",
+    "operation_id",
+    "phase",
+    "timestamp_ps",
+    "resource_kind",
+    "resource_id",
+    "completed_bytes",
+    "subject_object_id"
+  ],
+  "raw_execution_result_keys": [
+    "schema",
+    "execution_id",
+    "completed_at_ps",
+    "quiesced_at_ps",
+    "event_indices"
+  ],
+  "raw_runtime_report_keys": [
+    "execution_id",
+    "authority",
+    "operations",
+    "visits",
+    "wqes",
+    "sum_visit_wait_ps",
+    "critical_path_queue_ps",
+    "realized_critical_path_operation_ids"
+  ],
+  "raw_runtime_operation_keys": [
+    "operation_id",
+    "completed_at_ps",
+    "critical_predecessor_id",
+    "attribution"
+  ],
+  "raw_attribution_keys": [
+    "queue_ps",
+    "kv_ps",
+    "kernel_ps",
+    "dma_ps",
+    "collective_ps",
+    "nic_ps",
+    "control_ps"
+  ],
+  "raw_visit_keys": [
+    "execution_id",
+    "operation_id",
+    "stage",
+    "resource_kind",
+    "resource_id",
+    "subject_object_id",
+    "submitted_at_ps",
+    "eligible_at_ps",
+    "started_at_ps",
+    "finished_at_ps",
+    "completed_at_ps",
+    "service_bytes"
+  ],
+  "raw_wqe_keys": [
+    "ordinal",
+    "wqe_id",
+    "operation_id",
+    "submitted_at_ps",
+    "doorbell_started_at_ps",
+    "doorbell_completed_at_ps",
+    "network_eligible_at_ps",
+    "network_started_at_ps",
+    "network_finished_at_ps",
+    "completed_at_ps",
+    "payload_bytes",
+    "sq_post_sequence",
+    "cq_post_sequence"
+  ],
+  "raw_step_result_keys": [
+    "step_index",
+    "step_latency_ps",
+    "completed_at_ps",
+    "request_metrics",
+    "additive_visit_totals"
+  ],
+  "raw_request_metric_keys": [
+    "request_id",
+    "phase",
+    "token_index",
+    "completed_at_ps",
+    "latency_ps",
+    "ttft_ps",
+    "tpot_ps",
+    "attribution",
+    "additive_visit_totals"
+  ],
+  "raw_additive_visit_keys": [
+    "queue_wait_ps",
+    "service_ps",
+    "visibility_ps",
+    "visit_count"
+  ],
+  "raw_request_summary_keys": [
+    "request_id",
+    "token_completion_times_ps",
+    "ttft_ps",
+    "tpot_ps"
+  ],
+  "raw_fraction_keys": [
+    "numerator",
+    "denominator"
+  ],
+  "raw_bypass_keys": [
+    "profile",
+    "hardware_mode",
+    "authority",
+    "inputs",
+    "reference_artifacts",
+    "candidate_artifacts"
+  ],
+  "raw_bypass_input_keys": [
+    "goal_text_hex",
+    "goal_binary_hex",
+    "topology_hex",
+    "seed",
+    "baseline_argv"
+  ],
+  "raw_bypass_artifact_keys": [
+    "completion_csv_hex",
+    "canonical_completion_rows",
+    "step_result_tuples",
+    "replay_request_summary"
+  ],
+  "behavioral_family_instances": {
+    "single_wqe_d_additivity": 4,
+    "single_wqe_inverse_rate": 4,
+    "single_wqe_metric_forms": 8,
+    "single_wqe_component_rows": 8,
+    "two_wqe_fifo": 4,
+    "bypass_artifact_identity": 4
+  }
+}
