@@ -76,13 +76,18 @@ field.
 
 ## Registered commands and pre-freeze dry run
 
+The historical pre-freeze dry runs used the same executable basename, scripts,
+options and pinned inputs; resolved machine-local paths are intentionally
+omitted. The following command contracts are portable post-freeze renderings,
+not verbatim transcripts. Source the local configuration first.
+
 The fake command contract is:
 
 ```bash
 .venv/bin/python examples/rnic_live_v1/tier_a_acceptance.py \
   --factory fake \
-  --producer /data3/yifeng/simllm-dev/wave2-runs/codex/htsim9_prep_harness/tier_a/fake/build/simllm_rnic_tier_a \
-  --run-dir /data3/yifeng/simllm-dev/wave2-runs/codex/htsim9_prep_harness/tier_a/fake
+  --producer "${SIMLLM_TIER_A_RUN_ROOT:?configure SIMLLM_TIER_A_RUN_ROOT}/fake/build/simllm_rnic_tier_a" \
+  --run-dir "${SIMLLM_TIER_A_RUN_ROOT}/fake"
 ```
 
 The future composed command changes the factory and producer only:
@@ -90,15 +95,16 @@ The future composed command changes the factory and producer only:
 ```bash
 .venv/bin/python examples/rnic_live_v1/tier_a_acceptance.py \
   --factory htsim \
-  --producer /data3/yifeng/simllm-dev/wave2-runs/codex/htsim9_prep_harness/tier_a/htsim/build/htsim_rnic_tier_a \
-  --run-dir /data3/yifeng/simllm-dev/wave2-runs/codex/htsim9_prep_harness/tier_a/htsim
+  --producer "${SIMLLM_TIER_A_RUN_ROOT:?configure SIMLLM_TIER_A_RUN_ROOT}/htsim/build/htsim_rnic_tier_a" \
+  --run-dir "${SIMLLM_TIER_A_RUN_ROOT}/htsim"
 ```
 
-Before this freeze, both exact commands are run with `--check-only` appended.
-That mode parses the CLI, validates the complete declarative matrix and raw
-schema contract, and validates that every output path is under the external
-wave-2 run root. It does not inspect the producer path, construct a port or
-device, create the run directory, open an observation file or emit a result.
+Before this freeze, the historical resolved forms of both commands were run
+with `--check-only` appended. That mode parses the CLI, validates the complete
+declarative matrix and raw schema contract, and validates that every output
+path is under the external wave-2 run root. It does not inspect the producer
+path, construct a port or device, create the run directory, open an
+observation file or emit a result.
 
 After implementation, the checker invokes the producer with the frozen
 arguments `--factory`, `--expectations` and `--observations`. The producer must

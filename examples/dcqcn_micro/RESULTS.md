@@ -1,8 +1,10 @@
 # DCQCN micro-behavior validation: results against pre-registered expectations
 
 Runs of 2026-08-05, one `run_micro.py` invocation (9 check rows in
-`summary.csv`; msg.csv, incast.csv and join-*.csv rate series under
-`/data3/yifeng/simllm-dev/dcqcn-micro-runs`). Binaries: `htsim_rnic` and
+`summary.csv`; `msg.csv`, `incast.csv` and `join-*.csv` rate series).
+Those artifacts remain outside Git in the machine-local directory used for
+the historical run; its resolved historical path is intentionally omitted. New runs
+default to `${SIMLLM_DATA_ROOT}/dcqcn_micro`. Binaries: `htsim_rnic` and
 `htsim_dcqcn_atlahs` at `c03e1f2`; DCQCN runs use the binary's default
 ECN/buffer settings (recorded caveat: those defaults are not rescaled
 for the 40G experiments). The registered predictions are in

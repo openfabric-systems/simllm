@@ -20,16 +20,17 @@ The scaling study is reproduced with:
 
 ```bash
 .venv/bin/python -m examples.core7_incremental.run_study \
-  --out /data3/yifeng/simllm-dev/wave1-runs/core7_incremental_ledger
+  --out "${SIMLLM_DATA_ROOT:?configure SIMLLM_DATA_ROOT}/core7_incremental"
 ```
 
-The raw file is
-`/data3/yifeng/simllm-dev/wave1-runs/core7_incremental_ledger/measurements.json`.
-Its SHA-256 digest for this run is
+The historical raw file, `measurements.json`, remains outside Git in the
+machine-local directory used for the run; its resolved historical path is intentionally
+omitted. Its SHA-256 digest for this run is
 `5a7035c60ece0dfe54eb22fc30550df45cdcd2f27cced0071b29280e8e2a6d0b`.
 It contains 48 measured rows plus the configuration, host disclosure,
 medians, relation checks and structural guards. Raw timing data is not Git
-content.
+content. New runs default to
+`${SIMLLM_DATA_ROOT}/core7_incremental/measurements.json`.
 
 ## E1: seeded behavioral equivalence
 

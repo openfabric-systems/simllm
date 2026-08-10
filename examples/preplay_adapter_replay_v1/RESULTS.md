@@ -42,16 +42,18 @@ for its freeze and implementation commits; closing evidence commit
 ## Run configuration and evidence classes
 
 The original component study was rerun after the review fix under the
-repository `.venv`; its bulk output is at
-`/data3/yifeng/simllm-dev/wave2-runs/codex_play23_arrival_replay/preplay_adapter_replay_review/`.
-The decision-relevant review study used
-`/data3/yifeng/simllm-dev/venv-vllm`, vLLM v0.26.0, the cached Granite
+repository `.venv`; its bulk output remains outside Git in the machine-local
+directory used for the historical run. The decision-relevant review study used
+a machine-local vLLM v0.26.0 environment whose resolved historical path is
+intentionally omitted, the cached Granite
 revision `ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445`, offline Hugging Face
 mode, no chunked prefill or asynchronous scheduling, a 64-token model limit
-and a 64-block logical KV pool. Its output is at
-`/data3/yifeng/simllm-dev/wave2-runs/codex_play23_arrival_replay/preplay_adapter_replay_engine/`.
-The amended live smoke is at
-`/data3/yifeng/simllm-dev/wave2-runs/codex_play23_arrival_replay/preplay_adapter_replay_live_review/`.
+and a 64-block logical KV pool. Its output and the amended live-smoke output
+remain in their historical machine-local directories. All three resolved
+artifact paths are intentionally omitted. For current reproductions,
+`SIMLLM_VLLM_PYTHON` selects the compatible vLLM interpreter and new output
+sets default to `${SIMLLM_DATA_ROOT}/preplay_adapter_replay_v1/`, with
+`review`, `engine` and `live_review` suffixes.
 
 Evidence classes remain separate.
 

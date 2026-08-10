@@ -21,6 +21,7 @@ REPOSITORY_ROOT = Path(__file__).parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
+from simllm._local_config import path_from_env
 from simllm.adapters.vllm import (
     SimExecutorConfig,
     configure,
@@ -39,17 +40,11 @@ from simllm.preplay import (
     write_preplay_trace,
 )
 
-MODEL = Path(
-    "/home/yifeng/packages/vllm-rnic-capture/hf-cache/hub/"
-    "models--ibm-granite--granite-3.0-1b-a400m-instruct/snapshots/"
-    "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
-)
-VLLM_ROOT = Path(
-    "/data3/yifeng/simllm-dev/venv-vllm/lib/python3.12/site-packages/vllm"
-)
-DEFAULT_RUN_DIR = Path(
-    "/data3/yifeng/simllm-dev/wave2-runs/"
-    "codex_play23_arrival_replay/preplay_adapter_replay_engine"
+MODEL_CACHE_PATH = (
+    Path("hub")
+    / "models--ibm-granite--granite-3.0-1b-a400m-instruct"
+    / "snapshots"
+    / "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
 )
 GRANITE_FIXTURE = (
     Path(__file__).parents[1] / "preplay_trace_v1/granite_length_cap.jsonl"
@@ -82,6 +77,29 @@ CONTEXT_TOKEN_PS = 10
 TOKEN_COSTS_PS = (100, 200)
 ORACLE_TOKENS = {"r0": (38,), "r1": (61, 62, 63, 64)}
 BASELINE_TOKENS = {"r0": (512, 512, 512, 512), "r1": (512, 512, 512, 512)}
+
+
+def _required_env_path(name: str) -> Path:
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"{name} must be set to an existing directory")
+    path = Path(value).expanduser()
+    if not path.is_dir():
+        raise RuntimeError(f"{name} must name an existing directory: {path}")
+    return path
+
+
+def _model_path() -> Path:
+    return _required_env_path("HF_HOME") / MODEL_CACHE_PATH
+
+
+def _vllm_package_root() -> Path:
+    configured = _required_env_path("SIMLLM_VLLM_PACKAGE_ROOT")
+    if (configured / "sampling_params.py").is_file():
+        return configured
+    raise RuntimeError(
+        "SIMLLM_VLLM_PACKAGE_ROOT must name the installed vllm package directory"
+    )
 
 
 class LinearStepSink:
@@ -280,7 +298,7 @@ def drive_cell(
     try:
         with engine_environment():
             llm = LLM(
-                model=str(MODEL),
+                model=str(_model_path()),
                 worker_cls="simllm.adapters.vllm.SimWorker",
                 enforce_eager=True,
                 max_model_len=64,
@@ -544,7 +562,9 @@ def run_study(run_dir: Path) -> dict[str, Any]:
 
 
 def check_inputs() -> None:
-    if not MODEL.is_dir() or not GRANITE_FIXTURE.is_file():
+    model = _model_path()
+    vllm_root = _vllm_package_root()
+    if not model.is_dir() or not GRANITE_FIXTURE.is_file():
         raise SystemExit("cached model or tracked Granite fixture is missing")
     observed = hashlib.sha256(GRANITE_FIXTURE.read_bytes()).hexdigest()
     if observed != EXPECTED_GRANITE_SHA256:
@@ -552,7 +572,7 @@ def check_inputs() -> None:
     if importlib.metadata.version("vllm") != "0.26.0":
         raise SystemExit("the review study requires vLLM 0.26.0")
     for relative_path, expected in PINNED_SOURCE_HASHES.items():
-        observed = hashlib.sha256((VLLM_ROOT / relative_path).read_bytes()).hexdigest()
+        observed = hashlib.sha256((vllm_root / relative_path).read_bytes()).hexdigest()
         if observed != expected:
             raise SystemExit(f"pinned vLLM source changed: {relative_path}")
 
@@ -560,11 +580,16 @@ def check_inputs() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check-only", action="store_true")
-    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR)
+    parser.add_argument("--run-dir", type=Path)
     args = parser.parse_args()
     check_inputs()
     if args.check_only:
         return
+    if args.run_dir is None:
+        data_root = path_from_env("SIMLLM_DATA_ROOT")
+        if data_root is None:
+            parser.error("--run-dir is required when SIMLLM_DATA_ROOT is not set")
+        args.run_dir = data_root / "preplay_adapter_replay_v1" / "engine"
     summary = run_study(args.run_dir)
     print(json.dumps(summary, indent=2, sort_keys=True))
 

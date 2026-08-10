@@ -8,8 +8,9 @@ study uses only the already cached model files and runs on CPU.
 
 - Model: `ibm-granite/granite-3.0-1b-a400m-instruct`
 - Revision: `ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445`
-- Cache root: `/home/yifeng/packages/vllm-rnic-capture/hf-cache`
-- Runtime: `/data3/yifeng/simllm-dev/venv-vllm/bin/python`
+- Historical cache root: resolved machine-local path intentionally omitted
+- Historical runtime: machine-local pinned environment, resolved historical path
+  intentionally omitted
 - Device: CPU only
 - Effective dtype: `float32`
 - Sampling seed: `173`
@@ -18,6 +19,9 @@ study uses only the already cached model files and runs on CPU.
 
 The run sets `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1`. Network access
 is not an admissible fallback.
+
+For a current reproduction, `HF_HOME` selects the cache root and
+`SIMLLM_VLLM_PYTHON` selects the compatible interpreter.
 
 ## Frozen requests
 

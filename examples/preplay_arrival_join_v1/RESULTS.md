@@ -11,8 +11,9 @@ after that implementation commit.
 The run used the repository `.venv`, the tracked Granite length-cap fixture,
 and a dependency-free synthetic two-request trace. It exercised one and two
 requests, plus zero-origin and exactly 7,000 ps shifted arrivals. Bulk output
-is retained outside the repository at
-`/data3/yifeng/simllm-dev/wave2-runs/codex_play23_arrival_replay/preplay_arrival_join_v1/`.
+remains outside Git in the machine-local directory used for the historical
+run; its resolved historical path is intentionally omitted. New runs default to
+`${SIMLLM_DATA_ROOT}/preplay_arrival_join_v1/`.
 
 The generated `summary.json` is 2,779 bytes with SHA-256
 `fb4fad6dcac4730c0b124f46accc48d24a306232968d623a73b4afb13a1a3463`.

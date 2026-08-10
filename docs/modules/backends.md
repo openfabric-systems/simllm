@@ -542,7 +542,7 @@ is difficult.
   context placement. Cover
   RESET, INIT, RTR, RTS, SQD/SQE, ERR and teardown; PD/MR/MPT/MTT ownership;
   peer QPN/PSN/GID/path exchange; retry/RNR parameters; and failed or timed-out
-  pairing. Provide both manual out-of-band TCP pairing and `rdma_cm`/IB-CM
+  pairing. Provide both manual out-of-band TCP pairing and `rdma_cm` or IB-CM
   pairing, with TCP treated as host control for RoCE/InfiniBand and as data
   transport only for iWARP. The generic memory hierarchy is `on_die_sram`, an
   optional `device_memory` tier and `host_pinned_memory`. The CX-7 default is

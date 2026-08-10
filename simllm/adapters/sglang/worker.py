@@ -7,7 +7,7 @@ SGLang's plugin framework can replace that method without a fork (see
 :mod:`simllm.adapters.sglang.plugin`)::
 
     SIMLLM_SGLANG_ENABLE=1 SIMLLM_SGLANG_MODE=virtual SIMLLM_SGLANG_GPU=b100 \\
-    SIMLLM_SGLANG_STEP_RECORDS=/data3/yifeng/simllm/steps.jsonl \\
+    SIMLLM_SGLANG_STEP_RECORDS=... \\
     python -m sglang.launch_server --model-path meta-llama/Llama-3.1-8B \\
         --disable-overlap-schedule --max-total-tokens 32768
 

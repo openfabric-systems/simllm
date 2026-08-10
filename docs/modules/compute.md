@@ -269,7 +269,8 @@ and stream orders, recomputes sample summaries, checks capture split isolation,
 and reruns every deterministic kernel/copy estimate before accepting it.
 Changing an identity, source, fit or split produces a new artifact. Small
 synthetic fixtures may live with tests and studies. Raw production SASS traces,
-profiler exports and bulk replay outputs live under `/data3/yifeng/`, never in
+profiler exports and bulk replay outputs live under the external root
+configured by `SIMLLM_DATA_ROOT`, never in
 Git; the public artifact records their content hashes and provenance.
 
 ## Status

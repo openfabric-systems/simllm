@@ -150,9 +150,12 @@ virtual clock advances by each step's makespan; sim-native metrics:
 
 ## Check E: replay of the recorded adapter smoke JSONLs
 
-Replay `/data3/yifeng/simllm-dev/m2-smoke-steps-v2.jsonl` (vLLM, 8
-records) and `/data3/yifeng/simllm-dev/m3-smoke-steps.jsonl` (SGLang, 9
-records), schema `atlahs-closed-loop-step-v1`, through the sink with a
+Replay the externally stored vLLM capture (8 records, SHA-256
+`55d6f35946ee82633e1613178e397165c4358a70a63e78f64c55fbaf4ce027cf`)
+and SGLang capture (9 records, SHA-256
+`e84677236ee87f1f97ccc486f2f9c474ba73893ae1706f45ed9ba21e5e892408`).
+Their resolved machine-local paths are intentionally omitted. Both use schema
+`atlahs-closed-loop-step-v1` and are replayed through the sink with a
 declared tp=8 x pp=1 x dp=1 manifest (`simllm.placement.declared_manifest`)
 and the TP=8 dims above, on rnic-nn-fluid. No closed form is registered
 for these makespans (the recorded token counts vary per step); the
@@ -169,3 +172,10 @@ registered properties are:
 - E3 (report only): the network share of each step, defined as
   1 - (L * c * 1000) / makespan, is reported per step for both frontends;
   no band is registered.
+
+The tracked `fixtures/vllm-m2-steps.jsonl` and
+`fixtures/sglang-m3-steps.jsonl` files are distinct post-specified portable
+replay inputs, with SHA-256 values
+`a226fcc17908844ba080587fe6607c5c8f34b178d17111fbd384819731b26fb7` and
+`656772148cd8fbda71a25af08215d806f38f3886abb068f72c9e0ddc8cb7c26f`.
+They are not substitutes for the two frozen Check E captures.

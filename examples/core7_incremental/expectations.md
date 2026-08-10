@@ -104,9 +104,11 @@ expected superlinear direction in the presence of interpreter and host noise.
 The comparison demonstrates removal of the old trend; it does not claim a
 stable speedup factor.
 
-Raw per-repetition nanosecond measurements belong under
-`/data3/yifeng/simllm-dev/wave1-runs/core7_incremental_ledger/` and are not Git
-content.
+The frozen requirement is that raw per-repetition nanosecond measurements
+remain outside Git in a machine-local external directory. The resolved
+historical target is intentionally omitted. As a post-freeze portability
+convention, new runs default to
+`${SIMLLM_DATA_ROOT}/core7_incremental/`.
 
 ## Evidence classes and construction disclosures
 
