@@ -287,6 +287,20 @@ landed with the same slice and is exercised by the examples/m5 studies
 together with the MoE traffic mapping
 ([traffic](traffic.md), [M5 results](../../examples/m5/RESULTS.md)).
 
+The COMP-15 first slice is implemented in `simllm.compute.nccl_stack`. It adds
+name-mirrored `ncclCommInitRank` and `ncclAllReduce` entry points, exact ring
+traffic planning, logical channels and chunks, per-channel GPU FIFO slots with
+ready flags and head/tail counters, the CPU proxy loop, `ncclNet` send, receive
+and test seams, and ibverbs post and CQ-poll seams. The intra-node route stays
+inside the collective kernel. The inter-node route closes the GPU FIFO to CPU
+proxy to net plugin to verbs to GPU tail-poll loop. Every call, proactive
+signal store, and successful poll observation emits a strict
+`simllm-nccl-stack-event-v1` record from one caller-supplied `VirtualClock`.
+The [NCCL stack skeleton study](../../examples/nccl_stack_v1/RESULTS.md)
+reports 5 of 5 passing behavioral relation families over all 35 instances and
+8 of 8 fatal unscored structural invariants. This zero-time component stream
+is not yet projected onto the live TTFT/TPOT metric chain.
+
 ## COMP-1: offline SASS calibration plan
 
 Strictly offline; the step loop never invokes a cycle-level simulator.
@@ -412,30 +426,24 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   baseline: selecting or omitting the default ring path must preserve every
   accepted ring timestamp, counter and task order exactly.
 - COMP-15 (Completeness; P1; L): model the NCCL software stack with the real
-  stack's functional names and interfaces, trimmed to the main path.
-  Intra-node collectives execute as NCCL collective kernels on the
-  NVLink-class egress model (the existing ring egress kernel, deepened by
-  COMP-11) and stay off the fabric. Inter-node transfers follow the proxy
-  model: the proxy progression loop calls a `ncclNet`-shaped plugin surface
-  (isend, irecv, test), which calls an ibverbs-shaped surface (post send,
-  poll CQ), which submits to the native RNIC session; this is the concrete
-  BACK-20 CPU-proxy producer shape, and CORE-4 owns the channel queues the
-  proxy drains. Function and interface names track the real stack so
-  captures and traces line up; the implementations are trimmed, side calls
-  off the main path are omitted or served inertly, and every boundary
-  crossing emits an observability event with virtual timestamps.
-  The model covers NCCL and its traffic planner together: communicator
-  setup, logical channel construction, chunking and channel assignment,
-  the creation and polling of the GPU-resident send and receive staging
-  buffers, and the interactions of the calls between layers. Both the data
-  path and the signal path are simulated: buffer bytes as data movement,
-  and the ready flags and head/tail counters as their own observable
-  events, so a consumer that polls and a producer that proactively signals
-  are distinguishable in the timeline.
-  GPU-initiated mode replaces the proxy leg with the BACK-20 GPU-initiated
-  path behind the same upper interface. The simulated framework
-  communicators (VLLM-14, SGL-11) are the callers of this stack. The first
-  slice is the complete mental model as name-mirrored empty function calls
-  with observability and centralized virtual timestamps; mechanisms fill
-  in step by step per the sizing plan in
-  [docs/README_PRO.md](../README_PRO.md).
+  stack's functional names and interfaces, trimmed to the main path. The
+  zero-time first slice is landed: communicator setup, ring channel
+  construction, chunking and assignment, per-channel GPU FIFO slots,
+  ready/head/tail signals and polls, the CPU proxy, `ncclNet` isend, irecv and
+  test seams, ibverbs post and CQ-poll seams, and distinct intra-node and
+  inter-node call loops all emit strict events on one caller-owned clock. The
+  [study](../../examples/nccl_stack_v1/RESULTS.md) freezes and validates the
+  exact call sequences and planner count relations.
+  Remaining work is to replace the deliberate zero-time boundaries and
+  metadata-only byte movement with service-time mechanisms connected to the
+  existing GPU, PCIe, native RNIC and fabric authorities, then calibrate those
+  mechanisms from captures without introducing a second timing authority.
+  Intra-node collectives must compose with the NVLink-class egress model and
+  stay off the fabric. Inter-node transfer and receive completion must project
+  through CORE-4 and CORE-5 to `CompletionEvent`, `StepResult`, TTFT and TPOT.
+  Add the BACK-20 GPU-initiated leg behind the same upper interface while
+  preserving the CPU-host proxy path as the default identity baseline. The
+  VLLM-14 and SGL-11 simulated communicators remain the adapter callers that
+  must connect to this stack. Function and event identities must remain stable
+  so later captures, timing calibration and adapter traces align with this
+  first slice.
