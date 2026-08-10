@@ -1,3 +1,4 @@
+import hashlib
 import json
 from dataclasses import replace
 from types import MappingProxyType
@@ -189,6 +190,147 @@ def test_all_work_kinds_round_trip_through_real_json():
     graph = _all_work_graph()
     wire = json.loads(json.dumps(execution_graph_to_json(graph)))
     assert execution_graph_from_json(wire) == graph
+
+
+def _pairwise_graph(work: CollectiveWork) -> ExecutionGraph:
+    return ExecutionGraph(
+        "core6-uniform",
+        7,
+        11,
+        (
+            ExecutionOperation(
+                "a2av",
+                0,
+                "cuda:0:nccl:ep",
+                work,
+            ),
+        ),
+        ("a2av",),
+    )
+
+
+def test_uniform_collective_keeps_frozen_v1_json_bytes():
+    graph = _pairwise_graph(
+        CollectiveWork("all-to-allv", (0, 1), 2048, "pairwise")
+    )
+    wire = (
+        json.dumps(
+            execution_graph_to_json(graph),
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+        + b"\n"
+    )
+
+    assert len(wire) == 559
+    assert hashlib.sha256(wire).hexdigest() == (
+        "f4a5a70f5bd4a0c2fed874baa88f3035266a54f386a59927e115872c2bcff0a3"
+    )
+    assert "pair_payload_bytes" not in wire.decode()
+    decoded = execution_graph_from_json(json.loads(wire))
+    assert decoded == graph
+    assert decoded.operations[0].work.pair_payload_bytes == ()
+
+
+def test_sparse_pair_payloads_round_trip_as_the_authoritative_table():
+    graph = _pairwise_graph(
+        CollectiveWork(
+            "all-to-allv",
+            (0, 1),
+            0,
+            "pairwise",
+            pair_payload_bytes=((0, 1, 2048), (1, 0, 4096)),
+        )
+    )
+    payload = execution_graph_to_json(graph)
+
+    assert payload["schema"] == EXECUTION_GRAPH_SCHEMA
+    assert payload["operations"][0]["work"]["payload_bytes"] == 0
+    assert payload["operations"][0]["work"]["pair_payload_bytes"] == [
+        [0, 1, 2048],
+        [1, 0, 4096],
+    ]
+    assert execution_graph_from_json(json.loads(json.dumps(payload))) == graph
+
+
+@pytest.mark.parametrize(
+    ("work", "match"),
+    [
+        (
+            CollectiveWork(
+                "all-to-allv",
+                (0, 1),
+                0,
+                "pairwise",
+                pair_payload_bytes=((0, 1, 1), (0, 1, 2)),
+            ),
+            "unique",
+        ),
+        (
+            CollectiveWork(
+                "all-to-allv",
+                (0, 1),
+                0,
+                "pairwise",
+                pair_payload_bytes=((0, 0, 1),),
+            ),
+            "must differ",
+        ),
+        (
+            CollectiveWork(
+                "all-to-allv",
+                (0, 1),
+                0,
+                "pairwise",
+                pair_payload_bytes=((0, 2, 1),),
+            ),
+            "belong to ranks",
+        ),
+        (
+            CollectiveWork(
+                "all-to-allv",
+                (0, 1),
+                0,
+                "pairwise",
+                pair_payload_bytes=((0, 1, 0),),
+            ),
+            "at least 1",
+        ),
+        (
+            CollectiveWork(
+                "all-to-allv",
+                (0, 1),
+                0,
+                "pairwise",
+                pair_payload_bytes=((1, 0, 1), (0, 1, 1)),
+            ),
+            "source-major",
+        ),
+        (
+            CollectiveWork(
+                "all-to-allv",
+                (0, 1),
+                1,
+                "pairwise",
+                pair_payload_bytes=((0, 1, 1),),
+            ),
+            "cannot both",
+        ),
+        (
+            CollectiveWork(
+                "all-reduce",
+                (0, 1),
+                0,
+                "ring",
+                pair_payload_bytes=((0, 1, 1),),
+            ),
+            "only for pairwise",
+        ),
+    ],
+)
+def test_sparse_pair_payload_validation_rejects_ambiguous_tables(work, match):
+    with pytest.raises(ValueError, match=match):
+        validate_execution_graph(_pairwise_graph(work))
 
 
 def test_observations_are_enveloped_without_reconstructing_policy():

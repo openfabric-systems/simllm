@@ -171,7 +171,7 @@ def render_serial_execution_graph_goal(
             ring_tags[operation.operation_id] = next_ring_tag
             next_ring_tag += 2 * (len(work.ranks) - 1)
         elif _is_pairwise(work):
-            if work.payload_bytes == 0:
+            if work.payload_bytes == 0 and not work.pair_payload_bytes:
                 raise ValueError(
                     f"operation {operation.operation_id!r} is a zero-payload "
                     "pairwise all-to-allv; the serial GOAL renderer rejects it "
@@ -259,12 +259,18 @@ def render_serial_execution_graph_goal(
                 local_dependencies,
                 frontiers,
             )
-            send_bytes = {
-                (source, destination): work.payload_bytes
-                for source in work.ranks
-                for destination in work.ranks
-                if source != destination
-            }
+            if work.pair_payload_bytes:
+                send_bytes = {
+                    (source, destination): payload_bytes
+                    for source, destination, payload_bytes in work.pair_payload_bytes
+                }
+            else:
+                send_bytes = {
+                    (source, destination): work.payload_bytes
+                    for source in work.ranks
+                    for destination in work.ranks
+                    if source != destination
+                }
             frontier = pairwise_all_to_allv(
                 trace,
                 ranks=list(work.ranks),

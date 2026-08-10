@@ -164,9 +164,15 @@ dictionary:
 branch on `(collective, algorithm_hint)`: a ring `all-reduce` carries the
 full reduced payload, while a `pairwise` `all-to-allv` carries the bytes each
 rank sends to each other rank (one uniform ordered-pair share; the serial
-lowerer and the serial GOAL renderer agree on this decoding). An all-to-allv
-with per-pair size variation, e.g. captured routed-expert dispatch, is not
-representable by the single scalar; CORE-6 owns the contract extension.
+lowerer and the serial GOAL renderer agree on this decoding). The optional
+`pair_payload_bytes` table is the variable-size form for pairwise all-to-allv:
+each source-major entry is `(source_rank, destination_rank, bytes)`, omitted
+pairs carry zero bytes, and a nonempty table requires the scalar to be zero.
+The field is omitted from JSON when empty, so old
+`simllm-execution-graph-v1` scalar payloads retain their exact bytes and
+meaning. The strict reader rejects duplicate, self, out-of-group, nonpositive,
+unsorted and scalar-plus-table entries. Both the serial GOAL renderer and the
+coarse runtime consume the same table.
 The coarse ring path currently requires a positive payload evenly divisible
 by its rank count, so every round sends an exact integer chunk and never
 fabricates a byte. CORE-16 owns remainder chunking. Control sends reserve
@@ -393,14 +399,12 @@ does not claim to produce these resource-contention measurements.
   end-to-end latency. Support synchronous waits and asynchronous control or
   collective progress. Preserve v1 readers if the queue-visit projection needs
   a versioned event extension.
-- CORE-6: represent variable per-pair all-to-allv sizes in the graph
-  contract. `CollectiveWork.payload_bytes` carries one uniform ordered-pair
-  share for `pairwise` all-to-allv, so a captured, non-uniform dispatch
-  (routed experts under real gating) cannot be expressed. Decide between an
-  optional per-pair size table on the collective payload and a schema bump;
-  the uniform scalar form must stay readable either way. Coordinate with the
-  TRAF-2 capture half so traffic expansion and the renderer consume the same
-  representation.
+- CORE-6 (Completeness; P1; M): finish the routed-supply validation of the
+  implemented optional `CollectiveWork.pair_payload_bytes` table. The graph
+  reader, writer, serial renderer and coarse runtime now agree on the sparse
+  representation while retaining exact v1 scalar bytes. Close this entry only
+  when the TRAF-2 captured-routing path populates the same table and changes a
+  step-sink JCT by the frozen exact relation in `examples/routed_supply_v1`.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
