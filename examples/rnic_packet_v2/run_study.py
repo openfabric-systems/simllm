@@ -27,6 +27,8 @@ TIER_A_EXPECTATIONS = (
 )
 SIMLLM_BASE_COMMIT = "b74629b4b4da1addda9ff21226cfabf5c09aad87"
 HTSIM_BASE_COMMIT = "edb28c3015c173b4251abc5858c587df325e1ebc"
+SIMLLM_EXPECTATION_COMMIT = "506f87af93687ccf0df85f6b5307b71a20ed3762"
+HTSIM_EXPECTATION_COMMIT = "6ece8bdd908496dadfd4df809e3a4eb660d6cc26"
 PAYLOAD_BYTES = (4096, 1048576)
 LINK_RATE_GBPS = (200, 400)
 DOORBELL_SERVICE_PS = (0, 1000)
@@ -459,8 +461,8 @@ def _run(
         "simllm_revision": _git_commit(REPO_ROOT),
         "htsim_revision": _git_commit(htsim_source),
         "expectation_commits": {
-            "simllm": "TO_BE_REPLACED_BY_RESULTS_COMMIT",
-            "htsim": "TO_BE_REPLACED_BY_RESULTS_COMMIT",
+            "simllm": SIMLLM_EXPECTATION_COMMIT,
+            "htsim": HTSIM_EXPECTATION_COMMIT,
         },
         "ctest": ctest,
         "abi_v1_artifact_identity": v1_identity,

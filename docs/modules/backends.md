@@ -131,13 +131,14 @@ GOAL Send
   -> GOAL completion
 ```
 
-The target composition links the SimLLM C++ library into the directly invoked
-htsim binary, with no Python callback in the packet event loop. The composed
-runtime will present `AtlahsFlowRuntime` to `AtlahsHtsimApi`. That link is not
-live today: current htsim binaries do not contain `simllm::rnic`. HTSIM-9 owns
-the combined outer wrapper and backend extension through which the SimLLM
-hardware runtime calls an htsim policy and fabric using opaque flow and packet
-tokens. QP, WQE, CQ, QPC, PCIe and DMA objects never cross that boundary.
+The composition links the SimLLM C++ library into the directly invoked htsim
+binary, with no Python callback in the packet event loop. The composed runtime
+presents `AtlahsFlowRuntime` to `AtlahsHtsimApi`. The wrapper and versioned
+flow, packet-attempt and transport-control event relay are component-live.
+HTSIM-9 retains only the Tier B live-metric closure through CORE-15. The
+SimLLM hardware runtime calls an htsim policy and fabric using opaque flow and
+packet tokens. QP, WQE, CQ, QPC, PCIe and DMA objects never cross that
+boundary.
 
 State ownership is explicit:
 
@@ -154,16 +155,17 @@ State ownership is explicit:
   watermarks that originate PFC and the paused priority state that consumes
   it.
 
-### HTSIM-9 preparation seam
+### HTSIM-9 wrapper seam
 
 The SimLLM-side executable preparation package is in the
 [Tier A harness results](../../examples/rnic_live_v1/tier_a_harness_results.md).
 Its generic scenario runner receives a `PortFactory` that supplies the
 versioned `NetworkPort`, an external-event pump and read-only issue and
 terminal traces.
-The physical factory configuration contains capacity, link rate, zero-header
-and zero-propagation fixture controls and controlled-drop selection. It does
-not contain native doorbell service D or a precomputed serialization time.
+The physical factory configuration contains ABI version, capacity, link rate,
+packet geometry, zero-propagation fixture controls and controlled-drop
+selection. It does not contain native doorbell service D or a precomputed
+serialization time.
 The fake implementation composes the existing deterministic fake port. The
 HTSIM-9 binary compiles the same runner and main and replaces only the factory
 translation unit.
@@ -373,9 +375,9 @@ ordered transport retirement, signaled/unsignaled reclamation, CQ owner wrap,
 polling, network would-block and controlled SQ-full, network-drop and
 CQ-overrun evidence. Its versioned `NetworkPort` passes opaque transfer tokens
 plus flow/tag and policy-context identity without transferring WQ/QP/CQ
-ownership. Flow-level acceptance/outcome timestamps remain separate from the
-packet issue timestamps that HTSIM-9 must supply. The htsim wrapper is not yet
-connected, so the old HTSIM ledger remains the live compatibility path.
+ownership. Flow-level acceptance/outcome timestamps remain separate from
+packet issue timestamps. At that checkpoint the htsim wrapper was not yet
+connected and the old HTSIM ledger remained the live compatibility path.
 The post-specified native regression study passes all 11 cells exactly; see
 [examples/rnic_wq_v1/RESULTS.md](../../examples/rnic_wq_v1/RESULTS.md).
 
@@ -576,11 +578,11 @@ is difficult.
   counters, and the reusable bypass byte checker are complete. The frozen
   component study is
   [rnic_session_records_v1](../../examples/rnic_session_records_v1/RESULTS.md).
-  BACK-8 remains open for the frozen live-reachability gate. HTSIM-9 owns the
-  outer `AtlahsFlowRuntime` wrapper and concrete htsim-side adapter; CORE-4 and
-  CORE-5 own graph invocation, `CompletionEvent`, step-result and TTFT/TPOT
-  reduction. The modular composition entry point and external port injection
-  seam are complete.
+  BACK-8 remains open for the frozen live-reachability gate. The HTSIM-9
+  wrapper, concrete adapter and ABI-v2 packet-event projection are complete;
+  CORE-4, CORE-5 and CORE-15 own graph invocation, `CompletionEvent`,
+  step-result and TTFT/TPOT reduction. The modular composition entry point and
+  external port injection seam are complete.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
   the structural **RDMA
   Work Queue**, merging the old WQE lifecycle and per-WQE-start work. Model
@@ -668,27 +670,6 @@ is difficult.
   BACK-11 and BACK-12 own when semantic lookup, DMA, CQE and fault events
   occur; BACK-17 only lowers optional events not already represented by the
   landed base transaction path into shared-fabric PCIe service classes.
-- BACK-25 (Completeness; P1; L): add a versioned packet-attempt lifecycle to
-  `NetworkPort` without exposing RNIC-owned objects. Carry logical extent,
-  packet index, transmission-attempt index, payload offset, payload and wire
-  bytes, and control/data kind. Add explicit TX-start, TX-finish and native-RX
-  arrival observations while retaining Delivered and Dropped as the only
-  terminal attempt events. Tokens are unique for the whole session, one token
-  has exactly one terminal, and intermediate observations never consume it.
-  Include stable drop-resource and evidence provenance. Preserve the v1
-  flow-extent path as an explicit compatibility mode and prove its accepted
-  rows byte identical.
-- BACK-26 (Completeness; P1; L): add versioned transport-control vocabulary to
-  `NetworkPort`. Carry packet-keyed ECN and CNP feedback,
-  policy-context-keyed eligibility and rate updates with effective timestamps,
-  PFC control-frame submission and pause or resume reception with endpoint or
-  link identity, priority and quanta or duration, plus capability-negotiated
-  link-state transitions with stable link identity, up or down state,
-  transition time and optional effective rate. Busy remains resource
-  backpressure, and `DropReason::LinkDown` remains a per-attempt consequence.
-  The disabled control and dynamic-link paths preserve v1 timestamps, bytes,
-  token order and random draws exactly; unsupported dynamic transitions reject
-  explicitly until htsim supplies a timestamped producer.
 - BACK-27 (Completeness; P1; L): connect the landed GPU-initiated producer and
   GPU-owned CQ consumer to explicitly submitted tasks on the compute model's
   concurrent service, using the NCCL egress-kernel shape. Join each task to
@@ -771,14 +752,24 @@ is difficult.
   it reports a false success. Add checked-in baselines or remove that compare,
   fix zero-flow diagnostics, and make every failed command fail the gate.
 - HTSIM-9 (Completeness; P1; L): the composed `AtlahsFlowRuntime` wrapper
-  landed on the backend main (its PR 11) as an ABI-v1 checkpoint: opaque
-  flow tokens, structural-mode exclusivity with observed counters, relayed
-  backpressure, stable transport identities, and the frozen Tier A gate
-  passing with the htsim factory. Remaining scope: the packetized TX/RX
-  event vocabulary (after BACK-25 and BACK-26) so first and last packet
-  issue populate the native timeline, and the Tier B live-reachability run
-  through CORE-15's chain. The entry closes when Tier B passes with
-  packet-issue evidence.
+  now carries the ABI-v2 packet-attempt and transport-control vocabulary in
+  addition to its byte-identical ABI-v1 compatibility path. The htsim
+  packetized manifold publishes committed source-serializer TX start and end,
+  destination RX arrival and attempt delivery; the wrapper maps runtime ECN,
+  CNP, policy update, PFC and capability-gated link observations without
+  inventing acceptance-time packet issue. Directed composition populates the
+  native WQE packet timeline only from those explicit events, and the frozen
+  Tier A v1 and v2 gates pass. Remaining scope is only the Tier B
+  live-reachability run through CORE-15's `ExecutionGraph` to
+  `CompletionEvent`, `StepResult`, TTFT and TPOT chain. The entry closes when
+  Tier B passes with packet-issue evidence.
+- HTSIM-15 (Completeness; P2; L): add a timestamped dynamic-link transition
+  producer to an htsim runtime and advertise the ABI-v2 capability only for
+  that enabled path. The landed vocabulary carries stable link identity, up
+  or down state, transition time and optional effective rate, but current
+  physical runtimes expose only static pre-run failed-link configuration and
+  reject a requested dynamic capability. The disabled path must preserve the
+  ABI-v1 and ABI-v2 no-transition baselines exactly.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.
