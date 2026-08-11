@@ -8,9 +8,11 @@ never has to fabricate them.
 ## Why
 
 The simulation replaces model execution, so every decision the real model
-would make is otherwise fabricated: output token ids (today one fixed
-mid-vocabulary id), output length (today drawn from a workload
-distribution), and MoE expert routing (today uniform). Those decisions feed
+would make is otherwise fabricated: output token ids (one fixed
+mid-vocabulary id on the absent-replay path), output length (drawn from a
+workload distribution unless a joined replay run pins it), and MoE expert
+routing (uniform only when no `RoutedMoeSupply` is attached). Those
+decisions feed
 back into exactly the things the simulation promises to keep real: the stop
 position drives scheduler-visible completion and batch composition, token
 identity drives prefix-cache hits, and routing drives the all-to-all
@@ -51,10 +53,10 @@ and still produce a real simulation.
   `simllm-preplay-routing-reference-v1` pointer to its trace row. One atomic
   `RequestBookkeeper.extend` call pins all framework-request objects only
   after the complete join validates.
-- **Replay.** The adapters serve the predefined token ids instead of a
-  fabricated token and honor the oracle's stop position, so the scheduler
+- **Replay.** The vLLM adapter serves the predefined token ids instead of a
+  fabricated token and honors the oracle's stop position, so the scheduler
   sees the true completion step; the traffic layer consumes the captured
-  routing for non-uniform all-to-all.
+  routing for non-uniform all-to-all. SGLang replay is PLAY-7.
 - **Honesty rule.** A CPU run is one realization, not the deployment's
   exact token stream: CPU and GPU numerics differ, so sampled ids can
   diverge between the oracle and silicon. Greedy or fixed-seed sampling is

@@ -23,11 +23,13 @@ emergent from the workload, not assumed.
 ### Framework frontend (adapters, `simllm/adapters/`)
 
 The framework's scheduler, batching policy and KV/prefix-cache accounting run
-unmodified; only model execution is replaced. Both adapters reduce to the same
-contract: per scheduler step, a **step record** (which requests ran, how many
-prefill/decode tokens each, how many tokens were served from cache) goes to
-the core, and a **step result** (simulated step latency, flow completions)
-comes back.
+unmodified; the executor seam replaces model execution alone, while the
+flagged VLLM-13/VLLM-16 model-runner seam additionally replaces the collective
+layer with `SimGroupCoordinator` and the simulated NCCL stack. Both adapters
+reduce to the same contract: per scheduler step, a **step record** (which
+requests ran, how many prefill/decode tokens each, how many tokens were served
+from cache) goes to the core, and a **step result** (simulated step latency,
+flow completions) comes back.
 
 **vLLM (v1 engine, pinned to v0.26.0):** no fork needed. The engine's step
 loop is `EngineCore.step()`, i.e. `Scheduler.schedule()` producing a
@@ -232,16 +234,17 @@ operations, NCCL commands, SQ/RQ/CQ and WQEs. It is a public projection, not a
 second WQE lifecycle implementation. Packet identities and packet lifecycle
 remain backend-private.
 
-One run has one mutable WQE authority. Today the live htsim path uses its
-timing-neutral `AtlahsWqeLedger`, while the structural C++ `WorkQueue` is
-reachable only from native tests and probes. In the target structural mode the
-SimLLM native RNIC session alone allocates WQ and WQE identities, changes
-occupancy and records lifecycle timestamps. The htsim ledger is then neither
-constructed nor mutated; bookkeeping facts and result rows are immutable
-projections of native records. The explicit hardware-bypass mode does the
-opposite: it constructs no structural RNIC state and labels the compatibility
-ledger as the authority for that run. Structural and bypass records are never
-merged or reconciled by choosing timestamps after simulation.
+One run has one mutable WQE authority. Today the composed native C++ RNIC
+session is the sole mutable WQE authority on the live htsim path, and the
+timing-neutral `AtlahsWqeLedger` remains the sole authority only in explicit
+hardware-bypass mode. In structural mode, live for the frozen isolated
+`rnic_live_v1` fixture, the SimLLM native RNIC session alone allocates WQ and
+WQE identities, changes occupancy and records lifecycle timestamps. Structural
+mode constructs no htsim ledger at all, so bookkeeping facts and result rows
+are immutable projections of native records. The explicit hardware-bypass mode
+does the opposite: it constructs no structural RNIC state and labels the
+compatibility ledger as the authority for that run. Structural and bypass
+records are never merged or reconciled by choosing timestamps after simulation.
 
 The stable WQE key is session and endpoint plus WQ kind, WQ identity and post
 sequence. WR IDs, GOAL flow IDs, htsim tokens and local vector indices are
@@ -265,9 +268,11 @@ references do not impose their original transient scope on later users.
 - **Virtual clock**: orders request arrivals and step completions.
 - **Execution contracts** (`simllm/core/execution.py`): the passive,
   versioned graph and completion records above, plus `ExecutionLowerer` and
-  `DeviceRuntime` protocols. CORE-2 supplies strict graph/result JSON,
-  serial diagnostic lowering and graph-only replay. CORE-3 through CORE-5
-  implement KV lifecycle, resources and feedback in order.
+  `DeviceRuntime` protocols. CORE-2, CORE-4 and CORE-5 are complete for their
+  supported scopes: strict graph/result JSON with serial diagnostic lowering
+  and graph-only replay, the coarse `DeviceRuntime` including the frozen
+  Tier B structural fixture, and completion reduction with seven-component
+  attribution. CORE-3 still owns explicit KV lifecycle.
   Dependency semantics are explicit per edge: `depends_on` waits for complete
   predecessor operations, while `participant_local_depends_on` lets
   distributed collective ranks arrive after their own predecessor frontiers.
@@ -303,10 +308,14 @@ references do not impose their original transient scope on later users.
   doorbell-to-wire) defaults to **zero delay and zero jitter**: those
   effects are roughly constant per operation, orthogonal to fabric behavior,
   and folding them in by default would confound network attribution. A
-  single per-endpoint `initiation_delay_ps` constant exists for launch-path
-  studies (e.g. sub-microsecond GPU-initiated vs multi-microsecond
-  CPU-proxy) where small-message all-to-all makes launch overhead comparable
-  to transfer time.
+  single per-endpoint `initiation_delay_ps` constant remains the analytical
+  fallback for launch-path studies (e.g. sub-microsecond GPU-initiated vs
+  multi-microsecond CPU-proxy) where small-message all-to-all makes launch
+  overhead comparable to transfer time. BACK-27 adds the structural
+  alternative: the CPU-proxy and GPU-initiated producers submit timed tasks
+  to the concurrent compute service, which measured +20 and +23 cycle
+  submission delays at saturated occupancy while staying disabled and
+  byte-identical by default.
 - **Traffic model**: consumes three inputs: a *collective trace*
   (`simllm-collective-trace-v1`, one JSONL record per op: step, layer, op,
   group type, group global ranks, send counts, element bytes, hidden size,
@@ -329,13 +338,19 @@ references do not impose their original transient scope on later users.
 
 The target full packet path has two independent model axes. SimLLM owns a C++
 RNIC hardware extension under `simllm/backends/rnic/`: RDMA WQ/CQ, QP/QPC,
-MMIO/PCIe/DMA and TX/RX hardware. htsim owns selectable transport/CC policies
-and the packet fabric. A versioned C++ adapter passes opaque flow tokens and
-feedback events between them; no QP, queue, context or DMA object crosses that
-boundary. BACK-18 landed the modular construction entry point, and the pinned
-backend main links the SimLLM static library into the directly invoked
-`htsim_rnic` binary through the ABI-v1 `AtlahsFlowRuntime` composition. There
-is no Python callback in the packet event loop.
+MMIO/PCIe/DMA, the virtual host-memory registry with its QPC translation
+asymmetry, the host-CPU, CPU-proxy and GPU-initiated submission profiles with
+their independently named requester and sole CQ consumer, and TX/RX hardware.
+htsim owns selectable transport/CC policies and the packet fabric. A versioned
+C++ adapter passes opaque flow tokens and, at ABI v2, session-unique
+packet-attempt identity, committed TX/RX boundaries, typed drop evidence and
+transport-control events between them; no QP, queue, context or DMA object
+crosses that boundary. BACK-18 landed the modular construction entry point,
+and the pinned backend main links the SimLLM static library into the directly
+invoked `htsim_rnic` binary through the `AtlahsFlowRuntime` composition, which
+passed both frozen live-composition tiers at ABI v1 and now also carries the
+ABI-v2 packet-attempt and transport-control vocabulary. There is no Python
+callback in the packet event loop.
 
 The composition is live for the frozen isolated `rnic_live_v1` fixture.
 Tier A exercised the directly invoked composed binary and its flow-level FCT
@@ -344,16 +359,27 @@ and JCT evidence. Tier B consumed immutable native observations through
 `ExecutionResult` and `StepResult`, so native doorbell and link-rate changes
 reached TTFT and TPOT by the frozen relations. BACK-8 and the demonstrated
 CORE-15 live-seam clauses closed on that evidence. CORE-21 retains the
-same-contended-graph bypass-versus-composed comparison that Tier B did not run.
+same-contended-graph bypass-versus-composed comparison with its signed JCT,
+TTFT and TPOT change, and BACK-31 retains the executable-level unlinked-native
+negative control; Tier B ran neither.
 
 The ABI-v1 descriptor carries GOAL flow and tag identity plus a separate
 policy-context token, while completion uses a network-owned token. It does not
 equate flow acceptance or delivery with first-packet or last-packet issue.
-BACK-25 and BACK-26 own the packet-attempt and transport-control vocabulary,
-and HTSIM-9 remains open for a composed packet-issue run after those surfaces
-land. The standalone slice is validated in
-[examples/rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md), and the live gate is
-validated in [examples/rnic_live_v1](../examples/rnic_live_v1/RESULTS.md). The
+BACK-25 and BACK-26 closed on 2026-08-11 at the versioned vocabulary and relay
+boundary, so NetworkPort ABI v2 now carries session-unique packet-attempt
+identity, explicit TX start and finish, RX arrival, attempt terminals, typed
+drop evidence, ECN/CNP, effective rate updates, PFC and link-state forms, with
+ABI v1 kept as the exact default compatibility path. HTSIM-9 closes only when
+one composed run of the Tier B class carries that ABI-v2 packet-issue evidence
+through `ExecutionGraph` to `CompletionEvent`, `StepResult`, TTFT and TPOT,
+while HTSIM-15, HTSIM-16 and BACK-34 retain the dynamic-link producer, the
+physical control producers and the partial-final-packet cell. The standalone
+slice is validated in
+[examples/rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md), the live gate in
+[examples/rnic_live_v1](../examples/rnic_live_v1/RESULTS.md), and the ABI-v2
+packet-attempt and transport-control vocabulary in
+[examples/rnic_packet_v2](../examples/rnic_packet_v2/RESULTS.md). The
 detailed evidence and calibration plan is
 [papers/rnic-hardware-calibration.md](papers/rnic-hardware-calibration.md).
 
@@ -379,10 +405,11 @@ The GOAL trace is executed by a discrete-event simulator:
 
 - **htsim** (packet-level): `htsim_uec -goal <bin> -topo <topo>` executes the
   GOAL schedule over a Clos topology with full transport behavior, and
-  `htsim_rnic` (currently pinned on the append-only
-  `2026_08_05/simllm-addon` branch) runs the RNIC
-  policy profiles: the packetized no-CC baseline `rnic-nn`, explicit-hardware
-  bypass baseline `rnic-nn-fluid` and explicit-rate endpoint `rnic-cn`. The
+  `htsim_rnic`, pinned on backend main (`4885c64`) with the WQE bookkeeping
+  and the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`,
+  runs the RNIC policy profiles: the packetized
+  no-CC baseline `rnic-nn`, explicit-hardware bypass baseline `rnic-nn-fluid`
+  and explicit-rate endpoint `rnic-cn`. The
   GOAL-driven `htsim_dcqcn_atlahs` comparator is also available. Only the
   Slingshot-like profile `rnic-ss` remains a profile-wiring follow-up
   (HTSIM-1 in [modules/backends.md](modules/backends.md)); the factory rejects
@@ -427,11 +454,21 @@ abstract collective op.
    trace is emitted and simulated once. Cheap, deterministic, but network
    congestion cannot influence batch composition.
 2. **Closed-loop.** Each scheduler step (or window of steps) is simulated
-   before the next one is released; the network's completion time advances the
-   virtual clock the scheduler sees. The step/result exchange uses versioned
-   JSON manifests (`atlahs-closed-loop-step-v1` / `atlahs-closed-loop-result-v1`,
-   see `simllm/core`). Per-step subprocess invocation is the diagnostic
-   mode; a persistent co-simulator process is planned for scale.
+   before the next one is released; one composed native completion projects
+   through `CoarseDeviceRuntime` into `ExecutionResult` and `StepResult`,
+   whose boundary advances the virtual clock the scheduler sees. Structural
+   native authority and explicit hardware bypass are mutually exclusive within
+   a run. The step manifest crosses the boundary as versioned JSON
+   (`atlahs-closed-loop-step-v1`, see `simllm/core`), while the result returns
+   as an in-process `StepResult`: the `atlahs-closed-loop-result-v1` name has
+   no reader or writer and predates CORE-5 attribution, so CORE-24 owns the
+   strict full-`StepResult` wire codec that replaces it. Per-step subprocess
+   invocation remains the default diagnostic mode; BRIDGE-1 landed the opt-in
+   prepared-replay `HtsimPersistentStepSink`, which reuses a persistent worker
+   pool, matched all 34 prepared-versus-diagnostic pairs exactly and reported
+   3.36x to 5.43x speedup in its four scored wall-time instances, while the
+   online stateful co-simulator session remains BRIDGE-2, CORE-24 and
+   HTSIM-18, and child-process lifetime binding remains BRIDGE-3.
 
 ## Timing and metrics
 
@@ -452,11 +489,15 @@ Every simulated configuration should carry provenance (backend profile,
 topology, calibration profile, seeds) and be checked against real captures
 where available: single-node runs for compute-model calibration, multi-node
 NCCL traces (via the ATLAHS capture pipeline) for network-model validation,
-with error bounds reported per metric.
+and the CPU pre-play oracle ([modules/preplay.md](modules/preplay.md)) for
+each request's true output length, stop reason and expert routing, with error
+bounds reported per metric.
 
-Accuracy validation advances only after calibrated compute and the resource
-runtime are available. Use identical framework commit, model, parallelism,
-request trace, seed and warm-up policy in simulation and silicon. Progress
+Accuracy validation advances only after calibrated compute; the coarse
+resource runtime landed with CORE-4, so its registered approximations and
+their calibration, not its existence, now gate this stage. Use identical
+framework commit, model, parallelism, request trace, seed and warm-up policy
+in simulation and silicon. Progress
 through single-GPU compute, eight-GPU intra-node, two-node rail-RNIC,
 offered-load sweeps, KV pressure, chunked prefill/preemption or retraction,
 then mixed and bursty workloads. Report p50, p90, p99 and p99.9 TTFT/TPOT,
@@ -521,4 +562,7 @@ strict loader reruns deterministic estimates and rejects target, clock,
 identity or sample-summary drift. Bulk raw traces stay outside Git under
 `/data3/yifeng/`. COMP-1,
 COMP-5, COMP-6 and advanced instruction/cache semantics in COMP-10 remain
-open, as does the inter-operation `DeviceRuntime` in CORE-4.
+open. The inter-operation `DeviceRuntime` in CORE-4 is complete for the
+coordinated first coarse bypass profile and the frozen Tier B structural
+fixture, with its residual approximations registered as CORE-11 through
+CORE-14, CORE-16 and CORE-21.

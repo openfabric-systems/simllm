@@ -100,10 +100,12 @@ As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 metrics) and the full rnic-cn algorithm-book implementation
 (deterministic reservation ledger, windowed feedforward snapshots,
 fractional nflow, sender egress composition, BJP-derived resequencing
-window) are merged. The SimLLM pin for HTSim is now on the append-only
-`2026_08_05/simllm-addon` branch because the WQE bookkeeping commit has not
-been merged into backend main. A submodule pin to an addon branch is an
-intentional supported state. The same HTSIM sources build on Linux with
+window) are merged. The SimLLM pin for HTSim is on backend main, which now
+carries the WQE bookkeeping commit, the composed SimLLM RNIC wrapper and the
+ABI-v2 event relay. A pin to an append-only `<date>/simllm-addon` branch
+remains an intentional supported state while backend work is in review, but
+it is an intermediate state rather than the steady one. The same HTSIM
+sources build on Linux with
 GCC/Clang and on Windows with MSVC. From the SimLLM root, the supported
 helper commands are:
 
