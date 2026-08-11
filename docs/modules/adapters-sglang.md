@@ -176,8 +176,9 @@ in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
   hits
   (repeated shared prefixes) and retraction under KV pressure, and a
   `launch_server` (HTTP) run in addition to the offline `Engine` smoke. Run
-  after the calibrated compute table and CORE-3/4/5, using the same commit,
-  model, parallel configuration, request trace, seed and warm-up policy on
+  after the calibrated compute table and CORE-3, since CORE-4 and CORE-5
+  have landed, using the same commit, model, parallel configuration,
+  request trace, seed and warm-up policy on
   silicon and in simulation. Stage single-GPU compute, eight-GPU intra-node,
   two-node rail-RNIC, offered-load, KV-pressure, chunked/retraction and
   mixed/bursty cases. Report p50 through p99.9 TTFT/TPOT and attributed queue,
@@ -226,7 +227,8 @@ in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
   hits, retracted prefills and MIXED batches; prove the count matches the rows
   for which SGLang consumes a generated token. Keep the absent field as the
   explicit compatibility path.
-- SGL-13 (Completeness; P1; L): after CORE-4 and CORE-5 land, project each
+- SGL-13 (Completeness; P1; L): now that CORE-4 and CORE-5 have landed,
+  project each
   simulated SGLang communicator `CollectiveWork` through the single runtime
   authority into `CompletionEvent`, `StepResult`, and TTFT/TPOT. Freeze a
   fixed-workload signed metric relation and quantitative band first. The
