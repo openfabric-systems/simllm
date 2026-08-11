@@ -1,0 +1,52 @@
+{
+  "schema": "simllm-rnic-back34-expectations-v1",
+  "simllm_base_commit": "90ada43070adb3b1e624b6819aff34d8620e8571",
+  "htsim_base_commit": "4885c647eecdfdf81479d1df052223c016ad086b",
+  "network_abi_version": 2,
+  "payload_bytes": 5000,
+  "link_rate_gbps": 400,
+  "doorbell_service_ps": 1000,
+  "max_wire_packet_bytes": 4096,
+  "data_header_bytes": 64,
+  "expected_packets": [
+    {
+      "packet_index": 0,
+      "payload_offset_bytes": 0,
+      "payload_bytes": 4032,
+      "wire_bytes": 4096,
+      "tx_started_at_ps": 1000,
+      "tx_finished_at_ps": 82920,
+      "tier_a_rx_arrived_at_ps": 82920,
+      "composed_rx_arrived_at_ps": 164840
+    },
+    {
+      "packet_index": 1,
+      "payload_offset_bytes": 4032,
+      "payload_bytes": 968,
+      "wire_bytes": 1032,
+      "tx_started_at_ps": 82920,
+      "tx_finished_at_ps": 103560,
+      "tier_a_rx_arrived_at_ps": 103560,
+      "composed_rx_arrived_at_ps": 185480
+    }
+  ],
+  "tier_a_boundaries": {
+    "first_packet_at_ps": 1000,
+    "last_packet_at_ps": 82920,
+    "first_rx_at_ps": 82920,
+    "last_rx_at_ps": 103560,
+    "network_outcome_at_ps": 103560
+  },
+  "composed_boundaries": {
+    "first_packet_at_ps": 1000,
+    "last_packet_at_ps": 82920,
+    "first_rx_at_ps": 164840,
+    "last_rx_at_ps": 185480,
+    "network_outcome_at_ps": 185480
+  },
+  "v1_artifact_sha256": {
+    "raw_observations.json": "37a4e9cf88a1b60094409150dfad25599eb77cbf268b3d08bfacf527e493a26a",
+    "summary.json": "00ef7e4f5bdbd38f4eabe9ba42dc75f56de528c8751b93e6eef4a3089fa61004"
+  },
+  "accepted_v2_raw_sha256": "39059d56663f73869224613c9c7a0de3bee5733a6654469cd2a54c22354cc692"
+}

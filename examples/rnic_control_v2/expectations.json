@@ -1,0 +1,99 @@
+{
+  "schema": "simllm-rnic-control-v2-expectations-v1",
+  "simllm_base_commit": "90ada43070adb3b1e624b6819aff34d8620e8571",
+  "htsim_base_commit": "4885c647eecdfdf81479d1df052223c016ad086b",
+  "network_abi_versions": [1, 2],
+  "topology": "experiments/rnic_multibaseline/topologies/clos_64_400g.topo",
+  "physical_node_count": 64,
+  "destination": 63,
+  "endpoint_link_bps": 400000000000,
+  "max_wire_packet_bytes": 4096,
+  "data_header_bytes": 64,
+  "policy_context_token": 9001,
+  "ecn": {
+    "kmin_bytes": 0,
+    "kmax_bytes": 4096,
+    "pmax_ppm": 1000000,
+    "seed": 9
+  },
+  "congestion_cells": [
+    {
+      "name": "four_flow_ecn",
+      "flow_count": 4,
+      "payload_bytes": 65536,
+      "pfc_enabled": false
+    },
+    {
+      "name": "eight_flow_ecn",
+      "flow_count": 8,
+      "payload_bytes": 65536,
+      "pfc_enabled": false
+    }
+  ],
+  "pfc_cells": [
+    {
+      "name": "pfc_64k",
+      "flow_count": 8,
+      "payload_bytes": 65536,
+      "pfc_low_threshold_bytes": 4096,
+      "pfc_high_threshold_bytes": 8192
+    },
+    {
+      "name": "pfc_128k",
+      "flow_count": 8,
+      "payload_bytes": 131072,
+      "pfc_low_threshold_bytes": 4096,
+      "pfc_high_threshold_bytes": 8192
+    }
+  ],
+  "dynamic_link_cells": [
+    {
+      "name": "link_hold_short",
+      "source": 0,
+      "payload_bytes": 65536,
+      "link_id": 1,
+      "down_at_ps": 1000,
+      "up_at_ps": 201000,
+      "completion_delta_ps_band": [100000, 250000]
+    },
+    {
+      "name": "link_hold_long",
+      "source": 0,
+      "payload_bytes": 65536,
+      "link_id": 1,
+      "down_at_ps": 1000,
+      "up_at_ps": 401000,
+      "completion_delta_ps_band": [300000, 450000]
+    }
+  ],
+  "scored_relations": {
+    "cnp_rate_delta_bps": {
+      "instances": 2,
+      "band": [-300000000000, -1]
+    },
+    "pfc_pause_duration_ps": {
+      "instances": 2,
+      "band": [1, 1000000000]
+    },
+    "dynamic_link_completion_delta_ps": {
+      "instances": 2,
+      "bands_from_cells": true
+    },
+    "dynamic_link_duration_spacing_ps": {
+      "instances": 1,
+      "band": [190000, 210000]
+    },
+    "control_disabled_identity": {
+      "instances": 6,
+      "changed_bytes_band": [0, 0]
+    },
+    "abi_v1_identity": {
+      "instances": 2,
+      "changed_bytes_band": [0, 0]
+    }
+  },
+  "v1_artifact_sha256": {
+    "raw_observations.json": "37a4e9cf88a1b60094409150dfad25599eb77cbf268b3d08bfacf527e493a26a",
+    "summary.json": "00ef7e4f5bdbd38f4eabe9ba42dc75f56de528c8751b93e6eef4a3089fa61004"
+  }
+}
