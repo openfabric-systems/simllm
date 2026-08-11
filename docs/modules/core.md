@@ -292,6 +292,17 @@ tested; CORE-1 closed with M1. The step-record JSON readers landed with the
 M4 first slice, which also exercised the step schema for real: recorded M2/M3
 smoke JSONLs load, round-trip and replay through `HtsimStepSink`.
 
+BRIDGE-1 is complete for the pinned-binary prepared-replay scope.
+`HtsimPersistentStepSink` retains a local worker pool across batches, prepares
+isolated diagnostic runs concurrently, publishes only a complete batch and
+serves exact records in order. The
+[frozen study](../../examples/bridge_persistent_v1/RESULTS.md) matched all 34
+prepared-versus-diagnostic pairs in each of the result, outcome, GOAL text,
+GOAL binary and completion-CSV evidence classes. All four scored live wall-time
+instances passed with 3.36x to 5.43x speedup, and all six cells reported
+physical quiescence. BRIDGE-2, CORE-24 and HTSIM-18 retain the online stateful
+session and full CORE-5 transport rather than widening this exact acceleration.
+
 CORE-2 is complete. Graph structural and payload validation includes implicit
 FIFO edges, strict JSON readers and writers cover all five work kinds, and the
 serial compatibility lowerer retains per-layer request correlation, queues,
@@ -549,9 +560,44 @@ does not claim to produce these resource-contention measurements.
   completed-prefill and decode batch, match the framework's actual token
   production mask request by request, and preserve zero-sample, all-sample and
   legacy wire behavior exactly.
-- BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
-  process for closed loop, replacing per-step subprocess spawns. Its
-  incremental flow-injection transport should carry `ExecutionGraph` and
-  the landed CORE-5 `CompletionEvent`, `ExecutionResult`, `StepResult` and
-  bookkeeping projections. The M4 diagnostic mode currently pays
-  about 8 seconds of process/parse overhead per live tp=8 step.
+- CORE-24 (Completeness; P1; M): add a strict, versioned full `StepResult` wire
+  codec for BRIDGE-2. The existing `atlahs-closed-loop-result-v1` name has no
+  reader or writer and predates CORE-5 attribution. The new canonical form
+  must carry step identity and boundaries, every `RequestMetric`, exact
+  rational TPOT, the conserved `LatencyAttribution` partition and separately
+  typed `AdditiveVisitTotals`. Preserve a strict reader for any accepted
+  legacy result form and prove in-memory to wire to in-memory identity for
+  empty, prefill, decode and mixed-request results.
+- BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
+  client after HTSIM-18 supplies its persistent flow session and CORE-24
+  supplies the full result codec. BRIDGE-1 calibration measured 7.252 seconds
+  per isolated simulator invocation and 0.011 seconds for `txt2bin`. The
+  prepared sink overlaps this cost only when all records are available to
+  `prepare` up front, so a live closed-loop step still pays the full serial
+  invocation. This P1 client and HTSIM-18 must remove that per-step boundary.
+  A proposed
+  `simllm-cosim-session-v1` uses the same length-prefixed canonical JSON frame
+  rule as HTSIM-18. Handshake frames select the exact backend session and
+  authority. Each input frame carries a contiguous sequence, canonical
+  `ExecutionGraph`, source `StepRecord` and starting bookkeeping cursor.
+  Output event frames carry canonical `CompletionEvent` values and the exact
+  append batch of object, stage and completion facts; the terminal frame
+  carries `ExecutionResult`, full `StepResult`, ending ledger cursor and
+  physical quiescence separately from framework completion. Reject loss,
+  duplication, cursor disagreement, graph/event identity disagreement and
+  timestamp regression before publishing a result. The explicit diagnostic
+  and BRIDGE-1 prepared modes remain the identity off paths and must preserve
+  every accepted byte and timestamp when the online session is disabled.
+- BRIDGE-3 (Completeness; P0; M): bind every simulator child lifetime to its
+  owning SimLLM run. A demonstrated interpreter SIGTERM leaves as many as one
+  diagnostic child or `max_workers` prepared `htsim_rnic` children orphaned:
+  invocation uses no child process group, Linux parent-death signal or parent
+  signal-and-reap handler, and the parent-owned 600-second timeout disappears
+  with the interpreter. The acceptance criterion is "no orphan htsim
+  processes after a killed run". Kill diagnostic and prepared runs while
+  native children are in flight, then prove after a bounded poll that no
+  targeted descendant remains orphaned or zombie. Preserve normal diagnostic
+  output byte for byte and the complete prepared identity family, make timeout
+  and normal-shutdown cleanup idempotent, avoid signaling unrelated processes,
+  and document the supported-platform process-group, parent-death or Job
+  Object strategy.
