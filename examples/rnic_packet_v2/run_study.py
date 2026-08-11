@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from itertools import product
@@ -215,6 +216,9 @@ def _build(htsim_source: Path, build_dir: Path) -> tuple[Path, dict[str, int]]:
 
 
 def _run_v1(producer: Path, run_dir: Path) -> dict[str, Any]:
+    local_producer = run_dir / "build" / producer.name
+    local_producer.parent.mkdir(parents=True, exist_ok=False)
+    shutil.copy2(producer, local_producer)
     subprocess.run(
         [
             sys.executable,
@@ -222,7 +226,7 @@ def _run_v1(producer: Path, run_dir: Path) -> dict[str, Any]:
             "--factory",
             "htsim",
             "--producer",
-            str(producer),
+            str(local_producer),
             "--run-dir",
             str(run_dir),
         ],

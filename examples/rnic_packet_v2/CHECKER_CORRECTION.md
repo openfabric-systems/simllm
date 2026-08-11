@@ -22,3 +22,11 @@ This correction is post-specified test machinery. It is not claimed as a
 pre-registered assertion or as additional behavioral evidence. The corrected
 checker must still reject the frozen missing-TX-event mutant and pass every
 inherited Tier A family.
+
+Before the formal run, a read-through against the inherited Tier A path also
+found that the study built its producer in a sibling of the ABI-v1 run
+directory. The inherited checker deliberately requires the executable to
+reside inside that run directory. The study now copies the already built
+executable into an ABI-v1-local `build/` directory before invoking the
+unchanged checker. This path correction changes no simulation input, output,
+oracle or denominator and was made before the formal result-producing run.
