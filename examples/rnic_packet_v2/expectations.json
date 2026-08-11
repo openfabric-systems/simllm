@@ -1,0 +1,57 @@
+{
+  "schema": "simllm-rnic-packet-v2-expectations-v1",
+  "simllm_base_commit": "b74629b4b4da1addda9ff21226cfabf5c09aad87",
+  "htsim_base_commit": "edb28c3015c173b4251abc5858c587df325e1ebc",
+  "network_abi_versions": [1, 2],
+  "packet_wire_quantum_bytes": 4096,
+  "payload_bytes": [4096, 1048576],
+  "link_rate_gbps": [200, 400],
+  "doorbell_service_ps": [0, 1000],
+  "single_wqe_rows": 8,
+  "fifo_rows": 4,
+  "inherited_tier_a_instances": {
+    "d_additivity": 4,
+    "inverse_rate_serialization": 4,
+    "two_wqe_fifo": 4
+  },
+  "packet_instances": {
+    "tx_d_additivity": 4,
+    "rx_d_additivity": 4,
+    "multi_packet_inverse_rate_span": 2
+  },
+  "v1_artifact_sha256": {
+    "raw_observations.json": "37a4e9cf88a1b60094409150dfad25599eb77cbf268b3d08bfacf527e493a26a",
+    "summary.json": "00ef7e4f5bdbd38f4eabe9ba42dc75f56de528c8751b93e6eef4a3089fa61004"
+  },
+  "packet_event_kinds": [
+    "packet_tx_started",
+    "packet_tx_finished",
+    "packet_rx_arrived",
+    "delivered",
+    "dropped"
+  ],
+  "control_event_kinds": [
+    "ecn_marked",
+    "cnp_received",
+    "eligibility_updated",
+    "rate_updated",
+    "pfc_frame_submitted",
+    "pfc_paused",
+    "pfc_resumed",
+    "link_state_changed"
+  ],
+  "packet_event_fields": [
+    "attempt_token",
+    "extent_token",
+    "wqe_id",
+    "event_kind",
+    "event_time_ps",
+    "extent_index",
+    "packet_index",
+    "transmission_attempt",
+    "payload_offset_bytes",
+    "payload_bytes",
+    "wire_bytes",
+    "packet_kind"
+  ]
+}
