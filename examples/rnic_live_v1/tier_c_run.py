@@ -284,6 +284,7 @@ def _binary_environment(
     txt2bin: Path,
     reference_rnic: Path,
     reference_dcqcn: Path,
+    bypass_topology: Path,
 ) -> dict[str, str]:
     return {
         "SIMLLM_RNIC_TIER_A_PRODUCER": str(tier_a_producer),
@@ -292,6 +293,7 @@ def _binary_environment(
         "SIMLLM_TIER_B_REFERENCE_DCQCN": str(reference_dcqcn),
         "SIMLLM_TIER_B_BYPASS_RNIC": str(rnic),
         "SIMLLM_TIER_B_BYPASS_DCQCN": str(dcqcn),
+        "SIMLLM_TIER_B_BYPASS_TOPOLOGY": str(bypass_topology),
         "SIMLLM_TXT2BIN": str(txt2bin),
     }
 
@@ -391,6 +393,14 @@ def _run(
         txt2bin=txt2bin,
         reference_rnic=reference_rnic,
         reference_dcqcn=reference_dcqcn,
+        bypass_topology=(
+            htsim_source
+            / "htsim"
+            / "sim"
+            / "datacenter"
+            / "topologies"
+            / "leaf_spine_tiny.topo"
+        ).resolve(strict=True),
     )
 
     tier_a_dir = out / "abi-v1-tier-a"

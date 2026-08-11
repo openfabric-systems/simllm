@@ -410,7 +410,18 @@ def _goal_text() -> str:
 
 
 def _write_bypass_topology(temp_root: Path) -> Path:
-    source = TRACKED_BYPASS_TOPOLOGY.resolve(strict=True).read_text(encoding="utf-8")
+    configured_source = path_from_env("SIMLLM_TIER_B_BYPASS_TOPOLOGY")
+    source_path = (
+        configured_source
+        if configured_source is not None
+        else TRACKED_BYPASS_TOPOLOGY
+    )
+    if not source_path.is_file():
+        raise RuntimeError(
+            "SIMLLM_TIER_B_BYPASS_TOPOLOGY must name leaf_spine_tiny.topo "
+            "when the private htsim submodule is not initialized"
+        )
+    source = source_path.resolve(strict=True).read_text(encoding="utf-8")
     speed_line = "Downlink_speed_Gbps 100"
     if source.count(speed_line) != 2:
         raise RuntimeError("tracked tiny topology no longer has two equal 100G tiers")

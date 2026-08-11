@@ -488,6 +488,24 @@ def test_composed_projection_transaction_aborts_without_consuming_native_evidenc
     ) == 2
 
 
+def test_bypass_topology_accepts_machine_local_source(tmp_path, monkeypatch):
+    source = tmp_path / "leaf_spine_tiny.topo"
+    source.write_text(
+        "Nodes 32\n"
+        "Downlink_speed_Gbps 100\n"
+        "Downlink_speed_Gbps 100\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SIMLLM_TIER_B_BYPASS_TOPOLOGY", str(source))
+
+    topology = _write_bypass_topology(tmp_path)
+    text = topology.read_text(encoding="utf-8")
+
+    assert text.count("Downlink_speed_Gbps 400") == 2
+    assert "Downlink_speed_Gbps 100" not in text
+    assert "Nodes 32" in text
+
+
 def test_bypass_topology_retains_the_tiny_shape_at_the_frozen_link_rate(tmp_path):
     if not TRACKED_BYPASS_TOPOLOGY.is_file():
         pytest.skip(
