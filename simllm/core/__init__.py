@@ -84,6 +84,7 @@ from simllm.core.runtime import (
     collective_goal_tags,
 )
 from simllm.core.step import (
+    LEGACY_RESULT_SCHEMA,
     RESULT_SCHEMA,
     STEP_SCHEMA,
     AdditiveVisitTotals,
@@ -100,6 +101,7 @@ from simllm.core.step import (
     step_records_to_json,
     write_step_records,
 )
+from simllm.core.step_io import step_result_from_json, step_result_to_json
 
 __all__ = [
     "BOOKKEEPING_SCHEMA",
@@ -111,6 +113,7 @@ __all__ = [
     "DEFAULT_RNIC_RATE_BPS",
     "EXECUTION_GRAPH_SCHEMA",
     "EXECUTION_RESULT_SCHEMA",
+    "LEGACY_RESULT_SCHEMA",
     "RESULT_SCHEMA",
     "STEP_SCHEMA",
     "AdditiveVisitTotals",
@@ -184,6 +187,8 @@ __all__ = [
     "step_record_to_json",
     "step_records_from_jsonl",
     "step_records_to_json",
+    "step_result_from_json",
+    "step_result_to_json",
     "validate_bookkeeping_ledger",
     "validate_execution_graph",
     "write_step_records",
