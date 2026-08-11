@@ -2,9 +2,10 @@
 
 Current disposition, 2026-08-11: this file is chronological. Statements in
 the Tier A and Tier B sections that HTSIM-9 remained open describe those
-earlier checkpoints. The Tier C section below records the later ABI-v2 packet
-chain evidence and the HTSIM-19 off-path blocker. HTSIM-9 is still open because
-no single qualifying current-pin outer run passed every frozen gate.
+earlier checkpoints. The Tier C section below records the later qualifying
+ABI-v2 packet-chain run. HTSIM-9 is closed. HTSIM-19 was retired after the
+failed off-path gate was traced to a runner binary-role error rather than a
+backend regression.
 
 ## Claim scope
 
@@ -266,7 +267,7 @@ The stricter fatal-boolean provenance changed how the booleans are derived but
 did not change their serialized shape or values, so no result hash change
 occurred.
 
-## Tier C ABI-v2 packet-chain run and HTSIM-19 blocker
+## Tier C ABI-v2 packet-chain chronology and closure
 
 ### Frozen scope and chronology
 
@@ -281,38 +282,39 @@ audited backend remained
 `4885c647eecdfdf81479d1df052223c016ad086b`.
 
 Implementation `42a4a12e541cab666d996087779e302e278c6c0e` added ABI-v2
-packet parsing and live projection. Three machinery corrections then passed
+packet parsing and live projection. Four machinery corrections then passed
 the frozen check-only registry without changing its relation set:
 
 - `11f555c919e64a60abb14419db347994bd8c3e75` forwarded the inherited Tier A
   run-root guard;
 - `51d85e4ff67b307a19872b5af04cbbd85dd5116e` supplied the byte-identical
   Tier B topology from the audited checkout when private submodules are absent;
-  and
 - `73ffb43ee192126631f0ac80d461a70c0149d8cf` made the path-launched Tier C
-  runner importable.
+  runner importable; and
+- `9d5fb26bdd51fe50805bdbae76a42197075e8102` separated the composed link-ON
+  build from the frozen bypass link-OFF build.
 
 The first two full attempts stopped before Tier C observations existed, first
 on the missing Tier A run-root handoff and then on the uninitialized private
-submodule topology path. The next current-pin attempt passed every native and
-structural gate but found the ABI-v1 identity defect described below. A later
-attempt reproduced accepted ABI-v1 bytes by substituting the older accepted
-Tier B candidate executables, then reached the Tier C checker after the import
-fix. That binary substitution was chosen after observing the current-pin
-failure. Commit `ee4b85a87da7a197e3d06a11eb5e9b0ceac3b2e8` therefore removed
-it and restored the frozen requirement that Tier B use the RNIC and DCQCN
-executables built from the audited pin. History was not rewritten.
+submodule topology path. The third attempt passed every native and structural
+gate but incorrectly used the composed link-ON binary as the Tier B bypass
+candidate. Its bypass identity result was 2/4, so the outer runner stopped
+before Tier C and published no top-level result. Commit
+`562ab9170199ecdafacd994f127fda7e76576637` misattributed that observation to
+the audited backend pin. This chronology preserves the attempt while
+withdrawing that diagnosis.
 
-The final registered command at `ee4b85a` used output
-`$SIMLLM_WAVE5_RUN_ROOT/codex/htsim9_packet_closure`. It passed ruff, 685
-pytest tests with 5 skips, all 370 htsim CTest cases and all 6 standalone
-native CTest cases. Tier A reproduced both accepted digests. Tier B then
-failed its fatal off-path gate at bypass identity 2/4, so the outer runner
-published no Tier C observation and no top-level accepted result.
+A later hybrid substituted older accepted Tier B candidate executables after
+the 2/4 observation. It reproduced the ABI-v1 bytes and reached the Tier C
+checker, but remains post-specified diagnostic evidence. Commit
+`ee4b85a87da7a197e3d06a11eb5e9b0ceac3b2e8` removed that substitution. The
+final correction instead builds both roles from the same audited backend
+source: link ON for composed live-chain rows and link OFF for frozen Tier B
+bypass rows.
 
-### Current-pin ABI-v1 failure
+### Misconfigured link-ON bypass failure
 
-The current-pin Tier B raw and result digests are respectively
+The misconfigured link-ON Tier B raw and result digests are respectively
 `d04ff7e6fddb5c35f487b50b5bd0ea61a8265a3a8fe732d5ce9620f85cf6b850`
 and
 `d25cd2876a211a6b4aadd9cc192c5b2e2f9799c4775f481adca87f0db0b1ff36`.
@@ -328,10 +330,11 @@ and `rnic-cn` changed their completion CSV and canonical completion rows:
 
 The inputs, FCT, scalar-derived StepResult tuples and request summaries were
 unchanged. The repository-standard `BypassArtifacts` comparator rejected the
-two changed behavioral artifact classes. HTSIM-19 owns restoration of this
-current-backend compatibility path.
+two changed behavioral artifact classes. The initial claim that HTSIM-19
+owned restoration of a backend compatibility path was wrong. The three-run
+diagnosis below shows this was a harness-role error.
 
-### Frozen-relation packet diagnostic
+### Post-specified packet diagnostic
 
 The packet mechanism itself reached the live chain in two nonqualifying forms:
 a direct Tier C invocation after the fourth outer attempt had already stopped,
@@ -385,24 +388,107 @@ the `CompletionEvent` projection, or any live request metric. A valid TX stream
 can therefore reach and fail either scored family before an exact oracle pins
 the same quantity. The checker result records
 `scored_evaluation=raw_observations_before_exact_oracles`, with both later
-oracle orders explicit. This is genuine-risk diagnostic evidence. It is not
-promoted to closure because the qualifying outer run never reached it.
+oracle orders explicit. Every scored instance can fail in a run that reaches
+it: a valid TX stream can omit the doorbell shift in one cell, apply the wrong
+rate, project a constant start into `CompletionEvent`, or reach the native
+timeline without moving `StepResult`, TTFT or TPOT. Such a run fails the raw
+cross-cell relation before the later per-cell oracle pins the same quantities.
+The two scored families are therefore genuine-risk evidence and are not
+entailed by an earlier fatal oracle.
+
+### Three-run link-role diagnosis
+
+Before changing the harness, the unchanged registered Tier B command was run
+with three bypass candidates:
+
+1. Backend pin `4885c64` built with `HTSIM_ENABLE_SIMLLM_RNIC=OFF` passed
+   bypass identity 4/4. Every other family passed its full denominator. The
+   raw and result digests were the accepted
+   `acaca5c57134848a314a92d223c283a7dc63f1c3ef964f65f7dea75487d6dfa1`
+   and
+   `3755bf5c2b37e9c30f90f97e3d6920841c70d052ff9164434d26c4f56773f0ed`.
+2. The pre-v2 composed build with `HTSIM_ENABLE_SIMLLM_RNIC=ON` passed bypass
+   identity only 2/4, with every other family at its full denominator. Its raw
+   and result digests were
+   `d04ff7e6fddb5c35f487b50b5bd0ea61a8265a3a8fe732d5ce9620f85cf6b850`
+   and
+   `d25cd2876a211a6b4aadd9cc192c5b2e2f9799c4775f481adca87f0db0b1ff36`.
+3. The frozen wave-4 link-OFF build passed bypass identity 4/4 and reproduced
+   the same accepted raw and result digests as case 1.
+
+The 2/4 signature therefore follows the link setting, not backend revision or
+ABI-v2 support. The link-ON binary intentionally selects the structural
+session instead of the legacy WQE ledger for `rnic-nn` and `rnic-cn`. It is a
+composed binary, not a valid legacy bypass candidate. `rnic-nn-fluid` and
+DCQCN do not take that structural path and remained exact.
+
+HTSIM-19 is retired without a backend change. Its former P0 backend-regression
+classification and reproduction were wrong, and the ID will not be reused.
+No residual task remains for the by-design link-ON artifact difference.
+
+### Qualifying registered run
+
+The qualifying run used SimLLM commit
+`9d5fb26bdd51fe50805bdbae76a42197075e8102` and audited htsim commit
+`4885c647eecdfdf81479d1df052223c016ad086b`. Its top-level, Tier C raw and
+Tier C result SHA-256 values are respectively
+`a9c40db621dab3659f543cc80dc589a1fc14d5280d14c1752571896f9d39d92c`,
+`41138345b6aa306db91dcf929b5bbf9cdbf3a649a36cee2142c4ad755e8eef84`
+and
+`143303bef066172a0964afac0e81b90b49f06f39db87ab82ce2dca2c99efedf8`.
+The run record identifies the composed RNIC as link ON with SHA-256
+`8efbbcdf8f7c98b24fd78b926d38aef83538465dffe743c98387318ce75bd6f3`.
+It identifies the bypass RNIC and DCQCN binaries as link OFF with SHA-256
+values `7761015b5b4bbfe508c4d5257564f7842f0568bf21f6cbe2eefe92a2e9645d74`
+and `1db86255fc1ee505efeee8f8aa1ad310a9a6319f0d6d40877e529dbb38940fa8`.
+
+The fatal ABI-v1 off path reproduced all accepted bytes:
+
+- Tier A raw observations:
+  `37a4e9cf88a1b60094409150dfad25599eb77cbf268b3d08bfacf527e493a26a`;
+- Tier A summary:
+  `00ef7e4f5bdbd38f4eabe9ba42dc75f56de528c8751b93e6eef4a3089fa61004`;
+- Tier B raw observations:
+  `acaca5c57134848a314a92d223c283a7dc63f1c3ef964f65f7dea75487d6dfa1`;
+  and
+- Tier B results:
+  `3755bf5c2b37e9c30f90f97e3d6920841c70d052ff9164434d26c4f56773f0ed`.
+
+Tier B reported 4/4 doorbell additivity, 4/4 inverse rate, 8/8 live forms,
+8/8 component rows, 4/4 FIFO contention and 4/4 bypass identity. These are
+the inherited Tier B evidence classes and are not added to a Tier C headline.
+Ruff passed, pytest passed 686 tests with 5 skips, all 370 htsim CTest cases
+passed, and all 6 standalone native CTest cases passed.
+
+The qualifying Tier C run reproduced the packet diagnostic exactly. Its
+genuine-risk fractions are 4/4 for the doorbell packet-to-live chain and 4/4
+for the link-rate packet-to-live chain, with the signed magnitudes listed
+above. The overlapping families are not summed. All 8 single-WQE and 4 FIFO
+exact rows passed. The acceptance-surrogate, producer-constant and
+missing-TX-start controls were rejected. Those author-defined controls are
+fatal and unscored, as are packet closed forms, origin equality, event
+projection, inherited live-chain invariants and ABI-v1 digests. The digests
+are off-path change-set guards, not behavioral evidence.
 
 ### HTSIM-9 acceptance-clause mapping
 
-The registered closure clauses and their dispositions are:
+The registered closure clauses and their evidence are:
 
-1. "one composed run of the Tier B class passes": not demonstrated. The
-   current-pin outer run stopped at the fatal ABI-v1 Tier B identity gate;
-   the hybrid run used a different Tier B candidate provenance.
+1. "one composed run of the Tier B class passes": demonstrated by the single
+   registered outer invocation. Its composed live rows used the link-ON
+   `4885c64` build, its frozen bypass rows used the link-OFF build from the
+   same source, and Tier B passed every family including bypass identity 4/4.
 2. "ABI-v2 packet-issue evidence populating the native timeline through
    `ExecutionGraph` to `CompletionEvent`, `StepResult`, TTFT and TPOT":
-   demonstrated by the frozen-relation diagnostic, but not inside the single
-   qualifying run required by clause 1.
+   demonstrated inside that same invocation by the two 4/4 scored families,
+   the 12 exact rows and the recorded first-packet projection into
+   `CompletionEvent.STARTED` and live request metrics.
 3. "Network acceptance and whole-flow terminal events do not satisfy that
-   evidence": demonstrated diagnostically by the 1 MiB separation cells, the
-   explicit TX-start origin guard and the rejected acceptance surrogate.
+   evidence": demonstrated by the 1 MiB separation cells, explicit TX-start
+   origin guard and rejected acceptance-surrogate control.
 
-Because clause 1 is unmet and clause 2 is not demonstrated within its required
-run scope, HTSIM-9 does not close. HTSIM-19 `(Precision; P0; M)` is the exact
-residual blocker. No broader packet-chain claim is made.
+All registered clauses were demonstrated in the required run scope. HTSIM-9
+closes. No unproved clause was moved to a residual ID, so no new task ID from
+the allocated range is consumed. The claim remains limited to the frozen
+isolated fixture and does not claim the physical transport-control producers
+owned by HTSIM-16 or the dynamic-link source owned by HTSIM-15.

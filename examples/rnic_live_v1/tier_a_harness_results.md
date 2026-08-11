@@ -1,5 +1,10 @@
 # HTSIM-9 Tier A preparation results
 
+Current status, 2026-08-11: this file records the earlier preparation
+checkpoint. The later qualifying Tier C run is recorded in
+[RESULTS.md](RESULTS.md#tier-c-abi-v2-packet-chain-chronology-and-closure), and
+HTSIM-9 is now closed.
+
 The deterministic fake-port preparation gate passes. This is component
 evidence for the SimLLM side of HTSIM-9, not a composed htsim result and not a
 TTFT or TPOT claim. The successor remains HTSIM-9, which must compile the
