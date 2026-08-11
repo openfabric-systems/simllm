@@ -8,6 +8,7 @@ import importlib.metadata
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 import traceback
@@ -37,6 +38,7 @@ REPOSITORY_HASHES = {
 BWRAP_SHA256 = "a87328fd969d4bc9fbc62e56b15a393b2b23c7b47aa092a3ac02955a68da19e4"
 INVALID_UUID = "GPU-00000000-0000-0000-0000-000000000000"
 MECHANISMS = ("invalid-uuid", "device-namespace", "cpu-platform")
+FIX_ROUND_MECHANISM = "device-namespace-cpu-platform"
 EXPECTED_STEP_SCHEMA = "atlahs-closed-loop-step-v1"
 EXPECTED_OUTPUT_TOKENS = 2
 EXPECTED_SCORED = 3
@@ -86,7 +88,28 @@ def _device_probe() -> dict[str, Any]:
     import torch
 
     entries = sorted(Path("/dev").glob("nvidia*"))
-    nodes = [str(path) for path in entries if path.is_char_device()]
+    entry_details = []
+    for path in entries:
+        metadata = path.lstat()
+        mode = metadata.st_mode
+        if stat.S_ISCHR(mode):
+            kind = "character-device"
+        elif stat.S_ISDIR(mode):
+            kind = "directory"
+        elif stat.S_ISLNK(mode):
+            kind = "symbolic-link"
+        elif stat.S_ISREG(mode):
+            kind = "regular-file"
+        else:
+            kind = "other"
+        entry_details.append(
+            {
+                "path": str(path),
+                "kind": kind,
+                "mode": f"{stat.S_IMODE(mode):04o}",
+            }
+        )
+    nodes = [item["path"] for item in entry_details if item["kind"] == "character-device"]
     nvml: dict[str, Any]
     initialized = False
     try:
@@ -115,6 +138,7 @@ def _device_probe() -> dict[str, Any]:
         cuda_error = f"{type(exc).__name__}: {exc}"
     return {
         "device_entries": [str(path) for path in entries],
+        "device_entry_details": entry_details,
         "device_nodes": nodes,
         "device_node_count": len(nodes),
         "nvml": nvml,
@@ -139,7 +163,7 @@ def _probe_invisible(probe: dict[str, Any]) -> bool:
 
 def _run_internal(args: argparse.Namespace) -> None:
     mechanism = args.internal
-    if mechanism not in MECHANISMS:
+    if mechanism not in (*MECHANISMS, FIX_ROUND_MECHANISM):
         raise AssertionError("internal mechanism is not registered")
     attempt_dir = args.run_dir / mechanism
     result_path = attempt_dir / "attempt.json"
@@ -163,7 +187,7 @@ def _run_internal(args: argparse.Namespace) -> None:
     }
     exception = None
     try:
-        if mechanism == "cpu-platform":
+        if mechanism in ("cpu-platform", FIX_ROUND_MECHANISM):
             import vllm.platforms
             from vllm.platforms.cpu import CpuPlatform
 
@@ -311,7 +335,7 @@ def _launch_attempt(args: argparse.Namespace, mechanism: str) -> dict[str, Any]:
     if mechanism == "invalid-uuid":
         env["CUDA_VISIBLE_DEVICES"] = INVALID_UUID
         command = child
-    elif mechanism == "device-namespace":
+    elif mechanism in ("device-namespace", FIX_ROUND_MECHANISM):
         command = [
             str(args.bwrap),
             "--die-with-parent",
@@ -458,7 +482,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bwrap", type=Path, required=True)
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--check-only", action="store_true")
-    parser.add_argument("--internal", choices=MECHANISMS, help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--internal",
+        choices=(*MECHANISMS, FIX_ROUND_MECHANISM),
+        help=argparse.SUPPRESS,
+    )
     return parser.parse_args()
 
 
