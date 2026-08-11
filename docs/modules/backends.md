@@ -32,6 +32,11 @@ backend submodules.
   ingestion until BACK-28 lands. The reusable bypass checker guards the full
   reference input tuple and compares the four frozen behavioral artifact
   classes byte for byte.
+- `ComposedRnicObservations` + `ComposedRnicSession`: strict validation and
+  transactional projection of the frozen composed native rows into the core
+  structural RNIC seam. The external native session owns WQE lifecycle and
+  timing. The adapter tracks only atomic observation consumption and cannot
+  advance a WQE or simulator resource.
 - `simllm.backends.fct.normalized_fct`: per-flow FCT normalized to the
   `rnic-nn` baseline of the identical GOAL, matched by
   (source, destination, tag). Valid for aligned-start flows; for phases
@@ -131,13 +136,14 @@ GOAL Send
   -> GOAL completion
 ```
 
-The target composition links the SimLLM C++ library into the directly invoked
-htsim binary, with no Python callback in the packet event loop. The composed
-runtime will present `AtlahsFlowRuntime` to `AtlahsHtsimApi`. That link is not
-live today: current htsim binaries do not contain `simllm::rnic`. HTSIM-9 owns
-the combined outer wrapper and backend extension through which the SimLLM
-hardware runtime calls an htsim policy and fabric using opaque flow and packet
-tokens. QP, WQE, CQ, QPC, PCIe and DMA objects never cross that boundary.
+The composition links the SimLLM C++ library into the directly invoked htsim
+binary, with no Python callback in the packet event loop. The composed runtime
+presents `AtlahsFlowRuntime` to `AtlahsHtsimApi`; the pinned backend main
+contains this ABI-v1 link and passed both frozen live-composition tiers.
+HTSIM-9 retains the backend extension through which the SimLLM hardware
+runtime calls an htsim policy and fabric using opaque flow tokens. QP, WQE, CQ,
+QPC, PCIe and DMA objects never cross that boundary. Packet-attempt tokens and
+packet issue events remain follow-up scope.
 
 State ownership is explicit:
 
@@ -248,11 +254,12 @@ still name the device owner and use the `ReceiveQueue` owner kind. BACK-9 owns
 the RQ/SRQ registry, active receive path and the endpoint and identity checks
 that become mandatory when receive execution is enabled.
 The absent-network path owns an inert port that accepts with a fresh token and
-delivers on the device progress pump; HTSIM-9 supplies the future concrete
-external port. BACK-27 connects the landed GPU-side records to concurrent
-compute tasks. VLLM-13 and CORE-5 consume the recorded CQ-owner decision once
-that coupling is live. COMP-2's fixed CPU-proxy and GPU-initiated constants
-remain the analytical fallback while structural submission is disabled.
+delivers on the device progress pump. The composed ABI-v1 path injects the
+concrete htsim port landed by HTSIM-9; BACK-25 and BACK-26 extend its event
+vocabulary. BACK-27 connects the landed GPU-side records to concurrent compute
+tasks. VLLM-13 and CORE-5 consume the recorded CQ-owner decision once that
+coupling is live. COMP-2's fixed CPU-proxy and GPU-initiated constants remain
+the analytical fallback while structural submission is disabled.
 
 ### WQE authority and projection contract
 
@@ -302,8 +309,10 @@ rules. The current bookkeeping-v1 rule and legacy CSV `rq_id` are compatibility
 forms, not structural semantics. A structural public projection must use a
 versioned schema with these cardinalities while preserving a v1 reader.
 
-The current `AtlahsWqeLedger` remains the bypass authority until BACK-8,
-BACK-9, BACK-12 and HTSIM-9 connect the structural path. A WQE has no single
+The current `AtlahsWqeLedger` remains the sole authority only in explicit
+hardware-bypass mode. The composed ABI-v1 structural path instead selects the
+native session as sole WQE authority. BACK-9, BACK-12 and HTSIM-9 deepen that
+structural path without changing this exclusivity. A WQE has no single
 scheduled start constant. The model records post, doorbell publication and
 observation, WQE fetch or BlueFlame transfer, QPC readiness, scheduler
 admission, first and last packet, transport retirement, CQE visibility and CQ
@@ -473,6 +482,27 @@ The post-specified integration-review correction makes the CSV
 `producer_kind` field project the producer agent taxonomy, so GPU-initiated
 rows now record kind `gpu` while retaining shape `gpu_initiated`.
 
+On 2026-08-11 BACK-8 closed on the frozen two-tier live-composition gate. Tier
+A established the directly invoked composed binary, sole structural authority,
+native WQE timeline, exact single-WQE and FIFO relations, and step-sink replay.
+Tier B projected those immutable native observations through
+`ExecutionGraph -> CoarseDeviceRuntime -> CompletionEvent -> ExecutionResult
+-> StepResult -> TTFT/TPOT`. Its six genuine-risk families passed 4/4 D
+additivity, 4/4 inverse-rate serialization, 8/8 live metric forms, 8/8
+seven-component rows, 4/4 FIFO contention and 4/4 bypass artifact identity.
+The W1 queue wait was exactly L, the selected `nic_owner` attribution conserved
+every request latency, failed adapter transactions left native-consumption and
+runtime state untouched, and all four protected bypass profiles were
+byte-identical to the frozen reference. See the
+[Tier B results](../../examples/rnic_live_v1/RESULTS.md#tier-b-live-reachability).
+
+This closure does not claim packet issue timestamps. ABI-v1 still exposes
+flow-level network acceptance and whole-flow terminal events only; neither is
+a substitute for first-packet or last-packet issue. BACK-25 owns packet-attempt
+identity and TX/RX observations, BACK-26 owns transport-control vocabulary,
+and HTSIM-9 remains open for the htsim producer and composed packet-issue
+evidence after those interfaces land.
+
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
 and its ECMP-collision and slow-start behavior is the phenomenon under study.
@@ -549,38 +579,6 @@ is difficult.
   analytical incidence must not be described as detected hardware behavior.
 - BACK-2 (Completeness; P2; S): LogGOPSim invocation helper for fast
   flow-level sweeps.
-- BACK-8 (Completeness; P1; L): create the protocol-neutral SimLLM RNIC
-  hardware extension under
-  `simllm/backends/rnic/`. Its C++ event core must be independent of Python
-  and of any one CC policy, compose with htsim through HTSIM-9, and preserve
-  direct binary invocation. Define versioned configuration and result
-  records, deterministic event ordering, opaque policy/fabric tokens and a
-  hardware-bypass mode. The native session is the sole mutable WQE authority
-  in structural mode and emits the versioned records from which bookkeeping
-  and compatibility rows are projected. Acceptance requires the same hardware
-  configuration hash across `rnic-nn`, `rnic-cn` and DCQCN comparison rows.
-  Every bypass profile retained after composition, including packetized
-  profiles, must preserve its accepted artifacts byte for byte; an
-  intentionally unsupported legacy bypass must fail configuration explicitly.
-  A directly invoked htsim run and a step-level run must prove live
-  reachability: changing one nonzero native hardware service parameter changes
-  the corresponding WQE timeline, per-flow FCT, JCT, step latency and at least
-  one TTFT or TPOT outcome by the frozen relation. The test must fail if the
-  native library is unlinked, the wrapper is bypassed or a second lifecycle
-  authority is active.
-  The standalone C++17 library, opaque flow-level `NetworkPort`, strict native
-  build and deterministic fake adapter are complete. The SimLLM-owned
-  component record layer is also complete: schema-tagged structural and bypass
-  configuration/result records, canonical effective-hardware SHA-256,
-  sole-authority bookkeeping and completion-CSV projections, exact authority
-  counters, and the reusable bypass byte checker are complete. The frozen
-  component study is
-  [rnic_session_records_v1](../../examples/rnic_session_records_v1/RESULTS.md).
-  BACK-8 remains open for the frozen live-reachability gate. HTSIM-9 owns the
-  outer `AtlahsFlowRuntime` wrapper and concrete htsim-side adapter; CORE-4 and
-  CORE-5 own graph invocation, `CompletionEvent`, step-result and TTFT/TPOT
-  reduction. The modular composition entry point and external port injection
-  seam are complete.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
   the structural **RDMA
   Work Queue**, merging the old WQE lifecycle and per-WQE-start work. Model
@@ -774,11 +772,12 @@ is difficult.
   landed on the backend main (its PR 11) as an ABI-v1 checkpoint: opaque
   flow tokens, structural-mode exclusivity with observed counters, relayed
   backpressure, stable transport identities, and the frozen Tier A gate
-  passing with the htsim factory. Remaining scope: the packetized TX/RX
-  event vocabulary (after BACK-25 and BACK-26) so first and last packet
-  issue populate the native timeline, and the Tier B live-reachability run
-  through CORE-15's chain. The entry closes when Tier B passes with
-  packet-issue evidence.
+  passing with the htsim factory. The frozen Tier B run now also passes through
+  the live core metric chain. Remaining scope is precisely the packetized TX/RX
+  event vocabulary after BACK-25 and BACK-26, plus a composed run showing that
+  first-packet and last-packet issue populate the native timeline. Network
+  acceptance and whole-flow terminal events do not satisfy that evidence. The
+  entry closes when the packet-issue run passes.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.

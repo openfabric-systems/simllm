@@ -97,9 +97,9 @@ selected native `WqeRecord` owns the WQE lifecycle and every calibrated
 per-WQE start stage.
 The request bookkeeper, backend result rows and completion stream are
 projections of that record, not independent WQE state machines; the
-`AtlahsWqeLedger` is not constructed in this mode. Until the structural path is
-live, a run may explicitly select `AtlahsWqeLedger` as its sole timing-neutral
-bypass authority. A run never enables both mutable authorities, and every
+`AtlahsWqeLedger` is not constructed in this mode. A run may instead explicitly
+select `AtlahsWqeLedger` as its sole timing-neutral bypass authority. A run
+never enables both mutable authorities, and every
 projection must conserve identity, cardinality and timestamps available at its
 boundary. `CompletionReducer` owns only request metric history; it does not
 schedule, progress or complete a runtime object.
@@ -279,10 +279,11 @@ graph-level NCCL expansion, GPU-affine RNIC selection and semantic submission,
 and completion-event/projection plumbing. In bypass mode it delegates SQ/RQ/CQ
 and WQE state to the sole timing-neutral `AtlahsWqeLedger` authority. In
 structural mode it delegates WQE lifecycle, WQ/CQ state, NIC arbitration and
-completion to the native RNIC session owned by BACK-8, BACK-9 and BACK-12. It
-must call the compute service model rather than grow a second SM or SASS model
-in `simllm.core`. The compute slice therefore does not claim whole-task
-execution timing or compute/copy overlap.
+completion to the native RNIC session delivered by BACK-8, with wider WQ/CQ
+objects and pipeline arbitration remaining under BACK-9 and BACK-12. It must
+call the compute service model rather than grow a second SM or SASS model in
+`simllm.core`. The compute slice therefore does not claim whole-task execution
+timing or compute/copy overlap.
 
 ## Status
 
@@ -327,8 +328,8 @@ rows are separately validated surfaces. `CoarseDeviceRuntime` now supplies
 their concrete graph-operation/tag/WQE correlation.
 
 Actual framework observation producers remain VLLM-11/12 and SGL-9/10.
-Explicit KV state semantics remain CORE-3. BACK-8, BACK-9 and BACK-12 own
-structural RNIC objects and arbitration.
+Explicit KV state semantics remain CORE-3. BACK-9 and BACK-12 own the remaining
+structural RNIC objects and arbitration depth.
 
 CORE-5 is complete for the supported core path. `CompletionReducer` consumes
 the required graph boundary and the runtime's corrected critical-path
@@ -343,8 +344,8 @@ identities and fails closed when a count alone is ambiguous. The reducer
 consumes each execution ID once, including zero-latency results, and the v1
 reader treats an explicit null sampled-identity field as absent.
 
-CORE-4 is complete for the coordinated first coarse bypass profile;
-structural completion remains explicitly conditional on CORE-15.
+CORE-4 is complete for the coordinated first coarse bypass profile and the
+frozen Tier B structural fixture.
 `CoarseDeviceRuntime` implements host-launch and CUDA-stream order, dependency
 release, co-runnable non-preemptive kernel dispatch into `simllm.compute`,
 directional copy-engine queues, coarse shared HBM arbitration, NCCL channels,
@@ -352,9 +353,10 @@ NVLink-class intra-node service, GPU-affine cross-node semantic submission,
 synchronous/asynchronous control completion and completion/bookkeeping
 projection. `AtlahsWqeLedger` is the sole live bypass authority. Structural
 mode constructs no ledger and stages submissions through an isolated
-`NativeRnicTransaction`, whose prepared commit is the only mutation of its
-`NativeRnicSession`. HTSIM-9 owns the composed native/htsim implementation
-that fills this seam.
+`NativeRnicTransaction`. The composed adapter consumes immutable native
+observations transactionally; an abort leaves both runtime state and adapter
+session counters unchanged. The composed C++ session remains the sole mutable
+WQE lifecycle authority.
 
 The [CORE-4 runtime study](../../examples/core4_runtime/RESULTS.md) cites the
 older module expectations, the original expectations-only commit `d43cddb`,
@@ -367,8 +369,8 @@ was exactly four times wall JCT without entering the critical path, dependency
 chain launch intervals were clipped at the realized predecessor boundary, and
 omitted/explicit identity remained canonical-byte identical under class-label
 permutation. Remaining coarse approximations and completeness gaps are
-registered as CORE-11 through CORE-16 rather than being claimed as calibrated
-behavior.
+registered as CORE-11 through CORE-14 and CORE-16 rather than being claimed as
+calibrated behavior.
 
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
@@ -386,10 +388,17 @@ quiescence remained 20,971,520 ps. The separately frozen
 [Tier B expectations](../../examples/rnic_live_v1/tier_b_expectations.md)
 and their
 [review supplement](../../examples/rnic_live_v1/tier_b_review_supplement.md)
-retain the composed native live gate until HTSIM-9 and CORE-15 supply its
-producer. The supplement pins the raw producer schema, four bypass profiles,
-both objectively selected doorbell-owner mappings, and the two-WQE live FIFO
-relation.
+pinned the raw producer schema, four bypass profiles, both objectively selected
+doorbell-owner mappings, and the two-WQE live FIFO relation. The registered
+Tier B run then passed all six scored families: D additivity 4/4, inverse-rate
+serialization 4/4, live StepResult/TTFT/TPOT forms 8/8, seven-component rows
+8/8, FIFO contention 4/4, and bypass artifact identity 4/4. The selected
+`nic_owner` mapping put D and network service on NIC attribution while W1's
+wait of exactly L stayed in queue attribution. All fatal invariants and
+checker-sensitivity controls held. This is the first composed native
+network-to-TTFT/TPOT evidence and closes CORE-15; the exact scope and output
+hashes are in the
+[Tier B results](../../examples/rnic_live_v1/RESULTS.md#tier-b-live-reachability).
 
 ## Pre-registered runtime sanity experiments
 
@@ -523,14 +532,6 @@ does not claim to produce these resource-contention measurements.
   profile as an explicit off path. Enabling manifest discovery with the
   equivalent eight-by-eight mapping must preserve every accepted CORE-4 event,
   WQE, byte count and timestamp exactly.
-- CORE-15 (Completeness; P1; L): complete the structural runtime path after
-  HTSIM-9 supplies the composed transactional native session. The native path
-  must be live-reachable from an ExecutionGraph to a changed completion time;
-  its standalone probes do not close this task. Acceptance must compare a
-  fixed contended graph through bypass and composed native authority, observe
-  the registered signed JCT change, prove failed execution leaves native state
-  untouched, and preserve the bypass baseline exactly when structural mode is
-  disabled.
 - CORE-16 (Completeness; P2; M): replace CORE-4's fail-closed collective and
   control expansion limits with exact ring remainder chunking and a collision-
   free tag allocator wider than 1,024 control destinations. The present off
