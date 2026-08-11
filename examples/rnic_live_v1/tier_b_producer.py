@@ -181,7 +181,11 @@ def _event_row(index: int, event: Any) -> dict[str, Any]:
     }
 
 
-def _runtime_report_row(report: Any) -> dict[str, Any]:
+def _runtime_report_row(
+    report: Any,
+    *,
+    include_packet_timeline: bool = False,
+) -> dict[str, Any]:
     operations = [
         {
             "operation_id": operation.operation_id,
@@ -221,23 +225,40 @@ def _runtime_report_row(report: Any) -> dict[str, Any]:
             )
         ):
             raise RuntimeError("Tier B native projection omitted a stage timestamp")
-        wqes.append(
-            {
-                "ordinal": ordinal,
-                "wqe_id": wqe.wqe_id,
-                "operation_id": wqe.operation_id,
-                "submitted_at_ps": wqe.submitted_at_ps,
-                "doorbell_started_at_ps": wqe.doorbell_started_at_ps,
-                "doorbell_completed_at_ps": wqe.doorbell_completed_at_ps,
-                "network_eligible_at_ps": wqe.network_eligible_at_ps,
-                "network_started_at_ps": wqe.network_started_at_ps,
-                "network_finished_at_ps": wqe.network_finished_at_ps,
-                "completed_at_ps": wqe.completed_at_ps,
-                "payload_bytes": wqe.payload_bytes,
-                "sq_post_sequence": wqe.sq_post_sequence,
-                "cq_post_sequence": wqe.cq_post_sequence,
-            }
-        )
+        row = {
+            "ordinal": ordinal,
+            "wqe_id": wqe.wqe_id,
+            "operation_id": wqe.operation_id,
+            "submitted_at_ps": wqe.submitted_at_ps,
+            "doorbell_started_at_ps": wqe.doorbell_started_at_ps,
+            "doorbell_completed_at_ps": wqe.doorbell_completed_at_ps,
+            "network_eligible_at_ps": wqe.network_eligible_at_ps,
+            "network_started_at_ps": wqe.network_started_at_ps,
+            "network_finished_at_ps": wqe.network_finished_at_ps,
+            "completed_at_ps": wqe.completed_at_ps,
+            "payload_bytes": wqe.payload_bytes,
+            "sq_post_sequence": wqe.sq_post_sequence,
+            "cq_post_sequence": wqe.cq_post_sequence,
+        }
+        if include_packet_timeline:
+            if (
+                wqe.network_accepted_at_ps is None
+                or wqe.first_packet_at_ps is None
+                or wqe.last_packet_at_ps is None
+                or not wqe.packet_tx_started_at_ps
+            ):
+                raise RuntimeError("Tier C native projection omitted packet evidence")
+            row.update(
+                {
+                    "network_accepted_at_ps": wqe.network_accepted_at_ps,
+                    "first_packet_at_ps": wqe.first_packet_at_ps,
+                    "last_packet_at_ps": wqe.last_packet_at_ps,
+                    "packet_tx_started_at_ps": list(
+                        wqe.packet_tx_started_at_ps
+                    ),
+                }
+            )
+        wqes.append(row)
     return {
         "execution_id": report.execution_id,
         "authority": report.authority,
@@ -266,7 +287,12 @@ def _metric_row(metric: Any) -> dict[str, Any]:
     }
 
 
-def _run_structural_cell(cell: ComposedRnicCell) -> dict[str, Any]:
+def _run_structural_cell(
+    cell: ComposedRnicCell,
+    *,
+    include_packet_timeline: bool = False,
+    session_prefix: str = "tier-b",
+) -> dict[str, Any]:
     from simllm.core import (
         CoarseDeviceRuntime,
         CompletionReducer,
@@ -279,7 +305,7 @@ def _run_structural_cell(cell: ComposedRnicCell) -> dict[str, Any]:
     session = ComposedRnicSession(
         cell,
         session_id=(
-            f"tier-b-{cell.payload_bytes}-{cell.link_rate_gbps}-"
+            f"{session_prefix}-{cell.payload_bytes}-{cell.link_rate_gbps}-"
             f"{cell.doorbell_service_ps}-{cell.wqe_count}wqe"
         ),
     )
@@ -333,7 +359,10 @@ def _run_structural_cell(cell: ComposedRnicCell) -> dict[str, Any]:
                     "quiesced_at_ps": execution.quiesced_at_ps,
                     "event_indices": event_indices,
                 },
-                "runtime_report": _runtime_report_row(report),
+                "runtime_report": _runtime_report_row(
+                    report,
+                    include_packet_timeline=include_packet_timeline,
+                ),
                 "step_result": {
                     "step_index": step.step_index,
                     "step_latency_ps": step.step_latency_ps,
