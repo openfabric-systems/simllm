@@ -51,6 +51,7 @@ from simllm.backends.rnic_records import (
 )
 from simllm.backends.step_lowerer import SerialStepLowerer, SerialStepLowererConfig
 from simllm.backends.step_sink import (
+    HtsimPersistentStepSink,
     HtsimStepSink,
     HtsimStepSinkConfig,
     StepNetworkOutcome,
@@ -69,6 +70,7 @@ __all__ = [
     "ComposedWqeObservation",
     "FlowCompletion",
     "HtsimDcqcnConfig",
+    "HtsimPersistentStepSink",
     "HtsimRnicConfig",
     "HtsimStepSink",
     "HtsimStepSinkConfig",

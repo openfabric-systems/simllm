@@ -67,10 +67,21 @@ backend submodules.
   A step with no TP collectives (TP world of 1, or a zero-token drain
   record) returns `None`, so the adapter's own compute-only estimate
   stands. Per-step subprocess invocation is the documented diagnostic
-  mode; the persistent co-simulator is BRIDGE-1 (core.md).
+  mode and remains the default.
   `StepNetworkOutcome` keeps per-step bookkeeping (compute estimate, sample
   count and exactness, ordered layer calcs, makespan and network share) for
   reporting.
+- `HtsimPersistentStepSink` (BRIDGE-1): the opt-in prepared-replay form of
+  the same sink for a finite record sequence known before consumption.
+  `prepare` copies and lowers the records serially, then a persistent local
+  thread pool pipelines `txt2bin` and the unchanged isolated one-GOAL
+  `htsim_rnic` invocations. Results remain unpublished until the complete
+  batch succeeds and are served only for dataclass value-equal records in
+  their original order. The pool can serve another batch after the first is
+  fully consumed.
+  This preserves the diagnostic path's per-step reset semantics; it does not
+  claim a stateful online backend session. BRIDGE-2, CORE-24 and HTSIM-18 own
+  that later transport.
 - `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
   from a `StepRecord` to per-layer compute plus semantic TP/EP collective
   operations. Explicit framework observations bypass the fallback schedule and
@@ -354,6 +365,15 @@ plus a live closed loop: vLLM v0.26.0 in-process at tp=8 under
 `SimExecutor` with the sink drove `htsim_rnic` inside the engine step
 loop, every step latency matching the closed form to 0 ps
 (examples/m4/RESULTS.md).
+
+On 2026-08-11 BRIDGE-1 closed for finite known replays. The opt-in
+`HtsimPersistentStepSink` reuses a local worker pool and concurrently executes
+the unchanged isolated one-GOAL path. Its
+[frozen study](../../examples/bridge_persistent_v1/RESULTS.md) retained every
+step result, outcome, GOAL text, GOAL binary and completion CSV byte for byte
+across both recorded M4 TP 8 replays. Four and eight workers reduced wall time
+by 3.36x to 5.43x across the four scored cells. Diagnostic invocation remains
+the default; BRIDGE-2 and HTSIM-18 retain the true online stateful session.
 
 On 2026-08-10 BACK-5, BACK-6 and BACK-7 closed. The sink now consumes an
 optional exact provider layer breakdown, an optional exact step sample count
@@ -809,6 +829,32 @@ is difficult.
   first-packet and last-packet issue populate the native timeline. Network
   acceptance and whole-flow terminal events do not satisfy that evidence. The
   entry closes when the packet-issue run passes.
+- HTSIM-18 (Completeness; P1; L): add a genuinely persistent, opt-in
+  stdin/stdout session to the composed `htsim_rnic` binary. The existing
+  one-GOAL CLI remains the exact off path. BRIDGE-1 calibration measured
+  7.252 seconds per isolated simulator invocation and 0.011 seconds for
+  `txt2bin`. Its prepared sink overlaps finite replays, but `prepare` requires
+  every record before consumption, so each live closed-loop step still pays
+  the full serial invocation. This P1 session removes that per-step process
+  boundary while retaining simulator state across steps. A proposed
+  `simllm-htsim-flow-session-v1` uses a 32-bit big-endian byte length followed
+  by one canonical JSON object per frame. `open` carries session ID, profile,
+  topology identity, link rate, seed, effective-hardware hash and sole WQE
+  authority, then returns the accepted configuration and sequence zero.
+  `inject` carries a contiguous sequence, execution/operation/flow identity,
+  source, destination, tag, payload bytes, logical eligibility time and policy
+  context. `advance` names the causal boundary that may run; the server emits
+  ordered accepted, queued, started and completed flow projections with native
+  WQE aliases and timestamps. `drain` returns the last accepted sequence,
+  completion rows, authority counters and a quiescence proof; `close` is legal
+  only after drain. Duplicate, skipped, stale or post-terminal sequences fail
+  before authority mutation, and a disconnected client cannot silently commit
+  a partial frame. The event list, topology, native RNIC session and transport
+  policy state live from `open` through `close`, so later steps observe earlier
+  state. Acceptance compares one-step session output byte for byte with the
+  CLI off path, then uses two steps to prove state retention and exact
+  completion/bookkeeping conservation. BRIDGE-2 owns the SimLLM client and
+  graph-level framing above this flow protocol.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.

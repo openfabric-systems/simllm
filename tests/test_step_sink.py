@@ -1,12 +1,15 @@
 """Tests for the closed-loop htsim step sink (simllm.backends.step_sink)."""
 
 import hashlib
+import threading
+import time
 from types import SimpleNamespace
 
 import pytest
 
 import simllm.backends.step_sink as step_sink_module
 from simllm.backends import (
+    HtsimPersistentStepSink,
     HtsimStepSink,
     HtsimStepSinkConfig,
     StepNetworkOutcome,
@@ -347,6 +350,180 @@ def test_sink_sample_count_identity_when_every_request_samples(tmp_path, monkeyp
 
     assert estimates == [424_960, 424_960]
     assert goals[0] == goals[1]
+
+
+def test_persistent_sink_prepares_concurrently_and_publishes_in_order(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
+    active = 0
+    maximum_active = 0
+    worker_threads = set()
+    state_lock = threading.Lock()
+
+    def tracked_backend(config):
+        nonlocal active, maximum_active
+        goal_bytes = config.goal_bin.read_bytes()
+        with state_lock:
+            active += 1
+            maximum_active = max(maximum_active, active)
+            worker_threads.add(threading.get_ident())
+        try:
+            time.sleep(0.02)
+        finally:
+            with state_lock:
+                active -= 1
+        return SimpleNamespace(
+            job_completion_time_ps=lambda: 100_000
+            + int(hashlib.sha256(goal_bytes).hexdigest()[:8], 16),
+            flows=[],
+            quiescent=True,
+        )
+
+    monkeypatch.setattr(step_sink_module, "run_htsim_rnic", tracked_backend)
+    records = [
+        StepRecord(
+            index,
+            index * 1_000,
+            [
+                ScheduledRequest(
+                    f"r{index}",
+                    RequestPhase.DECODE,
+                    num_new_tokens=1,
+                    context_length=128 + index,
+                )
+            ],
+        )
+        for index in range(6)
+    ]
+    diagnostic = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SMALL_DIMS,
+            workdir=tmp_path / "diagnostic",
+        )
+    )
+    diagnostic_results = [diagnostic(record) for record in records]
+    assert maximum_active == 1
+
+    maximum_active = 0
+    worker_threads.clear()
+    with HtsimPersistentStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SMALL_DIMS,
+            workdir=tmp_path / "persistent",
+        ),
+        max_workers=3,
+    ) as persistent:
+        persistent.prepare(records)
+        assert persistent.outcomes == []
+        assert persistent.prepared_steps_remaining == len(records)
+        persistent_results = [persistent(record) for record in records]
+        assert persistent.prepared_steps_remaining == 0
+
+    assert maximum_active >= 2
+    assert len(worker_threads) >= 2
+    assert persistent_results == diagnostic_results
+    assert persistent.outcomes == diagnostic.outcomes
+    for record in records:
+        name = f"step-{record.step_index:06d}.goal"
+        assert (tmp_path / "persistent" / name).read_bytes() == (
+            tmp_path / "diagnostic" / name
+        ).read_bytes()
+
+
+@pytest.mark.parametrize("max_workers", [True, 1.5, "2"])
+def test_persistent_sink_rejects_noninteger_worker_count(tmp_path, max_workers):
+    with pytest.raises(TypeError, match="integer"):
+        HtsimPersistentStepSink(
+            HtsimStepSinkConfig(
+                profile="rnic-nn-fluid",
+                tp_ranks=(0, 1),
+                dims=SMALL_DIMS,
+                workdir=tmp_path,
+            ),
+            max_workers=max_workers,
+        )
+
+
+def test_persistent_sink_enforces_prepared_record_order(tmp_path, monkeypatch):
+    stub_backend(monkeypatch)
+    records = [
+        StepRecord(index, index * 10, decode_record().scheduled)
+        for index in range(2)
+    ]
+    persistent = HtsimPersistentStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SMALL_DIMS,
+            workdir=tmp_path / "persistent",
+        ),
+        max_workers=2,
+    )
+
+    with persistent:
+        with pytest.raises(RuntimeError, match="prepare"):
+            persistent(records[0])
+        with pytest.raises(ValueError, match="unique"):
+            persistent.prepare([records[0], records[0]])
+        persistent.prepare(records)
+        with pytest.raises(ValueError, match="next prepared step"):
+            persistent(records[1])
+        assert persistent.prepared_steps_remaining == 2
+        with pytest.raises(RuntimeError, match="consume"):
+            persistent.prepare(records)
+        assert persistent(records[0]) is not None
+        assert persistent(records[1]) is not None
+        persistent.prepare([records[0]])
+        assert persistent(records[0]) is not None
+
+    with pytest.raises(RuntimeError, match="closed"):
+        persistent.prepare(records)
+
+
+def test_persistent_sink_failed_preparation_publishes_nothing(tmp_path, monkeypatch):
+    monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
+    records = [
+        StepRecord(index, index * 10, decode_record().scheduled)
+        for index in range(2)
+    ]
+
+    def failing_backend(config):
+        if "step-000001" in config.completion_csv.name:
+            raise RuntimeError("injected backend failure")
+        return SimpleNamespace(
+            job_completion_time_ps=lambda: 100_000,
+            flows=[],
+            quiescent=True,
+        )
+
+    monkeypatch.setattr(step_sink_module, "run_htsim_rnic", failing_backend)
+    with HtsimPersistentStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=SMALL_DIMS,
+            workdir=tmp_path / "persistent",
+        ),
+        max_workers=2,
+    ) as persistent:
+        with pytest.raises(RuntimeError, match="injected backend failure"):
+            persistent.prepare(records)
+        assert persistent.prepared_steps_remaining == 0
+        assert persistent.outcomes == []
+
+        stub_backend(monkeypatch)
+        persistent.prepare(records)
+        results = [persistent(record) for record in records]
+        assert [result.step_index for result in results if result is not None] == [0, 1]
+        assert [result.step_latency_ps for result in results if result is not None] == [
+            100_000,
+            100_000,
+        ]
 
 
 @pytest.mark.skipif(
