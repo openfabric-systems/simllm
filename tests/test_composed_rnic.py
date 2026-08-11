@@ -18,6 +18,7 @@ from examples.rnic_live_v1.tier_b_producer import (
     BYPASS_PROFILES,
     FROZEN_SIMLLM_BASE,
     TIER_B_OBSERVATION_SCHEMA,
+    TRACKED_BYPASS_TOPOLOGY,
     _graph,
     _profile,
     _run_structural_cell,
@@ -228,6 +229,11 @@ def test_composed_projection_transaction_aborts_without_consuming_native_evidenc
 
 
 def test_bypass_topology_retains_the_tiny_shape_at_the_frozen_link_rate(tmp_path):
+    if not TRACKED_BYPASS_TOPOLOGY.is_file():
+        pytest.skip(
+            "tracked bypass topology lives in the private htsim submodule, "
+            "which CI checkouts do not initialize"
+        )
     topology = _write_bypass_topology(tmp_path)
     text = topology.read_text(encoding="utf-8")
 
