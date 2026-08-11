@@ -4,6 +4,7 @@
 #include <deque>
 #include <limits>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -85,6 +86,34 @@ bool validDropReason(DropReason reason) {
     }
 }
 
+bool validNetworkPacketKind(NetworkPacketKind kind) {
+    switch (kind) {
+    case NetworkPacketKind::Data:
+    case NetworkPacketKind::Retransmission:
+    case NetworkPacketKind::Ack:
+    case NetworkPacketKind::Nak:
+    case NetworkPacketKind::Cnp:
+    case NetworkPacketKind::Pfc:
+    case NetworkPacketKind::OtherControl:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool validDropEvidence(DropEvidenceProvenance evidence) {
+    switch (evidence) {
+    case DropEvidenceProvenance::None:
+    case DropEvidenceProvenance::Controlled:
+    case DropEvidenceProvenance::Asserted:
+    case DropEvidenceProvenance::Observed:
+    case DropEvidenceProvenance::Inferred:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool sameAgent(
     const RnicSubmissionAgent& lhs,
     const RnicSubmissionAgent& rhs) noexcept {
@@ -103,6 +132,19 @@ bool sameOptionalAgent(
 
 class WorkQueue::Impl {
 public:
+    struct InflightExtent {
+        WqeId wqe_id{0};
+        std::uint32_t abi_version{kNetworkPortAbiVersionV1};
+        std::uint32_t extent_index{0};
+    };
+
+    struct PacketAttemptState {
+        NetworkToken extent_token{0};
+        NetworkEvent started;
+        bool tx_finished{false};
+        bool rx_arrived{false};
+    };
+
     Impl(
         WorkQueueConfig config,
         NetworkPort& network_port,
@@ -115,6 +157,7 @@ public:
         std::optional<RnicSubmissionProfile> submission_profile)
         : config_(std::move(config)),
           network_port_(network_port),
+          network_capabilities_(network_port.capabilities()),
           pcie_fabric_(pcie_fabric),
           pcie_binding_(std::move(pcie_binding)),
           qpc_lookup_enabled_(qpc_lookup_enabled),
@@ -134,6 +177,21 @@ public:
         if (config_.policy_context_token == 0) {
             throw std::invalid_argument(
                 "RNIC policy-context token must be nonzero");
+        }
+        if (network_capabilities_.abi_version != kNetworkPortAbiVersionV1
+            && network_capabilities_.abi_version
+                != kNetworkPortAbiVersionV2) {
+            throw std::invalid_argument(
+                "RNIC network port advertises an unsupported ABI");
+        }
+        if (network_capabilities_.abi_version == kNetworkPortAbiVersionV1
+            && (network_capabilities_.packet_attempt_events
+                || network_capabilities_.ecn_cnp_events
+                || network_capabilities_.policy_update_events
+                || network_capabilities_.pfc_events
+                || network_capabilities_.dynamic_link_events)) {
+            throw std::invalid_argument(
+                "RNIC NetworkPort ABI v1 cannot advertise v2 capabilities");
         }
         validateServiceTime(
             config_.doorbell_service_ps, "doorbell_service_ps");
@@ -668,6 +726,7 @@ public:
             }
 
             NetworkTxDescriptor descriptor;
+            descriptor.abi_version = network_capabilities_.abi_version;
             descriptor.wqe_id = record.wqe_id;
             descriptor.wr_id = record.request.wr_id;
             descriptor.flow_id = record.request.flow_id;
@@ -706,7 +765,8 @@ public:
                     throw std::logic_error(
                         "accepted RNIC network result carries contradictory fields");
                 }
-                if (result.token == 0 || inflight_.count(result.token) != 0) {
+                if (result.token == 0 || inflight_.count(result.token) != 0
+                    || seen_network_tokens_.count(result.token) != 0) {
                     throw std::logic_error(
                         "RNIC network port returned an invalid or duplicate token");
                 }
@@ -714,7 +774,13 @@ public:
                 record.network_token = result.token;
                 record.timeline.network_accepted_at_ps = now_ps;
                 record.state = WqeState::InFlight;
-                inflight_.emplace(result.token, record.wqe_id);
+                inflight_.emplace(
+                    result.token,
+                    InflightExtent{
+                        record.wqe_id,
+                        descriptor.abi_version,
+                        descriptor.extent_index});
+                seen_network_tokens_.insert(result.token);
                 ++counters_.network_accepted;
                 ++changes;
                 continue;
@@ -782,47 +848,94 @@ public:
     }
 
     void onNetworkEvent(const NetworkEvent& event) {
-        if (event.abi_version != kNetworkPortAbiVersion) {
+        if (event.abi_version != network_capabilities_.abi_version) {
             throw std::invalid_argument("unsupported RNIC network event ABI");
         }
         if (!validDropLocation(event.drop_location)
-            || !validDropReason(event.drop_reason)) {
+            || !validDropReason(event.drop_reason)
+            || !validDropEvidence(event.drop_evidence)) {
             throw std::invalid_argument(
-                "RNIC network event carries an invalid drop enum");
-        }
-        switch (event.kind) {
-        case NetworkEventKind::Delivered:
-            if (event.drop_location != DropLocation::None
-                || event.drop_reason != DropReason::None) {
-                throw std::invalid_argument(
-                    "delivered RNIC network event carries drop evidence");
-            }
-            break;
-        case NetworkEventKind::Dropped:
-            if (event.drop_location == DropLocation::None
-                || event.drop_reason == DropReason::None) {
-                throw std::invalid_argument(
-                    "dropped RNIC network event lacks controlled evidence");
-            }
-            break;
-        default:
-            throw std::invalid_argument("invalid RNIC network event kind");
+                "RNIC network event carries an invalid evidence enum");
         }
         validateTime(event.event_time_ps);
-        const auto inflight_it = inflight_.find(event.token);
-        if (inflight_it == inflight_.end()) {
+        switch (event.scope) {
+        case NetworkEventScope::FlowExtent:
+            onFlowExtentEvent(event);
+            break;
+        case NetworkEventScope::PacketAttempt:
+            onPacketAttemptEvent(event);
+            break;
+        case NetworkEventScope::TransportControl:
+            onTransportControlEvent(event);
+            break;
+        default:
+            throw std::invalid_argument("invalid RNIC network event scope");
+        }
+        last_observed_time_ps_ = event.event_time_ps;
+    }
+
+    const InflightExtent& requireInflightExtent(
+        NetworkToken token, WqeId wqe_id) const {
+        const auto inflight = inflight_.find(token);
+        if (inflight == inflight_.end()) {
             throw std::logic_error("unknown or duplicate RNIC network token");
         }
-        if (event.wqe_id != inflight_it->second) {
+        if (wqe_id != inflight->second.wqe_id) {
             throw std::logic_error("RNIC network token/WQE mismatch");
         }
+        return inflight->second;
+    }
 
-        WqeRecord& record = mutableWqe(event.wqe_id);
+    void validateEventAfterAcceptance(
+        const NetworkEvent& event, const InflightExtent& extent) const {
+        if (event.abi_version != extent.abi_version
+            || event.extent_index != extent.extent_index) {
+            throw std::invalid_argument(
+                "RNIC network event changed its negotiated extent identity");
+        }
+        const WqeRecord& record = wqe(extent.wqe_id);
         if (!record.timeline.network_accepted_at_ps.has_value()
             || event.event_time_ps
                 < *record.timeline.network_accepted_at_ps) {
             throw std::logic_error("RNIC network event predates acceptance");
         }
+    }
+
+    void onFlowExtentEvent(const NetworkEvent& event) {
+        if (event.parent_token != 0
+            || (event.kind != NetworkEventKind::Delivered
+                && event.kind != NetworkEventKind::Dropped)) {
+            throw std::invalid_argument(
+                "RNIC flow extent requires one terminal event");
+        }
+        if (event.kind == NetworkEventKind::Delivered) {
+            if (event.drop_location != DropLocation::None
+                || event.drop_reason != DropReason::None
+                || event.drop_evidence != DropEvidenceProvenance::None
+                || event.drop_resource_id != 0) {
+                throw std::invalid_argument(
+                    "delivered RNIC network event carries drop evidence");
+            }
+        } else if (event.drop_location == DropLocation::None
+                   || event.drop_reason == DropReason::None
+                   || (event.abi_version == kNetworkPortAbiVersionV2
+                       && (event.drop_evidence
+                               == DropEvidenceProvenance::None
+                           || event.drop_resource_id == 0))) {
+            throw std::invalid_argument(
+                "dropped RNIC network event lacks typed evidence");
+        }
+        const InflightExtent extent = requireInflightExtent(
+            event.token, event.wqe_id);
+        validateEventAfterAcceptance(event, extent);
+        for (const auto& token_and_attempt : packet_attempts_) {
+            if (token_and_attempt.second.extent_token == event.token) {
+                throw std::logic_error(
+                    "RNIC extent terminated with a live packet attempt");
+            }
+        }
+
+        WqeRecord& record = mutableWqe(event.wqe_id);
         CompletionStatus status = CompletionStatus::Success;
         if (event.kind == NetworkEventKind::Dropped) {
             status = CompletionStatus::TransportError;
@@ -844,8 +957,7 @@ public:
             pending_outcomes_.erase(candidate.wqe_id);
             throw;
         }
-        last_observed_time_ps_ = event.event_time_ps;
-        inflight_.erase(inflight_it);
+        inflight_.erase(event.token);
         record.timeline.network_outcome_at_ps = event.event_time_ps;
         record.state = WqeState::AwaitingOrderedRetirement;
         record.ecn_marked = record.ecn_marked || event.ecn_marked;
@@ -864,6 +976,219 @@ public:
             });
         }
         commitRetirements(std::move(retirement_plan));
+    }
+
+    static bool samePacketAttempt(
+        const NetworkEvent& event, const NetworkEvent& started) {
+        return event.token == started.token
+            && event.parent_token == started.parent_token
+            && event.wqe_id == started.wqe_id
+            && event.extent_index == started.extent_index
+            && event.packet_index == started.packet_index
+            && event.transmission_attempt == started.transmission_attempt
+            && event.payload_offset_bytes == started.payload_offset_bytes
+            && event.payload_bytes == started.payload_bytes
+            && event.wire_bytes == started.wire_bytes
+            && event.packet_kind == started.packet_kind;
+    }
+
+    void validatePacketAttemptEnvelope(
+        const NetworkEvent& event, const InflightExtent& extent) const {
+        if (event.abi_version != kNetworkPortAbiVersionV2
+            || !network_capabilities_.packet_attempt_events
+            || event.token == 0 || event.parent_token == 0
+            || event.token == event.parent_token
+            || !validNetworkPacketKind(event.packet_kind)
+            || event.wire_bytes == 0
+            || event.payload_bytes > event.wire_bytes) {
+            throw std::invalid_argument(
+                "RNIC packet attempt has an invalid ABI-v2 envelope");
+        }
+        validateEventAfterAcceptance(event, extent);
+        const WqeRecord& record = wqe(event.wqe_id);
+        if (event.payload_offset_bytes > record.request.payload_bytes
+            || event.payload_bytes
+                > record.request.payload_bytes - event.payload_offset_bytes) {
+            throw std::out_of_range(
+                "RNIC packet attempt exceeds its WQE payload");
+        }
+    }
+
+    void onPacketAttemptEvent(const NetworkEvent& event) {
+        const InflightExtent& extent = requireInflightExtent(
+            event.parent_token, event.wqe_id);
+        validatePacketAttemptEnvelope(event, extent);
+        const bool terminal = event.kind == NetworkEventKind::Delivered
+                           || event.kind == NetworkEventKind::Dropped;
+        if (!terminal
+            && (event.drop_location != DropLocation::None
+                || event.drop_reason != DropReason::None
+                || event.drop_evidence != DropEvidenceProvenance::None
+                || event.drop_resource_id != 0)) {
+            throw std::invalid_argument(
+                "intermediate RNIC packet event carries drop evidence");
+        }
+
+        if (event.kind == NetworkEventKind::PacketTxStarted) {
+            if (seen_network_tokens_.count(event.token) != 0
+                || packet_attempts_.count(event.token) != 0) {
+                throw std::logic_error(
+                    "RNIC packet attempt token was reused in one session");
+            }
+            const auto seen = seen_network_tokens_.insert(event.token);
+            try {
+                const auto inserted = packet_attempts_.emplace(
+                    event.token,
+                    PacketAttemptState{event.parent_token, event, false, false});
+                if (!inserted.second) {
+                    throw std::logic_error(
+                        "RNIC packet attempt token is already live");
+                }
+            } catch (...) {
+                seen_network_tokens_.erase(seen.first);
+                throw;
+            }
+            if (event.packet_kind == NetworkPacketKind::Data
+                || event.packet_kind == NetworkPacketKind::Retransmission) {
+                WqeTimeline& timeline = mutableWqe(event.wqe_id).timeline;
+                if (!timeline.first_packet_at_ps.has_value()) {
+                    timeline.first_packet_at_ps = event.event_time_ps;
+                }
+                timeline.last_packet_at_ps = event.event_time_ps;
+            }
+            return;
+        }
+
+        const auto attempt = packet_attempts_.find(event.token);
+        if (attempt == packet_attempts_.end()) {
+            throw std::logic_error(
+                "unknown or duplicate RNIC packet attempt token");
+        }
+        if (!samePacketAttempt(event, attempt->second.started)
+            || event.event_time_ps
+                < attempt->second.started.event_time_ps) {
+            throw std::logic_error(
+                "RNIC packet attempt observation changed identity or time");
+        }
+        switch (event.kind) {
+        case NetworkEventKind::PacketTxFinished:
+            if (attempt->second.tx_finished) {
+                throw std::logic_error(
+                    "RNIC packet attempt finished TX more than once");
+            }
+            attempt->second.tx_finished = true;
+            return;
+        case NetworkEventKind::PacketRxArrived:
+            if (!attempt->second.tx_finished || attempt->second.rx_arrived) {
+                throw std::logic_error(
+                    "RNIC packet RX arrival violated attempt order");
+            }
+            attempt->second.rx_arrived = true;
+            return;
+        case NetworkEventKind::Delivered:
+            if (!attempt->second.rx_arrived
+                || event.drop_location != DropLocation::None
+                || event.drop_reason != DropReason::None
+                || event.drop_evidence != DropEvidenceProvenance::None
+                || event.drop_resource_id != 0) {
+                throw std::invalid_argument(
+                    "RNIC packet delivery has an invalid lifecycle");
+            }
+            packet_attempts_.erase(attempt);
+            return;
+        case NetworkEventKind::Dropped:
+            if (event.drop_location == DropLocation::None
+                || event.drop_reason == DropReason::None
+                || event.drop_evidence == DropEvidenceProvenance::None
+                || event.drop_resource_id == 0) {
+                throw std::invalid_argument(
+                    "RNIC packet drop lacks stable evidence");
+            }
+            packet_attempts_.erase(attempt);
+            return;
+        default:
+            throw std::invalid_argument(
+                "invalid RNIC packet-attempt event kind");
+        }
+    }
+
+    void onTransportControlEvent(const NetworkEvent& event) {
+        if (event.abi_version != kNetworkPortAbiVersionV2) {
+            throw std::invalid_argument(
+                "RNIC transport control requires NetworkPort ABI v2");
+        }
+        WqeRecord* record = nullptr;
+        if (event.parent_token != 0) {
+            const InflightExtent& extent = requireInflightExtent(
+                event.parent_token, event.wqe_id);
+            validateEventAfterAcceptance(event, extent);
+            record = &mutableWqe(event.wqe_id);
+        }
+        switch (event.kind) {
+        case NetworkEventKind::EcnMarked:
+        case NetworkEventKind::CnpReceived:
+            if (!network_capabilities_.ecn_cnp_events || record == nullptr
+                || event.token == 0) {
+                throw std::invalid_argument(
+                    "RNIC ECN or CNP event lacks packet correlation");
+            }
+            {
+                const auto attempt = packet_attempts_.find(event.token);
+                if (attempt == packet_attempts_.end()
+                    || attempt->second.extent_token != event.parent_token
+                    || attempt->second.started.wqe_id != event.wqe_id) {
+                    throw std::invalid_argument(
+                        "RNIC ECN or CNP token is not a live packet attempt");
+                }
+            }
+            if (event.kind == NetworkEventKind::EcnMarked) {
+                record->ecn_marked = true;
+            }
+            return;
+        case NetworkEventKind::EligibilityUpdated:
+        case NetworkEventKind::RateUpdated:
+            if (!network_capabilities_.policy_update_events
+                || record == nullptr
+                || event.policy_context_token != config_.policy_context_token
+                || event.effective_at_ps < event.event_time_ps
+                || (event.kind == NetworkEventKind::RateUpdated
+                    && (!event.has_effective_rate
+                        || event.effective_rate_bps == 0))) {
+                throw std::invalid_argument(
+                    "RNIC policy update has an invalid effective payload");
+            }
+            return;
+        case NetworkEventKind::PfcFrameSubmitted:
+        case NetworkEventKind::PfcPaused:
+        case NetworkEventKind::PfcResumed:
+            if (!network_capabilities_.pfc_events
+                || (event.link_id == 0
+                    && event.source == event.destination)
+                || (event.kind == NetworkEventKind::PfcPaused
+                    && event.pause_quanta == 0
+                    && !event.has_pause_duration)
+                || (event.kind == NetworkEventKind::PfcResumed
+                    && (event.pause_quanta != 0
+                        || event.has_pause_duration))) {
+                throw std::invalid_argument(
+                    "RNIC PFC event has an invalid control payload");
+            }
+            return;
+        case NetworkEventKind::LinkStateChanged:
+            if (!network_capabilities_.dynamic_link_events
+                || event.link_id == 0
+                || (event.link_state != NetworkLinkState::Up
+                    && event.link_state != NetworkLinkState::Down)
+                || (event.has_effective_rate
+                    && event.effective_rate_bps == 0)) {
+                throw std::invalid_argument(
+                    "RNIC link-state event has an invalid transition payload");
+            }
+            return;
+        default:
+            throw std::invalid_argument(
+                "invalid RNIC transport-control event kind");
+        }
     }
 
     std::vector<CompletionEntry> pollCompletionQueue(
@@ -946,7 +1271,8 @@ public:
 
     bool hasPendingPhysicalWork() const noexcept {
         return fatal_ || !unpublished_.empty() || !ready_.empty()
-            || !inflight_.empty() || !pending_outcomes_.empty()
+            || !inflight_.empty() || !packet_attempts_.empty()
+            || !pending_outcomes_.empty()
             || !pending_cqes_.empty() || !cq_.empty();
     }
 
@@ -1140,13 +1466,25 @@ public:
             mark_owned(wqe_id, WqeState::Doorbelled);
         }
         for (const auto& token_and_wqe : inflight_) {
-            const WqeRecord& record = wqe(token_and_wqe.second);
+            const WqeRecord& record = wqe(token_and_wqe.second.wqe_id);
             if (!record.network_token.has_value()
                 || *record.network_token != token_and_wqe.first) {
                 throw std::logic_error(
                     "RNIC in-flight token accounting mismatch");
             }
-            mark_owned(token_and_wqe.second, WqeState::InFlight);
+            mark_owned(token_and_wqe.second.wqe_id, WqeState::InFlight);
+        }
+        for (const auto& token_and_attempt : packet_attempts_) {
+            const PacketAttemptState& attempt = token_and_attempt.second;
+            const auto extent = inflight_.find(attempt.extent_token);
+            if (token_and_attempt.first != attempt.started.token
+                || extent == inflight_.end()
+                || attempt.started.parent_token != attempt.extent_token
+                || attempt.started.wqe_id != extent->second.wqe_id
+                || seen_network_tokens_.count(token_and_attempt.first) == 0) {
+                throw std::logic_error(
+                    "RNIC packet-attempt ownership accounting mismatch");
+            }
         }
         for (const auto& wqe_and_outcome : pending_outcomes_) {
             if (wqe_and_outcome.first
@@ -1185,6 +1523,17 @@ public:
                 }
             } else {
                 ++unreclaimed;
+            }
+            if (record.timeline.first_packet_at_ps.has_value()
+                    != record.timeline.last_packet_at_ps.has_value()
+                || (record.timeline.first_packet_at_ps.has_value()
+                    && (*record.timeline.first_packet_at_ps
+                            > *record.timeline.last_packet_at_ps
+                        || !record.timeline.network_accepted_at_ps.has_value()
+                        || *record.timeline.first_packet_at_ps
+                            < *record.timeline.network_accepted_at_ps))) {
+                throw std::logic_error(
+                    "RNIC packet timeline is not an ordered live projection");
             }
             bool needs_owner = false;
             switch (record.state) {
@@ -1612,6 +1961,7 @@ private:
 
     WorkQueueConfig config_;
     NetworkPort& network_port_;
+    NetworkPortCapabilities network_capabilities_;
     PcieFabric* pcie_fabric_{nullptr};
     std::optional<WorkQueuePcieBinding> pcie_binding_;
     bool qpc_lookup_enabled_{true};
@@ -1627,7 +1977,9 @@ private:
     std::vector<RnicCqConsumptionRecord> cq_consumption_records_;
     std::deque<WqeId> unpublished_;
     std::deque<WqeId> ready_;
-    std::map<NetworkToken, WqeId> inflight_;
+    std::map<NetworkToken, InflightExtent> inflight_;
+    std::map<NetworkToken, PacketAttemptState> packet_attempts_;
+    std::set<NetworkToken> seen_network_tokens_;
     std::map<WqeId, PendingOutcome> pending_outcomes_;
     std::map<PendingCqeKey, CompletionEntry> pending_cqes_;
     std::deque<CompletionEntry> cq_;

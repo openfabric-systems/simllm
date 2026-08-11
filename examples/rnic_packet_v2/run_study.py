@@ -342,9 +342,10 @@ def _validate_packet_cell(cell: dict[str, Any]) -> None:
         )
         if total_payload != payload:
             raise AssertionError("packet-v2 payload ledger does not close")
-        if tx_starts[0] != doorbell:
+        packet_issue_base = int(wqe["port_tx_at_ps"])
+        if tx_starts[0] != packet_issue_base:
             raise AssertionError("packet-v2 first TX issue is not exact")
-        expected_last_tx = doorbell + (
+        expected_last_tx = packet_issue_base + (
             (payload - min(payload, PACKET_WIRE_QUANTUM_BYTES))
             * 8
             * 1000
@@ -352,7 +353,9 @@ def _validate_packet_cell(cell: dict[str, Any]) -> None:
         )
         if tx_starts[-1] != expected_last_tx:
             raise AssertionError("packet-v2 last TX issue is not exact")
-        expected_terminal = doorbell + payload * 8 * 1000 // rate
+        expected_terminal = (
+            packet_issue_base + payload * 8 * 1000 // rate
+        )
         if rx_arrivals[-1] != expected_terminal:
             raise AssertionError("packet-v2 final RX boundary is not exact")
 

@@ -26,9 +26,18 @@ namespace {
 
 class Json {
 public:
-    enum class Kind { Null, Boolean, Integer, String, Array, Object };
+    enum class Kind {
+        Null,
+        Boolean,
+        Integer,
+        String,
+        Array,
+        Object,
+        OrderedObject,
+    };
     using Array = std::vector<Json>;
     using Object = std::map<std::string, Json>;
+    using OrderedObject = std::vector<std::pair<std::string, Json>>;
 
     Json() = default;
     explicit Json(bool value) : kind_(Kind::Boolean), boolean_(value) {}
@@ -40,6 +49,9 @@ public:
     explicit Json(Array value) : kind_(Kind::Array), array_(std::move(value)) {}
     explicit Json(Object value)
         : kind_(Kind::Object), object_(std::move(value)) {}
+    explicit Json(OrderedObject value)
+        : kind_(Kind::OrderedObject),
+          ordered_object_(std::move(value)) {}
 
     std::string dump(unsigned indent = 0) const {
         std::ostringstream output;
@@ -113,6 +125,9 @@ private:
             case Kind::Object:
                 writeObject(output, indent, depth);
                 return;
+            case Kind::OrderedObject:
+                writeOrderedObject(output, indent, depth);
+                return;
         }
         throw std::logic_error("unknown JSON kind");
     }
@@ -162,12 +177,39 @@ private:
         output << '}';
     }
 
+    void writeOrderedObject(
+        std::ostream& output, unsigned indent, unsigned depth) const {
+        output << '{';
+        for (std::size_t index = 0; index < ordered_object_.size(); ++index) {
+            if (index != 0) {
+                output << ',';
+            }
+            if (indent != 0) {
+                output << '\n';
+                pad(output, (depth + 1) * indent);
+            }
+            output << '\"' << escaped(ordered_object_[index].first)
+                   << '\"' << ':';
+            if (indent != 0) {
+                output << ' ';
+            }
+            ordered_object_[index].second.write(
+                output, indent, depth + 1);
+        }
+        if (indent != 0 && !ordered_object_.empty()) {
+            output << '\n';
+            pad(output, depth * indent);
+        }
+        output << '}';
+    }
+
     Kind kind_{Kind::Null};
     bool boolean_{false};
     std::uint64_t integer_{0};
     std::string string_;
     Array array_;
     Object object_;
+    OrderedObject ordered_object_;
 };
 
 Json object(std::initializer_list<std::pair<const std::string, Json>> values) {
@@ -179,6 +221,10 @@ Json object(std::initializer_list<std::pair<const std::string, Json>> values) {
 }
 
 Json array(Json::Array values) { return Json(std::move(values)); }
+
+Json orderedObject(Json::OrderedObject values) {
+    return Json(std::move(values));
+}
 
 template <typename T>
 T required(const std::optional<T>& value, const char* name) {
@@ -194,8 +240,62 @@ const char* terminalKind(NetworkEventKind kind) {
             return "delivered";
         case NetworkEventKind::Dropped:
             return "dropped";
+        default:
+            break;
     }
     throw std::logic_error("unknown network terminal kind");
+}
+
+const char* eventKind(NetworkEventKind kind) {
+    switch (kind) {
+        case NetworkEventKind::Delivered:
+            return "delivered";
+        case NetworkEventKind::Dropped:
+            return "dropped";
+        case NetworkEventKind::PacketTxStarted:
+            return "packet_tx_started";
+        case NetworkEventKind::PacketTxFinished:
+            return "packet_tx_finished";
+        case NetworkEventKind::PacketRxArrived:
+            return "packet_rx_arrived";
+        case NetworkEventKind::EcnMarked:
+            return "ecn_marked";
+        case NetworkEventKind::CnpReceived:
+            return "cnp_received";
+        case NetworkEventKind::EligibilityUpdated:
+            return "eligibility_updated";
+        case NetworkEventKind::RateUpdated:
+            return "rate_updated";
+        case NetworkEventKind::PfcFrameSubmitted:
+            return "pfc_frame_submitted";
+        case NetworkEventKind::PfcPaused:
+            return "pfc_paused";
+        case NetworkEventKind::PfcResumed:
+            return "pfc_resumed";
+        case NetworkEventKind::LinkStateChanged:
+            return "link_state_changed";
+    }
+    throw std::logic_error("unknown network event kind");
+}
+
+const char* packetKind(NetworkPacketKind kind) {
+    switch (kind) {
+        case NetworkPacketKind::Data:
+            return "data";
+        case NetworkPacketKind::Retransmission:
+            return "retransmission";
+        case NetworkPacketKind::Ack:
+            return "ack";
+        case NetworkPacketKind::Nak:
+            return "nak";
+        case NetworkPacketKind::Cnp:
+            return "cnp";
+        case NetworkPacketKind::Pfc:
+            return "pfc";
+        case NetworkPacketKind::OtherControl:
+            return "other_control";
+    }
+    throw std::logic_error("unknown network packet kind");
 }
 
 const char* completionStatus(CompletionStatus status) {
@@ -355,18 +455,25 @@ public:
 
     void onNetworkEvent(const NetworkEvent& event) {
         refreshIssued();
-        const auto owner = token_owner_.find(event.token);
+        const NetworkToken owner_token =
+            event.scope == NetworkEventScope::FlowExtent
+            ? event.token
+            : event.parent_token;
+        const auto owner = token_owner_.find(owner_token);
         if (owner == token_owner_.end()) {
             throw std::invalid_argument("terminal token was never issued");
         }
         if (owner->second != event.wqe_id) {
             throw std::invalid_argument("terminal token does not belong to WQE");
         }
-        if (consumed_.count(event.token) != 0) {
+        if (event.scope == NetworkEventScope::FlowExtent
+            && consumed_.count(event.token) != 0) {
             throw std::invalid_argument("terminal token already consumed");
         }
         device_.onNetworkEvent(event);
-        consumed_.insert(event.token);
+        if (event.scope == NetworkEventScope::FlowExtent) {
+            consumed_.insert(event.token);
+        }
         caller_time_ps_ = event.event_time_ps;
     }
 
@@ -560,12 +667,38 @@ Json liveTokensJson(const std::vector<NetworkToken>& tokens) {
     return array(std::move(rows));
 }
 
-Json portJson(const DrivenPort& port) {
-    return object({
-        {"issued", issuedJson(port.issued())},
-        {"terminals", terminalsJson(port.terminals())},
-        {"live_tokens", liveTokensJson(port.liveTokens())},
-    });
+Json packetEventsJson(const std::vector<NetworkEvent>& events) {
+    Json::Array rows;
+    for (const NetworkEvent& event : events) {
+        rows.push_back(orderedObject({
+            {"attempt_token", Json(event.token)},
+            {"extent_token", Json(event.parent_token)},
+            {"wqe_id", Json(event.wqe_id)},
+            {"event_kind", Json(eventKind(event.kind))},
+            {"event_time_ps", Json(event.event_time_ps)},
+            {"extent_index", Json(
+                 static_cast<std::uint64_t>(event.extent_index))},
+            {"packet_index", Json(event.packet_index)},
+            {"transmission_attempt", Json(
+                 static_cast<std::uint64_t>(event.transmission_attempt))},
+            {"payload_offset_bytes", Json(event.payload_offset_bytes)},
+            {"payload_bytes", Json(event.payload_bytes)},
+            {"wire_bytes", Json(event.wire_bytes)},
+            {"packet_kind", Json(packetKind(event.packet_kind))},
+        }));
+    }
+    return array(std::move(rows));
+}
+
+Json portJson(const DrivenPort& port, std::uint32_t network_abi_version) {
+    Json::Object result;
+    result.emplace("issued", issuedJson(port.issued()));
+    result.emplace("terminals", terminalsJson(port.terminals()));
+    result.emplace("live_tokens", liveTokensJson(port.liveTokens()));
+    if (network_abi_version == kNetworkPortAbiVersionV2) {
+        result.emplace("packet_events", packetEventsJson(port.packetEvents()));
+    }
+    return Json(std::move(result));
 }
 
 Json countersJson(const WorkQueueCounters& counters) {
@@ -619,39 +752,97 @@ const IssuedToken& issueFor(const DrivenPort& port, WqeId wqe_id) {
     return *match;
 }
 
-Json wqesJson(const RnicDevice& device, const DrivenPort& port) {
+std::optional<Picoseconds> packetBoundary(
+    const DrivenPort& port,
+    WqeId wqe_id,
+    NetworkEventKind kind,
+    bool first) {
+    std::optional<Picoseconds> boundary;
+    for (const NetworkEvent& event : port.packetEvents()) {
+        if (event.wqe_id != wqe_id || event.kind != kind) {
+            continue;
+        }
+        if (!boundary.has_value()
+            || (first && event.event_time_ps < *boundary)
+            || (!first && event.event_time_ps > *boundary)) {
+            boundary = event.event_time_ps;
+        }
+    }
+    return boundary;
+}
+
+Json wqesJson(
+    const RnicDevice& device,
+    const DrivenPort& port,
+    std::uint32_t network_abi_version) {
     Json::Array rows;
     const std::vector<WqeRecord>& records = device.records();
     for (std::size_t ordinal = 0; ordinal < records.size(); ++ordinal) {
         const WqeRecord& record = records[ordinal];
         const IssuedToken& issued = issueFor(port, record.wqe_id);
         const TerminalToken& terminal = terminalFor(port, record.wqe_id);
-        rows.push_back(object({
-            {"ordinal", Json(static_cast<std::uint64_t>(ordinal))},
-            {"wqe_id", Json(record.wqe_id)},
-            {"eligible_at_ps",
-             Json(required(record.timeline.admitted_at_ps, "admitted_at_ps"))},
-            {"network_accepted_at_ps",
-             Json(required(
-                 record.timeline.network_accepted_at_ps,
-                 "network_accepted_at_ps"))},
-            {"port_tx_at_ps", Json(issued.port_tx_at_ps)},
-            {"terminal_kind", Json(terminalKind(terminal.kind))},
-            {"terminal_at_ps",
-             Json(required(
-                 record.timeline.network_outcome_at_ps,
-                 "network_outcome_at_ps"))},
-            {"cqe_status",
-             Json(completionStatus(required(
-                 record.completion_status,
-                 "completion_status")))},
-            {"cqe_visible_at_ps",
-             Json(required(
-                 record.timeline.cqe_visible_at_ps,
-                 "cqe_visible_at_ps"))},
-            {"polled_at_ps",
-             Json(required(record.timeline.polled_at_ps, "polled_at_ps"))},
-        }));
+        Json::Object row;
+        row.emplace("ordinal", Json(static_cast<std::uint64_t>(ordinal)));
+        row.emplace("wqe_id", Json(record.wqe_id));
+        row.emplace(
+            "eligible_at_ps",
+            Json(required(record.timeline.admitted_at_ps, "admitted_at_ps")));
+        row.emplace(
+            "network_accepted_at_ps",
+            Json(required(
+                record.timeline.network_accepted_at_ps,
+                "network_accepted_at_ps")));
+        row.emplace("port_tx_at_ps", Json(issued.port_tx_at_ps));
+        row.emplace("terminal_kind", Json(terminalKind(terminal.kind)));
+        row.emplace(
+            "terminal_at_ps",
+            Json(required(
+                record.timeline.network_outcome_at_ps,
+                "network_outcome_at_ps")));
+        row.emplace(
+            "cqe_status",
+            Json(completionStatus(required(
+                record.completion_status,
+                "completion_status"))));
+        row.emplace(
+            "cqe_visible_at_ps",
+            Json(required(
+                record.timeline.cqe_visible_at_ps,
+                "cqe_visible_at_ps")));
+        row.emplace(
+            "polled_at_ps",
+            Json(required(record.timeline.polled_at_ps, "polled_at_ps")));
+        if (network_abi_version == kNetworkPortAbiVersionV2) {
+            row.emplace(
+                "first_packet_at_ps",
+                Json(required(
+                    record.timeline.first_packet_at_ps,
+                    "first_packet_at_ps")));
+            row.emplace(
+                "last_packet_at_ps",
+                Json(required(
+                    record.timeline.last_packet_at_ps,
+                    "last_packet_at_ps")));
+            const std::optional<Picoseconds> first_rx = packetBoundary(
+                port,
+                record.wqe_id,
+                NetworkEventKind::PacketRxArrived,
+                true);
+            const std::optional<Picoseconds> last_rx = packetBoundary(
+                port,
+                record.wqe_id,
+                NetworkEventKind::PacketRxArrived,
+                false);
+            if (first_rx.has_value() != last_rx.has_value()) {
+                throw std::logic_error(
+                    "Tier A packet RX boundary is only partially present");
+            }
+            if (first_rx.has_value()) {
+                row.emplace("first_rx_at_ps", Json(*first_rx));
+                row.emplace("last_rx_at_ps", Json(*last_rx));
+            }
+        }
+        rows.emplace_back(std::move(row));
     }
     return array(std::move(rows));
 }
@@ -701,7 +892,8 @@ Json runCell(
     std::size_t wqe_count,
     std::size_t port_capacity,
     bool signaled,
-    bool controlled_drop) {
+    bool controlled_drop,
+    std::uint32_t network_abi_version) {
     CompositionAuthority authority(true, false);
     const PortConfig port_config{
         port_capacity,
@@ -711,6 +903,7 @@ Json runCell(
         false,
         false,
         controlled_drop,
+        network_abi_version,
     };
     std::unique_ptr<DrivenPort> port = factory.create(port_config);
     RnicDeviceAttachments attachments;
@@ -746,8 +939,8 @@ Json runCell(
         "doorbell_service_ps", Json(reported_doorbell_service_ps));
     cell.emplace("authority", cellAuthority(authority.state()));
     cell.emplace("device", deviceJson(device));
-    cell.emplace("port", portJson(*port));
-    cell.emplace("wqes", wqesJson(device, *port));
+    cell.emplace("port", portJson(*port, network_abi_version));
+    cell.emplace("wqes", wqesJson(device, *port, network_abi_version));
     cell.emplace("cqe_order", cqeOrderJson(session.completions));
     cell.emplace("jct_ps", Json(session.jct_ps));
     if (controlled_drop) {
@@ -850,13 +1043,15 @@ Json terminalSnapshot(
 NetworkEvent invalidTerminalEvent(
     const std::string& kind,
     const TerminalIngress& ingress,
-    Picoseconds invalid_time_ps) {
+    Picoseconds invalid_time_ps,
+    std::uint32_t network_abi_version) {
     if (ingress.owners().size() != 2) {
         throw std::logic_error("terminal control did not issue two tokens");
     }
     const auto first = ingress.owners().begin();
     const auto second = std::next(first);
     NetworkEvent event;
+    event.abi_version = network_abi_version;
     event.kind = NetworkEventKind::Delivered;
     event.event_time_ps = invalid_time_ps;
     if (kind == "duplicate") {
@@ -877,7 +1072,8 @@ NetworkEvent invalidTerminalEvent(
 Json runTerminalControl(
     PortFactory& factory,
     ValidationLedger& validation_ledger,
-    const std::string& kind) {
+    const std::string& kind,
+    std::uint32_t network_abi_version) {
     constexpr std::uint64_t payload_bytes = 4096;
     constexpr std::uint64_t link_rate_gbps = 400;
     constexpr Picoseconds invalid_time_ps = 200000;
@@ -893,6 +1089,7 @@ Json runTerminalControl(
         false,
         false,
         false,
+        network_abi_version,
     });
     RnicDeviceAttachments attachments;
     attachments.network_port = port.get();
@@ -917,7 +1114,8 @@ Json runTerminalControl(
     const Json before = terminalSnapshot(device, *port, ingress);
 
     const NetworkEvent invalid =
-        invalidTerminalEvent(kind, ingress, invalid_time_ps);
+        invalidTerminalEvent(
+            kind, ingress, invalid_time_ps, network_abi_version);
     std::string exception_type;
     std::string exception_message;
     try {
@@ -1027,7 +1225,8 @@ ProducerOptions parseArguments(int argc, char** argv) {
     for (int index = 1; index < argc; ++index) {
         const std::string argument = argv[index];
         if (argument == "--factory" || argument == "--expectations"
-            || argument == "--observations") {
+            || argument == "--observations"
+            || argument == "--network-abi-version") {
             if (index + 1 >= argc) {
                 throw std::invalid_argument(argument + " requires a value");
             }
@@ -1036,8 +1235,15 @@ ProducerOptions parseArguments(int argc, char** argv) {
                 options.factory = value;
             } else if (argument == "--expectations") {
                 options.expectations_path = value;
-            } else {
+            } else if (argument == "--observations") {
                 options.observations_path = value;
+            } else if (value == "1") {
+                options.network_abi_version = kNetworkPortAbiVersionV1;
+            } else if (value == "2") {
+                options.network_abi_version = kNetworkPortAbiVersionV2;
+            } else {
+                throw std::invalid_argument(
+                    "--network-abi-version must be 1 or 2");
             }
         } else {
             throw std::invalid_argument("unknown argument: " + argument);
@@ -1075,7 +1281,8 @@ int runTierA(const ProducerOptions& options, PortFactory& factory) {
                     1,
                     1,
                     true,
-                    false));
+                    false,
+                    options.network_abi_version));
             }
         }
     }
@@ -1093,7 +1300,8 @@ int runTierA(const ProducerOptions& options, PortFactory& factory) {
                 2,
                 1,
                 true,
-                false));
+                false,
+                options.network_abi_version));
         }
     }
 
@@ -1109,36 +1317,54 @@ int runTierA(const ProducerOptions& options, PortFactory& factory) {
             1,
             1,
             true,
-            false));
+            false,
+            options.network_abi_version));
     }
 
     Json::Array terminal_controls;
     for (const std::string kind : {"duplicate", "unknown", "cross_wqe"}) {
         terminal_controls.push_back(
-            runTerminalControl(factory, validation_ledger, kind));
+            runTerminalControl(
+                factory,
+                validation_ledger,
+                kind,
+                options.network_abi_version));
     }
 
-    Json observations = object({
-        {"schema", Json("simllm-rnic-tier-a-observations-v1")},
-        {"factory", Json(options.factory)},
-        {"single_wqe", array(std::move(single_rows))},
-        {"fifo", array(std::move(fifo_rows))},
-        {"wrapper_bypass_control", array(std::move(bypass_rows))},
-        {"authority_cases", authorityCases()},
-        {"terminal_controls", array(std::move(terminal_controls))},
-        {"controlled_drop",
-         runCell(
-             factory,
-             validation_ledger,
-             4096,
-             400,
-             0,
-             0,
-             1,
-             1,
-             false,
-             true)},
-    });
+    Json::Object observation_fields;
+    observation_fields.emplace(
+        "schema",
+        Json(options.network_abi_version == kNetworkPortAbiVersionV1
+                 ? "simllm-rnic-tier-a-observations-v1"
+                 : "simllm-rnic-tier-a-observations-v2"));
+    observation_fields.emplace("factory", Json(options.factory));
+    observation_fields.emplace("single_wqe", array(std::move(single_rows)));
+    observation_fields.emplace("fifo", array(std::move(fifo_rows)));
+    observation_fields.emplace(
+        "wrapper_bypass_control", array(std::move(bypass_rows)));
+    observation_fields.emplace("authority_cases", authorityCases());
+    observation_fields.emplace(
+        "terminal_controls", array(std::move(terminal_controls)));
+    observation_fields.emplace(
+        "controlled_drop",
+        runCell(
+            factory,
+            validation_ledger,
+            4096,
+            400,
+            0,
+            0,
+            1,
+            1,
+            false,
+            true,
+            options.network_abi_version));
+    if (options.network_abi_version == kNetworkPortAbiVersionV2) {
+        observation_fields.emplace(
+            "network_abi_version",
+            Json(static_cast<std::uint64_t>(options.network_abi_version)));
+    }
+    Json observations(std::move(observation_fields));
 
     const std::string serialized = observations.dump(2) + "\n";
     validation_ledger.requirePublicationReady();
