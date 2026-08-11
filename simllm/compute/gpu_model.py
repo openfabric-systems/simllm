@@ -560,12 +560,18 @@ class GpuTask:
     task_id: str
     kind: GpuTaskKind
     launch: KernelLaunch
+    submitted_cycle: int = 0
+    eligible_cycle: int = 0
 
     def __post_init__(self) -> None:
         _require_text("task_id", self.task_id)
         _require_enum("kind", self.kind, GpuTaskKind)
         if not isinstance(self.launch, KernelLaunch):
             raise TypeError("launch must be a KernelLaunch")
+        _require_nonnegative_int("submitted_cycle", self.submitted_cycle)
+        _require_nonnegative_int("eligible_cycle", self.eligible_cycle)
+        if self.eligible_cycle < self.submitted_cycle:
+            raise ValueError("eligible_cycle must not precede submitted_cycle")
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -576,6 +582,8 @@ class GpuTaskEstimate:
     kind: GpuTaskKind
     implementation_id: str
     trace_id: str
+    submitted_cycle: int
+    eligible_cycle: int
     #: residency this launch would receive alone; a concurrent replay shares
     #: the SM's currencies, so admitted_cycle is what shows real admission
     isolated_resident_blocks_per_sm: int
@@ -669,6 +677,8 @@ class _TaskRun:
     threads_per_block: int = 0
     registers_per_block: int = 0
     shared_per_block: int = 0
+    submitted_cycle: int = 0
+    eligible_cycle: int = 0
     admitted_cycle: int | None = None
     completion_cycle: int = 0
     issued_instructions: int = 0
@@ -803,13 +813,18 @@ class SmSchedulerModel:
         _require_unique("task IDs", tuple(task.task_id for task in tasks))
         residents = [self.resident_blocks_per_sm(task.launch) for task in tasks]
         arch = self.architecture
-        outcome = self._replay(tuple(task.launch for task in tasks))
+        outcome = self._replay(
+            tuple(task.launch for task in tasks),
+            tuple((task.submitted_cycle, task.eligible_cycle) for task in tasks),
+        )
         task_estimates = tuple(
             GpuTaskEstimate(
                 task_id=task.task_id,
                 kind=task.kind,
                 implementation_id=task.launch.implementation_id,
                 trace_id=task.launch.trace_id,
+                submitted_cycle=run.submitted_cycle,
+                eligible_cycle=run.eligible_cycle,
                 isolated_resident_blocks_per_sm=residents[index],
                 admitted_cycle=run.admitted_cycle if run.admitted_cycle is not None else 0,
                 completion_cycle=run.completion_cycle,
@@ -844,10 +859,20 @@ class SmSchedulerModel:
             relative_uncertainty=arch.calibration.relative_uncertainty,
         )
 
-    def _replay(self, launches: tuple[KernelLaunch, ...]) -> _ReplayOutcome:
+    def _replay(
+        self,
+        launches: tuple[KernelLaunch, ...],
+        task_times: tuple[tuple[int, int], ...] | None = None,
+    ) -> _ReplayOutcome:
         arch = self.architecture
+        if task_times is None:
+            task_times = tuple((0, 0) for _ in launches)
+        if len(task_times) != len(launches):
+            raise AssertionError("GPU replay task timing cardinality mismatch")
         runs: list[_TaskRun] = []
-        for launch in launches:
+        for launch, (submitted_cycle, eligible_cycle) in zip(
+            launches, task_times, strict=True
+        ):
             self._validate_launch(launch)
             expanded_by_block: dict[
                 int, tuple[tuple[int, tuple[SassInstruction, ...]], ...]
@@ -877,6 +902,8 @@ class SmSchedulerModel:
                     threads_per_block=launch.threads_per_block,
                     registers_per_block=registers_per_warp * warps,
                     shared_per_block=shared,
+                    submitted_cycle=submitted_cycle,
+                    eligible_cycle=eligible_cycle,
                 )
             )
         total_blocks = sum(run.launch.grid_blocks for run in runs)
@@ -928,6 +955,8 @@ class SmSchedulerModel:
                 for sm in sms:
                     for task_index, run in enumerate(runs):
                         if run.next_pending >= len(run.pending_block_ids):
+                            continue
+                        if run.eligible_cycle > current:
                             continue
                         if not fits(sm, run):
                             continue
@@ -1070,7 +1099,22 @@ class SmSchedulerModel:
                 current += 1
                 continue
 
-            next_cycle = self._next_event_cycle(sms, current)
+            if not any(sm.blocks for sm in sms):
+                future_eligibility = [
+                    run.eligible_cycle
+                    for run in runs
+                    if run.next_pending < len(run.pending_block_ids)
+                    and run.eligible_cycle > current
+                ]
+                if not future_eligibility:
+                    raise RuntimeError(
+                        "GPU replay has pending CTAs without a future eligibility"
+                    )
+                current = min(future_eligibility)
+                admit()
+                continue
+
+            next_cycle = self._next_event_cycle(sms, runs, current)
             if next_cycle is None:
                 raise RuntimeError("GPU replay reached a dead state with unfinished CTAs")
             delta = next_cycle - current
@@ -1273,8 +1317,18 @@ class SmSchedulerModel:
         }[instruction.memory_space]
         return issue_cycle + latency, hbm_available, nvlink_available
 
-    def _next_event_cycle(self, sms: list[_SmState], current: int) -> int | None:
-        events: list[int] = []
+    def _next_event_cycle(
+        self,
+        sms: list[_SmState],
+        runs: list[_TaskRun],
+        current: int,
+    ) -> int | None:
+        events = [
+            run.eligible_cycle
+            for run in runs
+            if run.next_pending < len(run.pending_block_ids)
+            and run.eligible_cycle > current
+        ]
         for sm in sms:
             for block in sm.blocks:
                 if all(warp.pc == len(warp.instructions) for warp in block.warps):
