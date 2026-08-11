@@ -331,14 +331,40 @@ public:
         return batch;
     }
 
-    DoorbellBatch ringDoorbell(Picoseconds now_ps) {
+    DoorbellBatch ringDoorbell(
+        Picoseconds now_ps,
+        const std::optional<RnicProducerTaskLink>& producer_task) {
         validateTime(now_ps);
         if (unpublished_.empty()) {
+            if (producer_task.has_value()) {
+                throw std::invalid_argument(
+                    "RNIC producer task link requires an unpublished WQE");
+            }
             last_observed_time_ps_ = now_ps;
             return DoorbellBatch{0, 0, now_ps, now_ps};
         }
         if (fatal_) {
             throw std::logic_error("cannot ring RNIC doorbell after fatal error");
+        }
+        if (producer_task.has_value()) {
+            if (!submission_profile_.has_value()) {
+                throw std::invalid_argument(
+                    "RNIC producer task link requires a submission profile");
+            }
+            validateRnicProducerTaskLink(
+                *submission_profile_, *producer_task, now_ps);
+            const auto duplicate = std::find_if(
+                submission_records_.begin(),
+                submission_records_.end(),
+                [&producer_task](const RnicSubmissionRecord& record) {
+                    return record.producer_task.has_value()
+                        && record.producer_task->task_id
+                            == producer_task->task_id;
+                });
+            if (duplicate != submission_records_.end()) {
+                throw std::invalid_argument(
+                    "RNIC producer task identity was already linked");
+            }
         }
 
         if (next_batch_id_ == std::numeric_limits<std::uint64_t>::max()) {
@@ -598,6 +624,7 @@ public:
                     submission_profile_->queue_endpoint,
                     submission_profile_->queue_endpoint,
                     submission_profile_->uar_mapping_owner,
+                    producer_task,
                     record.timeline.posted_at_ps,
                     now_ps,
                     observed_at,
@@ -1044,6 +1071,7 @@ public:
                 throw std::logic_error(
                     "RNIC submission ledger disagrees with doorbelled WQEs");
             }
+            std::map<std::string, std::uint64_t> producer_task_batches;
             for (std::size_t index = 0;
                  index < submission_records_.size(); ++index) {
                 const RnicSubmissionRecord& submission =
@@ -1078,6 +1106,25 @@ public:
                         != *record.timeline.doorbell_seen_at_ps) {
                     throw std::logic_error(
                         "RNIC submission record is not a faithful projection");
+                }
+                if (submission.producer_task.has_value()) {
+                    try {
+                        validateRnicProducerTaskLink(
+                            profile,
+                            *submission.producer_task,
+                            submission.submitted_at_ps);
+                    } catch (const std::invalid_argument&) {
+                        throw std::logic_error(
+                            "RNIC submission record has an invalid producer task link");
+                    }
+                    const auto [item, inserted] = producer_task_batches.emplace(
+                        submission.producer_task->task_id,
+                        submission.doorbell_batch_id);
+                    if (!inserted
+                        && item->second != submission.doorbell_batch_id) {
+                        throw std::logic_error(
+                            "RNIC producer task link spans doorbell batches");
+                    }
                 }
             }
             if (cq_consumption_records_.size() != counters_.cqes_polled) {
@@ -1718,7 +1765,13 @@ PostBatchResult WorkQueue::postSendBatch(
 }
 
 DoorbellBatch WorkQueue::ringDoorbell(Picoseconds now_ps) {
-    return impl_->ringDoorbell(now_ps);
+    return impl_->ringDoorbell(now_ps, std::nullopt);
+}
+
+DoorbellBatch WorkQueue::ringDoorbell(
+    Picoseconds now_ps,
+    const RnicProducerTaskLink& producer_task) {
+    return impl_->ringDoorbell(now_ps, producer_task);
 }
 
 std::size_t WorkQueue::progress(Picoseconds now_ps) {

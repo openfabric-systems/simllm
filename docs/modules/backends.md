@@ -249,10 +249,19 @@ the RQ/SRQ registry, active receive path and the endpoint and identity checks
 that become mandatory when receive execution is enabled.
 The absent-network path owns an inert port that accepts with a fresh token and
 delivers on the device progress pump; HTSIM-9 supplies the future concrete
-external port. BACK-27 connects the landed GPU-side records to concurrent
-compute tasks. VLLM-13 and CORE-5 consume the recorded CQ-owner decision once
-that coupling is live. COMP-2's fixed CPU-proxy and GPU-initiated constants
-remain the analytical fallback while structural submission is disabled.
+external port. BACK-27 now connects CPU-proxy descriptor production and
+GPU-initiated WQE production to timed tasks in the concurrent compute service.
+The compute scheduler is the sole producer-task timing authority. Each native
+submission record carries only its validated immutable task identity and queue
+timestamps. The coupling is disabled by default, the caller-timestamp path
+remains an explicit bypass for non-host shapes, and host-CPU submission stays
+compute-free. The
+[GPU producer study](../../examples/rnic_gpu_producer_v1/RESULTS.md) measures
+exact issue-sharing and residency-delay relations while retaining all accepted
+default bytes. BACK-37 owns the remaining GPU CQ-consumer and runner-callback
+work. VLLM-13 and CORE-5 consume the recorded CQ-owner decision once that path
+is live. COMP-2's fixed CPU-proxy and GPU-initiated constants remain the
+analytical fallback while structural submission is disabled.
 
 ### WQE authority and projection contract
 
@@ -689,17 +698,6 @@ is difficult.
   The disabled control and dynamic-link paths preserve v1 timestamps, bytes,
   token order and random draws exactly; unsupported dynamic transitions reject
   explicitly until htsim supplies a timestamped producer.
-- BACK-27 (Completeness; P1; L): connect the landed GPU-initiated producer and
-  GPU-owned CQ consumer to explicitly submitted tasks on the compute model's
-  concurrent service, using the NCCL egress-kernel shape. Join each task to
-  the existing submission or consumption record without creating a second
-  WQE authority, and charge runner callback work to the recorded owner. The
-  current structural component accepts an explicit caller timestamp and
-  records ownership but does not invent GPU-kernel or callback time. The host
-  CPU default and the explicit caller-timestamp path are the bypasses; both
-  must preserve the BACK-20 rows, predecessor bytes and random draws exactly.
-  COMP-11 deepens the surrounding NCCL and NVLink model but does not own this
-  RNIC producer coupling.
 - BACK-28 (Completeness; P1; M): extend
   `simllm.backends.rnic_records` to ingest and freeze the native strict
   effective-hardware v2 and v3 objects. Validate allocation and page geometry,
@@ -707,6 +705,18 @@ is difficult.
   consumer and canonical hashes with the same rejection set as the native
   reader. The current Python reader deliberately rejects non-v1 effective
   hardware, so v1 structural and bypass ingestion remains the exact off path.
+- BACK-37 (Completeness; P1; L): connect the GPU-owned CQ consumer and its
+  runner callback to explicitly submitted work on the concurrent compute
+  service. The current enabled producer path stops at the immutable submission
+  task link; CQ polling and callback work still use caller-supplied native
+  timestamps. Join compute-owned consumption timing to the existing CQ
+  consumption record by stable CQE identity, charge callback work to the
+  configured consumer, and project the resulting completion through
+  `CompletionEvent`, `StepResult`, TTFT and TPOT. The host-CPU consumer and an
+  explicit caller-timestamp bypass must preserve the accepted BACK-20 rows,
+  predecessor bytes and random draws exactly. Enabled GPU consumption must
+  change an end-to-end metric in the registered direction and must never
+  advance CQE lifecycle state independently of the native RNIC authority.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 

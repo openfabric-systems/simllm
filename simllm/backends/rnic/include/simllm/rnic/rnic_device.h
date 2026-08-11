@@ -140,6 +140,9 @@ public:
         const std::vector<WorkRequest>& requests,
         Picoseconds now_ps);
     DoorbellBatch ringDoorbell(Picoseconds now_ps);
+    DoorbellBatch ringDoorbell(
+        Picoseconds now_ps,
+        const RnicProducerTaskLink& producer_task);
 
     // External events must be delivered before progress() at the same
     // timestamp. The inert owned port is pumped internally in that order.
