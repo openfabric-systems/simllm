@@ -17,17 +17,19 @@
       "tx_started_at_ps": 1000,
       "tx_finished_at_ps": 82920,
       "tier_a_rx_arrived_at_ps": 82920,
-      "composed_rx_arrived_at_ps": 164840
+      "composed_rx_arrived_at_ps": 82920,
+      "composed_delivered_at_ps": 164840
     },
     {
       "packet_index": 1,
       "payload_offset_bytes": 4032,
       "payload_bytes": 968,
       "wire_bytes": 1032,
-      "tx_started_at_ps": 82920,
-      "tx_finished_at_ps": 103560,
+      "tx_started_at_ps": 144200,
+      "tx_finished_at_ps": 164840,
       "tier_a_rx_arrived_at_ps": 103560,
-      "composed_rx_arrived_at_ps": 185480
+      "composed_rx_arrived_at_ps": 164840,
+      "composed_delivered_at_ps": 185480
     }
   ],
   "tier_a_boundaries": {
@@ -39,9 +41,9 @@
   },
   "composed_boundaries": {
     "first_packet_at_ps": 1000,
-    "last_packet_at_ps": 82920,
-    "first_rx_at_ps": 164840,
-    "last_rx_at_ps": 185480,
+    "last_packet_at_ps": 144200,
+    "first_rx_at_ps": 82920,
+    "last_rx_at_ps": 164840,
     "network_outcome_at_ps": 185480
   },
   "v1_artifact_sha256": {

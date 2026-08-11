@@ -40,10 +40,23 @@ RX boundaries are 82,920 and 103,560 ps. The native WQE boundaries are first
 TX 1,000, last TX 82,920, first RX 82,920, last RX 103,560, and outcome
 103,560 ps.
 
-For the directed packetized composition, the real destination serializer
-commits RX at 164,840 and 185,480 ps. Its native WQE boundaries are first TX
-1,000, last TX 82,920, first RX 164,840, last RX 185,480, and outcome
-185,480 ps.
+For the directed packetized composition, the full-quantum calendar reserves
+the second source slot from 82,920 through 164,840 ps and right-aligns the
+20,640 ps short serialization inside it. The second TX therefore starts at
+144,200 ps and finishes at 164,840 ps. Destination serialization starts at
+82,920 and 164,840 ps, then finishes at 164,840 and 185,480 ps. Its native WQE
+boundaries are first TX 1,000, last TX 144,200, first RX 82,920, last RX
+164,840, and outcome 185,480 ps.
+
+This paragraph corrects the original pre-study arithmetic after a focused
+native test exposed two source-audit mistakes: the short source packet is
+right-aligned within the existing full-quantum calendar, and
+`PacketRxArrived` denotes destination-serialization start. No registered study
+or scored relation had run. The corrected values follow the already landed
+contract in `htsim/sim/rnic_packetized_manifold.h:87-91` and the committed
+observation boundaries in
+`htsim/sim/rnic_packetized_manifold_runtime.cpp:441-455`. The tail family is
+fatal unscored, so this correction does not create or change a scored result.
 
 The exact partial-tail geometry and timestamp rows are fatal unscored
 component oracles. BACK-34 adds no author-defined scored behavior family.
