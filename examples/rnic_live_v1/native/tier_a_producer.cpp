@@ -893,12 +893,13 @@ Json runCell(
     std::size_t port_capacity,
     bool signaled,
     bool controlled_drop,
-    std::uint32_t network_abi_version) {
+    std::uint32_t network_abi_version,
+    std::uint64_t data_header_bytes = 0) {
     CompositionAuthority authority(true, false);
     const PortConfig port_config{
         port_capacity,
         link_rate_gbps,
-        0,
+        data_header_bytes,
         0,
         false,
         false,
@@ -1360,6 +1361,21 @@ int runTierA(const ProducerOptions& options, PortFactory& factory) {
             true,
             options.network_abi_version));
     if (options.network_abi_version == kNetworkPortAbiVersionV2) {
+        observation_fields.emplace(
+            "partial_final_packet",
+            runCell(
+                factory,
+                validation_ledger,
+                5000,
+                400,
+                1000,
+                1000,
+                1,
+                1,
+                true,
+                false,
+                options.network_abi_version,
+                64));
         observation_fields.emplace(
             "network_abi_version",
             Json(static_cast<std::uint64_t>(options.network_abi_version)));
