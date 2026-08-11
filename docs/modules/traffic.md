@@ -116,8 +116,9 @@ residual; see
 - TRAF-7: communication/compute overlap in the step model. `step_comm`
   chains each layer's compute and its collectives strictly serially;
   real engines overlap the MLP allreduce with the next layer's start under
-  some schedules. Implement this after CORE-3/4, by lowering compute and
-  collective work onto the framework-observed logical streams with explicit
+  some schedules. Implement this after CORE-3, since CORE-4 has landed, by
+  lowering compute and collective work onto the framework-observed logical
+  streams with explicit
   event/dependency edges in `ExecutionGraph`. The adapter owns observed
   program order and legal concurrency; the traffic planner owns collective
   algorithm/chunk expansion; `DeviceRuntime` owns realized overlap after

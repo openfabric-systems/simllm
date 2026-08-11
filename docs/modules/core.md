@@ -472,24 +472,6 @@ does not claim to produce these resource-contention measurements.
   byte-carrying READ or WRITE during preflight rather than reporting silent
   zero-cost HBM work. Acceptance must enable those same fixtures through the
   HBM service and preserve the explicit zero-byte path exactly.
-- CORE-6: represent variable per-pair all-to-allv sizes in the graph
-  contract. `CollectiveWork.payload_bytes` carries one uniform ordered-pair
-  share for `pairwise` all-to-allv, so a captured, non-uniform dispatch
-  (routed experts under real gating) cannot be expressed. Decide between an
-  optional per-pair size table on the collective payload and a schema bump;
-  the uniform scalar form must stay readable either way. Coordinate with the
-  TRAF-2 capture half so traffic expansion and the renderer consume the same
-  representation.
-- CORE-5 (Completeness; P1; L): implement completion feedback and tail
-  attribution. Stream queue,
-  start, progress and completion events, reduce the required completion
-  boundary to `StepResult`, advance `VirtualClock`, and export per-request
-  TTFT/TPOT plus queue-, KV-, kernel-, DMA-, collective-, NIC- and control-
-  attributed components. Export additive visit totals separately from the
-  realized critical-path decomposition; only the latter must conserve
-  end-to-end latency. Support synchronous waits and asynchronous control or
-  collective progress. Preserve v1 readers if the queue-visit projection needs
-  a versioned event extension.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
