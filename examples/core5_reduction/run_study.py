@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import asdict
 from fractions import Fraction
 from pathlib import Path
@@ -11,6 +12,8 @@ from pathlib import Path
 from simllm._local_config import path_from_env
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 SHAPES = ("parallel", "serial")
 RATES_GBPS = (200, 400)
 JCT_PS = {
@@ -1076,10 +1079,13 @@ def main() -> None:
     _validate_registry(arguments.out, arguments.tier_b_only, arguments.tier_b_producer)
     if not arguments.check_only:
         if arguments.tier_b_only:
-            raise RuntimeError(
-                "Tier B execution requires the composed HTSIM-9/CORE-15 producer; "
-                "the frozen registry is ready but no producer contract is landed"
+            from examples.rnic_live_v1.tier_b_acceptance import run_acceptance
+
+            run_acceptance(
+                arguments.out.resolve(),
+                Path(arguments.tier_b_producer).resolve(),
             )
+            return
         _run(arguments.out.resolve())
         return
     scope = "Tier B" if arguments.tier_b_only else "CORE-5"
