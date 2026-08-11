@@ -165,6 +165,24 @@ def _cmake_gate(
     build: Path,
     configure_options: list[str],
 ) -> dict[str, int]:
+    _cmake_build(source, build, configure_options)
+    completed = subprocess.run(
+        ["ctest", "--test-dir", str(build), "--output-on-failure"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    print(completed.stdout, end="")
+    return _parse_ctest(completed.stdout)
+
+
+def _cmake_build(
+    source: Path,
+    build: Path,
+    configure_options: list[str],
+    *,
+    targets: tuple[str, ...] = (),
+) -> None:
     subprocess.run(
         [
             "cmake",
@@ -177,18 +195,13 @@ def _cmake_gate(
         ],
         check=True,
     )
+    build_command = ["cmake", "--build", str(build), "--parallel", "4"]
+    if targets:
+        build_command.extend(["--target", *targets])
     subprocess.run(
-        ["cmake", "--build", str(build), "--parallel", "4"],
+        build_command,
         check=True,
     )
-    completed = subprocess.run(
-        ["ctest", "--test-dir", str(build), "--output-on-failure"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    print(completed.stdout, end="")
-    return _parse_ctest(completed.stdout)
 
 
 def _build_native_suites(htsim_source: Path, out: Path) -> dict[str, Any]:
@@ -219,6 +232,21 @@ def _build_native_suites(htsim_source: Path, out: Path) -> dict[str, Any]:
         "simllm_native_build": native_build,
         "simllm_native_ctest": native_ctest,
     }
+
+
+def _build_bypass_binaries(htsim_source: Path, out: Path) -> Path:
+    bypass_build = out / "htsim-bypass-build"
+    _cmake_build(
+        htsim_source / "htsim" / "sim",
+        bypass_build,
+        [
+            "-DENABLE_TESTS=OFF",
+            "-DHTSIM_ENABLE_SIMLLM_RNIC=OFF",
+            "-DHTSIM_CREATE_SOURCE_SYMLINKS=OFF",
+        ],
+        targets=("htsim_rnic", "htsim_dcqcn_atlahs"),
+    )
+    return bypass_build
 
 
 def _executable(build: Path, *relative_candidates: str) -> Path:
@@ -281,8 +309,9 @@ def _environment(values: dict[str, str]):
 def _binary_environment(
     *,
     tier_a_producer: Path,
-    rnic: Path,
-    dcqcn: Path,
+    composed_rnic: Path,
+    bypass_rnic: Path,
+    bypass_dcqcn: Path,
     txt2bin: Path,
     reference_rnic: Path,
     reference_dcqcn: Path,
@@ -290,11 +319,11 @@ def _binary_environment(
 ) -> dict[str, str]:
     return {
         "SIMLLM_RNIC_TIER_A_PRODUCER": str(tier_a_producer),
-        "SIMLLM_HTSIM_RNIC": str(rnic),
+        "SIMLLM_HTSIM_RNIC": str(composed_rnic),
         "SIMLLM_TIER_B_REFERENCE_RNIC": str(reference_rnic),
         "SIMLLM_TIER_B_REFERENCE_DCQCN": str(reference_dcqcn),
-        "SIMLLM_TIER_B_BYPASS_RNIC": str(rnic),
-        "SIMLLM_TIER_B_BYPASS_DCQCN": str(dcqcn),
+        "SIMLLM_TIER_B_BYPASS_RNIC": str(bypass_rnic),
+        "SIMLLM_TIER_B_BYPASS_DCQCN": str(bypass_dcqcn),
         "SIMLLM_TIER_B_BYPASS_TOPOLOGY": str(bypass_topology),
         "SIMLLM_TXT2BIN": str(txt2bin),
     }
@@ -379,19 +408,30 @@ def _run(
     }
     out.mkdir(parents=True)
     native = _build_native_suites(htsim_source, out)
+    bypass_build = _build_bypass_binaries(htsim_source, out)
     htsim_build = native["htsim_build"]
     tier_a_producer = _executable(htsim_build, "htsim_rnic_tier_a")
-    rnic = _executable(htsim_build, "datacenter/htsim_rnic", "htsim_rnic")
-    dcqcn = _executable(
+    composed_rnic = _executable(
         htsim_build,
+        "datacenter/htsim_rnic",
+        "htsim_rnic",
+    )
+    bypass_rnic = _executable(
+        bypass_build,
+        "datacenter/htsim_rnic",
+        "htsim_rnic",
+    )
+    bypass_dcqcn = _executable(
+        bypass_build,
         "datacenter/htsim_dcqcn_atlahs",
         "htsim_dcqcn_atlahs",
     )
     txt2bin = _executable(htsim_build, "txt2bin")
     environment = _binary_environment(
         tier_a_producer=tier_a_producer,
-        rnic=rnic,
-        dcqcn=dcqcn,
+        composed_rnic=composed_rnic,
+        bypass_rnic=bypass_rnic,
+        bypass_dcqcn=bypass_dcqcn,
         txt2bin=txt2bin,
         reference_rnic=reference_rnic,
         reference_dcqcn=reference_dcqcn,
@@ -432,6 +472,17 @@ def _run(
         "native_gates": {
             "htsim_ctest": native["htsim_ctest"],
             "simllm_native_ctest": native["simllm_native_ctest"],
+        },
+        "binary_roles": {
+            "composed": {
+                "htsim_enable_simllm_rnic": True,
+                "rnic_sha256": _digest(composed_rnic),
+            },
+            "bypass_candidate": {
+                "htsim_enable_simllm_rnic": False,
+                "rnic_sha256": _digest(bypass_rnic),
+                "dcqcn_sha256": _digest(bypass_dcqcn),
+            },
         },
         "abi_v1_artifact_identity": {
             "classification": "fatal_unscored_off_path",

@@ -27,6 +27,7 @@ from examples.rnic_live_v1.tier_b_producer import (
 from examples.rnic_live_v1.tier_c_acceptance import (
     check_observations as check_tier_c_observations,
 )
+from examples.rnic_live_v1.tier_c_run import _binary_environment
 from simllm.backends.composed_rnic import (
     ComposedRnicCell,
     ComposedRnicObservationError,
@@ -519,3 +520,33 @@ def test_bypass_topology_retains_the_tiny_shape_at_the_frozen_link_rate(tmp_path
     assert text.count("Downlink_speed_Gbps 400") == 2
     assert "Downlink_speed_Gbps 100" not in text
     assert "Nodes 32" in text
+
+
+def test_tier_c_runner_keeps_composed_and_bypass_binary_roles_separate(tmp_path):
+    paths = {
+        name: tmp_path / name
+        for name in (
+            "tier_a_producer",
+            "composed_rnic",
+            "bypass_rnic",
+            "bypass_dcqcn",
+            "txt2bin",
+            "reference_rnic",
+            "reference_dcqcn",
+            "bypass_topology",
+        )
+    }
+
+    environment = _binary_environment(**paths)
+
+    assert environment["SIMLLM_HTSIM_RNIC"] == str(paths["composed_rnic"])
+    assert environment["SIMLLM_TIER_B_BYPASS_RNIC"] == str(
+        paths["bypass_rnic"]
+    )
+    assert environment["SIMLLM_TIER_B_BYPASS_DCQCN"] == str(
+        paths["bypass_dcqcn"]
+    )
+    assert (
+        environment["SIMLLM_HTSIM_RNIC"]
+        != environment["SIMLLM_TIER_B_BYPASS_RNIC"]
+    )
