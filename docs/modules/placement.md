@@ -49,9 +49,9 @@ selection are design-only.
 
 - PLACE-1 (Completeness; P2; L): fabric topology schema contents and general
   NIC selection in the mapper, sourcing intra-node structure from NCCL
-  topology dumps. This is
-  explicitly deferred until after CORE-4 validates the first fixed resource
-  profile: eight GPUs per node, one WQE submission queue or QP per GPU, all
+  topology dumps. This is no longer blocked: CORE-4 validated the first
+  fixed resource profile of eight GPUs per node, one WQE submission queue or
+  QP per GPU, all
   eight feeding their GPU-affine 400G RNICs, with intra-node transfers on an
   NVLink-class path. The fixed rail profile does not need general inventory
   discovery.
