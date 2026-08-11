@@ -30,6 +30,7 @@ using simllm::rnic::RnicCqConsumptionRecord;
 using simllm::rnic::RnicDevice;
 using simllm::rnic::RnicDeviceConfig;
 using simllm::rnic::RnicProducerShape;
+using simllm::rnic::RnicProducerTaskLink;
 using simllm::rnic::RnicSubmissionAgent;
 using simllm::rnic::RnicSubmissionAgentKind;
 using simllm::rnic::RnicSubmissionProfile;
@@ -73,6 +74,25 @@ public:
             check(false, message);
         } catch (const Expected&) {
             check(true, message);
+        } catch (const std::exception& error) {
+            check(false, message + "; wrong exception: " + error.what());
+        } catch (...) {
+            check(false, message + "; wrong non-standard exception");
+        }
+    }
+
+    template <typename Expected, typename Callable>
+    void expectThrowAsWithMessage(
+        Callable&& callable,
+        const std::string& expected_message,
+        const std::string& message) {
+        try {
+            callable();
+            check(false, message);
+        } catch (const Expected& error) {
+            check(
+                error.what() == expected_message,
+                message + "; unexpected exception message: " + error.what());
         } catch (const std::exception& error) {
             check(false, message + "; wrong exception: " + error.what());
         } catch (...) {
@@ -316,6 +336,21 @@ std::size_t countStage(
     return count;
 }
 
+WorkRequest fixtureRequest(std::size_t index) {
+    WorkRequest request;
+    request.wr_id = index + 1;
+    request.flow_id = 2000 + index;
+    request.destination = 2;
+    request.payload_bytes = 64;
+    request.signaled = true;
+    WorkRequestDataMemory data;
+    data.allocation_id = kDataAllocation;
+    data.mkey = kMkey;
+    data.allocation_offset_bytes = 4096;
+    request.data_memory = data;
+    return request;
+}
+
 struct StudyRow {
     RnicProducerShape producer_shape{RnicProducerShape::HostCpuDriver};
     std::size_t batch_size{0};
@@ -338,33 +373,31 @@ struct StudyRow {
     bool invariants_valid{false};
 };
 
-StudyRow runFixture(RnicProducerShape shape, std::size_t batch_size) {
+StudyRow runFixture(
+    RnicProducerShape shape,
+    std::size_t batch_size,
+    const std::optional<RnicProducerTaskLink>& producer_task = std::nullopt,
+    Picoseconds ring_at_ps = 0,
+    RnicSubmissionRecord* projected_submission = nullptr) {
     RnicDevice device(submissionConfig(shape));
     if (!device.submissionProfile().has_value()) {
         throw std::logic_error("submission fixture lacks a profile");
     }
     for (std::size_t index = 0; index < batch_size; ++index) {
-        WorkRequest request;
-        request.wr_id = index + 1;
-        request.flow_id = 2000 + index;
-        request.destination = 2;
-        request.payload_bytes = 64;
-        request.signaled = true;
-        WorkRequestDataMemory data;
-        data.allocation_id = kDataAllocation;
-        data.mkey = kMkey;
-        data.allocation_offset_bytes = 4096;
-        request.data_memory = data;
+        const WorkRequest request = fixtureRequest(index);
         if (device.postSend(request, 0).status != PostStatus::Accepted) {
             throw std::logic_error("submission fixture post failed");
         }
     }
-    if (device.ringDoorbell(0).wqe_count != batch_size) {
+    const auto doorbell = producer_task.has_value()
+        ? device.ringDoorbell(ring_at_ps, *producer_task)
+        : device.ringDoorbell(ring_at_ps);
+    if (doorbell.wqe_count != batch_size) {
         throw std::logic_error("submission fixture doorbell failed");
     }
 
     std::vector<CompletionEntry> completions;
-    Picoseconds now_ps = 0;
+    Picoseconds now_ps = ring_at_ps;
     std::size_t iterations = 0;
     while (device.hasPendingPhysicalWork()) {
         const std::optional<Picoseconds> next = device.nextEventTime();
@@ -404,6 +437,12 @@ StudyRow runFixture(RnicProducerShape shape, std::size_t batch_size) {
                         ? producerId(shape)
                         : kRnicRequester);
         });
+    if (projected_submission != nullptr) {
+        if (submissions.empty()) {
+            throw std::logic_error("linked fixture produced no submission record");
+        }
+        *projected_submission = submissions.front();
+    }
 
     StudyRow row;
     row.producer_shape = shape;
@@ -644,6 +683,318 @@ void testDefaultAndSessionSchema(TestRunner& test) {
         "strict v3 parser rejects shape and endpoint disagreement");
 }
 
+RnicProducerTaskLink producerTaskLink(
+    RnicProducerShape shape,
+    const std::string& task_id,
+    std::uint32_t owner_id,
+    Picoseconds submitted_at_ps,
+    Picoseconds eligible_at_ps,
+    Picoseconds started_at_ps,
+    Picoseconds finished_at_ps,
+    Picoseconds completed_at_ps) {
+    RnicProducerTaskLink link;
+    link.task_id = task_id;
+    link.producer_shape = shape;
+    link.task_owner.kind = RnicSubmissionAgentKind::Gpu;
+    link.task_owner.id = owner_id;
+    link.submitted_at_ps = submitted_at_ps;
+    link.eligible_at_ps = eligible_at_ps;
+    link.started_at_ps = started_at_ps;
+    link.finished_at_ps = finished_at_ps;
+    link.completed_at_ps = completed_at_ps;
+    return link;
+}
+
+void testProducerTaskLinks(TestRunner& test) {
+    for (const auto& shape_and_owner : {
+             std::pair{RnicProducerShape::CpuProxy, std::uint32_t{7202}},
+             std::pair{RnicProducerShape::GpuInitiated, std::uint32_t{7103}}}) {
+        const RnicProducerShape shape = shape_and_owner.first;
+        const std::uint32_t owner_id = shape_and_owner.second;
+        const std::string task_id = std::string("producer-") + toString(shape);
+        const RnicProducerTaskLink link = producerTaskLink(
+            shape, task_id, owner_id, 0, 0, 1000, 4000, 4000);
+        RnicSubmissionRecord projected;
+        const StudyRow row = runFixture(
+            shape, 1, link, 16'000, &projected);
+        test.check(
+            row.invariants_valid && projected.producer_task.has_value(),
+            "non-host producer projects its compute task link");
+        if (projected.producer_task.has_value()) {
+            const RnicProducerTaskLink& actual = *projected.producer_task;
+            test.check(
+                actual.task_id == task_id
+                    && actual.producer_shape == shape
+                    && sameAgent(actual.task_owner, link.task_owner)
+                    && actual.submitted_at_ps == 0
+                    && actual.eligible_at_ps == 0
+                    && actual.started_at_ps == 1000
+                    && actual.finished_at_ps == 4000
+                    && actual.completed_at_ps == 4000
+                    && projected.submitted_at_ps == 16'000,
+                "producer task projection preserves identity and timestamps");
+        }
+    }
+
+    RnicDevice gpu(submissionConfig(RnicProducerShape::GpuInitiated));
+    test.check(
+        gpu.postSend(fixtureRequest(0), 0).status == PostStatus::Accepted,
+        "task-link atomicity fixture posts its WQE");
+    const std::uint64_t generation = gpu.pcieFabric()->generation();
+    RnicProducerTaskLink wrong_owner = producerTaskLink(
+        RnicProducerShape::GpuInitiated,
+        "wrong-owner",
+        9999,
+        0,
+        0,
+        1000,
+        4000,
+        4000);
+    test.expectThrowAs<std::invalid_argument>(
+        [&]() { static_cast<void>(gpu.ringDoorbell(16'000, wrong_owner)); },
+        "producer task link rejects the wrong GPU owner");
+    test.check(
+        gpu.submissionRecords().empty()
+            && gpu.unpublishedWqeCount() == 1
+            && gpu.pcieFabric()->generation() == generation,
+        "rejected task link preserves queue, record and fabric state");
+
+    const std::vector<std::pair<std::string, RnicProducerTaskLink>>
+        invalid_chronologies{
+            {"eligibility before submission",
+             producerTaskLink(
+                 RnicProducerShape::GpuInitiated,
+                 "eligibility-before-submission",
+                 7103,
+                 2000,
+                 1000,
+                 3000,
+                 4000,
+                 4000)},
+            {"start before eligibility",
+             producerTaskLink(
+                 RnicProducerShape::GpuInitiated,
+                 "start-before-eligibility",
+                 7103,
+                 0,
+                 2000,
+                 1000,
+                 4000,
+                 4000)},
+            {"finish before start",
+             producerTaskLink(
+                 RnicProducerShape::GpuInitiated,
+                 "finish-before-start",
+                 7103,
+                 0,
+                 0,
+                 3000,
+                 2000,
+                 4000)},
+            {"completion before finish",
+             producerTaskLink(
+                 RnicProducerShape::GpuInitiated,
+                 "completion-before-finish",
+                 7103,
+                 0,
+                 0,
+                 1000,
+                 4000,
+                 3000)},
+        };
+    for (const auto& [description, invalid] : invalid_chronologies) {
+        test.expectThrowAs<std::invalid_argument>(
+            [&]() { static_cast<void>(gpu.ringDoorbell(16'000, invalid)); },
+            "producer task link rejects " + description);
+        test.check(
+            gpu.submissionRecords().empty()
+                && gpu.unpublishedWqeCount() == 1
+                && gpu.pcieFabric()->generation() == generation,
+            description + " rejection is atomic");
+    }
+
+    RnicProducerTaskLink late = producerTaskLink(
+        RnicProducerShape::GpuInitiated,
+        "late-task",
+        7103,
+        0,
+        0,
+        1000,
+        20'000,
+        20'000);
+    test.expectThrowAs<std::invalid_argument>(
+        [&]() { static_cast<void>(gpu.ringDoorbell(16'000, late)); },
+        "producer task completion cannot follow RNIC submission");
+    test.check(
+        gpu.submissionRecords().empty()
+            && gpu.unpublishedWqeCount() == 1
+            && gpu.pcieFabric()->generation() == generation,
+        "late task rejection is atomic");
+    test.check(
+        gpu.ringDoorbell(16'000).wqe_count == 1,
+        "explicit caller timestamp remains the non-host bypass");
+
+    RnicDevice duplicate(submissionConfig(RnicProducerShape::GpuInitiated));
+    const RnicProducerTaskLink reused = producerTaskLink(
+        RnicProducerShape::GpuInitiated,
+        "reused-producer-task",
+        7103,
+        0,
+        0,
+        1000,
+        4000,
+        4000);
+    test.check(
+        duplicate.postSend(fixtureRequest(0), 0).status
+                == PostStatus::Accepted
+            && duplicate.ringDoorbell(16'000, reused).wqe_count == 1,
+        "producer task reuse fixture commits its first doorbell batch");
+    test.check(
+        duplicate.postSend(fixtureRequest(1), 16'000).status
+            == PostStatus::Accepted,
+        "producer task reuse fixture posts its second batch");
+    const std::uint64_t duplicate_generation =
+        duplicate.pcieFabric()->generation();
+    test.expectThrowAsWithMessage<std::invalid_argument>(
+        [&]() { static_cast<void>(duplicate.ringDoorbell(32'000, reused)); },
+        "RNIC producer task identity was already linked",
+        "producer task identity cannot be reused across doorbell batches");
+    test.check(
+        duplicate.submissionRecords().size() == 1
+            && duplicate.unpublishedWqeCount() == 1
+            && duplicate.pcieFabric()->generation() == duplicate_generation,
+        "duplicate task rejection preserves the second batch atomically");
+
+    const RnicProducerTaskLink fresh = producerTaskLink(
+        RnicProducerShape::GpuInitiated,
+        "fresh-producer-task",
+        7103,
+        16'000,
+        16'000,
+        17'000,
+        20'000,
+        20'000);
+    test.check(
+        duplicate.ringDoorbell(32'000, fresh).wqe_count == 1,
+        "fresh producer identity commits the second doorbell batch");
+    // The public path rejects reuse before record creation. Fault only the
+    // read-only projection to exercise the defensive ledger invariant.
+    auto& faulted_records =
+        const_cast<std::vector<RnicSubmissionRecord>&>(
+            duplicate.submissionRecords());
+    const bool has_two_links = faulted_records.size() == 2
+        && faulted_records[0].producer_task.has_value()
+        && faulted_records[1].producer_task.has_value();
+    test.check(
+        has_two_links,
+        "producer task invariant fixture has two linked batches");
+    if (has_two_links) {
+        const std::string second_task_id =
+            faulted_records[1].producer_task->task_id;
+        faulted_records[1].producer_task->task_id =
+            faulted_records[0].producer_task->task_id;
+        test.expectThrowAsWithMessage<std::logic_error>(
+            [&]() { duplicate.validateInvariants(); },
+            "RNIC producer task link spans doorbell batches",
+            "submission invariant rejects one task identity across batches");
+        faulted_records[1].producer_task->task_id = second_task_id;
+        duplicate.validateInvariants();
+    }
+
+    RnicDevice host(submissionConfig(RnicProducerShape::HostCpuDriver));
+    test.check(
+        host.postSend(fixtureRequest(0), 0).status == PostStatus::Accepted,
+        "host task-link rejection fixture posts its WQE");
+    RnicProducerTaskLink host_link = producerTaskLink(
+        RnicProducerShape::HostCpuDriver,
+        "host-task",
+        producerId(RnicProducerShape::HostCpuDriver),
+        0,
+        0,
+        0,
+        0,
+        0);
+    test.expectThrowAs<std::invalid_argument>(
+        [&]() { static_cast<void>(host.ringDoorbell(0, host_link)); },
+        "host CPU submission rejects a GPU task link");
+    test.check(
+        host.submissionRecords().empty() && host.unpublishedWqeCount() == 1,
+        "host task-link rejection preserves its submission ledger");
+}
+
+std::uint64_t parseUnsigned(const char* text, const char* name) {
+    try {
+        std::size_t consumed = 0;
+        const std::string value(text);
+        const std::uint64_t parsed = std::stoull(value, &consumed, 10);
+        if (consumed != value.size()) {
+            throw std::invalid_argument("trailing characters");
+        }
+        return parsed;
+    } catch (const std::exception&) {
+        throw std::invalid_argument(
+            std::string("invalid unsigned ") + name);
+    }
+}
+
+RnicProducerShape parseProducerShape(const std::string& value) {
+    if (value == "cpu_proxy") {
+        return RnicProducerShape::CpuProxy;
+    }
+    if (value == "gpu_initiated") {
+        return RnicProducerShape::GpuInitiated;
+    }
+    if (value == "host_cpu_driver") {
+        return RnicProducerShape::HostCpuDriver;
+    }
+    throw std::invalid_argument("invalid producer shape");
+}
+
+void printProducerLinkCsv(int argc, char** argv) {
+    if (argc != 11) {
+        throw std::invalid_argument(
+            "producer-link mode requires shape, task, owner and six timestamps");
+    }
+    const RnicProducerShape shape = parseProducerShape(argv[2]);
+    const std::string task_id(argv[3]);
+    if (task_id.find_first_of(",\r\n") != std::string::npos) {
+        throw std::invalid_argument("producer task identity is not CSV-safe");
+    }
+    const std::uint64_t owner = parseUnsigned(argv[4], "task owner");
+    if (owner > std::numeric_limits<std::uint32_t>::max()) {
+        throw std::invalid_argument("producer task owner exceeds uint32");
+    }
+    const RnicProducerTaskLink link = producerTaskLink(
+        shape,
+        task_id,
+        static_cast<std::uint32_t>(owner),
+        parseUnsigned(argv[5], "submitted timestamp"),
+        parseUnsigned(argv[6], "eligible timestamp"),
+        parseUnsigned(argv[7], "started timestamp"),
+        parseUnsigned(argv[8], "finished timestamp"),
+        parseUnsigned(argv[9], "completed timestamp"));
+    const Picoseconds record_submitted_at_ps = parseUnsigned(
+        argv[10], "record submission timestamp");
+    RnicSubmissionRecord projected;
+    const StudyRow row = runFixture(
+        shape, 1, link, record_submitted_at_ps, &projected);
+    if (!projected.producer_task.has_value()) {
+        throw std::logic_error("producer-link fixture lost its task projection");
+    }
+    const RnicProducerTaskLink& actual = *projected.producer_task;
+    std::cout
+        << "producer_shape,task_id,task_owner_kind,task_owner_id,"
+           "task_submitted_at_ps,task_eligible_at_ps,task_started_at_ps,"
+           "task_finished_at_ps,task_completed_at_ps,record_submitted_at_ps,"
+           "linked_records,invariants_valid\n"
+        << toString(shape) << ',' << actual.task_id << ','
+        << toString(actual.task_owner.kind) << ',' << actual.task_owner.id
+        << ',' << actual.submitted_at_ps << ',' << actual.eligible_at_ps
+        << ',' << actual.started_at_ps << ',' << actual.finished_at_ps
+        << ',' << actual.completed_at_ps << ',' << projected.submitted_at_ps
+        << ",1," << static_cast<int>(row.invariants_valid) << '\n';
+}
+
 std::vector<StudyRow> studyRows() {
     std::vector<StudyRow> rows;
     for (const RnicProducerShape shape : {
@@ -712,13 +1063,21 @@ void printStudyCsv(const std::vector<StudyRow>& rows) {
 
 int main(int argc, char** argv) {
     try {
+        if (argc >= 2
+            && std::string(argv[1]) == "--producer-link-csv") {
+            printProducerLinkCsv(argc, argv);
+            return 0;
+        }
         const std::vector<StudyRow> rows = studyRows();
         if (argc == 2 && std::string(argv[1]) == "--study-csv") {
             printStudyCsv(rows);
             return 0;
         }
         if (argc != 1) {
-            std::cerr << "usage: simllm_rnic_submission_test [--study-csv]\n";
+            std::cerr
+                << "usage: simllm_rnic_submission_test [--study-csv | "
+                   "--producer-link-csv <shape> <task> <owner> <submitted> "
+                   "<eligible> <started> <finished> <completed> <record>]\n";
             return 2;
         }
 
@@ -728,6 +1087,7 @@ int main(int argc, char** argv) {
         }
         testValidationAndAtomicity(test);
         testDefaultAndSessionSchema(test);
+        testProducerTaskLinks(test);
         if (test.failures() != 0) {
             std::cerr << test.failures() << " submission checks failed\n";
             return 1;

@@ -133,6 +133,34 @@ the NVLink cursor, and CTAs of a later task backfill capacity an earlier
 task cannot use. The result carries the makespan plus per-task admitted
 and completion cycles, issued instructions and byte counts.
 
+Each task now also carries logical submission and eligibility cycles. The
+concurrent service admits no CTA before eligibility, includes a newly eligible
+task in the same deterministic replay as resident kernels, and projects both
+input cycles into its per-task estimate. Default zero cycles preserve every
+accepted replay. Idle time before the first eligible task advances virtual
+time but is not misreported as dependency, pipeline or completion drain.
+
+`simllm.compute.rnic` uses this timed service for optional RNIC submission
+production. CPU-proxy mode submits a light GPU descriptor-store and
+publication task. GPU-initiated mode submits a WQE-store, doorbell-record
+store and publication task. Both use the network task class and contend with
+surrounding kernels for SM residency, issue and HBM service. The surrounding
+NCCL egress task retains its NVLink cursor and can be delayed through the
+shared issue path. Compute completion is resolved against the caller's
+submission deadline, then projected into the native RNIC record as an
+immutable link. Coupling is disabled by default, and host-CPU mode never
+constructs a task or invokes the scheduler.
+
+Replay order is a declared input to this coupling. `RnicProducerCoupling`
+passes caller-supplied concurrent tasks first in caller order, followed by
+non-host producer tasks in request order. The deterministic baseline scheduler
+uses task index to break admission and issue ties. Producer-last order lets the
+frozen residency-saturated background claim the full SM before the producer,
+which creates the registered +20 and +23 cycle submission delays. Reversing
+that order admits the producer first and does not preserve those rows. The
+COMP-13 concurrent artifact must therefore serialize and validate the exact
+task order rather than reconstruct it from task kind or identity.
+
 NCCL collectives enter through `simllm.compute.nccl`, which builds the
 per-GPU egress kernel of a ring all-reduce: `2 * (W - 1) * P / W` bytes
 per GPU, chunked across channel CTAs and their warps, each chunk loaded
@@ -482,7 +510,8 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
 - COMP-13 (Completeness; P1; M): extend `simllm-gpu-model-artifact-v2` with a
   narrow concurrent replay record for `GpuTask` inputs and
   `GpuConcurrentEstimate` outputs,
-  including task order, per-task admission/completion, requested and
+  including task order, per-task submission/eligibility,
+  admission/completion, requested and
   transacted HBM/NVLink bytes, request counts and deterministic replay
   validation. Until that record lands, concurrent demo CSVs are reviewed
   evidence but are not GPU-model artifacts.
@@ -532,3 +561,22 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   fused estimate exactly, and require every rendered cumulative boundary to
   remain within the declared capture uncertainty. The explicit no-breakdown
   path must retain the accepted GOAL bytes and TTFT exactly.
+- COMP-21 (Precision; P1; L): calibrate the active optional RNIC producer
+  task shapes that currently use a synthetic normalized trace. The v1
+  surrogate charges one 64-byte descriptor store plus publication for a CPU
+  proxy, or one 64-byte WQE store, one 4-byte doorbell-record store and
+  publication for GPU initiation, with one CTA, one warp and minimal
+  residency. Calibration must resolve the current GPU-initiated overlap: the
+  producer task charges that 4-byte doorbell-record update before effective
+  submission, then the native path charges the same physical update as a
+  `DoorbellRecord` host store starting at submission. Assign its service to
+  one timing authority and retain only the ordering projection at the other
+  boundary. Capture GPU descriptor publication and mapped-UAR submission on
+  the selected production GPU while sweeping batch sizes 1, 4 and 16 and
+  idle, half-resident and residency-saturated neighbors. Use task admission,
+  producer completion and RNIC-visible doorbell time as the identifying
+  observables. Replace the trace and profile entries only when an independent
+  validation capture predicts completion and queue wait within the larger of
+  two GPU cycles or 10 percent in every cell. Report the synthetic
+  before-versus-calibrated after error for every cell. The disabled coupling
+  and host-CPU paths must retain every accepted timestamp and artifact byte.

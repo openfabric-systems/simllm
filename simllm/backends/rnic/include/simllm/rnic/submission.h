@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 
 #include "simllm/rnic/pcie_fabric.h"
 
@@ -11,7 +12,8 @@ namespace simllm::rnic {
 inline constexpr std::uint32_t kRnicSubmissionConfigVersion = 1;
 inline constexpr std::uint32_t kRnicSubmissionProfileVersion = 1;
 inline constexpr std::uint32_t kRnicSubmissionAgentVersion = 1;
-inline constexpr std::uint32_t kRnicSubmissionRecordVersion = 1;
+inline constexpr std::uint32_t kRnicProducerTaskLinkVersion = 1;
+inline constexpr std::uint32_t kRnicSubmissionRecordVersion = 2;
 inline constexpr std::uint32_t kRnicCqConsumptionRecordVersion = 1;
 
 enum class RnicProducerShape : std::uint8_t {
@@ -64,6 +66,18 @@ struct RnicSubmissionProfile {
     std::uint32_t rnic_requester_id{0};
 };
 
+struct RnicProducerTaskLink {
+    std::uint32_t version{kRnicProducerTaskLinkVersion};
+    std::string task_id;
+    RnicProducerShape producer_shape{RnicProducerShape::HostCpuDriver};
+    RnicSubmissionAgent task_owner;
+    Picoseconds submitted_at_ps{0};
+    Picoseconds eligible_at_ps{0};
+    Picoseconds started_at_ps{0};
+    Picoseconds finished_at_ps{0};
+    Picoseconds completed_at_ps{0};
+};
+
 struct RnicSubmissionRecord {
     std::uint32_t version{kRnicSubmissionRecordVersion};
     std::uint64_t sequence{0};
@@ -78,6 +92,7 @@ struct RnicSubmissionRecord {
     PcieEndpointKind sq_endpoint{PcieEndpointKind::HostPinnedMemory};
     PcieEndpointKind doorbell_endpoint{PcieEndpointKind::HostPinnedMemory};
     RnicUarMappingOwner uar_mapping_owner{RnicUarMappingOwner::HostCpu};
+    std::optional<RnicProducerTaskLink> producer_task;
     Picoseconds posted_at_ps{0};
     Picoseconds submitted_at_ps{0};
     Picoseconds visible_to_rnic_at_ps{0};
@@ -101,6 +116,10 @@ bool isDefaultRnicSubmissionConfig(
 RnicSubmissionProfile resolveRnicSubmissionProfile(
     const RnicSubmissionConfig& config,
     std::uint32_t qpn);
+void validateRnicProducerTaskLink(
+    const RnicSubmissionProfile& profile,
+    const RnicProducerTaskLink& link,
+    Picoseconds record_submitted_at_ps);
 
 const char* toString(RnicProducerShape shape) noexcept;
 const char* toString(RnicSubmissionAgentKind kind) noexcept;

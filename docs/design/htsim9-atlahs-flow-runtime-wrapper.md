@@ -2,28 +2,39 @@
 
 ## Status and source boundary
 
-This note prepares HTSIM-9 but does not authorize or perform backend work.
-The htsim source referent is the SimLLM gitlink
+This note originally prepared the ABI-v1 HTSIM-9 checkpoint. Its source
+citations and gap assignments remain the historical audit used by the
+follow-on ABI-v2 work. The htsim source referent for that audit is the SimLLM
+gitlink
 `8c3f8b231a6a9311ffc1e7969a003dcba724b50d`. Every htsim citation below is
 against that exact object. The SimLLM source referent is wave-2 base
 `6aa3a7622f57b63c35e030667bad24948c6a0e0e`, including the landed
 `RnicDevice` review corrections. No file under `third_party/htsim` is changed
 by this package.
 
-The existing htsim outer contract accepts a flow request containing flow,
-endpoint, payload, start-time and tag fields, then reports completion by flow
-ID (`third_party/htsim/htsim/sim/atlahs_flow_runtime.h:20-27,37-57`). The
-current SimLLM `NetworkPort` is ABI v1 and admits one flow extent through
-`trySubmit`
+Post-landing status, 2026-08-11: the ABI-v1 wrapper is on the pinned backend
+main, and the frozen Tier A and Tier B gates pass for the isolated flow-level
+fixture. BACK-8 and the demonstrated CORE-15 live-seam clauses closed on that
+evidence. CORE-21 retains the same-graph authority comparison, BACK-31 retains
+the unlinked-native executable negative. BACK-25 and BACK-26 later closed at
+the vocabulary and relay boundary, so HTSIM-9 remains open only for a composed
+run demonstrating packet-issue evidence through the live chain.
+
+At the preparation freeze, the htsim outer contract accepted a flow request
+containing flow, endpoint, payload, start-time and tag fields, then reported
+completion by flow ID
+(`third_party/htsim/htsim/sim/atlahs_flow_runtime.h:20-27,37-57`). The
+then-current SimLLM `NetworkPort` was ABI v1 and admitted one flow extent
+through `trySubmit`
 (`simllm/backends/rnic/include/simllm/rnic/network_port.h:14-25,42-61,112-122`).
 Its only terminal events are `Delivered` and `Dropped` with an optional ECN
 bit and typed drop evidence
 (`simllm/backends/rnic/include/simllm/rnic/network_port.h:22-40,101-110`).
 
-This design does not silently broaden that ABI. Missing packet-attempt and
-transport-control vocabulary is assigned to BACK-25 and BACK-26. HTSIM-9 may
-implement the explicit ABI-v1 compatibility subset first, but it cannot claim
-the deferred packet or control semantics until those versioned surfaces land.
+The preparation did not silently broaden that ABI. Missing packet-attempt and
+transport-control vocabulary was assigned to BACK-25 and BACK-26. The
+follow-on completion landed those versioned surfaces while retaining the
+explicit ABI-v1 compatibility subset.
 
 ## Authority and construction seam
 
@@ -210,14 +221,43 @@ BACK-24 must pass its direct-device atomicity test in SimLLM before the
 composed gate claims terminal rejection at the device boundary. Wrapper-only
 prevalidation is useful integration defense but is not task closure.
 
-HTSIM-9 remains open after this ABI-v1 checkpoint. Its closure requires later
-append-only branch commits, after BACK-25 and BACK-26 provide their versioned
-ABI surfaces, that pass directed composed tests for packet TX start and
-finish, native RX arrival, attempt delivery and drop, ECN/CNP and rate
-updates, PFC pause and resume, and supported link-state events. Each event must
-follow the mapping and authority rules above. If any dynamic feature remains
-unsupported, its explicit rejection may satisfy BACK-26's disabled path but
-cannot satisfy the HTSIM-9 enabled-path requirement.
+### ABI-v2 completion addendum
+
+The follow-on vocabulary provides session-unique flow-extent and
+packet-attempt tokens, explicit TX start and finish, RX arrival, attempt
+delivery or drop, stable drop provenance, ECN/CNP, effective eligibility and
+rate updates, PFC submit, pause and resume, and capability-gated link-state
+events. `RnicPacketizedManifoldRuntime` emits packet observations from its
+committed source and destination serializer boundaries. The wrapper schedules
+those immutable observations at their event timestamps and never substitutes
+flow acceptance for TX issue. The native WQE timeline consumes only explicit
+data or retransmission TX-start events.
+
+ABI v1 remains the default and its frozen raw and summary artifacts retain
+their exact bytes. ABI v2 passes the same Tier A relations and adds exact
+packet timeline relations. Static failed-link configuration still has no
+timestamped transition source, so requested dynamic capability rejects and
+HTSIM-15 owns the optional enabled producer. HTSIM-9 now remains open only for
+the Tier B live-metric run through CORE-15.
+
+Version negotiation is exact for the whole session. A v2 consumer paired with
+a producer that advertises only v1 rejects before event-handler installation,
+runtime setup, submission or authority mutation. There is no implicit
+v2-to-v1 projection. A caller that requires compatibility constructs an
+explicit v1 session, which retains the accepted baseline bytes.
+
+Packet-keyed ECN and CNP correlation survives packet delivery or drop in a
+bounded completed-attempt tombstone while the parent extent remains live. The
+extent terminal purges that tombstone. This permits physical feedback to trail
+the data packet without retaining packet state beyond the logical operation.
+
+The physical packetized manifold currently advertises packet-attempt events
+only. The full control vocabulary is exercised by a test runtime, not by a
+physical policy or fabric producer. HTSIM-16 owns ECN/CNP, effective-rate, PFC
+and link-state producers. HTSIM-15 separately owns the timestamped dynamic
+link-transition source that HTSIM-16 can project. BACK-34 owns a registered
+4,096-byte-quantum partial-final-packet cell; the frozen packet matrix and the
+composed 8,192-byte directed test contain only full quanta.
 
 ### SimLLM pin-bump procedure
 
@@ -239,13 +279,14 @@ SimLLM change:
 4. Run `.venv/bin/ruff check .` and `.venv/bin/pytest -q`, including the live
    backend tests when the toolchain is available. Compare bypass artifacts
    against the old gitlink before accepting the new run record.
-5. Update `docs/modules/backends.md` in the same SimLLM change. A compatibility
-   checkpoint pin records progress but keeps HTSIM-9 open. Close HTSIM-9 only
-   after the full enabled packet, feedback, pause and link-state closure gate
-   above passes. Keep BACK-8 open for any registered run-record, projection,
-   bypass or live-metric remainder that is not actually complete. Keep
-   BACK-24, BACK-25 and BACK-26 open according to their independent acceptance
-   bars.
+5. Update `docs/modules/backends.md` in the same SimLLM change. The ABI-v2
+   pin closes BACK-25 and BACK-26 at the vocabulary and relay boundary, and
+   the Tier B results close the demonstrated BACK-8 and CORE-15 clauses,
+   while every undemonstrated clause keeps a distinct residual owner
+   (CORE-21, BACK-31, HTSIM-15 for the dynamic-link producer, HTSIM-16 for
+   the physical control-event producers). Close HTSIM-9 only after a
+   composed run demonstrates packet-issue evidence populating the native
+   timeline through the live metric chain.
 6. Commit the gitlink, module status and reproducible evidence together using
    the maintainer's identity. Never rewrite or delete the backend addon branch
    after SimLLM points at it.

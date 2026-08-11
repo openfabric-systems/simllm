@@ -1,0 +1,93 @@
+{
+  "abi_v1_artifact_identity": {
+    "raw_observations.json": true,
+    "summary.json": true
+  },
+  "abi_v2": {
+    "evidence_accounting": {
+      "correction": "post_specified_fix_round_1",
+      "exact_oracles": "fatal_unscored",
+      "fix_round_1_packet_family": {
+        "evaluation": "raw_observations_before_exact_oracles",
+        "independently_scored_relations": 10,
+        "scored_surface": {
+          "multi_packet_inverse_rate_span": 2,
+          "rx_d_additivity": 4,
+          "tx_d_additivity": 4
+        }
+      },
+      "original_oracle_first_packet_family": {
+        "classification": "withdrawn_as_entailed",
+        "independently_scored_relations": 0,
+        "reported_relations": 10
+      }
+    },
+    "inherited_tier_a": {
+      "exact_oracle_rows": 8,
+      "factory": "htsim",
+      "fatal_invariant_families": {
+        "authority_exclusivity": true,
+        "controlled_drop": true,
+        "fifo_ordering": true,
+        "quiescence": true,
+        "terminal_atomicity": true,
+        "token_conservation": true,
+        "wrapper_bypass_sensitivity": true
+      },
+      "schema": "simllm-rnic-tier-a-summary-v1",
+      "scored_family_instances": {
+        "d_additivity": 4,
+        "inverse_rate_serialization": 4,
+        "two_wqe_fifo": 4
+      },
+      "wrapper_bypass_rejected": true
+    },
+    "missing_tx_event_mutant_rejected": true,
+    "packet_families": {
+      "multi_packet_inverse_rate_span": {
+        "passed": 2,
+        "total": 2
+      },
+      "rx_d_additivity": {
+        "passed": 4,
+        "total": 4
+      },
+      "tx_d_additivity": {
+        "passed": 4,
+        "total": 4
+      }
+    }
+  },
+  "ctest": {
+    "failed": 0,
+    "passed": 370,
+    "total": 370
+  },
+  "expectation_commits": {
+    "htsim": "6ece8bdd908496dadfd4df809e3a4eb660d6cc26",
+    "simllm": "506f87af93687ccf0df85f6b5307b71a20ed3762",
+    "simllm_fix_round_1": "07521786020e41f56196d13718c62169d47ad70d"
+  },
+  "genuine_risk": {
+    "abi_v1_identity": {
+      "plausible_failures": 2,
+      "relations": 2
+    },
+    "inherited_tier_a": {
+      "plausible_failures": 12,
+      "relations": 12
+    },
+    "packet_families": {
+      "evaluation": "raw_observations_before_exact_oracles",
+      "plausible_failures": 10,
+      "relations": 10
+    }
+  },
+  "htsim_revision": "5445b81fd89c2e8c00bdf74e48d453da2a73eb30",
+  "schema": "simllm-rnic-packet-v2-results-v1",
+  "simllm_revision": "b7116739961b7d6b9d413cb020d43112b4d58692",
+  "v1_reference_sha256": {
+    "raw_observations.json": "37a4e9cf88a1b60094409150dfad25599eb77cbf268b3d08bfacf527e493a26a",
+    "summary.json": "00ef7e4f5bdbd38f4eabe9ba42dc75f56de528c8751b93e6eef4a3089fa61004"
+  }
+}
