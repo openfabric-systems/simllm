@@ -130,25 +130,32 @@ byte fixture in pytest, and `reset_configuration()` separates independent
 in-process runs. The chronology and evidence are recorded in
 [the PLAY-3 results](../../examples/preplay_adapter_replay_v1/RESULTS.md).
 
-PLAY-4 is complete. The independent framework CPU runner is optional
-follow-up PLAY-6, and SGLang replay is the explicit PLAY-7 follow-up.
+PLAY-4 is complete. The PLAY-5 routed replay half is also validated as of
+2026-08-11: both live bandwidth cells returned exact oracle completions, every
+captured all-to-all table matched its independent closed form, and all 13
+executed completion, routed-stream, TTFT and TPOT relations passed. The
+independent vLLM CPU comparison remains blocked because the installed CUDA
+build reaches `CPUWorker` but does not export `init_cpu_memory_env`; its six
+rows earned no pass. The chronology and exact evidence are recorded in
+[the PLAY-5 results](../../examples/preplay_validation_v1/RESULTS.md).
+
+The independent framework CPU runner remains optional follow-up PLAY-6, and
+SGLang replay is the explicit PLAY-7 follow-up.
 
 ## Open tasks
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
 
-- PLAY-5 (Completeness; P1; M): pre-registered validation study. First,
-  oracle consistency: the same requests and seed through the PLAY-1 runner
-  and through an independent framework CPU run must agree on lengths, stop
-  reasons and routing, with every divergence classified and none silently
-  accepted; admissible causes are the recorded sampler difference and the
-  numerics divergence the honesty rule predicts (kernel fusion and
-  reduction order can flip a near-tie argmax, cascading into length and
-  routing changes). Second, replay end-to-end: a replayed run's
-  scheduler-visible completions must land exactly at the oracle lengths,
-  and its all-to-all sizes must match the captured routing; freeze the
-  expectations in their own commit before implementation per the
-  development process.
+- PLAY-5 (Completeness; P1; M) (remaining independent CPU half after replay
+  validation): run the frozen requests and seed through the PLAY-1 runner and
+  a vLLM 0.26.0 CPU build, then compare lengths, stop reasons and routing with
+  every divergence classified and none silently accepted. The runtime must
+  select `CpuPlatform`, export `torch.ops._C.init_cpu_memory_env`, construct the
+  stock `CPUWorker` and `CPUModelRunner`, load the pinned Granite model entirely
+  on CPU, and show no CUDA allocation increase. The 2026-08-11 CUDA build
+  reached `CPUWorker.__init__` but lacked that CPU operator, so zero of six
+  rows executed. The routed replay half is complete with 13/13 scored live
+  relations and must retain those accepted results when this task closes.
 - PLAY-6 (Completeness; P2; L): add an optional framework CPU backend runner
   that captures the same artifact through vLLM or SGLang on CPU, exercising
   the deployment framework's sampler. The Transformers runner remains the
