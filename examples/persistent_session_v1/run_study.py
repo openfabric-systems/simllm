@@ -19,7 +19,7 @@ from simllm.goal import GoalTrace
 
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[1]
-EXPECTATIONS_COMMIT = "e77f3854f544052af9b9c695391540ab88727bc8"
+EXPECTATIONS_COMMIT = "71afffe602a527a5fde72e1e47a7987d85ebf479"
 HTSIM_BASE_COMMIT = "4885c647eecdfdf81479d1df052223c016ad086b"
 SCHEMA = "simllm-htsim-flow-session-v1"
 FRAME_LIMIT = 1 << 20
@@ -39,9 +39,9 @@ REPLAYS = {
     "two-node": (
         2,
         (Flow(0, 1, 4096), Flow(1, 0, 8192)),
-        (10.0, 25.0),
-        (0.01, 8.0),
-        2.0,
+        (0.002, 0.5),
+        (0.0005, 0.25),
+        1.2,
     ),
     "four-node": (
         4,
@@ -51,9 +51,9 @@ REPLAYS = {
             Flow(2, 3, 4096),
             Flow(3, 0, 8192),
         ),
-        (20.0, 45.0),
-        (0.01, 10.0),
-        3.0,
+        (0.004, 1.0),
+        (0.0005, 0.25),
+        1.5,
     ),
 }
 STATE_PAYLOADS = (4096, 8192)
@@ -71,7 +71,12 @@ def _configured_executable(variable: str) -> Path:
 
 
 def _canonical(value: Any) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
 
 
 def _frame(value: dict[str, Any]) -> bytes:
@@ -172,13 +177,13 @@ def _run_cli_flow(
             str(binary),
             "-goal",
             str(goal_bin),
-            "-linkspeed",
+            "-linkspeed_bps",
             str(LINK_RATE_BPS),
-            "-profile",
+            "-rnic_profile",
             "rnic-nn",
             "-nodes",
             str(nodes),
-            "-completion-csv",
+            "-completion_csv",
             str(completion),
         ],
         check=True,
