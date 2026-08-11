@@ -20,6 +20,7 @@ struct PortConfig {
     bool control_frames{false};
     bool congestion{false};
     bool drop_first{false};
+    std::uint32_t network_abi_version{kNetworkPortAbiVersionV1};
 };
 
 struct IssuedToken {
@@ -45,6 +46,10 @@ public:
     virtual std::vector<NetworkEvent> takeDue(Picoseconds now_ps) = 0;
     virtual const std::vector<IssuedToken>& issued() const noexcept = 0;
     virtual const std::vector<TerminalToken>& terminals() const noexcept = 0;
+    virtual const std::vector<NetworkEvent>& packetEvents() const noexcept {
+        static const std::vector<NetworkEvent> empty;
+        return empty;
+    }
     virtual std::vector<NetworkToken> liveTokens() const = 0;
 };
 
@@ -62,6 +67,7 @@ struct ProducerOptions {
     std::string factory;
     std::string expectations_path;
     std::string observations_path;
+    std::uint32_t network_abi_version{kNetworkPortAbiVersionV1};
 };
 
 int runTierA(const ProducerOptions& options, PortFactory& factory);

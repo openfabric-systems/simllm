@@ -79,6 +79,10 @@ producer invocation contract is pinned, so the run requires no further
 agreement. BACK-8 remains open for live metric reachability. The
 per-WQE packet-issue timeline remains unclaimed at ABI-v1.
 
+Postscript, 2026-08-11: BACK-25 and BACK-26 later closed at the vocabulary and
+relay boundary; see [the ABI-v2 packet study](../rnic_packet_v2/RESULTS.md) and
+its registered producer residuals.
+
 ## Tier B live reachability
 
 Tier B passed on 2026-08-11 and makes the first network-affected TTFT and TPOT

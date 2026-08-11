@@ -156,3 +156,7 @@ once.
 - The frozen [`expectations.md`](expectations.md) was not edited. Its proposed
   clarification remains a draft in the post-specified fixture audit pending
   maintainer approval.
+
+Postscript, 2026-08-11: BACK-25 and BACK-26 later closed at the vocabulary and
+relay boundary; see [the ABI-v2 packet study](../rnic_packet_v2/RESULTS.md) and
+its registered producer residuals.

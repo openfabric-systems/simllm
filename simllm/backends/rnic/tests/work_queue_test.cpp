@@ -17,7 +17,16 @@ using simllm::rnic::CompletionStatus;
 using simllm::rnic::DropLocation;
 using simllm::rnic::DropReason;
 using simllm::rnic::EvidenceKind;
+using simllm::rnic::NetworkEvent;
 using simllm::rnic::NetworkEventKind;
+using simllm::rnic::NetworkEventScope;
+using simllm::rnic::NetworkLinkState;
+using simllm::rnic::NetworkPacketKind;
+using simllm::rnic::NetworkPort;
+using simllm::rnic::NetworkPortCapabilities;
+using simllm::rnic::NetworkSubmitResult;
+using simllm::rnic::NetworkToken;
+using simllm::rnic::NetworkTxDescriptor;
 using simllm::rnic::Picoseconds;
 using simllm::rnic::PcieAnalyticalDelayAccounting;
 using simllm::rnic::PcieDirection;
@@ -33,6 +42,39 @@ using simllm::rnic::WorkRequest;
 using simllm::rnic::WqeState;
 using simllm::rnic::defaultPcieFabricConfig;
 using simllm::rnic::testing::FakeNetworkPort;
+
+class PacketEventPort final : public NetworkPort {
+public:
+    NetworkPortCapabilities capabilities() const noexcept override {
+        return NetworkPortCapabilities{
+            simllm::rnic::kNetworkPortAbiVersionV2,
+            true,
+            true,
+            true,
+            true,
+            true,
+        };
+    }
+
+    NetworkSubmitResult trySubmit(
+        const NetworkTxDescriptor& descriptor,
+        Picoseconds) override {
+        if (descriptor.abi_version
+            != simllm::rnic::kNetworkPortAbiVersionV2) {
+            return NetworkSubmitResult::rejected();
+        }
+        descriptor_ = descriptor;
+        return NetworkSubmitResult::accepted(next_token_++);
+    }
+
+    const NetworkTxDescriptor& descriptor() const noexcept {
+        return descriptor_;
+    }
+
+private:
+    NetworkToken next_token_{100};
+    NetworkTxDescriptor descriptor_;
+};
 
 bool sameAnalyticalAccounting(
     const PcieAnalyticalDelayAccounting& lhs,
@@ -994,6 +1036,171 @@ void testPcieCqeOverflowIsAtomicAndRetryable(TestRunner& test) {
     fabric.validateInvariants();
 }
 
+void testPacketEventVocabularyPopulatesTimeline(TestRunner& test) {
+    PacketEventPort network;
+    WorkQueue queue(config(2, 2), network);
+    const auto posted = queue.postSend(request(901, true, 5000), 0);
+    queue.ringDoorbell(0);
+    queue.progress(0);
+    const NetworkToken extent_token =
+        *queue.wqe(posted.wqe_id).network_token;
+
+    test.check(
+        network.descriptor().abi_version
+                == simllm::rnic::kNetworkPortAbiVersionV2
+            && !queue.wqe(posted.wqe_id).timeline.first_packet_at_ps
+                    .has_value()
+            && !queue.wqe(posted.wqe_id).timeline.last_packet_at_ps
+                    .has_value(),
+        "ABI-v2 acceptance alone does not synthesize packet timestamps");
+
+    const auto packet_event = [extent_token, &posted](
+                                  NetworkEventKind kind,
+                                  NetworkToken attempt_token,
+                                  std::uint64_t packet_index,
+                                  std::uint64_t offset,
+                                  std::uint64_t bytes,
+                                  Picoseconds event_time_ps) {
+        NetworkEvent event;
+        event.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+        event.kind = kind;
+        event.scope = NetworkEventScope::PacketAttempt;
+        event.token = attempt_token;
+        event.parent_token = extent_token;
+        event.wqe_id = posted.wqe_id;
+        event.event_time_ps = event_time_ps;
+        event.packet_index = packet_index;
+        event.payload_offset_bytes = offset;
+        event.payload_bytes = bytes;
+        event.wire_bytes = bytes;
+        event.packet_kind = NetworkPacketKind::Data;
+        return event;
+    };
+
+    test.expectThrow(
+        [&queue, &packet_event]() {
+            queue.onNetworkEvent(packet_event(
+                NetworkEventKind::PacketTxFinished,
+                2000,
+                0,
+                0,
+                4096,
+                9));
+        },
+        "packet finish without explicit TX issue is rejected");
+
+    queue.onNetworkEvent(packet_event(
+        NetworkEventKind::PacketTxStarted, 1000, 0, 0, 4096, 10));
+    queue.onNetworkEvent(packet_event(
+        NetworkEventKind::PacketTxFinished, 1000, 0, 0, 4096, 12));
+
+    NetworkEvent ecn;
+    ecn.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    ecn.kind = NetworkEventKind::EcnMarked;
+    ecn.scope = NetworkEventScope::TransportControl;
+    ecn.token = 1000;
+    ecn.parent_token = extent_token;
+    ecn.wqe_id = posted.wqe_id;
+    ecn.event_time_ps = 13;
+    queue.onNetworkEvent(ecn);
+
+    queue.onNetworkEvent(packet_event(
+        NetworkEventKind::PacketRxArrived, 1000, 0, 0, 4096, 14));
+    queue.onNetworkEvent(packet_event(
+        NetworkEventKind::Delivered, 1000, 0, 0, 4096, 14));
+
+    NetworkEvent cnp = ecn;
+    cnp.kind = NetworkEventKind::CnpReceived;
+    cnp.event_time_ps = 15;
+    queue.onNetworkEvent(cnp);
+
+    NetworkEvent eligibility;
+    eligibility.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    eligibility.kind = NetworkEventKind::EligibilityUpdated;
+    eligibility.scope = NetworkEventScope::TransportControl;
+    eligibility.parent_token = extent_token;
+    eligibility.wqe_id = posted.wqe_id;
+    eligibility.event_time_ps = 15;
+    eligibility.policy_context_token = 9001;
+    eligibility.effective_at_ps = 16;
+    queue.onNetworkEvent(eligibility);
+
+    NetworkEvent rate = eligibility;
+    rate.kind = NetworkEventKind::RateUpdated;
+    rate.event_time_ps = 16;
+    rate.has_effective_rate = true;
+    rate.effective_rate_bps = 400000000000ULL;
+    queue.onNetworkEvent(rate);
+
+    NetworkEvent pfc;
+    pfc.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    pfc.kind = NetworkEventKind::PfcFrameSubmitted;
+    pfc.scope = NetworkEventScope::TransportControl;
+    pfc.event_time_ps = 17;
+    pfc.source = 0;
+    pfc.destination = 1;
+    pfc.link_id = 17;
+    pfc.priority = 3;
+    queue.onNetworkEvent(pfc);
+    pfc.kind = NetworkEventKind::PfcPaused;
+    pfc.event_time_ps = 18;
+    pfc.pause_quanta = 64;
+    queue.onNetworkEvent(pfc);
+    pfc.kind = NetworkEventKind::PfcResumed;
+    pfc.event_time_ps = 19;
+    pfc.pause_quanta = 0;
+    queue.onNetworkEvent(pfc);
+
+    NetworkEvent link;
+    link.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    link.kind = NetworkEventKind::LinkStateChanged;
+    link.scope = NetworkEventScope::TransportControl;
+    link.event_time_ps = 19;
+    link.link_id = 17;
+    link.link_state = NetworkLinkState::Down;
+    queue.onNetworkEvent(link);
+
+    queue.onNetworkEvent(packet_event(
+        NetworkEventKind::PacketTxStarted, 1001, 1, 4096, 904, 20));
+    queue.onNetworkEvent(packet_event(
+        NetworkEventKind::PacketTxFinished, 1001, 1, 4096, 904, 21));
+    queue.onNetworkEvent(packet_event(
+        NetworkEventKind::PacketRxArrived, 1001, 1, 4096, 904, 22));
+    queue.onNetworkEvent(packet_event(
+        NetworkEventKind::Delivered, 1001, 1, 4096, 904, 22));
+
+    NetworkEvent terminal;
+    terminal.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    terminal.kind = NetworkEventKind::Delivered;
+    terminal.scope = NetworkEventScope::FlowExtent;
+    terminal.token = extent_token;
+    terminal.wqe_id = posted.wqe_id;
+    terminal.event_time_ps = 23;
+    queue.onNetworkEvent(terminal);
+    queue.progress(23);
+    NetworkEvent retired_cnp = cnp;
+    retired_cnp.event_time_ps = 23;
+    test.expectThrow(
+        [&queue, &retired_cnp]() {
+            queue.onNetworkEvent(retired_cnp);
+        },
+        "completed packet feedback tombstone ends with its extent");
+
+    const auto& record = queue.wqe(posted.wqe_id);
+    test.check(
+        record.timeline.first_packet_at_ps == 10
+            && record.timeline.last_packet_at_ps == 20
+            && record.timeline.network_outcome_at_ps == 23
+            && record.ecn_marked,
+        "only explicit ABI-v2 TX issue events populate the native timeline");
+    const auto completions = queue.pollCompletionQueue(1, 23);
+    test.check(
+        completions.size() == 1
+            && completions.front().status == CompletionStatus::Success,
+        "packet attempts remain projections and the flow extent retires once");
+    queue.validateInvariants();
+}
+
 }  // namespace
 
 int main() {
@@ -1020,6 +1227,7 @@ int main() {
     testPcieFabricWorkQueuePath(test);
     testPcieWorkQueueValidationAndAtomicOverflow(test);
     testPcieCqeOverflowIsAtomicAndRetryable(test);
+    testPacketEventVocabularyPopulatesTimeline(test);
     if (test.failures() != 0) {
         std::cerr << test.failures() << " RNIC WQ checks failed\n";
         return 1;
