@@ -1,7 +1,12 @@
 # HTSIM-18 persistent session and CORE-24 result codec expectations
 
-This file is frozen before either implementation and before any run of the
-registered study. It covers the opt-in HTSIM flow session and the full
+The original expectations freeze preceded either implementation and every
+result-producing run. A later expectations-only amendment corrected only the
+wall-clock calibration after a dry run exposed that the historical BRIDGE-1
+workload was not the lightweight flow replay registered here. The amendment
+precedes the HTSIM implementation commit and every result-producing run. The
+codec contract and all simulated-time relations remain exactly as first
+frozen. This file covers the opt-in HTSIM flow session and the full
 `StepResult` wire codec. The one-GOAL CLI remains the exact default off path.
 BRIDGE-2 remains open because it owns the graph-level client above these two
 deliverables.
@@ -44,8 +49,25 @@ The audit used SimLLM base commit
   must preserve.
 - `examples/bridge_persistent_v1/RESULTS.md:14-18` records the measured
   pre-existing baseline: `txt2bin` took 0.011178458 seconds and one isolated
-  simulator invocation took 7.252140791 seconds. Those observations inform
-  the broad wall-time bands below and are not evidence from this study.
+  simulator invocation took 7.252140791 seconds. That result used complete
+  recorded TP-8 steps with many flows and computation events. It motivates
+  removal of the serial process boundary but cannot calibrate the lightweight
+  one-flow invocations in this study.
+
+### Wall calibration amendment
+
+Before the HTSIM implementation commit, the unchanged base binary at commit
+`4885c647eecdfdf81479d1df052223c016ad086b` ran the exact isolated replay
+side of this study five times. Two-node replay elapsed seconds were
+`[0.010377614, 0.005665112, 0.004582836, 0.004237526, 0.004083072]`.
+Four-node replay elapsed seconds were
+`[0.008126185, 0.008239501, 0.008102946, 0.009297478, 0.011039933]`.
+These diagnostic-only observations are calibration inputs, not scored study
+evidence. No session mode exists in that binary. They replace the
+workload-inapplicable BRIDGE-1 values for the broad bands below. The session
+bands are deliberately broad because no preimplementation session timing can
+exist; the signed within-run ratio remains the decision-relevant wall-clock
+check.
 
 ### Causal boundary
 
@@ -250,16 +272,16 @@ and evidence comparison are outside the timed boundaries.
 
 | replay | isolated band, s | session band, s | minimum speedup |
 |---|---:|---:|---:|
-| two-node | `[10, 25]` | `[0.01, 8]` | `2.0x` |
-| four-node | `[20, 45]` | `[0.01, 10]` | `3.0x` |
+| two-node | `[0.002, 0.5]` | `[0.0005, 0.25]` | `1.2x` |
+| four-node | `[0.004, 1.0]` | `[0.0005, 0.25]` | `1.5x` |
 
 The signed expectation is lower wall time in session mode. The bands derive
-from the measured 7.252140791-second invocation and 0.011178458-second
-conversion baselines, with broad allowance for machine load and new process
-setup. R2 has two live-runtime instances. Both can fail through framing,
-startup, simulation, process scheduling, or accidental per-step child reuse,
-so the planned genuine-risk fraction is `2/2`. F1 does not entail R2 because
-byte-identical simulated time places no bound on host elapsed time.
+from the exact base-binary calibration above, with broad allowance for machine
+load and new process setup. R2 has two live-runtime instances. Both can fail
+through framing, startup, simulation, process scheduling, or accidental
+per-step child reuse, so the planned genuine-risk fraction is `2/2`. F1 does
+not entail R2 because byte-identical simulated time places no bound on host
+elapsed time.
 
 ## Registered command and pre-freeze dry run
 
@@ -272,9 +294,12 @@ SIMLLM_TXT2BIN="${SIMLLM_TXT2BIN:?configure the matching converter}" \
   --out "${SIMLLM_DATA_ROOT:?configure the data root}/persistent_session_v1"
 ```
 
-Before this freeze, the same command must be executed with `--check-only`.
+Before the original freeze and again before the wall-only amendment, the same
+command must be executed with `--check-only`.
 Check-only validates both executable paths, the fixed replay and state
 matrices, all wall bands, the four codec cases, the frame limit, and output
 placement. It prints the complete plan and creates no artifacts. The harness
-exists untracked during the freeze and contains only the literals frozen in
-this file.
+existed untracked during the original freeze and contained only the literals
+frozen in this file. At the amendment it is tracked and has only the corrected
+CLI spelling, canonical UTF-8 rendering, and the amended wall literals as
+unstaged changes.
