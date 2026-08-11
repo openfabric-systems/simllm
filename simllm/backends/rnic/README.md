@@ -41,12 +41,13 @@ accepted SQ/CQ-derived defaults. The namespace field is inert with DMA off,
 must be zero for an owned fabric, and is accepted for a shared fabric only
 when at least one domain must be derived.
 
-Network enabled requires an injected external `NetworkPort*`, which is the
-future HTSIM-9 seam. Network disabled rejects that pointer and owns an inert
-port. The inert port accepts each descriptor with a fresh token and returns a
-delivery on `RnicDevice::progress` at the caller's timestamp. It does not
-invent packet-issue timestamps. `RnicDeviceStageReport` records scalar,
-fabric, QPC, external-network and inert-network applicability explicitly.
+Network enabled requires an injected external `NetworkPort*`, which the
+HTSIM-9 composition binds to the directly invoked simulator. Network disabled
+rejects that pointer and owns an inert port. The inert port accepts each
+descriptor with a fresh token and returns a delivery on
+`RnicDevice::progress` at the caller's timestamp. It does not invent
+packet-issue timestamps. `RnicDeviceStageReport` records scalar, fabric, QPC,
+external-network and inert-network applicability explicitly.
 
 The caller remains the sole clock authority. Deliver external network events
 through `onNetworkEvent` before `progress` at the same timestamp, then choose
@@ -143,9 +144,10 @@ event for that token. A Busy result retains the SQ head until its advertised
 retry time. Completion of another token does not revoke that deadline.
 
 This first port admits one flow extent per WQE. Network acceptance and outcome
-times are real v1 observations. First/last packet timestamps stay unset until
-HTSIM-9 adds explicit packet-issue events, so flow admission is never mislabeled
-as NIC packet start.
+times are real ABI-v1 observations, where first and last packet timestamps stay
+unset. ABI v2 adds explicit packet-attempt events; the native timeline accepts
+first and last packet issue only from data or retransmission TX-start events,
+so flow admission is never mislabeled as NIC packet start.
 
 At one timestamp, deliver network events to `onNetworkEvent` before retrying
 the SQ with `progress`. CQ priority is then explicit call order. Calling
@@ -186,9 +188,10 @@ legacy CSV prefix, column order and LF bytes.
 `simllm-rnic-bookkeeping-v1` is the public structural WQE projection of that
 same result, not another mutable ledger. It intentionally preserves send
 cardinality without fabricating the receive-queue parent required by the older
-`simllm-request-bookkeeping-v1` compatibility rule. CORE-4 and CORE-5 own the
-later request and execution-scope join into `CompletionEvent` and step metrics.
-HTSIM-9 owns the concrete network port and live token reconciliation.
+`simllm-request-bookkeeping-v1` compatibility rule. `ComposedRnicSession`
+joins the native projection to request and execution scope, including
+`CompletionEvent` and step metrics. The HTSIM-9 composition supplies the
+concrete network port and live token reconciliation.
 
 The Python readers in `simllm.backends.rnic_records` strictly validate the
 schemas, recompute hashes, freeze nested configuration objects and reconcile
