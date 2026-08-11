@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -1038,6 +1039,40 @@ int runRnicSessionRecordChecks() {
 
 #ifndef SIMLLM_RNIC_SESSION_RECORD_EMBEDDED
 int main(int argc, char** argv) {
+    if (argc == 4
+        && std::string(argv[1]) == "--validate-effective-hardware") {
+        try {
+            std::ifstream input(argv[2], std::ios::binary);
+            if (!input) {
+                std::cerr << "cannot open effective-hardware input\n";
+                return 2;
+            }
+            std::ostringstream bytes;
+            bytes << input.rdbuf();
+            if (!input.good() && !input.eof()) {
+                std::cerr << "cannot read effective-hardware input\n";
+                return 2;
+            }
+            RnicSessionConfigRecord record;
+            record.session_id = "effective-hardware-probe";
+            record.hardware_mode = RnicHardwareMode::Structural;
+            record.authority =
+                simllm::rnic::RnicWqeAuthority::SimllmNativeRnicSession;
+            record.transport_policy = "rnic-nn";
+            record.effective_hardware_json = bytes.str();
+            record.hardware_config_sha256 = argv[3];
+            simllm::rnic::validateRnicSessionConfigRecord(record);
+            std::cout << "accepted\n";
+            return 0;
+        } catch (const std::invalid_argument& error) {
+            std::cerr << "rejected: " << error.what() << '\n';
+            return 1;
+        } catch (const std::exception& error) {
+            std::cerr << "effective-hardware probe failed: "
+                      << error.what() << '\n';
+            return 2;
+        }
+    }
     if (argc == 2 && std::string(argv[1]) == "--study-json") {
         try {
             std::cout << studyJson() << '\n';
@@ -1049,7 +1084,8 @@ int main(int argc, char** argv) {
         }
     }
     if (argc != 1) {
-        std::cerr << "usage: " << argv[0] << " [--study-json]\n";
+        std::cerr << "usage: " << argv[0]
+                  << " [--study-json | --validate-effective-hardware FILE SHA256]\n";
         return 2;
     }
     const int failures = runRnicSessionRecordChecks();
