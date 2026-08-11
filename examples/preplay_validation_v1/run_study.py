@@ -77,7 +77,9 @@ def _txt2bin_path(htsim_rnic: Path) -> Path:
     configured = os.environ.get("SIMLLM_TXT2BIN")
     if configured:
         return Path(configured)
-    return htsim_rnic.parents[2] / "tools" / "txt2bin"
+    build_dir = htsim_rnic.parents[1]
+    source_name = build_dir.name.removeprefix("build-")
+    return build_dir.parent / source_name / "htsim" / "sim" / "lgs" / "txt2bin"
 
 
 def check_only(args: argparse.Namespace) -> None:
@@ -426,7 +428,7 @@ def _attempt_vllm_cpu(args: argparse.Namespace) -> None:
         before_cuda = torch.cuda.memory_allocated() if torch.cuda.is_available() else 0
         vllm.platforms._current_platform = CpuPlatform()
         reached.append("cpu-platform-selected")
-        from oracle_worker import ValidationCPUWorker, latest_validation_worker
+        from oracle_worker import latest_validation_worker
         from vllm.v1.worker.cpu_model_runner import CPUModelRunner
         from vllm.v1.worker.cpu_worker import CPUWorker
 
@@ -435,7 +437,7 @@ def _attempt_vllm_cpu(args: argparse.Namespace) -> None:
             llm = LLM(
                 model=str(args.cache_dir / MODEL_RELATIVE_PATH),
                 dtype="float32",
-                worker_cls=ValidationCPUWorker,
+                worker_cls="oracle_worker.ValidationCPUWorker",
                 enforce_eager=True,
                 max_model_len=64,
                 kv_cache_memory_bytes=256 * 1024 * 1024,
