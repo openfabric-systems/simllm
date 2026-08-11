@@ -1028,6 +1028,58 @@ def test_isolated_estimate_matches_a_single_task_concurrent_replay():
     assert concurrent.issued_instructions == isolated.issued_instructions
 
 
+def test_concurrent_task_release_cycles_gate_admission_without_counting_idle():
+    model = SmSchedulerModel(synthetic_architecture())
+    kernel = launch(
+        blocks=1,
+        threads=32,
+        traces=traces_for_warps(
+            1,
+            SassInstruction(opcode="ALU", pipeline=PipelineKind.ALU),
+        ),
+    )
+    isolated = model.estimate(kernel)
+    delayed = model.estimate_concurrent(
+        (
+            GpuTask(
+                task_id="delayed",
+                kind=GpuTaskKind.COMPUTE,
+                launch=kernel,
+                submitted_cycle=5,
+                eligible_cycle=7,
+            ),
+        )
+    )
+
+    task = delayed.tasks[0]
+    assert task.submitted_cycle == 5
+    assert task.eligible_cycle == 7
+    assert task.admitted_cycle == 7
+    assert task.completion_cycle == 7 + isolated.duration_cycles
+    assert delayed.duration_cycles == task.completion_cycle
+    assert delayed.completion_drain_cycles == isolated.completion_drain_cycles
+
+
+def test_gpu_task_rejects_eligibility_before_submission():
+    kernel = launch(
+        blocks=1,
+        threads=32,
+        traces=traces_for_warps(
+            1,
+            SassInstruction(opcode="ALU", pipeline=PipelineKind.ALU),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="eligible_cycle"):
+        GpuTask(
+            task_id="backward",
+            kind=GpuTaskKind.COMPUTE,
+            launch=kernel,
+            submitted_cycle=2,
+            eligible_cycle=1,
+        )
+
+
 def test_nccl_ring_kernel_prefetches_two_chunks_before_the_first_store():
     kernel = nccl_ring_allreduce_launch(
         payload_bytes=512,

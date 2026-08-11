@@ -684,6 +684,17 @@ DoorbellBatch RnicDevice::ringDoorbell(Picoseconds now_ps) {
     return result;
 }
 
+DoorbellBatch RnicDevice::ringDoorbell(
+    Picoseconds now_ps,
+    const RnicProducerTaskLink& producer_task) {
+    requireHostMemoryLive();
+    validateCallerTime(now_ps);
+    DoorbellBatch result = work_queue_->ringDoorbell(
+        now_ps, producer_task);
+    last_caller_time_ps_ = now_ps;
+    return result;
+}
+
 void RnicDevice::onNetworkEvent(const NetworkEvent& event) {
     requireHostMemoryLive();
     if (!config_.network.enabled) {
