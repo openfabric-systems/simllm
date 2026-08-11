@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 EXPECTATIONS = Path(__file__).with_name("tier_c_expectations.json")
 SIMLLM_AUDIT_COMMIT = "90ada43070adb3b1e624b6819aff34d8620e8571"
 HTSIM_AUDIT_COMMIT = "4885c647eecdfdf81479d1df052223c016ad086b"
