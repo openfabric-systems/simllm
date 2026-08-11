@@ -10,6 +10,13 @@ backend submodules.
   `rnic-cn`; a run is valid only with `physical_quiescence=verified`),
   binary discovered via `SIMLLM_HTSIM_RNIC`, the README build location,
   then `PATH`.
+- `simllm-htsim-flow-session-v1` (HTSIM-18): the opt-in framed stdin/stdout
+  interface of the composed `htsim_rnic` binary. A 32-bit big-endian length
+  prefixes each canonical JSON object. `open`, `inject`, inclusive
+  virtual-time `advance`, `drain` and `close` retain one event list, topology,
+  native RNIC authority and transport policy. Structural `rnic-nn` and
+  generated `rnic-cn` are supported; the explicit nonstructural fluid mode is
+  rejected. The unchanged one-GOAL command remains the exact default off path.
 - `FlowCompletion` + `parse_completion_csv`: completion-CSV parsing
   with a stable legacy prefix
   (`profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps`)
@@ -80,8 +87,8 @@ backend submodules.
   their original order. The pool can serve another batch after the first is
   fully consumed.
   This preserves the diagnostic path's per-step reset semantics; it does not
-  claim a stateful online backend session. BRIDGE-2, CORE-24 and HTSIM-18 own
-  that later transport.
+  claim a stateful online backend session. The backend flow session and full
+  result codec are now delivered; BRIDGE-2 owns their graph-level client.
 - `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
   from a `StepRecord` to per-layer compute plus semantic TP/EP collective
   operations. Explicit framework observations bypass the fallback schedule and
@@ -93,7 +100,7 @@ backend submodules.
 | Submodule | Repo | Ref | Provides |
 |---|---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` (UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping) |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | paired `f8e1ee9` | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping and the persistent flow session |
 
 As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 (mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
@@ -380,7 +387,21 @@ the unchanged isolated one-GOAL path. Its
 step result, outcome, GOAL text, GOAL binary and completion CSV byte for byte
 across both recorded M4 TP 8 replays. Four and eight workers reduced wall time
 by 3.36x to 5.43x across the four scored cells. Diagnostic invocation remains
-the default; BRIDGE-2 and HTSIM-18 retain the true online stateful session.
+the default; BRIDGE-2 remains the online graph-level client.
+
+On 2026-08-11 HTSIM-18 closed with paired backend commit
+`f8e1ee923a9c108cd698786c1824b9722d22d0e1`. The opt-in
+`simllm-htsim-flow-session-v1` process retains native event, topology, RNIC and
+transport state from open through close. Its
+[frozen study](../../examples/persistent_session_v1/RESULTS.md) matched both
+stateless-equivalent latency streams byte for byte, while overlapping
+same-source flows raised the second FCT and source SQ high-water mark in both
+scored state cells. Both measured wall-clock cells were faster than isolated
+one-GOAL runs. Their corrected bands are diagnostic only because the wall-only
+amendment followed a precommit session smoke; HTSIM-24 owns a clean held-out
+wall study. The one-GOAL stdout, stderr, completion CSV and help bytes remained
+identical to the base binary. CORE-24 supplies the paired full result codec;
+BRIDGE-2 remains above this lower-level flow interface.
 
 On 2026-08-10 BACK-5, BACK-6 and BACK-7 closed. The sink now consumes an
 optional exact provider layer breakdown, an optional exact step sample count
@@ -885,32 +906,16 @@ is difficult.
   permit CNP correlation after packet delivery while the extent remains live,
   and preserve ABI-v1 plus ABI-v2 control-disabled bytes, timestamps, token
   order and random draws exactly.
-- HTSIM-18 (Completeness; P1; L): add a genuinely persistent, opt-in
-  stdin/stdout session to the composed `htsim_rnic` binary. The existing
-  one-GOAL CLI remains the exact off path. BRIDGE-1 calibration measured
-  7.252 seconds per isolated simulator invocation and 0.011 seconds for
-  `txt2bin`. Its prepared sink overlaps finite replays, but `prepare` requires
-  every record before consumption, so each live closed-loop step still pays
-  the full serial invocation. This P1 session removes that per-step process
-  boundary while retaining simulator state across steps. A proposed
-  `simllm-htsim-flow-session-v1` uses a 32-bit big-endian byte length followed
-  by one canonical JSON object per frame. `open` carries session ID, profile,
-  topology identity, link rate, seed, effective-hardware hash and sole WQE
-  authority, then returns the accepted configuration and sequence zero.
-  `inject` carries a contiguous sequence, execution/operation/flow identity,
-  source, destination, tag, payload bytes, logical eligibility time and policy
-  context. `advance` names the causal boundary that may run; the server emits
-  ordered accepted, queued, started and completed flow projections with native
-  WQE aliases and timestamps. `drain` returns the last accepted sequence,
-  completion rows, authority counters and a quiescence proof; `close` is legal
-  only after drain. Duplicate, skipped, stale or post-terminal sequences fail
-  before authority mutation, and a disconnected client cannot silently commit
-  a partial frame. The event list, topology, native RNIC session and transport
-  policy state live from `open` through `close`, so later steps observe earlier
-  state. Acceptance compares one-step session output byte for byte with the
-  CLI off path, then uses two steps to prove state retention and exact
-  completion/bookkeeping conservation. BRIDGE-2 owns the SimLLM client and
-  graph-level framing above this flow protocol.
+- HTSIM-24 (Precision; P1; S): repeat the persistent-session wall-clock family
+  on a held-out flow replay whose two-sided bands are frozen from the exact
+  pinned base CLI before the session outcome is observed. The wave-5
+  wall-only amendment corrected a workload mismatch but followed a precommit
+  session smoke, so its 2/2 band result is diagnostic rather than scored.
+  Acceptance must time the complete isolated and persistent boundaries,
+  preserve the fatal latency-byte identity, pass every predeclared band and
+  signed speedup instance, and state the entailment and genuine-risk analysis
+  without using any wave-5 session timing to select the held-out workload or
+  thresholds.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.
