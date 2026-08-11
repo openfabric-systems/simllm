@@ -171,9 +171,17 @@ def _routing_near_tie(
     right: DecisionBoundary,
     threshold: float,
 ) -> bool:
-    changed = set(left.selected_ids) ^ set(right.selected_ids)
-    candidates = set(left.boundary_ids) | set(right.boundary_ids)
-    return bool(changed) and changed <= candidates and min(left.margin, right.margin) <= threshold
+    left_only = set(left.selected_ids) - set(right.selected_ids)
+    right_only = set(right.selected_ids) - set(left.selected_ids)
+    if len(left_only) != 1 or len(right_only) != 1:
+        return False
+    left_expert = next(iter(left_only))
+    right_expert = next(iter(right_only))
+    return (
+        left.boundary_ids == (left_expert, right_expert)
+        and right.boundary_ids == (right_expert, left_expert)
+        and min(left.margin, right.margin) <= threshold
+    )
 
 
 def compare_oracle_requests(
@@ -220,7 +228,7 @@ def compare_oracle_requests(
             continue
         if first_token_difference is None:
             first_token_difference = index
-            if sampling_mode == "seeded-sampling":
+            if sampling_mode == "seeded-sampling" and input_tokens_exact:
                 root = DivergenceKind.SAMPLER_DIFFERENCE
             elif _token_near_tie(
                 left.token_boundaries[index],

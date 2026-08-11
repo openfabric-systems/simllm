@@ -334,13 +334,18 @@ def _transformers_capture(args: argparse.Namespace) -> None:
     )
 
 
-def _normalized_vllm_stop(choice: Any, eos_token_id: int) -> str:
+def _normalized_vllm_stop(choice: Any, eos_token_id: int | None) -> str:
     if choice.finish_reason == "length":
         return "length-cap"
     if choice.finish_reason != "stop":
         return f"unknown:{choice.finish_reason}"
-    if choice.stop_reason == eos_token_id or (
-        choice.stop_reason is None and choice.token_ids and choice.token_ids[-1] == eos_token_id
+    if eos_token_id is not None and (
+        choice.stop_reason == eos_token_id
+        or (
+            choice.stop_reason is None
+            and choice.token_ids
+            and choice.token_ids[-1] == eos_token_id
+        )
     ):
         return "eos"
     if isinstance(choice.stop_reason, str):
@@ -1118,6 +1123,19 @@ def _run_child(args: argparse.Namespace, mode: str) -> None:
         subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT)
 
 
+def _count_passed_scored(oracle: dict[str, Any], replay: dict[str, Any]) -> int:
+    if oracle["status"] == "blocked":
+        oracle_passed = 0
+    elif oracle["status"] == "executed":
+        rows = oracle["rows"]
+        if len(rows) != oracle["executed_scored"]:
+            raise AssertionError("oracle row count disagrees with its executed denominator")
+        oracle_passed = sum(bool(row["passed"]) for row in rows)
+    else:
+        raise AssertionError("oracle status is neither blocked nor executed")
+    return oracle_passed + int(replay["passed_scored"])
+
+
 def run_study(args: argparse.Namespace) -> dict[str, Any]:
     args.run_dir.mkdir(parents=True, exist_ok=False)
     os.environ["SIMLLM_HTSIM_RNIC"] = str(args.htsim_rnic)
@@ -1137,10 +1155,7 @@ def run_study(args: argparse.Namespace) -> dict[str, Any]:
         "replay": replay,
         "evidence": {
             "executed_scored": executed,
-            "passed_scored": (
-                (0 if oracle["status"] == "blocked" else oracle["executed_scored"])
-                + replay["passed_scored"]
-            ),
+            "passed_scored": _count_passed_scored(oracle, replay),
             "blocked_scored": oracle["blocked_rows"],
             "genuine_risk_numerator": executed,
             "genuine_risk_denominator": executed,

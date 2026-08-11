@@ -115,6 +115,28 @@ def test_seeded_sampler_difference_classifies_downstream_cascade():
     assert any(item.field == "routing" and item.cascade for item in result.divergences)
 
 
+def test_seeded_sampler_difference_requires_identical_prompt_tokens():
+    left = observation()
+    right = replace(
+        left,
+        input_token_ids=(10, 12),
+        output_token_ids=(40, 21),
+        token_boundaries=(boundary((40,), edge=(40, 20)), left.token_boundaries[1]),
+    )
+    result = compare_oracle_requests(
+        left,
+        right,
+        sampling_mode="seeded-sampling",
+        near_tie_abs_logit=1e-5,
+    )
+    assert not result.passed
+    assert result.unclassified_count == 2
+    assert all(
+        item.classification is not DivergenceKind.SAMPLER_DIFFERENCE
+        for item in result.divergences
+    )
+
+
 def test_greedy_near_tie_token_flip_is_admissible():
     left = observation()
     right = replace(
@@ -165,6 +187,28 @@ def test_prefill_route_flip_requires_the_frozen_boundary_margin():
     assert len(result.divergences) == 1
     assert result.divergences[0].classification is DivergenceKind.NUMERICS_NEAR_TIE_FLIP
     assert not result.divergences[0].cascade
+
+
+def test_prefill_route_flip_requires_each_runner_to_straddle_changed_experts():
+    left = observation()
+    left_routes = list(left.routed_decisions)
+    left_routes[0] = replace(
+        left_routes[0],
+        boundary=boundary((0, 1), edge=(1, 9), margin=3e-6),
+    )
+    right_routes = list(left.routed_decisions)
+    right_routes[0] = replace(
+        right_routes[0],
+        boundary=boundary((0, 2), edge=(2, 1), margin=2e-6),
+    )
+    result = compare_oracle_requests(
+        replace(left, routed_decisions=tuple(left_routes)),
+        replace(left, routed_decisions=tuple(right_routes)),
+        sampling_mode="greedy",
+        near_tie_abs_logit=1e-5,
+    )
+    assert not result.passed
+    assert result.unclassified_count == 1
 
 
 def test_large_margin_and_prompt_changes_remain_unclassified():
