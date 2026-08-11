@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from simllm.backends._child_process import (
+    _windows_job_diagnostics_for_test,
     _WindowsJob,
     cleanup_owned_children,
     run_owned_process,
@@ -66,20 +67,83 @@ def _wait_for_marker(directory: Path, timeout_s: float = 5.0) -> dict[str, objec
     pytest.fail("owned child marker was not published")
 
 
-def test_owned_process_preserves_captured_output_and_status():
+def _wait_for_pid_file(path: Path, timeout_s: float = 5.0) -> int:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if path.is_file():
+            return int(path.read_text(encoding="ascii"))
+        time.sleep(0.02)
+    pytest.fail(f"target PID file was not published: {path}")
+
+
+def _windows_failure_context(
+    completed: subprocess.CompletedProcess[str] | None,
+    target_pid_file: Path,
+) -> str:
+    target_pid = (
+        target_pid_file.read_text(encoding="ascii")
+        if target_pid_file.is_file()
+        else None
+    )
+    return json.dumps(
+        {
+            "completed_returncode": (
+                completed.returncode if completed is not None else None
+            ),
+            "job": _windows_job_diagnostics_for_test(),
+            "target_pid": target_pid,
+        },
+        sort_keys=True,
+    )
+
+
+def test_owned_process_preserves_captured_output_and_status(tmp_path):
+    target_pid_file = tmp_path / "normal-target.pid"
     code = (
-        "import sys; "
-        "sys.stdout.write('stdout line 1\\nstdout line 2'); "
-        "sys.stderr.write('stderr line'); "
-        "raise SystemExit(7)"
+        "import os\n"
+        "import sys\n"
+        "from pathlib import Path\n"
+        "marker = os.environ.get('SIMLLM_TEST_TARGET_PID_FILE')\n"
+        "if marker:\n"
+        "    Path(marker).write_text(str(os.getpid()), encoding='ascii')\n"
+        "sys.stdout.write('stdout line 1\\nstdout line 2')\n"
+        "sys.stderr.write('stderr line')\n"
+        "raise SystemExit(7)\n"
     )
     command = [sys.executable, "-c", code]
-    direct = subprocess.run(command, capture_output=True, text=True, check=False)
-    owned = run_owned_process(command, timeout_s=5.0)
+    direct_environment = os.environ.copy()
+    direct_environment.pop("SIMLLM_TEST_TARGET_PID_FILE", None)
+    owned_environment = direct_environment.copy()
+    owned_environment["SIMLLM_TEST_TARGET_PID_FILE"] = str(target_pid_file)
+    direct = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=direct_environment,
+    )
+    owned = run_owned_process(
+        command,
+        timeout_s=5.0,
+        environment=owned_environment,
+    )
+    context = _windows_failure_context(owned, target_pid_file)
+    if os.name == "nt":
+        print(f"WINDOWS_CHILD_DIAGNOSTICS={context}")
 
-    assert owned.returncode == direct.returncode == 7
-    assert owned.stdout == direct.stdout
-    assert owned.stderr == direct.stderr
+    _wait_for_pid_file(target_pid_file)
+    assert owned.returncode == direct.returncode == 7, context
+    assert owned.stdout == direct.stdout, context
+    assert owned.stderr == direct.stderr, context
+    if os.name == "nt":
+        diagnostics = _windows_job_diagnostics_for_test()
+        assert diagnostics["assign_result"] is True, context
+        assert diagnostics["launcher_owned_job_after_assign"] is True, context
+        assert diagnostics["handle_open_after_assign"] is True, context
+        assert diagnostics["handle_open_before_communicate"] is True, context
+        assert diagnostics["handle_open_after_communicate"] is True, context
+        assert diagnostics["handle_open_before_close"] is True, context
+        assert diagnostics["handle_open_after_close"] is False, context
     cleanup_owned_children()
     cleanup_owned_children()
 
@@ -87,14 +151,41 @@ def test_owned_process_preserves_captured_output_and_status():
 def test_timeout_terminates_reaps_and_allows_repeat_cleanup(tmp_path, monkeypatch):
     monkeypatch.setenv("SIMLLM_CHILD_LIFETIME_MARKER_DIR", str(tmp_path))
     monkeypatch.setenv("SIMLLM_CHILD_LIFETIME_RUN_NONCE", "timeout-control")
-    command = [sys.executable, "-c", "import time; time.sleep(30)"]
+    target_pid_file = tmp_path / "timeout-target.pid"
+    code = (
+        "import os\n"
+        "import time\n"
+        "from pathlib import Path\n"
+        f"Path({str(target_pid_file)!r}).write_text("
+        "str(os.getpid()), encoding='ascii')\n"
+        "time.sleep(30)\n"
+    )
+    command = [sys.executable, "-c", code]
 
-    with pytest.raises(subprocess.TimeoutExpired):
-        run_owned_process(command, timeout_s=0.1)
+    completed = None
+    try:
+        completed = run_owned_process(command, timeout_s=1.0)
+    except subprocess.TimeoutExpired:
+        pass
+    context = _windows_failure_context(completed, target_pid_file)
+    if os.name == "nt":
+        print(f"WINDOWS_CHILD_DIAGNOSTICS={context}")
+    if completed is not None:
+        pytest.fail(f"owned process returned before timeout: {context}")
 
     marker = _wait_for_marker(tmp_path)
     child_pid = int(marker["child_pid"])
+    target_pid = _wait_for_pid_file(target_pid_file)
     _wait_until_not_live(child_pid)
+    _wait_until_not_live(target_pid)
+    if os.name == "nt":
+        diagnostics = _windows_job_diagnostics_for_test()
+        assert diagnostics["assign_result"] is True, context
+        assert diagnostics["launcher_owned_job_after_assign"] is True, context
+        assert diagnostics["handle_open_timeout_observed"] is True, context
+        assert diagnostics["terminate_result"] is True, context
+        assert diagnostics["handle_open_before_close"] is True, context
+        assert diagnostics["handle_open_after_close"] is False, context
     cleanup_owned_children()
     cleanup_owned_children()
 
@@ -145,10 +236,18 @@ def test_windows_job_creation_failure_does_not_release_child(tmp_path, monkeypat
 def test_owner_termination_kills_only_the_registered_child(tmp_path):
     marker_dir = tmp_path / "markers"
     marker_dir.mkdir()
+    target_pid_file = tmp_path / "owner-kill-target.pid"
     environment = os.environ.copy()
     environment["SIMLLM_CHILD_LIFETIME_MARKER_DIR"] = str(marker_dir)
     environment["SIMLLM_CHILD_LIFETIME_RUN_NONCE"] = "owner-kill-control"
-    child_code = "import time; time.sleep(30)"
+    sleep_code = "import time; time.sleep(30)"
+    child_code = (
+        "import os, time; "
+        "from pathlib import Path; "
+        f"Path({str(target_pid_file)!r}).write_text("
+        "str(os.getpid()), encoding='ascii'); "
+        "time.sleep(30)"
+    )
     owner_code = (
         "import sys; "
         "from simllm.backends._child_process import run_owned_process; "
@@ -157,10 +256,11 @@ def test_owner_termination_kills_only_the_registered_child(tmp_path):
         + "], timeout_s=60.0)"
     )
     owner = subprocess.Popen([sys.executable, "-c", owner_code], env=environment)
-    sentinel = subprocess.Popen([sys.executable, "-c", child_code])
+    sentinel = subprocess.Popen([sys.executable, "-c", sleep_code])
     try:
         marker = _wait_for_marker(marker_dir)
         child_pid = int(marker["child_pid"])
+        target_pid = _wait_for_pid_file(target_pid_file)
         assert int(marker["owner_pid"]) == owner.pid
         if os.name == "posix":
             os.kill(owner.pid, signal.SIGTERM)
@@ -168,6 +268,7 @@ def test_owner_termination_kills_only_the_registered_child(tmp_path):
             owner.terminate()
         owner.wait(timeout=5.0)
         _wait_until_not_live(child_pid)
+        _wait_until_not_live(target_pid)
         assert sentinel.poll() is None
     finally:
         if owner.poll() is None:

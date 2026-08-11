@@ -27,6 +27,22 @@ _TERMINATION_GRACE_S = 1.0
 _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
 _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 _ERROR_ACCESS_DENIED = 5
+_LAST_WINDOWS_JOB_DIAGNOSTICS_LOCK = threading.Lock()
+_LAST_WINDOWS_JOB_DIAGNOSTICS: dict[str, object] = {}
+
+
+def _publish_windows_job_diagnostics(values: Mapping[str, object]) -> None:
+    global _LAST_WINDOWS_JOB_DIAGNOSTICS
+
+    with _LAST_WINDOWS_JOB_DIAGNOSTICS_LOCK:
+        _LAST_WINDOWS_JOB_DIAGNOSTICS = dict(values)
+
+
+def _windows_job_diagnostics_for_test() -> dict[str, object]:
+    """Return the most recent Job Object transition record for test failures."""
+
+    with _LAST_WINDOWS_JOB_DIAGNOSTICS_LOCK:
+        return dict(_LAST_WINDOWS_JOB_DIAGNOSTICS)
 
 
 if os.name == "nt":
@@ -71,7 +87,71 @@ class _WindowsJob:
 
     def __init__(self, handle: int) -> None:
         self._handle = handle
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._diagnostics: dict[str, object] = {
+            "created_handle": handle,
+            "platform": sys.platform,
+        }
+        self._record(handle_open_after_create=self._handle_is_open(handle)[0])
+
+    @staticmethod
+    def _handle_is_open(handle: int) -> tuple[bool, int]:
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetHandleInformation.argtypes = (
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.DWORD),
+        )
+        kernel32.GetHandleInformation.restype = wintypes.BOOL
+        flags = wintypes.DWORD()
+        ctypes.set_last_error(0)
+        succeeded = bool(
+            kernel32.GetHandleInformation(
+                wintypes.HANDLE(handle), ctypes.byref(flags)
+            )
+        )
+        return succeeded, ctypes.get_last_error()
+
+    @staticmethod
+    def _process_job_membership(
+        process_handle: int, job_handle: int | None
+    ) -> tuple[bool, bool, int]:
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.IsProcessInJob.argtypes = (
+            wintypes.HANDLE,
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.BOOL),
+        )
+        kernel32.IsProcessInJob.restype = wintypes.BOOL
+        membership = wintypes.BOOL()
+        ctypes.set_last_error(0)
+        succeeded = bool(
+            kernel32.IsProcessInJob(
+                wintypes.HANDLE(process_handle),
+                wintypes.HANDLE(job_handle) if job_handle is not None else None,
+                ctypes.byref(membership),
+            )
+        )
+        return succeeded, bool(membership.value), ctypes.get_last_error()
+
+    def _record(self, **values: object) -> None:
+        with self._lock:
+            self._diagnostics.update(values)
+            snapshot = dict(self._diagnostics)
+        _publish_windows_job_diagnostics(snapshot)
+
+    def note(self, phase: str, process: subprocess.Popen[str]) -> None:
+        """Capture handle and launcher state at a lifecycle boundary."""
+
+        with self._lock:
+            handle = self._handle
+        handle_open, handle_error = self._handle_is_open(handle)
+        self._record(
+            **{
+                f"handle_error_{phase}": handle_error,
+                f"handle_open_{phase}": handle_open,
+                f"launcher_returncode_{phase}": process.poll(),
+            }
+        )
 
     @classmethod
     def create(cls) -> _WindowsJob:
@@ -95,13 +175,22 @@ class _WindowsJob:
         information.basic_limit_information.limit_flags = (
             _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
         )
-        if not kernel32.SetInformationJobObject(
-            wintypes.HANDLE(job._handle),
-            _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
-            ctypes.byref(information),
-            ctypes.sizeof(information),
-        ):
-            error = ctypes.WinError(ctypes.get_last_error())
+        ctypes.set_last_error(0)
+        configured = bool(
+            kernel32.SetInformationJobObject(
+                wintypes.HANDLE(job._handle),
+                _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+                ctypes.byref(information),
+                ctypes.sizeof(information),
+            )
+        )
+        configuration_error = ctypes.get_last_error()
+        job._record(
+            set_information_last_error=configuration_error,
+            set_information_result=configured,
+        )
+        if not configured:
+            error = ctypes.WinError(configuration_error)
             job.close()
             raise error
         return job
@@ -110,11 +199,45 @@ class _WindowsJob:
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.AssignProcessToJobObject.argtypes = (wintypes.HANDLE, wintypes.HANDLE)
         kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
-        process_handle = wintypes.HANDLE(int(process._handle))  # type: ignore[attr-defined]
-        if not kernel32.AssignProcessToJobObject(
-            wintypes.HANDLE(self._handle), process_handle
-        ):
-            error_number = ctypes.get_last_error()
+        kernel32.GetCurrentProcess.argtypes = ()
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        raw_process_handle = int(process._handle)  # type: ignore[attr-defined]
+        process_handle = wintypes.HANDLE(raw_process_handle)
+        raw_owner_handle = int(kernel32.GetCurrentProcess())
+        owner_query, owner_in_job, owner_query_error = self._process_job_membership(
+            raw_owner_handle, None
+        )
+        before_query, before_in_job, before_query_error = (
+            self._process_job_membership(raw_process_handle, None)
+        )
+        ctypes.set_last_error(0)
+        assigned = bool(
+            kernel32.AssignProcessToJobObject(
+                wintypes.HANDLE(self._handle), process_handle
+            )
+        )
+        assignment_error = ctypes.get_last_error()
+        after_query, after_in_owned_job, after_query_error = (
+            self._process_job_membership(raw_process_handle, self._handle)
+        )
+        handle_open, handle_error = self._handle_is_open(self._handle)
+        self._record(
+            assign_last_error=assignment_error,
+            assign_result=assigned,
+            handle_error_after_assign=handle_error,
+            handle_open_after_assign=handle_open,
+            launcher_any_job_before_assign=before_in_job,
+            launcher_any_job_query_error=before_query_error,
+            launcher_any_job_query_result=before_query,
+            launcher_owned_job_after_assign=after_in_owned_job,
+            launcher_owned_job_query_error=after_query_error,
+            launcher_owned_job_query_result=after_query,
+            owner_any_job=owner_in_job,
+            owner_any_job_query_error=owner_query_error,
+            owner_any_job_query_result=owner_query,
+        )
+        if not assigned:
+            error_number = assignment_error
             detail = (
                 "the current process job rejected nested assignment"
                 if error_number == _ERROR_ACCESS_DENIED
@@ -125,26 +248,50 @@ class _WindowsJob:
     def terminate(self) -> None:
         with self._lock:
             if not self._handle:
+                self._record(terminate_skipped_closed_handle=True)
                 return
             kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
             kernel32.TerminateJobObject.argtypes = (wintypes.HANDLE, wintypes.UINT)
             kernel32.TerminateJobObject.restype = wintypes.BOOL
-            if not kernel32.TerminateJobObject(wintypes.HANDLE(self._handle), 1):
-                error_number = ctypes.get_last_error()
-                if error_number:
-                    raise ctypes.WinError(error_number)
+            ctypes.set_last_error(0)
+            terminated = bool(
+                kernel32.TerminateJobObject(wintypes.HANDLE(self._handle), 1)
+            )
+            error_number = ctypes.get_last_error()
+            self._record(
+                terminate_last_error=error_number,
+                terminate_result=terminated,
+            )
+            if not terminated and error_number:
+                raise ctypes.WinError(error_number)
 
     def close(self) -> None:
         with self._lock:
             if not self._handle:
+                self._record(close_repeated=True)
                 return
             handle = self._handle
+            open_before, error_before = self._handle_is_open(handle)
+            self._record(
+                handle_error_before_close=error_before,
+                handle_open_before_close=open_before,
+            )
             self._handle = 0
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
         kernel32.CloseHandle.restype = wintypes.BOOL
-        if not kernel32.CloseHandle(wintypes.HANDLE(handle)):
-            raise ctypes.WinError(ctypes.get_last_error())
+        ctypes.set_last_error(0)
+        closed = bool(kernel32.CloseHandle(wintypes.HANDLE(handle)))
+        close_error = ctypes.get_last_error()
+        open_after, error_after = self._handle_is_open(handle)
+        self._record(
+            close_last_error=close_error,
+            close_result=closed,
+            handle_error_after_close=error_after,
+            handle_open_after_close=open_after,
+        )
+        if not closed:
+            raise ctypes.WinError(close_error)
 
 
 @dataclass
@@ -428,7 +575,9 @@ def run_owned_process(
     try:
         process = subprocess.Popen(launcher, **popen_options)
         if job is not None:
+            job.note("after_popen", process)
             job.assign(process)
+            job.note("after_assign", process)
         child = _OwnedChild(
             process=process,
             command=argv,
@@ -443,9 +592,15 @@ def run_owned_process(
         process.stdin.flush()
         process.stdin.close()
         process.stdin = None
+        if job is not None:
+            job.note("before_communicate", process)
         stdout, stderr = process.communicate(timeout=timeout_s)
+        if job is not None:
+            job.note("after_communicate", process)
         return subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
     except subprocess.TimeoutExpired as error:
+        if job is not None and process is not None:
+            job.note("timeout_observed", process)
         if child is not None:
             _REGISTRY.terminate(child)
         elif process is not None:
@@ -466,6 +621,8 @@ def run_owned_process(
         raise
     finally:
         if child is not None:
+            if job is not None:
+                job.note("before_unregister", child.process)
             _REGISTRY.unregister(child)
         elif job is not None:
             job.close()

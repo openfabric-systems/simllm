@@ -5,6 +5,7 @@ from __future__ import annotations
 import ctypes
 import os
 import signal
+import subprocess
 import sys
 
 _PR_SET_PDEATHSIG = 1
@@ -53,6 +54,16 @@ def main() -> int:
             return 125
         if os.getppid() != expected_parent_pid:
             return 125
+        if os.name == "nt":
+            completed = subprocess.run(
+                command,
+                check=False,
+                env=os.environ,
+                stderr=sys.stderr,
+                stdin=sys.stdin,
+                stdout=sys.stdout,
+            )
+            return completed.returncode
         os.execvpe(command[0], command, os.environ)
     except OSError as error:
         print(f"owned child launcher: {error}", file=sys.stderr)
