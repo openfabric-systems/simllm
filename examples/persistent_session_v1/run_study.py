@@ -500,11 +500,24 @@ def main() -> None:
             prefix=f"state-{payload}",
             overlap=True,
         )
+        reset_session = _run_session_replay(
+            binary=binaries["htsim_rnic"],
+            nodes=2,
+            flows=(flow,),
+            hardware_hash=hardware_hashes[2],
+            prefix=f"state-{payload}-reset",
+            overlap=True,
+        )
         rows = stateful["drained"]["completion_rows"]
         second_fct = rows[1]["fct_ps"]
         high_watermarks = stateful["drained"]["sq_high_watermarks"]
         persistent_high = high_watermarks[0]
-        reset_high = 1
+        reset_rows = reset_session["drained"]["completion_rows"]
+        reset_high = reset_session["drained"]["sq_high_watermarks"][0]
+        if reset_rows[0]["fct_ps"] != reset["fct_ps"]:
+            fatal_failures.append(
+                f"state-{payload}: fresh reset session FCT differs from CLI"
+            )
         relation = {
             "persistent_second_gt_reset": second_fct > reset["fct_ps"],
             "persistent_high_watermark_is_two": persistent_high == 2,
@@ -517,6 +530,7 @@ def main() -> None:
                 "reset_second_fct_ps": reset["fct_ps"],
                 "persistent_sq_high_watermark": persistent_high,
                 "reset_sq_high_watermark": reset_high,
+                "reset_observation": "fresh-one-flow-session",
                 "relation": relation,
                 "passed": all(relation.values()),
                 "genuine_risk": True,
