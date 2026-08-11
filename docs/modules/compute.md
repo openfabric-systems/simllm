@@ -151,6 +151,16 @@ submission deadline, then projected into the native RNIC record as an
 immutable link. Coupling is disabled by default, and host-CPU mode never
 constructs a task or invokes the scheduler.
 
+Replay order is a declared input to this coupling. `RnicProducerCoupling`
+passes caller-supplied concurrent tasks first in caller order, followed by
+non-host producer tasks in request order. The deterministic baseline scheduler
+uses task index to break admission and issue ties. Producer-last order lets the
+frozen residency-saturated background claim the full SM before the producer,
+which creates the registered +20 and +23 cycle submission delays. Reversing
+that order admits the producer first and does not preserve those rows. The
+COMP-13 concurrent artifact must therefore serialize and validate the exact
+task order rather than reconstruct it from task kind or identity.
+
 NCCL collectives enter through `simllm.compute.nccl`, which builds the
 per-GPU egress kernel of a ring all-reduce: `2 * (W - 1) * P / W` bytes
 per GPU, chunked across channel CTAs and their warps, each chunk loaded
@@ -556,7 +566,12 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   surrogate charges one 64-byte descriptor store plus publication for a CPU
   proxy, or one 64-byte WQE store, one 4-byte doorbell-record store and
   publication for GPU initiation, with one CTA, one warp and minimal
-  residency. Capture GPU descriptor publication and mapped-UAR submission on
+  residency. Calibration must resolve the current GPU-initiated overlap: the
+  producer task charges that 4-byte doorbell-record update before effective
+  submission, then the native path charges the same physical update as a
+  `DoorbellRecord` host store starting at submission. Assign its service to
+  one timing authority and retain only the ordering projection at the other
+  boundary. Capture GPU descriptor publication and mapped-UAR submission on
   the selected production GPU while sweeping batch sizes 1, 4 and 16 and
   idle, half-resident and residency-saturated neighbors. Use task admission,
   producer completion and RNIC-visible doorbell time as the identifying

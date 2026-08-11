@@ -81,6 +81,25 @@ public:
         }
     }
 
+    template <typename Expected, typename Callable>
+    void expectThrowAsWithMessage(
+        Callable&& callable,
+        const std::string& expected_message,
+        const std::string& message) {
+        try {
+            callable();
+            check(false, message);
+        } catch (const Expected& error) {
+            check(
+                error.what() == expected_message,
+                message + "; unexpected exception message: " + error.what());
+        } catch (const std::exception& error) {
+            check(false, message + "; wrong exception: " + error.what());
+        } catch (...) {
+            check(false, message + "; wrong non-standard exception");
+        }
+    }
+
     int failures() const noexcept { return failures_; }
 
 private:
@@ -740,6 +759,60 @@ void testProducerTaskLinks(TestRunner& test) {
             && gpu.pcieFabric()->generation() == generation,
         "rejected task link preserves queue, record and fabric state");
 
+    const std::vector<std::pair<std::string, RnicProducerTaskLink>>
+        invalid_chronologies{
+            {"eligibility before submission",
+             producerTaskLink(
+                 RnicProducerShape::GpuInitiated,
+                 "eligibility-before-submission",
+                 7103,
+                 2000,
+                 1000,
+                 3000,
+                 4000,
+                 4000)},
+            {"start before eligibility",
+             producerTaskLink(
+                 RnicProducerShape::GpuInitiated,
+                 "start-before-eligibility",
+                 7103,
+                 0,
+                 2000,
+                 1000,
+                 4000,
+                 4000)},
+            {"finish before start",
+             producerTaskLink(
+                 RnicProducerShape::GpuInitiated,
+                 "finish-before-start",
+                 7103,
+                 0,
+                 0,
+                 3000,
+                 2000,
+                 4000)},
+            {"completion before finish",
+             producerTaskLink(
+                 RnicProducerShape::GpuInitiated,
+                 "completion-before-finish",
+                 7103,
+                 0,
+                 0,
+                 1000,
+                 4000,
+                 3000)},
+        };
+    for (const auto& [description, invalid] : invalid_chronologies) {
+        test.expectThrowAs<std::invalid_argument>(
+            [&]() { static_cast<void>(gpu.ringDoorbell(16'000, invalid)); },
+            "producer task link rejects " + description);
+        test.check(
+            gpu.submissionRecords().empty()
+                && gpu.unpublishedWqeCount() == 1
+                && gpu.pcieFabric()->generation() == generation,
+            description + " rejection is atomic");
+    }
+
     RnicProducerTaskLink late = producerTaskLink(
         RnicProducerShape::GpuInitiated,
         "late-task",
@@ -760,6 +833,73 @@ void testProducerTaskLinks(TestRunner& test) {
     test.check(
         gpu.ringDoorbell(16'000).wqe_count == 1,
         "explicit caller timestamp remains the non-host bypass");
+
+    RnicDevice duplicate(submissionConfig(RnicProducerShape::GpuInitiated));
+    const RnicProducerTaskLink reused = producerTaskLink(
+        RnicProducerShape::GpuInitiated,
+        "reused-producer-task",
+        7103,
+        0,
+        0,
+        1000,
+        4000,
+        4000);
+    test.check(
+        duplicate.postSend(fixtureRequest(0), 0).status
+                == PostStatus::Accepted
+            && duplicate.ringDoorbell(16'000, reused).wqe_count == 1,
+        "producer task reuse fixture commits its first doorbell batch");
+    test.check(
+        duplicate.postSend(fixtureRequest(1), 16'000).status
+            == PostStatus::Accepted,
+        "producer task reuse fixture posts its second batch");
+    const std::uint64_t duplicate_generation =
+        duplicate.pcieFabric()->generation();
+    test.expectThrowAsWithMessage<std::invalid_argument>(
+        [&]() { static_cast<void>(duplicate.ringDoorbell(32'000, reused)); },
+        "RNIC producer task identity was already linked",
+        "producer task identity cannot be reused across doorbell batches");
+    test.check(
+        duplicate.submissionRecords().size() == 1
+            && duplicate.unpublishedWqeCount() == 1
+            && duplicate.pcieFabric()->generation() == duplicate_generation,
+        "duplicate task rejection preserves the second batch atomically");
+
+    const RnicProducerTaskLink fresh = producerTaskLink(
+        RnicProducerShape::GpuInitiated,
+        "fresh-producer-task",
+        7103,
+        16'000,
+        16'000,
+        17'000,
+        20'000,
+        20'000);
+    test.check(
+        duplicate.ringDoorbell(32'000, fresh).wqe_count == 1,
+        "fresh producer identity commits the second doorbell batch");
+    // The public path rejects reuse before record creation. Fault only the
+    // read-only projection to exercise the defensive ledger invariant.
+    auto& faulted_records =
+        const_cast<std::vector<RnicSubmissionRecord>&>(
+            duplicate.submissionRecords());
+    const bool has_two_links = faulted_records.size() == 2
+        && faulted_records[0].producer_task.has_value()
+        && faulted_records[1].producer_task.has_value();
+    test.check(
+        has_two_links,
+        "producer task invariant fixture has two linked batches");
+    if (has_two_links) {
+        const std::string second_task_id =
+            faulted_records[1].producer_task->task_id;
+        faulted_records[1].producer_task->task_id =
+            faulted_records[0].producer_task->task_id;
+        test.expectThrowAsWithMessage<std::logic_error>(
+            [&]() { duplicate.validateInvariants(); },
+            "RNIC producer task link spans doorbell batches",
+            "submission invariant rejects one task identity across batches");
+        faulted_records[1].producer_task->task_id = second_task_id;
+        duplicate.validateInvariants();
+    }
 
     RnicDevice host(submissionConfig(RnicProducerShape::HostCpuDriver));
     test.check(
