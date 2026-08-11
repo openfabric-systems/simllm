@@ -10,7 +10,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from examples.rnic_live_v1.tier_b_acceptance import check_observations
+from examples.rnic_live_v1.tier_b_acceptance import (
+    TierBAcceptanceError,
+    check_observations,
+)
 from examples.rnic_live_v1.tier_b_producer import (
     BYPASS_PROFILES,
     FROZEN_SIMLLM_BASE,
@@ -33,6 +36,10 @@ EXPECTATIONS = (
     / "rnic_live_v1"
     / "tier_b_review_expectations.json"
 )
+
+
+def _bypass_binary_hashes() -> dict[str, tuple[str, str]]:
+    return {profile: ("1" * 64, "2" * 64) for profile in BYPASS_PROFILES}
 
 
 def _cell(
@@ -81,7 +88,7 @@ def _bypass_row(profile: str) -> dict[str, object]:
         "inputs": {
             "goal_text_hex": "00",
             "goal_binary_hex": "00",
-            "topology_hex": "",
+            "topology_hex": "00" if profile == "dcqcn" else "",
             "seed": 1,
             "baseline_argv": ["-rnic_profile", profile],
         },
@@ -90,7 +97,7 @@ def _bypass_row(profile: str) -> dict[str, object]:
     }
 
 
-def test_composed_projection_passes_the_complete_frozen_tier_b_checker():
+def _tier_b_observations() -> dict[str, object]:
     structural_single = [
         _run_structural_cell(_cell(payload, rate, doorbell, 1))
         for payload in (4096, 1_048_576)
@@ -102,7 +109,7 @@ def test_composed_projection_passes_the_complete_frozen_tier_b_checker():
         for rate in (200, 400)
         for doorbell in (0, 1000)
     ]
-    observations = {
+    return {
         "schema": TIER_B_OBSERVATION_SCHEMA,
         "factory": "htsim",
         "simllm_base_commit": FROZEN_SIMLLM_BASE,
@@ -110,9 +117,15 @@ def test_composed_projection_passes_the_complete_frozen_tier_b_checker():
         "structural_fifo": structural_fifo,
         "bypass": [_bypass_row(profile) for profile in BYPASS_PROFILES],
     }
+def test_composed_projection_passes_the_complete_frozen_tier_b_checker():
+    observations = _tier_b_observations()
     expectations = json.loads(EXPECTATIONS.read_text(encoding="utf-8"))
 
-    report = check_observations(observations, expectations)
+    report = check_observations(
+        observations,
+        expectations,
+        bypass_binary_hashes=_bypass_binary_hashes(),
+    )
 
     assert report["passed"] is True
     assert report["doorbell_owner"] == "nic_owner"
@@ -127,7 +140,60 @@ def test_composed_projection_passes_the_complete_frozen_tier_b_checker():
         "two_wqe_fifo": "4/4",
         "bypass_artifact_identity": "4/4",
     }
+    assert all(report["fatal_unscored_invariants"].values())
     assert all(report["negative_controls"].values())
+
+
+@pytest.mark.parametrize(
+    "artifact,empty",
+    [
+        ("completion_csv_hex", ""),
+        ("canonical_completion_rows", []),
+        ("step_result_tuples", []),
+        ("replay_request_summary", []),
+    ],
+)
+def test_tier_b_bypass_artifacts_must_be_nonempty(artifact, empty):
+    observations = _tier_b_observations()
+    for side in ("reference_artifacts", "candidate_artifacts"):
+        observations["bypass"][0][side][artifact] = empty
+    expectations = json.loads(EXPECTATIONS.read_text(encoding="utf-8"))
+
+    with pytest.raises(TierBAcceptanceError, match="empty|must not be empty"):
+        check_observations(
+            observations,
+            expectations,
+            bypass_binary_hashes=_bypass_binary_hashes(),
+        )
+
+
+def test_tier_b_bypass_binary_hashes_must_distinguish_the_executables():
+    observations = _tier_b_observations()
+    expectations = json.loads(EXPECTATIONS.read_text(encoding="utf-8"))
+    hashes = _bypass_binary_hashes()
+    hashes["rnic-nn"] = ("3" * 64, "3" * 64)
+
+    with pytest.raises(TierBAcceptanceError, match="binary hashes must differ"):
+        check_observations(
+            observations,
+            expectations,
+            bypass_binary_hashes=hashes,
+        )
+
+
+def test_tier_b_fifo_completion_order_is_fatal_and_unscored():
+    observations = _tier_b_observations()
+    expectations = json.loads(EXPECTATIONS.read_text(encoding="utf-8"))
+    wqes = observations["structural_fifo"][0]["steps"][0]["runtime_report"]["wqes"]
+    wqes[0]["cq_post_sequence"] = 2
+    wqes[1]["cq_post_sequence"] = 1
+
+    with pytest.raises(TierBAcceptanceError, match="FIFO W0 to W1 completion order"):
+        check_observations(
+            observations,
+            expectations,
+            bypass_binary_hashes=_bypass_binary_hashes(),
+        )
 
 
 def test_composed_projection_transaction_aborts_without_consuming_native_evidence():

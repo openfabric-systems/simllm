@@ -10,6 +10,13 @@ against that exact object. The SimLLM source referent is wave-2 base
 `RnicDevice` review corrections. No file under `third_party/htsim` is changed
 by this package.
 
+Post-landing status, 2026-08-11: the ABI-v1 wrapper is on the pinned backend
+main, and the frozen Tier A and Tier B gates pass for the isolated flow-level
+fixture. BACK-8 and the demonstrated CORE-15 live-seam clauses closed on that
+evidence. CORE-21 retains the same-graph authority comparison, BACK-31 retains
+the unlinked-native executable negative, and HTSIM-9 remains open only for the
+packet-issue extension described below after BACK-25 and BACK-26.
+
 The existing htsim outer contract accepts a flow request containing flow,
 endpoint, payload, start-time and tag fields, then reports completion by flow
 ID (`third_party/htsim/htsim/sim/atlahs_flow_runtime.h:20-27,37-57`). The
@@ -239,13 +246,12 @@ SimLLM change:
 4. Run `.venv/bin/ruff check .` and `.venv/bin/pytest -q`, including the live
    backend tests when the toolchain is available. Compare bypass artifacts
    against the old gitlink before accepting the new run record.
-5. Update `docs/modules/backends.md` in the same SimLLM change. A compatibility
-   checkpoint pin records progress but keeps HTSIM-9 open. Close HTSIM-9 only
-   after the full enabled packet, feedback, pause and link-state closure gate
-   above passes. Keep BACK-8 open for any registered run-record, projection,
-   bypass or live-metric remainder that is not actually complete. Keep
-   BACK-24, BACK-25 and BACK-26 open according to their independent acceptance
-   bars.
+5. Update `docs/modules/backends.md` in the same SimLLM change. The landed
+   ABI-v1 checkpoint and Tier B results close the demonstrated BACK-8 clauses,
+   while every undemonstrated clause keeps a distinct residual owner. Close
+   HTSIM-9 only after the full enabled packet, feedback, pause and link-state
+   closure gate above passes. Keep BACK-24, BACK-25 and BACK-26 open according
+   to their independent acceptance bars.
 6. Commit the gitlink, module status and reproducible evidence together using
    the maintainer's identity. Never rewrite or delete the backend addon branch
    after SimLLM points at it.

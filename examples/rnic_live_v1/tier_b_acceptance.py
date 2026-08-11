@@ -7,10 +7,16 @@ import hashlib
 import json
 import os
 import subprocess
-from collections.abc import Callable
-from dataclasses import dataclass, replace
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from simllm.backends.rnic_records import (
+    BypassArtifacts,
+    canonical_bypass_parameters,
+    compare_bypass_artifacts,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPECTATIONS = Path(__file__).with_name("tier_b_review_expectations.json")
@@ -23,6 +29,16 @@ ATTRIBUTION_KEYS = {
     "collective_ps",
     "nic_ps",
     "control_ps",
+}
+BYPASS_BINARY_ENVIRONMENTS = {
+    "rnic": (
+        "SIMLLM_TIER_B_REFERENCE_RNIC",
+        "SIMLLM_TIER_B_BYPASS_RNIC",
+    ),
+    "dcqcn": (
+        "SIMLLM_TIER_B_REFERENCE_DCQCN",
+        "SIMLLM_TIER_B_BYPASS_DCQCN",
+    ),
 }
 
 
@@ -717,6 +733,19 @@ def _check_inverse_rate(slow: CellView, fast: CellView) -> None:
     )
 
 
+def _check_fifo_completion_order(cell: CellView) -> bool:
+    ordered = all(
+        step.wqes[0]["completed_at_ps"] < step.wqes[1]["completed_at_ps"]
+        and step.wqes[0]["sq_post_sequence"]
+        < step.wqes[1]["sq_post_sequence"]
+        and step.wqes[0]["cq_post_sequence"]
+        < step.wqes[1]["cq_post_sequence"]
+        for step in cell.steps
+    )
+    _require(ordered, "FIFO W0 to W1 completion order drifted")
+    return ordered
+
+
 def _check_fifo(cell: CellView, owner: str) -> None:
     service = _expected_service(cell.payload_bytes, cell.rate_gbps)
     jct = cell.doorbell_ps + 2 * service
@@ -738,12 +767,6 @@ def _check_fifo(cell: CellView, owner: str) -> None:
             "FIFO W1 queue wait is not L",
         )
         _require(
-            w0["completed_at_ps"] < w1["completed_at_ps"]
-            and w0["sq_post_sequence"] < w1["sq_post_sequence"]
-            and w0["cq_post_sequence"] < w1["cq_post_sequence"],
-            "FIFO W0 to W1 completion order drifted",
-        )
-        _require(
             step.latency_ps == jct
             and step.completed_at_ps == T0 + (index + 1) * jct
             and step.metric["ttft_ps"] == jct,
@@ -760,8 +783,9 @@ def _check_fifo(cell: CellView, owner: str) -> None:
         )
 
 
-def _hex(value: Any, name: str) -> str:
+def _hex(value: Any, name: str, *, allow_empty: bool = False) -> str:
     _require(isinstance(value, str), f"{name} must be hexadecimal text")
+    _require(allow_empty or bool(value), f"{name} must not be empty")
     _require(len(value) % 2 == 0, f"{name} must have even length")
     _require(value == value.lower(), f"{name} must be lower case")
     try:
@@ -787,7 +811,11 @@ def _validate_bypass(
     _exact_keys(inputs, expectations["raw_bypass_input_keys"], f"{name}.inputs")
     _hex(inputs["goal_text_hex"], f"{name}.goal_text_hex")
     _hex(inputs["goal_binary_hex"], f"{name}.goal_binary_hex")
-    _hex(inputs["topology_hex"], f"{name}.topology_hex")
+    _hex(
+        inputs["topology_hex"],
+        f"{name}.topology_hex",
+        allow_empty=row["profile"] != "dcqcn",
+    )
     _integer(inputs["seed"], f"{name}.seed")
     argv = _array(inputs["baseline_argv"], f"{name}.baseline_argv")
     _require(argv and all(isinstance(item, str) for item in argv), f"{name} argv drifted")
@@ -799,22 +827,70 @@ def _validate_bypass(
             f"{name}.{side}",
         )
         _hex(artifacts["completion_csv_hex"], f"{name}.{side}.completion_csv_hex")
-        _array(
+        canonical_rows = _array(
             artifacts["canonical_completion_rows"],
             f"{name}.{side}.canonical_completion_rows",
         )
-        _array(artifacts["step_result_tuples"], f"{name}.{side}.step_result_tuples")
-        _array(
+        step_results = _array(
+            artifacts["step_result_tuples"],
+            f"{name}.{side}.step_result_tuples",
+        )
+        replay_summary = _array(
             artifacts["replay_request_summary"],
             f"{name}.{side}.replay_request_summary",
+        )
+        _require(
+            canonical_rows and step_results and replay_summary,
+            f"{name}.{side} contains an empty behavioral artifact",
         )
     return row
 
 
+def _canonical_json_bytes(value: Any) -> bytes:
+    return json.dumps(
+        value,
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("ascii")
+
+
+def _bypass_artifacts(row: dict[str, Any], side: str) -> BypassArtifacts:
+    inputs = row["inputs"]
+    artifacts = row[side]
+    argv_bytes = _canonical_json_bytes(inputs["baseline_argv"])
+    parameters = canonical_bypass_parameters(
+        {
+            "argument_count": len(inputs["baseline_argv"]),
+            "arguments_sha256": hashlib.sha256(argv_bytes).hexdigest(),
+        }
+    )
+    return BypassArtifacts(
+        goal_text=bytes.fromhex(inputs["goal_text_hex"]),
+        goal_binary=bytes.fromhex(inputs["goal_binary_hex"]),
+        topology=bytes.fromhex(inputs["topology_hex"]),
+        profile=row["profile"],
+        seed=inputs["seed"],
+        baseline_parameters=parameters,
+        completion_csv=bytes.fromhex(artifacts["completion_csv_hex"]),
+        canonical_completion=_canonical_json_bytes(
+            artifacts["canonical_completion_rows"]
+        ),
+        step_results=_canonical_json_bytes(artifacts["step_result_tuples"]),
+        replay_summary=_canonical_json_bytes(artifacts["replay_request_summary"]),
+    )
+
+
 def _check_bypass_identity(row: dict[str, Any]) -> None:
+    comparison = compare_bypass_artifacts(
+        _bypass_artifacts(row, "reference_artifacts"),
+        _bypass_artifacts(row, "candidate_artifacts"),
+    )
     _require(
-        row["reference_artifacts"] == row["candidate_artifacts"],
-        f"bypass artifacts changed for {row['profile']}",
+        comparison.equivalent,
+        f"bypass artifacts changed for {row['profile']}: "
+        f"inputs={list(comparison.changed_inputs)}, "
+        f"artifacts={list(comparison.changed_artifacts)}",
     )
 
 
@@ -855,9 +931,299 @@ def _expect_rejection(name: str, check: Callable[[], None]) -> bool:
     raise TierBAcceptanceError(f"negative control {name} was accepted")
 
 
-def check_observations(
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _bypass_binary_hashes_from_environment() -> dict[str, tuple[str, str]]:
+    pairs: dict[str, tuple[str, str]] = {}
+    for family, names in BYPASS_BINARY_ENVIRONMENTS.items():
+        digests = []
+        for name in names:
+            raw = os.environ.get(name)
+            _require(raw is not None and bool(raw.strip()), f"{name} is required")
+            path = Path(raw).resolve(strict=True)
+            _require(path.is_file(), f"{name} must name a file")
+            digests.append(_file_sha256(path))
+        pairs[family] = (digests[0], digests[1])
+    return {
+        "rnic-nn-fluid": pairs["rnic"],
+        "rnic-nn": pairs["rnic"],
+        "rnic-cn": pairs["rnic"],
+        "dcqcn": pairs["dcqcn"],
+    }
+
+
+def _validate_bypass_binary_hashes(
+    value: Mapping[str, tuple[str, str]],
+    profiles: list[str],
+) -> dict[str, tuple[str, str]]:
+    _require(isinstance(value, Mapping), "bypass binary hashes must be a mapping")
+    _require(set(value) == set(profiles), "bypass binary hash inventory drifted")
+    result: dict[str, tuple[str, str]] = {}
+    for profile in profiles:
+        pair = value[profile]
+        _require(
+            isinstance(pair, tuple) and len(pair) == 2,
+            f"bypass binary hashes for {profile} must be a pair",
+        )
+        reference, candidate = pair
+        for side, digest in (("reference", reference), ("candidate", candidate)):
+            _require(
+                isinstance(digest, str)
+                and len(digest) == 64
+                and digest == digest.lower()
+                and all(character in "0123456789abcdef" for character in digest),
+                f"{profile} {side} binary hash is not SHA-256",
+            )
+        _require(
+            reference != candidate,
+            f"{profile} reference and candidate binary hashes must differ",
+        )
+        result[profile] = (reference, candidate)
+    return result
+
+
+def _all_cells(
+    single: Mapping[tuple[int, int, int], CellView],
+    fifo: Mapping[tuple[int, int], CellView],
+) -> tuple[CellView, ...]:
+    return (*single.values(), *fifo.values())
+
+
+def _all_steps(cells: tuple[CellView, ...]) -> tuple[StepView, ...]:
+    return tuple(step for cell in cells for step in cell.steps)
+
+
+def _native_projection_holds(step: StepView) -> bool:
+    for wqe in step.wqes:
+        subject_events = [
+            event
+            for event in step.raw["completion_events"]
+            if event["subject_object_id"] == wqe["wqe_id"]
+        ]
+        expected_events = {
+            "submitted": wqe["submitted_at_ps"],
+            "queued": wqe["network_eligible_at_ps"],
+            "started": wqe["network_started_at_ps"],
+            "progress": wqe["network_finished_at_ps"],
+            "completed": wqe["completed_at_ps"],
+        }
+        if any(
+            len(matches := [event for event in subject_events if event["phase"] == phase])
+            != 1
+            or matches[0]["timestamp_ps"] != timestamp
+            for phase, timestamp in expected_events.items()
+        ):
+            return False
+        doorbell = [
+            visit
+            for visit in step.visits
+            if visit["stage"] == "native_doorbell"
+            and visit["subject_object_id"] == wqe["wqe_id"]
+        ]
+        network = [
+            visit
+            for visit in step.visits
+            if visit["stage"] == "native_network"
+            and visit["subject_object_id"] == wqe["wqe_id"]
+        ]
+        if len(doorbell) != 1 or len(network) != 1:
+            return False
+        if not (
+            doorbell[0]["started_at_ps"] == wqe["doorbell_started_at_ps"]
+            and doorbell[0]["finished_at_ps"] == wqe["doorbell_completed_at_ps"]
+            and network[0]["eligible_at_ps"] == wqe["network_eligible_at_ps"]
+            and network[0]["started_at_ps"] == wqe["network_started_at_ps"]
+            and network[0]["finished_at_ps"] == wqe["network_finished_at_ps"]
+            and network[0]["completed_at_ps"] == wqe["completed_at_ps"]
+        ):
+            return False
+    return True
+
+
+def _fatal_invariant_status(
+    observations: dict[str, Any],
+    single: Mapping[tuple[int, int, int], CellView],
+    fifo: Mapping[tuple[int, int], CellView],
+    bypass: Mapping[str, dict[str, Any]],
+    binary_hashes: Mapping[str, tuple[str, str]],
+    expectations: dict[str, Any],
+) -> dict[str, bool]:
+    cells = _all_cells(single, fifo)
+    steps = _all_steps(cells)
+
+    authority_exclusivity = all(
+        cell.raw["hardware_mode"] == "structural"
+        and cell.raw["authority"] == "SimllmNativeRnicSession"
+        for cell in cells
+    ) and all(
+        row["hardware_mode"] == "bypass"
+        and row["authority"] == "AtlahsWqeLedger"
+        for row in bypass.values()
+    )
+    _require(authority_exclusivity, "authority exclusivity failed")
+
+    schema_compatibility = (
+        observations["schema"] == expectations["observation_schema"]
+        and observations["factory"] == expectations["factory"]
+        and observations["simllm_base_commit"] == expectations["simllm_base_commit"]
+        and len(single) == len(expectations["single_wqe"]["payload_bytes"])
+        * len(expectations["single_wqe"]["link_rate_gbps"])
+        * len(expectations["single_wqe"]["doorbell_service_ps"])
+        and len(fifo) == len(expectations["fifo"]["link_rate_gbps"])
+        * len(expectations["fifo"]["doorbell_service_ps"])
+        and set(bypass) == set(expectations["retained_bypass_profiles"])
+    )
+    _require(schema_compatibility, "schema compatibility failed")
+
+    callback_reuse = all(
+        step.raw["callback_event_indices"]
+        == list(range(len(step.raw["completion_events"])))
+        == step.raw["execution_result"]["event_indices"]
+        for step in steps
+    )
+    _require(callback_reuse, "callback and ExecutionResult object reuse failed")
+
+    event_timestamp_order = all(
+        (timestamps := [
+            event["timestamp_ps"] for event in step.raw["completion_events"]
+        ])
+        == sorted(timestamps)
+        for step in steps
+    )
+    _require(event_timestamp_order, "completion events are not time ordered")
+
+    one_completion_boundary = all(
+        step.completed_at_ps == step.raw["execution_result"]["completed_at_ps"]
+        == step.raw["execution_result"]["quiesced_at_ps"]
+        == step.raw["step_result"]["completed_at_ps"]
+        == step.metric["completed_at_ps"]
+        and step.latency_ps == step.completed_at_ps - step.release_ps
+        for step in steps
+    )
+    _require(one_completion_boundary, "one completion boundary failed")
+
+    request_component_conservation = all(
+        sum(step.metric["attribution"].values()) == step.latency_ps
+        and all(
+            sum(operation["attribution"].values())
+            == operation["completed_at_ps"] - step.release_ps
+            for operation in step.report["operations"]
+        )
+        for step in steps
+    )
+    _require(request_component_conservation, "component conservation failed")
+
+    additive_visit_separation = all(
+        step.metric["additive_visit_totals"]
+        == step.raw["step_result"]["additive_visit_totals"]
+        == {
+            "queue_wait_ps": sum(
+                visit["started_at_ps"] - visit["eligible_at_ps"]
+                for visit in step.visits
+            ),
+            "service_ps": sum(
+                visit["finished_at_ps"] - visit["started_at_ps"]
+                for visit in step.visits
+            ),
+            "visibility_ps": sum(
+                visit["completed_at_ps"] - visit["finished_at_ps"]
+                for visit in step.visits
+            ),
+            "visit_count": len(step.visits),
+        }
+        and set(step.metric["additive_visit_totals"]).isdisjoint(ATTRIBUTION_KEYS)
+        for step in steps
+    )
+    _require(additive_visit_separation, "additive visit separation failed")
+
+    clock_monotonicity = all(
+        cell.steps[0].release_ps == T0
+        and all(
+            current.release_ps == previous.completed_at_ps
+            for previous, current in zip(cell.steps, cell.steps[1:])
+        )
+        and cell.summary["token_completion_times_ps"]
+        == [step.completed_at_ps for step in cell.steps]
+        for cell in cells
+    )
+    _require(clock_monotonicity, "clock monotonicity failed")
+
+    native_timeline_projection = all(
+        _native_projection_holds(step) for step in steps
+    )
+    _require(native_timeline_projection, "native timeline projection failed")
+
+    fifo_completion_order = all(
+        _check_fifo_completion_order(cell) for cell in fifo.values()
+    )
+
+    inactive_components_zero = all(
+        all(
+            step.metric["attribution"][key] == 0
+            for key in ("kv_ps", "kernel_ps", "dma_ps", "collective_ps", "control_ps")
+        )
+        and all(
+            all(
+                operation["attribution"][key] == 0
+                for key in (
+                    "kv_ps",
+                    "kernel_ps",
+                    "dma_ps",
+                    "collective_ps",
+                    "control_ps",
+                )
+            )
+            for operation in step.report["operations"]
+        )
+        for step in steps
+    )
+    _require(inactive_components_zero, "inactive components are nonzero")
+
+    bypass_input_guards = all(
+        row["inputs"]["goal_text_hex"]
+        and row["inputs"]["goal_binary_hex"]
+        and row["inputs"]["baseline_argv"]
+        and row["reference_artifacts"]["completion_csv_hex"]
+        and row["reference_artifacts"]["canonical_completion_rows"]
+        and row["reference_artifacts"]["step_result_tuples"]
+        and row["reference_artifacts"]["replay_request_summary"]
+        and row["candidate_artifacts"]["completion_csv_hex"]
+        and row["candidate_artifacts"]["canonical_completion_rows"]
+        and row["candidate_artifacts"]["step_result_tuples"]
+        and row["candidate_artifacts"]["replay_request_summary"]
+        and binary_hashes[profile][0] != binary_hashes[profile][1]
+        for profile, row in bypass.items()
+    )
+    _require(bypass_input_guards, "bypass input guards failed")
+
+    return {
+        "authority_exclusivity": authority_exclusivity,
+        "schema_compatibility": schema_compatibility,
+        "callback_execution_result_object_reuse": callback_reuse,
+        "event_timestamp_order": event_timestamp_order,
+        "one_completion_boundary": one_completion_boundary,
+        "request_component_conservation": request_component_conservation,
+        "additive_visit_separation": additive_visit_separation,
+        "clock_monotonicity": clock_monotonicity,
+        "native_timeline_projection": native_timeline_projection,
+        "fifo_completion_order": fifo_completion_order,
+        "inactive_components_zero": inactive_components_zero,
+        "bypass_input_guards": bypass_input_guards,
+    }
+
+
+def _evaluate_observations(
     observations: dict[str, Any],
     expectations: dict[str, Any],
+    binary_hashes: Mapping[str, tuple[str, str]],
+    *,
+    include_negative_controls: bool,
 ) -> dict[str, Any]:
     _exact_keys(observations, expectations["raw_top_keys"], "raw observations")
     _require(
@@ -968,72 +1334,144 @@ def check_observations(
         set(bypass) == set(expectations["retained_bypass_profiles"]),
         "bypass profile inventory drifted",
     )
+    validated_binary_hashes = _validate_bypass_binary_hashes(
+        binary_hashes,
+        expectations["retained_bypass_profiles"],
+    )
+    fatal_status = _fatal_invariant_status(
+        observations,
+        single,
+        fifo,
+        bypass,
+        validated_binary_hashes,
+        expectations,
+    )
     for profile in expectations["retained_bypass_profiles"]:
         families["bypass_artifact_identity"].score(
             profile,
             lambda profile=profile: _check_bypass_identity(bypass[profile]),
         )
 
-    mutant_d = replace(
-        single[(4096, 400, 1000)],
-        steps=single[(4096, 400, 0)].steps,
-    )
-    owner_step = single[(4096, 400, 1000)].steps[0]
-    owner_visits = list(copy.deepcopy(owner_step.visits))
-    owner_index = next(
-        index
-        for index, visit in enumerate(owner_visits)
-        if visit["stage"] == "native_doorbell"
-    )
-    owner_visits[owner_index]["resource_kind"] = "control_queue"
-    mutant_owner_step = replace(owner_step, visits=tuple(owner_visits))
-    changed_bypass = copy.deepcopy(bypass[expectations["retained_bypass_profiles"][0]])
-    changed_bypass["candidate_artifacts"]["completion_csv_hex"] += "00"
-    fifo_cell = fifo[(400, 0)]
-    fifo_step = fifo_cell.steps[0]
-    fifo_wqes = list(copy.deepcopy(fifo_step.wqes))
-    fifo_wqes[1]["network_eligible_at_ps"] = fifo_wqes[1]["network_started_at_ps"]
-    mutant_fifo_step = replace(fifo_step, wqes=tuple(fifo_wqes))
-    mutant_fifo = replace(
-        fifo_cell,
-        steps=(mutant_fifo_step, *fifo_cell.steps[1:]),
-    )
-    callback_indices = list(
-        single[(4096, 400, 0)].steps[0].raw["callback_event_indices"]
-    )
-    callback_indices.pop()
-    expected_callback_indices = list(
-        range(len(single[(4096, 400, 0)].steps[0].raw["completion_events"]))
-    )
-    negative_controls = {
-        "wrapper_bypass_d_sensitivity": _expect_rejection(
-            "wrapper_bypass_d_sensitivity",
-            lambda: _check_d_pair(single[(4096, 400, 0)], mutant_d),
-        ),
-        "event_object_reuse_sensitivity": _expect_rejection(
-            "event_object_reuse_sensitivity",
-            lambda: _require(
-                callback_indices == expected_callback_indices,
-                "callback index mutant rejected",
+    negative_controls: dict[str, bool] = {}
+    if include_negative_controls:
+        def single_row(
+            value: dict[str, Any],
+            payload: int,
+            rate: int,
+            doorbell: int,
+        ) -> dict[str, Any]:
+            return next(
+                row
+                for row in value["structural_single_wqe"]
+                if row["payload_bytes"] == payload
+                and row["link_rate_gbps"] == rate
+                and row["doorbell_service_ps"] == doorbell
+            )
+
+        def fifo_row(
+            value: dict[str, Any],
+            rate: int,
+            doorbell: int,
+        ) -> dict[str, Any]:
+            return next(
+                row
+                for row in value["structural_fifo"]
+                if row["link_rate_gbps"] == rate
+                and row["doorbell_service_ps"] == doorbell
+            )
+
+        def deployed_rejection(name: str, mutant: dict[str, Any]) -> bool:
+            return _expect_rejection(
+                name,
+                lambda: _require(
+                    _evaluate_observations(
+                        mutant,
+                        expectations,
+                        validated_binary_hashes,
+                        include_negative_controls=False,
+                    )["passed"],
+                    f"deployed checker accepted {name} mutant",
+                ),
+            )
+
+        mutant_d = copy.deepcopy(observations)
+        low_d = single_row(mutant_d, 4096, 400, 0)
+        high_d = single_row(mutant_d, 4096, 400, 1000)
+        high_d["steps"] = copy.deepcopy(low_d["steps"])
+        high_d["request_summary"] = copy.deepcopy(low_d["request_summary"])
+
+        mutant_reuse = copy.deepcopy(observations)
+        reuse_step = single_row(mutant_reuse, 4096, 400, 0)["steps"][0]
+        reuse_step["callback_event_indices"].pop()
+
+        mutant_owner = copy.deepcopy(observations)
+        owner_step = single_row(mutant_owner, 4096, 400, 1000)["steps"][0]
+        owner_wqe_id = owner_step["runtime_report"]["wqes"][0]["wqe_id"]
+        owner_visit = next(
+            visit
+            for visit in owner_step["runtime_report"]["visits"]
+            if visit["stage"] == "native_doorbell"
+            and visit["subject_object_id"] == owner_wqe_id
+        )
+        owner_visit["resource_kind"] = "control_queue"
+
+        mutant_fifo = copy.deepcopy(observations)
+        fifo_step = fifo_row(mutant_fifo, 400, 0)["steps"][0]
+        fifo_report = fifo_step["runtime_report"]
+        fifo_wqe = fifo_report["wqes"][1]
+        fifo_wqe_id = fifo_wqe["wqe_id"]
+        old_wait = (
+            fifo_wqe["network_started_at_ps"]
+            - fifo_wqe["network_eligible_at_ps"]
+        )
+        fifo_wqe["network_eligible_at_ps"] = fifo_wqe["network_started_at_ps"]
+        fifo_visit = next(
+            visit
+            for visit in fifo_report["visits"]
+            if visit["stage"] == "native_network"
+            and visit["subject_object_id"] == fifo_wqe_id
+        )
+        fifo_visit["eligible_at_ps"] = fifo_visit["started_at_ps"]
+        fifo_queued = next(
+            event
+            for event in fifo_step["completion_events"]
+            if event["subject_object_id"] == fifo_wqe_id
+            and event["phase"] == "queued"
+        )
+        fifo_queued["timestamp_ps"] = fifo_wqe["network_started_at_ps"]
+        fifo_report["sum_visit_wait_ps"] -= old_wait
+        fifo_step["step_result"]["additive_visit_totals"]["queue_wait_ps"] -= old_wait
+        fifo_step["step_result"]["request_metrics"][0]["additive_visit_totals"][
+            "queue_wait_ps"
+        ] -= old_wait
+
+        mutant_bypass = copy.deepcopy(observations)
+        mutant_bypass["bypass"][0]["candidate_artifacts"][
+            "completion_csv_hex"
+        ] += "00"
+
+        negative_controls = {
+            "wrapper_bypass_d_sensitivity": deployed_rejection(
+                "wrapper_bypass_d_sensitivity",
+                mutant_d,
             ),
-        ),
-        "doorbell_owner_sensitivity": _expect_rejection(
-            "doorbell_owner_sensitivity",
-            lambda: _doorbell_owner(
-                mutant_owner_step,
-                1000,
-                "doorbell owner mutant",
+            "event_object_reuse_sensitivity": deployed_rejection(
+                "event_object_reuse_sensitivity",
+                mutant_reuse,
             ),
-        ),
-        "fifo_wait_sensitivity": _expect_rejection(
-            "fifo_wait_sensitivity",
-            lambda: _check_fifo(mutant_fifo, owner),
-        ),
-        "bypass_byte_sensitivity": _expect_rejection(
-            "bypass_byte_sensitivity",
-            lambda: _check_bypass_identity(changed_bypass),
-        ),
-    }
+            "doorbell_owner_sensitivity": deployed_rejection(
+                "doorbell_owner_sensitivity",
+                mutant_owner,
+            ),
+            "fifo_wait_sensitivity": deployed_rejection(
+                "fifo_wait_sensitivity",
+                mutant_fifo,
+            ),
+            "bypass_byte_sensitivity": deployed_rejection(
+                "bypass_byte_sensitivity",
+                mutant_bypass,
+            ),
+        }
 
     family_rows = {name: family.as_dict() for name, family in families.items()}
     _require(
@@ -1056,22 +1494,28 @@ def check_observations(
             "structural_single_wqe": len(single),
             "structural_fifo": len(fifo),
         },
-        "fatal_unscored_invariants": {
-            "authority_exclusivity": True,
-            "schema_compatibility": True,
-            "callback_execution_result_object_reuse": True,
-            "event_timestamp_order": True,
-            "one_completion_boundary": True,
-            "request_component_conservation": True,
-            "additive_visit_separation": True,
-            "clock_monotonicity": True,
-            "native_timeline_projection": True,
-            "fifo_completion_order": True,
-            "inactive_components_zero": True,
-            "bypass_input_guards": True,
-        },
+        "fatal_unscored_invariants": fatal_status,
         "negative_controls": negative_controls,
     }
+
+
+def check_observations(
+    observations: dict[str, Any],
+    expectations: dict[str, Any],
+    *,
+    bypass_binary_hashes: Mapping[str, tuple[str, str]] | None = None,
+) -> dict[str, Any]:
+    hashes = (
+        _bypass_binary_hashes_from_environment()
+        if bypass_binary_hashes is None
+        else bypass_binary_hashes
+    )
+    return _evaluate_observations(
+        observations,
+        expectations,
+        hashes,
+        include_negative_controls=True,
+    )
 
 
 def _producer_command(producer: Path, expectations: Path, observations: Path) -> list[str]:

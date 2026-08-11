@@ -491,26 +491,37 @@ The post-specified integration-review correction makes the CSV
 `producer_kind` field project the producer agent taxonomy, so GPU-initiated
 rows now record kind `gpu` while retaining shape `gpu_initiated`.
 
-On 2026-08-11 BACK-8 closed on the frozen two-tier live-composition gate. Tier
-A established the directly invoked composed binary, sole structural authority,
-native WQE timeline, exact single-WQE and FIFO relations, and step-sink replay.
-Tier B projected those immutable native observations through
+On 2026-08-11 BACK-8 closed for the clauses demonstrated across its component,
+Tier A and Tier B gates. The session-record study established versioned
+records, policy-invariant hardware hashes, authority counters, projection
+identity and bypass comparison machinery. Tier A established the directly
+invoked composed binary, native WQE and per-flow completion movement, sole
+structural authority, exact single-WQE and FIFO relations, and step-sink
+replay. Tier B projected immutable native observations through
 `ExecutionGraph -> CoarseDeviceRuntime -> CompletionEvent -> ExecutionResult
 -> StepResult -> TTFT/TPOT`. Its six genuine-risk families passed 4/4 D
 additivity, 4/4 inverse-rate serialization, 8/8 live metric forms, 8/8
 seven-component rows, 4/4 FIFO contention and 4/4 bypass artifact identity.
 The W1 queue wait was exactly L, the selected `nic_owner` attribution conserved
-every request latency, failed adapter transactions left native-consumption and
-runtime state untouched, and all four protected bypass profiles were
-byte-identical to the frozen reference. See the
+every request latency, and all four protected bypass profiles matched the
+frozen reference. The bypass family's discriminating backend artifacts are
+the completion CSV and canonical completion rows; its scalar-derived
+StepResult and request-summary arrays are weaker projections. The review fix
+routes the comparison through the repository `BypassArtifacts` comparator.
+See the
 [Tier B results](../../examples/rnic_live_v1/RESULTS.md#tier-b-live-reachability).
 
-This closure does not claim packet issue timestamps. ABI-v1 still exposes
-flow-level network acceptance and whole-flow terminal events only; neither is
-a substitute for first-packet or last-packet issue. BACK-25 owns packet-attempt
-identity and TX/RX observations, BACK-26 owns transport-control vocabulary,
-and HTSIM-9 remains open for the htsim producer and composed packet-issue
-evidence after those interfaces land.
+Failed adapter transaction atomicity is unit-test evidence, not Tier B run
+evidence. `tests/test_composed_rnic.py` proves a rejected transaction consumes
+neither native observations nor runtime state before a later valid transaction
+commits. The remaining original BACK-8 clauses have explicit owners: CORE-21
+owns the same-contended-graph bypass-versus-composed signed JCT comparison and
+real bypass StepResult replay; BACK-31 owns an executable-level unlinked-native
+negative control; HTSIM-1 retains explicit rejection of the unsupported
+`rnic-ss` legacy profile; BACK-25 and BACK-26 own packet-attempt and
+transport-control vocabulary. HTSIM-9 remains open for a composed run showing
+first-packet and last-packet issue on those later interfaces. ABI-v1 network
+acceptance and whole-flow terminal events are not substitutes for packet issue.
 
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
@@ -703,6 +714,14 @@ is difficult.
   consumer and canonical hashes with the same rejection set as the native
   reader. The current Python reader deliberately rejects non-v1 effective
   hardware, so v1 structural and bypass ingestion remains the exact off path.
+- BACK-31 (Completeness; P1; L): complete the residual BACK-8 executable
+  negative control that the two-tier gate did not run. From the same pinned
+  sources, build a candidate with the SimLLM native library link deliberately
+  disabled and invoke the registered composed producer and live checker. The
+  run must fail before publishing an accepted result because native authority
+  and the signed D relation are absent. An observation-only mutant is not a
+  substitute for this link-level test. Preserve the accepted composed and
+  bypass binaries and artifacts byte for byte outside the negative build.
 - BACK-37 (Completeness; P1; L): connect the GPU-owned CQ consumer and its
   runner callback to explicitly submitted work on the concurrent compute
   service. The current enabled producer path stops at the immutable submission
