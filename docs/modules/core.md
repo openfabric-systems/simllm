@@ -292,6 +292,17 @@ tested; CORE-1 closed with M1. The step-record JSON readers landed with the
 M4 first slice, which also exercised the step schema for real: recorded M2/M3
 smoke JSONLs load, round-trip and replay through `HtsimStepSink`.
 
+BRIDGE-1 is complete for the pinned-binary prepared-replay scope.
+`HtsimPersistentStepSink` retains a local worker pool across batches, prepares
+isolated diagnostic runs concurrently, publishes only a complete batch and
+serves exact records in order. The
+[frozen study](../../examples/bridge_persistent_v1/RESULTS.md) matched all 34
+prepared-versus-diagnostic pairs in each of the result, outcome, GOAL text,
+GOAL binary and completion-CSV evidence classes. All four scored live wall-time
+instances passed with 3.36x to 5.43x speedup, and all six cells reported
+physical quiescence. BRIDGE-2, CORE-24 and HTSIM-18 retain the online stateful
+session and full CORE-5 transport rather than widening this exact acceleration.
+
 CORE-2 is complete. Graph structural and payload validation includes implicit
 FIFO edges, strict JSON readers and writers cover all five work kinds, and the
 serial compatibility lowerer retains per-layer request correlation, queues,
@@ -557,13 +568,6 @@ does not claim to produce these resource-contention measurements.
   typed `AdditiveVisitTotals`. Preserve a strict reader for any accepted
   legacy result form and prove in-memory to wire to in-memory identity for
   empty, prefill, decode and mixed-request results.
-- BRIDGE-1 (Completeness; P1; M): validate the implemented opt-in prepared
-  co-simulator for finite replays against the frozen BRIDGE-1 study. The
-  persistent local worker pool pipelines unchanged isolated diagnostic runs,
-  publishes only an atomically completed batch and serves results in exact
-  record order. Close this entry only when both recorded M4 TP 8 replays match
-  every diagnostic step and artifact byte for byte and satisfy all registered
-  four-worker and eight-worker wall-clock bands and speedup factors.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client after HTSIM-18 supplies its persistent flow session and CORE-24
   supplies the full result codec. A proposed

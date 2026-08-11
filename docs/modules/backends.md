@@ -347,6 +347,15 @@ plus a live closed loop: vLLM v0.26.0 in-process at tp=8 under
 loop, every step latency matching the closed form to 0 ps
 (examples/m4/RESULTS.md).
 
+On 2026-08-11 BRIDGE-1 closed for finite known replays. The opt-in
+`HtsimPersistentStepSink` reuses a local worker pool and concurrently executes
+the unchanged isolated one-GOAL path. Its
+[frozen study](../../examples/bridge_persistent_v1/RESULTS.md) retained every
+step result, outcome, GOAL text, GOAL binary and completion CSV byte for byte
+across both recorded M4 TP 8 replays. Four and eight workers reduced wall time
+by 3.36x to 5.43x across the four scored cells. Diagnostic invocation remains
+the default; BRIDGE-2 and HTSIM-18 retain the true online stateful session.
+
 On 2026-08-10 BACK-5, BACK-6 and BACK-7 closed. The sink now consumes an
 optional exact provider layer breakdown, an optional exact step sample count
 and an explicit GOAL-rank count while preserving the default M4 and CORE-2
