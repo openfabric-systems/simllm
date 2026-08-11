@@ -47,7 +47,6 @@ from concurrent.futures import Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
-from typing import Self
 
 from simllm.backends.htsim_rnic import RNIC_PROFILES, HtsimRnicConfig, run_htsim_rnic
 from simllm.compute import (
@@ -478,7 +477,7 @@ class HtsimPersistentStepSink(HtsimStepSink):
             self._closed = True
         self._executor.shutdown(wait=True, cancel_futures=False)
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> HtsimPersistentStepSink:  # noqa: PYI034 (typing.Self needs 3.11; CI runs 3.10)
         with self._state_lock:
             if self._closed:
                 raise RuntimeError("persistent step sink is closed")
