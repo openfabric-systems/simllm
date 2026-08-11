@@ -475,6 +475,22 @@ The post-specified integration-review correction makes the CSV
 `producer_kind` field project the producer agent taxonomy, so GPU-initiated
 rows now record kind `gpu` while retaining shape `gpu_initiated`.
 
+On 2026-08-11 BACK-25 and BACK-26 closed at the versioned vocabulary and
+relay boundary. NetworkPort ABI v2 carries session-unique packet-attempt
+identity, explicit TX start and finish, RX arrival, attempt terminals, typed
+drop evidence, ECN/CNP, effective eligibility and rate updates, PFC and
+link-state forms. ABI v1 remains the exact default compatibility path, and a
+v2 consumer rejects a v1-only producer rather than silently degrading. The
+unbound Tier A serializer populates the packet-study rows; the physical
+packetized manifold independently emits packet observations from committed
+serializer boundaries in the directed composition test. No physical runtime
+yet emits the control forms: their current enabled relay evidence uses a test
+runtime, while the packetized manifold advertises packet attempts alone.
+HTSIM-16 owns those physical control producers, HTSIM-15 owns the timestamped
+dynamic-link source, and BACK-34 owns the missing 4,096-byte-quantum partial
+final-packet cell. Evidence and the labeled post-specified review corrections
+are in [rnic_packet_v2](../../examples/rnic_packet_v2/RESULTS.md).
+
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
 and its ECMP-collision and slow-start behavior is the phenomenon under study.
@@ -688,6 +704,14 @@ is difficult.
   consumer and canonical hashes with the same rejection set as the native
   reader. The current Python reader deliberately rejects non-v1 effective
   hardware, so v1 structural and bypass ingestion remains the exact off path.
+- BACK-34 (Precision; P1; M): add a registered partial-final-packet cell at
+  the production 4,096-byte wire quantum to the ABI-v2 packet study and the
+  directed composed runtime. The closed matrix uses 4,096 and 1,048,576-byte
+  payloads and the composed test uses 8,192 bytes, so all final packets are
+  full quanta even though a smaller-quantum native unit test covers its own
+  tail. Replace that coverage surrogate with a nonmultiple payload, observe
+  exact final payload and wire bytes plus committed TX/RX boundaries, and
+  require the full-quantum rows and ABI-v1 artifacts to remain exact.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
@@ -708,8 +732,10 @@ is difficult.
   CC behavior. One QP's alpha, current/target rate, CNP suppression, byte and
   timer recovery state must survive across its WQEs and reset only with the
   modeled QP lifecycle. A new QP starts at its configured line/local-QoS rate;
-  HTSIM-9 carries CNP/ECN feedback to this policy and carries its rate update
-  back to the SimLLM hardware gate. The policy never owns that gate. Doorbell,
+  HTSIM-16 carries physical CNP/ECN observations and effective rate updates
+  across the landed vocabulary to the SimLLM hardware gate. Until that
+  producer lands, the capability rejects rather than fabricating feedback.
+  The policy never owns the hardware gate. Doorbell,
   DMA and CQ costs are common across all policies and must not be charged only
   to DCQCN. Calibrate policy parameters against
   [docs/papers/msg-size-vs-bandwidth.md](../papers/msg-size-vs-bandwidth.md)
@@ -770,6 +796,15 @@ is difficult.
   physical runtimes expose only static pre-run failed-link configuration and
   reject a requested dynamic capability. The disabled path must preserve the
   ABI-v1 and ABI-v2 no-transition baselines exactly.
+- HTSIM-16 (Completeness; P2; L): connect physical transport-control
+  observations to the landed ABI-v2 relay. Emit packet-keyed ECN and CNP plus
+  effective rate updates from the DCQCN policy, PFC submission, pause and
+  resume from the lossless fabric, and link-state observations from the
+  HTSIM-15 transition source. Advertise each capability only when its real
+  producer is active. Acceptance must exercise the actual policy and fabric,
+  permit CNP correlation after packet delivery while the extent remains live,
+  and preserve ABI-v1 plus ABI-v2 control-disabled bytes, timestamps, token
+  order and random draws exactly.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.

@@ -107,6 +107,10 @@ struct NetworkTxDescriptor {
 };
 
 struct NetworkPortCapabilities {
+    // One session uses exactly this producer version. A v2 consumer must
+    // reject a v1 producer before setup or submission; there is no implicit
+    // degradation. Compatibility requires an explicitly constructed v1
+    // session.
     std::uint32_t abi_version{kNetworkPortAbiVersionV1};
     bool packet_attempt_events{false};
     bool ecn_cnp_events{false};
@@ -180,6 +184,8 @@ struct NetworkEvent {
 
     // Transport-control payload. The event kind selects the applicable
     // subset, and disabled capabilities must leave every field at its default.
+    // ECN and CNP may reference either a live attempt or its bounded completed
+    // tombstone. The parent extent terminal ends that correlation lifetime.
     PolicyContextToken policy_context_token{0};
     std::uint32_t source{0};
     std::uint32_t destination{0};

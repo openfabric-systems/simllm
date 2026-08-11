@@ -1104,13 +1104,15 @@ void testPacketEventVocabularyPopulatesTimeline(TestRunner& test) {
     ecn.event_time_ps = 13;
     queue.onNetworkEvent(ecn);
 
-    NetworkEvent cnp = ecn;
-    cnp.kind = NetworkEventKind::CnpReceived;
-    queue.onNetworkEvent(cnp);
     queue.onNetworkEvent(packet_event(
         NetworkEventKind::PacketRxArrived, 1000, 0, 0, 4096, 14));
     queue.onNetworkEvent(packet_event(
         NetworkEventKind::Delivered, 1000, 0, 0, 4096, 14));
+
+    NetworkEvent cnp = ecn;
+    cnp.kind = NetworkEventKind::CnpReceived;
+    cnp.event_time_ps = 15;
+    queue.onNetworkEvent(cnp);
 
     NetworkEvent eligibility;
     eligibility.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
@@ -1176,6 +1178,13 @@ void testPacketEventVocabularyPopulatesTimeline(TestRunner& test) {
     terminal.event_time_ps = 23;
     queue.onNetworkEvent(terminal);
     queue.progress(23);
+    NetworkEvent retired_cnp = cnp;
+    retired_cnp.event_time_ps = 23;
+    test.expectThrow(
+        [&queue, &retired_cnp]() {
+            queue.onNetworkEvent(retired_cnp);
+        },
+        "completed packet feedback tombstone ends with its extent");
 
     const auto& record = queue.wqe(posted.wqe_id);
     test.check(

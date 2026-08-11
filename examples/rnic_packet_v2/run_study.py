@@ -29,6 +29,7 @@ SIMLLM_BASE_COMMIT = "b74629b4b4da1addda9ff21226cfabf5c09aad87"
 HTSIM_BASE_COMMIT = "edb28c3015c173b4251abc5858c587df325e1ebc"
 SIMLLM_EXPECTATION_COMMIT = "506f87af93687ccf0df85f6b5307b71a20ed3762"
 HTSIM_EXPECTATION_COMMIT = "6ece8bdd908496dadfd4df809e3a4eb660d6cc26"
+FIX_ROUND_EXPECTATION_COMMIT = "07521786020e41f56196d13718c62169d47ad70d"
 PAYLOAD_BYTES = (4096, 1048576)
 LINK_RATE_GBPS = (200, 400)
 DOORBELL_SERVICE_PS = (0, 1000)
@@ -371,17 +372,12 @@ def _validate_v2_observations(observations: dict[str, Any]) -> dict[str, Any]:
         raise AssertionError("ABI v2 producer returned the wrong schema")
     if observations.get("network_abi_version") != 2:
         raise AssertionError("ABI v2 producer returned the wrong version")
-    tier_a_expectations = _load_json(TIER_A_EXPECTATIONS)
-    inherited = check_observations(
-        _v1_projection(observations), tier_a_expectations, "htsim"
-    )
     single = {
         _cell_key(cell): cell for cell in observations["single_wqe"]
     }
-    fifo = observations["fifo"]
-    for cell in [*single.values(), *fifo]:
-        _validate_packet_cell(cell)
 
+    # Fix-round 1 makes the packet relations operationally independent of the
+    # exact oracles: evaluate the raw projections before any entailing pin.
     tx_additive = 0
     rx_additive = 0
     inverse_span = 0
@@ -415,6 +411,14 @@ def _validate_v2_observations(observations: dict[str, Any]) -> dict[str, Any]:
             raise AssertionError("packet-v2 inverse-rate packet span failed")
         inverse_span += 1
 
+    tier_a_expectations = _load_json(TIER_A_EXPECTATIONS)
+    inherited = check_observations(
+        _v1_projection(observations), tier_a_expectations, "htsim"
+    )
+    fifo = observations["fifo"]
+    for cell in [*single.values(), *fifo]:
+        _validate_packet_cell(cell)
+
     mutant = copy.deepcopy(next(iter(single.values())))
     mutant["port"]["packet_events"] = [
         row
@@ -438,6 +442,24 @@ def _validate_v2_observations(observations: dict[str, Any]) -> dict[str, Any]:
                 "passed": inverse_span,
                 "total": 2,
             },
+        },
+        "evidence_accounting": {
+            "correction": "post_specified_fix_round_1",
+            "original_oracle_first_packet_family": {
+                "classification": "withdrawn_as_entailed",
+                "independently_scored_relations": 0,
+                "reported_relations": 10,
+            },
+            "fix_round_1_packet_family": {
+                "evaluation": "raw_observations_before_exact_oracles",
+                "independently_scored_relations": 10,
+                "scored_surface": {
+                    "multi_packet_inverse_rate_span": 2,
+                    "rx_d_additivity": 4,
+                    "tx_d_additivity": 4,
+                },
+            },
+            "exact_oracles": "fatal_unscored",
         },
         "missing_tx_event_mutant_rejected": mutant_rejected,
     }
@@ -463,13 +485,18 @@ def _run(
         "expectation_commits": {
             "simllm": SIMLLM_EXPECTATION_COMMIT,
             "htsim": HTSIM_EXPECTATION_COMMIT,
+            "simllm_fix_round_1": FIX_ROUND_EXPECTATION_COMMIT,
         },
         "ctest": ctest,
         "abi_v1_artifact_identity": v1_identity,
         "abi_v2": v2,
         "genuine_risk": {
             "inherited_tier_a": {"plausible_failures": 12, "relations": 12},
-            "packet_families": {"plausible_failures": 10, "relations": 10},
+            "packet_families": {
+                "evaluation": "raw_observations_before_exact_oracles",
+                "plausible_failures": 10,
+                "relations": 10,
+            },
             "abi_v1_identity": {"plausible_failures": 2, "relations": 2},
         },
         "v1_reference_sha256": {

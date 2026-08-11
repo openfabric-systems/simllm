@@ -958,6 +958,14 @@ public:
             throw;
         }
         inflight_.erase(event.token);
+        for (auto attempt = completed_packet_attempts_.begin();
+             attempt != completed_packet_attempts_.end();) {
+            if (attempt->second.extent_token == event.token) {
+                attempt = completed_packet_attempts_.erase(attempt);
+            } else {
+                ++attempt;
+            }
+        }
         record.timeline.network_outcome_at_ps = event.event_time_ps;
         record.state = WqeState::AwaitingOrderedRetirement;
         record.ecn_marked = record.ecn_marked || event.ecn_marked;
@@ -1031,7 +1039,8 @@ public:
 
         if (event.kind == NetworkEventKind::PacketTxStarted) {
             if (seen_network_tokens_.count(event.token) != 0
-                || packet_attempts_.count(event.token) != 0) {
+                || packet_attempts_.count(event.token) != 0
+                || completed_packet_attempts_.count(event.token) != 0) {
                 throw std::logic_error(
                     "RNIC packet attempt token was reused in one session");
             }
@@ -1094,6 +1103,11 @@ public:
                 throw std::invalid_argument(
                     "RNIC packet delivery has an invalid lifecycle");
             }
+            if (!completed_packet_attempts_.emplace(
+                    event.token, attempt->second).second) {
+                throw std::logic_error(
+                    "RNIC packet delivery repeated a completed token");
+            }
             packet_attempts_.erase(attempt);
             return;
         case NetworkEventKind::Dropped:
@@ -1103,6 +1117,11 @@ public:
                 || event.drop_resource_id == 0) {
                 throw std::invalid_argument(
                     "RNIC packet drop lacks stable evidence");
+            }
+            if (!completed_packet_attempts_.emplace(
+                    event.token, attempt->second).second) {
+                throw std::logic_error(
+                    "RNIC packet drop repeated a completed token");
             }
             packet_attempts_.erase(attempt);
             return;
@@ -1134,11 +1153,19 @@ public:
             }
             {
                 const auto attempt = packet_attempts_.find(event.token);
-                if (attempt == packet_attempts_.end()
-                    || attempt->second.extent_token != event.parent_token
-                    || attempt->second.started.wqe_id != event.wqe_id) {
+                const auto completed =
+                    completed_packet_attempts_.find(event.token);
+                const PacketAttemptState* state =
+                    attempt != packet_attempts_.end()
+                    ? &attempt->second
+                    : completed != completed_packet_attempts_.end()
+                    ? &completed->second
+                    : nullptr;
+                if (state == nullptr
+                    || state->extent_token != event.parent_token
+                    || state->started.wqe_id != event.wqe_id) {
                     throw std::invalid_argument(
-                        "RNIC ECN or CNP token is not a live packet attempt");
+                        "RNIC ECN or CNP token is not retained by its extent");
                 }
             }
             if (event.kind == NetworkEventKind::EcnMarked) {
@@ -1484,6 +1511,19 @@ public:
                 || seen_network_tokens_.count(token_and_attempt.first) == 0) {
                 throw std::logic_error(
                     "RNIC packet-attempt ownership accounting mismatch");
+            }
+        }
+        for (const auto& token_and_attempt : completed_packet_attempts_) {
+            const PacketAttemptState& attempt = token_and_attempt.second;
+            const auto extent = inflight_.find(attempt.extent_token);
+            if (token_and_attempt.first != attempt.started.token
+                || extent == inflight_.end()
+                || packet_attempts_.count(token_and_attempt.first) != 0
+                || attempt.started.parent_token != attempt.extent_token
+                || attempt.started.wqe_id != extent->second.wqe_id
+                || seen_network_tokens_.count(token_and_attempt.first) == 0) {
+                throw std::logic_error(
+                    "RNIC completed packet tombstone accounting mismatch");
             }
         }
         for (const auto& wqe_and_outcome : pending_outcomes_) {
@@ -1979,6 +2019,7 @@ private:
     std::deque<WqeId> ready_;
     std::map<NetworkToken, InflightExtent> inflight_;
     std::map<NetworkToken, PacketAttemptState> packet_attempts_;
+    std::map<NetworkToken, PacketAttemptState> completed_packet_attempts_;
     std::set<NetworkToken> seen_network_tokens_;
     std::map<WqeId, PendingOutcome> pending_outcomes_;
     std::map<PendingCqeKey, CompletionEntry> pending_cqes_;

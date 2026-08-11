@@ -232,6 +232,25 @@ timestamped transition source, so requested dynamic capability rejects and
 HTSIM-15 owns the optional enabled producer. HTSIM-9 now remains open only for
 the Tier B live-metric run through CORE-15.
 
+Version negotiation is exact for the whole session. A v2 consumer paired with
+a producer that advertises only v1 rejects before event-handler installation,
+runtime setup, submission or authority mutation. There is no implicit
+v2-to-v1 projection. A caller that requires compatibility constructs an
+explicit v1 session, which retains the accepted baseline bytes.
+
+Packet-keyed ECN and CNP correlation survives packet delivery or drop in a
+bounded completed-attempt tombstone while the parent extent remains live. The
+extent terminal purges that tombstone. This permits physical feedback to trail
+the data packet without retaining packet state beyond the logical operation.
+
+The physical packetized manifold currently advertises packet-attempt events
+only. The full control vocabulary is exercised by a test runtime, not by a
+physical policy or fabric producer. HTSIM-16 owns ECN/CNP, effective-rate, PFC
+and link-state producers. HTSIM-15 separately owns the timestamped dynamic
+link-transition source that HTSIM-16 can project. BACK-34 owns a registered
+4,096-byte-quantum partial-final-packet cell; the frozen packet matrix and the
+composed 8,192-byte directed test contain only full quanta.
+
 ### SimLLM pin-bump procedure
 
 After the maintainer approves the backend results and names the immutable
