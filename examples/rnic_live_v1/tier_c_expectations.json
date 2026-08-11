@@ -1,0 +1,175 @@
+{
+  "schema": "simllm-rnic-tier-c-expectations-v1",
+  "observation_schema": "simllm-rnic-tier-c-observations-v1",
+  "results_schema": "simllm-rnic-tier-c-results-v1",
+  "simllm_audit_commit": "90ada43070adb3b1e624b6819aff34d8620e8571",
+  "htsim_audit_commit": "4885c647eecdfdf81479d1df052223c016ad086b",
+  "network_abi_version": 2,
+  "packet_wire_quantum_bytes": 4096,
+  "single_wqe": {
+    "payload_bytes": [
+      4096,
+      1048576
+    ],
+    "link_rate_gbps": [
+      200,
+      400
+    ],
+    "doorbell_service_ps": [
+      0,
+      1000
+    ],
+    "steps_per_cell": 3,
+    "wqe_count": 1
+  },
+  "fifo": {
+    "payload_bytes": 4096,
+    "link_rate_gbps": [
+      200,
+      400
+    ],
+    "doorbell_service_ps": [
+      0,
+      1000
+    ],
+    "steps_per_cell": 3,
+    "wqe_count": 2
+  },
+  "doorbell_live_relations": [
+    {
+      "payload_bytes": 4096,
+      "link_rate_gbps": 200,
+      "packet_offset_delta_ps": 1000,
+      "live_metric_delta_ps": 1000,
+      "absolute_completion_delta_ps": [
+        1000,
+        2000,
+        3000
+      ]
+    },
+    {
+      "payload_bytes": 4096,
+      "link_rate_gbps": 400,
+      "packet_offset_delta_ps": 1000,
+      "live_metric_delta_ps": 1000,
+      "absolute_completion_delta_ps": [
+        1000,
+        2000,
+        3000
+      ]
+    },
+    {
+      "payload_bytes": 1048576,
+      "link_rate_gbps": 200,
+      "packet_offset_delta_ps": 1000,
+      "live_metric_delta_ps": 1000,
+      "absolute_completion_delta_ps": [
+        1000,
+        2000,
+        3000
+      ]
+    },
+    {
+      "payload_bytes": 1048576,
+      "link_rate_gbps": 400,
+      "packet_offset_delta_ps": 1000,
+      "live_metric_delta_ps": 1000,
+      "absolute_completion_delta_ps": [
+        1000,
+        2000,
+        3000
+      ]
+    }
+  ],
+  "link_rate_live_relations": [
+    {
+      "payload_bytes": 4096,
+      "doorbell_service_ps": 0,
+      "first_packet_offset_delta_ps": 0,
+      "last_packet_offset_delta_ps": 0,
+      "live_metric_delta_ps": 81920
+    },
+    {
+      "payload_bytes": 4096,
+      "doorbell_service_ps": 1000,
+      "first_packet_offset_delta_ps": 0,
+      "last_packet_offset_delta_ps": 0,
+      "live_metric_delta_ps": 81920
+    },
+    {
+      "payload_bytes": 1048576,
+      "doorbell_service_ps": 0,
+      "first_packet_offset_delta_ps": 0,
+      "last_packet_offset_delta_ps": 20889600,
+      "live_metric_delta_ps": 20971520
+    },
+    {
+      "payload_bytes": 1048576,
+      "doorbell_service_ps": 1000,
+      "first_packet_offset_delta_ps": 0,
+      "last_packet_offset_delta_ps": 20889600,
+      "live_metric_delta_ps": 20971520
+    }
+  ],
+  "behavioral_family_instances": {
+    "doorbell_packet_to_live_chain": 4,
+    "link_rate_packet_to_live_chain": 4
+  },
+  "exact_oracle_rows": {
+    "structural_single_wqe": 8,
+    "structural_fifo": 4
+  },
+  "negative_controls": [
+    "acceptance_surrogate",
+    "producer_constant",
+    "missing_tx_start"
+  ],
+  "accepted_abi_v1_sha256": {
+    "tier_a_raw_observations.json": "37a4e9cf88a1b60094409150dfad25599eb77cbf268b3d08bfacf527e493a26a",
+    "tier_a_summary.json": "00ef7e4f5bdbd38f4eabe9ba42dc75f56de528c8751b93e6eef4a3089fa61004",
+    "tier_b_raw_observations.json": "acaca5c57134848a314a92d223c283a7dc63f1c3ef964f65f7dea75487d6dfa1",
+    "tier_b_results.json": "3755bf5c2b37e9c30f90f97e3d6920841c70d052ff9164434d26c4f56773f0ed"
+  },
+  "tier_c_producer_argument_names": [
+    "--factory",
+    "--expectations",
+    "--observations"
+  ],
+  "raw_observation_keys": [
+    "schema",
+    "factory",
+    "network_abi_version",
+    "simllm_base_commit",
+    "structural_single_wqe",
+    "structural_fifo"
+  ],
+  "raw_structural_cell_keys": [
+    "payload_bytes",
+    "link_rate_gbps",
+    "doorbell_service_ps",
+    "hardware_mode",
+    "authority",
+    "simllm_profile",
+    "steps",
+    "request_summary"
+  ],
+  "raw_packet_wqe_keys": [
+    "ordinal",
+    "wqe_id",
+    "operation_id",
+    "submitted_at_ps",
+    "doorbell_started_at_ps",
+    "doorbell_completed_at_ps",
+    "network_eligible_at_ps",
+    "network_accepted_at_ps",
+    "network_started_at_ps",
+    "first_packet_at_ps",
+    "last_packet_at_ps",
+    "packet_tx_started_at_ps",
+    "network_finished_at_ps",
+    "completed_at_ps",
+    "payload_bytes",
+    "sq_post_sequence",
+    "cq_post_sequence"
+  ]
+}

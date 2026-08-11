@@ -369,6 +369,10 @@ class WqeLifecycleProjection:
     network_eligible_at_ps: int | None = None
     network_started_at_ps: int | None = None
     network_finished_at_ps: int | None = None
+    network_accepted_at_ps: int | None = None
+    first_packet_at_ps: int | None = None
+    last_packet_at_ps: int | None = None
+    packet_tx_started_at_ps: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         for name in (
@@ -456,6 +460,50 @@ class WqeLifecycleProjection:
                 raise ValueError(
                     "WQE start and finish must project the native network stage"
                 )
+        packet_fields = (
+            self.network_accepted_at_ps,
+            self.first_packet_at_ps,
+            self.last_packet_at_ps,
+        )
+        if any(value is not None for value in packet_fields) or bool(
+            self.packet_tx_started_at_ps
+        ):
+            if not all(value is not None for value in packet_fields) or not isinstance(
+                self.packet_tx_started_at_ps, tuple
+            ) or not self.packet_tx_started_at_ps:
+                raise ValueError("WQE packet timeline must be all present")
+            if any(
+                not isinstance(value, int) or isinstance(value, bool)
+                for value in self.packet_tx_started_at_ps
+            ):
+                raise TypeError("WQE packet TX starts must be integers")
+            accepted = self.network_accepted_at_ps
+            first = self.first_packet_at_ps
+            last = self.last_packet_at_ps
+            assert accepted is not None
+            assert first is not None
+            assert last is not None
+            if tuple(sorted(self.packet_tx_started_at_ps)) != self.packet_tx_started_at_ps:
+                raise ValueError("WQE packet TX starts must be monotonic")
+            if (
+                first != min(self.packet_tx_started_at_ps)
+                or last != max(self.packet_tx_started_at_ps)
+            ):
+                raise ValueError("WQE packet timeline must derive from TX starts")
+            if (
+                self.network_eligible_at_ps is None
+                or self.network_started_at_ps is None
+                or self.network_finished_at_ps is None
+                or not (
+                    self.network_eligible_at_ps
+                    <= accepted
+                    <= first
+                    <= last
+                    <= self.network_finished_at_ps
+                )
+                or self.network_started_at_ps != first
+            ):
+                raise ValueError("WQE packet timeline is not monotonic")
 
 
 @runtime_checkable
@@ -491,7 +539,7 @@ class NativeRnicTransaction(Protocol):
 
 @runtime_checkable
 class NativeRnicSession(Protocol):
-    """Structural session seam that HTSIM-9 will connect to the native RNIC."""
+    """Structural session seam used by the HTSIM-9 composed native RNIC."""
 
     @property
     def authority_name(self) -> str:

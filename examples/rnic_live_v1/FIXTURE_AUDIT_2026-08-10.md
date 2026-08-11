@@ -1,5 +1,11 @@
 # Post-specified audit of the live RNIC v1 fixture
 
+Current status, 2026-08-11: the capability statements below are an audit of
+the named 2026-08-10 checkpoint, not the current registry state. The later
+qualifying Tier C run is recorded in
+[RESULTS.md](RESULTS.md#tier-c-abi-v2-packet-chain-chronology-and-closure), and
+HTSIM-9 is now closed.
+
 ## Audit status and chronology
 
 This is a post-specified fixture audit written on 2026-08-10. It is not an
