@@ -135,4 +135,3 @@ Before this freeze, the same command must be executed with `--check-only`.
 Check-only validates argument shapes, binary executability, fixture hashes,
 and the complete registered matrix; it prints the plan by design and produces
 no artifacts.
-
