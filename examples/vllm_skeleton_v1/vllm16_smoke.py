@@ -85,7 +85,8 @@ def _device_probe() -> dict[str, Any]:
     import pynvml
     import torch
 
-    nodes = sorted(str(path) for path in Path("/dev").glob("nvidia*"))
+    entries = sorted(Path("/dev").glob("nvidia*"))
+    nodes = [str(path) for path in entries if path.is_char_device()]
     nvml: dict[str, Any]
     initialized = False
     try:
@@ -113,6 +114,7 @@ def _device_probe() -> dict[str, Any]:
         allocated = None
         cuda_error = f"{type(exc).__name__}: {exc}"
     return {
+        "device_entries": [str(path) for path in entries],
         "device_nodes": nodes,
         "device_node_count": len(nodes),
         "nvml": nvml,
