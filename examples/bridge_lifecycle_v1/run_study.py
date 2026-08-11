@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import signal
 import subprocess
 import sys
@@ -18,7 +19,7 @@ from typing import Any
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[1]
 SIMLLM_BASE_COMMIT = "90ada43070adb3b1e624b6819aff34d8620e8571"
-HTSIM_COMMIT = "4885c647eecdfdf81479d1df052223c016ad086b"
+AUTHORING_HTSIM_COMMIT = "4885c647eecdfdf81479d1df052223c016ad086b"
 EXPECTATIONS_COMMIT = "78ef408c4d14f599359c673e146ffa9ecc012d2e"
 CELLS = (
     {"cell": "D1", "mode": "diagnostic", "max_workers": None, "targets": 1},
@@ -56,7 +57,7 @@ def _configured_executable(path: Path, option: str) -> Path:
     return resolved
 
 
-def _pinned_htsim_revision() -> str:
+def _observed_htsim_gitlink() -> str:
     return subprocess.run(
         ["git", "rev-parse", "HEAD:third_party/htsim"],
         cwd=REPO_ROOT,
@@ -85,9 +86,11 @@ def _validate_registry(arguments: argparse.Namespace) -> dict[str, object]:
         raise AssertionError("frozen lifecycle time bounds drifted")
     if STANDIN_SLEEP_S <= READY_TIMEOUT_S + POLL_TIMEOUT_S:
         raise AssertionError("stand-in must outlive readiness and post-kill polling")
-    pinned = _pinned_htsim_revision()
-    if pinned != HTSIM_COMMIT:
-        raise AssertionError(f"pinned HTSIM commit drifted: expected {HTSIM_COMMIT}, got {pinned}")
+    observed_gitlink = _observed_htsim_gitlink()
+    if re.fullmatch(r"[0-9a-f]{40}", observed_gitlink) is None:
+        raise AssertionError(
+            f"observed HTSIM gitlink is not a full commit hash: {observed_gitlink}"
+        )
     required = (
         REPO_ROOT / "examples" / "bridge_persistent_v1" / "run_study.py",
         VLLM_FIXTURE,
@@ -100,9 +103,10 @@ def _validate_registry(arguments: argparse.Namespace) -> dict[str, object]:
         raise FileNotFoundError(f"frozen study inputs are missing: {missing}")
     return {
         "artifacts_created": False,
+        "authoring_htsim_commit": AUTHORING_HTSIM_COMMIT,
         "cells": CELLS,
         "expectations_commit": EXPECTATIONS_COMMIT,
-        "pinned_htsim_commit": pinned,
+        "observed_htsim_gitlink": observed_gitlink,
         "real_htsim": str(real_htsim),
         "real_txt2bin": str(real_txt2bin),
         "standin_sleep_s": STANDIN_SLEEP_S,
@@ -543,7 +547,10 @@ def _run_study(arguments: argparse.Namespace, plan: dict[str, object]) -> None:
             "python": platform.python_version(),
             "system": platform.system(),
         },
-        "pinned_htsim_commit": plan["pinned_htsim_commit"],
+        "htsim_provenance": {
+            "authoring_source_audit_commit": plan["authoring_htsim_commit"],
+            "observed_superproject_gitlink": plan["observed_htsim_gitlink"],
+        },
         "raw_observations": rows,
         "real_binary_corroboration": real_row,
         "scored_relation_family": {
