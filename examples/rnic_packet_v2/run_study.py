@@ -22,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
 from examples.rnic_live_v1.tier_a_acceptance import check_observations
 
 EXPECTATIONS_PATH = Path(__file__).with_name("expectations.json")
+BACK34_EXPECTATIONS_PATH = Path(__file__).with_name("back34_expectations.json")
 TIER_A_EXPECTATIONS = (
     REPO_ROOT / "examples" / "rnic_live_v1" / "tier_a_expectations.json"
 )
@@ -222,6 +223,8 @@ def _run_v1(producer: Path, run_dir: Path) -> dict[str, Any]:
     local_producer = run_dir / "build" / producer.name
     local_producer.parent.mkdir(parents=True, exist_ok=False)
     shutil.copy2(producer, local_producer)
+    environment = os.environ.copy()
+    environment["SIMLLM_TIER_A_RUN_ROOT"] = str(run_dir.parent.resolve())
     subprocess.run(
         [
             sys.executable,
@@ -234,6 +237,7 @@ def _run_v1(producer: Path, run_dir: Path) -> dict[str, Any]:
             str(run_dir),
         ],
         check=True,
+        env=environment,
     )
     return {
         name: _digest(run_dir / name) for name in V1_ARTIFACT_SHA256
@@ -273,6 +277,7 @@ def _v1_projection(value: Any) -> Any:
         "last_packet_at_ps",
         "first_rx_at_ps",
         "last_rx_at_ps",
+        "partial_final_packet",
     }
     projected = {
         key: _v1_projection(item)
@@ -367,6 +372,72 @@ def _validate_packet_cell(cell: dict[str, Any]) -> None:
             raise AssertionError("packet-v2 final RX boundary is not exact")
 
 
+def _validate_partial_final_packet(cell: dict[str, Any]) -> dict[str, Any]:
+    frozen = _load_json(BACK34_EXPECTATIONS_PATH)
+    if int(cell["payload_bytes"]) != int(frozen["payload_bytes"]):
+        raise AssertionError("BACK-34 payload drifted")
+    if int(cell["link_rate_gbps"]) != int(frozen["link_rate_gbps"]):
+        raise AssertionError("BACK-34 link rate drifted")
+    if int(cell["doorbell_service_ps"]) != int(
+        frozen["doorbell_service_ps"]
+    ):
+        raise AssertionError("BACK-34 doorbell service drifted")
+    if len(cell["wqes"]) != 1:
+        raise AssertionError("BACK-34 must contain one WQE")
+    wqe = cell["wqes"][0]
+    for field, expected in frozen["tier_a_boundaries"].items():
+        observed_field = (
+            "terminal_at_ps" if field == "network_outcome_at_ps" else field
+        )
+        if int(wqe[observed_field]) != int(expected):
+            raise AssertionError(f"BACK-34 boundary drifted: {field}")
+
+    events = cell["port"]["packet_events"]
+    if len(events) != 8:
+        raise AssertionError("BACK-34 must contain eight packet events")
+    expected_times = {
+        "packet_tx_started": "tier_a_tx_started_at_ps",
+        "packet_tx_finished": "tier_a_tx_finished_at_ps",
+        "packet_rx_arrived": "tier_a_rx_arrived_at_ps",
+        "delivered": "tier_a_rx_arrived_at_ps",
+    }
+    for packet in frozen["expected_packets"]:
+        packet_index = int(packet["packet_index"])
+        rows = [
+            row
+            for row in events
+            if int(row["packet_index"]) == packet_index
+        ]
+        if len(rows) != 4:
+            raise AssertionError("BACK-34 packet lifecycle is incomplete")
+        if [row["event_kind"] for row in rows] != list(expected_times):
+            raise AssertionError("BACK-34 packet lifecycle order drifted")
+        for row in rows:
+            if tuple(row) != PACKET_EVENT_FIELDS:
+                raise AssertionError("BACK-34 event schema drifted")
+            for field in (
+                "payload_offset_bytes",
+                "payload_bytes",
+                "wire_bytes",
+            ):
+                if int(row[field]) != int(packet[field]):
+                    raise AssertionError(
+                        f"BACK-34 packet geometry drifted: {field}"
+                    )
+            time_field = expected_times[row["event_kind"]]
+            if int(row["event_time_ps"]) != int(packet[time_field]):
+                raise AssertionError(
+                    f"BACK-34 packet boundary drifted: {row['event_kind']}"
+                )
+    return {
+        "classification": "fatal_unscored",
+        "packet_rows": len(events),
+        "payload_bytes": int(cell["payload_bytes"]),
+        "final_payload_bytes": int(frozen["expected_packets"][-1]["payload_bytes"]),
+        "final_wire_bytes": int(frozen["expected_packets"][-1]["wire_bytes"]),
+    }
+
+
 def _validate_v2_observations(observations: dict[str, Any]) -> dict[str, Any]:
     if observations.get("schema") != "simllm-rnic-tier-a-observations-v2":
         raise AssertionError("ABI v2 producer returned the wrong schema")
@@ -418,6 +489,9 @@ def _validate_v2_observations(observations: dict[str, Any]) -> dict[str, Any]:
     fifo = observations["fifo"]
     for cell in [*single.values(), *fifo]:
         _validate_packet_cell(cell)
+    partial_final_packet = _validate_partial_final_packet(
+        observations["partial_final_packet"]
+    )
 
     mutant = copy.deepcopy(next(iter(single.values())))
     mutant["port"]["packet_events"] = [
@@ -462,6 +536,7 @@ def _validate_v2_observations(observations: dict[str, Any]) -> dict[str, Any]:
             "exact_oracles": "fatal_unscored",
         },
         "missing_tx_event_mutant_rejected": mutant_rejected,
+        "partial_final_packet": partial_final_packet,
     }
 
 

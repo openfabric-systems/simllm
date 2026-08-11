@@ -588,13 +588,31 @@ link-state forms. ABI v1 remains the exact default compatibility path, and a
 v2 consumer rejects a v1-only producer rather than silently degrading. The
 unbound Tier A serializer populates the packet-study rows; the physical
 packetized manifold independently emits packet observations from committed
-serializer boundaries in the directed composition test. No physical runtime
-yet emits the control forms: their current enabled relay evidence uses a test
-runtime, while the packetized manifold advertises packet attempts alone.
-HTSIM-16 owns those physical control producers, HTSIM-15 owns the timestamped
-dynamic-link source, and BACK-34 owns the missing 4,096-byte-quantum partial
-final-packet cell. Evidence and the labeled post-specified review corrections
-are in [rnic_packet_v2](../../examples/rnic_packet_v2/RESULTS.md).
+serializer boundaries in the directed composition test. At that checkpoint,
+enabled control-form relay evidence came from a test runtime, while the
+packetized manifold advertised packet attempts alone. Evidence and the
+labeled post-specified review corrections are in
+[rnic_packet_v2](../../examples/rnic_packet_v2/RESULTS.md).
+
+On 2026-08-11 HTSIM-15, HTSIM-16 and BACK-34 closed at their registered
+component scopes. The physical DCQCN runtime now emits packet-correlated ECN
+and CNP, policy-context rate and eligibility updates, real lossless-fabric PFC
+submission, pause and resume, and timestamped dynamic endpoint-link state.
+Capabilities are present only when each physical producer is enabled. The
+registered six-condition study scores 15 of 15 genuine-risk relations before
+its fatal exact oracles: 2 of 2 signed CNP rate changes, 2 of 2 PFC intervals,
+2 of 2 dynamic-link completion changes, 1 of 1 hold-duration spacing, 6 of 6
+control-disabled physical identities and 2 of 2 ABI-v1 byte identities. Late
+CNPs retain packet correlation after delivery while the extent remains live.
+See the [physical control results](../../examples/rnic_control_v2/RESULTS.md).
+
+The paired BACK-34 cell uses a 5,000-byte payload at the 4,096-byte wire
+quantum. Tier A and the directed composed runtime both observe a 968-byte
+payload tail in a 1,032-byte wire packet with exact committed TX and RX
+boundaries. Its 3 of 3 compatibility relations preserve the accepted
+full-quantum ABI-v2 projection and both ABI-v1 artifacts. The tail's exact
+geometry and times remain fatal unscored component oracles. See the
+[BACK-34 results](../../examples/rnic_packet_v2/BACK34_RESULTS.md).
 
 On 2026-08-11 the HTSIM-9 Tier C implementation connected ABI-v2 data and
 retransmission TX-start events to native `first_packet_at_ps` and
@@ -817,15 +835,6 @@ is difficult.
   predecessor bytes and random draws exactly. Enabled GPU consumption must
   change an end-to-end metric in the registered direction and must never
   advance CQE lifecycle state independently of the native RNIC authority.
-- BACK-34 (Precision; P1; M): add a registered partial-final-packet cell at
-  the production 4,096-byte wire quantum to the ABI-v2 packet study and the
-  directed composed runtime. The closed matrix uses 4,096 and 1,048,576-byte
-  payloads and the composed test uses 8,192 bytes, so all final packets are
-  full quanta even though a smaller-quantum native unit test covers its own
-  tail. Replace that coverage surrogate with a nonmultiple payload, observe
-  exact final payload and wire bytes plus committed TX/RX boundaries, and
-  require the full-quantum rows and ABI-v1 artifacts to remain exact.
-
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
 - HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
@@ -846,9 +855,9 @@ is difficult.
   timer recovery state must survive across its WQEs and reset only with the
   modeled QP lifecycle. A new QP starts at its configured line/local-QoS rate;
   HTSIM-16 carries physical CNP/ECN observations and effective rate updates
-  across the landed vocabulary to the SimLLM hardware gate. Until that
-  producer lands, the capability rejects rather than fabricating feedback.
-  The policy never owns the hardware gate. Doorbell,
+  across the landed vocabulary to the SimLLM hardware gate. With control
+  observations disabled, those capabilities remain absent rather than
+  fabricating feedback. The policy never owns the hardware gate. Doorbell,
   DMA and CQ costs are common across all policies and must not be charged only
   to DCQCN. Calibrate policy parameters against
   [docs/papers/msg-size-vs-bandwidth.md](../papers/msg-size-vs-bandwidth.md)
@@ -890,22 +899,6 @@ is difficult.
   zero in every attempted case, and the script lacks fail-fast handling, so
   it reports a false success. Add checked-in baselines or remove that compare,
   fix zero-flow diagnostics, and make every failed command fail the gate.
-- HTSIM-15 (Completeness; P2; L): add a timestamped dynamic-link transition
-  producer to an htsim runtime and advertise the ABI-v2 capability only for
-  that enabled path. The landed vocabulary carries stable link identity, up
-  or down state, transition time and optional effective rate, but current
-  physical runtimes expose only static pre-run failed-link configuration and
-  reject a requested dynamic capability. The disabled path must preserve the
-  ABI-v1 and ABI-v2 no-transition baselines exactly.
-- HTSIM-16 (Completeness; P2; L): connect physical transport-control
-  observations to the landed ABI-v2 relay. Emit packet-keyed ECN and CNP plus
-  effective rate updates from the DCQCN policy, PFC submission, pause and
-  resume from the lossless fabric, and link-state observations from the
-  HTSIM-15 transition source. Advertise each capability only when its real
-  producer is active. Acceptance must exercise the actual policy and fabric,
-  permit CNP correlation after packet delivery while the extent remains live,
-  and preserve ABI-v1 plus ABI-v2 control-disabled bytes, timestamps, token
-  order and random draws exactly.
 - HTSIM-24 (Precision; P1; S): repeat the persistent-session wall-clock family
   on a held-out flow replay whose two-sided bands are frozen from the exact
   pinned base CLI before the session outcome is observed. The wave-5
