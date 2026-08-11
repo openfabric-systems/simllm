@@ -660,7 +660,8 @@ was registered. See the
 HTSIM-19 is retired without a backend change and its ID will not be reused.
 The earlier P0 entry incorrectly treated a 2 of 4 Tier B bypass result as a
 backend-main regression. Three unchanged-command reproductions showed 4 of 4
-with current `4885c64` link OFF, 2 of 4 with a pre-v2 link-ON build and 4 of 4
+with the then-current `4885c64` link OFF, 2 of 4 with a pre-v2 link-ON build and
+4 of 4
 with the frozen wave-4 link-OFF build. The signature follows the link setting.
 A link-ON binary selects the structural session for `rnic-nn` and `rnic-cn`
 by design and is not the legacy bypass candidate. The harness now keeps those

@@ -14,6 +14,32 @@ The registered outputs are external to Git:
 - `$SIMLLM_WAVE5_RUN_ROOT/bridge1-identity/summary.json` contains the unchanged
   BRIDGE-1 diagnostic-versus-prepared identity run.
 
+## Post-specified pin-provenance note
+
+This note was added after the accepted run and is not preregistered or scored
+evidence. The accepted BRIDGE-3 outputs, including the real-binary
+corroboration, were produced with an `htsim_rnic` built from
+`4885c647eecdfdf81479d1df052223c016ad086b`. The superproject gitlink later
+moved to backend main commit
+`fc4400e4ca619223481536632074045cb6af2756`. The intervening pin regression
+occurred when bulk staging captured an initialized submodule checkout at the
+older commit after a merge had already resolved the newer gitlink.
+
+The newer gitlink does not retroactively change or invalidate the accepted
+lifecycle evidence. The scored 3/3 relation uses the executable stand-in and
+tests ownership and orphan reaping in the SimLLM invocation layer. The real
+`htsim_rnic` cell is separately classified as fatal unscored corroboration,
+and its exact binary hash and source revision remain part of the original
+record. No result-producing lifecycle run was repeated for this provenance
+correction.
+
+The registered runner now keeps the authoring source-audit commit distinct
+from the superproject gitlink observed when a command runs. Check-only output
+records both commit values and the validated executable paths. Any future
+result summary records both commit values together with the executable
+digests, without asserting that a moving current gitlink equals the historical
+audit commit.
+
 ## Live killed-owner relation
 
 Every owner received a real `SIGTERM` only after its exact marker count had

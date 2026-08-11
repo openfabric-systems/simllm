@@ -339,7 +339,7 @@ diagnosis below shows this was a harness-role error.
 The packet mechanism itself reached the live chain in two nonqualifying forms:
 a direct Tier C invocation after the fourth outer attempt had already stopped,
 and a post-specified hybrid outer invocation that used the older accepted Tier
-B candidates. Both used the current `4885c64` composed build for ABI-v2
+B candidates. Both used the then-current `4885c64` composed build for ABI-v2
 production. The hybrid output is retained at
 `$SIMLLM_WAVE5_RUN_ROOT/codex/htsim9_packet_closure-postspecified-hybrid`.
 Its overall, Tier C raw and Tier C result SHA-256 values are respectively

@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import sys
@@ -30,5 +31,18 @@ def test_bridge_lifecycle_check_only_creates_no_artifacts(tmp_path):
         text=True,
     )
 
-    assert '"artifacts_created": false' in completed.stdout
+    report = json.loads(completed.stdout)
+    observed_gitlink = subprocess.run(
+        ["git", "rev-parse", "HEAD:third_party/htsim"],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    assert report["artifacts_created"] is False
+    assert report["authoring_htsim_commit"] == (
+        "4885c647eecdfdf81479d1df052223c016ad086b"
+    )
+    assert report["observed_htsim_gitlink"] == observed_gitlink
     assert not out.exists()
