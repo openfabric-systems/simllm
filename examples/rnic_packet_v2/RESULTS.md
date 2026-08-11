@@ -4,15 +4,18 @@
 
 This report closes BACK-25 and BACK-26. NetworkPort ABI v2 now carries the
 packet-attempt and transport-control vocabulary, while ABI v1 remains the
-default compatibility path. The htsim packetized manifold is the timing
-authority for real TX and RX observations. The SimLLM WQE timeline populates
+default compatibility path. The scored study grid uses the unbound
+compatibility port's internal serializer as its timing authority. The htsim
+packetized manifold is the independent timing authority only in the directed
+composed 8,192-byte test. In both paths, the SimLLM WQE timeline populates
 `first_packet_at_ps` and `last_packet_at_ps` only from explicit data or
 retransmission TX-start events.
 
 This is Tier A component and native-composition evidence. It does not claim
 the Tier B `ExecutionGraph -> DeviceRuntime -> CompletionEvent -> StepResult
--> TTFT/TPOT` chain. HTSIM-9 remains open only for that live-metric run through
-CORE-15.
+-> TTFT/TPOT` chain. HTSIM-9 remains open until a Tier B-class run passes
+under ABI v2 with explicit packet-issue evidence populating the native
+timeline.
 
 ## Chronology and provenance
 
@@ -24,37 +27,85 @@ untracked dry-run harness existed in either repository. The registered
 check-only command printed its registry confirmation by design and produced
 no artifacts.
 
+The first review regressions were frozen separately at
+`07521786020e41f56196d13718c62169d47ad70d`. That freeze leaves the original
+expectations untouched and labels every fix-round assertion as post-specified.
+Its dry-run command also printed its registry confirmation by design and
+produced no artifacts.
+
 Implementation is SimLLM commit
 `fad1dcf277bab950035e35cd76c83fe1ec3db4f2` and htsim commit
-`63e2eb6437ef15b4bb039ce94fe647b7b488dbde`. A nonfinal smoke then exposed two
-study-runner defects. The FIFO fatal checker used the cell doorbell time for
-both WQEs instead of each WQE's frozen serializer grant, and the inherited
-checker required its producer inside the ABI-v1 run directory. SimLLM commit
-`c54d556133b411c59ff5094b591d912d4e19006e` repaired only that machinery before
-the formal run. The sweep, signed relations, exact bands and denominators did
-not change. These repairs are post-specified and are documented in
-[`CHECKER_CORRECTION.md`](CHECKER_CORRECTION.md); they are not claimed as
-pre-registered assertions.
+`63e2eb6437ef15b4bb039ce94fe647b7b488dbde`. After implementation started but
+before `fad1dcf` was committed, a nonfinal smoke exposed that the frozen FIFO
+fatal checker used the cell doorbell time for both WQEs. The post-specified
+mutation to each WQE's `port_tx_at_ps` landed inside `fad1dcf`. A later
+read-through found that the inherited checker required its producer inside
+the ABI-v1 run directory; only that path repair landed in
+`c54d556133b411c59ff5094b591d912d4e19006e`. The original c54d556 commit message
+and the first version of this report attributed both repairs to c54d556; that
+attribution was incorrect. The frozen sweep, signed relations, exact bands
+and registered family sizes did not change. Both repairs are post-specified
+and are documented in [`CHECKER_CORRECTION.md`](CHECKER_CORRECTION.md);
+neither is claimed as a pre-registered assertion.
 
-The formal registered run used SimLLM revision `c54d556` and htsim revision
-`63e2eb6`. This is a local pre-run expectation freeze, not a claim of public
-pre-registration. Bulk build and raw output stayed outside Git under the
-configured `SIMLLM_WAVE3_RUN_ROOT`.
+The first formal registered run used SimLLM revision `c54d556` and htsim
+revision `63e2eb6`. This is a local pre-run expectation freeze, not a claim of
+public pre-registration. Bulk build and raw output stayed outside Git under
+the configured `SIMLLM_WAVE3_RUN_ROOT`.
+
+Fix-round implementation is SimLLM commit
+`b7116739961b7d6b9d413cb020d43112b4d58692` and htsim commit
+`5445b81fd89c2e8c00bdf74e48d453da2a73eb30`. The first fix-round invocation
+built the committed tips and passed all 370 native tests, then stopped before
+either ABI run because the local `SIMLLM_TIER_A_RUN_ROOT` setting was absent.
+It produced build artifacts but no ABI observation or result summary. That
+incomplete directory was preserved under the external run root. The formal
+rerun set the missing root explicitly and used the same clean commits.
 
 The validated machine-readable summary is [`results.json`](results.json),
 with SHA-256
-`11a37d089a66ccf36e3a1242f5a2c6d10a69e913ab7076db1e84e6f76443feda`.
-The external runner result had SHA-256
-`1cf05dd11a2a3bb0abfbcf783db098bed36c17bc4f9d490b6415deb920037064`.
-The checked-in copy replaces its two prescribed expectation-commit
-placeholders with the actual hashes above; every observation, count, revision
-and artifact digest is otherwise unchanged. The same results-only substitution
-is now literal in the runner for future reproductions; it changes no input,
-oracle or simulation behavior.
+`660295101a98bb40bb49714cc98e2f2b2dc4da989acd32964898493d7b4e5efd`.
+It is byte-identical to the external runner result. The ABI-v2 raw observation
+SHA-256 is
+`39059d56663f73869224613c9c7a0de3bee5733a6654469cd2a54c22354cc692`.
+
+## Post-specified fix-round 1 corrections
+
+The first report's 10 of 10 packet-family score is withdrawn as a
+genuine-risk score. In that run, the inherited Tier A checker and then the
+fatal per-packet exact oracle ran before the packet relation loops. Once the
+exact oracle pinned every first and last TX and RX timestamp, none of those
+ten relations could fail in an execution that reached the scored loops. The
+observations still support exact-row and fatal-invariant evidence, but the
+original execution independently scored 0 of the reported 10 packet
+relations.
+
+The fix-round runner evaluates the raw ABI-v2 projections before either
+entailing exact oracle. Its scored packet surface is exactly four TX
+D-additivity instances, four RX D-additivity instances and two multi-packet
+inverse-rate span instances. Each instance can now fail before an exact
+timestamp is pinned. The later exact rows, payload and ordering checks, and
+missing-TX-event mutant remain fatal unscored evidence. This ordering and
+accounting correction is post-specified; it does not alter the frozen matrix,
+relations or quantitative bands.
+
+This correction supersedes the earlier statement in
+[`CHECKER_CORRECTION.md`](CHECKER_CORRECTION.md) that the genuine-risk
+denominators were unchanged. The frozen family sizes remain untouched, but
+the original oracle-first execution no longer counts as an independent
+packet-family score.
+
+The FIFO fatal-checker mutation is also post-specified. The frozen checker
+used the cell doorbell value as the TX base for both WQEs. A smoke after
+implementation started exposed that W1 instead starts at its capacity-one
+serializer grant. The corrected checker uses each WQE's `port_tx_at_ps`; that
+mutation landed in `fad1dcf`, not `c54d556`. The later `c54d556` commit changed
+only where the already built producer was placed for the inherited checker.
 
 ## Scored behavioral evidence
 
-Evidence families retain separate denominators.
+Evidence families from the corrected fix-round run retain separate
+denominators.
 
 | Family | Passed | Frozen relation |
 |---|---:|---|
@@ -66,11 +117,16 @@ Evidence families retain separate denominators.
 | ABI-v2 multi-packet span | 2 of 2 | TX and RX spans at 200 Gbit/s are exactly 2 times the 400 Gbit/s spans at both doorbell values. |
 | ABI-v1 artifact identity | 2 of 2 | Raw observations and summary have exactly zero changed bytes. |
 
-The new packet family therefore passes 10 of 10 relations. It makes the
-formerly unscorable relation 1 of `rnic_live_v1` observable: changing D by
-1,000 ps changes both first and last packet issue by exactly +1,000 ps. For
-the 1 MiB rows, the last-minus-first packet span is 41,779,200 ps at
-200 Gbit/s and 20,889,600 ps at 400 Gbit/s, exactly the frozen factor of 2.
+The corrected packet family therefore passes 10 of 10 independently
+evaluated relations. Taken together with inherited Tier A D-additivity, this
+study scores six of the eight conjunctive boundaries in frozen relation 1 of
+`rnic_live_v1`: WQE fetch eligibility, explicit first-packet issue, CQE
+visibility, CQ poll, flow completion and direct-run JCT. It does not score
+`StepResult.completed_at_ps` or the dependent replay request boundary. The
+last TX issue and first and last RX checks are packet-study refinements, not
+additional conjuncts of the original relation. For the 1 MiB rows, the
+last-minus-first packet span is 41,779,200 ps at 200 Gbit/s and 20,889,600 ps
+at 400 Gbit/s, exactly the frozen factor of 2.
 
 All eight single-WQE exact-oracle rows also pass. They are exact-row evidence
 and do not enter a behavioral denominator. The missing-TX-event mutant was
@@ -85,6 +141,15 @@ start, TX finish and RX arrival are intermediate observations; Delivered and
 Dropped are the only packet-attempt terminals. An extent cannot terminate
 while one of its attempts remains live.
 
+Completed packet-attempt correlation is retained only until the parent extent
+terminal, so a CNP that follows packet delivery remains valid without becoming
+unbounded state. A failed runtime submission now rolls back every synchronously
+scheduled event and defers ready notifications until commit. The directed
+rollback test repeats the same failing submission and receives the injected
+runtime error both times, with no leaked event or reused event-key collision.
+The capacity-two v1 regression also confirms that `drop_first` selects the
+first due terminal, not the first submitted extent.
+
 The htsim packetized manifold emits TX start and finish from committed source
 serializer boundaries and RX arrival and delivery from committed destination
 boundaries. A directed composed test for an 8,192-byte WQE at 400 Gbit/s and
@@ -95,16 +160,23 @@ surrogate supplies those packet fields.
 
 The discriminated control vocabulary covers packet-keyed ECN and CNP,
 policy-context-keyed eligibility and rate updates, PFC submit, pause and
-resume, and stable link-state transitions. The wrapper relay test covers every
-form and rejects any event that its bound runtime did not advertise. Current
-physical runtimes do not advertise a timestamped dynamic-link producer, so
-requesting that optional path rejects before mutation. HTSIM-15 owns that
-deliberately disabled enabled path.
+resume, and stable link-state transitions. Only the test fake emits these
+control forms. The physical packetized manifold advertises packet-attempt
+events alone, and the wrapper rejects events that a bound runtime did not
+advertise. HTSIM-16 owns physical ECN/CNP and rate-update producers from the
+DCQCN policy plus PFC and link-state producers from the fabric. HTSIM-15 owns
+the separately disabled timestamped dynamic-link transition source.
+
+The frozen 4,096-byte and 1 MiB payloads and the directed 8,192-byte composed
+test are all exact multiples of the 4,096-byte production quantum. The
+oracle's final-packet branch is therefore not exercised with a partial final
+packet at that quantum. BACK-34 owns the missing registered matrix and
+directed-composition cell.
 
 Fatal unscored checks all hold: authority exclusivity, token conservation,
 packet lifecycle ordering, exact payload closure, controlled drop, FIFO
 ordering, terminal atomicity, quiescence, capability validation and wrapper
-bypass sensitivity. These invariants and the 368 native test executables do
+bypass sensitivity. These invariants and the 370 native test executables do
 not increase a behavioral denominator.
 
 ## ABI-v1 and validation gates
@@ -119,7 +191,7 @@ timeline fields, packet events or control events.
 
 Final gates:
 
-- Registered Release study and complete htsim CTest suite: 368 of 368 passed.
+- Registered Release study and complete htsim CTest suite: 370 of 370 passed.
 - Standalone SimLLM native CTest suite: 6 of 6 passed with warnings as errors.
 - `.venv/bin/ruff check .`: all checks passed.
 - `.venv/bin/pytest -q`: 646 passed, 4 skipped.
@@ -127,30 +199,45 @@ Final gates:
 ## Genuine-risk fraction
 
 Fractions are reported per scored evidence family and are not combined with
-exact rows, fatal invariants or native executables.
+exact rows, fatal invariants or native executables. The original oracle-first
+packet execution independently scored 0 of its reported 10 relations, so its
+10 of 10 label is withdrawn rather than included in the corrected fractions.
 
 - Inherited Tier A: 12 of 12 relations were plausible failures. Admission
   could have replaced serializer issue, changed the doorbell ownership seam or
   disturbed FIFO grant order.
-- New packet timeline: 10 of 10 relations were plausible failures. A competent
-  relay could timestamp acceptance, choose TX finish instead of TX issue,
-  mishandle a right-aligned tail or lose the rate scaling at one packet
-  boundary.
+- Fix-round packet timeline: 10 of 10 relations were plausible failures at
+  their evaluation point because they ran against raw observations before any
+  entailing exact oracle. A competent relay could timestamp acceptance,
+  choose TX finish instead of TX issue or lose doorbell or rate scaling at one
+  packet boundary.
 - ABI-v1 identity: 2 of 2 relations were plausible failures. Version
   negotiation, event scheduling or serialization could have changed either
   accepted artifact even when the new mode was disabled.
 
 ## Registry result and deliberate omissions
 
-BACK-25 and BACK-26 are removed from the open registry. HTSIM-9
-`(Completeness; P1; L)` now states precisely that only the Tier B live-metric
-run through CORE-15 remains. HTSIM-15 `(Completeness; P2; L)` owns a future
-timestamped dynamic-link producer; the explicit rejection path preserves the
-accepted baselines.
+BACK-25 and BACK-26 are removed from the open registry with a dated closure
+narrative and this evidence link. HTSIM-9 `(Completeness; P1; L)` remains open
+until Tier B passes under ABI v2 with packet-issue evidence in the native
+timeline. BACK-34 `(Precision; P1; M)` owns production-quantum partial-tail
+evidence. HTSIM-15 `(Completeness; P2; L)` owns a future timestamped
+dynamic-link producer, and HTSIM-16 `(Completeness; P2; L)` owns every
+physical control-event producer. Their explicit rejection and disabled paths
+preserve the accepted baselines.
+
+The final conditional fetch found `origin/main` at
+`a620180c6bc980f1c695ade95b95cea7b407f199`, without the pending Tier B merge;
+CORE-15 and BACK-8 were still open there. This branch therefore did not merge
+that main or claim the pending ABI-v1 Tier B passage. Once the Tier B merge is
+present, the registry union must retain its ABI-v1 passage, retain this landed
+vocabulary, and close HTSIM-9 only after a Tier B-class run passes with ABI-v2
+packet-issue evidence populating the native timeline.
 
 This slice deliberately does not claim Tier B, TTFT or TPOT evidence. It does
-not implement dynamic link transitions, change the default ABI, edit
-`README.md` or `docs/README_PRO.md`, or commit bulk output. The paired htsim
-commit is intentionally not installed as the SimLLM submodule pin in this
-worker worktree; pin integration remains a separate maintainer operation after
-the two commit series are reviewed together.
+not exercise a production-quantum partial final packet or implement physical
+ECN/CNP, rate-update, PFC or link-state producers. It does not change the
+default ABI, edit `README.md` or `docs/README_PRO.md`, or commit bulk output.
+The paired htsim commit is intentionally not installed as the SimLLM submodule
+pin in this worker worktree; pin integration remains a separate maintainer
+operation after the two commit series are reviewed together.
