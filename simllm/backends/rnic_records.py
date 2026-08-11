@@ -27,11 +27,16 @@ from simllm.core._wire import (
 )
 
 RNIC_EFFECTIVE_HARDWARE_SCHEMA = "simllm-rnic-effective-hardware-v1"
+RNIC_EFFECTIVE_HARDWARE_HOST_MEMORY_SCHEMA = "simllm-rnic-effective-hardware-v2"
+RNIC_EFFECTIVE_HARDWARE_SUBMISSION_SCHEMA = "simllm-rnic-effective-hardware-v3"
 RNIC_SESSION_CONFIG_SCHEMA = "simllm-rnic-session-config-v1"
 RNIC_SESSION_RESULT_SCHEMA = "simllm-rnic-session-result-v1"
 RNIC_BOOKKEEPING_SCHEMA = "simllm-rnic-bookkeeping-v1"
 
 _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
+_INT64_MAX = (1 << 63) - 1
+_UINT32_MAX = (1 << 32) - 1
+_UINT64_MAX = (1 << 64) - 1
 _BYPASS_PARAMETER_RE = re.compile(r"[a-z][a-z0-9_]*\Z")
 _BYPASS_PARAMETER_EXCLUSIONS = frozenset(
     {
@@ -414,6 +419,55 @@ def _canonical_json(value: Mapping[str, Any]) -> bytes:
     ).encode("ascii")
 
 
+def _validate_native_json_value(value: Any, path: str, *, depth: int = 0) -> None:
+    if depth >= 32:
+        raise ValueError(f"{path}: exceeds the native JSON nesting limit")
+    if isinstance(value, dict):
+        for name, item in value.items():
+            if not isinstance(name, str):
+                raise TypeError(f"{path}: object keys must be strings")
+            _validate_native_json_string(name, f"{path} key")
+            _validate_native_json_value(item, f"{path}.{name}", depth=depth + 1)
+        return
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            _validate_native_json_value(item, f"{path}[{index}]", depth=depth + 1)
+        return
+    if type(value) is bool:
+        return
+    if type(value) is int:
+        if not 0 <= value <= _UINT64_MAX:
+            raise ValueError(f"{path}: expected an unsigned 64-bit integer")
+        return
+    if isinstance(value, str):
+        _validate_native_json_string(value, path)
+        return
+    raise ValueError(f"{path}: value is outside the native canonical JSON domain")
+
+
+def _validate_native_json_string(value: str, path: str) -> None:
+    if any(
+        ord(character) < 0x20
+        or ord(character) > 0x7E
+        or character in {'"', "\\"}
+        for character in value
+    ):
+        raise ValueError(f"{path}: expected an unescaped printable ASCII string")
+
+
+def _native_uint(
+    value: Any,
+    path: str,
+    *,
+    minimum: int = 0,
+    maximum: int = _UINT64_MAX,
+) -> int:
+    result = _integer(value, path, minimum=minimum)
+    if result > maximum:
+        raise ValueError(f"{path}: exceeds {maximum}")
+    return result
+
+
 def _freeze_json(value: Any) -> Any:
     if isinstance(value, Mapping):
         return MappingProxyType(
@@ -666,7 +720,12 @@ def _fabric(value: Any, path: str) -> dict[str, Any]:
     return result
 
 
-def _binding(value: Any, path: str) -> dict[str, int]:
+def _binding(
+    value: Any,
+    path: str,
+    *,
+    native_widths: bool = False,
+) -> dict[str, int]:
     obj = _object(value, path)
     names = {
         "pcie_completion_ordering_domain",
@@ -696,10 +755,19 @@ def _binding(value: Any, path: str) -> dict[str, int]:
             raise ValueError(f"{path}.{name}: must be positive")
         if name.endswith("_first_byte_offset") and result[name] >= 4096:
             raise ValueError(f"{path}.{name}: must be below 4096")
+    if native_widths:
+        for name in (
+            "pcie_cq_memory_path_id",
+            "pcie_doorbell_record_path_id",
+            "pcie_sq_memory_path_id",
+            "pcie_uar_path_id",
+        ):
+            if result[name] > _UINT32_MAX:
+                raise ValueError(f"{path}.{name}: exceeds uint32")
     return result
 
 
-def _effective_hardware(value: Any, path: str) -> dict[str, Any]:
+def _effective_hardware_v1(value: Any, path: str) -> dict[str, Any]:
     obj = _object(value, path)
     _fields(obj, path, required={"dma", "network", "qpc", "schema", "work_queue"})
     schema = _string(obj["schema"], f"{path}.schema")
@@ -777,6 +845,472 @@ def _effective_hardware(value: Any, path: str) -> dict[str, Any]:
         "schema": schema,
         "work_queue": queue_value,
     }
+
+
+def _native_module(value: Any, path: str) -> dict[str, bool]:
+    module = _object(value, path)
+    _fields(module, path, required={"enabled"})
+    return {"enabled": _boolean(module["enabled"], f"{path}.enabled")}
+
+
+def _validate_native_fabric_widths(fabric: Mapping[str, Any], path: str) -> None:
+    if fabric["data_credit_unit_bytes"] > _UINT32_MAX:
+        raise ValueError(f"{path}.data_credit_unit_bytes: exceeds uint32")
+    for direction in ("host_to_device_credits", "device_to_host_credits"):
+        for name, count in fabric[direction].items():
+            if count > _UINT32_MAX:
+                raise ValueError(f"{path}.{direction}.{name}: exceeds uint32")
+    for index, pcie_path in enumerate(fabric["paths"]):
+        if pcie_path["path_id"] > _UINT32_MAX:
+            raise ValueError(f"{path}.paths[{index}].path_id: exceeds uint32")
+
+
+def _submission(value: Any, path: str) -> dict[str, Any]:
+    obj = _object(value, path)
+    names = {
+        "cq_consumer_id",
+        "cq_consumer_kind",
+        "descriptor_queue_allocation_id",
+        "descriptor_queue_endpoint",
+        "descriptor_writer_id",
+        "descriptor_writer_kind",
+        "producer_id",
+        "producer_kind",
+        "producer_shape",
+        "queue_endpoint",
+        "rnic_requester_id",
+        "uar_mapping_owner",
+    }
+    _fields(obj, path, required=names)
+    result: dict[str, Any] = {
+        name: _string(obj[name], f"{path}.{name}")
+        for name in (
+            "cq_consumer_kind",
+            "descriptor_queue_endpoint",
+            "descriptor_writer_kind",
+            "producer_kind",
+            "producer_shape",
+            "queue_endpoint",
+            "uar_mapping_owner",
+        )
+    }
+    for name in ("producer_id", "cq_consumer_id", "rnic_requester_id"):
+        result[name] = _native_uint(
+            obj[name],
+            f"{path}.{name}",
+            minimum=1,
+            maximum=_UINT32_MAX,
+        )
+    for name in ("descriptor_writer_id", "descriptor_queue_allocation_id"):
+        result[name] = _native_uint(obj[name], f"{path}.{name}")
+
+    shape = result["producer_shape"]
+    if shape == "host_cpu_driver":
+        valid = (
+            result["producer_kind"] == "host_cpu_driver"
+            and result["descriptor_writer_kind"] == "none"
+            and result["descriptor_writer_id"] == 0
+            and result["descriptor_queue_allocation_id"] == 0
+            and result["descriptor_queue_endpoint"] == "none"
+            and result["queue_endpoint"] == "host_pinned_memory"
+            and result["cq_consumer_kind"] == "host_cpu_driver"
+            and result["uar_mapping_owner"] == "host_cpu"
+        )
+        message = "host CPU submission fields are inconsistent"
+    elif shape == "cpu_proxy":
+        valid = (
+            result["producer_kind"] == "cpu_proxy"
+            and result["descriptor_writer_kind"] == "gpu"
+            and 0 < result["descriptor_writer_id"] <= _UINT32_MAX
+            and result["descriptor_queue_allocation_id"] > 0
+            and result["descriptor_queue_endpoint"] == "host_pinned_memory"
+            and result["queue_endpoint"] == "host_pinned_memory"
+            and result["cq_consumer_kind"] == "cpu_proxy"
+            and result["uar_mapping_owner"] == "host_cpu"
+        )
+        message = "CPU-proxy submission fields are inconsistent"
+    elif shape == "gpu_initiated":
+        valid = (
+            result["producer_kind"] == "gpu"
+            and result["descriptor_writer_kind"] == "none"
+            and result["descriptor_writer_id"] == 0
+            and result["descriptor_queue_allocation_id"] == 0
+            and result["descriptor_queue_endpoint"] == "none"
+            and result["queue_endpoint"] == "gpu_memory"
+            and result["cq_consumer_kind"] == "gpu"
+            and result["uar_mapping_owner"] == "gpu"
+        )
+        message = "GPU-initiated submission fields are inconsistent"
+    else:
+        raise ValueError(f"{path}.producer_shape: unknown producer shape {shape!r}")
+    if not valid:
+        raise ValueError(f"{path}: {message}")
+    return result
+
+
+def _host_memory(
+    value: Any,
+    path: str,
+    *,
+    paths: Mapping[int, Mapping[str, Any]],
+    submission: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    obj = _object(value, path)
+    _fields(
+        obj,
+        path,
+        required={"allocations", "device_owner_id", "enabled", "registry", "work_queue"},
+    )
+    if not _boolean(obj["enabled"], f"{path}.enabled"):
+        raise ValueError(f"{path}: host memory schema must be enabled")
+    device_owner_id = _native_uint(
+        obj["device_owner_id"], f"{path}.device_owner_id", minimum=1
+    )
+
+    registry_path = f"{path}.registry"
+    registry_obj = _object(obj["registry"], registry_path)
+    registry_names = {
+        "mpt_entry_bytes",
+        "mpt_first_byte_offset",
+        "mtt_entry_bytes",
+        "mtt_first_byte_offset",
+        "queue_page_list_entry_bytes",
+        "queue_page_list_first_byte_offset",
+        "translation_path_id",
+    }
+    _fields(registry_obj, registry_path, required=registry_names)
+    registry = {
+        name: _native_uint(registry_obj[name], f"{registry_path}.{name}")
+        for name in sorted(registry_names)
+    }
+    for name in (
+        "mpt_entry_bytes",
+        "mtt_entry_bytes",
+        "queue_page_list_entry_bytes",
+        "translation_path_id",
+    ):
+        if registry[name] == 0:
+            raise ValueError(f"{registry_path}.{name}: must be positive")
+    for name in (
+        "mpt_first_byte_offset",
+        "mtt_first_byte_offset",
+        "queue_page_list_first_byte_offset",
+    ):
+        if registry[name] >= 4096:
+            raise ValueError(f"{registry_path}.{name}: must be below 4096")
+    translation_path_id = registry["translation_path_id"]
+    if translation_path_id > _UINT32_MAX:
+        raise ValueError(f"{registry_path}.translation_path_id: exceeds uint32")
+    translation_path = paths.get(translation_path_id)
+    if (
+        translation_path is None
+        or not translation_path["enabled"]
+        or translation_path.get("endpoint") != "host_pinned_memory"
+    ):
+        raise ValueError(f"{registry_path}.translation_path_id: path must be host-pinned")
+
+    binding_path = f"{path}.work_queue"
+    binding_obj = _object(obj["work_queue"], binding_path)
+    binding_names = {
+        "cq_ring_allocation_id",
+        "doorbell_record_allocation_id",
+        "qpc_context_bytes",
+        "qpc_icm_allocation_id",
+        "rq_ring_allocation_id",
+        "sq_ring_allocation_id",
+    }
+    _fields(binding_obj, binding_path, required=binding_names)
+    binding = {
+        name: _native_uint(binding_obj[name], f"{binding_path}.{name}", minimum=1)
+        for name in sorted(binding_names)
+    }
+
+    allocations_path = f"{path}.allocations"
+    raw_allocations = _array(obj["allocations"], allocations_path)
+    if not raw_allocations:
+        raise ValueError(f"{allocations_path}: must not be empty")
+    allocations = []
+    object_by_id: dict[int, str] = {}
+    owner_by_id: dict[int, int] = {}
+    endpoint_by_id: dict[int, str] = {}
+    descriptor_queue_count = 0
+    previous_id = 0
+    expected_owners = {
+        "qpc_icm": "queue_pair",
+        "sq_ring": "send_queue",
+        "rq_ring": "receive_queue",
+        "cq_ring": "completion_queue",
+        "doorbell_record": "send_queue",
+        "data_region": "memory_region",
+    }
+    if submission is not None:
+        expected_owners["descriptor_queue"] = "submission_producer"
+    for index, raw_allocation in enumerate(raw_allocations):
+        allocation_path = f"{allocations_path}[{index}]"
+        allocation_obj = _object(raw_allocation, allocation_path)
+        object_kind = _string(
+            allocation_obj.get("object_kind"), f"{allocation_path}.object_kind"
+        )
+        data_region = object_kind == "data_region"
+        allocation_names = {
+            "allocation_id",
+            "device_owner_id",
+            "endpoint",
+            "length_bytes",
+            "object_kind",
+            "owner_id",
+            "owner_kind",
+            "pages",
+            "path_id",
+            "virtual_address",
+        }
+        if data_region:
+            allocation_names.add("mkey")
+        _fields(allocation_obj, allocation_path, required=allocation_names)
+        allocation_id = _native_uint(
+            allocation_obj["allocation_id"], f"{allocation_path}.allocation_id"
+        )
+        if allocation_id == 0 or allocation_id <= previous_id:
+            raise ValueError(f"{allocations_path}: IDs must be positive and ascending")
+        previous_id = allocation_id
+        allocation: dict[str, Any] = {
+            "allocation_id": allocation_id,
+            "device_owner_id": _native_uint(
+                allocation_obj["device_owner_id"],
+                f"{allocation_path}.device_owner_id",
+                minimum=1,
+            ),
+            "endpoint": _string(
+                allocation_obj["endpoint"], f"{allocation_path}.endpoint"
+            ),
+            "length_bytes": _native_uint(
+                allocation_obj["length_bytes"],
+                f"{allocation_path}.length_bytes",
+                minimum=1,
+            ),
+            "object_kind": object_kind,
+            "owner_id": _native_uint(
+                allocation_obj["owner_id"], f"{allocation_path}.owner_id", minimum=1
+            ),
+            "owner_kind": _string(
+                allocation_obj["owner_kind"], f"{allocation_path}.owner_kind"
+            ),
+            "path_id": _native_uint(
+                allocation_obj["path_id"], f"{allocation_path}.path_id", minimum=1
+            ),
+            "virtual_address": allocation_obj["virtual_address"],
+        }
+        if data_region:
+            allocation["mkey"] = _native_uint(
+                allocation_obj["mkey"], f"{allocation_path}.mkey", minimum=1
+            )
+        if expected_owners.get(object_kind) != allocation["owner_kind"]:
+            raise ValueError(f"{allocation_path}: object and owner kinds are incompatible")
+        endpoint = allocation["endpoint"]
+        if endpoint not in {"host_pinned_memory", "gpu_memory"}:
+            raise ValueError(f"{allocation_path}.endpoint: incompatible allocation endpoint")
+        if object_kind == "qpc_icm" and endpoint != "host_pinned_memory":
+            raise ValueError(f"{allocation_path}: QPC ICM must be host-pinned")
+        path_id = allocation["path_id"]
+        if path_id > _UINT32_MAX:
+            raise ValueError(f"{allocation_path}.path_id: exceeds uint32")
+        selected_path = paths.get(path_id)
+        if (
+            selected_path is None
+            or not selected_path["enabled"]
+            or selected_path.get("endpoint") != endpoint
+        ):
+            raise ValueError(f"{allocation_path}.path_id: incompatible allocation path")
+
+        pages_path = f"{allocation_path}.pages"
+        pages_obj = _object(allocation_obj["pages"], pages_path)
+        _fields(
+            pages_obj,
+            pages_path,
+            required={"page_size_bytes", "physical_page_addresses"},
+        )
+        page_size = _native_uint(
+            pages_obj["page_size_bytes"], f"{pages_path}.page_size_bytes"
+        )
+        if page_size < 4096 or page_size & (page_size - 1):
+            raise ValueError(f"{pages_path}.page_size_bytes: invalid page size")
+        raw_pages = _array(
+            pages_obj["physical_page_addresses"],
+            f"{pages_path}.physical_page_addresses",
+        )
+        if not raw_pages:
+            raise ValueError(f"{pages_path}.physical_page_addresses: must not be empty")
+        physical_pages = []
+        unique_pages = set()
+        for page_index, raw_page in enumerate(raw_pages):
+            page = _native_uint(
+                raw_page,
+                f"{pages_path}.physical_page_addresses[{page_index}]",
+            )
+            if page % page_size or page in unique_pages:
+                raise ValueError(
+                    f"{pages_path}.physical_page_addresses: pages must be aligned and unique"
+                )
+            unique_pages.add(page)
+            physical_pages.append(page)
+        allocation["pages"] = {
+            "page_size_bytes": page_size,
+            "physical_page_addresses": physical_pages,
+        }
+        object_by_id[allocation_id] = object_kind
+        owner_by_id[allocation_id] = allocation["owner_id"]
+        endpoint_by_id[allocation_id] = endpoint
+        descriptor_queue_count += int(object_kind == "descriptor_queue")
+        allocations.append(allocation)
+
+    expected_binding_kinds = {
+        "qpc_icm_allocation_id": "qpc_icm",
+        "sq_ring_allocation_id": "sq_ring",
+        "rq_ring_allocation_id": "rq_ring",
+        "cq_ring_allocation_id": "cq_ring",
+        "doorbell_record_allocation_id": "doorbell_record",
+    }
+    for field, expected_kind in expected_binding_kinds.items():
+        allocation_id = binding[field]
+        if object_by_id.get(allocation_id) != expected_kind:
+            raise ValueError(f"{binding_path}.{field}: missing or mistyped allocation")
+        if (
+            submission is not None
+            and expected_kind not in {"qpc_icm", "rq_ring"}
+            and endpoint_by_id[allocation_id] != submission["queue_endpoint"]
+        ):
+            raise ValueError(f"{binding_path}.{field}: disagrees with submission endpoint")
+
+    if submission is not None and submission["producer_shape"] == "cpu_proxy":
+        descriptor_id = submission["descriptor_queue_allocation_id"]
+        descriptor_valid = (
+            descriptor_queue_count == 1
+            and object_by_id.get(descriptor_id) == "descriptor_queue"
+            and owner_by_id.get(descriptor_id) == submission["descriptor_writer_id"]
+            and endpoint_by_id.get(descriptor_id) == "host_pinned_memory"
+        )
+        if not descriptor_valid:
+            raise ValueError(f"{path}: CPU-proxy descriptor allocation is incompatible")
+    elif submission is not None and descriptor_queue_count != 0:
+        raise ValueError(f"{path}: non-proxy submission cannot carry a descriptor queue")
+
+    return {
+        "allocations": allocations,
+        "device_owner_id": device_owner_id,
+        "enabled": True,
+        "registry": registry,
+        "work_queue": binding,
+    }
+
+
+def _effective_hardware_v2_v3(value: Any, path: str) -> dict[str, Any]:
+    _validate_native_json_value(value, path)
+    obj = _object(value, path)
+    if len(_canonical_json(obj)) > 1 << 20:
+        raise ValueError(f"{path}: exceeds the native one-MiB byte limit")
+    schema = _string(obj.get("schema"), f"{path}.schema")
+    submission_schema = schema == RNIC_EFFECTIVE_HARDWARE_SUBMISSION_SCHEMA
+    if not submission_schema and schema != RNIC_EFFECTIVE_HARDWARE_HOST_MEMORY_SCHEMA:
+        raise ValueError(f"{path}.schema: unsupported effective-hardware schema {schema!r}")
+    root_fields = {"dma", "host_memory", "network", "qpc", "schema", "work_queue"}
+    if submission_schema:
+        root_fields.add("submission")
+    _fields(obj, path, required=root_fields)
+    network = _native_module(obj["network"], f"{path}.network")
+    qpc = _native_module(obj["qpc"], f"{path}.qpc")
+    submission = (
+        _submission(obj["submission"], f"{path}.submission")
+        if submission_schema
+        else None
+    )
+
+    dma_path = f"{path}.dma"
+    dma_obj = _object(obj["dma"], dma_path)
+    dma_enabled = _boolean(dma_obj.get("enabled"), f"{dma_path}.enabled")
+    if dma_enabled:
+        _fields(
+            dma_obj,
+            dma_path,
+            required={"enabled", "fabric", "fabric_scope", "work_queue"},
+        )
+        fabric = _fabric(dma_obj["fabric"], f"{dma_path}.fabric")
+        _validate_native_fabric_widths(fabric, f"{dma_path}.fabric")
+        fabric_scope = _choice(
+            dma_obj["fabric_scope"], {"owned", "shared"}, f"{dma_path}.fabric_scope"
+        )
+        queue_endpoint = (
+            submission["queue_endpoint"] if submission is not None else "host_pinned_memory"
+        )
+        binding = _binding(
+            dma_obj["work_queue"],
+            f"{dma_path}.work_queue",
+            native_widths=True,
+        )
+        path_by_id = {item["path_id"]: item for item in fabric["paths"]}
+        expected_endpoints = {
+            "pcie_uar_path_id": "mmio_bar",
+            "pcie_doorbell_record_path_id": queue_endpoint,
+            "pcie_sq_memory_path_id": queue_endpoint,
+            "pcie_cq_memory_path_id": queue_endpoint,
+        }
+        for field, endpoint in expected_endpoints.items():
+            selected = path_by_id.get(binding[field])
+            if selected is None or not selected["enabled"] or selected.get("endpoint") != endpoint:
+                raise ValueError(f"{dma_path}.work_queue.{field}: incompatible path")
+        dma: dict[str, Any] = {
+            "enabled": True,
+            "fabric": fabric,
+            "fabric_scope": fabric_scope,
+            "work_queue": binding,
+        }
+    else:
+        _fields(dma_obj, dma_path, required={"enabled"})
+        dma = {"enabled": False}
+        path_by_id = {}
+    if not dma_enabled or not qpc["enabled"]:
+        raise ValueError(f"{path}.host_memory: requires DMA and QPC")
+    host_memory = _host_memory(
+        obj["host_memory"],
+        f"{path}.host_memory",
+        paths=path_by_id,
+        submission=submission,
+    )
+
+    queue_path = f"{path}.work_queue"
+    queue_obj = _object(obj["work_queue"], queue_path)
+    queue_fields = {"cq_depth", "qpc_lookup_service_ps", "scheduler_service_ps", "sq_depth"}
+    _fields(queue_obj, queue_path, required=queue_fields)
+    queue = {
+        name: _native_uint(
+            queue_obj[name],
+            f"{queue_path}.{name}",
+            minimum=1 if name in {"sq_depth", "cq_depth"} else 0,
+        )
+        for name in sorted(queue_fields)
+    }
+    for name, item in queue.items():
+        if name.endswith("_ps") and item > _INT64_MAX:
+            raise ValueError(f"{queue_path}.{name}: exceeds the signed timestamp domain")
+    result = {
+        "dma": dma,
+        "host_memory": host_memory,
+        "network": network,
+        "qpc": qpc,
+        "schema": schema,
+        "work_queue": queue,
+    }
+    if submission is not None:
+        result["submission"] = submission
+    return result
+
+
+def _effective_hardware(value: Any, path: str) -> dict[str, Any]:
+    schema = value.get("schema") if isinstance(value, dict) else None
+    if schema == RNIC_EFFECTIVE_HARDWARE_HOST_MEMORY_SCHEMA or schema == (
+        RNIC_EFFECTIVE_HARDWARE_SUBMISSION_SCHEMA
+    ):
+        return _effective_hardware_v2_v3(value, path)
+    return _effective_hardware_v1(value, path)
 
 
 def _config_identity(

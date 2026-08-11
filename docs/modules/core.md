@@ -317,6 +317,26 @@ evidence. HTSIM-18 is also delivered in the paired backend commit. BRIDGE-2
 remains the graph-level client, lifecycle translation, ledger-cursor and
 transactional-publication layer above these two foundations.
 
+BRIDGE-3 is complete. Native simulator invocations now pass through one owned
+child boundary. Linux uses a handshake launcher that arms a parent-death
+signal before replacing itself with the simulator, with a unique process group
+and signal-and-reap cleanup for catchable shutdown. Other POSIX platforms use
+the process-group and catchable-signal path, but make no claim for uncatchable
+termination or host failure. Windows assigns the blocked launcher to a
+per-invocation Job Object with kill-on-close before releasing it. Primitive or
+assignment failure rejects the launch, and unsupported platforms do not fall
+back to an unowned process.
+
+The [frozen child-lifetime study](../../examples/bridge_lifecycle_v1/RESULTS.md)
+sent real `SIGTERM` signals to diagnostic and prepared owners. The unsafe
+negative rows retained exactly 1, 2 and 4 orphaned children, while every
+managed row retained zero after bounded polling, for 3/3 genuine-risk scored
+instances. A separate pinned `htsim_rnic` run also retained zero. The unchanged
+BRIDGE-1 checker preserved 34/34 pairs in each result, outcome, GOAL text, GOAL
+binary and completion-CSV class, plus 4/4 latency streams and 6/6 quiescence
+cells. Timeout, repeated cleanup, repeated close and unrelated-process controls
+complete the registered lifecycle scope.
+
 CORE-2 is complete. Graph structural and payload validation includes implicit
 FIFO edges, strict JSON readers and writers cover all five work kinds, and the
 serial compatibility lowerer retains per-layer request correlation, queues,
@@ -596,16 +616,3 @@ does not claim to produce these resource-contention measurements.
   timestamp regression before publishing a result. The explicit diagnostic
   and BRIDGE-1 prepared modes remain the identity off paths and must preserve
   every accepted byte and timestamp when the online session is disabled.
-- BRIDGE-3 (Completeness; P0; M): bind every simulator child lifetime to its
-  owning SimLLM run. A demonstrated interpreter SIGTERM leaves as many as one
-  diagnostic child or `max_workers` prepared `htsim_rnic` children orphaned:
-  invocation uses no child process group, Linux parent-death signal or parent
-  signal-and-reap handler, and the parent-owned 600-second timeout disappears
-  with the interpreter. The acceptance criterion is "no orphan htsim
-  processes after a killed run". Kill diagnostic and prepared runs while
-  native children are in flight, then prove after a bounded poll that no
-  targeted descendant remains orphaned or zombie. Preserve normal diagnostic
-  output byte for byte and the complete prepared identity family, make timeout
-  and normal-shutdown cleanup idempotent, avoid signaling unrelated processes,
-  and document the supported-platform process-group, parent-death or Job
-  Object strategy.

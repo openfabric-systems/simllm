@@ -15,11 +15,14 @@ from __future__ import annotations
 
 import csv
 import re
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from simllm._native import cmake_binary_candidates, find_native_binary
+from simllm.backends._child_process import (
+    prepare_owned_child_runtime,
+    run_owned_process,
+)
 
 RNIC_PROFILES = ("rnic-nn", "rnic-nn-fluid", "rnic-cn")
 
@@ -51,10 +54,14 @@ class HtsimRnicConfig:
     topology: Path | None = None
     #: extra raw flags, e.g. {"-rnic_cn_margin_ppm": "900000"}
     extra_flags: dict[str, str] = field(default_factory=dict)
+    #: regression-only negative control; production runs must retain False
+    unsafe_disable_child_lifetime_binding: bool = False
 
     def __post_init__(self) -> None:
         if self.profile not in RNIC_PROFILES:
             raise ValueError(f"profile must be one of {RNIC_PROFILES}")
+        if type(self.unsafe_disable_child_lifetime_binding) is not bool:
+            raise TypeError("unsafe_disable_child_lifetime_binding must be a boolean")
 
 
 def build_htsim_rnic_command(binary: Path, cfg: HtsimRnicConfig) -> list[str]:
@@ -170,9 +177,10 @@ def run_htsim_rnic(cfg: HtsimRnicConfig, binary: Path | None = None,
             "htsim_rnic not found: set SIMLLM_HTSIM_RNIC or build the htsim "
             "submodule (see README)"
         )
-    result = subprocess.run(
+    result = run_owned_process(
         build_htsim_rnic_command(binary, cfg),
-        capture_output=True, text=True, timeout=timeout_s, check=False,
+        timeout_s=timeout_s,
+        unsafe_unmanaged=cfg.unsafe_disable_child_lifetime_binding,
     )
     manifest = [l for l in result.stdout.splitlines() if l.startswith("[RNIC manifest]")]
     quiescent = any("physical_quiescence=verified" in l for l in manifest)
@@ -193,3 +201,9 @@ def run_htsim_rnic(cfg: HtsimRnicConfig, binary: Path | None = None,
         quiescent=quiescent,
         goal_completion_time_ps=_parse_goal_completion_time_ps(result.stdout),
     )
+
+
+def prepare_htsim_child_lifetime() -> None:
+    """Install the main-thread cleanup boundary before prepared workers run."""
+
+    prepare_owned_child_runtime()

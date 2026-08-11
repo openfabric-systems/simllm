@@ -49,7 +49,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
 
-from simllm.backends.htsim_rnic import RNIC_PROFILES, HtsimRnicConfig, run_htsim_rnic
+from simllm.backends.htsim_rnic import (
+    RNIC_PROFILES,
+    HtsimRnicConfig,
+    prepare_htsim_child_lifetime,
+    run_htsim_rnic,
+)
 from simllm.compute import (
     GPU_ENVELOPES,
     ComputeProvider,
@@ -105,6 +110,8 @@ class HtsimStepSinkConfig:
     num_goal_ranks: int | None = None
     #: optional captured routing and explicit placement-epoch supply
     routed_moe_supply: RoutedMoeSupply | None = None
+    #: regression-only negative control; production runs must retain False
+    unsafe_disable_child_lifetime_binding: bool = False
 
     def __post_init__(self) -> None:
         if self.profile not in RNIC_PROFILES:
@@ -113,6 +120,8 @@ class HtsimStepSinkConfig:
             self.routed_moe_supply, RoutedMoeSupply
         ):
             raise TypeError("routed_moe_supply must be RoutedMoeSupply or None")
+        if type(self.unsafe_disable_child_lifetime_binding) is not bool:
+            raise TypeError("unsafe_disable_child_lifetime_binding must be a boolean")
 
 
 @dataclass(frozen=True)
@@ -173,6 +182,7 @@ class _PlannedStep:
     profile: str
     linkspeed_bps: int
     topology: Path | None
+    unsafe_disable_child_lifetime_binding: bool
 
 
 @dataclass(frozen=True)
@@ -316,6 +326,9 @@ class HtsimStepSink:
             profile=cfg.profile,
             linkspeed_bps=cfg.linkspeed_bps,
             topology=cfg.topology,
+            unsafe_disable_child_lifetime_binding=(
+                cfg.unsafe_disable_child_lifetime_binding
+            ),
         )
 
     @staticmethod
@@ -330,6 +343,9 @@ class HtsimStepSink:
                 linkspeed_bps=plan.linkspeed_bps,
                 completion_csv=plan.completion_csv,
                 topology=plan.topology,
+                unsafe_disable_child_lifetime_binding=(
+                    plan.unsafe_disable_child_lifetime_binding
+                ),
             )
         )
         makespan_ps = run.job_completion_time_ps()
@@ -404,6 +420,9 @@ class HtsimPersistentStepSink(HtsimStepSink):
 
     def prepare(self, records: Sequence[StepRecord]) -> None:
         """Prepare one finite replay atomically from the caller's perspective."""
+
+        if not self.config.unsafe_disable_child_lifetime_binding:
+            prepare_htsim_child_lifetime()
 
         copied_records = tuple(copy.deepcopy(record) for record in records)
         if not copied_records:

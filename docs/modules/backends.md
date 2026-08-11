@@ -35,10 +35,11 @@ backend submodules.
   `simllm-rnic-effective-hardware-v3` projection, including allocation and
   page geometry plus the resolved submission producer, requester and CQ
   consumer. The native reader retains strict v2 compatibility, and disabled
-  devices retain the accepted v1 bytes. The Python reader retains strict v1
-  ingestion until BACK-28 lands. The reusable bypass checker guards the full
-  reference input tuple and compares the four frozen behavioral artifact
-  classes byte for byte.
+  devices retain the accepted v1 bytes. The Python reader ingests and
+  recursively freezes strict v1, v2 and v3 objects with native-matched
+  allocation, page, submission, ownership and canonical-hash rejection. The
+  reusable bypass checker guards the full reference input tuple and compares
+  the four frozen behavioral artifact classes byte for byte.
 - `ComposedRnicObservations` + `ComposedRnicSession`: strict validation and
   transactional projection of the frozen composed native rows into the core
   structural RNIC seam. The external native session owns WQE lifecycle and
@@ -100,7 +101,7 @@ backend submodules.
 | Submodule | Repo | Ref | Provides |
 |---|---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | paired `f8e1ee9` | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping and the persistent flow session |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, and the persistent flow session |
 
 As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 (mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
@@ -541,6 +542,18 @@ The post-specified integration-review correction makes the CSV
 `producer_kind` field project the producer agent taxonomy, so GPU-initiated
 rows now record kind `gpu` while retaining shape `gpu_initiated`.
 
+On 2026-08-11 BACK-28 closed strict Python ingestion of the native
+effective-hardware v2 and v3 objects. Four native-emitted v2/v3 controls are
+accepted, retain every projected field and array value, and are recursively
+immutable. The frozen rejection corpus covers 100 native branches across
+schema, fabric, path, submission, sole-CQ-consumer, host-memory allocation,
+page, binding, descriptor-ownership, work-queue and canonical-hash checks.
+Native and Python readers both rejected all 100, with exact acceptance-bit
+agreement in every case. The v1 structural object and complete config plus the
+bypass config retain their frozen hashes and parsed identities. Evidence,
+entailment analysis and reproduction commands are in
+[examples/rnic_records_v3/RESULTS.md](../../examples/rnic_records_v3/RESULTS.md).
+
 On 2026-08-11 BACK-8 closed for the clauses demonstrated across its component,
 Tier A and Tier B gates. The session-record study established versioned
 records, policy-invariant hardware hashes, authority counters, projection
@@ -816,13 +829,6 @@ is difficult.
   BACK-11 and BACK-12 own when semantic lookup, DMA, CQE and fault events
   occur; BACK-17 only lowers optional events not already represented by the
   landed base transaction path into shared-fabric PCIe service classes.
-- BACK-28 (Completeness; P1; M): extend
-  `simllm.backends.rnic_records` to ingest and freeze the native strict
-  effective-hardware v2 and v3 objects. Validate allocation and page geometry,
-  submission-shape endpoint agreement, descriptor ownership, sole CQ
-  consumer and canonical hashes with the same rejection set as the native
-  reader. The current Python reader deliberately rejects non-v1 effective
-  hardware, so v1 structural and bypass ingestion remains the exact off path.
 - BACK-37 (Completeness; P1; L): connect the GPU-owned CQ consumer and its
   runner callback to explicitly submitted work on the concurrent compute
   service. The current enabled producer path stops at the immutable submission
