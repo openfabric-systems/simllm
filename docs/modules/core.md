@@ -380,8 +380,8 @@ was exactly four times wall JCT without entering the critical path, dependency
 chain launch intervals were clipped at the realized predecessor boundary, and
 omitted/explicit identity remained canonical-byte identical under class-label
 permutation. Remaining coarse approximations and completeness gaps are
-registered as CORE-11 through CORE-14, CORE-16 and CORE-21 rather than being
-claimed as calibrated behavior.
+registered as CORE-11 through CORE-14 and CORE-16 rather than being claimed as
+calibrated behavior.
 
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
@@ -412,13 +412,18 @@ sole-authority projection, and its explicit bypass artifact guard. Transaction
 rollback is separate unit-test evidence in `tests/test_composed_rnic.py`: an
 adapter failure consumes neither native observations nor runtime state.
 
-Tier B did not execute one fixed contended graph through both bypass and
-composed native authority, so it did not measure the registered signed JCT
-difference between those modes. CORE-15 closes only for the demonstrated
-live-seam clauses, with that undemonstrated acceptance clause and real
-StepResult replay for the bypass side moved to CORE-21. The exact Tier B scope
-and output hashes are in the
-[Tier B results](../../examples/rnic_live_v1/RESULTS.md#tier-b-live-reachability).
+Tier B itself stopped short of one fixed contended graph through both bypass
+and composed native authority. The subsequent
+[RNIC authority comparison](../../examples/rnic_authority_v1/RESULTS.md)
+closed that residual as CORE-21. One canonical graph and `StepRecord` traversed
+the timing-neutral ledger and composed native session through the deployed
+reducer. Structural minus bypass was exactly +1,000 ps for JCT, prefill TTFT
+and decode TPOT at both rates, passing 6/6 signed instances. The independent
+rate family passed 12/12, and every live cell recorded a 0/0 native transaction
+abort followed by one committed two-WQE retry. The bypass bundle matched
+through the repository `BypassArtifacts` comparator after the isolated
+link-disabled build. The result ledger quotes and maps every registered
+CORE-21 clause; no residual remains.
 
 ## Pre-registered runtime sanity experiments
 
@@ -472,24 +477,6 @@ does not claim to produce these resource-contention measurements.
   byte-carrying READ or WRITE during preflight rather than reporting silent
   zero-cost HBM work. Acceptance must enable those same fixtures through the
   HBM service and preserve the explicit zero-byte path exactly.
-- CORE-6: represent variable per-pair all-to-allv sizes in the graph
-  contract. `CollectiveWork.payload_bytes` carries one uniform ordered-pair
-  share for `pairwise` all-to-allv, so a captured, non-uniform dispatch
-  (routed experts under real gating) cannot be expressed. Decide between an
-  optional per-pair size table on the collective payload and a schema bump;
-  the uniform scalar form must stay readable either way. Coordinate with the
-  TRAF-2 capture half so traffic expansion and the renderer consume the same
-  representation.
-- CORE-5 (Completeness; P1; L): implement completion feedback and tail
-  attribution. Stream queue,
-  start, progress and completion events, reduce the required completion
-  boundary to `StepResult`, advance `VirtualClock`, and export per-request
-  TTFT/TPOT plus queue-, KV-, kernel-, DMA-, collective-, NIC- and control-
-  attributed components. Export additive visit totals separately from the
-  realized critical-path decomposition; only the latter must conserve
-  end-to-end latency. Support synchronous waits and asynchronous control or
-  collective progress. Preserve v1 readers if the queue-visit projection needs
-  a versioned event extension.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
@@ -570,17 +557,6 @@ does not claim to produce these resource-contention measurements.
   completed-prefill and decode batch, match the framework's actual token
   production mask request by request, and preserve zero-sample, all-sample and
   legacy wire behavior exactly.
-- CORE-21 (Completeness; P1; L): complete the residual CORE-15 authority
-  comparison that Tier B did not execute. Freeze one fixed contended
-  `ExecutionGraph`, run that same graph through the timing-neutral bypass
-  authority and the composed native authority, and register the signed JCT,
-  TTFT and TPOT change before execution. Both modes must use identical
-  semantic inputs and the deployed `ExecutionResult -> StepResult` reduction;
-  the bypass side must not synthesize StepResult tuples or request summaries
-  from a scalar JCT. Preserve the accepted bypass artifacts exactly, prove the
-  structural session remains the sole WQE authority when selected, and include
-  transactional failure in the registered live harness rather than relying
-  only on the existing unit test.
 - CORE-24 (Completeness; P1; M): add a strict, versioned full `StepResult` wire
   codec for BRIDGE-2. The existing `atlahs-closed-loop-result-v1` name has no
   reader or writer and predates CORE-5 attribution. The new canonical form

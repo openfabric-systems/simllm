@@ -218,8 +218,8 @@ owns removal of this compatibility-domain restriction.
 This first slice is observability only. It does not create a runtime authority,
 emit a `CompletionEvent`, change a `StepResult`, or model communication time.
 It therefore makes no TTFT or TPOT claim. VLLM-19, VLLM-20, and VLLM-21 own
-the explicit residuals; CORE-4 and CORE-5 must land before runtime projection
-or timing work begins.
+the explicit residuals. CORE-4 and CORE-5 have landed, so runtime projection
+is unblocked and is VLLM-19's remaining work.
 
 Placement capture (`simllm/adapters/vllm/worker_ext.py`), used on *real* runs:
 
@@ -409,7 +409,8 @@ omit the optional field; v1 readers and that compatibility path are unchanged.
   prefixes longer than one KV block (the 2026-08-04 smoke's shared prefix
   was shorter than the 16-token block, so hits were legitimately zero), and
   preemption behavior under KV pressure. Run only after the calibrated
-  compute table and CORE-3/4/5 are ready. Use the identical vLLM commit,
+  compute table and CORE-3 are ready, since CORE-4 and CORE-5 have landed.
+  Use the identical vLLM commit,
   model, parallel configuration, request trace, seed and warm-up policy in
   simulation and silicon. Stage the comparison as single-GPU compute,
   eight-GPU intra-node, two-node rail-RNIC, offered-load sweep, KV pressure,
@@ -485,15 +486,10 @@ omit the optional field; v1 readers and that compatibility path are unchanged.
   omitted or inert unless a supported study opts into them. SGL-11 remains the
   untouched SGLang half and should reuse this torch-optional shape/event base.
   This ID explicitly excludes runtime projection and every timing claim:
-  VLLM-19, VLLM-20, and VLLM-21 own those residuals, and CORE-4/5 gate live
-  projection.
-- VLLM-15 (Precision; P1; S): populate `StepRecord.num_sampled` from the
-  translator's existing exact `produces_token` flags. Cover mid-prompt and
-  prompt-completing chunked prefill, prefix-cache completion, decode and the
-  attach-mid-flight fallback. The emitted count must equal the fabricated
-  `ModelRunnerOutput` rows that actually sample; an absent field remains the
-  explicit compatibility path.
-- VLLM-19 (Completeness; P1; L): after CORE-4 and CORE-5 land, project each
+  VLLM-19, VLLM-20, and VLLM-21 own those residuals on the landed CORE-4 and
+  CORE-5 runtime and reduction path.
+- VLLM-19 (Completeness; P1; L): now that CORE-4 and CORE-5 have landed,
+  project each
   coordinator `CollectiveWork` through the single runtime authority into
   `CompletionEvent`, `StepResult`, and TTFT/TPOT. The current component event is
   not metric-live and must not be timed in parallel with another authority.
