@@ -149,6 +149,7 @@ This is component evidence. It creates no htsim composition,
 `CompletionEvent`, `StepResult`, TTFT or TPOT claim. HTSIM-9 is the successor
 for native RNIC to packet-simulator composition. BACK-27 is the wave-4
 successor that submits GPU producer and CQ-owner work through the concurrent
-compute service. BACK-28 owns strict Python ingestion of native effective-
-hardware v2 and v3. BACK-11 retains QP lifecycle, pairing and cache residency.
+compute service. BACK-28 later closed strict Python ingestion of native
+effective-hardware v2 and v3. BACK-11 retains QP lifecycle, pairing and cache
+residency.
 No backend submodule, `README.md` or `docs/README_PRO.md` was changed.
