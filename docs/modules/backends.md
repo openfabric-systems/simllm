@@ -71,8 +71,9 @@ backend submodules.
   `prepare` copies and lowers the records serially, then a persistent local
   thread pool pipelines `txt2bin` and the unchanged isolated one-GOAL
   `htsim_rnic` invocations. Results remain unpublished until the complete
-  batch succeeds and are served only for byte-equal records in their original
-  order. The pool can serve another batch after the first is fully consumed.
+  batch succeeds and are served only for dataclass value-equal records in
+  their original order. The pool can serve another batch after the first is
+  fully consumed.
   This preserves the diagnostic path's per-step reset semantics; it does not
   claim a stateful online backend session. BRIDGE-2, CORE-24 and HTSIM-18 own
   that later transport.
@@ -800,7 +801,12 @@ is difficult.
   packet-issue evidence.
 - HTSIM-18 (Completeness; P1; L): add a genuinely persistent, opt-in
   stdin/stdout session to the composed `htsim_rnic` binary. The existing
-  one-GOAL CLI remains the exact off path. A proposed
+  one-GOAL CLI remains the exact off path. BRIDGE-1 calibration measured
+  7.252 seconds per isolated simulator invocation and 0.011 seconds for
+  `txt2bin`. Its prepared sink overlaps finite replays, but `prepare` requires
+  every record before consumption, so each live closed-loop step still pays
+  the full serial invocation. This P1 session removes that per-step process
+  boundary while retaining simulator state across steps. A proposed
   `simllm-htsim-flow-session-v1` uses a 32-bit big-endian byte length followed
   by one canonical JSON object per frame. `open` carries session ID, profile,
   topology identity, link rate, seed, effective-hardware hash and sole WQE

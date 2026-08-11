@@ -130,3 +130,40 @@ The remaining work is explicit:
 No backend source was changed, no physical profile was reinterpreted, no
 tracked raw output was added, and no BRIDGE-3 task was created because there is
 no fourth distinct deferred scope.
+
+## Post-specified independent-review notes
+
+These notes were added after the frozen study and independent review. They do
+not amend the registered expectations or the scored relations.
+
+Baseline variance was not estimated in the original headline. Each fixture's
+headline speedups divide by one diagnostic observation (`n = 1`), reused for
+both worker rows. Across the three measurement occasions, the vLLM diagnostic
+was 60.338482 seconds in calibration, 61.301904 seconds in the disclosed
+replication and 68.868529 seconds in the official run. The SGLang diagnostic
+was 72.218455 seconds in the replication and 76.716722 seconds in the official
+run. Machine load was not monitored. The observed spread supports treating the
+point speedups as having roughly plus or minus 15 percent uncertainty, not as
+precise estimates. Every same-fixture pairing of an observed diagnostic
+baseline with any observed prepared measurement still exceeds the registered
+1.5x and 2.0x lower bounds, and every observation remains within its registered
+wall-clock band, so the pass conclusion survives the spread.
+
+The eight-worker asymmetry follows from replay length. vLLM has eight records
+and fits one scheduling wave, while SGLang has nine records, so eight workers
+require `ceil(9 / 8) = 2` waves and one simulator invocation runs in the second
+wave.
+
+The review also demonstrated that interpreter SIGTERM can orphan one in-flight
+diagnostic `htsim_rnic` child or as many as `max_workers` prepared children.
+The launcher has no child process group, Linux parent-death signal or parent
+signal-and-reap handler, and its 600-second timeout dies with the parent. This
+defect predates BRIDGE-1 in the diagnostic path, but the pool widens its maximum
+fan-out. The preceding claim that no BRIDGE-3 task was needed is therefore
+superseded. BRIDGE-3 `(Completeness; P0; M)` now owns the acceptance criterion
+"no orphan htsim processes after a killed run" for both invocation modes.
+This round registers the defect instead of changing the sink because portable
+child ownership and reaping are shared process-lifecycle behavior across both
+modes and require explicit supported-platform supervision. No sink code was
+changed, so the frozen 34/34 byte-identity family was not rerun in this
+documentation-only correction.

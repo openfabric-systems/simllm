@@ -570,7 +570,12 @@ does not claim to produce these resource-contention measurements.
   empty, prefill, decode and mixed-request results.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client after HTSIM-18 supplies its persistent flow session and CORE-24
-  supplies the full result codec. A proposed
+  supplies the full result codec. BRIDGE-1 calibration measured 7.252 seconds
+  per isolated simulator invocation and 0.011 seconds for `txt2bin`. The
+  prepared sink overlaps this cost only when all records are available to
+  `prepare` up front, so a live closed-loop step still pays the full serial
+  invocation. This P1 client and HTSIM-18 must remove that per-step boundary.
+  A proposed
   `simllm-cosim-session-v1` uses the same length-prefixed canonical JSON frame
   rule as HTSIM-18. Handshake frames select the exact backend session and
   authority. Each input frame carries a contiguous sequence, canonical
@@ -583,3 +588,16 @@ does not claim to produce these resource-contention measurements.
   timestamp regression before publishing a result. The explicit diagnostic
   and BRIDGE-1 prepared modes remain the identity off paths and must preserve
   every accepted byte and timestamp when the online session is disabled.
+- BRIDGE-3 (Completeness; P0; M): bind every simulator child lifetime to its
+  owning SimLLM run. A demonstrated interpreter SIGTERM leaves as many as one
+  diagnostic child or `max_workers` prepared `htsim_rnic` children orphaned:
+  invocation uses no child process group, Linux parent-death signal or parent
+  signal-and-reap handler, and the parent-owned 600-second timeout disappears
+  with the interpreter. The acceptance criterion is "no orphan htsim
+  processes after a killed run". Kill diagnostic and prepared runs while
+  native children are in flight, then prove after a bounded poll that no
+  targeted descendant remains orphaned or zombie. Preserve normal diagnostic
+  output byte for byte and the complete prepared identity family, make timeout
+  and normal-shutdown cleanup idempotent, avoid signaling unrelated processes,
+  and document the supported-platform process-group, parent-death or Job
+  Object strategy.
