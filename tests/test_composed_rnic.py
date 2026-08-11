@@ -18,6 +18,7 @@ from examples.rnic_live_v1.tier_b_producer import (
     _graph,
     _profile,
     _run_structural_cell,
+    _write_bypass_topology,
 )
 from simllm.backends.composed_rnic import (
     ComposedRnicCell,
@@ -158,3 +159,13 @@ def test_composed_projection_transaction_aborts_without_consuming_native_evidenc
     assert [visit.stage for visit in runtime.last_report.visits].count(
         "native_network"
     ) == 2
+
+
+def test_bypass_topology_retains_the_tiny_shape_at_the_frozen_link_rate(tmp_path):
+    topology = _write_bypass_topology(tmp_path)
+    text = topology.read_text(encoding="utf-8")
+
+    assert topology.name == "leaf_spine_tiny_400g.topo"
+    assert text.count("Downlink_speed_Gbps 400") == 2
+    assert "Downlink_speed_Gbps 100" not in text
+    assert "Nodes 32" in text

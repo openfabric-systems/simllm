@@ -38,6 +38,16 @@ FROZEN_SIMLLM_BASE = "fc282efc91573638de7dcfae2befee1cf022011b"
 T0 = 7_000
 REQUEST_ID = "tier-b-request"
 BYPASS_PROFILES = ("rnic-nn-fluid", "rnic-nn", "rnic-cn", "dcqcn")
+TRACKED_BYPASS_TOPOLOGY = (
+    REPO_ROOT
+    / "third_party"
+    / "htsim"
+    / "htsim"
+    / "sim"
+    / "datacenter"
+    / "topologies"
+    / "leaf_spine_tiny.topo"
+)
 
 
 def _required_path(name: str) -> Path:
@@ -370,6 +380,17 @@ def _goal_text() -> str:
     return "num_ranks 32\n\n" + "\n\n".join(ranks) + "\n"
 
 
+def _write_bypass_topology(temp_root: Path) -> Path:
+    source = TRACKED_BYPASS_TOPOLOGY.resolve(strict=True).read_text(encoding="utf-8")
+    speed_line = "Downlink_speed_Gbps 100"
+    if source.count(speed_line) != 2:
+        raise RuntimeError("tracked tiny topology no longer has two equal 100G tiers")
+    configured = source.replace(speed_line, "Downlink_speed_Gbps 400")
+    topology = temp_root / "leaf_spine_tiny_400g.topo"
+    topology.write_text(configured, encoding="utf-8", newline="\n")
+    return topology
+
+
 def _canonical_rows(run: RnicRunResult) -> list[list[Any]]:
     rows = [
         [
@@ -438,7 +459,7 @@ def _run_bypass_profile(
             "-goal",
             "fixture.bin",
             "-topology",
-            "leaf_spine_tiny.topo",
+            "leaf_spine_tiny_400g.topo",
             "-link_bps",
             "400000000000",
             "-completion_csv",
@@ -494,16 +515,7 @@ def _bypass_rows(temp_root: Path) -> list[dict[str, Any]]:
     candidate_rnic = _required_path("SIMLLM_TIER_B_BYPASS_RNIC")
     candidate_dcqcn = _required_path("SIMLLM_TIER_B_BYPASS_DCQCN")
     txt2bin = _required_path("SIMLLM_TXT2BIN")
-    topology = (
-        REPO_ROOT
-        / "third_party"
-        / "htsim"
-        / "htsim"
-        / "sim"
-        / "datacenter"
-        / "topologies"
-        / "leaf_spine_tiny.topo"
-    ).resolve(strict=True)
+    topology = _write_bypass_topology(temp_root)
     goal_text = _goal_text()
     goal_path = temp_root / "fixture.goal"
     goal_path.write_text(goal_text, encoding="utf-8", newline="\n")
