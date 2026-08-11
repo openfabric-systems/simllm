@@ -23,6 +23,12 @@ FREEZE_COMMIT = "2bd61cdfe7b6d545c05ea17db6894bb50eb14735"
 TIER_A_ACCEPTANCE = Path(__file__).with_name("tier_a_acceptance.py")
 TIER_B_LAUNCHER = Path(__file__).with_name("tier_b_producer_launcher.sh")
 TIER_C_LAUNCHER = Path(__file__).with_name("tier_c_producer_launcher.sh")
+ACCEPTED_TIER_B_BINARY_SHA256 = {
+    "reference_rnic": "b156414b758fa54eb74251ce5aa02adf4c5d80ef5555cf3945b2c5e40322beeb",
+    "candidate_rnic": "aeb2ce155ed69d8cd697a31eb28e8eed6455ce3f69c5d024e64e546ebc579c9e",
+    "reference_dcqcn": "e1f215575d30ddd6df8f8bf5525d5462bd2ae6588f8de4b67f91cc6de83e06b4",
+    "candidate_dcqcn": "c62f751fd2ad5109cd5238cf02cba0e284f0949d14cfb9008d03423f9446b649",
+}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -45,6 +51,16 @@ def _revision(source: Path) -> str:
 
 def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _required_environment_path(name: str) -> Path:
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        raise RuntimeError(f"{name} must name the accepted Tier B executable")
+    path = Path(raw.strip())
+    if not path.is_absolute():
+        raise ValueError(f"{name} must be an absolute path")
+    return path.resolve(strict=True)
 
 
 def _wave5_root() -> Path:
@@ -279,8 +295,8 @@ def _environment(values: dict[str, str]):
 def _binary_environment(
     *,
     tier_a_producer: Path,
-    rnic: Path,
-    dcqcn: Path,
+    bypass_rnic: Path,
+    bypass_dcqcn: Path,
     txt2bin: Path,
     reference_rnic: Path,
     reference_dcqcn: Path,
@@ -288,11 +304,11 @@ def _binary_environment(
 ) -> dict[str, str]:
     return {
         "SIMLLM_RNIC_TIER_A_PRODUCER": str(tier_a_producer),
-        "SIMLLM_HTSIM_RNIC": str(rnic),
+        "SIMLLM_HTSIM_RNIC": str(bypass_rnic),
         "SIMLLM_TIER_B_REFERENCE_RNIC": str(reference_rnic),
         "SIMLLM_TIER_B_REFERENCE_DCQCN": str(reference_dcqcn),
-        "SIMLLM_TIER_B_BYPASS_RNIC": str(rnic),
-        "SIMLLM_TIER_B_BYPASS_DCQCN": str(dcqcn),
+        "SIMLLM_TIER_B_BYPASS_RNIC": str(bypass_rnic),
+        "SIMLLM_TIER_B_BYPASS_DCQCN": str(bypass_dcqcn),
         "SIMLLM_TIER_B_BYPASS_TOPOLOGY": str(bypass_topology),
         "SIMLLM_TXT2BIN": str(txt2bin),
     }
@@ -368,6 +384,18 @@ def _run(
     for reference in (reference_rnic, reference_dcqcn):
         if not reference.is_file():
             raise FileNotFoundError(f"Tier C reference binary is absent: {reference}")
+    bypass_rnic = _required_environment_path("SIMLLM_TIER_B_BYPASS_RNIC")
+    bypass_dcqcn = _required_environment_path("SIMLLM_TIER_B_BYPASS_DCQCN")
+    bypass_binary_sha256 = {
+        "reference_rnic": _digest(reference_rnic),
+        "candidate_rnic": _digest(bypass_rnic),
+        "reference_dcqcn": _digest(reference_dcqcn),
+        "candidate_dcqcn": _digest(bypass_dcqcn),
+    }
+    if bypass_binary_sha256 != ACCEPTED_TIER_B_BINARY_SHA256:
+        raise AssertionError(
+            f"accepted Tier B binary provenance changed: {bypass_binary_sha256}"
+        )
 
     python_gates = {
         "ruff": _python_gate([str(REPO_ROOT / ".venv" / "bin" / "ruff"), "check", "."]),
@@ -379,17 +407,11 @@ def _run(
     native = _build_native_suites(htsim_source, out)
     htsim_build = native["htsim_build"]
     tier_a_producer = _executable(htsim_build, "htsim_rnic_tier_a")
-    rnic = _executable(htsim_build, "datacenter/htsim_rnic", "htsim_rnic")
-    dcqcn = _executable(
-        htsim_build,
-        "datacenter/htsim_dcqcn_atlahs",
-        "htsim_dcqcn_atlahs",
-    )
     txt2bin = _executable(htsim_build, "txt2bin")
     environment = _binary_environment(
         tier_a_producer=tier_a_producer,
-        rnic=rnic,
-        dcqcn=dcqcn,
+        bypass_rnic=bypass_rnic,
+        bypass_dcqcn=bypass_dcqcn,
         txt2bin=txt2bin,
         reference_rnic=reference_rnic,
         reference_dcqcn=reference_dcqcn,
@@ -433,6 +455,7 @@ def _run(
         },
         "abi_v1_artifact_identity": {
             "classification": "fatal_unscored_off_path",
+            "accepted_bypass_binary_sha256": bypass_binary_sha256,
             "actual_sha256": actual_digests,
             "expected_sha256": expected_digests,
             "passed": True,
