@@ -62,10 +62,20 @@ backend submodules.
   A step with no TP collectives (TP world of 1, or a zero-token drain
   record) returns `None`, so the adapter's own compute-only estimate
   stands. Per-step subprocess invocation is the documented diagnostic
-  mode; the persistent co-simulator is BRIDGE-1 (core.md).
+  mode and remains the default.
   `StepNetworkOutcome` keeps per-step bookkeeping (compute estimate, sample
   count and exactness, ordered layer calcs, makespan and network share) for
   reporting.
+- `HtsimPersistentStepSink` (BRIDGE-1): the opt-in prepared-replay form of
+  the same sink for a finite record sequence known before consumption.
+  `prepare` copies and lowers the records serially, then a persistent local
+  thread pool pipelines `txt2bin` and the unchanged isolated one-GOAL
+  `htsim_rnic` invocations. Results remain unpublished until the complete
+  batch succeeds and are served only for byte-equal records in their original
+  order. The pool can serve another batch after the first is fully consumed.
+  This preserves the diagnostic path's per-step reset semantics; it does not
+  claim a stateful online backend session. BRIDGE-2, CORE-24 and HTSIM-18 own
+  that later transport.
 - `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
   from a `StepRecord` to per-layer compute plus semantic TP/EP collective
   operations. Explicit framework observations bypass the fallback schedule and
@@ -779,6 +789,27 @@ is difficult.
   issue populate the native timeline, and the Tier B live-reachability run
   through CORE-15's chain. The entry closes when Tier B passes with
   packet-issue evidence.
+- HTSIM-18 (Completeness; P1; L): add a genuinely persistent, opt-in
+  stdin/stdout session to the composed `htsim_rnic` binary. The existing
+  one-GOAL CLI remains the exact off path. A proposed
+  `simllm-htsim-flow-session-v1` uses a 32-bit big-endian byte length followed
+  by one canonical JSON object per frame. `open` carries session ID, profile,
+  topology identity, link rate, seed, effective-hardware hash and sole WQE
+  authority, then returns the accepted configuration and sequence zero.
+  `inject` carries a contiguous sequence, execution/operation/flow identity,
+  source, destination, tag, payload bytes, logical eligibility time and policy
+  context. `advance` names the causal boundary that may run; the server emits
+  ordered accepted, queued, started and completed flow projections with native
+  WQE aliases and timestamps. `drain` returns the last accepted sequence,
+  completion rows, authority counters and a quiescence proof; `close` is legal
+  only after drain. Duplicate, skipped, stale or post-terminal sequences fail
+  before authority mutation, and a disconnected client cannot silently commit
+  a partial frame. The event list, topology, native RNIC session and transport
+  policy state live from `open` through `close`, so later steps observe earlier
+  state. Acceptance compares one-step session output byte for byte with the
+  CLI off path, then uses two steps to prove state retention and exact
+  completion/bookkeeping conservation. BRIDGE-2 owns the SimLLM client and
+  graph-level framing above this flow protocol.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.

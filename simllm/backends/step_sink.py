@@ -11,12 +11,14 @@ simulated makespan as the step latency. Plugged into
 the network's completion time advances the virtual clock the frontend
 scheduler sees.
 
-Per-step subprocess invocation is the documented *diagnostic* mode of the
-closed loop (docs/modules/core.md): every step pays a process spawn and a
-full GOAL parse, which is fine for validation runs of tens of steps. The
-persistent co-simulator that amortizes this is BRIDGE-1 and needs the
-incremental flow-injection mode on the htsim side; this module deliberately
-does not attempt it.
+Per-step subprocess invocation remains the documented *diagnostic* mode and
+the default. :class:`HtsimPersistentStepSink` is the opt-in acceleration for a
+finite replay whose records are known before the scheduler consumes them. It
+keeps a local worker pool alive, prepares isolated diagnostic runs
+concurrently, then serves their exact results in record order. The pinned
+backend still accepts only one GOAL per process, so this mode deliberately
+preserves per-step reset semantics. A stateful online simulator session needs
+the separate backend protocol tracked as HTSIM-18.
 
 A step with no collective work returns ``None``: the TP world has size 1
 (or the dims declare no experts, or no EP group is configured) and the
@@ -38,9 +40,14 @@ approximation.
 
 from __future__ import annotations
 
+import copy
+from collections import deque
 from collections.abc import Sequence
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
+from threading import Lock
+from typing import Self
 
 from simllm.backends.htsim_rnic import RNIC_PROFILES, HtsimRnicConfig, run_htsim_rnic
 from simllm.compute import (
@@ -148,6 +155,42 @@ class StepNetworkOutcome:
         return 1.0 - calc_ps / self.makespan_ps
 
 
+@dataclass(frozen=True)
+class _PlannedStep:
+    """Immutable handoff from serial record lowering to one backend worker."""
+
+    step_index: int
+    virtual_time_ps: int
+    goal_path: Path
+    completion_csv: Path
+    compute_estimate_ps: int
+    num_sampled: int
+    sample_count_exact: bool
+    per_layer_calc_ns: int | None
+    layer_calc_ns: tuple[int, ...]
+    routing_mode: str
+    placement_epoch: int | None
+    profile: str
+    linkspeed_bps: int
+    topology: Path | None
+
+
+@dataclass(frozen=True)
+class _SimulatedStep:
+    """One unpublished result, safe to retain until its record is consumed."""
+
+    result: StepResult | None
+    outcome: StepNetworkOutcome | None
+
+
+@dataclass(frozen=True)
+class _PreparedStep:
+    """A copied input record joined to its unpublished simulation result."""
+
+    record: StepRecord
+    simulation: _SimulatedStep
+
+
 class HtsimStepSink:
     """Step sink that simulates each step's TP traffic on ``htsim_rnic``."""
 
@@ -210,7 +253,9 @@ class HtsimStepSink:
             previous_boundary_ns = boundary_ns
         return tuple(layer_calc_ns)
 
-    def __call__(self, record: StepRecord) -> StepResult | None:
+    def _plan_step(self, record: StepRecord) -> _PlannedStep | None:
+        """Lower and render one record without invoking either native tool."""
+
         cfg = self.config
         tp_ops = step_tp_allreduces(record, cfg.dims, cfg.tp_ranks)
         moe_ops = step_moe_alltoalls(
@@ -253,36 +298,191 @@ class HtsimStepSink:
             base_tag=cfg.base_tag,
         )
         name = f"step-{record.step_index:06d}"
-        goal_bin = to_binary(trace.write(cfg.workdir / f"{name}.goal"))
+        goal_path = trace.write(cfg.workdir / f"{name}.goal")
+        return _PlannedStep(
+            step_index=record.step_index,
+            virtual_time_ps=record.virtual_time_ps,
+            goal_path=goal_path,
+            completion_csv=cfg.workdir / f"{name}.{cfg.profile}.csv",
+            compute_estimate_ps=estimate_ps,
+            num_sampled=self._num_sampled(record),
+            sample_count_exact=record.num_sampled is not None,
+            per_layer_calc_ns=per_layer_calc_ns,
+            layer_calc_ns=layer_calc_ns,
+            routing_mode=routing_mode,
+            placement_epoch=(
+                moe_ops[0].placement_epoch if routing_mode == "captured" else None
+            ),
+            profile=cfg.profile,
+            linkspeed_bps=cfg.linkspeed_bps,
+            topology=cfg.topology,
+        )
+
+    @staticmethod
+    def _execute_plan(plan: _PlannedStep) -> _SimulatedStep:
+        """Compile and execute one plan using the accepted diagnostic path."""
+
+        goal_bin = to_binary(plan.goal_path)
         run = run_htsim_rnic(
             HtsimRnicConfig(
                 goal_bin=goal_bin,
-                profile=cfg.profile,
-                linkspeed_bps=cfg.linkspeed_bps,
-                completion_csv=cfg.workdir / f"{name}.{cfg.profile}.csv",
-                topology=cfg.topology,
+                profile=plan.profile,
+                linkspeed_bps=plan.linkspeed_bps,
+                completion_csv=plan.completion_csv,
+                topology=plan.topology,
             )
         )
         makespan_ps = run.job_completion_time_ps()
-        self.outcomes.append(
-            StepNetworkOutcome(
-                step_index=record.step_index,
-                compute_estimate_ps=estimate_ps,
-                num_sampled=self._num_sampled(record),
-                sample_count_exact=record.num_sampled is not None,
-                per_layer_calc_ns=per_layer_calc_ns,
-                layer_calc_ns=layer_calc_ns,
-                makespan_ps=makespan_ps,
-                num_flows=len(run.flows),
-                quiescent=run.quiescent,
-                routing_mode=routing_mode,
-                placement_epoch=(
-                    moe_ops[0].placement_epoch if routing_mode == "captured" else None
-                ),
-            )
+        outcome = StepNetworkOutcome(
+            step_index=plan.step_index,
+            compute_estimate_ps=plan.compute_estimate_ps,
+            num_sampled=plan.num_sampled,
+            sample_count_exact=plan.sample_count_exact,
+            per_layer_calc_ns=plan.per_layer_calc_ns,
+            layer_calc_ns=plan.layer_calc_ns,
+            makespan_ps=makespan_ps,
+            num_flows=len(run.flows),
+            quiescent=run.quiescent,
+            routing_mode=plan.routing_mode,
+            placement_epoch=plan.placement_epoch,
         )
-        return StepResult(
-            step_index=record.step_index,
+        result = StepResult(
+            step_index=plan.step_index,
             step_latency_ps=makespan_ps,
-            completed_at_ps=record.virtual_time_ps + makespan_ps,
+            completed_at_ps=plan.virtual_time_ps + makespan_ps,
         )
+        return _SimulatedStep(result=result, outcome=outcome)
+
+    def _simulate_step(self, record: StepRecord) -> _SimulatedStep:
+        plan = self._plan_step(record)
+        if plan is None:
+            return _SimulatedStep(result=None, outcome=None)
+        return self._execute_plan(plan)
+
+    def _publish(self, simulation: _SimulatedStep) -> StepResult | None:
+        if simulation.outcome is not None:
+            self.outcomes.append(simulation.outcome)
+        return simulation.result
+
+    def __call__(self, record: StepRecord) -> StepResult | None:
+        return self._publish(self._simulate_step(record))
+
+
+class HtsimPersistentStepSink(HtsimStepSink):
+    """Opt-in prepared replay using a persistent local worker pool.
+
+    ``prepare`` copies and lowers a finite record sequence before the scheduler
+    consumes it. Native compilation and the unchanged one-GOAL simulator path
+    then run concurrently. Calls must replay the prepared values in exact
+    order; no prediction, fallback, or record substitution is permitted.
+
+    The executor survives across fully consumed batches until ``close``. Use a
+    context manager when possible so worker shutdown belongs to the timed
+    end-to-end boundary.
+    """
+
+    def __init__(self, config: HtsimStepSinkConfig, *, max_workers: int) -> None:
+        super().__init__(config)
+        if isinstance(max_workers, bool) or not isinstance(max_workers, int):
+            raise TypeError("max_workers must be an integer")
+        if max_workers <= 0:
+            raise ValueError("max_workers must be positive")
+        self.max_workers = max_workers
+        self._executor = ThreadPoolExecutor(
+            max_workers=max_workers,
+            thread_name_prefix="simllm-htsim",
+        )
+        self._prepared: deque[_PreparedStep] = deque()
+        self._state_lock = Lock()
+        self._preparing = False
+        self._closed = False
+
+    @property
+    def prepared_steps_remaining(self) -> int:
+        with self._state_lock:
+            return len(self._prepared)
+
+    def prepare(self, records: Sequence[StepRecord]) -> None:
+        """Prepare one finite replay atomically from the caller's perspective."""
+
+        copied_records = tuple(copy.deepcopy(record) for record in records)
+        if not copied_records:
+            raise ValueError("records must not be empty")
+        if any(not isinstance(record, StepRecord) for record in copied_records):
+            raise TypeError("records must contain StepRecord values")
+        step_indices = [record.step_index for record in copied_records]
+        if len(step_indices) != len(set(step_indices)):
+            raise ValueError("prepared records must have unique step indices")
+
+        with self._state_lock:
+            if self._closed:
+                raise RuntimeError("persistent step sink is closed")
+            if self._preparing:
+                raise RuntimeError("a preparation is already in progress")
+            if self._prepared:
+                raise RuntimeError("consume the prepared replay before preparing another")
+            self._preparing = True
+
+        futures: list[Future[_SimulatedStep] | None] = []
+        try:
+            plans = tuple(self._plan_step(record) for record in copied_records)
+            futures = [
+                self._executor.submit(self._execute_plan, plan)
+                if plan is not None
+                else None
+                for plan in plans
+            ]
+            wait(tuple(future for future in futures if future is not None))
+            simulations = tuple(
+                future.result()
+                if future is not None
+                else _SimulatedStep(result=None, outcome=None)
+                for future in futures
+            )
+        except BaseException:
+            submitted = tuple(future for future in futures if future is not None)
+            for future in submitted:
+                future.cancel()
+            wait(submitted)
+            with self._state_lock:
+                self._preparing = False
+            raise
+
+        prepared = deque(
+            _PreparedStep(record, simulation)
+            for record, simulation in zip(copied_records, simulations, strict=True)
+        )
+        with self._state_lock:
+            self._prepared = prepared
+            self._preparing = False
+
+    def __call__(self, record: StepRecord) -> StepResult | None:
+        with self._state_lock:
+            if self._preparing:
+                raise RuntimeError("prepared results are not available yet")
+            if not self._prepared:
+                raise RuntimeError("prepare records before calling the persistent sink")
+            prepared = self._prepared[0]
+            if record != prepared.record:
+                raise ValueError(
+                    "record does not match the next prepared step "
+                    f"{prepared.record.step_index}"
+                )
+            self._prepared.popleft()
+            return self._publish(prepared.simulation)
+
+    def close(self) -> None:
+        with self._state_lock:
+            if self._closed:
+                return
+            self._closed = True
+        self._executor.shutdown(wait=True, cancel_futures=False)
+
+    def __enter__(self) -> Self:
+        with self._state_lock:
+            if self._closed:
+                raise RuntimeError("persistent step sink is closed")
+        return self
+
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
+        self.close()

@@ -549,9 +549,33 @@ does not claim to produce these resource-contention measurements.
   completed-prefill and decode batch, match the framework's actual token
   production mask request by request, and preserve zero-sample, all-sample and
   legacy wire behavior exactly.
-- BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
-  process for closed loop, replacing per-step subprocess spawns. Its
-  incremental flow-injection transport should carry `ExecutionGraph` and
-  the landed CORE-5 `CompletionEvent`, `ExecutionResult`, `StepResult` and
-  bookkeeping projections. The M4 diagnostic mode currently pays
-  about 8 seconds of process/parse overhead per live tp=8 step.
+- CORE-24 (Completeness; P1; M): add a strict, versioned full `StepResult` wire
+  codec for BRIDGE-2. The existing `atlahs-closed-loop-result-v1` name has no
+  reader or writer and predates CORE-5 attribution. The new canonical form
+  must carry step identity and boundaries, every `RequestMetric`, exact
+  rational TPOT, the conserved `LatencyAttribution` partition and separately
+  typed `AdditiveVisitTotals`. Preserve a strict reader for any accepted
+  legacy result form and prove in-memory to wire to in-memory identity for
+  empty, prefill, decode and mixed-request results.
+- BRIDGE-1 (Completeness; P1; M): validate the implemented opt-in prepared
+  co-simulator for finite replays against the frozen BRIDGE-1 study. The
+  persistent local worker pool pipelines unchanged isolated diagnostic runs,
+  publishes only an atomically completed batch and serves results in exact
+  record order. Close this entry only when both recorded M4 TP 8 replays match
+  every diagnostic step and artifact byte for byte and satisfy all registered
+  four-worker and eight-worker wall-clock bands and speedup factors.
+- BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
+  client after HTSIM-18 supplies its persistent flow session and CORE-24
+  supplies the full result codec. A proposed
+  `simllm-cosim-session-v1` uses the same length-prefixed canonical JSON frame
+  rule as HTSIM-18. Handshake frames select the exact backend session and
+  authority. Each input frame carries a contiguous sequence, canonical
+  `ExecutionGraph`, source `StepRecord` and starting bookkeeping cursor.
+  Output event frames carry canonical `CompletionEvent` values and the exact
+  append batch of object, stage and completion facts; the terminal frame
+  carries `ExecutionResult`, full `StepResult`, ending ledger cursor and
+  physical quiescence separately from framework completion. Reject loss,
+  duplication, cursor disagreement, graph/event identity disagreement and
+  timestamp regression before publishing a result. The explicit diagnostic
+  and BRIDGE-1 prepared modes remain the identity off paths and must preserve
+  every accepted byte and timestamp when the online session is disabled.
