@@ -539,7 +539,7 @@ class NativeRnicTransaction(Protocol):
 
 @runtime_checkable
 class NativeRnicSession(Protocol):
-    """Structural session seam that HTSIM-9 will connect to the native RNIC."""
+    """Structural session seam used by the HTSIM-9 composed native RNIC."""
 
     @property
     def authority_name(self) -> str:

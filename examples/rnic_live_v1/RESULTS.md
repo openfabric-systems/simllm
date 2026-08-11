@@ -1,5 +1,11 @@
 # Live RNIC composition: Tier A results
 
+Current disposition, 2026-08-11: this file is chronological. Statements in
+the Tier A and Tier B sections that HTSIM-9 remained open describe those
+earlier checkpoints. The Tier C section below records the later ABI-v2 packet
+chain evidence and the HTSIM-19 off-path blocker. HTSIM-9 is still open because
+no single qualifying current-pin outer run passed every frozen gate.
+
 ## Claim scope
 
 This report claims TIER A of the frozen two-tier gate and nothing more.
@@ -259,3 +265,144 @@ byte for byte at
 The stricter fatal-boolean provenance changed how the booleans are derived but
 did not change their serialized shape or values, so no result hash change
 occurred.
+
+## Tier C ABI-v2 packet-chain run and HTSIM-19 blocker
+
+### Frozen scope and chronology
+
+The additive Tier C expectations were frozen at
+`2bd61cdfe7b6d545c05ea17db6894bb50eb14735`, before the producer, checker or
+result-producing run. The machine-readable expectations SHA-256 is
+`c2d8ffcf36c54c9ac5ddf2b89e1cf57317ede5031baf3afd05f9ef56b5fb1358`.
+The freeze commit records a clean tracked tree and one untracked dry-run
+harness containing only frozen literals and check-only validation. The
+registered check-only command had passed without producing artifacts. The
+audited backend remained
+`4885c647eecdfdf81479d1df052223c016ad086b`.
+
+Implementation `42a4a12e541cab666d996087779e302e278c6c0e` added ABI-v2
+packet parsing and live projection. Three machinery corrections then passed
+the frozen check-only registry without changing its relation set:
+
+- `11f555c919e64a60abb14419db347994bd8c3e75` forwarded the inherited Tier A
+  run-root guard;
+- `51d85e4ff67b307a19872b5af04cbbd85dd5116e` supplied the byte-identical
+  Tier B topology from the audited checkout when private submodules are absent;
+  and
+- `73ffb43ee192126631f0ac80d461a70c0149d8cf` made the path-launched Tier C
+  runner importable.
+
+The first two full attempts stopped before Tier C observations existed, first
+on the missing Tier A run-root handoff and then on the uninitialized private
+submodule topology path. The next current-pin attempt passed every native and
+structural gate but found the ABI-v1 identity defect described below. A later
+attempt reproduced accepted ABI-v1 bytes by substituting the older accepted
+Tier B candidate executables, then reached the Tier C checker after the import
+fix. That binary substitution was chosen after observing the current-pin
+failure. Commit `ee4b85a87da7a197e3d06a11eb5e9b0ceac3b2e8` therefore removed
+it and restored the frozen requirement that Tier B use the RNIC and DCQCN
+executables built from the audited pin. History was not rewritten.
+
+The final registered command at `ee4b85a` used output
+`$SIMLLM_WAVE5_RUN_ROOT/codex/htsim9_packet_closure`. It passed ruff, 685
+pytest tests with 5 skips, all 370 htsim CTest cases and all 6 standalone
+native CTest cases. Tier A reproduced both accepted digests. Tier B then
+failed its fatal off-path gate at bypass identity 2/4, so the outer runner
+published no Tier C observation and no top-level accepted result.
+
+### Current-pin ABI-v1 failure
+
+The current-pin Tier B raw and result digests are respectively
+`d04ff7e6fddb5c35f487b50b5bd0ea61a8265a3a8fe732d5ce9620f85cf6b850`
+and
+`d25cd2876a211a6b4aadd9cc192c5b2e2f9799c4775f481adca87f0db0b1ff36`.
+All structural families retained their full fractions: 4/4 doorbell
+additivity, 4/4 inverse rate, 8/8 live forms, 8/8 component rows and 4/4 FIFO.
+The `rnic-nn-fluid` and DCQCN bypass rows also remained exact. Only `rnic-nn`
+and `rnic-cn` changed their completion CSV and canonical completion rows:
+
+- `rnic-nn` retained FCT 165,120 ps, but WQE/RQ/CQ identity changed from
+  `97/34/65` to `1/0/1`;
+- `rnic-cn` retained FCT 6,161,920 ps and transport object 97, but WQE/RQ/CQ
+  identity changed from `1089/34/65` to `1/0/1`.
+
+The inputs, FCT, scalar-derived StepResult tuples and request summaries were
+unchanged. The repository-standard `BypassArtifacts` comparator rejected the
+two changed behavioral artifact classes. HTSIM-19 owns restoration of this
+current-backend compatibility path.
+
+### Frozen-relation packet diagnostic
+
+The packet mechanism itself reached the live chain in two nonqualifying forms:
+a direct Tier C invocation after the fourth outer attempt had already stopped,
+and a post-specified hybrid outer invocation that used the older accepted Tier
+B candidates. Both used the current `4885c64` composed build for ABI-v2
+production. The hybrid output is retained at
+`$SIMLLM_WAVE5_RUN_ROOT/codex/htsim9_packet_closure-postspecified-hybrid`.
+Its overall, Tier C raw and Tier C result SHA-256 values are respectively
+`ea9125c76855ea8dc1fcf92fc2541689a8089d29e7c1247cc5c24bb2c18c336b`,
+`41138345b6aa306db91dcf929b5bbf9cdbf3a649a36cee2142c4ad755e8eef84`
+and
+`143303bef066172a0964afac0e81b90b49f06f39db87ab82ce2dca2c99efedf8`.
+These are diagnostic evidence against the frozen relations, not an accepted
+closure result.
+
+The diagnostic genuine-risk fractions were:
+
+- doorbell packet-to-live chain: 4/4. In every payload-rate instance and all
+  three request steps, changing native doorbell service from 0 to 1,000 ps
+  moved first packet, last packet, `CompletionEvent.STARTED`, step latency and
+  TTFT by exactly `+1000 ps`; both TPOT values moved by `+1000 ps`, and the
+  absolute step completions moved by `+1000`, `+2000` and `+3000 ps`;
+- link-rate packet-to-live chain: 4/4. Slow-minus-fast first-packet movement
+  was 0 in every instance. At 4 KiB, last-packet movement was 0 and each live
+  metric moved by `+81920 ps`. At 1 MiB, last-packet movement was
+  `+20889600 ps` and each live metric moved by `+20971520 ps`.
+
+The two fractions are overlapping relation families and are not summed into
+an 8/8 independent-risk headline. All 8 single-WQE and 4 FIFO exact rows held.
+The acceptance-surrogate, producer-constant and missing-TX-start mutants were
+all rejected. Packet closed forms, TX-start origin, event projection,
+acceptance and terminal separation, inherited live-chain invariants and the
+ABI-v1 digest checks remained fatal and unscored. In particular, the ABI-v1
+digest check is a run gate, not a behavioral family.
+
+For the 1 MiB, 400 Gbit/s, zero-doorbell cell, network acceptance and first
+packet were both at release offset 0, last packet was at 20,889,600 ps and the
+whole-flow terminal was at 20,971,520 ps. The acceptance-surrogate mutant
+copied acceptance into both packet fields and failed. The explicit TX-start
+origin and closed-form checks also prevent a whole-flow terminal from serving
+as packet issue.
+
+### Entailment analysis
+
+The deployed Tier C checker evaluates both scored families directly against
+raw observations before either the per-cell packet exact oracle or the
+inherited Tier B checker. The explicit-origin guard only requires each cell's
+packet fields to equal the minimum and maximum data or retransmission TX-start
+events for that WQE. It does not fix the cross-cell doorbell or rate movement,
+the `CompletionEvent` projection, or any live request metric. A valid TX stream
+can therefore reach and fail either scored family before an exact oracle pins
+the same quantity. The checker result records
+`scored_evaluation=raw_observations_before_exact_oracles`, with both later
+oracle orders explicit. This is genuine-risk diagnostic evidence. It is not
+promoted to closure because the qualifying outer run never reached it.
+
+### HTSIM-9 acceptance-clause mapping
+
+The registered closure clauses and their dispositions are:
+
+1. "one composed run of the Tier B class passes": not demonstrated. The
+   current-pin outer run stopped at the fatal ABI-v1 Tier B identity gate;
+   the hybrid run used a different Tier B candidate provenance.
+2. "ABI-v2 packet-issue evidence populating the native timeline through
+   `ExecutionGraph` to `CompletionEvent`, `StepResult`, TTFT and TPOT":
+   demonstrated by the frozen-relation diagnostic, but not inside the single
+   qualifying run required by clause 1.
+3. "Network acceptance and whole-flow terminal events do not satisfy that
+   evidence": demonstrated diagnostically by the 1 MiB separation cells, the
+   explicit TX-start origin guard and the rejected acceptance surrogate.
+
+Because clause 1 is unmet and clause 2 is not demonstrated within its required
+run scope, HTSIM-9 does not close. HTSIM-19 `(Precision; P0; M)` is the exact
+residual blocker. No broader packet-chain claim is made.
