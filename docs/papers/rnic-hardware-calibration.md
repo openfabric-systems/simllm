@@ -13,9 +13,12 @@ RNIC hardware and transport/congestion control are independent model axes.
 The structural hardware model is SimLLM-owned C++ under
 `simllm/backends/rnic/`. The target composition links it into the directly
 invoked simulator process so the packet event loop has no Python callback.
-That link is not live today; native tests and probes are component evidence
-only until BACK-8 and HTSIM-9 connect the library to htsim. htsim retains the
-selectable `rnic-nn`, `rnic-cn` and DCQCN policies and the packet fabric.
+That ABI-v1 flow-level link is live for the frozen isolated `rnic_live_v1`
+fixture. Tier A supplies directly invoked composed FCT and JCT evidence, and
+Tier B projects the composed native completion through the runtime into TTFT
+and TPOT. htsim retains the selectable `rnic-nn`, `rnic-cn` and DCQCN policies
+and the packet fabric. Packet-attempt and packet-issue evidence remains with
+BACK-25, BACK-26 and HTSIM-9.
 
 ```text
 ibverbs capture or GOAL lowering
@@ -253,13 +256,13 @@ to the identical `rnic-nn` GOAL where starts are aligned.
 
 1. CORE-8 and CORE-9 establish the queue semantics and the loss-checked public
    projection. The frozen expectations precede those behavioral changes.
-2. BACK-8 supplies the SimLLM session half and HTSIM-9 supplies the combined
-   `AtlahsFlowRuntime` and htsim adapter. Together they establish the C++
-   hardware/policy ABI and prove that all full-RNIC profiles share one hardware
-   configuration. CORE-4 then invokes that composition from `ExecutionGraph`,
-   and CORE-5 reduces its single completion boundary into `ExecutionResult`,
-   `StepResult`, TTFT and TPOT. A native service parameter must traverse that
-   full chain before further native precision work can close.
+2. BACK-8 supplied the SimLLM session half and HTSIM-9 supplied the ABI-v1
+   `AtlahsFlowRuntime` and htsim adapter. The component and two-tier gates
+   establish the C++ hardware/policy ABI, policy-invariant hardware hashes and
+   a live frozen chain from `ExecutionGraph` through `StepResult`, TTFT and
+   TPOT. CORE-21 retains the same-contended-graph authority comparison,
+   BACK-31 retains an executable-level unlinked-native negative control, and
+   HTSIM-9 retains packet-issue evidence after BACK-25 and BACK-26.
 3. BACK-13 and BACK-14 establish the provenance schema and capture path so
    implementation parameters come from evidence rather than retrospective
    fitting. Capture work may proceed in parallel, but it cannot substitute for

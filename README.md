@@ -185,12 +185,13 @@ RNIC hardware and congestion control are separate model axes. A full-RNIC
 comparison holds the hardware profile fixed and swaps only the htsim
 transport/CC policy. The analytical fluid baseline keeps an explicit hardware
 bypass so closed-form validation remains available.
-The native WQ and PCIe slices are currently standalone component models: the
-live packet and TTFT/TPOT path still uses htsim's timing-neutral compatibility
-ledger until BACK-8, BACK-18 and HTSIM-9 link the native hardware session
-into the directly invoked simulator, CORE-4 invokes that composition from
-the execution graph, and CORE-5 reduces its completion into `StepResult` and
-TTFT/TPOT.
+The native WQ and PCIe slices now feed an ABI-v1 composed flow-level path for
+the frozen isolated `rnic_live_v1` fixture. Tier B projects the composed native
+completion through the execution graph, runtime and `StepResult` into TTFT and
+TPOT. BACK-8 and the demonstrated CORE-15 live-seam clauses closed on that
+evidence. CORE-21 retains the same-contended-graph bypass-versus-composed
+comparison, while HTSIM-9 remains open for packet-issue evidence after
+BACK-25 and BACK-26.
 The RNIC device itself is now built from modules behind one construction
 entry point: the work-queue core plus optional DMA (PCIe), QPC (connection
 and context) and network transport modules
@@ -202,10 +203,10 @@ point serves everything from a bare work queue to the full device.
 
 | Model | Status | What it is |
 |---|---|---|
-| RDMA Work Queue | partial, first native slice available ([study](examples/rnic_wq_v1/RESULTS.md), [BACK-8/9](docs/modules/backends.md)) | SimLLM C++ now models one finite SQ/CQ pair, WR-prefix posting, doorbell batches, ordered retirement, signaling, polling, owner wrap, network backpressure and controlled queue failures; RQ/SRQ, shared CQs and mlx5 encoding remain planned |
+| RDMA Work Queue | partial, first native slice live in the frozen composed fixture ([study](examples/rnic_live_v1/RESULTS.md), [BACK-9](docs/modules/backends.md)) | SimLLM C++ now models one finite SQ/CQ pair, WR-prefix posting, doorbell batches, ordered retirement, signaling, polling, owner wrap, network backpressure and controlled queue failures; RQ/SRQ, shared CQs and mlx5 encoding remain planned |
 | PCIe, MMIO and DMA | available, deterministic transaction slice ([study](examples/rnic_pcie_v1/RESULTS.md), [BACK-16/17](docs/modules/backends.md)) | Shared host-store, MWr/MRd/CplD scheduling with finite credits, tags and buffers, class ledgers and analytical path profiles; measured calibration and optional BlueFlame, ATS/ATC and MSI-X remain planned |
 | QP, QPC and context memory | planned ([BACK-11/19](docs/modules/backends.md)) | QP pairing and state transitions plus QPC, MTT/MPT and WQE-cache residency in a measured device-cache and host-ICM hierarchy; connection setup registers the QP context in an explicitly tracked model of host memory |
-| Host and GPU submission | planned ([BACK-20](docs/modules/backends.md)) | Who submits work and consumes completions: a host CPU driver ringing doorbells, a CPU proxy fed from GPU queues, or GPU-initiated rings (the GPU posts its own network work) with a GPU-owned completion queue |
+| Host and GPU submission | producer shapes and GPU task coupling available; GPU CQ consumption remains open ([BACK-37](docs/modules/backends.md)) | Who submits work and consumes completions: a host CPU driver ringing doorbells, a CPU proxy fed from GPU queues, or GPU-initiated rings (the GPU posts its own network work) with a GPU-owned completion queue |
 | TX/RX hardware pipelines | planned ([BACK-12](docs/modules/backends.md)) | Packetization, schedulers, port buffers, ACK/NAK/RNR/retry, CQE completion, PFC gates and location-specific fault injection |
 | CX-7 observable state | planned ([BACK-13/14/15](docs/modules/backends.md)) | Versioned driver-visible registers, counters and traces, verbs capture/replay, and Collie-seeded boundary calibration; undocumented internals stay explicit calibrated abstractions |
 
@@ -213,10 +214,10 @@ point serves everything from a bare work queue to the full device.
 
 | Model | Status | What it is |
 |---|---|---|
-| `rnic-nn` | available, hardware adapter planned ([HTSIM-9](docs/modules/backends.md)) | Packetized no-CC policy and the reference for normalized FCT; full-RNIC runs use the same hardware path as physical policies |
+| `rnic-nn` | available through the ABI-v1 composed flow adapter; packet-issue events open ([HTSIM-9](docs/modules/backends.md)) | Packetized no-CC policy and the reference for normalized FCT; full-RNIC runs use the same hardware path as physical policies |
 | `rnic-nn-fluid` | available | Continuous fluid policy with deterministic closed forms and the explicit hardware-bypass 0 ps anchor |
-| `rnic-cn` | available, hardware adapter planned ([HTSIM-6/9](docs/modules/backends.md)) | Explicit-rate policy with deterministic reservations, packet spraying and resequencing, lossless without PFC |
-| DCQCN | available, hardware adapter planned ([HTSIM-5/9](docs/modules/backends.md)) | RoCEv2 comparator with per-QP CNP state, rate reduction/recovery and ECN plus optional PFC; DCQCN calibration lands before programmable CC |
+| `rnic-cn` | available through the ABI-v1 composed flow adapter; packet-issue events open ([HTSIM-6/9](docs/modules/backends.md)) | Explicit-rate policy with deterministic reservations, packet spraying and resequencing, lossless without PFC |
+| DCQCN | available through the ABI-v1 composed flow adapter; packet-issue events open ([HTSIM-5/9](docs/modules/backends.md)) | RoCEv2 comparator with per-QP CNP state, rate reduction/recovery and ECN plus optional PFC; DCQCN calibration lands before programmable CC |
 | LogGOPSim flow level | planned ([BACK-2](docs/modules/backends.md)) | Fast flow-level sweeps before packet-level runs |
 
 Fabrics are two-tier Clos topologies with detailed switch models (VoQ
