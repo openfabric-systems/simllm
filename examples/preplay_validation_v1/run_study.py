@@ -73,6 +73,13 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _txt2bin_path(htsim_rnic: Path) -> Path:
+    configured = os.environ.get("SIMLLM_TXT2BIN")
+    if configured:
+        return Path(configured)
+    return htsim_rnic.parents[2] / "tools" / "txt2bin"
+
+
 def check_only(args: argparse.Namespace) -> None:
     model = args.cache_dir / MODEL_RELATIVE_PATH
     if not model.is_dir() or not (model / "config.json").is_file():
@@ -85,6 +92,9 @@ def check_only(args: argparse.Namespace) -> None:
             raise SystemExit(f"pinned external source changed: {relative}")
     if not args.htsim_rnic.is_file() or not args.htsim_rnic.stat().st_mode & 0o111:
         raise SystemExit(f"htsim_rnic is missing or not executable: {args.htsim_rnic}")
+    txt2bin = _txt2bin_path(args.htsim_rnic)
+    if not txt2bin.is_file() or not txt2bin.stat().st_mode & 0o111:
+        raise SystemExit(f"companion txt2bin is missing or not executable: {txt2bin}")
     if NEAR_TIE_ABS_LOGIT <= 0:
         raise AssertionError("near-tie margin must be positive")
     if BANDWIDTHS_BPS[1] != 2 * BANDWIDTHS_BPS[0]:
@@ -424,7 +434,6 @@ def _attempt_vllm_cpu(args: argparse.Namespace) -> None:
             reached.append("llm-construction-entered")
             llm = LLM(
                 model=str(args.cache_dir / MODEL_RELATIVE_PATH),
-                device="cpu",
                 dtype="float32",
                 worker_cls=ValidationCPUWorker,
                 enforce_eager=True,
@@ -1108,6 +1117,7 @@ def _run_child(args: argparse.Namespace, mode: str) -> None:
 def run_study(args: argparse.Namespace) -> dict[str, Any]:
     args.run_dir.mkdir(parents=True, exist_ok=False)
     os.environ["SIMLLM_HTSIM_RNIC"] = str(args.htsim_rnic)
+    os.environ["SIMLLM_TXT2BIN"] = str(_txt2bin_path(args.htsim_rnic))
     _run_child(args, "transformers")
     _run_child(args, "vllm-cpu")
     _prepare_replay(args)
