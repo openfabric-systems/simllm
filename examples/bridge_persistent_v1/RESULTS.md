@@ -160,10 +160,11 @@ The launcher has no child process group, Linux parent-death signal or parent
 signal-and-reap handler, and its 600-second timeout dies with the parent. This
 defect predates BRIDGE-1 in the diagnostic path, but the pool widens its maximum
 fan-out. The preceding claim that no BRIDGE-3 task was needed is therefore
-superseded. BRIDGE-3 `(Completeness; P0; M)` now owns the acceptance criterion
-"no orphan htsim processes after a killed run" for both invocation modes.
-This round registers the defect instead of changing the sink because portable
-child ownership and reaping are shared process-lifecycle behavior across both
-modes and require explicit supported-platform supervision. No sink code was
-changed, so the frozen 34/34 byte-identity family was not rerun in this
-documentation-only correction.
+superseded. BRIDGE-3 `(Completeness; P0; M)` was registered with the acceptance
+criterion "no orphan htsim processes after a killed run" for both invocation
+modes. That round registered the defect instead of changing the sink because
+portable child ownership and reaping are shared process-lifecycle behavior
+across both modes and require explicit supported-platform supervision. No sink
+code was changed in that documentation-only correction. BRIDGE-3 later closed
+with the [child-lifetime study](../bridge_lifecycle_v1/RESULTS.md), which reran
+and preserved the frozen 34/34 identity family.
