@@ -21,6 +21,13 @@ std::uint32_t compatibilityIdentity(
     return configured == 0 ? qpn : configured;
 }
 
+bool sameAgent(
+    const RnicSubmissionAgent& lhs,
+    const RnicSubmissionAgent& rhs) noexcept {
+    return lhs.version == rhs.version && lhs.kind == rhs.kind
+        && lhs.id == rhs.id;
+}
+
 }  // namespace
 
 bool isDefaultRnicSubmissionConfig(
@@ -110,6 +117,56 @@ RnicSubmissionProfile resolveRnicSubmissionProfile(
         throw std::invalid_argument("invalid RNIC producer shape");
     }
     return profile;
+}
+
+void validateRnicProducerTaskLink(
+    const RnicSubmissionProfile& profile,
+    const RnicProducerTaskLink& link,
+    Picoseconds record_submitted_at_ps) {
+    if (link.version != kRnicProducerTaskLinkVersion) {
+        throw std::invalid_argument(
+            "unsupported RNIC producer task-link version");
+    }
+    if (link.task_id.empty()) {
+        throw std::invalid_argument(
+            "RNIC producer task link requires a task identity");
+    }
+    if (link.producer_shape != profile.producer_shape) {
+        throw std::invalid_argument(
+            "RNIC producer task link disagrees with the producer shape");
+    }
+
+    const RnicSubmissionAgent* expected_owner = nullptr;
+    switch (profile.producer_shape) {
+    case RnicProducerShape::HostCpuDriver:
+        throw std::invalid_argument(
+            "RNIC host CPU submission cannot carry a GPU task link");
+    case RnicProducerShape::CpuProxy:
+        if (!profile.descriptor_writer.has_value()) {
+            throw std::invalid_argument(
+                "RNIC CPU proxy has no GPU descriptor writer");
+        }
+        expected_owner = &*profile.descriptor_writer;
+        break;
+    case RnicProducerShape::GpuInitiated:
+        expected_owner = &profile.producer;
+        break;
+    default:
+        throw std::invalid_argument("invalid RNIC producer task-link shape");
+    }
+    if (!sameAgent(link.task_owner, *expected_owner)
+        || link.task_owner.kind != RnicSubmissionAgentKind::Gpu) {
+        throw std::invalid_argument(
+            "RNIC producer task link names the wrong GPU owner");
+    }
+    if (link.eligible_at_ps < link.submitted_at_ps
+        || link.started_at_ps < link.eligible_at_ps
+        || link.finished_at_ps < link.started_at_ps
+        || link.completed_at_ps < link.finished_at_ps
+        || record_submitted_at_ps < link.completed_at_ps) {
+        throw std::invalid_argument(
+            "RNIC producer task-link timestamps are not monotonic");
+    }
 }
 
 const char* toString(RnicProducerShape shape) noexcept {
