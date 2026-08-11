@@ -26,12 +26,16 @@ own modules.
   DMA, collective, NIC and control owners. Additive visit work is a different
   type and never enters that identity.
 - `RequestPhase`, `ScheduledRequest`: the per-request vocabulary.
-- Closed-loop wire schemas: `atlahs-closed-loop-step-v1` and
-  `atlahs-closed-loop-result-v1` are the JSON forms of `StepRecord` and
-  `StepResult` exchanged with the simulator per scheduler step.
+- Closed-loop wire schemas: `atlahs-closed-loop-step-v1` is the JSON form of
+  `StepRecord`; `simllm-step-result-v2` is the strict full `StepResult` form.
+  It preserves every request metric, exact rational TPOT, conserved latency
+  attribution and separately typed additive visit totals. The earlier
+  `atlahs-closed-loop-result-v1` name had no accepted payload and is rejected
+  explicitly rather than upgraded from invented fields.
 - Record serialization both ways: `step_record_to_json`,
   `step_records_to_json`, `write_step_records`, `step_record_from_json` and
-  `step_records_from_jsonl`.
+  `step_records_from_jsonl`, plus `step_result_to_json` and
+  `step_result_from_json` for full results.
 
 ### Execution and completion boundary
 
@@ -301,8 +305,17 @@ serves exact records in order. The
 prepared-versus-diagnostic pairs in each of the result, outcome, GOAL text,
 GOAL binary and completion-CSV evidence classes. All four scored live wall-time
 instances passed with 3.36x to 5.43x speedup, and all six cells reported
-physical quiescence. BRIDGE-2, CORE-24 and HTSIM-18 retain the online stateful
-session and full CORE-5 transport rather than widening this exact acceleration.
+physical quiescence. It remains the finite known-replay acceleration and does
+not become the online stateful client.
+
+CORE-24 is complete. `simllm-step-result-v2` now round-trips empty, prefill,
+decode and mixed results through real JSON bytes, including `Fraction(1, 3)`
+without float conversion. The strict reader rejects missing and unknown
+fields, invalid conservation and the payload-less legacy schema name. The
+paired persistent-session study records the exact wire digests and closure
+evidence. HTSIM-18 is also delivered in the paired backend commit. BRIDGE-2
+remains the graph-level client, lifecycle translation, ledger-cursor and
+transactional-publication layer above these two foundations.
 
 CORE-2 is complete. Graph structural and payload validation includes implicit
 FIFO edges, strict JSON readers and writers cover all five work kinds, and the
@@ -581,29 +594,27 @@ does not claim to produce these resource-contention measurements.
   structural session remains the sole WQE authority when selected, and include
   transactional failure in the registered live harness rather than relying
   only on the existing unit test.
-- CORE-24 (Completeness; P1; M): add a strict, versioned full `StepResult` wire
-  codec for BRIDGE-2. The existing `atlahs-closed-loop-result-v1` name has no
-  reader or writer and predates CORE-5 attribution. The new canonical form
-  must carry step identity and boundaries, every `RequestMetric`, exact
-  rational TPOT, the conserved `LatencyAttribution` partition and separately
-  typed `AdditiveVisitTotals`. Preserve a strict reader for any accepted
-  legacy result form and prove in-memory to wire to in-memory identity for
-  empty, prefill, decode and mixed-request results.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
-  client after HTSIM-18 supplies its persistent flow session and CORE-24
-  supplies the full result codec. BRIDGE-1 calibration measured 7.252 seconds
-  per isolated simulator invocation and 0.011 seconds for `txt2bin`. The
-  prepared sink overlaps this cost only when all records are available to
-  `prepare` up front, so a live closed-loop step still pays the full serial
-  invocation. This P1 client and HTSIM-18 must remove that per-step boundary.
+  client above the delivered HTSIM persistent flow session and strict full
+  `StepResult` codec. The backend foundation retains one event list, topology,
+  native RNIC authority and transport policy across flow injections; its
+  frozen study demonstrated byte-identical stateless-equivalent latencies,
+  discriminating retained queue state and lower wall time. The remaining
+  client must lower live `ExecutionGraph` dependencies into flow injections
+  and inclusive virtual-time horizons, translate the returned native
+  lifecycle projections into canonical `CompletionEvent` values, append the
+  exact object, stage and completion facts at the supplied bookkeeping cursor,
+  construct `ExecutionResult`, reduce the full `StepResult`, and publish only
+  after all identities, cursors, timestamps and quiescence evidence validate.
   A proposed
   `simllm-cosim-session-v1` uses the same length-prefixed canonical JSON frame
-  rule as HTSIM-18. Handshake frames select the exact backend session and
-  authority. Each input frame carries a contiguous sequence, canonical
-  `ExecutionGraph`, source `StepRecord` and starting bookkeeping cursor.
+  rule as the backend flow session. Handshake frames select the exact backend
+  session and authority. Each input frame carries a contiguous sequence,
+  canonical `ExecutionGraph`, source `StepRecord` and starting bookkeeping
+  cursor.
   Output event frames carry canonical `CompletionEvent` values and the exact
   append batch of object, stage and completion facts; the terminal frame
-  carries `ExecutionResult`, full `StepResult`, ending ledger cursor and
+  carries `ExecutionResult`, `simllm-step-result-v2`, ending ledger cursor and
   physical quiescence separately from framework completion. Reject loss,
   duplication, cursor disagreement, graph/event identity disagreement and
   timestamp regression before publishing a result. The explicit diagnostic

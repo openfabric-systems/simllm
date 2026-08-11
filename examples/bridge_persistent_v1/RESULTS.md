@@ -116,16 +116,21 @@ pool accelerates a finite known replay while deliberately retaining the
 accepted diagnostic model in which each step resets backend state. It does not
 claim online scheduler prediction or cross-step network-policy state.
 
-The remaining work is explicit:
+At this study's publication date, the remaining work was:
 
 - BRIDGE-2 `(Completeness; P1; L)` owns the online graph-level client carrying
   `ExecutionGraph`, `CompletionEvent`, `ExecutionResult`, `StepResult` and
   loss-checked bookkeeping append facts.
-- CORE-24 `(Completeness; P1; M)` owns the missing strict full `StepResult` wire
-  codec required by that client.
-- HTSIM-18 `(Completeness; P1; L)` owns the genuine stateful stdin/stdout flow
-  session in the backend; its precise frame, sequence, authority and drain
-  contract is registered in `docs/modules/backends.md`.
+- CORE-24 `(Completeness; P1; M)` owned the then-missing strict full
+  `StepResult` wire codec required by that client.
+- HTSIM-18 `(Completeness; P1; L)` owned the then-missing genuine stateful
+  stdin/stdout flow session in the backend.
+
+Wave 5 supersedes the last two residual statements. CORE-24 and HTSIM-18 are
+closed by the paired
+[`persistent_session_v1`](../persistent_session_v1/RESULTS.md) foundation.
+BRIDGE-2 remains open for the graph-level client, lifecycle translation,
+bookkeeping cursor and transactional publication above those deliverables.
 
 No backend source was changed, no physical profile was reinterpreted, no
 tracked raw output was added, and no BRIDGE-3 task was created because there is
