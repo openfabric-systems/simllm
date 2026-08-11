@@ -319,6 +319,17 @@ Exactly one strengthened smoke ran in the review round. It reached
 1660 Ti despite masking, so VLLM-16 keeps the genuinely GPU-invisible version
 of this asserted smoke open.
 
+The VLLM-16 three-mechanism isolation study ran on 2026-08-11 from expectations
+frozen in commit `25e79be`. The invalid UUID left NVML and five NVIDIA
+character nodes visible. A bubblewrap device namespace achieved genuine GPU
+invisibility, but this CUDA-tagged vLLM package selected
+`UnspecifiedPlatform` and failed device configuration before resolving
+`SimWorker`. A forced `CpuPlatform` reached the skeleton and passed every
+runner, token, record-count and schema assertion, but NVML and the physical
+device nodes remained visible. No row combined both requirements, so the
+headline is 0/3 with genuine-risk fraction 3/3 and VLLM-16 remains open. See
+[the VLLM-16 results](../../examples/vllm_skeleton_v1/vllm16_RESULTS.md).
+
 PLAY-3 joined-token replay is implemented in `SimExecutor` and the flagged
 skeleton as of 2026-08-10. Expectations were frozen in commit `edcb2b9`
 before implementation or any replay run. A joined
@@ -466,15 +477,21 @@ omit the optional field; v1 readers and that compatibility path are unchanged.
   This ID explicitly excludes runtime projection and every timing claim:
   VLLM-19, VLLM-20, and VLLM-21 own those residuals, and CORE-4/5 gate live
   projection.
-- VLLM-16 (Completeness; P1; M): run the flagged in-process skeleton smoke on
-  a genuinely GPU-invisible host where CUDA platform selection is unavailable
-  and no physical GPU is discoverable before or during worker construction.
-  Confirm that vLLM reaches the dotted `SimWorker` seam, constructs
-  `SimModelRunner` without stock `Worker.init_device` or physical GPU state,
-  generates only the configured fabricated token, and emits exactly the
-  expected `atlahs-closed-loop-step-v1` records. The 2026-08-10 host does not
-  close this task because vLLM identified a GTX 1660 Ti despite
-  `CUDA_VISIBLE_DEVICES=`.
+- VLLM-16 (Completeness; P1; M) (rescoped after the three-mechanism isolation
+  study): run the flagged in-process skeleton smoke in one process that has
+  both a genuinely GPU-invisible device boundary and a valid non-CUDA vLLM
+  platform. The concrete host requirement is zero NVIDIA character nodes,
+  NVML unavailable or reporting zero devices, and Torch reporting zero CUDA
+  devices before and after construction. The concrete runtime requirement is
+  a vLLM 0.26.0 CPU-tagged build with its matching CPU Torch runtime, so device
+  configuration has a nonempty CPU type before the dotted worker is resolved.
+  Confirm that vLLM reaches `SimWorker`, constructs `SimModelRunner` without
+  stock device initialization, leaves worker device state unset, returns only
+  the configured fabricated token, emits exactly two
+  `atlahs-closed-loop-step-v1` records, and allocates zero CUDA bytes. The
+  2026-08-11 namespace met the physical boundary but its CUDA build fell to
+  `UnspecifiedPlatform`; the CPU override passed the smoke while the GTX 1660
+  Ti remained physically visible. Neither path closes this task.
 - VLLM-15 (Precision; P1; S): populate `StepRecord.num_sampled` from the
   translator's existing exact `produces_token` flags. Cover mid-prompt and
   prompt-completing chunked prefill, prefix-cache completion, decode and the
