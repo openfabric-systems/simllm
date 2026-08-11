@@ -10,6 +10,13 @@ backend submodules.
   `rnic-cn`; a run is valid only with `physical_quiescence=verified`),
   binary discovered via `SIMLLM_HTSIM_RNIC`, the README build location,
   then `PATH`.
+- `simllm-htsim-flow-session-v1` (HTSIM-18): the opt-in framed stdin/stdout
+  interface of the composed `htsim_rnic` binary. A 32-bit big-endian length
+  prefixes each canonical JSON object. `open`, `inject`, inclusive
+  virtual-time `advance`, `drain` and `close` retain one event list, topology,
+  native RNIC authority and transport policy. Structural `rnic-nn` and
+  generated `rnic-cn` are supported; the explicit nonstructural fluid mode is
+  rejected. The unchanged one-GOAL command remains the exact default off path.
 - `FlowCompletion` + `parse_completion_csv`: completion-CSV parsing
   with a stable legacy prefix
   (`profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps`)
@@ -81,8 +88,8 @@ backend submodules.
   their original order. The pool can serve another batch after the first is
   fully consumed.
   This preserves the diagnostic path's per-step reset semantics; it does not
-  claim a stateful online backend session. BRIDGE-2, CORE-24 and HTSIM-18 own
-  that later transport.
+  claim a stateful online backend session. The backend flow session and full
+  result codec are now delivered; BRIDGE-2 owns their graph-level client.
 - `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
   from a `StepRecord` to per-layer compute plus semantic TP/EP collective
   operations. Explicit framework observations bypass the fallback schedule and
@@ -94,7 +101,7 @@ backend submodules.
 | Submodule | Repo | Ref | Provides |
 |---|---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` (UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping) |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, and the persistent flow session |
 
 As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 (mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
@@ -153,12 +160,14 @@ GOAL Send
 The composition links the SimLLM C++ library into the directly invoked htsim
 binary, with no Python callback in the packet event loop. The composed runtime
 presents `AtlahsFlowRuntime` to `AtlahsHtsimApi`; the pinned backend main
-contains this link and passed both frozen live-composition tiers at ABI v1.
-The wrapper and versioned flow, packet-attempt and transport-control event
-relay are component-live. HTSIM-9 retains only the composed packet-issue run
-through the live metric chain. The SimLLM hardware runtime calls an htsim
-policy and fabric using opaque flow and packet tokens. QP, WQE, CQ, QPC, PCIe
-and DMA objects never cross that boundary.
+contains this link and passed frozen Tier A and Tier B at ABI v1. The wrapper
+and versioned flow, packet-attempt and transport-control event relay are
+component-live. The qualifying Tier C run carries ABI-v2 explicit TX-start
+evidence through the native timeline and live metric chain while its separate
+link-OFF binaries preserve the frozen ABI-v1 bypass artifacts. HTSIM-9 is
+closed on that run. The SimLLM hardware runtime calls an htsim policy and
+fabric using opaque flow and packet tokens. QP, WQE, CQ, QPC, PCIe and DMA
+objects never cross that boundary.
 
 State ownership is explicit:
 
@@ -270,8 +279,8 @@ still name the device owner and use the `ReceiveQueue` owner kind. BACK-9 owns
 the RQ/SRQ registry, active receive path and the endpoint and identity checks
 that become mandatory when receive execution is enabled.
 The absent-network path owns an inert port that accepts with a fresh token and
-delivers on the device progress pump. The composed ABI-v1 path injects the
-concrete htsim port landed by HTSIM-9; BACK-25 and BACK-26 extend its event
+delivers on the device progress pump. The composed path injects the concrete
+htsim port landed by HTSIM-9; BACK-25 and BACK-26 added its ABI-v2 event
 vocabulary. BACK-27 now connects CPU-proxy descriptor production and
 GPU-initiated WQE production to timed tasks in the concurrent compute service.
 The compute scheduler is the sole producer-task timing authority. Each native
@@ -335,11 +344,12 @@ forms, not structural semantics. A structural public projection must use a
 versioned schema with these cardinalities while preserving a v1 reader.
 
 The current `AtlahsWqeLedger` remains the sole authority only in explicit
-hardware-bypass mode. The composed ABI-v1 structural path instead selects the
-native session as sole WQE authority. BACK-9, BACK-12 and HTSIM-9 deepen that
-structural path without changing this exclusivity. A WQE has no single
-scheduled start constant. The model records post, doorbell publication and
-observation, WQE fetch or BlueFlame transfer, QPC readiness, scheduler
+hardware-bypass mode. The composed structural path instead selects the native
+session as sole WQE authority. BACK-9 and BACK-12 deepen that structural path
+without changing this exclusivity. The HTSIM-9 Tier C projection consumes its
+explicit packet events without creating another lifecycle. A WQE has no
+single scheduled start constant. The model records post, doorbell publication
+and observation, WQE fetch or BlueFlame transfer, QPC readiness, scheduler
 admission, first and last packet, transport retirement, CQE visibility and CQ
 polling separately.
 NIC start is first-packet issue. A reduced per-WQE start latency is derived
@@ -378,7 +388,21 @@ the unchanged isolated one-GOAL path. Its
 step result, outcome, GOAL text, GOAL binary and completion CSV byte for byte
 across both recorded M4 TP 8 replays. Four and eight workers reduced wall time
 by 3.36x to 5.43x across the four scored cells. Diagnostic invocation remains
-the default; BRIDGE-2 and HTSIM-18 retain the true online stateful session.
+the default; BRIDGE-2 remains the online graph-level client.
+
+On 2026-08-11 HTSIM-18 closed with paired backend commit
+`f8e1ee923a9c108cd698786c1824b9722d22d0e1`. The opt-in
+`simllm-htsim-flow-session-v1` process retains native event, topology, RNIC and
+transport state from open through close. Its
+[frozen study](../../examples/persistent_session_v1/RESULTS.md) matched both
+stateless-equivalent latency streams byte for byte, while overlapping
+same-source flows raised the second FCT and source SQ high-water mark in both
+scored state cells. Both measured wall-clock cells were faster than isolated
+one-GOAL runs. Their corrected bands are diagnostic only because the wall-only
+amendment followed a precommit session smoke; HTSIM-24 owns a clean held-out
+wall study. The one-GOAL stdout, stderr, completion CSV and help bytes remained
+identical to the base binary. CORE-24 supplies the paired full result codec;
+BRIDGE-2 remains above this lower-level flow interface.
 
 On 2026-08-10 BACK-5, BACK-6 and BACK-7 closed. The sink now consumes an
 optional exact provider layer breakdown, an optional exact step sample count
@@ -563,9 +587,11 @@ and was rejected before observations or results existed. The separate
 positive binaries and repository-standard bypass bundle remained exact. The
 result ledger quotes and maps every registered CORE-21 and BACK-31 clause; no
 residual remains. HTSIM-1 retains explicit rejection of the unsupported
-`rnic-ss` legacy profile, and HTSIM-9 remains open for a composed run showing
-first-packet and last-packet issue. ABI-v1 network acceptance and whole-flow
-terminal events are not substitutes for packet issue.
+`rnic-ss` legacy profile. At the Tier B checkpoint HTSIM-9 remained open for a
+composed run showing first-packet and last-packet issue, since ABI-v1 network
+acceptance and whole-flow terminal events are not substitutes for packet
+issue; the Tier C update below records its closure and the corrected
+binary-role diagnosis.
 
 On 2026-08-11 BACK-25 and BACK-26 closed at the versioned vocabulary and
 relay boundary. NetworkPort ABI v2 carries session-unique packet-attempt
@@ -575,13 +601,70 @@ link-state forms. ABI v1 remains the exact default compatibility path, and a
 v2 consumer rejects a v1-only producer rather than silently degrading. The
 unbound Tier A serializer populates the packet-study rows; the physical
 packetized manifold independently emits packet observations from committed
-serializer boundaries in the directed composition test. No physical runtime
-yet emits the control forms: their current enabled relay evidence uses a test
-runtime, while the packetized manifold advertises packet attempts alone.
-HTSIM-16 owns those physical control producers, HTSIM-15 owns the timestamped
-dynamic-link source, and BACK-34 owns the missing 4,096-byte-quantum partial
-final-packet cell. Evidence and the labeled post-specified review corrections
-are in [rnic_packet_v2](../../examples/rnic_packet_v2/RESULTS.md).
+serializer boundaries in the directed composition test. At that checkpoint,
+enabled control-form relay evidence came from a test runtime, while the
+packetized manifold advertised packet attempts alone. Evidence and the
+labeled post-specified review corrections are in
+[rnic_packet_v2](../../examples/rnic_packet_v2/RESULTS.md).
+
+On 2026-08-11 HTSIM-15, HTSIM-16 and BACK-34 closed at their registered
+component scopes. The physical DCQCN runtime now emits packet-correlated ECN
+and CNP, policy-context rate and eligibility updates, real lossless-fabric PFC
+submission, pause and resume, and timestamped dynamic endpoint-link state.
+Capabilities are present only when each physical producer is enabled. The
+registered six-condition study scores 15 of 15 genuine-risk relations before
+its fatal exact oracles: 2 of 2 signed CNP rate changes, 2 of 2 PFC intervals,
+2 of 2 dynamic-link completion changes, 1 of 1 hold-duration spacing, 6 of 6
+control-disabled physical identities and 2 of 2 ABI-v1 byte identities. Late
+CNPs retain packet correlation after delivery while the extent remains live.
+See the [physical control results](../../examples/rnic_control_v2/RESULTS.md).
+
+The paired BACK-34 cell uses a 5,000-byte payload at the 4,096-byte wire
+quantum. Tier A and the directed composed runtime both observe a 968-byte
+payload tail in a 1,032-byte wire packet with exact committed TX and RX
+boundaries. Its 3 of 3 compatibility relations preserve the accepted
+full-quantum ABI-v2 projection and both ABI-v1 artifacts. The tail's exact
+geometry and times remain fatal unscored component oracles. See the
+[BACK-34 results](../../examples/rnic_packet_v2/BACK34_RESULTS.md).
+
+On 2026-08-11 the HTSIM-9 Tier C implementation connected ABI-v2 data and
+retransmission TX-start events to native `first_packet_at_ps` and
+`last_packet_at_ps`, then projected first-packet issue through
+`ExecutionGraph -> CompletionEvent -> StepResult -> TTFT/TPOT`. The qualifying
+registered run used audited htsim commit `4885c64` in two explicit roles: a
+link-ON composed binary for the live chain and link-OFF RNIC and DCQCN binaries
+for the frozen Tier B bypass rows. All accepted ABI-v1 Tier A and Tier B files
+were byte-identical. Tier B passed every family, including bypass identity
+4 of 4. Ruff, 686 pytest tests with 5 skips, all 370 htsim CTest cases and all
+6 standalone native CTest cases passed.
+
+The run passed 4 of 4 doorbell packet-to-live instances and 4 of 4 link-rate
+packet-to-live instances with the frozen signs and exact magnitudes. The
+checker evaluated raw cross-cell observations before its packet exact oracle
+and inherited Tier B checker, so neither scored family was entailed. The
+acceptance-surrogate, producer-constant and missing-TX-start controls failed
+as required and remain fatal-unscored. The 1 MiB cells placed last-packet
+issue strictly after acceptance and strictly before whole-flow terminal time.
+
+HTSIM-9 closes against each registered clause. "one composed run of the Tier
+B class passes" is supported by the single outer invocation and its complete
+Tier B result. "ABI-v2 packet-issue evidence populating the native timeline
+through `ExecutionGraph` to `CompletionEvent`, `StepResult`, TTFT and TPOT" is
+supported by both 4 of 4 live-chain families and the exact event projection.
+"Network acceptance and whole-flow terminal events do not satisfy that
+evidence" is supported by the separation cells, explicit TX-start origin and
+rejected acceptance surrogate. No closure clause remains, so no residual task
+was registered. See the
+[Tier C results](../../examples/rnic_live_v1/RESULTS.md#tier-c-abi-v2-packet-chain-chronology-and-closure).
+
+HTSIM-19 is retired without a backend change and its ID will not be reused.
+The earlier P0 entry incorrectly treated a 2 of 4 Tier B bypass result as a
+backend-main regression. Three unchanged-command reproductions showed 4 of 4
+with current `4885c64` link OFF, 2 of 4 with a pre-v2 link-ON build and 4 of 4
+with the frozen wave-4 link-OFF build. The signature follows the link setting.
+A link-ON binary selects the structural session for `rnic-nn` and `rnic-cn`
+by design and is not the legacy bypass candidate. The harness now keeps those
+binary roles separate; no HTSIM residual survives.
 
 BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
@@ -758,15 +841,6 @@ is difficult.
   predecessor bytes and random draws exactly. Enabled GPU consumption must
   change an end-to-end metric in the registered direction and must never
   advance CQE lifecycle state independently of the native RNIC authority.
-- BACK-34 (Precision; P1; M): add a registered partial-final-packet cell at
-  the production 4,096-byte wire quantum to the ABI-v2 packet study and the
-  directed composed runtime. The closed matrix uses 4,096 and 1,048,576-byte
-  payloads and the composed test uses 8,192 bytes, so all final packets are
-  full quanta even though a smaller-quantum native unit test covers its own
-  tail. Replace that coverage surrogate with a nonmultiple payload, observe
-  exact final payload and wire bytes plus committed TX/RX boundaries, and
-  require the full-quantum rows and ABI-v1 artifacts to remain exact.
-
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
 - HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
@@ -787,9 +861,9 @@ is difficult.
   timer recovery state must survive across its WQEs and reset only with the
   modeled QP lifecycle. A new QP starts at its configured line/local-QoS rate;
   HTSIM-16 carries physical CNP/ECN observations and effective rate updates
-  across the landed vocabulary to the SimLLM hardware gate. Until that
-  producer lands, the capability rejects rather than fabricating feedback.
-  The policy never owns the hardware gate. Doorbell,
+  across the landed vocabulary to the SimLLM hardware gate. With control
+  observations disabled, those capabilities remain absent rather than
+  fabricating feedback. The policy never owns the hardware gate. Doorbell,
   DMA and CQ costs are common across all policies and must not be charged only
   to DCQCN. Calibrate policy parameters against
   [docs/papers/msg-size-vs-bandwidth.md](../papers/msg-size-vs-bandwidth.md)
@@ -831,68 +905,16 @@ is difficult.
   zero in every attempted case, and the script lacks fail-fast handling, so
   it reports a false success. Add checked-in baselines or remove that compare,
   fix zero-flow diagnostics, and make every failed command fail the gate.
-- HTSIM-9 (Completeness; P1; L): the composed `AtlahsFlowRuntime` wrapper
-  landed on the backend main (its PR 11) as an ABI-v1 checkpoint: opaque
-  flow tokens, structural-mode exclusivity with observed counters, relayed
-  backpressure, stable transport identities, and the frozen Tier A gate
-  passing with the htsim factory. The frozen Tier B run passed through the
-  live core metric chain at ABI v1, carrying no packet events. The wrapper
-  now also carries the ABI-v2 packet-attempt and transport-control
-  vocabulary (backend PR 12): the htsim packetized manifold publishes
-  committed source-serializer TX start and end, destination RX arrival and
-  attempt delivery; the wrapper maps runtime ECN, CNP, policy update, PFC
-  and capability-gated link observations without inventing acceptance-time
-  packet issue; directed composition populates the native WQE packet
-  timeline only from those explicit events, and the frozen Tier A v1 and v2
-  gates pass. Neither result alone satisfies the closure gate: the Tier B
-  run predates the vocabulary and the packet study never enters the live
-  metric chain. The entry closes when one composed run of the Tier B class
-  passes with ABI-v2 packet-issue evidence populating the native timeline
-  through `ExecutionGraph` to `CompletionEvent`, `StepResult`, TTFT and
-  TPOT. Network acceptance and whole-flow terminal events do not satisfy
-  that evidence.
-- HTSIM-15 (Completeness; P2; L): add a timestamped dynamic-link transition
-  producer to an htsim runtime and advertise the ABI-v2 capability only for
-  that enabled path. The landed vocabulary carries stable link identity, up
-  or down state, transition time and optional effective rate, but current
-  physical runtimes expose only static pre-run failed-link configuration and
-  reject a requested dynamic capability. The disabled path must preserve the
-  ABI-v1 and ABI-v2 no-transition baselines exactly.
-- HTSIM-16 (Completeness; P2; L): connect physical transport-control
-  observations to the landed ABI-v2 relay. Emit packet-keyed ECN and CNP plus
-  effective rate updates from the DCQCN policy, PFC submission, pause and
-  resume from the lossless fabric, and link-state observations from the
-  HTSIM-15 transition source. Advertise each capability only when its real
-  producer is active. Acceptance must exercise the actual policy and fabric,
-  permit CNP correlation after packet delivery while the extent remains live,
-  and preserve ABI-v1 plus ABI-v2 control-disabled bytes, timestamps, token
-  order and random draws exactly.
-- HTSIM-18 (Completeness; P1; L): add a genuinely persistent, opt-in
-  stdin/stdout session to the composed `htsim_rnic` binary. The existing
-  one-GOAL CLI remains the exact off path. BRIDGE-1 calibration measured
-  7.252 seconds per isolated simulator invocation and 0.011 seconds for
-  `txt2bin`. Its prepared sink overlaps finite replays, but `prepare` requires
-  every record before consumption, so each live closed-loop step still pays
-  the full serial invocation. This P1 session removes that per-step process
-  boundary while retaining simulator state across steps. A proposed
-  `simllm-htsim-flow-session-v1` uses a 32-bit big-endian byte length followed
-  by one canonical JSON object per frame. `open` carries session ID, profile,
-  topology identity, link rate, seed, effective-hardware hash and sole WQE
-  authority, then returns the accepted configuration and sequence zero.
-  `inject` carries a contiguous sequence, execution/operation/flow identity,
-  source, destination, tag, payload bytes, logical eligibility time and policy
-  context. `advance` names the causal boundary that may run; the server emits
-  ordered accepted, queued, started and completed flow projections with native
-  WQE aliases and timestamps. `drain` returns the last accepted sequence,
-  completion rows, authority counters and a quiescence proof; `close` is legal
-  only after drain. Duplicate, skipped, stale or post-terminal sequences fail
-  before authority mutation, and a disconnected client cannot silently commit
-  a partial frame. The event list, topology, native RNIC session and transport
-  policy state live from `open` through `close`, so later steps observe earlier
-  state. Acceptance compares one-step session output byte for byte with the
-  CLI off path, then uses two steps to prove state retention and exact
-  completion/bookkeeping conservation. BRIDGE-2 owns the SimLLM client and
-  graph-level framing above this flow protocol.
+- HTSIM-24 (Precision; P1; S): repeat the persistent-session wall-clock family
+  on a held-out flow replay whose two-sided bands are frozen from the exact
+  pinned base CLI before the session outcome is observed. The wave-5
+  wall-only amendment corrected a workload mismatch but followed a precommit
+  session smoke, so its 2/2 band result is diagnostic rather than scored.
+  Acceptance must time the complete isolated and persistent boundaries,
+  preserve the fatal latency-byte identity, pass every predeclared band and
+  signed speedup instance, and state the entailment and genuine-risk analysis
+  without using any wave-5 session timing to select the held-out workload or
+  thresholds.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.

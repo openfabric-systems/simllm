@@ -22,6 +22,21 @@ from simllm.core.runtime import (
 NATIVE_AUTHORITY = "SimllmNativeRnicSession"
 TIER_A_EXPECTATION_SCHEMA = "simllm-rnic-tier-a-expectations-v1"
 TIER_A_OBSERVATION_SCHEMA = "simllm-rnic-tier-a-observations-v1"
+TIER_A_OBSERVATION_SCHEMA_V2 = "simllm-rnic-tier-a-observations-v2"
+PACKET_EVENT_KEYS = {
+    "attempt_token",
+    "extent_token",
+    "wqe_id",
+    "event_kind",
+    "event_time_ps",
+    "extent_index",
+    "packet_index",
+    "transmission_attempt",
+    "payload_offset_bytes",
+    "payload_bytes",
+    "wire_bytes",
+    "packet_kind",
+}
 
 
 class ComposedRnicObservationError(ValueError):
@@ -70,6 +85,10 @@ class ComposedWqeObservation:
     network_started_at_ps: int
     network_finished_at_ps: int
     completed_at_ps: int
+    network_accepted_at_ps: int | None = None
+    first_packet_at_ps: int | None = None
+    last_packet_at_ps: int | None = None
+    packet_tx_started_at_ps: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         _require(self.ordinal >= 0, "composed WQE ordinal must be nonnegative")
@@ -82,6 +101,52 @@ class ComposedWqeObservation:
             <= self.completed_at_ps,
             "composed WQE timestamps are not monotonic",
         )
+        packet_fields = (
+            self.network_accepted_at_ps,
+            self.first_packet_at_ps,
+            self.last_packet_at_ps,
+        )
+        if any(value is not None for value in packet_fields) or bool(
+            self.packet_tx_started_at_ps
+        ):
+            _require(
+                all(value is not None for value in packet_fields)
+                and bool(self.packet_tx_started_at_ps),
+                "composed ABI-v2 packet evidence is only partially present",
+            )
+            _require(
+                isinstance(self.packet_tx_started_at_ps, tuple)
+                and all(
+                    isinstance(value, int) and not isinstance(value, bool)
+                    for value in self.packet_tx_started_at_ps
+                ),
+                "composed packet TX starts must be an integer tuple",
+            )
+            accepted = self.network_accepted_at_ps
+            first = self.first_packet_at_ps
+            last = self.last_packet_at_ps
+            assert accepted is not None
+            assert first is not None
+            assert last is not None
+            _require(
+                tuple(sorted(self.packet_tx_started_at_ps))
+                == self.packet_tx_started_at_ps,
+                "composed packet TX starts are not monotonic",
+            )
+            _require(
+                first == min(self.packet_tx_started_at_ps)
+                and last == max(self.packet_tx_started_at_ps),
+                "composed packet timeline did not derive from TX-start events",
+            )
+            _require(
+                self.eligible_at_ps
+                <= accepted
+                <= first
+                <= last
+                <= self.network_finished_at_ps
+                and self.network_started_at_ps == first,
+                "composed ABI-v2 packet timestamps are not monotonic",
+            )
 
 
 @dataclass(frozen=True)
@@ -93,6 +158,7 @@ class ComposedRnicCell:
     doorbell_service_ps: int
     wqes: tuple[ComposedWqeObservation, ...]
     jct_ps: int
+    network_abi_version: int = 1
 
     def __post_init__(self) -> None:
         _require(self.payload_bytes > 0, "composed payload must be positive")
@@ -102,6 +168,10 @@ class ComposedRnicCell:
             "composed doorbell service must be nonnegative",
         )
         _require(len(self.wqes) in {1, 2}, "composed cell must contain one or two WQEs")
+        _require(
+            self.network_abi_version in {1, 2},
+            "composed cell uses an unsupported NetworkPort ABI",
+        )
         _require(
             tuple(wqe.ordinal for wqe in self.wqes) == tuple(range(len(self.wqes))),
             "composed WQE ordinals must be contiguous",
@@ -117,14 +187,54 @@ class ComposedRnicCell:
             self.jct_ps == max(wqe.completed_at_ps for wqe in self.wqes),
             "composed JCT disagrees with WQE completion",
         )
+        packet_enabled = tuple(
+            wqe.first_packet_at_ps is not None for wqe in self.wqes
+        )
+        _require(
+            all(packet_enabled) if self.network_abi_version == 2 else not any(packet_enabled),
+            "composed packet evidence disagrees with the selected ABI",
+        )
 
     @property
     def wqe_count(self) -> int:
         return len(self.wqes)
 
 
-def _parse_wqe(value: Any, name: str) -> ComposedWqeObservation:
+def _packet_tx_starts(port: dict[str, Any], wqe_id: int, name: str) -> tuple[int, ...]:
+    rows = _array(port.get("packet_events"), f"{name}.packet_events")
+    starts: list[int] = []
+    for index, value in enumerate(rows):
+        row_name = f"{name}.packet_events[{index}]"
+        row = _object(value, row_name)
+        _exact_keys(row, PACKET_EVENT_KEYS, row_name)
+        if (
+            _integer(row["wqe_id"], f"{row_name}.wqe_id") == wqe_id
+            and row["event_kind"] == "packet_tx_started"
+            and row["packet_kind"] in {"data", "retransmission"}
+        ):
+            starts.append(_integer(row["event_time_ps"], f"{row_name}.event_time_ps"))
+    _require(bool(starts), f"{name} has no explicit data TX-start event")
+    return tuple(starts)
+
+
+def _parse_wqe(
+    value: Any,
+    name: str,
+    *,
+    network_abi_version: int,
+    port: dict[str, Any],
+) -> ComposedWqeObservation:
     row = _object(value, name)
+    packet_keys = (
+        {
+            "first_packet_at_ps",
+            "last_packet_at_ps",
+            "first_rx_at_ps",
+            "last_rx_at_ps",
+        }
+        if network_abi_version == 2
+        else set()
+    )
     _exact_keys(
         row,
         {
@@ -138,7 +248,8 @@ def _parse_wqe(value: Any, name: str) -> ComposedWqeObservation:
             "cqe_status",
             "cqe_visible_at_ps",
             "polled_at_ps",
-        },
+        }
+        | packet_keys,
         name,
     )
     ordinal = _integer(row["ordinal"], f"{name}.ordinal")
@@ -148,7 +259,7 @@ def _parse_wqe(value: Any, name: str) -> ComposedWqeObservation:
         row["network_accepted_at_ps"],
         f"{name}.network_accepted_at_ps",
     )
-    started = _integer(row["port_tx_at_ps"], f"{name}.port_tx_at_ps")
+    port_tx = _integer(row["port_tx_at_ps"], f"{name}.port_tx_at_ps")
     terminal = _integer(row["terminal_at_ps"], f"{name}.terminal_at_ps")
     cqe_visible = _integer(
         row["cqe_visible_at_ps"],
@@ -161,13 +272,27 @@ def _parse_wqe(value: Any, name: str) -> ComposedWqeObservation:
         f"{name} is not a successful native completion",
     )
     _require(
-        0 <= eligible <= accepted <= started <= terminal <= cqe_visible <= completed,
+        0 <= eligible <= accepted <= port_tx <= terminal <= cqe_visible <= completed,
         f"{name} timestamps are not monotonic",
     )
-    _require(
-        accepted == started,
-        f"{name} does not use the frozen zero-admission fixture",
-    )
+    first_packet = None
+    last_packet = None
+    packet_tx_starts: tuple[int, ...] = ()
+    started = port_tx
+    if network_abi_version == 2:
+        first_packet = _integer(
+            row["first_packet_at_ps"], f"{name}.first_packet_at_ps"
+        )
+        last_packet = _integer(
+            row["last_packet_at_ps"], f"{name}.last_packet_at_ps"
+        )
+        packet_tx_starts = _packet_tx_starts(port, native_wqe_id, name)
+        started = first_packet
+    else:
+        _require(
+            accepted == started,
+            f"{name} does not use the frozen zero-admission fixture",
+        )
     return ComposedWqeObservation(
         ordinal=ordinal,
         native_wqe_id=native_wqe_id,
@@ -175,10 +300,19 @@ def _parse_wqe(value: Any, name: str) -> ComposedWqeObservation:
         network_started_at_ps=started,
         network_finished_at_ps=terminal,
         completed_at_ps=completed,
+        network_accepted_at_ps=accepted if network_abi_version == 2 else None,
+        first_packet_at_ps=first_packet,
+        last_packet_at_ps=last_packet,
+        packet_tx_started_at_ps=packet_tx_starts,
     )
 
 
-def _parse_cell(value: Any, name: str, expected_wqes: int) -> ComposedRnicCell:
+def _parse_cell(
+    value: Any,
+    name: str,
+    expected_wqes: int,
+    network_abi_version: int,
+) -> ComposedRnicCell:
     cell = _object(value, name)
     _exact_keys(
         cell,
@@ -239,6 +373,10 @@ def _parse_cell(value: Any, name: str, expected_wqes: int) -> ComposedRnicCell:
         f"{name} did not quiesce cleanly",
     )
     port = _object(cell["port"], f"{name}.port")
+    expected_port_keys = {"issued", "terminals", "live_tokens"}
+    if network_abi_version == 2:
+        expected_port_keys.add("packet_events")
+    _exact_keys(port, expected_port_keys, f"{name}.port")
     issued = _array(port.get("issued"), f"{name}.port.issued")
     terminals = _array(port.get("terminals"), f"{name}.port.terminals")
     live_tokens = _array(port.get("live_tokens"), f"{name}.port.live_tokens")
@@ -252,7 +390,12 @@ def _parse_cell(value: Any, name: str, expected_wqes: int) -> ComposedRnicCell:
     raw_wqes = _array(cell["wqes"], f"{name}.wqes")
     _require(len(raw_wqes) == expected_wqes, f"{name} has the wrong WQE count")
     wqes = tuple(
-        _parse_wqe(row, f"{name}.wqes[{index}]")
+        _parse_wqe(
+            row,
+            f"{name}.wqes[{index}]",
+            network_abi_version=network_abi_version,
+            port=port,
+        )
         for index, row in enumerate(raw_wqes)
     )
     _require(
@@ -273,7 +416,14 @@ def _parse_cell(value: Any, name: str, expected_wqes: int) -> ComposedRnicCell:
         jct == max(wqe.completed_at_ps for wqe in wqes),
         f"{name} JCT disagrees with native CQ polling",
     )
-    return ComposedRnicCell(payload, rate, doorbell, wqes, jct)
+    return ComposedRnicCell(
+        payload,
+        rate,
+        doorbell,
+        wqes,
+        jct,
+        network_abi_version,
+    )
 
 
 @dataclass(frozen=True)
@@ -282,20 +432,42 @@ class ComposedRnicObservations:
 
     single_wqe: dict[tuple[int, int, int], ComposedRnicCell]
     fifo: dict[tuple[int, int], ComposedRnicCell]
+    network_abi_version: int = 1
 
     @classmethod
     def from_json(cls, value: Any) -> ComposedRnicObservations:
         root = _object(value, "composed observations")
-        _require(
-            root.get("schema") == TIER_A_OBSERVATION_SCHEMA,
-            "composed observations use the wrong schema",
-        )
+        schema = root.get("schema")
+        if schema == TIER_A_OBSERVATION_SCHEMA:
+            network_abi_version = 1
+            _require(
+                "network_abi_version" not in root,
+                "ABI-v1 composed observations advertise a version field",
+            )
+        elif schema == TIER_A_OBSERVATION_SCHEMA_V2:
+            network_abi_version = _integer(
+                root.get("network_abi_version"),
+                "network_abi_version",
+            )
+            _require(
+                network_abi_version == 2,
+                "ABI-v2 composed observations advertise the wrong version",
+            )
+        else:
+            raise ComposedRnicObservationError(
+                "composed observations use the wrong schema"
+            )
         _require(root.get("factory") == "htsim", "composed factory is not htsim")
         single_rows = _array(root.get("single_wqe"), "single_wqe")
         fifo_rows = _array(root.get("fifo"), "fifo")
         single: dict[tuple[int, int, int], ComposedRnicCell] = {}
         for index, raw in enumerate(single_rows):
-            cell = _parse_cell(raw, f"single_wqe[{index}]", 1)
+            cell = _parse_cell(
+                raw,
+                f"single_wqe[{index}]",
+                1,
+                network_abi_version,
+            )
             key = (
                 cell.payload_bytes,
                 cell.link_rate_gbps,
@@ -305,7 +477,12 @@ class ComposedRnicObservations:
             single[key] = cell
         fifo: dict[tuple[int, int], ComposedRnicCell] = {}
         for index, raw in enumerate(fifo_rows):
-            cell = _parse_cell(raw, f"fifo[{index}]", 2)
+            cell = _parse_cell(
+                raw,
+                f"fifo[{index}]",
+                2,
+                network_abi_version,
+            )
             _require(cell.payload_bytes == 4096, "FIFO payload is not 4 KiB")
             key = (cell.link_rate_gbps, cell.doorbell_service_ps)
             _require(key not in fifo, f"fifo repeats cell {key}")
@@ -322,7 +499,11 @@ class ComposedRnicObservations:
         }
         _require(set(single) == expected_single, "single-WQE matrix is incomplete")
         _require(set(fifo) == expected_fifo, "FIFO matrix is incomplete")
-        return cls(single_wqe=single, fifo=fifo)
+        return cls(
+            single_wqe=single,
+            fifo=fifo,
+            network_abi_version=network_abi_version,
+        )
 
     @classmethod
     def read(cls, path: str | Path) -> ComposedRnicObservations:
@@ -340,6 +521,8 @@ def invoke_composed_tier_a_producer(
     producer: str | Path,
     expectations: str | Path,
     observations: str | Path,
+    *,
+    network_abi_version: int = 1,
 ) -> list[str]:
     """Invoke the frozen Tier A port-factory producer and return its argv."""
 
@@ -350,15 +533,25 @@ def invoke_composed_tier_a_producer(
         not observations_path.exists(),
         f"composed observation file already exists: {observations_path}",
     )
+    _require(
+        network_abi_version in {1, 2},
+        "composed producer uses an unsupported NetworkPort ABI",
+    )
     command = [
         str(producer_path),
         "--factory",
         "htsim",
-        "--expectations",
-        str(expectations_path),
-        "--observations",
-        str(observations_path),
     ]
+    if network_abi_version == 2:
+        command.extend(["--network-abi-version", "2"])
+    command.extend(
+        [
+            "--expectations",
+            str(expectations_path),
+            "--observations",
+            str(observations_path),
+        ]
+    )
     subprocess.run(command, check=True)
     _require(
         observations_path.is_file(),
@@ -498,6 +691,24 @@ class _ComposedRnicTransaction:
             network_eligible_at_ps=network_eligible,
             network_started_at_ps=network_started,
             network_finished_at_ps=network_finished,
+            network_accepted_at_ps=(
+                offset + observed.network_accepted_at_ps
+                if observed.network_accepted_at_ps is not None
+                else None
+            ),
+            first_packet_at_ps=(
+                offset + observed.first_packet_at_ps
+                if observed.first_packet_at_ps is not None
+                else None
+            ),
+            last_packet_at_ps=(
+                offset + observed.last_packet_at_ps
+                if observed.last_packet_at_ps is not None
+                else None
+            ),
+            packet_tx_started_at_ps=tuple(
+                offset + value for value in observed.packet_tx_started_at_ps
+            ),
         )
         self._projections.append(projection)
         return projection

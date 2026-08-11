@@ -235,10 +235,11 @@ data or retransmission TX-start events.
 
 ABI v1 remains the default and its frozen raw and summary artifacts retain
 their exact bytes. ABI v2 passes the same Tier A relations and adds exact
-packet timeline relations. Static failed-link configuration still has no
-timestamped transition source, so requested dynamic capability rejects and
-HTSIM-15 owns the optional enabled producer. HTSIM-9 now remains open only for
-the Tier B live-metric run through CORE-15.
+packet timeline relations. At the original vocabulary checkpoint, static
+failed-link configuration had no timestamped transition source and requested
+dynamic capability rejected. The later HTSIM-15 closure added an opt-in
+timestamped endpoint-link source without changing that disabled path. HTSIM-9
+now remains open only for the Tier B live-metric run through CORE-15.
 
 Version negotiation is exact for the whole session. A v2 consumer paired with
 a producer that advertises only v1 rejects before event-handler installation,
@@ -251,13 +252,12 @@ bounded completed-attempt tombstone while the parent extent remains live. The
 extent terminal purges that tombstone. This permits physical feedback to trail
 the data packet without retaining packet state beyond the logical operation.
 
-The physical packetized manifold currently advertises packet-attempt events
-only. The full control vocabulary is exercised by a test runtime, not by a
-physical policy or fabric producer. HTSIM-16 owns ECN/CNP, effective-rate, PFC
-and link-state producers. HTSIM-15 separately owns the timestamped dynamic
-link-transition source that HTSIM-16 can project. BACK-34 owns a registered
-4,096-byte-quantum partial-final-packet cell; the frozen packet matrix and the
-composed 8,192-byte directed test contain only full quanta.
+The packetized manifold advertises packet-attempt events only. The physical
+DCQCN runtime now advertises its conditionally enabled ECN/CNP, effective-rate,
+PFC and link-state producers. HTSIM-15 and HTSIM-16 close those physical
+sources with exact disabled-path evidence. BACK-34 adds a registered
+5,000-byte partial-final-packet cell at the 4,096-byte wire quantum to both
+Tier A and the directed composed runtime.
 
 ### SimLLM pin-bump procedure
 
@@ -283,10 +283,10 @@ SimLLM change:
    pin closes BACK-25 and BACK-26 at the vocabulary and relay boundary, and
    the Tier B results close the demonstrated BACK-8 and CORE-15 clauses,
    while every undemonstrated clause keeps a distinct residual owner
-   (CORE-21, BACK-31, HTSIM-15 for the dynamic-link producer, HTSIM-16 for
-   the physical control-event producers). Close HTSIM-9 only after a
-   composed run demonstrates packet-issue evidence populating the native
-   timeline through the live metric chain.
+   (CORE-21 and BACK-31 at that checkpoint). HTSIM-15 and HTSIM-16 later
+   closed from physical DCQCN, PFC and dynamic-link evidence. Close HTSIM-9
+   only after a composed run demonstrates packet-issue evidence populating
+   the native timeline through the live metric chain.
 6. Commit the gitlink, module status and reproducible evidence together using
    the maintainer's identity. Never rewrite or delete the backend addon branch
    after SimLLM points at it.

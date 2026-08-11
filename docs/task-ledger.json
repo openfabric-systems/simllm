@@ -1,6 +1,6 @@
 {
   "schema": "simllm-task-ledger-v1",
-  "note": "Closed registry IDs, recovered from the module-doc history on main at 90ada43. Open IDs are NOT listed here: they are read from the open-task sections of docs/modules/*.md, which stay the source of truth. The change that closes a task removes its module entry and appends its ID here, so closed plus open is the number of tasks ever registered. IDs are never renumbered or reused. CORE-5, CORE-6 and VLLM-15 were each removed by their completing change and then restored verbatim by a later branch merge that kept both sides of the open-task list; they are recorded here so the same resurrection fails CI instead of going unnoticed.",
+  "note": "Closed registry IDs, recovered from the module-doc history on main at 90ada43. Open IDs are NOT listed here: they are read from the open-task sections of docs/modules/*.md, which stay the source of truth. The change that closes a task removes its module entry and appends its ID here, so closed plus open is the number of tasks ever registered. IDs are never renumbered or reused. CORE-5, CORE-6 and VLLM-15 were each removed by their completing change and then restored verbatim by a later branch merge that kept both sides of the open-task list; they are recorded here so the same resurrection fails CI instead of going unnoticed. retired_never_landed records IDs that were registered on a branch and retired before reaching main: they were never open tasks here, so they are not counted, but their numbers are still never reused.",
   "retracted": [
     "BACK-4"
   ],
@@ -21,6 +21,7 @@
     "BACK-27",
     "BACK-28",
     "BACK-31",
+    "BACK-34",
     "BRIDGE-1",
     "BRIDGE-3",
     "COMP-3",
@@ -33,8 +34,13 @@
     "CORE-7",
     "CORE-15",
     "CORE-21",
+    "CORE-24",
     "GOAL-1",
     "HTSIM-3",
+    "HTSIM-9",
+    "HTSIM-15",
+    "HTSIM-16",
+    "HTSIM-18",
     "PLAY-1",
     "PLAY-2",
     "PLAY-3",
@@ -47,5 +53,8 @@
     "VLLM-2",
     "VLLM-15",
     "VLLM-16"
+  ],
+  "retired_never_landed": [
+    "HTSIM-19"
   ]
 }

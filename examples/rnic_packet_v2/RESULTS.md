@@ -1,5 +1,11 @@
 # RNIC packet-event ABI v2 results
 
+This report records the earlier BACK-25 and BACK-26 vocabulary checkpoint.
+The subsequent physical-control closure is in
+[`rnic_control_v2/RESULTS.md`](../rnic_control_v2/RESULTS.md), and the
+subsequent production-quantum tail closure is in
+[`BACK34_RESULTS.md`](BACK34_RESULTS.md).
+
 ## Claim scope
 
 This report closes BACK-25 and BACK-26. NetworkPort ABI v2 now carries the
@@ -160,18 +166,18 @@ surrogate supplies those packet fields.
 
 The discriminated control vocabulary covers packet-keyed ECN and CNP,
 policy-context-keyed eligibility and rate updates, PFC submit, pause and
-resume, and stable link-state transitions. Only the test fake emits these
-control forms. The physical packetized manifold advertises packet-attempt
-events alone, and the wrapper rejects events that a bound runtime did not
-advertise. HTSIM-16 owns physical ECN/CNP and rate-update producers from the
-DCQCN policy plus PFC and link-state producers from the fabric. HTSIM-15 owns
-the separately disabled timestamped dynamic-link transition source.
+resume, and stable link-state transitions. At this report's frozen revision,
+the test fake was the control-form producer. The physical packetized manifold
+advertised packet-attempt events alone, and the wrapper rejected events that a
+bound runtime did not advertise. HTSIM-15 and HTSIM-16 later closed with the
+physical DCQCN, PFC and dynamic-link producers documented in the linked
+control result above.
 
-The frozen 4,096-byte and 1 MiB payloads and the directed 8,192-byte composed
-test are all exact multiples of the 4,096-byte production quantum. The
-oracle's final-packet branch is therefore not exercised with a partial final
-packet at that quantum. BACK-34 owns the missing registered matrix and
-directed-composition cell.
+At this report's frozen revision, the 4,096-byte and 1 MiB payloads and the
+directed 8,192-byte composed test were exact multiples of the 4,096-byte
+production quantum. BACK-34 later closed with a registered 5,000-byte Tier A
+and composed cell whose final packet carries 968 payload bytes in 1,032 wire
+bytes.
 
 Fatal unscored checks all hold: authority exclusivity, token conservation,
 packet lifecycle ordering, exact payload closure, controlled drop, FIFO
@@ -220,11 +226,9 @@ packet execution independently scored 0 of its reported 10 relations, so its
 BACK-25 and BACK-26 are removed from the open registry with a dated closure
 narrative and this evidence link. HTSIM-9 `(Completeness; P1; L)` remains open
 until Tier B passes under ABI v2 with packet-issue evidence in the native
-timeline. BACK-34 `(Precision; P1; M)` owns production-quantum partial-tail
-evidence. HTSIM-15 `(Completeness; P2; L)` owns a future timestamped
-dynamic-link producer, and HTSIM-16 `(Completeness; P2; L)` owns every
-physical control-event producer. Their explicit rejection and disabled paths
-preserve the accepted baselines.
+timeline. BACK-34, HTSIM-15 and HTSIM-16 subsequently closed at their
+registered component scopes, with separate result reports linked at the top
+of this historical record.
 
 The final conditional fetch found `origin/main` at
 `a620180c6bc980f1c695ade95b95cea7b407f199`, without the pending Tier B merge;
@@ -234,10 +238,12 @@ present, the registry union must retain its ABI-v1 passage, retain this landed
 vocabulary, and close HTSIM-9 only after a Tier B-class run passes with ABI-v2
 packet-issue evidence populating the native timeline.
 
-This slice deliberately does not claim Tier B, TTFT or TPOT evidence. It does
-not exercise a production-quantum partial final packet or implement physical
-ECN/CNP, rate-update, PFC or link-state producers. It does not change the
-default ABI, edit `README.md` or `docs/README_PRO.md`, or commit bulk output.
-The paired htsim commit is intentionally not installed as the SimLLM submodule
-pin in this worker worktree; pin integration remains a separate maintainer
-operation after the two commit series are reviewed together.
+This earlier slice deliberately did not claim Tier B, TTFT or TPOT evidence,
+exercise a production-quantum partial final packet, or implement physical
+ECN/CNP, rate-update, PFC or link-state producers. The later BACK-34,
+HTSIM-15 and HTSIM-16 result reports supersede only those component omissions.
+Neither slice changes the default ABI, edits `README.md` or
+`docs/README_PRO.md`, or commits bulk output. The paired htsim commit is
+intentionally not installed as the SimLLM submodule pin in this worker
+worktree; pin integration remains a separate maintainer operation after the
+two commit series are reviewed together.

@@ -16,9 +16,10 @@ the default. :class:`HtsimPersistentStepSink` is the opt-in acceleration for a
 finite replay whose records are known before the scheduler consumes them. It
 keeps a local worker pool alive, prepares isolated diagnostic runs
 concurrently, then serves their exact results in record order. The pinned
-backend still accepts only one GOAL per process, so this mode deliberately
-preserves per-step reset semantics. A stateful online simulator session needs
-the separate backend protocol tracked as HTSIM-18.
+backend diagnostic path still accepts one GOAL per process, so this mode
+deliberately preserves per-step reset semantics. The backend persistent flow
+protocol is now delivered; BRIDGE-2 owns the stateful online graph-level
+client above it.
 
 A step with no collective work returns ``None``: the TP world has size 1
 (or the dims declare no experts, or no EP group is configured) and the

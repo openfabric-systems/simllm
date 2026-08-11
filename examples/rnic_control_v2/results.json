@@ -1,0 +1,464 @@
+{
+  "abi_v1_sha256": {
+    "raw_observations.json": "37a4e9cf88a1b60094409150dfad25599eb77cbf268b3d08bfacf527e493a26a",
+    "summary.json": "00ef7e4f5bdbd38f4eabe9ba42dc75f56de528c8751b93e6eef4a3089fa61004"
+  },
+  "ctest": {
+    "failed": 0,
+    "passed": 374,
+    "total": 374
+  },
+  "entailment_analysis": {
+    "abi_v1_identity": "accepted semantic output can still differ byte for byte",
+    "cnp_rate_delta_bps": "the real CNP can arrive while the subsequent rate remains unchanged or outside the frozen signed band",
+    "control_disabled_identity": "the observation callback can perturb timing, tokens, counters, ordering, or samples after the run starts",
+    "dynamic_link_relations": "exact transition rows do not force a completion-time response",
+    "evaluation_order": "all scored relations use generated raw observations before the fatal exact-oracle pass",
+    "exact_oracles": "fatal_unscored",
+    "pfc_pause_duration_ps": "the real fabric can emit a zero or out-of-band pause interval",
+    "reference_digests": "unscored change-set guards validated at entry"
+  },
+  "exact_oracles": {
+    "classification": "fatal_unscored",
+    "common_packet_and_extent_ledgers": {
+      "eight_flow_ecn": {
+        "disabled": {
+          "flow_extents": 8,
+          "packet_attempts": 136,
+          "packet_events": 544
+        },
+        "enabled": {
+          "flow_extents": 8,
+          "packet_attempts": 136,
+          "packet_events": 544
+        }
+      },
+      "four_flow_ecn": {
+        "disabled": {
+          "flow_extents": 4,
+          "packet_attempts": 68,
+          "packet_events": 272
+        },
+        "enabled": {
+          "flow_extents": 4,
+          "packet_attempts": 68,
+          "packet_events": 272
+        }
+      },
+      "link_hold_long": {
+        "disabled": {
+          "flow_extents": 1,
+          "packet_attempts": 17,
+          "packet_events": 68
+        },
+        "enabled": {
+          "flow_extents": 1,
+          "packet_attempts": 17,
+          "packet_events": 68
+        },
+        "no_transition": {
+          "flow_extents": 1,
+          "packet_attempts": 17,
+          "packet_events": 68
+        }
+      },
+      "link_hold_short": {
+        "disabled": {
+          "flow_extents": 1,
+          "packet_attempts": 17,
+          "packet_events": 68
+        },
+        "enabled": {
+          "flow_extents": 1,
+          "packet_attempts": 17,
+          "packet_events": 68
+        },
+        "no_transition": {
+          "flow_extents": 1,
+          "packet_attempts": 17,
+          "packet_events": 68
+        }
+      },
+      "pfc_128k": {
+        "disabled": {
+          "flow_extents": 8,
+          "packet_attempts": 264,
+          "packet_events": 1056
+        },
+        "enabled": {
+          "flow_extents": 8,
+          "packet_attempts": 264,
+          "packet_events": 1056
+        }
+      },
+      "pfc_64k": {
+        "disabled": {
+          "flow_extents": 8,
+          "packet_attempts": 136,
+          "packet_events": 544
+        },
+        "enabled": {
+          "flow_extents": 8,
+          "packet_attempts": 136,
+          "packet_events": 544
+        }
+      }
+    },
+    "congestion": {
+      "eight_flow_ecn": {
+        "cnps": 8,
+        "ecn_marks": 397,
+        "eligibility_updates": 8,
+        "late_cnp_after_packet_delivery": 8,
+        "rate_updates": 16
+      },
+      "four_flow_ecn": {
+        "cnps": 4,
+        "ecn_marks": 198,
+        "eligibility_updates": 4,
+        "late_cnp_after_packet_delivery": 4,
+        "rate_updates": 8
+      },
+      "pfc_128k": {
+        "cnps": 8,
+        "ecn_marks": 782,
+        "eligibility_updates": 20,
+        "late_cnp_after_packet_delivery": 8,
+        "rate_updates": 16
+      },
+      "pfc_64k": {
+        "cnps": 8,
+        "ecn_marks": 397,
+        "eligibility_updates": 16,
+        "late_cnp_after_packet_delivery": 8,
+        "rate_updates": 16
+      }
+    },
+    "dynamic_link": {
+      "link_hold_long": {
+        "rows": [
+          [
+            1000,
+            "down"
+          ],
+          [
+            401000,
+            "up"
+          ]
+        ],
+        "transitions": 2
+      },
+      "link_hold_short": {
+        "rows": [
+          [
+            1000,
+            "down"
+          ],
+          [
+            201000,
+            "up"
+          ]
+        ],
+        "transitions": 2
+      }
+    },
+    "pfc": {
+      "pfc_128k": {
+        "paired_eligibility_updates": 2,
+        "paused": 30,
+        "resumed": 30,
+        "submitted": 60
+      },
+      "pfc_64k": {
+        "paired_eligibility_updates": 2,
+        "paused": 13,
+        "resumed": 13,
+        "submitted": 26
+      }
+    },
+    "unsupported_capability_rejection": "covered by the full htsim CTest suite"
+  },
+  "expectation_commit": "51af85937d6b1d3c36f6d841c6445d98ef84c2d3",
+  "genuine_risk": {
+    "abi_v1_identity": {
+      "plausible_failures": 2,
+      "relations": 2
+    },
+    "cnp_rate_delta_bps": {
+      "plausible_failures": 2,
+      "relations": 2
+    },
+    "control_disabled_identity": {
+      "plausible_failures": 6,
+      "relations": 6
+    },
+    "dynamic_link_completion_delta_ps": {
+      "plausible_failures": 2,
+      "relations": 2
+    },
+    "dynamic_link_duration_spacing_ps": {
+      "plausible_failures": 1,
+      "relations": 1
+    },
+    "overall": {
+      "plausible_failures": 15,
+      "relations": 15
+    },
+    "pfc_pause_duration_ps": {
+      "plausible_failures": 2,
+      "relations": 2
+    }
+  },
+  "htsim_revision": "d716067acc3f7ef89807e6ab310197dfbdea99f7",
+  "raw_cells": {
+    "eight_flow_ecn": {
+      "disabled": "cells/eight_flow_ecn/disabled/raw_observations.json",
+      "enabled": "cells/eight_flow_ecn/enabled/raw_observations.json"
+    },
+    "four_flow_ecn": {
+      "disabled": "cells/four_flow_ecn/disabled/raw_observations.json",
+      "enabled": "cells/four_flow_ecn/enabled/raw_observations.json"
+    },
+    "link_hold_long": {
+      "disabled": "cells/link_hold_long/disabled/raw_observations.json",
+      "enabled": "cells/link_hold_long/enabled/raw_observations.json",
+      "no_transition": "cells/link_hold_long/no_transition/raw_observations.json"
+    },
+    "link_hold_short": {
+      "disabled": "cells/link_hold_short/disabled/raw_observations.json",
+      "enabled": "cells/link_hold_short/enabled/raw_observations.json",
+      "no_transition": "cells/link_hold_short/no_transition/raw_observations.json"
+    },
+    "pfc_128k": {
+      "disabled": "cells/pfc_128k/disabled/raw_observations.json",
+      "enabled": "cells/pfc_128k/enabled/raw_observations.json"
+    },
+    "pfc_64k": {
+      "disabled": "cells/pfc_64k/disabled/raw_observations.json",
+      "enabled": "cells/pfc_64k/enabled/raw_observations.json"
+    }
+  },
+  "schema": "simllm-rnic-control-v2-results-v1",
+  "scored_relations": {
+    "abi_v1_identity": {
+      "artifacts": {
+        "raw_observations.json": true,
+        "summary.json": true
+      },
+      "passed": 2,
+      "total": 2
+    },
+    "cnp_rate_delta_bps": {
+      "observations": [
+        {
+          "band": [
+            -300000000000,
+            -1
+          ],
+          "cnp_at_ps": 8334080,
+          "condition": "four_flow_ecn",
+          "effective_rate_bps": 200000000000,
+          "rate_at_ps": 8334080,
+          "signed_delta_bps": -200000000000
+        },
+        {
+          "band": [
+            -300000000000,
+            -1
+          ],
+          "cnp_at_ps": 8334080,
+          "condition": "eight_flow_ecn",
+          "effective_rate_bps": 200000000000,
+          "rate_at_ps": 8334080,
+          "signed_delta_bps": -200000000000
+        }
+      ],
+      "passed": 2,
+      "total": 2
+    },
+    "control_disabled_identity": {
+      "observations": [
+        {
+          "behavioral_matches": {
+            "canonical_completion": true,
+            "completion_csv": true,
+            "replay_summary": true,
+            "step_results": true
+          },
+          "changed_artifacts": [],
+          "changed_inputs": [],
+          "condition": "four_flow_ecn",
+          "input_matches": {
+            "baseline_parameters": true,
+            "goal_binary": true,
+            "goal_text": true,
+            "profile": true,
+            "seed": true,
+            "topology": true
+          }
+        },
+        {
+          "behavioral_matches": {
+            "canonical_completion": true,
+            "completion_csv": true,
+            "replay_summary": true,
+            "step_results": true
+          },
+          "changed_artifacts": [],
+          "changed_inputs": [],
+          "condition": "eight_flow_ecn",
+          "input_matches": {
+            "baseline_parameters": true,
+            "goal_binary": true,
+            "goal_text": true,
+            "profile": true,
+            "seed": true,
+            "topology": true
+          }
+        },
+        {
+          "behavioral_matches": {
+            "canonical_completion": true,
+            "completion_csv": true,
+            "replay_summary": true,
+            "step_results": true
+          },
+          "changed_artifacts": [],
+          "changed_inputs": [],
+          "condition": "pfc_64k",
+          "input_matches": {
+            "baseline_parameters": true,
+            "goal_binary": true,
+            "goal_text": true,
+            "profile": true,
+            "seed": true,
+            "topology": true
+          }
+        },
+        {
+          "behavioral_matches": {
+            "canonical_completion": true,
+            "completion_csv": true,
+            "replay_summary": true,
+            "step_results": true
+          },
+          "changed_artifacts": [],
+          "changed_inputs": [],
+          "condition": "pfc_128k",
+          "input_matches": {
+            "baseline_parameters": true,
+            "goal_binary": true,
+            "goal_text": true,
+            "profile": true,
+            "seed": true,
+            "topology": true
+          }
+        },
+        {
+          "behavioral_matches": {
+            "canonical_completion": true,
+            "completion_csv": true,
+            "replay_summary": true,
+            "step_results": true
+          },
+          "changed_artifacts": [],
+          "changed_inputs": [],
+          "condition": "link_hold_short",
+          "input_matches": {
+            "baseline_parameters": true,
+            "goal_binary": true,
+            "goal_text": true,
+            "profile": true,
+            "seed": true,
+            "topology": true
+          }
+        },
+        {
+          "behavioral_matches": {
+            "canonical_completion": true,
+            "completion_csv": true,
+            "replay_summary": true,
+            "step_results": true
+          },
+          "changed_artifacts": [],
+          "changed_inputs": [],
+          "condition": "link_hold_long",
+          "input_matches": {
+            "baseline_parameters": true,
+            "goal_binary": true,
+            "goal_text": true,
+            "profile": true,
+            "seed": true,
+            "topology": true
+          }
+        }
+      ],
+      "passed": 6,
+      "total": 6
+    },
+    "dynamic_link_completion_delta_ps": {
+      "observations": [
+        {
+          "band": [
+            100000,
+            250000
+          ],
+          "completion_at_ps": 9702440,
+          "condition": "link_hold_short",
+          "no_transition_completion_at_ps": 9583360,
+          "signed_delta_ps": 119080
+        },
+        {
+          "band": [
+            300000,
+            450000
+          ],
+          "completion_at_ps": 9902440,
+          "condition": "link_hold_long",
+          "no_transition_completion_at_ps": 9583360,
+          "signed_delta_ps": 319080
+        }
+      ],
+      "passed": 2,
+      "total": 2
+    },
+    "dynamic_link_duration_spacing_ps": {
+      "band": [
+        190000,
+        210000
+      ],
+      "passed": 1,
+      "signed_spacing_ps": 200000,
+      "total": 1
+    },
+    "pfc_pause_duration_ps": {
+      "observations": [
+        {
+          "band": [
+            1,
+            1000000000
+          ],
+          "condition": "pfc_64k",
+          "duration_ps": 81920,
+          "link_id": 4446745699708894886,
+          "pause_at_ps": 2247040,
+          "resume_at_ps": 2328960
+        },
+        {
+          "band": [
+            1,
+            1000000000
+          ],
+          "condition": "pfc_128k",
+          "duration_ps": 81920,
+          "link_id": 4446745699708894886,
+          "pause_at_ps": 2247040,
+          "resume_at_ps": 2328960
+        }
+      ],
+      "passed": 2,
+      "total": 2
+    }
+  },
+  "simllm_revision": "89dbb4b0d275fd893799792491411e4bd2c24a2d"
+}
