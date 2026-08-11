@@ -132,8 +132,11 @@ in-process runs. The chronology and evidence are recorded in
 
 PLAY-4 is complete. The PLAY-5 routed replay half is also validated as of
 2026-08-11: both live bandwidth cells returned exact oracle completions, every
-captured all-to-all table matched its independent closed form, and all 13
-executed completion, routed-stream, TTFT and TPOT relations passed. The
+captured all-to-all table matched its closed form, and all 13 executed
+completion, routed-stream, TTFT and TPOT relations passed. A post-specified
+raw-trace recomputation then derived all ten GOAL tables without reading the
+routing projection and matched 10/10. This corrects the primary evaluator's
+overstated independence claim while leaving its result unchanged. The
 independent vLLM CPU comparison remains blocked because the installed CUDA
 build reaches `CPUWorker` but does not export `init_cpu_memory_env`; its six
 rows earned no pass. The chronology and exact evidence are recorded in
