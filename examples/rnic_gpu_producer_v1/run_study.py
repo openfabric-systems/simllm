@@ -639,12 +639,11 @@ def _validate_rows(rows: list[dict[str, str | int]]) -> dict[str, int]:
     saturated_passed = 0
     idle_identity_passed = 0
     structural_failures: list[str] = []
-    for shape in ISOLATED_COMPLETION_CYCLES:
+    for shape, isolated in ISOLATED_COMPLETION_CYCLES.items():
         idle = indexed[("enabled", shape, "idle")]
         half = indexed[("enabled", shape, "half")]
         saturated = indexed[("enabled", shape, "saturated")]
         disabled_idle = indexed[("disabled", shape, "idle")]
-        isolated = ISOLATED_COMPLETION_CYCLES[shape]
         half_passed += int(
             int(half["task_completed_cycle"]) == isolated + 1
         )
