@@ -1,0 +1,172 @@
+{
+  "schema": "simllm-rnic-authority-expectations-v1",
+  "observation_schema": "simllm-rnic-authority-observations-v1",
+  "result_schema": "simllm-rnic-authority-results-v1",
+  "simllm_base_commit": "90ada43070adb3b1e624b6819aff34d8620e8571",
+  "htsim_source_commit": "4885c647eecdfdf81479d1df052223c016ad086b",
+  "fixed_graph": {
+    "execution_id": "core21-fixed-contended-graph",
+    "step_index": 1,
+    "released_at_ps": 17000,
+    "source_rank": 0,
+    "destination_ranks": [
+      8,
+      16
+    ],
+    "payload_bytes": 4096,
+    "wqe_count": 2,
+    "logical_queue": "core21-control",
+    "operation_ids": [
+      "core21-contended-send"
+    ],
+    "completion_operation_ids": [
+      "core21-contended-send"
+    ],
+    "request_ids": [
+      "core21-prefill",
+      "core21-decode"
+    ]
+  },
+  "history_seed": {
+    "first_release_ps": 7000,
+    "duration_ps": 10000,
+    "request_id": "core21-decode",
+    "work_kind": "compute",
+    "scored": false
+  },
+  "sweep": {
+    "link_rate_gbps": [
+      200,
+      400
+    ],
+    "doorbell_service_ps": [
+      0,
+      1000
+    ]
+  },
+  "closed_forms": {
+    "wire_service_ps": "payload_bytes * 8 * 1000 / link_rate_gbps",
+    "bypass_jct_ps": "2 * wire_service_ps",
+    "structural_jct_ps": "doorbell_service_ps + 2 * wire_service_ps",
+    "rate_200_minus_400_ps": 163840
+  },
+  "signed_authority_relation": {
+    "orientation": "structural_minus_bypass",
+    "doorbell_service_ps": 1000,
+    "metrics": [
+      "jct_ps",
+      "prefill_ttft_ps",
+      "decode_tpot_ps"
+    ],
+    "direction": "positive",
+    "lower_bound_ps": 1000,
+    "upper_bound_ps": 1000,
+    "instances": 6
+  },
+  "inverse_rate_relation": {
+    "orientation": "rate_200_minus_rate_400",
+    "metrics": [
+      "jct_ps",
+      "prefill_ttft_ps",
+      "decode_tpot_ps"
+    ],
+    "lower_bound_ps": 163840,
+    "upper_bound_ps": 163840,
+    "instances": 12
+  },
+  "fatal_unscored": [
+    "d0_authority_identity",
+    "identical_graph_and_step_input",
+    "deployed_reducer_on_both_modes",
+    "bypass_ledger_is_sole_bypass_authority",
+    "native_session_is_sole_structural_authority",
+    "transaction_failure_is_atomic",
+    "transaction_retry_commits_once",
+    "bypass_artifacts_preserved",
+    "positive_assets_preserved",
+    "negative_cache_is_off",
+    "negative_main_binary_exists",
+    "negative_tier_a_target_absent",
+    "negative_producer_rejected_native_absence",
+    "negative_checker_rejected_missing_observations",
+    "negative_published_no_accepted_result"
+  ],
+  "negative_control": {
+    "profile": "rnic-nn",
+    "expected_producer_exit": 2,
+    "expected_checker_exit": 2,
+    "producer_diagnostic": "composed preflight lacks structural native authority",
+    "checker_diagnostic": "authority observations do not exist",
+    "forbidden_outputs": [
+      "raw_observations.json",
+      "raw_observations.json.tmp",
+      "results.json",
+      "results.json.tmp"
+    ]
+  },
+  "builds": {
+    "positive": {
+      "HTSIM_ENABLE_SIMLLM_RNIC": "ON",
+      "HTSIM_CREATE_SOURCE_SYMLINKS": "OFF",
+      "targets": [
+        "htsim_rnic_tier_a",
+        "htsim_rnic",
+        "txt2bin"
+      ]
+    },
+    "negative": {
+      "HTSIM_ENABLE_SIMLLM_RNIC": "OFF",
+      "HTSIM_CREATE_SOURCE_SYMLINKS": "OFF",
+      "targets": [
+        "htsim_rnic",
+        "txt2bin"
+      ],
+      "absent_target": "htsim_rnic_tier_a"
+    }
+  },
+  "producer_argument_names": [
+    "--expectations",
+    "--observations",
+    "--tier-a-producer",
+    "--htsim-rnic",
+    "--txt2bin"
+  ],
+  "checker_argument_names": [
+    "--expectations",
+    "--observations",
+    "--negative-evidence",
+    "--results"
+  ],
+  "raw_top_keys": [
+    "schema",
+    "simllm_source_commit",
+    "htsim_source_commit",
+    "native_observations_sha256",
+    "preflight",
+    "cells"
+  ],
+  "raw_cell_keys": [
+    "link_rate_gbps",
+    "doorbell_service_ps",
+    "execution_graph",
+    "step_record",
+    "history_seed",
+    "bypass",
+    "structural",
+    "transaction_failure"
+  ],
+  "raw_mode_keys": [
+    "hardware_mode",
+    "authority",
+    "execution_result",
+    "runtime_report",
+    "step_result",
+    "request_summary",
+    "wqe_count",
+    "bypass_artifacts"
+  ],
+  "behavioral_family_instances": {
+    "signed_authority_delta": 6,
+    "inverse_rate_delta": 12
+  }
+}
