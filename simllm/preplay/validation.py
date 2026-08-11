@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 
 
-class DivergenceKind(StrEnum):
+class DivergenceKind(str, Enum):
     """Root classifications admitted by the PLAY-5 study."""
 
     SAMPLER_DIFFERENCE = "sampler-difference"
