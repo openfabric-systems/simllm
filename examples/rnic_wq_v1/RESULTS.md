@@ -113,3 +113,15 @@ encoding, fences, inline/BlueFlame paths, CQE compression/moderation and
 interrupt delivery. PCIe/QPC/packet/retry behavior remains BACK-10 through
 BACK-12. No physical latency parameter has been fitted from these synthetic
 runs.
+
+## Post-specified status after the Tier B gate
+
+The BACK-8 sentence above records the state when this standalone component
+study ran. The later frozen Tier A and Tier B gates connected the ABI-v1
+`AtlahsFlowRuntime` composition and carried native timing through the core
+metric chain for the isolated `rnic_live_v1` fixture. BACK-8 and the
+demonstrated CORE-15 live-seam clauses closed on that evidence. CORE-21 retains
+the same-contended-graph bypass-versus-composed comparison, BACK-31 retains the
+unlinked-native executable negative, and HTSIM-9 retains packet-issue evidence
+under BACK-25 and BACK-26. This later status does not broaden the standalone
+component claims in this report.

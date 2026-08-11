@@ -392,8 +392,10 @@ polling, network would-block and controlled SQ-full, network-drop and
 CQ-overrun evidence. Its versioned `NetworkPort` passes opaque transfer tokens
 plus flow/tag and policy-context identity without transferring WQ/QP/CQ
 ownership. Flow-level acceptance/outcome timestamps remain separate from the
-packet issue timestamps that HTSIM-9 must supply. The htsim wrapper is not yet
-connected, so the old HTSIM ledger remains the live compatibility path.
+packet issue timestamps that HTSIM-9 must supply. At this dated component
+checkpoint, the htsim wrapper was not connected, so the old HTSIM ledger was
+its live compatibility path. The later BACK-8 closure below records the ABI-v1
+composition and Tier B evidence.
 The post-specified native regression study passes all 11 cells exactly; see
 [examples/rnic_wq_v1/RESULTS.md](../../examples/rnic_wq_v1/RESULTS.md).
 
