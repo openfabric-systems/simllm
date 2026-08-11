@@ -339,7 +339,9 @@ def _normalized_vllm_stop(choice: Any, eos_token_id: int) -> str:
         return "length-cap"
     if choice.finish_reason != "stop":
         return f"unknown:{choice.finish_reason}"
-    if choice.stop_reason == eos_token_id:
+    if choice.stop_reason == eos_token_id or (
+        choice.stop_reason is None and choice.token_ids and choice.token_ids[-1] == eos_token_id
+    ):
         return "eos"
     if isinstance(choice.stop_reason, str):
         return "stop-string"
@@ -418,7 +420,6 @@ def _attempt_vllm_cpu(args: argparse.Namespace) -> None:
     try:
         import torch
         import vllm.platforms
-        from vllm import LLM, SamplingParams
         from vllm.platforms.cpu import CpuPlatform
 
         observed = json.loads(
@@ -429,6 +430,7 @@ def _attempt_vllm_cpu(args: argparse.Namespace) -> None:
         vllm.platforms._current_platform = CpuPlatform()
         reached.append("cpu-platform-selected")
         from oracle_worker import latest_validation_worker
+        from vllm import LLM, SamplingParams
         from vllm.v1.worker.cpu_model_runner import CPUModelRunner
         from vllm.v1.worker.cpu_worker import CPUWorker
 
