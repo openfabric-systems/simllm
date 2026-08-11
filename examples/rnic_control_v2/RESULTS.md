@@ -13,7 +13,7 @@ The result-producing run used SimLLM implementation commit
 `89dbb4b0d275fd893799792491411e4bd2c24a2d` and htsim implementation commit
 `d716067acc3f7ef89807e6ab310197dfbdea99f7`. Bulk build and raw observations
 are under
-`/data3/yifeng/simllm-dev/wave5-runs/codex/htsim1516_control_producers/control-v2`.
+`${SIMLLM_DATA_ROOT}/wave5-runs/codex/htsim1516_control_producers/control-v2`.
 The tracked [`results.json`](results.json) is byte-identical to that run's
 summary and has SHA-256
 `73c20588366ca0cdef61843170b17d9cf4f582f9520ac99e9de6ea88a8502f17`.

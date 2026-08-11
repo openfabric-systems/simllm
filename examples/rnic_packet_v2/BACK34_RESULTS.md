@@ -23,7 +23,7 @@ The final registered run used SimLLM implementation commit
 `89dbb4b0d275fd893799792491411e4bd2c24a2d` and htsim implementation commit
 `d716067acc3f7ef89807e6ab310197dfbdea99f7`. Bulk build and raw observations
 are under
-`/data3/yifeng/simllm-dev/wave5-runs/codex/htsim1516_control_producers/back34`.
+`${SIMLLM_DATA_ROOT}/wave5-runs/codex/htsim1516_control_producers/back34`.
 The tracked [`back34_results.json`](back34_results.json) is byte-identical to
 that run's summary and has SHA-256
 `d850858e21bcb3b405d35ddf86b4df952003f6948d1864ebe418eb9a8ae50e0d`.
