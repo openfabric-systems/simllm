@@ -1,5 +1,14 @@
 """Network-backend invocation: htsim (packet-level) and LogGOPSim (flow-level)."""
 
+from simllm.backends.composed_rnic import (
+    NATIVE_AUTHORITY,
+    ComposedRnicCell,
+    ComposedRnicObservationError,
+    ComposedRnicObservations,
+    ComposedRnicSession,
+    ComposedWqeObservation,
+    invoke_composed_tier_a_producer,
+)
 from simllm.backends.fct import NormalizedFct, normalized_fct
 from simllm.backends.htsim import HtsimUecConfig, build_htsim_uec_command
 from simllm.backends.htsim_dcqcn import (
@@ -42,18 +51,26 @@ from simllm.backends.rnic_records import (
 )
 from simllm.backends.step_lowerer import SerialStepLowerer, SerialStepLowererConfig
 from simllm.backends.step_sink import (
+    HtsimPersistentStepSink,
     HtsimStepSink,
     HtsimStepSinkConfig,
     StepNetworkOutcome,
 )
 
 __all__ = [
+    "NATIVE_AUTHORITY",
     "RNIC_PROFILES",
     "BypassArtifactComparison",
     "BypassArtifactPaths",
     "BypassArtifacts",
+    "ComposedRnicCell",
+    "ComposedRnicObservationError",
+    "ComposedRnicObservations",
+    "ComposedRnicSession",
+    "ComposedWqeObservation",
     "FlowCompletion",
     "HtsimDcqcnConfig",
+    "HtsimPersistentStepSink",
     "HtsimRnicConfig",
     "HtsimStepSink",
     "HtsimStepSinkConfig",
@@ -81,6 +98,7 @@ __all__ = [
     "compare_bypass_artifacts",
     "find_htsim_dcqcn",
     "find_htsim_rnic",
+    "invoke_composed_tier_a_producer",
     "normalized_fct",
     "parse_completion_csv",
     "read_bypass_artifacts",

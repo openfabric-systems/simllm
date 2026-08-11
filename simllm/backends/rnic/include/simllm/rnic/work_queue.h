@@ -258,6 +258,9 @@ public:
         const std::vector<WorkRequest>& requests,
         Picoseconds now_ps);
     DoorbellBatch ringDoorbell(Picoseconds now_ps);
+    DoorbellBatch ringDoorbell(
+        Picoseconds now_ps,
+        const RnicProducerTaskLink& producer_task);
     // Deliver same-timestamp NetworkEvents before progress() so a completed
     // network credit is visible when its advertised retry deadline arrives.
     std::size_t progress(Picoseconds now_ps);

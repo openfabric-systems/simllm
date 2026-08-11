@@ -205,6 +205,7 @@ class QueueVisit:
     completed_at_ps: int
     service_bytes: int = 0
     subject_object_id: str | None = None
+    stage: str | None = None
 
     def __post_init__(self) -> None:
         _require_text("execution_id", self.execution_id)
@@ -222,6 +223,8 @@ class QueueVisit:
             _require_int(name, getattr(self, name))
         if self.subject_object_id is not None:
             _require_text("subject_object_id", self.subject_object_id)
+        if self.stage is not None:
+            _require_text("stage", self.stage)
         if self.eligible_at_ps < self.submitted_at_ps:
             raise ValueError("queue visit becomes eligible before submission")
         if self.started_at_ps < self.eligible_at_ps:
@@ -361,6 +364,11 @@ class WqeLifecycleProjection:
     completed_at_ps: int
     channel_id: str
     nccl_command_id: str | None = None
+    doorbell_started_at_ps: int | None = None
+    doorbell_completed_at_ps: int | None = None
+    network_eligible_at_ps: int | None = None
+    network_started_at_ps: int | None = None
+    network_finished_at_ps: int | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -404,6 +412,50 @@ class WqeLifecycleProjection:
             raise ValueError("WQE completion precedes resource release")
         if self.nccl_command_id is not None:
             _require_text("nccl_command_id", self.nccl_command_id)
+        native_stages = (
+            self.doorbell_started_at_ps,
+            self.doorbell_completed_at_ps,
+            self.network_eligible_at_ps,
+            self.network_started_at_ps,
+            self.network_finished_at_ps,
+        )
+        if any(value is not None for value in native_stages):
+            if any(value is None for value in native_stages):
+                raise ValueError("native WQE stage timestamps must be all present")
+            for name, value in zip(
+                (
+                    "doorbell_started_at_ps",
+                    "doorbell_completed_at_ps",
+                    "network_eligible_at_ps",
+                    "network_started_at_ps",
+                    "network_finished_at_ps",
+                ),
+                native_stages,
+                strict=True,
+            ):
+                _require_int(name, value)
+            assert self.doorbell_started_at_ps is not None
+            assert self.doorbell_completed_at_ps is not None
+            assert self.network_eligible_at_ps is not None
+            assert self.network_started_at_ps is not None
+            assert self.network_finished_at_ps is not None
+            if not (
+                self.submitted_at_ps
+                <= self.doorbell_started_at_ps
+                <= self.doorbell_completed_at_ps
+                <= self.network_eligible_at_ps
+                <= self.network_started_at_ps
+                <= self.network_finished_at_ps
+                <= self.completed_at_ps
+            ):
+                raise ValueError("native WQE stage timestamps are not monotonic")
+            if (
+                self.started_at_ps != self.network_started_at_ps
+                or self.finished_at_ps != self.network_finished_at_ps
+            ):
+                raise ValueError(
+                    "WQE start and finish must project the native network stage"
+                )
 
 
 @runtime_checkable
@@ -606,6 +658,18 @@ class _ScheduledOperation:
     critical_predecessor_id: str | None
     nccl_command_id: str | None = None
     wqes: list[WqeLifecycleProjection] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class _SemanticSendSchedule:
+    visits: tuple[QueueVisit, ...]
+    projection: WqeLifecycleProjection | None
+
+    @property
+    def completed_at_ps(self) -> int:
+        if not self.visits:
+            raise RuntimeError("semantic send produced no resource visit")
+        return self.visits[-1].completed_at_ps
 
 
 _DEVICE_ENDPOINT_RE = re.compile(r"^(?:gpu|cuda|rank):(\d+)(?::|$)", re.IGNORECASE)
@@ -1483,7 +1547,7 @@ class CoarseDeviceRuntime:
                 + operation_index * CONTROL_GOAL_TAG_STRIDE
                 + extent_index
             )
-            transfer_visit, projection = self._schedule_semantic_send(
+            transfer = self._schedule_semantic_send(
                 graph=graph,
                 operation=operation,
                 source_rank=rank,
@@ -1498,15 +1562,15 @@ class CoarseDeviceRuntime:
                 state=state,
                 wqe_authority=wqe_authority,
             )
-            visits.append(transfer_visit)
-            physical_paths.append([launch, control_visit, transfer_visit])
-            physical_completed = max(physical_completed, transfer_visit.completed_at_ps)
+            visits.extend(transfer.visits)
+            physical_paths.append([launch, control_visit, *transfer.visits])
+            physical_completed = max(physical_completed, transfer.completed_at_ps)
             participant_completed[destination] = max(
                 participant_completed.get(destination, 0),
-                transfer_visit.completed_at_ps,
+                transfer.completed_at_ps,
             )
-            if projection is not None:
-                wqes.append(projection)
+            if transfer.projection is not None:
+                wqes.append(transfer.projection)
         if work.mode is ControlMode.SYNCHRONOUS:
             logical_completed = physical_completed
             logical_paths = physical_paths
@@ -1559,9 +1623,7 @@ class CoarseDeviceRuntime:
                     tuple[
                         int,
                         int,
-                        QueueVisit,
-                        QueueVisit,
-                        WqeLifecycleProjection | None,
+                        _SemanticSendSchedule,
                         list[QueueVisit],
                     ]
                 ] = []
@@ -1576,7 +1638,7 @@ class CoarseDeviceRuntime:
                         frontier[source_rank],
                         state,
                     )
-                    transfer_visit, projection = self._schedule_semantic_send(
+                    transfer = self._schedule_semantic_send(
                         graph=graph,
                         operation=operation,
                         source_rank=source_rank,
@@ -1592,21 +1654,20 @@ class CoarseDeviceRuntime:
                         wqe_authority=wqe_authority,
                     )
                     extent_index += 1
-                    visits.extend((channel_visit, transfer_visit))
+                    visits.append(channel_visit)
+                    visits.extend(transfer.visits)
                     source_path = [
                         *frontier_paths[source_rank],
                         channel_visit,
-                        transfer_visit,
+                        *transfer.visits,
                     ]
-                    if projection is not None:
-                        wqes.append(projection)
+                    if transfer.projection is not None:
+                        wqes.append(transfer.projection)
                     round_records.append(
                         (
                             source_rank,
                             destination_rank,
-                            channel_visit,
-                            transfer_visit,
-                            projection,
+                            transfer,
                             source_path,
                         )
                     )
@@ -1615,14 +1676,12 @@ class CoarseDeviceRuntime:
                 for (
                     source_rank,
                     destination_rank,
-                    _,
-                    transfer_visit,
-                    _,
+                    transfer,
                     source_path,
                 ) in round_records:
                     for rank in (source_rank, destination_rank):
-                        if transfer_visit.completed_at_ps >= next_frontier[rank]:
-                            next_frontier[rank] = transfer_visit.completed_at_ps
+                        if transfer.completed_at_ps >= next_frontier[rank]:
+                            next_frontier[rank] = transfer.completed_at_ps
                             next_frontier_paths[rank] = source_path
                 frontier = next_frontier
                 frontier_paths = next_frontier_paths
@@ -1649,7 +1708,7 @@ class CoarseDeviceRuntime:
                     readiness[source_rank],
                     state,
                 )
-                transfer_visit, projection = self._schedule_semantic_send(
+                transfer = self._schedule_semantic_send(
                     graph=graph,
                     operation=operation,
                     source_rank=source_rank,
@@ -1665,15 +1724,16 @@ class CoarseDeviceRuntime:
                     wqe_authority=wqe_authority,
                 )
                 extent_index += 1
-                visits.extend((channel_visit, transfer_visit))
-                paths.append([launch, channel_visit, transfer_visit])
-                if projection is not None:
-                    wqes.append(projection)
+                visits.append(channel_visit)
+                visits.extend(transfer.visits)
+                paths.append([launch, channel_visit, *transfer.visits])
+                if transfer.projection is not None:
+                    wqes.append(transfer.projection)
                 participant_completed[source_rank] = max(
-                    participant_completed[source_rank], transfer_visit.completed_at_ps
+                    participant_completed[source_rank], transfer.completed_at_ps
                 )
                 participant_completed[destination_rank] = max(
-                    participant_completed[destination_rank], transfer_visit.completed_at_ps
+                    participant_completed[destination_rank], transfer.completed_at_ps
                 )
         else:
             raise AssertionError("collective tag preflight accepted an unsupported algorithm")
@@ -1739,7 +1799,7 @@ class CoarseDeviceRuntime:
         nccl_command_id: str | None,
         state: _RuntimeState,
         wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
-    ) -> tuple[QueueVisit, WqeLifecycleProjection | None]:
+    ) -> _SemanticSendSchedule:
         source_node, source_gpu = self.profile.node_gpu(source_rank)
         destination_node, _ = self.profile.node_gpu(destination_rank)
         if source_node == destination_node:
@@ -1753,22 +1813,24 @@ class CoarseDeviceRuntime:
             )
             completed_at_ps = finished_at_ps + self.profile.completion_delivery_ps
             state.nvlink_available[source_rank] = finished_at_ps
-            return (
-                QueueVisit(
-                    execution_id=graph.execution_id,
-                    operation_id=operation.operation_id,
-                    resource=ResourceRef(
-                        ResourceKind.NVLINK,
-                        f"node-{source_node}:gpu-{source_gpu}:nvlink",
+            return _SemanticSendSchedule(
+                visits=(
+                    QueueVisit(
+                        execution_id=graph.execution_id,
+                        operation_id=operation.operation_id,
+                        resource=ResourceRef(
+                            ResourceKind.NVLINK,
+                            f"node-{source_node}:gpu-{source_gpu}:nvlink",
+                        ),
+                        submitted_at_ps=submitted_at_ps,
+                        eligible_at_ps=eligible_at_ps,
+                        started_at_ps=started_at_ps,
+                        finished_at_ps=finished_at_ps,
+                        completed_at_ps=completed_at_ps,
+                        service_bytes=payload_bytes,
                     ),
-                    submitted_at_ps=submitted_at_ps,
-                    eligible_at_ps=eligible_at_ps,
-                    started_at_ps=started_at_ps,
-                    finished_at_ps=finished_at_ps,
-                    completed_at_ps=completed_at_ps,
-                    service_bytes=payload_bytes,
                 ),
-                None,
+                projection=None,
             )
 
         submission = SemanticWqeSubmission(
@@ -1787,21 +1849,61 @@ class CoarseDeviceRuntime:
         )
         projection = wqe_authority.submit(submission)
         self._validate_wqe_projection(submission, projection)
-        return (
-            QueueVisit(
-                execution_id=graph.execution_id,
-                operation_id=operation.operation_id,
-                resource=ResourceRef(ResourceKind.NIC, projection.rnic_id),
-                submitted_at_ps=projection.submitted_at_ps,
-                eligible_at_ps=projection.eligible_at_ps,
-                started_at_ps=projection.started_at_ps,
-                finished_at_ps=projection.finished_at_ps,
-                completed_at_ps=projection.completed_at_ps,
-                service_bytes=projection.payload_bytes,
-                subject_object_id=projection.wqe_id,
-            ),
-            projection,
+        return _SemanticSendSchedule(
+            visits=self._native_wqe_visits(projection),
+            projection=projection,
         )
+
+    @staticmethod
+    def _native_wqe_visits(
+        projection: WqeLifecycleProjection,
+    ) -> tuple[QueueVisit, ...]:
+        if projection.doorbell_started_at_ps is None:
+            return (
+                QueueVisit(
+                    execution_id=projection.execution_id,
+                    operation_id=projection.operation_id,
+                    resource=ResourceRef(ResourceKind.NIC, projection.rnic_id),
+                    submitted_at_ps=projection.submitted_at_ps,
+                    eligible_at_ps=projection.eligible_at_ps,
+                    started_at_ps=projection.started_at_ps,
+                    finished_at_ps=projection.finished_at_ps,
+                    completed_at_ps=projection.completed_at_ps,
+                    service_bytes=projection.payload_bytes,
+                    subject_object_id=projection.wqe_id,
+                ),
+            )
+
+        assert projection.doorbell_completed_at_ps is not None
+        assert projection.network_eligible_at_ps is not None
+        assert projection.network_started_at_ps is not None
+        assert projection.network_finished_at_ps is not None
+        doorbell = QueueVisit(
+            execution_id=projection.execution_id,
+            operation_id=projection.operation_id,
+            resource=ResourceRef(ResourceKind.NIC, projection.rnic_id),
+            submitted_at_ps=projection.submitted_at_ps,
+            eligible_at_ps=projection.doorbell_started_at_ps,
+            started_at_ps=projection.doorbell_started_at_ps,
+            finished_at_ps=projection.doorbell_completed_at_ps,
+            completed_at_ps=projection.doorbell_completed_at_ps,
+            subject_object_id=projection.wqe_id,
+            stage="native_doorbell",
+        )
+        network = QueueVisit(
+            execution_id=projection.execution_id,
+            operation_id=projection.operation_id,
+            resource=ResourceRef(ResourceKind.NIC, projection.rnic_id),
+            submitted_at_ps=projection.submitted_at_ps,
+            eligible_at_ps=projection.network_eligible_at_ps,
+            started_at_ps=projection.network_started_at_ps,
+            finished_at_ps=projection.network_finished_at_ps,
+            completed_at_ps=projection.completed_at_ps,
+            service_bytes=projection.payload_bytes,
+            subject_object_id=projection.wqe_id,
+            stage="native_network",
+        )
+        return (doorbell, network)
 
     def _validate_wqe_projection(
         self,
@@ -1885,6 +1987,21 @@ class CoarseDeviceRuntime:
                     )
 
         for wqe in wqes:
+            queued_at_ps = (
+                wqe.network_eligible_at_ps
+                if wqe.network_eligible_at_ps is not None
+                else wqe.eligible_at_ps
+            )
+            started_at_ps = (
+                wqe.network_started_at_ps
+                if wqe.network_started_at_ps is not None
+                else wqe.started_at_ps
+            )
+            finished_at_ps = (
+                wqe.network_finished_at_ps
+                if wqe.network_finished_at_ps is not None
+                else wqe.finished_at_ps
+            )
             for phase, timestamp, resource, completed_bytes in (
                 (
                     EventPhase.SUBMITTED,
@@ -1894,19 +2011,19 @@ class CoarseDeviceRuntime:
                 ),
                 (
                     EventPhase.QUEUED,
-                    wqe.eligible_at_ps,
+                    queued_at_ps,
                     ResourceRef(ResourceKind.NIC, wqe.rnic_id),
                     None,
                 ),
                 (
                     EventPhase.STARTED,
-                    wqe.started_at_ps,
+                    started_at_ps,
                     ResourceRef(ResourceKind.NIC, wqe.rnic_id),
                     None,
                 ),
                 (
                     EventPhase.PROGRESS,
-                    wqe.finished_at_ps,
+                    finished_at_ps,
                     ResourceRef(ResourceKind.NIC, wqe.rnic_id),
                     wqe.payload_bytes,
                 ),

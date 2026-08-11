@@ -97,9 +97,9 @@ selected native `WqeRecord` owns the WQE lifecycle and every calibrated
 per-WQE start stage.
 The request bookkeeper, backend result rows and completion stream are
 projections of that record, not independent WQE state machines; the
-`AtlahsWqeLedger` is not constructed in this mode. Until the structural path is
-live, a run may explicitly select `AtlahsWqeLedger` as its sole timing-neutral
-bypass authority. A run never enables both mutable authorities, and every
+`AtlahsWqeLedger` is not constructed in this mode. A run may instead explicitly
+select `AtlahsWqeLedger` as its sole timing-neutral bypass authority. A run
+never enables both mutable authorities, and every
 projection must conserve identity, cardinality and timestamps available at its
 boundary. `CompletionReducer` owns only request metric history; it does not
 schedule, progress or complete a runtime object.
@@ -279,10 +279,11 @@ graph-level NCCL expansion, GPU-affine RNIC selection and semantic submission,
 and completion-event/projection plumbing. In bypass mode it delegates SQ/RQ/CQ
 and WQE state to the sole timing-neutral `AtlahsWqeLedger` authority. In
 structural mode it delegates WQE lifecycle, WQ/CQ state, NIC arbitration and
-completion to the native RNIC session owned by BACK-8, BACK-9 and BACK-12. It
-must call the compute service model rather than grow a second SM or SASS model
-in `simllm.core`. The compute slice therefore does not claim whole-task
-execution timing or compute/copy overlap.
+completion to the native RNIC session delivered by BACK-8, with wider WQ/CQ
+objects and pipeline arbitration remaining under BACK-9 and BACK-12. It must
+call the compute service model rather than grow a second SM or SASS model in
+`simllm.core`. The compute slice therefore does not claim whole-task execution
+timing or compute/copy overlap.
 
 ## Status
 
@@ -291,6 +292,17 @@ monotonic picosecond time and deterministic tie-breaking) are implemented and
 tested; CORE-1 closed with M1. The step-record JSON readers landed with the
 M4 first slice, which also exercised the step schema for real: recorded M2/M3
 smoke JSONLs load, round-trip and replay through `HtsimStepSink`.
+
+BRIDGE-1 is complete for the pinned-binary prepared-replay scope.
+`HtsimPersistentStepSink` retains a local worker pool across batches, prepares
+isolated diagnostic runs concurrently, publishes only a complete batch and
+serves exact records in order. The
+[frozen study](../../examples/bridge_persistent_v1/RESULTS.md) matched all 34
+prepared-versus-diagnostic pairs in each of the result, outcome, GOAL text,
+GOAL binary and completion-CSV evidence classes. All four scored live wall-time
+instances passed with 3.36x to 5.43x speedup, and all six cells reported
+physical quiescence. BRIDGE-2, CORE-24 and HTSIM-18 retain the online stateful
+session and full CORE-5 transport rather than widening this exact acceleration.
 
 CORE-2 is complete. Graph structural and payload validation includes implicit
 FIFO edges, strict JSON readers and writers cover all five work kinds, and the
@@ -327,8 +339,8 @@ rows are separately validated surfaces. `CoarseDeviceRuntime` now supplies
 their concrete graph-operation/tag/WQE correlation.
 
 Actual framework observation producers remain VLLM-11/12 and SGL-9/10.
-Explicit KV state semantics remain CORE-3. BACK-8, BACK-9 and BACK-12 own
-structural RNIC objects and arbitration.
+Explicit KV state semantics remain CORE-3. BACK-9 and BACK-12 own the remaining
+structural RNIC objects and arbitration depth.
 
 CORE-5 is complete for the supported core path. `CompletionReducer` consumes
 the required graph boundary and the runtime's corrected critical-path
@@ -343,8 +355,8 @@ identities and fails closed when a count alone is ambiguous. The reducer
 consumes each execution ID once, including zero-latency results, and the v1
 reader treats an explicit null sampled-identity field as absent.
 
-CORE-4 is complete for the coordinated first coarse bypass profile;
-structural completion remains explicitly conditional on CORE-15.
+CORE-4 is complete for the coordinated first coarse bypass profile and the
+frozen Tier B structural fixture.
 `CoarseDeviceRuntime` implements host-launch and CUDA-stream order, dependency
 release, co-runnable non-preemptive kernel dispatch into `simllm.compute`,
 directional copy-engine queues, coarse shared HBM arbitration, NCCL channels,
@@ -352,9 +364,10 @@ NVLink-class intra-node service, GPU-affine cross-node semantic submission,
 synchronous/asynchronous control completion and completion/bookkeeping
 projection. `AtlahsWqeLedger` is the sole live bypass authority. Structural
 mode constructs no ledger and stages submissions through an isolated
-`NativeRnicTransaction`, whose prepared commit is the only mutation of its
-`NativeRnicSession`. HTSIM-9 owns the composed native/htsim implementation
-that fills this seam.
+`NativeRnicTransaction`. The composed adapter consumes immutable native
+observations transactionally; an abort leaves both runtime state and adapter
+session counters unchanged. The composed C++ session remains the sole mutable
+WQE lifecycle authority.
 
 The [CORE-4 runtime study](../../examples/core4_runtime/RESULTS.md) cites the
 older module expectations, the original expectations-only commit `d43cddb`,
@@ -367,8 +380,8 @@ was exactly four times wall JCT without entering the critical path, dependency
 chain launch intervals were clipped at the realized predecessor boundary, and
 omitted/explicit identity remained canonical-byte identical under class-label
 permutation. Remaining coarse approximations and completeness gaps are
-registered as CORE-11 through CORE-16 rather than being claimed as calibrated
-behavior.
+registered as CORE-11 through CORE-14, CORE-16 and CORE-21 rather than being
+claimed as calibrated behavior.
 
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
@@ -386,10 +399,26 @@ quiescence remained 20,971,520 ps. The separately frozen
 [Tier B expectations](../../examples/rnic_live_v1/tier_b_expectations.md)
 and their
 [review supplement](../../examples/rnic_live_v1/tier_b_review_supplement.md)
-retain the composed native live gate until HTSIM-9 and CORE-15 supply its
-producer. The supplement pins the raw producer schema, four bypass profiles,
-both objectively selected doorbell-owner mappings, and the two-WQE live FIFO
-relation.
+pinned the raw producer schema, four bypass profiles, both objectively selected
+doorbell-owner mappings, and the two-WQE live FIFO relation. The registered
+Tier B run then passed all six scored families: D additivity 4/4, inverse-rate
+serialization 4/4, live StepResult/TTFT/TPOT forms 8/8, seven-component rows
+8/8, FIFO contention 4/4, and bypass artifact identity 4/4. The selected
+`nic_owner` mapping put D and network service on NIC attribution while W1's
+wait of exactly L stayed in queue attribution. All fatal invariants and
+checker-sensitivity controls held. This demonstrated CORE-15's structural
+path from a graph to changed completion and live request metrics, its
+sole-authority projection, and its explicit bypass artifact guard. Transaction
+rollback is separate unit-test evidence in `tests/test_composed_rnic.py`: an
+adapter failure consumes neither native observations nor runtime state.
+
+Tier B did not execute one fixed contended graph through both bypass and
+composed native authority, so it did not measure the registered signed JCT
+difference between those modes. CORE-15 closes only for the demonstrated
+live-seam clauses, with that undemonstrated acceptance clause and real
+StepResult replay for the bypass side moved to CORE-21. The exact Tier B scope
+and output hashes are in the
+[Tier B results](../../examples/rnic_live_v1/RESULTS.md#tier-b-live-reachability).
 
 ## Pre-registered runtime sanity experiments
 
@@ -523,14 +552,6 @@ does not claim to produce these resource-contention measurements.
   profile as an explicit off path. Enabling manifest discovery with the
   equivalent eight-by-eight mapping must preserve every accepted CORE-4 event,
   WQE, byte count and timestamp exactly.
-- CORE-15 (Completeness; P1; L): complete the structural runtime path after
-  HTSIM-9 supplies the composed transactional native session. The native path
-  must be live-reachable from an ExecutionGraph to a changed completion time;
-  its standalone probes do not close this task. Acceptance must compare a
-  fixed contended graph through bypass and composed native authority, observe
-  the registered signed JCT change, prove failed execution leaves native state
-  untouched, and preserve the bypass baseline exactly when structural mode is
-  disabled.
 - CORE-16 (Completeness; P2; M): replace CORE-4's fail-closed collective and
   control expansion limits with exact ring remainder chunking and a collision-
   free tag allocator wider than 1,024 control destinations. The present off
@@ -549,9 +570,55 @@ does not claim to produce these resource-contention measurements.
   completed-prefill and decode batch, match the framework's actual token
   production mask request by request, and preserve zero-sample, all-sample and
   legacy wire behavior exactly.
-- BRIDGE-1 (inherited from the folded bridge module): persistent co-simulator
-  process for closed loop, replacing per-step subprocess spawns. Its
-  incremental flow-injection transport should carry `ExecutionGraph` and
-  the landed CORE-5 `CompletionEvent`, `ExecutionResult`, `StepResult` and
-  bookkeeping projections. The M4 diagnostic mode currently pays
-  about 8 seconds of process/parse overhead per live tp=8 step.
+- CORE-21 (Completeness; P1; L): complete the residual CORE-15 authority
+  comparison that Tier B did not execute. Freeze one fixed contended
+  `ExecutionGraph`, run that same graph through the timing-neutral bypass
+  authority and the composed native authority, and register the signed JCT,
+  TTFT and TPOT change before execution. Both modes must use identical
+  semantic inputs and the deployed `ExecutionResult -> StepResult` reduction;
+  the bypass side must not synthesize StepResult tuples or request summaries
+  from a scalar JCT. Preserve the accepted bypass artifacts exactly, prove the
+  structural session remains the sole WQE authority when selected, and include
+  transactional failure in the registered live harness rather than relying
+  only on the existing unit test.
+- CORE-24 (Completeness; P1; M): add a strict, versioned full `StepResult` wire
+  codec for BRIDGE-2. The existing `atlahs-closed-loop-result-v1` name has no
+  reader or writer and predates CORE-5 attribution. The new canonical form
+  must carry step identity and boundaries, every `RequestMetric`, exact
+  rational TPOT, the conserved `LatencyAttribution` partition and separately
+  typed `AdditiveVisitTotals`. Preserve a strict reader for any accepted
+  legacy result form and prove in-memory to wire to in-memory identity for
+  empty, prefill, decode and mixed-request results.
+- BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
+  client after HTSIM-18 supplies its persistent flow session and CORE-24
+  supplies the full result codec. BRIDGE-1 calibration measured 7.252 seconds
+  per isolated simulator invocation and 0.011 seconds for `txt2bin`. The
+  prepared sink overlaps this cost only when all records are available to
+  `prepare` up front, so a live closed-loop step still pays the full serial
+  invocation. This P1 client and HTSIM-18 must remove that per-step boundary.
+  A proposed
+  `simllm-cosim-session-v1` uses the same length-prefixed canonical JSON frame
+  rule as HTSIM-18. Handshake frames select the exact backend session and
+  authority. Each input frame carries a contiguous sequence, canonical
+  `ExecutionGraph`, source `StepRecord` and starting bookkeeping cursor.
+  Output event frames carry canonical `CompletionEvent` values and the exact
+  append batch of object, stage and completion facts; the terminal frame
+  carries `ExecutionResult`, full `StepResult`, ending ledger cursor and
+  physical quiescence separately from framework completion. Reject loss,
+  duplication, cursor disagreement, graph/event identity disagreement and
+  timestamp regression before publishing a result. The explicit diagnostic
+  and BRIDGE-1 prepared modes remain the identity off paths and must preserve
+  every accepted byte and timestamp when the online session is disabled.
+- BRIDGE-3 (Completeness; P0; M): bind every simulator child lifetime to its
+  owning SimLLM run. A demonstrated interpreter SIGTERM leaves as many as one
+  diagnostic child or `max_workers` prepared `htsim_rnic` children orphaned:
+  invocation uses no child process group, Linux parent-death signal or parent
+  signal-and-reap handler, and the parent-owned 600-second timeout disappears
+  with the interpreter. The acceptance criterion is "no orphan htsim
+  processes after a killed run". Kill diagnostic and prepared runs while
+  native children are in flight, then prove after a bounded poll that no
+  targeted descendant remains orphaned or zombie. Preserve normal diagnostic
+  output byte for byte and the complete prepared identity family, make timeout
+  and normal-shutdown cleanup idempotent, avoid signaling unrelated processes,
+  and document the supported-platform process-group, parent-death or Job
+  Object strategy.

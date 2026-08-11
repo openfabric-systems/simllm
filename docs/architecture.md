@@ -330,43 +330,46 @@ references do not impose their original transient scope on later users.
 The target full packet path has two independent model axes. SimLLM owns a C++
 RNIC hardware extension under `simllm/backends/rnic/`: RDMA WQ/CQ, QP/QPC,
 MMIO/PCIe/DMA and TX/RX hardware. htsim owns selectable transport/CC policies
-and the packet fabric. A versioned C++ adapter passes opaque packet or flow
-tokens and feedback events between them; no QP, queue, context or DMA object
-crosses that boundary. BACK-8, BACK-18 and HTSIM-9 will link the SimLLM
-static library into the directly invoked htsim binaries and present the
-composition through the existing `AtlahsFlowRuntime` interface; BACK-18 owns
-the modular construction entry point through which the work-queue core and
-the optional QPC, DMA and network modules are assembled. There is no Python
-callback in the packet event loop.
+and the packet fabric. A versioned C++ adapter passes opaque flow tokens and
+feedback events between them; no QP, queue, context or DMA object crosses that
+boundary. BACK-18 landed the modular construction entry point, and the pinned
+backend main links the SimLLM static library into the directly invoked
+`htsim_rnic` binary through the ABI-v1 `AtlahsFlowRuntime` composition. There
+is no Python callback in the packet event loop.
 
-That composition is not live today. The wheel carries the CMake files and C++
-sources but builds no Python extension, and the current `htsim_rnic` binaries
-do not link `simllm::rnic`. The implemented standalone C++17 SQ/CQ,
-`PcieFabric` and opaque flow-level `NetworkPort` are therefore reached by
-native tests and probe studies only. Their timing cannot yet change packet
-FCT, `ExecutionResult`, `StepResult` or TTFT/TPOT. The descriptor carries GOAL
-flow/tag identity and a separate policy-context token, while completion uses a
-network-owned token. It does not equate flow acceptance or delivery with
-first/last packet issue. The standalone slice is validated in
-[examples/rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md); its live wrapper,
-composition entry point and packet-level adapter remain BACK-8, BACK-18 and
-HTSIM-9. The detailed evidence and
-calibration plan is
+The composition is live for the frozen isolated `rnic_live_v1` fixture.
+Tier A exercised the directly invoked composed binary and its flow-level FCT
+and JCT evidence. Tier B consumed immutable native observations through
+`ExecutionGraph`, `CoarseDeviceRuntime`, `CompletionEvent`,
+`ExecutionResult` and `StepResult`, so native doorbell and link-rate changes
+reached TTFT and TPOT by the frozen relations. BACK-8 and the demonstrated
+CORE-15 live-seam clauses closed on that evidence. CORE-21 retains the
+same-contended-graph bypass-versus-composed comparison that Tier B did not run.
+
+The ABI-v1 descriptor carries GOAL flow and tag identity plus a separate
+policy-context token, while completion uses a network-owned token. It does not
+equate flow acceptance or delivery with first-packet or last-packet issue.
+BACK-25 and BACK-26 own the packet-attempt and transport-control vocabulary,
+and HTSIM-9 remains open for a composed packet-issue run after those surfaces
+land. The standalone slice is validated in
+[examples/rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md), and the live gate is
+validated in [examples/rnic_live_v1](../examples/rnic_live_v1/RESULTS.md). The
+detailed evidence and calibration plan is
 [papers/rnic-hardware-calibration.md](papers/rnic-hardware-calibration.md).
 
 The reachability contract is one timing path. `ExecutionGraph` enters the
-CORE-4 `DeviceRuntime`, which invokes the composed htsim binary and returns one
+CORE-4 `DeviceRuntime`, which projects one composed native completion into an
 `ExecutionResult`; its completion boundary becomes `StepResult`, advances the
-virtual clock and therefore changes TTFT/TPOT. The current `HtsimStepSink`
-already maps an htsim makespan into `StepResult`, but it still invokes the
-uncomposed binary and no concrete graph `DeviceRuntime` exists. Structural
-mode must start the inner htsim network operation only when the native WQE is
-eligible and must release the outer GOAL operation only when native completion
-delivery, e.g. CQ polling, permits it. The resulting terminal completion is
-consumed once. Python must never compute `native delay + htsim FCT`, and the
-composed binary must never retain the timing-neutral ledger beside the native
-WorkQueue. Bypass mode uses the old path alone and must preserve its accepted
-completion times exactly.
+virtual clock and therefore changes TTFT/TPOT. Tier B implements that contract
+for its fixed cells without adding a second probe or compatibility-ledger
+delay. Structural mode starts network service only when the native WQE is
+eligible and releases the outer operation at native completion visibility.
+The terminal completion is consumed once. Python must never compute
+`native delay + htsim FCT`, and the composed binary must never retain the
+timing-neutral ledger beside the native WorkQueue. Bypass mode uses the old
+authority alone and preserves its accepted completion artifacts. General
+same-graph authority comparison is CORE-21, and packet-level completion detail
+is the HTSIM-9 remainder.
 The composition expectations were first frozen before implementation in
 [examples/rnic_live_v1](../examples/rnic_live_v1/expectations.md) at commit
 `65b5609`; commit `facb26d` clarified retry identity, and commit `947399c`
