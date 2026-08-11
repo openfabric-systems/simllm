@@ -241,20 +241,21 @@ def _copy_executable(source: Path, destination: Path) -> Path:
 
 def _run_tier_a_v1(producer: Path, out: Path) -> dict[str, str]:
     local = _copy_executable(producer, out / "build" / producer.name)
-    subprocess.run(
-        [
-            sys.executable,
-            str(TIER_A_ACCEPTANCE),
-            "--factory",
-            "htsim",
-            "--producer",
-            str(local),
-            "--run-dir",
-            str(out),
-        ],
-        cwd=REPO_ROOT,
-        check=True,
-    )
+    with _environment({"SIMLLM_TIER_A_RUN_ROOT": str(out)}):
+        subprocess.run(
+            [
+                sys.executable,
+                str(TIER_A_ACCEPTANCE),
+                "--factory",
+                "htsim",
+                "--producer",
+                str(local),
+                "--run-dir",
+                str(out),
+            ],
+            cwd=REPO_ROOT,
+            check=True,
+        )
     return {
         "tier_a_raw_observations.json": _digest(out / "raw_observations.json"),
         "tier_a_summary.json": _digest(out / "summary.json"),
