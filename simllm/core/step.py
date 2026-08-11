@@ -6,11 +6,10 @@ back. Adapters (vLLM, SGLang) translate their native scheduler outputs into
 these records so the core never depends on a specific framework.
 
 In closed-loop mode the same contract crosses a process boundary as versioned
-JSON manifests: a step manifest (schema ``atlahs-closed-loop-step-v1``, what
-the scheduler ran plus the virtual time) goes to the simulator, and a result
-manifest (schema ``atlahs-closed-loop-result-v1``, ``simulated_time_us`` plus
-per-flow completions) comes back. Per-step subprocess invocation is the
-diagnostic mode; a persistent co-simulator process is planned (BRIDGE-1).
+JSON objects. The step-record schema remains ``atlahs-closed-loop-step-v1``.
+The full result schema is ``simllm-step-result-v2`` and preserves every CORE-5
+metric without floating-point conversion. Per-step subprocess invocation is
+the diagnostic mode; BRIDGE-2 owns the persistent graph-level client.
 """
 
 from __future__ import annotations
@@ -25,7 +24,8 @@ from typing import Any
 
 #: closed-loop wire-format schema names for StepRecord / StepResult
 STEP_SCHEMA = "atlahs-closed-loop-step-v1"
-RESULT_SCHEMA = "atlahs-closed-loop-result-v1"
+LEGACY_RESULT_SCHEMA = "atlahs-closed-loop-result-v1"
+RESULT_SCHEMA = "simllm-step-result-v2"
 
 
 class RequestPhase(enum.Enum):
