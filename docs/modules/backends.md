@@ -535,18 +535,22 @@ routes the comparison through the repository `BypassArtifacts` comparator.
 See the
 [Tier B results](../../examples/rnic_live_v1/RESULTS.md#tier-b-live-reachability).
 
-Failed adapter transaction atomicity is unit-test evidence, not Tier B run
-evidence. `tests/test_composed_rnic.py` proves a rejected transaction consumes
-neither native observations nor runtime state before a later valid transaction
-commits. The remaining original BACK-8 clauses have explicit owners: CORE-21
-owns the same-contended-graph bypass-versus-composed signed JCT comparison and
-real bypass StepResult replay; BACK-31 owns an executable-level unlinked-native
-negative control; HTSIM-1 retains explicit rejection of the unsupported
-`rnic-ss` legacy profile; the packet-attempt and transport-control vocabulary
-landed under BACK-25 and BACK-26 the same day, below. HTSIM-9 remains open for
-a composed run showing first-packet and last-packet issue on those interfaces.
-ABI-v1 network acceptance and whole-flow terminal events are not substitutes
-for packet issue.
+Tier B kept failed adapter transaction atomicity as unit-test evidence and did
+not run its same-graph or link-disabled residuals. The subsequent
+[RNIC authority comparison](../../examples/rnic_authority_v1/RESULTS.md)
+closed both residuals as CORE-21 and BACK-31. One canonical graph traversed
+the timing-neutral and composed authorities through the deployed reducer,
+passing the signed metric family 6/6 and the inverse-rate family 12/12. Each
+live structural cell recorded the failed 0/0 transaction and one two-WQE
+retry. A fresh build from the same pinned htsim source set the SimLLM native
+link OFF, ran its unconditional RNIC main through the registered producer,
+and was rejected before observations or results existed. The separate
+positive binaries and repository-standard bypass bundle remained exact. The
+result ledger quotes and maps every registered CORE-21 and BACK-31 clause; no
+residual remains. HTSIM-1 retains explicit rejection of the unsupported
+`rnic-ss` legacy profile, and HTSIM-9 remains open for a composed run showing
+first-packet and last-packet issue. ABI-v1 network acceptance and whole-flow
+terminal events are not substitutes for packet issue.
 
 On 2026-08-11 BACK-25 and BACK-26 closed at the versioned vocabulary and
 relay boundary. NetworkPort ABI v2 carries session-unique packet-attempt
@@ -734,14 +738,6 @@ is difficult.
   consumer and canonical hashes with the same rejection set as the native
   reader. The current Python reader deliberately rejects non-v1 effective
   hardware, so v1 structural and bypass ingestion remains the exact off path.
-- BACK-31 (Completeness; P1; L): complete the residual BACK-8 executable
-  negative control that the two-tier gate did not run. From the same pinned
-  sources, build a candidate with the SimLLM native library link deliberately
-  disabled and invoke the registered composed producer and live checker. The
-  run must fail before publishing an accepted result because native authority
-  and the signed D relation are absent. An observation-only mutant is not a
-  substitute for this link-level test. Preserve the accepted composed and
-  bypass binaries and artifacts byte for byte outside the negative build.
 - BACK-37 (Completeness; P1; L): connect the GPU-owned CQ consumer and its
   runner callback to explicitly submitted work on the concurrent compute
   service. The current enabled producer path stops at the immutable submission
