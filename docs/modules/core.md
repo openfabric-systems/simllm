@@ -489,6 +489,18 @@ no physical GOAL operation. Six placement and request-count cells plus the
 real Granite prefill matched every frozen identity; see
 [the CORE-28 results](../../examples/per_request_fidelity_v1/RESULTS.md).
 
+CORE-34 is complete. `RequestRoutingLifetime` is the one mutable request
+identity from join through close: it carries opaque join provenance, arrival,
+an arena extent, a monotonic unique-token cursor, delayed scheduler finish and
+two layer masks. `CompletionReducer` optionally advances its registry only
+after graph, result and runtime-report validation. Only subjectless logical
+pairwise dispatch/combine completions for the request's final captured token
+set end bits; WQE-subject events do not. CLOSED requires full masks, exact
+captured coverage and the scheduler finish before the view release callback
+runs. The real Granite study closed one and three requests with zero live views
+and failed closed for suppressed dispatch layer 7 and combine layer 19; see
+[the routing lifetime results](../../examples/routing_lifetime_v1/RESULTS.md).
+
 ## Pre-registered runtime sanity experiments
 
 These expectations are recorded before CORE-4 implements scheduling. CORE-2
@@ -525,23 +537,18 @@ does not claim to produce these resource-contention measurements.
 
 ## Open tasks
 
-- CORE-34 (Precision; P0; M): make one per-request routing-lifetime record the
-  mutable completion authority for joined replay requests. It carries stable
-  request and join provenance, arrival time, an arena offset/count view, a
-  monotonic unique-token consumption cursor, scheduler-finish state and
-  separate dispatch/combine end masks for at most 64 model layers. The only
-  legal state path is `JOINED -> ADMITTED -> EXECUTING -> FINISH_FLAGGED ->
-  DRAINED -> CLOSED`; the arena view may be released only at `CLOSED`, which
-  requires the scheduler finish flag, full masks and cursor equal to captured
-  token count. Join final-token collective completions through the existing
-  `ExecutionGraph -> CompletionEvent -> CompletionReducer` path without
-  treating WQE or packet events as request completions. Acceptance drives the
-  real Granite replay records through clean one-request and three-request
-  lifetimes with zero live views at exit, deliberately suppresses one
-  dispatch and one combine end flag in separate runs and requires fatal
-  diagnostics naming the request, phase and missing model layer, and rejects
-  premature release or any non-closed end-of-run record without partial
-  lifecycle mutation.
+- CORE-35 (Precision; P1; M): make the coarse runtime report conserve
+  participant-local dependency frontiers in multi-rank serial MoE graphs. The
+  routing-lifetime study's first three-request run executed those frontiers,
+  then `_runtime_report` rejected rank 1 of
+  `step-0:layer-1:rank-1:compute` because its selected path overlapped the
+  operation's single global critical predecessor. Replace that scalar
+  predecessor accounting with a participant-aware critical segment, or an
+  equivalent conserved representation. Acceptance runs the original Granite
+  three-request graph without barrier tightening, retains every completion and
+  routing-lifetime outcome, and matches the accepted barrier projection's
+  scheduler-visible completion while reporting the participant-local work
+  separately rather than double-counting it.
 - CORE-3 (Completeness; P1; L): implement explicit KV lifecycle accounting before resource
   contention. Consume adapter observations for RESERVE, ALLOCATE,
   BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
