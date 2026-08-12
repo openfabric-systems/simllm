@@ -31,18 +31,21 @@ and still produce a real simulation.
   length and stop reason, plus per forwarded input token, per MoE layer, the
   top-k expert assignments. This includes every prompt token in the prefill
   forward and every nonterminal generated token forwarded during decode.
-  `TransformersCpuRunner` is the implemented runner. Torch and Transformers
-  load only when that execution entry is constructed.
-- **Artifact.** `simllm-preplay-trace-v1`: versioned and
-  provenance-carrying (model identity, sampling configuration and seed,
-  capture host, schema version), keyed by a stable request identity. Bulk
-  rows live off-repo, since large generated artifacts never live in this
-  repo; the repo carries the schema and small fixtures only. Its JSONL
-  header, request, forward-token and footer rows stream one completed request
-  at a time. The writer protects existing paths by default and replaces one
-  only when its caller passes `overwrite=True`. The strict reader rejects
-  unknown fields, incomplete requests, duplicate identities, inconsistent
-  route shapes and missing footers.
+  `TransformersCpuRunner` remains the baseline. `VllmCpuRunner` captures the
+  stock vLLM sampler, post-selection CPU expert dispatch, and scheduler-owned
+  paged-KV decisions. `SglangCpuRunner` is the qualified fallback. Framework
+  packages load lazily only when their runner executes.
+- **Artifacts.** `simllm-preplay-trace-v1` remains the Transformers artifact.
+  It is versioned and provenance-carrying, keyed by a stable request identity,
+  and protected by a byte fixture. `simllm-preplay-trace-v2` is a separate
+  strict framework-observation contract. It records explicit per-request
+  outputs and finish reasons, post-selection expert IDs, framework page or
+  slot identities, globally sequenced allocation, prefix-hit, eviction,
+  preemption and release events, and independent observed versus
+  authored-against framework source identities. Its canonical reader rejects
+  unknown fields, incomplete or duplicate identities, inconsistent routing,
+  nonmonotonic event sequences and footer disagreement. Bulk rows remain
+  outside Git; the repository carries schemas and small fixtures only.
 - **Join.** A workload arrival realization assigns each request its
   arrival timestamp at the framework entry point. The join produces
   per-request tracking records in the core bookkeeping (request identity,
@@ -56,14 +59,15 @@ and still produce a real simulation.
   consumes those creation timestamps and delays the framework handoff until
   the shared virtual clock reaches each arrival. The join remains a read-only
   source of eligibility and does not choose a framework batch.
-- **Replay.** The vLLM adapter serves the predefined token ids instead of a
+- **Replay.** The vLLM adapter serves v1 predefined token ids instead of a
   fabricated token and honors the oracle's stop position, so the scheduler
   sees the true completion step; the traffic layer consumes the captured
   routing for non-uniform all-to-all. Each scheduled request identity remains
   attached to its routed token slice and becomes a read-only partition of the
   aggregate physical pair table. Direct and execution-graph GOAL renderers
   fail closed unless every request, layer, phase and directed pair agrees with
-  that routed authority under the selected placement. SGLang replay is PLAY-7.
+  that routed authority under the selected placement. Joining the observed v2
+  request and KV records is PLAY-8. SGLang replay is PLAY-7.
 - **Honesty rule.** A CPU run is one realization, not the deployment's
   exact token stream: CPU and GPU numerics differ, so sampled ids can
   diverge between the oracle and silicon. Greedy or fixed-seed sampling is
@@ -85,6 +89,15 @@ dispatch. Discovery keys on Transformers-internal layer and router module
 names, so both discovery and recomputation are version-sensitive. They have
 been source-verified only for Transformers 5.14.1 and the pinned Granite
 snapshot used by the PLAY-1 study.
+
+The framework v2 path does observe dispatch. For vLLM 0.26.0 on CPU, the
+stock response capturer allocates its routed-expert result but the monolithic
+CPU MoE path does not populate it. The observation plugin therefore captures
+the exact expert-ID tensor returned by `cpu_fused_moe.select_experts`
+immediately before the unchanged expert kernel consumes it, then passes that
+same tensor into vLLM's stock request capturer. KV hooks wrap the stock v1
+manager, block pool and scheduler methods after their decisions; they never
+replace allocation, eviction or preemption policy.
 
 Module rules: nothing in the simulator core imports this module; the heavy
 dependencies (torch, transformers or a framework CPU backend) import
@@ -147,20 +160,35 @@ byte fixture in pytest, and `reset_configuration()` separates independent
 in-process runs. The chronology and evidence are recorded in
 [the PLAY-3 results](../../examples/preplay_adapter_replay_v1/RESULTS.md).
 
-PLAY-4 is complete. The PLAY-5 routed replay half is also validated as of
+PLAY-4 is complete. The PLAY-5 routed replay half was validated as of
 2026-08-11: both live bandwidth cells returned exact oracle completions, every
 captured all-to-all table matched its closed form, and all 13 executed
 completion, routed-stream, TTFT and TPOT relations passed. A post-specified
 raw-trace recomputation then derived all ten GOAL tables without reading the
 routing projection and matched 10/10. This corrects the primary evaluator's
 overstated independence claim while leaving its result unchanged. The
-independent vLLM CPU comparison remains blocked because the installed CUDA
-build reaches `CPUWorker` but does not export `init_cpu_memory_env`; its six
-rows earned no pass. The chronology and exact evidence are recorded in
+chronology and exact evidence are recorded in
 [the PLAY-5 results](../../examples/preplay_validation_v1/RESULTS.md).
 
-The independent framework CPU runner remains optional follow-up PLAY-6, and
-SGLang replay is the explicit PLAY-7 follow-up.
+PLAY-5 and PLAY-6 are complete as of 2026-08-12. An isolated vLLM 0.26.0 CPU
+source build qualified on the AVX2 host with task-local GCC 13.4, CMake 4.4.2
+and numactl headers. It selected `CpuPlatform`, exported
+`init_cpu_memory_env`, constructed the stock CPU worker and model runner,
+loaded Granite entirely on CPU, and showed a zero-byte CUDA allocation delta
+in both study cells. All three requests matched the Transformers baseline on
+complete output token sequence, length and finish reason. All 1,512 aligned
+token-layer routing rows differed in tuple order but not expert set, producing
+zero changed all-to-all bytes. The prefix relation passed. The registered
+pressure relation failed because vLLM admitted or serialized the four pressure
+requests without preempting any of them, even though the 64-token cell evicted
+eight cached blocks. The exact build ladder, `7/8` genuine-risk result and
+strict v1/v2 evidence are in
+[the framework-oracle results](../../examples/framework_oracle_v1/RESULTS.md).
+
+The independent `VllmCpuRunner` and fallback `SglangCpuRunner` are opt-in.
+Missing packages and unsupported worker, model, device, dispatch and KV seams
+are rejected before the canonical v2 writer runs. The Transformers runner and
+v1 fixture remain byte-identical. SGLang replay remains PLAY-7.
 
 PLAY-11 is complete. Captured MoE traffic retains each scheduled request ID as
 a read-only partition of the aggregate directed-pair demand through direct and
@@ -177,25 +205,23 @@ not per-request time attribution; see
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
 
-- PLAY-5 (Completeness; P1; M) (remaining independent CPU half after replay
-  validation): run the frozen requests and seed through the PLAY-1 runner and
-  a vLLM 0.26.0 CPU build, then compare lengths, stop reasons and routing with
-  every divergence classified and none silently accepted. The runtime must
-  select `CpuPlatform`, export `torch.ops._C.init_cpu_memory_env`, construct the
-  stock `CPUWorker` and `CPUModelRunner`, load the pinned Granite model entirely
-  on CPU, and show no CUDA allocation increase. The 2026-08-11 CUDA build
-  reached `CPUWorker.__init__` but lacked that CPU operator, so zero of six
-  rows executed. The routed replay half is complete with 13/13 scored live
-  relations and must retain those accepted results when this task closes.
-- PLAY-6 (Completeness; P2; L): add an optional framework CPU backend runner
-  that captures the same artifact through vLLM or SGLang on CPU, exercising
-  the deployment framework's sampler. The Transformers runner remains the
-  supported baseline and must stay byte-identical when no framework runner
-  is selected. Missing framework dependencies and unsupported CPU backends
-  must be rejected before a trace writer opens.
 - PLAY-7 (Completeness; P2; M): consume joined replay runs in the SGLang
   adapter. Serve each request's predefined token IDs, pin scheduler-visible
   completion to the oracle length, retain the speculative and structured
   refusal boundaries that apply there, and prove an identity off mode against
   the accepted fabricated-token baseline. Add an in-process live smoke before
   claiming the path is live-reachable.
+- PLAY-8 (Completeness; P1; L): join `simllm-preplay-trace-v2` into the live
+  replay path. Bind its observed per-request outputs and expert routing to the
+  existing replay identities, retain the framework scheduler as the sole KV
+  authority, and reconcile its per-request KV event stream with the oracle
+  record. The explicit v1 join and absent-replay paths must remain byte- and
+  timestamp-identical when v2 is not selected.
+- PLAY-9 (Precision; P1; M): replace the first pressure-study workload, which
+  vLLM admitted or serialized without pressure-group preemption, with a
+  pre-registered family that distinguishes admission deferral from true
+  scheduler recompute. The identifying observations are scheduler preemption
+  counters and the detailed event ledger at two reported capacities.
+  Acceptance requires at least one low-capacity pressure-group preemption,
+  none at high capacity, exact event-to-counter reconciliation, and retention
+  of the published negative `64` versus `256` result as chronology.
