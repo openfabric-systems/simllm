@@ -9,6 +9,14 @@ from simllm.backends.composed_rnic import (
     ComposedWqeObservation,
     invoke_composed_tier_a_producer,
 )
+from simllm.backends.dependency_cross_check import (
+    DependencyCrossCheckPlan,
+    DependencyCrossCheckReport,
+    DependencyOrderingComparison,
+    DependencyPhaseFrontierComparison,
+    complete_dependency_cross_check,
+    plan_dependency_cross_check,
+)
 from simllm.backends.device_step_sink import DeviceRuntimeStepSink, DeviceStepOutcome
 from simllm.backends.fct import NormalizedFct, normalized_fct
 from simllm.backends.htsim import HtsimUecConfig, build_htsim_uec_command
@@ -54,8 +62,10 @@ from simllm.backends.step_lowerer import (
     ObservedStepLowerer,
     SerialStepLowerer,
     SerialStepLowererConfig,
+    SerialStepTiming,
 )
 from simllm.backends.step_sink import (
+    DEPENDENCY_CROSS_CHECK_MODES,
     HtsimPersistentStepSink,
     HtsimStepSink,
     HtsimStepSinkConfig,
@@ -64,6 +74,7 @@ from simllm.backends.step_sink import (
 )
 
 __all__ = [
+    "DEPENDENCY_CROSS_CHECK_MODES",
     "NATIVE_AUTHORITY",
     "RNIC_PROFILES",
     "BypassArtifactComparison",
@@ -74,6 +85,10 @@ __all__ = [
     "ComposedRnicObservations",
     "ComposedRnicSession",
     "ComposedWqeObservation",
+    "DependencyCrossCheckPlan",
+    "DependencyCrossCheckReport",
+    "DependencyOrderingComparison",
+    "DependencyPhaseFrontierComparison",
     "DeviceRuntimeStepSink",
     "DeviceStepOutcome",
     "FlowCompletion",
@@ -98,6 +113,7 @@ __all__ = [
     "RnicWqeTimeline",
     "SerialStepLowerer",
     "SerialStepLowererConfig",
+    "SerialStepTiming",
     "StepLocalityOutcome",
     "StepNetworkOutcome",
     "assert_bypass_artifact_identity",
@@ -106,11 +122,13 @@ __all__ = [
     "build_htsim_uec_command",
     "canonical_bypass_parameters",
     "compare_bypass_artifacts",
+    "complete_dependency_cross_check",
     "find_htsim_dcqcn",
     "find_htsim_rnic",
     "invoke_composed_tier_a_producer",
     "normalized_fct",
     "parse_completion_csv",
+    "plan_dependency_cross_check",
     "read_bypass_artifacts",
     "rnic_bookkeeping_projection_from_json",
     "rnic_session_config_from_json",

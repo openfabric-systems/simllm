@@ -1,6 +1,24 @@
 """GOAL (Group Operation Assembly Language) trace emission and conversion."""
 
-from simllm.goal.emitter import GoalMessage, GoalTrace
+from simllm.goal.emitter import (
+    GoalDependency,
+    GoalDependencyKind,
+    GoalDependencyProvenance,
+    GoalGraphEdge,
+    GoalMessage,
+    GoalOperation,
+    GoalTrace,
+)
 from simllm.goal.txt2bin import find_txt2bin, to_binary
 
-__all__ = ["GoalMessage", "GoalTrace", "find_txt2bin", "to_binary"]
+__all__ = [
+    "GoalDependency",
+    "GoalDependencyKind",
+    "GoalDependencyProvenance",
+    "GoalGraphEdge",
+    "GoalMessage",
+    "GoalOperation",
+    "GoalTrace",
+    "find_txt2bin",
+    "to_binary",
+]

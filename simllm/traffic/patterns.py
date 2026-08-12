@@ -13,12 +13,27 @@ label of that rank's last operation in the phase.
 
 from __future__ import annotations
 
-from simllm.goal import GoalMessage, GoalTrace
+from simllm.goal import (
+    GoalDependencyKind,
+    GoalDependencyProvenance,
+    GoalMessage,
+    GoalTrace,
+)
 
 
-def _chain(trace: GoalTrace, rank: int, op_label: str, after: dict[int, str] | None) -> None:
+def _chain(
+    trace: GoalTrace,
+    rank: int,
+    op_label: str,
+    after: dict[int, str] | None,
+    after_provenance: dict[int, GoalDependencyProvenance] | None = None,
+) -> None:
     if after and rank in after:
-        trace.rank(rank).requires(op_label, after[rank])
+        trace.rank(rank).requires(
+            op_label,
+            after[rank],
+            provenance=None if after_provenance is None else after_provenance.get(rank),
+        )
 
 
 def scatter(
@@ -70,6 +85,10 @@ def ring_allreduce(
     size_bytes: int,
     base_tag: int,
     after: dict[int, str] | None = None,
+    *,
+    operation_id: str | None = None,
+    after_provenance: dict[int, GoalDependencyProvenance] | None = None,
+    exact_frontier: bool = False,
 ) -> dict[int, str]:
     """Ring allreduce: reduce-scatter then allgather, 2*(W-1) neighbor rounds.
 
@@ -85,17 +104,66 @@ def ring_allreduce(
     for round_index in range(2 * (world - 1)):
         tag = base_tag + round_index
         round_done: dict[int, str] = {}
+        round_labels: dict[int, tuple[str, str]] = {}
         for i, r in enumerate(ranks):
             succ = ranks[(i + 1) % world]
             pred = ranks[(i - 1) % world]
-            tx = trace.rank(r).send(chunk, to=succ, tag=tag)
-            rx = trace.rank(r).recv(chunk, source=pred, tag=tag)
+            tx = trace.rank(r).send(
+                chunk,
+                to=succ,
+                tag=tag,
+                operation_id=operation_id,
+            )
+            rx = trace.rank(r).recv(
+                chunk,
+                source=pred,
+                tag=tag,
+                operation_id=operation_id,
+            )
+            round_labels[r] = (tx, rx)
+        for i, r in enumerate(ranks):
+            succ = ranks[(i + 1) % world]
+            tx, rx = round_labels[r]
+            trace.record_message(
+                GoalMessage(
+                    operation_id=operation_id,
+                    source_rank=r,
+                    destination_rank=succ,
+                    payload_bytes=chunk,
+                    tag=tag,
+                    send_label=tx,
+                    receive_label=round_labels[succ][1],
+                )
+            )
             if r in prev_done:
-                trace.rank(r).requires(tx, prev_done[r])
-                trace.rank(r).requires(rx, prev_done[r])
-            # the round is complete on a rank when its recv landed; the next
-            # round's send also waits on it, which chains the pipeline
-            round_done[r] = rx
+                if round_index == 0:
+                    provenance = (
+                        None if after_provenance is None else after_provenance.get(r)
+                    )
+                elif operation_id is None:
+                    provenance = None
+                else:
+                    provenance = GoalDependencyProvenance(
+                        GoalDependencyKind.COLLECTIVE_INTERNAL,
+                        operation_id,
+                    )
+                trace.rank(r).requires(tx, prev_done[r], provenance=provenance)
+                trace.rank(r).requires(rx, prev_done[r], provenance=provenance)
+            if exact_frontier:
+                if operation_id is None:
+                    raise ValueError("exact ring frontier requires operation_id")
+                join = trace.rank(r).calc(0, operation_id=operation_id)
+                internal = GoalDependencyProvenance(
+                    GoalDependencyKind.COLLECTIVE_INTERNAL,
+                    operation_id,
+                )
+                trace.rank(r).requires(join, tx, provenance=internal)
+                trace.rank(r).requires(join, rx, provenance=internal)
+                round_done[r] = join
+            else:
+                # Compatibility rendering selects the receive as its syntactic
+                # frontier. Exact graph projection uses the join above.
+                round_done[r] = rx
         prev_done = round_done
     return prev_done
 
@@ -108,6 +176,8 @@ def pairwise_all_to_allv(
     after: dict[int, str] | None = None,
     *,
     operation_id: str | None = None,
+    after_provenance: dict[int, GoalDependencyProvenance] | None = None,
+    exact_frontier: bool = False,
     request_send_bytes: dict[tuple[int, int], tuple[tuple[str, int], ...]] | None = None,
 ) -> dict[int, str]:
     """Direct pairwise exchange: rank s sends ``send_bytes[(s, d)]`` to d.
@@ -129,17 +199,30 @@ def pairwise_all_to_allv(
         )
 
     done: dict[int, str] = {}
+    incident: dict[int, list[str]] = {rank: [] for rank in ranks}
     for s in ranks:
         for d in ranks:
             size = send_bytes.get((s, d), 0)
             if size <= 0 or s == d:
                 continue
-            tx = trace.rank(s).send(size, to=d, tag=tag)
-            _chain(trace, s, tx, after)
+            tx = trace.rank(s).send(
+                size,
+                to=d,
+                tag=tag,
+                operation_id=operation_id,
+            )
+            _chain(trace, s, tx, after, after_provenance)
             done.setdefault(s, tx)
-            rx = trace.rank(d).recv(size, source=s, tag=tag)
-            _chain(trace, d, rx, after)
+            incident[s].append(tx)
+            rx = trace.rank(d).recv(
+                size,
+                source=s,
+                tag=tag,
+                operation_id=operation_id,
+            )
+            _chain(trace, d, rx, after, after_provenance)
             done[d] = rx
+            incident[d].append(rx)
             trace.record_message(
                 GoalMessage(
                     operation_id=operation_id,
@@ -154,6 +237,21 @@ def pairwise_all_to_allv(
                     ),
                 )
             )
+    if exact_frontier:
+        if operation_id is None:
+            raise ValueError("exact pairwise frontier requires operation_id")
+        internal = GoalDependencyProvenance(
+            GoalDependencyKind.COLLECTIVE_INTERNAL,
+            operation_id,
+        )
+        for rank in ranks:
+            labels = incident[rank]
+            if not labels:
+                continue
+            join = trace.rank(rank).calc(0, operation_id=operation_id)
+            for label in labels:
+                trace.rank(rank).requires(join, label, provenance=internal)
+            done[rank] = join
     return done
 
 

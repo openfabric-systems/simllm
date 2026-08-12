@@ -283,12 +283,18 @@ def test_live_sink_reports_all_intra_analytic_outcome(tmp_path, monkeypatch):
     assert locality.nvlink_service_ps == 8_000
     assert locality.compute_service_ps == 2_000
     assert locality.backend_runs == 0
-    assert locality.composed_phase_service_ps == (1_000,) * 8
+    assert locality.ordering_authority == "execution-graph"
+    assert locality.graph_execution_id == "step-0"
+    assert locality.artifact_count == 10
+    # Post-specified re-acceptance: the unchanged graph wire projects into six
+    # causal-level graph artifacts; all-intra collective phases remain analytic.
+    assert locality.graph_artifact_count == 6
+    assert locality.composed_phase_service_ps == (1_000,) * 10
     assert outcome.num_flows == 0
     assert list((tmp_path / "local").glob("*.goal")) == []
 
 
-def test_live_sink_serially_composes_mixed_phase_maxima(tmp_path, monkeypatch):
+def test_live_sink_executes_mixed_artifacts_in_graph_order(tmp_path, monkeypatch):
     _stub_backend(monkeypatch, makespan_ps=123_456)
     sink = HtsimStepSink(
         HtsimStepSinkConfig(
@@ -307,10 +313,27 @@ def test_live_sink_serially_composes_mixed_phase_maxima(tmp_path, monkeypatch):
     assert result is not None
     assert result.step_latency_ps == 2_000 + 24 * 123_456
     assert locality.backend_runs == 24
-    assert locality.fabric_phase_service_ps == (123_456,) * 24
-    assert locality.composed_phase_service_ps == (123_456,) * 24
+    assert locality.ordering_authority == "execution-graph"
+    assert locality.artifact_count == 26
+    # Post-specified re-acceptance: the unchanged graph wire projects into six
+    # causal levels while only the 24 fabric phases invoke the backend.
+    assert locality.graph_artifact_count == 6
+    assert locality.fabric_phase_service_ps == (
+        (0,)
+        + (123_456,) * 12
+        + (0,)
+        + (123_456,) * 12
+    )
+    assert locality.composed_phase_service_ps == (
+        (1_000,)
+        + (123_456,) * 12
+        + (1_000,)
+        + (123_456,) * 12
+    )
     assert sink.outcomes[0].num_flows == 48
-    assert len(list((tmp_path / "mixed").glob("*.goal"))) == 24
+    assert len(
+        list((tmp_path / "mixed").glob("step-*.artifact-*.phase-*.goal"))
+    ) == 24
 
 
 def test_persistent_sink_matches_diagnostic_locality_projection(tmp_path, monkeypatch):
@@ -370,9 +393,16 @@ def test_live_sink_explicit_all_remote_matches_omitted_placement(
     )
 
     assert omitted(record) == explicit(record)
-    omitted_goal = (tmp_path / "omitted" / "step-000000.goal").read_bytes()
-    explicit_goal = (tmp_path / "explicit" / "step-000000.goal").read_bytes()
-    assert explicit_goal == omitted_goal
+    omitted_artifacts = tuple(
+        (path.name, path.read_bytes())
+        for path in sorted((tmp_path / "omitted").glob("*.goal"))
+    )
+    explicit_artifacts = tuple(
+        (path.name, path.read_bytes())
+        for path in sorted((tmp_path / "explicit").glob("*.goal"))
+    )
+    assert explicit_artifacts == omitted_artifacts
+    assert len(explicit_artifacts) == 4
     omitted_locality = omitted.locality_outcomes[0]
     explicit_locality = explicit.locality_outcomes[0]
     assert omitted_locality.authority == "compatibility-all-remote"
@@ -381,6 +411,12 @@ def test_live_sink_explicit_all_remote_matches_omitted_placement(
     assert explicit_locality.compatibility_fast_path
     assert explicit_locality.fabric_directed_bytes == 192
     assert explicit_locality.nvlink_directed_bytes == 0
+    assert omitted_locality.ordering_authority == "execution-graph"
+    assert explicit_locality.ordering_authority == "execution-graph"
+    assert (
+        explicit_locality.artifact_operation_ids
+        == omitted_locality.artifact_operation_ids
+    )
 
 
 def test_live_sink_rejects_incomplete_manifest_before_goal_write(

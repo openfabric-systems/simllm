@@ -57,25 +57,39 @@ backend submodules.
   GOAL-driven `htsim_uec` runs.
 - `HtsimStepSink` + `HtsimStepSinkConfig` (M4): the closed-loop step sink,
   a callable `StepRecord -> StepResult | None` matching the adapters' sink
-  contract. Per step it renders the TP serial chain
-  (`simllm.traffic.render_step_goal`: per layer one `calc` then the two ring
-  allreduces, plus the MoE
-  dispatch/combine all-to-alls when the config declares `ep_ranks` and
-  the dims declare experts, landed with the M5 slice). A provider may return
-  an optional exact duration per layer; the sink validates count,
-  nonnegativity and the fused sum, then truncates cumulative boundaries to
-  GOAL ns. Providers without the hook retain the original even scalar split
-  byte for byte. An optional `StepRecord.num_sampled` prices the LM head from
-  exact attribution; absence retains `len(scheduled)`. The config's optional
-  `num_goal_ranks` pads topology-sized GOALs without moving the active group
-  to the highest rank. The sink converts
-  with `txt2bin`, runs `htsim_rnic` on the configured profile/topology,
-  parses the completion CSV and returns the simulated makespan as the
-  step latency with `completed_at_ps = record.virtual_time_ps + makespan`.
-  A step with no TP collectives (TP world of 1, or a zero-token drain
-  record) returns `None`, so the adapter's own compute-only estimate
-  stands. Per-step subprocess invocation is the documented diagnostic
-  mode and remains the default.
+  contract. Per step its serial lowerer builds one `ExecutionGraph`; that
+  graph's effective dependency inventory is the semantic ordering authority.
+  The checked graph projector renders causal GOAL artifacts and htsim enforces
+  exactly that projected order. A provider may return an optional exact
+  duration per layer; the sink validates count, nonnegativity and the fused
+  sum, then truncates cumulative boundaries to GOAL ns. Providers without the
+  hook retain the original even scalar split byte for byte. An optional
+  `StepRecord.num_sampled` prices the LM head from exact attribution; absence
+  retains `len(scheduled)`. The config's optional `num_goal_ranks` pads
+  topology-sized GOALs without moving the active group to the highest rank.
+  The sink converts with `txt2bin`, runs `htsim_rnic` on the configured
+  profile/topology, parses the completion CSV and returns the authoritative
+  simulated makespan as the step latency with
+  `completed_at_ps = record.virtual_time_ps + makespan`. A step with no fabric
+  collectives returns `None`, so the adapter's own compute-only estimate
+  stands. Per-step subprocess invocation is the documented diagnostic mode and
+  remains the default.
+
+  The seam-local `dependency_cross_check="atlahs-goal"` option independently
+  renders and executes the same all-remote schedule through the direct ATLAHS
+  GOAL path. The graph-projected execution remains the sole authority for the
+  returned result. Its diagnostic report inspects every canonical effective
+  edge for direct-GOAL syntactic reachability, identifies whole-operation and
+  participant-local ordering-scope differences, and separately records raw
+  phase-frontier gaps and the signed direct minus graph completion delta beyond
+  the study-registered `dependency_cross_check_tolerance_ps`.
+  Disagreement is reported with operation, phase and timing detail; it is not
+  averaged, used to override the result or treated as an equality assertion.
+  The default-off value preserves accepted artifacts and results exactly. The
+  current cross-check rejects placement configurations with local NVLink work;
+  TRAF-16 owns that frontier precision. CORE-36 owns the future unified
+  fidelity selection and provenance surface, so this option is not a second
+  global configuration scheme.
   `StepNetworkOutcome` keeps per-step bookkeeping (compute estimate, sample
   count and exactness, ordered layer calcs, makespan and network share) for
   reporting.
@@ -87,8 +101,10 @@ backend submodules.
   batch succeeds and are served only for dataclass value-equal records in
   their original order. The pool can serve another batch after the first is
   fully consumed.
-  This preserves the diagnostic path's per-step reset semantics; it does not
-  claim a stateful online backend session. The backend flow session and full
+  This preserves the diagnostic path's reset semantics with a fresh process
+  and local state for every GOAL artifact and step. This mode does not claim a
+  stateful online backend session, and ordered `rnic-cn` multi-artifact runs
+  are rejected before backend execution. The backend flow session and full
   result codec are now delivered; BRIDGE-2 owns their graph-level client.
 - `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
   from a `StepRecord` to per-layer compute plus semantic TP/EP collective
@@ -385,6 +401,19 @@ plus a live closed loop: vLLM v0.26.0 in-process at tp=8 under
 `SimExecutor` with the sink drove `htsim_rnic` inside the engine step
 loop, every step latency matching the closed form to 0 ps
 (examples/m4/RESULTS.md).
+
+The TRAF-12 follow-up keeps the independently rendered ATLAHS GOAL execution
+available behind the serial sink's explicit dependency cross-check. The
+authoritative graph-projected execution still supplies the returned makespan;
+the second execution reports its ordering-scope, raw phase-frontier and
+completion-time disagreements for diagnosis. The all-remote structural audit
+checked all 423 canonical effective edges and found 235 differences: the
+frozen 47/47 whole-operation logical-queue FIFO differences plus 188
+participant-local syntactic-frontier mismatches added as a post-specified,
+unscored diagnostic. Raw timing remained scoped to the 47 frozen boundaries,
+with 46/47 unequal, early gaps. The default-off path retained the accepted
+artifacts and results exactly; see
+[the dependency authority results](../../examples/dependency_authority_v1/RESULTS.md).
 
 On 2026-08-11 BRIDGE-1 closed for finite known replays. The opt-in
 `HtsimPersistentStepSink` reuses a local worker pool and concurrently executes
@@ -746,6 +775,17 @@ is difficult.
   Acceptance includes per-class attribution, calibrated queue and tag knees,
   and defended p50 through p99.9 latency. Until those mechanisms land,
   analytical incidence must not be described as detected hardware behavior.
+- BACK-38 (Precision; P1; L): preserve htsim topology, RNG,
+  transport, congestion-control and RNIC state across ordered GOAL artifacts
+  instead of starting a fresh process at every boundary. Multi-artifact
+  `rnic-cn` currently fails before backend execution, while `rnic-nn` and
+  `rnic-nn-fluid` remain accepted. Acceptance must execute one checked graph
+  projection in a state-preserving session, reconcile every artifact and
+  completion identity, and retain the current rejection and stateless-profile
+  bytes as the explicit off paths.
+
+### Completeness
+
 - BACK-2 (Completeness; P2; S): LogGOPSim invocation helper for fast
   flow-level sweeps.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
@@ -847,6 +887,7 @@ is difficult.
   predecessor bytes and random draws exactly. Enabled GPU consumption must
   change an end-to-end metric in the registered direction and must never
   advance CQE lifecycle state independently of the native RNIC authority.
+
 - BACK-39 (Completeness; P2; L): join ABI-v2 packet attempts to request
   identity only if a future study needs packet-level request attribution. The
   current request dispatch lifetime intentionally stops at collective flow
@@ -858,16 +899,11 @@ is difficult.
   accepted routing-lifetime, GOAL, completion and metric byte exactly.
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
-- HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
-  the runtime factory
-  rejects it with a clear error until the slingshot runtime lands. Its CLI
-  options are already parsed so the flag ABI is stable. Out of simllm's
-  scope by maintainer decision; tracked here for the backend repo only.
+### Precision
+
 - HTSIM-2 (Precision; P1; M): goodput/state/queue trace flags for `rnic-cn`;
   they need trace
   hooks in the reviewed runtime first.
-- HTSIM-4 (Completeness; P2; M): GOAL parser hardening and the checked-in
-  `txt2bin` build target.
 - HTSIM-5 (Precision; P1; L): persistent DCQCN policy state across hardware
   WQEs. On
   2026-08-07 the former hardware-specific per-WQE-start scope was merged into
@@ -894,6 +930,15 @@ is difficult.
   R_AI = C/20 and C/10 (dcqcn.cpp:48-49) against the paper's fixed
   40 Mbps, and the ECN defaults are fixed bytes (Kmin 64 KB, Kmax
   640 KB, Pmax 0.25) independent of the link rate.
+- HTSIM-6 (Precision; P1; L): `rnic-cn` policy lookahead (maintainer design
+  2026-08-05). The
+  established-pair fast path must not wait when granted bandwidth suffices,
+  and the policy receives bounded lookahead from BACK-9 so it can pre-declare
+  one RTT ahead for queued work toward the same destination. The WQ, WQE and
+  QPC remain SimLLM hardware state; htsim retains only link-pair reservation,
+  control-slot and predeclaration state. The timing-neutral SQ and directed
+  link-pair identity in `d778326` remain the compatibility ledger until the
+  adapter lands.
 - HTSIM-7 (Precision; P1; L): rnic-cn concurrent same-pair flow scaling.
   10,000
   simultaneous flows between one source-destination pair make no visible
@@ -905,15 +950,6 @@ is difficult.
   HTSIM-6 and BACK-9: policy lookahead removes the repeated declare cost,
   structural WQ backpressure limits how much work can be exposed, and the
   event-loop scaling needs its own look.
-- HTSIM-6 (Precision; P1; L): `rnic-cn` policy lookahead (maintainer design
-  2026-08-05). The
-  established-pair fast path must not wait when granted bandwidth suffices,
-  and the policy receives bounded lookahead from BACK-9 so it can pre-declare
-  one RTT ahead for queued work toward the same destination. The WQ, WQE and
-  QPC remain SimLLM hardware state; htsim retains only link-pair reservation,
-  control-slot and predeclaration state. The timing-neutral SQ and directed
-  link-pair identity in `d778326` remain the compatibility ledger until the
-  adapter lands.
 - HTSIM-8 (Precision; P0; M): repair the backend `commit_check.sh` validation
   gate. Current
   `origin/main` has no `validate_outputs` baselines, `validate.py` divides by
@@ -930,6 +966,16 @@ is difficult.
   signed speedup instance, and state the entailment and genuine-risk analysis
   without using any wave-5 session timing to select the held-out workload or
   thresholds.
+
+### Completeness
+
+- HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
+  the runtime factory
+  rejects it with a clear error until the slingshot runtime lands. Its CLI
+  options are already parsed so the flag ABI is stable. Out of simllm's
+  scope by maintainer decision; tracked here for the backend repo only.
+- HTSIM-4 (Completeness; P2; M): GOAL parser hardening and the checked-in
+  `txt2bin` build target.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.

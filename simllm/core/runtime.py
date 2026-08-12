@@ -41,7 +41,9 @@ from simllm.core.execution import (
     ComputeWork,
     ControlMode,
     ControlWork,
+    DependencyScope,
     DmaWork,
+    EffectiveDependencyEdge,
     EventPhase,
     ExecutionGraph,
     ExecutionOperation,
@@ -51,7 +53,12 @@ from simllm.core.execution import (
     ResourceKind,
     ResourceRef,
 )
-from simllm.core.execution_io import execution_result_to_json, validate_execution_graph
+from simllm.core.execution_io import (
+    effective_dependency_edges,
+    execution_result_to_json,
+    operation_participant_ranks,
+    validate_execution_graph,
+)
 from simllm.core.step import LatencyAttribution
 
 PS_PER_SECOND = 1_000_000_000_000
@@ -283,7 +290,13 @@ class CriticalPathBreakdown:
 
 @dataclass(frozen=True)
 class RuntimeOperationRecord:
-    """Coarse realized timing for one immutable graph operation."""
+    """Coarse realized timing for one immutable graph operation.
+
+    The causal predecessor fields retain the exact readiness boundary. The
+    critical predecessor is present only when that boundary is the
+    predecessor's whole-operation completion and can therefore be added to a
+    nonoverlapping critical-path chain.
+    """
 
     operation_id: str
     class_label: int
@@ -294,6 +307,8 @@ class RuntimeOperationRecord:
     participant_completed_at_ps: tuple[tuple[int, int], ...]
     breakdown: CriticalPathBreakdown
     attribution: LatencyAttribution
+    causal_predecessor_id: str | None
+    causal_predecessor_completed_at_ps: int | None
     critical_predecessor_id: str | None
     sum_visit_wait_ps: int
 
@@ -704,8 +719,64 @@ class _ScheduledOperation:
     logical_paths: list[list[QueueVisit]]
     eligible_at_ps: int
     critical_predecessor_id: str | None
+    critical_predecessor_completed_at_ps: int | None = None
     nccl_command_id: str | None = None
     wqes: list[WqeLifecycleProjection] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class _CausalWitness:
+    predecessor_id: str
+    completed_at_ps: int
+
+
+_ReadyOperation = tuple[
+    dict[int, int],
+    dict[int, _CausalWitness | None],
+    int,
+]
+
+
+def _select_causal_witness(
+    *candidates: tuple[int, _CausalWitness | None],
+) -> _CausalWitness | None:
+    if not candidates:
+        raise ValueError("causal-witness selection requires at least one candidate")
+    return max(
+        candidates,
+        key=lambda candidate: (
+            candidate[0],
+            candidate[1] is not None,
+            -1 if candidate[1] is None else candidate[1].completed_at_ps,
+            "" if candidate[1] is None else candidate[1].predecessor_id,
+        ),
+    )[1]
+
+
+def _completion_causal_witness(
+    completed_at_ps: Mapping[int, int],
+    causal_witnesses: Mapping[int, _CausalWitness | None],
+) -> _CausalWitness | None:
+    if completed_at_ps.keys() != causal_witnesses.keys():
+        raise AssertionError("participant completion and causal-witness ranks differ")
+    return _select_causal_witness(
+        *(
+            (completed, causal_witnesses[rank])
+            for rank, completed in completed_at_ps.items()
+        )
+    )
+
+
+def _logical_path_index(paths: Sequence[Sequence[QueueVisit]]) -> int:
+    if not paths or any(not path for path in paths):
+        raise ValueError("logical-path selection requires nonempty paths")
+    return max(
+        range(len(paths)),
+        key=lambda index: (
+            paths[index][-1].completed_at_ps,
+            paths[index][-1].resource.resource_id,
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -921,40 +992,42 @@ class CoarseDeviceRuntime:
                 operation.operation_id: index
                 for index, operation in enumerate(graph.operations)
             }
-            queue_predecessor = self._queue_predecessors(graph)
+            incoming_edges: dict[str, list[EffectiveDependencyEdge]] = defaultdict(list)
+            for edge in effective_dependency_edges(graph):
+                incoming_edges[edge.operation_id].append(edge)
             launch_visits = self._schedule_launches(graph, state)
             scheduled: dict[str, _ScheduledOperation] = {}
             unscheduled = {operation.operation_id for operation in graph.operations}
             all_wqes: list[WqeLifecycleProjection] = []
 
             while unscheduled:
-                ready_data: dict[
-                    str, tuple[dict[int, int], int, str | None]
-                ] = {}
+                ready_data: dict[str, _ReadyOperation] = {}
                 for operation in graph.operations:
                     operation_id = operation.operation_id
                     if operation_id not in unscheduled:
                         continue
-                    predecessors = set(operation.depends_on)
-                    predecessors.update(operation.participant_local_depends_on)
-                    previous = queue_predecessor.get(operation_id)
-                    if previous is not None:
-                        predecessors.add(previous)
+                    predecessors = {
+                        edge.predecessor_id
+                        for edge in incoming_edges[operation_id]
+                    }
                     if not predecessors.issubset(scheduled):
                         continue
-                    by_rank, eligible_at_ps, critical_predecessor = (
+                    (
+                        by_rank,
+                        causal_witnesses,
+                        eligible_at_ps,
+                    ) = (
                         self._operation_readiness(
-                            graph,
                             operation,
                             launch_visits[operation_id],
                             scheduled,
-                            previous,
+                            tuple(incoming_edges[operation_id]),
                         )
                     )
                     ready_data[operation_id] = (
                         by_rank,
+                        causal_witnesses,
                         eligible_at_ps,
-                        critical_predecessor,
                     )
                 if not ready_data:
                     raise RuntimeError("validated graph made no scheduling progress")
@@ -988,13 +1061,17 @@ class CoarseDeviceRuntime:
                         unscheduled.remove(operation_id)
                     continue
 
-                by_rank, eligible_at_ps, critical_predecessor = ready_data[selected_id]
+                (
+                    by_rank,
+                    causal_witnesses,
+                    eligible_at_ps,
+                ) = ready_data[selected_id]
                 outcome = self._schedule_noncompute(
                     graph,
                     selected,
                     by_rank,
+                    causal_witnesses,
                     eligible_at_ps,
-                    critical_predecessor,
                     launch_visits[selected_id],
                     tags,
                     state,
@@ -1071,6 +1148,21 @@ class CoarseDeviceRuntime:
 
     def _preflight(self, graph: ExecutionGraph) -> None:
         collective_goal_tags(graph, base_tag=self.profile.goal_base_tag)
+        operation_by_id = {
+            operation.operation_id: operation for operation in graph.operations
+        }
+        for edge in effective_dependency_edges(graph):
+            operation = operation_by_id[edge.operation_id]
+            if (
+                edge.scope is DependencyScope.PARTICIPANT_LOCAL
+                and isinstance(operation.work, ControlWork)
+                and operation.work.mode is ControlMode.ASYNCHRONOUS
+                and edge.participant_rank != operation.rank
+            ):
+                raise ValueError(
+                    "participant-local readiness on an asynchronous control "
+                    "destination is unsupported by the coarse runtime"
+                )
         for operation in graph.operations:
             work = operation.work
             self.profile.node_gpu(operation.rank)
@@ -1137,18 +1229,6 @@ class CoarseDeviceRuntime:
             else:
                 raise TypeError(f"unsupported work payload {type(work).__name__}")
 
-    @staticmethod
-    def _queue_predecessors(graph: ExecutionGraph) -> dict[str, str]:
-        tails: dict[tuple[int, str], str] = {}
-        result: dict[str, str] = {}
-        for operation in graph.operations:
-            key = (operation.rank, operation.logical_queue)
-            previous = tails.get(key)
-            if previous is not None:
-                result[operation.operation_id] = previous
-            tails[key] = operation.operation_id
-        return result
-
     def _schedule_launches(
         self,
         graph: ExecutionGraph,
@@ -1177,55 +1257,53 @@ class CoarseDeviceRuntime:
             state.host_available[node] = finished_at_ps
         return result
 
-    @staticmethod
-    def _operation_ranks(operation: ExecutionOperation) -> tuple[int, ...]:
-        if isinstance(operation.work, CollectiveWork):
-            return operation.work.ranks
-        return (operation.rank,)
-
     def _operation_readiness(
         self,
-        graph: ExecutionGraph,
         operation: ExecutionOperation,
         launch: QueueVisit,
         scheduled: Mapping[str, _ScheduledOperation],
-        queue_predecessor: str | None,
-    ) -> tuple[dict[int, int], int, str | None]:
-        ranks = self._operation_ranks(operation)
+        incoming_edges: tuple[EffectiveDependencyEdge, ...],
+    ) -> _ReadyOperation:
+        ranks = operation_participant_ranks(operation)
         readiness = {rank: launch.completed_at_ps for rank in ranks}
-        predecessor_times: list[tuple[int, str]] = []
-        for predecessor_id in operation.depends_on:
-            completed = scheduled[predecessor_id].logical_completed_at_ps
-            predecessor_times.append((completed, predecessor_id))
-            for rank in ranks:
+        causal_witnesses: dict[int, _CausalWitness | None] = {
+            rank: None for rank in ranks
+        }
+        for edge in incoming_edges:
+            predecessor = scheduled[edge.predecessor_id]
+            if edge.scope is DependencyScope.WHOLE_OPERATION:
+                completed = predecessor.logical_completed_at_ps
+                constrained_ranks = ranks
+            else:
+                rank = edge.participant_rank
+                if rank is None:
+                    raise AssertionError("participant-local edge has no rank")
+                completed = predecessor.participant_completed_at_ps[rank]
+                constrained_ranks = (rank,)
+            witness = _CausalWitness(edge.predecessor_id, completed)
+            for rank in constrained_ranks:
+                previous_witness = causal_witnesses[rank]
+                if previous_witness is None:
+                    causal_witnesses[rank] = witness
+                else:
+                    causal_witnesses[rank] = _select_causal_witness(
+                        (previous_witness.completed_at_ps, previous_witness),
+                        (completed, witness),
+                    )
                 readiness[rank] = max(readiness[rank], completed)
-        if queue_predecessor is not None:
-            completed = scheduled[queue_predecessor].logical_completed_at_ps
-            predecessor_times.append((completed, queue_predecessor))
-            for rank in ranks:
-                readiness[rank] = max(readiness[rank], completed)
-        for predecessor_id in operation.participant_local_depends_on:
-            predecessor = scheduled[predecessor_id]
-            for rank in ranks:
-                completed = predecessor.participant_completed_at_ps.get(rank)
-                if completed is None:
-                    continue
-                readiness[rank] = max(readiness[rank], completed)
-                predecessor_times.append((completed, predecessor_id))
-        critical = (
-            max(predecessor_times, key=lambda item: (item[0], item[1]))[1]
-            if predecessor_times
-            else None
+        return (
+            readiness,
+            causal_witnesses,
+            min(readiness.values()),
         )
-        return readiness, min(readiness.values()), critical
 
     def _select_ready_operation(
         self,
-        ready_data: Mapping[str, tuple[dict[int, int], int, str | None]],
+        ready_data: Mapping[str, _ReadyOperation],
         operation_by_id: Mapping[str, ExecutionOperation],
         operation_index: Mapping[str, int],
     ) -> str:
-        earliest = min(value[1] for value in ready_data.values())
+        earliest = min(value[2] for value in ready_data.values())
         candidates = tuple(
             ArbitrationCandidate(
                 operation_id=operation_id,
@@ -1233,7 +1311,7 @@ class CoarseDeviceRuntime:
                 eligible_at_ps=eligible_at_ps,
                 class_label=operation_by_id[operation_id].priority,
             )
-            for operation_id, (_, eligible_at_ps, _) in ready_data.items()
+            for operation_id, (_, _, eligible_at_ps) in ready_data.items()
             if eligible_at_ps == earliest
         )
         policy = self.arbitration_policy or IdentityArbitrationPolicy()
@@ -1257,7 +1335,7 @@ class CoarseDeviceRuntime:
     def _compute_group(
         self,
         selected: ExecutionOperation,
-        ready_data: Mapping[str, tuple[dict[int, int], int, str | None]],
+        ready_data: Mapping[str, _ReadyOperation],
         operation_by_id: Mapping[str, ExecutionOperation],
         operation_index: Mapping[str, int],
         state: _RuntimeState,
@@ -1284,7 +1362,7 @@ class CoarseDeviceRuntime:
         self,
         graph: ExecutionGraph,
         operations: tuple[ExecutionOperation, ...],
-        ready_data: Mapping[str, tuple[dict[int, int], int, str | None]],
+        ready_data: Mapping[str, _ReadyOperation],
         launches: Mapping[str, QueueVisit],
         state: _RuntimeState,
     ) -> dict[str, _ScheduledOperation]:
@@ -1384,6 +1462,7 @@ class CoarseDeviceRuntime:
                     )
                 )
             logical_completed = gpu_visit.completed_at_ps
+            causal_witness = ready_data[operation_id][1][rank]
             outcomes[operation_id] = _ScheduledOperation(
                 operation=operation,
                 logical_completed_at_ps=logical_completed,
@@ -1392,7 +1471,16 @@ class CoarseDeviceRuntime:
                 visits=visits,
                 logical_paths=[[launches[operation_id], gpu_visit]],
                 eligible_at_ps=eligible[operation_id],
-                critical_predecessor_id=ready_data[operation_id][2],
+                critical_predecessor_id=(
+                    None
+                    if causal_witness is None
+                    else causal_witness.predecessor_id
+                ),
+                critical_predecessor_completed_at_ps=(
+                    None
+                    if causal_witness is None
+                    else causal_witness.completed_at_ps
+                ),
             )
         return outcomes
 
@@ -1411,8 +1499,8 @@ class CoarseDeviceRuntime:
         graph: ExecutionGraph,
         operation: ExecutionOperation,
         by_rank: dict[int, int],
+        causal_witnesses: dict[int, _CausalWitness | None],
         eligible_at_ps: int,
-        critical_predecessor: str | None,
         launch: QueueVisit,
         tags: Mapping[str, tuple[int, ...]],
         state: _RuntimeState,
@@ -1420,16 +1508,21 @@ class CoarseDeviceRuntime:
         operation_index: int,
     ) -> _ScheduledOperation:
         if isinstance(operation.work, DmaWork):
+            causal_witness = _completion_causal_witness(
+                by_rank,
+                causal_witnesses,
+            )
             return self._schedule_dma(
                 graph,
                 operation,
-                by_rank[operation.rank],
-                critical_predecessor,
+                max(by_rank.values()),
+                causal_witness,
                 launch,
                 state,
             )
         if isinstance(operation.work, KvCacheWork):
             completed = max(launch.completed_at_ps, by_rank[operation.rank])
+            causal_witness = causal_witnesses[operation.rank]
             return _ScheduledOperation(
                 operation=operation,
                 logical_completed_at_ps=completed,
@@ -1438,14 +1531,23 @@ class CoarseDeviceRuntime:
                 visits=[launch],
                 logical_paths=[[launch]],
                 eligible_at_ps=eligible_at_ps,
-                critical_predecessor_id=critical_predecessor,
+                critical_predecessor_id=(
+                    None
+                    if causal_witness is None
+                    else causal_witness.predecessor_id
+                ),
+                critical_predecessor_completed_at_ps=(
+                    None
+                    if causal_witness is None
+                    else causal_witness.completed_at_ps
+                ),
             )
         if isinstance(operation.work, ControlWork):
             return self._schedule_control(
                 graph,
                 operation,
-                by_rank[operation.rank],
-                critical_predecessor,
+                by_rank,
+                causal_witnesses,
                 launch,
                 state,
                 wqe_authority,
@@ -1456,7 +1558,7 @@ class CoarseDeviceRuntime:
                 graph,
                 operation,
                 by_rank,
-                critical_predecessor,
+                causal_witnesses,
                 launch,
                 tags[operation.operation_id],
                 state,
@@ -1469,7 +1571,7 @@ class CoarseDeviceRuntime:
         graph: ExecutionGraph,
         operation: ExecutionOperation,
         eligible_at_ps: int,
-        critical_predecessor: str | None,
+        causal_witness: _CausalWitness | None,
         launch: QueueVisit,
         state: _RuntimeState,
     ) -> _ScheduledOperation:
@@ -1546,15 +1648,20 @@ class CoarseDeviceRuntime:
             visits=[launch, copy_visit, hbm_visit],
             logical_paths=[[launch, copy_visit]],
             eligible_at_ps=eligible_at_ps,
-            critical_predecessor_id=critical_predecessor,
+            critical_predecessor_id=(
+                None if causal_witness is None else causal_witness.predecessor_id
+            ),
+            critical_predecessor_completed_at_ps=(
+                None if causal_witness is None else causal_witness.completed_at_ps
+            ),
         )
 
     def _schedule_control(
         self,
         graph: ExecutionGraph,
         operation: ExecutionOperation,
-        eligible_at_ps: int,
-        critical_predecessor: str | None,
+        readiness: dict[int, int],
+        causal_witnesses: dict[int, _CausalWitness | None],
         launch: QueueVisit,
         state: _RuntimeState,
         wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
@@ -1563,6 +1670,7 @@ class CoarseDeviceRuntime:
         work = operation.work
         assert isinstance(work, ControlWork)
         rank = operation.rank
+        eligible_at_ps = readiness[rank]
         node, gpu = self.profile.node_gpu(rank)
         started_at_ps = max(eligible_at_ps, state.control_available.get(rank, 0))
         finished_at_ps = started_at_ps + self.profile.control_service_ps
@@ -1586,6 +1694,7 @@ class CoarseDeviceRuntime:
         wqes: list[WqeLifecycleProjection] = []
         physical_completed = control_visit.completed_at_ps
         participant_completed = {rank: control_visit.completed_at_ps}
+        physical_path_witnesses = [causal_witnesses[rank]]
         for extent_index, destination in enumerate(work.destination_ranks):
             if destination == rank:
                 continue
@@ -1605,13 +1714,21 @@ class CoarseDeviceRuntime:
                 extent_index=extent_index,
                 channel_id=f"control:{work.message}",
                 submitted_at_ps=control_visit.completed_at_ps,
-                eligible_at_ps=control_visit.completed_at_ps,
+                eligible_at_ps=max(
+                    control_visit.completed_at_ps,
+                    readiness[destination],
+                ),
                 nccl_command_id=None,
                 state=state,
                 wqe_authority=wqe_authority,
             )
+            transfer_witness = _select_causal_witness(
+                (control_visit.completed_at_ps, causal_witnesses[rank]),
+                (readiness[destination], causal_witnesses[destination]),
+            )
             visits.extend(transfer.visits)
             physical_paths.append([launch, control_visit, *transfer.visits])
+            physical_path_witnesses.append(transfer_witness)
             physical_completed = max(physical_completed, transfer.completed_at_ps)
             participant_completed[destination] = max(
                 participant_completed.get(destination, 0),
@@ -1622,9 +1739,12 @@ class CoarseDeviceRuntime:
         if work.mode is ControlMode.SYNCHRONOUS:
             logical_completed = physical_completed
             logical_paths = physical_paths
+            selected_path_index = _logical_path_index(physical_paths)
+            causal_witness = physical_path_witnesses[selected_path_index]
         else:
             logical_completed = control_visit.completed_at_ps
             logical_paths = [[launch, control_visit]]
+            causal_witness = causal_witnesses[rank]
         participant_completed[rank] = logical_completed
         return _ScheduledOperation(
             operation=operation,
@@ -1634,7 +1754,12 @@ class CoarseDeviceRuntime:
             visits=visits,
             logical_paths=logical_paths,
             eligible_at_ps=eligible_at_ps,
-            critical_predecessor_id=critical_predecessor,
+            critical_predecessor_id=(
+                None if causal_witness is None else causal_witness.predecessor_id
+            ),
+            critical_predecessor_completed_at_ps=(
+                None if causal_witness is None else causal_witness.completed_at_ps
+            ),
             wqes=wqes,
         )
 
@@ -1643,7 +1768,7 @@ class CoarseDeviceRuntime:
         graph: ExecutionGraph,
         operation: ExecutionOperation,
         readiness: dict[int, int],
-        critical_predecessor: str | None,
+        causal_witnesses: dict[int, _CausalWitness | None],
         launch: QueueVisit,
         goal_tags: tuple[int, ...],
         state: _RuntimeState,
@@ -1658,13 +1783,16 @@ class CoarseDeviceRuntime:
         channel = work.channel_hint or "default"
         visits: list[QueueVisit] = [launch]
         paths: list[list[QueueVisit]] = []
+        path_witnesses: list[_CausalWitness | None] = []
         wqes: list[WqeLifecycleProjection] = []
         participant_completed = dict(readiness)
+        participant_witnesses = dict(causal_witnesses)
         extent_index = 0
 
         if work.collective == "all-reduce" and work.algorithm_hint == "ring":
             chunk_bytes = work.payload_bytes // len(work.ranks)
             frontier = dict(readiness)
+            frontier_witnesses = dict(causal_witnesses)
             frontier_paths = {rank: [launch] for rank in work.ranks}
             for round_index, goal_tag in enumerate(goal_tags):
                 round_records: list[
@@ -1673,6 +1801,7 @@ class CoarseDeviceRuntime:
                         int,
                         _SemanticSendSchedule,
                         list[QueueVisit],
+                        _CausalWitness | None,
                     ]
                 ] = []
                 for index, source_rank in enumerate(work.ranks):
@@ -1696,10 +1825,23 @@ class CoarseDeviceRuntime:
                         extent_index=extent_index,
                         channel_id=f"{channel}:round-{round_index}",
                         submitted_at_ps=channel_visit.completed_at_ps,
-                        eligible_at_ps=channel_visit.completed_at_ps,
+                        eligible_at_ps=max(
+                            channel_visit.completed_at_ps,
+                            frontier[destination_rank],
+                        ),
                         nccl_command_id=command_id,
                         state=state,
                         wqe_authority=wqe_authority,
+                    )
+                    transfer_witness = _select_causal_witness(
+                        (
+                            channel_visit.completed_at_ps,
+                            frontier_witnesses[source_rank],
+                        ),
+                        (
+                            frontier[destination_rank],
+                            frontier_witnesses[destination_rank],
+                        ),
                     )
                     extent_index += 1
                     visits.append(channel_visit)
@@ -1717,24 +1859,37 @@ class CoarseDeviceRuntime:
                             destination_rank,
                             transfer,
                             source_path,
+                            transfer_witness,
                         )
                     )
                 next_frontier = dict(frontier)
+                next_frontier_witnesses = dict(frontier_witnesses)
                 next_frontier_paths = dict(frontier_paths)
                 for (
                     source_rank,
                     destination_rank,
                     transfer,
                     source_path,
+                    transfer_witness,
                 ) in round_records:
                     for rank in (source_rank, destination_rank):
+                        next_frontier_witnesses[rank] = _select_causal_witness(
+                            (
+                                next_frontier[rank],
+                                next_frontier_witnesses[rank],
+                            ),
+                            (transfer.completed_at_ps, transfer_witness),
+                        )
                         if transfer.completed_at_ps >= next_frontier[rank]:
                             next_frontier[rank] = transfer.completed_at_ps
                             next_frontier_paths[rank] = source_path
                 frontier = next_frontier
+                frontier_witnesses = next_frontier_witnesses
                 frontier_paths = next_frontier_paths
             participant_completed = frontier
+            participant_witnesses = frontier_witnesses
             paths = list(frontier_paths.values())
+            path_witnesses = list(frontier_witnesses.values())
         elif work.collective == "all-to-allv" and work.algorithm_hint == "pairwise":
             goal_tag = goal_tags[0]
             if work.pair_payload_bytes:
@@ -1766,17 +1921,39 @@ class CoarseDeviceRuntime:
                     extent_index=extent_index,
                     channel_id=channel,
                     submitted_at_ps=channel_visit.completed_at_ps,
-                    eligible_at_ps=channel_visit.completed_at_ps,
+                    eligible_at_ps=max(
+                        channel_visit.completed_at_ps,
+                        readiness[destination_rank],
+                    ),
                     nccl_command_id=command_id,
                     state=state,
                     wqe_authority=wqe_authority,
+                )
+                transfer_witness = _select_causal_witness(
+                    (
+                        channel_visit.completed_at_ps,
+                        causal_witnesses[source_rank],
+                    ),
+                    (
+                        readiness[destination_rank],
+                        causal_witnesses[destination_rank],
+                    ),
                 )
                 extent_index += 1
                 visits.append(channel_visit)
                 visits.extend(transfer.visits)
                 paths.append([launch, channel_visit, *transfer.visits])
+                path_witnesses.append(transfer_witness)
                 if transfer.projection is not None:
                     wqes.append(transfer.projection)
+                for rank in (source_rank, destination_rank):
+                    participant_witnesses[rank] = _select_causal_witness(
+                        (
+                            participant_completed[rank],
+                            participant_witnesses[rank],
+                        ),
+                        (transfer.completed_at_ps, transfer_witness),
+                    )
                 participant_completed[source_rank] = max(
                     participant_completed[source_rank], transfer.completed_at_ps
                 )
@@ -1787,8 +1964,18 @@ class CoarseDeviceRuntime:
             raise AssertionError("collective tag preflight accepted an unsupported algorithm")
 
         logical_completed = max(participant_completed.values())
+        completion_causal_witness = _completion_causal_witness(
+            participant_completed,
+            participant_witnesses,
+        )
         if not paths:
             paths = [[launch]]
+            path_witnesses = [completion_causal_witness]
+        selected_path_index = _logical_path_index(paths)
+        if paths[selected_path_index][-1].completed_at_ps == logical_completed:
+            causal_witness = path_witnesses[selected_path_index]
+        else:
+            causal_witness = completion_causal_witness
         return _ScheduledOperation(
             operation=operation,
             logical_completed_at_ps=logical_completed,
@@ -1797,7 +1984,12 @@ class CoarseDeviceRuntime:
             visits=visits,
             logical_paths=paths,
             eligible_at_ps=min(readiness.values()),
-            critical_predecessor_id=critical_predecessor,
+            critical_predecessor_id=(
+                None if causal_witness is None else causal_witness.predecessor_id
+            ),
+            critical_predecessor_completed_at_ps=(
+                None if causal_witness is None else causal_witness.completed_at_ps
+            ),
             nccl_command_id=command_id,
             wqes=wqes,
         )
@@ -2096,10 +2288,9 @@ class CoarseDeviceRuntime:
 
         for operation in graph.operations:
             outcome = scheduled[operation.operation_id]
-            final_visit = max(
-                (path[-1] for path in outcome.logical_paths),
-                key=lambda visit: (visit.completed_at_ps, visit.resource.resource_id),
-            )
+            final_visit = outcome.logical_paths[
+                _logical_path_index(outcome.logical_paths)
+            ][-1]
             add(
                 CompletionEvent(
                     execution_id=graph.execution_id,
@@ -2127,18 +2318,26 @@ class CoarseDeviceRuntime:
         for operation in graph.operations:
             outcome = scheduled[operation.operation_id]
             all_visits.extend(outcome.visits)
-            path = max(
-                outcome.logical_paths,
-                key=lambda candidate: (
-                    candidate[-1].completed_at_ps,
-                    candidate[-1].resource.resource_id,
-                ),
-            )
+            path = outcome.logical_paths[_logical_path_index(outcome.logical_paths)]
             launch = path[0]
-            predecessor_id = outcome.critical_predecessor_id
+            causal_predecessor_id = outcome.critical_predecessor_id
+            causal_predecessor_completed_at_ps = (
+                outcome.critical_predecessor_completed_at_ps
+            )
+            additive_predecessor_id = None
+            if causal_predecessor_id is not None:
+                if causal_predecessor_completed_at_ps is None:
+                    raise RuntimeError("critical predecessor is missing its causal boundary")
+                if (
+                    causal_predecessor_completed_at_ps
+                    == scheduled[causal_predecessor_id].logical_completed_at_ps
+                ):
+                    additive_predecessor_id = causal_predecessor_id
+            elif causal_predecessor_completed_at_ps is not None:
+                raise RuntimeError("causal boundary has no critical predecessor")
             segment_start_ps = (
-                scheduled[predecessor_id].logical_completed_at_ps
-                if predecessor_id is not None
+                causal_predecessor_completed_at_ps
+                if additive_predecessor_id is not None
                 else graph.released_at_ps
             )
             cursor_ps = segment_start_ps
@@ -2223,7 +2422,11 @@ class CoarseDeviceRuntime:
                 ),
                 breakdown=breakdown,
                 attribution=attribution,
-                critical_predecessor_id=predecessor_id,
+                causal_predecessor_id=causal_predecessor_id,
+                causal_predecessor_completed_at_ps=(
+                    causal_predecessor_completed_at_ps
+                ),
+                critical_predecessor_id=additive_predecessor_id,
                 sum_visit_wait_ps=sum(visit.queue_wait_ps for visit in outcome.visits),
             )
             operation_records.append(record)
@@ -2248,7 +2451,7 @@ class CoarseDeviceRuntime:
                     raise RuntimeError("critical predecessor chain contains a cycle")
                 seen.add(current)
                 reverse_chain.append(current)
-                current = scheduled[current].critical_predecessor_id
+                current = by_operation_record[current].critical_predecessor_id
             critical_chain = tuple(reversed(reverse_chain))
         else:
             critical_chain = ()

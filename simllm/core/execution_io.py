@@ -36,7 +36,10 @@ from simllm.core.execution import (
     ComputeWork,
     ControlMode,
     ControlWork,
+    DependencyOrigin,
+    DependencyScope,
     DmaWork,
+    EffectiveDependencyEdge,
     EventPhase,
     ExecutionGraph,
     ExecutionObservations,
@@ -56,7 +59,11 @@ _DEVICE_PARTICIPANT_RE = re.compile(
 )
 
 
-def _operation_participant_ranks(operation: ExecutionOperation) -> set[int]:
+def operation_participant_ranks(operation: ExecutionOperation) -> tuple[int, ...]:
+    """Return the canonical participant ranks of one graph operation."""
+
+    if not isinstance(operation, ExecutionOperation):
+        _fail("operation", "expected ExecutionOperation")
     ranks = {operation.rank}
     work = operation.work
     if isinstance(work, CollectiveWork):
@@ -68,7 +75,58 @@ def _operation_participant_ranks(operation: ExecutionOperation) -> set[int]:
             match = _DEVICE_PARTICIPANT_RE.match(endpoint.strip())
             if match is not None:
                 ranks.add(int(match.group(1)))
-    return ranks
+    return tuple(sorted(ranks))
+
+
+def _effective_dependency_edges_unchecked(
+    graph: ExecutionGraph,
+) -> tuple[EffectiveDependencyEdge, ...]:
+    operation_by_id = {
+        operation.operation_id: operation for operation in graph.operations
+    }
+    queue_tail: dict[tuple[int, str], str] = {}
+    result: list[EffectiveDependencyEdge] = []
+    for operation in graph.operations:
+        for predecessor_id in operation.depends_on:
+            result.append(
+                EffectiveDependencyEdge(
+                    predecessor_id=predecessor_id,
+                    operation_id=operation.operation_id,
+                    scope=DependencyScope.WHOLE_OPERATION,
+                    origin=DependencyOrigin.EXPLICIT,
+                )
+            )
+        for predecessor_id in operation.participant_local_depends_on:
+            predecessor = operation_by_id.get(predecessor_id)
+            if predecessor is None:
+                continue
+            shared_ranks = sorted(
+                set(operation_participant_ranks(operation))
+                & set(operation_participant_ranks(predecessor))
+            )
+            result.extend(
+                EffectiveDependencyEdge(
+                    predecessor_id=predecessor_id,
+                    operation_id=operation.operation_id,
+                    scope=DependencyScope.PARTICIPANT_LOCAL,
+                    origin=DependencyOrigin.EXPLICIT,
+                    participant_rank=rank,
+                )
+                for rank in shared_ranks
+            )
+        queue = (operation.rank, operation.logical_queue)
+        previous = queue_tail.get(queue)
+        if previous is not None:
+            result.append(
+                EffectiveDependencyEdge(
+                    predecessor_id=previous,
+                    operation_id=operation.operation_id,
+                    scope=DependencyScope.WHOLE_OPERATION,
+                    origin=DependencyOrigin.LOGICAL_QUEUE_FIFO,
+                )
+            )
+        queue_tail[queue] = operation.operation_id
+    return tuple(result)
 
 
 def _validate_config(config: tuple[tuple[str, Any], ...], path: str) -> None:
@@ -310,6 +368,14 @@ def validate_execution_graph(graph: ExecutionGraph) -> None:
         _validate_correlation(operation.correlation, f"{path}.correlation")
         _integer(operation.placement_epoch, f"{path}.placement_epoch", nonnegative=True)
         _validate_work(operation.work, f"{path}.work")
+        if (
+            isinstance(operation.work, CollectiveWork)
+            and operation.rank not in operation.work.ranks
+        ):
+            _fail(
+                f"{path}.rank",
+                "collective anchor rank must be one of its participant ranks",
+            )
         if isinstance(operation.work, CollectiveWork) and operation.work.request_pair_payload_bytes:
             attributed_requests = {entry[0] for entry in operation.work.request_pair_payload_bytes}
             unknown_requests = sorted(attributed_requests - set(operation.correlation.request_ids))
@@ -332,8 +398,8 @@ def validate_execution_graph(graph: ExecutionGraph) -> None:
                     )
         for dep_index, dependency in enumerate(operation.participant_local_depends_on):
             predecessor = operation_by_id[dependency]
-            target_ranks = _operation_participant_ranks(operation)
-            predecessor_ranks = _operation_participant_ranks(predecessor)
+            target_ranks = set(operation_participant_ranks(operation))
+            predecessor_ranks = set(operation_participant_ranks(predecessor))
             if target_ranks.isdisjoint(predecessor_ranks):
                 _fail(
                     f"graph.operations[{index}].participant_local_depends_on[{dep_index}]",
@@ -349,20 +415,10 @@ def validate_execution_graph(graph: ExecutionGraph) -> None:
             )
     _validate_unique(completion_ids, "graph.completion_operation_ids")
 
-    edges: set[tuple[str, str]] = set()
-    for operation in operations:
-        edges.update((dependency, operation.operation_id) for dependency in operation.depends_on)
-        edges.update(
-            (dependency, operation.operation_id)
-            for dependency in operation.participant_local_depends_on
-        )
-    queue_tail: dict[tuple[int, str], str] = {}
-    for operation in operations:
-        queue = (operation.rank, operation.logical_queue)
-        previous = queue_tail.get(queue)
-        if previous is not None:
-            edges.add((previous, operation.operation_id))
-        queue_tail[queue] = operation.operation_id
+    edges = {
+        (edge.predecessor_id, edge.operation_id)
+        for edge in _effective_dependency_edges_unchecked(graph)
+    }
 
     outgoing: dict[str, set[str]] = defaultdict(set)
     indegree = {operation_id: 0 for operation_id in operation_by_id}
@@ -382,6 +438,20 @@ def validate_execution_graph(graph: ExecutionGraph) -> None:
     if visited != len(operation_by_id):
         cycle_ids = sorted(operation_id for operation_id, degree in indegree.items() if degree)
         _fail("graph", f"dependency and FIFO edges contain a cycle involving {cycle_ids}")
+
+
+def effective_dependency_edges(
+    graph: ExecutionGraph,
+) -> tuple[EffectiveDependencyEdge, ...]:
+    """Return every explicit and implicit ordering edge in canonical order.
+
+    Participant-local dependencies are expanded by shared rank. Logical queue
+    FIFO contributes a whole-operation edge between each pair of adjacent
+    operations on the same rank and queue.
+    """
+
+    validate_execution_graph(graph)
+    return _effective_dependency_edges_unchecked(graph)
 
 
 def execution_graph_from_observations(

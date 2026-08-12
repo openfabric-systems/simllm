@@ -524,10 +524,16 @@ def test_step_sink_uses_captured_supply_and_reports_authority(tmp_path, monkeypa
     result = sink(_prefill_record(1))
 
     assert result is not None
-    assert result.step_latency_ps == 123_456
+    # Post-specified re-acceptance: the unchanged graph wire now projects into
+    # two analytic compute levels and four backend collective artifacts.
+    assert result.step_latency_ps == 2_000 + 4 * 123_456
     assert sink.outcomes[0].routing_mode == "captured"
     assert sink.outcomes[0].placement_epoch == 1
-    goal = (tmp_path / "step-000001.goal").read_text()
+    assert sink.locality_outcomes[0].graph_artifact_count == 6
+    assert sink.locality_outcomes[0].backend_runs == 4
+    goals = sorted(tmp_path.glob("step-000001.artifact-*.goal"))
+    assert len(goals) == 4
+    goal = "\n".join(path.read_text() for path in goals)
     assert "send 8b to 1 tag 1000" in goal
     assert "send 16b to 0 tag 1000" in goal
 

@@ -34,7 +34,7 @@ from simllm.core import (
     VirtualClock,
     execution_graph_to_json,
 )
-from simllm.traffic import lower_step_observations, render_serial_execution_graph_goal
+from simllm.traffic import lower_step_observations, project_execution_graph_goal
 
 RANKS = (0, 8)
 PAYLOAD_BYTES = 524_288
@@ -373,7 +373,7 @@ def test_overlap_api_has_no_percentage_or_duration_discount_parameter():
     assert not any("overlap" in name or "discount" in name for name in names)
 
 
-def test_observed_lowerer_absent_observations_preserves_serial_artifacts():
+def test_observed_lowerer_absent_observations_has_reaccepted_graph_artifacts():
     dims = ModelDims(2, 64, 128, 4, 4, 16, 256, 2)
     record = StepRecord(
         0,
@@ -401,13 +401,28 @@ def test_observed_lowerer_absent_observations_preserves_serial_artifacts():
         )
         + "\n"
     ).encode()
-    goal = render_serial_execution_graph_goal(graph).render().encode()
+    projection = project_execution_graph_goal(graph)
+    goal_manifest = tuple(
+        (
+            len(artifact.trace.render().encode()),
+            hashlib.sha256(artifact.trace.render().encode()).hexdigest(),
+        )
+        for artifact in projection.artifacts
+    )
 
     assert len(wire) == 4_127
     assert hashlib.sha256(wire).hexdigest() == (
         "aa3c836fe559973a7bf0940384c2e8a84e6af84e0fbd2c02d3b89774ee0c8e2d"
     )
-    assert len(goal) == 1_880
-    assert hashlib.sha256(goal).hexdigest() == (
-        "7087db6780f7e34f5a559a6505eeccc15d984c7b478cd8f0bc5838053825d4b6"
+    # Post-specified re-acceptance: the unchanged graph wire now projects into
+    # six causal-level artifacts, with queue barriers checked at each split.
+    assert goal_manifest == (
+        (66, "3141fbcf0c9670b212a2f271c6514030bc827754cc86958154a48aecd6eeee1e"),
+        (374, "b50c42be665e86528de008b744d131c30d7e98d66420ebf5a46208c9ca9ce1c3"),
+        (374, "2102961315a4031b965a6a66c5406baeafc192d9100c7ea74ecde25c39d9db7e"),
+        (66, "3141fbcf0c9670b212a2f271c6514030bc827754cc86958154a48aecd6eeee1e"),
+        (374, "6449f6faa1cca2836d615a66ed7dfa9a9efceab0de2a1f22827c871f3eebd8b5"),
+        (374, "5abe15a421948ffa0e5756c3e61369f8034a964a39a76615c6c7ae140ca2483d"),
     )
+    assert len(projection.boundaries) == 3
+    assert len(projection.serialized_edges) == 12

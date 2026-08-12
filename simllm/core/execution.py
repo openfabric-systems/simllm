@@ -92,6 +92,20 @@ class EventPhase(enum.Enum):
     COMPLETED = "completed"
 
 
+class DependencyScope(str, enum.Enum):
+    """How one effective graph edge gates its target operation."""
+
+    WHOLE_OPERATION = "whole-operation"
+    PARTICIPANT_LOCAL = "participant-local"
+
+
+class DependencyOrigin(str, enum.Enum):
+    """Which authoritative graph rule contributes an effective edge."""
+
+    EXPLICIT = "explicit"
+    LOGICAL_QUEUE_FIFO = "logical-queue-fifo"
+
+
 @dataclass(frozen=True)
 class ComputeWork:
     """One kernel or fused kernel region submitted for GPU execution.
@@ -260,6 +274,22 @@ class ExecutionGraph:
     operations: tuple[ExecutionOperation, ...] = ()
     #: operations whose logical completion releases the framework; empty means all
     completion_operation_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class EffectiveDependencyEdge:
+    """One fully expanded ordering edge carried by an execution graph.
+
+    Whole-operation edges gate every target participant on the predecessor's
+    logical completion. Participant-local edges are expanded to one record per
+    shared rank and gate only that rank on its predecessor frontier.
+    """
+
+    predecessor_id: str
+    operation_id: str
+    scope: DependencyScope
+    origin: DependencyOrigin
+    participant_rank: int | None = None
 
 
 @dataclass(frozen=True)

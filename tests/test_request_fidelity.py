@@ -31,7 +31,7 @@ from simllm.traffic import (
     RequestFidelityError,
     RoutedMoeSupply,
     compare_request_moe_fidelity,
-    render_serial_execution_graph_goal,
+    project_execution_graph_goal,
     render_step_goal,
     step_moe_alltoalls,
     validate_request_moe_fidelity,
@@ -178,7 +178,9 @@ def _swap_requests(
     ("epoch", "count"),
     [(epoch, count) for epoch in (0, 1) for count in (1, 2, 3)],
 )
-def test_direct_and_graph_renderers_preserve_request_identity_and_physical_goal(epoch, count):
+def test_direct_and_graph_projection_preserve_request_identity_and_physical_messages(
+    epoch, count
+):
     supply = _supply()
     record = _record(epoch, count)
     direct = render_step_goal(
@@ -207,19 +209,37 @@ def test_direct_and_graph_renderers_preserve_request_identity_and_physical_goal(
     )
     graph = lowerer.lower(record)
     replay_graph = execution_graph_from_json(execution_graph_to_json(graph))
-    graph_trace = render_serial_execution_graph_goal(replay_graph)
+    projection = project_execution_graph_goal(replay_graph)
+    graph_messages = tuple(
+        message
+        for artifact in projection.artifacts
+        for message in artifact.trace.messages
+    )
     graph_report = compare_request_moe_fidelity(
         record,
         DIMS,
         (0, 1),
         supply,
-        graph_trace.messages,
+        graph_messages,
     )
 
     assert direct_report.per_request_matches
     assert graph_report.per_request_matches
     assert graph_report.observed_request_rows == direct_report.observed_request_rows
-    assert direct.render() == graph_trace.render()
+    def physical_rows(messages):
+        return tuple(
+            (
+                message.operation_id,
+                message.source_rank,
+                message.destination_rank,
+                message.payload_bytes,
+                message.tag,
+                message.request_payload_bytes,
+            )
+            for message in messages
+        )
+
+    assert physical_rows(graph_messages) == physical_rows(direct.messages)
     assert hashlib.sha256(direct.render().encode()).hexdigest() == GOAL_HASHES[(epoch, count)]
     collectives = [
         operation.work
