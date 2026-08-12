@@ -27,8 +27,9 @@ simplification is a numbered task in docs/modules/traffic.md:
 - no sequence parallelism (which would replace each allreduce with a
   reduce-scatter plus allgather of 1/W the bytes framed around the
   norm/dropout regions): TRAF-6;
-- no communication/compute overlap (each layer's compute and its
-  collectives are a strict serial chain): TRAF-7;
+- `render_step_goal` retains the strict serial compatibility schedule;
+  `lower_step_observations` instead preserves adapter-observed queues and
+  dependency edges, with real adapter schedule production tracked by TRAF-13;
 - no pipeline-parallel activation traffic (records carry no PP stage
   information yet): TRAF-8;
 - the MoE layer is rendered as one calc, then the TP allreduces, then
@@ -540,8 +541,10 @@ def render_step_goal(
     layer's attention allreduce, then its MLP allreduce (both only when the TP
     world produces collectives), then, for MoE dims with ``ep_ranks`` given,
     the dispatch and combine all-to-allvs over the EP group; the next layer's
-    calc waits for the previous layer's last collective (no overlap, TRAF-7;
-    the fixed calc/allreduce/dispatch/combine order is TRAF-9). A scalar calc
+    calc waits for the previous layer's last collective. This is the serial
+    compatibility off path; observation-aware execution uses
+    :func:`lower_step_observations`. The fixed
+    calc/allreduce/dispatch/combine order is TRAF-9. A scalar calc
     repeats on every layer for compatibility; a sequence supplies unequal
     layer costs. Participants are the TP ranks plus, when MoE all-to-alls
     exist, the EP ranks; other ranks below ``num_goal_ranks`` get one
