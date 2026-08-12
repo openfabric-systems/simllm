@@ -163,8 +163,10 @@ def render_serial_execution_graph_goal(
     collective ranks. Operation-scoped edges are accepted only when both
     operations have one identical rank; cross-rank completion barriers require
     the stateful resource runtime. Logical KV work, DMA, control work, timing
-    gates, sparse pair tables with an uncovered rank and other collective
-    algorithms are rejected instead of being silently dropped.
+    gates and other collective algorithms are rejected instead of being
+    silently dropped. Sparse pair tables, including an empty semantic
+    all-to-allv, retain exact zero-work rank frontiers when a later dependency
+    needs them.
 
     Ring tag blocks are reserved for every layer before pairwise tags are
     assigned.  This matches ``render_step_goal`` even though graph submission

@@ -682,10 +682,11 @@ def test_sink_moe_end_to_end_matches_closed_form(tmp_path):
     """An EP-only MoE step through txt2bin + htsim_rnic on the fluid profile.
 
     Per layer: calc, then dispatch and combine pairwise all-to-allvs over
-    W = 4 EP ranks. Each a2av phase releases W(W-1) equal flows at once
-    (every NIC sends and receives W-1), so the fluid manifold grants each
-    flow floor(B / (W-1)) whole bps (the exact max-min water level floored,
-    rnic_max_min_allocator.cpp) and completes it after
+    W = 4 EP ranks. Each phase releases W-1 equal flows: the one modeled
+    engine fans out for dispatch, then combine transposes the star. The
+    shared source or destination NIC makes the fluid manifold grant each flow
+    floor(B / (W-1)) whole bps (the exact max-min water level floored,
+    rnic_max_min_allocator.cpp), completing it after
     ceil(S * 8e12 / rate) whole ps (rnic_fluid_manifold.cpp), plus P.
     For W-1 dividing 400e9 this is exactly the M1 20 ps/byte law; W-1 = 3
     is not a divisor, hence the explicit floor/ceil form.
@@ -707,5 +708,5 @@ def test_sink_moe_end_to_end_matches_closed_form(tmp_path):
     expected = SMALL_MOE_DIMS.num_layers * (max(per_layer_ns, 1) * 1000 + 2 * phase_ps)
 
     assert result.step_latency_ps == expected
-    # 2L a2avs x W(W-1) flows each
-    assert s.outcomes[0].num_flows == 2 * SMALL_MOE_DIMS.num_layers * world * (world - 1)
+    # 2L a2avs x (W-1) star flows each
+    assert s.outcomes[0].num_flows == 2 * SMALL_MOE_DIMS.num_layers * (world - 1)

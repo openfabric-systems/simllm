@@ -27,16 +27,19 @@ the flow-level work the GOAL emitter renders.
   `ModelDims` plus an expert-parallel group of W GOAL ranks maps to the
   step's MoE traffic: per MoE layer, a dispatch pairwise all-to-allv then
   a combine pairwise all-to-allv. Without an optional `RoutedMoeSupply`,
-  each rank uses the M5 compatibility payload
+  the first EP rank is the one modeled engine and uses the uniform payload
   `total_new_tokens * top_k * hidden_size * dtype_bytes // W` to every
-  other rank. This is the uniform-routing assumption: the router spreads
-  (token, expert) assignments evenly over the EP group and each rank's
-  own 1/W share stays local, off the fabric. `RoutedMoeSupply` instead joins
-  the strict `simllm-routed-experts-v1` projection to immutable placement
-  manifest snapshots and a step-to-epoch map. It slices each scheduled
-  prefill or decode phase, emits one hidden vector per token and remote
-  destination rank, pre-reduces combine to the transposed pair table and
-  records the selected epoch on the graph operation. Dense dims, an EP world
+  other rank. The router spreads this one engine's (token, expert)
+  assignments evenly over the EP group and its own 1/W share stays local,
+  off the fabric. `RoutedMoeSupply` instead declares one `engine_rank`, then
+  joins either the strict `simllm-routed-experts-v1` projection or the packed
+  routing arena to immutable placement snapshots and a step-to-epoch map. It
+  slices each scheduled prefill or decode phase, emits one hidden vector from
+  that engine per token and remote destination rank, pre-reduces combine to
+  the transposed pair table and records the selected epoch on the graph
+  operation. Peer EP ranks own experts but carry zero scheduled tokens in
+  this isolated projection. Full peer-engine population requires explicit,
+  independently routed peer workloads under TRAF-26. Dense dims, an EP world
   below 2 or a zero-token record produce no ops.
 - `plan_step_locality` expands TP ring rounds and MoE dispatch/combine tables
   into ordered directed phases over semantic global ranks, then joins an
@@ -86,10 +89,10 @@ the flow-level work the GOAL emitter renders.
   all-to-allv operations, preserves `participant_local_depends_on` edges and
   representable single-rank FIFO predecessors, and never reduces a distributed
   whole-operation barrier through rank-local ancestry. It fails loudly on
-  explicit or implicit cross-rank barriers, sparse pair tables that leave a
-  declared rank without a send or receive, and work or timing semantics the
-  serial GOAL subset cannot represent. It consumes no `StepRecord` after
-  lowering.
+  explicit or implicit cross-rank barriers and work or timing semantics the
+  serial GOAL subset cannot represent. Sparse pair tables preserve exact idle
+  rank frontiers, including a zero-byte semantic collective when every routed
+  destination is local. It consumes no `StepRecord` after lowering.
 - `project_execution_graph_goal` is the checked active projection. It assigns
   graph operations to canonical causal-level artifacts, renders supported
   rank-local relations with structured provenance, records distributed
@@ -124,11 +127,13 @@ grid (fluid MoE step makespans exact to 0 ps across EP x step-shape). The
 JSONL collective-trace consumer is not yet implemented (TRAF-5).
 
 The captured-routing half of TRAF-2 is implemented behind the explicit
-`RoutedMoeSupply` seam. Its absent path retains the old scalar payload, while
-its enabled path is live through `SerialStepLowerer`, `render_step_goal` and
-`HtsimStepSink`. The combined Granite study passed exact graph and GOAL pair
-tables at two placement epochs, four fluid-JCT cells with 0 ps residual and
-the frozen uniform GOAL hash, closing TRAF-2; see
+`RoutedMoeSupply` seam. Its absent path is the single-engine uniform
+approximation, while its enabled path is live through `SerialStepLowerer`,
+`render_step_goal` and `HtsimStepSink`. The original combined Granite study
+passed exact graph and GOAL pair tables at two placement epochs and four
+fluid-JCT cells with 0 ps residual, closing TRAF-2. TRAF-25 later corrected
+both paths' source population and reran the traffic section with 48 rather
+than 96 positive flows while retaining all four JCT values; see
 [the routing supply results](../../examples/routed_supply_v1/RESULTS.md).
 
 CORE-2 additionally proved that serial GOAL rendered only from a
@@ -157,7 +162,8 @@ six exact cells. All-remote JCT increased by 4,212,053 ps at 1,024 vector bytes
 and 8,317,082 ps at 2,048 bytes. The frozen graph had 144 operations, 423
 effective edges, 72 causal artifacts, 47 required distributed FIFO boundaries
 and 376 other serialized edges. The direct 72,819-byte GOAL fixtures remain
-unchanged diagnostics, while the active artifact manifests are explicitly
+the historical source-multiplied diagnostics. TRAF-25's corrected direct
+fixtures are 20,392 bytes, while the active artifact manifests are explicitly
 re-accepted; see
 [the dependency authority results](../../examples/dependency_authority_v1/RESULTS.md).
 The selectable follow-up retains that independent ATLAHS path. In the serial
@@ -207,31 +213,21 @@ boundary across one prefill and one decode step: only DP bookkeeping and one
 fixed TP event appeared per step, with no observation graph or semantic EP
 site. It is component evidence and does not change the behavioral denominator.
 
-TRAF-25 is registered against a source-multiplicity correctness defect in the
-captured and uniform MoE renderers. One `StepRecord` contains one engine's
-scheduled tokens, but the current renderer sources every token from every EP
-rank. The expectations-only ownership study declares a single engine rank and
-idle peer schedulers for this projection. No implementation or result-producing
-run has occurred at registration time.
+TRAF-25 corrected the source-multiplicity defect in both captured and uniform
+MoE rendering. One `StepRecord` now has one engine source, while peer EP ranks
+remain expert owners with zero scheduled tokens in the isolated projection.
+The Granite EP-width sweep passed 3/3 genuine-risk families and 9/9 instances.
+At EP width 8, total traffic changed from 207,499,264 to 25,563,136 bytes while
+peak-rank egress changed from 27,060,224 to 12,781,568 bytes. The live 400
+Gbit/s fluid and packet results were 706,622,768 and 724,527,360 ps, both above
+the 255,631,360 ps corrected serialization floor. Five affected traffic
+consumers were rerun, the framework oracle was audited as unaffected, and all
+old source-multiplied numeric surfaces are listed in
+[the token ownership results](../../examples/token_ownership_v1/RESULTS.md).
 
 ## Open tasks
 
 ### Precision
-
-- TRAF-25 (Precision; P0; M): make one declared EP engine rank the sole source
-  of every token in one captured `StepRecord`; peer ranks own experts but hold
-  zero scheduled tokens in this isolated projection. Remove source
-  multiplication from both captured and uniform paths rather than preserving
-  it as compatibility. Acceptance requires: (1) TP and MoE consume the same
-  `record.total_new_tokens` population; (2) each request's dispatch bytes come
-  only from its engine rank and combine is the exact transpose; (3) EP-width-8
-  tests conserve per-layer token sources, satisfy the independent
-  `total_new_tokens * top_k * num_layers * 2` hop bound and agree with the
-  routed-token projection; (4) the Granite EP-width sweep reports total bytes
-  and peak-rank egress separately, then moves fluid and packet-level makespan
-  in the preregistered direction above the physical serialization floor; and
-  (5) every affected routed study is refrozen or explicitly reported as an
-  unavailable rerun, with old and corrected published numbers listed.
 
 - TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
   zero-propagation, per-source NVLink egress surrogate against
