@@ -30,7 +30,16 @@ per serving step.
   versioned JSON artifact (schema `simllm-profile-table-v1`) with
   mandatory provenance (`source` e.g. "accel-sim" or "capture",
   simulator/capture `version`, `gpu`, caller-supplied `created` date; the
-  library never reads the clock).
+  library never reads the clock). `enable_family_sum=True` is an explicit
+  opt-in that sums a fused kernel's declared family projections and propagates
+  conservative uncertainty. The default ignores that projection, retains the
+  historical miss behavior and serializes the same table byte for byte.
+- `ComputeCalibrationArtifact`: strict
+  `simllm-compute-calibration-v1` capture record. It binds GPU, driver, CUDA,
+  profiler, source, binary, static-SASS and capture-manifest identities to an
+  immutable train or held-out split, launch metadata and every raw duration
+  sample. Its compiler emits the existing profile-table schema using train
+  medians and held-out error to set family uncertainty.
 - `RooflineProvider`: analytical `max(flops/peak, bytes/bw)` with an
   efficiency derate; classifies compute- vs memory-bound from the kernel
   configuration alone. `enable_layer_breakdown=True` apportions the fused
@@ -301,6 +310,63 @@ profiler exports and bulk replay outputs live under the external root
 configured by `SIMLLM_DATA_ROOT`, never in
 Git; the public artifact records their content hashes and provenance.
 
+## COMP-1: offline SASS calibration plan
+
+Strictly offline; the step loop never invokes a cycle-level simulator.
+
+- Use a hybrid measured plus SASS pipeline. Raw cycle-simulator output is
+  never treated as silicon truth. Pin a support envelope for every table:
+  framework and commit, model, GPU architecture, CUDA/toolchain, dtype and
+  quantization, eager or CUDA-graph mode, kernel implementation, tensor
+  parallel width, batch/new-token/context shapes, KV dtype and MoE shape.
+  Unsupported combinations miss loudly rather than borrowing a precise-
+  looking number.
+- Capture the exact production run first. Nsight/CUPTI metadata records
+  kernel identity, launch order, streams, shapes and silicon durations;
+  NVBit supplies the SASS traces required by Accel-Sim. Key table entries
+  by kernel binary/hash plus the semantic shape, not by a family label alone,
+  so a framework or compiler kernel change invalidates the correct entries.
+- Build one replayable microbenchmark per captured kernel implementation.
+  It must reproduce launch parameters, tensor layout, dtype, workspace,
+  stream/graph mode and relevant cache state. Sweep the captured shape axes,
+  not synthetic square GEMMs that the real framework never launches.
+- Replay traces offline with a pinned Accel-Sim/GPGPU-Sim configuration on
+  hardware that the simulator supports. Fit and report calibration residuals
+  against silicon using train shapes, then evaluate held-out shapes. Launch
+  overhead, host delay and queueing are measured separately from kernel
+  service, so the SASS table cannot hide a missing runtime queue.
+- Populate `simllm-gpu-model-artifact-v2` with capture hash, kernel hash, GPU,
+  tool versions, shape, measured samples, simulated cycles, calibrated
+  duration, uncertainty, calibration split and creation date. Derive the
+  compact `simllm-profile-table-v1` lookup entry from that record and retain
+  the model artifact's identity in table provenance. Both artifacts are
+  immutable; changing an identity field produces a new record.
+- Initial acceptance bars, to be tightened from evidence: 100 percent kernel
+  identity coverage for the supported run; measured coefficient of variation
+  below 2 percent for controlled microbenchmarks; held-out per-kernel median
+  absolute percentage error below 10 percent and p95 below 20 percent;
+  per-phase median below 5 percent and p95 below 10 percent; compute-only
+  step error below 5 percent. Every miss is reported, never averaged away.
+- Simulator starting point: Accel-Sim v1.3.0 in SASS trace-driven mode over
+  GPGPU-Sim 4.x with a compatible NVBit tracer. Tool versions remain pinned
+  per artifact because modern framework kernels and GPU architectures may
+  require newer support than this starting point provides.
+- B100: no validated Accel-Sim config exists. The per-family
+  efficiency-versus-shape surface measured on the validated GPU is
+  transferred onto the B100 roofline roofs (peak flops and HBM bandwidth
+  of the declared envelope), replacing the flat 0.7 derate, with
+  explicitly inflated uncertainty in every transferred entry. The first
+  real B100 capture recalibrates by table swap; nothing in the step loop
+  changes.
+- Hard dependency (COMP-5): local CUDA 12.4 and CUPTI activity timing work on
+  the GTX 1660 Ti with driver 550.90.07. Nsight Compute attaches but returns
+  `ERR_NVGPUCTRPERM` because the loaded driver has
+  `RmProfilingAdminOnly: 1`; no performance counters are collected. The
+  display GPU also produced isolated timing outliers above the registered
+  stability ceiling. Production closure needs counter permission, a stable
+  capture environment and allocation on the exact target architecture with a
+  compatible dynamic SASS and Accel-Sim path.
+
 ## Status
 
 Both providers, the transformer step model (fused and family-decomposed),
@@ -319,12 +385,25 @@ A100/H100 profiles are unvalidated bootstrap seeds and do not establish
 production accuracy: their pipeline initiation intervals are derived from
 published per-SM unit counts, not measured.
 
+The [Turing calibration study](../../examples/compute_calibration_v1/RESULTS.md)
+lands the first real activity-timing pipeline and populated table. On the
+available GTX 1660 Ti it captured 50 family, dtype and shape cells with 2,050
+target samples. Held-out calibrated median and p95 error were 0.674 percent
+and 1.773 percent versus 17.782 percent and 25.069 percent for the roofline
+bootstrap. The frozen study is nevertheless an overall failure: isolated
+high-duration samples put 3 of 50 final cells above the 2 percent coefficient
+of variation ceiling, and the preceding post-fix capture missed 2 of 50.
+These Turing numbers validate the method and do not transfer to Hopper.
+
 The M5 first slice landed the COMP-1 groundwork: `step_kernels`, the
 `simllm-profile-table-v1` artifact with provenance, and 1D log-linear
 interpolation (closing COMP-3; the multi-axis extension is COMP-4). The
-production SASS pipeline itself (below) has not run yet; it is blocked on
-trace-capture hardware
-(COMP-5). Therefore COMP-1, COMP-5 and COMP-6 remain open. MoE geometry
+production SASS pipeline itself (above) has not run yet. Nsight Systems
+activity timing works locally, while Nsight Compute counters fail with
+`ERR_NVGPUCTRPERM`, the display GPU misses the frozen stability guard and
+TU116 cannot supply target-architecture evidence. COMP-5 records those exact
+hardware requirements. Therefore COMP-1, COMP-5 and COMP-6 remain open. MoE
+geometry
 landed with the same slice and is exercised by the examples/m5 studies
 together with the MoE traffic mapping
 ([traffic](traffic.md), [M5 results](../../examples/m5/RESULTS.md)).
@@ -393,101 +472,48 @@ and an explicit reason:
 | `simllmNetworkComplete` | simllm-invented: deterministic external completion injection until a native RNIC session supplies CQEs |
 | `simllmKernelComplete` | simllm-invented: stack-internal kernel-completion observation until runtime projection lands |
 
-## COMP-1: offline SASS calibration plan
-
-Strictly offline; the step loop never invokes a cycle-level simulator.
-
-- Use a hybrid measured plus SASS pipeline. Raw cycle-simulator output is
-  never treated as silicon truth. Pin a support envelope for every table:
-  framework and commit, model, GPU architecture, CUDA/toolchain, dtype and
-  quantization, eager or CUDA-graph mode, kernel implementation, tensor
-  parallel width, batch/new-token/context shapes, KV dtype and MoE shape.
-  Unsupported combinations miss loudly rather than borrowing a precise-
-  looking number.
-- Capture the exact production run first. Nsight/CUPTI metadata records
-  kernel identity, launch order, streams, shapes and silicon durations;
-  NVBit supplies the SASS traces required by Accel-Sim. Key table entries
-  by kernel binary/hash plus the semantic shape, not by a family label alone,
-  so a framework or compiler kernel change invalidates the correct entries.
-- Build one replayable microbenchmark per captured kernel implementation.
-  It must reproduce launch parameters, tensor layout, dtype, workspace,
-  stream/graph mode and relevant cache state. Sweep the captured shape axes,
-  not synthetic square GEMMs that the real framework never launches.
-- Replay traces offline with a pinned Accel-Sim/GPGPU-Sim configuration on
-  hardware that the simulator supports. Fit and report calibration residuals
-  against silicon using train shapes, then evaluate held-out shapes. Launch
-  overhead, host delay and queueing are measured separately from kernel
-  service, so the SASS table cannot hide a missing runtime queue.
-- Populate `simllm-gpu-model-artifact-v2` with capture hash, kernel hash, GPU,
-  tool versions, shape, measured samples, simulated cycles, calibrated
-  duration, uncertainty, calibration split and creation date. Derive the
-  compact `simllm-profile-table-v1` lookup entry from that record and retain
-  the model artifact's identity in table provenance. Both artifacts are
-  immutable; changing an identity field produces a new record.
-- Initial acceptance bars, to be tightened from evidence: 100 percent kernel
-  identity coverage for the supported run; measured coefficient of variation
-  below 2 percent for controlled microbenchmarks; held-out per-kernel median
-  absolute percentage error below 10 percent and p95 below 20 percent;
-  per-phase median below 5 percent and p95 below 10 percent; compute-only
-  step error below 5 percent. Every miss is reported, never averaged away.
-- Simulator starting point: Accel-Sim v1.3.0 in SASS trace-driven mode over
-  GPGPU-Sim 4.x with a compatible NVBit tracer. Tool versions remain pinned
-  per artifact because modern framework kernels and GPU architectures may
-  require newer support than this starting point provides.
-- B100: no validated Accel-Sim config exists. The per-family
-  efficiency-versus-shape surface measured on the validated GPU is
-  transferred onto the B100 roofline roofs (peak flops and HBM bandwidth
-  of the declared envelope), replacing the flat 0.7 derate, with
-  explicitly inflated uncertainty in every transferred entry. The first
-  real B100 capture recalibrates by table swap; nothing in the step loop
-  changes.
-- Hard dependency (COMP-5): trace capture needs a working modern GPU.
-  The local GTX 1660 Ti's driver is currently too old for the CUDA
-  toolchain (confirmed during the M3 smoke: torch cu130 reports CUDA
-  unavailable), so a driver fix or cluster A100/H100 hours are required
-  before any trace lands.
-
 ## Open tasks
 
-- COMP-1 (Precision; P1; L): run the offline SASS pipeline above and ship the
-  first populated per-family table (groundwork landed with M5: `step_kernels`,
-  the table artifact and interpolation; the trace-driven service-model
-  mechanisms and bootstrap profiles are also landed, but production capture,
-  calibration and a populated table remain blocked on COMP-5).
-- COMP-2: calibrated host-initiation profiles (GPU-initiated vs CPU-proxy
-  constants) for launch-path sensitivity studies.
-- COMP-4: multi-axis interpolation in `ProfileTableProvider`. The landed
-  rule interpolates along one config axis with every other axis pinned to
-  covered values; a query differing on two or more axes raises `KeyError`
-  instead of attempting a multilinear fit.
-- COMP-5: trace-capture hardware for COMP-1 (local driver fix for the
-  GTX 1660 Ti, or cluster A100/H100 allocation). Sub-task of COMP-1.
-- COMP-6: per-layer kernel shapes. `step_kernels` aggregates each family
-  over all layers of the step; SASS tables index per-invocation shapes,
-  so the mapping needs a per-layer (per-invocation) split before tables
-  can be keyed the way the tracer sees kernels.
+### Precision
+
+- COMP-1 (Precision; P1; L): complete production compute calibration.
+  The Turing method anchor lands activity capture, immutable raw samples,
+  train-only table compilation, interpolation and the provider seam, but its
+  numbers are synthetic TU116 evidence. Its final run passed held-out
+  calibrated median and p95 error at 0.674 percent and 1.773 percent versus
+  17.782 percent and 25.069 percent for the flat 0.7 roofline surrogate. It
+  failed the fatal stability guard in 3 of 50 cells, with a preceding post-fix
+  capture failing 2 of 50. Replace the active A100/H100 bootstrap and flat
+  roofline surrogate only after capturing exact production framework kernels
+  on the target architecture, collecting the full activity, counter and
+  dynamic-SASS ledger, calibrating pinned Accel-Sim replay, and validating
+  immutable held-out kernels. Acceptance remains every controlled cell below
+  2 percent coefficient of variation, held-out kernel median error below
+  10 percent and p95 below 20 percent, per-phase median below 5 percent and
+  p95 below 10 percent, and compute-only step error below 5 percent. The
+  roofline and calibration-off paths must retain accepted artifacts and
+  timestamps byte for byte.
+- COMP-5 (Precision; P1; L): provide the production capture
+  environment required by COMP-1. On 2026-08-12 the local GTX 1660 Ti with
+  driver 550.90.07 successfully produced CUPTI activity timing through Nsight
+  Systems. Nsight Compute attached but returned `ERR_NVGPUCTRPERM`, profiled
+  no kernels and reported that this user lacks performance-counter permission;
+  the loaded driver exposes `RmProfilingAdminOnly: 1`. The local requirement
+  is an administrator disabling that restriction or granting the documented
+  profiling capability, followed by a successful counter probe. The display
+  GPU also produced isolated samples above the 2 percent per-cell variation
+  ceiling in two consecutive post-fix captures. Production closure therefore
+  needs a stable non-display or exclusive capture environment, controlled
+  clocks, and allocation on the exact A100, H100 or B100 target with compatible
+  dynamic NVBit tracing and Accel-Sim support. Acceptance is a nonempty
+  activity trace, successful required-counter probe, exact tool and GPU
+  provenance, and every registered cell below the stability ceiling.
 - COMP-7 (Precision; P1; M): MoE compute assumes perfectly balanced routing:
   every rank computes `top_k` experts' flops for its own tokens and streams all
   resident experts once. Consume the landed `simllm-routed-experts-v1`
   projection through `RoutedMoeSupply`, using the same selected placement
   epoch as traffic, to drive per-rank effective expert load and hot-expert
   imbalance.
-- COMP-8: the fused-vs-family sum invariant test compares in float; above
-  2 to the 53rd flops (a 32k-token prefill chunk on a 100B-class dense
-  rank) ULP effects could mask a real mismatch even though the integer
-  identity is exact. Assert the sums in the integer domain when such
-  shapes enter scope (audit note, examples/m5/RESULTS.md).
-- COMP-9: extend `DurationEstimate` and profile artifacts from one nominal
-  value plus uncertainty to a measured or fitted service-time distribution
-  with declared sample count and quantiles. CORE-5 needs this before claiming
-  kernel-level p99 or p99.9 tail accuracy; deterministic means remain valid
-  for closed-form sanity studies.
-- COMP-10: extend trace replay beyond synchronous normalized per-warp
-  instructions. Add subpartition-aware scheduler ownership, barriers,
-  `cp.async`, Hopper TMA and warpgroup async issue/commit/wait semantics, plus
-  calibrated cache partitions, bank conflicts and hit/miss behavior. Until
-  each mechanism lands with capture evidence, its opcode or launch form must
-  fail closed rather than borrow a scalar latency.
 - COMP-11 (Precision; P1; L): deepen the active NVLink and NCCL ring model.
   The v1 egress path is one
   flat per-GPU serializer and the ring builder emits only the egress half
@@ -507,48 +533,6 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   instead of backfilling. Both need a pre-registered form of their own,
   including how the issue-order delay should behave once CORE-4 owns
   submission policy.
-- COMP-13 (Completeness; P1; M): extend `simllm-gpu-model-artifact-v2` with a
-  narrow concurrent replay record for `GpuTask` inputs and
-  `GpuConcurrentEstimate` outputs,
-  including task order, per-task submission/eligibility,
-  admission/completion, requested and
-  transacted HBM/NVLink bytes, request counts and deterministic replay
-  validation. Until that record lands, concurrent demo CSVs are reviewed
-  evidence but are not GPU-model artifacts.
-- COMP-14 (Completeness; P2; L): add optional NCCL algorithm builders for
-  tree all-reduce, all-to-all, reduce-scatter and all-gather behind an
-  explicit algorithm selection. The ring builder remains the identity
-  baseline: selecting or omitting the default ring path must preserve every
-  accepted ring timestamp, counter and task order exactly.
-- COMP-15 (Completeness; P1; L): model the NCCL software stack with the real
-  stack's functional names and interfaces, trimmed to the main path. The
-  audited zero-time first slice is landed: communicator and ring setup,
-  explicit ring-step chunk planning, GPU send-FIFO tail publication,
-  `ncclProxySaveOp` queueing, independent CPU proxy progression,
-  `ncclNet.isend`, verbs post, RNIC doorbell, external CQE production, CQ poll,
-  proxy head-credit return, and distinct intra-node and inter-node call loops
-  all emit strict events on one caller-owned clock. The
-  [study](../../examples/nccl_stack_v1/RESULTS.md) freezes and validates the
-  exact call sequences and planner relations.
-  Remaining work is to replace deliberate zero-time boundaries and
-  metadata-only movement with calibrated service mechanisms connected to the
-  existing GPU, PCIe, native RNIC and fabric authorities; add the
-  GPU-initiated leg; project selected events through the supported runtime and
-  metric chain; and land the VLLM-14 and SGL-11 adapter callers. Receive-leg
-  progression must wire `recvProxyProgress`, `ncclNet.irecv`, `ncclIbIrecv`,
-  `wrap_ibv_post_recv`, receive completion through `ncclNet.test` and
-  `wrap_ibv_poll_cq`, receive-connector tail publication, and GPU `waitPeer`
-  plus `postPeer` head-credit return. These additions must retain one timing
-  authority and the explicit bypass behavior.
-  Intra-node collectives must compose with the NVLink-class egress model and
-  stay off the fabric. Inter-node transfer and receive completion must project
-  through CORE-4 and CORE-5 to `CompletionEvent`, `StepResult`, TTFT and TPOT.
-  Add the BACK-20 GPU-initiated leg behind the same upper interface while
-  preserving the CPU-host proxy path as the default identity baseline. The
-  VLLM-14 and SGL-11 simulated communicators remain the adapter callers that
-  must connect to this stack. Function and event identities must remain stable
-  so later captures, timing calibration and adapter traces align with this
-  first slice.
 - COMP-17 (Precision; P1; M): after COMP-6 supplies per-invocation captured
   shapes, populate `estimate_layers` for `ProfileTableProvider` and
   `TraceCalibratedGpuProvider`. The current surrogate is the step sink's even
@@ -594,12 +578,89 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   accepted TRAF-7 timestamp and artifact byte.
 - COMP-23 (Precision; P2; L): add a calibrated per-kernel latency
   distribution provider beside the mean-valued table. The landed profile
-  table and trace-calibrated service model return one value per input,
-  which cannot express the run-to-run spread that clock, cache and
-  scheduling variation produce on real silicon. Fit a distribution per
-  kernel family from captured repeats, carry the fit provenance, the
-  calibration envelope and the seed, and report results drawn from it as
-  distributional claims rather than point estimates. The deterministic
-  providers remain the exact compatibility levels and their accepted
-  artifacts stay byte-identical. Blocked on the same capture evidence as
-  COMP-1, so it follows COMP-5.
+  table and trace-calibrated service model return one value per input, which
+  cannot express the run-to-run spread that clock, cache and scheduling
+  variation produce on real silicon. The Turing method anchor now supplies
+  41 raw samples per family, dtype and shape cell and demonstrates why the
+  distribution must retain outliers rather than only a mean. Those synthetic
+  TU116 samples validate the artifact shape but do not calibrate production
+  kernels. Fit a distribution per production kernel family after COMP-1 and
+  COMP-5 provide the target capture, carry the fit provenance, calibration
+  envelope and seed, and validate held-out quantiles against raw silicon
+  samples. Report the deterministic point-table error before the
+  distributional result. The deterministic providers remain exact
+  compatibility levels and their accepted artifacts stay byte-identical.
+
+### Completeness
+
+- COMP-13 (Completeness; P1; M): extend `simllm-gpu-model-artifact-v2` with a
+  narrow concurrent replay record for `GpuTask` inputs and
+  `GpuConcurrentEstimate` outputs,
+  including task order, per-task submission/eligibility,
+  admission/completion, requested and
+  transacted HBM/NVLink bytes, request counts and deterministic replay
+  validation. Until that record lands, concurrent demo CSVs are reviewed
+  evidence but are not GPU-model artifacts.
+- COMP-14 (Completeness; P2; L): add optional NCCL algorithm builders for
+  tree all-reduce, all-to-all, reduce-scatter and all-gather behind an
+  explicit algorithm selection. The ring builder remains the identity
+  baseline: selecting or omitting the default ring path must preserve every
+  accepted ring timestamp, counter and task order exactly.
+- COMP-15 (Completeness; P1; L): model the NCCL software stack with the real
+  stack's functional names and interfaces, trimmed to the main path. The
+  audited zero-time first slice is landed: communicator and ring setup,
+  explicit ring-step chunk planning, GPU send-FIFO tail publication,
+  `ncclProxySaveOp` queueing, independent CPU proxy progression,
+  `ncclNet.isend`, verbs post, RNIC doorbell, external CQE production, CQ poll,
+  proxy head-credit return, and distinct intra-node and inter-node call loops
+  all emit strict events on one caller-owned clock. The
+  [study](../../examples/nccl_stack_v1/RESULTS.md) freezes and validates the
+  exact call sequences and planner relations.
+  Remaining work is to replace deliberate zero-time boundaries and
+  metadata-only movement with calibrated service mechanisms connected to the
+  existing GPU, PCIe, native RNIC and fabric authorities; add the
+  GPU-initiated leg; project selected events through the supported runtime and
+  metric chain; and land the VLLM-14 and SGL-11 adapter callers. Receive-leg
+  progression must wire `recvProxyProgress`, `ncclNet.irecv`, `ncclIbIrecv`,
+  `wrap_ibv_post_recv`, receive completion through `ncclNet.test` and
+  `wrap_ibv_poll_cq`, receive-connector tail publication, and GPU `waitPeer`
+  plus `postPeer` head-credit return. These additions must retain one timing
+  authority and the explicit bypass behavior.
+  Intra-node collectives must compose with the NVLink-class egress model and
+  stay off the fabric. Inter-node transfer and receive completion must project
+  through CORE-4 and CORE-5 to `CompletionEvent`, `StepResult`, TTFT and TPOT.
+  Add the BACK-20 GPU-initiated leg behind the same upper interface while
+  preserving the CPU-host proxy path as the default identity baseline. The
+  VLLM-14 and SGL-11 simulated communicators remain the adapter callers that
+  must connect to this stack. Function and event identities must remain stable
+  so later captures, timing calibration and adapter traces align with this
+  first slice.
+
+### Uncategorized
+
+- COMP-2: calibrated host-initiation profiles (GPU-initiated vs CPU-proxy
+  constants) for launch-path sensitivity studies.
+- COMP-4: multi-axis interpolation in `ProfileTableProvider`. The landed
+  rule interpolates along one config axis with every other axis pinned to
+  covered values; a query differing on two or more axes raises `KeyError`
+  instead of attempting a multilinear fit.
+- COMP-6: per-layer kernel shapes. `step_kernels` aggregates each family
+  over all layers of the step; SASS tables index per-invocation shapes,
+  so the mapping needs a per-layer (per-invocation) split before tables
+  can be keyed the way the tracer sees kernels.
+- COMP-8: the fused-vs-family sum invariant test compares in float; above
+  2 to the 53rd flops (a 32k-token prefill chunk on a 100B-class dense
+  rank) ULP effects could mask a real mismatch even though the integer
+  identity is exact. Assert the sums in the integer domain when such
+  shapes enter scope (audit note, examples/m5/RESULTS.md).
+- COMP-9: extend `DurationEstimate` and profile artifacts from one nominal
+  value plus uncertainty to a measured or fitted service-time distribution
+  with declared sample count and quantiles. CORE-5 needs this before claiming
+  kernel-level p99 or p99.9 tail accuracy; deterministic means remain valid
+  for closed-form sanity studies.
+- COMP-10: extend trace replay beyond synchronous normalized per-warp
+  instructions. Add subpartition-aware scheduler ownership, barriers,
+  `cp.async`, Hopper TMA and warpgroup async issue/commit/wait semantics, plus
+  calibrated cache partitions, bank conflicts and hit/miss behavior. Until
+  each mechanism lands with capture evidence, its opcode or launch form must
+  fail closed rather than borrow a scalar latency.

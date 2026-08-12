@@ -58,15 +58,16 @@ def _tracked_files() -> list[Path]:
     return [Path(raw.decode()) for raw in completed.stdout.split(b"\0") if raw]
 
 
-_BARE_RATIONAL = re.compile(r"\A/\d+\Z")
+_BARE_RATIONAL = re.compile(r"\A/\d+(?:\.\d+)?\Z")
 
 
 def _is_bare_rational(match: str) -> bool:
-    """A slash followed only by digits is a denominator, not a path.
+    """A slash followed only by a number is a denominator, not a path.
 
-    Exact rational metrics render as `1/3` and `20/1`, so prose and result
-    records legitimately contain a slash before a number. No machine-local
-    path is ever spelled `/7`, which keeps this exemption narrow.
+    Exact rational metrics render as `1/3` and `20/1`, and paired
+    measurements render as `0.510%/1.768%`, so prose and result records
+    legitimately contain a slash before a number. No machine-local path is
+    ever spelled `/7` or `/1.768`, which keeps this exemption narrow.
     """
 
     return bool(_BARE_RATIONAL.match(match))
