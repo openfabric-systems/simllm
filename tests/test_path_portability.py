@@ -58,6 +58,20 @@ def _tracked_files() -> list[Path]:
     return [Path(raw.decode()) for raw in completed.stdout.split(b"\0") if raw]
 
 
+_BARE_RATIONAL = re.compile(r"\A/\d+\Z")
+
+
+def _is_bare_rational(match: str) -> bool:
+    """A slash followed only by digits is a denominator, not a path.
+
+    Exact rational metrics render as `1/3` and `20/1`, so prose and result
+    records legitimately contain a slash before a number. No machine-local
+    path is ever spelled `/7`, which keeps this exemption narrow.
+    """
+
+    return bool(_BARE_RATIONAL.match(match))
+
+
 def _line_matches(text: str, pattern: re.Pattern[str]) -> list[tuple[int, str]]:
     return [
         (line_number, match.group(0))
@@ -93,6 +107,8 @@ def test_markdown_and_cpp_paths_are_portable() -> None:
             text = _mask_document_urls(text)
         for pattern in patterns:
             for line_number, match in _line_matches(text, pattern):
+                if _is_bare_rational(match):
+                    continue
                 violations.append(f"{relative_path}:{line_number}: {match}")
 
     assert not violations, "non-portable filesystem paths:\n" + "\n".join(violations)

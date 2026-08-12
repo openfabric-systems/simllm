@@ -38,6 +38,15 @@ the flow-level work the GOAL emitter renders.
   destination rank, pre-reduces combine to the transposed pair table and
   records the selected epoch on the graph operation. Dense dims, an EP world
   below 2 or a zero-token record produce no ops.
+- `lower_step_observations` joins that traffic plan to framework-neutral
+  `ExecutionObservations`. The adapter tuple order, logical queues, dependency
+  edges, gates, priorities, correlations and completion frontier pass through
+  unchanged. Each observed collective identifies one layer and semantic site;
+  traffic validates its group and payload, supplies the algorithm, routed pair
+  table and placement epoch, and requires every planned site exactly once.
+  `ObservedStepLowerer` exposes this path through the standard
+  `ExecutionLowerer` contract. Omitting observations delegates directly to
+  `SerialStepLowerer` as the exact compatibility off path.
 - `render_step_goal` renders the serial per-rank chain (per layer: `calc`,
   the two TP allreduces when the TP world produces them, then for MoE dims
   with `ep_ranks` given the dispatch and combine all-to-allvs) through the
@@ -99,6 +108,19 @@ the fluid and physical-topology paths. Every valid comparison has 0 ps timing
 residual; see
 [examples/step_sink_precision/RESULTS.md](../../examples/step_sink_precision/RESULTS.md).
 
+TRAF-7 is complete for observation-driven step lowering and the coarse live
+metric chain. The frozen two-layer study crossed `C/D` from 1/2 to 2 and
+realized independent, two-stage pipeline and serial graphs at their exact
+closed forms. Pipeline TTFT and TPOT were exactly 5/6 of serial in all four
+registered metric cells. A separate shared-versus-split NCCL-channel fixture
+changed JCT by exactly 999 ps, and the absent-observation graph and GOAL bytes
+retained their accepted hashes. All 16 scored relations, 22 exact-oracle rows
+and 12 fatal unscored guards passed; see
+[the overlap results](../../examples/compute_comm_overlap_v1/RESULTS.md).
+Current framework adapters do not yet emit these schedules, and the runtime's
+physical collective expansion and GPU-side contention gaps remain explicit
+under TRAF-13, TRAF-14, CORE-26, CORE-27 and COMP-22.
+
 ## Open tasks
 
 - TRAF-4 (ring-allreduce part closed by examples/m4, pairwise-a2av part
@@ -113,20 +135,6 @@ residual; see
   full activation on every rank; SP would replace each allreduce with a
   reduce-scatter plus allgather of 1/W the bytes around the norm/dropout
   regions.
-- TRAF-7: communication/compute overlap in the step model. `step_comm`
-  chains each layer's compute and its collectives strictly serially;
-  real engines overlap the MLP allreduce with the next layer's start under
-  some schedules. Implement this after CORE-3, since CORE-4 has landed, by
-  lowering compute and collective work onto the framework-observed logical
-  streams with explicit
-  event/dependency edges in `ExecutionGraph`. The adapter owns observed
-  program order and legal concurrency; the traffic planner owns collective
-  algorithm/chunk expansion; `DeviceRuntime` owns realized overlap after
-  CUDA-stream, GPU, HBM, copy-engine, NCCL-channel, WQE and NIC contention.
-  No layer stores or learns an overlap percentage. First validate an ideal
-  independent-resource graph at exact `max(compute, communication)` versus
-  the serial graph at exact `compute + communication`, then add one resource
-  contention mechanism at a time.
 - TRAF-8: pipeline-parallel activation traffic from step records. Records
   carry no PP stage attribution yet, so `step_comm` emits TP and EP
   collectives only; the M1 workload-B GOAL shows the target
@@ -148,3 +156,20 @@ residual; see
   (attention and router before dispatch, expert MLP between dispatch and
   combine) and may overlap shared-expert work with the a2avs. The serial
   whole-layer calc keeps the makespan correct only to first order.
+- TRAF-13 (Completeness; P1; L): connect at least one real framework schedule
+  producer to `ObservedStepLowerer` after VLLM-19 or SGL-10 supplies captured
+  operation order, streams, events and completion boundaries. Replay a fixed
+  captured step through the traffic binding, `DeviceRuntime`,
+  `CompletionEvent`, `StepResult`, TTFT and TPOT; require every captured order
+  and dependency fact to survive exactly and show that one observed legal
+  overlap changes the live metric in its registered direction. Disabling the
+  producer must select the serial lowerer and preserve every accepted serial
+  graph, GOAL byte, timestamp and completion order exactly.
+- TRAF-14 (Precision; P1; M): move ring-round and pairwise-extent expansion
+  from the coarse runtime's current semantic-work surrogate into one immutable
+  traffic-owned collective plan carried through `ExecutionGraph`. The runtime
+  may schedule those extents but may not choose or reconstruct their algorithm,
+  chunk sizes, rank order or tags. Compare the plan against the existing GOAL
+  pattern expansion over payload, world-size and routed sparse-pair sweeps with
+  exact byte, round, dependency and tag conservation. The absent explicit plan
+  must preserve the accepted v1 wire bytes and serial timing exactly.

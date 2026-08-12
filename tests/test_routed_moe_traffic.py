@@ -13,12 +13,14 @@ import simllm.backends.step_sink as step_sink_module
 from simllm.backends import (
     HtsimStepSink,
     HtsimStepSinkConfig,
+    ObservedStepLowerer,
     SerialStepLowerer,
     SerialStepLowererConfig,
 )
 from simllm.compute import ComputeProvider, DurationEstimate, ModelDims
 from simllm.core import (
     CollectiveWork,
+    ExecutionObservations,
     RequestBookkeeper,
     RequestPhase,
     ScheduledRequest,
@@ -391,6 +393,36 @@ def test_render_and_lowerer_carry_the_same_sparse_tables_and_epoch():
         (0, 1, 8),
         (1, 0, 16),
     )
+
+
+def test_observed_lowerer_binds_captured_pair_tables_and_epoch():
+    supply = _tiny_supply()
+    record = _prefill_record(1)
+    config = SerialStepLowererConfig(
+        TINY_MOE_DIMS,
+        (0,),
+        ep_ranks=(0, 1),
+        provider=FixedProvider(2_000),
+        routed_moe_supply=supply,
+    )
+    serial = SerialStepLowerer(config).lower(record)
+    marker_operations = tuple(
+        replace(
+            operation,
+            work=replace(operation.work, algorithm_hint=None),
+            placement_epoch=0,
+        )
+        if isinstance(operation.work, CollectiveWork)
+        else operation
+        for operation in serial.operations
+    )
+
+    observed = ObservedStepLowerer(config).lower(
+        record,
+        ExecutionObservations(marker_operations, serial.completion_operation_ids),
+    )
+
+    assert observed == serial
 
 
 def test_step_sink_uses_captured_supply_and_reports_authority(tmp_path, monkeypatch):
