@@ -87,7 +87,8 @@ def _require_sha256(value: object, path: str) -> str:
 
 def _require_sidecar_name(value: object, path: str) -> str:
     name = _string(value, path)
-    if name in {".", ".."} or any(character in name for character in "/\\:\0"):
+    forbidden = ("/", "\\", ":", "\0")
+    if name in {".", ".."} or any(character in name for character in forbidden):
         raise ValueError(f"{path}: expected a plain sibling file name")
     return name
 
