@@ -289,6 +289,51 @@ class CriticalPathBreakdown:
 
 
 @dataclass(frozen=True)
+class RuntimeCriticalSegment:
+    """One conserved critical-path segment for an operation participant."""
+
+    operation_id: str
+    participant_rank: int
+    started_at_ps: int
+    completed_at_ps: int
+    predecessor_operation_id: str | None
+    predecessor_participant_rank: int | None
+    breakdown: CriticalPathBreakdown
+    attribution: LatencyAttribution
+
+    def __post_init__(self) -> None:
+        _require_text("operation_id", self.operation_id)
+        for name in ("participant_rank", "started_at_ps", "completed_at_ps"):
+            _require_int(name, getattr(self, name))
+        if self.completed_at_ps < self.started_at_ps:
+            raise ValueError("critical segment completes before its causal boundary")
+        predecessor_fields = (
+            self.predecessor_operation_id,
+            self.predecessor_participant_rank,
+        )
+        if any(value is None for value in predecessor_fields) and any(
+            value is not None for value in predecessor_fields
+        ):
+            raise ValueError("critical segment predecessor identity must be all present")
+        if self.predecessor_operation_id is not None:
+            _require_text("predecessor_operation_id", self.predecessor_operation_id)
+            assert self.predecessor_participant_rank is not None
+            _require_int(
+                "predecessor_participant_rank",
+                self.predecessor_participant_rank,
+            )
+        if not isinstance(self.breakdown, CriticalPathBreakdown):
+            raise TypeError("breakdown must be CriticalPathBreakdown")
+        if not isinstance(self.attribution, LatencyAttribution):
+            raise TypeError("attribution must be LatencyAttribution")
+        latency_ps = self.completed_at_ps - self.started_at_ps
+        if self.breakdown.operation_latency_ps != latency_ps:
+            raise ValueError("critical segment breakdown does not conserve elapsed time")
+        if self.attribution.total_ps != latency_ps:
+            raise ValueError("critical segment attribution does not conserve elapsed time")
+
+
+@dataclass(frozen=True)
 class RuntimeOperationRecord:
     """Coarse realized timing for one immutable graph operation.
 
@@ -305,6 +350,7 @@ class RuntimeOperationRecord:
     completed_at_ps: int
     physical_completed_at_ps: int
     participant_completed_at_ps: tuple[tuple[int, int], ...]
+    critical_segments: tuple[RuntimeCriticalSegment, ...]
     breakdown: CriticalPathBreakdown
     attribution: LatencyAttribution
     causal_predecessor_id: str | None
@@ -681,6 +727,7 @@ class RuntimeReport:
     sum_visit_wait_ps: int
     critical_path_queue_ps: int
     realized_critical_path_operation_ids: tuple[str, ...]
+    realized_critical_path_segments: tuple[tuple[str, int], ...]
     class_service_bytes: tuple[tuple[int, int], ...]
     random_draw_count: int
 
@@ -715,6 +762,8 @@ class _ScheduledOperation:
     logical_completed_at_ps: int
     physical_completed_at_ps: int
     participant_completed_at_ps: dict[int, int]
+    participant_paths: dict[int, list[QueueVisit]]
+    participant_causal_witnesses: dict[int, _CausalWitness | None]
     visits: list[QueueVisit]
     logical_paths: list[list[QueueVisit]]
     eligible_at_ps: int
@@ -727,6 +776,7 @@ class _ScheduledOperation:
 @dataclass(frozen=True)
 class _CausalWitness:
     predecessor_id: str
+    participant_rank: int
     completed_at_ps: int
 
 
@@ -749,6 +799,7 @@ def _select_causal_witness(
             candidate[1] is not None,
             -1 if candidate[1] is None else candidate[1].completed_at_ps,
             "" if candidate[1] is None else candidate[1].predecessor_id,
+            -1 if candidate[1] is None else candidate[1].participant_rank,
         ),
     )[1]
 
@@ -765,6 +816,17 @@ def _completion_causal_witness(
             for rank, completed in completed_at_ps.items()
         )
     )
+
+
+def _logical_completion_participant_rank(outcome: _ScheduledOperation) -> int:
+    ranks = tuple(
+        rank
+        for rank, completed_at_ps in outcome.participant_completed_at_ps.items()
+        if completed_at_ps == outcome.logical_completed_at_ps
+    )
+    if not ranks:
+        raise AssertionError("logical completion has no participant segment")
+    return max(ranks)
 
 
 def _logical_path_index(paths: Sequence[Sequence[QueueVisit]]) -> int:
@@ -1273,14 +1335,20 @@ class CoarseDeviceRuntime:
             predecessor = scheduled[edge.predecessor_id]
             if edge.scope is DependencyScope.WHOLE_OPERATION:
                 completed = predecessor.logical_completed_at_ps
+                predecessor_rank = _logical_completion_participant_rank(predecessor)
                 constrained_ranks = ranks
             else:
                 rank = edge.participant_rank
                 if rank is None:
                     raise AssertionError("participant-local edge has no rank")
                 completed = predecessor.participant_completed_at_ps[rank]
+                predecessor_rank = rank
                 constrained_ranks = (rank,)
-            witness = _CausalWitness(edge.predecessor_id, completed)
+            witness = _CausalWitness(
+                edge.predecessor_id,
+                predecessor_rank,
+                completed,
+            )
             for rank in constrained_ranks:
                 previous_witness = causal_witnesses[rank]
                 if previous_witness is None:
@@ -1468,6 +1536,10 @@ class CoarseDeviceRuntime:
                 logical_completed_at_ps=logical_completed,
                 physical_completed_at_ps=logical_completed,
                 participant_completed_at_ps={rank: logical_completed},
+                participant_paths={
+                    rank: [launches[operation_id], gpu_visit],
+                },
+                participant_causal_witnesses={rank: causal_witness},
                 visits=visits,
                 logical_paths=[[launches[operation_id], gpu_visit]],
                 eligible_at_ps=eligible[operation_id],
@@ -1528,6 +1600,8 @@ class CoarseDeviceRuntime:
                 logical_completed_at_ps=completed,
                 physical_completed_at_ps=completed,
                 participant_completed_at_ps={operation.rank: completed},
+                participant_paths={operation.rank: [launch]},
+                participant_causal_witnesses={operation.rank: causal_witness},
                 visits=[launch],
                 logical_paths=[[launch]],
                 eligible_at_ps=eligible_at_ps,
@@ -1645,6 +1719,12 @@ class CoarseDeviceRuntime:
             participant_completed_at_ps={
                 rank: completed_at_ps for rank in participant_ranks
             },
+            participant_paths={
+                rank: [launch, copy_visit] for rank in participant_ranks
+            },
+            participant_causal_witnesses={
+                rank: causal_witness for rank in participant_ranks
+            },
             visits=[launch, copy_visit, hbm_visit],
             logical_paths=[[launch, copy_visit]],
             eligible_at_ps=eligible_at_ps,
@@ -1694,6 +1774,8 @@ class CoarseDeviceRuntime:
         wqes: list[WqeLifecycleProjection] = []
         physical_completed = control_visit.completed_at_ps
         participant_completed = {rank: control_visit.completed_at_ps}
+        participant_paths = {rank: [launch, control_visit]}
+        participant_segment_witnesses = {rank: causal_witnesses[rank]}
         physical_path_witnesses = [causal_witnesses[rank]]
         for extent_index, destination in enumerate(work.destination_ranks):
             if destination == rank:
@@ -1734,6 +1816,12 @@ class CoarseDeviceRuntime:
                 participant_completed.get(destination, 0),
                 transfer.completed_at_ps,
             )
+            participant_paths[destination] = [
+                launch,
+                control_visit,
+                *transfer.visits,
+            ]
+            participant_segment_witnesses[destination] = transfer_witness
             if transfer.projection is not None:
                 wqes.append(transfer.projection)
         if work.mode is ControlMode.SYNCHRONOUS:
@@ -1751,6 +1839,8 @@ class CoarseDeviceRuntime:
             logical_completed_at_ps=logical_completed,
             physical_completed_at_ps=physical_completed,
             participant_completed_at_ps=participant_completed,
+            participant_paths=participant_paths,
+            participant_causal_witnesses=participant_segment_witnesses,
             visits=visits,
             logical_paths=logical_paths,
             eligible_at_ps=eligible_at_ps,
@@ -1787,6 +1877,7 @@ class CoarseDeviceRuntime:
         wqes: list[WqeLifecycleProjection] = []
         participant_completed = dict(readiness)
         participant_witnesses = dict(causal_witnesses)
+        participant_paths = {rank: [launch] for rank in readiness}
         extent_index = 0
 
         if work.collective == "all-reduce" and work.algorithm_hint == "ring":
@@ -1888,6 +1979,7 @@ class CoarseDeviceRuntime:
                 frontier_paths = next_frontier_paths
             participant_completed = frontier
             participant_witnesses = frontier_witnesses
+            participant_paths = frontier_paths
             paths = list(frontier_paths.values())
             path_witnesses = list(frontier_witnesses.values())
         elif work.collective == "all-to-allv" and work.algorithm_hint == "pairwise":
@@ -1954,6 +2046,12 @@ class CoarseDeviceRuntime:
                         ),
                         (transfer.completed_at_ps, transfer_witness),
                     )
+                    if transfer.completed_at_ps >= participant_completed[rank]:
+                        participant_paths[rank] = [
+                            launch,
+                            channel_visit,
+                            *transfer.visits,
+                        ]
                 participant_completed[source_rank] = max(
                     participant_completed[source_rank], transfer.completed_at_ps
                 )
@@ -1981,6 +2079,8 @@ class CoarseDeviceRuntime:
             logical_completed_at_ps=logical_completed,
             physical_completed_at_ps=logical_completed,
             participant_completed_at_ps=participant_completed,
+            participant_paths=participant_paths,
+            participant_causal_witnesses=participant_witnesses,
             visits=visits,
             logical_paths=paths,
             eligible_at_ps=min(readiness.values()),
@@ -2304,6 +2404,73 @@ class CoarseDeviceRuntime:
         sequenced.sort(key=lambda item: (item[0], item[1]))
         return tuple(event for _, _, event in sequenced)
 
+    @staticmethod
+    def _critical_path_breakdown(
+        operation_id: str,
+        path: Sequence[QueueVisit],
+        segment_start_ps: int,
+        segment_completed_at_ps: int,
+    ) -> CriticalPathBreakdown:
+        if not path:
+            raise ValueError("critical-path accounting requires a nonempty path")
+        launch = path[0]
+        cursor_ps = segment_start_ps
+        launch_wait_ps = max(
+            0,
+            launch.started_at_ps - max(launch.eligible_at_ps, cursor_ps),
+        )
+        launch_service_ps = max(
+            0,
+            launch.finished_at_ps - max(launch.started_at_ps, cursor_ps),
+        )
+        launch_visibility_ps = max(
+            0,
+            launch.completed_at_ps - max(launch.finished_at_ps, cursor_ps),
+        )
+        launch_queue_ps = launch_wait_ps + launch_service_ps + launch_visibility_ps
+        cursor_ps = max(cursor_ps, launch.completed_at_ps)
+
+        device_queue_ps = 0
+        service_ps = 0
+        completion_delivery_ps = 0
+        for visit in path[1:]:
+            device_queue_ps += max(
+                0,
+                visit.started_at_ps - max(visit.eligible_at_ps, cursor_ps),
+            )
+            service_ps += max(
+                0,
+                visit.finished_at_ps - max(visit.started_at_ps, cursor_ps),
+            )
+            completion_delivery_ps += max(
+                0,
+                visit.completed_at_ps - max(visit.finished_at_ps, cursor_ps),
+            )
+            cursor_ps = max(cursor_ps, visit.completed_at_ps)
+
+        operation_latency_ps = segment_completed_at_ps - segment_start_ps
+        covered = (
+            launch_queue_ps
+            + device_queue_ps
+            + service_ps
+            + completion_delivery_ps
+        )
+        external_dependency_ps = operation_latency_ps - covered
+        if external_dependency_ps < 0:
+            raise ValueError(
+                f"operation {operation_id!r} has overlapping visits on its "
+                "selected additive critical path"
+            )
+        return CriticalPathBreakdown(
+            launch_queue_ps=launch_queue_ps,
+            device_queue_ps=device_queue_ps,
+            service_ps=service_ps,
+            completion_delivery_ps=completion_delivery_ps,
+            external_dependency_ps=external_dependency_ps,
+            operation_latency_ps=operation_latency_ps,
+            critical_path_queue_ps=launch_wait_ps + device_queue_ps,
+        )
+
     def _runtime_report(
         self,
         graph: ExecutionGraph,
@@ -2315,11 +2482,68 @@ class CoarseDeviceRuntime:
         operation_records: list[RuntimeOperationRecord] = []
         all_visits: list[QueueVisit] = []
         by_operation_record: dict[str, RuntimeOperationRecord] = {}
+        segment_by_key: dict[tuple[str, int], RuntimeCriticalSegment] = {}
         for operation in graph.operations:
             outcome = scheduled[operation.operation_id]
             all_visits.extend(outcome.visits)
+            participant_ranks = set(outcome.participant_completed_at_ps)
+            if set(outcome.participant_paths) != participant_ranks:
+                raise RuntimeError("participant completion and critical paths differ")
+            if set(outcome.participant_causal_witnesses) != participant_ranks:
+                raise RuntimeError("participant completion and causal witnesses differ")
+            critical_segments: list[RuntimeCriticalSegment] = []
+            for participant_rank in sorted(participant_ranks):
+                participant_path = outcome.participant_paths[participant_rank]
+                participant_witness = outcome.participant_causal_witnesses[
+                    participant_rank
+                ]
+                participant_started_at_ps = (
+                    graph.released_at_ps
+                    if participant_witness is None
+                    else participant_witness.completed_at_ps
+                )
+                participant_completed_at_ps = outcome.participant_completed_at_ps[
+                    participant_rank
+                ]
+                participant_breakdown = self._critical_path_breakdown(
+                    operation.operation_id,
+                    participant_path,
+                    participant_started_at_ps,
+                    participant_completed_at_ps,
+                )
+                participant_attribution = self._critical_path_attribution(
+                    operation,
+                    participant_path,
+                    participant_started_at_ps,
+                    participant_completed_at_ps,
+                )
+                segment = RuntimeCriticalSegment(
+                    operation_id=operation.operation_id,
+                    participant_rank=participant_rank,
+                    started_at_ps=participant_started_at_ps,
+                    completed_at_ps=participant_completed_at_ps,
+                    predecessor_operation_id=(
+                        None
+                        if participant_witness is None
+                        else participant_witness.predecessor_id
+                    ),
+                    predecessor_participant_rank=(
+                        None
+                        if participant_witness is None
+                        else participant_witness.participant_rank
+                    ),
+                    breakdown=participant_breakdown,
+                    attribution=participant_attribution,
+                )
+                key = (operation.operation_id, participant_rank)
+                if key in segment_by_key:
+                    raise RuntimeError("duplicate participant critical segment")
+                segment_by_key[key] = segment
+                critical_segments.append(segment)
+
+            # These scalar fields remain compatibility projections. The
+            # participant-keyed segments above are the conservation authority.
             path = outcome.logical_paths[_logical_path_index(outcome.logical_paths)]
-            launch = path[0]
             causal_predecessor_id = outcome.critical_predecessor_id
             causal_predecessor_completed_at_ps = (
                 outcome.critical_predecessor_completed_at_ps
@@ -2340,64 +2564,11 @@ class CoarseDeviceRuntime:
                 if additive_predecessor_id is not None
                 else graph.released_at_ps
             )
-            cursor_ps = segment_start_ps
-
-            launch_wait_ps = max(
-                0,
-                launch.started_at_ps - max(launch.eligible_at_ps, cursor_ps),
-            )
-            launch_service_ps = max(
-                0,
-                launch.finished_at_ps - max(launch.started_at_ps, cursor_ps),
-            )
-            launch_visibility_ps = max(
-                0,
-                launch.completed_at_ps - max(launch.finished_at_ps, cursor_ps),
-            )
-            launch_queue_ps = (
-                launch_wait_ps + launch_service_ps + launch_visibility_ps
-            )
-            cursor_ps = max(cursor_ps, launch.completed_at_ps)
-
-            device_queue_ps = 0
-            service_ps = 0
-            completion_delivery_ps = 0
-            for visit in path[1:]:
-                device_queue_ps += max(
-                    0,
-                    visit.started_at_ps - max(visit.eligible_at_ps, cursor_ps),
-                )
-                service_ps += max(
-                    0,
-                    visit.finished_at_ps - max(visit.started_at_ps, cursor_ps),
-                )
-                completion_delivery_ps += max(
-                    0,
-                    visit.completed_at_ps - max(visit.finished_at_ps, cursor_ps),
-                )
-                cursor_ps = max(cursor_ps, visit.completed_at_ps)
-
-            operation_latency_ps = outcome.logical_completed_at_ps - segment_start_ps
-            covered = (
-                launch_queue_ps
-                + device_queue_ps
-                + service_ps
-                + completion_delivery_ps
-            )
-            external_dependency_ps = operation_latency_ps - covered
-            if external_dependency_ps < 0:
-                raise ValueError(
-                    f"operation {operation.operation_id!r} has overlapping visits on its "
-                    "selected additive critical path"
-                )
-            breakdown = CriticalPathBreakdown(
-                launch_queue_ps=launch_queue_ps,
-                device_queue_ps=device_queue_ps,
-                service_ps=service_ps,
-                completion_delivery_ps=completion_delivery_ps,
-                external_dependency_ps=external_dependency_ps,
-                operation_latency_ps=operation_latency_ps,
-                critical_path_queue_ps=launch_wait_ps + device_queue_ps,
+            breakdown = self._critical_path_breakdown(
+                operation.operation_id,
+                path,
+                segment_start_ps,
+                outcome.logical_completed_at_ps,
             )
             attribution = self._critical_path_attribution(
                 operation,
@@ -2405,7 +2576,7 @@ class CoarseDeviceRuntime:
                 segment_start_ps,
                 outcome.logical_completed_at_ps,
             )
-            if attribution.total_ps != operation_latency_ps:
+            if attribution.total_ps != breakdown.operation_latency_ps:
                 raise ValueError(
                     f"operation {operation.operation_id!r} attribution does not "
                     "conserve its critical-path segment"
@@ -2420,6 +2591,7 @@ class CoarseDeviceRuntime:
                 participant_completed_at_ps=tuple(
                     sorted(outcome.participant_completed_at_ps.items())
                 ),
+                critical_segments=tuple(critical_segments),
                 breakdown=breakdown,
                 attribution=attribution,
                 causal_predecessor_id=causal_predecessor_id,
@@ -2432,6 +2604,22 @@ class CoarseDeviceRuntime:
             operation_records.append(record)
             by_operation_record[operation.operation_id] = record
 
+        for segment in segment_by_key.values():
+            if segment.predecessor_operation_id is None:
+                if segment.started_at_ps != graph.released_at_ps:
+                    raise ValueError("root critical segment does not start at graph release")
+                continue
+            assert segment.predecessor_participant_rank is not None
+            predecessor_key = (
+                segment.predecessor_operation_id,
+                segment.predecessor_participant_rank,
+            )
+            predecessor = segment_by_key.get(predecessor_key)
+            if predecessor is None:
+                raise ValueError("critical segment names an unknown predecessor segment")
+            if segment.started_at_ps != predecessor.completed_at_ps:
+                raise ValueError("critical segment predecessor timestamp disagrees")
+
         operation_index = {
             operation.operation_id: index for index, operation in enumerate(graph.operations)
         }
@@ -2443,29 +2631,52 @@ class CoarseDeviceRuntime:
                     operation_index[operation_id],
                 ),
             )
-            reverse_chain: list[str] = []
-            seen: set[str] = set()
-            current: str | None = endpoint
-            while current is not None:
-                if current in seen:
+            endpoint_record = by_operation_record[endpoint]
+            endpoint_segment = max(
+                (
+                    segment
+                    for segment in endpoint_record.critical_segments
+                    if segment.completed_at_ps == endpoint_record.completed_at_ps
+                ),
+                key=lambda segment: segment.participant_rank,
+            )
+            reverse_segment_chain: list[tuple[str, int]] = []
+            seen_segments: set[tuple[str, int]] = set()
+            current_key: tuple[str, int] | None = (
+                endpoint_segment.operation_id,
+                endpoint_segment.participant_rank,
+            )
+            while current_key is not None:
+                if current_key in seen_segments:
                     raise RuntimeError("critical predecessor chain contains a cycle")
-                seen.add(current)
-                reverse_chain.append(current)
-                current = by_operation_record[current].critical_predecessor_id
-            critical_chain = tuple(reversed(reverse_chain))
+                seen_segments.add(current_key)
+                reverse_segment_chain.append(current_key)
+                current_segment = segment_by_key[current_key]
+                if current_segment.predecessor_operation_id is None:
+                    current_key = None
+                else:
+                    assert current_segment.predecessor_participant_rank is not None
+                    current_key = (
+                        current_segment.predecessor_operation_id,
+                        current_segment.predecessor_participant_rank,
+                    )
+            critical_segment_chain = tuple(reversed(reverse_segment_chain))
         else:
-            critical_chain = ()
-        critical_path_queue_ps = sum(
-            by_operation_record[operation_id].breakdown.critical_path_queue_ps
-            for operation_id in critical_chain
+            critical_segment_chain = ()
+        critical_chain = tuple(
+            operation_id for operation_id, _ in critical_segment_chain
         )
-        if critical_chain:
+        critical_path_queue_ps = sum(
+            segment_by_key[key].breakdown.critical_path_queue_ps
+            for key in critical_segment_chain
+        )
+        if critical_segment_chain:
             chain_latency_ps = sum(
-                by_operation_record[operation_id].breakdown.operation_latency_ps
-                for operation_id in critical_chain
+                segment_by_key[key].breakdown.operation_latency_ps
+                for key in critical_segment_chain
             )
             endpoint_latency_ps = (
-                scheduled[critical_chain[-1]].logical_completed_at_ps
+                segment_by_key[critical_segment_chain[-1]].completed_at_ps
                 - graph.released_at_ps
             )
             if chain_latency_ps != endpoint_latency_ps:
@@ -2486,6 +2697,7 @@ class CoarseDeviceRuntime:
             sum_visit_wait_ps=sum(visit.queue_wait_ps for visit in all_visits),
             critical_path_queue_ps=critical_path_queue_ps,
             realized_critical_path_operation_ids=critical_chain,
+            realized_critical_path_segments=critical_segment_chain,
             class_service_bytes=tuple(sorted(class_bytes.items())),
             random_draw_count=wqe_authority.random_draw_count,
         )
