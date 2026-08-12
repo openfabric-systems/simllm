@@ -52,6 +52,10 @@ Environment variable            Meaning (default)
                                 whose exact tokens replace fabrication; every
                                 request must enter with its oracle length
                                 pinned as ``max_tokens`` (unset).
+``SIMLLM_VLLM_OBSERVED_SCHEDULE``
+                                ``granite-dbo`` enables the audited Granite
+                                MoE observation producer; ``off`` preserves
+                                the absent-observation path (``off``).
 ``SIMLLM_VLLM_WORKER_MODE``     ``skeleton`` enables the flagged
                                 :class:`simllm.adapters.vllm.SimWorker` path.
                                 Any other value is rejected when that worker
@@ -91,6 +95,10 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, runtime_checkable
 
 from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
 from simllm.adapters.vllm.replay import ReplayTokenSource, sample_adapter_tokens
+from simllm.adapters.vllm.schedule import (
+    OBSERVED_SCHEDULE_MODES,
+    OBSERVED_SCHEDULE_OFF,
+)
 from simllm.compute import (
     GPU_ENVELOPES,
     PS_PER_SECOND,
@@ -254,10 +262,17 @@ class SimExecutorConfig:
     token_id: int | None = None
     step_records_path: str | None = None
     replay_run_path: str | None = None
+    observed_schedule: str = OBSERVED_SCHEDULE_OFF
 
     def __post_init__(self) -> None:
         if self.mode not in ("virtual", "paced"):
             raise ValueError(f"SIMLLM_VLLM_MODE must be virtual or paced, got {self.mode!r}")
+        if self.observed_schedule not in OBSERVED_SCHEDULE_MODES:
+            known = ", ".join(OBSERVED_SCHEDULE_MODES)
+            raise ValueError(
+                "SIMLLM_VLLM_OBSERVED_SCHEDULE must be one of "
+                f"{known}; got {self.observed_schedule!r}"
+            )
         if self.kv_memory_bytes <= 0:
             raise ValueError("SIMLLM_VLLM_KV_MEMORY_BYTES must be positive")
 
@@ -275,6 +290,14 @@ class SimExecutorConfig:
             token_id=_env_int(env, "SIMLLM_VLLM_TOKEN_ID", None),
             step_records_path=_env_str(env, "SIMLLM_VLLM_STEP_RECORDS", None),
             replay_run_path=_env_str(env, "SIMLLM_VLLM_REPLAY_RUN", None),
+            observed_schedule=(
+                _env_str(
+                    env,
+                    "SIMLLM_VLLM_OBSERVED_SCHEDULE",
+                    OBSERVED_SCHEDULE_OFF,
+                )
+                or OBSERVED_SCHEDULE_OFF
+            ).lower(),
         )
 
     def gpu_spec(self) -> GpuSpec:
@@ -679,6 +702,33 @@ def model_dims_from_vllm_config(vllm_config: VllmConfig) -> ModelDims:
             4 * hidden_size,
         )
     )
+    raw_num_experts = getattr(text_config, "num_local_experts", None)
+    num_experts = (
+        int(geom("num_experts", lambda: raw_num_experts, 0))
+        if raw_num_experts is not None
+        else 0
+    )
+    top_k = (
+        int(
+            geom(
+                "top_k",
+                lambda: getattr(text_config, "num_experts_per_tok", None),
+                0,
+            )
+        )
+        if num_experts > 0
+        else 0
+    )
+    ep_size = (
+        max(int(getattr(parallel_config, "data_parallel_size", 1) or 1), 1)
+        if bool(getattr(parallel_config, "enable_expert_parallel", False))
+        else 1
+    )
+    if num_experts > 0 and num_experts % ep_size:
+        raise ValueError(
+            "vLLM MoE expert count must divide the enabled expert-parallel size"
+        )
+    local_num_experts = num_experts // ep_size if num_experts > 0 else 0
     dtype_bytes = int(geom("dtype_bytes", lambda: model_config.dtype.itemsize, 2))
     dims = ModelDims(
         num_layers=int(
@@ -702,6 +752,12 @@ def model_dims_from_vllm_config(vllm_config: VllmConfig) -> ModelDims:
             getattr(vllm_config, "cache_config", None), float(dtype_bytes)
         ),
         defaulted_fields=tuple(defaulted),
+        num_experts=num_experts,
+        top_k=top_k,
+        moe_intermediate_size=(
+            max(intermediate // tp_size, 1) if num_experts > 0 else None
+        ),
+        local_num_experts=local_num_experts,
     )
     if defaulted:
         logger.warning(

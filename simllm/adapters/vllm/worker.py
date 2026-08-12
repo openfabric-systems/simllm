@@ -19,7 +19,9 @@ documented in :mod:`simllm.adapters.vllm.executor`.
 The class subclasses vLLM v0.26.0's GPU ``Worker`` when vLLM is present, but
 overrides every ordinary initialization and step entry that would reach CUDA.
 Its model runner mirrors the selected v1 algorithm names and call order while
-leaving ``_model_forward`` empty. One adapter-local lifecycle owns the
+leaving physical ``_model_forward`` computation empty. The optional audited
+Granite DBO mode emits source-backed semantic work at that boundary. One
+adapter-local lifecycle owns the
 :class:`simllm.core.VirtualClock`, step records, results, sink, and streaming
 writer. The runner settles a step exactly once during ``execute_model`` and
 returns the fabricated output from ``sample_tokens`` without advancing time a
@@ -57,8 +59,21 @@ from simllm.adapters.vllm.executor import (
     model_dims_from_vllm_config,
 )
 from simllm.adapters.vllm.replay import ReplayTokenSource, sample_adapter_tokens
+from simllm.adapters.vllm.schedule import (
+    OBSERVED_SCHEDULE_GRANITE_DBO,
+    OBSERVED_SCHEDULE_OFF,
+    GraniteScheduleTiming,
+    observations_from_vllm_step,
+)
+from simllm.compute import (
+    ComputeProvider,
+    GpuSpec,
+    HostInitiationModel,
+    ModelDims,
+    RooflineProvider,
+)
 from simllm.compute.nccl_stack import NcclStackConfig
-from simllm.core import VirtualClock
+from simllm.core import ExecutionObservations, VirtualClock
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +313,10 @@ class SimModelRunner:
         call_ledger: _CallLedger,
         tp_group: SimGroupCoordinator,
         dp_group: SimGroupCoordinator,
+        compute_provider: ComputeProvider,
+        gpu: GpuSpec,
+        host_model: HostInitiationModel,
+        dims: ModelDims,
     ) -> None:
         self.vllm_config = vllm_config
         self.model_config = vllm_config.model_config
@@ -310,6 +329,10 @@ class SimModelRunner:
         self.call_ledger = call_ledger
         self.tp_group = tp_group
         self.dp_group = dp_group
+        self.compute_provider = compute_provider
+        self.gpu = gpu
+        self.host_model = host_model
+        self.dims = dims
         if self.tp_group.observer is not self.dp_group.observer:
             raise ValueError("TP and DP groups must share one coordinator observer")
         self.coordinator_observer = self.tp_group.observer
@@ -319,6 +342,8 @@ class SimModelRunner:
         self._loras: set[int] = set()
         self.is_pooling_model = False
         self.uniform_decode_query_len = 1
+        self.latest_observations: ExecutionObservations | None = None
+        self.latest_schedule_timing: GraniteScheduleTiming | None = None
         with self.call_ledger.record("runner.__init__"):
             pass
 
@@ -394,15 +419,37 @@ class SimModelRunner:
         with self.call_ledger.record("runner._preprocess"):
             return translated
 
-    def _model_forward(self, translated: Any) -> None:
+    def _model_forward(self, translated: Any) -> ExecutionObservations | None:
         with self.call_ledger.record("runner._model_forward"):
+            mode = self.runtime.config.observed_schedule
+            if mode == OBSERVED_SCHEDULE_GRANITE_DBO:
+                if not self.runtime.is_authority:
+                    self.latest_observations = None
+                    self.latest_schedule_timing = None
+                    return None
+                observations, timing = observations_from_vllm_step(
+                    translated.record,
+                    self.vllm_config,
+                    self.dims,
+                    self.dp_group.ranks,
+                    self.compute_provider,
+                    self.gpu,
+                    self.host_model,
+                )
+                self.latest_observations = observations
+                self.latest_schedule_timing = timing
+                return observations
+            if mode != OBSERVED_SCHEDULE_OFF:
+                raise AssertionError(f"unhandled observed schedule mode {mode!r}")
             tensor = ShapeTensor(
                 (SKELETON_TP_PAYLOAD_BYTES // FLOAT32.itemsize,),
                 dtype=FLOAT32,
                 element_size_bytes=FLOAT32.itemsize,
             )
             self.tp_group.all_reduce(tensor)
-            return
+            self.latest_observations = None
+            self.latest_schedule_timing = None
+            return None
 
     @property
     def coordinator_events(self) -> tuple[GroupCoordinatorEvent, ...]:
@@ -460,8 +507,8 @@ class SimModelRunner:
             padded = self._determine_batch_execution_and_padding(prepared)
             metadata = self._build_attention_metadata(padded)
             preprocessed = self._preprocess(metadata)
-            self._model_forward(preprocessed)
-            self.runtime.settle(translated)
+            observations = self._model_forward(preprocessed)
+            self.runtime.settle(translated, observations)
             self.execute_model_state = _ExecuteModelState(
                 translated=translated,
                 scheduler_output=scheduler_output,
@@ -616,6 +663,13 @@ class SimWorker(_GpuWorkerBase):
             else (_HOOKS.config or self._config_from_env())
         )
         self.dims = model_dims_from_vllm_config(vllm_config)
+        self.gpu = _HOOKS.gpu or self.sim_config.gpu_spec()
+        self.compute_provider = _HOOKS.compute_provider or RooflineProvider(
+            efficiency=self.sim_config.efficiency
+        )
+        self.host_model = _HOOKS.host_model or HostInitiationModel(
+            initiation_delay_ps=self.sim_config.host_initiation_ps
+        )
         tp_size = int(getattr(parallel_config, "tensor_parallel_size", 1) or 1)
         worker_world_size = int(
             getattr(parallel_config, "world_size", tp_size * pp_size) or tp_size * pp_size
@@ -731,6 +785,10 @@ class SimWorker(_GpuWorkerBase):
                 self._call_ledger,
                 self.tp_group,
                 self.dp_group,
+                self.compute_provider,
+                self.gpu,
+                self.host_model,
+                self.dims,
             )
 
     def load_model(self, *, load_dummy_weights: bool = False) -> None:
