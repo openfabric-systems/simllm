@@ -573,6 +573,14 @@ def _moe_operation_id(record: StepRecord, operation: MoeAllToAll) -> str:
     return f"step-{record.step_index}:layer-{operation.layer}:ep-{operation.phase}"
 
 
+def _tp_operation_id(record: StepRecord, operation: TpAllReduce) -> str:
+    return f"step-{record.step_index}:layer-{operation.layer}:tp-{operation.site}"
+
+
+def _compute_operation_id(record: StepRecord, layer: int, rank: int) -> str:
+    return f"step-{record.step_index}:layer-{layer}:rank-{rank}:compute"
+
+
 def _request_partitions(
     operation: MoeAllToAll,
 ) -> dict[tuple[int, int], tuple[tuple[str, int], ...]]:
@@ -735,7 +743,10 @@ def render_step_goal(
         # layer's last collective
         calc_done: dict[int, str] = {}
         for rank in participants:
-            calc = trace.rank(rank).calc(layer_calc_ns[layer])
+            calc = trace.rank(rank).calc(
+                layer_calc_ns[layer],
+                operation_id=_compute_operation_id(record, layer, rank),
+            )
             if rank in previous:
                 trace.rank(rank).requires(calc, previous[rank])
             calc_done[rank] = calc
@@ -750,6 +761,7 @@ def render_step_goal(
                     size_bytes=op.payload_bytes,
                     base_tag=base_tag + op_index * tag_stride,
                     after=previous,
+                    operation_id=_tp_operation_id(record, op),
                 )
                 previous = {**previous, **done}
         if moe_ops:

@@ -25,8 +25,11 @@ that its own compute-only estimate stands, which is exactly right when
 there is no network work to simulate. With MoE dims and ``ep_ranks``
 configured, the authoritative graph additionally carries the dispatch and
 combine all-to-alls of every layer. The legacy direct renderer remains the
-byte-locked diagnostic; active graph-projection artifacts have their own
-explicitly accepted manifest.
+byte-locked diagnostic and can be selected as the independent
+``atlahs-goal`` dependency cross-check. A cross-check records ordering,
+phase-frontier and completion differences without changing the graph-owned
+``StepResult``. Active graph-projection artifacts have their own explicitly
+accepted manifest.
 
 When ``placement_manifest`` is present, the sink classifies every expanded
 directed segment before rendering. Same-node segments become analytic
@@ -35,7 +38,9 @@ Omitting placement selects all-remote classification. The historical direct
 renderer remains available as a diagnostic, but the active sink uses the
 checked graph projection. Distributed whole-operation barriers become ordered
 artifact boundaries because the pinned GOAL compiler resolves dependency
-labels inside one rank block.
+labels inside one rank block. Dependency cross-check selection is this seam's
+current switch; CORE-36 owns the unified fidelity configuration and provenance
+surface.
 
 Providers may opt into an exact per-layer duration breakdown. The sink checks
 that it sums to the fused estimate and emits the unequal layer costs. Existing
@@ -48,6 +53,7 @@ approximation.
 from __future__ import annotations
 
 import copy
+import hashlib
 from collections import deque
 from collections.abc import Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
@@ -55,6 +61,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
 
+from simllm.backends.dependency_cross_check import (
+    DependencyCrossCheckPlan,
+    DependencyCrossCheckReport,
+    complete_dependency_cross_check,
+    plan_dependency_cross_check,
+)
 from simllm.backends.htsim_rnic import (
     RNIC_PROFILES,
     HtsimRnicConfig,
@@ -83,10 +95,12 @@ from simllm.traffic import (
     plan_execution_graph_locality,
     project_execution_graph_goal,
     render_fabric_phase_goal,
+    render_step_goal,
     validate_execution_graph_locality_projection,
 )
 
 _STATEFUL_MULTI_ARTIFACT_PROFILES = frozenset({"rnic-cn"})
+DEPENDENCY_CROSS_CHECK_MODES = ("atlahs-goal",)
 
 
 @dataclass
@@ -107,6 +121,9 @@ class HtsimStepSinkConfig:
     uniform routing. ``topology`` is optional: the null-network profiles
     (``rnic-nn``, ``rnic-nn-fluid``) run on the generated manifold,
     ``rnic-cn`` takes a Clos topology file.
+    ``dependency_cross_check="atlahs-goal"`` runs the independently rendered
+    direct schedule after the authoritative graph projection and publishes a
+    diagnostic report. It never selects the scheduler-visible result.
     """
 
     profile: str
@@ -133,6 +150,10 @@ class HtsimStepSinkConfig:
     nvlink_bandwidth_bytes_per_second: int = (
         DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
     )
+    #: optional independent dependency executor; CORE-36 owns unified selection
+    dependency_cross_check: str | None = None
+    #: absolute completion-time difference reported by the selected cross-check
+    dependency_cross_check_tolerance_ps: int = 0
 
     def __post_init__(self) -> None:
         if self.profile not in RNIC_PROFILES:
@@ -154,6 +175,21 @@ class HtsimStepSinkConfig:
         ):
             raise ValueError(
                 "nvlink_bandwidth_bytes_per_second must be a positive integer"
+            )
+        if (
+            self.dependency_cross_check is not None
+            and self.dependency_cross_check not in DEPENDENCY_CROSS_CHECK_MODES
+        ):
+            raise ValueError(
+                "dependency_cross_check must be None or one of "
+                f"{DEPENDENCY_CROSS_CHECK_MODES}"
+            )
+        if (
+            type(self.dependency_cross_check_tolerance_ps) is not int
+            or self.dependency_cross_check_tolerance_ps < 0
+        ):
+            raise ValueError(
+                "dependency_cross_check_tolerance_ps must be a nonnegative integer"
             )
 
 
@@ -248,6 +284,18 @@ class _PlannedExecutionArtifact:
 
 
 @dataclass(frozen=True)
+class _PlannedDependencyCrossCheck:
+    """One independently rendered schedule selected for diagnostic comparison."""
+
+    comparison: DependencyCrossCheckPlan
+    goal_path: Path
+    completion_csv: Path
+    goal_bytes: int
+    goal_sha256: str
+    tolerance_ps: int
+
+
+@dataclass(frozen=True)
 class _PlannedStep:
     """Immutable handoff from serial record lowering to one backend worker."""
 
@@ -273,6 +321,7 @@ class _PlannedStep:
     boundary_edge_count: int
     serialized_edge_count: int
     graph_artifact_count: int
+    dependency_cross_check: _PlannedDependencyCrossCheck | None
 
 
 @dataclass(frozen=True)
@@ -282,6 +331,7 @@ class _SimulatedStep:
     result: StepResult | None
     outcome: StepNetworkOutcome | None
     locality_outcome: StepLocalityOutcome | None
+    dependency_cross_check_report: DependencyCrossCheckReport | None
 
 
 @dataclass(frozen=True)
@@ -314,6 +364,8 @@ class HtsimStepSink:
         self.outcomes: list[StepNetworkOutcome] = []
         #: locality projection for the same simulated steps, in call order
         self.locality_outcomes: list[StepLocalityOutcome] = []
+        #: explicitly selected independent dependency comparisons, in call order
+        self.dependency_cross_check_reports: list[DependencyCrossCheckReport] = []
 
     @staticmethod
     def _num_sampled(record: StepRecord) -> int:
@@ -406,6 +458,37 @@ class HtsimStepSink:
         compatibility_fast_path = self._rank_mapper is None or (
             locality.nvlink_bytes == 0 and self._rank_mapper.mode == "gpu-rank"
         )
+        cross_check_trace = None
+        cross_check_comparison = None
+        if cfg.dependency_cross_check is not None:
+            if not compatibility_fast_path:
+                raise ValueError(
+                    "the atlahs-goal dependency cross-check currently requires "
+                    "the all-remote compatibility level; local NVLink segments "
+                    "need TRAF-16 participant-frontier comparison"
+                )
+            cross_check_trace = render_step_goal(
+                record,
+                cfg.dims,
+                cfg.tp_ranks,
+                timing.layer_calc_ns,
+                ep_ranks=cfg.ep_ranks,
+                routed_supply=cfg.routed_moe_supply,
+                num_goal_ranks=cfg.num_goal_ranks,
+                base_tag=cfg.base_tag,
+            )
+            cross_check_comparison = plan_dependency_cross_check(
+                graph=graph,
+                direct_trace=cross_check_trace,
+                boundary_edges=tuple(
+                    boundary.edge for boundary in projection.boundaries
+                ),
+                expected_messages=tuple(
+                    message
+                    for artifact in projection.artifacts
+                    for message in artifact.trace.messages
+                ),
+            )
         operation_by_id = {
             operation.operation_id: operation for operation in graph.operations
         }
@@ -554,6 +637,25 @@ class HtsimStepSink:
             raise ValueError(
                 "locality projection contains collectives absent from GOAL projection"
             )
+        planned_cross_check = None
+        if cross_check_trace is not None:
+            if cross_check_comparison is None:
+                raise AssertionError("cross-check trace has no comparison plan")
+            cross_check_dir = cfg.workdir / "cross-check"
+            cross_check_dir.mkdir(parents=True, exist_ok=True)
+            cross_check_goal_path = cross_check_dir / f"{name}.atlahs-goal.goal"
+            cross_check_payload = cross_check_trace.render().encode()
+            cross_check_trace.write(cross_check_goal_path)
+            planned_cross_check = _PlannedDependencyCrossCheck(
+                comparison=cross_check_comparison,
+                goal_path=cross_check_goal_path,
+                completion_csv=(
+                    cross_check_dir / f"{name}.atlahs-goal.{cfg.profile}.csv"
+                ),
+                goal_bytes=len(cross_check_payload),
+                goal_sha256=hashlib.sha256(cross_check_payload).hexdigest(),
+                tolerance_ps=cfg.dependency_cross_check_tolerance_ps,
+            )
         return _PlannedStep(
             step_index=record.step_index,
             virtual_time_ps=record.virtual_time_ps,
@@ -585,6 +687,7 @@ class HtsimStepSink:
             boundary_edge_count=len(projection.boundaries),
             serialized_edge_count=len(projection.serialized_edges),
             graph_artifact_count=len(projection.artifacts),
+            dependency_cross_check=planned_cross_check,
         )
 
     @staticmethod
@@ -631,6 +734,11 @@ class HtsimStepSink:
         num_flows = 0
         quiescent = True
         backend_runs = 0
+        authority_timing_rows: list[tuple[int, int, int]] = []
+        authority_artifact_names: list[str] = []
+        authority_artifact_sha256: list[str] = []
+        authority_artifact_bytes: list[int] = []
+        artifact_offset_ps = 0
         for artifact in plan.artifacts:
             if artifact.goal_path is None:
                 if artifact.completion_csv is not None:
@@ -639,12 +747,28 @@ class HtsimStepSink:
             else:
                 if artifact.completion_csv is None:
                     raise AssertionError("GOAL artifact has no completion path")
+                if plan.dependency_cross_check is not None:
+                    payload = artifact.goal_path.read_bytes()
+                    authority_artifact_names.append(artifact.goal_path.name)
+                    authority_artifact_sha256.append(
+                        hashlib.sha256(payload).hexdigest()
+                    )
+                    authority_artifact_bytes.append(len(payload))
                 run = HtsimStepSink._run_goal(
                     plan,
                     artifact.goal_path,
                     artifact.completion_csv,
                 )
                 fabric_service_ps = run.job_completion_time_ps()
+                if plan.dependency_cross_check is not None:
+                    authority_timing_rows.extend(
+                        (
+                            flow.tag,
+                            artifact_offset_ps + flow.start_time_ps,
+                            artifact_offset_ps + flow.completion_time_ps,
+                        )
+                        for flow in run.flows
+                    )
                 num_flows += len(run.flows)
                 quiescent = quiescent and run.quiescent
                 backend_runs += 1
@@ -652,10 +776,49 @@ class HtsimStepSink:
             composed_services.append(
                 max(artifact.local_service_ps, fabric_service_ps)
             )
+            artifact_offset_ps += composed_services[-1]
         fabric_phase_service_ps = tuple(fabric_services)
         composed_phase_service_ps = tuple(composed_services)
         represented_compute_ps = 0 if plan.compute_in_artifacts else plan.compute_service_ps
         makespan_ps = represented_compute_ps + sum(composed_services)
+        cross_check_report = None
+        if plan.dependency_cross_check is not None:
+            cross_check = plan.dependency_cross_check
+            cross_check_run = HtsimStepSink._run_goal(
+                plan,
+                cross_check.goal_path,
+                cross_check.completion_csv,
+            )
+            cross_check_report = complete_dependency_cross_check(
+                cross_check.comparison,
+                authority_rows=tuple(authority_timing_rows),
+                cross_check_rows=tuple(
+                    (
+                        flow.tag,
+                        flow.start_time_ps,
+                        flow.completion_time_ps,
+                    )
+                    for flow in cross_check_run.flows
+                ),
+                authority_completion_ps=makespan_ps,
+                cross_check_completion_ps=(
+                    cross_check_run.job_completion_time_ps()
+                ),
+                tolerance_ps=cross_check.tolerance_ps,
+                authority_artifact_names=tuple(authority_artifact_names),
+                authority_artifact_sha256=tuple(authority_artifact_sha256),
+                authority_artifact_bytes=tuple(authority_artifact_bytes),
+                cross_check_artifact_name=(
+                    f"{cross_check.goal_path.parent.name}/"
+                    f"{cross_check.goal_path.name}"
+                ),
+                cross_check_artifact_sha256=cross_check.goal_sha256,
+                cross_check_artifact_bytes=cross_check.goal_bytes,
+                authority_quiescent=quiescent,
+                cross_check_quiescent=cross_check_run.quiescent,
+                authority_flow_count=num_flows,
+                cross_check_flow_count=len(cross_check_run.flows),
+            )
         outcome = StepNetworkOutcome(
             step_index=plan.step_index,
             compute_estimate_ps=plan.compute_estimate_ps,
@@ -710,6 +873,7 @@ class HtsimStepSink:
             result=result,
             outcome=outcome,
             locality_outcome=locality_outcome,
+            dependency_cross_check_report=cross_check_report,
         )
 
     def _simulate_step(self, record: StepRecord) -> _SimulatedStep:
@@ -719,6 +883,7 @@ class HtsimStepSink:
                 result=None,
                 outcome=None,
                 locality_outcome=None,
+                dependency_cross_check_report=None,
             )
         return self._execute_plan(plan)
 
@@ -727,6 +892,10 @@ class HtsimStepSink:
             self.outcomes.append(simulation.outcome)
         if simulation.locality_outcome is not None:
             self.locality_outcomes.append(simulation.locality_outcome)
+        if simulation.dependency_cross_check_report is not None:
+            self.dependency_cross_check_reports.append(
+                simulation.dependency_cross_check_report
+            )
         return simulation.result
 
     def __call__(self, record: StepRecord) -> StepResult | None:
@@ -810,6 +979,7 @@ class HtsimPersistentStepSink(HtsimStepSink):
                     result=None,
                     outcome=None,
                     locality_outcome=None,
+                    dependency_cross_check_report=None,
                 )
                 for future in futures
             )

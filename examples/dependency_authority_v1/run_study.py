@@ -57,6 +57,7 @@ FROZEN_GRAPH_CENSUS = {
 }
 TRACE_SHA256 = "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341"
 EXPECTATIONS_COMMIT = "d39dfdc2951e147187446e27c46d9ed3f1a6816a"
+CROSS_CHECK_EXPECTATIONS_COMMIT = "69a7ada2ec192b3d7eec81b53529a5662371e3b1"
 HTSIM_COMPILER_EVIDENCE_AUTHORED_AGAINST = (
     "034e2419f061f872ece400b7280319290c7589d9"
 )
@@ -258,6 +259,54 @@ def _run_cell(
     )
 
 
+def _run_cross_check(
+    out: Path,
+    *,
+    vector_bytes: int,
+    supply,
+) -> tuple[object, object, Path]:
+    from examples.nvlink_locality_v1.run_study import (
+        PLACEMENTS as HOSTS,
+    )
+    from examples.nvlink_locality_v1.run_study import (
+        _dims,
+        _physical_manifest,
+        _record,
+    )
+    from simllm.backends import HtsimStepSink, HtsimStepSinkConfig
+    from simllm.compute import ComputeProvider, DurationEstimate
+
+    class FixedProvider(ComputeProvider):
+        def estimate(self, kernel, gpu):
+            return DurationEstimate(duration_ps=24_000, bound="declared-fixed")
+
+    workdir = out / "cross-check" / f"vector-{vector_bytes}"
+    sink = HtsimStepSink(
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0,),
+            dims=_dims(vector_bytes),
+            workdir=workdir,
+            ep_ranks=(0, 1, 2, 3),
+            linkspeed_bps=400_000_000_000,
+            provider=FixedProvider(),
+            routed_moe_supply=supply,
+            placement_manifest=_physical_manifest(HOSTS["ABCD"]),
+            num_goal_ranks=4,
+            dependency_cross_check=CROSS_CHECK_MODE,
+            dependency_cross_check_tolerance_ps=(
+                CROSS_CHECK_COMPLETION_TOLERANCE_PS
+            ),
+        )
+    )
+    result = sink(_record(0, 0))
+    if result is None:
+        raise AssertionError("cross-check collective did not reach StepResult")
+    if len(sink.dependency_cross_check_reports) != 1:
+        raise AssertionError("one selected cross-check must produce one report")
+    return result, sink.dependency_cross_check_reports[0], workdir
+
+
 def _raw_tag_gaps(workdir: Path, locality: dict[str, object]) -> dict[str, object]:
     from simllm.backends import parse_completion_csv
 
@@ -389,6 +438,127 @@ def _active_goal_manifest(workdir: Path) -> dict[str, object]:
     }
 
 
+def _cross_check_finding(
+    *,
+    vector_bytes: int,
+    authority_jct_ps: int,
+    authority_flow_count: int,
+    authority_workdir: Path,
+    cross_check_result,
+    report,
+) -> dict[str, object]:
+    expected = EXPECTED_CROSS_CHECK_FINDINGS[vector_bytes]
+    legacy_bytes, legacy_sha256 = LEGACY_GOAL_ORACLES[vector_bytes]
+    phase_comparisons = report.phase_frontier_comparisons
+    evaluated_cross_gaps = tuple(
+        comparison.cross_check_gap_ps
+        for comparison in phase_comparisons
+        if comparison.evaluated and comparison.cross_check_gap_ps is not None
+    )
+    negative_cross_gaps = tuple(
+        gap_ps for gap_ps in evaluated_cross_gaps if gap_ps < 0
+    )
+    authority_manifest = _active_goal_manifest(authority_workdir)
+    authority_artifacts = authority_manifest["artifacts"]
+    expected_authority_names = tuple(
+        artifact["name"] for artifact in authority_artifacts
+    )
+    expected_authority_sha256 = tuple(
+        artifact["sha256"] for artifact in authority_artifacts
+    )
+    expected_authority_bytes = tuple(
+        artifact["bytes"] for artifact in authority_artifacts
+    )
+    signed_low, signed_high = expected[
+        "signed_completion_difference_band_ps"
+    ]
+    checks = {
+        "explicit_mechanisms": (
+            report.authority_mechanism == "execution-graph-projection"
+            and report.cross_check_mechanism == "atlahs-independent-goal"
+        ),
+        "complete_ordering_inventory": (
+            len(report.ordering_comparisons) == ADJACENT_TRANSITIONS
+            and report.ordering_disagreement_count
+            == expected["ordering_scope_differences"]
+        ),
+        "complete_phase_frontier_inventory": (
+            len(phase_comparisons) == ADJACENT_TRANSITIONS
+            and len(evaluated_cross_gaps) == ADJACENT_TRANSITIONS
+        ),
+        "registered_negative_phase_frontiers": (
+            report.phase_frontier_disagreement_count
+            == expected["negative_phase_frontiers"]
+            and len(negative_cross_gaps)
+            == expected["negative_phase_frontiers"]
+        ),
+        "registered_first_phase_frontier_gap": (
+            evaluated_cross_gaps[0]
+            == expected["first_phase_frontier_gap_ps"]
+        ),
+        "registered_minimum_phase_frontier_gap": (
+            min(evaluated_cross_gaps)
+            == expected["minimum_phase_frontier_gap_ps"]
+        ),
+        "graph_authority_result_preserved": (
+            cross_check_result.step_latency_ps == authority_jct_ps
+            and report.authority_completion_ps == authority_jct_ps
+        ),
+        "registered_direct_completion": (
+            report.cross_check_completion_ps
+            == expected["direct_completion_ps"]
+        ),
+        "registered_signed_completion_difference": (
+            signed_low
+            <= report.signed_completion_difference_ps
+            <= signed_high
+        ),
+        "registered_zero_tolerance_disagreement": (
+            report.completion_tolerance_ps
+            == CROSS_CHECK_COMPLETION_TOLERANCE_PS
+            and report.completion_disagreement
+            and report.has_disagreement
+        ),
+        "legacy_direct_artifact_preserved": (
+            report.cross_check_artifact_bytes == legacy_bytes
+            and report.cross_check_artifact_sha256 == legacy_sha256
+        ),
+        "authority_artifacts_preserved": (
+            report.authority_artifact_names == expected_authority_names
+            and report.authority_artifact_sha256
+            == expected_authority_sha256
+            and report.authority_artifact_bytes == expected_authority_bytes
+        ),
+        "both_runs_quiescent": (
+            report.authority_quiescent and report.cross_check_quiescent
+        ),
+        "complete_flow_inventories": (
+            report.authority_flow_count == authority_flow_count
+            and report.cross_check_flow_count == authority_flow_count
+            and authority_flow_count > 0
+        ),
+    }
+    return {
+        "vector_bytes": vector_bytes,
+        "registered": expected,
+        "observed": {
+            "ordering_scope_differences": report.ordering_disagreement_count,
+            "negative_phase_frontiers": len(negative_cross_gaps),
+            "first_phase_frontier_gap_ps": evaluated_cross_gaps[0],
+            "minimum_phase_frontier_gap_ps": min(evaluated_cross_gaps),
+            "direct_completion_ps": report.cross_check_completion_ps,
+            "signed_completion_difference_ps": (
+                report.signed_completion_difference_ps
+            ),
+            "authority_completion_ps": report.authority_completion_ps,
+            "completion_tolerance_ps": report.completion_tolerance_ps,
+        },
+        "checks": checks,
+        "passed": all(checks.values()),
+        "report": asdict(report),
+    }
+
+
 def run_study(out: Path) -> None:
     from examples.nvlink_locality_v1.run_study import (
         NVLINK_BYTES_PER_SECOND,
@@ -448,6 +618,27 @@ def run_study(out: Path) -> None:
             )
             cells[(vector_bytes, placement)] = cell
             sinks[(vector_bytes, placement)] = sink
+
+    cross_check_findings = []
+    for vector_bytes in VECTOR_BYTES:
+        cross_check_result, report, _ = _run_cross_check(
+            out,
+            vector_bytes=vector_bytes,
+            supply=supply,
+        )
+        authority_cell = cells[(vector_bytes, "ABCD")]
+        cross_check_findings.append(
+            _cross_check_finding(
+                vector_bytes=vector_bytes,
+                authority_jct_ps=authority_cell["jct_ps"],
+                authority_flow_count=authority_cell["network"]["num_flows"],
+                authority_workdir=(
+                    out / f"vector-{vector_bytes}" / "ABCD"
+                ),
+                cross_check_result=cross_check_result,
+                report=report,
+            )
+        )
 
     signed_instances = []
     causal_instances = []
@@ -693,6 +884,7 @@ def run_study(out: Path) -> None:
         and all(row["passed"] for row in structural)
         and all(row["passed"] for row in identity)
         and all(row["passed"] for row in causal_instances)
+        and all(row["passed"] for row in cross_check_findings)
         and negative_control["valid_projection_accepted"]
         and all(
             cell["network"]["quiescent"]
@@ -716,6 +908,7 @@ def run_study(out: Path) -> None:
         "schema": "simllm-dependency-authority-study-v1",
         "provenance": {
             "expectations_commit": EXPECTATIONS_COMMIT,
+            "cross_check_expectations_commit": CROSS_CHECK_EXPECTATIONS_COMMIT,
             "simllm_evidence_authored_against": EVIDENCE_AUTHORED_AGAINST,
             "htsim_compiler_evidence_authored_against": (
                 HTSIM_COMPILER_EVIDENCE_AUTHORED_AGAINST
@@ -741,6 +934,11 @@ def run_study(out: Path) -> None:
             "nvlink_bandwidth_bytes_per_second": NVLINK_BYTES_PER_SECOND,
             "trace_sha256": TRACE_SHA256,
             "replays_per_cell": 3,
+            "cross_check_mode": CROSS_CHECK_MODE,
+            "cross_check_replays_per_vector": 1,
+            "cross_check_completion_tolerance_ps": (
+                CROSS_CHECK_COMPLETION_TOLERANCE_PS
+            ),
         },
         "cells": [cells[key] for key in sorted(cells)],
         "behavioral": behavioral,
@@ -753,6 +951,7 @@ def run_study(out: Path) -> None:
         "exact_oracle_rows": exact_cells,
         "structural_invariants": structural,
         "all_remote_identity": identity,
+        "cross_check_findings": cross_check_findings,
         "fatal_unscored": {
             "passed": fatal_passed,
             "composed_causal_guards": causal_instances,
@@ -762,7 +961,10 @@ def run_study(out: Path) -> None:
             "note": (
                 "Exact cells, projection inventories, legacy hashes, authority "
                 "labels, composed causal gaps, identity and quiescence are "
-                "fatal and unscored."
+                "fatal and unscored. Cross-check completeness and agreement "
+                "with the frozen disagreement findings are also fatal and "
+                "unscored; the disagreements themselves are diagnostic "
+                "findings, not API failures."
             ),
         },
         "entailment": (
