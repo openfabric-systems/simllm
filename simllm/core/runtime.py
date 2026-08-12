@@ -205,6 +205,117 @@ class IdentityArbitrationPolicy:
 
 
 @dataclass(frozen=True)
+class StrictPriorityArbitrationPolicy:
+    """Class-aware policy that grants the most favored legal candidate first.
+
+    A smaller ``class_label`` is the more favored class, and equal labels fall
+    back to the resource's deterministic baseline order.  The policy is a total
+    order over any candidate set and holds no state, so repeated grants over a
+    shrinking set reproduce that one order exactly.
+
+    ``class_aware=False`` is the explicit identity setting.  It ignores every
+    class label and reproduces :class:`IdentityArbitrationPolicy` grant for
+    grant, which is what makes a class-label permutation a no-op.
+    """
+
+    class_aware: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.class_aware, bool):
+            raise TypeError("class_aware must be a bool")
+
+    def select(self, candidates: tuple[ArbitrationCandidate, ...]) -> ArbitrationCandidate:
+        if not candidates:
+            raise ValueError("strict priority arbitration requires at least one candidate")
+        if not self.class_aware:
+            return min(candidates, key=lambda item: item.baseline_sequence)
+        return min(
+            candidates,
+            key=lambda item: (item.class_label, item.baseline_sequence),
+        )
+
+
+class WeightedRoundRobinArbitrationPolicy:
+    """Class-aware policy that gives each class its weight of grants per round.
+
+    The policy keeps one integer credit per class label and carries it across
+    grants, which is what separates a weighted round robin from strict
+    priority: a favored class does not starve the others, it only wins more
+    often.  One grant is served as follows.
+
+    1. ``present`` is the ascending list of distinct class labels offered.
+    2. ``eligible`` is the members of ``present`` with a credit above zero; a
+       class seen for the first time starts at its weight.
+    3. When ``eligible`` is empty a new round begins: every class in
+       ``present`` is refilled to its weight and becomes eligible again.
+    4. The winning class is the smallest eligible label, its credit is spent,
+       and the grant is the smallest ``baseline_sequence`` inside that class.
+
+    The credit state is scheduling state, not a second authority: it only
+    reorders candidates that mandatory legality and ordering filters already
+    admitted.  ``class_aware=False`` is the explicit identity setting, which
+    ignores labels and credits and reproduces
+    :class:`IdentityArbitrationPolicy` grant for grant.
+    """
+
+    def __init__(
+        self,
+        weights: Mapping[int, int] | None = None,
+        *,
+        default_weight: int = 1,
+        class_aware: bool = True,
+    ) -> None:
+        _require_int("default_weight", default_weight, positive=True)
+        if not isinstance(class_aware, bool):
+            raise TypeError("class_aware must be a bool")
+        resolved: dict[int, int] = {}
+        for class_label, weight in dict(weights or {}).items():
+            _require_int("class label", class_label)
+            _require_int("class weight", weight, positive=True)
+            resolved[class_label] = weight
+        self._weights = resolved
+        self._default_weight = default_weight
+        self.class_aware = class_aware
+        self._remaining: dict[int, int] = {}
+
+    def weight(self, class_label: int) -> int:
+        """Return how many grants per round one class label receives."""
+
+        _require_int("class label", class_label)
+        return self._weights.get(class_label, self._default_weight)
+
+    @property
+    def remaining_credits(self) -> dict[int, int]:
+        """Expose the credit state for audit, never as a second scheduling seam."""
+
+        return dict(self._remaining)
+
+    def select(self, candidates: tuple[ArbitrationCandidate, ...]) -> ArbitrationCandidate:
+        if not candidates:
+            raise ValueError("weighted round robin requires at least one candidate")
+        if not self.class_aware:
+            return min(candidates, key=lambda item: item.baseline_sequence)
+        present = sorted({item.class_label for item in candidates})
+        eligible = [
+            class_label
+            for class_label in present
+            if self._remaining.get(class_label, self.weight(class_label)) > 0
+        ]
+        if not eligible:
+            for class_label in present:
+                self._remaining[class_label] = self.weight(class_label)
+            eligible = list(present)
+        winner = eligible[0]
+        self._remaining[winner] = (
+            self._remaining.get(winner, self.weight(winner)) - 1
+        )
+        return min(
+            (item for item in candidates if item.class_label == winner),
+            key=lambda item: item.baseline_sequence,
+        )
+
+
+@dataclass(frozen=True)
 class QueueVisit:
     """One visit using the repository-wide queue timestamp contract."""
 
@@ -1425,11 +1536,56 @@ class CoarseDeviceRuntime:
             for operation_id, (_, _, eligible_at_ps) in ready_data.items()
             if eligible_at_ps == earliest
         )
+        return self._grant(candidates).operation_id
+
+    def _grant(
+        self,
+        candidates: tuple[ArbitrationCandidate, ...],
+    ) -> ArbitrationCandidate:
+        """Ask the arbitration policy for one grant and refuse an illegal answer."""
+
         policy = self.arbitration_policy or IdentityArbitrationPolicy()
         selected = policy.select(candidates)
         if selected not in candidates:
             raise ValueError("arbitration policy selected a candidate outside the legal set")
-        return selected.operation_id
+        return selected
+
+    def _arbitrated_order(
+        self,
+        operation_ids: Sequence[str],
+        ready_data: Mapping[str, _ReadyOperation],
+        operation_by_id: Mapping[str, ExecutionOperation],
+        operation_index: Mapping[str, int],
+    ) -> tuple[str, ...]:
+        """Order one already-fixed co-runnable set by repeated arbitration.
+
+        Membership is decided before this call; arbitration only decides the
+        order in which the members are submitted, one grant at a time, with the
+        not-yet-granted members offered in the resource's deterministic
+        baseline order.  Under the identity policy every grant is the smallest
+        remaining baseline sequence, so the result is exactly the graph order
+        this seam produced before the policy reached it.
+        """
+
+        remaining = {
+            operation_id: ArbitrationCandidate(
+                operation_id=operation_id,
+                baseline_sequence=operation_index[operation_id],
+                eligible_at_ps=ready_data[operation_id][2],
+                class_label=operation_by_id[operation_id].priority,
+            )
+            for operation_id in operation_ids
+        }
+        order: list[str] = []
+        while remaining:
+            candidates = tuple(
+                remaining[operation_id]
+                for operation_id in sorted(remaining, key=operation_index.__getitem__)
+            )
+            granted = self._grant(candidates)
+            del remaining[granted.operation_id]
+            order.append(granted.operation_id)
+        return tuple(order)
 
     def _kernel_launch(self, operation: ExecutionOperation) -> KernelLaunch:
         assert isinstance(operation.work, ComputeWork)
@@ -1467,7 +1623,12 @@ class CoarseDeviceRuntime:
             if operation.work.hbm_bytes and state.hbm_available.get(rank, 0) > start:
                 continue
             candidates.append(operation_id)
-        return tuple(sorted(candidates, key=operation_index.__getitem__))
+        return self._arbitrated_order(
+            candidates,
+            ready_data,
+            operation_by_id,
+            operation_index,
+        )
 
     def _schedule_compute_group(
         self,
@@ -3209,6 +3370,8 @@ __all__ = [
     "RuntimeOperationRecord",
     "RuntimeReport",
     "SemanticWqeSubmission",
+    "StrictPriorityArbitrationPolicy",
+    "WeightedRoundRobinArbitrationPolicy",
     "WqeLifecycleProjection",
     "collective_goal_tags",
 ]
