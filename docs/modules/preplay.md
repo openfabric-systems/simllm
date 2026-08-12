@@ -190,6 +190,14 @@ Missing packages and unsupported worker, model, device, dispatch and KV seams
 are rejected before the canonical v2 writer runs. The Transformers runner and
 v1 fixture remain byte-identical. SGLang replay remains PLAY-7.
 
+The v2 routing projection now has a direct strict reader for traffic replay.
+`project_framework_routing` copies request, phase-local token, layer and
+framework-returned top-k tuple order without sorting and records the source
+artifact hash. The dispatch sequence study proved all frozen source orders and
+exact byte projections. This observation ends at the framework return value;
+it does not claim the later kernel, NCCL or RNIC WQE sequence. See
+[the dispatch sequence results](../../examples/dispatch_sequence_v1/RESULTS.md).
+
 PLAY-11 is complete. Captured MoE traffic retains each scheduled request ID as
 a read-only partition of the aggregate directed-pair demand through direct and
 execution-graph GOAL rendering. The gate checks every request, layer, dispatch
@@ -216,6 +224,26 @@ requests. All 32 real traffic steps remained byte-identical; see
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
 
+### Precision
+
+- PLAY-9 (Precision; P1; M): replace the first pressure-study workload, which
+  vLLM admitted or serialized without pressure-group preemption, with a
+  pre-registered family that distinguishes admission deferral from true
+  scheduler recompute. The identifying observations are scheduler preemption
+  counters and the detailed event ledger at two reported capacities.
+  Acceptance requires at least one low-capacity pressure-group preemption,
+  none at high capacity, exact event-to-counter reconciliation, and retention
+  of the published negative `64` versus `256` result as chronology.
+- PLAY-14 (Precision; P1; L): replace framework-return order as the dispatch
+  issue surrogate with an observed per-message post sequence from the
+  framework collective or kernel boundary through NCCL and RNIC WQE
+  submission. The evidence must join request, layer, phase, token, top-k
+  position, source and destination identities, quantify any reordering or
+  coalescing, recalibrate the sequence generator against that observation and
+  retain framework-return order as an explicit fallback with unchanged bytes.
+
+### Completeness
+
 - PLAY-7 (Completeness; P2; M): consume joined replay runs in the SGLang
   adapter. Serve each request's predefined token IDs, pin scheduler-visible
   completion to the oracle length, retain the speculative and structured
@@ -228,11 +256,3 @@ Tags follow the legend in [backends.md](backends.md#open-tasks).
   authority, and reconcile its per-request KV event stream with the oracle
   record. The explicit v1 join and absent-replay paths must remain byte- and
   timestamp-identical when v2 is not selected.
-- PLAY-9 (Precision; P1; M): replace the first pressure-study workload, which
-  vLLM admitted or serialized without pressure-group preemption, with a
-  pre-registered family that distinguishes admission deferral from true
-  scheduler recompute. The identifying observations are scheduler preemption
-  counters and the detailed event ledger at two reported capacities.
-  Acceptance requires at least one low-capacity pressure-group preemption,
-  none at high capacity, exact event-to-counter reconciliation, and retention
-  of the published negative `64` versus `256` result as chronology.

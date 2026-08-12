@@ -38,6 +38,15 @@ the flow-level work the GOAL emitter renders.
   destination rank, pre-reduces combine to the transposed pair table and
   records the selected epoch on the graph operation. Dense dims, an EP world
   below 2 or a zero-token record produce no ops.
+- `step_moe_message_sequences` is the explicit
+  `captured-message-sequence` precision level. It retains request identity and
+  every contributing `(token_index, top_k_index)` position while emitting
+  either one message per token and unique remote destination or one
+  whole-layer request/source/destination group ordered by its first
+  contribution. `render_sequenced_step_goal` projects that tuple order into
+  source-local issue dependencies. The aggregate APIs above remain the
+  default and expose no second fidelity selector; CORE-36 owns that future
+  selection surface.
 - `plan_step_locality` expands TP ring rounds and MoE dispatch/combine tables
   into ordered directed phases over semantic global ranks, then joins an
   optional placement manifest through `RankMapper.is_intra_node` before any
@@ -207,6 +216,20 @@ boundary across one prefill and one decode step: only DP bookkeeping and one
 fixed TP event appeared per step, with no observation graph or semantic EP
 site. It is component evidence and does not change the behavioral denominator.
 
+TRAF-21 is complete. The explicit captured-message sequence level copies the
+strict v2 framework-returned top-k order, retains routing ordinals and exact
+per-request and per-pair projections, and supports per-token and whole-layer
+expert grouping. Its 12-cell native decision fixture preserved all exact
+bytes and changed packet completion in the registered positive direction.
+The frozen byte-only packet bands missed because the backend reserves full
+packet-calendar envelopes, while the frozen fluid comparison exposed an
+80,201 ps capture-order effect at 400 Gbit/s. The inverse-rate family passed
+2/2; the complete genuine-risk result is 1/3 family classes and 2/10
+instances. The accepted 334,432-byte Granite aggregate GOAL retained its
+SHA-256. Aggregate and expert-group Granite rendering remained practical, but
+the 101,318-message per-token render exceeded 60 seconds. See
+[the dispatch sequence results](../../examples/dispatch_sequence_v1/RESULTS.md).
+
 ## Open tasks
 
 ### Precision
@@ -236,6 +259,15 @@ site. It is component evidence and does not change the behavioral denominator.
   graph scope, move live JCT by the registered direction and magnitude, and
   retain the current supported artifact bytes and timing as the explicit off
   path.
+- TRAF-22 (Precision; P1; M): make `captured-message-sequence` practical for
+  the measured 54-token, 24-layer Granite step without weakening message or
+  routing identity. The current 101,318-message plan finishes in 1.86 s, but
+  GOAL rendering exceeds 60 s because per-message label validation scans the
+  growing rank program. Replace that quadratic validation with a checked bulk
+  or indexed path, then pre-register and execute the omitted per-token packet
+  and fluid cells. Acceptance requires render plus compile within 30 s, peak
+  traced memory within 1 GiB, GOAL text within 64 MiB, exact pair and request
+  conservation, and byte-identical aggregate and expert-group off paths.
 
 ### Completeness
 
@@ -281,14 +313,6 @@ site. It is component evidence and does not change the behavioral denominator.
   (attention and router before dispatch, expert MLP between dispatch and
   combine) and may overlap shared-expert work with the a2avs. The serial
   whole-layer calc keeps the makespan correct only to first order.
-- TRAF-14 (Precision; P1; M): move ring-round and pairwise-extent expansion
-  from the coarse runtime's current semantic-work surrogate into one immutable
-  traffic-owned collective plan carried through `ExecutionGraph`. The runtime
-  may schedule those extents but may not choose or reconstruct their algorithm,
-  chunk sizes, rank order or tags. Compare the plan against the existing GOAL
-  pattern expansion over payload, world-size and routed sparse-pair sweeps with
-  exact byte, round, dependency and tag conservation. The absent explicit plan
-  must preserve the accepted v1 wire bytes and serial timing exactly.
 - TRAF-19 (Precision; P2; L): add a statistical flow-completion level
   beside the fluid and packet-level network models. Fit a completion-time
   distribution offline from packet-level runs over a declared topology,
