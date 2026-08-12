@@ -44,8 +44,9 @@ the flow-level work the GOAL emitter renders.
   GOAL-rank projection. Missing placement is the exact accepted all-remote
   compatibility classification. An explicit all-remote placement under
   `gpu-rank` mapping takes the same identity path. This direct `StepRecord`
-  planner is retained for diagnostics; it is not the active sink's ordering
-  authority.
+  planner remains independently executable through `render_step_goal`. It is
+  the ordering authority for a standalone direct-GOAL run and an observational
+  cross-check, never the active graph-projected sink's ordering authority.
 - `plan_execution_graph_locality` expands only graph-owned collective
   operations, tags and request partitions, then classifies their directed
   segments as local or fabric traffic. Its exact verifier recomputes the plan
@@ -77,7 +78,9 @@ the flow-level work the GOAL emitter renders.
   disjoint per collective. The calc input may be one compatibility scalar or
   an ordered value per layer, and `num_goal_ranks` idle-fills a larger GOAL
   layout. A scalar step without MoE work renders byte-identically to the
-  pre-M5 emitter (golden test).
+  pre-M5 emitter (golden test). The direct renderer deliberately constructs
+  its own ATLAHS schedule so it can remain an independent debug cross-check;
+  it is not used to repair or override graph-projected ordering.
 - `render_serial_execution_graph_goal` is the CORE-2 graph-only diagnostic
   replay. It accepts validated per-rank compute, ring allreduce and pairwise
   all-to-allv operations, preserves `participant_local_depends_on` edges and
@@ -157,6 +160,22 @@ and 376 other serialized edges. The direct 72,819-byte GOAL fixtures remain
 unchanged diagnostics, while the active artifact manifests are explicitly
 re-accepted; see
 [the dependency authority results](../../examples/dependency_authority_v1/RESULTS.md).
+The selectable follow-up retains that independent ATLAHS path. In the serial
+sink, `dependency_cross_check="atlahs-goal"` keeps the `ExecutionGraph`
+projection authoritative and does not change the `StepResult`. Its structural
+comparator inspects all 423 canonical effective edges and finds 235
+differences. These comprise the frozen 47/47 whole-operation
+logical-queue FIFO differences plus 188 participant-local syntactic-frontier
+mismatches added as post-specified, unscored diagnostic coverage. The raw
+timing subset remains the 47 frozen whole-operation boundaries, with 46/47
+unequal, early gaps. Direct minus graph completion differs by -4,212,053 ps
+and -8,317,082 ps in the two frozen all-remote cells. The default-off path
+preserves the accepted artifacts and results exactly. The current cross-check
+is restricted to the all-remote compatibility classification; a placement
+with local NVLink work is rejected, and TRAF-16 owns the participant-local
+frontier precision needed before that comparison is meaningful. CORE-36 owns
+the future unified fidelity selector and provenance record; this option is
+only the present traffic/backend seam switch.
 Historical
 `examples/breakdown` fabric-TP columns remain byte-unchanged and are the
 all-remote, cross-node what-if under this model.

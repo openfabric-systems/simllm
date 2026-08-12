@@ -1,9 +1,158 @@
 # Dependency authority v1 results
 
-TRAF-12 closes for the demonstrated serial step-sink scope. `ExecutionGraph`
-is now the single semantic authority for operation identity, logical queues,
-dependency scope and completion identity. The locality plan, GOAL artifacts,
-backend ordering and coarse runtime are checked projections of that graph.
+## Post-closure amendment: selectable independent cross-check
+
+TRAF-12 remains closed for the demonstrated serial step-sink scope, with a
+more precise per-run authority contract. Exactly one mechanism decides
+ordering in any run. The active `HtsimStepSink` uses `ExecutionGraph` as its
+authority for operation identity, logical queues, dependency scope,
+completion identity and the `StepResult`. Its locality plan, authoritative
+GOAL artifacts and backend ordering are checked graph projections.
+
+The independent direct ATLAHS GOAL path is retained. With the default
+`dependency_cross_check=None`, only the graph-authoritative path executes.
+Selecting `dependency_cross_check="atlahs-goal"` additionally renders and
+executes the same all-remote operation and physical-message schedule through
+the independent direct GOAL dependency mechanism. This study set
+`dependency_cross_check_tolerance_ps=0`. The graph result remains
+authoritative. The cross-check result is never averaged with it, never
+silently preferred, and never allowed to override it. A disagreement is a
+successful diagnostic finding rather than an API failure. Malformed or
+incomplete comparison evidence still fails because no valid comparison can
+then be made.
+
+The selected comparison first proves equal operation identity and the same
+576-message physical inventory. It then reports three disagreement classes:
+
+- an **ordering-scope difference** exists when a graph ordering edge
+  requires predecessor terminal labels that do not reach every applicable
+  direct-GOAL target entry;
+- a **phase-frontier difference** exists when the evaluated signed frontier
+  gap differs between mechanisms. A negative direct gap while the graph
+  authority has a nonnegative gap is the registered early-entry subtype;
+- a **completion-time difference** exists when the absolute direct-minus-
+  authority completion difference exceeds the registered tolerance.
+
+The structural report retains each predecessor and target operation ID,
+rank, terminal label, entry label, and the missing predecessor ranks for each
+target. It therefore reports why a boundary differs, rather than only
+returning a count. Top-level fields name `execution-graph-projection` as the
+authority and `atlahs-independent-goal` as the cross-check, then retain both
+completion times, their signed difference and tolerance, artifact identities,
+quiescence and flow counts. The structural comparison audits all 423
+canonical effective graph edges. The frozen registered subset contains 47
+distributed whole-operation FIFO boundaries, and all 47 are deficient in the
+independent direct `requires` reachability. The expanded comparator also found
+188 participant-local syntactic-frontier mismatches, for 235 structural
+differences in total. Those additional 188 were observed only after expanding
+beyond the frozen subset and are explicitly **post-specified** diagnostic,
+unscored findings. Raw frontier comparison remains scoped to the 47
+distributed boundaries. It showed early direct phase entry at 46 boundaries
+for each payload, while the graph authority had a minimum boundary gap of
+0 ps. The remaining boundary had the same 1,000 ps gap in both mechanisms,
+so 46 of 47 evaluated frontier gaps differed in these cells.
+
+| Vector bytes | Structural edges audited | Ordering-scope differences | Unequal frontiers | Negative direct frontiers | First direct gap ps | Minimum direct gap ps | Direct completion ps | Graph completion ps | Direct minus graph ps |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1,024 | 423 | 235 (47/47 registered distributed, 188 post-specified participant-local) | 46/47 | 46/47 | -368,640 | -1,413,120 | 156,569,755 | 160,781,808 | -4,212,053 |
+| 2,048 | 423 | 235 (47/47 registered distributed, 188 post-specified participant-local) | 46/47 | 46/47 | -737,280 | -3,675,091 | 217,222,486 | 225,539,568 | -8,317,082 |
+
+The completion tolerance was 0 ps, so both nonzero completion differences
+are reported disagreements. Both executions reached quiescence and each
+reported 576 flows. The direct completion is shorter in both cells because
+rank-local direct dependencies admit overlap that the graph's
+whole-operation boundaries prohibit. These are findings, not a reason to
+discard the independent mechanism.
+
+The supported cross-check scope in this amendment is an all-remote schedule.
+A selected cross-check with local NVLink segments rejects before writing a
+cross-check artifact because that would compare different physical
+schedules. TRAF-16 owns exact participant-local frontier fidelity. The local
+`dependency_cross_check` option is the existing dependency seam's selector,
+not a second repository-wide configuration design. CORE-36 owns the future
+unified fidelity-selection surface.
+
+### Amendment chronology and provenance
+
+The original closure and results below were not rewritten to manufacture
+this later architecture direction. Expectations for the selectable
+cross-check were frozen in
+`69a7ada2ec192b3d7eec81b53529a5662371e3b1` after the original closure and
+before its implementation or production run. Initial implementation landed
+at `ca167cfdd3da0a74c9ee6a531e31e5d0f61f0eee`. Its first completed amendment
+run produced summary SHA-256
+`a9778a8e2147446555a0a61a13d9a1730fe9ae18f072b074ca8c4faafc13ad80`, but
+that run is rejected as acceptance evidence. Its fatal-unscored cross-check
+equality and signed-band guards ran before TRAF-B1 scoring, so they pinned the
+same signed completion relation before it entered the scored denominator.
+The run is recorded here rather than silently discarded.
+
+The correction evaluates TRAF-B1 from raw live `StepResult` values and
+TRAF-B3 from the raw mutation-checker result before any entailing cross-check
+guard. Only afterward does it apply exact diagnostic expectations. That
+correction landed in `6470c31f90434c8255cbdf1258fa199662a86cfd`. The final
+clean rerun observed `6470c31f90434c8255cbdf1258fa199662a86cfd` and produced
+summary SHA-256
+`8203f424a26da82eadc74414f5789187e7f2695a1989a693e1fb428b0fc06123`.
+The fidelity contract read from the
+integrator branch was PR 40 commit
+`d41ff1a8e59d1669a03a7bd1501242704eb39d72`.
+
+| Amendment provenance field | Revision or value |
+|---|---|
+| Cross-check expectations-only commit | `69a7ada2ec192b3d7eec81b53529a5662371e3b1` |
+| Initial implementation and rejected completed run | `ca167cfdd3da0a74c9ee6a531e31e5d0f61f0eee` |
+| Rejected run `summary.json` SHA-256 | `a9778a8e2147446555a0a61a13d9a1730fe9ae18f072b074ca8c4faafc13ad80` |
+| Entailment-order correction commit | `6470c31f90434c8255cbdf1258fa199662a86cfd` |
+| Corrected SimLLM revision observed by the final run | `6470c31f90434c8255cbdf1258fa199662a86cfd` |
+| Integrator PR 40 contract commit | `d41ff1a8e59d1669a03a7bd1501242704eb39d72` |
+| Accepted amendment `summary.json` SHA-256 | `8203f424a26da82eadc74414f5789187e7f2695a1989a693e1fb428b0fc06123` |
+| `txt2bin` SHA-256 | `f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b` |
+| `htsim_rnic` SHA-256 | `cfb5014a663791f7619fe33309114a74e82878de860c14fc8a723713501f027d` |
+
+The native hashes are unchanged from the original production record. Run the
+amended study from the repository root with:
+
+```bash
+.venv/bin/python examples/dependency_authority_v1/run_study.py \
+  --out "${SIMLLM_DEPENDENCY_AUTHORITY_AMENDMENT_RUN_ROOT:?configure this variable}"
+```
+
+### Amendment artifact acceptance and scoring
+
+Selecting the cross-check adds artifacts only below `cross-check/`. It does
+not change the authoritative graph artifacts or `StepResult`, and the
+unselected path creates no cross-check directory. The independently rendered
+artifacts remain byte-identical to the accepted legacy direct fixtures:
+
+| Vector bytes | Bytes | SHA-256 | Disposition |
+|---:|---:|---|---|
+| 1,024 | 72,819 | `0417832c8788a0477d48b414cf2d8456b87215abd1d0193ba46fb8db46185d8a` | accepted legacy identity preserved |
+| 2,048 | 72,819 | `bcd72e63546d03efaddd48c16e160457d1e28f19795036d1f871788d78cf5a02` | accepted legacy identity preserved |
+
+The comparison's complete inventories, quiescence, authority preservation
+and typed report are fatal-unscored evidence. The differences themselves are
+diagnostic findings. The amended runner records the raw three-class report
+and signed observations before applying the registered exact and bounded
+checks. That observation order does not turn diagnostic replication into
+genuine risk. The completion values and their signed differences are also
+algebraically entailed by the already accepted direct and graph JCTs, so the
+amendment adds no genuine-risk numerator or denominator. The original score
+remains **2/2 families and 3/3 parameterized instances**.
+
+A programmatic comparison with the original production summary found exact
+equality for `cells`, `behavioral`, `behavioral_score`, `exact_oracle_rows`,
+`structural_invariants`, and `all_remote_identity`. Both summaries retained a
+true fatal-check result. This is byte- and value-level preservation evidence,
+not another scored relation.
+
+## Original TRAF-12 closure result
+
+TRAF-12 closed for the demonstrated serial step-sink scope. In the
+authoritative live sink configuration, `ExecutionGraph` became the single
+semantic authority for operation identity, logical queues, dependency scope
+and completion identity. The locality plan, GOAL artifacts, backend ordering
+and coarse runtime became checked projections of that graph.
 
 Both genuine-risk families passed, with **2/2 families and 3/3 parameterized
 instances**. Reconciliation increased the all-remote live JCT by exactly
@@ -78,11 +227,14 @@ ordering would therefore discard graph scope and completion information.
 
 The reconciled design enumerates one canonical effective edge set from the
 graph. Validation, the coarse runtime, locality classification and GOAL
-projection consume that same set. GOAL is a read-only rendering. Distributed
-whole-operation edges become required ordered artifact boundaries when the
-grammar cannot name a cross-rank predecessor. All other cross-artifact edges
-remain in a scope-preserving serialized inventory, while collective-internal
-relations retain separate operation-owned provenance.
+projection consume that same set. On the authoritative path, GOAL is a
+read-only graph rendering. Distributed whole-operation edges become required
+ordered artifact boundaries when the grammar cannot name a cross-rank
+predecessor. All other cross-artifact edges remain in a scope-preserving
+serialized inventory, while collective-internal relations retain separate
+operation-owned provenance. The separately selected direct ATLAHS GOAL
+cross-check remains free to construct and execute its own dependencies, but
+its timings cannot control the graph-authoritative `StepResult`.
 
 ### Path inventory
 
@@ -93,10 +245,13 @@ relations retain separate operation-owned provenance.
 | Coarse graph runtime | `ExecutionGraph`; graph edge scopes were realized by `CoarseDeviceRuntime` | `RuntimeReport`, queue visits and `CompletionEvent` rows rather than GOAL bytes | `completion_operation_ids` selected the graph boundary, then `CompletionReducer` produced `ExecutionResult`, `StepResult`, TTFT and TPOT |
 | Historical diagnostic graph renderer | `ExecutionGraph` input, but the renderer reconstructed implicit FIFO as participant-local order | One diagnostic GOAL | GOAL quiescence if executed; no supported live step-sink metric consumer |
 | Reconciled live step sink | `StepRecord` is lowered once to the authoritative `ExecutionGraph`; locality and backend execution are projections | 72 causal graph artifacts for the frozen step. In `ABCD`, 24 compute artifacts stay analytic and 48 collective artifacts become GOAL files and htsim runs | The graph completion boundary must be representable or projection fails before artifact output. Ordered artifact service produces the live `StepResult`, TTFT and TPOT |
+| Selected independent ATLAHS cross-check | The direct renderer independently constructs GOAL `requires` while `ExecutionGraph` remains the live sink authority | One additional monolithic GOAL and htsim completion CSV under `cross-check/`, plus a typed comparison report | Direct quiescence is diagnostic only. It reports structural, frontier and tolerance-qualified completion disagreements without changing `StepResult` |
 | Reconciled coarse graph runtime | `ExecutionGraph` and the same canonical effective edge set | Scope-correct readiness, `RuntimeReport`, queue visits and completion rows | The graph-selected completion frontier remains the reducer input |
 
-The legacy direct renderer remains available only as a diagnostic accepted
-artifact. It is no longer an ordering authority in the active sink.
+The legacy direct renderer remains independently executable as a diagnostic
+cross-check and accepted artifact. It is not the ordering authority for the
+active graph-sink run, but its independence is deliberately preserved so its
+disagreements remain observable.
 
 ### Prechange disagreement census
 
@@ -205,8 +360,8 @@ fatal-unscored.
 
 ## Artifact acceptance
 
-The diagnostic direct renderer preserved the previously accepted all-remote
-GOAL bytes exactly:
+The independent direct cross-check renderer preserved the previously
+accepted all-remote GOAL bytes exactly:
 
 | Vector bytes | Bytes | SHA-256 | Disposition |
 |---:|---:|---|---|
@@ -260,8 +415,8 @@ The default dense active backend manifest is:
 | 5 | 398 | `c5520d64fe8df27809dd1df8dc2d0e8b0e700657122bb081f51333ec6daa2e76` |
 
 The historical expectation and result files were not rewritten. The prior
-direct artifact was wrong as the live ordering authority, not as a diagnostic
-byte fixture.
+direct artifact was wrong as the silently competing live ordering authority,
+not as an independent cross-check or diagnostic byte fixture.
 
 ## Evidence classes and entailment
 
@@ -275,10 +430,13 @@ Evidence classes remain separate and no counts below are added together.
 | Exact JCT and locality oracles | 6 rows | 6/6 passed; fatal-unscored |
 | Structural projection census | 2 payload rows | 2/2 passed; fatal-unscored |
 | Direct and omitted-placement identity | 2 payload rows | 2/2 passed; fatal-unscored |
+| Selectable ATLAHS cross-check report | 2 payload rows, 423 structural edges and 3 typed disagreement classes each | Complete and preserved; fatal-unscored report evidence. The frozen 47 distributed differences and 188 post-specified participant-local differences are diagnostic findings. |
+| Cross-check boundary timestamps | 2 payload rows, 47 transitions each | Raw observations retained; diagnostic evidence, not a behavioral denominator |
 | Composed causal gaps | 2 payload rows, 47 transitions each | Both passed; by-construction and fatal-unscored |
 | Native simulator execution and quiescence | Fabric-bearing cells | Passed; native execution evidence, not a behavioral denominator |
 | Clean pre-production Python regression | 951 collected | 944 passed, 7 skipped; test evidence only |
 | Final post-closure Python regression | 952 collected | 945 passed, 7 skipped; test evidence only |
+| Post-amendment Python regression | 971 collected | 964 passed, 7 skipped; test evidence only |
 
 The genuine-risk headline is therefore **2/2 families and 3/3 instances**.
 The runner evaluated live `StepResult` values before applying exact bands,
@@ -328,11 +486,13 @@ manufacture that movement.
 > completions that no phase enters early when overlap is disabled, and
 > reproduce exact StepResult timing over node-span and payload sweeps."
 
-`ExecutionGraph` is the one semantic ordering authority. The complete edge
-projection and negative control establish enforcement. The composed raw tag
-rows had zero early transitions at both payloads, reported as fatal-unscored
-because process ordering constructs their sign. All six `StepResult` cells
-matched their frozen exact values or bands.
+`ExecutionGraph` is the one semantic ordering authority for the authoritative
+live execution. The independently selected ATLAHS run reports its differences
+but cannot replace that result. The complete edge projection and negative
+control establish enforcement. The composed raw tag rows had zero early
+transitions at both payloads, reported as fatal-unscored because process
+ordering constructs their sign. All six `StepResult` cells matched their
+frozen exact values or bands.
 
 > "Retain the frozen all-remote GOAL-byte identity; label and re-accept any
 > unavoidable timestamp change."
@@ -353,6 +513,22 @@ deliberately rejected extension is registered under an allocated residual ID:
 | BACK-38 (Precision; P1; L) | Preserve congestion-control and network state across multi-artifact backend execution. Physical `rnic-cn` multi-artifact use fails closed until one stateful session can execute the projection. |
 
 ## Contradiction sweep
+
+### Post-amendment sweep
+
+No new contradiction was found in `README.md`. This branch predates PR 40, so
+its local `docs/README_PRO.md` and `docs/architecture.md` copies do not yet
+contain the integrator-owned fidelity sections. The sections were therefore
+read from `origin/main` at
+`d41ff1a8e59d1669a03a7bd1501242704eb39d72`. Their per-run single-authority,
+explicit independent cross-check, reported-disagreement, and CORE-36
+selection-surface requirements agree with this amendment. Both integrator
+documents were left untouched. The older broad architecture statement that
+all closed-loop completion projects through `CoarseDeviceRuntime` remains a
+genuine contradiction for direct `HtsimStepSink` composition, as recorded in
+the original sweep below; the amendment introduced no additional hit.
+
+### Original closure sweep
 
 The required post-closure sweep reviewed all three integrator-owned documents.
 They were reported here and were not edited for these findings in this branch.

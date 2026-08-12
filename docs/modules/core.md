@@ -112,10 +112,19 @@ never enables both mutable authorities, and every
 projection must conserve identity, cardinality and timestamps available at its
 boundary. `CompletionReducer` owns only request metric history; it does not
 schedule, progress or complete a runtime object.
-GOAL operations, messages, dependency provenance and backend rows are checked
-read-only projections of the graph and runtime authorities. They may reject an
-unrepresentable graph before execution, but they may not reconstruct or weaken
-its ordering.
+In a graph-authoritative sink run, GOAL operations, messages, dependency
+provenance and backend rows are checked read-only projections of the graph and
+runtime authorities. They may reject an unrepresentable graph before
+execution, but they may not reconstruct or weaken its ordering. A standalone
+direct-GOAL run instead selects the independently rendered ATLAHS schedule as
+its ordering authority. Setting
+`HtsimStepSinkConfig.dependency_cross_check="atlahs-goal"` does not change the
+serial sink's selection: the `ExecutionGraph` projection still determines its
+result, while the direct-GOAL execution contributes only a diagnostic report.
+The report records ordering-scope, raw phase-frontier and completion-time
+differences; it never averages, overrides or silently prefers one mechanism's
+timestamps. CORE-36 owns replacing this seam-local switch with one validated
+fidelity selection and provenance surface.
 
 The target contract requires all contended resources to use one queue-visit
 meaning even when Python and C++ use different mechanisms:
@@ -454,6 +463,20 @@ artifacts and produced positive all-remote JCT changes of 4,212,053 ps and
 8,317,082 ps. Unsupported early completion and asynchronous destination-local
 control shapes fail closed under CORE-29 and CORE-30; see
 [the dependency authority results](../../examples/dependency_authority_v1/RESULTS.md).
+The selectable ATLAHS cross-check preserves that sole authority while keeping
+the independently constructed direct-GOAL schedule executable. The all-remote
+comparator inspects all 423 canonical effective edges and reports 235
+structural differences: the frozen 47/47 whole-operation logical-queue FIFO
+differences and 188 participant-local syntactic-frontier mismatches added as a
+post-specified, unscored diagnostic. Raw timing remains evaluated on the 47
+frozen whole-operation boundaries, with 46/47 unequal, early gaps. In the two
+frozen cells, direct minus graph completion deltas are -4,212,053 ps and
+-8,317,082 ps. These are findings, not values folded into `ExecutionResult` or
+`StepResult`.
+Cross-check disabled preserves the accepted graph artifacts, timestamps and
+results exactly. Local-NVLink comparison rejects at preflight; TRAF-16 owns
+its frontier precision, while CORE-36 owns a repository-wide fidelity
+selector.
 
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two

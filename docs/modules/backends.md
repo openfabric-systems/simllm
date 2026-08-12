@@ -57,25 +57,39 @@ backend submodules.
   GOAL-driven `htsim_uec` runs.
 - `HtsimStepSink` + `HtsimStepSinkConfig` (M4): the closed-loop step sink,
   a callable `StepRecord -> StepResult | None` matching the adapters' sink
-  contract. Per step it renders the TP serial chain
-  (`simllm.traffic.render_step_goal`: per layer one `calc` then the two ring
-  allreduces, plus the MoE
-  dispatch/combine all-to-alls when the config declares `ep_ranks` and
-  the dims declare experts, landed with the M5 slice). A provider may return
-  an optional exact duration per layer; the sink validates count,
-  nonnegativity and the fused sum, then truncates cumulative boundaries to
-  GOAL ns. Providers without the hook retain the original even scalar split
-  byte for byte. An optional `StepRecord.num_sampled` prices the LM head from
-  exact attribution; absence retains `len(scheduled)`. The config's optional
-  `num_goal_ranks` pads topology-sized GOALs without moving the active group
-  to the highest rank. The sink converts
-  with `txt2bin`, runs `htsim_rnic` on the configured profile/topology,
-  parses the completion CSV and returns the simulated makespan as the
-  step latency with `completed_at_ps = record.virtual_time_ps + makespan`.
-  A step with no TP collectives (TP world of 1, or a zero-token drain
-  record) returns `None`, so the adapter's own compute-only estimate
-  stands. Per-step subprocess invocation is the documented diagnostic
-  mode and remains the default.
+  contract. Per step its serial lowerer builds one `ExecutionGraph`; that
+  graph's effective dependency inventory is the semantic ordering authority.
+  The checked graph projector renders causal GOAL artifacts and htsim enforces
+  exactly that projected order. A provider may return an optional exact
+  duration per layer; the sink validates count, nonnegativity and the fused
+  sum, then truncates cumulative boundaries to GOAL ns. Providers without the
+  hook retain the original even scalar split byte for byte. An optional
+  `StepRecord.num_sampled` prices the LM head from exact attribution; absence
+  retains `len(scheduled)`. The config's optional `num_goal_ranks` pads
+  topology-sized GOALs without moving the active group to the highest rank.
+  The sink converts with `txt2bin`, runs `htsim_rnic` on the configured
+  profile/topology, parses the completion CSV and returns the authoritative
+  simulated makespan as the step latency with
+  `completed_at_ps = record.virtual_time_ps + makespan`. A step with no fabric
+  collectives returns `None`, so the adapter's own compute-only estimate
+  stands. Per-step subprocess invocation is the documented diagnostic mode and
+  remains the default.
+
+  The seam-local `dependency_cross_check="atlahs-goal"` option independently
+  renders and executes the same all-remote schedule through the direct ATLAHS
+  GOAL path. The graph-projected execution remains the sole authority for the
+  returned result. Its diagnostic report inspects every canonical effective
+  edge for direct-GOAL syntactic reachability, identifies whole-operation and
+  participant-local ordering-scope differences, and separately records raw
+  phase-frontier gaps and the signed direct minus graph completion delta beyond
+  the study-registered `dependency_cross_check_tolerance_ps`.
+  Disagreement is reported with operation, phase and timing detail; it is not
+  averaged, used to override the result or treated as an equality assertion.
+  The default-off value preserves accepted artifacts and results exactly. The
+  current cross-check rejects placement configurations with local NVLink work;
+  TRAF-16 owns that frontier precision. CORE-36 owns the future unified
+  fidelity selection and provenance surface, so this option is not a second
+  global configuration scheme.
   `StepNetworkOutcome` keeps per-step bookkeeping (compute estimate, sample
   count and exactness, ordered layer calcs, makespan and network share) for
   reporting.
@@ -382,6 +396,19 @@ plus a live closed loop: vLLM v0.26.0 in-process at tp=8 under
 `SimExecutor` with the sink drove `htsim_rnic` inside the engine step
 loop, every step latency matching the closed form to 0 ps
 (examples/m4/RESULTS.md).
+
+The TRAF-12 follow-up keeps the independently rendered ATLAHS GOAL execution
+available behind the serial sink's explicit dependency cross-check. The
+authoritative graph-projected execution still supplies the returned makespan;
+the second execution reports its ordering-scope, raw phase-frontier and
+completion-time disagreements for diagnosis. The all-remote structural audit
+checked all 423 canonical effective edges and found 235 differences: the
+frozen 47/47 whole-operation logical-queue FIFO differences plus 188
+participant-local syntactic-frontier mismatches added as a post-specified,
+unscored diagnostic. Raw timing remained scoped to the 47 frozen boundaries,
+with 46/47 unequal, early gaps. The default-off path retained the accepted
+artifacts and results exactly; see
+[the dependency authority results](../../examples/dependency_authority_v1/RESULTS.md).
 
 On 2026-08-11 BRIDGE-1 closed for finite known replays. The opt-in
 `HtsimPersistentStepSink` reuses a local worker pool and concurrently executes
