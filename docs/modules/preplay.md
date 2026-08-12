@@ -56,7 +56,11 @@ and still produce a real simulation.
 - **Replay.** The vLLM adapter serves the predefined token ids instead of a
   fabricated token and honors the oracle's stop position, so the scheduler
   sees the true completion step; the traffic layer consumes the captured
-  routing for non-uniform all-to-all. SGLang replay is PLAY-7.
+  routing for non-uniform all-to-all. Each scheduled request identity remains
+  attached to its routed token slice and becomes a read-only partition of the
+  aggregate physical pair table. Direct and execution-graph GOAL renderers
+  fail closed unless every request, layer, phase and directed pair agrees with
+  that routed authority under the selected placement. SGLang replay is PLAY-7.
 - **Honesty rule.** A CPU run is one realization, not the deployment's
   exact token stream: CPU and GPU numerics differ, so sampled ids can
   diverge between the oracle and silicon. Greedy or fixed-seed sampling is
@@ -146,6 +150,17 @@ rows earned no pass. The chronology and exact evidence are recorded in
 
 The independent framework CPU runner remains optional follow-up PLAY-6, and
 SGLang replay is the explicit PLAY-7 follow-up.
+
+PLAY-11 is complete. Captured MoE traffic retains each scheduled request ID as
+a read-only partition of the aggregate directed-pair demand through direct and
+execution-graph GOAL rendering. The gate checks every request, layer, dispatch
+or combine phase and directed pair before backend execution. Across one, two
+and three co-scheduled requests and two placements, all exact tables and
+physical GOAL hashes matched. Four synthetic and one Granite
+aggregate-preserving request permutations left the aggregate check unchanged
+but were rejected by the per-request gate. The result remains byte fidelity,
+not per-request time attribution; see
+[the PLAY-11 results](../../examples/per_request_fidelity_v1/RESULTS.md).
 
 ## Open tasks
 

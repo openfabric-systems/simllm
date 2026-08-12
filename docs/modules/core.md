@@ -193,6 +193,14 @@ coarse runtime consume the same table when each declared rank sends or
 receives. The runtime also accepts a valid table with an uncovered rank; the
 diagnostic serial renderer rejects that case because it cannot emit the
 rank's collective-completion frontier.
+An optional `request_pair_payload_bytes` tuple partitions that sparse table by
+stable request identity. Its request-major entries are
+`(request_id, source_rank, destination_rank, bytes)`, and strict validation
+requires their per-pair sums to reproduce the aggregate table exactly and each
+identity to appear in the operation correlation. The field is read-only
+metadata: graph JSON retains it, structured GOAL messages retain it, and GOAL
+text does not emit it. Direct and graph renderers fail closed if the structured
+message projection disagrees with the corresponding authority.
 The combined captured-routing study populated that table from real Granite
 assignments, carried it through the step graph and GOAL, and changed live
 fluid JCT by every frozen exact relation. It also retained the old v1 scalar
@@ -416,6 +424,18 @@ permutation. Remaining coarse approximations and completeness gaps are
 registered as CORE-11 through CORE-14 and CORE-16 rather than being claimed as
 calibrated behavior.
 
+The [TRAF-7 overlap study](../../examples/compute_comm_overlap_v1/RESULTS.md)
+now drives adapter-authored logical queues and dependencies through that
+runtime and the live completion reducer. Across two compute-to-communication
+ratios, independent work matched `max(C, D)`, serial work matched `C + D`, and
+the registered two-stage pipeline landed strictly between them at its exact
+closed form. TTFT and TPOT moved by the same signed amount. The first added
+resource family isolated the existing per-rank NCCL-channel cursor: changing
+only shared to split channel identity reduced JCT by exactly 999 ps. This is
+coarse executor evidence, not a claim that NCCL GPU kernels, HBM demand or
+copy/GPUDirect service are calibrated; CORE-26, CORE-27 and COMP-22 retain
+those gaps.
+
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
 requests through three `ExecutionGraph -> CoarseDeviceRuntime ->
@@ -457,6 +477,17 @@ abort followed by one committed two-WQE retry. The bypass bundle matched
 through the repository `BypassArtifacts` comparator after the isolated
 link-disabled build. The result ledger quotes and maps every registered
 CORE-21 clause; no residual remains.
+
+CORE-28 is complete. Sparse pairwise `CollectiveWork` may carry an optional
+request-major partition that sums exactly to the aggregate physical pair table.
+Strict validation rejects malformed, unknown, duplicate, noncanonical or
+aggregate-inconsistent ownership before rendering. The partition survives the
+execution-graph JSON round trip and graph-only GOAL renderer, where a second
+fail-closed comparison checks the structured message projection. Empty
+attribution remains absent from the wire form, and adding attribution changes
+no physical GOAL operation. Six placement and request-count cells plus the
+real Granite prefill matched every frozen identity; see
+[the CORE-28 results](../../examples/per_request_fidelity_v1/RESULTS.md).
 
 ## Pre-registered runtime sanity experiments
 
@@ -590,6 +621,24 @@ does not claim to produce these resource-contention measurements.
   completed-prefill and decode batch, match the framework's actual token
   production mask request by request, and preserve zero-sample, all-sample and
   legacy wire behavior exactly.
+- CORE-26 (Precision; P1; L): replace the cross-node collective path's current
+  independent GPU-versus-RNIC surrogate with one runtime composition of the
+  GPU-resident NCCL task and the existing WQE/NIC authority. Consume the
+  resource demands calibrated by COMP-22 and compose with CORE-13 and COMP-11
+  rather than adding a second SM, HBM or NVLink scheduler. Sweep payload,
+  participant count, channel count and compute-neighbor pressure across the
+  crossover; require TTFT and TPOT to enter the measured overlap bands and
+  reconcile every GPU and network byte exactly. Zero GPU demand and disabled
+  composition must preserve every accepted TRAF-7 timestamp and artifact byte.
+- CORE-27 (Precision; P1; L): add only the data-mover resources that COMP-22
+  observes on the cross-node NCCL path, including copy-engine or GPUDirect DMA
+  visits when present, plus their shared-HBM interaction and downstream
+  visibility. The current surrogate charges no such visit. Identify eligibility,
+  grant, release and consumer-visible completion from a reproducible concurrent
+  capture; vary transfer size, direction and competing copy pressure and match
+  held-out queue wait and JCT within the declared measurement band. An observed
+  no-copy path must stay explicitly zero, and disabling this mechanism must
+  preserve the CORE-26 baseline exactly.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client above the delivered HTSIM persistent flow session and strict full
   `StepResult` codec. The backend foundation retains one event list, topology,

@@ -1,5 +1,7 @@
 import re
 
+import pytest
+
 from simllm.goal import GoalTrace
 from simllm.traffic import (
     binomial_broadcast,
@@ -49,6 +51,35 @@ def test_pairwise_all_to_allv_skips_zero_and_self():
     assert text.count("send") == 2
     assert "send 999b" not in text
     assert 2 not in done
+
+
+def test_pairwise_all_to_allv_records_request_partition_without_splitting_send():
+    trace = GoalTrace(2)
+    pairwise_all_to_allv(
+        trace,
+        ranks=[0, 1],
+        send_bytes={(0, 1): 12},
+        tag=5,
+        operation_id="a2av",
+        request_send_bytes={(0, 1): (("alpha", 4), ("beta", 8))},
+    )
+
+    assert trace.render().count(": send ") == 1
+    assert trace.messages[0].payload_bytes == 12
+    assert trace.messages[0].request_payload_bytes == (("alpha", 4), ("beta", 8))
+
+
+def test_pairwise_all_to_allv_rejects_incomplete_request_partition():
+    trace = GoalTrace(2)
+    with pytest.raises(ValueError, match="cover exactly"):
+        pairwise_all_to_allv(
+            trace,
+            ranks=[0, 1],
+            send_bytes={(0, 1): 12},
+            tag=5,
+            operation_id="a2av",
+            request_send_bytes={},
+        )
 
 
 def test_binomial_broadcast_rounds():

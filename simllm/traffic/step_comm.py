@@ -27,8 +27,9 @@ simplification is a numbered task in docs/modules/traffic.md:
 - no sequence parallelism (which would replace each allreduce with a
   reduce-scatter plus allgather of 1/W the bytes framed around the
   norm/dropout regions): TRAF-6;
-- no communication/compute overlap (each layer's compute and its
-  collectives are a strict serial chain): TRAF-7;
+- `render_step_goal` retains the strict serial compatibility schedule;
+  `lower_step_observations` instead preserves adapter-observed queues and
+  dependency edges, with real adapter schedule production tracked by TRAF-13;
 - no pipeline-parallel activation traffic (records carry no PP stage
   information yet): TRAF-8;
 - the MoE layer is rendered as one calc, then the TP allreduces, then
@@ -43,12 +44,22 @@ structures are exactly the patterns validated by the M1/M4/M5 studies.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from simllm.compute import ModelDims
-from simllm.core import RequestPhase, StepRecord
-from simllm.goal import GoalTrace
+from simllm.core import (
+    CollectiveWork,
+    ComputeWork,
+    ExecutionGraph,
+    ExecutionObservations,
+    ExecutionOperation,
+    RequestPhase,
+    StepRecord,
+    execution_graph_from_observations,
+)
+from simllm.goal import GoalMessage, GoalTrace
 from simllm.placement import RankMapper
+from simllm.preplay.routing import RoutedToken
 from simllm.traffic.locality import (
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     ClassifiedCommunicationPhase,
@@ -58,6 +69,12 @@ from simllm.traffic.locality import (
     classify_step_locality,
 )
 from simllm.traffic.patterns import pairwise_all_to_allv, ring_allreduce
+from simllm.traffic.request_fidelity import (
+    AggregatePairRow,
+    RequestFidelityReport,
+    RequestPairRow,
+    compare_goal_request_attribution,
+)
 from simllm.traffic.routed_moe import RoutedMoeSupply
 
 #: the two allreduce sites of one transformer layer, in execution order
@@ -65,6 +82,201 @@ TP_ALLREDUCE_SITES = ("attention", "mlp")
 
 #: the two all-to-allv phases of one MoE layer, in execution order
 MOE_A2A_PHASES = ("dispatch", "combine")
+
+
+def _planned_collective_work(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    ep_ranks: Sequence[int] | None,
+    routed_supply: RoutedMoeSupply | None,
+) -> dict[tuple[str, int, str], tuple[CollectiveWork, int]]:
+    """Return traffic-owned collective work indexed by semantic call site."""
+
+    planned: dict[tuple[str, int, str], tuple[CollectiveWork, int]] = {}
+    for operation in step_tp_allreduces(record, dims, tp_ranks):
+        key = ("tp", operation.layer, operation.site)
+        planned[key] = (
+            CollectiveWork(
+                collective="all-reduce",
+                ranks=operation.ranks,
+                payload_bytes=operation.payload_bytes,
+                algorithm_hint="ring",
+                channel_hint=operation.site,
+            ),
+            0,
+        )
+    for operation in step_moe_alltoalls(
+        record,
+        dims,
+        ep_ranks if ep_ranks is not None else (),
+        routed_supply=routed_supply,
+    ):
+        key = ("moe", operation.layer, operation.phase)
+        planned[key] = (
+            CollectiveWork(
+                collective="all-to-allv",
+                ranks=operation.ranks,
+                payload_bytes=operation.per_pair_bytes,
+                algorithm_hint="pairwise",
+                channel_hint=operation.phase,
+                pair_payload_bytes=operation.pair_payload_bytes,
+                request_pair_payload_bytes=operation.request_pair_payload_bytes,
+            ),
+            operation.placement_epoch,
+        )
+    return planned
+
+
+def _observed_collective_key(
+    operation: ExecutionOperation,
+    index: int,
+) -> tuple[str, int, str]:
+    work = operation.work
+    assert isinstance(work, CollectiveWork)
+    layer = operation.correlation.layer
+    if layer is None:
+        raise ValueError(
+            f"observations.operations[{index}]: collective needs correlation.layer"
+        )
+    site = work.channel_hint
+    if site is None:
+        raise ValueError(
+            f"observations.operations[{index}]: collective needs a semantic "
+            "channel_hint site"
+        )
+    if work.collective == "all-reduce":
+        return ("tp", layer, site)
+    if work.collective == "all-to-allv":
+        return ("moe", layer, site)
+    raise ValueError(
+        f"observations.operations[{index}]: unsupported step collective "
+        f"{work.collective!r}"
+    )
+
+
+def _validate_observed_collective(
+    observed: ExecutionOperation,
+    planned: CollectiveWork,
+    placement_epoch: int,
+    index: int,
+) -> None:
+    work = observed.work
+    assert isinstance(work, CollectiveWork)
+    path = f"observations.operations[{index}]"
+    if work.ranks != planned.ranks:
+        raise ValueError(f"{path}: collective ranks disagree with the step plan")
+    if observed.rank not in planned.ranks:
+        raise ValueError(f"{path}: collective anchor rank is outside the step plan")
+    if work.payload_bytes != planned.payload_bytes:
+        raise ValueError(f"{path}: collective payload disagrees with the step plan")
+    if work.pair_payload_bytes != planned.pair_payload_bytes:
+        raise ValueError(f"{path}: collective pair payloads disagree with the step plan")
+    if work.request_pair_payload_bytes not in ((), planned.request_pair_payload_bytes):
+        raise ValueError(
+            f"{path}: collective request attribution disagrees with the step plan"
+        )
+    if work.algorithm_hint not in (None, planned.algorithm_hint):
+        raise ValueError(f"{path}: collective algorithm disagrees with the traffic plan")
+    if observed.placement_epoch not in (0, placement_epoch):
+        raise ValueError(f"{path}: placement epoch disagrees with the traffic plan")
+
+
+def lower_step_observations(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    observations: ExecutionObservations,
+    *,
+    ep_ranks: Sequence[int] | None = None,
+    routed_supply: RoutedMoeSupply | None = None,
+) -> ExecutionGraph:
+    """Bind adapter-observed ordering to traffic-planned collective work.
+
+    The adapter owns tuple order, logical queues, explicit dependency edges,
+    timing gates, priorities, correlations, and the completion frontier. Its
+    collective observations identify a semantic call site with
+    ``correlation.layer`` and ``CollectiveWork.channel_hint``. The traffic
+    planner verifies the observed group and bytes, selects the algorithm, and
+    supplies routed pair tables and placement epochs. Compute work passes
+    through byte for byte.
+
+    Every collective planned from the step must be observed exactly once. The
+    returned standard :class:`ExecutionGraph` leaves realized concurrency to
+    :class:`~simllm.core.DeviceRuntime`; this function has no timing or overlap
+    parameter.
+    """
+
+    if not isinstance(record, StepRecord):
+        raise TypeError("record must be a StepRecord")
+    if not isinstance(dims, ModelDims):
+        raise TypeError("dims must be ModelDims")
+    if not isinstance(observations, ExecutionObservations):
+        raise TypeError("observations must be ExecutionObservations")
+    if not isinstance(observations.operations, tuple):
+        raise TypeError("observations.operations must be a tuple")
+    if not isinstance(observations.completion_operation_ids, tuple):
+        raise TypeError("observations.completion_operation_ids must be a tuple")
+
+    planned = _planned_collective_work(
+        record,
+        dims,
+        tp_ranks,
+        ep_ranks,
+        routed_supply,
+    )
+    lowered: list[ExecutionOperation] = []
+    observed_keys: set[tuple[str, int, str]] = set()
+    for index, operation in enumerate(observations.operations):
+        if not isinstance(operation, ExecutionOperation):
+            raise TypeError(
+                f"observations.operations[{index}] must be an ExecutionOperation"
+            )
+        if isinstance(operation.work, ComputeWork):
+            lowered.append(operation)
+            continue
+        if not isinstance(operation.work, CollectiveWork):
+            raise TypeError(
+                f"observations.operations[{index}]: step lowering supports only "
+                "ComputeWork and CollectiveWork"
+            )
+        key = _observed_collective_key(operation, index)
+        if key in observed_keys:
+            raise ValueError(
+                f"observations.operations[{index}]: duplicate collective site {key!r}"
+            )
+        try:
+            planned_work, placement_epoch = planned[key]
+        except KeyError as exc:
+            raise ValueError(
+                f"observations.operations[{index}]: collective site {key!r} "
+                "is absent from the step plan"
+            ) from exc
+        _validate_observed_collective(
+            operation,
+            planned_work,
+            placement_epoch,
+            index,
+        )
+        lowered.append(
+            replace(
+                operation,
+                work=planned_work,
+                placement_epoch=placement_epoch,
+            )
+        )
+        observed_keys.add(key)
+
+    missing = sorted(set(planned) - observed_keys)
+    if missing:
+        raise ValueError(f"observations: missing planned collective sites {missing!r}")
+    return execution_graph_from_observations(
+        record,
+        ExecutionObservations(
+            operations=tuple(lowered),
+            completion_operation_ids=observations.completion_operation_ids,
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -111,39 +323,44 @@ class MoeAllToAll:
     per_pair_bytes: int
     #: sparse ordered-pair bytes when captured routing is authoritative
     pair_payload_bytes: tuple[tuple[int, int, int], ...] = ()
+    #: read-only request partition of the sparse ordered-pair table
+    request_pair_payload_bytes: tuple[tuple[str, int, int, int], ...] = ()
     #: expert ownership epoch used to derive the sparse table
     placement_epoch: int = 0
 
 
-def _scheduled_routed_tokens(record: StepRecord, supply: RoutedMoeSupply):
-    from simllm.preplay.routing import RoutedToken
+@dataclass(frozen=True)
+class _ScheduledRoutedRequest:
+    request_id: str
+    tokens: tuple[RoutedToken, ...]
+
+
+def _scheduled_routed_tokens(
+    record: StepRecord,
+    supply: RoutedMoeSupply,
+) -> tuple[_ScheduledRoutedRequest, ...]:
 
     request_ids = [request.request_id for request in record.scheduled]
     if len(request_ids) != len(set(request_ids)):
         raise ValueError("record.scheduled: duplicate request identity")
-    tokens: list[RoutedToken] = []
+    requests: list[_ScheduledRoutedRequest] = []
+    token_count = 0
     for index, scheduled in enumerate(record.scheduled):
         path = f"record.scheduled[{index}]"
-        if (
-            isinstance(scheduled.num_new_tokens, bool)
-            or not isinstance(scheduled.num_new_tokens, int)
+        if isinstance(scheduled.num_new_tokens, bool) or not isinstance(
+            scheduled.num_new_tokens, int
         ):
             raise TypeError(f"{path}.num_new_tokens: expected an integer")
         if scheduled.num_new_tokens < 0:
             raise ValueError(f"{path}.num_new_tokens: expected a nonnegative integer")
-        if (
-            isinstance(scheduled.context_length, bool)
-            or not isinstance(scheduled.context_length, int)
+        if isinstance(scheduled.context_length, bool) or not isinstance(
+            scheduled.context_length, int
         ):
             raise TypeError(f"{path}.context_length: expected an integer")
         try:
-            routed_request = supply.routed_experts.by_request_id(
-                scheduled.request_id
-            )
+            routed_request = supply.routed_experts.by_request_id(scheduled.request_id)
         except KeyError as exc:
-            raise ValueError(
-                f"{path}.request_id: absent from routed-experts projection"
-            ) from exc
+            raise ValueError(f"{path}.request_id: absent from routed-experts projection") from exc
         if scheduled.num_new_tokens == 0:
             continue
         if scheduled.phase is RequestPhase.PREFILL:
@@ -167,12 +384,29 @@ def _scheduled_routed_tokens(record: StepRecord, supply: RoutedMoeSupply):
                 f"{path}: {phase} token slice [{start}, {end}) is outside "
                 f"captured count {len(phase_tokens)}"
             )
-        tokens.extend(phase_tokens[start:end])
-    if len(tokens) != record.total_new_tokens:
-        raise ValueError(
-            "record.scheduled: captured token count disagrees with total_new_tokens"
+        selected = tuple(phase_tokens[start:end])
+        requests.append(
+            _ScheduledRoutedRequest(
+                request_id=scheduled.request_id,
+                tokens=selected,
+            )
         )
-    return tuple(tokens)
+        token_count += len(selected)
+    if token_count != record.total_new_tokens:
+        raise ValueError("record.scheduled: captured token count disagrees with total_new_tokens")
+    return tuple(requests)
+
+
+def _aggregate_request_pairs(
+    entries: tuple[tuple[str, int, int, int], ...],
+) -> tuple[tuple[int, int, int], ...]:
+    totals: dict[tuple[int, int], int] = {}
+    for _, source, destination, size in entries:
+        pair = (source, destination)
+        totals[pair] = totals.get(pair, 0) + size
+    return tuple(
+        (source, destination, size) for (source, destination), size in sorted(totals.items())
+    )
 
 
 def _routed_moe_alltoalls(
@@ -187,22 +421,16 @@ def _routed_moe_alltoalls(
         raise ValueError("ep_ranks: expected distinct nonnegative integer ranks")
     routing = supply.routed_experts
     if routing.expert_count != dims.num_experts:
-        raise ValueError(
-            "routed_experts.expert_count: disagrees with model num_experts"
-        )
+        raise ValueError("routed_experts.expert_count: disagrees with model num_experts")
     if routing.top_k != dims.top_k:
         raise ValueError("routed_experts.top_k: disagrees with model top_k")
     expected_layers = tuple(range(dims.num_layers))
     if routing.moe_layer_indices != expected_layers:
-        raise ValueError(
-            "routed_experts.moe_layer_indices: disagree with model layers"
-        )
+        raise ValueError("routed_experts.moe_layer_indices: disagree with model layers")
     placement = supply.placement_for_step(record.step_index)
     owners = placement.owner_map()
     expected_keys = {
-        (layer, expert)
-        for layer in expected_layers
-        for expert in range(dims.num_experts)
+        (layer, expert) for layer in expected_layers for expert in range(dims.num_experts)
     }
     owner_keys = set(owners)
     missing = expected_keys - owner_keys
@@ -226,35 +454,39 @@ def _routed_moe_alltoalls(
             + ", ".join(str(rank) for rank in sorted(invalid_ranks))
         )
 
-    tokens = _scheduled_routed_tokens(record, supply)
+    scheduled_requests = _scheduled_routed_tokens(record, supply)
     vector_bytes = dims.hidden_size * dims.dtype_bytes
     operations = []
     for layer in expected_layers:
-        send_bytes: dict[tuple[int, int], int] = {}
+        request_send_bytes: dict[tuple[str, int, int], int] = {}
         for source in ranks:
-            for token in tokens:
-                layer_routing = token.layers[layer]
-                destinations = {
-                    owners[(layer, expert)]
-                    for expert in layer_routing.expert_ids
-                }
-                for destination in destinations:
-                    if destination == source:
-                        continue
-                    pair = (source, destination)
-                    send_bytes[pair] = send_bytes.get(pair, 0) + vector_bytes
-        dispatch = tuple(
-            (source, destination, size)
-            for (source, destination), size in sorted(send_bytes.items())
+            for scheduled_request in scheduled_requests:
+                for token in scheduled_request.tokens:
+                    layer_routing = token.layers[layer]
+                    destinations = {owners[(layer, expert)] for expert in layer_routing.expert_ids}
+                    for destination in destinations:
+                        if destination == source:
+                            continue
+                        key = (
+                            scheduled_request.request_id,
+                            source,
+                            destination,
+                        )
+                        request_send_bytes[key] = request_send_bytes.get(key, 0) + vector_bytes
+        request_dispatch = tuple(
+            (request_id, source, destination, size)
+            for (request_id, source, destination), size in sorted(request_send_bytes.items())
         )
+        dispatch = _aggregate_request_pairs(request_dispatch)
         # A routed token has a destination owner, and at least one of the two
         # or more EP sources is remote from that owner, so dispatch is nonempty.
-        combine = tuple(
+        request_combine = tuple(
             sorted(
-                (destination, source, size)
-                for source, destination, size in dispatch
+                (request_id, destination, source, size)
+                for request_id, source, destination, size in request_dispatch
             )
         )
+        combine = _aggregate_request_pairs(request_combine)
         operations.extend(
             (
                 MoeAllToAll(
@@ -263,6 +495,7 @@ def _routed_moe_alltoalls(
                     ranks=ranks,
                     per_pair_bytes=0,
                     pair_payload_bytes=dispatch,
+                    request_pair_payload_bytes=request_dispatch,
                     placement_epoch=placement.placement_epoch,
                 ),
                 MoeAllToAll(
@@ -271,6 +504,7 @@ def _routed_moe_alltoalls(
                     ranks=ranks,
                     per_pair_bytes=0,
                     pair_payload_bytes=combine,
+                    request_pair_payload_bytes=request_combine,
                     placement_epoch=placement.placement_epoch,
                 ),
             )
@@ -320,9 +554,9 @@ def step_moe_alltoalls(
         return []
     if routed_supply is not None:
         return _routed_moe_alltoalls(record, dims, ranks, routed_supply)
-    per_pair = (
-        record.total_new_tokens * dims.top_k * dims.hidden_size * dims.dtype_bytes
-    ) // len(ranks)
+    per_pair = (record.total_new_tokens * dims.top_k * dims.hidden_size * dims.dtype_bytes) // len(
+        ranks
+    )
     if per_pair <= 0:
         return []
     return [
@@ -330,6 +564,89 @@ def step_moe_alltoalls(
         for layer in range(dims.num_layers)
         for phase in MOE_A2A_PHASES
     ]
+
+
+def _moe_operation_id(record: StepRecord, operation: MoeAllToAll) -> str:
+    return f"step-{record.step_index}:layer-{operation.layer}:ep-{operation.phase}"
+
+
+def _request_partitions(
+    operation: MoeAllToAll,
+) -> dict[tuple[int, int], tuple[tuple[str, int], ...]]:
+    by_pair: dict[tuple[int, int], list[tuple[str, int]]] = {}
+    for request_id, source, destination, size in operation.request_pair_payload_bytes:
+        by_pair.setdefault((source, destination), []).append((request_id, size))
+    return {pair: tuple(sorted(entries)) for pair, entries in by_pair.items()}
+
+
+def _expected_fidelity_rows(
+    record: StepRecord,
+    operations: Sequence[MoeAllToAll],
+) -> tuple[tuple[RequestPairRow, ...], tuple[AggregatePairRow, ...]]:
+    request_rows = []
+    aggregate_rows = []
+    for operation in operations:
+        if not operation.request_pair_payload_bytes:
+            continue
+        operation_id = _moe_operation_id(record, operation)
+        request_rows.extend(
+            (operation_id, request_id, source, destination, size)
+            for request_id, source, destination, size in (operation.request_pair_payload_bytes)
+        )
+        aggregate_rows.extend(
+            (operation_id, source, destination, size)
+            for source, destination, size in operation.pair_payload_bytes
+        )
+    return tuple(request_rows), tuple(aggregate_rows)
+
+
+def _compare_operations_to_messages(
+    record: StepRecord,
+    operations: Sequence[MoeAllToAll],
+    messages: Sequence[GoalMessage],
+) -> RequestFidelityReport:
+    request_rows, aggregate_rows = _expected_fidelity_rows(record, operations)
+    return compare_goal_request_attribution(
+        request_rows,
+        aggregate_rows,
+        messages,
+    )
+
+
+def compare_request_moe_fidelity(
+    record: StepRecord,
+    dims: ModelDims,
+    ep_ranks: Sequence[int],
+    routed_supply: RoutedMoeSupply,
+    messages: Sequence[GoalMessage],
+) -> RequestFidelityReport:
+    """Compare rendered messages with the scheduled routed-supply authority."""
+
+    operations = step_moe_alltoalls(
+        record,
+        dims,
+        ep_ranks,
+        routed_supply=routed_supply,
+    )
+    return _compare_operations_to_messages(record, operations, messages)
+
+
+def validate_request_moe_fidelity(
+    record: StepRecord,
+    dims: ModelDims,
+    ep_ranks: Sequence[int],
+    routed_supply: RoutedMoeSupply,
+    messages: Sequence[GoalMessage],
+) -> RequestFidelityReport:
+    """Fail closed unless every rendered request byte matches captured routing."""
+
+    return compare_request_moe_fidelity(
+        record,
+        dims,
+        ep_ranks,
+        routed_supply,
+        messages,
+    ).require_match()
 
 
 def render_step_goal(
@@ -350,8 +667,10 @@ def render_step_goal(
     layer's attention allreduce, then its MLP allreduce (both only when the TP
     world produces collectives), then, for MoE dims with ``ep_ranks`` given,
     the dispatch and combine all-to-allvs over the EP group; the next layer's
-    calc waits for the previous layer's last collective (no overlap, TRAF-7;
-    the fixed calc/allreduce/dispatch/combine order is TRAF-9). A scalar calc
+    calc waits for the previous layer's last collective. This is the serial
+    compatibility off path; observation-aware execution uses
+    :func:`lower_step_observations`. The fixed
+    calc/allreduce/dispatch/combine order is TRAF-9. A scalar calc
     repeats on every layer for compatibility; a sequence supplies unequal
     layer costs. Participants are the TP ranks plus, when MoE all-to-alls
     exist, the EP ranks; other ranks below ``num_goal_ranks`` get one
@@ -387,8 +706,7 @@ def render_step_goal(
         layer_calc_ns = tuple(per_layer_calc_ns)
     if len(layer_calc_ns) != dims.num_layers:
         raise ValueError(
-            f"received {len(layer_calc_ns)} layer calc values for "
-            f"num_layers={dims.num_layers}"
+            f"received {len(layer_calc_ns)} layer calc values for num_layers={dims.num_layers}"
         )
     if any(value < 0 for value in layer_calc_ns):
         raise ValueError("layer calc values must be nonnegative")
@@ -405,9 +723,7 @@ def render_step_goal(
         num_goal_ranks = max(participants) + 1
     minimum_ranks = max(participants) + 1
     if num_goal_ranks < minimum_ranks:
-        raise ValueError(
-            f"num_goal_ranks={num_goal_ranks} cannot contain rank {minimum_ranks - 1}"
-        )
+        raise ValueError(f"num_goal_ranks={num_goal_ranks} cannot contain rank {minimum_ranks - 1}")
     trace = GoalTrace(num_goal_ranks)
 
     previous: dict[int, str] = {}
@@ -446,10 +762,7 @@ def render_step_goal(
                     }
                 else:
                     send_bytes = {
-                        (s, d): op.per_pair_bytes
-                        for s in op.ranks
-                        for d in op.ranks
-                        if s != d
+                        (s, d): op.per_pair_bytes for s in op.ranks for d in op.ranks if s != d
                     }
                 done = pairwise_all_to_allv(
                     trace,
@@ -457,6 +770,10 @@ def render_step_goal(
                     send_bytes=send_bytes,
                     tag=moe_base_tag + moe_index,
                     after=previous,
+                    operation_id=_moe_operation_id(record, op),
+                    request_send_bytes=(
+                        _request_partitions(op) if op.request_pair_payload_bytes else None
+                    ),
                 )
                 previous = {**previous, **done}
 
@@ -464,6 +781,8 @@ def render_step_goal(
     for rank in range(num_goal_ranks):
         if rank not in used:
             trace.rank(rank).calc(0)
+    if any(operation.request_pair_payload_bytes for operation in moe_ops):
+        _compare_operations_to_messages(record, moe_ops, trace.messages).require_match()
     return trace
 
 

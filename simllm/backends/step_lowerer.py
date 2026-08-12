@@ -40,6 +40,7 @@ from simllm.traffic import (
     MOE_A2A_PHASES,
     TP_ALLREDUCE_SITES,
     RoutedMoeSupply,
+    lower_step_observations,
     step_moe_alltoalls,
     step_tp_allreduces,
 )
@@ -58,9 +59,7 @@ class SerialStepLowererConfig:
     dims: ModelDims
     tp_ranks: Sequence[int]
     ep_ranks: Sequence[int] | None = None
-    provider: ComputeProvider = field(
-        default_factory=lambda: RooflineProvider(efficiency=0.7)
-    )
+    provider: ComputeProvider = field(default_factory=lambda: RooflineProvider(efficiency=0.7))
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel)
     routed_moe_supply: RoutedMoeSupply | None = None
@@ -188,12 +187,8 @@ class SerialStepLowerer(ExecutionLowerer):
                         work=ComputeWork(
                             kernel=kernel.name,
                             config=kernel.config + (("layer", layer),),
-                            flops=_split_integer(
-                                total_flops, cfg.dims.num_layers, layer
-                            ),
-                            hbm_bytes=_split_integer(
-                                total_hbm_bytes, cfg.dims.num_layers, layer
-                            ),
+                            flops=_split_integer(total_flops, cfg.dims.num_layers, layer),
+                            hbm_bytes=_split_integer(total_hbm_bytes, cfg.dims.num_layers, layer),
                             nominal_duration_ps=per_layer_duration_ps,
                             uncertainty_fraction=estimate.uncertainty,
                         ),
@@ -208,9 +203,7 @@ class SerialStepLowerer(ExecutionLowerer):
                 if tp_op is None:
                     continue
                 operation_id = f"{execution_id}:layer-{layer}:tp-{site}"
-                dependencies = _unique(
-                    tuple(tails[rank] for rank in tp_op.ranks)
-                )
+                dependencies = _unique(tuple(tails[rank] for rank in tp_op.ranks))
                 operations.append(
                     ExecutionOperation(
                         operation_id=operation_id,
@@ -235,9 +228,7 @@ class SerialStepLowerer(ExecutionLowerer):
                 if moe_op is None:
                     continue
                 operation_id = f"{execution_id}:layer-{layer}:ep-{phase}"
-                dependencies = _unique(
-                    tuple(tails[rank] for rank in moe_op.ranks)
-                )
+                dependencies = _unique(tuple(tails[rank] for rank in moe_op.ranks))
                 operations.append(
                     ExecutionOperation(
                         operation_id=operation_id,
@@ -250,6 +241,7 @@ class SerialStepLowerer(ExecutionLowerer):
                             algorithm_hint="pairwise",
                             channel_hint=phase,
                             pair_payload_bytes=moe_op.pair_payload_bytes,
+                            request_pair_payload_bytes=(moe_op.request_pair_payload_bytes),
                         ),
                         correlation=correlation,
                         placement_epoch=moe_op.placement_epoch,
@@ -269,3 +261,34 @@ class SerialStepLowerer(ExecutionLowerer):
         )
         validate_execution_graph(graph)
         return graph
+
+
+class ObservedStepLowerer(ExecutionLowerer):
+    """Lower observed step streams, with the serial schedule as the exact off path.
+
+    Supplying observations opts into traffic-side binding of semantic
+    collectives while preserving the adapter's queues and dependency edges.
+    Omitting observations delegates to :class:`SerialStepLowerer` so accepted
+    serial graph and GOAL artifacts are unchanged.
+    """
+
+    def __init__(self, config: SerialStepLowererConfig) -> None:
+        self.config = config
+        self._serial = SerialStepLowerer(config)
+
+    def lower(
+        self,
+        record: StepRecord,
+        observations: ExecutionObservations | None = None,
+    ) -> ExecutionGraph:
+        if observations is None:
+            return self._serial.lower(record)
+        cfg = self.config
+        return lower_step_observations(
+            record,
+            cfg.dims,
+            cfg.tp_ranks,
+            observations,
+            ep_ranks=cfg.ep_ranks,
+            routed_supply=cfg.routed_moe_supply,
+        )

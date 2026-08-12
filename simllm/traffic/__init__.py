@@ -38,6 +38,11 @@ from simllm.traffic.patterns import (
     ring_allreduce,
     scatter,
 )
+from simllm.traffic.request_fidelity import (
+    RequestFidelityError,
+    RequestFidelityReport,
+    compare_goal_request_attribution,
+)
 from simllm.traffic.routed_moe import (
     ExpertPlacementSnapshot,
     RoutedMoeSupply,
@@ -49,12 +54,15 @@ from simllm.traffic.step_comm import (
     TP_ALLREDUCE_SITES,
     MoeAllToAll,
     TpAllReduce,
+    compare_request_moe_fidelity,
+    lower_step_observations,
     plan_step_locality,
     render_fabric_phase_goal,
     render_step_goal,
     step_communication_phases,
     step_moe_alltoalls,
     step_tp_allreduces,
+    validate_request_moe_fidelity,
 )
 
 __all__ = [
@@ -67,12 +75,17 @@ __all__ = [
     "DirectedCollectiveSegment",
     "ExpertPlacementSnapshot",
     "MoeAllToAll",
+    "RequestFidelityError",
+    "RequestFidelityReport",
     "RoutedMoeSupply",
     "StepLocalityPlan",
     "TpAllReduce",
     "binomial_broadcast",
     "classify_step_locality",
+    "compare_goal_request_attribution",
+    "compare_request_moe_fidelity",
     "gather",
+    "lower_step_observations",
     "pairwise_all_to_allv",
     "plan_step_locality",
     "render_fabric_phase_goal",
@@ -84,5 +97,6 @@ __all__ = [
     "step_moe_alltoalls",
     "step_tp_allreduces",
     "validate_expert_placement_snapshot",
+    "validate_request_moe_fidelity",
     "validate_routed_moe_supply",
 ]
