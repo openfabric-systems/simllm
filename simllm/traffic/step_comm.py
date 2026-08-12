@@ -43,10 +43,19 @@ structures are exactly the patterns validated by the M1/M4/M5 studies.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from simllm.compute import ModelDims
-from simllm.core import RequestPhase, StepRecord
+from simllm.core import (
+    CollectiveWork,
+    ComputeWork,
+    ExecutionGraph,
+    ExecutionObservations,
+    ExecutionOperation,
+    RequestPhase,
+    StepRecord,
+    execution_graph_from_observations,
+)
 from simllm.goal import GoalTrace
 from simllm.traffic.patterns import pairwise_all_to_allv, ring_allreduce
 from simllm.traffic.routed_moe import RoutedMoeSupply
@@ -56,6 +65,196 @@ TP_ALLREDUCE_SITES = ("attention", "mlp")
 
 #: the two all-to-allv phases of one MoE layer, in execution order
 MOE_A2A_PHASES = ("dispatch", "combine")
+
+
+def _planned_collective_work(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    ep_ranks: Sequence[int] | None,
+    routed_supply: RoutedMoeSupply | None,
+) -> dict[tuple[str, int, str], tuple[CollectiveWork, int]]:
+    """Return traffic-owned collective work indexed by semantic call site."""
+
+    planned: dict[tuple[str, int, str], tuple[CollectiveWork, int]] = {}
+    for operation in step_tp_allreduces(record, dims, tp_ranks):
+        key = ("tp", operation.layer, operation.site)
+        planned[key] = (
+            CollectiveWork(
+                collective="all-reduce",
+                ranks=operation.ranks,
+                payload_bytes=operation.payload_bytes,
+                algorithm_hint="ring",
+                channel_hint=operation.site,
+            ),
+            0,
+        )
+    for operation in step_moe_alltoalls(
+        record,
+        dims,
+        ep_ranks if ep_ranks is not None else (),
+        routed_supply=routed_supply,
+    ):
+        key = ("moe", operation.layer, operation.phase)
+        planned[key] = (
+            CollectiveWork(
+                collective="all-to-allv",
+                ranks=operation.ranks,
+                payload_bytes=operation.per_pair_bytes,
+                algorithm_hint="pairwise",
+                channel_hint=operation.phase,
+                pair_payload_bytes=operation.pair_payload_bytes,
+            ),
+            operation.placement_epoch,
+        )
+    return planned
+
+
+def _observed_collective_key(
+    operation: ExecutionOperation,
+    index: int,
+) -> tuple[str, int, str]:
+    work = operation.work
+    assert isinstance(work, CollectiveWork)
+    layer = operation.correlation.layer
+    if layer is None:
+        raise ValueError(
+            f"observations.operations[{index}]: collective needs correlation.layer"
+        )
+    site = work.channel_hint
+    if site is None:
+        raise ValueError(
+            f"observations.operations[{index}]: collective needs a semantic "
+            "channel_hint site"
+        )
+    if work.collective == "all-reduce":
+        return ("tp", layer, site)
+    if work.collective == "all-to-allv":
+        return ("moe", layer, site)
+    raise ValueError(
+        f"observations.operations[{index}]: unsupported step collective "
+        f"{work.collective!r}"
+    )
+
+
+def _validate_observed_collective(
+    observed: ExecutionOperation,
+    planned: CollectiveWork,
+    placement_epoch: int,
+    index: int,
+) -> None:
+    work = observed.work
+    assert isinstance(work, CollectiveWork)
+    path = f"observations.operations[{index}]"
+    if work.ranks != planned.ranks:
+        raise ValueError(f"{path}: collective ranks disagree with the step plan")
+    if observed.rank not in planned.ranks:
+        raise ValueError(f"{path}: collective anchor rank is outside the step plan")
+    if work.payload_bytes != planned.payload_bytes:
+        raise ValueError(f"{path}: collective payload disagrees with the step plan")
+    if work.pair_payload_bytes != planned.pair_payload_bytes:
+        raise ValueError(f"{path}: collective pair payloads disagree with the step plan")
+    if work.algorithm_hint not in (None, planned.algorithm_hint):
+        raise ValueError(f"{path}: collective algorithm disagrees with the traffic plan")
+    if observed.placement_epoch not in (0, placement_epoch):
+        raise ValueError(f"{path}: placement epoch disagrees with the traffic plan")
+
+
+def lower_step_observations(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    observations: ExecutionObservations,
+    *,
+    ep_ranks: Sequence[int] | None = None,
+    routed_supply: RoutedMoeSupply | None = None,
+) -> ExecutionGraph:
+    """Bind adapter-observed ordering to traffic-planned collective work.
+
+    The adapter owns tuple order, logical queues, explicit dependency edges,
+    timing gates, priorities, correlations, and the completion frontier. Its
+    collective observations identify a semantic call site with
+    ``correlation.layer`` and ``CollectiveWork.channel_hint``. The traffic
+    planner verifies the observed group and bytes, selects the algorithm, and
+    supplies routed pair tables and placement epochs. Compute work passes
+    through byte for byte.
+
+    Every collective planned from the step must be observed exactly once. The
+    returned standard :class:`ExecutionGraph` leaves realized concurrency to
+    :class:`~simllm.core.DeviceRuntime`; this function has no timing or overlap
+    parameter.
+    """
+
+    if not isinstance(record, StepRecord):
+        raise TypeError("record must be a StepRecord")
+    if not isinstance(dims, ModelDims):
+        raise TypeError("dims must be ModelDims")
+    if not isinstance(observations, ExecutionObservations):
+        raise TypeError("observations must be ExecutionObservations")
+    if not isinstance(observations.operations, tuple):
+        raise TypeError("observations.operations must be a tuple")
+    if not isinstance(observations.completion_operation_ids, tuple):
+        raise TypeError("observations.completion_operation_ids must be a tuple")
+
+    planned = _planned_collective_work(
+        record,
+        dims,
+        tp_ranks,
+        ep_ranks,
+        routed_supply,
+    )
+    lowered: list[ExecutionOperation] = []
+    observed_keys: set[tuple[str, int, str]] = set()
+    for index, operation in enumerate(observations.operations):
+        if not isinstance(operation, ExecutionOperation):
+            raise TypeError(
+                f"observations.operations[{index}] must be an ExecutionOperation"
+            )
+        if isinstance(operation.work, ComputeWork):
+            lowered.append(operation)
+            continue
+        if not isinstance(operation.work, CollectiveWork):
+            raise TypeError(
+                f"observations.operations[{index}]: step lowering supports only "
+                "ComputeWork and CollectiveWork"
+            )
+        key = _observed_collective_key(operation, index)
+        if key in observed_keys:
+            raise ValueError(
+                f"observations.operations[{index}]: duplicate collective site {key!r}"
+            )
+        try:
+            planned_work, placement_epoch = planned[key]
+        except KeyError as exc:
+            raise ValueError(
+                f"observations.operations[{index}]: collective site {key!r} "
+                "is absent from the step plan"
+            ) from exc
+        _validate_observed_collective(
+            operation,
+            planned_work,
+            placement_epoch,
+            index,
+        )
+        lowered.append(
+            replace(
+                operation,
+                work=planned_work,
+                placement_epoch=placement_epoch,
+            )
+        )
+        observed_keys.add(key)
+
+    missing = sorted(set(planned) - observed_keys)
+    if missing:
+        raise ValueError(f"observations: missing planned collective sites {missing!r}")
+    return execution_graph_from_observations(
+        record,
+        ExecutionObservations(
+            operations=tuple(lowered),
+            completion_operation_ids=observations.completion_operation_ids,
+        ),
+    )
 
 
 @dataclass(frozen=True)

@@ -40,6 +40,7 @@ from simllm.traffic import (
     MOE_A2A_PHASES,
     TP_ALLREDUCE_SITES,
     RoutedMoeSupply,
+    lower_step_observations,
     step_moe_alltoalls,
     step_tp_allreduces,
 )
@@ -269,3 +270,34 @@ class SerialStepLowerer(ExecutionLowerer):
         )
         validate_execution_graph(graph)
         return graph
+
+
+class ObservedStepLowerer(ExecutionLowerer):
+    """Lower observed step streams, with the serial schedule as the exact off path.
+
+    Supplying observations opts into traffic-side binding of semantic
+    collectives while preserving the adapter's queues and dependency edges.
+    Omitting observations delegates to :class:`SerialStepLowerer` so accepted
+    serial graph and GOAL artifacts are unchanged.
+    """
+
+    def __init__(self, config: SerialStepLowererConfig) -> None:
+        self.config = config
+        self._serial = SerialStepLowerer(config)
+
+    def lower(
+        self,
+        record: StepRecord,
+        observations: ExecutionObservations | None = None,
+    ) -> ExecutionGraph:
+        if observations is None:
+            return self._serial.lower(record)
+        cfg = self.config
+        return lower_step_observations(
+            record,
+            cfg.dims,
+            cfg.tp_ranks,
+            observations,
+            ep_ranks=cfg.ep_ranks,
+            routed_supply=cfg.routed_moe_supply,
+        )
