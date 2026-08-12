@@ -623,3 +623,57 @@ def test_drain_dense_and_single_rank_bypasses_remain_empty():
         (0,),
         routed_supply=supply,
     ) == []
+
+
+def test_observed_lowerer_preserves_per_request_attribution():
+    """The observed path must carry request attribution, not just pair totals.
+
+    The traffic planner owns collective semantics, so a schedule observed from
+    a framework carries no request attribution of its own. If the planner does
+    not rebind it, per-request fidelity silently disappears on exactly the path
+    a live adapter will use.
+    """
+
+    supply = _tiny_supply()
+    record = _prefill_record(1)
+    config = SerialStepLowererConfig(
+        TINY_MOE_DIMS,
+        (0,),
+        ep_ranks=(0, 1),
+        provider=FixedProvider(2_000),
+        routed_moe_supply=supply,
+    )
+    serial = SerialStepLowerer(config).lower(record)
+    bare_markers = tuple(
+        replace(
+            operation,
+            work=replace(
+                operation.work,
+                algorithm_hint=None,
+                request_pair_payload_bytes=(),
+            ),
+            placement_epoch=0,
+        )
+        if isinstance(operation.work, CollectiveWork)
+        else operation
+        for operation in serial.operations
+    )
+
+    observed = ObservedStepLowerer(config).lower(
+        record,
+        ExecutionObservations(bare_markers, serial.completion_operation_ids),
+    )
+
+    attributed = [
+        operation
+        for operation in observed.operations
+        if isinstance(operation.work, CollectiveWork)
+        and operation.work.request_pair_payload_bytes
+    ]
+    assert attributed, "observed lowering dropped every per-request attribution"
+    for expected, actual in zip(serial.operations, observed.operations, strict=True):
+        if isinstance(expected.work, CollectiveWork):
+            assert (
+                actual.work.request_pair_payload_bytes
+                == expected.work.request_pair_payload_bytes
+            )

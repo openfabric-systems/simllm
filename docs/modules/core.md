@@ -193,6 +193,14 @@ coarse runtime consume the same table when each declared rank sends or
 receives. The runtime also accepts a valid table with an uncovered rank; the
 diagnostic serial renderer rejects that case because it cannot emit the
 rank's collective-completion frontier.
+An optional `request_pair_payload_bytes` tuple partitions that sparse table by
+stable request identity. Its request-major entries are
+`(request_id, source_rank, destination_rank, bytes)`, and strict validation
+requires their per-pair sums to reproduce the aggregate table exactly and each
+identity to appear in the operation correlation. The field is read-only
+metadata: graph JSON retains it, structured GOAL messages retain it, and GOAL
+text does not emit it. Direct and graph renderers fail closed if the structured
+message projection disagrees with the corresponding authority.
 The combined captured-routing study populated that table from real Granite
 assignments, carried it through the step graph and GOAL, and changed live
 fluid JCT by every frozen exact relation. It also retained the old v1 scalar
@@ -469,6 +477,17 @@ abort followed by one committed two-WQE retry. The bypass bundle matched
 through the repository `BypassArtifacts` comparator after the isolated
 link-disabled build. The result ledger quotes and maps every registered
 CORE-21 clause; no residual remains.
+
+CORE-28 is complete. Sparse pairwise `CollectiveWork` may carry an optional
+request-major partition that sums exactly to the aggregate physical pair table.
+Strict validation rejects malformed, unknown, duplicate, noncanonical or
+aggregate-inconsistent ownership before rendering. The partition survives the
+execution-graph JSON round trip and graph-only GOAL renderer, where a second
+fail-closed comparison checks the structured message projection. Empty
+attribution remains absent from the wire form, and adding attribution changes
+no physical GOAL operation. Six placement and request-count cells plus the
+real Granite prefill matched every frozen identity; see
+[the CORE-28 results](../../examples/per_request_fidelity_v1/RESULTS.md).
 
 ## Pre-registered runtime sanity experiments
 

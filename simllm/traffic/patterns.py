@@ -13,7 +13,7 @@ label of that rank's last operation in the phase.
 
 from __future__ import annotations
 
-from simllm.goal import GoalTrace
+from simllm.goal import GoalMessage, GoalTrace
 
 
 def _chain(trace: GoalTrace, rank: int, op_label: str, after: dict[int, str] | None) -> None:
@@ -106,12 +106,28 @@ def pairwise_all_to_allv(
     send_bytes: dict[tuple[int, int], int],
     tag: int,
     after: dict[int, str] | None = None,
+    *,
+    operation_id: str | None = None,
+    request_send_bytes: dict[tuple[int, int], tuple[tuple[str, int], ...]] | None = None,
 ) -> dict[int, str]:
     """Direct pairwise exchange: rank s sends ``send_bytes[(s, d)]`` to d.
 
     Zero or missing entries send nothing. Completion label per rank is its
     last receive (or last send for ranks that receive nothing).
     """
+    positive_pairs = {
+        (source, destination)
+        for (source, destination), size in send_bytes.items()
+        if size > 0 and source != destination
+    }
+    if request_send_bytes is not None and set(request_send_bytes) != positive_pairs:
+        missing = sorted(positive_pairs - set(request_send_bytes))
+        extra = sorted(set(request_send_bytes) - positive_pairs)
+        raise ValueError(
+            "request_send_bytes must cover exactly the positive physical pairs; "
+            f"missing={missing}, extra={extra}"
+        )
+
     done: dict[int, str] = {}
     for s in ranks:
         for d in ranks:
@@ -124,6 +140,20 @@ def pairwise_all_to_allv(
             rx = trace.rank(d).recv(size, source=s, tag=tag)
             _chain(trace, d, rx, after)
             done[d] = rx
+            trace.record_message(
+                GoalMessage(
+                    operation_id=operation_id,
+                    source_rank=s,
+                    destination_rank=d,
+                    payload_bytes=size,
+                    tag=tag,
+                    send_label=tx,
+                    receive_label=rx,
+                    request_payload_bytes=(
+                        () if request_send_bytes is None else request_send_bytes[(s, d)]
+                    ),
+                )
+            )
     return done
 
 
