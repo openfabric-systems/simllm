@@ -203,25 +203,37 @@ void launchTarget(Family family, Buffers<T>& buffers, std::size_t count) {
 }
 
 template <typename T>
-void runMatrix(
+void captureCell(
     Buffers<T>& buffers,
-    int launches,
-    std::uint32_t* flushBuffer,
-    bool flushEachLaunch) {
+    Family family,
+    int shape,
+    std::uint32_t* flushBuffer) {
     const std::size_t flushWords = kFlushBytes / sizeof(std::uint32_t);
     const unsigned int flushBlocks = static_cast<unsigned int>(
         (flushWords + kThreads - 1) / kThreads);
+    const std::size_t count = kWorkItemsPerShapeUnit * shape;
+
+    for (int warmup = 0; warmup < kWarmupLaunches; ++warmup) {
+        launchTarget(family, buffers, count);
+    }
+    checkCuda(cudaDeviceSynchronize(), "cell warmup synchronization");
+
+    checkCuda(cudaProfilerStart(), "cudaProfilerStart");
+    for (int sample = 0; sample < kMeasuredLaunches; ++sample) {
+        simllm_cache_flush_kernel<<<flushBlocks, kThreads>>>(
+            flushBuffer, flushWords);
+        checkCuda(cudaGetLastError(), "cache flush kernel launch");
+        launchTarget(family, buffers, count);
+    }
+    checkCuda(cudaDeviceSynchronize(), "cell capture synchronization");
+    checkCuda(cudaProfilerStop(), "cudaProfilerStop");
+}
+
+template <typename T>
+void captureMatrix(Buffers<T>& buffers, std::uint32_t* flushBuffer) {
     for (Family family : kFamilies) {
         for (int shape : kShapes) {
-            const std::size_t count = kWorkItemsPerShapeUnit * shape;
-            for (int sample = 0; sample < launches; ++sample) {
-                if (flushEachLaunch) {
-                    simllm_cache_flush_kernel<<<flushBlocks, kThreads>>>(
-                        flushBuffer, flushWords);
-                    checkCuda(cudaGetLastError(), "cache flush kernel launch");
-                }
-                launchTarget(family, buffers, count);
-            }
+            captureCell(buffers, family, shape, flushBuffer);
         }
     }
 }
@@ -262,15 +274,8 @@ int main(int argc, char** argv) {
         checkCuda(cudaMalloc(&flushBuffer, kFlushBytes),
                   "cudaMalloc cache flush buffer");
 
-        runMatrix(fp32, kWarmupLaunches, flushBuffer, false);
-        runMatrix(fp64, kWarmupLaunches, flushBuffer, false);
-        checkCuda(cudaDeviceSynchronize(), "warmup synchronization");
-
-        checkCuda(cudaProfilerStart(), "cudaProfilerStart");
-        runMatrix(fp32, kMeasuredLaunches, flushBuffer, true);
-        runMatrix(fp64, kMeasuredLaunches, flushBuffer, true);
-        checkCuda(cudaDeviceSynchronize(), "capture synchronization");
-        checkCuda(cudaProfilerStop(), "cudaProfilerStop");
+        captureMatrix(fp32, flushBuffer);
+        captureMatrix(fp64, flushBuffer);
 
         checkCuda(cudaFree(flushBuffer), "cudaFree cache flush buffer");
         std::printf(

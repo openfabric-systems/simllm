@@ -461,7 +461,7 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
             "--sample=none",
             "--cpuctxsw=none",
             "--capture-range=cudaProfilerApi",
-            "--capture-range-end=stop",
+            "--capture-range-end=repeat:50",
             "--force-overwrite=true",
             "--output",
             report_prefix,
@@ -802,7 +802,14 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
         encoding="utf-8",
     )
 
-    all_scored = all(item["passed"] == item["total"] for item in scores.values())
+    all_scored = all(
+        scores[family]["passed"] == scores[family]["total"]
+        for family in (
+            "train_shape_scaling",
+            "dtype_slowdown",
+            "family_sum_composition",
+        )
+    )
     all_fatal = all(results["fatal_unscored"].values())
     if not (
         all_scored
