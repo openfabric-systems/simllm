@@ -87,8 +87,10 @@ backend submodules.
   batch succeeds and are served only for dataclass value-equal records in
   their original order. The pool can serve another batch after the first is
   fully consumed.
-  This preserves the diagnostic path's per-step reset semantics; it does not
-  claim a stateful online backend session. The backend flow session and full
+  This preserves the diagnostic path's reset semantics with a fresh process
+  and local state for every GOAL artifact and step. This mode does not claim a
+  stateful online backend session, and ordered `rnic-cn` multi-artifact runs
+  are rejected before backend execution. The backend flow session and full
   result codec are now delivered; BRIDGE-2 owns their graph-level client.
 - `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
   from a `StepRecord` to per-layer compute plus semantic TP/EP collective
@@ -741,6 +743,17 @@ is difficult.
   Acceptance includes per-class attribution, calibrated queue and tag knees,
   and defended p50 through p99.9 latency. Until those mechanisms land,
   analytical incidence must not be described as detected hardware behavior.
+- BACK-38 (Precision; P1; L): preserve htsim topology, RNG,
+  transport, congestion-control and RNIC state across ordered GOAL artifacts
+  instead of starting a fresh process at every boundary. Multi-artifact
+  `rnic-cn` currently fails before backend execution, while `rnic-nn` and
+  `rnic-nn-fluid` remain accepted. Acceptance must execute one checked graph
+  projection in a state-preserving session, reconcile every artifact and
+  completion identity, and retain the current rejection and stateless-profile
+  bytes as the explicit off paths.
+
+### Completeness
+
 - BACK-2 (Completeness; P2; S): LogGOPSim invocation helper for fast
   flow-level sweeps.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
@@ -842,18 +855,14 @@ is difficult.
   predecessor bytes and random draws exactly. Enabled GPU consumption must
   change an end-to-end metric in the registered direction and must never
   advance CQE lifecycle state independently of the native RNIC authority.
+
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
-- HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
-  the runtime factory
-  rejects it with a clear error until the slingshot runtime lands. Its CLI
-  options are already parsed so the flag ABI is stable. Out of simllm's
-  scope by maintainer decision; tracked here for the backend repo only.
+### Precision
+
 - HTSIM-2 (Precision; P1; M): goodput/state/queue trace flags for `rnic-cn`;
   they need trace
   hooks in the reviewed runtime first.
-- HTSIM-4 (Completeness; P2; M): GOAL parser hardening and the checked-in
-  `txt2bin` build target.
 - HTSIM-5 (Precision; P1; L): persistent DCQCN policy state across hardware
   WQEs. On
   2026-08-07 the former hardware-specific per-WQE-start scope was merged into
@@ -880,6 +889,15 @@ is difficult.
   R_AI = C/20 and C/10 (dcqcn.cpp:48-49) against the paper's fixed
   40 Mbps, and the ECN defaults are fixed bytes (Kmin 64 KB, Kmax
   640 KB, Pmax 0.25) independent of the link rate.
+- HTSIM-6 (Precision; P1; L): `rnic-cn` policy lookahead (maintainer design
+  2026-08-05). The
+  established-pair fast path must not wait when granted bandwidth suffices,
+  and the policy receives bounded lookahead from BACK-9 so it can pre-declare
+  one RTT ahead for queued work toward the same destination. The WQ, WQE and
+  QPC remain SimLLM hardware state; htsim retains only link-pair reservation,
+  control-slot and predeclaration state. The timing-neutral SQ and directed
+  link-pair identity in `d778326` remain the compatibility ledger until the
+  adapter lands.
 - HTSIM-7 (Precision; P1; L): rnic-cn concurrent same-pair flow scaling.
   10,000
   simultaneous flows between one source-destination pair make no visible
@@ -891,15 +909,6 @@ is difficult.
   HTSIM-6 and BACK-9: policy lookahead removes the repeated declare cost,
   structural WQ backpressure limits how much work can be exposed, and the
   event-loop scaling needs its own look.
-- HTSIM-6 (Precision; P1; L): `rnic-cn` policy lookahead (maintainer design
-  2026-08-05). The
-  established-pair fast path must not wait when granted bandwidth suffices,
-  and the policy receives bounded lookahead from BACK-9 so it can pre-declare
-  one RTT ahead for queued work toward the same destination. The WQ, WQE and
-  QPC remain SimLLM hardware state; htsim retains only link-pair reservation,
-  control-slot and predeclaration state. The timing-neutral SQ and directed
-  link-pair identity in `d778326` remain the compatibility ledger until the
-  adapter lands.
 - HTSIM-8 (Precision; P0; M): repair the backend `commit_check.sh` validation
   gate. Current
   `origin/main` has no `validate_outputs` baselines, `validate.py` divides by
@@ -916,6 +925,16 @@ is difficult.
   signed speedup instance, and state the entailment and genuine-risk analysis
   without using any wave-5 session timing to select the held-out workload or
   thresholds.
+
+### Completeness
+
+- HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
+  the runtime factory
+  rejects it with a clear error until the slingshot runtime lands. Its CLI
+  options are already parsed so the flag ABI is stable. Out of simllm's
+  scope by maintainer decision; tracked here for the backend repo only.
+- HTSIM-4 (Completeness; P2; M): GOAL parser hardening and the checked-in
+  `txt2bin` build target.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit.

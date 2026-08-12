@@ -42,17 +42,25 @@ the flow-level work the GOAL emitter renders.
   into ordered directed phases over semantic global ranks, then joins an
   optional placement manifest through `RankMapper.is_intra_node` before any
   GOAL-rank projection. Missing placement is the exact accepted all-remote
-  compatibility authority. An explicit all-remote placement under `gpu-rank`
-  mapping takes the same identity path.
+  compatibility classification. An explicit all-remote placement under
+  `gpu-rank` mapping takes the same identity path. This direct `StepRecord`
+  planner is retained for diagnostics; it is not the active sink's ordering
+  authority.
+- `plan_execution_graph_locality` expands only graph-owned collective
+  operations, tags and request partitions, then classifies their directed
+  segments as local or fabric traffic. Its exact verifier recomputes the plan
+  from the graph and rejects a lost, duplicated or mutated operation, edge,
+  rank, payload, tag or request partition.
 - In the placement-enabled path, each phase's intra-node segments use a flat
   analytic per-source egress serializer. The declared first-cut rate is
   450,000,000,000 bytes/s and source service is
   `ceil(local_egress_bytes * 1e9 / rate)` whole nanoseconds. Only cross-node
   segments reach `render_fabric_phase_goal` and htsim. `HtsimStepSink`
-  executes mixed-locality phases behind an external serial barrier and uses
-  `max(local_service, fabric_service)` for each phase. An all-intra-node step
-  invokes no fabric backend. The analytic value is uncalibrated; TRAF-11 owns
-  its replacement with same-generation evidence.
+  executes graph-ordered causal artifacts. Within a placement-split collective
+  it uses `max(local_service, fabric_service)` for each directed phase and sums
+  those phase services. An all-intra-node step invokes no fabric backend. The
+  analytic value is uncalibrated; TRAF-11 owns its replacement with
+  same-generation evidence.
 - `lower_step_observations` joins that traffic plan to framework-neutral
   `ExecutionObservations`. The adapter tuple order, logical queues, dependency
   edges, gates, priorities, correlations and completion frontier pass through
@@ -73,11 +81,19 @@ the flow-level work the GOAL emitter renders.
 - `render_serial_execution_graph_goal` is the CORE-2 graph-only diagnostic
   replay. It accepts validated per-rank compute, ring allreduce and pairwise
   all-to-allv operations, preserves `participant_local_depends_on` edges and
-  FIFO predecessors, and never reduces a separate `depends_on`
+  representable single-rank FIFO predecessors, and never reduces a distributed
   whole-operation barrier through rank-local ancestry. It fails loudly on
-  cross-rank barriers, sparse pair tables that leave a declared rank without
-  a send or receive, and work or timing semantics the serial GOAL subset
-  cannot represent. It consumes no `StepRecord` after lowering.
+  explicit or implicit cross-rank barriers, sparse pair tables that leave a
+  declared rank without a send or receive, and work or timing semantics the
+  serial GOAL subset cannot represent. It consumes no `StepRecord` after
+  lowering.
+- `project_execution_graph_goal` is the checked active projection. It assigns
+  graph operations to canonical causal-level artifacts, renders supported
+  rank-local relations with structured provenance, records distributed
+  whole-operation edges as ordered artifact boundaries and inventories other
+  cross-artifact edges. `verify_execution_goal_projection` independently
+  checks the canonical partition and exact operation, edge, rank, message,
+  payload, tag, request-partition and completion-boundary inventories.
 
 Deliberately out of scope: exact TP weight-storage intervals (packed QKV,
 gate/up packing, quantization padding); group memberships plus activation
@@ -130,12 +146,20 @@ Across a fixed captured Granite step, raw fabric bytes increased and local
 bytes decreased exactly from one node to two nodes to all remote at both
 payloads. Single-node TP widths 1 through 8 emitted no fabric bytes, while the
 explicit all-remote cells retained the frozen GOAL bytes and matched omitted
-placement. The registered exact live-metric family did not fully pass: the
-accepted monolithic all-remote GOAL overlaps rank-local phase frontiers, while
-the new localized path uses global serial phase barriers. The signed placement
-order still held at both payloads. TRAF-12 owns that active causal-semantics
-reconciliation. Historical `examples/breakdown` fabric-TP columns remain
-byte-unchanged and are the all-remote, cross-node what-if under this model.
+placement. TRAF-12 made `ExecutionGraph` the semantic authority for the active
+sink and aligned the coarse runtime, locality and backend projection to one
+effective edge inventory.
+The closed study passed 2/2 genuine-risk families over 3/3 instances and all
+six exact cells. All-remote JCT increased by 4,212,053 ps at 1,024 vector bytes
+and 8,317,082 ps at 2,048 bytes. The frozen graph had 144 operations, 423
+effective edges, 72 causal artifacts, 47 required distributed FIFO boundaries
+and 376 other serialized edges. The direct 72,819-byte GOAL fixtures remain
+unchanged diagnostics, while the active artifact manifests are explicitly
+re-accepted; see
+[the dependency authority results](../../examples/dependency_authority_v1/RESULTS.md).
+Historical
+`examples/breakdown` fabric-TP columns remain byte-unchanged and are the
+all-remote, cross-node what-if under this model.
 TRAF-7 is complete for observation-driven step lowering and the coarse live
 metric chain. The frozen two-layer study crossed `C/D` from 1/2 to 2 and
 realized independent, two-stage pipeline and serial graphs at their exact
@@ -151,22 +175,8 @@ under TRAF-13, TRAF-14, CORE-26, CORE-27 and COMP-22.
 
 ## Open tasks
 
-- TRAF-4 (ring-allreduce part closed by examples/m4, pairwise-a2av part
-  closed by examples/m5): end-to-end closed-form validation of binomial
-  broadcast against the fluid backend, extending the M1/M4/M5 study
-  pattern.
-- TRAF-3: KV-transfer records for PD-disaggregation and cache-miss
-  re-prefill (milestone M6).
-- TRAF-5: the JSONL collective-trace consumer (parse
-  `simllm-collective-trace-v1` records and hand them to pattern expansion).
-- TRAF-6: sequence parallelism in the step model. `step_comm` reduces the
-  full activation on every rank; SP would replace each allreduce with a
-  reduce-scatter plus allgather of 1/W the bytes around the norm/dropout
-  regions.
-- TRAF-8: pipeline-parallel activation traffic from step records. Records
-  carry no PP stage attribution yet, so `step_comm` emits TP and EP
-  collectives only; the M1 workload-B GOAL shows the target
-  activation-chain shape.
+### Precision
+
 - TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
   zero-propagation, per-source NVLink egress surrogate against
   same-generation point-to-point and collective captures. Sweep payload and
@@ -176,24 +186,25 @@ under TRAF-13, TRAF-14, CORE-26, CORE-27 and COMP-22.
   completion error is at most 10 percent or 1 microsecond, whichever is
   larger. Report the before/after TTFT and TPOT effect and retain the exact
   all-remote identity path.
-- TRAF-12 (Precision; P0; L): reconcile the active causal phase semantics of
-  the accepted monolithic all-remote GOAL with the localized phase-by-phase
-  path. The current all-remote compatibility renderer advances ranks from
-  rank-local completion frontiers, while localized execution imposes the
-  global serial phase barrier registered under the TRAF-7 off path. In the
-  captured TRAF-10 run, 46 of 47 adjacent phase transitions overlap in the
-  all-remote CSV, invalidating its registered phase-additive JCT bands.
-  Establish one timing authority, prove from raw per-tag starts and
-  completions that no phase enters early when overlap is disabled, and
-  reproduce exact StepResult timing over node-span and payload sweeps. Retain
-  the frozen all-remote GOAL-byte identity; label and re-accept any unavoidable
-  timestamp change.
-- TRAF-9: MoE layer op ordering. `render_step_goal` renders one calc per
-  layer followed by the TP allreduces and then dispatch and combine back
-  to back; a real MoE layer splits its compute around the all-to-alls
-  (attention and router before dispatch, expert MLP between dispatch and
-  combine) and may overlap shared-expert work with the a2avs. The serial
-  whole-layer calc keeps the makespan correct only to first order.
+- TRAF-14 (Precision; P1; M): move ring-round and pairwise-extent expansion
+  from the coarse runtime's current semantic-work surrogate into one immutable
+  traffic-owned collective plan carried through `ExecutionGraph`. The runtime
+  may schedule those extents but may not choose or reconstruct their
+  algorithm, chunk sizes, rank order or tags. Compare the plan against the
+  existing GOAL pattern expansion over payload, world-size and routed sparse-pair
+  sweeps with exact byte, round, dependency and tag conservation. The absent
+  explicit plan must preserve the accepted v1 wire bytes and serial timing
+  exactly.
+- TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
+  across graph-artifact and placement-subphase process boundaries. Current
+  process quiescence strengthens 284 participant-local edges to artifact-wide
+  order. Acceptance must compare raw per-rank starts and completions with the
+  graph scope, move live JCT by the registered direction and magnitude, and
+  retain the current supported artifact bytes and timing as the explicit off
+  path.
+
+### Completeness
+
 - TRAF-13 (Completeness; P1; L): connect at least one real framework schedule
   producer to `ObservedStepLowerer` after VLLM-19 or SGL-10 supplies captured
   operation order, streams, events and completion boundaries. Replay a fixed
@@ -203,11 +214,34 @@ under TRAF-13, TRAF-14, CORE-26, CORE-27 and COMP-22.
   overlap changes the live metric in its registered direction. Disabling the
   producer must select the serial lowerer and preserve every accepted serial
   graph, GOAL byte, timestamp and completion order exactly.
-- TRAF-14 (Precision; P1; M): move ring-round and pairwise-extent expansion
-  from the coarse runtime's current semantic-work surrogate into one immutable
-  traffic-owned collective plan carried through `ExecutionGraph`. The runtime
-  may schedule those extents but may not choose or reconstruct their algorithm,
-  chunk sizes, rank order or tags. Compare the plan against the existing GOAL
-  pattern expansion over payload, world-size and routed sparse-pair sweeps with
-  exact byte, round, dependency and tag conservation. The absent explicit plan
-  must preserve the accepted v1 wire bytes and serial timing exactly.
+- TRAF-15 (Completeness; P2; M): project arbitrary legal forward, non-monotone
+  and general non-contiguous or fan-in DAGs through the step sink. The current
+  projector rejects unsupported order classes before writing an artifact.
+  Acceptance must preserve that explicit rejection as the off path, avoid
+  inventing order between independent operations and retain every supported
+  projection byte and timestamp exactly.
+
+### Uncategorized
+
+- TRAF-3: KV-transfer records for PD-disaggregation and cache-miss
+  re-prefill (milestone M6).
+- TRAF-4 (ring-allreduce part closed by examples/m4, pairwise-a2av part
+  closed by examples/m5): end-to-end closed-form validation of binomial
+  broadcast against the fluid backend, extending the M1/M4/M5 study
+  pattern.
+- TRAF-5: the JSONL collective-trace consumer (parse
+  `simllm-collective-trace-v1` records and hand them to pattern expansion).
+- TRAF-6: sequence parallelism in the step model. `step_comm` reduces the
+  full activation on every rank; SP would replace each allreduce with a
+  reduce-scatter plus allgather of 1/W the bytes around the norm/dropout
+  regions.
+- TRAF-8: pipeline-parallel activation traffic from step records. Records
+  carry no PP stage attribution yet, so `step_comm` emits TP and EP
+  collectives only; the M1 workload-B GOAL shows the target activation-chain
+  shape.
+- TRAF-9: MoE layer op ordering. `render_step_goal` renders one calc per
+  layer followed by the TP allreduces and then dispatch and combine back
+  to back; a real MoE layer splits its compute around the all-to-alls
+  (attention and router before dispatch, expert MLP between dispatch and
+  combine) and may overlap shared-expert work with the a2avs. The serial
+  whole-layer calc keeps the makespan correct only to first order.

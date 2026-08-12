@@ -53,6 +53,11 @@ own modules.
   names the logical boundary that releases the framework; an empty tuple means
   every operation, while an explicit subset permits background asynchronous
   work to remain in the stateful runtime.
+  `effective_dependency_edges` is the one typed expansion of that ordering:
+  it combines explicit and same-queue FIFO predecessors, retains
+  whole-operation versus participant-local scope and records the applicable
+  rank for each local edge. Graph validation, `CoarseDeviceRuntime` and traffic
+  projections consume this same immutable edge inventory.
 - `simllm-completion-event-v1`: a timestamped `CompletionEvent` at submitted,
   queued, started, progress or completed phase, optionally attributed to one
   concrete `ResourceRef`. `subject_object_id` identifies the WQE or other
@@ -107,6 +112,10 @@ never enables both mutable authorities, and every
 projection must conserve identity, cardinality and timestamps available at its
 boundary. `CompletionReducer` owns only request metric history; it does not
 schedule, progress or complete a runtime object.
+GOAL operations, messages, dependency provenance and backend rows are checked
+read-only projections of the graph and runtime authorities. They may reject an
+unrepresentable graph before execution, but they may not reconstruct or weaken
+its ordering.
 
 The target contract requires all contended resources to use one queue-visit
 meaning even when Python and C++ use different mechanisms:
@@ -436,6 +445,16 @@ coarse executor evidence, not a claim that NCCL GPU kernels, HBM demand or
 copy/GPUDirect service are calibrated; CORE-26, CORE-27 and COMP-22 retain
 those gaps.
 
+TRAF-12 reconciled the graph and GOAL dependency paths for the demonstrated
+serial step-sink scope. `CoarseDeviceRuntime` now consumes the canonical edge
+inventory, gates each supported participant on its exact predecessor frontier
+and carries the causal witness selected by the realized completion path through
+`RuntimeReport`. The same frozen Granite graph projects to checked backend
+artifacts and produced positive all-remote JCT changes of 4,212,053 ps and
+8,317,082 ps. Unsupported early completion and asynchronous destination-local
+control shapes fail closed under CORE-29 and CORE-30; see
+[the dependency authority results](../../examples/dependency_authority_v1/RESULTS.md).
+
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
 requests through three `ExecutionGraph -> CoarseDeviceRuntime ->
@@ -525,22 +544,8 @@ does not claim to produce these resource-contention measurements.
 
 ## Open tasks
 
-- CORE-3 (Completeness; P1; L): implement explicit KV lifecycle accounting before resource
-  contention. Consume adapter observations for RESERVE, ALLOCATE,
-  BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
-  TRANSFER and RECOMPUTE. Enforce allocation, ownership, reference-count and
-  byte-conservation invariants. Add `examples/kv_cache_strategies/` with
-  pre-registered vLLM and SGLang cases: no reuse, repeated system prefixes,
-  competing prefix pools, multi-turn sessions, chunked prefill, capacity
-  pressure, eviction, preemption/recompute, mixed contexts and bursts. Sweep
-  capacity, block size, arrival rate, length, sharing and concurrency; report
-  live/reserved/reclaimable bytes, fragmentation, hits, eviction reason and
-  age, reads/writes, transfers, recompute, preemption, capacity wait and
-  TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9. Until this
-  lands, CORE-4 accepts zero-byte lifecycle observations but rejects every
-  byte-carrying READ or WRITE during preflight rather than reporting silent
-  zero-cost HBM work. Acceptance must enable those same fixtures through the
-  HBM service and preserve the explicit zero-byte path exactly.
+### Precision
+
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
@@ -556,23 +561,6 @@ does not claim to produce these resource-contention measurements.
   wait, finite-capacity release, overflow rollback and identical reductions in
   both languages. Existing PCIe, WQ and GPU studies must remain byte-identical
   under identity arbitration before any non-identity class policy is enabled.
-- CORE-9 (Completeness; P1; M): replace the bookkeeping-v1 WQE compatibility
-  shape with a versioned structural projection while retaining a strict v1
-  reader. A send WQE names one local SQ and send CQ, a receive WQE names one RQ
-  or SRQ and receive CQ, and RX matching is a later relation. Represent
-  transport retirement, SQ reclamation, optional CQE visibility and CQ poll as
-  distinct facts so an unsignaled success never fabricates a CQ completion.
-  Preserve the native session, endpoint, WQ kind, WQ identity and post
-  sequence as the conservation key; WR ID, GOAL flow ID and backend tokens are
-  explicit aliases only. Acceptance covers send, RQ receive, SRQ receive,
-  one-sided no-receive and unsignaled no-CQE records plus v1 round-trip
-  compatibility.
-- CORE-10 (Completeness; P2; M): add non-identity arbitration policies only
-  after CORE-8 establishes the policy seam and exact identity baseline. Start
-  with strict priority and weighted round robin over legal ready candidates;
-  keep per-SQ ordering and protocol forward-progress rules outside the policy.
-  Every policy has an explicit identity setting whose class-label permutation
-  leaves the accepted baseline byte-identical.
 - CORE-11 (Precision; P1; L): replace CORE-4's whole-operation exclusive HBM
   reservation with calibrated kernel-versus-DMA shared-bandwidth service. The
   current surrogate serializes an entire HBM-using kernel against an entire
@@ -596,6 +584,60 @@ does not claim to produce these resource-contention measurements.
   must vary payload, participant count and competing kernel demand, change
   end-to-end graph JCT into the measured bands, and retain the explicit
   cross-node RNIC path exactly.
+- CORE-26 (Precision; P1; L): replace the cross-node collective path's current
+  independent GPU-versus-RNIC surrogate with one runtime composition of the
+  GPU-resident NCCL task and the existing WQE/NIC authority. Consume the
+  resource demands calibrated by COMP-22 and compose with CORE-13 and COMP-11
+  rather than adding a second SM, HBM or NVLink scheduler. Sweep payload,
+  participant count, channel count and compute-neighbor pressure across the
+  crossover; require TTFT and TPOT to enter the measured overlap bands and
+  reconcile every GPU and network byte exactly. Zero GPU demand and disabled
+  composition must preserve every accepted TRAF-7 timestamp and artifact byte.
+- CORE-27 (Precision; P1; L): add only the data-mover resources that COMP-22
+  observes on the cross-node NCCL path, including copy-engine or GPUDirect DMA
+  visits when present, plus their shared-HBM interaction and downstream
+  visibility. The current surrogate charges no such visit. Identify eligibility,
+  grant, release and consumer-visible completion from a reproducible concurrent
+  capture; vary transfer size, direction and competing copy pressure and match
+  held-out queue wait and JCT within the declared measurement band. An observed
+  no-copy path must stay explicitly zero, and disabling this mechanism must
+  preserve the CORE-26 baseline exactly.
+
+### Completeness
+
+- CORE-3 (Completeness; P1; L): implement explicit KV lifecycle accounting before resource
+  contention. Consume adapter observations for RESERVE, ALLOCATE,
+  BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
+  TRANSFER and RECOMPUTE. Enforce allocation, ownership, reference-count and
+  byte-conservation invariants. Add `examples/kv_cache_strategies/` with
+  pre-registered vLLM and SGLang cases: no reuse, repeated system prefixes,
+  competing prefix pools, multi-turn sessions, chunked prefill, capacity
+  pressure, eviction, preemption/recompute, mixed contexts and bursts. Sweep
+  capacity, block size, arrival rate, length, sharing and concurrency; report
+  live/reserved/reclaimable bytes, fragmentation, hits, eviction reason and
+  age, reads/writes, transfers, recompute, preemption, capacity wait and
+  TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9. Until this
+  lands, CORE-4 accepts zero-byte lifecycle observations but rejects every
+  byte-carrying READ or WRITE during preflight rather than reporting silent
+  zero-cost HBM work. Acceptance must enable those same fixtures through the
+  HBM service and preserve the explicit zero-byte path exactly.
+- CORE-9 (Completeness; P1; M): replace the bookkeeping-v1 WQE compatibility
+  shape with a versioned structural projection while retaining a strict v1
+  reader. A send WQE names one local SQ and send CQ, a receive WQE names one RQ
+  or SRQ and receive CQ, and RX matching is a later relation. Represent
+  transport retirement, SQ reclamation, optional CQE visibility and CQ poll as
+  distinct facts so an unsignaled success never fabricates a CQ completion.
+  Preserve the native session, endpoint, WQ kind, WQ identity and post
+  sequence as the conservation key; WR ID, GOAL flow ID and backend tokens are
+  explicit aliases only. Acceptance covers send, RQ receive, SRQ receive,
+  one-sided no-receive and unsignaled no-CQE records plus v1 round-trip
+  compatibility.
+- CORE-10 (Completeness; P2; M): add non-identity arbitration policies only
+  after CORE-8 establishes the policy seam and exact identity baseline. Start
+  with strict priority and weighted round robin over legal ready candidates;
+  keep per-SQ ordering and protocol forward-progress rules outside the policy.
+  Every policy has an explicit identity setting whose class-label permutation
+  leaves the accepted baseline byte-identical.
 - CORE-14 (Completeness; P2; L): generalize `CoarseDeviceProfile` beyond the
   fixed eight GPUs, eight affine RNICs and arithmetic rank mapping. Consume the
   repository placement and fabric manifests through the existing schemas,
@@ -621,24 +663,20 @@ does not claim to produce these resource-contention measurements.
   completed-prefill and decode batch, match the framework's actual token
   production mask request by request, and preserve zero-sample, all-sample and
   legacy wire behavior exactly.
-- CORE-26 (Precision; P1; L): replace the cross-node collective path's current
-  independent GPU-versus-RNIC surrogate with one runtime composition of the
-  GPU-resident NCCL task and the existing WQE/NIC authority. Consume the
-  resource demands calibrated by COMP-22 and compose with CORE-13 and COMP-11
-  rather than adding a second SM, HBM or NVLink scheduler. Sweep payload,
-  participant count, channel count and compute-neighbor pressure across the
-  crossover; require TTFT and TPOT to enter the measured overlap bands and
-  reconcile every GPU and network byte exactly. Zero GPU demand and disabled
-  composition must preserve every accepted TRAF-7 timestamp and artifact byte.
-- CORE-27 (Precision; P1; L): add only the data-mover resources that COMP-22
-  observes on the cross-node NCCL path, including copy-engine or GPUDirect DMA
-  visits when present, plus their shared-HBM interaction and downstream
-  visibility. The current surrogate charges no such visit. Identify eligibility,
-  grant, release and consumer-visible completion from a reproducible concurrent
-  capture; vary transfer size, direction and competing copy pressure and match
-  held-out queue wait and JCT within the declared measurement band. An observed
-  no-copy path must stay explicitly zero, and disabling this mechanism must
-  preserve the CORE-26 baseline exactly.
+- CORE-29 (Completeness; P2; M): support explicit early and background
+  graph completion boundaries separately from full backend quiescence. The
+  checked GOAL projector currently rejects any completion set other than the
+  full terminal-operation set before writing an artifact. Acceptance must
+  preserve the selected framework completion while later physical work drains,
+  reject a boundary that cannot be represented exactly, and keep the omitted
+  and full-terminal baselines byte- and timing-identical.
+- CORE-30 (Completeness; P2; M): realize participant-local readiness for
+  asynchronous `ControlWork` destination ranks. `CoarseDeviceRuntime` currently
+  rejects this unsupported graph shape before scheduling, while synchronous and
+  supported asynchronous control paths remain accepted. Acceptance must gate
+  each destination on its exact local predecessor frontier, conserve the
+  selected causal timestamp through reporting and completion reduction, and
+  preserve every accepted control byte and timestamp when the path is absent.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client above the delivered HTSIM persistent flow session and strict full
   `StepResult` codec. The backend foundation retains one event list, topology,
