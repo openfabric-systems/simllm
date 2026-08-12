@@ -7,8 +7,12 @@ study. The graph contract carries exact sparse all-to-allv sizes, the joined
 pre-play trace projects executed input-token assignments without terminal
 forwards, and the traffic path maps those assignments through explicit expert
 placement epochs into both the graph and the live fluid step sink. All four
-routed JCT cells match the frozen closed forms with 0 ps residual. The
-uniform path retains its frozen bytes.
+routed JCT cells match the frozen closed forms with 0 ps residual. TRAF-25
+later corrected both captured and uniform source populations from 96 to 48
+positive flows while retaining every published JCT. The corrected bytes,
+counts and hashes are in
+[the token ownership results](../token_ownership_v1/RESULTS.md#routed_supply_v1);
+the source-multiplied values below remain the historical record.
 
 ## Expectations and chronology
 

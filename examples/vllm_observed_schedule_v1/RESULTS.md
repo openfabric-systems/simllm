@@ -155,8 +155,9 @@ Across the 32 steps, each of the six cells contained 121,646 request-pair rows
 and 440,115,200 directed bytes. The byte figure is a pre-TRAF-25 conservation
 identity over the known source-multiplied routed table. It is inflated by
 `_routed_moe_alltoalls` sourcing every token from all eight EP ranks and is not
-portable across the pending TRAF-25 fix. Every per-step request-pair identity
-was the same in serial, observed and perturbed modes and on both placements.
+portable across the landed TRAF-25 correction. Every per-step request-pair
+identity was the same in serial, observed and perturbed modes and on both
+placements.
 `StepResult` retained the original `r0`, `r1` and `r2` identities while those
 requests remained active. These are fatal unscored conservation and identity
 checks, not overlap evidence.
@@ -169,6 +170,12 @@ collapses, so the communication term changes by roughly a factor of two, not
 by the factor of eight by which total bytes change. Both retained reduction
 bands scale with that communication term and are therefore not portable across
 TRAF-25.
+
+These remain historical source-multiplied observations. The corrected
+single-engine [population](../token_ownership_v1/RESULTS.md#declared-population)
+and [live-makespan](../token_ownership_v1/RESULTS.md#live-makespan-and-physical-sanity)
+tables are in the token ownership results. VLLM-24 retains the separate
+independent adapter-byte cross-check gap.
 
 `_validate_microbatch_partition` only proves that microbatch tables recombine
 to the full table produced by the same traffic planner. It conserves the
@@ -196,7 +203,7 @@ single-node placement and 21.56 percent on the cross-node placement. The
 cross-node reduction was 8.999 times the single-node reduction, which is above
 the frozen fivefold threshold. These raw reductions are pre-TRAF-25 and are not
 portable because both scale with the communication term affected by the
-pending token-ownership fix.
+landed token-ownership correction.
 
 ## DBO-off control from retained raw rows
 

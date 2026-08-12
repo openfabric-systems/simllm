@@ -153,35 +153,35 @@ The TRAF-10 first-cut locality split is live through `HtsimStepSink` and
 Across a fixed captured Granite step, raw fabric bytes increased and local
 bytes decreased exactly from one node to two nodes to all remote at both
 payloads. Single-node TP widths 1 through 8 emitted no fabric bytes, while the
-explicit all-remote cells retained the frozen GOAL bytes and matched omitted
-placement. TRAF-12 made `ExecutionGraph` the semantic authority for the active
-sink and aligned the coarse runtime, locality and backend projection to one
-effective edge inventory.
-The closed study passed 2/2 genuine-risk families over 3/3 instances and all
-six exact cells. All-remote JCT increased by 4,212,053 ps at 1,024 vector bytes
-and 8,317,082 ps at 2,048 bytes. The frozen graph had 144 operations, 423
-effective edges, 72 causal artifacts, 47 required distributed FIFO boundaries
-and 376 other serialized edges. The direct 72,819-byte GOAL fixtures remain
-the historical source-multiplied diagnostics. TRAF-25's corrected direct
-fixtures are 20,392 bytes, while the active artifact manifests are explicitly
-re-accepted; see
+explicit all-remote cells matched omitted placement. TRAF-12 made
+`ExecutionGraph` the semantic authority for the active sink and aligned the
+coarse runtime, locality and backend projection to one effective edge
+inventory. The corrected dependency rerun retained the graph census exactly:
+144 operations, 423 effective edges, 72 causal artifacts, 47 required
+distributed FIFO boundaries and 376 other serialized edges. The corrected
+direct diagnostic is 20,392 bytes and 144 flows at both payloads. At 1,024 and
+2,048 vector bytes, it completed in 150,838,767 ps and 205,653,487 ps, while
+the graph-authoritative path completed in 155,702,768 ps and 215,381,488 ps.
+The graph-minus-direct changes are therefore 4,864,001 ps and 9,728,001 ps;
+see
 [the dependency authority results](../../examples/dependency_authority_v1/RESULTS.md).
-The selectable follow-up retains that independent ATLAHS path. In the serial
-sink, `dependency_cross_check="atlahs-goal"` keeps the `ExecutionGraph`
-projection authoritative and does not change the `StepResult`. Its structural
-comparator inspects all 423 canonical effective edges and finds 235
-differences. These comprise the frozen 47/47 whole-operation
-logical-queue FIFO differences plus 188 participant-local syntactic-frontier
-mismatches added as post-specified, unscored diagnostic coverage. The raw
-timing subset remains the 47 frozen whole-operation boundaries, with 46/47
-unequal, early gaps. Direct minus graph completion differs by -4,212,053 ps
-and -8,317,082 ps in the two frozen all-remote cells. The default-off path
-preserves the accepted artifacts and results exactly. The current cross-check
-is restricted to the all-remote compatibility classification; a placement
-with local NVLink work is rejected, and TRAF-16 owns the participant-local
-frontier precision needed before that comparison is meaningful. CORE-36 owns
-the future unified fidelity selector and provenance record; this option is
-only the present traffic/backend seam switch.
+The authority conclusion is unchanged. In the serial sink,
+`dependency_cross_check="atlahs-goal"` keeps the `ExecutionGraph` projection
+authoritative and does not change the `StepResult`. Its structural comparator
+inspects all 423 canonical effective edges and reports 94 differences: 47
+whole-operation logical-queue FIFO differences and 47 participant-local
+syntactic-frontier differences. The raw timing subset remains the 47
+whole-operation boundaries, with 32/47 unequal, early gaps. These are
+diagnostic findings rather than values folded into the live result. The
+default-off path preserves the accepted artifacts and results exactly. The
+current cross-check is restricted to the all-remote compatibility
+classification; a placement with local NVLink work is rejected, and TRAF-16
+owns the participant-local frontier precision needed before that comparison
+is meaningful. The corrected single-node `AAAA` values remain pending
+CORE-41's ingress-aware analytic service correction and are not a precision
+acceptance oracle. CORE-36 owns the future unified fidelity selector and
+provenance record; this option is only the present traffic/backend seam
+switch.
 Historical
 `examples/breakdown` fabric-TP columns remain byte-unchanged and are the
 all-remote, cross-node what-if under this model.
@@ -256,17 +256,6 @@ old source-multiplied numeric surfaces are listed in
 
 ### Precision
 
-- TRAF-27 (Precision; P0; M): rerun and refreeze the seventh routed consumer,
-  `dependency_authority_v1`, after TRAF-25's one-home-rank correction. The
-  expectations-only record freezes corrected byte and flow inventories, exact
-  singleton graph-census bands, physical JCT bounds, direct and graph JCT
-  bands, and the predicted dependency-comparator response before execution.
-  Acceptance must preserve `ExecutionGraph` as the sole live authority, keep
-  ATLAHS opt-in and diagnostic, evaluate the raw graph-minus-direct relation
-  before any entailing exact guard, mark the CORE-41 single-node values as
-  pending, rerun the production study, correct every listed current-value
-  surface, and point retained historical consumer values to the corrected
-  table.
 - TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
   zero-propagation, per-source NVLink egress surrogate against
   same-generation point-to-point and collective captures. Sweep payload and

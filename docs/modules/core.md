@@ -472,24 +472,28 @@ serial step-sink scope. `CoarseDeviceRuntime` now consumes the canonical edge
 inventory, gates each supported participant on its exact predecessor frontier
 and carries the causal witness selected by the realized completion path through
 `RuntimeReport`. The same frozen Granite graph projects to checked backend
-artifacts and produced positive all-remote JCT changes of 4,212,053 ps and
-8,317,082 ps. Unsupported early completion and asynchronous destination-local
-control shapes fail closed under CORE-29 and CORE-30; see
+artifacts. The corrected rerun retained 144 operations, 423 effective edges,
+72 causal artifacts, 47 required distributed FIFO boundaries and 376 other
+serialized edges. Its 20,392-byte direct diagnostic produced 144 flows and
+completed in 150,838,767 ps and 205,653,487 ps at 1,024 and 2,048 vector
+bytes. The graph-authoritative path completed in 155,702,768 ps and
+215,381,488 ps, for positive graph-minus-direct changes of 4,864,001 ps and
+9,728,001 ps. Unsupported early completion and asynchronous
+destination-local control shapes fail closed under CORE-29 and CORE-30; see
 [the dependency authority results](../../examples/dependency_authority_v1/RESULTS.md).
 The selectable ATLAHS cross-check preserves that sole authority while keeping
 the independently constructed direct-GOAL schedule executable. The all-remote
-comparator inspects all 423 canonical effective edges and reports 235
-structural differences: the frozen 47/47 whole-operation logical-queue FIFO
-differences and 188 participant-local syntactic-frontier mismatches added as a
-post-specified, unscored diagnostic. Raw timing remains evaluated on the 47
-frozen whole-operation boundaries, with 46/47 unequal, early gaps. In the two
-frozen cells, direct minus graph completion deltas are -4,212,053 ps and
--8,317,082 ps. These are findings, not values folded into `ExecutionResult` or
-`StepResult`.
-Cross-check disabled preserves the accepted graph artifacts, timestamps and
-results exactly. Local-NVLink comparison rejects at preflight; TRAF-16 owns
-its frontier precision, while CORE-36 owns a repository-wide fidelity
-selector.
+comparator inspects all 423 canonical effective edges and reports 94
+structural differences: 47 whole-operation logical-queue FIFO differences and
+47 participant-local syntactic-frontier differences. Raw timing remains
+evaluated on the 47 whole-operation boundaries, with 32/47 unequal, early
+gaps. These are diagnostic findings, not values folded into `ExecutionResult`
+or `StepResult`, so the authority conclusion is unchanged. Cross-check
+disabled preserves the accepted graph artifacts, timestamps and results
+exactly. Local-NVLink comparison rejects at preflight; TRAF-16 owns its
+frontier precision, while the corrected single-node `AAAA` service values
+remain pending CORE-41's ingress-aware analytic correction. CORE-36 owns a
+repository-wide fidelity selector.
 
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
