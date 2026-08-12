@@ -75,7 +75,7 @@ FROZEN_GRAPH_CENSUS = {
 TRACE_SHA256 = "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341"
 EXPECTATIONS_COMMIT = "d39dfdc2951e147187446e27c46d9ed3f1a6816a"
 CROSS_CHECK_EXPECTATIONS_COMMIT = "69a7ada2ec192b3d7eec81b53529a5662371e3b1"
-REFREEZE_EXPECTATIONS_COMMIT = "pending-expectations-only-commit"
+REFREEZE_EXPECTATIONS_COMMIT = "bf6780f21c3029b3dbc06c1ea1868c1eeb03ec97"
 HTSIM_COMPILER_EVIDENCE_AUTHORED_AGAINST = (
     "034e2419f061f872ece400b7280319290c7589d9"
 )
@@ -292,6 +292,23 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _validate_source_artifacts(source_root: Path) -> dict[str, object]:
+    observations: dict[str, object] = {}
+    for name, (relative, expected_digest) in SOURCE_ARTIFACTS.items():
+        path = source_root / relative
+        if not path.is_file():
+            raise FileNotFoundError(f"required source artifact is missing: {relative}")
+        observed_digest = _sha256(path)
+        if observed_digest != expected_digest:
+            raise AssertionError(f"source artifact changed: {relative}")
+        observations[name] = {
+            "relative_path": relative,
+            "bytes": path.stat().st_size,
+            "sha256": observed_digest,
+        }
+    return observations
 
 
 def _run_cell(
@@ -689,7 +706,7 @@ def _cross_check_finding(
     }
 
 
-def run_study(out: Path) -> None:
+def run_study(source_root: Path, out: Path) -> None:
     from examples.nvlink_locality_v1.run_study import (
         NVLINK_BYTES_PER_SECOND,
         _dims,
@@ -726,6 +743,7 @@ def run_study(out: Path) -> None:
     _require_clean_worktree()
     if out.exists():
         raise FileExistsError(f"refusing to overwrite existing output {out}")
+    source_observations = _validate_source_artifacts(source_root)
     trace_path = _trace_path()
     if _sha256(trace_path) != TRACE_SHA256:
         raise AssertionError("tracked Granite trace does not match its frozen digest")
@@ -810,6 +828,33 @@ def run_study(out: Path) -> None:
             )
         )
 
+    physical_sanity = []
+    for finding in cross_check_findings:
+        vector_bytes = finding["vector_bytes"]
+        bounds = PHYSICAL_SANITY_BOUNDS_PS[vector_bytes]
+        graph_jct_ps = cells[(vector_bytes, "ABCD")]["jct_ps"]
+        direct_jct_ps = finding["observed"]["direct_completion_ps"]
+        physical_sanity.append(
+            {
+                "vector_bytes": vector_bytes,
+                "peak_egress_serialization_floor_ps": bounds[
+                    "peak_egress_serialization_floor"
+                ],
+                "graph_phase_chain_floor_ps": bounds["phase_chain_floor"],
+                "conservative_ceiling_ps": bounds["conservative_ceiling"],
+                "observed_direct_jct_ps": direct_jct_ps,
+                "observed_graph_jct_ps": graph_jct_ps,
+                "passed": (
+                    bounds["peak_egress_serialization_floor"]
+                    <= direct_jct_ps
+                    <= bounds["conservative_ceiling"]
+                    and bounds["phase_chain_floor"]
+                    <= graph_jct_ps
+                    <= bounds["conservative_ceiling"]
+                ),
+            }
+        )
+
     exact_cells = []
     for key, cell in cells.items():
         vector_bytes, placement = key
@@ -868,6 +913,9 @@ def run_study(out: Path) -> None:
         goal_projection = project_execution_graph_goal(graph, num_goal_ranks=4)
         verify_execution_goal_projection(graph, goal_projection)
         edges = effective_dependency_edges(graph)
+        positive_pair_count = sum(
+            len(phase.phase.segments) for phase in locality_plan.phases
+        )
         operation_by_id = {
             operation.operation_id: operation for operation in graph.operations
         }
@@ -921,6 +969,7 @@ def run_study(out: Path) -> None:
                 "vector_bytes": vector_bytes,
                 "operation_count": len(graph.operations),
                 "effective_edge_count": len(edges),
+                "positive_pair_count": positive_pair_count,
                 "whole_operation_edges": sum(
                     edge.scope.value == "whole-operation" for edge in edges
                 ),
@@ -948,6 +997,7 @@ def run_study(out: Path) -> None:
                 "active_goal_manifest": active_manifest,
                 "ordering_authority": outcome_locality["ordering_authority"],
                 "passed": len(graph.operations) == FROZEN_GRAPH_CENSUS["operations"]
+                and positive_pair_count == FROZEN_GRAPH_CENSUS["positive_flows"]
                 and explicit_local_references
                 == FROZEN_GRAPH_CENSUS["explicit_participant_local_references"]
                 and implicit_fifo_edges
@@ -1037,6 +1087,7 @@ def run_study(out: Path) -> None:
         all(row["passed"] for row in exact_cells)
         and all(row["passed"] for row in structural)
         and all(row["passed"] for row in identity)
+        and all(row["passed"] for row in physical_sanity)
         and all(row["passed"] for row in causal_instances)
         and all(row["passed"] for row in cross_check_findings)
         and negative_control["valid_projection_accepted"]
@@ -1078,6 +1129,7 @@ def run_study(out: Path) -> None:
             "python": sys.version,
             "platform": platform.platform(),
             "trace_sha256": _sha256(trace_path),
+            "external_source_observations": source_observations,
         },
         "configuration": {
             "vector_bytes": list(VECTOR_BYTES),
@@ -1091,6 +1143,8 @@ def run_study(out: Path) -> None:
             "num_goal_ranks": 4,
             "nvlink_bandwidth_bytes_per_second": NVLINK_BYTES_PER_SECOND,
             "trace_sha256": TRACE_SHA256,
+            "dependency_workload": "tracked-granite-length-cap",
+            "external_source_role": "provenance-only",
             "replays_per_cell": 3,
             "cross_check_mode": CROSS_CHECK_MODE,
             "cross_check_replays_per_vector": 1,
@@ -1109,6 +1163,7 @@ def run_study(out: Path) -> None:
         "exact_oracle_rows": exact_cells,
         "structural_invariants": structural,
         "all_remote_identity": identity,
+        "physical_sanity": physical_sanity,
         "cross_check_findings": cross_check_findings,
         "fatal_unscored": {
             "passed": fatal_passed,
@@ -1117,7 +1172,7 @@ def run_study(out: Path) -> None:
                 "valid_projection_accepted"
             ],
             "note": (
-                "Exact cells, projection inventories, legacy hashes, authority "
+                "Exact cells, projection inventories, direct hashes, authority "
                 "labels, composed causal gaps, identity and quiescence are "
                 "fatal and unscored. Cross-check completeness and agreement "
                 "with the frozen disagreement findings are also fatal and "
@@ -1143,7 +1198,7 @@ def run_study(out: Path) -> None:
         or passed_instances != total_instances
         or not fatal_passed
     ):
-        raise RuntimeError("TRAF-12 study failed its frozen acceptance bar")
+        raise RuntimeError("TRAF-27 refreeze failed its frozen acceptance bar")
 
 
 def main() -> None:
@@ -1155,7 +1210,7 @@ def main() -> None:
     if args.check_only:
         check_only(args)
         return
-    run_study(args.out)
+    run_study(args.source_root, args.out)
 
 
 if __name__ == "__main__":
