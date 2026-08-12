@@ -80,7 +80,11 @@ def _run(
 ) -> dict[str, Any]:
     from simllm.backends.htsim_rnic import HtsimRnicConfig, run_htsim_rnic
 
-    completion_csv = out / f"{name}.completion.csv"
+    # Every run writes the one shared completion path so that the manifest a
+    # run prints carries no run-specific option string. F1 compares manifests
+    # for the same GOAL and the same options, which a per-run CSV name would
+    # have made impossible.
+    completion_csv = out / "completion.csv"
     extra: dict[str, str] = {}
     if bin_width_ps is not None:
         extra = {
@@ -106,6 +110,7 @@ def _run(
         "manifest": sorted(result.manifest),
         "name": name,
     }
+    completion_csv.replace(out / f"{name}.completion.csv")
     if bin_width_ps is not None:
         record["goodput_rows"] = _read_csv(out / f"{name}.goodput.csv")
         record["state_rows"] = _read_csv(out / f"{name}.state.csv")
@@ -117,8 +122,12 @@ def _makespan_ps(record: dict[str, Any]) -> int:
     return max(int(row["completion_time_ps"]) for row in record["completion_rows"])
 
 
+#: The one observation line a traced run adds. Nothing else may differ.
+TRACE_MANIFEST_PREFIX = "[RNIC manifest] rnic_cn_goodput_trace_rows="
+
+
 def _non_trace_manifest(record: dict[str, Any]) -> list[str]:
-    return [line for line in record["manifest"] if "trace" not in line]
+    return [line for line in record["manifest"] if not line.startswith(TRACE_MANIFEST_PREFIX)]
 
 
 def _check_only(args: argparse.Namespace, executables: dict[str, Path]) -> None:

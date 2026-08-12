@@ -740,6 +740,31 @@ BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
 and its ECMP-collision and slow-start behavior is the phenomenon under study.
 
+HTSIM-2 closed on 2026-08-13. `rnic-cn` now carries
+`-rnic_cn_goodput_trace_csv` with `-rnic_cn_goodput_trace_bin_ps`,
+`-rnic_cn_state_trace_csv`, and `-rnic_cn_queue_trace_csv` with
+`-rnic_cn_queue_trace_max_rows`. Every flag is off by default, each pair is
+all or nothing, and all five are rejected for the profiles that cannot produce
+them. The two shared trace components were already profile neutral; the new
+`AtlahsQueueTrace` is the third, consuming the ns-tm3 switch observation
+boundary that no profile previously read. Seven recording points sit in the
+reviewed runtime, goodput at the receiver's in-order release and sender state
+at declare, rate activation, immediate feedback, nflow raise, retirement and
+delivery completion. The untraced binary is byte-identical to the pre-change
+binary and the traced run differs only by one observation manifest line
+([rnic_cn_trace_v1](../../examples/rnic_cn_trace_v1/RESULTS.md), 22 of 27
+scored instances, backend ctest 358 of 358).
+
+Two frozen relations in that study were refuted and are recorded here because
+they bear on how the traces may be read. Goodput is binned on the receiver's
+in-order release, not on wire arrival, so a bin total may exceed the link's
+per-bin byte budget by the resequencing burst; the observed excess never
+exceeded one maximum DATA payload. And the `rnic-cn` control-packet population
+is time driven and therefore rate dependent, while the DATA population is not:
+the same GOAL produced exactly 1024 DATA switch enqueues at both 400 and
+200 Gbit/s and 242 against 772 control enqueues. Comparisons across link rates
+must separate the two.
+
 BACK-2 closed on 2026-08-13. `simllm/backends/loggopsim.py` drives the
 unmodified LogGOPSim binary over the same binary GOAL the htsim helpers use.
 Fifteen exact argument and parse oracles pin the option grammar, both output
@@ -944,9 +969,6 @@ is difficult.
 
 ### Precision
 
-- HTSIM-2 (Precision; P1; M): goodput/state/queue trace flags for `rnic-cn`;
-  they need trace
-  hooks in the reviewed runtime first.
 - HTSIM-5 (Precision; P1; L): persistent DCQCN policy state across hardware
   WQEs. On
   2026-08-07 the former hardware-specific per-WQE-start scope was merged into
