@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -55,6 +56,16 @@ GRANITE_RENDER_COMPILE_LIMIT_S = 30.0
 GRANITE_BACKEND_LIMIT_S = 60.0
 GRANITE_MEMORY_LIMIT_BYTES = 1 << 30
 GRANITE_GOAL_LIMIT_BYTES = 64 << 20
+GRANITE_RENDER_ATTEMPT_TIMEOUT_S = 60
+
+
+class MeasurementTimedOut(RuntimeError):
+    """A scale measurement exceeded its declared wall-time attempt."""
+
+    def __init__(self, elapsed_ns: int, peak_bytes: int):
+        super().__init__("scale measurement timed out")
+        self.elapsed_ns = elapsed_ns
+        self.peak_bytes = peak_bytes
 
 
 def parse_args() -> argparse.Namespace:
@@ -643,15 +654,36 @@ def _evaluate_synthetic_exact(
     }
 
 
-def _measure_call(function: Any) -> tuple[Any, int, int]:
+def _measure_call(
+    function: Any,
+    *,
+    timeout_s: int | None = None,
+) -> tuple[Any, int, int]:
+    if timeout_s is not None and not hasattr(signal, "setitimer"):
+        raise RuntimeError("timed scale measurements require POSIX interval timers")
+
+    def timed_out(_signum: int, _frame: Any) -> None:
+        raise TimeoutError
+
+    previous_handler: Any = None
+    if timeout_s is not None:
+        previous_handler = signal.signal(signal.SIGALRM, timed_out)
+        signal.setitimer(signal.ITIMER_REAL, timeout_s)
     tracemalloc.start()
     start = time.perf_counter_ns()
     try:
         value = function()
         elapsed_ns = time.perf_counter_ns() - start
         _, peak_bytes = tracemalloc.get_traced_memory()
+    except TimeoutError:
+        elapsed_ns = time.perf_counter_ns() - start
+        _, peak_bytes = tracemalloc.get_traced_memory()
+        raise MeasurementTimedOut(elapsed_ns, peak_bytes) from None
     finally:
         tracemalloc.stop()
+        if timeout_s is not None:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous_handler)
     return value, elapsed_ns, peak_bytes
 
 
@@ -769,7 +801,45 @@ def _run_granite(
     observations = {}
     for grouping in GROUPINGS:
         plan, plan_ns, plan_peak = _measure_call(plan_functions[grouping])
-        trace, render_ns, render_peak = _measure_call(render_functions[grouping])
+        if grouping == "aggregate":
+            planned_message_count = sum(
+                len(operation.pair_payload_bytes) for operation in plan
+            )
+            planned_message_bytes = sum(
+                sum(size for _, _, size in operation.pair_payload_bytes)
+                for operation in plan
+            )
+        else:
+            planned_message_count = sum(
+                len(sequence.messages) for sequence in plan
+            )
+            planned_message_bytes = sum(
+                sum(message.payload_bytes for message in sequence.messages)
+                for sequence in plan
+            )
+        try:
+            trace, render_ns, render_peak = _measure_call(
+                render_functions[grouping],
+                timeout_s=GRANITE_RENDER_ATTEMPT_TIMEOUT_S,
+            )
+        except MeasurementTimedOut as exc:
+            observations[grouping] = {
+                "trace_schema": routing.trace_schema,
+                "order_authority": "reconstructed-v1",
+                "plan_item_count": len(plan),
+                "message_count": planned_message_count,
+                "message_bytes": planned_message_bytes,
+                "plan_ns": plan_ns,
+                "plan_peak_traced_bytes": plan_peak,
+                "render_timed_out": True,
+                "render_attempt_timeout_s": GRANITE_RENDER_ATTEMPT_TIMEOUT_S,
+                "render_attempt_ns": exc.elapsed_ns,
+                "render_attempt_peak_traced_bytes": exc.peak_bytes,
+                "backends": {},
+                "practical_for_large_sweeps": False,
+            }
+            _write_json(output_dir / "progress.json", observations)
+            continue
         goal_path = trace.write(output_dir / f"{grouping}.goal")
         binary_path = output_dir / f"{grouping}.bin"
         start = time.perf_counter_ns()
@@ -825,6 +895,7 @@ def _run_granite(
             "plan_item_count": len(plan),
             "plan_ns": plan_ns,
             "render_ns": render_ns,
+            "render_timed_out": False,
             "plan_peak_traced_bytes": plan_peak,
             "render_peak_traced_bytes": render_peak,
             "peak_traced_bytes": peak_bytes,
@@ -846,6 +917,7 @@ def _run_granite(
             "goal_bytes": GRANITE_GOAL_LIMIT_BYTES,
             "backend_wall_s": GRANITE_BACKEND_LIMIT_S,
             "backend_attempt_timeout_s": BACKEND_TIMEOUT_S,
+            "render_attempt_timeout_s": GRANITE_RENDER_ATTEMPT_TIMEOUT_S,
         },
         "groupings": observations,
     }
