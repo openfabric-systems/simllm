@@ -58,6 +58,7 @@ COMPUTE_ESTIMATE_PS = 24_000
 EXPECTED_PHASES = 48
 EXPECTED_POSITIVE_PAIRS = 144
 EXPECTATIONS_COMMIT = "dd1eefebc84091c547d8cad10225b21ab85a7706"
+REQUALIFICATION_EXPECTATIONS_COMMIT = "a455bc4581b79fcd8d3c0021a50e449276afb477"
 EVIDENCE_AUTHORED_AGAINST = "6973bd0e3ed6091c403c7055ee01c2d8ae0ae970"
 
 
@@ -773,6 +774,9 @@ def run_study(out: Path) -> dict[str, object]:
         "schema": "simllm-nvlink-locality-study-v1",
         "provenance": {
             "expectations_commit": EXPECTATIONS_COMMIT,
+            "requalification_expectations_commit": (
+                REQUALIFICATION_EXPECTATIONS_COMMIT
+            ),
             "evidence_authored_against": EVIDENCE_AUTHORED_AGAINST,
             "observed_simllm_revision": _git_revision("HEAD"),
             "observed_htsim_gitlink": _git_revision("HEAD:third_party/htsim"),
