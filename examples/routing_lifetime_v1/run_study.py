@@ -57,6 +57,33 @@ MEMORY_CELLS = {
     },
 }
 
+#: CORE-47 comparator registry, frozen by refreeze_expectations.md. Every
+#: literal is CORE-35's independently published measurement of the same cells;
+#: nothing here is recomputed from a run.
+COMPARATOR_CELLS = {
+    1: {
+        "executions": 25,
+        "completions": 5_760,
+        "agreeing_timestamps": 4_455,
+        "moved_timestamps": 1_305,
+        "executed_target_ps": 10_480_742,
+        "barrier_target_ps": 10_790_217,
+        "final_boundary_ps": 154_568_365,
+    },
+    3: {
+        "executions": 33,
+        "completions": 7_680,
+        "agreeing_timestamps": 5_127,
+        "moved_timestamps": 2_553,
+        "executed_target_ps": 13_812_156,
+        "barrier_target_ps": 14_485_720,
+        "final_boundary_ps": 234_886_380,
+    },
+}
+
+COMPARATOR_TARGET_OPERATION_ID = "step-0:layer-1:rank-1:compute"
+COMPARATOR_TARGET_PARTICIPANT_RANK = 1
+
 LIFECYCLE_CELLS = {
     "clean-one": {"request_count": 1, "closed": 1, "live": 0, "views": 0},
     "clean-three": {"request_count": 3, "closed": 3, "live": 0, "views": 0},
@@ -94,6 +121,46 @@ def _check_frozen_registry() -> None:
     }
     if suppressions != {("r0", "dispatch", 7), ("r2", "combine", 19)}:
         raise AssertionError("suppression registry disagrees with expectations")
+    _check_comparator_registry()
+
+
+def _check_comparator_registry() -> None:
+    """Validate the CORE-47 comparator literals without running anything."""
+
+    if set(COMPARATOR_CELLS) != {1, 3}:
+        raise AssertionError("comparator registry must cover both lifecycle cells")
+    for request_count, cell in COMPARATOR_CELLS.items():
+        expected_executions = 25 if request_count == 1 else 33
+        if cell["executions"] != expected_executions:
+            raise AssertionError("comparator execution count drifted")
+        if cell["agreeing_timestamps"] + cell["moved_timestamps"] != cell["completions"]:
+            raise AssertionError("comparator timestamp partition does not conserve")
+        if cell["barrier_target_ps"] <= cell["executed_target_ps"]:
+            raise AssertionError("the barrier arm must never be earlier")
+        if cell["moved_timestamps"] <= 0:
+            raise AssertionError("a moved intermediate value is expected here")
+        if cell["final_boundary_ps"] <= cell["barrier_target_ps"]:
+            raise AssertionError("an intermediate value cannot outlast its step")
+    one, three = COMPARATOR_CELLS[1], COMPARATOR_CELLS[3]
+    if three["moved_timestamps"] <= one["moved_timestamps"]:
+        raise AssertionError("the wider cell must move strictly more values")
+    if (
+        three["moved_timestamps"] * one["completions"]
+        <= one["moved_timestamps"] * three["completions"]
+    ):
+        raise AssertionError("the wider cell must move a larger fraction")
+    if three["final_boundary_ps"] <= one["final_boundary_ps"]:
+        raise AssertionError("three requests cannot finish before one")
+    gaps = {
+        count: cell["barrier_target_ps"] - cell["executed_target_ps"]
+        for count, cell in COMPARATOR_CELLS.items()
+    }
+    if gaps != {1: 309_475, 3: 673_564}:
+        raise AssertionError("comparator target gap literals drifted")
+    if not COMPARATOR_TARGET_OPERATION_ID.endswith(":compute"):
+        raise AssertionError("the comparator target must be a compute operation")
+    if COMPARATOR_TARGET_PARTICIPANT_RANK <= 0:
+        raise AssertionError("the decision case is a non-first participant rank")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -954,7 +1021,8 @@ def main() -> None:
     if arguments.check_only:
         print(
             "check-only validated two memory cells, two clean lifecycle cells, "
-            "two suppression cells and five source records; no artifacts produced"
+            "two suppression cells, two comparator cells and five source "
+            "records; no artifacts produced"
         )
         return
     result = _run(arguments)
