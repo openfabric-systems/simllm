@@ -316,7 +316,19 @@ The declared `engine_rank`, source-0 uniform approximation and unchanged
 oracles cover clause 2. The 42-of-48 unit fixture and 12,482-of-20,736 Granite
 projection cover clause 3. The EP-width and live-makespan tables plus physical
 bounds cover clause 4. The six consumer sections and retained result hashes
-cover clause 5. No part of the registered acceptance is deferred.
+cover clause 5 only in part.
+
+Clause 5 is not fully met, and this is the one deferred piece. A seventh
+routed consumer was missed: `examples/dependency_authority_v1/run_study.py`
+renders captured MoE traffic through `_routed_supply(_routed_projection(...))`
+imported from `nvlink_locality_v1`, at lines 207, 213, 268, 271 and 406, and
+this branch leaves it untouched. Its frozen registry at lines 22 to 57 still
+carries pre-correction literals: `GRAPH_ARTIFACT_COUNT = 72`,
+`LEGACY_GOAL_ORACLES` at 72,819 bytes, and
+`LEGACY_JCT_PS = {1024: 156_569_755, 2048: 217_222_486}`. That study would
+fail if rerun today, so it is reported here as an unavailable rerun rather
+than as a refrozen consumer. It must be rerun and refrozen before any further
+branch merges through this renderer.
 
 ## Contradiction sweep
 

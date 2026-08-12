@@ -194,24 +194,51 @@ changed JCT by exactly 999 ps, and the absent-observation graph and GOAL bytes
 retained their accepted hashes. All 16 scored relations, 22 exact-oracle rows
 and 12 fatal unscored guards passed; see
 [the overlap results](../../examples/compute_comm_overlap_v1/RESULTS.md).
-Current framework adapters do not yet emit these schedules, and the runtime's
+The vLLM adapter now emits one implemented source-backed schedule. Its current
+qualification is void, as recorded below. The runtime's
 physical collective expansion and GPU-side contention gaps remain explicit
-under TRAF-13, TRAF-14, CORE-26, CORE-27 and COMP-22.
+under TRAF-14, CORE-26, CORE-27 and COMP-22.
 The 2026-08-12 TRAF-13 qualification added `DeviceRuntimeStepSink`, which binds
 the adapter's sole `VirtualClock` and carries optional observations through
 `ObservedStepLowerer`, `CoarseDeviceRuntime`, `CompletionEvent`,
 `RuntimeReport`, `CompletionReducer` and request-attributed `StepResult`
-metrics. Its component evidence passed the accepted exact serial graph and GOAL
-identity checks. The vLLM producer qualification did not pass: the adapter
-emitted no `ExecutionObservations` and covered 0 of the 48 required Granite MoE
-dispatch and combine sites. No single-node or cross-node Granite placement
-metric ran. The behavioral result is `0/0, blocked before behavioral
-execution`; TRAF-13 remains open. See
+metrics. Its first component qualification passed the accepted exact serial
+graph and GOAL identity checks but emitted no framework schedule, so its
+historical behavioral result remains `0/0, blocked before behavioral
+execution`. See
 [the observed-schedule qualification results](../../examples/observed_schedule_v1/RESULTS.md).
-A separate live vLLM 0.26.0 Granite skeleton diagnostic confirmed the same
-boundary across one prefill and one decode step: only DP bookkeeping and one
-fixed TP event appeared per step, with no observation graph or semantic EP
-site. It is component evidence and does not change the behavioral denominator.
+A separate pre-VLLM-22 live diagnostic confirmed that earlier boundary across
+one prefill and one decode step. It is historical component evidence and does
+not change that blocked denominator.
+
+TRAF-13 remains open after the source-backed vLLM qualification on 2026-08-12.
+The eight-rank Granite replay emitted observations for all 32 nonempty steps
+and reached traffic binding, the coarse runtime, completion events,
+`StepResult`, TTFT and TPOT. The run is void with findings because the fatal
+`ttft_exact_single_batch` guard was violated. That guard tested the same
+serial-versus-observed arm-equivalence premise needed to attribute the two
+in-band TPOT reductions to DBO, so the failure is not orthogonal to the raw
+behavioral findings. Retained DBO-off steps 24 through 31 bound the measured
+non-DBO residual at 1.231 percent of the mean DBO reduction on both placements,
+but do not restore a score.
+
+The residual is not caused by participant-local dependency scope, which both
+lowerers use. The structural differences are the open TRAF-9 whole-layer MoE
+ordering approximation and the observed arm's terminal logits plus
+`requests-visible` fan-in. The vLLM wrapper shows event waits and no
+wrapper-level global barrier, but `deep_ep` itself was not installed; lower
+level rank-local completion is inferred, not directly source-backed.
+
+The retained 440,115,200 directed bytes are a pre-TRAF-25 conservation
+identity over the source-multiplied table and are not portable. The duration
+model keys on maximum per-source egress, not total bytes. Under TRAF-25,
+dispatch egress from the owning rank stays fixed while combine collapses, so
+the communication term changes by roughly a factor of two rather than the
+eightfold total-byte change. `_validate_microbatch_partition` conserves the
+inflated planner table against itself and cannot detect the defect; it is not a
+byte-correctness guard. Both reduction bands are consequently non-portable
+across TRAF-25. See
+[the source-backed results](../../examples/vllm_observed_schedule_v1/RESULTS.md).
 
 TRAF-25 corrected the source-multiplicity defect in both captured and uniform
 MoE rendering. One `StepRecord` now has one engine source, while peer EP ranks
@@ -254,6 +281,36 @@ old source-multiplied numeric surfaces are listed in
   graph scope, move live JCT by the registered direction and magnitude, and
   retain the current supported artifact bytes and timing as the explicit off
   path.
+- TRAF-23 (Precision; P1; L): measure per-rank completion frontiers on the
+  VLLM-22 path. Capture dispatch and combine return, next-compute eligibility,
+  final-logits completion and terminal `requests-visible` fan-in on a B100
+  NVLink node and a 400 Gbit/s cross-node placement. Fit only identifiable
+  latency and frontier terms, hold out at least one payload and step shape, and
+  require registered held-out error bounds on those measured frontiers. Any
+  one-edge perturbation criterion must be no larger than one measured target
+  collective's service time; a whole-step reduction fraction is not an
+  admissible minimum. The current source schedule and producer-disabled serial
+  identities remain the exact off paths.
+- TRAF-19 (Precision; P2; L): add a statistical flow-completion level
+  beside the fluid and packet-level network models. Fit a completion-time
+  distribution offline from packet-level runs over a declared topology,
+  load and collective shape, then draw from it, so a large sweep keeps
+  network side effects such as ECMP hash collisions, incast tails and
+  link failures as a measured tail instead of deleting them by assuming
+  an infinite pipe. The fit must carry its calibration envelope and be
+  refused outside it, the draw must be seeded and reproducible, and the
+  packet-level path stays the exact reference the fit is validated
+  against. Acceptance compares fitted quantiles against held-out
+  packet-level runs at registered accuracy, and states plainly that a
+  marginal fit does not reproduce correlations it never observed.
+- TRAF-20 (Precision; P2; M): add a fluid LogGOPSim fast level for
+  schedule-shape studies that do not need per-flow transport behavior.
+  The GOAL already compiles to the LogGOPSim toolchain, so this level
+  reuses it analytically and bypasses the event-driven RNIC path. Its
+  purpose is sweep throughput, so acceptance must state the measured
+  wall-clock gain and the measured error against the packet-level
+  reference on the same schedules, and it must refuse configurations
+  whose questions it cannot answer rather than returning a number.
 
 ### Completeness
 
@@ -267,17 +324,17 @@ old source-multiplied numeric surfaces are listed in
   while selecting the isolated mode preserves every accepted TRAF-25 byte,
   timestamp and completion order exactly.
 
-- TRAF-13 (Completeness; P1; L): connect at least one real framework schedule
-  producer to `ObservedStepLowerer` after VLLM-22 or SGL-17 supplies captured
-  operation order, streams, events and completion boundaries. The
-  `DeviceRuntimeStepSink` component is ready, but its 2026-08-12 qualification
-  observed no vLLM schedule and matched 0 of 48 required semantic MoE sites.
-  Replay a fixed captured step through the traffic binding, `DeviceRuntime`,
-  `CompletionEvent`, `StepResult`, TTFT and TPOT; require every captured order
-  and dependency fact to survive exactly and show that one observed legal
-  overlap changes the live metric in its registered direction. Disabling the
-  producer must select the serial lowerer and preserve every accepted serial
-  graph, GOAL byte, timestamp and completion order exactly.
+- TRAF-13 (Completeness; P0; L): qualify at least one real framework schedule
+  producer through `ObservedStepLowerer`. The 2026-08-12 VLLM-22 run reached
+  the full metric chain but is void because `ttft_exact_single_batch` violated
+  the frozen arm-equivalence premise. A future expectations-only qualification
+  must distinguish DBO from the TRAF-9 and terminal-frontier differences,
+  preserve every captured order and dependency fact through traffic binding,
+  `DeviceRuntime`, `CompletionEvent`, `StepResult`, TTFT and TPOT, and show a
+  registered live-metric relation. Disabling the producer must select the
+  serial lowerer and preserve every accepted serial graph, GOAL byte,
+  timestamp and completion order exactly. Routed-byte acceptance depends on
+  TRAF-25 and VLLM-24.
 - TRAF-15 (Completeness; P2; M): project arbitrary legal forward, non-monotone
   and general non-contiguous or fan-in DAGs through the step sink. The current
   projector rejects unsupported order classes before writing an artifact.
@@ -309,31 +366,3 @@ old source-multiplied numeric surfaces are listed in
   (attention and router before dispatch, expert MLP between dispatch and
   combine) and may overlap shared-expert work with the a2avs. The serial
   whole-layer calc keeps the makespan correct only to first order.
-- TRAF-14 (Precision; P1; M): move ring-round and pairwise-extent expansion
-  from the coarse runtime's current semantic-work surrogate into one immutable
-  traffic-owned collective plan carried through `ExecutionGraph`. The runtime
-  may schedule those extents but may not choose or reconstruct their algorithm,
-  chunk sizes, rank order or tags. Compare the plan against the existing GOAL
-  pattern expansion over payload, world-size and routed sparse-pair sweeps with
-  exact byte, round, dependency and tag conservation. The absent explicit plan
-  must preserve the accepted v1 wire bytes and serial timing exactly.
-- TRAF-19 (Precision; P2; L): add a statistical flow-completion level
-  beside the fluid and packet-level network models. Fit a completion-time
-  distribution offline from packet-level runs over a declared topology,
-  load and collective shape, then draw from it, so a large sweep keeps
-  network side effects such as ECMP hash collisions, incast tails and
-  link failures as a measured tail instead of deleting them by assuming
-  an infinite pipe. The fit must carry its calibration envelope and be
-  refused outside it, the draw must be seeded and reproducible, and the
-  packet-level path stays the exact reference the fit is validated
-  against. Acceptance compares fitted quantiles against held-out
-  packet-level runs at registered accuracy, and states plainly that a
-  marginal fit does not reproduce correlations it never observed.
-- TRAF-20 (Precision; P2; M): add a fluid LogGOPSim fast level for
-  schedule-shape studies that do not need per-flow transport behavior.
-  The GOAL already compiles to the LogGOPSim toolchain, so this level
-  reuses it analytically and bypasses the event-driven RNIC path. Its
-  purpose is sweep throughput, so acceptance must state the measured
-  wall-clock gain and the measured error against the packet-level
-  reference on the same schedules, and it must refuse configurations
-  whose questions it cannot answer rather than returning a number.

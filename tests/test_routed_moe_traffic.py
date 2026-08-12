@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 
 import simllm.backends.step_sink as step_sink_module
+from simllm.adapters.vllm import VllmBatchSlice, build_granite_execution_observations
 from simllm.backends import (
     DeviceRuntimeStepSink,
     HtsimStepSink,
@@ -18,7 +19,13 @@ from simllm.backends import (
     SerialStepLowerer,
     SerialStepLowererConfig,
 )
-from simllm.compute import ComputeProvider, DurationEstimate, ModelDims
+from simllm.compute import (
+    GPU_ENVELOPES,
+    ComputeProvider,
+    DurationEstimate,
+    HostInitiationModel,
+    ModelDims,
+)
 from simllm.core import (
     CollectiveWork,
     ExecutionObservations,
@@ -162,6 +169,17 @@ def _routing() -> RoutedExperts:
                     _token(ForwardPhase.PREFILL, 1, 11, (0, 2), (0, 1)),
                     _token(ForwardPhase.DECODE, 0, 20, (1, 3), (2, 3)),
                     _token(ForwardPhase.DECODE, 1, 21, (0, 1), (1, 2)),
+                ),
+            ),
+            RoutedRequest(
+                request_id="beta",
+                prompt_token_count=2,
+                output_token_count=3,
+                tokens=(
+                    _token(ForwardPhase.PREFILL, 0, 30, (0, 3), (1, 3)),
+                    _token(ForwardPhase.PREFILL, 1, 31, (1, 2), (0, 3)),
+                    _token(ForwardPhase.DECODE, 0, 40, (0, 2), (1, 3)),
+                    _token(ForwardPhase.DECODE, 1, 41, (2, 3), (0, 1)),
                 ),
             ),
         ),
@@ -963,3 +981,93 @@ def test_observed_lowerer_preserves_per_request_attribution():
     assert [metric.request_id for metric in result.request_metrics] == ["alpha"]
     assert result.request_metrics[0].ttft_ps == result.step_latency_ps
     assert clock.now_ps == result.completed_at_ps
+
+
+def test_adapter_dbo_schedule_rebinds_disjoint_request_pair_partitions():
+    supply = _tiny_supply()
+    record = StepRecord(
+        step_index=2,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest(
+                "alpha",
+                RequestPhase.DECODE,
+                1,
+                context_length=3,
+            ),
+            ScheduledRequest(
+                "beta",
+                RequestPhase.DECODE,
+                1,
+                context_length=3,
+            ),
+        ],
+        num_sampled=2,
+        sampled_request_ids=["alpha", "beta"],
+    )
+    provider = FixedProvider(2_000)
+    config = SerialStepLowererConfig(
+        TINY_MOE_DIMS,
+        (0,),
+        ep_ranks=(0, 1),
+        provider=provider,
+        routed_moe_supply=supply,
+    )
+    observations, timing = build_granite_execution_observations(
+        record,
+        TINY_MOE_DIMS,
+        (0, 1),
+        (
+            VllmBatchSlice(0, ("alpha",), 1),
+            VllmBatchSlice(1, ("beta",), 1),
+        ),
+        provider,
+        GPU_ENVELOPES["b100"],
+        HostInitiationModel(),
+    )
+    graph = ObservedStepLowerer(config).lower(record, observations)
+    collectives = [
+        operation
+        for operation in graph.operations
+        if isinstance(operation.work, CollectiveWork)
+    ]
+
+    assert len(collectives) == 8
+    assert timing.represented_compute_ps == 2_000
+    for operation in collectives:
+        request_ids = {
+            request_id
+            for request_id, _, _, _ in operation.work.request_pair_payload_bytes
+        }
+        assert request_ids == set(operation.correlation.request_ids)
+
+    full = step_moe_alltoalls(
+        record,
+        TINY_MOE_DIMS,
+        (0, 1),
+        routed_supply=supply,
+    )
+    for expected in full:
+        matched = [
+            operation.work
+            for operation in collectives
+            if operation.correlation.layer == expected.layer
+            and operation.work.channel_hint == expected.phase
+        ]
+        assert tuple(
+            sorted(
+                row
+                for work in matched
+                for row in work.request_pair_payload_bytes
+            )
+        ) == expected.request_pair_payload_bytes
+
+    clock = VirtualClock()
+    sink = DeviceRuntimeStepSink(config)
+    sink.bind_clock(clock)
+    result = sink(record, observations)
+    assert [metric.request_id for metric in result.request_metrics] == [
+        "alpha",
+        "beta",
+    ]
+    assert sink.outcomes[0].graph == graph
