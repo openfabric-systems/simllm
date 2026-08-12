@@ -55,6 +55,20 @@ backend submodules.
   backend DCQCN PR); same completion-CSV schema and quiescence contract.
 - `HtsimUecConfig` + `build_htsim_uec_command`: argv construction for
   GOAL-driven `htsim_uec` runs.
+- `LogGopsimConfig` + `build_loggopsim_command` + `run_loggopsim` +
+  `parse_loggopsim_stdout` (BACK-2): the flow-level analytical seam. The same
+  binary GOAL is costed with the LogGOPS model instead of a packet fabric, so
+  a sweep that only needs a schedule completion time does not pay for a
+  packet-level run. LogGOPS parameters keep the tool's own units, `L`, `o`,
+  `g` and `O` in whole nanoseconds and `G` in nanoseconds per byte, under
+  explicit `_ns` field names; parsed times convert to picoseconds by exactly
+  1000. The parser reads both output shapes the tool can print, the per-host
+  block and the batch-mode maximum, and treats a nonfinite `Average FCT` as
+  absent. Discovery is `SIMLLM_LOGGOPSIM`, the `build/loggopsim` CMake
+  layout, the ATLAHS submodule's own make output, then `PATH`; with none of
+  those present the runner raises and names the environment variable. This is
+  an invocation helper only, and TRAF-20 still owns the fluid fast fidelity
+  level.
 - `HtsimStepSink` + `HtsimStepSinkConfig` (M4): the closed-loop step sink,
   a callable `StepRecord -> StepResult | None` matching the adapters' sink
   contract. Per step its serial lowerer builds one `ExecutionGraph`; that
@@ -726,6 +740,16 @@ BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
 and its ECMP-collision and slow-start behavior is the phenomenon under study.
 
+BACK-2 closed on 2026-08-13. `simllm/backends/loggopsim.py` drives the
+unmodified LogGOPSim binary over the same binary GOAL the htsim helpers use.
+Fifteen exact argument and parse oracles pin the option grammar, both output
+shapes and the picosecond conversion, and a live two-by-two sweep over message
+size and per-byte gap reproduces the LogGOPS cost model on four of four scored
+instances with an invariant 6500 ns constant, every cell above its own
+serialization floor
+([loggopsim_helper_v1](../../examples/loggopsim_helper_v1/RESULTS.md)). The
+helper is the invocation seam only; TRAF-20 still owns the fluid fast level.
+
 ## Open tasks
 
 Every task is labeled `(Category; priority; difficulty)`. P0 is a correctness,
@@ -807,8 +831,6 @@ is difficult.
 
 ### Completeness
 
-- BACK-2 (Completeness; P2; S): LogGOPSim invocation helper for fast
-  flow-level sweeps.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
   the structural **RDMA
   Work Queue**, merging the old WQE lifecycle and per-WQE-start work. Model
