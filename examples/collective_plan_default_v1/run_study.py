@@ -31,11 +31,17 @@ FROZEN_SCORED_FAMILIES = 4
 FROZEN_SCORED_INSTANCES = 20
 
 EXPECTATIONS = "examples/collective_plan_default_v1/expectations.md"
+REFREEZE = "examples/collective_plan_default_v1/refreeze_expectations.md"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 GRANITE_LAYERS = 24
 GRANITE_EP_WIDTH = 8
 GRANITE_STEP_COUNT = 3
+GPUS_PER_NODE = 8
+#: transport refreeze: one rank per node, so the swept fabric rate binds and
+#: intra-node NVLink traffic stays off the fabric
+LIVE_RANKS = tuple(index * GPUS_PER_NODE for index in range(GRANITE_EP_WIDTH))
+NVLINK_RATE_BPS = 900_000_000_000
 
 
 def serialization_ps(byte_count: int, rate_bps: int) -> int:
@@ -94,12 +100,22 @@ def check_only(args: argparse.Namespace) -> None:
     ):
         raise AssertionError("serialization is not inverse in the rate")
 
+    if len(LIVE_RANKS) != GRANITE_EP_WIDTH:
+        raise AssertionError("live rank registry drifted")
+    if len({rank // GPUS_PER_NODE for rank in LIVE_RANKS}) != GRANITE_EP_WIDTH:
+        raise AssertionError("the live placement puts two ranks on one node")
+    if NVLINK_RATE_BPS <= max(RATES_BPS):
+        raise AssertionError("the NVLink rate no longer dominates the fabric rate")
+
     if not (REPO_ROOT / EXPECTATIONS).is_file():
         raise AssertionError("the frozen expectations record is missing")
+    if not (REPO_ROOT / REFREEZE).is_file():
+        raise AssertionError("the transport refreeze record is missing")
     if any(not str(path) for path in (args.out, args.granite_root)):
         raise AssertionError("registered path argument is empty")
     print(
         "check-only validated the frozen collective-plan-default registries, "
+        "the transport-aware bounds, the pinned live placement, the "
         "perturbation family and evidence accounting; produced no artifacts"
     )
 
@@ -266,8 +282,14 @@ def _execute(graph, rate_bps: int):
     return result, tuple(events), wqes
 
 
-def _graph_bytes_and_load(graph) -> tuple[int, int, int]:
-    """Return total directed bytes, peak full-duplex endpoint load and messages."""
+def _graph_transport(graph) -> dict[str, Any]:
+    """Split the planned directed extents by the link the model selects.
+
+    ``CoarseDeviceRuntime`` routes a same-node semantic send over NVLink at the
+    profile's fixed rate and a cross-node send over the swept fabric rate, so a
+    bound that charges one rate to both is wrong. The void first run charged the
+    fabric rate to traffic that never left node 0.
+    """
 
     from simllm.core import CollectiveWork
     from simllm.traffic import collective_plan_by_operation
@@ -285,12 +307,49 @@ def _graph_bytes_and_load(graph) -> tuple[int, int, int]:
             directed.append(
                 (extent.source_rank, extent.destination_rank, extent.payload_bytes)
             )
-    loads: dict[int, list[int]] = {}
+    fabric: dict[int, list[int]] = {}
+    nvlink: dict[int, list[int]] = {}
+    fabric_bytes = 0
+    nvlink_bytes = 0
     for source, destination, payload in directed:
+        same_node = source // GPUS_PER_NODE == destination // GPUS_PER_NODE
+        loads = nvlink if same_node else fabric
         loads.setdefault(source, [0, 0])[0] += payload
         loads.setdefault(destination, [0, 0])[1] += payload
-    peak = max((max(pair) for pair in loads.values()), default=0)
-    return sum(row[2] for row in directed), peak, len(directed)
+        if same_node:
+            nvlink_bytes += payload
+        else:
+            fabric_bytes += payload
+    return {
+        "fabric_loads": fabric,
+        "nvlink_loads": nvlink,
+        "fabric_bytes": fabric_bytes,
+        "nvlink_bytes": nvlink_bytes,
+        "directed_bytes": fabric_bytes + nvlink_bytes,
+        "message_count": len(directed),
+    }
+
+
+def _transport_bounds(transport: dict[str, Any], compute_ps: int, rate_bps: int):
+    """Transport-aware floor and ceiling from the refreeze."""
+
+    endpoints = set(transport["fabric_loads"]) | set(transport["nvlink_loads"])
+    floor_network = 0
+    for rank in endpoints:
+        fabric = transport["fabric_loads"].get(rank, [0, 0])
+        nvlink = transport["nvlink_loads"].get(rank, [0, 0])
+        endpoint = max(
+            serialization_ps(max(fabric), rate_bps),
+            serialization_ps(max(nvlink), NVLINK_RATE_BPS),
+        )
+        floor_network = max(floor_network, endpoint)
+    ceiling = (
+        compute_ps
+        + serialization_ps(transport["fabric_bytes"], rate_bps)
+        + serialization_ps(transport["nvlink_bytes"], NVLINK_RATE_BPS)
+        + 1_000 * transport["message_count"]
+    )
+    return compute_ps + floor_network, ceiling
 
 
 def _compute_ps(graph) -> int:
@@ -539,7 +598,7 @@ def _live_arm(args: argparse.Namespace, output_dir: Path) -> dict[str, Any]:
     replayed = [record for record in records if record.total_new_tokens > 0]
     replayed = replayed[:GRANITE_STEP_COUNT]
     dims = _dims(GRANITE_LAYERS, moe=True)
-    tp_ranks = tuple(range(GRANITE_EP_WIDTH))
+    tp_ranks = LIVE_RANKS
 
     cells: dict[str, Any] = {}
     for rate in RATES_BPS:
@@ -576,7 +635,7 @@ def _live_arm(args: argparse.Namespace, output_dir: Path) -> dict[str, Any]:
                     ttft_ps = int(metric.ttft_ps)
                 if metric.tpot_ps is not None:
                     tpot_ps = int(metric.tpot_ps)
-                directed_bytes, peak_load, message_count = _graph_bytes_and_load(
+                transport = _graph_transport(
                     _lower(
                         record,
                         dims,
@@ -587,21 +646,19 @@ def _live_arm(args: argparse.Namespace, output_dir: Path) -> dict[str, Any]:
                     )
                 )
                 compute_ps = _compute_ps(graph)
+                floor_ps, ceiling_ps = _transport_bounds(transport, compute_ps, rate)
                 step_rows.append(
                     {
                         "step_index": index,
                         "tokens": source.total_new_tokens,
                         "step_latency_ps": step.step_latency_ps,
                         "compute_ps": compute_ps,
-                        "directed_bytes": directed_bytes,
-                        "peak_endpoint_load_bytes": peak_load,
-                        "message_count": message_count,
-                        "floor_ps": compute_ps + serialization_ps(peak_load, rate),
-                        "ceiling_ps": (
-                            compute_ps
-                            + serialization_ps(directed_bytes, rate)
-                            + 1_000 * message_count
-                        ),
+                        "directed_bytes": transport["directed_bytes"],
+                        "fabric_bytes": transport["fabric_bytes"],
+                        "nvlink_bytes": transport["nvlink_bytes"],
+                        "message_count": transport["message_count"],
+                        "floor_ps": floor_ps,
+                        "ceiling_ps": ceiling_ps,
                     }
                 )
             cells[f"{mode}.{rate}"] = {
