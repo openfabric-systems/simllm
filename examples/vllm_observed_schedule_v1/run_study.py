@@ -223,11 +223,15 @@ def _routed_supply(path: Path):
 def _profile(placement: str):
     from simllm.core import CoarseDeviceProfile
 
+    class _OneRankPerNodeProfile(CoarseDeviceProfile):
+        def node_gpu(self, rank: int) -> tuple[int, int]:
+            super().node_gpu(rank)
+            return rank, 0
+
     if placement == "single-node":
         return CoarseDeviceProfile(nvlink_rate_bps=3_600_000_000_000)
     if placement == "cross-node":
-        return CoarseDeviceProfile(
-            gpus_per_node=1,
+        return _OneRankPerNodeProfile(
             rnic_rate_bps=400_000_000_000,
         )
     raise ValueError(f"unknown placement {placement!r}")

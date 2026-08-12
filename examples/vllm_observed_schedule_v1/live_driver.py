@@ -88,6 +88,11 @@ class _LiveObservationSink:
         from simllm.compute import RooflineProvider
         from simllm.core import CoarseDeviceProfile, CoarseDeviceRuntime
 
+        class _OneRankPerNodeProfile(CoarseDeviceProfile):
+            def node_gpu(self, rank: int) -> tuple[int, int]:
+                super().node_gpu(rank)
+                return rank, 0
+
         config = SerialStepLowererConfig(
             _model_dims(),
             (0,),
@@ -95,8 +100,7 @@ class _LiveObservationSink:
             provider=RooflineProvider(efficiency=0.7),
             routed_moe_supply=_routed_supply(routed_experts),
         )
-        profile = CoarseDeviceProfile(
-            gpus_per_node=1,
+        profile = _OneRankPerNodeProfile(
             rnic_rate_bps=400_000_000_000,
         )
         self._delegate = DeviceRuntimeStepSink(
