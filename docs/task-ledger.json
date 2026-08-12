@@ -71,8 +71,10 @@
     "TRAF-27",
     "VLLM-1",
     "VLLM-2",
+    "VLLM-6",
     "VLLM-15",
     "VLLM-16",
+    "VLLM-24",
     "WORK-3"
   ],
   "retired_never_landed": [

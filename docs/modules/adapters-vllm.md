@@ -101,6 +101,18 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
   Llama-8B-shaped default is warned once and stamped on
   `ModelDims.defaulted_fields`.
 
+`model_dims_from_vllm_config` reads the MoE geometry off vLLM's own resolved
+MoE parallel shape rather than off the raw flags. `expert_parallel_geometry`
+resolves that shape for the config's global rank (the flattened
+`dp * pcp * tp` device set, whether expert parallelism is actually in use, the
+resulting MoE tensor-parallel size, and the rank's expert group and index), and
+`expert_group_ranks` returns the group itself, or `None` for a dense model
+because vLLM builds no expert-parallel group for one. When expert parallelism
+is in use, `SimExecutor` binds that group once, before any step, to a sink
+implementing `ExpertGroupStepSink.bind_expert_group`; with it disabled the
+executor binds nothing and the sink keeps the group its own configuration
+declared.
+
 Timing has two modes: `paced` (sleep the simulated latency, stock vLLM
 metrics stay meaningful) and `virtual` (return immediately, report sim-native
 metrics). Configuration that no vLLM flag carries comes from `SIMLLM_VLLM_*`
@@ -451,19 +463,64 @@ the open TRAF-9 whole-layer MoE ordering approximation and the observed arm's
 terminal logits plus `requests-visible` fan-in. TRAF-23 owns measured
 frontiers only. The retained 440,115,200 directed bytes are a pre-TRAF-25
 conservation identity over the source-multiplied table and are not portable.
-The adapter emits zero-byte semantic all-to-allv markers, so the observed path
-does not independently cross-check a routed-MoE byte count before traffic
-planning replaces them. VLLM-24 owns that P0 validation gap. The
+The adapter emits zero-byte semantic all-to-allv markers. Those are an explicit
+`no-byte-evidence` observation mode, named by
+`simllm.traffic.observed_routed_byte_evidence`, and they no longer stand in for
+a byte check: VLLM-24 closed that P0 gap. The
 producer-disabled path passed all 64 per-step direct serial comparisons and
 both accepted graph and legacy diagnostic GOAL hashes. See
 [the observed-schedule results](../../examples/vllm_observed_schedule_v1/RESULTS.md).
 
-This branch also added a post-specified component test showing that one fake
-Granite configuration maps to `num_experts=32`, `top_k=8`,
-`moe_intermediate_size=512` and `local_num_experts=4`. The VLLM-22 freeze
-registered no VLLM-6 acceptance relation, so that component result does not
-partially close VLLM-6. Its complete geometry and executor-group clauses remain
-open below.
+VLLM-24 is complete. Expectations were frozen at commit `20f6017` and amended
+at `1a4db9b`, both before the harness and every result-producing run; the
+amendment corrected two frozen rule statements that were written as if every
+routed byte leaves the owner, which is false for combine. The independent guard
+lives in `simllm.traffic.routed_conservation` and runs on the full-step routed
+plan from both the observation-aware lowerer and the serial renderer. Its
+ownership side is built from the record's per-request scheduled token counts,
+the declared `RoutedMoeSupply.engine_rank` and the model geometry, none of which
+comes from the per-token routing walk that produces the byte table it inspects.
+Five rules apply to every routed representation and four more need
+deduplicated captured routing; the uniform destination approximation is
+deliberately exempt from those four, because it never merges experts that share
+a destination.
+
+The study ran the captured Granite routing at EP worlds 2 and 8 against a
+source-replicated arm that reproduces the pre-TRAF-25 shape. All 8 fatal guards
+held and 5 of 5 executed scored instances passed, against a frozen denominator
+of 9. At EP world 8 the replicated arm emitted 42,656 hops against an 8,448-hop
+bound and was detected; at EP world 2 it emitted 2,112 against the same bound
+and was not, which is a first-principles certainty rather than a measurement,
+since a two-rank world admits at most one remote owner per token-layer. The
+four unexecuted instances are the frozen decode cell: the frozen capture carries
+22 prefill tokens and zero decode tokens, so that cell cannot be built from it
+at all. A labeled post-specified one-token prefill chunk behaved as the frozen
+decode cell predicted and is reported separately. See
+[the conservation results](../../examples/routed_byte_conservation_v1/RESULTS.md).
+
+VLLM-6 is complete. Expectations were frozen at commit `20f6017` before the
+implementation and every run, replacing the earlier post-specified component
+result that could not close the clause. The geometry reader now follows vLLM's
+own resolved MoE parallel shape: the expert world is the flattened
+`dp * pcp * tp` rather than `dp` alone, expert parallelism leaves the expert
+weights entirely un-tensor-sharded while its absence shards them across that
+whole flattened set, the global expert count includes the EPLB redundant
+copies, and the per-rank local count follows vLLM's uneven remainder
+distribution. An expert world wider than the expert count is refused rather
+than handing a rank no experts. `SimExecutor` derives its expert group in
+vLLM's `ExternalDP x DP x PP x PCP x TP` layout order, which excludes the other
+pipeline stage, and binds it once to an expert-group-capable sink only when
+expert parallelism is actually in use.
+
+That study passed 22/22 scored instances with 5 of 5 fatal guard cases held,
+over 12 geometry cells, 5 rank layout cells, 3 corrected directions and the two
+binding cells. The parallel side of every cell was re-derived against the real
+pinned `vllm.config.ParallelConfig` in a separate interpreter; 13 of 17 cells
+constructed and agreed exactly, while vLLM v0.26.0 itself refuses prefill
+context parallelism combined with data parallelism and the probe could not
+supply the launcher convention the ExternalDP cell needs. See
+[the geometry results](../../examples/vllm_moe_geometry_v1/RESULTS.md).
+
 The pre-play framework oracle adds a separate, inert-by-default vLLM general
 plugin. `VllmCpuRunner` enables it only inside an isolated CPU process. The
 plugin observes the stock `CPUWorker`, `CPUModelRunner`, v1 KV manager, block
@@ -541,30 +598,9 @@ and zero changed all-to-all bytes. The detailed evidence is in
   matrix. Hold out at least one model and group size; require modeled median
   and p95 call cost within a pre-registered relative or additive band, then
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
-- VLLM-24 (Precision; P0; M): restore an independent routed-MoE byte
-  cross-check on the active observation path. The Granite producer currently
-  emits zero-byte semantic all-to-allv markers;
-  `_validate_observed_collective` permits empty pair and request-pair tables,
-  and `_validate_microbatch_partition` only recombines work produced by the
-  same traffic planner. After TRAF-25, carry source-observed token ownership or
-  an equivalent independent per-request pair projection across the adapter
-  seam and require exact agreement with the traffic plan for source rank,
-  destination rank, request identity, per-source egress and total directed
-  bytes. The semantic-marker path may remain an explicit no-byte-evidence
-  mode, but it must not satisfy or be cited as a byte-correctness guard.
 
 ### Completeness
 
-- VLLM-6 (Completeness; P1; M): complete the adapter's MoE geometry and expert
-  group binding. This branch has post-specified component evidence for one
-  Granite `model_dims_from_vllm_config` mapping, but no expectations-only
-  acceptance relation preceded it, so the geometry clause remains open.
-  Register exact mappings for expert count, top-k, per-expert intermediate
-  size and local experts across enabled and no-MoE configurations, including
-  failure and default behavior. Then make `SimExecutor` derive the exact
-  expert group from the active parallel configuration and pass `ep_ranks` to
-  its sink. Acceptance must preserve the explicit no-EP path and the VLLM-22
-  `SimWorker` schedule and serial-off identities exactly.
 - VLLM-13 (Completeness; P1; L) (remaining GPU-present half after the flagged
   skeleton): the skeleton DP coordination half has landed through
   `SimGroupCoordinator`, including consumption of its local padded-token
@@ -612,7 +648,8 @@ and zero changed all-to-all bytes. The detailed evidence is in
   must name the wrapper or measured mechanism that makes each concurrency
   legal and derive no edge from an overlap percentage or compatibility
   schedule. Completion reduction must return the original request identities;
-  per-request routed-byte acceptance depends on TRAF-25 and VLLM-24. With the
+  per-request routed-byte acceptance depends on TRAF-25 and VLLM-24, both of
+  which have landed. With the
   producer absent, preserve the legacy sink call, serial graph and GOAL bytes,
   timestamps and completion order exactly.
 - VLLM-23 (Completeness; P2; L): extend the source-backed observation producer

@@ -299,8 +299,10 @@ dispatch egress from the owning rank stays fixed while combine collapses, so
 the communication term changes by roughly a factor of two rather than the
 eightfold total-byte change. `_validate_microbatch_partition` conserves the
 inflated planner table against itself and cannot detect the defect; it is not a
-byte-correctness guard. Both reduction bands are consequently non-portable
-across TRAF-25. See
+byte-correctness guard. VLLM-24 later added the guard that can:
+`simllm.traffic.routed_conservation` checks the planned routed table against
+independently derived token ownership. Both reduction bands are consequently
+non-portable across TRAF-25. See
 [the source-backed results](../../examples/vllm_observed_schedule_v1/RESULTS.md).
 
 TRAF-25 corrected the source-multiplicity defect in both captured and uniform
@@ -314,6 +316,33 @@ the 255,631,360 ps corrected serialization floor. Five affected traffic
 consumers were rerun, the framework oracle was audited as unaffected, and all
 old source-multiplied numeric surfaces are listed in
 [the token ownership results](../../examples/token_ownership_v1/RESULTS.md).
+
+VLLM-24 added the independent routed-byte conservation guard in
+`simllm.traffic.routed_conservation`, and both `lower_step_observations` and
+`render_step_goal` now run it on the full-step routed plan. Its ownership side
+comes from the record's per-request scheduled token counts, the declared
+`RoutedMoeSupply.engine_rank` and the model geometry, so it never consumes the
+per-token routing walk it inspects. Five rules apply to every routed
+representation, including the uniform destination approximation:
+`source-attribution`, `destination-legality`, `owner-egress`,
+`transpose-symmetry` and the `step-hop-bound`
+`bytes <= total_new_tokens * top_k * num_layers * 2 * vector_bytes`. Four more,
+`vector-granularity`, `request-identity`, `per-request-hop-bound` and
+`per-layer-hop-bound`, need deduplicated captured routing and are deliberately
+not applied to the uniform approximation, which exceeds
+`min(top_k, W - 1)` per token by construction because it never merges experts
+that share a destination. A violated rule is fatal and unscored.
+
+The qualifying study replayed the captured Granite routing at EP worlds 2 and 8
+against a source-replicated arm reproducing the pre-TRAF-25 shape. At world 8
+the replicated arm emitted 42,656 hops against an 8,448-hop bound and was
+caught; at world 2 it emitted 2,112 against the same bound and was not, because
+a two-rank world admits at most one remote owner per token-layer, so
+`2 * hops_A(2) <= 4224` for any routing at all. The captured-only per-layer
+rule caught it at both worlds, but it is unavailable to the uniform
+approximation, which is why the wide-world step bound is the rule that
+generalizes. See
+[the conservation results](../../examples/routed_byte_conservation_v1/RESULTS.md).
 
 TRAF-21's explicit captured-message sequence interface remains complete.
 TRAF-25 now makes the aggregate and sequenced projections consume one ordered
@@ -446,7 +475,7 @@ residual. See
   registered live-metric relation. Disabling the producer must select the
   serial lowerer and preserve every accepted serial graph, GOAL byte,
   timestamp and completion order exactly. Routed-byte acceptance depends on
-  TRAF-25 and VLLM-24.
+  TRAF-25 and VLLM-24, both of which have landed.
 - TRAF-15 (Completeness; P2; M): project arbitrary legal forward, non-monotone
   and general non-contiguous or fan-in DAGs through the step sink. The current
   projector rejects unsupported order classes before writing an artifact.
