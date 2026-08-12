@@ -141,6 +141,16 @@ class BookkeepingEntry:
 
 
 @dataclass(frozen=True)
+class FrameworkRequestArrival:
+    """Read-only arrival projection for one framework request object."""
+
+    sequence: int
+    request_id: str
+    arrived_at_ps: int
+    request_ref: CreatedObjectRef
+
+
+@dataclass(frozen=True)
 class BookkeepingLedger:
     """Immutable snapshot of all facts known to one bookkeeper."""
 
@@ -331,6 +341,55 @@ def validate_bookkeeping_ledger(ledger: BookkeepingLedger) -> None:
     """Validate sequence, lineage, WQE context and completion consistency."""
 
     _validate_bookkeeping_ledger_state(ledger)
+
+
+def framework_request_arrivals(
+    ledger: BookkeepingLedger,
+) -> tuple[FrameworkRequestArrival, ...]:
+    """Project exact request arrivals from validated framework objects.
+
+    The created-object timestamp is the authority. Metadata fields are not
+    consulted because they are descriptive copies of that timestamp.
+    Projection order is ledger order; consumers may sort by arrival while
+    retaining ``sequence`` as the deterministic tie break.
+    """
+
+    validate_bookkeeping_ledger(ledger)
+    arrivals: list[FrameworkRequestArrival] = []
+    seen_request_ids: set[str] = set()
+    for entry in ledger.entries:
+        fact = entry.fact
+        if not isinstance(fact, CreatedObjectRecord):
+            continue
+        if fact.ref.kind is not CreatedObjectKind.FRAMEWORK_REQUEST:
+            continue
+        if fact.owner is not ObjectOwner.FRAMEWORK:
+            raise ValueError(
+                f"ledger.entries[{entry.sequence}].fact.owner: framework request "
+                "must be owned by the framework"
+            )
+        request_ids = fact.scope.correlation.request_ids
+        if len(request_ids) != 1:
+            raise ValueError(
+                f"ledger.entries[{entry.sequence}].fact.scope.correlation.request_ids: "
+                "framework request must name exactly one request"
+            )
+        request_id = request_ids[0]
+        if request_id in seen_request_ids:
+            raise ValueError(
+                "bookkeeping ledger contains more than one framework request "
+                f"object for {request_id!r}"
+            )
+        seen_request_ids.add(request_id)
+        arrivals.append(
+            FrameworkRequestArrival(
+                sequence=entry.sequence,
+                request_id=request_id,
+                arrived_at_ps=fact.created_at_ps,
+                request_ref=fact.ref,
+            )
+        )
+    return tuple(arrivals)
 
 
 @dataclass
