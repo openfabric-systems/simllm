@@ -190,7 +190,7 @@ def test_two_node_ring_splits_exactly_at_host_boundaries():
     assert plan.nvlink_service_ps == 24_000
 
 
-def test_two_node_uniform_moe_splits_local_and_remote_pairs():
+def test_two_node_single_engine_uniform_moe_splits_local_and_remote_pairs():
     plan = plan_step_locality(
         _decode_record(),
         TINY_MOE_DIMS,
@@ -200,11 +200,11 @@ def test_two_node_uniform_moe_splits_local_and_remote_pairs():
     )
 
     assert len(plan.phases) == 4
-    assert plan.fabric_segments == 32
-    assert plan.nvlink_segments == 16
-    assert plan.fabric_bytes == 384
-    assert plan.nvlink_bytes == 192
-    assert plan.total_directed_bytes == 576
+    assert plan.fabric_segments == 8
+    assert plan.nvlink_segments == 4
+    assert plan.fabric_bytes == 96
+    assert plan.nvlink_bytes == 48
+    assert plan.total_directed_bytes == 144
 
 
 def test_phase_renderer_sends_only_cross_node_ring_segments():

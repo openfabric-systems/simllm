@@ -59,17 +59,17 @@ ROUTES = {
 }
 
 GOAL_HASHES = {
-    (0, 1): "1eb2bbff8a981523b5f6733420aa9d5d3509aa473ed991409b8d455e619e5864",
-    (0, 2): "78a8e80589b156374b965634dd82251931219398c1e2cf2454b06cbe3629916c",
-    (0, 3): "8e38bf44631b9f3d7020452886552502fa567ec44559d05b5401a5dbbc825ab6",
-    (1, 1): "8c1738dbd01f320b0f5f005b9ea6acd19145c77db67af89eaac4a78219d494de",
-    (1, 2): "3023c39e472980ed6c689410a21fa626db3a73cf8a3d83bde425d8d41cfd4361",
-    (1, 3): "60cb32ca80a57d03b627de51d01fd292c0e87da3ec1482760faa8d304b075440",
+    (0, 1): "67f0ef85f98a00e057252b999623985abc1915fad36f4117bc799515a45122ba",
+    (0, 2): "9990c84751f1de0422eede0db306a743e5099d86f87f0d4500040d66155e653d",
+    (0, 3): "da71e8f850c078dd4885df8b273da4636e2faef2b0ff91c68b41581aeef8b036",
+    (1, 1): "742e4e3fc3d5aae66ef8010a6c91e128753703433eb845e53737645524714e78",
+    (1, 2): "c3c171774a9a7bf530b68656a6b83d5d5e148ca4219a817fe3a965bb2a2673dd",
+    (1, 3): "2d87fcc70ee4d2837127a300a4c576061cc711d76388fc4e60fbc29aa9df73e0",
 }
 
 PERMUTATION_ERRORS = {
-    (0, 2): (12, 96, -16),
-    (0, 3): (12, 96, -16),
+    (0, 2): (8, 64, 0),
+    (0, 3): (8, 64, 0),
     (1, 2): (4, 32, 16),
     (1, 3): (4, 32, 16),
 }
@@ -129,6 +129,7 @@ def _supply() -> RoutedMoeSupply:
         ),
     )
     return RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=routed,
         placements=(epoch0, epoch1),
         step_placement_epochs=tuple(

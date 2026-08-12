@@ -589,6 +589,7 @@ def _traffic_supply(tracked_projection, manifests):
     from simllm.traffic import ExpertPlacementSnapshot, RoutedMoeSupply
 
     return RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=tracked_projection,
         placements=tuple(
             ExpertPlacementSnapshot.from_manifest(manifest, (0, 1))

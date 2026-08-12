@@ -328,6 +328,7 @@ def _synthetic_inputs() -> tuple[Any, Any]:
         ),
     )
     supply = RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=routed,
         placements=(epoch0, epoch1),
         step_placement_epochs=tuple(
@@ -656,6 +657,7 @@ def _granite_supply(arguments: argparse.Namespace, record: Any) -> Any:
         ),
     )
     return RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=routed,
         placements=(placement,),
         step_placement_epochs=((record.step_index, 0),),

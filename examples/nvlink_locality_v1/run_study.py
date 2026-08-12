@@ -156,6 +156,7 @@ def _routed_supply(projection):
     from simllm.traffic import ExpertPlacementSnapshot, RoutedMoeSupply
 
     return RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=projection,
         placements=(
             ExpertPlacementSnapshot.from_manifest(

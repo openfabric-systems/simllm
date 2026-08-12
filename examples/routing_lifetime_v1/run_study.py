@@ -309,6 +309,7 @@ def _supply(
         else {"routing_arena": arena, "lifetimes": lifetimes}
     )
     return RoutedMoeSupply(
+        engine_rank=0,
         placements=(_placement(),),
         step_placement_epochs=tuple((record.step_index, 0) for record in steps),
         **keywords,

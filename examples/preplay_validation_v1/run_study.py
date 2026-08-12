@@ -749,6 +749,7 @@ def _replay_cell(args: argparse.Namespace, bandwidth: int) -> None:
         ),
     )
     supply = RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=routed,
         placements=(placement,),
         step_placement_epochs=tuple((step, 0) for step in range(128)),

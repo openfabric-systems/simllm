@@ -242,19 +242,6 @@ def render_serial_execution_graph_goal(
                     "pairwise all-to-allv; the serial GOAL renderer rejects it "
                     "instead of silently dropping the collective"
                 )
-            covered_ranks = {
-                rank
-                for source, destination, _ in work.pair_payload_bytes
-                for rank in (source, destination)
-            }
-            uncovered_ranks = sorted(set(work.ranks) - covered_ranks)
-            if work.pair_payload_bytes and uncovered_ranks:
-                ranks_text = ", ".join(str(rank) for rank in uncovered_ranks)
-                raise ValueError(
-                    f"operation {operation.operation_id!r} has sparse pairwise "
-                    f"all-to-allv payloads with uncovered ranks {ranks_text}; the "
-                    "serial GOAL renderer cannot emit their completion frontier"
-                )
         else:
             raise ValueError(
                 f"operation {operation.operation_id!r} uses unsupported collective "
@@ -459,14 +446,54 @@ def _validate_completion_boundary(
 
     if not graph.completion_operation_ids:
         return
-    ancestors = _logical_completion_ancestors(graph, edges)
-    covered = set(graph.completion_operation_ids)
-    for operation_id in graph.completion_operation_ids:
-        covered.update(ancestors[operation_id])
-    all_operation_ids = {
-        operation.operation_id for operation in graph.operations
+    operation_by_id = {
+        operation.operation_id: operation for operation in graph.operations
     }
-    if covered != all_operation_ids:
+    incoming: dict[str, list[EffectiveDependencyEdge]] = {
+        operation.operation_id: [] for operation in graph.operations
+    }
+    for edge in edges:
+        incoming[edge.operation_id].append(edge)
+
+    Fragment = tuple[str, int]
+    ancestors: dict[Fragment, set[Fragment]] = {}
+    for operation in graph.operations:
+        operation_id = operation.operation_id
+        target_ranks = operation_participant_ranks(operation)
+        for rank in target_ranks:
+            fragment = (operation_id, rank)
+            fragment_ancestors: set[Fragment] = set()
+            for edge in incoming[operation_id]:
+                if (
+                    edge.scope is DependencyScope.PARTICIPANT_LOCAL
+                    and edge.participant_rank != rank
+                ):
+                    continue
+                predecessor_ranks = operation_participant_ranks(
+                    operation_by_id[edge.predecessor_id]
+                )
+                if edge.scope is DependencyScope.PARTICIPANT_LOCAL:
+                    predecessor_ranks = (rank,)
+                for predecessor_rank in predecessor_ranks:
+                    predecessor = (edge.predecessor_id, predecessor_rank)
+                    if predecessor not in ancestors:
+                        raise ValueError(
+                            "graph cannot be represented by ordered GOAL artifacts: "
+                            "forward or non-monotone dependencies are unsupported"
+                        )
+                    fragment_ancestors.add(predecessor)
+                    fragment_ancestors.update(ancestors[predecessor])
+            ancestors[fragment] = fragment_ancestors
+
+    completed_fragments = {
+        (operation_id, rank)
+        for operation_id in graph.completion_operation_ids
+        for rank in operation_participant_ranks(operation_by_id[operation_id])
+    }
+    covered = set(completed_fragments)
+    for fragment in completed_fragments:
+        covered.update(ancestors[fragment])
+    if covered != set(ancestors):
         raise ValueError(
             "graph completion boundary is not full terminal quiescence; "
             "the GOAL projection cannot represent an early completion subset"
@@ -571,7 +598,12 @@ def _causal_level_operation_groups(
     graph: ExecutionGraph,
     edges: tuple[EffectiveDependencyEdge, ...],
 ) -> tuple[tuple[ExecutionOperation, ...], ...]:
-    """Partition contiguous operations at every effective dependency level."""
+    """Partition contiguous operations into quiescence-safe causal groups.
+
+    Rank-local chains can advance through different dependency levels without
+    forming a cross-rank barrier. Such adjacent levels remain in one GOAL
+    artifact so backend quiescence does not invent ordering between them.
+    """
 
     incoming_edges: dict[str, list[EffectiveDependencyEdge]] = {}
     for edge in edges:
@@ -602,6 +634,33 @@ def _causal_level_operation_groups(
             groups.append([])
             group_stages.append(stage)
         groups[-1].append(operation)
+
+    direct_predecessors: dict[str, set[str]] = {
+        operation.operation_id: set() for operation in graph.operations
+    }
+    for edge in edges:
+        direct_predecessors[edge.operation_id].add(edge.predecessor_id)
+    ancestors: dict[str, set[str]] = {}
+    for operation in graph.operations:
+        operation_ancestors: set[str] = set()
+        for predecessor_id in direct_predecessors[operation.operation_id]:
+            operation_ancestors.add(predecessor_id)
+            operation_ancestors.update(ancestors[predecessor_id])
+        ancestors[operation.operation_id] = operation_ancestors
+
+    group_index = 1
+    while group_index < len(groups):
+        boundary_is_ordered = all(
+            predecessor.operation_id in ancestors[operation.operation_id]
+            for predecessor in groups[group_index - 1]
+            for operation in groups[group_index]
+        )
+        if boundary_is_ordered:
+            group_index += 1
+            continue
+        groups[group_index - 1].extend(groups.pop(group_index))
+        group_stages.pop(group_index)
+
     operation_groups = tuple(tuple(group) for group in groups)
     _validate_artifact_ordering(graph, operation_groups, edges)
     return operation_groups
