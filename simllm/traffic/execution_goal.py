@@ -13,6 +13,7 @@ from simllm.core.execution import (
 from simllm.core.execution_io import validate_execution_graph
 from simllm.goal import GoalTrace
 from simllm.traffic.patterns import pairwise_all_to_allv, ring_allreduce
+from simllm.traffic.request_fidelity import compare_goal_request_attribution
 
 
 def _is_ring(work: CollectiveWork) -> bool:
@@ -21,6 +22,15 @@ def _is_ring(work: CollectiveWork) -> bool:
 
 def _is_pairwise(work: CollectiveWork) -> bool:
     return work.collective == "all-to-allv" and work.algorithm_hint == "pairwise"
+
+
+def _request_partitions(
+    work: CollectiveWork,
+) -> dict[tuple[int, int], tuple[tuple[str, int], ...]]:
+    by_pair: dict[tuple[int, int], list[tuple[str, int]]] = {}
+    for request_id, source, destination, size in work.request_pair_payload_bytes:
+        by_pair.setdefault((source, destination), []).append((request_id, size))
+    return {pair: tuple(sorted(entries)) for pair, entries in by_pair.items()}
 
 
 def _participant_local_dependency_ids(
@@ -150,13 +160,9 @@ def render_serial_execution_graph_goal(
 
     for operation in graph.operations:
         if operation.not_before_ps != 0:
-            raise ValueError(
-                f"operation {operation.operation_id!r} has a nonzero timing gate"
-            )
+            raise ValueError(f"operation {operation.operation_id!r} has a nonzero timing gate")
         if operation.priority != 0:
-            raise ValueError(
-                f"operation {operation.operation_id!r} has a nonzero priority"
-            )
+            raise ValueError(f"operation {operation.operation_id!r} has a nonzero priority")
         work = operation.work
         if isinstance(work, ComputeWork):
             used_ranks.add(operation.rank)
@@ -212,9 +218,7 @@ def render_serial_execution_graph_goal(
     if num_goal_ranks is None:
         num_goal_ranks = minimum_ranks
     if num_goal_ranks < minimum_ranks:
-        raise ValueError(
-            f"num_goal_ranks={num_goal_ranks} cannot contain rank {minimum_ranks - 1}"
-        )
+        raise ValueError(f"num_goal_ranks={num_goal_ranks} cannot contain rank {minimum_ranks - 1}")
     trace = GoalTrace(num_goal_ranks)
 
     frontiers: dict[str, dict[int, str]] = {}
@@ -290,6 +294,10 @@ def render_serial_execution_graph_goal(
                 send_bytes=send_bytes,
                 tag=pairwise_tags[operation.operation_id],
                 after=after,
+                operation_id=operation.operation_id,
+                request_send_bytes=(
+                    _request_partitions(work) if work.request_pair_payload_bytes else None
+                ),
             )
         else:
             raise AssertionError("unsupported work passed the renderer preflight")
@@ -302,13 +310,38 @@ def render_serial_execution_graph_goal(
                 if rank not in frontiers[dependency]:
                     continue
                 rank_ancestors.add(dependency)
-                rank_ancestors.update(
-                    local_ancestors.get(dependency, {}).get(rank, set())
-                )
+                rank_ancestors.update(local_ancestors.get(dependency, {}).get(rank, set()))
             local_ancestors[operation.operation_id][rank] = rank_ancestors
         queue_tail[(operation.rank, operation.logical_queue)] = operation.operation_id
 
     for rank in range(num_goal_ranks):
         if rank not in used_ranks:
             trace.rank(rank).calc(0)
+    attributed_operations = [
+        operation
+        for operation in graph.operations
+        if isinstance(operation.work, CollectiveWork) and operation.work.request_pair_payload_bytes
+    ]
+    if attributed_operations:
+        expected_request_rows = tuple(
+            (
+                operation.operation_id,
+                request_id,
+                source,
+                destination,
+                size,
+            )
+            for operation in attributed_operations
+            for request_id, source, destination, size in (operation.work.request_pair_payload_bytes)
+        )
+        expected_aggregate_rows = tuple(
+            (operation.operation_id, source, destination, size)
+            for operation in attributed_operations
+            for source, destination, size in operation.work.pair_payload_bytes
+        )
+        compare_goal_request_attribution(
+            expected_request_rows,
+            expected_aggregate_rows,
+            trace.messages,
+        ).require_match()
     return trace

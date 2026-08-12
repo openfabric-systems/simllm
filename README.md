@@ -184,6 +184,30 @@ The hardware/CC boundary, mlx5 hook, CX-7 evidence rules and full boundary
 campaign are in
 [docs/papers/rnic-hardware-calibration.md](docs/papers/rnic-hardware-calibration.md).
 
+## Precision levels
+
+Not every question needs the most detailed model, and paying for detail
+you do not need is how a simulator becomes too slow to use. SimLLM is
+built so each seam of the stack, from the workload down to the NIC, can
+run at a chosen precision, and so the run records which precision it
+used.
+
+At each seam there is a compatibility level whose results are locked byte
+for byte, one or more analytic levels, and, where the evidence exists, a
+calibrated level fitted offline against captured runs. Switching a level
+changes how long things take and how much they vary. It never changes
+what happened: the same requests produce the same tokens, the same stop
+reasons and the same collective shape at every level.
+
+The network seam shows why that matters. Its fluid closed form is fast
+and smooth, its packet-level model reproduces congestion and is slow, and
+a registered statistical level (TRAF-19) will draw flow completions from
+a distribution fitted on packet-level runs, so a large sweep can keep
+effects like ECMP hash collisions and link failures as a measured tail
+instead of deleting them. The full matrix of seams, levels and owning
+tasks is in the
+[developer guide](docs/README_PRO.md#fidelity-levels-and-switches).
+
 ## Models
 
 What SimLLM models today and what is planned next. Each task ID links to

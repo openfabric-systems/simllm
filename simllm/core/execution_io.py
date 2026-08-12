@@ -196,6 +196,57 @@ def _validate_work(work: WorkPayload, path: str) -> None:
                     path,
                     "pair_payload_bytes and payload_bytes cannot both be authoritative",
                 )
+        request_pair_payloads = _require_tuple(
+            work.request_pair_payload_bytes,
+            f"{path}.request_pair_payload_bytes",
+        )
+        request_pair_keys: list[tuple[str, int, int]] = []
+        attributed_pairs: dict[tuple[int, int], int] = defaultdict(int)
+        for index, entry in enumerate(request_pair_payloads):
+            entry_path = f"{path}.request_pair_payload_bytes[{index}]"
+            if not isinstance(entry, tuple) or len(entry) != 4:
+                _fail(entry_path, "expected a four-item tuple")
+            request_id = _string(entry[0], f"{entry_path}[0]")
+            source_rank = _integer(entry[1], f"{entry_path}[1]", nonnegative=True)
+            destination_rank = _integer(
+                entry[2],
+                f"{entry_path}[2]",
+                nonnegative=True,
+            )
+            size = _integer(entry[3], f"{entry_path}[3]", minimum=1)
+            if source_rank == destination_rank:
+                _fail(entry_path, "source and destination ranks must differ")
+            if source_rank not in ranks or destination_rank not in ranks:
+                _fail(entry_path, "source and destination must belong to ranks")
+            request_pair_keys.append((request_id, source_rank, destination_rank))
+            attributed_pairs[(source_rank, destination_rank)] += size
+        if len(request_pair_keys) != len(set(request_pair_keys)):
+            _fail(
+                f"{path}.request_pair_payload_bytes",
+                "request and ordered rank pairs must be unique",
+            )
+        if request_pair_keys != sorted(request_pair_keys):
+            _fail(
+                f"{path}.request_pair_payload_bytes",
+                "entries must be in request-major order",
+            )
+        if request_pair_payloads:
+            if (work.collective, work.algorithm_hint) != (
+                "all-to-allv",
+                "pairwise",
+            ):
+                _fail(
+                    f"{path}.request_pair_payload_bytes",
+                    "partition is valid only for pairwise all-to-allv",
+                )
+            expected_pairs = {
+                (source, destination): size for source, destination, size in pair_payloads
+            }
+            if dict(attributed_pairs) != expected_pairs:
+                _fail(
+                    f"{path}.request_pair_payload_bytes",
+                    "per-pair sums must equal pair_payload_bytes exactly",
+                )
         for field_name in ("algorithm_hint", "channel_hint"):
             value = getattr(work, field_name)
             if value is not None:
@@ -259,6 +310,14 @@ def validate_execution_graph(graph: ExecutionGraph) -> None:
         _validate_correlation(operation.correlation, f"{path}.correlation")
         _integer(operation.placement_epoch, f"{path}.placement_epoch", nonnegative=True)
         _validate_work(operation.work, f"{path}.work")
+        if isinstance(operation.work, CollectiveWork) and operation.work.request_pair_payload_bytes:
+            attributed_requests = {entry[0] for entry in operation.work.request_pair_payload_bytes}
+            unknown_requests = sorted(attributed_requests - set(operation.correlation.request_ids))
+            if unknown_requests:
+                _fail(
+                    f"{path}.work.request_pair_payload_bytes",
+                    f"request identities are absent from operation correlation: {unknown_requests}",
+                )
 
     for index, operation in enumerate(operations):
         for field_name, dependencies in (
@@ -402,8 +461,10 @@ def _work_to_json(work: WorkPayload) -> dict[str, Any]:
             "channel_hint": work.channel_hint,
         }
         if work.pair_payload_bytes:
-            payload["pair_payload_bytes"] = [
-                list(entry) for entry in work.pair_payload_bytes
+            payload["pair_payload_bytes"] = [list(entry) for entry in work.pair_payload_bytes]
+        if work.request_pair_payload_bytes:
+            payload["request_pair_payload_bytes"] = [
+                list(entry) for entry in work.request_pair_payload_bytes
             ]
         return payload
     if isinstance(work, ControlWork):
@@ -463,9 +524,7 @@ def _work_from_json(value: Any, path: str) -> WorkPayload:
             kernel=_string(payload["kernel"], f"{path}.kernel"),
             config=_config_from_json(payload.get("config", []), f"{path}.config"),
             flops=_integer(payload.get("flops", 0), f"{path}.flops", nonnegative=True),
-            hbm_bytes=_integer(
-                payload.get("hbm_bytes", 0), f"{path}.hbm_bytes", nonnegative=True
-            ),
+            hbm_bytes=_integer(payload.get("hbm_bytes", 0), f"{path}.hbm_bytes", nonnegative=True),
             nominal_duration_ps=_optional_integer(
                 payload.get("nominal_duration_ps"),
                 f"{path}.nominal_duration_ps",
@@ -539,16 +598,19 @@ def _work_from_json(value: Any, path: str) -> WorkPayload:
             descriptor_id=_string(payload["descriptor_id"], f"{path}.descriptor_id"),
             source=_string(payload["source"], f"{path}.source"),
             destination=_string(payload["destination"], f"{path}.destination"),
-            byte_count=_integer(
-                payload["byte_count"], f"{path}.byte_count", nonnegative=True
-            ),
+            byte_count=_integer(payload["byte_count"], f"{path}.byte_count", nonnegative=True),
         )
     if kind == "collective":
         _fields(
             payload,
             path,
             required={"kind", "collective", "ranks", "payload_bytes"},
-            optional={"algorithm_hint", "channel_hint", "pair_payload_bytes"},
+            optional={
+                "algorithm_hint",
+                "channel_hint",
+                "pair_payload_bytes",
+                "request_pair_payload_bytes",
+            },
         )
         raw_pair_payloads = _array(
             payload.get("pair_payload_bytes", []),
@@ -567,6 +629,24 @@ def _work_from_json(value: Any, path: str) -> WorkPayload:
                     _integer(entry[2], f"{entry_path}[2]", minimum=1),
                 )
             )
+        raw_request_pair_payloads = _array(
+            payload.get("request_pair_payload_bytes", []),
+            f"{path}.request_pair_payload_bytes",
+        )
+        request_pair_payloads: list[tuple[str, int, int, int]] = []
+        for index, raw_entry in enumerate(raw_request_pair_payloads):
+            entry_path = f"{path}.request_pair_payload_bytes[{index}]"
+            entry = _array(raw_entry, entry_path)
+            if len(entry) != 4:
+                _fail(entry_path, "expected a four-item array")
+            request_pair_payloads.append(
+                (
+                    _string(entry[0], f"{entry_path}[0]"),
+                    _integer(entry[1], f"{entry_path}[1]", nonnegative=True),
+                    _integer(entry[2], f"{entry_path}[2]", nonnegative=True),
+                    _integer(entry[3], f"{entry_path}[3]", minimum=1),
+                )
+            )
         work = CollectiveWork(
             collective=_string(payload["collective"], f"{path}.collective"),
             ranks=_int_tuple(payload["ranks"], f"{path}.ranks"),
@@ -576,10 +656,9 @@ def _work_from_json(value: Any, path: str) -> WorkPayload:
             algorithm_hint=_optional_string(
                 payload.get("algorithm_hint"), f"{path}.algorithm_hint"
             ),
-            channel_hint=_optional_string(
-                payload.get("channel_hint"), f"{path}.channel_hint"
-            ),
+            channel_hint=_optional_string(payload.get("channel_hint"), f"{path}.channel_hint"),
             pair_payload_bytes=tuple(pair_payloads),
+            request_pair_payload_bytes=tuple(request_pair_payloads),
         )
         _validate_work(work, path)
         return work
@@ -624,9 +703,7 @@ def execution_graph_to_json(graph: ExecutionGraph) -> dict[str, Any]:
                 "logical_queue": operation.logical_queue,
                 "work": _work_to_json(operation.work),
                 "depends_on": list(operation.depends_on),
-                "participant_local_depends_on": list(
-                    operation.participant_local_depends_on
-                ),
+                "participant_local_depends_on": list(operation.participant_local_depends_on),
                 "not_before_ps": operation.not_before_ps,
                 "priority": operation.priority,
                 "correlation": _correlation_to_json(operation.correlation),
@@ -656,7 +733,9 @@ def execution_graph_from_json(value: Any) -> ExecutionGraph:
         optional={"operations", "completion_operation_ids"},
     )
     operations: list[ExecutionOperation] = []
-    for index, raw_operation in enumerate(_array(payload.get("operations", []), "graph.operations")):
+    for index, raw_operation in enumerate(
+        _array(payload.get("operations", []), "graph.operations")
+    ):
         path = f"graph.operations[{index}]"
         operation = _object(raw_operation, path)
         _fields(
@@ -676,13 +755,9 @@ def execution_graph_from_json(value: Any) -> ExecutionGraph:
             ExecutionOperation(
                 operation_id=_string(operation["operation_id"], f"{path}.operation_id"),
                 rank=_integer(operation["rank"], f"{path}.rank", nonnegative=True),
-                logical_queue=_string(
-                    operation["logical_queue"], f"{path}.logical_queue"
-                ),
+                logical_queue=_string(operation["logical_queue"], f"{path}.logical_queue"),
                 work=_work_from_json(operation["work"], f"{path}.work"),
-                depends_on=_string_tuple(
-                    operation.get("depends_on", []), f"{path}.depends_on"
-                ),
+                depends_on=_string_tuple(operation.get("depends_on", []), f"{path}.depends_on"),
                 not_before_ps=_integer(
                     operation.get("not_before_ps", 0),
                     f"{path}.not_before_ps",
@@ -792,17 +867,13 @@ def completion_event_from_json(value: Any) -> CompletionEvent:
         )
         resource = ResourceRef(
             kind=_enum_value(ResourceKind, resource_payload["kind"], "event.resource.kind"),
-            resource_id=_string(
-                resource_payload["resource_id"], "event.resource.resource_id"
-            ),
+            resource_id=_string(resource_payload["resource_id"], "event.resource.resource_id"),
         )
     event = CompletionEvent(
         execution_id=_string(payload["execution_id"], "event.execution_id"),
         operation_id=_string(payload["operation_id"], "event.operation_id"),
         phase=_enum_value(EventPhase, payload["phase"], "event.phase"),
-        timestamp_ps=_integer(
-            payload["timestamp_ps"], "event.timestamp_ps", nonnegative=True
-        ),
+        timestamp_ps=_integer(payload["timestamp_ps"], "event.timestamp_ps", nonnegative=True),
         resource=resource,
         completed_bytes=_optional_integer(
             payload.get("completed_bytes"), "event.completed_bytes", nonnegative=True

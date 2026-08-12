@@ -49,11 +49,16 @@ from simllm.backends.rnic_records import (
     rnic_session_config_from_json,
     rnic_session_result_from_json,
 )
-from simllm.backends.step_lowerer import SerialStepLowerer, SerialStepLowererConfig
+from simllm.backends.step_lowerer import (
+    ObservedStepLowerer,
+    SerialStepLowerer,
+    SerialStepLowererConfig,
+)
 from simllm.backends.step_sink import (
     HtsimPersistentStepSink,
     HtsimStepSink,
     HtsimStepSinkConfig,
+    StepLocalityOutcome,
     StepNetworkOutcome,
 )
 
@@ -76,6 +81,7 @@ __all__ = [
     "HtsimStepSinkConfig",
     "HtsimUecConfig",
     "NormalizedFct",
+    "ObservedStepLowerer",
     "RnicAuthorityCounters",
     "RnicBookkeepingProjection",
     "RnicCompletionProjection",
@@ -89,6 +95,7 @@ __all__ = [
     "RnicWqeTimeline",
     "SerialStepLowerer",
     "SerialStepLowererConfig",
+    "StepLocalityOutcome",
     "StepNetworkOutcome",
     "assert_bypass_artifact_identity",
     "build_htsim_dcqcn_command",

@@ -23,12 +23,25 @@ patterns rather than abstract ops.
 COLLECTIVE_TRACE_SCHEMA = "simllm-collective-trace-v1"
 
 from simllm.traffic.execution_goal import render_serial_execution_graph_goal
+from simllm.traffic.locality import (
+    DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
+    ClassifiedCommunicationPhase,
+    CollectiveCommunicationPhase,
+    DirectedCollectiveSegment,
+    StepLocalityPlan,
+    classify_step_locality,
+)
 from simllm.traffic.patterns import (
     binomial_broadcast,
     gather,
     pairwise_all_to_allv,
     ring_allreduce,
     scatter,
+)
+from simllm.traffic.request_fidelity import (
+    RequestFidelityError,
+    RequestFidelityReport,
+    compare_goal_request_attribution,
 )
 from simllm.traffic.routed_moe import (
     ExpertPlacementSnapshot,
@@ -41,28 +54,49 @@ from simllm.traffic.step_comm import (
     TP_ALLREDUCE_SITES,
     MoeAllToAll,
     TpAllReduce,
+    compare_request_moe_fidelity,
+    lower_step_observations,
+    plan_step_locality,
+    render_fabric_phase_goal,
     render_step_goal,
+    step_communication_phases,
     step_moe_alltoalls,
     step_tp_allreduces,
+    validate_request_moe_fidelity,
 )
 
 __all__ = [
     "COLLECTIVE_TRACE_SCHEMA",
+    "DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND",
     "MOE_A2A_PHASES",
     "TP_ALLREDUCE_SITES",
+    "ClassifiedCommunicationPhase",
+    "CollectiveCommunicationPhase",
+    "DirectedCollectiveSegment",
     "ExpertPlacementSnapshot",
     "MoeAllToAll",
+    "RequestFidelityError",
+    "RequestFidelityReport",
     "RoutedMoeSupply",
+    "StepLocalityPlan",
     "TpAllReduce",
     "binomial_broadcast",
+    "classify_step_locality",
+    "compare_goal_request_attribution",
+    "compare_request_moe_fidelity",
     "gather",
+    "lower_step_observations",
     "pairwise_all_to_allv",
+    "plan_step_locality",
+    "render_fabric_phase_goal",
     "render_serial_execution_graph_goal",
     "render_step_goal",
     "ring_allreduce",
     "scatter",
+    "step_communication_phases",
     "step_moe_alltoalls",
     "step_tp_allreduces",
     "validate_expert_placement_snapshot",
+    "validate_request_moe_fidelity",
     "validate_routed_moe_supply",
 ]
