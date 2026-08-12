@@ -1,4 +1,4 @@
-"""Run the frozen TRAF-12 dependency-authority study after implementation."""
+"""Run the frozen TRAF-12 dependency-authority study and TRAF-27 refreeze."""
 
 from __future__ import annotations
 
@@ -17,47 +17,65 @@ if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
 EVIDENCE_AUTHORED_AGAINST = "dcbef8682b1d74fb059a95d5b8b6f0c4ae07c9eb"
+REFREEZE_EVIDENCE_AUTHORED_AGAINST = (
+    "14d8447b838e651f8321ffb0588ea02219e26e9a"
+)
 VECTOR_BYTES = (1_024, 2_048)
 PLACEMENTS = ("AAAA", "AABB", "ABCD")
 PHASE_COUNT = 48
 ADJACENT_TRANSITIONS = 47
 GRAPH_ARTIFACT_COUNT = 72
 GRAPH_ARTIFACT_OPERATION_COUNTS = (4, 1, 1) * 24
-LEGACY_JCT_PS = {
+PRE_OWNERSHIP_DIRECT_JCT_PS = {
     1_024: 156_569_755,
     2_048: 217_222_486,
 }
+DIRECT_JCT_PS = {
+    1_024: 150_838_767,
+    2_048: 205_653_487,
+}
 EXPECTED_JCT_BANDS = {
-    (1_024, "AAAA"): (7_121_000, 7_121_000),
-    (1_024, "AABB"): (139_195_840, 139_195_840),
-    (1_024, "ABCD"): (160_781_760, 160_781_808),
-    (2_048, "AAAA"): (14_180_000, 14_180_000),
-    (2_048, "AABB"): (182_367_680, 182_367_680),
-    (2_048, "ABCD"): (225_539_520, 225_539_568),
+    (1_024, "AAAA"): (4_562_000, 4_562_000),
+    (1_024, "AABB"): (136_246_720, 136_246_720),
+    (1_024, "ABCD"): (155_702_720, 155_702_864),
+    (2_048, "AAAA"): (9_071_000, 9_071_000),
+    (2_048, "AABB"): (176_469_440, 176_469_440),
+    (2_048, "ABCD"): (215_381_440, 215_381_584),
 }
 EXPECTED_SIGNED_CHANGE_BANDS = {
-    1_024: (4_212_005, 4_212_053),
-    2_048: (8_317_034, 8_317_082),
+    1_024: (4_863_953, 4_864_097),
+    2_048: (9_727_953, 9_728_097),
 }
-LEGACY_GOAL_ORACLES = {
+DIRECT_GOAL_ORACLES = {
     1_024: (
-        72_819,
-        "0417832c8788a0477d48b414cf2d8456b87215abd1d0193ba46fb8db46185d8a",
+        20_392,
+        "917961edf996753223857d64010fc61e4f6b08672f18dcadf42c70d60ee36c4a",
     ),
     2_048: (
-        72_819,
-        "bcd72e63546d03efaddd48c16e160457d1e28f19795036d1f871788d78cf5a02",
+        20_392,
+        "16ee686eda4634886b117788b3893c893f5e12ea819736e0afdbdf63bab0e826",
     ),
 }
 FROZEN_GRAPH_CENSUS = {
     "operations": 144,
+    "effective_edges": 423,
+    "whole_operation_edges": 139,
+    "participant_local_edges": 284,
     "explicit_participant_local_references": 212,
     "implicit_fifo_edges": 139,
     "distributed_fifo_edges": 47,
+    "artifacts": 72,
+    "boundaries": 47,
+    "serialized_edges": 376,
+    "serialized_participant_explicit_edges": 284,
+    "serialized_whole_fifo_edges": 92,
+    "backend_artifacts": 48,
+    "positive_flows": 144,
 }
 TRACE_SHA256 = "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341"
 EXPECTATIONS_COMMIT = "d39dfdc2951e147187446e27c46d9ed3f1a6816a"
 CROSS_CHECK_EXPECTATIONS_COMMIT = "69a7ada2ec192b3d7eec81b53529a5662371e3b1"
+REFREEZE_EXPECTATIONS_COMMIT = "pending-expectations-only-commit"
 HTSIM_COMPILER_EVIDENCE_AUTHORED_AGAINST = (
     "034e2419f061f872ece400b7280319290c7589d9"
 )
@@ -68,28 +86,63 @@ CROSS_CHECK_COMPLETION_TOLERANCE_PS = 0
 EXPECTED_CROSS_CHECK_FINDINGS = {
     1_024: {
         "ordering_scope_differences": 47,
-        "negative_phase_frontiers": 46,
-        "first_phase_frontier_gap_ps": -368_640,
-        "minimum_phase_frontier_gap_ps": -1_413_120,
-        "direct_completion_ps": 156_569_755,
-        "signed_completion_difference_band_ps": (-4_212_053, -4_212_005),
+        "full_ordering_edge_count": 423,
+        "full_ordering_scope_differences": 94,
+        "participant_local_scope_differences": 47,
+        "whole_fifo_scope_differences": 47,
+        "negative_phase_frontiers": 32,
+        "first_phase_frontier_gap_ps": -81_920,
+        "minimum_phase_frontier_gap_ps": -716_800,
+        "direct_completion_ps": 150_838_767,
+        "signed_completion_difference_band_ps": (-4_864_097, -4_863_953),
     },
     2_048: {
         "ordering_scope_differences": 47,
-        "negative_phase_frontiers": 46,
-        "first_phase_frontier_gap_ps": -737_280,
-        "minimum_phase_frontier_gap_ps": -3_675_091,
-        "direct_completion_ps": 217_222_486,
-        "signed_completion_difference_band_ps": (-8_317_082, -8_317_034),
+        "full_ordering_edge_count": 423,
+        "full_ordering_scope_differences": 94,
+        "participant_local_scope_differences": 47,
+        "whole_fifo_scope_differences": 47,
+        "negative_phase_frontiers": 32,
+        "first_phase_frontier_gap_ps": -163_840,
+        "minimum_phase_frontier_gap_ps": -1_433_600,
+        "direct_completion_ps": 205_653_487,
+        "signed_completion_difference_band_ps": (-9_728_097, -9_727_953),
     },
 }
 EXPECTED_CELLS = {
-    (1_024, "AAAA"): (11_870_208, 0, 11_870_208, 7_097_000),
-    (1_024, "AABB"): (11_870_208, 7_913_472, 3_956_736, 2_442_000),
-    (1_024, "ABCD"): (11_870_208, 11_870_208, 0, 0),
-    (2_048, "AAAA"): (23_740_416, 0, 23_740_416, 14_156_000),
-    (2_048, "AABB"): (23_740_416, 15_826_944, 7_913_472, 4_838_000),
-    (2_048, "ABCD"): (23_740_416, 23_740_416, 0, 0),
+    (1_024, "AAAA"): (2_983_936, 0, 2_983_936, 4_538_000),
+    (1_024, "AABB"): (2_983_936, 2_011_136, 972_800, 2_194_000),
+    (1_024, "ABCD"): (2_983_936, 2_983_936, 0, 0),
+    (2_048, "AAAA"): (5_967_872, 0, 5_967_872, 9_047_000),
+    (2_048, "AABB"): (5_967_872, 4_022_272, 1_945_600, 4_358_000),
+    (2_048, "ABCD"): (5_967_872, 5_967_872, 0, 0),
+}
+PENDING_INGRESS_PRECISION_CELLS = ((1_024, "AAAA"), (2_048, "AAAA"))
+PHYSICAL_SANITY_BOUNDS_PS = {
+    1_024: {
+        "peak_egress_serialization_floor": 29_839_360,
+        "phase_chain_floor": 155_702_720,
+        "conservative_ceiling": 347_702_720,
+    },
+    2_048: {
+        "peak_egress_serialization_floor": 59_678_720,
+        "phase_chain_floor": 215_381_440,
+        "conservative_ceiling": 407_381_440,
+    },
+}
+SOURCE_ARTIFACTS = {
+    "capture": (
+        "capture/granite-greedy.jsonl",
+        "5f55fccc265ee5519430a0f73d6631e49aa547ec07fcb81034e9fc2b4d9fead6",
+    ),
+    "steps": (
+        "replay-400g/steps.jsonl",
+        "824cd9557293328bb42b593ac893b6a067302e545b087c9219195ccb8031d755",
+    ),
+    "routing": (
+        "replay-400g/routed-experts.json",
+        "24e986e989e21f1bfe7e758d4470928c82c3bbaec06072a839743b9b17d7cf5f",
+    ),
 }
 
 
@@ -103,8 +156,8 @@ def _check_frozen_registry() -> None:
         raise AssertionError("JCT grid is incomplete")
     if set(EXPECTED_SIGNED_CHANGE_BANDS) != set(VECTOR_BYTES):
         raise AssertionError("signed-change grid is incomplete")
-    if set(LEGACY_GOAL_ORACLES) != set(VECTOR_BYTES):
-        raise AssertionError("legacy GOAL grid is incomplete")
+    if set(DIRECT_GOAL_ORACLES) != set(VECTOR_BYTES):
+        raise AssertionError("direct GOAL grid is incomplete")
     if set(EXPECTED_CELLS) != expected_keys:
         raise AssertionError("exact locality grid is incomplete")
     if set(EXPECTED_CROSS_CHECK_FINDINGS) != set(VECTOR_BYTES):
@@ -117,10 +170,20 @@ def _check_frozen_registry() -> None:
         raise AssertionError("adjacent-transition count drifted")
     if FROZEN_GRAPH_CENSUS["distributed_fifo_edges"] != ADJACENT_TRANSITIONS:
         raise AssertionError("distributed FIFO census drifted")
+    if FROZEN_GRAPH_CENSUS["artifacts"] != GRAPH_ARTIFACT_COUNT:
+        raise AssertionError("graph artifact census drifted")
+    if FROZEN_GRAPH_CENSUS["boundaries"] != ADJACENT_TRANSITIONS:
+        raise AssertionError("artifact boundary census drifted")
+    if FROZEN_GRAPH_CENSUS["positive_flows"] != 3 * PHASE_COUNT:
+        raise AssertionError("positive-flow arithmetic drifted")
+    if set(PENDING_INGRESS_PRECISION_CELLS) - expected_keys:
+        raise AssertionError("pending locality cell is outside the sweep")
+    if any(len(digest) != 64 for _, digest in SOURCE_ARTIFACTS.values()):
+        raise AssertionError("external source provenance is malformed")
     for vector_bytes in VECTOR_BYTES:
         low, high = EXPECTED_JCT_BANDS[(vector_bytes, "ABCD")]
         delta_low, delta_high = EXPECTED_SIGNED_CHANGE_BANDS[vector_bytes]
-        if (low - LEGACY_JCT_PS[vector_bytes], high - LEGACY_JCT_PS[vector_bytes]) != (
+        if (low - DIRECT_JCT_PS[vector_bytes], high - DIRECT_JCT_PS[vector_bytes]) != (
             delta_low,
             delta_high,
         ):
@@ -133,13 +196,46 @@ def _check_frozen_registry() -> None:
         ]
         if not ordered[0] < ordered[1] < ordered[2]:
             raise AssertionError("node-span JCT direction is not increasing")
-        size, digest = LEGACY_GOAL_ORACLES[vector_bytes]
+        size, digest = DIRECT_GOAL_ORACLES[vector_bytes]
         if size <= 0 or len(digest) != 64:
-            raise AssertionError("legacy GOAL oracle is malformed")
+            raise AssertionError("direct GOAL oracle is malformed")
+        if DIRECT_JCT_PS[vector_bytes] >= PRE_OWNERSHIP_DIRECT_JCT_PS[vector_bytes]:
+            raise AssertionError("direct JCT correction lost its predicted direction")
+        total_bytes = EXPECTED_CELLS[(vector_bytes, "ABCD")][0]
+        bounds = PHYSICAL_SANITY_BOUNDS_PS[vector_bytes]
+        expected_phase_floor = 24_000 + PHASE_COUNT * 2_000_000 + 20 * total_bytes
+        expected_ceiling = 24_000 + 144 * 2_000_000 + 20 * total_bytes
+        if bounds["phase_chain_floor"] != expected_phase_floor:
+            raise AssertionError("phase-chain physical floor arithmetic drifted")
+        if bounds["conservative_ceiling"] != expected_ceiling:
+            raise AssertionError("physical ceiling arithmetic drifted")
+        if low != bounds["phase_chain_floor"] or high - low != 144:
+            raise AssertionError("graph JCT band no longer follows the frozen physics")
+        if not (
+            bounds["peak_egress_serialization_floor"]
+            <= DIRECT_JCT_PS[vector_bytes]
+            <= bounds["conservative_ceiling"]
+            and bounds["phase_chain_floor"] <= low <= high
+            <= bounds["conservative_ceiling"]
+        ):
+            raise AssertionError("JCT prediction is outside its physical bounds")
         finding = EXPECTED_CROSS_CHECK_FINDINGS[vector_bytes]
         if finding["ordering_scope_differences"] != ADJACENT_TRANSITIONS:
             raise AssertionError("cross-check ordering census drifted")
-        if finding["negative_phase_frontiers"] != ADJACENT_TRANSITIONS - 1:
+        if finding["full_ordering_edge_count"] != FROZEN_GRAPH_CENSUS[
+            "effective_edges"
+        ]:
+            raise AssertionError("cross-check edge census drifted")
+        if finding["full_ordering_scope_differences"] != (
+            finding["participant_local_scope_differences"]
+            + finding["whole_fifo_scope_differences"]
+        ):
+            raise AssertionError("cross-check disagreement classes do not sum")
+        if finding["whole_fifo_scope_differences"] != ADJACENT_TRANSITIONS:
+            raise AssertionError("whole-FIFO cross-check census drifted")
+        if finding["participant_local_scope_differences"] != ADJACENT_TRANSITIONS:
+            raise AssertionError("participant-local cross-check census drifted")
+        if not 0 < finding["negative_phase_frontiers"] < ADJACENT_TRANSITIONS:
             raise AssertionError("cross-check frontier census drifted")
         if finding["first_phase_frontier_gap_ps"] >= 0:
             raise AssertionError("first cross-check frontier gap lost its sign")
@@ -147,7 +243,7 @@ def _check_frozen_registry() -> None:
             "first_phase_frontier_gap_ps"
         ]:
             raise AssertionError("minimum cross-check frontier gap is invalid")
-        if finding["direct_completion_ps"] != LEGACY_JCT_PS[vector_bytes]:
+        if finding["direct_completion_ps"] != DIRECT_JCT_PS[vector_bytes]:
             raise AssertionError("direct cross-check completion drifted")
         signed_low, signed_high = finding[
             "signed_completion_difference_band_ps"
@@ -160,7 +256,8 @@ def _check_frozen_registry() -> None:
 def check_only(args: argparse.Namespace) -> None:
     _check_frozen_registry()
     print(
-        f"check-only out={args.out}; validated frozen literals and produced no artifacts"
+        f"check-only source_root={args.source_root} out={args.out}; "
+        "validated frozen literals and produced no artifacts"
     )
 
 
@@ -402,7 +499,7 @@ def _negative_control() -> dict[str, object]:
     }
 
 
-def _legacy_goal_oracle(vector_bytes: int, supply) -> dict[str, object]:
+def _direct_goal_oracle(vector_bytes: int, supply) -> dict[str, object]:
     from examples.nvlink_locality_v1.run_study import _dims, _record
     from simllm.traffic import render_step_goal
 
@@ -449,7 +546,7 @@ def _cross_check_finding(
     report,
 ) -> dict[str, object]:
     expected = EXPECTED_CROSS_CHECK_FINDINGS[vector_bytes]
-    legacy_bytes, legacy_sha256 = LEGACY_GOAL_ORACLES[vector_bytes]
+    direct_bytes, direct_sha256 = DIRECT_GOAL_ORACLES[vector_bytes]
     phase_comparisons = report.phase_frontier_comparisons
     evaluated_cross_gaps = tuple(
         comparison.cross_check_gap_ps
@@ -487,13 +584,23 @@ def _cross_check_finding(
             and report.boundary_ordering_disagreement_count
             == expected["ordering_scope_differences"]
         ),
-        "post_specified_full_ordering_census": (
-            report.ordering_edge_count == 423
-            and report.ordering_disagreement_count == 235
+        "registered_full_ordering_census": (
+            report.ordering_edge_count
+            == expected["full_ordering_edge_count"]
+            and report.ordering_disagreement_count
+            == expected["full_ordering_scope_differences"]
             and report.ordering_disagreement_classes
             == (
-                ("participant-local", "explicit", 188),
-                ("whole-operation", "logical-queue-fifo", 47),
+                (
+                    "participant-local",
+                    "explicit",
+                    expected["participant_local_scope_differences"],
+                ),
+                (
+                    "whole-operation",
+                    "logical-queue-fifo",
+                    expected["whole_fifo_scope_differences"],
+                ),
             )
         ),
         "complete_phase_frontier_inventory": (
@@ -533,9 +640,9 @@ def _cross_check_finding(
             and report.completion_disagreement
             and report.has_disagreement
         ),
-        "legacy_direct_artifact_preserved": (
-            report.cross_check_artifact_bytes == legacy_bytes
-            and report.cross_check_artifact_sha256 == legacy_sha256
+        "registered_direct_artifact_preserved": (
+            report.cross_check_artifact_bytes == direct_bytes
+            and report.cross_check_artifact_sha256 == direct_sha256
         ),
         "authority_artifacts_preserved": (
             report.authority_artifact_names == expected_authority_names
@@ -646,13 +753,13 @@ def run_study(out: Path) -> None:
     causal_instances = []
     for vector_bytes in VECTOR_BYTES:
         observed = cells[(vector_bytes, "ABCD")]["jct_ps"]
-        delta = observed - LEGACY_JCT_PS[vector_bytes]
+        delta = observed - DIRECT_JCT_PS[vector_bytes]
         delta_low, delta_high = EXPECTED_SIGNED_CHANGE_BANDS[vector_bytes]
         signed_instances.append(
             {
                 "vector_bytes": vector_bytes,
-                "historical_jct_ps": LEGACY_JCT_PS[vector_bytes],
-                "reconciled_jct_ps": observed,
+                "direct_jct_ps": DIRECT_JCT_PS[vector_bytes],
+                "graph_authority_jct_ps": observed,
                 "signed_change_ps": delta,
                 "expected_signed_change_band_ps": [delta_low, delta_high],
                 "passed": delta_low <= delta <= delta_high,
@@ -719,6 +826,11 @@ def run_study(out: Path) -> None:
             {
                 "vector_bytes": vector_bytes,
                 "placement": placement,
+                "precision_status": (
+                    "pending-CORE-41"
+                    if key in PENDING_INGRESS_PRECISION_CELLS
+                    else "accepted"
+                ),
                 "observed_locality": list(observed_tuple),
                 "expected_locality": list(expected),
                 "observed_jct_ps": cell["jct_ps"],
@@ -784,8 +896,8 @@ def run_study(out: Path) -> None:
             )
             for edge in edges
         )
-        legacy_oracle = _legacy_goal_oracle(vector_bytes, supply)
-        legacy_size, legacy_digest = LEGACY_GOAL_ORACLES[vector_bytes]
+        direct_oracle = _direct_goal_oracle(vector_bytes, supply)
+        direct_size, direct_digest = DIRECT_GOAL_ORACLES[vector_bytes]
         active_manifest = _active_goal_manifest(
             out / f"vector-{vector_bytes}" / "ABCD"
         )
@@ -830,9 +942,9 @@ def run_study(out: Path) -> None:
                     serialized_participant_explicit
                 ),
                 "serialized_whole_fifo_edges": serialized_whole_fifo,
-                "legacy_direct_goal": legacy_oracle,
-                "legacy_direct_goal_passed": legacy_oracle
-                == {"bytes": legacy_size, "sha256": legacy_digest},
+                "direct_goal": direct_oracle,
+                "direct_goal_passed": direct_oracle
+                == {"bytes": direct_size, "sha256": direct_digest},
                 "active_goal_manifest": active_manifest,
                 "ordering_authority": outcome_locality["ordering_authority"],
                 "passed": len(graph.operations) == FROZEN_GRAPH_CENSUS["operations"]
@@ -842,19 +954,32 @@ def run_study(out: Path) -> None:
                 == FROZEN_GRAPH_CENSUS["implicit_fifo_edges"]
                 and distributed_fifo_edges
                 == FROZEN_GRAPH_CENSUS["distributed_fifo_edges"]
-                and len(edges) == 423
-                and len(goal_projection.artifacts) == GRAPH_ARTIFACT_COUNT
+                and len(edges) == FROZEN_GRAPH_CENSUS["effective_edges"]
+                and sum(edge.scope.value == "whole-operation" for edge in edges)
+                == FROZEN_GRAPH_CENSUS["whole_operation_edges"]
+                and sum(edge.scope.value == "participant-local" for edge in edges)
+                == FROZEN_GRAPH_CENSUS["participant_local_edges"]
+                and len(goal_projection.artifacts)
+                == FROZEN_GRAPH_CENSUS["artifacts"]
                 and [
                     len(artifact.operation_ids)
                     for artifact in goal_projection.artifacts
                 ]
                 == list(GRAPH_ARTIFACT_OPERATION_COUNTS)
-                and len(goal_projection.boundaries) == ADJACENT_TRANSITIONS
-                and len(goal_projection.serialized_edges) == 376
-                and boundary_whole_fifo == ADJACENT_TRANSITIONS
-                and serialized_participant_explicit == 284
-                and serialized_whole_fifo == 92
-                and active_manifest["artifact_count"] == PHASE_COUNT
+                and len(goal_projection.boundaries)
+                == FROZEN_GRAPH_CENSUS["boundaries"]
+                and len(goal_projection.serialized_edges)
+                == FROZEN_GRAPH_CENSUS["serialized_edges"]
+                and boundary_whole_fifo
+                == FROZEN_GRAPH_CENSUS["distributed_fifo_edges"]
+                and serialized_participant_explicit
+                == FROZEN_GRAPH_CENSUS[
+                    "serialized_participant_explicit_edges"
+                ]
+                and serialized_whole_fifo
+                == FROZEN_GRAPH_CENSUS["serialized_whole_fifo_edges"]
+                and active_manifest["artifact_count"]
+                == FROZEN_GRAPH_CENSUS["backend_artifacts"]
                 and outcome_locality["effective_dependency_edge_count"]
                 == len(edges)
                 and outcome_locality["graph_artifact_count"]
@@ -863,8 +988,8 @@ def run_study(out: Path) -> None:
                 == len(goal_projection.boundaries)
                 and outcome_locality["serialized_edge_count"]
                 == len(goal_projection.serialized_edges)
-                and legacy_oracle
-                == {"bytes": legacy_size, "sha256": legacy_digest}
+                and direct_oracle
+                == {"bytes": direct_size, "sha256": direct_digest}
                 and outcome_locality["ordering_authority"] == "execution-graph",
             }
         )
@@ -903,7 +1028,8 @@ def run_study(out: Path) -> None:
                 "omitted_edge_count": plan.effective_dependency_edge_count,
                 "passed": explicit_payloads == omitted_payloads
                 and len(explicit_payloads) == PHASE_COUNT
-                and plan.graph_artifact_count == GRAPH_ARTIFACT_COUNT,
+                and plan.graph_artifact_count
+                == FROZEN_GRAPH_CENSUS["artifacts"],
             }
         )
 
@@ -937,7 +1063,11 @@ def run_study(out: Path) -> None:
         "provenance": {
             "expectations_commit": EXPECTATIONS_COMMIT,
             "cross_check_expectations_commit": CROSS_CHECK_EXPECTATIONS_COMMIT,
+            "refreeze_expectations_commit": REFREEZE_EXPECTATIONS_COMMIT,
             "simllm_evidence_authored_against": EVIDENCE_AUTHORED_AGAINST,
+            "refreeze_evidence_authored_against": (
+                REFREEZE_EVIDENCE_AUTHORED_AGAINST
+            ),
             "htsim_compiler_evidence_authored_against": (
                 HTSIM_COMPILER_EVIDENCE_AUTHORED_AGAINST
             ),
@@ -1018,6 +1148,7 @@ def run_study(out: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args()

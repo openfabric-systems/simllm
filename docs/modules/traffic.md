@@ -256,6 +256,17 @@ old source-multiplied numeric surfaces are listed in
 
 ### Precision
 
+- TRAF-27 (Precision; P0; M): rerun and refreeze the seventh routed consumer,
+  `dependency_authority_v1`, after TRAF-25's one-home-rank correction. The
+  expectations-only record freezes corrected byte and flow inventories, exact
+  singleton graph-census bands, physical JCT bounds, direct and graph JCT
+  bands, and the predicted dependency-comparator response before execution.
+  Acceptance must preserve `ExecutionGraph` as the sole live authority, keep
+  ATLAHS opt-in and diagnostic, evaluate the raw graph-minus-direct relation
+  before any entailing exact guard, mark the CORE-41 single-node values as
+  pending, rerun the production study, correct every listed current-value
+  surface, and point retained historical consumer values to the corrected
+  table.
 - TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
   zero-propagation, per-source NVLink egress surrogate against
   same-generation point-to-point and collective captures. Sweep payload and

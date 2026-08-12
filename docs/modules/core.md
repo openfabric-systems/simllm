@@ -594,6 +594,16 @@ does not claim to produce these resource-contention measurements.
 
 ### Precision
 
+- CORE-41 (Precision; P0; M): make analytic intra-node routed service charge
+  the maximum endpoint load, including both source egress and destination
+  ingress. The current `max(source_egress)` surrogate was exact for symmetric
+  traffic but undercharges the corrected many-to-one combine star. Identify
+  the correction from explicit endpoint byte ledgers, then sweep payload and
+  EP width across symmetric, dispatch-star and combine-star fixtures. Require
+  exact byte conservation, the preregistered ingress-bound service increase
+  and its live JCT effect; preserve symmetric and all-remote timestamps
+  exactly. Revisit the dependency-authority `AAAA` values, which remain
+  baseline observations rather than precision oracles until this lands.
 - CORE-35 (Precision; P1; M): make the coarse runtime report conserve
   participant-local dependency frontiers in multi-rank serial MoE graphs. The
   routing-lifetime study's first three-request run executed those frontiers,
