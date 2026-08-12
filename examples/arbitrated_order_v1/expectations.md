@@ -343,3 +343,32 @@ Any registered acceptance clause this run does not demonstrate moves to CORE-54
 or CORE-55 with the owning module and category tag before the closing entry is
 removed. A clause that passes needs no new ID, and an adjacent improvement that
 no registered clause claimed is recorded in prose instead of as a task.
+
+## Amendment 1, the byte-identity guard excluded the label echo
+
+Recorded after the freeze above and before the registered production run. The
+text above is left untouched; this section states what changed, why, and when.
+
+While debugging the harness against the implemented behavior, the byte-identity
+guard was found to be mis-specified. It required two identity settings to
+produce byte-identical runtime reports while the class labels were permuted,
+but `RuntimeOperationRecord.class_label` and `RuntimeReport.class_service_bytes`
+are passive echoes of `ExecutionOperation.priority`. A report that repeats its
+own input cannot be byte-identical when that input is permuted, under any
+implementation, so the guard as written asserted something no accepted study
+ever claimed and the seam was never able to satisfy.
+
+The guard is therefore narrowed, and at the same time strengthened, to:
+
+- every identity setting, under every registered class labeling, produces
+  byte-identical ordered tuples, step latencies, TTFT, TPOT, execution results
+  and runtime reports once the two passive label echoes are projected out;
+- the total service bytes summed over `class_service_bytes` are identical
+  across all of them, so permuting labels re-attributes bytes between classes
+  and never creates, loses or moves any.
+
+Nothing else changes. The scored families, the physical intervals, the grant
+model and every other fatal guard are the ones frozen above. This amendment was
+authored before any registered result was produced, and the run reports it as a
+disclosed post-freeze correction rather than as part of the original
+registration.
