@@ -767,20 +767,39 @@ def run_study(source_root: Path, out: Path) -> None:
             cells[(vector_bytes, placement)] = cell
             sinks[(vector_bytes, placement)] = sink
 
+    # Execute both mechanisms first, but do not apply any registered direct
+    # completion, signed-band, artifact, or comparator oracle yet.
+    raw_cross_checks = {}
+    for vector_bytes in VECTOR_BYTES:
+        raw_cross_checks[vector_bytes] = _run_cross_check(
+            out,
+            vector_bytes=vector_bytes,
+            supply=supply,
+        )
+
     signed_instances = []
     causal_instances = []
     for vector_bytes in VECTOR_BYTES:
-        observed = cells[(vector_bytes, "ABCD")]["jct_ps"]
-        delta = observed - DIRECT_JCT_PS[vector_bytes]
+        graph_observed = cells[(vector_bytes, "ABCD")]["jct_ps"]
+        _, raw_report, _ = raw_cross_checks[vector_bytes]
+        direct_observed = raw_report.cross_check_completion_ps
+        delta = (
+            graph_observed - direct_observed
+            if direct_observed is not None
+            else None
+        )
         delta_low, delta_high = EXPECTED_SIGNED_CHANGE_BANDS[vector_bytes]
         signed_instances.append(
             {
                 "vector_bytes": vector_bytes,
-                "direct_jct_ps": DIRECT_JCT_PS[vector_bytes],
-                "graph_authority_jct_ps": observed,
+                "registered_direct_jct_ps": DIRECT_JCT_PS[vector_bytes],
+                "observed_direct_jct_ps": direct_observed,
+                "observed_graph_authority_jct_ps": graph_observed,
                 "signed_change_ps": delta,
                 "expected_signed_change_band_ps": [delta_low, delta_high],
-                "passed": delta_low <= delta <= delta_high,
+                "passed": (
+                    delta is not None and delta_low <= delta <= delta_high
+                ),
             }
         )
         workdir = out / f"vector-{vector_bytes}" / "ABCD"
@@ -802,15 +821,12 @@ def run_study(source_root: Path, out: Path) -> None:
         },
     }
 
-    # Score decision-relevant relations before cross-check guards that inspect
-    # the same completion values or registered signed-change bands.
+    # The decision-relevant relations above now contain both raw completion
+    # observations. Only after scoring them do the exact and bounded
+    # cross-check guards inspect those values.
     cross_check_findings = []
     for vector_bytes in VECTOR_BYTES:
-        cross_check_result, report, _ = _run_cross_check(
-            out,
-            vector_bytes=vector_bytes,
-            supply=supply,
-        )
+        cross_check_result, report, _ = raw_cross_checks[vector_bytes]
         authority_cell = cells[(vector_bytes, "ABCD")]
         cross_check_findings.append(
             _cross_check_finding(
