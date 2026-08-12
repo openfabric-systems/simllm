@@ -171,9 +171,14 @@ def _validate_observed_collective(
         raise ValueError(f"{path}: collective ranks disagree with the step plan")
     if observed.rank not in planned.ranks:
         raise ValueError(f"{path}: collective anchor rank is outside the step plan")
-    if work.payload_bytes != planned.payload_bytes:
+    semantic_pairwise_marker = (
+        work.collective == "all-to-allv"
+        and work.payload_bytes == 0
+        and not work.pair_payload_bytes
+    )
+    if work.payload_bytes != planned.payload_bytes and not semantic_pairwise_marker:
         raise ValueError(f"{path}: collective payload disagrees with the step plan")
-    if work.pair_payload_bytes != planned.pair_payload_bytes:
+    if work.pair_payload_bytes not in ((), planned.pair_payload_bytes):
         raise ValueError(f"{path}: collective pair payloads disagree with the step plan")
     if work.request_pair_payload_bytes not in ((), planned.request_pair_payload_bytes):
         raise ValueError(
@@ -183,6 +188,160 @@ def _validate_observed_collective(
         raise ValueError(f"{path}: collective algorithm disagrees with the traffic plan")
     if observed.placement_epoch not in (0, placement_epoch):
         raise ValueError(f"{path}: placement epoch disagrees with the traffic plan")
+
+
+def _observed_microbatch_records(
+    record: StepRecord,
+    observations: ExecutionObservations,
+) -> dict[int | None, StepRecord]:
+    """Return the request partition declared by collective correlations."""
+
+    request_ids_by_microbatch: dict[int, tuple[str, ...]] = {}
+    saw_unbatched_collective = False
+    for index, operation in enumerate(observations.operations):
+        if not isinstance(operation.work, CollectiveWork):
+            continue
+        microbatch = operation.correlation.microbatch
+        if microbatch is None:
+            saw_unbatched_collective = True
+            continue
+        if isinstance(microbatch, bool) or not isinstance(microbatch, int):
+            raise TypeError(
+                f"observations.operations[{index}]: microbatch must be an integer"
+            )
+        if microbatch < 0:
+            raise ValueError(
+                f"observations.operations[{index}]: microbatch must be nonnegative"
+            )
+        request_ids = operation.correlation.request_ids
+        if not request_ids:
+            raise ValueError(
+                f"observations.operations[{index}]: microbatch collective needs "
+                "request correlation"
+            )
+        previous = request_ids_by_microbatch.setdefault(microbatch, request_ids)
+        if previous != request_ids:
+            raise ValueError(
+                f"observations.operations[{index}]: microbatch {microbatch} "
+                "request correlation is inconsistent"
+            )
+
+    if not request_ids_by_microbatch:
+        return {None: record}
+    if saw_unbatched_collective:
+        raise ValueError("observations mix batched and unbatched collective sites")
+    indices = tuple(sorted(request_ids_by_microbatch))
+    if indices != tuple(range(len(indices))):
+        raise ValueError("observations microbatch indices must be contiguous from zero")
+
+    scheduled_by_id = {
+        request.request_id: request for request in record.scheduled
+    }
+    if len(scheduled_by_id) != len(record.scheduled):
+        raise ValueError("record.scheduled contains duplicate request identities")
+    flattened = tuple(
+        request_id
+        for microbatch in indices
+        for request_id in request_ids_by_microbatch[microbatch]
+    )
+    expected = tuple(request.request_id for request in record.scheduled)
+    if flattened != expected:
+        raise ValueError(
+            "observed microbatches must partition scheduled requests in source order"
+        )
+
+    records: dict[int | None, StepRecord] = {}
+    for microbatch in indices:
+        request_ids = request_ids_by_microbatch[microbatch]
+        records[microbatch] = StepRecord(
+            step_index=record.step_index,
+            virtual_time_ps=record.virtual_time_ps,
+            scheduled=[scheduled_by_id[request_id] for request_id in request_ids],
+        )
+    return records
+
+
+def _planned_collective_instances(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    ep_ranks: Sequence[int] | None,
+    routed_supply: RoutedMoeSupply | None,
+    observations: ExecutionObservations,
+) -> tuple[
+    dict[tuple[int | None, str, int, str], tuple[CollectiveWork, int]],
+    dict[int | None, StepRecord],
+]:
+    batch_records = _observed_microbatch_records(record, observations)
+    planned: dict[
+        tuple[int | None, str, int, str], tuple[CollectiveWork, int]
+    ] = {}
+    for microbatch, batch_record in batch_records.items():
+        for key, value in _planned_collective_work(
+            batch_record,
+            dims,
+            tp_ranks,
+            ep_ranks,
+            routed_supply,
+        ).items():
+            planned[(microbatch, *key)] = value
+    return planned, batch_records
+
+
+def _aggregate_request_rows(
+    rows: Sequence[tuple[str, int, int, int]],
+) -> tuple[tuple[int, int, int], ...]:
+    totals: dict[tuple[int, int], int] = {}
+    for _, source, destination, size in rows:
+        pair = (source, destination)
+        totals[pair] = totals.get(pair, 0) + size
+    return tuple(
+        (source, destination, size)
+        for (source, destination), size in sorted(totals.items())
+    )
+
+
+def _validate_microbatch_partition(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    ep_ranks: Sequence[int] | None,
+    routed_supply: RoutedMoeSupply | None,
+    batch_records: dict[int | None, StepRecord],
+    planned: dict[tuple[int | None, str, int, str], tuple[CollectiveWork, int]],
+) -> None:
+    if set(batch_records) == {None}:
+        return
+    full = _planned_collective_work(
+        record,
+        dims,
+        tp_ranks,
+        ep_ranks,
+        routed_supply,
+    )
+    microbatches = tuple(sorted(key for key in batch_records if key is not None))
+    for semantic_key, (full_work, _) in full.items():
+        works = [planned[(microbatch, *semantic_key)][0] for microbatch in microbatches]
+        if full_work.pair_payload_bytes:
+            request_rows = tuple(
+                sorted(
+                    row
+                    for work in works
+                    for row in work.request_pair_payload_bytes
+                )
+            )
+            if request_rows != full_work.request_pair_payload_bytes:
+                raise ValueError(
+                    f"observed microbatch request partition loses bytes at {semantic_key!r}"
+                )
+            if _aggregate_request_rows(request_rows) != full_work.pair_payload_bytes:
+                raise ValueError(
+                    f"observed microbatch aggregate partition loses bytes at {semantic_key!r}"
+                )
+        elif sum(work.payload_bytes for work in works) != full_work.payload_bytes:
+            raise ValueError(
+                f"observed microbatch scalar partition loses bytes at {semantic_key!r}"
+            )
 
 
 def lower_step_observations(
@@ -204,7 +363,10 @@ def lower_step_observations(
     supplies routed pair tables and placement epochs. Compute work passes
     through byte for byte.
 
-    Every collective planned from the step must be observed exactly once. The
+    Every collective planned from each observed microbatch must be observed
+    exactly once. Repeated semantic sites are legal only across distinct,
+    request-partitioned microbatches, whose traffic must recombine to the
+    full-step plan exactly. The
     returned standard :class:`ExecutionGraph` leaves realized concurrency to
     :class:`~simllm.core.DeviceRuntime`; this function has no timing or overlap
     parameter.
@@ -221,15 +383,25 @@ def lower_step_observations(
     if not isinstance(observations.completion_operation_ids, tuple):
         raise TypeError("observations.completion_operation_ids must be a tuple")
 
-    planned = _planned_collective_work(
+    planned, batch_records = _planned_collective_instances(
         record,
         dims,
         tp_ranks,
         ep_ranks,
         routed_supply,
+        observations,
+    )
+    _validate_microbatch_partition(
+        record,
+        dims,
+        tp_ranks,
+        ep_ranks,
+        routed_supply,
+        batch_records,
+        planned,
     )
     lowered: list[ExecutionOperation] = []
-    observed_keys: set[tuple[str, int, str]] = set()
+    observed_keys: set[tuple[int | None, str, int, str]] = set()
     for index, operation in enumerate(observations.operations):
         if not isinstance(operation, ExecutionOperation):
             raise TypeError(
@@ -243,7 +415,10 @@ def lower_step_observations(
                 f"observations.operations[{index}]: step lowering supports only "
                 "ComputeWork and CollectiveWork"
             )
-        key = _observed_collective_key(operation, index)
+        key = (
+            operation.correlation.microbatch,
+            *_observed_collective_key(operation, index),
+        )
         if key in observed_keys:
             raise ValueError(
                 f"observations.operations[{index}]: duplicate collective site {key!r}"
