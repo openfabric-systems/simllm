@@ -557,7 +557,15 @@ exactly. Local-NVLink comparison rejects at preflight; TRAF-16 owns its
 frontier precision. CORE-41 closed the ingress gap and refroze the two
 single-node `AAAA` cells from 4,538,000 ps and 9,047,000 ps of service to
 6,652,000 ps and 13,286,000 ps, carrying JCT to 6,676,000 ps and 13,310,000 ps;
-every `AABB` and `ABCD` row is unchanged. The repository-wide fidelity
+every `AABB` and `ABCD` row is unchanged. CORE-42 then requalified
+[nvlink_locality_v1](../../examples/nvlink_locality_v1/RESULTS.md) against those
+refrozen cells: 3/3 genuine-risk families and 8/8 instances pass, both services
+sit inside their exact serialization floor and their 48,000 ps
+whole-nanosecond ceiling, and the refrozen all-local instances are classified
+as genuine risk narrowed to the charge rule, the phase split and the rounding,
+because the conserved local byte total already pins their magnitude inside that
+window and the star fixture cannot falsify the full-duplex ruling.
+The repository-wide fidelity
 selector is `PrecisionConfig`; the cross-check switch is a diagnostic and
 names no seam level.
 
@@ -706,18 +714,6 @@ does not claim to produce these resource-contention measurements.
   its live TTFT and TPOT effect, while symmetric and single-source cases keep
   their accepted timestamps. Scope boundary: CORE-41 owns the analytic
   intra-node routed service and must preserve all-remote timestamps exactly.
-- CORE-42 (Precision; P0; S): requalify
-  [nvlink_locality_v1](../../examples/nvlink_locality_v1/RESULTS.md) under the
-  CORE-41 endpoint charge. Its two all-local `AAAA` cells are still frozen at
-  the superseded maximum-source-egress service of 4,538,000 ps and 9,047,000 ps,
-  so that runner now rejects its own fixture. Unlike the dependency-authority
-  rows, which were recorded as baseline observations, these `AAAA` cells are
-  scored TRAF-B2 instances, so requalification needs its own expectations-only
-  commit that registers 6,652,000 ps, 13,286,000 ps and the corresponding JCTs
-  before the rerun, rather than an edit folded into another change. Acceptance
-  reruns the study, keeps every `AABB` and `ABCD` row exact, and states whether
-  the refrozen `AAAA` instances still carry genuine risk or become exact-oracle
-  evidence.
 - CORE-43 (Precision; P1; M): cross-validate the analytic endpoint charge
   against the fabric backend's realized per-endpoint serialization on identical
   traffic. CORE-41 demonstrated the correction at EP width four on a real
