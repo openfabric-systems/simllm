@@ -1293,14 +1293,15 @@ def _granite_bounds_rows(granite: dict[str, Any]) -> list[dict[str, Any]]:
 def _quiescence_rows(cells: dict[str, Any]) -> dict[str, Any]:
     rows = []
     for key, cell in sorted(cells.items()):
-        manifest = cell.get("manifest") or {}
+        # The backend manifest is a list of raw "[RNIC manifest]" lines.
+        manifest = cell.get("manifest") or []
+        verified = any("physical_quiescence=verified" in line for line in manifest)
         rows.append(
             {
                 "cell": key,
                 "quiescent": bool(cell.get("quiescent")),
-                "physical_quiescence": manifest.get("physical_quiescence"),
-                "passed": bool(cell.get("quiescent"))
-                and manifest.get("physical_quiescence") == "verified",
+                "physical_quiescence_verified": verified,
+                "passed": bool(cell.get("quiescent")) and verified,
             }
         )
     return {"rows": rows, "all_passed": all(row["passed"] for row in rows)}
