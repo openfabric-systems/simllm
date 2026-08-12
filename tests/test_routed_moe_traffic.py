@@ -783,6 +783,7 @@ def test_uniform_path_uses_one_declared_engine_population():
         ("layers", "disagree with model layers"),
         ("missing-owner", "missing owner"),
         ("outside-rank", "outside ep_ranks"),
+        ("engine-rank", "engine_rank: rank 2 is outside ep_ranks"),
         ("missing-request", "absent from routed-experts projection"),
         ("prefill-slice", "outside captured count"),
         ("decode-slice", "outside captured count"),
@@ -810,6 +811,8 @@ def test_captured_expansion_rejects_inconsistent_inputs(change, message):
             expert_owners=entries,
         )
         supply = replace(supply, placements=(changed, supply.placements[1]))
+    elif change == "engine-rank":
+        supply = replace(supply, engine_rank=2)
     elif change == "missing-request":
         record.scheduled[0].request_id = "missing"
     elif change == "prefill-slice":
@@ -851,6 +854,13 @@ def test_supply_and_manifest_snapshot_reject_invalid_epoch_state():
             routed_experts=_routing(),
             placements=(first, second),
             step_placement_epochs=((0, 7),),
+        )
+    with pytest.raises(ValueError, match="expected a nonnegative integer"):
+        RoutedMoeSupply(
+            engine_rank=-1,
+            routed_experts=_routing(),
+            placements=(first, second),
+            step_placement_epochs=((0, 0),),
         )
 
     manifest = _tiny_manifest(0)

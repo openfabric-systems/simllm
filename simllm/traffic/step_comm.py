@@ -553,8 +553,6 @@ def _routed_moe_alltoalls(
             (request_id, source, destination, size)
             for (request_id, source, destination), size in sorted(request_send_bytes.items())
         )
-        if not request_dispatch:
-            continue
         dispatch = _aggregate_request_pairs(request_dispatch)
         request_combine = tuple(
             sorted(
@@ -1087,10 +1085,7 @@ def _execution_graph_communication_phases(
                 pair_payload_bytes = ()
                 per_pair_bytes = work.payload_bytes
             if not pair_payload_bytes and per_pair_bytes <= 0:
-                raise ValueError(
-                    f"graph.operations[{index}] is a zero-payload pairwise "
-                    "all-to-allv"
-                )
+                continue
             phases.append(
                 _moe_communication_phase(
                     MoeAllToAll(

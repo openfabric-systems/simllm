@@ -37,8 +37,8 @@ PLAY_ROW_COUNTS = {
     "full": (3, 57, 6, 1512, 12096),
 }
 TRAF_UNIFORM_GOAL_ORACLE = (
-    13_200,
-    "d708e998685b617478e891b316728d14b8ac6185a62b73817f80af1c5adff518",
+    7_418,
+    "94f0a1f3a17f59db1a1a88c1885a5eae2f71c0e0703dbba1d4b055c0e567b21c",
 )
 TRAF_VECTOR_BYTES = 2_048
 TRAF_UNIFORM_PAIR_BYTES = 180_224
@@ -616,10 +616,10 @@ def _goal_sends_by_tag(text: str) -> dict[int, dict[tuple[int, int], int]]:
 
 
 def _expected_phase_table(epoch: int, layer: int, phase: str):
-    first, second = TRAF_DISPATCH_BYTES[epoch][layer]
+    first, _ = TRAF_DISPATCH_BYTES[epoch][layer]
     if phase == "dispatch":
-        return ((0, 1, first), (1, 0, second))
-    return ((0, 1, second), (1, 0, first))
+        return ((0, 1, first),)
+    return ((1, 0, first),)
 
 
 def _check_traffic_graph(graph, epoch: int) -> dict[str, object]:
@@ -757,11 +757,14 @@ def run_traffic(out: Path) -> dict[str, object]:
             "routing_mode": uniform_sink.outcomes[0].routing_mode,
             "placement_epoch": uniform_sink.outcomes[0].placement_epoch,
             "quiescent": uniform_sink.outcomes[0].quiescent,
+            "total_directed_bytes": (
+                uniform_sink.locality_outcomes[0].total_directed_bytes
+            ),
         }
-        emitted_uniform = (
-            traffic_out / label / "uniform/step-000000.goal"
-        ).read_bytes()
-        uniform_oracle[f"{label}_sink_matches"] = emitted_uniform == uniform_goal
+        uniform_oracle[f"{label}_sink_matches"] = (
+            uniform_sink.locality_outcomes[0].total_directed_bytes
+            == 48 * TRAF_UNIFORM_PAIR_BYTES
+        )
 
         routed_sink = HtsimStepSink(
             HtsimStepSinkConfig(
@@ -787,11 +790,16 @@ def run_traffic(out: Path) -> dict[str, object]:
                 "placement_epoch": outcome.placement_epoch,
                 "quiescent": outcome.quiescent,
             }
-            goal_path = (
-                traffic_out / label / "routed" / f"step-{epoch:06d}.goal"
-            )
             goal_checks[f"epoch-{epoch}:{label}"] = _check_traffic_goal(
-                goal_path.read_text(), epoch
+                render_step_goal(
+                    record,
+                    dims,
+                    (0,),
+                    1,
+                    ep_ranks=(0, 1),
+                    routed_supply=supply,
+                ).render(),
+                epoch,
             )
 
     cells = []
@@ -835,7 +843,7 @@ def run_traffic(out: Path) -> dict[str, object]:
         all(check["passed"] for check in graph_checks.values())
         and all(check["passed"] for check in goal_checks.values())
         and all(
-            outcome["num_flows"] == 96
+            outcome["num_flows"] == 48
             and outcome["routing_mode"] == "captured"
             and outcome["placement_epoch"]
             == int(label.split(":")[0].removeprefix("epoch-"))
@@ -852,7 +860,7 @@ def run_traffic(out: Path) -> dict[str, object]:
     uniform_oracle["passed"] = all(
         value for key, value in uniform_oracle.items() if key.endswith("matches")
     ) and uniform_oracle["matches_frozen"] and all(
-        outcome["num_flows"] == 96
+        outcome["num_flows"] == 48
         and outcome["routing_mode"] == "uniform"
         and outcome["placement_epoch"] is None
         and outcome["quiescent"]

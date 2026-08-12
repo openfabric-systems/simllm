@@ -424,14 +424,10 @@ class HtsimStepSink:
         )
         if not moe_operations:
             routing_mode = "none"
-        elif all(operation.work.pair_payload_bytes for operation in moe_operations):
+        elif cfg.routed_moe_supply is not None:
             routing_mode = "captured"
-        elif all(
-            not operation.work.pair_payload_bytes for operation in moe_operations
-        ):
-            routing_mode = "uniform"
         else:
-            raise AssertionError("one step cannot mix uniform and captured MoE traffic")
+            routing_mode = "uniform"
         locality = plan_execution_graph_locality(
             graph,
             rank_mapper=self._rank_mapper,
@@ -541,6 +537,26 @@ class HtsimStepSink:
             operation_id = collective.operation_id
             classified_phases = tuple(phases_by_operation.pop(operation_id, ()))
             if not classified_phases:
+                work = collective.work
+                if (
+                    work.collective == "all-to-allv"
+                    and work.algorithm_hint == "pairwise"
+                    and work.payload_bytes == 0
+                    and not work.pair_payload_bytes
+                    and operations == (collective,)
+                ):
+                    planned_artifacts.append(
+                        _PlannedExecutionArtifact(
+                            artifact_id=(
+                                f"graph-artifact-{artifact_index}:empty-collective"
+                            ),
+                            operation_ids=artifact.operation_ids,
+                            goal_path=None,
+                            completion_csv=None,
+                            local_service_ps=0,
+                        )
+                    )
+                    continue
                 raise ValueError("collective artifact has no locality service phase")
             if compatibility_fast_path:
                 stem = f"{name}.artifact-{artifact_index:04d}"

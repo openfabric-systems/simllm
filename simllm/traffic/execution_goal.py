@@ -230,12 +230,6 @@ def render_serial_execution_graph_goal(
         if _is_ring(work):
             pass
         elif _is_pairwise(work):
-            if work.payload_bytes == 0 and not work.pair_payload_bytes:
-                raise ValueError(
-                    f"operation {operation.operation_id!r} is a zero-payload "
-                    "pairwise all-to-allv; the serial GOAL renderer rejects it "
-                    "instead of silently dropping the collective"
-                )
             if len(work.ranks) < 2:
                 raise ValueError(
                     f"operation {operation.operation_id!r} is a single-rank "
@@ -598,12 +592,7 @@ def _causal_level_operation_groups(
     graph: ExecutionGraph,
     edges: tuple[EffectiveDependencyEdge, ...],
 ) -> tuple[tuple[ExecutionOperation, ...], ...]:
-    """Partition contiguous operations into quiescence-safe causal groups.
-
-    Rank-local chains can advance through different dependency levels without
-    forming a cross-rank barrier. Such adjacent levels remain in one GOAL
-    artifact so backend quiescence does not invent ordering between them.
-    """
+    """Partition contiguous operations at every effective dependency level."""
 
     incoming_edges: dict[str, list[EffectiveDependencyEdge]] = {}
     for edge in edges:
@@ -634,32 +623,6 @@ def _causal_level_operation_groups(
             groups.append([])
             group_stages.append(stage)
         groups[-1].append(operation)
-
-    direct_predecessors: dict[str, set[str]] = {
-        operation.operation_id: set() for operation in graph.operations
-    }
-    for edge in edges:
-        direct_predecessors[edge.operation_id].add(edge.predecessor_id)
-    ancestors: dict[str, set[str]] = {}
-    for operation in graph.operations:
-        operation_ancestors: set[str] = set()
-        for predecessor_id in direct_predecessors[operation.operation_id]:
-            operation_ancestors.add(predecessor_id)
-            operation_ancestors.update(ancestors[predecessor_id])
-        ancestors[operation.operation_id] = operation_ancestors
-
-    group_index = 1
-    while group_index < len(groups):
-        boundary_is_ordered = all(
-            predecessor.operation_id in ancestors[operation.operation_id]
-            for predecessor in groups[group_index - 1]
-            for operation in groups[group_index]
-        )
-        if boundary_is_ordered:
-            group_index += 1
-            continue
-        groups[group_index - 1].extend(groups.pop(group_index))
-        group_stages.pop(group_index)
 
     operation_groups = tuple(tuple(group) for group in groups)
     _validate_artifact_ordering(graph, operation_groups, edges)

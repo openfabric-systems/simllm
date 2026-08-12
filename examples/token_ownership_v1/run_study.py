@@ -637,10 +637,11 @@ def _score_behavioral(legacy: dict[str, Any], corrected: dict[str, Any]) -> dict
     )
     native_rows = []
     for bandwidth in BANDWIDTHS_BPS:
-        key = f"w8:{bandwidth}:rnic-nn-fluid"
-        observed = corrected["direct_native"][key]["jct_ps"]
+        key = f"{bandwidth}:rnic-nn-fluid"
+        live = corrected["live_step_result"][key]
+        observed = live["step_result_jct_ps"]
         expected = CORRECTED_FLUID_JCT_PS[(8, bandwidth)]
-        flow_count = corrected["direct_native"][key]["flow_count"]
+        flow_count = live["flow_count"]
         passed = expected <= observed <= expected + flow_count
         if bandwidth == 400_000_000_000:
             published_ratio = observed / PUBLISHED_FLUID_JCT_PS
@@ -658,22 +659,24 @@ def _score_behavioral(legacy: dict[str, Any], corrected: dict[str, Any]) -> dict
                 "passed": passed,
             }
         )
-    packet = corrected["direct_native"]["w8:400000000000:rnic-nn"]
+    packet = corrected["live_step_result"]["400000000000:rnic-nn"]
     archived_packet = legacy["archived_native"]["rnic-nn"]
-    fluid_400 = corrected["direct_native"]["w8:400000000000:rnic-nn-fluid"]
-    packet_ratio = packet["jct_ps"] / archived_packet["jct_ps"]
+    fluid_400 = corrected["live_step_result"]["400000000000:rnic-nn-fluid"]
+    packet_ratio = packet["step_result_jct_ps"] / archived_packet["jct_ps"]
     packet_pass = (
         _inside(packet_ratio, (0.60, 0.85))
-        and fluid_400["jct_ps"] <= packet["jct_ps"] <= 850_000_000
+        and fluid_400["step_result_jct_ps"]
+        <= packet["step_result_jct_ps"]
+        <= 850_000_000
     )
     native_rows.append(
         {
             "profile": "rnic-nn",
             "bandwidth_bps": 400_000_000_000,
-            "observed_jct_ps": packet["jct_ps"],
+            "observed_jct_ps": packet["step_result_jct_ps"],
             "archived_defective_jct_ps": archived_packet["jct_ps"],
             "ratio_to_archived": packet_ratio,
-            "fluid_floor_jct_ps": fluid_400["jct_ps"],
+            "fluid_floor_jct_ps": fluid_400["step_result_jct_ps"],
             "passed": packet_pass,
         }
     )
@@ -703,6 +706,8 @@ def _fatal_checks(corrected: dict[str, Any]) -> dict[str, Any]:
         independent = corrected["independent_projection"][str(world)]
         frozen = BYTE_CELLS[world]
         expected_request = REQUEST_BYTES_W8 if world == 8 else independent["request_bytes"]
+        uniform_per_pair = TOKEN_COUNT * TOP_K * VECTOR_BYTES // world
+        expected_uniform_total = PHASE_COUNT * (world - 1) * uniform_per_pair
         passed = (
             observed["total_bytes"] == frozen["corrected_total"]
             and observed["peak_rank_egress_bytes"] == frozen["corrected_peak"]
@@ -711,6 +716,8 @@ def _fatal_checks(corrected: dict[str, Any]) -> dict[str, Any]:
             and observed["layer_hops"] == independent["layer_hops"]
             and observed["request_bytes"] == expected_request
             and observed["dispatch_sources"] == [0]
+            and observed["uniform_dispatch_sources"] == [0]
+            and observed["uniform_total_bytes"] == expected_uniform_total
             and observed["tp_payload_bytes"] == [TOKEN_COUNT * VECTOR_BYTES]
             and observed["hops"] <= TOKEN_COUNT * TOP_K * LAYER_COUNT * 2
         )
@@ -724,6 +731,8 @@ def _fatal_checks(corrected: dict[str, Any]) -> dict[str, Any]:
                 "hop_bound": TOKEN_COUNT * TOP_K * LAYER_COUNT * 2,
                 "request_bytes": observed["request_bytes"],
                 "dispatch_sources": observed["dispatch_sources"],
+                "uniform_dispatch_sources": observed["uniform_dispatch_sources"],
+                "uniform_total_bytes": observed["uniform_total_bytes"],
                 "tp_payload_bytes": observed["tp_payload_bytes"],
                 "passed": passed,
             }

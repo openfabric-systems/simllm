@@ -477,7 +477,7 @@ def test_serial_goal_renderer_rejects_work_it_cannot_preserve(graph, match):
         render_serial_execution_graph_goal(graph)
 
 
-def test_serial_goal_renderer_rejects_zero_payload_pairwise_all_to_allv():
+def test_serial_goal_renderer_preserves_zero_payload_pairwise_frontier():
     graph = ExecutionGraph(
         "zero-a2a",
         0,
@@ -499,8 +499,13 @@ def test_serial_goal_renderer_rejects_zero_payload_pairwise_all_to_allv():
         ),
         ("a2a",),
     )
-    with pytest.raises(ValueError, match="zero-payload pairwise"):
-        render_serial_execution_graph_goal(graph)
+    trace = render_serial_execution_graph_goal(graph)
+
+    assert trace.messages == ()
+    assert any(
+        operation.operation_id == "a2a" and operation.text == "calc 0"
+        for operation in trace.operations
+    )
 
 
 def test_serial_goal_renderer_rejects_single_rank_pairwise_all_to_allv():

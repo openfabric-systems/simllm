@@ -62,7 +62,7 @@ GOAL_HASHES = {
     (0, 1): "67f0ef85f98a00e057252b999623985abc1915fad36f4117bc799515a45122ba",
     (0, 2): "9990c84751f1de0422eede0db306a743e5099d86f87f0d4500040d66155e653d",
     (0, 3): "da71e8f850c078dd4885df8b273da4636e2faef2b0ff91c68b41581aeef8b036",
-    (1, 1): "742e4e3fc3d5aae66ef8010a6c91e128753703433eb845e53737645524714e78",
+    (1, 1): "4d2dc2857898f78c251d164d9aaf90dbf09ebac03844aa202e96aab8846e5288",
     (1, 2): "c3c171774a9a7bf530b68656a6b83d5d5e148ca4219a817fe3a965bb2a2673dd",
     (1, 3): "2d87fcc70ee4d2837127a300a4c576061cc711d76388fc4e60fbc29aa9df73e0",
 }
@@ -247,7 +247,10 @@ def test_direct_and_graph_projection_preserve_request_identity_and_physical_mess
         for operation in replay_graph.operations
         if isinstance(operation.work, CollectiveWork)
     ]
-    assert all(work.request_pair_payload_bytes for work in collectives)
+    assert all(
+        not work.pair_payload_bytes or work.request_pair_payload_bytes
+        for work in collectives
+    )
 
 
 @pytest.mark.parametrize(

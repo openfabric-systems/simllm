@@ -326,10 +326,21 @@ def _traffic_identity(
     from simllm.backends import SerialStepLowerer, SerialStepLowererConfig
     from simllm.core import execution_graph_to_json
     from simllm.traffic import (
-        render_serial_execution_graph_goal,
+        project_execution_graph_goal,
         render_step_goal,
         step_moe_alltoalls,
     )
+
+    def projection_bytes(graph: Any) -> bytes:
+        projection = project_execution_graph_goal(graph, num_goal_ranks=8)
+        rows = [
+            {
+                "operation_ids": list(artifact.operation_ids),
+                "goal": artifact.trace.render(),
+            }
+            for artifact in projection.artifacts
+        ]
+        return (json.dumps(rows, separators=(",", ":")) + "\n").encode()
 
     dims = _granite_dims()
     legacy_supply = _supply(routed, steps)
@@ -398,14 +409,8 @@ def _traffic_identity(
             execution_graph_to_json(legacy_graph)
             == execution_graph_to_json(arena_graph)
         )
-        legacy_graph_goal = render_serial_execution_graph_goal(
-            legacy_graph,
-            num_goal_ranks=8,
-        ).render().encode()
-        arena_graph_goal = render_serial_execution_graph_goal(
-            arena_graph,
-            num_goal_ranks=8,
-        ).render().encode()
+        legacy_graph_goal = projection_bytes(legacy_graph)
+        arena_graph_goal = projection_bytes(arena_graph)
         graph_goal_match = legacy_graph_goal == arena_graph_goal
         rows.append(
             {
@@ -437,8 +442,17 @@ def _traffic_identity(
         "classification": "fatal-unscored",
         "rows": rows,
         "step_zero_matches_archived_goal": step_zero_matches_archive,
+        "archived_defective_goal": {
+            "bytes": len(archived_goal),
+            "sha256": _sha256(archived_goal),
+        },
+        "corrected_step_zero_goal": {
+            "bytes": rows[0]["direct_goal_bytes"],
+            "sha256": rows[0]["direct_goal_sha256"],
+        },
+        "archive_difference_expected": True,
         "passed": all(row["passed"] for row in rows)
-        and step_zero_matches_archive,
+        and not step_zero_matches_archive,
     }
     return result, legacy_supply, arena_supply
 
