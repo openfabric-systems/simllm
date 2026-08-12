@@ -12,11 +12,22 @@ synthetic token-ID sequences with controllable shared-prefix structure.
 - `TraceArrivals(path)`: replay absolute arrival times from a file.
 - `FixedLengths` / `LogNormalLengths(mean, sigma, seed)` / `TraceLengths`:
   request length samplers (token or byte counts), reproducible by seed.
+- `RequestAdmissionGate(clock, bookkeeper, mode)`: expose framework requests
+  in bookkeeping order. `ARRIVAL_GATED` withholds the next request until its
+  creation timestamp is eligible on the shared virtual clock;
+  `ALL_AT_ONCE` is the default identity mode and exposes every request without
+  advancing time or mutating bookkeeping. The supplied framework callback
+  remains the only handoff into `add_request`.
 
 ## Status
 
 Arrival processes and length distributions are implemented and tested
-(lengths landed with M1). Shared-prefix prompt structure is not started.
+(lengths landed with M1). WORK-3 is complete: the opt-in in-process gate now
+consumes framework-request creation timestamps while leaving batching to the
+framework. The live vLLM sweep passed all 8/8 genuine-risk arrival and offered
+load instances, and the all-at-once mode retained every compared artifact
+byte; see [the WORK-3 results](../../examples/arrival_admission_v1/RESULTS.md).
+Shared-prefix prompt structure is not started.
 
 ## Open tasks
 
@@ -24,3 +35,9 @@ Arrival processes and length distributions are implemented and tested
   sessions) emitting token-ID sequences; the length-distribution part of
   this task landed with M1.
 - WORK-2: bursty/MMPP arrival process for congestion-sensitive studies.
+- WORK-4 (Completeness; P2; L): add a server-mode ingress coordinator that
+  maps external request injection to simulated time without using wall-clock
+  sleeps as model time. It must retain the in-process gate and ungated server
+  path as explicit identity modes, preserve framework scheduler authority,
+  and measure the coordinator's queue contribution separately from framework
+  queueing.

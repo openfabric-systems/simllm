@@ -592,3 +592,14 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   of two GPU cycles or 10 percent in every cell, and report the surrogate's
   before-versus-calibrated error. The calibration-off path must preserve every
   accepted TRAF-7 timestamp and artifact byte.
+- COMP-23 (Precision; P2; L): add a calibrated per-kernel latency
+  distribution provider beside the mean-valued table. The landed profile
+  table and trace-calibrated service model return one value per input,
+  which cannot express the run-to-run spread that clock, cache and
+  scheduling variation produce on real silicon. Fit a distribution per
+  kernel family from captured repeats, carry the fit provenance, the
+  calibration envelope and the seed, and report results drawn from it as
+  distributional claims rather than point estimates. The deterministic
+  providers remain the exact compatibility levels and their accepted
+  artifacts stay byte-identical. Blocked on the same capture evidence as
+  COMP-1, so it follows COMP-5.

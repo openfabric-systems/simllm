@@ -167,6 +167,28 @@ audit now derives every observed row from AST, and the correction supplement
 in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
 `output_tensor_list` callers without rewriting the frozen expectations file.
 
+The TRAF-13 observation-aware backend handoff does not add an SGLang schedule
+producer. The current communicator still emits its zero-time component event
+sidecar rather than `ExecutionObservations`, and no source qualification,
+runtime projection, TTFT, or TPOT relation was run for this adapter. SGL-17
+owns that optional producer while preserving the current exact flag-off path.
+The framework-oracle fallback is separate from the simulated worker and is
+also inert by default. `SglangCpuRunner` selects the stock CPU engine,
+`TpModelWorker`, `ModelRunner`, Granite model, sampler and
+`return_routed_experts` response path. Observation hooks project the real
+paged allocator, `RadixCache` matcher and eviction boundary, and decode
+retraction decisions. SGLang's host capturer unconditionally requests pinned
+memory, which initializes a CUDA pinned allocator even in its CPU engine. The
+fallback substitutes an ordinary CPU tensor only for that capture buffer; it
+retains every selected expert ID and does not replace model dispatch or
+scheduler state. A one-request qualification reached the stock worker,
+returned the selected expert IDs, observed an allocation and prefix lookup,
+and wrote a strict v2 trace. The main 2026-08-12 study did not select this
+fallback because the higher-fidelity vLLM CPU build qualified first. SGLang
+therefore remains component evidence in
+[the framework-oracle results](../../examples/framework_oracle_v1/RESULTS.md),
+not part of its eight-instance behavioral headline.
+
 ## Open tasks
 
 - SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic
@@ -197,12 +219,17 @@ in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
   `configure(step_sink=...)` on the CPU-engine smoke path, mirroring the
   vLLM tp=8 run of examples/m4 (the M4 slice covered this adapter by
   JSONL replay only).
-- SGL-9: observe RadixCache, token-pool and request-pool lifecycle events for
-  CORE-3 without replacing SGLang's policy. Emit stable pool/block/request
-  IDs, token intervals, layer/dtype/bytes, epoch, reference count, cause and
-  correlation ID for allocation, prefix bind/touch, reads/writes,
-  release/free, eviction, transfer and retraction-driven recompute. The
-  dedicated KV study compares these actual decisions with VLLM-11.
+- SGL-9 (Precision; P1; L) (remaining after the CPU-oracle lifecycle slice):
+  the v2 fallback now observes stock Radix prefix matching, token-slot
+  allocation, radix eviction and decode retraction with request and slot IDs.
+  Its current projection is slot IDs plus token counts. Extend it for CORE-3
+  with stable pool identity, token intervals, layer/dtype/bytes, epoch,
+  reference count, cause and correlation ID, prefix bind/touch, reads/writes,
+  release/free and transfer. The identifying observables are the owning
+  `RadixCache`, token-pool and request-pool objects. Acceptance requires exact
+  event cardinality, identity and cause agreement against those objects, a
+  direct comparison with VLLM-11, and byte preservation of the current v2 and
+  oracle-disabled paths.
 - SGL-10: capture and replay the supported model runner's CUDA stream/event,
   kernel and NCCL schedule as an `ExecutionGraph` template keyed by the same
   identity envelope as its compute table. Bind batch shapes, radix events and
@@ -249,6 +276,24 @@ in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
   one model and group size, require modeled median and p95 call cost within a
   pre-registered band, then verify the signed TTFT/TPOT effect and exact
   zero-cost bypass.
+- SGL-17 (Completeness; P2; L): add the SGLang communicator's source-backed
+  observed schedule as `ExecutionObservations`, including exact per-layer
+  semantic sites, logical streams, submission and program order, event-wait
+  dependencies, request correlation, and completion frontier for every
+  supported call. Derive concurrency only from the active communicator and
+  scheduler source, with no overlap percentage or compatibility-schedule
+  inference. When the producer is disabled or absent, preserve the accepted
+  worker records, event sidecar, sink calls, timestamps, tokens, and completion
+  order exactly.
+- SGL-16 (Precision; P1; M): replace the framework-oracle fallback's Granite
+  model-order layer inference with stable layer IDs supplied by SGLang. The
+  current surrogate cycles missing capture labels through the model's 24 MoE
+  modules in execution order; the identifying observable is an explicit
+  framework layer ID at the post-selection capturer. Freeze at least two
+  prompt shapes and a preemption resume before changing it. Acceptance
+  requires zero layer-label disagreements and byte-identical expert IDs,
+  request outputs and KV events relative to the current qualified Granite
+  fallback.
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
 worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin

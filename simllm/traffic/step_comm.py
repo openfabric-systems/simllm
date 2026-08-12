@@ -335,7 +335,8 @@ class MoeAllToAll:
 @dataclass(frozen=True)
 class _ScheduledRoutedRequest:
     request_id: str
-    tokens: tuple[RoutedToken, ...]
+    tokens: tuple[RoutedToken, ...] = ()
+    arena_token_indices: tuple[int, ...] = ()
 
 
 def _scheduled_routed_tokens(
@@ -360,41 +361,82 @@ def _scheduled_routed_tokens(
             scheduled.context_length, int
         ):
             raise TypeError(f"{path}.context_length: expected an integer")
-        try:
-            routed_request = supply.routed_experts.by_request_id(scheduled.request_id)
-        except KeyError as exc:
-            raise ValueError(f"{path}.request_id: absent from routed-experts projection") from exc
+        if supply.routed_experts is not None:
+            try:
+                routed_request = supply.routed_experts.by_request_id(
+                    scheduled.request_id
+                )
+            except KeyError as exc:
+                raise ValueError(
+                    f"{path}.request_id: absent from routed-experts projection"
+                ) from exc
+            prompt_token_count = routed_request.prompt_token_count
+        else:
+            arena = supply.routing_arena
+            lifetimes = supply.lifetimes
+            assert arena is not None and lifetimes is not None
+            try:
+                arena_request = arena.by_request_id(scheduled.request_id)
+                lifetime = lifetimes.by_request_id(scheduled.request_id)
+            except KeyError as exc:
+                raise ValueError(
+                    f"{path}.request_id: absent from routing arena authority"
+                ) from exc
+            if lifetime.view.arena_id != arena.arena_id:
+                raise ValueError(f"{path}.request_id: lifetime view belongs to another arena")
+            prompt_token_count = arena_request.prompt_token_count
         if scheduled.num_new_tokens == 0:
             continue
         if scheduled.phase is RequestPhase.PREFILL:
             end = scheduled.context_length
             start = end - scheduled.num_new_tokens
-            phase_tokens = routed_request.prefill_tokens
+            captured_count = prompt_token_count
             phase = "prefill"
         elif scheduled.phase is RequestPhase.DECODE:
             start = (
                 scheduled.context_length
                 - scheduled.num_new_tokens
-                - routed_request.prompt_token_count
+                - prompt_token_count
             )
             end = start + scheduled.num_new_tokens
-            phase_tokens = routed_request.decode_tokens
+            captured_count = (
+                len(routed_request.decode_tokens)
+                if supply.routed_experts is not None
+                else arena_request.decode_token_count
+            )
             phase = "decode"
         else:
             raise TypeError(f"{path}.phase: expected RequestPhase")
-        if start < 0 or end > len(phase_tokens) or start >= end:
+        if start < 0 or end > captured_count or start >= end:
             raise ValueError(
                 f"{path}: {phase} token slice [{start}, {end}) is outside "
-                f"captured count {len(phase_tokens)}"
+                f"captured count {captured_count}"
             )
-        selected = tuple(phase_tokens[start:end])
+        if supply.routed_experts is not None:
+            phase_tokens = (
+                routed_request.prefill_tokens
+                if scheduled.phase is RequestPhase.PREFILL
+                else routed_request.decode_tokens
+            )
+            selected = tuple(phase_tokens[start:end])
+            arena_indices: tuple[int, ...] = ()
+        else:
+            selected = ()
+            absolute_start = (
+                start
+                if scheduled.phase is RequestPhase.PREFILL
+                else prompt_token_count + start
+            )
+            absolute_end = absolute_start + scheduled.num_new_tokens
+            arena_indices = tuple(range(absolute_start, absolute_end))
         requests.append(
             _ScheduledRoutedRequest(
                 request_id=scheduled.request_id,
                 tokens=selected,
+                arena_token_indices=arena_indices,
             )
         )
-        token_count += len(selected)
+        token_count += len(selected) + len(arena_indices)
     if token_count != record.total_new_tokens:
         raise ValueError("record.scheduled: captured token count disagrees with total_new_tokens")
     return tuple(requests)
@@ -422,14 +464,22 @@ def _routed_moe_alltoalls(
         raise ValueError("ep_ranks: contains duplicate ranks")
     if any(isinstance(rank, bool) or not isinstance(rank, int) or rank < 0 for rank in ranks):
         raise ValueError("ep_ranks: expected distinct nonnegative integer ranks")
-    routing = supply.routed_experts
+    routing = supply.routed_experts or supply.routing_arena
+    assert routing is not None
+    authority_name = (
+        "routed_experts" if supply.routed_experts is not None else "routing_arena"
+    )
     if routing.expert_count != dims.num_experts:
-        raise ValueError("routed_experts.expert_count: disagrees with model num_experts")
+        raise ValueError(
+            f"{authority_name}.expert_count: disagrees with model num_experts"
+        )
     if routing.top_k != dims.top_k:
-        raise ValueError("routed_experts.top_k: disagrees with model top_k")
+        raise ValueError(f"{authority_name}.top_k: disagrees with model top_k")
     expected_layers = tuple(range(dims.num_layers))
     if routing.moe_layer_indices != expected_layers:
-        raise ValueError("routed_experts.moe_layer_indices: disagree with model layers")
+        raise ValueError(
+            f"{authority_name}.moe_layer_indices: disagree with model layers"
+        )
     placement = supply.placement_for_step(record.step_index)
     owners = placement.owner_map()
     expected_keys = {
@@ -464,9 +514,27 @@ def _routed_moe_alltoalls(
         request_send_bytes: dict[tuple[str, int, int], int] = {}
         for source in ranks:
             for scheduled_request in scheduled_requests:
-                for token in scheduled_request.tokens:
-                    layer_routing = token.layers[layer]
-                    destinations = {owners[(layer, expert)] for expert in layer_routing.expert_ids}
+                if supply.routed_experts is not None:
+                    expert_rows = (
+                        token.layers[layer].expert_ids
+                        for token in scheduled_request.tokens
+                    )
+                else:
+                    arena = supply.routing_arena
+                    lifetimes = supply.lifetimes
+                    assert arena is not None and lifetimes is not None
+                    view = lifetimes.by_request_id(scheduled_request.request_id).view
+                    expert_rows = (
+                        arena.expert_ids_at(
+                            view.token_offset,
+                            view.token_count,
+                            token_index,
+                            layer,
+                        )
+                        for token_index in scheduled_request.arena_token_indices
+                    )
+                for expert_ids in expert_rows:
+                    destinations = {owners[(layer, expert)] for expert in expert_ids}
                     for destination in destinations:
                         if destination == source:
                             continue

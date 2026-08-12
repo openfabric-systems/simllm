@@ -17,6 +17,7 @@ from simllm.backends.dependency_cross_check import (
     complete_dependency_cross_check,
     plan_dependency_cross_check,
 )
+from simllm.backends.device_step_sink import DeviceRuntimeStepSink, DeviceStepOutcome
 from simllm.backends.fct import NormalizedFct, normalized_fct
 from simllm.backends.htsim import HtsimUecConfig, build_htsim_uec_command
 from simllm.backends.htsim_dcqcn import (
@@ -88,6 +89,8 @@ __all__ = [
     "DependencyCrossCheckReport",
     "DependencyOrderingComparison",
     "DependencyPhaseFrontierComparison",
+    "DeviceRuntimeStepSink",
+    "DeviceStepOutcome",
     "FlowCompletion",
     "HtsimDcqcnConfig",
     "HtsimPersistentStepSink",

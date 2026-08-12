@@ -71,12 +71,17 @@ own modules.
   runtime's realized predecessor chain for each correlated request endpoint,
   accumulates TTFT across non-sampling prefill chunks, computes exact TPOT,
   advances `VirtualClock` only to framework completion and retains later
-  asynchronous events as physical evidence.
+  asynchronous events as physical evidence. Its optional bookkeeping input
+  seeds each request's first-token history at the framework-request creation
+  timestamp; omitting it selects the exact legacy timing origin.
 - `simllm-request-bookkeeping-v1`: an append-only `BookkeepingLedger` of
   request-stage transitions, created-object records and the same
   `CompletionEvent` objects returned by the runtime. `RequestBookkeeper`
   assigns sequence numbers, validates lineage, registers a graph without
   mutating it, and queries by request, execution or object ancestry.
+  `framework_request_arrivals` validates the complete ledger and returns one
+  ordered arrival projection per framework request from
+  `CreatedObjectRecord.created_at_ps`.
 
 Created objects use typed portable identities and opaque owner-native handles:
 framework request and vRAM allocation, execution operation, NCCL command,
@@ -414,6 +419,14 @@ identities and fails closed when a count alone is ambiguous. The reducer
 consumes each execution ID once, including zero-latency results, and the v1
 reader treats an explicit null sampled-identity field as absent.
 
+CORE-31 is complete. When supplied a bookkeeping snapshot, the reducer now
+starts each request at its exact framework-request creation timestamp and
+attributes arrival-to-first-release time to the request critical-path queue.
+Scheduling before arrival rejects without advancing the clock or metric
+history, while omitting bookkeeping retains legacy results. The joined live
+vLLM study matched queue plus service to TTFT exactly in all 12 request rows;
+see [the CORE-31 results](../../examples/arrival_admission_v1/RESULTS.md).
+
 CORE-4 is complete for the coordinated first coarse bypass profile and the
 frozen Tier B structural fixture.
 `CoarseDeviceRuntime` implements host-launch and CUDA-stream order, dependency
@@ -531,6 +544,18 @@ no physical GOAL operation. Six placement and request-count cells plus the
 real Granite prefill matched every frozen identity; see
 [the CORE-28 results](../../examples/per_request_fidelity_v1/RESULTS.md).
 
+CORE-34 is complete. `RequestRoutingLifetime` is the one mutable request
+identity from join through close: it carries opaque join provenance, arrival,
+an arena extent, a monotonic unique-token cursor, delayed scheduler finish and
+two layer masks. `CompletionReducer` optionally advances its registry only
+after graph, result and runtime-report validation. Only subjectless logical
+pairwise dispatch/combine completions for the request's final captured token
+set end bits; WQE-subject events do not. CLOSED requires full masks, exact
+captured coverage and the scheduler finish before the view release callback
+runs. The real Granite study closed one and three requests with zero live views
+and failed closed for suppressed dispatch layer 7 and combine layer 19; see
+[the routing lifetime results](../../examples/routing_lifetime_v1/RESULTS.md).
+
 ## Pre-registered runtime sanity experiments
 
 These expectations are recorded before CORE-4 implements scheduling. CORE-2
@@ -569,6 +594,34 @@ does not claim to produce these resource-contention measurements.
 
 ### Precision
 
+- CORE-35 (Precision; P1; M): make the coarse runtime report conserve
+  participant-local dependency frontiers in multi-rank serial MoE graphs. The
+  routing-lifetime study's first three-request run executed those frontiers,
+  then `_runtime_report` rejected rank 1 of
+  `step-0:layer-1:rank-1:compute` because its selected path overlapped the
+  operation's single global critical predecessor. Replace that scalar
+  predecessor accounting with a participant-aware critical segment, or an
+  equivalent conserved representation. Acceptance runs the original Granite
+  three-request graph without barrier tightening, retains every completion and
+  routing-lifetime outcome, and matches the accepted barrier projection's
+  scheduler-visible completion while reporting the participant-local work
+  separately rather than double-counting it.
+- CORE-3 (Completeness; P1; L): implement explicit KV lifecycle accounting before resource
+  contention. Consume adapter observations for RESERVE, ALLOCATE,
+  BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
+  TRANSFER and RECOMPUTE. Enforce allocation, ownership, reference-count and
+  byte-conservation invariants. Add `examples/kv_cache_strategies/` with
+  pre-registered vLLM and SGLang cases: no reuse, repeated system prefixes,
+  competing prefix pools, multi-turn sessions, chunked prefill, capacity
+  pressure, eviction, preemption/recompute, mixed contexts and bursts. Sweep
+  capacity, block size, arrival rate, length, sharing and concurrency; report
+  live/reserved/reclaimable bytes, fragmentation, hits, eviction reason and
+  age, reads/writes, transfers, recompute, preemption, capacity wait and
+  TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9. Until this
+  lands, CORE-4 accepts zero-byte lifecycle observations but rejects every
+  byte-carrying READ or WRITE during preflight rather than reporting silent
+  zero-cost HBM work. Acceptance must enable those same fixtures through the
+  HBM service and preserve the explicit zero-byte path exactly.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
@@ -700,6 +753,30 @@ does not claim to produce these resource-contention measurements.
   each destination on its exact local predecessor frontier, conserve the
   selected causal timestamp through reporting and completion reduction, and
   preserve every accepted control byte and timestamp when the path is absent.
+- CORE-26 (Precision; P1; L): replace the cross-node collective path's current
+  independent GPU-versus-RNIC surrogate with one runtime composition of the
+  GPU-resident NCCL task and the existing WQE/NIC authority. Consume the
+  resource demands calibrated by COMP-22 and compose with CORE-13 and COMP-11
+  rather than adding a second SM, HBM or NVLink scheduler. Sweep payload,
+  participant count, channel count and compute-neighbor pressure across the
+  crossover; require TTFT and TPOT to enter the measured overlap bands and
+  reconcile every GPU and network byte exactly. Zero GPU demand and disabled
+  composition must preserve every accepted TRAF-7 timestamp and artifact byte.
+- CORE-27 (Precision; P1; L): add only the data-mover resources that COMP-22
+  observes on the cross-node NCCL path, including copy-engine or GPUDirect DMA
+  visits when present, plus their shared-HBM interaction and downstream
+  visibility. The current surrogate charges no such visit. Identify eligibility,
+  grant, release and consumer-visible completion from a reproducible concurrent
+  capture; vary transfer size, direction and competing copy pressure and match
+  held-out queue wait and JCT within the declared measurement band. An observed
+  no-copy path must stay explicitly zero, and disabling this mechanism must
+  preserve the CORE-26 baseline exactly.
+- CORE-32 (Completeness; P2; L): model optional framework or server admission
+  control after arrival eligibility, including rejection, rate limits,
+  concurrency caps and policy-driven deferral, without duplicating the
+  framework scheduler. The disabled policy must preserve the arrival-gated
+  baseline exactly, and policy queue time must remain distinct from arrival
+  gating and scheduler queue time.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client above the delivered HTSIM persistent flow session and strict full
   `StepResult` codec. The backend foundation retains one event list, topology,
@@ -726,3 +803,14 @@ does not claim to produce these resource-contention measurements.
   timestamp regression before publishing a result. The explicit diagnostic
   and BRIDGE-1 prepared modes remain the identity off paths and must preserve
   every accepted byte and timestamp when the online session is disabled.
+- CORE-36 (Completeness; P1; M): make precision-level selection one
+  validated surface. Each seam is currently selected separately through a
+  provider object, a profile string, the presence of a placement
+  manifest, a build option or an environment variable, so a run cannot
+  state its full fidelity configuration in one place and a result cannot
+  be read back with the precision that produced it. Define one
+  configuration naming the level of every seam, validate it up front,
+  refuse incompatible combinations explicitly rather than silently
+  degrading, and stamp the resolved selection into the run provenance
+  next to the existing schema and hash fields. The current per-seam
+  spellings remain supported and byte-identical while they are migrated.

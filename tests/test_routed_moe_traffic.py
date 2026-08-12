@@ -11,6 +11,7 @@ import pytest
 
 import simllm.backends.step_sink as step_sink_module
 from simllm.backends import (
+    DeviceRuntimeStepSink,
     HtsimStepSink,
     HtsimStepSinkConfig,
     ObservedStepLowerer,
@@ -21,10 +22,14 @@ from simllm.compute import ComputeProvider, DurationEstimate, ModelDims
 from simllm.core import (
     CollectiveWork,
     ExecutionObservations,
+    JoinProvenance,
     RequestBookkeeper,
+    RequestLifetimeRegistry,
     RequestPhase,
+    RoutingViewDescriptor,
     ScheduledRequest,
     StepRecord,
+    VirtualClock,
 )
 from simllm.placement import PlacementManifest, RankPlacement
 from simllm.preplay import (
@@ -35,6 +40,7 @@ from simllm.preplay import (
     RoutedLayer,
     RoutedRequest,
     RoutedToken,
+    build_routing_arena,
     join_preplay_arrivals,
     project_preplay_routing,
 )
@@ -359,6 +365,73 @@ def test_granite_fixture_matches_frozen_epoch_pair_tables():
             assert op.pair_payload_bytes == expected
 
 
+def test_arena_authority_matches_validation_projection_without_cursor_mutation(
+    tmp_path,
+):
+    run = join_preplay_arrivals(
+        (RequestArrival(request_id="length-cap", arrived_at_ps=0),),
+        _GRANITE_FIXTURE,
+        RequestBookkeeper(),
+    )
+    arena = build_routing_arena(run, tmp_path / "routing-arena.json")
+    legacy = _granite_supply()
+    lifetimes = RequestLifetimeRegistry(arena.moe_layer_indices)
+    provenance = JoinProvenance(
+        run_schema=run.schema,
+        trace_schema=run.trace.schema,
+        trace_sha256=run.trace.sha256,
+    )
+    for request in arena.requests:
+        lifetimes.register(
+            request.request_id,
+            provenance,
+            run.by_request_id(request.request_id).arrived_at_ps,
+            RoutingViewDescriptor(
+                arena_id=arena.arena_id,
+                token_offset=request.token_offset,
+                token_count=request.token_count,
+                prompt_token_count=request.prompt_token_count,
+                release_callback=lambda: None,
+            ),
+        )
+    packed = RoutedMoeSupply(
+        placements=legacy.placements,
+        step_placement_epochs=legacy.step_placement_epochs,
+        routing_arena=arena,
+        lifetimes=lifetimes,
+    )
+    record = _granite_record(0)
+
+    assert step_moe_alltoalls(
+        record,
+        GRANITE_MOE_DIMS,
+        (0, 1),
+        routed_supply=packed,
+    ) == step_moe_alltoalls(
+        record,
+        GRANITE_MOE_DIMS,
+        (0, 1),
+        routed_supply=legacy,
+    )
+    assert render_step_goal(
+        record,
+        GRANITE_MOE_DIMS,
+        (0,),
+        1,
+        ep_ranks=(0, 1),
+        routed_supply=packed,
+    ).render() == render_step_goal(
+        record,
+        GRANITE_MOE_DIMS,
+        (0,),
+        1,
+        ep_ranks=(0, 1),
+        routed_supply=legacy,
+    ).render()
+    assert lifetimes.by_request_id("length-cap").consumption_cursor == 0
+    arena.close()
+
+
 def test_render_and_lowerer_carry_the_same_sparse_tables_and_epoch():
     supply = _tiny_supply()
     record = _prefill_record(1)
@@ -665,10 +738,11 @@ def test_observed_lowerer_preserves_per_request_attribution():
         for operation in serial.operations
     )
 
-    observed = ObservedStepLowerer(config).lower(
-        record,
-        ExecutionObservations(bare_markers, serial.completion_operation_ids),
+    observations = ExecutionObservations(
+        bare_markers,
+        serial.completion_operation_ids,
     )
+    observed = ObservedStepLowerer(config).lower(record, observations)
 
     attributed = [
         operation
@@ -683,3 +757,13 @@ def test_observed_lowerer_preserves_per_request_attribution():
                 actual.work.request_pair_payload_bytes
                 == expected.work.request_pair_payload_bytes
             )
+
+    clock = VirtualClock()
+    sink = DeviceRuntimeStepSink(config)
+    sink.bind_clock(clock)
+    result = sink(record, observations)
+
+    assert sink.outcomes[0].graph == observed
+    assert [metric.request_id for metric in result.request_metrics] == ["alpha"]
+    assert result.request_metrics[0].ttft_ps == result.step_latency_ps
+    assert clock.now_ps == result.completed_at_ps

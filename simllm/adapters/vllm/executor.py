@@ -87,7 +87,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import Future
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, runtime_checkable
 
 from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
 from simllm.adapters.vllm.replay import ReplayTokenSource, sample_adapter_tokens
@@ -103,6 +103,7 @@ from simllm.compute import (
     step_kernel,
 )
 from simllm.core import (
+    ExecutionObservations,
     RequestPhase,
     ScheduledRequest,
     StepRecord,
@@ -123,6 +124,7 @@ __all__ = [
     "PINNED_VLLM_VERSION",
     "PS_PER_SECOND",
     "ModelDims",
+    "ObservationStepSink",
     "ReplayTokenSource",
     "SimExecutor",
     "SimExecutorConfig",
@@ -143,9 +145,34 @@ __all__ = [
     "write_step_records",
 ]
 
-#: A step sink consumes one record and may return the simulated outcome; a
+#: A legacy sink consumes one record and may return the simulated outcome; a
 #: sink that returns ``None`` leaves the estimate to the compute provider.
-StepSink = Callable[[StepRecord], "StepResult | None"]
+LegacyStepSink: TypeAlias = Callable[[StepRecord], StepResult | None]
+
+
+@runtime_checkable
+class ObservationStepSink(Protocol):
+    """Consume a step plus its optional framework execution observations.
+
+    The adapter binds its sole :class:`VirtualClock` before the first call.
+    Omitting observations is meaningful: the sink must select its exact serial
+    compatibility path rather than infer a framework schedule.
+    """
+
+    def bind_clock(self, clock: VirtualClock) -> None:
+        """Bind the adapter's timing authority before any step executes."""
+        ...
+
+    def __call__(
+        self,
+        record: StepRecord,
+        observations: ExecutionObservations | None,
+    ) -> StepResult:
+        """Return the authoritative result for one translated step."""
+        ...
+
+
+StepSink: TypeAlias = LegacyStepSink | ObservationStepSink
 
 
 def _missing_vllm_error() -> ImportError:
@@ -869,6 +896,8 @@ class _SimStepRuntime:
         self.fallback_latency = fallback_latency
         self.clock = VirtualClock() if clock is None else clock
         self.is_authority = is_authority
+        if isinstance(self.step_sink, ObservationStepSink):
+            self.step_sink.bind_clock(self.clock)
         self.translator = StepTranslator()
         self.step_index = 0
         self.step_records: list[StepRecord] = []
@@ -889,10 +918,28 @@ class _SimStepRuntime:
         self.step_index += 1
         return translated
 
-    def settle(self, translated: TranslatedStep) -> StepResult:
+    def settle(
+        self,
+        translated: TranslatedStep,
+        observations: ExecutionObservations | None = None,
+    ) -> StepResult:
         """Apply the accepted sink, fallback, append, advance, pace order."""
         record = translated.record
-        result = self.step_sink(record) if self.step_sink is not None else None
+        if isinstance(self.step_sink, ObservationStepSink):
+            result = self.step_sink(record, observations)
+        elif self.step_sink is not None:
+            if observations is not None:
+                raise TypeError(
+                    "framework observations require an ObservationStepSink; "
+                    "the configured legacy sink accepts StepRecord only"
+                )
+            result = self.step_sink(record)
+        else:
+            if observations is not None:
+                raise RuntimeError(
+                    "framework observations require a configured ObservationStepSink"
+                )
+            result = None
         if result is None:
             latency_ps = self.fallback_latency(translated)
             result = StepResult(
@@ -918,12 +965,17 @@ class _SimStepRuntime:
             return False
         translated = self.translate(scheduler_output)
         record = translated.record
-        if self.step_sink is not None:
+        result = None
+        if isinstance(self.step_sink, ObservationStepSink):
+            result = self.step_sink(record, None)
+        elif self.step_sink is not None:
             self.step_sink(record)
         if self.is_authority:
             self.step_records.append(record)
             self.step_results.append(
-                StepResult(
+                result
+                if result is not None
+                else StepResult(
                     step_index=record.step_index,
                     step_latency_ps=0,
                     completed_at_ps=self.clock.now_ps,
