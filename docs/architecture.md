@@ -470,6 +470,44 @@ abstract collective op.
    online stateful co-simulator session remains BRIDGE-2, CORE-24 and
    HTSIM-18, and child-process lifetime binding remains BRIDGE-3.
 
+
+## Precision levels and their contract
+
+Coupling mode says how much of the loop is closed. Precision level says
+how much detail each seam spends time on, and the two are independent.
+The seam matrix, the owning tasks and the current state live in the
+[developer guide](README_PRO.md#fidelity-levels-and-switches); this
+section states the contract every level must satisfy.
+
+1. **Semantics are level-invariant.** A level may change a duration or
+   its variance. It may not change token identity, output length, stop
+   reason, scheduler decisions, collective participants or payload
+   shape. Any level that would change those is a different model, not a
+   different precision, and must be registered as such.
+2. **Every seam names a compatibility level.** That level's accepted
+   artifacts stay byte-identical as other levels are added, which is what
+   makes the rest of the ladder safe to extend.
+3. **Deterministic and calibrated levels are labeled, never mixed
+   silently.** A deterministic level returns one value per input. A
+   calibrated level returns a draw from a distribution fitted offline
+   against captured evidence, and must carry the fit provenance, the
+   calibration envelope it is valid within, and the seed that reproduces
+   the draw. A result produced at a calibrated level is reported with its
+   distributional claim, not as a point estimate.
+4. **The run records its configuration.** A result is only interpretable
+   with the precision that produced it, so the selected level of every
+   seam belongs in the run provenance. CORE-36 owns making that one
+   validated surface rather than the current per-seam mixture of provider
+   objects, profile strings, manifests, build options and environment
+   variables.
+5. **Cross-checking is an explicit mode, not an accident.** Where two
+   paths can execute the same schedule, as the ATLAHS GOAL path and the
+   runtime's own dependency realization both can, exactly one is the
+   authority for a given run and the other may be selected as a
+   cross-check whose disagreements are reported. TRAF-12 owns that
+   reconciliation.
+
+
 ## Timing and metrics
 
 An instantly-returning simulated executor breaks metric *meaning*, not metric
