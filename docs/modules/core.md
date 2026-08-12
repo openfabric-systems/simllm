@@ -193,6 +193,14 @@ coarse runtime consume the same table when each declared rank sends or
 receives. The runtime also accepts a valid table with an uncovered rank; the
 diagnostic serial renderer rejects that case because it cannot emit the
 rank's collective-completion frontier.
+An optional `request_pair_payload_bytes` tuple partitions that sparse table by
+stable request identity. Its request-major entries are
+`(request_id, source_rank, destination_rank, bytes)`, and strict validation
+requires their per-pair sums to reproduce the aggregate table exactly and each
+identity to appear in the operation correlation. The field is read-only
+metadata: graph JSON retains it, structured GOAL messages retain it, and GOAL
+text does not emit it. Direct and graph renderers fail closed if the structured
+message projection disagrees with the corresponding authority.
 The combined captured-routing study populated that table from real Granite
 assignments, carried it through the step graph and GOAL, and changed live
 fluid JCT by every frozen exact relation. It also retained the old v1 scalar
@@ -458,6 +466,17 @@ through the repository `BypassArtifacts` comparator after the isolated
 link-disabled build. The result ledger quotes and maps every registered
 CORE-21 clause; no residual remains.
 
+CORE-28 is complete. Sparse pairwise `CollectiveWork` may carry an optional
+request-major partition that sums exactly to the aggregate physical pair table.
+Strict validation rejects malformed, unknown, duplicate, noncanonical or
+aggregate-inconsistent ownership before rendering. The partition survives the
+execution-graph JSON round trip and graph-only GOAL renderer, where a second
+fail-closed comparison checks the structured message projection. Empty
+attribution remains absent from the wire form, and adding attribution changes
+no physical GOAL operation. Six placement and request-count cells plus the
+real Granite prefill matched every frozen identity; see
+[the CORE-28 results](../../examples/per_request_fidelity_v1/RESULTS.md).
+
 ## Pre-registered runtime sanity experiments
 
 These expectations are recorded before CORE-4 implements scheduling. CORE-2
@@ -590,14 +609,6 @@ does not claim to produce these resource-contention measurements.
   completed-prefill and decode batch, match the framework's actual token
   production mask request by request, and preserve zero-sample, all-sample and
   legacy wire behavior exactly.
-- CORE-28 (Precision; P1; M): extend the existing sparse pairwise collective
-  payload with an optional, loss-checked per-request byte partition. Keep the
-  aggregate pair table as the physical service demand and require the request
-  partition to sum to it exactly. Acceptance must preserve the partition
-  through strict execution-graph JSON round trip and graph-only GOAL
-  rendering, reject unknown, duplicate and aggregate-inconsistent request
-  entries, and keep every legacy graph byte and physical GOAL operation
-  byte-identical when attribution is absent or added.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client above the delivered HTSIM persistent flow session and strict full
   `StepResult` codec. The backend foundation retains one event list, topology,
