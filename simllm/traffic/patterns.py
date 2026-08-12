@@ -13,6 +13,8 @@ label of that rank's last operation in the phase.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from simllm.goal import (
     GoalDependencyKind,
     GoalDependencyProvenance,
@@ -261,6 +263,108 @@ def pairwise_all_to_allv(
             for label in labels:
                 trace.rank(rank).requires(join, label, provenance=internal)
             done[rank] = join
+    return done
+
+
+def ordered_pairwise_messages(
+    trace: GoalTrace,
+    ranks: list[int],
+    messages: Sequence[tuple[str, int, int, int]],
+    tag: int,
+    after: dict[int, str] | None = None,
+    *,
+    operation_id: str | None = None,
+    after_provenance: dict[int, GoalDependencyProvenance] | None = None,
+) -> dict[int, str]:
+    """Emit request-attributed messages in their supplied issue order.
+
+    Each row is ``(request_id, source, destination, payload_bytes)``. Tuple
+    order is authoritative. Sends from one source are connected with
+    ``irequires`` so they enter that source's queue in order without waiting
+    for the previous message to finish. Different sources remain unordered.
+    The returned frontier joins every incident send and receive before the
+    caller advances to the next phase.
+    """
+
+    if operation_id is None:
+        raise ValueError("ordered messages require operation_id for their frontier")
+    rank_set = set(ranks)
+    if not ranks or len(rank_set) != len(ranks):
+        raise ValueError("ranks must be nonempty and distinct")
+    rows = tuple(messages)
+    if not rows:
+        raise ValueError("messages must not be empty")
+
+    for index, row in enumerate(rows):
+        if not isinstance(row, tuple) or len(row) != 4:
+            raise TypeError(f"messages[{index}] must be a four-item tuple")
+        request_id, source, destination, payload_bytes = row
+        if not isinstance(request_id, str) or not request_id.strip():
+            raise ValueError(f"messages[{index}][0] must be a nonblank string")
+        if source not in rank_set or destination not in rank_set:
+            raise ValueError(f"messages[{index}] uses a rank outside the group")
+        if source == destination:
+            raise ValueError(f"messages[{index}] is a self-pair")
+        if isinstance(payload_bytes, bool) or not isinstance(payload_bytes, int):
+            raise TypeError(f"messages[{index}][3] must be an integer")
+        if payload_bytes <= 0:
+            raise ValueError(f"messages[{index}][3] must be positive")
+
+    done: dict[int, str] = {}
+    incident: dict[int, list[str]] = {rank: [] for rank in ranks}
+    send_tails: dict[int, str] = {}
+    internal = GoalDependencyProvenance(
+        GoalDependencyKind.COLLECTIVE_INTERNAL,
+        operation_id,
+    )
+    for index, row in enumerate(rows):
+        request_id, source, destination, payload_bytes = row
+
+        tx = trace.rank(source).send(
+            payload_bytes,
+            to=destination,
+            tag=tag,
+            operation_id=operation_id,
+        )
+        if source in send_tails:
+            trace.rank(source).irequires(
+                tx,
+                send_tails[source],
+                provenance=internal,
+            )
+        else:
+            _chain(trace, source, tx, after, after_provenance)
+        send_tails[source] = tx
+        incident[source].append(tx)
+
+        rx = trace.rank(destination).recv(
+            payload_bytes,
+            source=source,
+            tag=tag,
+            operation_id=operation_id,
+        )
+        _chain(trace, destination, rx, after, after_provenance)
+        incident[destination].append(rx)
+        trace.record_message(
+            GoalMessage(
+                operation_id=operation_id,
+                source_rank=source,
+                destination_rank=destination,
+                payload_bytes=payload_bytes,
+                tag=tag,
+                send_label=tx,
+                receive_label=rx,
+                request_payload_bytes=((request_id, payload_bytes),),
+            )
+        )
+
+    for rank, labels in incident.items():
+        if not labels:
+            continue
+        join = trace.rank(rank).calc(0, operation_id=operation_id)
+        for label in labels:
+            trace.rank(rank).requires(join, label, provenance=internal)
+        done[rank] = join
     return done
 
 

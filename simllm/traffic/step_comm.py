@@ -46,6 +46,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
+from enum import Enum
 
 from simllm.compute import ModelDims
 from simllm.core import (
@@ -72,7 +73,11 @@ from simllm.traffic.locality import (
     StepLocalityPlan,
     classify_step_locality,
 )
-from simllm.traffic.patterns import pairwise_all_to_allv, ring_allreduce
+from simllm.traffic.patterns import (
+    ordered_pairwise_messages,
+    pairwise_all_to_allv,
+    ring_allreduce,
+)
 from simllm.traffic.request_fidelity import (
     AggregatePairRow,
     RequestFidelityReport,
@@ -508,11 +513,96 @@ class MoeAllToAll:
     placement_epoch: int = 0
 
 
+class MoeMessageGrouping(str, Enum):
+    """Declared coalescing rule for captured MoE message replay."""
+
+    PER_TOKEN = "per-token"
+    PER_EXPERT_GROUP = "per-expert-group"
+
+
+@dataclass(frozen=True)
+class RoutedMoeMessage:
+    """One request-owned message and its captured routing positions."""
+
+    request_id: str
+    source_rank: int
+    destination_rank: int
+    payload_bytes: int
+    routing_ordinals: tuple[tuple[int, int], ...]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.request_id, str) or not self.request_id.strip():
+            raise ValueError("message.request_id: expected a nonblank string")
+        for field_name, value in (
+            ("source_rank", self.source_rank),
+            ("destination_rank", self.destination_rank),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"message.{field_name}: expected a nonnegative integer")
+        if self.source_rank == self.destination_rank:
+            raise ValueError("message ranks must differ")
+        if (
+            isinstance(self.payload_bytes, bool)
+            or not isinstance(self.payload_bytes, int)
+            or self.payload_bytes <= 0
+        ):
+            raise ValueError("message.payload_bytes: expected a positive integer")
+        if not isinstance(self.routing_ordinals, tuple) or not self.routing_ordinals:
+            raise ValueError("message.routing_ordinals: expected a nonempty tuple")
+        for index, ordinal in enumerate(self.routing_ordinals):
+            if not isinstance(ordinal, tuple) or len(ordinal) != 2:
+                raise TypeError(
+                    f"message.routing_ordinals[{index}]: expected a two-item tuple"
+                )
+            if any(
+                isinstance(value, bool) or not isinstance(value, int) or value < 0
+                for value in ordinal
+            ):
+                raise ValueError(
+                    f"message.routing_ordinals[{index}]: expected nonnegative integers"
+                )
+        if len(self.routing_ordinals) != len(set(self.routing_ordinals)):
+            raise ValueError("message.routing_ordinals: duplicate routing position")
+
+
+@dataclass(frozen=True)
+class MoeMessageSequence:
+    """One ordered captured-message phase plus aggregate projections."""
+
+    layer: int
+    phase: str
+    ranks: tuple[int, ...]
+    grouping: MoeMessageGrouping
+    messages: tuple[RoutedMoeMessage, ...]
+    pair_payload_bytes: tuple[tuple[int, int, int], ...]
+    request_pair_payload_bytes: tuple[tuple[str, int, int, int], ...]
+    placement_epoch: int
+
+    def __post_init__(self) -> None:
+        if self.phase not in MOE_A2A_PHASES:
+            raise ValueError("sequence.phase: expected dispatch or combine")
+        if not isinstance(self.grouping, MoeMessageGrouping):
+            raise TypeError("sequence.grouping: expected MoeMessageGrouping")
+        if not self.messages:
+            raise ValueError("sequence.messages: expected at least one message")
+
+
 @dataclass(frozen=True)
 class _ScheduledRoutedRequest:
     request_id: str
     tokens: tuple[RoutedToken, ...] = ()
     arena_token_indices: tuple[int, ...] = ()
+    phase_token_indices: tuple[int, ...] = ()
+
+
+@dataclass(frozen=True)
+class _RoutedMoeDispatchLayer:
+    """One layer of ordered dispatch contributions from the engine owner."""
+
+    layer: int
+    ranks: tuple[int, ...]
+    messages: tuple[RoutedMoeMessage, ...]
+    placement_epoch: int
 
 
 def _scheduled_routed_tokens(
@@ -610,6 +700,7 @@ def _scheduled_routed_tokens(
                 request_id=scheduled.request_id,
                 tokens=selected,
                 arena_token_indices=arena_indices,
+                phase_token_indices=tuple(range(start, end)),
             )
         )
         token_count += len(selected) + len(arena_indices)
@@ -618,27 +709,22 @@ def _scheduled_routed_tokens(
     return tuple(requests)
 
 
-def _aggregate_request_pairs(
-    entries: tuple[tuple[str, int, int, int], ...],
-) -> tuple[tuple[int, int, int], ...]:
-    totals: dict[tuple[int, int], int] = {}
-    for _, source, destination, size in entries:
-        pair = (source, destination)
-        totals[pair] = totals.get(pair, 0) + size
-    return tuple(
-        (source, destination, size) for (source, destination), size in sorted(totals.items())
-    )
-
-
-def _routed_moe_alltoalls(
+def _routed_moe_dispatch_layers(
     record: StepRecord,
     dims: ModelDims,
     ranks: tuple[int, ...],
     supply: RoutedMoeSupply,
-) -> list[MoeAllToAll]:
+) -> tuple[_RoutedMoeDispatchLayer, ...]:
+    """Build the shared ordered authority for captured routed traffic."""
+
+    if dims.num_experts <= 0 or len(ranks) < 2 or record.total_new_tokens <= 0:
+        return ()
     if len(ranks) != len(set(ranks)):
         raise ValueError("ep_ranks: contains duplicate ranks")
-    if any(isinstance(rank, bool) or not isinstance(rank, int) or rank < 0 for rank in ranks):
+    if any(
+        isinstance(rank, bool) or not isinstance(rank, int) or rank < 0
+        for rank in ranks
+    ):
         raise ValueError("ep_ranks: expected distinct nonnegative integer ranks")
     routing = supply.routed_experts or supply.routing_arena
     assert routing is not None
@@ -684,19 +770,17 @@ def _routed_moe_alltoalls(
         )
     source = supply.engine_rank
     if source not in ranks:
-        raise ValueError(
-            f"supply.engine_rank: rank {source} is outside ep_ranks"
-        )
+        raise ValueError(f"supply.engine_rank: rank {source} is outside ep_ranks")
 
     scheduled_requests = _scheduled_routed_tokens(record, supply)
     vector_bytes = dims.hidden_size * dims.dtype_bytes
-    operations = []
+    layers: list[_RoutedMoeDispatchLayer] = []
     for layer in expected_layers:
-        request_send_bytes: dict[tuple[str, int, int], int] = {}
+        messages: list[RoutedMoeMessage] = []
         for scheduled_request in scheduled_requests:
             if supply.routed_experts is not None:
-                expert_rows = (
-                    token.layers[layer].expert_ids
+                token_rows = (
+                    (token.token_index, token.layers[layer].expert_ids)
                     for token in scheduled_request.tokens
                 )
             else:
@@ -704,61 +788,140 @@ def _routed_moe_alltoalls(
                 lifetimes = supply.lifetimes
                 assert arena is not None and lifetimes is not None
                 view = lifetimes.by_request_id(scheduled_request.request_id).view
-                expert_rows = (
-                    arena.expert_ids_at(
-                        view.token_offset,
-                        view.token_count,
-                        token_index,
-                        layer,
+                token_rows = (
+                    (
+                        phase_token_index,
+                        arena.expert_ids_at(
+                            view.token_offset,
+                            view.token_count,
+                            arena_token_index,
+                            layer,
+                        ),
                     )
-                    for token_index in scheduled_request.arena_token_indices
+                    for phase_token_index, arena_token_index in zip(
+                        scheduled_request.phase_token_indices,
+                        scheduled_request.arena_token_indices,
+                        strict=True,
+                    )
                 )
-            for expert_ids in expert_rows:
-                destinations = {owners[(layer, expert)] for expert in expert_ids}
-                for destination in destinations:
+            for token_index, expert_ids in token_rows:
+                destinations: dict[int, int] = {}
+                for top_k_index, expert in enumerate(expert_ids):
+                    destination = owners[(layer, expert)]
+                    destinations.setdefault(destination, top_k_index)
+                for destination, top_k_index in destinations.items():
                     if destination == source:
                         continue
-                    key = (
-                        scheduled_request.request_id,
-                        source,
-                        destination,
+                    messages.append(
+                        RoutedMoeMessage(
+                            request_id=scheduled_request.request_id,
+                            source_rank=source,
+                            destination_rank=destination,
+                            payload_bytes=vector_bytes,
+                            routing_ordinals=((token_index, top_k_index),),
+                        )
                     )
-                    request_send_bytes[key] = request_send_bytes.get(key, 0) + vector_bytes
-        request_dispatch = tuple(
-            (request_id, source, destination, size)
-            for (request_id, source, destination), size in sorted(request_send_bytes.items())
-        )
-        dispatch = _aggregate_request_pairs(request_dispatch)
-        request_combine = tuple(
-            sorted(
-                (request_id, destination, source, size)
-                for request_id, source, destination, size in request_dispatch
+        layers.append(
+            _RoutedMoeDispatchLayer(
+                layer=layer,
+                ranks=ranks,
+                messages=tuple(messages),
+                placement_epoch=placement.placement_epoch,
             )
+        )
+    return tuple(layers)
+
+
+def _message_request_pairs(
+    messages: tuple[RoutedMoeMessage, ...],
+) -> tuple[tuple[str, int, int, int], ...]:
+    totals: dict[tuple[str, int, int], int] = {}
+    for message in messages:
+        key = (
+            message.request_id,
+            message.source_rank,
+            message.destination_rank,
+        )
+        totals[key] = totals.get(key, 0) + message.payload_bytes
+    return tuple(
+        (request_id, source, destination, size)
+        for (request_id, source, destination), size in sorted(totals.items())
+    )
+
+
+def _aggregate_request_pairs(
+    entries: tuple[tuple[str, int, int, int], ...],
+) -> tuple[tuple[int, int, int], ...]:
+    totals: dict[tuple[int, int], int] = {}
+    for _, source, destination, size in entries:
+        pair = (source, destination)
+        totals[pair] = totals.get(pair, 0) + size
+    return tuple(
+        (source, destination, size)
+        for (source, destination), size in sorted(totals.items())
+    )
+
+
+def _transpose_routed_messages(
+    messages: tuple[RoutedMoeMessage, ...],
+) -> tuple[RoutedMoeMessage, ...]:
+    return tuple(
+        RoutedMoeMessage(
+            request_id=message.request_id,
+            source_rank=message.destination_rank,
+            destination_rank=message.source_rank,
+            payload_bytes=message.payload_bytes,
+            routing_ordinals=message.routing_ordinals,
+        )
+        for message in messages
+    )
+
+
+def _routed_moe_alltoalls_from_layers(
+    layers: tuple[_RoutedMoeDispatchLayer, ...],
+) -> list[MoeAllToAll]:
+    operations: list[MoeAllToAll] = []
+    for layer in layers:
+        request_dispatch = _message_request_pairs(layer.messages)
+        dispatch = _aggregate_request_pairs(request_dispatch)
+        request_combine = _message_request_pairs(
+            _transpose_routed_messages(layer.messages)
         )
         combine = _aggregate_request_pairs(request_combine)
         operations.extend(
             (
                 MoeAllToAll(
-                    layer=layer,
+                    layer=layer.layer,
                     phase="dispatch",
-                    ranks=ranks,
+                    ranks=layer.ranks,
                     per_pair_bytes=0,
                     pair_payload_bytes=dispatch,
                     request_pair_payload_bytes=request_dispatch,
-                    placement_epoch=placement.placement_epoch,
+                    placement_epoch=layer.placement_epoch,
                 ),
                 MoeAllToAll(
-                    layer=layer,
+                    layer=layer.layer,
                     phase="combine",
-                    ranks=ranks,
+                    ranks=layer.ranks,
                     per_pair_bytes=0,
                     pair_payload_bytes=combine,
                     request_pair_payload_bytes=request_combine,
-                    placement_epoch=placement.placement_epoch,
+                    placement_epoch=layer.placement_epoch,
                 ),
             )
         )
     return operations
+
+
+def _routed_moe_alltoalls(
+    record: StepRecord,
+    dims: ModelDims,
+    ranks: tuple[int, ...],
+    supply: RoutedMoeSupply,
+) -> list[MoeAllToAll]:
+    return _routed_moe_alltoalls_from_layers(
+        _routed_moe_dispatch_layers(record, dims, ranks, supply)
+    )
 
 
 def step_moe_alltoalls(
@@ -834,6 +997,113 @@ def step_moe_alltoalls(
         for layer in range(dims.num_layers)
         for phase in MOE_A2A_PHASES
     ]
+
+
+def _group_routed_messages(
+    messages: tuple[RoutedMoeMessage, ...],
+    grouping: MoeMessageGrouping,
+) -> tuple[RoutedMoeMessage, ...]:
+    if grouping is MoeMessageGrouping.PER_TOKEN:
+        return messages
+    if grouping is not MoeMessageGrouping.PER_EXPERT_GROUP:
+        raise TypeError("grouping must be a MoeMessageGrouping")
+
+    order: list[tuple[str, int, int]] = []
+    totals: dict[tuple[str, int, int], int] = {}
+    ordinals: dict[tuple[str, int, int], list[tuple[int, int]]] = {}
+    for message in messages:
+        key = (
+            message.request_id,
+            message.source_rank,
+            message.destination_rank,
+        )
+        if key not in totals:
+            order.append(key)
+            totals[key] = 0
+            ordinals[key] = []
+        totals[key] += message.payload_bytes
+        ordinals[key].extend(message.routing_ordinals)
+    return tuple(
+        RoutedMoeMessage(
+            request_id=request_id,
+            source_rank=source,
+            destination_rank=destination,
+            payload_bytes=totals[(request_id, source, destination)],
+            routing_ordinals=tuple(ordinals[(request_id, source, destination)]),
+        )
+        for request_id, source, destination in order
+    )
+
+
+def step_moe_message_sequences(
+    record: StepRecord,
+    dims: ModelDims,
+    ep_ranks: Sequence[int],
+    *,
+    routed_supply: RoutedMoeSupply,
+    grouping: MoeMessageGrouping,
+) -> list[MoeMessageSequence]:
+    """Derive ordered MoE messages from captured per-token routing.
+
+    The base order is scheduled request, selected token and returned top-k
+    position from the declared engine owner. Multiple experts on one
+    destination produce one vector transfer for that token at the first
+    matching top-k position. ``PER_EXPERT_GROUP`` coalesces a request's
+    whole-layer traffic for one ordered pair and keeps the first contributing
+    position as its issue position. Combine transposes the dispatch stream
+    without claiming a kernel or wire issue order that the capture did not
+    observe.
+    """
+
+    if not isinstance(grouping, MoeMessageGrouping):
+        raise TypeError("grouping must be a MoeMessageGrouping")
+    ranks = tuple(ep_ranks)
+    layers = _routed_moe_dispatch_layers(
+        record, dims, ranks, routed_supply
+    )
+    if not layers:
+        return []
+
+    aggregate = _routed_moe_alltoalls_from_layers(layers)
+    aggregate_by_key = {
+        (operation.layer, operation.phase): operation for operation in aggregate
+    }
+    sequences: list[MoeMessageSequence] = []
+
+    for layer in layers:
+        dispatch_messages = _group_routed_messages(layer.messages, grouping)
+        combine_messages = _group_routed_messages(
+            _transpose_routed_messages(layer.messages),
+            grouping,
+        )
+        for phase, messages in (
+            ("dispatch", dispatch_messages),
+            ("combine", combine_messages),
+        ):
+            authority = aggregate_by_key[(layer.layer, phase)]
+            request_pairs = _message_request_pairs(messages)
+            pair_payloads = _aggregate_request_pairs(request_pairs)
+            if request_pairs != authority.request_pair_payload_bytes:
+                raise AssertionError(
+                    f"sequenced {phase} request projection disagrees with aggregate authority"
+                )
+            if pair_payloads != authority.pair_payload_bytes:
+                raise AssertionError(
+                    f"sequenced {phase} pair projection disagrees with aggregate authority"
+                )
+            sequences.append(
+                MoeMessageSequence(
+                    layer=layer.layer,
+                    phase=phase,
+                    ranks=ranks,
+                    grouping=grouping,
+                    messages=messages,
+                    pair_payload_bytes=pair_payloads,
+                    request_pair_payload_bytes=request_pairs,
+                    placement_epoch=layer.placement_epoch,
+                )
+            )
+    return sequences
 
 
 def _moe_operation_id(record: StepRecord, operation: MoeAllToAll) -> str:
@@ -1068,6 +1338,168 @@ def render_step_goal(
             trace.rank(rank).calc(0)
     if any(operation.request_pair_payload_bytes for operation in moe_ops):
         _compare_operations_to_messages(record, moe_ops, trace.messages).require_match()
+    return trace
+
+
+def render_sequenced_step_goal(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    per_layer_calc_ns: int | Sequence[int],
+    *,
+    ep_ranks: Sequence[int],
+    routed_supply: RoutedMoeSupply,
+    message_grouping: MoeMessageGrouping,
+    num_goal_ranks: int | None = None,
+    base_tag: int = 1000,
+) -> GoalTrace:
+    """Render the explicit ``captured-message-sequence`` precision level.
+
+    This opt-in entry point preserves the declared engine rank's
+    framework-returned routing sequence and the selected grouping rule. The
+    established :func:`render_step_goal` aggregate compatibility renderer
+    remains the default and has no message-granularity selector.
+    """
+
+    tp_ops = step_tp_allreduces(record, dims, tp_ranks)
+    moe_sequences = step_moe_message_sequences(
+        record,
+        dims,
+        ep_ranks,
+        routed_supply=routed_supply,
+        grouping=message_grouping,
+    )
+    if not tp_ops and not moe_sequences:
+        raise ValueError(
+            "step has no tensor-parallel collectives and no sequenced MoE "
+            "messages to render"
+        )
+    if isinstance(per_layer_calc_ns, int):
+        layer_calc_ns = (per_layer_calc_ns,) * dims.num_layers
+    else:
+        layer_calc_ns = tuple(per_layer_calc_ns)
+    if len(layer_calc_ns) != dims.num_layers:
+        raise ValueError(
+            f"received {len(layer_calc_ns)} layer calc values for "
+            f"num_layers={dims.num_layers}"
+        )
+    if any(value < 0 for value in layer_calc_ns):
+        raise ValueError("layer calc values must be nonnegative")
+
+    ranks = list(tp_ranks)
+    participants = list(ranks)
+    if moe_sequences:
+        for rank in moe_sequences[0].ranks:
+            if rank not in participants:
+                participants.append(rank)
+    tag_stride = 2 * (len(ranks) - 1) if tp_ops else 0
+    moe_base_tag = base_tag + len(tp_ops) * tag_stride
+    moe_by_key = {
+        (sequence.layer, sequence.phase): sequence
+        for sequence in moe_sequences
+    }
+    if num_goal_ranks is None:
+        num_goal_ranks = max(participants) + 1
+    minimum_ranks = max(participants) + 1
+    if num_goal_ranks < minimum_ranks:
+        raise ValueError(
+            f"num_goal_ranks={num_goal_ranks} cannot contain rank "
+            f"{minimum_ranks - 1}"
+        )
+    trace = GoalTrace(num_goal_ranks)
+
+    previous: dict[int, str] = {}
+    for layer in range(dims.num_layers):
+        calc_done: dict[int, str] = {}
+        for rank in participants:
+            calc = trace.rank(rank).calc(
+                layer_calc_ns[layer],
+                operation_id=_compute_operation_id(record, layer, rank),
+            )
+            if rank in previous:
+                trace.rank(rank).requires(calc, previous[rank])
+            calc_done[rank] = calc
+        previous = {**previous, **calc_done}
+        if tp_ops:
+            for site_index in range(len(TP_ALLREDUCE_SITES)):
+                op_index = layer * len(TP_ALLREDUCE_SITES) + site_index
+                operation = tp_ops[op_index]
+                done = ring_allreduce(
+                    trace,
+                    ranks=list(operation.ranks),
+                    size_bytes=operation.payload_bytes,
+                    base_tag=base_tag + op_index * tag_stride,
+                    after=previous,
+                    operation_id=_tp_operation_id(record, operation),
+                )
+                previous = {**previous, **done}
+        if moe_sequences:
+            for phase_index, phase in enumerate(MOE_A2A_PHASES):
+                moe_index = layer * len(MOE_A2A_PHASES) + phase_index
+                sequence = moe_by_key.get((layer, phase))
+                if sequence is None:
+                    continue
+                operation_id = (
+                    f"step-{record.step_index}:layer-{sequence.layer}:"
+                    f"ep-{sequence.phase}"
+                )
+                done = ordered_pairwise_messages(
+                    trace,
+                    ranks=list(sequence.ranks),
+                    messages=tuple(
+                        (
+                            message.request_id,
+                            message.source_rank,
+                            message.destination_rank,
+                            message.payload_bytes,
+                        )
+                        for message in sequence.messages
+                    ),
+                    tag=moe_base_tag + moe_index,
+                    after=previous,
+                    operation_id=operation_id,
+                )
+                previous = {**previous, **done}
+
+    used = set(participants)
+    for rank in range(num_goal_ranks):
+        if rank not in used:
+            trace.rank(rank).calc(0)
+
+    aggregate = step_moe_alltoalls(
+        record,
+        dims,
+        ep_ranks,
+        routed_supply=routed_supply,
+    )
+    _compare_operations_to_messages(record, aggregate, trace.messages).require_match()
+    for sequence in moe_sequences:
+        operation_id = (
+            f"step-{record.step_index}:layer-{sequence.layer}:ep-{sequence.phase}"
+        )
+        rendered = tuple(
+            (
+                message.request_payload_bytes[0][0],
+                message.source_rank,
+                message.destination_rank,
+                message.payload_bytes,
+            )
+            for message in trace.messages
+            if message.operation_id == operation_id
+        )
+        expected = tuple(
+            (
+                message.request_id,
+                message.source_rank,
+                message.destination_rank,
+                message.payload_bytes,
+            )
+            for message in sequence.messages
+        )
+        if rendered != expected:
+            raise AssertionError(
+                f"rendered {sequence.phase} message order disagrees with plan"
+            )
     return trace
 
 

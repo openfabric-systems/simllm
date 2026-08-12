@@ -14,11 +14,17 @@ import pytest
 
 from simllm.core import RequestBookkeeper
 from simllm.preplay import (
+    FRAMEWORK_PREPLAY_TRACE_SCHEMA,
     PREPLAY_TRACE_SCHEMA,
     ROUTED_EXPERTS_SCHEMA,
     ForwardPhase,
     ForwardTokenTrace,
+    FrameworkPreplayTrace,
+    FrameworkRequestTrace,
+    FrameworkTraceProvenance,
     LayerRouting,
+    ObservedLayerDispatch,
+    ObservedTokenDispatch,
     PreplayTrace,
     PromptFormat,
     RequestArrival,
@@ -27,10 +33,12 @@ from simllm.preplay import (
     StopReason,
     TraceProvenance,
     join_preplay_arrivals,
+    project_framework_routing,
     project_preplay_routing,
     read_routed_experts,
     routed_experts_from_json,
     routed_experts_to_json,
+    write_framework_preplay_trace,
     write_preplay_trace,
     write_routed_experts,
 )
@@ -54,6 +62,82 @@ def _canonical_bytes(value) -> bytes:
         ).encode()
         + b"\n"
     )
+
+
+def test_framework_projection_preserves_returned_top_k_order(tmp_path):
+    routes = ((3, 1), (2, 1), (3, 2), (1, 3))
+    provenance = FrameworkTraceProvenance(
+        model_id="org/model",
+        model_revision="test-revision",
+        model_class="TestMoeForCausalLM",
+        dtype="float32",
+        tokenizer_sha256="a" * 64,
+        sampling=SamplingConfig.greedy(),
+        capture_host="test-host",
+        runner="test-runner",
+        framework="vllm",
+        framework_version="1.0",
+        observed_source="b" * 40,
+        authored_against_source="c" * 40,
+        torch_version="2.0",
+        device="cpu",
+        torch_num_threads=1,
+        engine_seed=1,
+        eos_token_id=0,
+        top_k=2,
+        expert_count=4,
+        moe_layer_indices=(0,),
+        kv_page_size=1,
+        kv_token_capacity=64,
+        dispatch_layer_mapping="framework-layer-id",
+    )
+    request = FrameworkRequestTrace(
+        request_id="alpha",
+        prompt_sha256="d" * 64,
+        prompt_format=PromptFormat.TEXT,
+        input_token_ids=(10, 11, 12, 13),
+        max_new_tokens=1,
+        stop_strings=(),
+        output_text="done",
+        output_token_ids=(0,),
+        output_length=1,
+        stop_reason=StopReason.LENGTH_CAP,
+        matched_stop_string=None,
+        framework_cached_tokens=0,
+        framework_preemption_count=0,
+        prefill_dispatch=tuple(
+            ObservedTokenDispatch(
+                phase=ForwardPhase.PREFILL,
+                token_index=index,
+                token_id=10 + index,
+                routing=(
+                    ObservedLayerDispatch(layer_index=0, expert_ids=expert_ids),
+                ),
+            )
+            for index, expert_ids in enumerate(routes)
+        ),
+        decode_dispatch=(),
+    )
+    path = write_framework_preplay_trace(
+        tmp_path / "framework.jsonl",
+        FrameworkPreplayTrace(
+            provenance=provenance,
+            requests=(request,),
+            kv_events=(),
+        ),
+    )
+
+    projection = project_framework_routing(path)
+    round_trip = read_routed_experts(
+        write_routed_experts(projection, tmp_path / "routing.json")
+    )
+
+    assert projection.trace_schema == FRAMEWORK_PREPLAY_TRACE_SCHEMA
+    assert projection.trace_sha256 == hashlib.sha256(path.read_bytes()).hexdigest()
+    assert tuple(
+        token.layers[0].expert_ids for token in projection.requests[0].tokens
+    ) == routes
+    assert round_trip == projection
 
 
 def _routing(

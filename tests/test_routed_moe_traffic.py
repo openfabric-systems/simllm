@@ -40,6 +40,7 @@ from simllm.core import (
 )
 from simllm.placement import PlacementManifest, RankPlacement
 from simllm.preplay import (
+    FRAMEWORK_PREPLAY_TRACE_SCHEMA,
     PREPLAY_TRACE_SCHEMA,
     ForwardPhase,
     RequestArrival,
@@ -53,9 +54,12 @@ from simllm.preplay import (
 )
 from simllm.traffic import (
     ExpertPlacementSnapshot,
+    MoeMessageGrouping,
     RoutedMoeSupply,
+    render_sequenced_step_goal,
     render_step_goal,
     step_moe_alltoalls,
+    step_moe_message_sequences,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -494,6 +498,223 @@ def test_ep8_token_sources_conserve_hops_and_match_compute_projection():
         if operation.phase == "combine"
         for _, _, destination, _ in operation.request_pair_payload_bytes
     )
+
+
+@pytest.mark.parametrize(
+    "grouping",
+    (MoeMessageGrouping.PER_TOKEN, MoeMessageGrouping.PER_EXPERT_GROUP),
+)
+def test_ep8_sequenced_messages_match_aggregate_pairs_and_hop_ceiling(grouping):
+    supply = _ep8_supply()
+    record = _ep8_record()
+    ranks = tuple(range(8))
+    operations = step_moe_alltoalls(
+        record,
+        EP8_MOE_DIMS,
+        ranks,
+        routed_supply=supply,
+    )
+    sequences = step_moe_message_sequences(
+        record,
+        EP8_MOE_DIMS,
+        ranks,
+        routed_supply=supply,
+        grouping=grouping,
+    )
+    trace = render_sequenced_step_goal(
+        record,
+        EP8_MOE_DIMS,
+        (supply.engine_rank,),
+        0,
+        ep_ranks=ranks,
+        routed_supply=supply,
+        message_grouping=grouping,
+    )
+    authority = {
+        (operation.layer, operation.phase): operation.pair_payload_bytes
+        for operation in operations
+    }
+
+    def pair_totals(messages):
+        totals = {}
+        for message in messages:
+            pair = (message.source_rank, message.destination_rank)
+            totals[pair] = totals.get(pair, 0) + message.payload_bytes
+        return tuple(
+            (source, destination, size)
+            for (source, destination), size in sorted(totals.items())
+        )
+
+    for sequence in sequences:
+        key = (sequence.layer, sequence.phase)
+        assert pair_totals(sequence.messages) == authority[key]
+        operation_id = (
+            f"step-{record.step_index}:layer-{sequence.layer}:"
+            f"ep-{sequence.phase}"
+        )
+        rendered = tuple(
+            message
+            for message in trace.messages
+            if message.operation_id == operation_id
+        )
+        assert pair_totals(rendered) == authority[key]
+        if sequence.phase == "dispatch":
+            assert {message.source_rank for message in sequence.messages} == {
+                supply.engine_rank
+            }
+        else:
+            assert {message.destination_rank for message in sequence.messages} == {
+                supply.engine_rank
+            }
+
+    vector_bytes = EP8_MOE_DIMS.hidden_size * EP8_MOE_DIMS.dtype_bytes
+    planned_hops = (
+        sum(
+            message.payload_bytes
+            for sequence in sequences
+            for message in sequence.messages
+        )
+        // vector_bytes
+    )
+    rendered_hops = (
+        sum(message.payload_bytes for message in trace.messages) // vector_bytes
+    )
+    projected_hops = 2 * sum(_ep8_compute_hops_by_layer(supply, record).values())
+    hop_upper_bound = (
+        record.total_new_tokens
+        * EP8_MOE_DIMS.top_k
+        * EP8_MOE_DIMS.num_layers
+        * 2
+    )
+    assert planned_hops == rendered_hops == projected_hops == 42
+    assert planned_hops <= hop_upper_bound == 48
+
+
+def test_captured_message_sequence_preserves_top_k_order_and_pair_totals():
+    routes = ((3, 1), (2, 1), (3, 2), (1, 3))
+    dims = replace(TINY_MOE_DIMS, num_layers=1, hidden_size=1024)
+    routing = RoutedExperts(
+        trace_schema=FRAMEWORK_PREPLAY_TRACE_SCHEMA,
+        trace_sha256="f" * 64,
+        expert_count=4,
+        top_k=2,
+        moe_layer_indices=(0,),
+        requests=(
+            RoutedRequest(
+                request_id="alpha",
+                prompt_token_count=4,
+                output_token_count=1,
+                tokens=tuple(
+                    RoutedToken(
+                        phase=ForwardPhase.PREFILL,
+                        token_index=index,
+                        token_id=10 + index,
+                        layers=(
+                            RoutedLayer(layer_index=0, expert_ids=expert_ids),
+                        ),
+                    )
+                    for index, expert_ids in enumerate(routes)
+                ),
+            ),
+        ),
+    )
+    supply = RoutedMoeSupply(
+        engine_rank=0,
+        routed_experts=routing,
+        placements=(
+            ExpertPlacementSnapshot(
+                placement_epoch=0,
+                expert_owners=tuple((0, expert, expert) for expert in range(4)),
+            ),
+        ),
+        step_placement_epochs=((0, 0),),
+    )
+    record = StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest(
+                "alpha",
+                RequestPhase.PREFILL,
+                4,
+                context_length=4,
+            )
+        ],
+        num_sampled=1,
+    )
+    per_token = step_moe_message_sequences(
+        record,
+        dims,
+        (0, 1, 2, 3),
+        routed_supply=supply,
+        grouping=MoeMessageGrouping.PER_TOKEN,
+    )
+    grouped = step_moe_message_sequences(
+        record,
+        dims,
+        (0, 1, 2, 3),
+        routed_supply=supply,
+        grouping=MoeMessageGrouping.PER_EXPERT_GROUP,
+    )
+    aggregate = step_moe_alltoalls(
+        record,
+        dims,
+        (0, 1, 2, 3),
+        routed_supply=supply,
+    )
+
+    dispatch, combine = per_token
+    grouped_dispatch, grouped_combine = grouped
+    assert len(dispatch.messages) == len(combine.messages) == 8
+    assert len(grouped_dispatch.messages) == len(grouped_combine.messages) == 3
+    assert sum(message.payload_bytes for message in dispatch.messages) == 16_384
+    assert sum(message.payload_bytes for message in combine.messages) == 16_384
+    assert {
+        source: tuple(
+            message.destination_rank
+            for message in dispatch.messages
+            if message.source_rank == source
+        )
+        for source in range(4)
+    } == {
+        0: (3, 1, 2, 1, 3, 2, 1, 3),
+        1: (),
+        2: (),
+        3: (),
+    }
+    assert all(len(message.routing_ordinals) == 1 for message in dispatch.messages)
+    assert all(
+        (combine_message.source_rank, combine_message.destination_rank)
+        == (dispatch_message.destination_rank, dispatch_message.source_rank)
+        and combine_message.routing_ordinals == dispatch_message.routing_ordinals
+        for dispatch_message, combine_message in zip(
+            dispatch.messages,
+            combine.messages,
+            strict=True,
+        )
+    )
+    assert [sequence.pair_payload_bytes for sequence in per_token] == [
+        operation.pair_payload_bytes for operation in aggregate
+    ]
+    assert [sequence.request_pair_payload_bytes for sequence in grouped] == [
+        operation.request_pair_payload_bytes for operation in aggregate
+    ]
+
+    trace = render_sequenced_step_goal(
+        record,
+        dims,
+        (0,),
+        0,
+        ep_ranks=(0, 1, 2, 3),
+        routed_supply=supply,
+        message_grouping=MoeMessageGrouping.PER_TOKEN,
+    )
+    assert len(trace.messages) == 16
+    assert [
+        message.destination_rank
+        for message in trace.messages[:8]
+        if message.source_rank == 0
+    ] == [3, 1, 2, 1, 3, 2, 1, 3]
 
 
 def test_epoch_change_and_phase_slices_change_only_selected_routes():
