@@ -148,6 +148,21 @@ and 12 fatal unscored guards passed; see
 Current framework adapters do not yet emit these schedules, and the runtime's
 physical collective expansion and GPU-side contention gaps remain explicit
 under TRAF-13, TRAF-14, CORE-26, CORE-27 and COMP-22.
+The 2026-08-12 TRAF-13 qualification added `DeviceRuntimeStepSink`, which binds
+the adapter's sole `VirtualClock` and carries optional observations through
+`ObservedStepLowerer`, `CoarseDeviceRuntime`, `CompletionEvent`,
+`RuntimeReport`, `CompletionReducer` and request-attributed `StepResult`
+metrics. Its component evidence passed the accepted exact serial graph and GOAL
+identity checks. The vLLM producer qualification did not pass: the adapter
+emitted no `ExecutionObservations` and covered 0 of the 48 required Granite MoE
+dispatch and combine sites. No single-node or cross-node Granite placement
+metric ran. The behavioral result is `0/0, blocked before behavioral
+execution`; TRAF-13 remains open. See
+[the observed-schedule qualification results](../../examples/observed_schedule_v1/RESULTS.md).
+A separate live vLLM 0.26.0 Granite skeleton diagnostic confirmed the same
+boundary across one prefill and one decode step: only DP bookkeeping and one
+fixed TP event appeared per step, with no observation graph or semantic EP
+site. It is component evidence and does not change the behavioral denominator.
 
 ## Open tasks
 
@@ -195,9 +210,11 @@ under TRAF-13, TRAF-14, CORE-26, CORE-27 and COMP-22.
   combine) and may overlap shared-expert work with the a2avs. The serial
   whole-layer calc keeps the makespan correct only to first order.
 - TRAF-13 (Completeness; P1; L): connect at least one real framework schedule
-  producer to `ObservedStepLowerer` after VLLM-19 or SGL-10 supplies captured
-  operation order, streams, events and completion boundaries. Replay a fixed
-  captured step through the traffic binding, `DeviceRuntime`,
+  producer to `ObservedStepLowerer` after VLLM-22 or SGL-17 supplies captured
+  operation order, streams, events and completion boundaries. The
+  `DeviceRuntimeStepSink` component is ready, but its 2026-08-12 qualification
+  observed no vLLM schedule and matched 0 of 48 required semantic MoE sites.
+  Replay a fixed captured step through the traffic binding, `DeviceRuntime`,
   `CompletionEvent`, `StepResult`, TTFT and TPOT; require every captured order
   and dependency fact to survive exactly and show that one observed legal
   overlap changes the live metric in its registered direction. Disabling the

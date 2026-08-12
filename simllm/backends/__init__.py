@@ -9,6 +9,7 @@ from simllm.backends.composed_rnic import (
     ComposedWqeObservation,
     invoke_composed_tier_a_producer,
 )
+from simllm.backends.device_step_sink import DeviceRuntimeStepSink, DeviceStepOutcome
 from simllm.backends.fct import NormalizedFct, normalized_fct
 from simllm.backends.htsim import HtsimUecConfig, build_htsim_uec_command
 from simllm.backends.htsim_dcqcn import (
@@ -73,6 +74,8 @@ __all__ = [
     "ComposedRnicObservations",
     "ComposedRnicSession",
     "ComposedWqeObservation",
+    "DeviceRuntimeStepSink",
+    "DeviceStepOutcome",
     "FlowCompletion",
     "HtsimDcqcnConfig",
     "HtsimPersistentStepSink",

@@ -167,6 +167,11 @@ audit now derives every observed row from AST, and the correction supplement
 in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
 `output_tensor_list` callers without rewriting the frozen expectations file.
 
+The TRAF-13 observation-aware backend handoff does not add an SGLang schedule
+producer. The current communicator still emits its zero-time component event
+sidecar rather than `ExecutionObservations`, and no source qualification,
+runtime projection, TTFT, or TPOT relation was run for this adapter. SGL-17
+owns that optional producer while preserving the current exact flag-off path.
 The framework-oracle fallback is separate from the simulated worker and is
 also inert by default. `SglangCpuRunner` selects the stock CPU engine,
 `TpModelWorker`, `ModelRunner`, Granite model, sampler and
@@ -271,6 +276,15 @@ not part of its eight-instance behavioral headline.
   one model and group size, require modeled median and p95 call cost within a
   pre-registered band, then verify the signed TTFT/TPOT effect and exact
   zero-cost bypass.
+- SGL-17 (Completeness; P2; L): add the SGLang communicator's source-backed
+  observed schedule as `ExecutionObservations`, including exact per-layer
+  semantic sites, logical streams, submission and program order, event-wait
+  dependencies, request correlation, and completion frontier for every
+  supported call. Derive concurrency only from the active communicator and
+  scheduler source, with no overlap percentage or compatibility-schedule
+  inference. When the producer is disabled or absent, preserve the accepted
+  worker records, event sidecar, sink calls, timestamps, tokens, and completion
+  order exactly.
 - SGL-16 (Precision; P1; M): replace the framework-oracle fallback's Granite
   model-order layer inference with stable layer IDs supplied by SGLang. The
   current surrogate cycles missing capture labels through the model's 24 MoE
