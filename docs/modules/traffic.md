@@ -48,8 +48,8 @@ the flow-level work the GOAL emitter renders.
   whole-layer request/source/destination group ordered by its first
   contribution. `render_sequenced_step_goal` projects that tuple order into
   source-local issue dependencies. The aggregate APIs above remain the
-  default and expose no second fidelity selector; CORE-36 owns that future
-  selection surface.
+  default and expose no second fidelity selector; `simllm.core.PrecisionConfig`
+  is the one selection surface.
 - `plan_step_locality` expands TP ring rounds and MoE dispatch/combine tables
   into ordered directed phases over semantic global ranks, then joins an
   optional placement manifest through `RankMapper.is_intra_node` before any
@@ -216,9 +216,9 @@ classification; a placement with local NVLink work is rejected, and TRAF-16
 owns the participant-local frontier precision needed before that comparison
 is meaningful. The corrected single-node `AAAA` values remain pending
 CORE-41's ingress-aware analytic service correction and are not a precision
-acceptance oracle. CORE-36 owns the future unified fidelity selector and
-provenance record; this option is only the present traffic/backend seam
-switch.
+acceptance oracle. `simllm.core.PrecisionConfig` and `RunProvenance` own the
+unified fidelity selection and record; this option is only a traffic/backend
+diagnostic switch and names no seam level.
 Historical
 `examples/breakdown` fabric-TP columns remain byte-unchanged and are the
 all-remote, cross-node what-if under this model.

@@ -60,6 +60,11 @@ from simllm.core.execution_io import (
     operation_participant_ranks,
     validate_execution_graph,
 )
+from simllm.core.precision import (
+    PrecisionConfig,
+    check_precision_selection,
+    rnic_hardware_level_for_authority_mode,
+)
 from simllm.core.step import LatencyAttribution
 
 PS_PER_SECOND = 1_000_000_000_000
@@ -967,6 +972,7 @@ class CoarseDeviceRuntime:
         arbitration_policy: ArbitrationPolicy | None = None,
         kernel_services: Mapping[int, SmSchedulerModel] | None = None,
         kernel_launches: Mapping[str, KernelLaunch] | None = None,
+        precision: PrecisionConfig | None = None,
     ) -> None:
         from simllm.compute import KernelLaunch, SmSchedulerModel
 
@@ -975,6 +981,15 @@ class CoarseDeviceRuntime:
             raise TypeError("profile must be a CoarseDeviceProfile")
         if not isinstance(authority_mode, RnicAuthorityMode):
             raise TypeError("authority_mode must be a RnicAuthorityMode")
+        #: explicit run-wide fidelity surface, or None when none was supplied
+        self.precision = precision
+        #: the one seam this runtime selects; an explicit disagreement is
+        #: refused here, before either WQE authority is constructed
+        self.selected_precision_levels = check_precision_selection(
+            precision,
+            rnic_hardware=rnic_hardware_level_for_authority_mode(authority_mode),
+            selection_source="CoarseDeviceRuntime",
+        )
         if arbitration_policy is not None and not isinstance(
             arbitration_policy,
             ArbitrationPolicy,

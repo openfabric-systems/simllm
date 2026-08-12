@@ -87,9 +87,15 @@ backend submodules.
   averaged, used to override the result or treated as an equality assertion.
   The default-off value preserves accepted artifacts and results exactly. The
   current cross-check rejects placement configurations with local NVLink work;
-  TRAF-16 owns that frontier precision. CORE-36 owns the future unified
-  fidelity selection and provenance surface, so this option is not a second
-  global configuration scheme.
+  TRAF-16 owns that frontier precision. `simllm.core.PrecisionConfig` owns the
+  unified fidelity selection and `RunProvenance` its record, so this option is
+  not a second global configuration scheme.
+  `HtsimStepSinkConfig.precision` accepts an explicit surface and
+  `selected_precision_levels` reports the compute, dependency, locality and
+  network levels this configuration selects. A contradiction is refused during
+  configuration validation, before the workdir, any GOAL artifact or any
+  backend process exists. `HtsimRnicConfig` does the same for its profile
+  spelling alone.
   `StepNetworkOutcome` keeps per-step bookkeeping (compute estimate, sample
   count and exactness, ordered layer calcs, makespan and network share) for
   reporting.

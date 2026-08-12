@@ -38,9 +38,14 @@ Omitting placement selects all-remote classification. The historical direct
 renderer remains available as a diagnostic, but the active sink uses the
 checked graph projection. Distributed whole-operation barriers become ordered
 artifact boundaries because the pinned GOAL compiler resolves dependency
-labels inside one rank block. Dependency cross-check selection is this seam's
-current switch; CORE-36 owns the unified fidelity configuration and provenance
-surface.
+labels inside one rank block. Dependency cross-check selection stays a
+diagnostic switch and never names a fidelity level.
+
+The provider object, profile string and placement-manifest presence remain the
+operational selectors. ``HtsimStepSinkConfig`` reports the levels they select
+in ``selected_precision_levels``, and an explicit ``precision`` surface that
+disagrees with any of them is refused during configuration validation, before
+the workdir, any GOAL artifact or any backend process exists.
 
 Providers may opt into an exact per-layer duration breakdown. The sink checks
 that it sums to the fused estimate and emits the unequal layer costs. Existing
@@ -85,7 +90,17 @@ from simllm.compute import (
     ModelDims,
     RooflineProvider,
 )
-from simllm.core import CollectiveWork, StepRecord, StepResult
+from simllm.core import (
+    CollectiveWork,
+    DependencyLevel,
+    PrecisionConfig,
+    StepRecord,
+    StepResult,
+    check_precision_selection,
+    compute_level_for_provider,
+    locality_level_for_placement,
+    network_level_for_profile,
+)
 from simllm.goal import to_binary
 from simllm.placement import PlacementManifest, RankMapper
 from simllm.traffic import (
@@ -150,10 +165,19 @@ class HtsimStepSinkConfig:
     nvlink_bandwidth_bytes_per_second: int = (
         DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
     )
-    #: optional independent dependency executor; CORE-36 owns unified selection
+    #: optional independent dependency executor; a diagnostic, never a seam level
     dependency_cross_check: str | None = None
     #: absolute completion-time difference reported by the selected cross-check
     dependency_cross_check_tolerance_ps: int = 0
+    #: optional explicit fidelity surface checked against the legacy spellings
+    precision: PrecisionConfig | None = None
+    #: the seams this configuration selects; set by validation, never by a caller
+    selected_precision_levels: dict[str, object] = field(
+        init=False,
+        repr=False,
+        compare=False,
+        default_factory=dict,
+    )
 
     def __post_init__(self) -> None:
         if self.profile not in RNIC_PROFILES:
@@ -191,6 +215,14 @@ class HtsimStepSinkConfig:
             raise ValueError(
                 "dependency_cross_check_tolerance_ps must be a nonnegative integer"
             )
+        self.selected_precision_levels = check_precision_selection(
+            self.precision,
+            compute=compute_level_for_provider(self.provider),
+            dependency=DependencyLevel.SERIAL,
+            locality=locality_level_for_placement(self.placement_manifest),
+            network=network_level_for_profile(self.profile),
+            selection_source="HtsimStepSinkConfig",
+        )
 
 
 @dataclass(frozen=True)

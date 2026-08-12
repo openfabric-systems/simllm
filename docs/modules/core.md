@@ -99,6 +99,48 @@ executions. Each use carries its own scope. Causal object lineage may narrow a
 batched request set, but cannot introduce a request absent from its causal
 parents.
 
+### Precision selection and run provenance
+
+`PrecisionConfig` names one level for each of the eight seams in the fidelity
+matrix: `workload`, `request_outcome`, `framework`, `compute`, `dependency`,
+`locality`, `network` and `rnic_hardware`. It is strict, so every field is
+required, unknown fields and values are rejected, and a string is never
+coerced to a nearby level. Construction validates the combination and refuses
+an incompatible one with a diagnostic that names both seams and both escapes:
+`composed-native` RNIC hardware cannot run on the `rnic-nn-fluid` closed form,
+because the fluid path is the explicit nonstructural bypass anchor.
+`PrecisionConfig.compatibility()` is the byte-locked baseline level at every
+seam.
+
+`RunProvenance` binds a resolved configuration to one source artifact's schema
+and hash under `simllm-run-provenance-v1`, so a published result can be read
+back with the precision that produced it. It serializes canonically, hashes
+the precision payload itself, and rejects a missing or unknown field, a
+malformed source hash, an unsupported schema, an invalid combination and a
+mismatched precision digest. It is deliberately outside the bypass-identity
+contract, so stamping a run moves no accepted byte.
+
+The operational selectors are unchanged and stay authoritative. A provider
+object, profile string, placement-manifest presence, observation supply,
+authority mode and adapter environment spelling still select the mechanism;
+the surface only resolves which level each one names and refuses an explicit
+disagreement. Two entry points keep that honest:
+
+- `check_precision_selection` reports only the seams a component observes and
+  validates those against an explicit configuration. It never invents a level,
+  so a component with a partial view is neither credited with nor refused on a
+  seam it does not own. A structural `CoarseDeviceRuntime` selects
+  `composed-native` and selects no network level at all.
+- `resolve_precision_config` composes a complete run configuration, filling
+  any unobserved seam with its compatibility level and validating the whole.
+  Its caller is asserting a whole run, so an incoherent completion is refused
+  rather than degraded.
+
+`compute_level_for_provider` reads the `precision_compute_level` attribute a
+`ComputeProvider` declares. A caller-defined provider that declares nothing
+resolves to `None`: the surface records that the spelling constrains nothing
+here rather than putting a guessed level into a stamp.
+
 ### Authority, queue visits and arbitration
 
 An enabled execution profile has one mutable authority for each object. The
@@ -128,8 +170,8 @@ serial sink's selection: the `ExecutionGraph` projection still determines its
 result, while the direct-GOAL execution contributes only a diagnostic report.
 The report records ordering-scope, raw phase-frontier and completion-time
 differences; it never averages, overrides or silently prefers one mechanism's
-timestamps. CORE-36 owns replacing this seam-local switch with one validated
-fidelity selection and provenance surface.
+timestamps. The switch selects a diagnostic, never a fidelity level: seam
+levels are named by `PrecisionConfig` and recorded by `RunProvenance`.
 
 The target contract requires all contended resources to use one queue-visit
 meaning even when Python and C++ use different mechanisms:
@@ -515,8 +557,9 @@ exactly. Local-NVLink comparison rejects at preflight; TRAF-16 owns its
 frontier precision. CORE-41 closed the ingress gap and refroze the two
 single-node `AAAA` cells from 4,538,000 ps and 9,047,000 ps of service to
 6,652,000 ps and 13,286,000 ps, carrying JCT to 6,676,000 ps and 13,310,000 ps;
-every `AABB` and `ABCD` row is unchanged. CORE-36 owns a repository-wide
-fidelity selector.
+every `AABB` and `ABCD` row is unchanged. The repository-wide fidelity
+selector is `PrecisionConfig`; the cross-check switch is a diagnostic and
+names no seam level.
 
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
@@ -907,14 +950,21 @@ does not claim to produce these resource-contention measurements.
   timestamp regression before publishing a result. The explicit diagnostic
   and BRIDGE-1 prepared modes remain the identity off paths and must preserve
   every accepted byte and timestamp when the online session is disabled.
-- CORE-36 (Completeness; P1; M): make precision-level selection one
-  validated surface. Each seam is currently selected separately through a
-  provider object, a profile string, the presence of a placement
-  manifest, a build option or an environment variable, so a run cannot
-  state its full fidelity configuration in one place and a result cannot
-  be read back with the precision that produced it. Define one
-  configuration naming the level of every seam, validate it up front,
-  refuse incompatible combinations explicitly rather than silently
-  degrading, and stamp the resolved selection into the run provenance
-  next to the existing schema and hash fields. The current per-seam
-  spellings remain supported and byte-identical while they are migrated.
+- CORE-44 (Completeness; P2; M): route the workload and framework seam
+  spellings through `PrecisionConfig`. The other six seams resolve from a
+  spelling some component can observe, but there is no combined workload
+  selector anywhere, and the framework level is chosen by which entry point a
+  deployment starts rather than by any record. A run therefore cannot derive
+  those two levels from its own components and must name them explicitly. Add
+  an observable selector for each, resolve it through
+  `check_precision_selection`, and keep every current spelling byte-identical.
+- CORE-45 (Completeness; P1; M): emit the run provenance stamp from a live
+  run. `RunProvenance` round-trips and the precision surface study stamps its
+  own result, but no sink or backend run writes one today: a sink observes
+  four seams and cannot compose a complete configuration by itself, and the
+  source artifact identity is not known when it is constructed. Give the
+  closed-loop path a place to bind a complete configuration to the source it
+  consumed, so a published result carries its own fidelity configuration
+  without a study assembling it by hand. The bypass-identity contract already
+  excludes run provenance, so the emission must leave every accepted byte
+  class unchanged.

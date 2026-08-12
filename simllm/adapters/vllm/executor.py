@@ -111,13 +111,17 @@ from simllm.compute import (
     step_kernel,
 )
 from simllm.core import (
+    DependencyLevel,
     ExecutionObservations,
+    PrecisionConfig,
+    RequestOutcomeLevel,
     RequestPhase,
     ScheduledRequest,
     StepRecord,
     StepRecordStream,
     StepResult,
     VirtualClock,
+    check_precision_selection,
     step_records_to_json,
     write_step_records,
 )
@@ -275,6 +279,35 @@ class SimExecutorConfig:
             )
         if self.kv_memory_bytes <= 0:
             raise ValueError("SIMLLM_VLLM_KV_MEMORY_BYTES must be positive")
+
+    def selected_precision_levels(
+        self,
+        precision: PrecisionConfig | None = None,
+    ) -> dict[str, Any]:
+        """Report the seams these environment spellings select.
+
+        ``replay_run_path`` selects the request-outcome level and
+        ``observed_schedule`` selects the dependency level. The framework and
+        workload seams are chosen by which entry point a deployment starts,
+        not by this record, so they are absent here rather than guessed. An
+        explicit ``precision`` that contradicts either observed level is
+        refused before the executor runs anything.
+        """
+
+        return check_precision_selection(
+            precision,
+            request_outcome=(
+                RequestOutcomeLevel.FABRICATED
+                if self.replay_run_path is None
+                else RequestOutcomeLevel.PREPLAY_ORACLE
+            ),
+            dependency=(
+                DependencyLevel.SERIAL
+                if self.observed_schedule == OBSERVED_SCHEDULE_OFF
+                else DependencyLevel.OBSERVED_FRAMEWORK_SCHEDULE
+            ),
+            selection_source="SimExecutorConfig",
+        )
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> SimExecutorConfig:
