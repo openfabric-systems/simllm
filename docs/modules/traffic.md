@@ -38,6 +38,21 @@ the flow-level work the GOAL emitter renders.
   destination rank, pre-reduces combine to the transposed pair table and
   records the selected epoch on the graph operation. Dense dims, an EP world
   below 2 or a zero-token record produce no ops.
+- `plan_step_locality` expands TP ring rounds and MoE dispatch/combine tables
+  into ordered directed phases over semantic global ranks, then joins an
+  optional placement manifest through `RankMapper.is_intra_node` before any
+  GOAL-rank projection. Missing placement is the exact accepted all-remote
+  compatibility authority. An explicit all-remote placement under `gpu-rank`
+  mapping takes the same identity path.
+- In the placement-enabled path, each phase's intra-node segments use a flat
+  analytic per-source egress serializer. The declared first-cut rate is
+  450,000,000,000 bytes/s and source service is
+  `ceil(local_egress_bytes * 1e9 / rate)` whole nanoseconds. Only cross-node
+  segments reach `render_fabric_phase_goal` and htsim. `HtsimStepSink`
+  executes mixed-locality phases behind an external serial barrier and uses
+  `max(local_service, fabric_service)` for each phase. An all-intra-node step
+  invokes no fabric backend. The analytic value is uncalibrated; TRAF-11 owns
+  its replacement with same-generation evidence.
 - `render_step_goal` renders the serial per-rank chain (per layer: `calc`,
   the two TP allreduces when the TP world produces them, then for MoE dims
   with `ep_ranks` given the dispatch and combine all-to-allvs) through the
@@ -99,6 +114,20 @@ the fluid and physical-topology paths. Every valid comparison has 0 ps timing
 residual; see
 [examples/step_sink_precision/RESULTS.md](../../examples/step_sink_precision/RESULTS.md).
 
+The TRAF-10 first-cut locality split is live through `HtsimStepSink` and
+`StepResult`; see
+[the NVLink locality results](../../examples/nvlink_locality_v1/RESULTS.md).
+Across a fixed captured Granite step, raw fabric bytes increased and local
+bytes decreased exactly from one node to two nodes to all remote at both
+payloads. Single-node TP widths 1 through 8 emitted no fabric bytes, while the
+explicit all-remote cells retained the frozen GOAL bytes and matched omitted
+placement. The registered exact live-metric family did not fully pass: the
+accepted monolithic all-remote GOAL overlaps rank-local phase frontiers, while
+the new localized path uses global serial phase barriers. The signed placement
+order still held at both payloads. TRAF-12 owns that active causal-semantics
+reconciliation. Historical `examples/breakdown` fabric-TP columns remain
+byte-unchanged and are the all-remote, cross-node what-if under this model.
+
 ## Open tasks
 
 - TRAF-4 (ring-allreduce part closed by examples/m4, pairwise-a2av part
@@ -131,17 +160,27 @@ residual; see
   carry no PP stage attribution yet, so `step_comm` emits TP and EP
   collectives only; the M1 workload-B GOAL shows the target
   activation-chain shape.
-- TRAF-10: intra-node NVLink locality split (maintainer direction,
-  2026-08-04). Intra-node segments of a collective should not ride the
-  fabric: model them as a point-to-point NVLink-class network (first cut:
-  a flat same-generation NVLink per-GPU bandwidth, analytic, no packet
-  simulation), and send only inter-node segments to htsim. Consequence:
-  single-node TP (any width up to 8 on the 8-GPU reference node) has no
-  fabric component at all, and the fabric story applies to cross-node
-  placements. Needs the locality knowledge of the placement manifest
-  (`is_intra_node`) and composes with the `unique-nic` GOAL-rank mapping
-  (PLACE-2); the committed examples/breakdown fabric-TP columns become
-  the cross-node what-if under this model.
+- TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
+  zero-propagation, per-source NVLink egress surrogate against
+  same-generation point-to-point and collective captures. Sweep payload and
+  participant count on the reference eight-GPU node, hold out at least one
+  payload per participant width, and replace the constant with the smallest
+  identifiable bandwidth, latency and concurrency form whose held-out phase
+  completion error is at most 10 percent or 1 microsecond, whichever is
+  larger. Report the before/after TTFT and TPOT effect and retain the exact
+  all-remote identity path.
+- TRAF-12 (Precision; P0; L): reconcile the active causal phase semantics of
+  the accepted monolithic all-remote GOAL with the localized phase-by-phase
+  path. The current all-remote compatibility renderer advances ranks from
+  rank-local completion frontiers, while localized execution imposes the
+  global serial phase barrier registered under the TRAF-7 off path. In the
+  captured TRAF-10 run, 46 of 47 adjacent phase transitions overlap in the
+  all-remote CSV, invalidating its registered phase-additive JCT bands.
+  Establish one timing authority, prove from raw per-tag starts and
+  completions that no phase enters early when overlap is disabled, and
+  reproduce exact StepResult timing over node-span and payload sweeps. Retain
+  the frozen all-remote GOAL-byte identity; label and re-accept any unavoidable
+  timestamp change.
 - TRAF-9: MoE layer op ordering. `render_step_goal` renders one calc per
   layer followed by the TP allreduces and then dispatch and combine back
   to back; a real MoE layer splits its compute around the all-to-alls

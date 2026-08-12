@@ -28,7 +28,10 @@ both.
   contents land with M4.
 - `RankMapper`: rank to GOAL-rank assignment mirroring the htsim drivers'
   `-goal_rank_mapping` (`gpu-rank` implemented; `unique-nic` needs the
-  fabric manifest), plus `is_intra_node`.
+  fabric manifest), plus `is_intra_node`. Construction validates and snapshots
+  a unique global-rank-to-host projection with nonblank hostnames and unique
+  local GPU endpoints, so an active traffic run cannot silently change its
+  locality authority.
 
 ## Status
 
@@ -44,6 +47,13 @@ exact group lists) and closes the placement half of VLLM-7; the M4 studies
 and the live tp=8 closed-loop run drive `HtsimStepSink` off
 `declared_manifest(tp=8).group_ranks(0, "tp")`. Fabric manifest and NIC
 selection are design-only.
+
+TRAF-10 now consumes this existing placement authority directly: collective
+segments are classified by semantic global rank before fabric GOAL-rank
+projection, and no locality field is copied into the execution graph. The
+captured locality study covers one-node, two-node and all-remote placements;
+see [the results](../../examples/nvlink_locality_v1/RESULTS.md). This required
+no manifest schema change. General `unique-nic` projection remains PLACE-2.
 
 ## Open tasks
 
