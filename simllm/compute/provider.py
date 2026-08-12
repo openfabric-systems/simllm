@@ -431,7 +431,11 @@ class ProfileTableProvider(ComputeProvider):
             "entries": entries,
         }
         path = Path(path)
-        path.write_text(json.dumps(payload, indent=2) + "\n")
+        path.write_text(
+            json.dumps(payload, indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
         return path
 
     @classmethod

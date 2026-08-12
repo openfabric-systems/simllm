@@ -16,7 +16,7 @@ import math
 import re
 import statistics
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -58,6 +58,32 @@ def nearest_rank(values: Sequence[float | int], percentile: float) -> float:
     ordered = sorted(float(value) for value in values)
     rank = max(1, math.ceil(percentile * len(ordered)))
     return ordered[rank - 1]
+
+
+def _summary_matches(stored: Any, recomputed: dict[str, Any]) -> bool:
+    """Compare a stored capture summary against one recomputed from samples.
+
+    Every count and duration is an integer and must agree exactly, so a
+    tampered sample list is still rejected. The coefficient of variation is
+    a float built from `statistics.fmean` and `statistics.pstdev`, whose
+    implementations differ between CPython versions, so a tracked artifact
+    would otherwise validate only on the interpreter that wrote it. It is
+    compared within a relative tolerance far tighter than any real change to
+    the samples could produce.
+    """
+
+    if not isinstance(stored, dict) or set(stored) != set(recomputed):
+        return False
+    for key, expected in recomputed.items():
+        observed = stored[key]
+        if isinstance(expected, float):
+            if not isinstance(observed, (int, float)) or isinstance(observed, bool):
+                return False
+            if not math.isclose(float(observed), expected, rel_tol=1e-9, abs_tol=1e-12):
+                return False
+        elif observed != expected:
+            return False
+    return True
 
 
 def absolute_percentage_error(predicted: int, measured: int) -> float:
@@ -288,7 +314,7 @@ class KernelCaptureCell:
             launch=KernelLaunchMetadata.from_json(value["launch"]),
             durations_ps=tuple(int(item) for item in value["durations_ps"]),
         )
-        if value.get("summary") != cell.summary_json():
+        if not _summary_matches(value.get("summary"), cell.summary_json()):
             raise ValueError(f"capture summary does not match raw samples for {cell.profile_key}")
         return cell
 
@@ -375,6 +401,11 @@ class ComputeCalibrationArtifact:
 
     provenance: ComputeCalibrationProvenance
     cells: tuple[KernelCaptureCell, ...]
+    #: exact bytes this artifact was loaded from, when it came from a file.
+    #: Where the bytes came from is not part of the artifact's content, so it
+    #: takes no part in equality: a loaded artifact still equals the one that
+    #: produced the file.
+    source_bytes: bytes | None = field(default=None, compare=False, repr=False)
 
     def __post_init__(self) -> None:
         if not self.cells:
@@ -397,7 +428,18 @@ class ComputeCalibrationArtifact:
 
     @property
     def sha256(self) -> str:
-        return hashlib.sha256(self.to_json_bytes()).hexdigest()
+        """Content identity of this artifact.
+
+        A loaded artifact hashes the exact bytes it came from. `save` writes
+        `to_json_bytes` verbatim, so for any tracked file the two agree, and
+        anchoring to the stored bytes keeps the identity stable across
+        interpreters. Recomputing it would fold in `coefficient_of_variation`,
+        a float whose last bit differs between CPython versions, which made a
+        tracked artifact verify only on the interpreter that wrote it.
+        """
+
+        payload = self.source_bytes if self.source_bytes is not None else self.to_json_bytes()
+        return hashlib.sha256(payload).hexdigest()
 
     def save(self, path: str | Path) -> Path:
         output = Path(path)
@@ -418,10 +460,11 @@ class ComputeCalibrationArtifact:
 
     @classmethod
     def load(cls, path: str | Path) -> ComputeCalibrationArtifact:
-        value = json.loads(Path(path).read_text(encoding="utf-8"))
+        raw = Path(path).read_bytes()
+        value = json.loads(raw.decode("utf-8"))
         if not isinstance(value, dict):
             raise TypeError("calibration artifact root must be an object")
-        return cls.from_json(value)
+        return replace(cls.from_json(value), source_bytes=raw)
 
 
 @dataclass(frozen=True)
