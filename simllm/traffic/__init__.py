@@ -22,6 +22,12 @@ patterns rather than abstract ops.
 
 COLLECTIVE_TRACE_SCHEMA = "simllm-collective-trace-v1"
 
+from simllm.traffic.collective_plan import (
+    DEFAULT_COLLECTIVE_PLAN_BASE_TAG,
+    collective_plan_by_operation,
+    plan_execution_graph_collectives,
+    render_collective_plan,
+)
 from simllm.traffic.execution_goal import (
     ExecutionGoalArtifact,
     ExecutionGoalArtifactBoundary,
@@ -82,6 +88,7 @@ from simllm.traffic.step_comm import (
 
 __all__ = [
     "COLLECTIVE_TRACE_SCHEMA",
+    "DEFAULT_COLLECTIVE_PLAN_BASE_TAG",
     "DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND",
     "MOE_A2A_PHASES",
     "TP_ALLREDUCE_SITES",
@@ -103,15 +110,18 @@ __all__ = [
     "TpAllReduce",
     "binomial_broadcast",
     "classify_step_locality",
+    "collective_plan_by_operation",
     "compare_goal_request_attribution",
     "compare_request_moe_fidelity",
     "gather",
     "lower_step_observations",
     "ordered_pairwise_messages",
     "pairwise_all_to_allv",
+    "plan_execution_graph_collectives",
     "plan_execution_graph_locality",
     "plan_step_locality",
     "project_execution_graph_goal",
+    "render_collective_plan",
     "render_fabric_phase_goal",
     "render_sequenced_step_goal",
     "render_serial_execution_graph_goal",
