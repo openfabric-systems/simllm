@@ -20,6 +20,7 @@ from simllm.adapters.vllm import (
     SKELETON_INIT_CALL_SEQUENCE,
     SKELETON_STEP_CALL_SEQUENCE,
     ModelDims,
+    ObservationStepSink,
     PlacementExporter,
     ReplayTokenSource,
     SimExecutor,
@@ -38,7 +39,13 @@ from simllm.adapters.vllm import (
     write_step_records,
 )
 from simllm.compute import GpuSpec, HostInitiationModel, RooflineProvider
-from simllm.core import RequestBookkeeper, RequestPhase, VirtualClock
+from simllm.core import (
+    ExecutionObservations,
+    RequestBookkeeper,
+    RequestPhase,
+    StepResult,
+    VirtualClock,
+)
 from simllm.placement import PlacementManifest
 from simllm.preplay import (
     ForwardPhase,
@@ -87,6 +94,26 @@ class FakeSchedulerOutput:
     @property
     def total_num_scheduled_tokens(self) -> int:
         return sum(self.num_scheduled_tokens.values())
+
+
+class CapturingObservationSink:
+    def __init__(self, latency_ps=7_000):
+        self.latency_ps = latency_ps
+        self.clock = None
+        self.calls = []
+
+    def bind_clock(self, clock):
+        if self.clock is not None and self.clock is not clock:
+            raise RuntimeError("clock changed")
+        self.clock = clock
+
+    def __call__(self, record, observations):
+        self.calls.append((record, observations))
+        return StepResult(
+            step_index=record.step_index,
+            step_latency_ps=self.latency_ps,
+            completed_at_ps=record.virtual_time_ps + self.latency_ps,
+        )
 
 
 def prompt(length: int) -> list[int]:
@@ -1302,6 +1329,57 @@ def test_reset_and_injected_config_prevent_replay_contamination(monkeypatch, tmp
         assert clean_worker.replay is None
     finally:
         reset_configuration()
+
+
+def test_observation_sink_binds_the_worker_clock_and_receives_absent_schedule(
+    monkeypatch,
+):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    reset_configuration()
+    sink = CapturingObservationSink()
+    try:
+        assert isinstance(sink, ObservationStepSink)
+        configure(step_sink=sink)
+        clock = VirtualClock(start_ps=123_000)
+        worker = make_sim_worker(clock)
+        worker.init_device()
+        step = FakeSchedulerOutput(
+            scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+            num_scheduled_tokens={"r0": 4},
+        )
+
+        assert worker.execute_model(step) is None
+
+        assert sink.clock is clock
+        assert len(sink.calls) == 1
+        assert sink.calls[0][0] is worker.step_records[0]
+        assert sink.calls[0][1] is None
+        assert worker.step_results[0].step_latency_ps == 7_000
+        assert clock.now_ps == 130_000
+    finally:
+        reset_configuration()
+
+
+def test_framework_observations_cannot_be_silently_sent_to_a_legacy_sink():
+    from simllm.adapters.vllm.executor import _SimStepRuntime
+
+    calls = []
+    runtime = _SimStepRuntime(
+        config=SimExecutorConfig(),
+        step_sink=lambda record: calls.append(record),
+        fallback_latency=lambda translated: 0,
+    )
+    translated = runtime.translate(
+        FakeSchedulerOutput(
+            scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+            num_scheduled_tokens={"r0": 4},
+        )
+    )
+
+    with pytest.raises(TypeError, match="legacy sink"):
+        runtime.settle(translated, ExecutionObservations())
+
+    assert calls == []
 
 
 # Record export
