@@ -29,7 +29,7 @@ simplification is a numbered task in docs/modules/traffic.md:
   norm/dropout regions): TRAF-6;
 - `render_step_goal` retains the strict serial compatibility schedule;
   `lower_step_observations` instead preserves adapter-observed queues and
-  dependency edges, with real adapter schedule production tracked by TRAF-13;
+  dependency edges; VLLM-22 supplies the accepted Granite MoE producer;
 - no pipeline-parallel activation traffic (records carry no PP stage
   information yet): TRAF-8;
 - the MoE layer is rendered as one calc, then the TP allreduces, then
