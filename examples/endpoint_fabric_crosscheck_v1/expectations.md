@@ -311,3 +311,39 @@ The dry run registered with this freeze is the same command with
 `--check-only`, which validates every frozen literal above, imports no SimLLM
 implementation, reads no input file, invokes no native executable and writes no
 artifact.
+
+## Amendment, before any run
+
+Two defects in the section above were found while reviewing the freeze against
+its own arithmetic, before the study was implemented and before any result
+existed. Both are corrected here rather than after a run, and the original text
+is left standing so the correction is visible.
+
+**1. The CORE-F2 analytic allowance was derived wrongly.** The registered
+allowance `48 * 999` is the bound for the distance between a quantized value
+and its own ideal. CORE-F2's analytic instance instead compares two different
+quantizations of the same load. Writing `x = k * L_p / 1000` at the faster
+rate, the per-phase residual is
+
+    1000 * ceil(2x) - 2 * 1000 * ceil(x)
+
+and `ceil(2x) - 2 * ceil(x)` takes the values `-1` and `0`, so the per-phase
+residual spans a full quantum and the correct bound over 48 phases is
+`48 * 1000 = 48,000` picoseconds, not `47,952`. This follows from the identity
+alone and needs no measurement. The corrected allowance is `48 * 1000`.
+
+**2. The CORE-F2 analytic instances are entailed and must not be scored.** The
+analytic charge is a deterministic closed form over the endpoint ledger, and
+that ledger is the input characterization this freeze already fixes. A relation
+whose value the freeze already pins carries no genuine risk, which the
+entailment rule forbids counting as behavioral evidence. The 32 analytic
+instances of CORE-F2 are therefore reclassified as fatal-unscored, and CORE-F2
+keeps its 32 fluid instances as its scored population. The fluid instances are
+genuine risk: nothing in the freeze pins what the max-min allocator does when
+its capacity is halved.
+
+The revised scored population is CORE-F1 with 3,072 instances, CORE-F2 with 32,
+and CORE-F3 with 64, for 3,168 scored instances across three families.
+
+The CORE-F1 and CORE-F3 bounds are unaffected. Both compare a quantized value
+with its own unquantized ideal, where `999` is the correct bound.
