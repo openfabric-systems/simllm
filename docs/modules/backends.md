@@ -354,6 +354,11 @@ admission, first and last packet, transport retirement, CQE visibility and CQ
 polling separately.
 NIC start is first-packet issue. A reduced per-WQE start latency is derived
 from the native timeline for calibration and never charged again by htsim.
+Request routing lifetime stops at the semantic collective and its expanded
+flow or WQE granularity. ABI-v2 packet-attempt events remain backend-private
+and are not joined to request identity. BACK-39 records the canonical
+per-request byte extent, boundary packetization, attempt, retry and terminal
+reconciliation required before that boundary may move.
 The pre-implementation composition expectations were first frozen in
 [examples/rnic_live_v1](../../examples/rnic_live_v1/expectations.md) at commit
 `65b5609`; commit `facb26d` clarified retry identity, commit `947399c`
@@ -842,6 +847,15 @@ is difficult.
   predecessor bytes and random draws exactly. Enabled GPU consumption must
   change an end-to-end metric in the registered direction and must never
   advance CQE lifecycle state independently of the native RNIC authority.
+- BACK-39 (Completeness; P2; L): join ABI-v2 packet attempts to request
+  identity only if a future study needs packet-level request attribution. The
+  current request dispatch lifetime intentionally stops at collective flow
+  and WQE granularity. A packet join must first carry canonical per-request
+  byte extents through aggregate GOAL flow submission, define packetization
+  across extent boundaries, and reconcile every packet attempt and retry with
+  its operation, WQE, byte range and terminal delivery or drop. The disabled
+  path keeps packet identities backend-private and must preserve every
+  accepted routing-lifetime, GOAL, completion and metric byte exactly.
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
 - HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
