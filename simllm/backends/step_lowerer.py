@@ -58,9 +58,7 @@ class SerialStepLowererConfig:
     dims: ModelDims
     tp_ranks: Sequence[int]
     ep_ranks: Sequence[int] | None = None
-    provider: ComputeProvider = field(
-        default_factory=lambda: RooflineProvider(efficiency=0.7)
-    )
+    provider: ComputeProvider = field(default_factory=lambda: RooflineProvider(efficiency=0.7))
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel)
     routed_moe_supply: RoutedMoeSupply | None = None
@@ -188,12 +186,8 @@ class SerialStepLowerer(ExecutionLowerer):
                         work=ComputeWork(
                             kernel=kernel.name,
                             config=kernel.config + (("layer", layer),),
-                            flops=_split_integer(
-                                total_flops, cfg.dims.num_layers, layer
-                            ),
-                            hbm_bytes=_split_integer(
-                                total_hbm_bytes, cfg.dims.num_layers, layer
-                            ),
+                            flops=_split_integer(total_flops, cfg.dims.num_layers, layer),
+                            hbm_bytes=_split_integer(total_hbm_bytes, cfg.dims.num_layers, layer),
                             nominal_duration_ps=per_layer_duration_ps,
                             uncertainty_fraction=estimate.uncertainty,
                         ),
@@ -208,9 +202,7 @@ class SerialStepLowerer(ExecutionLowerer):
                 if tp_op is None:
                     continue
                 operation_id = f"{execution_id}:layer-{layer}:tp-{site}"
-                dependencies = _unique(
-                    tuple(tails[rank] for rank in tp_op.ranks)
-                )
+                dependencies = _unique(tuple(tails[rank] for rank in tp_op.ranks))
                 operations.append(
                     ExecutionOperation(
                         operation_id=operation_id,
@@ -235,9 +227,7 @@ class SerialStepLowerer(ExecutionLowerer):
                 if moe_op is None:
                     continue
                 operation_id = f"{execution_id}:layer-{layer}:ep-{phase}"
-                dependencies = _unique(
-                    tuple(tails[rank] for rank in moe_op.ranks)
-                )
+                dependencies = _unique(tuple(tails[rank] for rank in moe_op.ranks))
                 operations.append(
                     ExecutionOperation(
                         operation_id=operation_id,
@@ -250,6 +240,7 @@ class SerialStepLowerer(ExecutionLowerer):
                             algorithm_hint="pairwise",
                             channel_hint=phase,
                             pair_payload_bytes=moe_op.pair_payload_bytes,
+                            request_pair_payload_bytes=(moe_op.request_pair_payload_bytes),
                         ),
                         correlation=correlation,
                         placement_epoch=moe_op.placement_epoch,

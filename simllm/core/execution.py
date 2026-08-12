@@ -159,6 +159,12 @@ class CollectiveWork:
     omitted pairs carry zero bytes. A nonempty table is authoritative and
     requires ``payload_bytes == 0``. An empty table retains the uniform scalar
     interpretation and its original v1 wire encoding.
+
+    ``request_pair_payload_bytes`` is an optional loss-checked partition of
+    that sparse table. Each entry is
+    ``(request_id, source_rank, destination_rank, bytes)``. It never replaces
+    or changes the aggregate physical service demand; its sums must reproduce
+    ``pair_payload_bytes`` exactly.
     """
 
     collective: str
@@ -167,6 +173,7 @@ class CollectiveWork:
     algorithm_hint: str | None = None
     channel_hint: str | None = None
     pair_payload_bytes: tuple[tuple[int, int, int], ...] = ()
+    request_pair_payload_bytes: tuple[tuple[str, int, int, int], ...] = ()
 
 
 @dataclass(frozen=True)

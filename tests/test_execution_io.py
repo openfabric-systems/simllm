@@ -210,9 +210,7 @@ def _pairwise_graph(work: CollectiveWork) -> ExecutionGraph:
 
 
 def test_uniform_collective_keeps_frozen_v1_json_bytes():
-    graph = _pairwise_graph(
-        CollectiveWork("all-to-allv", (0, 1), 2048, "pairwise")
-    )
+    graph = _pairwise_graph(CollectiveWork("all-to-allv", (0, 1), 2048, "pairwise"))
     wire = (
         json.dumps(
             execution_graph_to_json(graph),
@@ -251,6 +249,133 @@ def test_sparse_pair_payloads_round_trip_as_the_authoritative_table():
         [1, 0, 4096],
     ]
     assert execution_graph_from_json(json.loads(json.dumps(payload))) == graph
+
+
+def test_request_pair_partition_round_trips_and_preserves_aggregate_authority():
+    work = CollectiveWork(
+        "all-to-allv",
+        (0, 1),
+        0,
+        "pairwise",
+        pair_payload_bytes=((0, 1, 12), (1, 0, 8)),
+        request_pair_payload_bytes=(
+            ("alpha", 0, 1, 4),
+            ("alpha", 1, 0, 8),
+            ("beta", 0, 1, 8),
+        ),
+    )
+    graph = _pairwise_graph(work)
+    graph = replace(
+        graph,
+        operations=(
+            replace(
+                graph.operations[0],
+                correlation=OperationCorrelation(request_ids=("alpha", "beta")),
+            ),
+        ),
+    )
+
+    payload = execution_graph_to_json(graph)
+
+    assert payload["operations"][0]["work"]["request_pair_payload_bytes"] == [
+        ["alpha", 0, 1, 4],
+        ["alpha", 1, 0, 8],
+        ["beta", 0, 1, 8],
+    ]
+    assert execution_graph_from_json(json.loads(json.dumps(payload))) == graph
+
+
+@pytest.mark.parametrize(
+    ("request_rows", "requests", "match"),
+    [
+        (
+            (("", 0, 1, 12),),
+            ("alpha",),
+            "must not be blank",
+        ),
+        (
+            (("alpha", 0, 1, 0),),
+            ("alpha",),
+            "at least 1",
+        ),
+        (
+            (("alpha", 0, 0, 12),),
+            ("alpha",),
+            "must differ",
+        ),
+        (
+            (("alpha", 0, 2, 12),),
+            ("alpha",),
+            "belong to ranks",
+        ),
+        (
+            (("alpha", 0, 1, 4), ("alpha", 0, 1, 8)),
+            ("alpha",),
+            "unique",
+        ),
+        (
+            (("beta", 0, 1, 8), ("alpha", 0, 1, 4)),
+            ("alpha", "beta"),
+            "request-major",
+        ),
+        (
+            (("alpha", 0, 1, 11),),
+            ("alpha",),
+            "sums must equal",
+        ),
+        (
+            (("missing", 0, 1, 12),),
+            ("alpha",),
+            "absent from operation correlation",
+        ),
+    ],
+)
+def test_request_pair_partition_rejects_ambiguous_ownership(request_rows, requests, match):
+    graph = _pairwise_graph(
+        CollectiveWork(
+            "all-to-allv",
+            (0, 1),
+            0,
+            "pairwise",
+            pair_payload_bytes=((0, 1, 12),),
+            request_pair_payload_bytes=request_rows,
+        )
+    )
+    graph = replace(
+        graph,
+        operations=(
+            replace(
+                graph.operations[0],
+                correlation=OperationCorrelation(request_ids=requests),
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match=match):
+        validate_execution_graph(graph)
+
+
+def test_request_pair_partition_rejects_non_pairwise_collective():
+    graph = _pairwise_graph(
+        CollectiveWork(
+            "all-reduce",
+            (0, 1),
+            0,
+            "ring",
+            request_pair_payload_bytes=(("alpha", 0, 1, 12),),
+        )
+    )
+    graph = replace(
+        graph,
+        operations=(
+            replace(
+                graph.operations[0],
+                correlation=OperationCorrelation(request_ids=("alpha",)),
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="valid only for pairwise"):
+        validate_execution_graph(graph)
 
 
 @pytest.mark.parametrize(
@@ -509,9 +634,7 @@ def test_same_queue_name_on_different_ranks_is_not_one_fifo():
         0,
         0,
         (
-            ExecutionOperation(
-                "rank-0", 0, "compute", ComputeWork("a"), depends_on=("rank-1",)
-            ),
+            ExecutionOperation("rank-0", 0, "compute", ComputeWork("a"), depends_on=("rank-1",)),
             ExecutionOperation("rank-1", 1, "compute", ComputeWork("b")),
         ),
     )
@@ -526,11 +649,7 @@ def test_same_queue_name_on_different_ranks_is_not_one_fifo():
                 "dangling",
                 0,
                 0,
-                (
-                    ExecutionOperation(
-                        "a", 0, "a", ComputeWork("a"), depends_on=("missing",)
-                    ),
-                ),
+                (ExecutionOperation("a", 0, "a", ComputeWork("a"), depends_on=("missing",)),),
             ),
             "unknown operation ID",
         ),
