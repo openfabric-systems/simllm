@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from simllm.core.clock import VirtualClock
@@ -147,7 +149,15 @@ def test_participant_local_report_keeps_exact_asymmetric_causal_boundary():
     assert target.eligible_at_ps == 20
     assert target.completed_at_ps == 30
     assert target.breakdown.operation_latency_ps == 30
-    assert report.realized_critical_path_operation_ids == ("target",)
+    target_segment = target.critical_segments[0]
+    assert target_segment.participant_rank == 0
+    assert target_segment.predecessor_operation_id == "collective"
+    assert target_segment.predecessor_participant_rank == 0
+    assert target_segment.started_at_ps == 20
+    assert target_segment.completed_at_ps == 30
+    assert target_segment.breakdown.operation_latency_ps == 10
+    assert report.realized_critical_path_operation_ids == ("collective", "target")
+    assert report.realized_critical_path_segments == (("collective", 0), ("target", 0))
     assert result.completed_at_ps == 30
     assert result.quiesced_at_ps == 20_000_000
 
@@ -165,6 +175,83 @@ def test_participant_local_report_keeps_exact_asymmetric_causal_boundary():
     assert reduced.request_metrics[0].completed_at_ps == 30
     assert reduced.request_metrics[0].latency_ps == 30
     assert clock.now_ps == 30
+
+
+def test_reducer_rejects_mismatched_participant_segment_without_mutation():
+    correlation = OperationCorrelation(request_ids=("request",))
+    graph = ExecutionGraph(
+        execution_id="mismatched-participant-segment",
+        step_index=0,
+        released_at_ps=0,
+        operations=(
+            ExecutionOperation(
+                "collective",
+                0,
+                "collective",
+                CollectiveWork(
+                    "all-to-allv",
+                    (0, 1, 2),
+                    0,
+                    "pairwise",
+                    pair_payload_bytes=(
+                        (0, 1, 1),
+                        (0, 2, 1_000_000),
+                    ),
+                ),
+                correlation=correlation,
+            ),
+            ExecutionOperation(
+                "target",
+                1,
+                "compute",
+                ComputeWork("target", nominal_duration_ps=10),
+                participant_local_depends_on=("collective",),
+                correlation=correlation,
+            ),
+        ),
+        completion_operation_ids=("target",),
+    )
+    runtime = CoarseDeviceRuntime(CoarseDeviceProfile())
+    result = runtime.execute(graph)
+    assert runtime.last_report is not None
+    report = runtime.last_report
+    by_id = {operation.operation_id: operation for operation in report.operations}
+    target = by_id["target"]
+    target_segment = target.critical_segments[0]
+    assert target_segment.predecessor_participant_rank == 1
+    collective_completions = dict(by_id["collective"].participant_completed_at_ps)
+    assert collective_completions[0] != collective_completions[1]
+
+    mutated_target = replace(
+        target,
+        critical_segments=(
+            replace(target_segment, predecessor_participant_rank=0),
+        ),
+    )
+    mutated_report = replace(
+        report,
+        operations=tuple(
+            mutated_target if operation.operation_id == "target" else operation
+            for operation in report.operations
+        ),
+    )
+    record = StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=[ScheduledRequest("request", RequestPhase.PREFILL, 1)],
+        num_sampled=1,
+        sampled_request_ids=["request"],
+    )
+    clock = VirtualClock(0)
+    reducer = CompletionReducer(clock)
+
+    with pytest.raises(ValueError, match="segment predecessor timestamp"):
+        reducer.reduce(record, graph, result, mutated_report)
+
+    assert clock.now_ps == 0
+    assert reducer.latest_request_metrics == ()
+    reduced = reducer.reduce(record, graph, result, report)
+    assert reduced.completed_at_ps == result.completed_at_ps
 
 
 def test_sparse_collective_uses_completion_path_causal_witness():
