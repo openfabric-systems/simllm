@@ -2,8 +2,7 @@
 
 :class:`HtsimStepSink` implements the adapters' step-sink contract (a
 callable ``StepRecord -> StepResult | None``): for every scheduler step it
-renders the step's tensor-parallel GOAL program
-(:func:`simllm.traffic.render_step_goal`), converts it with ``txt2bin``,
+renders the step's tensor-parallel GOAL program, converts it with ``txt2bin``,
 executes it on a configured ``htsim_rnic`` profile, and returns the
 simulated makespan as the step latency. Plugged into
 ``simllm.adapters.vllm.configure(step_sink=...)`` or
@@ -30,6 +29,11 @@ configured, the per-step GOAL additionally carries the dispatch and
 combine all-to-alls of every layer
 (:func:`simllm.traffic.step_moe_alltoalls`); a non-MoE configuration
 renders byte-identically to the pre-MoE sink.
+
+When ``placement_manifest`` is present, the sink classifies every expanded
+directed segment before rendering. Same-node segments become analytic
+per-source NVLink service and only cross-node segments reach ``htsim``.
+Omitting placement retains the exact historical all-remote GOAL path.
 
 Providers may opt into an exact per-layer duration breakdown. The sink checks
 that it sums to the fused estimate and emits the unequal layer costs. Existing
@@ -66,8 +70,13 @@ from simllm.compute import (
 )
 from simllm.core import StepRecord, StepResult
 from simllm.goal import to_binary
+from simllm.placement import PlacementManifest, RankMapper
 from simllm.traffic import (
+    DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     RoutedMoeSupply,
+    StepLocalityPlan,
+    plan_step_locality,
+    render_fabric_phase_goal,
     render_step_goal,
     step_moe_alltoalls,
     step_tp_allreduces,
@@ -78,10 +87,11 @@ from simllm.traffic import (
 class HtsimStepSinkConfig:
     """One closed-loop deployment under simulation.
 
-    ``tp_ranks`` are the GOAL ranks of the tensor-parallel group (e.g.
+    ``tp_ranks`` are semantic global ranks of the tensor-parallel group (e.g.
     ``manifest.group_ranks(0, "tp")`` of a declared manifest under the
-    gpu-rank mapping); ``dims`` is the per-rank sharded geometry the same
-    deployment declares. ``ep_ranks`` is the optional expert-parallel
+    gpu-rank mapping). Locality is classified before the later GOAL endpoint
+    projection. ``dims`` is the per-rank sharded geometry the same deployment
+    declares. ``ep_ranks`` is the optional expert-parallel
     group: when the dims declare experts (``dims.num_experts > 0``) and
     ``ep_ranks`` are given, every step's GOAL includes the per-layer MoE
     dispatch and combine all-to-alls over these ranks; leaving it ``None``
@@ -112,6 +122,12 @@ class HtsimStepSinkConfig:
     routed_moe_supply: RoutedMoeSupply | None = None
     #: regression-only negative control; production runs must retain False
     unsafe_disable_child_lifetime_binding: bool = False
+    #: optional physical-placement authority; None is exact all-remote compatibility
+    placement_manifest: PlacementManifest | None = None
+    #: declared one-direction flat per-source NVLink rate; analytic, uncalibrated
+    nvlink_bandwidth_bytes_per_second: int = (
+        DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
+    )
 
     def __post_init__(self) -> None:
         if self.profile not in RNIC_PROFILES:
@@ -122,6 +138,18 @@ class HtsimStepSinkConfig:
             raise TypeError("routed_moe_supply must be RoutedMoeSupply or None")
         if type(self.unsafe_disable_child_lifetime_binding) is not bool:
             raise TypeError("unsafe_disable_child_lifetime_binding must be a boolean")
+        if self.placement_manifest is not None and not isinstance(
+            self.placement_manifest,
+            PlacementManifest,
+        ):
+            raise TypeError("placement_manifest must be PlacementManifest or None")
+        if (
+            type(self.nvlink_bandwidth_bytes_per_second) is not int
+            or self.nvlink_bandwidth_bytes_per_second <= 0
+        ):
+            raise ValueError(
+                "nvlink_bandwidth_bytes_per_second must be a positive integer"
+            )
 
 
 @dataclass(frozen=True)
@@ -133,7 +161,7 @@ class StepNetworkOutcome:
     compute_estimate_ps: int
     #: uniform calc cost handed to GOAL, or None for an unequal breakdown
     per_layer_calc_ns: int | None
-    #: simulated makespan of the step's GOAL program, ps
+    #: simulated makespan of the represented step, ps
     makespan_ps: int
     num_flows: int
     #: emitted GOAL calc units in layer order, ns; empty on legacy construction
@@ -142,7 +170,7 @@ class StepNetworkOutcome:
     num_sampled: int = 0
     #: whether num_sampled came from an exact record field
     sample_count_exact: bool = False
-    #: whether the backend wrapper verified physical quiescence
+    #: backend quiescence, vacuously true when no fabric backend run is needed
     quiescent: bool = False
     #: realized MoE traffic mode: ``none``, ``uniform`` or ``captured``
     routing_mode: str = "uniform"
@@ -165,13 +193,50 @@ class StepNetworkOutcome:
 
 
 @dataclass(frozen=True)
+class StepLocalityOutcome:
+    """Opt-in locality accounting kept separate from legacy outcome bytes."""
+
+    step_index: int
+    authority: str
+    compatibility_fast_path: bool
+    total_directed_bytes: int
+    fabric_directed_bytes: int
+    nvlink_directed_bytes: int
+    fabric_segments: int
+    nvlink_segments: int
+    phase_count: int
+    backend_runs: int
+    compute_service_ps: int
+    nvlink_service_ps: int
+    nvlink_bandwidth_bytes_per_second: int
+    #: empty on the accepted monolithic all-remote compatibility path
+    fabric_phase_service_ps: tuple[int, ...] = ()
+    #: empty on the accepted monolithic all-remote compatibility path
+    composed_phase_service_ps: tuple[int, ...] = ()
+
+
+@dataclass(frozen=True)
+class _PlannedLocalityPhase:
+    """One externally serialized mixed-locality communication phase."""
+
+    phase_id: str
+    goal_path: Path | None
+    completion_csv: Path | None
+    nvlink_service_ps: int
+
+
+@dataclass(frozen=True)
 class _PlannedStep:
     """Immutable handoff from serial record lowering to one backend worker."""
 
     step_index: int
     virtual_time_ps: int
-    goal_path: Path
-    completion_csv: Path
+    legacy_goal_path: Path | None
+    legacy_completion_csv: Path | None
+    locality_phases: tuple[_PlannedLocalityPhase, ...]
+    locality: StepLocalityPlan
+    compatibility_fast_path: bool
+    compute_service_ps: int
     compute_estimate_ps: int
     num_sampled: int
     sample_count_exact: bool
@@ -191,6 +256,7 @@ class _SimulatedStep:
 
     result: StepResult | None
     outcome: StepNetworkOutcome | None
+    locality_outcome: StepLocalityOutcome | None
 
 
 @dataclass(frozen=True)
@@ -206,9 +272,23 @@ class HtsimStepSink:
 
     def __init__(self, config: HtsimStepSinkConfig) -> None:
         self.config = config
+        placement = copy.deepcopy(config.placement_manifest)
+        self._rank_mapper = RankMapper(placement) if placement is not None else None
+        if self._rank_mapper is not None:
+            groups = (("tp_ranks", config.tp_ranks),)
+            if config.ep_ranks is not None:
+                groups += (("ep_ranks", config.ep_ranks),)
+            for name, ranks_value in groups:
+                ranks = tuple(ranks_value)
+                if len(ranks) != len(set(ranks)):
+                    raise ValueError(f"{name} must contain distinct ranks")
+                for rank in ranks:
+                    self._rank_mapper.goal_rank(rank)
         self.config.workdir.mkdir(parents=True, exist_ok=True)
         #: one entry per simulated (non-None) step, in call order
         self.outcomes: list[StepNetworkOutcome] = []
+        #: locality projection for the same simulated steps, in call order
+        self.locality_outcomes: list[StepLocalityOutcome] = []
 
     @staticmethod
     def _num_sampled(record: StepRecord) -> int:
@@ -297,23 +377,86 @@ class HtsimStepSink:
                 else None
             )
             rendered_calc_ns = layer_calc_ns
-        trace = render_step_goal(
+        locality = plan_step_locality(
             record,
             cfg.dims,
             cfg.tp_ranks,
-            rendered_calc_ns,
             ep_ranks=cfg.ep_ranks,
             routed_supply=cfg.routed_moe_supply,
-            num_goal_ranks=cfg.num_goal_ranks,
+            rank_mapper=self._rank_mapper,
+            nvlink_bandwidth_bytes_per_second=(
+                cfg.nvlink_bandwidth_bytes_per_second
+            ),
             base_tag=cfg.base_tag,
         )
         name = f"step-{record.step_index:06d}"
-        goal_path = trace.write(cfg.workdir / f"{name}.goal")
+        compatibility_fast_path = self._rank_mapper is None or (
+            locality.nvlink_bytes == 0 and self._rank_mapper.mode == "gpu-rank"
+        )
+        legacy_goal_path = None
+        legacy_completion_csv = None
+        locality_phases: tuple[_PlannedLocalityPhase, ...] = ()
+        if compatibility_fast_path:
+            trace = render_step_goal(
+                record,
+                cfg.dims,
+                cfg.tp_ranks,
+                rendered_calc_ns,
+                ep_ranks=cfg.ep_ranks,
+                routed_supply=cfg.routed_moe_supply,
+                num_goal_ranks=cfg.num_goal_ranks,
+                base_tag=cfg.base_tag,
+            )
+            legacy_goal_path = trace.write(cfg.workdir / f"{name}.goal")
+            legacy_completion_csv = cfg.workdir / f"{name}.{cfg.profile}.csv"
+        else:
+            assert self._rank_mapper is not None
+            phase_traces = tuple(
+                (
+                    render_fabric_phase_goal(
+                        phase,
+                        rank_mapper=self._rank_mapper,
+                        num_goal_ranks=cfg.num_goal_ranks,
+                    )
+                    if phase.fabric_segments
+                    else None
+                )
+                for phase in locality.phases
+            )
+            planned_phases = []
+            for phase_index, (phase, trace) in enumerate(
+                zip(locality.phases, phase_traces, strict=True)
+            ):
+                stem = f"{name}.phase-{phase_index:04d}"
+                goal_path = (
+                    trace.write(cfg.workdir / f"{stem}.goal")
+                    if trace is not None
+                    else None
+                )
+                planned_phases.append(
+                    _PlannedLocalityPhase(
+                        phase_id=phase.phase.phase_id,
+                        goal_path=goal_path,
+                        completion_csv=(
+                            cfg.workdir / f"{stem}.{cfg.profile}.csv"
+                            if trace is not None
+                            else None
+                        ),
+                        nvlink_service_ps=phase.nvlink_service_ps,
+                    )
+                )
+            locality_phases = tuple(planned_phases)
         return _PlannedStep(
             step_index=record.step_index,
             virtual_time_ps=record.virtual_time_ps,
-            goal_path=goal_path,
-            completion_csv=cfg.workdir / f"{name}.{cfg.profile}.csv",
+            legacy_goal_path=legacy_goal_path,
+            legacy_completion_csv=legacy_completion_csv,
+            locality_phases=locality_phases,
+            locality=locality,
+            compatibility_fast_path=compatibility_fast_path,
+            compute_service_ps=(
+                sum(max(calc_ns, 1) for calc_ns in layer_calc_ns) * 1000
+            ),
             compute_estimate_ps=estimate_ps,
             num_sampled=self._num_sampled(record),
             sample_count_exact=record.num_sampled is not None,
@@ -332,23 +475,73 @@ class HtsimStepSink:
         )
 
     @staticmethod
-    def _execute_plan(plan: _PlannedStep) -> _SimulatedStep:
-        """Compile and execute one plan using the accepted diagnostic path."""
-
-        goal_bin = to_binary(plan.goal_path)
-        run = run_htsim_rnic(
+    def _run_goal(
+        plan: _PlannedStep,
+        goal_path: Path,
+        completion_csv: Path,
+    ):
+        goal_bin = to_binary(goal_path)
+        return run_htsim_rnic(
             HtsimRnicConfig(
                 goal_bin=goal_bin,
                 profile=plan.profile,
                 linkspeed_bps=plan.linkspeed_bps,
-                completion_csv=plan.completion_csv,
+                completion_csv=completion_csv,
                 topology=plan.topology,
                 unsafe_disable_child_lifetime_binding=(
                     plan.unsafe_disable_child_lifetime_binding
                 ),
             )
         )
-        makespan_ps = run.job_completion_time_ps()
+
+    @staticmethod
+    def _execute_plan(plan: _PlannedStep) -> _SimulatedStep:
+        """Execute either the accepted fast path or serial mixed phases."""
+
+        if plan.compatibility_fast_path:
+            assert plan.legacy_goal_path is not None
+            assert plan.legacy_completion_csv is not None
+            run = HtsimStepSink._run_goal(
+                plan,
+                plan.legacy_goal_path,
+                plan.legacy_completion_csv,
+            )
+            makespan_ps = run.job_completion_time_ps()
+            num_flows = len(run.flows)
+            quiescent = run.quiescent
+            backend_runs = 1
+            fabric_phase_service_ps: tuple[int, ...] = ()
+            composed_phase_service_ps: tuple[int, ...] = ()
+        else:
+            fabric_services = []
+            composed_services = []
+            num_flows = 0
+            quiescent = True
+            backend_runs = 0
+            for phase in plan.locality_phases:
+                if phase.goal_path is None:
+                    if phase.completion_csv is not None:
+                        raise AssertionError("local-only phase has a completion path")
+                    fabric_service_ps = 0
+                else:
+                    if phase.completion_csv is None:
+                        raise AssertionError("fabric phase has no completion path")
+                    run = HtsimStepSink._run_goal(
+                        plan,
+                        phase.goal_path,
+                        phase.completion_csv,
+                    )
+                    fabric_service_ps = run.job_completion_time_ps()
+                    num_flows += len(run.flows)
+                    quiescent = quiescent and run.quiescent
+                    backend_runs += 1
+                fabric_services.append(fabric_service_ps)
+                composed_services.append(
+                    max(phase.nvlink_service_ps, fabric_service_ps)
+                )
+            fabric_phase_service_ps = tuple(fabric_services)
+            composed_phase_service_ps = tuple(composed_services)
+            makespan_ps = plan.compute_service_ps + sum(composed_services)
         outcome = StepNetworkOutcome(
             step_index=plan.step_index,
             compute_estimate_ps=plan.compute_estimate_ps,
@@ -357,27 +550,57 @@ class HtsimStepSink:
             per_layer_calc_ns=plan.per_layer_calc_ns,
             layer_calc_ns=plan.layer_calc_ns,
             makespan_ps=makespan_ps,
-            num_flows=len(run.flows),
-            quiescent=run.quiescent,
+            num_flows=num_flows,
+            quiescent=quiescent,
             routing_mode=plan.routing_mode,
             placement_epoch=plan.placement_epoch,
+        )
+        locality = plan.locality
+        locality_outcome = StepLocalityOutcome(
+            step_index=plan.step_index,
+            authority=locality.authority,
+            compatibility_fast_path=plan.compatibility_fast_path,
+            total_directed_bytes=locality.total_directed_bytes,
+            fabric_directed_bytes=locality.fabric_bytes,
+            nvlink_directed_bytes=locality.nvlink_bytes,
+            fabric_segments=locality.fabric_segments,
+            nvlink_segments=locality.nvlink_segments,
+            phase_count=len(locality.phases),
+            backend_runs=backend_runs,
+            compute_service_ps=plan.compute_service_ps,
+            nvlink_service_ps=locality.nvlink_service_ps,
+            nvlink_bandwidth_bytes_per_second=(
+                locality.nvlink_bandwidth_bytes_per_second
+            ),
+            fabric_phase_service_ps=fabric_phase_service_ps,
+            composed_phase_service_ps=composed_phase_service_ps,
         )
         result = StepResult(
             step_index=plan.step_index,
             step_latency_ps=makespan_ps,
             completed_at_ps=plan.virtual_time_ps + makespan_ps,
         )
-        return _SimulatedStep(result=result, outcome=outcome)
+        return _SimulatedStep(
+            result=result,
+            outcome=outcome,
+            locality_outcome=locality_outcome,
+        )
 
     def _simulate_step(self, record: StepRecord) -> _SimulatedStep:
         plan = self._plan_step(record)
         if plan is None:
-            return _SimulatedStep(result=None, outcome=None)
+            return _SimulatedStep(
+                result=None,
+                outcome=None,
+                locality_outcome=None,
+            )
         return self._execute_plan(plan)
 
     def _publish(self, simulation: _SimulatedStep) -> StepResult | None:
         if simulation.outcome is not None:
             self.outcomes.append(simulation.outcome)
+        if simulation.locality_outcome is not None:
+            self.locality_outcomes.append(simulation.locality_outcome)
         return simulation.result
 
     def __call__(self, record: StepRecord) -> StepResult | None:
@@ -455,7 +678,11 @@ class HtsimPersistentStepSink(HtsimStepSink):
             simulations = tuple(
                 future.result()
                 if future is not None
-                else _SimulatedStep(result=None, outcome=None)
+                else _SimulatedStep(
+                    result=None,
+                    outcome=None,
+                    locality_outcome=None,
+                )
                 for future in futures
             )
         except BaseException:

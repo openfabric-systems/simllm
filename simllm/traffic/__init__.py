@@ -23,6 +23,14 @@ patterns rather than abstract ops.
 COLLECTIVE_TRACE_SCHEMA = "simllm-collective-trace-v1"
 
 from simllm.traffic.execution_goal import render_serial_execution_graph_goal
+from simllm.traffic.locality import (
+    DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
+    ClassifiedCommunicationPhase,
+    CollectiveCommunicationPhase,
+    DirectedCollectiveSegment,
+    StepLocalityPlan,
+    classify_step_locality,
+)
 from simllm.traffic.patterns import (
     binomial_broadcast,
     gather,
@@ -41,26 +49,38 @@ from simllm.traffic.step_comm import (
     TP_ALLREDUCE_SITES,
     MoeAllToAll,
     TpAllReduce,
+    plan_step_locality,
+    render_fabric_phase_goal,
     render_step_goal,
+    step_communication_phases,
     step_moe_alltoalls,
     step_tp_allreduces,
 )
 
 __all__ = [
     "COLLECTIVE_TRACE_SCHEMA",
+    "DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND",
     "MOE_A2A_PHASES",
     "TP_ALLREDUCE_SITES",
+    "ClassifiedCommunicationPhase",
+    "CollectiveCommunicationPhase",
+    "DirectedCollectiveSegment",
     "ExpertPlacementSnapshot",
     "MoeAllToAll",
     "RoutedMoeSupply",
+    "StepLocalityPlan",
     "TpAllReduce",
     "binomial_broadcast",
+    "classify_step_locality",
     "gather",
     "pairwise_all_to_allv",
+    "plan_step_locality",
+    "render_fabric_phase_goal",
     "render_serial_execution_graph_goal",
     "render_step_goal",
     "ring_allreduce",
     "scatter",
+    "step_communication_phases",
     "step_moe_alltoalls",
     "step_tp_allreduces",
     "validate_expert_placement_snapshot",
