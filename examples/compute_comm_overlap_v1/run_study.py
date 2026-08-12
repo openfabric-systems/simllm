@@ -621,6 +621,8 @@ def _structural_guards(
 
 def _json_value(value: Any) -> Any:
     if isinstance(value, Fraction):
+        if value.denominator == 1:
+            return value.numerator
         return f"{value.numerator}/{value.denominator}"
     if isinstance(value, tuple):
         return [_json_value(item) for item in value]
