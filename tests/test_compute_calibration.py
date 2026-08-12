@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import json
+from pathlib import Path
 
 import pytest
 
@@ -25,6 +27,7 @@ from simllm.compute import (
 )
 
 GPU = GpuSpec("gtx1660-ti-sm75-fp32", 5.437e12, 288e9)
+STUDY_DIR = Path(__file__).parents[1] / "examples" / "compute_calibration_v1"
 
 
 def _launch(grid_x: int = 1024) -> KernelLaunchMetadata:
@@ -276,6 +279,26 @@ def test_calibration_artifact_round_trip_and_train_only_table(tmp_path):
     assert held_out.bound == "interpolated"
     assert table.provenance is not None
     assert artifact.sha256 in table.provenance.references[0]
+
+
+def test_tracked_turing_artifacts_are_self_consistent(tmp_path):
+    artifact_path = STUDY_DIR / "calibration.json"
+    table_path = STUDY_DIR / "profile_table.json"
+    results = json.loads((STUDY_DIR / "results.json").read_text(encoding="utf-8"))
+
+    artifact = ComputeCalibrationArtifact.load(artifact_path)
+    table = ProfileTableProvider.load(table_path, enable_family_sum=True)
+    roundtrip = tmp_path / "profile_table.json"
+    table.save(roundtrip)
+
+    assert len(artifact.cells) == 50
+    assert sum(len(cell.durations_ps) for cell in artifact.cells) == 2050
+    assert sum(cell.split == TRAIN_SPLIT for cell in artifact.cells) == 30
+    assert sum(cell.split == HELD_OUT_SPLIT for cell in artifact.cells) == 20
+    assert results["provenance"]["calibration_sha256"] == artifact.sha256
+    assert table.provenance is not None
+    assert artifact.sha256 in table.provenance.references[0]
+    assert roundtrip.read_bytes() == table_path.read_bytes()
 
 
 def test_calibration_artifact_rejects_changed_summary():

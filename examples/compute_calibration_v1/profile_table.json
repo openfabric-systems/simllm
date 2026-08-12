@@ -1,0 +1,401 @@
+{
+  "schema": "simllm-profile-table-v1",
+  "provenance": {
+    "source": "capture",
+    "version": "NVIDIA Nsight Systems version 2023.4.4.54-234433681190v0",
+    "gpu": "NVIDIA GeForce GTX 1660 Ti",
+    "created": "2026-08-12",
+    "references": [
+      "simllm-compute-calibration-v1:sha256:0be6dad653ff32a0f4667b5cb05f7ddaefdc06e8f6f1cea032bb8d285b42023f",
+      "https://docs.nvidia.com/nsight-systems/2023.4/UserGuide/index.html",
+      "https://docs.nvidia.com/nsight-compute/2024.1/ReleaseNotes/topics/gpu-support.html",
+      "https://developer.nvidia.com/nvidia-development-tools-solutions-ERR_NVGPUCTRPERM-permission-issue-performance-counters"
+    ]
+  },
+  "entries": [
+    {
+      "kernel": "attn_gemm",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 14240000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_gemm",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 37344000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_gemm",
+      "config": [
+        [
+          "new_tokens",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 51008000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_gemm",
+      "config": [
+        [
+          "new_tokens",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 141089000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_gemm",
+      "config": [
+        [
+          "new_tokens",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 197985000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_gemm",
+      "config": [
+        [
+          "new_tokens",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 556324000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_score",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ],
+        [
+          "kv_tokens",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 14208000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_score",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ],
+        [
+          "kv_tokens",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 27073000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_score",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ],
+        [
+          "kv_tokens",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 50976000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_score",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ],
+        [
+          "kv_tokens",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 100672000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_score",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ],
+        [
+          "kv_tokens",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 198273000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "attn_score",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ],
+        [
+          "kv_tokens",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 395811000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "kv_read",
+      "config": [
+        [
+          "kv_tokens",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 10528000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "kv_read",
+      "config": [
+        [
+          "kv_tokens",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 18049000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "kv_read",
+      "config": [
+        [
+          "kv_tokens",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 36608000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "kv_read",
+      "config": [
+        [
+          "kv_tokens",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 68256000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "kv_read",
+      "config": [
+        [
+          "kv_tokens",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 141057000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "kv_read",
+      "config": [
+        [
+          "kv_tokens",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 269122000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "lm_head",
+      "config": [
+        [
+          "sampled",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 14272000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "lm_head",
+      "config": [
+        [
+          "sampled",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 54592000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "lm_head",
+      "config": [
+        [
+          "sampled",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 50912000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "lm_head",
+      "config": [
+        [
+          "sampled",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 209762000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "lm_head",
+      "config": [
+        [
+          "sampled",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 198305000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "lm_head",
+      "config": [
+        [
+          "sampled",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 831174000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "mlp_gemm",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 14272000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "mlp_gemm",
+      "config": [
+        [
+          "new_tokens",
+          1
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 71873000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "mlp_gemm",
+      "config": [
+        [
+          "new_tokens",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 51073000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "mlp_gemm",
+      "config": [
+        [
+          "new_tokens",
+          4
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 278561000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "mlp_gemm",
+      "config": [
+        [
+          "new_tokens",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp32",
+      "duration_ps": 198017000,
+      "uncertainty": 0.05
+    },
+    {
+      "kernel": "mlp_gemm",
+      "config": [
+        [
+          "new_tokens",
+          16
+        ]
+      ],
+      "gpu": "gtx1660-ti-sm75-fp64",
+      "duration_ps": 1106664000,
+      "uncertainty": 0.05
+    }
+  ]
+}
