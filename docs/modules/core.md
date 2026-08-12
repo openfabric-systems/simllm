@@ -491,9 +491,11 @@ gaps. These are diagnostic findings, not values folded into `ExecutionResult`
 or `StepResult`, so the authority conclusion is unchanged. Cross-check
 disabled preserves the accepted graph artifacts, timestamps and results
 exactly. Local-NVLink comparison rejects at preflight; TRAF-16 owns its
-frontier precision, while the corrected single-node `AAAA` service values
-remain pending CORE-41's ingress-aware analytic correction. CORE-36 owns a
-repository-wide fidelity selector.
+frontier precision. CORE-41 closed the ingress gap and refroze the two
+single-node `AAAA` cells from 4,538,000 ps and 9,047,000 ps of service to
+6,652,000 ps and 13,286,000 ps, carrying JCT to 6,676,000 ps and 13,310,000 ps;
+every `AABB` and `ABCD` row is unchanged. CORE-36 owns a repository-wide
+fidelity selector.
 
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
@@ -598,16 +600,30 @@ does not claim to produce these resource-contention measurements.
 
 ### Precision
 
-- CORE-41 (Precision; P0; M): make analytic intra-node routed service charge
-  the maximum endpoint load, including both source egress and destination
-  ingress. The current `max(source_egress)` surrogate was exact for symmetric
-  traffic but undercharges the corrected many-to-one combine star. Identify
-  the correction from explicit endpoint byte ledgers, then sweep payload and
-  EP width across symmetric, dispatch-star and combine-star fixtures. Require
-  exact byte conservation, the preregistered ingress-bound service increase
-  and its live JCT effect; preserve symmetric and all-remote timestamps
-  exactly. Revisit the dependency-authority `AAAA` values, which remain
-  baseline observations rather than precision oracles until this lands.
+- CORE-42 (Precision; P0; S): requalify
+  [nvlink_locality_v1](../../examples/nvlink_locality_v1/RESULTS.md) under the
+  CORE-41 endpoint charge. Its two all-local `AAAA` cells are still frozen at
+  the superseded maximum-source-egress service of 4,538,000 ps and 9,047,000 ps,
+  so that runner now rejects its own fixture. Unlike the dependency-authority
+  rows, which were recorded as baseline observations, these `AAAA` cells are
+  scored TRAF-B2 instances, so requalification needs its own expectations-only
+  commit that registers 6,652,000 ps, 13,286,000 ps and the corresponding JCTs
+  before the rerun, rather than an edit folded into another change. Acceptance
+  reruns the study, keeps every `AABB` and `ABCD` row exact, and states whether
+  the refrozen `AAAA` instances still carry genuine risk or become exact-oracle
+  evidence.
+- CORE-43 (Precision; P1; M): cross-validate the analytic endpoint charge
+  against the fabric backend's realized per-endpoint serialization on identical
+  traffic. CORE-41 demonstrated the correction at EP width four on a real
+  capture fixture and at widths two, four and eight on synthetic fixtures, but
+  not at the capture scale where the recomputed undercharge is 1.676 times: EP
+  width eight over all 48 Granite phases, egress-only 15,249,408 bytes against
+  true rank-0 endpoint bytes of 25,563,136. Run that traffic all-local and
+  all-remote, compare the analytic charge with the fluid backend's
+  serialization term, which already decomposes as the full endpoint total at 20
+  ps/byte, and require the two serializers to agree within a preregistered
+  band. Report the effect on a live TTFT and TPOT and keep the all-remote path
+  exact.
 - CORE-35 (Precision; P1; M): make the coarse runtime report conserve
   participant-local dependency frontiers in multi-rank serial MoE graphs. The
   routing-lifetime study's first three-request run executed those frontiers,
@@ -666,7 +682,7 @@ does not claim to produce these resource-contention measurements.
   reproducible multi-stream trace. Acceptance must vary arrival offset and
   residency pressure, match the observed overlap bands, and preserve the
   simultaneous-arrival and single-kernel baselines exactly.
-- CORE-13 (Precision; P1; L): replace the flat per-source intra-node
+- CORE-13 (Precision; P1; L): replace the flat per-endpoint intra-node
   NVLink-class serializer with calibrated compute-owned NCCL/NVLink service.
   The current surrogate uses payload bytes and one configured rate; it does
   not replay the network kernel, HBM reads or link/topology selection. Use
