@@ -65,7 +65,10 @@ from simllm.core.execution_io import effective_dependency_edges
 from simllm.goal import GoalMessage, GoalTrace
 from simllm.placement import RankMapper
 from simllm.preplay.routing import RoutedToken
-from simllm.traffic.collective_plan import collective_plan_by_operation
+from simllm.traffic.collective_plan import (
+    collective_plan_by_operation,
+    plan_execution_graph_collectives,
+)
 from simllm.traffic.locality import (
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     ClassifiedCommunicationPhase,
@@ -359,6 +362,7 @@ def lower_step_observations(
     *,
     ep_ranks: Sequence[int] | None = None,
     routed_supply: RoutedMoeSupply | None = None,
+    attach_collective_plan: bool = True,
 ) -> ExecutionGraph:
     """Bind adapter-observed ordering to traffic-planned collective work.
 
@@ -377,6 +381,13 @@ def lower_step_observations(
     returned standard :class:`ExecutionGraph` leaves realized concurrency to
     :class:`~simllm.core.DeviceRuntime`; this function has no timing or overlap
     parameter.
+
+    ``attach_collective_plan`` defaults to True, so the returned graph carries
+    the immutable traffic-owned :class:`~simllm.core.CollectivePlan` for every
+    collective and the runtime never reconstructs one. Setting it False is the
+    explicit compatibility bypass: the graph then has no plan, serializes to
+    the accepted v1 wire form without the ``collective_plans`` field, and the
+    runtime falls back to its own semantic expansion.
     """
 
     if not isinstance(record, StepRecord):
@@ -455,13 +466,16 @@ def lower_step_observations(
     missing = sorted(set(planned) - observed_keys)
     if missing:
         raise ValueError(f"observations: missing planned collective sites {missing!r}")
-    return execution_graph_from_observations(
+    graph = execution_graph_from_observations(
         record,
         ExecutionObservations(
             operations=tuple(lowered),
             completion_operation_ids=observations.completion_operation_ids,
         ),
     )
+    if not attach_collective_plan:
+        return graph
+    return plan_execution_graph_collectives(graph)
 
 
 @dataclass(frozen=True)
