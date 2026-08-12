@@ -444,6 +444,21 @@ wall study. The one-GOAL stdout, stderr, completion CSV and help bytes remained
 identical to the base binary. CORE-24 supplies the paired full result codec;
 BRIDGE-2 remains above this lower-level flow interface.
 
+On 2026-08-13 HTSIM-24 closed. The
+[held-out wall study](../../examples/persistent_session_wall_v1/RESULTS.md)
+requalified the wall-clock family on two bidirectional-ring replays generated
+by a topology rule frozen before any local timing command, with two-sided bands
+materialized mechanically from a base-CLI-only calibration and committed as a
+band lock before the session option was invoked. Both replays pass every band
+and the signed speedup instance, `2/2` genuine risk: the complete persistent
+boundary is 6.16x faster than the complete isolated boundary on the 6-flow
+replay and 5.96x faster on the 10-flow replay, against a predeclared 1.1x
+minimum. Both sit below the 12x and 20x process-count ratios that bound what
+retaining one process can save, and both boundaries scale near-linearly with
+flow count. Every fatal guard held, including byte-identical ordered FCT lists
+between the isolated and persistent paths, so the run is valid rather than
+void. The diagnostic wave-5 bands are superseded.
+
 On 2026-08-10 BACK-5, BACK-6 and BACK-7 closed. The sink now consumes an
 optional exact provider layer breakdown, an optional exact step sample count
 and an explicit GOAL-rank count while preserving the default M4 and CORE-2
@@ -956,22 +971,36 @@ is difficult.
   HTSIM-6 and BACK-9: policy lookahead removes the repeated declare cost,
   structural WQ backpressure limits how much work can be exposed, and the
   event-loop scaling needs its own look.
-- HTSIM-8 (Precision; P0; M): repair the backend `commit_check.sh` validation
-  gate. Current
-  `origin/main` has no `validate_outputs` baselines, `validate.py` divides by
-  zero in every attempted case, and the script lacks fail-fast handling, so
-  it reports a false success. Add checked-in baselines or remove that compare,
-  fix zero-flow diagnostics, and make every failed command fail the gate.
-- HTSIM-24 (Precision; P1; S): repeat the persistent-session wall-clock family
-  on a held-out flow replay whose two-sided bands are frozen from the exact
-  pinned base CLI before the session outcome is observed. The wave-5
-  wall-only amendment corrected a workload mismatch but followed a precommit
-  session smoke, so its 2/2 band result is diagnostic rather than scored.
-  Acceptance must time the complete isolated and persistent boundaries,
-  preserve the fatal latency-byte identity, pass every predeclared band and
-  signed speedup instance, and state the entailment and genuine-risk analysis
-  without using any wave-5 session timing to select the held-out workload or
-  thresholds.
+- HTSIM-8 (Precision; P0; M): make the backend `commit_check.sh` gate citable
+  as release evidence.
+  The three registered code defects are repaired on
+  `codex/htsim8_commit_check`: the absent-baseline comparison and the remote
+  fetch are removed in favor of the absolute bounds each plan already authors,
+  an empty completion set reports the empty case instead of dividing by it,
+  and `set -euo pipefail` plus a nonzero validator status make every failed
+  command fail the gate
+  ([htsim_commit_gate_v1](../../examples/htsim_commit_gate_v1/RESULTS.md),
+  `2/2` raw rejection instances plus a tracked-plan defect that was rejected
+  and then removed). What remains is acceptance. On its first honest run the
+  repaired gate rejects the backend checkout: 17 of 95 experiments miss their
+  authored FCT bounds and 7 of the 8 default plans fail, so the gate is red
+  and cannot yet be cited as a passing release gate. This closes when HTSIM-25
+  resolves the bound drift and the full default gate exits zero.
+- HTSIM-25 (Precision; P0; L): reconcile the authored UEC validation bounds
+  with current backend behavior.
+  The repaired gate is the first enforcement these bounds have ever received:
+  `bf83fa2` put the UEC completion prints behind
+  `HTSIM_TRACE_FLOW_COMPLETIONS`, which the gate never set, so every
+  experiment since then parsed zero completions and reached the zero division
+  instead of comparing anything. Every failure is a missed FCT bound, never a
+  completion-count, input or status failure, and each observation sits above
+  its own serialization floor, so none is physically impossible. The drift
+  concentrates in two places: `Small permutation, INC (16 nodes)` misses its
+  210 us bound by 9 to 14 percent in all three congestion-control modes, and 9
+  of the 17 failures are in the two `-failed 8` load-balancing plans, where the
+  worst case reaches 564.7 us against a 220 us bound. Decide per experiment,
+  with evidence, whether the transport regressed or the authored bound is
+  stale. Never relax a bound to match an observation without that evidence.
 
 ### Completeness
 
