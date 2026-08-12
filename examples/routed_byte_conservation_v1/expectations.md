@@ -204,6 +204,49 @@ directed bytes, because a wider EP world can only split a token's experts over
 more owners. If the measured ratio `bytes_A(8) / bytes_A(2)` comes out below 1
 the relation is not what the model claims.
 
+## Amendment 1: the two owner rules were phase-blind
+
+Chronology, stated exactly. The original freeze above landed in commit
+`20f6017`. The guard was then implemented, and its first pass over the
+existing test suite refuted two of the nine frozen rule STATEMENTS before any
+study harness or result-producing run existed. This amendment is authored
+after that implementation pass and before every study run, and it is additive
+to the rule set rather than a relaxation of it. The original statements stay
+above, unedited, so the correction is legible.
+
+What was wrong. `source-attribution` and `owner-egress` were both written as
+if every routed byte leaves the owner. Only dispatch does. Combine carries the
+pre-reduced expert outputs BACK to the owner, so its source is a peer expert
+owner and its destination is the owner. As literally frozen, both rules would
+be violated by every correct combine table and the guard would reject every
+correct step, which makes it useless rather than strict.
+
+Corrected statements, replacing the two rows above:
+
+| Rule | Corrected statement | Applies |
+|---|---|---|
+| `source-attribution` | every dispatch pair's source is the declared owner and every combine pair's destination is the declared owner | always |
+| `owner-egress` | every directed byte has the declared owner at exactly one endpoint, and the step's owner egress equals its owner ingress | always |
+
+`destination-legality` gains the symmetric clause that both endpoints are
+distinct members of `ep_ranks`, which the original row stated only for the
+destination.
+
+What does not change. The fault model, the arms, the cells, the closed-form
+bounds, the detection matrix and every frozen expectation E1 through E6 stand
+exactly as written. Source replication makes dispatch rows leave `W` different
+ranks and leaves most rows with the owner at neither endpoint, so both
+corrected rules still detect it at both worlds, which is what E5 claims. The
+`step-hop-bound` rule, the one E3 and E4 turn on, is untouched.
+
+Cost of the correction, stated before the run. The two corrected rules are now
+partly redundant with each other and with `transpose-symmetry`: a table that
+passes the phase-aware rule normally passes the phase-agnostic one. They are
+retained separately because they fail on different faults, `owner-egress`
+surviving a producer that swaps the two phase labels while
+`source-attribution` does not. Redundancy among fatal unscored guards costs
+nothing in the score, since none of them enters a behavioral denominator.
+
 ## Registry discipline
 
 This freeze registers no new task ID. An ID is registered after the run only
