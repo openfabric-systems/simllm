@@ -207,9 +207,9 @@ the link rate must double the serialization term exactly and leave propagation
 untouched. Registered:
 
 - Fluid: `sum_p (F_p^200 - PROP) == 2 * sum_p (F_p^400 - PROP)` within
-  `+/- sum_p n_p` picoseconds per step, and the fluid propagation total is
+  plus or minus `sum_p n_p` picoseconds per step, and the fluid propagation total is
   exactly 96,000,000 ps at both rates.
-- Analytic: `sum_p A_p^200 == 2 * sum_p A_p^400` within `+/- 48 * 999`
+- Analytic: `sum_p A_p^200 == 2 * sum_p A_p^400` within plus or minus `48 * 999`
   picoseconds per step, the quantization allowance.
 
 A term that moved by 1.05 or by 4 would fail. The registered direction is a
