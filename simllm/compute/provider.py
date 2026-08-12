@@ -61,7 +61,17 @@ class ComputeProvider(abc.ABC):
     A provider may also expose an ordered layer breakdown for a fused step
     through :meth:`estimate_layers`. The default returns ``None`` so existing
     providers and their callers retain the scalar estimate exactly.
+
+    ``precision_compute_level`` names the compute seam level this provider
+    implements, using the vocabulary of
+    :class:`simllm.core.ComputeLevel`. It is a plain string so this module
+    stays independent of the core package. ``None`` means the provider does
+    not declare a level, and the unified precision surface then treats the
+    compute seam as unconstrained by this spelling rather than assuming one.
     """
+
+    #: declared compute-seam level, or None when the provider names no level
+    precision_compute_level: str | None = None
 
     @abc.abstractmethod
     def estimate(self, kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate: ...
@@ -89,6 +99,8 @@ class RooflineProvider(ComputeProvider):
     intensity against the GPU envelope. ``efficiency`` derates peak numbers
     (real kernels rarely reach 100% of either roof).
     """
+
+    precision_compute_level = "roofline"
 
     def __init__(
         self,
@@ -282,6 +294,8 @@ class ProfileTableProvider(ComputeProvider):
     interpolation direction (the query can still interpolate along a
     different, positive axis).
     """
+
+    precision_compute_level = "profile-table"
 
     EXACT_UNCERTAINTY = 0.05
     MIN_INTERPOLATED_UNCERTAINTY = 0.15

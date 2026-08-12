@@ -1550,6 +1550,8 @@ class CopyEngineServiceModel:
 class TraceCalibratedGpuProvider(ComputeProvider):
     """O(1) ``ComputeProvider`` adapter over estimates replayed at construction."""
 
+    precision_compute_level = "profile-table"
+
     def __init__(
         self,
         architectures: Iterable[GpuArchitectureProfile],

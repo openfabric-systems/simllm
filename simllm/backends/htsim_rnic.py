@@ -23,6 +23,11 @@ from simllm.backends._child_process import (
     prepare_owned_child_runtime,
     run_owned_process,
 )
+from simllm.core import (
+    PrecisionConfig,
+    check_precision_selection,
+    network_level_for_profile,
+)
 
 RNIC_PROFILES = ("rnic-nn", "rnic-nn-fluid", "rnic-cn")
 
@@ -56,12 +61,26 @@ class HtsimRnicConfig:
     extra_flags: dict[str, str] = field(default_factory=dict)
     #: regression-only negative control; production runs must retain False
     unsafe_disable_child_lifetime_binding: bool = False
+    #: optional explicit fidelity surface checked against the profile spelling
+    precision: PrecisionConfig | None = None
+    #: the seams this configuration selects; set by validation, never by a caller
+    selected_precision_levels: dict[str, object] = field(
+        init=False,
+        repr=False,
+        compare=False,
+        default_factory=dict,
+    )
 
     def __post_init__(self) -> None:
         if self.profile not in RNIC_PROFILES:
             raise ValueError(f"profile must be one of {RNIC_PROFILES}")
         if type(self.unsafe_disable_child_lifetime_binding) is not bool:
             raise TypeError("unsafe_disable_child_lifetime_binding must be a boolean")
+        self.selected_precision_levels = check_precision_selection(
+            self.precision,
+            network=network_level_for_profile(self.profile),
+            selection_source="HtsimRnicConfig",
+        )
 
 
 def build_htsim_rnic_command(binary: Path, cfg: HtsimRnicConfig) -> list[str]:
