@@ -311,12 +311,12 @@ were populated and COMP-17 remains open unchanged.
 `README.md` and `docs/README_PRO.md` contain no statement contradicted by this
 closure.
 
-`docs/architecture.md` line 561 states that in `estimate_concurrent` "a later
-task backfills capacity an earlier one cannot use", with no residency
-qualification. Finding G2 shows backfill happens only while the SM still has
-room: with each CTA claiming half the shared memory, the later task does not
-backfill at all and the two tasks serialize. The sentence is incomplete rather
-than wrong, and it is reported here rather than edited.
+`docs/architecture.md`, in the paragraph describing `estimate_concurrent`,
+states that "a later task backfills capacity an earlier one cannot use", with
+no residency qualification. Finding G2 shows backfill happens only while the
+SM still has room: with each CTA claiming half the shared memory, the later
+task does not backfill at all and the two tasks serialize. The sentence is
+incomplete rather than wrong, and it is reported here rather than edited.
 
 ## Claim boundaries
 
