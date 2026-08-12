@@ -634,6 +634,169 @@ class GpuConcurrentEstimate:
         return self.hbm_transacted_bytes
 
 
+class MixedMakespanRegime(str, Enum):
+    """Which measured mechanism set a concurrent makespan.
+
+    ``ISSUE_ORDER`` is the case in which every task admitted its first CTAs
+    at its own eligibility cycle, so the tasks overlapped and the makespan
+    exceeded the longest isolated control only by the submission-order issue
+    delay. ``RESIDENCY_SERIALIZED`` is the case in which at least one task
+    could not admit at eligibility because the SM's residency currencies were
+    already claimed, so the makespan carries that task's whole isolated
+    duration after its admission.
+    """
+
+    ISSUE_ORDER = "issue-order"
+    RESIDENCY_SERIALIZED = "residency-serialized"
+
+
+@dataclass(frozen=True, kw_only=True)
+class MixedMakespanForm:
+    """Measured decomposition of one concurrent replay against its controls.
+
+    This record is a read-only projection of a replay that already happened.
+    It is not a second estimator: every field is arithmetic over the supplied
+    :class:`GpuConcurrentEstimate` and the isolated single-task controls
+    measured on the same architecture. ``simllm.compute`` keeps one timing
+    authority, :class:`SmSchedulerModel`, and this record only names the terms
+    of its result so a study or regression can compare them.
+
+    The two registered forms come from findings G1 and G2 of the task-mix
+    study. They are the measured behavior of the exact frozen fixtures there,
+    not a general scheduling law for other launch shapes or architectures.
+    """
+
+    regime: MixedMakespanRegime
+    #: task identifiers in the order they were submitted to the replay
+    task_ids: tuple[str, ...]
+    #: isolated control duration of each task, same order as ``task_ids``
+    isolated_cycles: tuple[int, ...]
+    #: eligibility, admission and completion cycles, same order
+    eligible_cycles: tuple[int, ...]
+    admitted_cycles: tuple[int, ...]
+    completion_cycles: tuple[int, ...]
+    #: measured concurrent makespan
+    mixed_cycles: int
+    #: identifier of the task that could not admit at its own eligibility
+    residency_gated_task_id: str | None
+
+    @property
+    def concurrent_floor_cycles(self) -> int:
+        """Longest isolated control: no concurrent replay can finish sooner."""
+
+        return max(self.isolated_cycles)
+
+    @property
+    def serialized_ceiling_cycles(self) -> int:
+        """Fully serialized controls: the conservative upper bound."""
+
+        return sum(self.isolated_cycles)
+
+    @property
+    def issue_delay_cycles(self) -> int:
+        """G1 term: makespan above the longest isolated control.
+
+        This subtraction is a definition, not a prediction. What the task-mix
+        study measured, and what a replication has to reproduce, is that the
+        term follows the actual submitted task order and disappears only when
+        both the per-SM scheduler budget and the load/store issue width are
+        widened together.
+        """
+
+        return self.mixed_cycles - self.concurrent_floor_cycles
+
+    @property
+    def residency_delay_cycles(self) -> tuple[int, ...]:
+        """Cycles each task waited for SM residency after becoming eligible."""
+
+        return tuple(
+            admitted - eligible
+            for admitted, eligible in zip(
+                self.admitted_cycles,
+                self.eligible_cycles,
+                strict=True,
+            )
+        )
+
+    @property
+    def residency_serialized_cycles(self) -> int | None:
+        """G2 form: gated admission plus that task's whole isolated control.
+
+        ``None`` in the issue-order regime, where no task was gated. Unlike
+        :attr:`issue_delay_cycles` this is a real predicate: it asserts that a
+        residency-gated task pays its full isolated duration starting at its
+        admission cycle, which a makespan value alone would not identify.
+        """
+
+        if self.residency_gated_task_id is None:
+            return None
+        index = self.task_ids.index(self.residency_gated_task_id)
+        return self.admitted_cycles[index] + self.isolated_cycles[index]
+
+    @property
+    def within_physical_interval(self) -> bool:
+        """Whether the makespan sits inside its floor and serialized ceiling."""
+
+        return (
+            self.concurrent_floor_cycles
+            <= self.mixed_cycles
+            <= self.serialized_ceiling_cycles
+        )
+
+
+def decompose_mixed_makespan(
+    estimate: GpuConcurrentEstimate,
+    isolated_cycles: Mapping[str, int],
+) -> MixedMakespanForm:
+    """Name the measured terms of one concurrent replay.
+
+    ``isolated_cycles`` maps each task identifier to the duration the same
+    launch measured alone on the same architecture, i.e. the single-task
+    control. Every task in ``estimate`` must have one, because a decomposition
+    against a missing control would silently invent a bound.
+    """
+
+    if not isinstance(estimate, GpuConcurrentEstimate):
+        raise TypeError("estimate must be a GpuConcurrentEstimate")
+    if not isinstance(isolated_cycles, Mapping):
+        raise TypeError("isolated_cycles must be a mapping")
+    if not estimate.tasks:
+        raise ValueError("a mixed makespan needs at least one task estimate")
+    missing = tuple(
+        task.task_id for task in estimate.tasks if task.task_id not in isolated_cycles
+    )
+    if missing:
+        raise KeyError(f"no isolated control for tasks {missing}")
+    for task in estimate.tasks:
+        _require_positive_int(
+            f"isolated control for {task.task_id!r}", isolated_cycles[task.task_id]
+        )
+
+    gated = tuple(
+        task for task in estimate.tasks if task.admitted_cycle > task.eligible_cycle
+    )
+    if len(gated) > 1:
+        raise ValueError(
+            "more than one task waited for residency; the registered G2 form "
+            "covers a single gated task, so this replay needs its own "
+            "registration before it is decomposed"
+        )
+    return MixedMakespanForm(
+        regime=(
+            MixedMakespanRegime.RESIDENCY_SERIALIZED
+            if gated
+            else MixedMakespanRegime.ISSUE_ORDER
+        ),
+        task_ids=tuple(task.task_id for task in estimate.tasks),
+        isolated_cycles=tuple(isolated_cycles[task.task_id] for task in estimate.tasks),
+        eligible_cycles=tuple(task.eligible_cycle for task in estimate.tasks),
+        admitted_cycles=tuple(task.admitted_cycle for task in estimate.tasks),
+        completion_cycles=tuple(task.completion_cycle for task in estimate.tasks),
+        mixed_cycles=estimate.duration_cycles,
+        residency_gated_task_id=gated[0].task_id if gated else None,
+    )
+
+
 # Mutable replay state is deliberately private. Public workload and profile
 # records above remain immutable and portable.
 @dataclass

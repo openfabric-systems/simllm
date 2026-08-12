@@ -3,16 +3,30 @@
 The placement manifest remains the sole authority for whether two semantic
 global ranks share a node. This module classifies already expanded directed
 segments before any fabric rendering. Local segments use a declared flat
-per-source NVLink serializer; remote segments remain inputs to the existing
+per-endpoint NVLink serializer; remote segments remain inputs to the existing
 fabric backend.
 
-The first-cut service is deliberately analytic and uncalibrated. GOAL calc
-units are whole nanoseconds, so one source's phase service is
+Each local endpoint is charged from an explicit byte ledger that carries both
+directions, never from a source-side surrogate. The modeled port is full
+duplex, matching NVLink and NVSwitch ports, which carry the declared bandwidth
+in each direction independently, so one endpoint's load is
 
-    ceil(local_egress_bytes * 1e9 / bandwidth_bytes_per_second)
+    endpoint_load = max(egress_bytes, ingress_bytes)
 
-nanoseconds. No propagation term is added. TRAF-11 owns calibration against
-same-generation measurements.
+and the rejected alternative, a shared half-duplex port charged
+``egress_bytes + ingress_bytes``, would double a symmetric exchange that the
+hardware serves on independent transmit and receive lanes. GOAL calc units are
+whole nanoseconds, so one endpoint's phase service is
+
+    ceil(endpoint_load * 1e9 / bandwidth_bytes_per_second)
+
+nanoseconds, and the serial phase costs the largest of them. No propagation
+term is added. TRAF-11 owns calibration against same-generation measurements.
+
+Egress alone was an exact proxy only while every routed token was sourced by
+every expert-parallel rank, which made the local traffic matrix symmetric. Once
+each routed token has one home rank, a combine phase fans W-1 sources into that
+one rank, and the missing ingress term undercharges it.
 """
 
 from __future__ import annotations
@@ -40,6 +54,31 @@ def _require_positive_int(name: str, value: object) -> int:
 
 def _ceil_div(numerator: int, denominator: int) -> int:
     return (numerator + denominator - 1) // denominator
+
+
+def _endpoint_byte_ledger(
+    segments: tuple[DirectedCollectiveSegment, ...],
+) -> tuple[tuple[int, int, int], ...]:
+    """Explicit per-endpoint (rank, egress, ingress) ledger over local segments.
+
+    Both directions are accumulated from the segments themselves. No transpose
+    or symmetry assumption is used, so a one-to-many dispatch and a many-to-one
+    combine produce different ledgers from the same segment count.
+    """
+
+    egress: dict[int, int] = {}
+    ingress: dict[int, int] = {}
+    for segment in segments:
+        egress[segment.source_rank] = (
+            egress.get(segment.source_rank, 0) + segment.payload_bytes
+        )
+        ingress[segment.destination_rank] = (
+            ingress.get(segment.destination_rank, 0) + segment.payload_bytes
+        )
+    return tuple(
+        (rank, egress.get(rank, 0), ingress.get(rank, 0))
+        for rank in sorted(set(egress) | set(ingress))
+    )
 
 
 @dataclass(frozen=True)
@@ -132,14 +171,16 @@ class CollectiveCommunicationPhase:
 
 @dataclass(frozen=True)
 class ClassifiedCommunicationPhase:
-    """One phase split into fabric segments and analytic source service."""
+    """One phase split into fabric segments and analytic endpoint service."""
 
     phase: CollectiveCommunicationPhase
     fabric_segments: tuple[DirectedCollectiveSegment, ...]
     nvlink_segments: tuple[DirectedCollectiveSegment, ...]
-    #: semantic source rank to egress service in whole nanoseconds
-    nvlink_source_service_ns: tuple[tuple[int, int], ...]
-    #: maximum source serializer duration for this serial phase
+    #: sorted local endpoint ledger of (rank, egress bytes, ingress bytes)
+    nvlink_endpoint_bytes: tuple[tuple[int, int, int], ...]
+    #: declared one-direction endpoint capacity used to charge this phase
+    nvlink_bandwidth_bytes_per_second: int
+    #: maximum endpoint serializer duration for this serial phase
     nvlink_service_ps: int
 
     def __post_init__(self) -> None:
@@ -147,8 +188,8 @@ class ClassifiedCommunicationPhase:
         object.__setattr__(self, "nvlink_segments", tuple(self.nvlink_segments))
         object.__setattr__(
             self,
-            "nvlink_source_service_ns",
-            tuple(self.nvlink_source_service_ns),
+            "nvlink_endpoint_bytes",
+            tuple(tuple(entry) for entry in self.nvlink_endpoint_bytes),
         )
         if not isinstance(self.phase, CollectiveCommunicationPhase):
             raise TypeError("phase must be a CollectiveCommunicationPhase")
@@ -163,22 +204,40 @@ class ClassifiedCommunicationPhase:
             cursor = iter(self.phase.segments)
             if any(not any(candidate == segment for candidate in cursor) for segment in subset):
                 raise ValueError(f"{name} segments must retain original phase order")
-        services = self.nvlink_source_service_ns
-        if tuple(sorted(services)) != services:
-            raise ValueError("NVLink source services must be sorted by source rank")
-        service_ranks = [rank for rank, _ in services]
-        if len(service_ranks) != len(set(service_ranks)):
-            raise ValueError("NVLink source services contain duplicate ranks")
-        local_sources = {segment.source_rank for segment in self.nvlink_segments}
-        if set(service_ranks) != local_sources:
-            raise ValueError("NVLink source services do not cover the local sources")
-        for rank, duration_ns in services:
-            _require_nonnegative_rank("NVLink source rank", rank)
-            _require_positive_int("NVLink source service", duration_ns)
+        _require_positive_int(
+            "nvlink_bandwidth_bytes_per_second",
+            self.nvlink_bandwidth_bytes_per_second,
+        )
+        ledger = self.nvlink_endpoint_bytes
+        if any(len(entry) != 3 for entry in ledger):
+            raise ValueError("an endpoint ledger entry must be a three-item tuple")
+        if tuple(sorted(ledger)) != ledger:
+            raise ValueError("NVLink endpoint ledger must be sorted by rank")
+        ledger_ranks = [rank for rank, _, _ in ledger]
+        if len(ledger_ranks) != len(set(ledger_ranks)):
+            raise ValueError("NVLink endpoint ledger contains duplicate ranks")
+        for rank, egress_bytes, ingress_bytes in ledger:
+            _require_nonnegative_rank("NVLink endpoint rank", rank)
+            _require_nonnegative_rank("NVLink endpoint egress", egress_bytes)
+            _require_nonnegative_rank("NVLink endpoint ingress", ingress_bytes)
+            if egress_bytes + ingress_bytes <= 0:
+                raise ValueError("a local endpoint must carry positive bytes")
+        if ledger != _endpoint_byte_ledger(self.nvlink_segments):
+            raise ValueError("NVLink endpoint ledger disagrees with the local segments")
+        if sum(egress for _, egress, _ in ledger) != self.nvlink_bytes:
+            raise ValueError("NVLink endpoint egress does not conserve local bytes")
+        if sum(ingress for _, _, ingress in ledger) != self.nvlink_bytes:
+            raise ValueError("NVLink endpoint ingress does not conserve local bytes")
         _require_nonnegative_rank("nvlink_service_ps", self.nvlink_service_ps)
-        expected_phase_ps = max((duration for _, duration in services), default=0) * 1000
+        expected_phase_ps = (
+            max(
+                (duration for _, duration in self.nvlink_endpoint_service_ns),
+                default=0,
+            )
+            * 1000
+        )
         if self.nvlink_service_ps != expected_phase_ps:
-            raise ValueError("nvlink_service_ps disagrees with source service")
+            raise ValueError("nvlink_service_ps disagrees with the endpoint ledger")
 
     @property
     def fabric_bytes(self) -> int:
@@ -187,6 +246,33 @@ class ClassifiedCommunicationPhase:
     @property
     def nvlink_bytes(self) -> int:
         return sum(segment.payload_bytes for segment in self.nvlink_segments)
+
+    @property
+    def nvlink_endpoint_service_ns(self) -> tuple[tuple[int, int], ...]:
+        """Read-only projection of the ledger onto whole-nanosecond service."""
+
+        return tuple(
+            (
+                rank,
+                _ceil_div(
+                    max(egress_bytes, ingress_bytes) * 1_000_000_000,
+                    self.nvlink_bandwidth_bytes_per_second,
+                ),
+            )
+            for rank, egress_bytes, ingress_bytes in self.nvlink_endpoint_bytes
+        )
+
+    @property
+    def nvlink_peak_endpoint_bytes(self) -> int:
+        """Largest single-endpoint directional load charged by this phase."""
+
+        return max(
+            (
+                max(egress_bytes, ingress_bytes)
+                for _, egress_bytes, ingress_bytes in self.nvlink_endpoint_bytes
+            ),
+            default=0,
+        )
 
 
 @dataclass(frozen=True)
@@ -267,7 +353,8 @@ def _classify_phase(
             phase=phase,
             fabric_segments=phase.segments,
             nvlink_segments=(),
-            nvlink_source_service_ns=(),
+            nvlink_endpoint_bytes=(),
+            nvlink_bandwidth_bytes_per_second=bandwidth_bytes_per_second,
             nvlink_service_ps=0,
         )
 
@@ -284,22 +371,22 @@ def _classify_phase(
         else:
             fabric.append(segment)
 
-    source_egress_bytes: dict[int, int] = {}
-    for segment in local:
-        source_egress_bytes[segment.source_rank] = (
-            source_egress_bytes.get(segment.source_rank, 0) + segment.payload_bytes
+    endpoint_bytes = _endpoint_byte_ledger(tuple(local))
+    endpoint_service_ns = tuple(
+        _ceil_div(
+            max(egress_bytes, ingress_bytes) * 1_000_000_000,
+            bandwidth_bytes_per_second,
         )
-    source_service_ns = {
-        rank: _ceil_div(payload_bytes * 1_000_000_000, bandwidth_bytes_per_second)
-        for rank, payload_bytes in source_egress_bytes.items()
-    }
+        for _, egress_bytes, ingress_bytes in endpoint_bytes
+    )
 
     return ClassifiedCommunicationPhase(
         phase=phase,
         fabric_segments=tuple(fabric),
         nvlink_segments=tuple(local),
-        nvlink_source_service_ns=tuple(sorted(source_service_ns.items())),
-        nvlink_service_ps=max(source_service_ns.values(), default=0) * 1000,
+        nvlink_endpoint_bytes=endpoint_bytes,
+        nvlink_bandwidth_bytes_per_second=bandwidth_bytes_per_second,
+        nvlink_service_ps=max(endpoint_service_ns, default=0) * 1000,
     )
 
 

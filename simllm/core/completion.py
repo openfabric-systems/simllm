@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from fractions import Fraction
+from itertools import pairwise
 
 from simllm.core.bookkeeping import (
     BookkeepingLedger,
@@ -15,8 +16,14 @@ from simllm.core.execution import (
     ExecutionGraph,
     ExecutionResult,
 )
+from simllm.core.execution_io import operation_participant_ranks
 from simllm.core.request_lifetime import RequestLifetimeRegistry
-from simllm.core.runtime import QueueVisit, RuntimeOperationRecord, RuntimeReport
+from simllm.core.runtime import (
+    QueueVisit,
+    RuntimeCriticalSegment,
+    RuntimeOperationRecord,
+    RuntimeReport,
+)
 from simllm.core.step import (
     AdditiveVisitTotals,
     LatencyAttribution,
@@ -149,7 +156,11 @@ class CompletionReducer:
         result: ExecutionResult,
         report: RuntimeReport,
         clock: VirtualClock,
-    ) -> tuple[dict[str, RuntimeOperationRecord], tuple[str, ...]]:
+    ) -> tuple[
+        dict[str, RuntimeOperationRecord],
+        tuple[str, ...],
+        dict[tuple[str, int], RuntimeCriticalSegment],
+    ]:
         if not isinstance(record, StepRecord):
             raise TypeError("record must be a StepRecord")
         if not isinstance(graph, ExecutionGraph):
@@ -183,16 +194,104 @@ class CompletionReducer:
         by_id = {operation.operation_id: operation for operation in report.operations}
         if len(by_id) != len(report.operations):
             raise ValueError("RuntimeReport contains duplicate operation IDs")
-        for operation in report.operations:
-            if operation.attribution.total_ps != operation.breakdown.operation_latency_ps:
+        graph_operation_by_id = {
+            operation.operation_id: operation for operation in graph.operations
+        }
+        critical_segments: dict[tuple[str, int], RuntimeCriticalSegment] = {}
+        for operation_record in report.operations:
+            if (
+                operation_record.attribution.total_ps
+                != operation_record.breakdown.operation_latency_ps
+            ):
                 raise ValueError(
-                    f"operation {operation.operation_id!r} attribution does not conserve"
+                    f"operation {operation_record.operation_id!r} attribution does not conserve"
                 )
-            predecessor = operation.critical_predecessor_id
+            predecessor = operation_record.critical_predecessor_id
             if predecessor is not None and predecessor not in by_id:
                 raise ValueError(
-                    f"operation {operation.operation_id!r} names an unknown predecessor"
+                    f"operation {operation_record.operation_id!r} names an unknown predecessor"
                 )
+            graph_operation = graph_operation_by_id[operation_record.operation_id]
+            expected_ranks = operation_participant_ranks(graph_operation)
+            segment_ranks = tuple(
+                segment.participant_rank
+                for segment in operation_record.critical_segments
+            )
+            if segment_ranks != expected_ranks:
+                raise ValueError(
+                    f"operation {operation_record.operation_id!r} critical segments "
+                    "disagree with canonical participants"
+                )
+            participant_completions = dict(
+                operation_record.participant_completed_at_ps
+            )
+            if tuple(sorted(participant_completions)) != expected_ranks:
+                raise ValueError(
+                    f"operation {operation_record.operation_id!r} participant "
+                    "completions disagree with canonical participants"
+                )
+            for segment in operation_record.critical_segments:
+                if segment.operation_id != operation_record.operation_id:
+                    raise ValueError("critical segment operation identity disagrees")
+                if (
+                    segment.completed_at_ps
+                    != participant_completions[segment.participant_rank]
+                ):
+                    raise ValueError("critical segment participant completion disagrees")
+                key = (segment.operation_id, segment.participant_rank)
+                if key in critical_segments:
+                    raise ValueError("RuntimeReport contains duplicate critical segments")
+                critical_segments[key] = segment
+
+        for segment in critical_segments.values():
+            if segment.predecessor_operation_id is None:
+                if segment.started_at_ps != graph.released_at_ps:
+                    raise ValueError(
+                        "root critical segment does not start at graph release"
+                    )
+                continue
+            assert segment.predecessor_participant_rank is not None
+            predecessor_key = (
+                segment.predecessor_operation_id,
+                segment.predecessor_participant_rank,
+            )
+            predecessor_segment = critical_segments.get(predecessor_key)
+            if predecessor_segment is None:
+                raise ValueError("critical segment names an unknown predecessor segment")
+            if segment.started_at_ps != predecessor_segment.completed_at_ps:
+                raise ValueError("critical segment predecessor timestamp disagrees")
+
+        report_segment_chain = report.realized_critical_path_segments
+        if any(key not in critical_segments for key in report_segment_chain):
+            raise ValueError("RuntimeReport critical path names an unknown segment")
+        if tuple(key[0] for key in report_segment_chain) != (
+            report.realized_critical_path_operation_ids
+        ):
+            raise ValueError("RuntimeReport critical path projections disagree")
+        for predecessor_key, segment_key in pairwise(report_segment_chain):
+            segment = critical_segments[segment_key]
+            if (
+                segment.predecessor_operation_id,
+                segment.predecessor_participant_rank,
+            ) != predecessor_key:
+                raise ValueError("RuntimeReport critical segment chain is discontinuous")
+        if report_segment_chain:
+            report_chain_latency_ps = sum(
+                critical_segments[key].breakdown.operation_latency_ps
+                for key in report_segment_chain
+            )
+            report_endpoint = critical_segments[report_segment_chain[-1]]
+            if (
+                report_chain_latency_ps
+                != report_endpoint.completed_at_ps - graph.released_at_ps
+            ):
+                raise ValueError("RuntimeReport critical segment chain does not conserve")
+        report_queue_ps = sum(
+            critical_segments[key].breakdown.critical_path_queue_ps
+            for key in report_segment_chain
+        )
+        if report_queue_ps != report.critical_path_queue_ps:
+            raise ValueError("RuntimeReport critical-path queue total disagrees")
 
         if any(visit.execution_id != graph.execution_id for visit in report.visits):
             raise ValueError("RuntimeReport visit execution ID disagrees with graph")
@@ -234,27 +333,48 @@ class CompletionReducer:
                 raise ValueError(
                     f"operation {operation_id!r} has no unique matching completion event"
                 )
-        return by_id, required_ids
+        return by_id, required_ids, critical_segments
 
     @staticmethod
     def _critical_chain(
         endpoint_id: str,
         by_id: dict[str, RuntimeOperationRecord],
+        critical_segments: dict[tuple[str, int], RuntimeCriticalSegment],
         released_at_ps: int,
-    ) -> tuple[tuple[str, ...], LatencyAttribution]:
-        reverse_chain: list[str] = []
-        seen: set[str] = set()
-        current: str | None = endpoint_id
+    ) -> tuple[tuple[tuple[str, int], ...], LatencyAttribution]:
+        endpoint_record = by_id[endpoint_id]
+        endpoint_segment = max(
+            (
+                segment
+                for segment in endpoint_record.critical_segments
+                if segment.completed_at_ps == endpoint_record.completed_at_ps
+            ),
+            key=lambda segment: segment.participant_rank,
+        )
+        reverse_chain: list[tuple[str, int]] = []
+        seen: set[tuple[str, int]] = set()
+        current: tuple[str, int] | None = (
+            endpoint_segment.operation_id,
+            endpoint_segment.participant_rank,
+        )
         while current is not None:
             if current in seen:
                 raise ValueError("request critical predecessor chain contains a cycle")
             seen.add(current)
             reverse_chain.append(current)
-            current = by_id[current].critical_predecessor_id
+            segment = critical_segments[current]
+            if segment.predecessor_operation_id is None:
+                current = None
+            else:
+                assert segment.predecessor_participant_rank is not None
+                current = (
+                    segment.predecessor_operation_id,
+                    segment.predecessor_participant_rank,
+                )
         chain = tuple(reversed(reverse_chain))
         attribution = LatencyAttribution()
-        for operation_id in chain:
-            attribution += by_id[operation_id].attribution
+        for key in chain:
+            attribution += critical_segments[key].attribution
         expected_latency = by_id[endpoint_id].completed_at_ps - released_at_ps
         if attribution.total_ps != expected_latency:
             raise ValueError(
@@ -295,7 +415,7 @@ class CompletionReducer:
             raise ValueError(
                 f"execution ID has already been reduced: {graph.execution_id!r}"
             )
-        by_id, required_ids = self._validate_inputs(
+        by_id, required_ids, critical_segments = self._validate_inputs(
             record,
             graph,
             result,
@@ -353,6 +473,7 @@ class CompletionReducer:
             _, graph_attribution = self._critical_chain(
                 endpoint_id,
                 by_id,
+                critical_segments,
                 graph.released_at_ps,
             )
             endpoint_at_ps = by_id[endpoint_id].completed_at_ps

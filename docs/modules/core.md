@@ -157,10 +157,31 @@ resource critical path. Only the latter can participate in an additive TTFT,
 TPOT or JCT decomposition. GPU wall-idle classifications, PCIe transaction
 wait sums, WQ stage waits and last-completion makespans retain distinct names;
 no caller may compare or add them merely because each has units of time.
-For a dependency chain, each operation segment begins at its realized
-predecessor completion. Queue, service and visibility intervals that completed
-before that boundary contribute zero; intervals crossing it contribute only
-their remaining tail. Summed segment latency must equal graph JCT exactly.
+Critical-path accounting is keyed by participant, not by operation. Each
+operation publishes one `RuntimeCriticalSegment` for every rank returned by
+`operation_participant_ranks`, and that per-rank segment set is the
+conservation authority. A segment records its rank's causal boundary,
+completion, selected resource path breakdown, latency attribution and its
+predecessor as an explicit `(operation_id, participant_rank)` pair: a
+participant-local edge names the same rank, a whole-operation edge names the
+predecessor's logical-maximum rank, and a root segment names none and starts at
+graph release. A scalar predecessor per operation cannot express this, because
+a multi-rank collective has a per-rank frontier and a rank proceeding legally
+from its own predecessor would appear to overlap the operation's one global
+predecessor.
+
+Each segment begins at its named predecessor segment's completion, exactly.
+Queue, service and visibility intervals that completed before that boundary
+contribute zero; intervals crossing it contribute only their remaining tail.
+Each segment's breakdown and attribution must each sum to
+`completed_at_ps - started_at_ps`, and the realized endpoint chain
+`realized_critical_path_segments` must be acyclic, start at graph release and
+sum to endpoint completion exactly.
+`realized_critical_path_operation_ids` and the operation-level
+`critical_predecessor_id`, breakdown and attribution remain as explicit
+compatibility projections of that authority; they may not replace, relax or
+contradict it. CORE-46 owns proving the projection cannot contradict the
+segments.
 
 Every optional class or priority scheduler must sit behind a replaceable
 policy. Mandatory protocol legality and ordering constrain the ready set before
@@ -491,9 +512,11 @@ gaps. These are diagnostic findings, not values folded into `ExecutionResult`
 or `StepResult`, so the authority conclusion is unchanged. Cross-check
 disabled preserves the accepted graph artifacts, timestamps and results
 exactly. Local-NVLink comparison rejects at preflight; TRAF-16 owns its
-frontier precision, while the corrected single-node `AAAA` service values
-remain pending CORE-41's ingress-aware analytic correction. CORE-36 owns a
-repository-wide fidelity selector.
+frontier precision. CORE-41 closed the ingress gap and refroze the two
+single-node `AAAA` cells from 4,538,000 ps and 9,047,000 ps of service to
+6,652,000 ps and 13,286,000 ps, carrying JCT to 6,676,000 ps and 13,310,000 ps;
+every `AABB` and `ABCD` row is unchanged. CORE-36 owns a repository-wide
+fidelity selector.
 
 The pre-registered
 [CORE-5 reduction study](../../examples/core5_reduction/RESULTS.md) drove two
@@ -560,6 +583,21 @@ runs. The real Granite study closed one and three requests with zero live views
 and failed closed for suppressed dispatch layer 7 and combine layer 19; see
 [the routing lifetime results](../../examples/routing_lifetime_v1/RESULTS.md).
 
+CORE-35 is complete. Scalar predecessor accounting is gone from the coarse
+report. Each operation publishes one conserved critical segment per canonical
+participant, and `CompletionReducer` validates the inventory, every segment
+completion, every predecessor reference and the realized endpoint chain. The
+Granite replay now runs with no barrier tightening: rank 1 of
+`step-0:layer-1:rank-1:compute` is admitted from rank 1 of
+`step-0:layer-0:ep-combine` rather than rejected against that collective's
+slowest rank. Both graph shapes reproduced their frozen result and completion
+digests over 25 and 33 executions, agreed on every step boundary and every
+completion identity, and differed on exactly 1,305 of 5,760 and 2,553 of 7,680
+intermediate timestamps, never with the barrier earlier. A report that declares
+rank 0 as the predecessor while keeping the rank-1 boundary is still rejected
+atomically, so the graph is not admitted by a weaker check; see
+[the participant frontier results](../../examples/participant_frontier_v1/RESULTS.md).
+
 ## Pre-registered runtime sanity experiments
 
 These expectations are recorded before CORE-4 implements scheduling. CORE-2
@@ -598,28 +636,80 @@ does not claim to produce these resource-contention measurements.
 
 ### Precision
 
-- CORE-41 (Precision; P0; M): make analytic intra-node routed service charge
-  the maximum endpoint load, including both source egress and destination
-  ingress. The current `max(source_egress)` surrogate was exact for symmetric
-  traffic but undercharges the corrected many-to-one combine star. Identify
-  the correction from explicit endpoint byte ledgers, then sweep payload and
-  EP width across symmetric, dispatch-star and combine-star fixtures. Require
-  exact byte conservation, the preregistered ingress-bound service increase
-  and its live JCT effect; preserve symmetric and all-remote timestamps
-  exactly. Revisit the dependency-authority `AAAA` values, which remain
-  baseline observations rather than precision oracles until this lands.
-- CORE-35 (Precision; P1; M): make the coarse runtime report conserve
-  participant-local dependency frontiers in multi-rank serial MoE graphs. The
-  routing-lifetime study's first three-request run executed those frontiers,
-  then `_runtime_report` rejected rank 1 of
-  `step-0:layer-1:rank-1:compute` because its selected path overlapped the
-  operation's single global critical predecessor. Replace that scalar
-  predecessor accounting with a participant-aware critical segment, or an
-  equivalent conserved representation. Acceptance runs the original Granite
-  three-request graph without barrier tightening, retains every completion and
-  routing-lifetime outcome, and matches the accepted barrier projection's
-  scheduler-visible completion while reporting the participant-local work
-  separately rather than double-counting it.
+- CORE-49 (Precision; P1; S): pass the arbitrated order, not the graph order,
+  to the concurrent compute service. `_select_ready_operation` consults the
+  arbitration policy, but `_compute_group` then rebuilds the co-runnable group
+  as `sorted(candidates, key=operation_index)`, i.e. `ExecutionGraph` tuple
+  order, and never consults the policy. Under the identity policy the two
+  orders coincide, which is why COMP-12 could register the measured
+  submission-order issue delay against the graph order and observe it live. A
+  CORE-10 class-aware policy would reorder its selection while the compute
+  service still received graph order, so the registered issue-order term would
+  follow an order the runtime no longer chose. Derive the group order from the
+  same policy decision that selected the first operation, and use the
+  concurrent makespan and per-task admission cycles as the identifying
+  observables. Identity arbitration and class-label permutation must preserve
+  every accepted timestamp, wait, byte count and completion order exactly.
+- CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
+  destination-ingress serializer. Semantic sends serialize per source RNIC and
+  nothing at the receiver, so an all-remote many-to-one combine completes at
+  the maximum single-source egress rather than at a contended arrival. The
+  TRAF-14 qualification could therefore only report its converging four-rank
+  combine as structural evidence: 100 ps at 400 Gbit/s and 200 ps at
+  200 Gbit/s are the largest single extent, not a physical oracle. Identify the
+  correction from explicit per-endpoint byte ledgers, sweep payload and fan-in
+  across dispatch-star, combine-star and symmetric all-remote fixtures, and
+  require exact byte conservation, the preregistered ingress-bound increase and
+  its live TTFT and TPOT effect, while symmetric and single-source cases keep
+  their accepted timestamps. Scope boundary: CORE-41 owns the analytic
+  intra-node routed service and must preserve all-remote timestamps exactly.
+- CORE-42 (Precision; P0; S): requalify
+  [nvlink_locality_v1](../../examples/nvlink_locality_v1/RESULTS.md) under the
+  CORE-41 endpoint charge. Its two all-local `AAAA` cells are still frozen at
+  the superseded maximum-source-egress service of 4,538,000 ps and 9,047,000 ps,
+  so that runner now rejects its own fixture. Unlike the dependency-authority
+  rows, which were recorded as baseline observations, these `AAAA` cells are
+  scored TRAF-B2 instances, so requalification needs its own expectations-only
+  commit that registers 6,652,000 ps, 13,286,000 ps and the corresponding JCTs
+  before the rerun, rather than an edit folded into another change. Acceptance
+  reruns the study, keeps every `AABB` and `ABCD` row exact, and states whether
+  the refrozen `AAAA` instances still carry genuine risk or become exact-oracle
+  evidence.
+- CORE-43 (Precision; P1; M): cross-validate the analytic endpoint charge
+  against the fabric backend's realized per-endpoint serialization on identical
+  traffic. CORE-41 demonstrated the correction at EP width four on a real
+  capture fixture and at widths two, four and eight on synthetic fixtures, but
+  not at the capture scale where the recomputed undercharge is 1.676 times: EP
+  width eight over all 48 Granite phases, egress-only 15,249,408 bytes against
+  true rank-0 endpoint bytes of 25,563,136. Run that traffic all-local and
+  all-remote, compare the analytic charge with the fluid backend's
+  serialization term, which already decomposes as the full endpoint total at 20
+  ps/byte, and require the two serializers to agree within a preregistered
+  band. Report the effect on a live TTFT and TPOT and keep the all-remote path
+  exact.
+- CORE-46 (Precision; P1; S): check the retained scalar operation-level report
+  projection against the participant-keyed segment authority. CORE-35 made
+  `RuntimeCriticalSegment` the conservation authority but left
+  `critical_predecessor_id`, the operation-level breakdown and attribution, and
+  `realized_critical_path_operation_ids` as unjoined compatibility fields. The
+  one-authority rule requires a read-only projection to be joined by stable
+  identity and checked for loss, duplication and timestamp disagreement, and
+  nothing asserts today that the scalar fields are derivable from the segments.
+  Identify the exact derivation, then require it on the Granite participant-local
+  and barrier cells plus a fixture whose collective ranks finish out of order.
+  Acceptance must reject a hand-built report whose scalar predecessor
+  contradicts its segments, and must preserve every accepted timestamp, digest
+  and completion identity exactly.
+- CORE-47 (Precision; P1; M): retire the whole-operation barrier tightening from
+  the routing-lifetime study path. `_runtime_report_compatible_graph` exists
+  only because the scalar report rejected a participant-local frontier, which
+  CORE-35 fixed, so that study's accepted intermediate timestamps were produced
+  under a stricter ordering than the lowerer emits. Rerun it on the unchanged
+  graph, record which of its surfaces move and which are unchanged, and keep the
+  barrier arm as an explicit comparator rather than as the executed path.
+  Acceptance must retain every lifecycle exit, suppression diagnostic and
+  scheduler-visible boundary, and must state each moved intermediate value with
+  its cause.
 - CORE-3 (Completeness; P1; L): implement explicit KV lifecycle accounting before resource
   contention. Consume adapter observations for RESERVE, ALLOCATE,
   BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
@@ -666,7 +756,7 @@ does not claim to produce these resource-contention measurements.
   reproducible multi-stream trace. Acceptance must vary arrival offset and
   residency pressure, match the observed overlap bands, and preserve the
   simultaneous-arrival and single-kernel baselines exactly.
-- CORE-13 (Precision; P1; L): replace the flat per-source intra-node
+- CORE-13 (Precision; P1; L): replace the flat per-endpoint intra-node
   NVLink-class serializer with calibrated compute-owned NCCL/NVLink service.
   The current surrogate uses payload bytes and one configured rate; it does
   not replay the network kernel, HBM reads or link/topology selection. Use

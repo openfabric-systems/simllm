@@ -27,6 +27,10 @@ from simllm.goal import (
     GoalGraphEdge,
     GoalTrace,
 )
+from simllm.traffic.collective_plan import (
+    collective_plan_by_operation,
+    render_collective_plan,
+)
 from simllm.traffic.patterns import pairwise_all_to_allv, ring_allreduce
 from simllm.traffic.request_fidelity import compare_goal_request_attribution
 
@@ -193,6 +197,7 @@ def render_serial_execution_graph_goal(
             "ordered execution-graph projection"
         )
     needed_frontiers = {edge.predecessor_id for edge in graph_edges}
+    plan_by_operation = collective_plan_by_operation(graph)
 
     used_ranks: set[int] = set()
     expected_tags = collective_goal_tags(graph, base_tag=base_tag)
@@ -283,6 +288,26 @@ def render_serial_execution_graph_goal(
                     provenance=provenance,
                 )
             frontier = {operation.rank: calc}
+        elif isinstance(work, CollectiveWork) and plan_by_operation:
+            after, after_provenance = _collective_entry_gates(
+                trace,
+                operation,
+                entry_dependencies,
+            )
+            plan = plan_by_operation[operation.operation_id]
+            plan_tags = tuple(round_.tag for round_ in plan.rounds)
+            if selected_tags[operation.operation_id] != plan_tags:
+                raise ValueError(
+                    f"collective tags for {operation.operation_id!r} disagree "
+                    "with its immutable plan"
+                )
+            frontier = render_collective_plan(
+                trace,
+                after=after,
+                plan=plan,
+                after_provenance=after_provenance,
+                exact_frontier=operation.operation_id in needed_frontiers,
+            )
         elif isinstance(work, CollectiveWork) and _is_ring(work):
             after, after_provenance = _collective_entry_gates(
                 trace,
@@ -430,6 +455,11 @@ def _artifact_subgraph(
             operation_id
             for operation_id in graph.completion_operation_ids
             if operation_id in operation_ids
+        ),
+        collective_plans=tuple(
+            plan
+            for plan in graph.collective_plans
+            if plan.operation_id in operation_ids
         ),
     )
 
