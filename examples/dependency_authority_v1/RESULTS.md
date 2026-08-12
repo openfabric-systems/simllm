@@ -122,20 +122,42 @@ algebraically entailed by the fixed replay and add no scored evidence.
 
 | Vector bytes | Placement | Total bytes | Fabric bytes | NVLink bytes | NVLink service ps | StepResult JCT ps | Native flows | Precision status |
 |---:|---|---:|---:|---:|---:|---:|---:|---|
-| 1,024 | `AAAA` | 2,983,936 | 0 | 2,983,936 | 4,538,000 | 4,562,000 | 0 | baseline only, pending CORE-41 |
+| 1,024 | `AAAA` | 2,983,936 | 0 | 2,983,936 | 6,652,000 | 6,676,000 | 0 | accepted, CORE-41 refreeze |
 | 1,024 | `AABB` | 2,983,936 | 2,011,136 | 972,800 | 2,194,000 | 136,246,720 | 96 | accepted |
 | 1,024 | `ABCD` | 2,983,936 | 2,983,936 | 0 | 0 | 155,702,768 | 144 | accepted |
-| 2,048 | `AAAA` | 5,967,872 | 0 | 5,967,872 | 9,047,000 | 9,071,000 | 0 | baseline only, pending CORE-41 |
+| 2,048 | `AAAA` | 5,967,872 | 0 | 5,967,872 | 13,286,000 | 13,310,000 | 0 | accepted, CORE-41 refreeze |
 | 2,048 | `AABB` | 5,967,872 | 4,022,272 | 1,945,600 | 4,358,000 | 176,469,440 | 96 | accepted |
 | 2,048 | `ABCD` | 5,967,872 | 5,967,872 | 0 | 0 | 215,381,488 | 144 | accepted |
 
-The single-node values are reproducible observations, not accepted precision.
-The analytic locality service charges maximum source egress but omits maximum
-destination ingress. That proxy undercharges the corrected combine star.
-CORE-41 owns the ingress-aware correction; its expected services are 6,652,000
-ps and 13,286,000 ps rather than the current 4,538,000 ps and 9,047,000 ps.
-The `AABB` cells have one local pair in each direction and the `ABCD` cells
-have no local service, so this defect does not affect their reported JCTs.
+#### CORE-41 refreeze of the two single-node rows
+
+The TRAF-27 run recorded the two `AAAA` rows as reproducible baseline
+observations rather than accepted precision, because the analytic locality
+service then charged maximum source egress and omitted maximum destination
+ingress, which undercharges the corrected combine star. That is now fixed. The
+service charges the maximum endpoint load over both directions, and exactly
+those two rows moved:
+
+| Vector bytes | Service old ps | Service new ps | Signed change ps | JCT, TTFT, TPOT old ps | JCT, TTFT, TPOT new ps |
+|---:|---:|---:|---:|---:|---:|
+| 1,024 | 4,538,000 | 6,652,000 | +2,114,000 | 4,562,000 | 6,676,000 |
+| 2,048 | 9,047,000 | 13,286,000 | +4,239,000 | 9,071,000 | 13,310,000 |
+
+Both new values were predicted before the correction existed, by this study's
+own refreeze expectations and again by the CORE-41 expectations-only commit
+`3879fb01a7249bbe92fe4342ad9e163570c2da1d`. The refreeze commit
+`43ffeb87b3d4877f9a491d55a83ddd33254b3923` recorded them and preceded the rerun
+that tested them. The rerun observed exactly those values at revision
+`43ffeb87b3d4877f9a491d55a83ddd33254b3923`, produced `summary.json` SHA-256
+`95286d67fa033bc66e2e054b4aab9c53976a2bf90ada7e7e31501dbe2586eee4`, matched
+every unaffected row, and left this study at 2/2 families and 3/3 instances
+with all fatal guards passing. These rows are exact fatal-unscored consumer
+regression evidence; no scored family, instance or denominator changed.
+
+The `AABB` cells have one local pair in each direction per phase, so every
+local endpoint's egress equals its ingress and its maximum is unchanged. The
+`ABCD` cells have no local service. Both were measured unchanged, as predicted.
+See [the endpoint service results](../endpoint_service_v1/RESULTS.md).
 
 ### Structural and artifact result
 

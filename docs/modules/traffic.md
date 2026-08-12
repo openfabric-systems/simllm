@@ -65,10 +65,22 @@ the flow-level work the GOAL emitter renders.
   from the graph and rejects a lost, duplicated or mutated operation, edge,
   rank, payload, tag or request partition.
 - In the placement-enabled path, each phase's intra-node segments use a flat
-  analytic per-source egress serializer. The declared first-cut rate is
-  450,000,000,000 bytes/s and source service is
-  `ceil(local_egress_bytes * 1e9 / rate)` whole nanoseconds. Only cross-node
-  segments reach `render_fabric_phase_goal` and htsim. `HtsimStepSink`
+  analytic per-endpoint serializer. `ClassifiedCommunicationPhase` carries an
+  explicit sorted `nvlink_endpoint_bytes` ledger of
+  `(rank, egress_bytes, ingress_bytes)` built from the local segments
+  themselves, with no transpose or symmetry assumption, and rebuilds it in
+  `__post_init__` so a ledger, byte conservation or service that disagrees with
+  its own segments cannot be constructed. The declared first-cut rate is
+  450,000,000,000 bytes/s. The modeled port is full duplex, matching NVLink and
+  NVSwitch ports, so one endpoint's load is
+  `max(egress_bytes, ingress_bytes)`, its service is
+  `ceil(endpoint_load * 1e9 / rate)` whole nanoseconds, and the serial phase
+  costs the largest of them. The rejected alternative, a shared half-duplex port
+  charged `egress_bytes + ingress_bytes`, would double a symmetric exchange the
+  hardware serves on independent lanes; see
+  [the endpoint service results](../../examples/endpoint_service_v1/RESULTS.md).
+  Only cross-node segments reach `render_fabric_phase_goal` and htsim.
+  `HtsimStepSink`
   executes graph-ordered causal artifacts. Within a placement-split collective
   it uses `max(local_service, fabric_service)` for each directed phase and sums
   those phase services. An all-intra-node step invokes no fabric backend. The
@@ -93,6 +105,22 @@ the flow-level work the GOAL emitter renders.
   pre-M5 emitter (golden test). The direct renderer deliberately constructs
   its own ATLAHS schedule so it can remain an independent debug cross-check;
   it is not used to repair or override graph-projected ordering.
+- `plan_execution_graph_collectives` attaches one immutable `CollectivePlan`
+  per collective operation and returns the planned `ExecutionGraph`. The plan
+  is the sole explicit-plan authority for algorithm, rank order, rounds, tags,
+  channels, chunk sizes, endpoint actions, their rank-local predecessors and
+  the directed extents with their request partitions. A canonical SHA-256 over
+  that content is its integrity identity, so a partially changed handoff is
+  rejected before scheduling, and the semantic fields are compared against the
+  `CollectiveWork` they join to, so a byte-conserving rank-order or tag change
+  cannot pass. Coverage is all or nothing: a graph that plans only some of its
+  collectives is invalid. Tags come from the accepted `collective_goal_tags`
+  allocator rather than a second implementation, and that allocator reads them
+  back out of the plan once it is attached. `collective_plan_by_operation`
+  returns the validated inventory and `render_collective_plan` renders the
+  declared actions, choosing only how a finished round is exposed to a
+  successor. A graph with no plan keeps the accepted compatibility path,
+  including the coarse runtime's own expansion, byte for byte.
 - `render_serial_execution_graph_goal` is the CORE-2 graph-only diagnostic
   replay. It accepts validated per-rank compute, ring allreduce and pairwise
   all-to-allv operations, preserves `participant_local_depends_on` edges and
@@ -204,9 +232,33 @@ retained their accepted hashes. All 16 scored relations, 22 exact-oracle rows
 and 12 fatal unscored guards passed; see
 [the overlap results](../../examples/compute_comm_overlap_v1/RESULTS.md).
 The vLLM adapter now emits one implemented source-backed schedule. Its current
-qualification is void, as recorded below. The runtime's
-physical collective expansion and GPU-side contention gaps remain explicit
-under TRAF-14, CORE-26, CORE-27 and COMP-22.
+qualification is void, as recorded below. The runtime's GPU-side contention
+gaps remain explicit under CORE-26, CORE-27 and COMP-22.
+
+The 2026-08-13 TRAF-14 qualification closed the duplicated collective
+expansion. Ring rounds and pairwise extents now live in one immutable
+traffic-owned `CollectivePlan` carried through `ExecutionGraph`, and the
+coarse runtime schedules those declared extents instead of re-deriving them.
+Compared with the shipped `ring_allreduce` and `pairwise_all_to_allv`
+expansions over worlds 2 and 4, payloads 3, 4 and 4,096 bytes, the three
+routed sparse cases and both GOAL frontier modes, all 18 comparisons are
+identical in messages, dependencies, tags, chunks, per-rank frontiers and
+rendered text. The two registered byte-conserving perturbations, a changed
+plan tag and a changed semantic rank order, are both rejected by validation
+and by runtime preflight with zero work requests submitted, while the same
+rank-order change is absorbed silently by the absent-plan surrogate at an
+unchanged 120 ps and unchanged 24 bytes. The explicit plan carries a 3-byte
+four-rank ring that the compatibility runtime rejects outright and reaches
+TTFT and TPOT of exactly 120 ps at 400 Gbit/s and 240 ps at 200 Gbit/s across
+one prefill and two decode steps. All six genuine-risk instances in two
+families passed and no fatal guard was violated; the absent-plan arm keeps its
+559-byte v1 wire form and its exact runtime timing, including under a nonzero
+collective channel service. See
+[the collective plan results](../../examples/collective_plan_v1/RESULTS.md).
+The plan is opt-in today, so TRAF-28 owns making it the lowering default and
+retiring the surrogate, and CORE-48 owns the missing cross-node
+destination-ingress serializer that keeps a converging combine structural
+rather than physical evidence.
 The 2026-08-12 TRAF-13 qualification added `DeviceRuntimeStepSink`, which binds
 the adapter's sole `VirtualClock` and carries optional observations through
 `ObservedStepLowerer`, `CoarseDeviceRuntime`, `CompletionEvent`,
@@ -240,7 +292,9 @@ level rank-local completion is inferred, not directly source-backed.
 
 The retained 440,115,200 directed bytes are a pre-TRAF-25 conservation
 identity over the source-multiplied table and are not portable. The duration
-model keys on maximum per-source egress, not total bytes. Under TRAF-25,
+model keys on maximum per-endpoint load, not total bytes. It keyed on maximum
+per-source egress until CORE-41, which was the same quantity only while the
+local traffic matrix stayed symmetric. Under TRAF-25,
 dispatch egress from the owning rank stays fixed while combine collapses, so
 the communication term changes by roughly a factor of two rather than the
 eightfold total-byte change. `_validate_microbatch_partition` conserves the
@@ -303,10 +357,16 @@ residual. See
   preregistered bounds; the missing 200/400 Gbit/s Granite scaling check;
   unchanged aggregate-default bytes and timing; and retention of the
   30-second render-plus-compile, 1 GiB memory, 64 MiB GOAL and 60-second
-  backend limits. PLAY-14 retains unobserved wire issue order, and CORE-41
-  retains analytic destination-ingress service.
+  backend limits. PLAY-14 retains unobserved wire issue order. CORE-41 closed
+  the analytic destination-ingress gap and supplies the safe full-duplex floor
+  this requalification should use: the synthetic home endpoint carries 16,384
+  bytes in each direction, so `max(egress, ingress)` is 655,360 ps at 200
+  Gbit/s and 327,680 ps at 400 Gbit/s, exactly half the summed floors the void
+  freeze used, and the retained fluid observations exceed them. That makes the
+  requalification recoverable; it does not unvoid or rescore the historical
+  run, whose chronology is preserved.
 - TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
-  zero-propagation, per-source NVLink egress surrogate against
+  zero-propagation, per-endpoint NVLink surrogate against
   same-generation point-to-point and collective captures. Sweep payload and
   participant count on the reference eight-GPU node, hold out at least one
   payload per participant width, and replace the constant with the smallest
@@ -314,15 +374,18 @@ residual. See
   completion error is at most 10 percent or 1 microsecond, whichever is
   larger. Report the before/after TTFT and TPOT effect and retain the exact
   all-remote identity path.
-- TRAF-14 (Precision; P1; M): move ring-round and pairwise-extent expansion
-  from the coarse runtime's current semantic-work surrogate into one immutable
-  traffic-owned collective plan carried through `ExecutionGraph`. The runtime
-  may schedule those extents but may not choose or reconstruct their
-  algorithm, chunk sizes, rank order or tags. Compare the plan against the
-  existing GOAL pattern expansion over payload, world-size and routed sparse-pair
-  sweeps with exact byte, round, dependency and tag conservation. The absent
-  explicit plan must preserve the accepted v1 wire bytes and serial timing
-  exactly.
+- TRAF-28 (Precision; P1; M): make the traffic-owned collective plan the
+  default on the production lowering path so the coarse runtime's semantic-work
+  expansion can be retired. TRAF-14 made the plan the sole authority whenever it
+  is present, but no shipped lowerer attaches one, so every default graph still
+  reaches the runtime's own reconstruction and the two expansions can drift for
+  exactly the graphs nobody opted in. Attach the plan in `SerialStepLowerer` and
+  `lower_step_observations`, keep an explicit bypass that preserves the accepted
+  559-byte v1 wire form and its serial timing, and requalify with the TRAF-14
+  perturbation family plus a live TTFT and TPOT arm on a real replayed step
+  rather than the tiny sentinel. Acceptance must show the runtime reconstruction
+  unreachable on the default path and removable without changing any accepted
+  number.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide
