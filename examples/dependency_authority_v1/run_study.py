@@ -62,6 +62,26 @@ HTSIM_COMPILER_EVIDENCE_AUTHORED_AGAINST = (
 )
 EXPECTED_BEHAVIORAL_FAMILIES = 2
 EXPECTED_BEHAVIORAL_INSTANCES = 3
+CROSS_CHECK_MODE = "atlahs-goal"
+CROSS_CHECK_COMPLETION_TOLERANCE_PS = 0
+EXPECTED_CROSS_CHECK_FINDINGS = {
+    1_024: {
+        "ordering_scope_differences": 47,
+        "negative_phase_frontiers": 46,
+        "first_phase_frontier_gap_ps": -368_640,
+        "minimum_phase_frontier_gap_ps": -1_413_120,
+        "direct_completion_ps": 156_569_755,
+        "signed_completion_difference_band_ps": (-4_212_053, -4_212_005),
+    },
+    2_048: {
+        "ordering_scope_differences": 47,
+        "negative_phase_frontiers": 46,
+        "first_phase_frontier_gap_ps": -737_280,
+        "minimum_phase_frontier_gap_ps": -3_675_091,
+        "direct_completion_ps": 217_222_486,
+        "signed_completion_difference_band_ps": (-8_317_082, -8_317_034),
+    },
+}
 EXPECTED_CELLS = {
     (1_024, "AAAA"): (11_870_208, 0, 11_870_208, 7_097_000),
     (1_024, "AABB"): (11_870_208, 7_913_472, 3_956_736, 2_442_000),
@@ -86,6 +106,12 @@ def _check_frozen_registry() -> None:
         raise AssertionError("legacy GOAL grid is incomplete")
     if set(EXPECTED_CELLS) != expected_keys:
         raise AssertionError("exact locality grid is incomplete")
+    if set(EXPECTED_CROSS_CHECK_FINDINGS) != set(VECTOR_BYTES):
+        raise AssertionError("cross-check finding grid is incomplete")
+    if CROSS_CHECK_MODE != "atlahs-goal":
+        raise AssertionError("cross-check selection literal drifted")
+    if CROSS_CHECK_COMPLETION_TOLERANCE_PS != 0:
+        raise AssertionError("cross-check completion tolerance drifted")
     if PHASE_COUNT - 1 != ADJACENT_TRANSITIONS:
         raise AssertionError("adjacent-transition count drifted")
     if FROZEN_GRAPH_CENSUS["distributed_fifo_edges"] != ADJACENT_TRANSITIONS:
@@ -109,6 +135,25 @@ def _check_frozen_registry() -> None:
         size, digest = LEGACY_GOAL_ORACLES[vector_bytes]
         if size <= 0 or len(digest) != 64:
             raise AssertionError("legacy GOAL oracle is malformed")
+        finding = EXPECTED_CROSS_CHECK_FINDINGS[vector_bytes]
+        if finding["ordering_scope_differences"] != ADJACENT_TRANSITIONS:
+            raise AssertionError("cross-check ordering census drifted")
+        if finding["negative_phase_frontiers"] != ADJACENT_TRANSITIONS - 1:
+            raise AssertionError("cross-check frontier census drifted")
+        if finding["first_phase_frontier_gap_ps"] >= 0:
+            raise AssertionError("first cross-check frontier gap lost its sign")
+        if finding["minimum_phase_frontier_gap_ps"] > finding[
+            "first_phase_frontier_gap_ps"
+        ]:
+            raise AssertionError("minimum cross-check frontier gap is invalid")
+        if finding["direct_completion_ps"] != LEGACY_JCT_PS[vector_bytes]:
+            raise AssertionError("direct cross-check completion drifted")
+        signed_low, signed_high = finding[
+            "signed_completion_difference_band_ps"
+        ]
+        original_low, original_high = EXPECTED_SIGNED_CHANGE_BANDS[vector_bytes]
+        if (signed_low, signed_high) != (-original_high, -original_low):
+            raise AssertionError("cross-check signed band arithmetic drifted")
 
 
 def check_only(args: argparse.Namespace) -> None:
