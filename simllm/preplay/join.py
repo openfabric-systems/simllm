@@ -483,6 +483,7 @@ def join_preplay_arrivals(
     facts = tuple(
         _bookkeeping_record(request, trace_reference) for request in run.requests
     )
+    published_arena_paths: tuple[Path, Path] | None = None
     if routing_arena_index_path is not None:
         # Validate the ledger transaction before publishing either sidecar. The
         # real append sees the same immutable snapshot after the arena build.
@@ -490,6 +491,13 @@ def join_preplay_arrivals(
         from simllm.preplay.arena import build_routing_arena
 
         arena = build_routing_arena(run, routing_arena_index_path)
+        published_arena_paths = (arena.index_path, arena.payload_path)
         arena.close()
-    bookkeeper.extend(facts)
+    try:
+        bookkeeper.extend(facts)
+    except BaseException:
+        if published_arena_paths is not None:
+            for published_path in published_arena_paths:
+                published_path.unlink(missing_ok=True)
+        raise
     return run

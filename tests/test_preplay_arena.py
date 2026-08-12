@@ -200,6 +200,31 @@ def test_join_can_publish_arena_after_bookkeeping_transaction_prevalidates(
         ]
 
 
+def test_join_removes_new_sidecars_if_bookkeeping_commit_fails(tmp_path) -> None:
+    class RejectingBookkeeper(RequestBookkeeper):
+        def extend(self, facts):
+            del facts
+            raise RuntimeError("injected bookkeeping failure")
+
+    trace = _trace()
+    trace_path = write_preplay_trace(
+        tmp_path / "trace.jsonl",
+        trace.provenance,
+        trace.requests,
+    )
+    index_path = tmp_path / "run.routing.json"
+    with pytest.raises(RuntimeError, match="injected bookkeeping failure"):
+        join_preplay_arrivals(
+            (RequestArrival(request_id="alpha", arrived_at_ps=100),),
+            trace_path,
+            RejectingBookkeeper(),
+            routing_arena_index_path=index_path,
+        )
+
+    assert not index_path.exists()
+    assert not index_path.with_suffix(".bin").exists()
+
+
 def test_arena_request_view_blocks_close_and_releases_portably(joined_run, tmp_path):
     arena = build_routing_arena(joined_run, tmp_path / "arena.json")
     view = arena.acquire_request("alpha")
