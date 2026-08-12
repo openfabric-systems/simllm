@@ -68,6 +68,8 @@ from simllm.compute.gpu_model import (
     KernelLaunch,
     MemoryHierarchyProfile,
     MemorySpace,
+    MixedMakespanForm,
+    MixedMakespanRegime,
     NvlinkProfile,
     PipelineKind,
     PipelineProfile,
@@ -77,6 +79,7 @@ from simllm.compute.gpu_model import (
     TraceCalibratedGpuProvider,
     WarpSchedulerPolicy,
     a100_sxm_80gb_seed_profile,
+    decompose_mixed_makespan,
     h100_sxm_80gb_seed_profile,
 )
 from simllm.compute.gpu_model_io import (
@@ -194,6 +197,8 @@ __all__ = [
     "KernelSpec",
     "MemoryHierarchyProfile",
     "MemorySpace",
+    "MixedMakespanForm",
+    "MixedMakespanRegime",
     "ModelDims",
     "NcclCollectiveResult",
     "NcclRoute",
@@ -222,6 +227,7 @@ __all__ = [
     "a100_sxm_80gb_seed_profile",
     "absolute_percentage_error",
     "calibration_artifact_to_profile_table",
+    "decompose_mixed_makespan",
     "estimate_step_latency_ps",
     "gpu_model_artifact_from_json",
     "gpu_model_artifact_to_json",
