@@ -658,26 +658,28 @@ def _expected_pairs(record: Any, routed: Any) -> dict[int, dict[tuple[int, int],
     result = {}
     for layer in range(24):
         dispatch: dict[tuple[int, int], int] = {}
-        for source in (0, 1):
-            for token in tokens:
-                destinations = {
-                    0 if expert < 16 else 1 for expert in token.layers[layer].expert_ids
-                }
-                for destination in destinations:
-                    if source != destination:
-                        pair = (source, destination)
-                        dispatch[pair] = dispatch.get(pair, 0) + VECTOR_BYTES
+        source = 0
+        for token in tokens:
+            destinations = {
+                0 if expert < 16 else 1
+                for expert in token.layers[layer].expert_ids
+            }
+            for destination in destinations:
+                if source != destination:
+                    pair = (source, destination)
+                    dispatch[pair] = dispatch.get(pair, 0) + VECTOR_BYTES
         combine = {(destination, source): size for (source, destination), size in dispatch.items()}
-        result[1000 + layer * 2] = dispatch
-        result[1000 + layer * 2 + 1] = combine
+        if dispatch:
+            result[1000 + layer * 2] = dispatch
+            result[1000 + layer * 2 + 1] = combine
     return result
 
 
 def _expected_step_delta(expected: dict[int, dict[tuple[int, int], int]]) -> int:
     total = 0
     for layer in range(24):
-        dispatch = expected[1000 + layer * 2]
-        combine = expected[1000 + layer * 2 + 1]
+        dispatch = expected.get(1000 + layer * 2, {})
+        combine = expected.get(1000 + layer * 2 + 1, {})
         total += max(dispatch.values(), default=0)
         total += max(combine.values(), default=0)
     return -20 * total
@@ -731,7 +733,11 @@ def _replay_cell(args: argparse.Namespace, bandwidth: int) -> None:
     from simllm.backends import HtsimStepSink, HtsimStepSinkConfig
     from simllm.compute import ComputeProvider, DurationEstimate
     from simllm.preplay import read_preplay_trace, read_routed_experts
-    from simllm.traffic import ExpertPlacementSnapshot, RoutedMoeSupply
+    from simllm.traffic import (
+        ExpertPlacementSnapshot,
+        RoutedMoeSupply,
+        render_step_goal,
+    )
 
     class FixedProvider(ComputeProvider):
         def estimate(self, kernel: Any, gpu: Any) -> DurationEstimate:
@@ -749,6 +755,7 @@ def _replay_cell(args: argparse.Namespace, bandwidth: int) -> None:
         ),
     )
     supply = RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=routed,
         placements=(placement,),
         step_placement_epochs=tuple((step, 0) for step in range(128)),
@@ -846,8 +853,16 @@ def _replay_cell(args: argparse.Namespace, bandwidth: int) -> None:
             expected_deltas.append(0)
             continue
         expected = _expected_pairs(record, routed)
-        goal_path = cell_dir / "htsim" / f"step-{record.step_index:06d}.goal"
-        actual = _goal_sends_by_tag(goal_path.read_text(encoding="utf-8"))
+        actual = _goal_sends_by_tag(
+            render_step_goal(
+                record,
+                _traffic_dims(),
+                (0,),
+                1,
+                ep_ranks=(0, 1),
+                routed_supply=supply,
+            ).render()
+        )
         exact = actual == expected
         goal_checks.append(
             {
@@ -858,11 +873,14 @@ def _replay_cell(args: argparse.Namespace, bandwidth: int) -> None:
         )
         expected_deltas.append(_expected_step_delta(expected))
         outcome = sink.outcomes[network_index]
+        locality = sink.locality_outcomes[network_index]
         if (
             outcome.step_index != record.step_index
             or outcome.routing_mode != "captured"
             or outcome.placement_epoch != 0
             or not outcome.quiescent
+            or locality.total_directed_bytes
+            != sum(size for pairs in expected.values() for size in pairs.values())
         ):
             raise AssertionError("backend outcome failed its captured-routing gates")
         network_index += 1

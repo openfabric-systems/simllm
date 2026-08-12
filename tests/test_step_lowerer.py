@@ -66,8 +66,8 @@ DENSE_LEGACY_GOAL_SHA256 = (
 B1_ABSENT_LEGACY_GOAL_SHA256 = (
     "7087db6780f7e34f5a559a6505eeccc15d984c7b478cd8f0bc5838053825d4b6"
 )
-MOE_LEGACY_GOAL_SHA256 = (
-    "2b3b73320cf02ffa11fc8a513c22edd0b450f8cedf520b28e2156fd2e60a8c0c"
+MOE_GOAL_SHA256 = (
+    "5074699d2bd55a12794bdf39d8181c1475e17ca21a134128e2075470c0eb6543"
 )
 
 
@@ -272,7 +272,7 @@ def test_dense_tp1_lowers_and_renders_as_compute_only_work():
     assert "recv " not in rendered
 
 
-def test_moe_graph_projects_global_serial_fallback_and_keeps_legacy_diagnostic():
+def test_moe_graph_projects_global_serial_fallback_and_direct_diagnostic():
     record = decode_record()
     config = SerialStepLowererConfig(
         SMALL_MOE_DIMS,
@@ -290,9 +290,8 @@ def test_moe_graph_projects_global_serial_fallback_and_keeps_legacy_diagnostic()
         per_layer_calc_ns=per_layer_calc_ns,
         ep_ranks=(0, 1, 2, 3),
     )
-    # Post-specified re-acceptance: the unchanged graph wire now separates
-    # per-layer compute, dispatch and combine causal levels while preserving
-    # the byte-locked legacy diagnostic.
+    # The graph separates per-layer compute, dispatch and combine causal
+    # levels while preserving the direct diagnostic's physical sends.
     assert len(projection.artifacts) == 6
     assert len(projection.boundaries) == 3
     assert len(projection.serialized_edges) == 24
@@ -302,7 +301,7 @@ def test_moe_graph_projects_global_serial_fallback_and_keeps_legacy_diagnostic()
     ) == legacy.render().count(": send ")
     assert (
         hashlib.sha256(legacy.render().encode()).hexdigest()
-        == MOE_LEGACY_GOAL_SHA256
+        == MOE_GOAL_SHA256
     )
     pairwise = [
         operation.work
@@ -311,7 +310,11 @@ def test_moe_graph_projects_global_serial_fallback_and_keeps_legacy_diagnostic()
     ]
     assert len(pairwise) == 2 * SMALL_MOE_DIMS.num_layers
     assert {work.collective for work in pairwise} == {"all-to-allv"}
-    assert {work.payload_bytes for work in pairwise} == {2048}
+    assert {work.payload_bytes for work in pairwise} == {0}
+    assert {
+        sum(size for _, _, size in work.pair_payload_bytes)
+        for work in pairwise
+    } == {3 * 2048}
 
 
 def test_serial_renderer_distinguishes_participant_and_operation_dependencies():
@@ -474,7 +477,7 @@ def test_serial_goal_renderer_rejects_work_it_cannot_preserve(graph, match):
         render_serial_execution_graph_goal(graph)
 
 
-def test_serial_goal_renderer_rejects_zero_payload_pairwise_all_to_allv():
+def test_serial_goal_renderer_preserves_zero_payload_pairwise_frontier():
     graph = ExecutionGraph(
         "zero-a2a",
         0,
@@ -496,8 +499,13 @@ def test_serial_goal_renderer_rejects_zero_payload_pairwise_all_to_allv():
         ),
         ("a2a",),
     )
-    with pytest.raises(ValueError, match="zero-payload pairwise"):
-        render_serial_execution_graph_goal(graph)
+    trace = render_serial_execution_graph_goal(graph)
+
+    assert trace.messages == ()
+    assert any(
+        operation.operation_id == "a2a" and operation.text == "calc 0"
+        for operation in trace.operations
+    )
 
 
 def test_serial_goal_renderer_rejects_single_rank_pairwise_all_to_allv():
@@ -519,7 +527,7 @@ def test_serial_goal_renderer_rejects_single_rank_pairwise_all_to_allv():
         render_serial_execution_graph_goal(graph)
 
 
-def test_serial_goal_renderer_rejects_uncovered_sparse_rank():
+def test_serial_goal_renderer_preserves_uncovered_sparse_rank_frontier():
     graph = ExecutionGraph(
         "uncovered-a2a-rank",
         0,
@@ -536,12 +544,30 @@ def test_serial_goal_renderer_rejects_uncovered_sparse_rank():
                     algorithm_hint="pairwise",
                     pair_payload_bytes=((0, 1, 4096),),
                 ),
+                ),
+                ExecutionOperation(
+                    "after",
+                    2,
+                    "cuda:2:compute",
+                    ComputeWork("after", nominal_duration_ps=1_000),
+                    participant_local_depends_on=("a2a",),
+                ),
             ),
-        ),
-        ("a2a",),
+        ("after",),
     )
-    with pytest.raises(ValueError, match="uncovered ranks 2"):
-        render_serial_execution_graph_goal(graph)
+    trace = render_serial_execution_graph_goal(graph)
+
+    rank2_operations = [
+        operation
+        for operation in trace.operations
+        if operation.rank == 2
+    ]
+    assert [operation.text for operation in rank2_operations] == [
+        "calc 0",
+        "calc 1",
+    ]
+    assert rank2_operations[0].operation_id == "a2a"
+    assert rank2_operations[1].operation_id == "after"
 
 
 def test_serial_renderer_uses_sparse_pair_payload_sizes_exactly():

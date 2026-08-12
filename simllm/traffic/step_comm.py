@@ -17,9 +17,10 @@ operations.
 Expert parallel (:func:`step_moe_alltoalls`): per MoE layer, a dispatch
 pairwise all-to-allv (tokens to their experts' owner ranks) followed by a
 combine pairwise all-to-allv (expert outputs back). An optional captured
-routing supply selects per-token destinations at an explicit placement epoch;
-its absence retains the uniform compatibility assumption documented on the
-function.
+routing supply selects per-token destinations at an explicit placement epoch
+and declares the one engine rank that owns this record's tokens. Its absence
+uses the first EP rank as the documented single-engine source for a uniform
+destination approximation.
 
 This is a deliberately first-order model of step traffic; each
 simplification is a numbered task in docs/modules/traffic.md:
@@ -29,7 +30,7 @@ simplification is a numbered task in docs/modules/traffic.md:
   norm/dropout regions): TRAF-6;
 - `render_step_goal` retains the strict serial compatibility schedule;
   `lower_step_observations` instead preserves adapter-observed queues and
-  dependency edges, with real adapter schedule production tracked by TRAF-13;
+  dependency edges; VLLM-22 supplies the accepted Granite MoE producer;
 - no pipeline-parallel activation traffic (records carry no PP stage
   information yet): TRAF-8;
 - the MoE layer is rendered as one calc, then the TP allreduces, then
@@ -176,9 +177,14 @@ def _validate_observed_collective(
         raise ValueError(f"{path}: collective ranks disagree with the step plan")
     if observed.rank not in planned.ranks:
         raise ValueError(f"{path}: collective anchor rank is outside the step plan")
-    if work.payload_bytes != planned.payload_bytes:
+    semantic_pairwise_marker = (
+        work.collective == "all-to-allv"
+        and work.payload_bytes == 0
+        and not work.pair_payload_bytes
+    )
+    if work.payload_bytes != planned.payload_bytes and not semantic_pairwise_marker:
         raise ValueError(f"{path}: collective payload disagrees with the step plan")
-    if work.pair_payload_bytes != planned.pair_payload_bytes:
+    if work.pair_payload_bytes not in ((), planned.pair_payload_bytes):
         raise ValueError(f"{path}: collective pair payloads disagree with the step plan")
     if work.request_pair_payload_bytes not in ((), planned.request_pair_payload_bytes):
         raise ValueError(
@@ -188,6 +194,160 @@ def _validate_observed_collective(
         raise ValueError(f"{path}: collective algorithm disagrees with the traffic plan")
     if observed.placement_epoch not in (0, placement_epoch):
         raise ValueError(f"{path}: placement epoch disagrees with the traffic plan")
+
+
+def _observed_microbatch_records(
+    record: StepRecord,
+    observations: ExecutionObservations,
+) -> dict[int | None, StepRecord]:
+    """Return the request partition declared by collective correlations."""
+
+    request_ids_by_microbatch: dict[int, tuple[str, ...]] = {}
+    saw_unbatched_collective = False
+    for index, operation in enumerate(observations.operations):
+        if not isinstance(operation.work, CollectiveWork):
+            continue
+        microbatch = operation.correlation.microbatch
+        if microbatch is None:
+            saw_unbatched_collective = True
+            continue
+        if isinstance(microbatch, bool) or not isinstance(microbatch, int):
+            raise TypeError(
+                f"observations.operations[{index}]: microbatch must be an integer"
+            )
+        if microbatch < 0:
+            raise ValueError(
+                f"observations.operations[{index}]: microbatch must be nonnegative"
+            )
+        request_ids = operation.correlation.request_ids
+        if not request_ids:
+            raise ValueError(
+                f"observations.operations[{index}]: microbatch collective needs "
+                "request correlation"
+            )
+        previous = request_ids_by_microbatch.setdefault(microbatch, request_ids)
+        if previous != request_ids:
+            raise ValueError(
+                f"observations.operations[{index}]: microbatch {microbatch} "
+                "request correlation is inconsistent"
+            )
+
+    if not request_ids_by_microbatch:
+        return {None: record}
+    if saw_unbatched_collective:
+        raise ValueError("observations mix batched and unbatched collective sites")
+    indices = tuple(sorted(request_ids_by_microbatch))
+    if indices != tuple(range(len(indices))):
+        raise ValueError("observations microbatch indices must be contiguous from zero")
+
+    scheduled_by_id = {
+        request.request_id: request for request in record.scheduled
+    }
+    if len(scheduled_by_id) != len(record.scheduled):
+        raise ValueError("record.scheduled contains duplicate request identities")
+    flattened = tuple(
+        request_id
+        for microbatch in indices
+        for request_id in request_ids_by_microbatch[microbatch]
+    )
+    expected = tuple(request.request_id for request in record.scheduled)
+    if flattened != expected:
+        raise ValueError(
+            "observed microbatches must partition scheduled requests in source order"
+        )
+
+    records: dict[int | None, StepRecord] = {}
+    for microbatch in indices:
+        request_ids = request_ids_by_microbatch[microbatch]
+        records[microbatch] = StepRecord(
+            step_index=record.step_index,
+            virtual_time_ps=record.virtual_time_ps,
+            scheduled=[scheduled_by_id[request_id] for request_id in request_ids],
+        )
+    return records
+
+
+def _planned_collective_instances(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    ep_ranks: Sequence[int] | None,
+    routed_supply: RoutedMoeSupply | None,
+    observations: ExecutionObservations,
+) -> tuple[
+    dict[tuple[int | None, str, int, str], tuple[CollectiveWork, int]],
+    dict[int | None, StepRecord],
+]:
+    batch_records = _observed_microbatch_records(record, observations)
+    planned: dict[
+        tuple[int | None, str, int, str], tuple[CollectiveWork, int]
+    ] = {}
+    for microbatch, batch_record in batch_records.items():
+        for key, value in _planned_collective_work(
+            batch_record,
+            dims,
+            tp_ranks,
+            ep_ranks,
+            routed_supply,
+        ).items():
+            planned[(microbatch, *key)] = value
+    return planned, batch_records
+
+
+def _aggregate_request_rows(
+    rows: Sequence[tuple[str, int, int, int]],
+) -> tuple[tuple[int, int, int], ...]:
+    totals: dict[tuple[int, int], int] = {}
+    for _, source, destination, size in rows:
+        pair = (source, destination)
+        totals[pair] = totals.get(pair, 0) + size
+    return tuple(
+        (source, destination, size)
+        for (source, destination), size in sorted(totals.items())
+    )
+
+
+def _validate_microbatch_partition(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    ep_ranks: Sequence[int] | None,
+    routed_supply: RoutedMoeSupply | None,
+    batch_records: dict[int | None, StepRecord],
+    planned: dict[tuple[int | None, str, int, str], tuple[CollectiveWork, int]],
+) -> None:
+    if set(batch_records) == {None}:
+        return
+    full = _planned_collective_work(
+        record,
+        dims,
+        tp_ranks,
+        ep_ranks,
+        routed_supply,
+    )
+    microbatches = tuple(sorted(key for key in batch_records if key is not None))
+    for semantic_key, (full_work, _) in full.items():
+        works = [planned[(microbatch, *semantic_key)][0] for microbatch in microbatches]
+        if full_work.pair_payload_bytes:
+            request_rows = tuple(
+                sorted(
+                    row
+                    for work in works
+                    for row in work.request_pair_payload_bytes
+                )
+            )
+            if request_rows != full_work.request_pair_payload_bytes:
+                raise ValueError(
+                    f"observed microbatch request partition loses bytes at {semantic_key!r}"
+                )
+            if _aggregate_request_rows(request_rows) != full_work.pair_payload_bytes:
+                raise ValueError(
+                    f"observed microbatch aggregate partition loses bytes at {semantic_key!r}"
+                )
+        elif sum(work.payload_bytes for work in works) != full_work.payload_bytes:
+            raise ValueError(
+                f"observed microbatch scalar partition loses bytes at {semantic_key!r}"
+            )
 
 
 def lower_step_observations(
@@ -209,7 +369,10 @@ def lower_step_observations(
     supplies routed pair tables and placement epochs. Compute work passes
     through byte for byte.
 
-    Every collective planned from the step must be observed exactly once. The
+    Every collective planned from each observed microbatch must be observed
+    exactly once. Repeated semantic sites are legal only across distinct,
+    request-partitioned microbatches, whose traffic must recombine to the
+    full-step plan exactly. The
     returned standard :class:`ExecutionGraph` leaves realized concurrency to
     :class:`~simllm.core.DeviceRuntime`; this function has no timing or overlap
     parameter.
@@ -226,15 +389,25 @@ def lower_step_observations(
     if not isinstance(observations.completion_operation_ids, tuple):
         raise TypeError("observations.completion_operation_ids must be a tuple")
 
-    planned = _planned_collective_work(
+    planned, batch_records = _planned_collective_instances(
         record,
         dims,
         tp_ranks,
         ep_ranks,
         routed_supply,
+        observations,
+    )
+    _validate_microbatch_partition(
+        record,
+        dims,
+        tp_ranks,
+        ep_ranks,
+        routed_supply,
+        batch_records,
+        planned,
     )
     lowered: list[ExecutionOperation] = []
-    observed_keys: set[tuple[str, int, str]] = set()
+    observed_keys: set[tuple[int | None, str, int, str]] = set()
     for index, operation in enumerate(observations.operations):
         if not isinstance(operation, ExecutionOperation):
             raise TypeError(
@@ -248,7 +421,10 @@ def lower_step_observations(
                 f"observations.operations[{index}]: step lowering supports only "
                 "ComputeWork and CollectiveWork"
             )
-        key = _observed_collective_key(operation, index)
+        key = (
+            operation.correlation.microbatch,
+            *_observed_collective_key(operation, index),
+        )
         if key in observed_keys:
             raise ValueError(
                 f"observations.operations[{index}]: duplicate collective site {key!r}"
@@ -587,51 +763,53 @@ def _routed_moe_alltoalls(
             "placement snapshot: owner ranks outside ep_ranks: "
             + ", ".join(str(rank) for rank in sorted(invalid_ranks))
         )
+    source = supply.engine_rank
+    if source not in ranks:
+        raise ValueError(
+            f"supply.engine_rank: rank {source} is outside ep_ranks"
+        )
 
     scheduled_requests = _scheduled_routed_tokens(record, supply)
     vector_bytes = dims.hidden_size * dims.dtype_bytes
     operations = []
     for layer in expected_layers:
         request_send_bytes: dict[tuple[str, int, int], int] = {}
-        for source in ranks:
-            for scheduled_request in scheduled_requests:
-                if supply.routed_experts is not None:
-                    expert_rows = (
-                        token.layers[layer].expert_ids
-                        for token in scheduled_request.tokens
+        for scheduled_request in scheduled_requests:
+            if supply.routed_experts is not None:
+                expert_rows = (
+                    token.layers[layer].expert_ids
+                    for token in scheduled_request.tokens
+                )
+            else:
+                arena = supply.routing_arena
+                lifetimes = supply.lifetimes
+                assert arena is not None and lifetimes is not None
+                view = lifetimes.by_request_id(scheduled_request.request_id).view
+                expert_rows = (
+                    arena.expert_ids_at(
+                        view.token_offset,
+                        view.token_count,
+                        token_index,
+                        layer,
                     )
-                else:
-                    arena = supply.routing_arena
-                    lifetimes = supply.lifetimes
-                    assert arena is not None and lifetimes is not None
-                    view = lifetimes.by_request_id(scheduled_request.request_id).view
-                    expert_rows = (
-                        arena.expert_ids_at(
-                            view.token_offset,
-                            view.token_count,
-                            token_index,
-                            layer,
-                        )
-                        for token_index in scheduled_request.arena_token_indices
+                    for token_index in scheduled_request.arena_token_indices
+                )
+            for expert_ids in expert_rows:
+                destinations = {owners[(layer, expert)] for expert in expert_ids}
+                for destination in destinations:
+                    if destination == source:
+                        continue
+                    key = (
+                        scheduled_request.request_id,
+                        source,
+                        destination,
                     )
-                for expert_ids in expert_rows:
-                    destinations = {owners[(layer, expert)] for expert in expert_ids}
-                    for destination in destinations:
-                        if destination == source:
-                            continue
-                        key = (
-                            scheduled_request.request_id,
-                            source,
-                            destination,
-                        )
-                        request_send_bytes[key] = request_send_bytes.get(key, 0) + vector_bytes
+                    request_send_bytes[key] = request_send_bytes.get(key, 0) + vector_bytes
         request_dispatch = tuple(
             (request_id, source, destination, size)
             for (request_id, source, destination), size in sorted(request_send_bytes.items())
         )
         dispatch = _aggregate_request_pairs(request_dispatch)
-        # A routed token has a destination owner, and at least one of the two
-        # or more EP sources is remote from that owner, so dispatch is nonempty.
         request_combine = tuple(
             sorted(
                 (request_id, destination, source, size)
@@ -679,21 +857,25 @@ def step_moe_alltoalls(
     outputs, both over the expert-parallel group ``ep_ranks`` of W ranks.
 
     With ``routed_supply``, the scheduled request slices select exact captured
-    input tokens. Expert ownership at the step's explicit placement epoch maps
-    each token to destination ranks. Dispatch deduplicates several selected
-    experts on the same destination into one hidden vector, and combine is the
-    exact reverse table after owner-side pre-reduction.
+    input tokens owned by ``routed_supply.engine_rank``. The other EP ranks
+    own experts but contribute zero scheduled tokens to this isolated engine
+    step. Expert ownership at the step's explicit placement epoch maps each
+    token to destination ranks. Dispatch deduplicates several selected experts
+    on the same destination into one hidden vector, and combine is the exact
+    reverse table after owner-side pre-reduction.
 
-    Without a routed supply, the compatibility assumption spreads the
-    ``total_new_tokens * top_k`` (token, expert) assignments evenly over
-    the W ranks, so each rank sends
+    Without a routed supply, the uniform approximation uses ``ep_ranks[0]``
+    as the one engine rank. It spreads that engine's
+    ``total_new_tokens * top_k`` (token, expert) assignments evenly over the W
+    expert-owner ranks, so the engine sends
 
         per_pair_bytes = total_new_tokens * top_k * hidden_size
                          * dtype_bytes // W
 
-    to every OTHER rank in both phases; the 1/W share routed to a rank's
-    own resident experts stays local and never touches the fabric. The floor
-    division remains part of this explicit compatibility path.
+    to every other rank in dispatch, and combine transposes those pairs. The
+    1/W share routed to the engine rank's resident experts stays local and
+    never touches the fabric. The floor division remains part of this explicit
+    approximation.
 
     Empty means: dense dims (``num_experts == 0``), an EP world smaller
     than 2, or a zero-new-token drain record. The uniform path also returns
@@ -711,8 +893,25 @@ def step_moe_alltoalls(
     )
     if per_pair <= 0:
         return []
+    source = ranks[0]
+    dispatch = tuple(
+        (source, destination, per_pair)
+        for destination in ranks
+        if destination != source
+    )
+    combine = tuple(
+        (destination, source, per_pair)
+        for destination in ranks
+        if destination != source
+    )
     return [
-        MoeAllToAll(layer=layer, phase=phase, ranks=ranks, per_pair_bytes=per_pair)
+        MoeAllToAll(
+            layer=layer,
+            phase=phase,
+            ranks=ranks,
+            per_pair_bytes=0,
+            pair_payload_bytes=(dispatch if phase == "dispatch" else combine),
+        )
         for layer in range(dims.num_layers)
         for phase in MOE_A2A_PHASES
     ]
@@ -1062,6 +1261,10 @@ def render_step_goal(
     tag_stride = 2 * (len(ranks) - 1) if tp_ops else 0
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
     moe_by_key = {(op.layer, op.phase): op for op in moe_ops}
+    moe_tag_by_key = {
+        (op.layer, op.phase): moe_base_tag + index
+        for index, op in enumerate(moe_ops)
+    }
     if num_goal_ranks is None:
         num_goal_ranks = max(participants) + 1
     minimum_ranks = max(participants) + 1
@@ -1098,7 +1301,6 @@ def render_step_goal(
                 previous = {**previous, **done}
         if moe_ops:
             for phase_index in range(len(MOE_A2A_PHASES)):
-                moe_index = layer * len(MOE_A2A_PHASES) + phase_index
                 op = moe_by_key.get((layer, MOE_A2A_PHASES[phase_index]))
                 if op is None:
                     continue
@@ -1115,7 +1317,7 @@ def render_step_goal(
                     trace,
                     ranks=list(op.ranks),
                     send_bytes=send_bytes,
-                    tag=moe_base_tag + moe_index,
+                    tag=moe_tag_by_key[(op.layer, op.phase)],
                     after=previous,
                     operation_id=_moe_operation_id(record, op),
                     request_send_bytes=(
@@ -1390,6 +1592,10 @@ def step_communication_phases(
     tp_ranks_tuple = tuple(tp_ranks)
     tag_stride = 2 * (len(tp_ranks_tuple) - 1) if tp_ops else 0
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
+    moe_tag_by_key = {
+        (operation.layer, operation.phase): moe_base_tag + index
+        for index, operation in enumerate(moe_ops)
+    }
 
     phases = []
     for layer in range(dims.num_layers):
@@ -1408,11 +1614,10 @@ def step_communication_phases(
             operation = moe_by_key.get((layer, phase))
             if operation is None:
                 continue
-            moe_index = layer * len(MOE_A2A_PHASES) + phase_index
             phases.append(
                 _moe_communication_phase(
                     operation,
-                    tag=moe_base_tag + moe_index,
+                    tag=moe_tag_by_key[(operation.layer, operation.phase)],
                     operation_id=_moe_operation_id(record, operation),
                 )
             )
@@ -1481,10 +1686,7 @@ def _execution_graph_communication_phases(
                 pair_payload_bytes = ()
                 per_pair_bytes = work.payload_bytes
             if not pair_payload_bytes and per_pair_bytes <= 0:
-                raise ValueError(
-                    f"graph.operations[{index}] is a zero-payload pairwise "
-                    "all-to-allv"
-                )
+                continue
             phases.append(
                 _moe_communication_phase(
                     MoeAllToAll(

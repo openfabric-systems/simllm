@@ -113,6 +113,7 @@ def validate_expert_placement_snapshot(value: ExpertPlacementSnapshot) -> None:
 class RoutedMoeSupply:
     """Captured assignments, placement snapshots and explicit step epochs."""
 
+    engine_rank: int
     placements: tuple[ExpertPlacementSnapshot, ...]
     step_placement_epochs: tuple[tuple[int, int], ...]
     routed_experts: RoutedExperts | None = None
@@ -152,6 +153,7 @@ def validate_routed_moe_supply(value: RoutedMoeSupply) -> None:
 
     if not isinstance(value, RoutedMoeSupply):
         raise TypeError("supply: expected RoutedMoeSupply")
+    _integer(value.engine_rank, "supply.engine_rank", nonnegative=True)
     if (value.routed_experts is None) == (value.routing_arena is None):
         raise ValueError(
             "supply: select exactly one routed_experts or routing_arena authority"

@@ -16,6 +16,8 @@ from typing import ClassVar
 import pytest
 
 from simllm.adapters.vllm import (
+    GRANITE_ALL2ALL_BACKEND,
+    OBSERVED_SCHEDULE_GRANITE_DBO,
     SKELETON_EMPTY_STEP_CALL_SEQUENCE,
     SKELETON_INIT_CALL_SEQUENCE,
     SKELETON_STEP_CALL_SEQUENCE,
@@ -28,21 +30,29 @@ from simllm.adapters.vllm import (
     SimModelRunner,
     SimWorker,
     StepTranslator,
+    VllmBatchSlice,
+    build_granite_execution_observations,
     configure,
     fabricate_sampled_tokens,
     manifest_from_worker_entries,
+    observations_from_vllm_step,
     reset_configuration,
     sample_adapter_tokens,
     step_kernel,
     step_records_to_json,
     translate_scheduler_output,
+    vllm_batch_slices,
     write_step_records,
 )
 from simllm.compute import GpuSpec, HostInitiationModel, RooflineProvider
 from simllm.core import (
+    CollectiveWork,
+    ComputeWork,
     ExecutionObservations,
     RequestBookkeeper,
     RequestPhase,
+    ScheduledRequest,
+    StepRecord,
     StepResult,
     VirtualClock,
 )
@@ -206,6 +216,58 @@ def fake_vllm_config():
         quant_config=None,
         use_v2_model_runner=False,
     )
+
+
+class FakeGraniteModelConfig(FakeModelConfig):
+    hf_text_config = SimpleNamespace(
+        model_type="granitemoe",
+        architectures=["GraniteMoeForCausalLM"],
+        intermediate_size=512,
+        num_local_experts=32,
+        num_experts_per_tok=8,
+    )
+
+    @staticmethod
+    def get_hidden_size():
+        return 1024
+
+    @staticmethod
+    def get_num_layers(parallel_config):
+        return 24
+
+    @staticmethod
+    def get_num_attention_heads(parallel_config):
+        return 16
+
+    @staticmethod
+    def get_num_kv_heads(parallel_config):
+        return 8
+
+    @staticmethod
+    def get_head_size():
+        return 64
+
+    @staticmethod
+    def get_vocab_size():
+        return 49_155
+
+    @staticmethod
+    def get_total_num_hidden_layers():
+        return 24
+
+
+def fake_granite_vllm_config():
+    config = fake_vllm_config()
+    config.model_config = FakeGraniteModelConfig()
+    config.parallel_config.data_parallel_size = 8
+    config.parallel_config.data_parallel_rank = 0
+    config.parallel_config.enable_expert_parallel = True
+    config.parallel_config.all2all_backend = GRANITE_ALL2ALL_BACKEND
+    config.parallel_config.enable_dbo = True
+    config.parallel_config.ubatch_size = 0
+    config.parallel_config.dbo_decode_token_threshold = 2
+    config.parallel_config.dbo_prefill_token_threshold = 512
+    return config
 
 
 def make_sim_worker(
@@ -519,6 +581,246 @@ def test_sim_runner_serves_dp_coordination_then_tp_collective(monkeypatch):
     assert step_records_to_json(worker.step_records)[0]["num_tokens_after_padding"] == 4
     assert worker.sample_tokens(None).sampled_token_ids == [[512]]
     assert worker.clock.now_ps == 123_000
+
+
+def test_granite_worker_emits_source_ordered_single_and_dbo_schedules(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    reset_configuration()
+    sink = CapturingObservationSink()
+    try:
+        configure(step_sink=sink)
+        worker = make_sim_worker(
+            VirtualClock(),
+            vllm_config=fake_granite_vllm_config(),
+            simllm_config=SimExecutorConfig(
+                observed_schedule=OBSERVED_SCHEDULE_GRANITE_DBO
+            ),
+        )
+        worker.init_device()
+        prefill = FakeSchedulerOutput(
+            scheduled_new_reqs=[
+                FakeNewRequest("r0", prompt(1)),
+                FakeNewRequest("r1", prompt(1)),
+                FakeNewRequest("r2", prompt(1)),
+            ],
+            num_scheduled_tokens={"r0": 1, "r1": 1, "r2": 1},
+        )
+        assert worker.execute_model(prefill) is None
+        prefill_observations = sink.calls[-1][1]
+        assert isinstance(prefill_observations, ExecutionObservations)
+        prefill_collectives = [
+            operation
+            for operation in prefill_observations.operations
+            if isinstance(operation.work, CollectiveWork)
+        ]
+        assert len(prefill_collectives) == 48
+        assert {operation.correlation.microbatch for operation in prefill_collectives} == {
+            None
+        }
+        assert worker.sample_tokens(None).req_ids == ["r0", "r1", "r2"]
+
+        decode = FakeSchedulerOutput(
+            scheduled_cached_reqs=FakeCachedRequests(
+                ["r0", "r1", "r2"],
+                [1, 1, 1],
+                [1, 1, 1],
+            ),
+            num_scheduled_tokens={"r0": 1, "r1": 1, "r2": 1},
+        )
+        assert worker.execute_model(decode) is None
+        observations = sink.calls[-1][1]
+        assert isinstance(observations, ExecutionObservations)
+        collectives = [
+            operation
+            for operation in observations.operations
+            if isinstance(operation.work, CollectiveWork)
+        ]
+        assert len(collectives) == 96
+        assert {
+            (operation.correlation.layer, operation.work.channel_hint)
+            for operation in collectives
+        } == {
+            (layer, site)
+            for layer in range(24)
+            for site in ("dispatch", "combine")
+        }
+        assert all(operation.work.payload_bytes == 0 for operation in collectives)
+        assert {
+            operation.correlation.microbatch for operation in collectives
+        } == {0, 1}
+        requests_by_microbatch = {
+            microbatch: {
+                operation.correlation.request_ids
+                for operation in collectives
+                if operation.correlation.microbatch == microbatch
+            }
+            for microbatch in (0, 1)
+        }
+        assert requests_by_microbatch == {0: {("r0",)}, 1: {("r1", "r2")}}
+
+        comm_layer_zero = [
+            (operation.correlation.microbatch, operation.work.channel_hint)
+            for operation in collectives
+            if operation.correlation.layer == 0
+        ]
+        assert comm_layer_zero == [
+            (0, "dispatch"),
+            (1, "dispatch"),
+            (0, "combine"),
+            (1, "combine"),
+        ]
+        expert_one = next(
+            operation
+            for operation in observations.operations
+            if operation.operation_id
+            == "step-1:ubatch-1:layer-0:rank-0:experts"
+        )
+        combine_zero = "step-1:ubatch-0:layer-0:ep-combine"
+        assert combine_zero not in expert_one.depends_on
+        assert combine_zero not in expert_one.participant_local_depends_on
+        next_pre_zero = next(
+            operation
+            for operation in observations.operations
+            if operation.operation_id
+            == "step-1:ubatch-0:layer-1:rank-0:pre-dispatch"
+        )
+        assert next_pre_zero.participant_local_depends_on == (combine_zero,)
+
+        rank_zero_logits = next(
+            operation
+            for operation in observations.operations
+            if operation.operation_id == "step-1:rank-0:logits"
+        )
+        assert rank_zero_logits.depends_on == ()
+        assert rank_zero_logits.participant_local_depends_on == (
+            "step-1:ubatch-0:layer-23:ep-combine",
+            "step-1:ubatch-1:layer-23:ep-combine",
+        )
+
+        assert observations.completion_operation_ids == (
+            "step-1:ubatch-0:requests-visible",
+            "step-1:ubatch-1:requests-visible",
+        )
+        completion_by_id = {
+            operation.operation_id: operation
+            for operation in observations.operations
+            if operation.operation_id in observations.completion_operation_ids
+        }
+        assert completion_by_id[
+            "step-1:ubatch-0:requests-visible"
+        ].correlation.request_ids == ("r0",)
+        assert completion_by_id[
+            "step-1:ubatch-1:requests-visible"
+        ].correlation.request_ids == ("r1", "r2")
+
+        runner = worker.model_runner
+        assert isinstance(runner, SimModelRunner)
+        assert runner.latest_observations is observations
+        assert runner.latest_schedule_timing is not None
+        rank_zero_compute_ps = sum(
+            operation.work.nominal_duration_ps or 0
+            for operation in observations.operations
+            if operation.rank == 0 and isinstance(operation.work, ComputeWork)
+        )
+        assert rank_zero_compute_ps == (
+            runner.latest_schedule_timing.represented_compute_ps
+        )
+        decode_record = sink.calls[-1][0]
+        decode_kernel = step_kernel(
+            worker.dims,
+            decode_record,
+            decode_record.num_sampled or 0,
+        )
+        rank_zero_compute = [
+            operation.work
+            for operation in observations.operations
+            if operation.rank == 0 and isinstance(operation.work, ComputeWork)
+        ]
+        assert sum(work.flops for work in rank_zero_compute) == int(
+            decode_kernel.flops
+        )
+        assert sum(work.hbm_bytes for work in rank_zero_compute) == int(
+            decode_kernel.bytes_moved
+        )
+    finally:
+        reset_configuration()
+
+
+def test_granite_schedule_rejects_unaudited_configuration_and_splits():
+    config = fake_granite_vllm_config()
+    dims = ModelDims(
+        24,
+        1024,
+        512,
+        16,
+        8,
+        64,
+        49_155,
+        2,
+        num_experts=32,
+        top_k=8,
+        moe_intermediate_size=512,
+        local_num_experts=4,
+    )
+    decode = StepRecord(
+        0,
+        0,
+        [
+            ScheduledRequest("r0", RequestPhase.DECODE, 1, context_length=8),
+            ScheduledRequest("r1", RequestPhase.DECODE, 1, context_length=8),
+        ],
+        num_sampled=2,
+    )
+    provider = RooflineProvider(efficiency=0.7)
+    gpu = GpuSpec("b100", 1.8e15, 8.0e12)
+    host = HostInitiationModel()
+
+    bad_backend = fake_granite_vllm_config()
+    bad_backend.parallel_config.all2all_backend = "allgather_reducescatter"
+    with pytest.raises(RuntimeError, match="all2all_backend"):
+        observations_from_vllm_step(
+            decode, bad_backend, dims, tuple(range(8)), provider, gpu, host
+        )
+
+    bad_model = fake_granite_vllm_config()
+    bad_model.model_config = FakeModelConfig()
+    with pytest.raises(RuntimeError, match="GraniteMoeForCausalLM"):
+        observations_from_vllm_step(
+            decode, bad_model, dims, tuple(range(8)), provider, gpu, host
+        )
+
+    bad_tp = fake_granite_vllm_config()
+    bad_tp.parallel_config.tensor_parallel_size = 2
+    with pytest.raises(RuntimeError, match="tensor_parallel_size=1"):
+        observations_from_vllm_step(
+            decode, bad_tp, dims, tuple(range(8)), provider, gpu, host
+        )
+
+    multi_token = StepRecord(
+        1,
+        0,
+        [ScheduledRequest("r0", RequestPhase.PREFILL, 512, context_length=512)],
+    )
+    with pytest.raises(RuntimeError, match="multi-token requests"):
+        vllm_batch_slices(multi_token, config.parallel_config)
+
+    padded = replace(decode, num_tokens_after_padding=4)
+    with pytest.raises(RuntimeError, match="padding changes"):
+        vllm_batch_slices(padded, config.parallel_config)
+
+    with pytest.raises(ValueError, match="partition scheduled requests"):
+        build_granite_execution_observations(
+            decode,
+            dims,
+            tuple(range(8)),
+            (
+                VllmBatchSlice(0, ("r1",), 1),
+                VllmBatchSlice(1, ("r0",), 1),
+            ),
+            provider,
+            gpu,
+            host,
+        )
 
 
 def test_dp_coordinator_return_controls_the_padding_record_field(monkeypatch):
@@ -1308,6 +1610,24 @@ def test_config_rejects_bad_values():
         SimExecutorConfig.from_env({"SIMLLM_VLLM_KV_MEMORY_BYTES": "lots"})
     with pytest.raises(ValueError, match="unknown SIMLLM_VLLM_GPU"):
         SimExecutorConfig.from_env({"SIMLLM_VLLM_GPU": "gtx280"}).gpu_spec()
+    with pytest.raises(ValueError, match="SIMLLM_VLLM_OBSERVED_SCHEDULE"):
+        SimExecutorConfig.from_env(
+            {"SIMLLM_VLLM_OBSERVED_SCHEDULE": "plausible-overlap"}
+        )
+
+
+def test_granite_model_dims_include_enabled_ep_geometry():
+    from simllm.adapters.vllm.executor import model_dims_from_vllm_config
+
+    dims = model_dims_from_vllm_config(fake_granite_vllm_config())
+
+    assert dims.num_layers == 24
+    assert dims.hidden_size == 1024
+    assert dims.num_experts == 32
+    assert dims.top_k == 8
+    assert dims.moe_intermediate_size == 512
+    assert dims.local_num_experts == 4
+    assert dims.defaulted_fields == ()
 
 
 def test_reset_and_injected_config_prevent_replay_contamination(monkeypatch, tmp_path):

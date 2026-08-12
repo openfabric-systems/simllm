@@ -1,0 +1,61 @@
+{
+  "schema": "simllm-compute-calibration-v1-expectations-v1",
+  "authored_against": "cede92930a469bd0be2f2c588866885c9e0e3618",
+  "gpu": {
+    "architecture": "turing",
+    "compute_capability": "7.5",
+    "device_model": "NVIDIA GeForce GTX 1660 Ti",
+    "memory_bandwidth_bytes_per_second": 288000000000,
+    "base_clock_hz": 1500000000,
+    "memory_channel_bytes_per_second": 48000000000,
+    "fp32_peak_flops_per_second": 5437000000000,
+    "fp64_peak_flops_per_second": 169906250000
+  },
+  "capture": {
+    "families": [
+      "attn_gemm",
+      "attn_score",
+      "mlp_gemm",
+      "lm_head",
+      "kv_read"
+    ],
+    "dtypes": [
+      "fp32",
+      "fp64"
+    ],
+    "train_shapes": [
+      1,
+      4,
+      16
+    ],
+    "held_out_shapes": [
+      2,
+      8
+    ],
+    "work_items_per_shape_unit": 262144,
+    "warmup_launches_per_cell": 10,
+    "measured_launches_per_cell": 41,
+    "block_threads": 256,
+    "cache_flush_bytes": 33554432,
+    "creation_date": "2026-08-12"
+  },
+  "accuracy_bands": {
+    "calibrated_median_absolute_percentage_error_max": 10.0,
+    "calibrated_p95_absolute_percentage_error_max": 20.0,
+    "roofline_must_exceed_median_or_p95_band": true,
+    "calibrated_median_must_be_below_roofline": true,
+    "calibrated_p95_must_be_below_roofline": true,
+    "cell_coefficient_of_variation_max": 0.02
+  },
+  "scored_relations": {
+    "held_out_accuracy_distribution": 20,
+    "train_shape_scaling": 20,
+    "dtype_slowdown": 25,
+    "family_sum_opt_in": 2
+  },
+  "physical_guards": {
+    "minimum_shape_ratio": 1.0,
+    "maximum_shape_ratio": 8.0,
+    "minimum_fp64_to_fp32_ratio": 1.0
+  }
+}

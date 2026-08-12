@@ -244,8 +244,18 @@ def test_step_moe_alltoalls_counts_and_payload():
     # 2 phases per layer, layer-major (dispatch, combine) order
     assert [(op.layer, op.phase) for op in ops] == [
         (0, "dispatch"), (0, "combine"), (1, "dispatch"), (1, "combine")]
-    # per pair: total_new_tokens * top_k * hidden * dtype / W
-    assert {op.per_pair_bytes for op in ops} == {3 * 2 * 4 * 2 // 4}
+    # One engine's uniform share is a sparse dispatch star and its transpose.
+    per_pair = 3 * 2 * 4 * 2 // 4
+    assert {op.per_pair_bytes for op in ops} == {0}
+    assert all(
+        op.pair_payload_bytes
+        == (
+            tuple((0, destination, per_pair) for destination in (1, 2, 3))
+            if op.phase == "dispatch"
+            else tuple((source, 0, per_pair) for source in (1, 2, 3))
+        )
+        for op in ops
+    )
     assert {op.ranks for op in ops} == {(0, 1, 2, 3)}
 
 
@@ -264,9 +274,9 @@ def test_render_step_goal_moe_only_structure():
     trace = render_step_goal(decode_record(), TINY_MOE_DIMS, [0],
                              per_layer_calc_ns=5, ep_ranks=[0, 1, 2, 3])
     text = trace.render()
-    # per pair 12 B; per a2av W(W-1) = 12 sends, 2 a2avs per layer, 2 layers
-    assert text.count("send 12b") == 2 * 2 * 12
-    assert text.count("recv 12b") == 2 * 2 * 12
+    # Per pair is 12 B. One source star has W-1 sends per phase.
+    assert text.count("send 12b") == 2 * 2 * 3
+    assert text.count("recv 12b") == 2 * 2 * 3
     # one calc per layer on each of the 4 EP ranks, no idle fillers
     assert text.count("calc 5") == 2 * 4
     assert text.count("calc 0") == 0
@@ -282,8 +292,8 @@ def test_render_step_goal_moe_with_tp_structure():
                              per_layer_calc_ns=5, ep_ranks=[0, 1, 2, 3])
     text = trace.render()
     # TP payload = 24 B over W=2: chunk 12 B, 2 rounds per allreduce, 2
-    # sends per round; 4 allreduces total; a2avs also move 12 B pairs
-    assert text.count("send 12b") == 4 * 2 * 2 + 2 * 2 * 12
+    # sends per round; 4 allreduces total; MoE uses one three-peer star.
+    assert text.count("send 12b") == 4 * 2 * 2 + 2 * 2 * 3
     # allreduce tag blocks 1000..1007 (stride 2), then a2avs at 1008..1011
     for tag in (1000, 1002, 1004, 1006, 1008, 1009, 1010, 1011):
         assert f"tag {tag}" in text

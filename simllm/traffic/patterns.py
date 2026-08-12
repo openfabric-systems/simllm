@@ -185,7 +185,9 @@ def pairwise_all_to_allv(
     """Direct pairwise exchange: rank s sends ``send_bytes[(s, d)]`` to d.
 
     Zero or missing entries send nothing. Completion label per rank is its
-    last receive (or last send for ranks that receive nothing).
+    last receive (or last send for ranks that receive nothing). When an exact
+    semantic frontier is requested, a rank with no incident message receives
+    a zero-time completion point instead of disappearing from the collective.
     """
     positive_pairs = {
         (source, destination)
@@ -249,6 +251,13 @@ def pairwise_all_to_allv(
         for rank in ranks:
             labels = incident[rank]
             if not labels:
+                if after and rank in after:
+                    done[rank] = after[rank]
+                else:
+                    done[rank] = trace.rank(rank).calc(
+                        0,
+                        operation_id=operation_id,
+                    )
                 continue
             join = trace.rank(rank).calc(0, operation_id=operation_id)
             for label in labels:

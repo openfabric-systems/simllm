@@ -13,5 +13,6 @@ examples/rnic_live_v1/tier_b_review_expectations.json text eol=lf
 examples/rnic_live_v1/tier_c_expectations.json text eol=lf
 examples/rnic_packet_v2/*.json text eol=lf
 examples/rnic_control_v2/*.json text eol=lf
+examples/compute_calibration_v1/*.json text eol=lf
 examples/m4/fixtures/*.jsonl text eol=lf
 examples/rnic_authority_v1/*.json text eol=lf

@@ -404,27 +404,66 @@ call contract. `DeviceRuntimeStepSink` owns observed lowering, the coarse
 device runtime, completion reduction, and the returned `StepResult`. A focused
 component fixture routed supplied observations through that chain, produced
 200 completion events and request metrics for both scheduled requests, and
-preserved the frozen serial graph and GOAL digests. These are component and
-fatal-unscored identity results only. They do not establish a framework
-schedule producer or a live TTFT or TPOT effect.
+preserved the frozen serial graph and GOAL digests. At that commit these were
+component and fatal-unscored identity results only.
 
-The registered source and component qualification then stopped before every
+The first registered source and component qualification stopped before every
 behavioral relation, as predicted by the expectations-only commit `409b4ad`.
 The four-layer skeleton invoked the observation-capable sink once with no
 `ExecutionObservations` and exposed one fixed 4,096-byte `all_reduce`, zero of
 the required 48 semantic Granite MoE sites, and no layer, logical-stream,
 dependency, request, or completion-frontier fields. The audited active source
-also supplied no legal next-layer overlap for the frozen replay. No placement
-or TTFT/TPOT row ran, so the genuine-risk result is `0/0, blocked before
-behavioral execution`, not a failed or passed overlap fraction. VLLM-22 owns
-the missing producer and its live qualification.
+had not yet been translated. No placement or TTFT/TPOT row ran, so that
+historical genuine-risk result remains `0/0, blocked before behavioral
+execution`.
 
-A separate post-run diagnostic reached a real vLLM 0.26.0 `LLM` using the
+A separate pre-VLLM-22 diagnostic reached a real vLLM 0.26.0 `LLM` using the
 Granite skeleton runner. Its prefill and decode steps each exposed one 64-byte
 DP event and one fixed 4,096-byte TP event, still with no
 `ExecutionObservations`, per-layer operation, or EP dispatch and combine site.
-This is component diagnostic evidence only and does not change the blocked
+That historical component evidence does not change the earlier blocked
 behavioral denominator.
+
+VLLM-22 remains open as of 2026-08-12. The opt-in `granite-dbo` producer at the
+`SimWorker` model-forward boundary translates each real vLLM v0.26.0 scheduler
+step into a Granite per-layer schedule. It records source submission order,
+per-rank compute and shared communication queues, participant-local edges,
+microbatch request correlation and request-visible completion frontiers. The
+producer derives no overlap percentage or edge from the serial compatibility
+graph. Unsupported model families, TP or PP shapes, explicit microbatch sizes,
+padded DBO and multi-token DBO splits fail explicitly; VLLM-23 owns those
+optional shapes. The audited vLLM wrapper supplies the event-wait argument and
+contains no wrapper-level global barrier, but `deep_ep` itself was not
+installed. Rank-local behavior below that wrapper is inferred rather than
+directly source-backed.
+
+The live eight-rank replay emitted observations on all 32 nonempty steps. All
+steps carried 24 layers and 48 unique dispatch/combine sites; 23 DBO steps
+carried 96 invocations. The run is void with findings because the fatal
+`ttft_exact_single_batch` guard was violated. That guard tested the same
+serial-versus-observed equivalence premise required to attribute the two
+in-band TPOT reductions to DBO. DBO-off steps 24 through 31 bound the measured
+non-DBO residual at 1.231 percent of the mean DBO reduction on both placements,
+but the failure is not orthogonal and no behavioral pass fraction is reported.
+
+Both arms use participant-local frontiers. Their structural differences are
+the open TRAF-9 whole-layer MoE ordering approximation and the observed arm's
+terminal logits plus `requests-visible` fan-in. TRAF-23 owns measured
+frontiers only. The retained 440,115,200 directed bytes are a pre-TRAF-25
+conservation identity over the source-multiplied table and are not portable.
+The adapter emits zero-byte semantic all-to-allv markers, so the observed path
+does not independently cross-check a routed-MoE byte count before traffic
+planning replaces them. VLLM-24 owns that P0 validation gap. The
+producer-disabled path passed all 64 per-step direct serial comparisons and
+both accepted graph and legacy diagnostic GOAL hashes. See
+[the observed-schedule results](../../examples/vllm_observed_schedule_v1/RESULTS.md).
+
+This branch also added a post-specified component test showing that one fake
+Granite configuration maps to `num_experts=32`, `top_k=8`,
+`moe_intermediate_size=512` and `local_num_experts=4`. The VLLM-22 freeze
+registered no VLLM-6 acceptance relation, so that component result does not
+partially close VLLM-6. Its complete geometry and executor-group clauses remain
+open below.
 The pre-play framework oracle adds a separate, inert-by-default vLLM general
 plugin. `VllmCpuRunner` enables it only inside an isolated CPU process. The
 plugin observes the stock `CPUWorker`, `CPUModelRunner`, v1 KV manager, block
@@ -452,8 +491,8 @@ and zero changed all-to-all bytes. The detailed evidence is in
 
 ## Open tasks
 
-- VLLM-3: sim-native metrics export via a `vllm.stat_logger_plugins` stat
-  logger for virtual-time runs.
+### Precision
+
 - VLLM-4 (Precision; P1; L) (remaining half): a paced-mode run whose TTFT/TPOT
   are compared with a real capture, a `vllm serve` run confirming the drain
   record lands under the `EngineCore` busy loop (source-verified only; the
@@ -473,34 +512,6 @@ and zero changed all-to-all bytes. The detailed evidence is in
   WQE/NIC, flow-completion and control-delay components. Calibrate only the
   early stages; hold out later stages, and choose the next accuracy task from
   their attributed residuals rather than aggregate error alone.
-- VLLM-5: CI harness with transcribed stand-ins for the vLLM types
-  (`Executor`, `ModelRunnerOutput`, `FullAttentionSpec`, `CompilationTimes`)
-  so the init-RPC sequence and the step loop run end to end without a GPU
-  stack installed.
-- VLLM-6 (rescoped after the M5 slice landed MoE `ModelDims` and
-  `step_moe_alltoalls` in the shared modules): the adapter half remains,
-  `model_dims_from_vllm_config` does not yet read the MoE geometry
-  (num_experts, top_k, per-expert intermediate size, local experts) off a
-  vLLM MoE config, and `SimExecutor` passes no `ep_ranks` to a sink.
-- VLLM-7 (placement half closed with M4): the placement-side builder
-  exists, `simllm.placement.declared_manifest` computes a
-  `source="declared"` manifest from tp/pp/dp in the DP x PP x TP layout
-  order, and the M4 closed-loop runs drive the sink off it. Remaining
-  half: `SimExecutor` deriving that declared manifest from its own
-  `ParallelConfig` automatically (today the caller constructs it by hand
-  and must keep the sizes in sync with the vLLM flags).
-- VLLM-8: generate-only today. Speculative decoding and structured output
-  are refused with explicit errors (fabricated tokens would silently model
-  0% draft acceptance or first-token grammar deaths); pooling models
-  (`pooler_output`) and encoder/multimodal inputs are serviced with empty
-  or `None` answers rather than fabricated outputs.
-- VLLM-9: render the accumulated `step_records` into a
-  `simllm.core.GoalTrace` (the offline open-loop mode's second half; the
-  records already carry phases, token counts and completions).
-- VLLM-10: pipeline parallelism. Needs a pending-output FIFO so the
-  batch-queue loop's interleaved `execute_model`/`sample_tokens` pairs map
-  to the right steps, plus per-stage step accounting; until then
-  `supports_pp` stays False and vLLM rejects PP > 1 up front.
 - VLLM-11 (Precision; P1; L) (remaining after the CPU-oracle lifecycle
   slice): the v2 oracle now observes stock-manager prefix lookup, allocation,
   release, cached-block eviction and scheduler recompute with exact block and
@@ -512,12 +523,48 @@ and zero changed all-to-all bytes. The detailed evidence is in
   reconstruction. Acceptance requires exact event cardinality, identity and
   cause agreement against those objects, with the current v2 projection and
   oracle-disabled path preserved byte for byte.
-- VLLM-12: capture and replay the supported model runner's device schedule as
-  an `ExecutionGraph` template keyed with the same identity envelope as the
-  compute profile. Preserve CUDA stream order, event waits, kernel launches,
-  NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
-  The simulated executor binds step shapes and framework KV events to this
-  template; it does not invent concurrency from aggregate phase timings.
+- VLLM-20 (Precision; P1; M): replace the current `ncclAllReduce`-shaped
+  compatibility lowering for `all_gather`, `broadcast`, `send`, and `recv`
+  with native COMP stack entries when those entries exist. The surrogate is an
+  all-reduce-shaped zero-time trace; the identifying observables are the
+  operation-specific stack names, peer roles, byte counts, and shape results.
+  Remove the current ring-layout servable-domain restriction: native entries
+  must represent zero payloads explicitly and accept operation-legal nonzero
+  byte counts without requiring even all-reduce lane or chunk division.
+  Acceptance requires exact semantic operation identity for every enabled call
+  while the compatibility off path remains byte-for-byte and timestamp-for-
+  timestamp identical to this slice.
+- VLLM-21 (Precision; P1; L): calibrate real coordinator dispatch cost after
+  VLLM-19 makes it metric-live. The current surrogate is exactly zero dispatch
+  time. Measure pinned-vLLM Python dispatch, custom-op indirection, and
+  synchronization stalls over a frozen payload, group-size, and call-mode
+  matrix. Hold out at least one model and group size; require modeled median
+  and p95 call cost within a pre-registered relative or additive band, then
+  verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
+- VLLM-24 (Precision; P0; M): restore an independent routed-MoE byte
+  cross-check on the active observation path. The Granite producer currently
+  emits zero-byte semantic all-to-allv markers;
+  `_validate_observed_collective` permits empty pair and request-pair tables,
+  and `_validate_microbatch_partition` only recombines work produced by the
+  same traffic planner. After TRAF-25, carry source-observed token ownership or
+  an equivalent independent per-request pair projection across the adapter
+  seam and require exact agreement with the traffic plan for source rank,
+  destination rank, request identity, per-source egress and total directed
+  bytes. The semantic-marker path may remain an explicit no-byte-evidence
+  mode, but it must not satisfy or be cited as a byte-correctness guard.
+
+### Completeness
+
+- VLLM-6 (Completeness; P1; M): complete the adapter's MoE geometry and expert
+  group binding. This branch has post-specified component evidence for one
+  Granite `model_dims_from_vllm_config` mapping, but no expectations-only
+  acceptance relation preceded it, so the geometry clause remains open.
+  Register exact mappings for expert count, top-k, per-expert intermediate
+  size and local experts across enabled and no-MoE configurations, including
+  failure and default behavior. Then make `SimExecutor` derive the exact
+  expert group from the active parallel configuration and pass `ep_ranks` to
+  its sink. Acceptance must preserve the explicit no-EP path and the VLLM-22
+  `SimWorker` schedule and serial-off identities exactly.
 - VLLM-13 (Completeness; P1; L) (remaining GPU-present half after the flagged
   skeleton): the skeleton DP coordination half has landed through
   `SimGroupCoordinator`, including consumption of its local padded-token
@@ -554,33 +601,60 @@ and zero changed all-to-all bytes. The detailed evidence is in
   Freeze a fixed-workload signed TTFT/TPOT relation and quantitative band before
   implementation. The disabled projection must preserve every accepted
   VLLM-13 timestamp, token, record, and completion order exactly.
-- VLLM-20 (Precision; P1; M): replace the current `ncclAllReduce`-shaped
-  compatibility lowering for `all_gather`, `broadcast`, `send`, and `recv`
-  with native COMP stack entries when those entries exist. The surrogate is an
-  all-reduce-shaped zero-time trace; the identifying observables are the
-  operation-specific stack names, peer roles, byte counts, and shape results.
-  Remove the current ring-layout servable-domain restriction: native entries
-  must represent zero payloads explicitly and accept operation-legal nonzero
-  byte counts without requiring even all-reduce lane or chunk division.
-  Acceptance requires exact semantic operation identity for every enabled call
-  while the compatibility off path remains byte-for-byte and timestamp-for-
-  timestamp identical to this slice.
-- VLLM-21 (Precision; P1; L): calibrate real coordinator dispatch cost after
-  VLLM-19 makes it metric-live. The current surrogate is exactly zero dispatch
-  time. Measure pinned-vLLM Python dispatch, custom-op indirection, and
-  synchronization stalls over a frozen payload, group-size, and call-mode
-  matrix. Hold out at least one model and group size; require modeled median
-  and p95 call cost within a pre-registered relative or additive band, then
-  verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
-- VLLM-22 (Completeness; P1; L): add a real source-backed vLLM
-  `ExecutionObservations` producer for each translated step. For the frozen
-  Granite replay it must observe all 24 ordered layers and exactly 48 semantic
-  MoE sites, one dispatch and one combine per layer, with exact submission
-  order, logical streams, program-order and event-wait dependencies, request
-  correlation, and completion frontier. Name the active source mechanism that
-  makes every claimed concurrency legal, and derive no edge from an overlap
-  percentage or compatibility schedule. Extend the per-request regression to
-  the adapter-emitted schedule, proving that traffic rebinding preserves every
-  request-pair byte and that completion reduction returns the correct request
-  identities. With the producer absent, preserve the legacy sink call, serial
-  graph and GOAL bytes, timestamps, and completion order exactly.
+- VLLM-22 (Completeness; P0; L): qualify the real vLLM
+  `ExecutionObservations` producer for the frozen Granite boundary. The
+  2026-08-12 run emitted all 24 ordered layers and 48 semantic MoE sites but is
+  void because `ttft_exact_single_batch` violated the frozen arm-equivalence
+  premise. A future expectations-only qualification must distinguish DBO from
+  the TRAF-9 and terminal-frontier differences, preserve exact submission
+  order, logical streams, dependencies, request correlation and completion
+  frontiers, and reach TTFT and TPOT through the supported metric chain. It
+  must name the wrapper or measured mechanism that makes each concurrency
+  legal and derive no edge from an overlap percentage or compatibility
+  schedule. Completion reduction must return the original request identities;
+  per-request routed-byte acceptance depends on TRAF-25 and VLLM-24. With the
+  producer absent, preserve the legacy sink call, serial graph and GOAL bytes,
+  timestamps and completion order exactly.
+- VLLM-23 (Completeness; P2; L): extend the source-backed observation producer
+  beyond the implemented Granite TP1, PP1, uniform one-token decode boundary.
+  Add exact request and token-interval correlation for multi-token or padded
+  DBO splits, explicit `ubatch_size`, TP greater than one and PP greater than
+  one. The current path rejects each shape before emitting a plausible
+  schedule. Acceptance must exercise every enabled shape through traffic
+  rebinding and request completion while preserving those explicit refusals,
+  the implemented Granite schedule and the producer-disabled serial path
+  exactly.
+
+### Uncategorized
+
+- VLLM-3: sim-native metrics export via a `vllm.stat_logger_plugins` stat
+  logger for virtual-time runs.
+- VLLM-5: CI harness with transcribed stand-ins for the vLLM types
+  (`Executor`, `ModelRunnerOutput`, `FullAttentionSpec`, `CompilationTimes`)
+  so the init-RPC sequence and the step loop run end to end without a GPU
+  stack installed.
+- VLLM-7 (placement half closed with M4): the placement-side builder
+  exists, `simllm.placement.declared_manifest` computes a
+  `source="declared"` manifest from tp/pp/dp in the DP x PP x TP layout
+  order, and the M4 closed-loop runs drive the sink off it. Remaining
+  half: `SimExecutor` deriving that declared manifest from its own
+  `ParallelConfig` automatically (today the caller constructs it by hand
+  and must keep the sizes in sync with the vLLM flags).
+- VLLM-8: generate-only today. Speculative decoding and structured output
+  are refused with explicit errors (fabricated tokens would silently model
+  0% draft acceptance or first-token grammar deaths); pooling models
+  (`pooler_output`) and encoder/multimodal inputs are serviced with empty
+  or `None` answers rather than fabricated outputs.
+- VLLM-9: render the accumulated `step_records` into a
+  `simllm.core.GoalTrace` (the offline open-loop mode's second half; the
+  records already carry phases, token counts and completions).
+- VLLM-10: pipeline parallelism. Needs a pending-output FIFO so the
+  batch-queue loop's interleaved `execute_model`/`sample_tokens` pairs map
+  to the right steps, plus per-stage step accounting; until then
+  `supports_pp` stays False and vLLM rejects PP > 1 up front.
+- VLLM-12: capture and replay the supported model runner's device schedule as
+  an `ExecutionGraph` template keyed with the same identity envelope as the
+  compute profile. Preserve CUDA stream order, event waits, kernel launches,
+  NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
+  The simulated executor binds step shapes and framework KV events to this
+  template; it does not invent concurrency from aggregate phase timings.

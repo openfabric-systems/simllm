@@ -20,33 +20,33 @@ PLACEMENTS = {
     "ABCD": ("a", "b", "c", "d"),
 }
 EXPECTED_CELLS = {
-    (1_024, "AAAA"): (11_870_208, 0, 11_870_208, 7_097_000),
-    (1_024, "AABB"): (11_870_208, 7_913_472, 3_956_736, 2_442_000),
-    (1_024, "ABCD"): (11_870_208, 11_870_208, 0, 0),
-    (2_048, "AAAA"): (23_740_416, 0, 23_740_416, 14_156_000),
-    (2_048, "AABB"): (23_740_416, 15_826_944, 7_913_472, 4_838_000),
-    (2_048, "ABCD"): (23_740_416, 23_740_416, 0, 0),
+    (1_024, "AAAA"): (2_983_936, 0, 2_983_936, 4_538_000),
+    (1_024, "AABB"): (2_983_936, 2_011_136, 972_800, 2_194_000),
+    (1_024, "ABCD"): (2_983_936, 2_983_936, 0, 0),
+    (2_048, "AAAA"): (5_967_872, 0, 5_967_872, 9_047_000),
+    (2_048, "AABB"): (5_967_872, 4_022_272, 1_945_600, 4_358_000),
+    (2_048, "ABCD"): (5_967_872, 5_967_872, 0, 0),
 }
-LEGACY_GOAL_ORACLES = {
+DIRECT_GOAL_ORACLES = {
     1_024: (
-        72_819,
-        "0417832c8788a0477d48b414cf2d8456b87215abd1d0193ba46fb8db46185d8a",
+        20_392,
+        "917961edf996753223857d64010fc61e4f6b08672f18dcadf42c70d60ee36c4a",
     ),
     2_048: (
-        72_819,
-        "bcd72e63546d03efaddd48c16e160457d1e28f19795036d1f871788d78cf5a02",
+        20_392,
+        "16ee686eda4634886b117788b3893c893f5e12ea819736e0afdbdf63bab0e826",
     ),
 }
 EXPECTED_JCT_BANDS = {
-    (1_024, "AAAA"): (7_121_000, 7_121_000),
-    (1_024, "AABB"): (139_195_840, 139_195_840),
-    (1_024, "ABCD"): (160_781_760, 160_781_808),
-    (2_048, "AAAA"): (14_180_000, 14_180_000),
-    (2_048, "AABB"): (182_367_680, 182_367_680),
-    (2_048, "ABCD"): (225_539_520, 225_539_568),
+    (1_024, "AAAA"): (4_562_000, 4_562_000),
+    (1_024, "AABB"): (136_246_720, 136_246_720),
+    (1_024, "ABCD"): (155_702_720, 155_702_864),
+    (2_048, "AAAA"): (9_071_000, 9_071_000),
+    (2_048, "AABB"): (176_469_440, 176_469_440),
+    (2_048, "ABCD"): (215_381_440, 215_381_584),
 }
 EXPECTED_PHASES = 48
-EXPECTED_POSITIVE_PAIRS = 576
+EXPECTED_POSITIVE_PAIRS = 144
 EXPECTATIONS_COMMIT = "dd1eefebc84091c547d8cad10225b21ab85a7706"
 EVIDENCE_AUTHORED_AGAINST = "6973bd0e3ed6091c403c7055ee01c2d8ae0ae970"
 
@@ -79,15 +79,15 @@ def _check_frozen_registry() -> None:
         if not (one[2] > two[2] > remote[2]):
             raise AssertionError("NVLink-byte direction is not strictly decreasing")
         low, high = EXPECTED_JCT_BANDS[(vector_bytes, "ABCD")]
-        if high - low != EXPECTED_PHASES:
+        if high - low != EXPECTED_POSITIVE_PAIRS:
             raise AssertionError("all-remote quantization band drifted")
         ordered = [EXPECTED_JCT_BANDS[(vector_bytes, name)][0] for name in PLACEMENTS]
         if not ordered[0] < ordered[1] < ordered[2]:
             raise AssertionError("JCT direction is not strictly increasing")
     if EXPECTED_CELLS[(2_048, "ABCD")][0] != 2 * EXPECTED_CELLS[(1_024, "ABCD")][0]:
         raise AssertionError("payload sweep no longer doubles directed bytes")
-    if any(size <= 0 or len(digest) != 64 for size, digest in LEGACY_GOAL_ORACLES.values()):
-        raise AssertionError("legacy GOAL oracle is malformed")
+    if any(size <= 0 or len(digest) != 64 for size, digest in DIRECT_GOAL_ORACLES.values()):
+        raise AssertionError("direct GOAL oracle is malformed")
     if EXPECTED_PHASES <= 0 or EXPECTED_POSITIVE_PAIRS <= 0:
         raise AssertionError("phase and pair counts must be positive")
 
@@ -156,6 +156,7 @@ def _routed_supply(projection):
     from simllm.traffic import ExpertPlacementSnapshot, RoutedMoeSupply
 
     return RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=projection,
         placements=(
             ExpertPlacementSnapshot.from_manifest(
@@ -375,8 +376,40 @@ def _goal_oracle(path: Path) -> dict[str, object]:
     }
 
 
-def _flow_csv_path(workdir: Path, step_index: int = 0) -> Path:
-    return workdir / f"step-{step_index:06d}.rnic-nn-fluid.csv"
+def _direct_goal_oracle(vector_bytes: int, supply) -> dict[str, object]:
+    from simllm.traffic import render_step_goal
+
+    trace = render_step_goal(
+        _record(0, 0),
+        _dims(vector_bytes),
+        (0,),
+        1,
+        ep_ranks=(0, 1, 2, 3),
+        routed_supply=supply,
+        num_goal_ranks=4,
+    )
+    payload = trace.render().encode()
+    return {
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def _artifact_inventory(workdir: Path, suffix: str) -> dict[str, object]:
+    paths = sorted(workdir.glob(f"step-000000.*.{suffix}"))
+    digest = hashlib.sha256()
+    total_bytes = 0
+    for path in paths:
+        payload = path.read_bytes()
+        digest.update(path.name.encode())
+        digest.update(b"\0")
+        digest.update(payload)
+        total_bytes += len(payload)
+    return {
+        "files": len(paths),
+        "bytes": total_bytes,
+        "sha256": digest.hexdigest(),
+    }
 
 
 def _tp_width_guards():
@@ -501,28 +534,30 @@ def _fatal_checks(
 
         explicit_dir = out / f"vector-{vector_bytes}" / "ABCD"
         omitted_dir = out / f"vector-{vector_bytes}" / "omitted"
-        explicit_goal = _goal_oracle(explicit_dir / "step-000000.goal")
-        omitted_goal = _goal_oracle(omitted_dir / "step-000000.goal")
-        frozen_size, frozen_digest = LEGACY_GOAL_ORACLES[vector_bytes]
-        explicit_csv = _flow_csv_path(explicit_dir).read_bytes()
-        omitted_csv = _flow_csv_path(omitted_dir).read_bytes()
+        direct_goal = _direct_goal_oracle(vector_bytes, supply)
+        frozen_size, frozen_digest = DIRECT_GOAL_ORACLES[vector_bytes]
+        explicit_goals = _artifact_inventory(explicit_dir, "goal")
+        omitted_goals = _artifact_inventory(omitted_dir, "goal")
+        explicit_csvs = _artifact_inventory(explicit_dir, "rnic-nn-fluid.csv")
+        omitted_csvs = _artifact_inventory(omitted_dir, "rnic-nn-fluid.csv")
         explicit_network = sinks[(vector_bytes, "ABCD")].outcomes[0]
         omitted_network = omitted[vector_bytes][1].outcomes[0]
         identity.append(
             {
                 "vector_bytes": vector_bytes,
-                "explicit_goal": explicit_goal,
-                "omitted_goal": omitted_goal,
-                "frozen_goal": {
+                "direct_goal": direct_goal,
+                "frozen_direct_goal": {
                     "bytes": frozen_size,
                     "sha256": frozen_digest,
                 },
-                "flow_csv_bytes": len(explicit_csv),
-                "flow_csv_sha256": hashlib.sha256(explicit_csv).hexdigest(),
-                "passed": explicit_goal == omitted_goal
-                and explicit_goal
+                "explicit_goal_artifacts": explicit_goals,
+                "omitted_goal_artifacts": omitted_goals,
+                "explicit_csv_artifacts": explicit_csvs,
+                "omitted_csv_artifacts": omitted_csvs,
+                "passed": direct_goal
                 == {"bytes": frozen_size, "sha256": frozen_digest}
-                and explicit_csv == omitted_csv
+                and explicit_goals == omitted_goals
+                and explicit_csvs == omitted_csvs
                 and explicit_network == omitted_network,
             }
         )
