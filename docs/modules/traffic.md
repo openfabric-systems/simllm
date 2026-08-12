@@ -105,6 +105,22 @@ the flow-level work the GOAL emitter renders.
   pre-M5 emitter (golden test). The direct renderer deliberately constructs
   its own ATLAHS schedule so it can remain an independent debug cross-check;
   it is not used to repair or override graph-projected ordering.
+- `plan_execution_graph_collectives` attaches one immutable `CollectivePlan`
+  per collective operation and returns the planned `ExecutionGraph`. The plan
+  is the sole explicit-plan authority for algorithm, rank order, rounds, tags,
+  channels, chunk sizes, endpoint actions, their rank-local predecessors and
+  the directed extents with their request partitions. A canonical SHA-256 over
+  that content is its integrity identity, so a partially changed handoff is
+  rejected before scheduling, and the semantic fields are compared against the
+  `CollectiveWork` they join to, so a byte-conserving rank-order or tag change
+  cannot pass. Coverage is all or nothing: a graph that plans only some of its
+  collectives is invalid. Tags come from the accepted `collective_goal_tags`
+  allocator rather than a second implementation, and that allocator reads them
+  back out of the plan once it is attached. `collective_plan_by_operation`
+  returns the validated inventory and `render_collective_plan` renders the
+  declared actions, choosing only how a finished round is exposed to a
+  successor. A graph with no plan keeps the accepted compatibility path,
+  including the coarse runtime's own expansion, byte for byte.
 - `render_serial_execution_graph_goal` is the CORE-2 graph-only diagnostic
   replay. It accepts validated per-rank compute, ring allreduce and pairwise
   all-to-allv operations, preserves `participant_local_depends_on` edges and
@@ -216,9 +232,33 @@ retained their accepted hashes. All 16 scored relations, 22 exact-oracle rows
 and 12 fatal unscored guards passed; see
 [the overlap results](../../examples/compute_comm_overlap_v1/RESULTS.md).
 The vLLM adapter now emits one implemented source-backed schedule. Its current
-qualification is void, as recorded below. The runtime's
-physical collective expansion and GPU-side contention gaps remain explicit
-under TRAF-14, CORE-26, CORE-27 and COMP-22.
+qualification is void, as recorded below. The runtime's GPU-side contention
+gaps remain explicit under CORE-26, CORE-27 and COMP-22.
+
+The 2026-08-13 TRAF-14 qualification closed the duplicated collective
+expansion. Ring rounds and pairwise extents now live in one immutable
+traffic-owned `CollectivePlan` carried through `ExecutionGraph`, and the
+coarse runtime schedules those declared extents instead of re-deriving them.
+Compared with the shipped `ring_allreduce` and `pairwise_all_to_allv`
+expansions over worlds 2 and 4, payloads 3, 4 and 4,096 bytes, the three
+routed sparse cases and both GOAL frontier modes, all 18 comparisons are
+identical in messages, dependencies, tags, chunks, per-rank frontiers and
+rendered text. The two registered byte-conserving perturbations, a changed
+plan tag and a changed semantic rank order, are both rejected by validation
+and by runtime preflight with zero work requests submitted, while the same
+rank-order change is absorbed silently by the absent-plan surrogate at an
+unchanged 120 ps and unchanged 24 bytes. The explicit plan carries a 3-byte
+four-rank ring that the compatibility runtime rejects outright and reaches
+TTFT and TPOT of exactly 120 ps at 400 Gbit/s and 240 ps at 200 Gbit/s across
+one prefill and two decode steps. All six genuine-risk instances in two
+families passed and no fatal guard was violated; the absent-plan arm keeps its
+559-byte v1 wire form and its exact runtime timing, including under a nonzero
+collective channel service. See
+[the collective plan results](../../examples/collective_plan_v1/RESULTS.md).
+The plan is opt-in today, so TRAF-28 owns making it the lowering default and
+retiring the surrogate, and CORE-48 owns the missing cross-node
+destination-ingress serializer that keeps a converging combine structural
+rather than physical evidence.
 The 2026-08-12 TRAF-13 qualification added `DeviceRuntimeStepSink`, which binds
 the adapter's sole `VirtualClock` and carries optional observations through
 `ObservedStepLowerer`, `CoarseDeviceRuntime`, `CompletionEvent`,
@@ -334,15 +374,18 @@ residual. See
   completion error is at most 10 percent or 1 microsecond, whichever is
   larger. Report the before/after TTFT and TPOT effect and retain the exact
   all-remote identity path.
-- TRAF-14 (Precision; P1; M): move ring-round and pairwise-extent expansion
-  from the coarse runtime's current semantic-work surrogate into one immutable
-  traffic-owned collective plan carried through `ExecutionGraph`. The runtime
-  may schedule those extents but may not choose or reconstruct their
-  algorithm, chunk sizes, rank order or tags. Compare the plan against the
-  existing GOAL pattern expansion over payload, world-size and routed sparse-pair
-  sweeps with exact byte, round, dependency and tag conservation. The absent
-  explicit plan must preserve the accepted v1 wire bytes and serial timing
-  exactly.
+- TRAF-28 (Precision; P1; M): make the traffic-owned collective plan the
+  default on the production lowering path so the coarse runtime's semantic-work
+  expansion can be retired. TRAF-14 made the plan the sole authority whenever it
+  is present, but no shipped lowerer attaches one, so every default graph still
+  reaches the runtime's own reconstruction and the two expansions can drift for
+  exactly the graphs nobody opted in. Attach the plan in `SerialStepLowerer` and
+  `lower_step_observations`, keep an explicit bypass that preserves the accepted
+  559-byte v1 wire form and its serial timing, and requalify with the TRAF-14
+  perturbation family plus a live TTFT and TPOT arm on a real replayed step
+  rather than the tiny sentinel. Acceptance must show the runtime reconstruction
+  unreachable on the default path and removable without changing any accepted
+  number.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide

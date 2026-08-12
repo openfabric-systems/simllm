@@ -35,6 +35,7 @@ from simllm.core.bookkeeping import (
     StageRecord,
 )
 from simllm.core.execution import (
+    CollectivePlan,
     CollectiveWork,
     CompletionEvent,
     CompletionHandler,
@@ -907,6 +908,19 @@ def collective_goal_tags(
 
     validate_execution_graph(graph)
     _require_int("base_tag", base_tag)
+    if graph.collective_plans:
+        result = {
+            plan.operation_id: tuple(round_.tag for round_ in plan.rounds)
+            for plan in graph.collective_plans
+        }
+        allocated_tags = tuple(tag for tags in result.values() for tag in tags)
+        collective_tag_limit = base_tag + CONTROL_GOAL_TAG_OFFSET
+        if allocated_tags and max(allocated_tags) >= collective_tag_limit:
+            raise ValueError(
+                "collective plan tags overlap the control-tag range reserved "
+                f"at base + {CONTROL_GOAL_TAG_OFFSET}"
+            )
+        return result
     next_ring_tag = base_tag
     result: dict[str, tuple[int, ...]] = {}
     pairwise: list[ExecutionOperation] = []
@@ -1047,6 +1061,9 @@ class CoarseDeviceRuntime:
         native_committed = False
         try:
             tags = collective_goal_tags(graph, base_tag=self.profile.goal_base_tag)
+            collective_plans = {
+                plan.operation_id: plan for plan in graph.collective_plans
+            }
             operation_by_id = {
                 operation.operation_id: operation for operation in graph.operations
             }
@@ -1136,6 +1153,7 @@ class CoarseDeviceRuntime:
                     eligible_at_ps,
                     launch_visits[selected_id],
                     tags,
+                    collective_plans,
                     state,
                     wqe_authority,
                     operation_index[selected_id],
@@ -1210,6 +1228,9 @@ class CoarseDeviceRuntime:
 
     def _preflight(self, graph: ExecutionGraph) -> None:
         collective_goal_tags(graph, base_tag=self.profile.goal_base_tag)
+        collective_plans = {
+            plan.operation_id: plan for plan in graph.collective_plans
+        }
         operation_by_id = {
             operation.operation_id: operation for operation in graph.operations
         }
@@ -1254,7 +1275,12 @@ class CoarseDeviceRuntime:
             elif isinstance(work, CollectiveWork):
                 for rank in work.ranks:
                     self.profile.node_gpu(rank)
-                if work.collective == "all-reduce" and work.algorithm_hint == "ring":
+                plan = collective_plans.get(operation.operation_id)
+                if plan is not None:
+                    for extent in plan.extents:
+                        self.profile.node_gpu(extent.source_rank)
+                        self.profile.node_gpu(extent.destination_rank)
+                elif work.collective == "all-reduce" and work.algorithm_hint == "ring":
                     rank_count = len(work.ranks)
                     if work.payload_bytes < rank_count:
                         raise ValueError(
@@ -1267,6 +1293,8 @@ class CoarseDeviceRuntime:
                             "CORE-16 owns remainder chunking"
                         )
                 if (
+                    plan is None
+                    and
                     work.collective == "all-to-allv"
                     and work.payload_bytes == 0
                     and not work.pair_payload_bytes
@@ -1575,6 +1603,7 @@ class CoarseDeviceRuntime:
         eligible_at_ps: int,
         launch: QueueVisit,
         tags: Mapping[str, tuple[int, ...]],
+        collective_plans: Mapping[str, CollectivePlan],
         state: _RuntimeState,
         wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
         operation_index: int,
@@ -1635,6 +1664,7 @@ class CoarseDeviceRuntime:
                 causal_witnesses,
                 launch,
                 tags[operation.operation_id],
+                collective_plans.get(operation.operation_id),
                 state,
                 wqe_authority,
             )
@@ -1861,11 +1891,23 @@ class CoarseDeviceRuntime:
         causal_witnesses: dict[int, _CausalWitness | None],
         launch: QueueVisit,
         goal_tags: tuple[int, ...],
+        plan: CollectivePlan | None,
         state: _RuntimeState,
         wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
     ) -> _ScheduledOperation:
         work = operation.work
         assert isinstance(work, CollectiveWork)
+        if plan is not None:
+            return self._schedule_collective_plan(
+                graph,
+                operation,
+                readiness,
+                causal_witnesses,
+                launch,
+                plan,
+                state,
+                wqe_authority,
+            )
         command_id = (
             "nccl-command:"
             f"{_escape_id(graph.execution_id)}:{_escape_id(operation.operation_id)}"
@@ -2069,6 +2111,194 @@ class CoarseDeviceRuntime:
         if not paths:
             paths = [[launch]]
             path_witnesses = [completion_causal_witness]
+        selected_path_index = _logical_path_index(paths)
+        if paths[selected_path_index][-1].completed_at_ps == logical_completed:
+            causal_witness = path_witnesses[selected_path_index]
+        else:
+            causal_witness = completion_causal_witness
+        return _ScheduledOperation(
+            operation=operation,
+            logical_completed_at_ps=logical_completed,
+            physical_completed_at_ps=logical_completed,
+            participant_completed_at_ps=participant_completed,
+            participant_paths=participant_paths,
+            participant_causal_witnesses=participant_witnesses,
+            visits=visits,
+            logical_paths=paths,
+            eligible_at_ps=min(readiness.values()),
+            critical_predecessor_id=(
+                None if causal_witness is None else causal_witness.predecessor_id
+            ),
+            critical_predecessor_completed_at_ps=(
+                None if causal_witness is None else causal_witness.completed_at_ps
+            ),
+            nccl_command_id=command_id,
+            wqes=wqes,
+        )
+
+    def _schedule_collective_plan(
+        self,
+        graph: ExecutionGraph,
+        operation: ExecutionOperation,
+        readiness: dict[int, int],
+        causal_witnesses: dict[int, _CausalWitness | None],
+        launch: QueueVisit,
+        plan: CollectivePlan,
+        state: _RuntimeState,
+        wqe_authority: AtlahsWqeLedger | NativeRnicTransaction,
+    ) -> _ScheduledOperation:
+        """Schedule only the actions and extents declared by ``plan``."""
+
+        command_id = (
+            "nccl-command:"
+            f"{_escape_id(graph.execution_id)}:{_escape_id(operation.operation_id)}"
+        )
+        action_by_id = {action.action_id: action for action in plan.actions}
+        round_by_index = {round_.round_index: round_ for round_ in plan.rounds}
+        action_completed: dict[str, int] = {}
+        action_witnesses: dict[str, _CausalWitness | None] = {}
+        action_paths: dict[str, list[QueueVisit]] = {}
+        visits: list[QueueVisit] = [launch]
+        wqes: list[WqeLifecycleProjection] = []
+
+        def action_ready(
+            action_id: str,
+        ) -> tuple[int, _CausalWitness | None, list[QueueVisit]]:
+            action = action_by_id[action_id]
+            candidates = [
+                (
+                    readiness[action.rank],
+                    causal_witnesses[action.rank],
+                    [launch],
+                )
+            ]
+            candidates.extend(
+                (
+                    action_completed[dependency],
+                    action_witnesses[dependency],
+                    action_paths[dependency],
+                )
+                for dependency in action.depends_on
+            )
+            return max(
+                candidates,
+                key=lambda candidate: (
+                    candidate[0],
+                    candidate[1] is not None,
+                    (
+                        -1
+                        if candidate[1] is None
+                        else candidate[1].completed_at_ps
+                    ),
+                    (
+                        ""
+                        if candidate[1] is None
+                        else candidate[1].predecessor_id
+                    ),
+                ),
+            )
+
+        for extent_index, extent in enumerate(plan.extents):
+            round_ = round_by_index[extent.round_index]
+            send_ready, send_witness, send_path = action_ready(
+                extent.send_action_id
+            )
+            receive_ready, receive_witness, _ = action_ready(
+                extent.receive_action_id
+            )
+            channel_visit = self._schedule_nccl_channel(
+                graph,
+                operation,
+                extent.source_rank,
+                plan.channel_id,
+                launch.completed_at_ps,
+                send_ready,
+                state,
+            )
+            transfer = self._schedule_semantic_send(
+                graph=graph,
+                operation=operation,
+                source_rank=extent.source_rank,
+                destination_rank=extent.destination_rank,
+                payload_bytes=extent.payload_bytes,
+                goal_tag=round_.tag,
+                extent_index=extent_index,
+                channel_id=round_.channel_id,
+                submitted_at_ps=channel_visit.completed_at_ps,
+                eligible_at_ps=max(
+                    channel_visit.completed_at_ps,
+                    receive_ready,
+                ),
+                nccl_command_id=command_id,
+                state=state,
+                wqe_authority=wqe_authority,
+            )
+            transfer_witness = _select_causal_witness(
+                (channel_visit.completed_at_ps, send_witness),
+                (receive_ready, receive_witness),
+            )
+            path = [*send_path, channel_visit, *transfer.visits]
+            visits.append(channel_visit)
+            visits.extend(transfer.visits)
+            if transfer.projection is not None:
+                wqes.append(transfer.projection)
+            for action_id in (
+                extent.send_action_id,
+                extent.receive_action_id,
+            ):
+                action_completed[action_id] = transfer.completed_at_ps
+                action_witnesses[action_id] = transfer_witness
+                action_paths[action_id] = path
+
+        participant_completed = {}
+        participant_witnesses = {}
+        participant_paths = {}
+        paths = []
+        path_witnesses = []
+        for rank, terminal_action_ids in plan.terminal_action_ids:
+            candidates = [
+                (
+                    readiness[rank],
+                    causal_witnesses[rank],
+                    [launch],
+                )
+            ]
+            candidates.extend(
+                (
+                    action_completed[action_id],
+                    action_witnesses[action_id],
+                    action_paths[action_id],
+                )
+                for action_id in terminal_action_ids
+            )
+            completed, witness, path = max(
+                candidates,
+                key=lambda candidate: (
+                    candidate[0],
+                    candidate[1] is not None,
+                    (
+                        -1
+                        if candidate[1] is None
+                        else candidate[1].completed_at_ps
+                    ),
+                    (
+                        ""
+                        if candidate[1] is None
+                        else candidate[1].predecessor_id
+                    ),
+                ),
+            )
+            participant_completed[rank] = completed
+            participant_witnesses[rank] = witness
+            participant_paths[rank] = path
+            paths.append(path)
+            path_witnesses.append(witness)
+
+        logical_completed = max(participant_completed.values())
+        completion_causal_witness = _completion_causal_witness(
+            participant_completed,
+            participant_witnesses,
+        )
         selected_path_index = _logical_path_index(paths)
         if paths[selected_path_index][-1].completed_at_ps == logical_completed:
             causal_witness = path_witnesses[selected_path_index]

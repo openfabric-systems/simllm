@@ -28,9 +28,15 @@ from simllm.core.bookkeeping_io import (
 from simllm.core.clock import VirtualClock
 from simllm.core.completion import CompletionReducer
 from simllm.core.execution import (
+    COLLECTIVE_PLAN_SCHEMA,
     COMPLETION_EVENT_SCHEMA,
     EXECUTION_GRAPH_SCHEMA,
     EXECUTION_RESULT_SCHEMA,
+    CollectivePlan,
+    CollectivePlanAction,
+    CollectivePlanActionKind,
+    CollectivePlanExtent,
+    CollectivePlanRound,
     CollectiveWork,
     CompletionEvent,
     CompletionHandler,
@@ -56,6 +62,7 @@ from simllm.core.execution import (
     WorkPayload,
 )
 from simllm.core.execution_io import (
+    collective_plan_integrity_sha256,
     completion_event_from_json,
     completion_event_to_json,
     effective_dependency_edges,
@@ -121,6 +128,7 @@ from simllm.core.step_io import step_result_from_json, step_result_to_json
 
 __all__ = [
     "BOOKKEEPING_SCHEMA",
+    "COLLECTIVE_PLAN_SCHEMA",
     "COMPLETION_EVENT_SCHEMA",
     "DEFAULT_GOAL_BASE_TAG",
     "DEFAULT_GPUS_PER_NODE",
@@ -142,6 +150,11 @@ __all__ = [
     "BookkeepingScope",
     "CoarseDeviceProfile",
     "CoarseDeviceRuntime",
+    "CollectivePlan",
+    "CollectivePlanAction",
+    "CollectivePlanActionKind",
+    "CollectivePlanExtent",
+    "CollectivePlanRound",
     "CollectiveWork",
     "CompletionEvent",
     "CompletionHandler",
@@ -203,6 +216,7 @@ __all__ = [
     "bookkeeping_ledger_from_json",
     "bookkeeping_ledger_to_json",
     "collective_goal_tags",
+    "collective_plan_integrity_sha256",
     "completion_event_from_json",
     "completion_event_to_json",
     "effective_dependency_edges",

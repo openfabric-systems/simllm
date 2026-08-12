@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 #: Versioned wire-format names; execution_io implements the JSON readers and writers.
 EXECUTION_GRAPH_SCHEMA = "simllm-execution-graph-v1"
+COLLECTIVE_PLAN_SCHEMA = "simllm-collective-plan-v1"
 COMPLETION_EVENT_SCHEMA = "simllm-completion-event-v1"
 EXECUTION_RESULT_SCHEMA = "simllm-execution-result-v1"
 
@@ -190,6 +191,78 @@ class CollectiveWork:
     request_pair_payload_bytes: tuple[tuple[str, int, int, int], ...] = ()
 
 
+class CollectivePlanActionKind(str, enum.Enum):
+    """One endpoint action declared by a traffic-owned collective plan."""
+
+    SEND = "send"
+    RECEIVE = "receive"
+
+
+@dataclass(frozen=True)
+class CollectivePlanRound:
+    """One declared collective round with its traffic-owned tag and channel."""
+
+    round_index: int
+    tag: int
+    channel_id: str
+
+
+@dataclass(frozen=True)
+class CollectivePlanAction:
+    """One send or receive action and its exact internal predecessors."""
+
+    action_id: str
+    rank: int
+    kind: CollectivePlanActionKind
+    extent_id: str
+    depends_on: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class CollectivePlanExtent:
+    """One immutable directed transfer paired to endpoint actions."""
+
+    extent_id: str
+    round_index: int
+    source_rank: int
+    destination_rank: int
+    payload_bytes: int
+    send_action_id: str
+    receive_action_id: str
+    request_payload_bytes: tuple[tuple[str, int], ...] = ()
+
+
+@dataclass(frozen=True)
+class CollectivePlan:
+    """Traffic-owned physical expansion for one semantic graph operation.
+
+    The semantic fields are an immutable join key to ``CollectiveWork``. The
+    rounds, endpoint actions and extents are the sole explicit-plan authority
+    for rank order, chunks, dependencies, tags and directed traffic. The
+    integrity identity detects a partially changed handoff before scheduling.
+
+    ``channel_id`` names the per-rank collective channel the runtime serializes
+    an operation's endpoint actions on. Each round carries its own channel
+    label for the work-request record, which a multi-round algorithm makes
+    distinct from the operation channel.
+    """
+
+    operation_id: str
+    collective: str
+    algorithm: str
+    channel_id: str
+    rank_order: tuple[int, ...]
+    payload_bytes: int
+    pair_payload_bytes: tuple[tuple[int, int, int], ...]
+    request_pair_payload_bytes: tuple[tuple[str, int, int, int], ...]
+    rounds: tuple[CollectivePlanRound, ...]
+    actions: tuple[CollectivePlanAction, ...]
+    extents: tuple[CollectivePlanExtent, ...]
+    entry_action_ids: tuple[tuple[int, tuple[str, ...]], ...]
+    terminal_action_ids: tuple[tuple[int, tuple[str, ...]], ...]
+    integrity_sha256: str
+
+
 @dataclass(frozen=True)
 class ControlWork:
     """One local or in-band control message."""
@@ -274,6 +347,8 @@ class ExecutionGraph:
     operations: tuple[ExecutionOperation, ...] = ()
     #: operations whose logical completion releases the framework; empty means all
     completion_operation_ids: tuple[str, ...] = ()
+    #: optional all-or-nothing physical authority for the graph's collectives
+    collective_plans: tuple[CollectivePlan, ...] = ()
 
 
 @dataclass(frozen=True)

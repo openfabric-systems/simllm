@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import re
 from collections import defaultdict, deque
@@ -28,9 +30,15 @@ from simllm.core._wire import (
     _validate_unique,
 )
 from simllm.core.execution import (
+    COLLECTIVE_PLAN_SCHEMA,
     COMPLETION_EVENT_SCHEMA,
     EXECUTION_GRAPH_SCHEMA,
     EXECUTION_RESULT_SCHEMA,
+    CollectivePlan,
+    CollectivePlanAction,
+    CollectivePlanActionKind,
+    CollectivePlanExtent,
+    CollectivePlanRound,
     CollectiveWork,
     CompletionEvent,
     ComputeWork,
@@ -323,6 +331,331 @@ def _validate_work(work: WorkPayload, path: str) -> None:
     _fail(path, f"unsupported work payload {type(work).__name__}")
 
 
+def _collective_plan_identity_to_json(plan: CollectivePlan) -> dict[str, Any]:
+    return {
+        "schema": COLLECTIVE_PLAN_SCHEMA,
+        "operation_id": plan.operation_id,
+        "collective": plan.collective,
+        "algorithm": plan.algorithm,
+        "channel_id": plan.channel_id,
+        "rank_order": list(plan.rank_order),
+        "payload_bytes": plan.payload_bytes,
+        "pair_payload_bytes": [list(entry) for entry in plan.pair_payload_bytes],
+        "request_pair_payload_bytes": [
+            list(entry) for entry in plan.request_pair_payload_bytes
+        ],
+        "rounds": [
+            {
+                "round_index": round_.round_index,
+                "tag": round_.tag,
+                "channel_id": round_.channel_id,
+            }
+            for round_ in plan.rounds
+        ],
+        "actions": [
+            {
+                "action_id": action.action_id,
+                "rank": action.rank,
+                "kind": action.kind.value,
+                "extent_id": action.extent_id,
+                "depends_on": list(action.depends_on),
+            }
+            for action in plan.actions
+        ],
+        "extents": [
+            {
+                "extent_id": extent.extent_id,
+                "round_index": extent.round_index,
+                "source_rank": extent.source_rank,
+                "destination_rank": extent.destination_rank,
+                "payload_bytes": extent.payload_bytes,
+                "send_action_id": extent.send_action_id,
+                "receive_action_id": extent.receive_action_id,
+                "request_payload_bytes": [
+                    list(entry) for entry in extent.request_payload_bytes
+                ],
+            }
+            for extent in plan.extents
+        ],
+        "entry_action_ids": [
+            [rank, list(action_ids)] for rank, action_ids in plan.entry_action_ids
+        ],
+        "terminal_action_ids": [
+            [rank, list(action_ids)] for rank, action_ids in plan.terminal_action_ids
+        ],
+    }
+
+
+def collective_plan_integrity_sha256(plan: CollectivePlan) -> str:
+    """Return the canonical integrity identity of one plan's immutable content."""
+
+    if not isinstance(plan, CollectivePlan):
+        raise TypeError("plan must be a CollectivePlan")
+    wire = json.dumps(
+        _collective_plan_identity_to_json(plan),
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return hashlib.sha256(wire).hexdigest()
+
+
+def _validate_rank_action_ids(
+    entries: tuple[tuple[int, tuple[str, ...]], ...],
+    path: str,
+    *,
+    rank_order: tuple[int, ...],
+    action_by_id: dict[str, CollectivePlanAction],
+) -> dict[int, tuple[str, ...]]:
+    values = _require_tuple(entries, path)
+    if len(values) != len(rank_order):
+        _fail(path, "must contain one entry for every rank in rank_order")
+    result: dict[int, tuple[str, ...]] = {}
+    for index, entry in enumerate(values):
+        entry_path = f"{path}[{index}]"
+        if not isinstance(entry, tuple) or len(entry) != 2:
+            _fail(entry_path, "expected a two-item tuple")
+        rank = _integer(entry[0], f"{entry_path}[0]", nonnegative=True)
+        if rank != rank_order[index]:
+            _fail(entry_path, "rank entries must preserve rank_order exactly")
+        action_ids = _require_tuple(entry[1], f"{entry_path}[1]")
+        for action_index, action_id in enumerate(action_ids):
+            action_id = _string(action_id, f"{entry_path}[1][{action_index}]")
+            action = action_by_id.get(action_id)
+            if action is None:
+                _fail(f"{entry_path}[1][{action_index}]", "unknown action ID")
+            if action.rank != rank:
+                _fail(f"{entry_path}[1][{action_index}]", "action belongs to another rank")
+        _validate_unique(action_ids, f"{entry_path}[1]")
+        result[rank] = action_ids
+    return result
+
+
+def _validate_collective_plan(
+    plan: CollectivePlan,
+    path: str,
+    *,
+    work: CollectiveWork,
+) -> None:
+    if not isinstance(plan, CollectivePlan):
+        _fail(path, "expected CollectivePlan")
+    _string(plan.operation_id, f"{path}.operation_id")
+    _string(plan.collective, f"{path}.collective")
+    _string(plan.algorithm, f"{path}.algorithm")
+    _string(plan.channel_id, f"{path}.channel_id")
+    rank_order = _require_tuple(plan.rank_order, f"{path}.rank_order")
+    if not rank_order:
+        _fail(f"{path}.rank_order", "must not be empty")
+    for index, rank in enumerate(rank_order):
+        _integer(rank, f"{path}.rank_order[{index}]", nonnegative=True)
+    _validate_unique(rank_order, f"{path}.rank_order")
+    _integer(plan.payload_bytes, f"{path}.payload_bytes", nonnegative=True)
+
+    if plan.collective != work.collective:
+        _fail(path, "collective disagrees with semantic work")
+    if plan.algorithm != work.algorithm_hint:
+        _fail(path, "algorithm disagrees with semantic work")
+    if plan.channel_id != (work.channel_hint or "default"):
+        _fail(path, "channel disagrees with semantic work")
+    if plan.rank_order != work.ranks:
+        _fail(path, "rank order disagrees with semantic work")
+    if plan.payload_bytes != work.payload_bytes:
+        _fail(path, "payload_bytes disagrees with semantic work")
+    if plan.pair_payload_bytes != work.pair_payload_bytes:
+        _fail(path, "pair_payload_bytes disagrees with semantic work")
+    if plan.request_pair_payload_bytes != work.request_pair_payload_bytes:
+        _fail(path, "request_pair_payload_bytes disagrees with semantic work")
+
+    semantic_copy = CollectiveWork(
+        collective=plan.collective,
+        ranks=plan.rank_order,
+        payload_bytes=plan.payload_bytes,
+        algorithm_hint=plan.algorithm,
+        channel_hint=work.channel_hint,
+        pair_payload_bytes=plan.pair_payload_bytes,
+        request_pair_payload_bytes=plan.request_pair_payload_bytes,
+    )
+    _validate_work(semantic_copy, path)
+
+    rounds = _require_tuple(plan.rounds, f"{path}.rounds")
+    if not rounds:
+        _fail(f"{path}.rounds", "must not be empty")
+    round_tags = []
+    for index, round_ in enumerate(rounds):
+        round_path = f"{path}.rounds[{index}]"
+        if not isinstance(round_, CollectivePlanRound):
+            _fail(round_path, "expected CollectivePlanRound")
+        if round_.round_index != index:
+            _fail(f"{round_path}.round_index", "round indices must be contiguous")
+        _integer(round_.tag, f"{round_path}.tag", nonnegative=True)
+        _string(round_.channel_id, f"{round_path}.channel_id")
+        round_tags.append(round_.tag)
+    _validate_unique(round_tags, f"{path}.rounds tags")
+
+    actions = _require_tuple(plan.actions, f"{path}.actions")
+    action_by_id: dict[str, CollectivePlanAction] = {}
+    action_index_by_id: dict[str, int] = {}
+    for index, action in enumerate(actions):
+        action_path = f"{path}.actions[{index}]"
+        if not isinstance(action, CollectivePlanAction):
+            _fail(action_path, "expected CollectivePlanAction")
+        action_id = _string(action.action_id, f"{action_path}.action_id")
+        if action_id in action_by_id:
+            _fail(f"{action_path}.action_id", "duplicate action ID")
+        action_by_id[action_id] = action
+        action_index_by_id[action_id] = index
+        _integer(action.rank, f"{action_path}.rank", nonnegative=True)
+        if action.rank not in rank_order:
+            _fail(f"{action_path}.rank", "action rank is outside rank_order")
+        if not isinstance(action.kind, CollectivePlanActionKind):
+            _fail(f"{action_path}.kind", "expected CollectivePlanActionKind")
+        _string(action.extent_id, f"{action_path}.extent_id")
+        dependencies = _require_tuple(action.depends_on, f"{action_path}.depends_on")
+        for dep_index, dependency in enumerate(dependencies):
+            _string(dependency, f"{action_path}.depends_on[{dep_index}]")
+        _validate_unique(dependencies, f"{action_path}.depends_on")
+
+    for index, action in enumerate(actions):
+        action_path = f"{path}.actions[{index}]"
+        for dep_index, dependency in enumerate(action.depends_on):
+            predecessor_index = action_index_by_id.get(dependency)
+            if predecessor_index is None:
+                _fail(f"{action_path}.depends_on[{dep_index}]", "unknown action ID")
+            if predecessor_index >= index:
+                _fail(
+                    f"{action_path}.depends_on[{dep_index}]",
+                    "internal dependencies must point to an earlier action",
+                )
+            if action_by_id[dependency].rank != action.rank:
+                _fail(
+                    f"{action_path}.depends_on[{dep_index}]",
+                    "internal dependency must stay on one rank",
+                )
+
+    extents = _require_tuple(plan.extents, f"{path}.extents")
+    extent_by_id: dict[str, CollectivePlanExtent] = {}
+    extent_action_ids: set[str] = set()
+    previous_round = -1
+    for index, extent in enumerate(extents):
+        extent_path = f"{path}.extents[{index}]"
+        if not isinstance(extent, CollectivePlanExtent):
+            _fail(extent_path, "expected CollectivePlanExtent")
+        extent_id = _string(extent.extent_id, f"{extent_path}.extent_id")
+        if extent_id in extent_by_id:
+            _fail(f"{extent_path}.extent_id", "duplicate extent ID")
+        extent_by_id[extent_id] = extent
+        _integer(extent.round_index, f"{extent_path}.round_index", nonnegative=True)
+        if extent.round_index >= len(rounds):
+            _fail(f"{extent_path}.round_index", "round index is outside the plan")
+        if extent.round_index < previous_round:
+            _fail(f"{extent_path}.round_index", "extents must be round-major")
+        previous_round = extent.round_index
+        _integer(extent.source_rank, f"{extent_path}.source_rank", nonnegative=True)
+        _integer(
+            extent.destination_rank,
+            f"{extent_path}.destination_rank",
+            nonnegative=True,
+        )
+        if extent.source_rank == extent.destination_rank:
+            _fail(extent_path, "extent source and destination must differ")
+        if (
+            extent.source_rank not in rank_order
+            or extent.destination_rank not in rank_order
+        ):
+            _fail(extent_path, "extent endpoint is outside rank_order")
+        _integer(extent.payload_bytes, f"{extent_path}.payload_bytes", minimum=1)
+        for field_name, action_id, kind, rank in (
+            (
+                "send_action_id",
+                extent.send_action_id,
+                CollectivePlanActionKind.SEND,
+                extent.source_rank,
+            ),
+            (
+                "receive_action_id",
+                extent.receive_action_id,
+                CollectivePlanActionKind.RECEIVE,
+                extent.destination_rank,
+            ),
+        ):
+            action_id = _string(action_id, f"{extent_path}.{field_name}")
+            action = action_by_id.get(action_id)
+            if action is None:
+                _fail(f"{extent_path}.{field_name}", "unknown action ID")
+            if action.kind is not kind or action.rank != rank:
+                _fail(f"{extent_path}.{field_name}", "action kind or rank disagrees")
+            if action.extent_id != extent_id:
+                _fail(f"{extent_path}.{field_name}", "action extent identity disagrees")
+            if action_id in extent_action_ids:
+                _fail(f"{extent_path}.{field_name}", "action is reused by another extent")
+            extent_action_ids.add(action_id)
+        request_ids = []
+        request_bytes = 0
+        request_payloads = _require_tuple(
+            extent.request_payload_bytes,
+            f"{extent_path}.request_payload_bytes",
+        )
+        for request_index, entry in enumerate(request_payloads):
+            entry_path = f"{extent_path}.request_payload_bytes[{request_index}]"
+            if not isinstance(entry, tuple) or len(entry) != 2:
+                _fail(entry_path, "expected a two-item tuple")
+            request_ids.append(_string(entry[0], f"{entry_path}[0]"))
+            request_bytes += _integer(entry[1], f"{entry_path}[1]", minimum=1)
+        _validate_unique(request_ids, f"{extent_path}.request_payload_bytes request IDs")
+        if request_ids != sorted(request_ids):
+            _fail(
+                f"{extent_path}.request_payload_bytes",
+                "entries must be request-major",
+            )
+        if request_payloads and request_bytes != extent.payload_bytes:
+            _fail(
+                f"{extent_path}.request_payload_bytes",
+                "partition must sum to extent payload_bytes",
+            )
+    if extent_action_ids != set(action_by_id):
+        _fail(f"{path}.actions", "actions must be paired exactly to plan extents")
+
+    entries = _validate_rank_action_ids(
+        plan.entry_action_ids,
+        f"{path}.entry_action_ids",
+        rank_order=rank_order,
+        action_by_id=action_by_id,
+    )
+    terminals = _validate_rank_action_ids(
+        plan.terminal_action_ids,
+        f"{path}.terminal_action_ids",
+        rank_order=rank_order,
+        action_by_id=action_by_id,
+    )
+    expected_entries = {
+        rank: tuple(
+            action.action_id
+            for action in actions
+            if action.rank == rank and not action.depends_on
+        )
+        for rank in rank_order
+    }
+    if entries != expected_entries:
+        _fail(f"{path}.entry_action_ids", "does not match dependency roots")
+    predecessor_ids = {
+        dependency for action in actions for dependency in action.depends_on
+    }
+    expected_terminals = {
+        rank: tuple(
+            action.action_id
+            for action in actions
+            if action.rank == rank and action.action_id not in predecessor_ids
+        )
+        for rank in rank_order
+    }
+    if terminals != expected_terminals:
+        _fail(f"{path}.terminal_action_ids", "does not match dependency terminals")
+
+    if not re.fullmatch(r"[0-9a-f]{64}", plan.integrity_sha256):
+        _fail(f"{path}.integrity_sha256", "expected a lowercase SHA-256 digest")
+    if collective_plan_integrity_sha256(plan) != plan.integrity_sha256:
+        _fail(f"{path}.integrity_sha256", "collective plan integrity mismatch")
+
+
 def validate_execution_graph(graph: ExecutionGraph) -> None:
     """Validate graph structure, FIFO semantics and local payload values."""
     if not isinstance(graph, ExecutionGraph):
@@ -334,6 +667,10 @@ def validate_execution_graph(graph: ExecutionGraph) -> None:
     completion_ids = _require_tuple(
         graph.completion_operation_ids,
         "graph.completion_operation_ids",
+    )
+    collective_plans = _require_tuple(
+        graph.collective_plans,
+        "graph.collective_plans",
     )
     operation_by_id: dict[str, ExecutionOperation] = {}
     for index, operation in enumerate(operations):
@@ -414,6 +751,31 @@ def validate_execution_graph(graph: ExecutionGraph) -> None:
                 f"unknown operation ID {completion_id!r}",
             )
     _validate_unique(completion_ids, "graph.completion_operation_ids")
+
+    if collective_plans:
+        collective_operations = tuple(
+            operation
+            for operation in operations
+            if isinstance(operation.work, CollectiveWork)
+        )
+        if len(collective_plans) != len(collective_operations):
+            _fail(
+                "graph.collective_plans",
+                "explicit plans must cover every collective operation exactly",
+            )
+        all_tags = []
+        for index, (plan, operation) in enumerate(
+            zip(collective_plans, collective_operations, strict=True)
+        ):
+            path = f"graph.collective_plans[{index}]"
+            if not isinstance(plan, CollectivePlan):
+                _fail(path, "expected CollectivePlan")
+            if plan.operation_id != operation.operation_id:
+                _fail(path, "plan order or operation identity disagrees with graph")
+            assert isinstance(operation.work, CollectiveWork)
+            _validate_collective_plan(plan, path, work=operation.work)
+            all_tags.extend(round_.tag for round_ in plan.rounds)
+        _validate_unique(all_tags, "graph.collective_plans round tags")
 
     edges = {
         (edge.predecessor_id, edge.operation_id)
@@ -758,10 +1120,269 @@ def _work_from_json(value: Any, path: str) -> WorkPayload:
     _fail(f"{path}.kind", f"unknown work kind {kind!r}")
 
 
+def _collective_plan_to_json(plan: CollectivePlan) -> dict[str, Any]:
+    payload = _collective_plan_identity_to_json(plan)
+    payload["integrity_sha256"] = plan.integrity_sha256
+    return payload
+
+
+def _rank_action_ids_from_json(
+    value: Any,
+    path: str,
+) -> tuple[tuple[int, tuple[str, ...]], ...]:
+    result = []
+    for index, raw_entry in enumerate(_array(value, path)):
+        entry_path = f"{path}[{index}]"
+        entry = _array(raw_entry, entry_path)
+        if len(entry) != 2:
+            _fail(entry_path, "expected a two-item array")
+        result.append(
+            (
+                _integer(entry[0], f"{entry_path}[0]", nonnegative=True),
+                _string_tuple(entry[1], f"{entry_path}[1]"),
+            )
+        )
+    return tuple(result)
+
+
+def _collective_plan_from_json(value: Any, path: str) -> CollectivePlan:
+    payload = _object(value, path)
+    _fields(
+        payload,
+        path,
+        required={
+            "schema",
+            "operation_id",
+            "collective",
+            "algorithm",
+            "channel_id",
+            "rank_order",
+            "payload_bytes",
+            "pair_payload_bytes",
+            "request_pair_payload_bytes",
+            "rounds",
+            "actions",
+            "extents",
+            "entry_action_ids",
+            "terminal_action_ids",
+            "integrity_sha256",
+        },
+    )
+    schema = _string(payload["schema"], f"{path}.schema")
+    if schema != COLLECTIVE_PLAN_SCHEMA:
+        _fail(
+            f"{path}.schema",
+            f"unsupported schema {schema!r}; expected {COLLECTIVE_PLAN_SCHEMA!r}",
+        )
+
+    pair_payloads = []
+    for index, raw_entry in enumerate(
+        _array(payload["pair_payload_bytes"], f"{path}.pair_payload_bytes")
+    ):
+        entry_path = f"{path}.pair_payload_bytes[{index}]"
+        entry = _array(raw_entry, entry_path)
+        if len(entry) != 3:
+            _fail(entry_path, "expected a three-item array")
+        pair_payloads.append(
+            (
+                _integer(entry[0], f"{entry_path}[0]", nonnegative=True),
+                _integer(entry[1], f"{entry_path}[1]", nonnegative=True),
+                _integer(entry[2], f"{entry_path}[2]", minimum=1),
+            )
+        )
+
+    request_pair_payloads = []
+    for index, raw_entry in enumerate(
+        _array(
+            payload["request_pair_payload_bytes"],
+            f"{path}.request_pair_payload_bytes",
+        )
+    ):
+        entry_path = f"{path}.request_pair_payload_bytes[{index}]"
+        entry = _array(raw_entry, entry_path)
+        if len(entry) != 4:
+            _fail(entry_path, "expected a four-item array")
+        request_pair_payloads.append(
+            (
+                _string(entry[0], f"{entry_path}[0]"),
+                _integer(entry[1], f"{entry_path}[1]", nonnegative=True),
+                _integer(entry[2], f"{entry_path}[2]", nonnegative=True),
+                _integer(entry[3], f"{entry_path}[3]", minimum=1),
+            )
+        )
+
+    rounds = []
+    for index, raw_round in enumerate(_array(payload["rounds"], f"{path}.rounds")):
+        round_path = f"{path}.rounds[{index}]"
+        round_payload = _object(raw_round, round_path)
+        _fields(
+            round_payload,
+            round_path,
+            required={"round_index", "tag", "channel_id"},
+        )
+        rounds.append(
+            CollectivePlanRound(
+                round_index=_integer(
+                    round_payload["round_index"],
+                    f"{round_path}.round_index",
+                    nonnegative=True,
+                ),
+                tag=_integer(
+                    round_payload["tag"],
+                    f"{round_path}.tag",
+                    nonnegative=True,
+                ),
+                channel_id=_string(
+                    round_payload["channel_id"],
+                    f"{round_path}.channel_id",
+                ),
+            )
+        )
+
+    actions = []
+    for index, raw_action in enumerate(_array(payload["actions"], f"{path}.actions")):
+        action_path = f"{path}.actions[{index}]"
+        action_payload = _object(raw_action, action_path)
+        _fields(
+            action_payload,
+            action_path,
+            required={"action_id", "rank", "kind", "extent_id", "depends_on"},
+        )
+        actions.append(
+            CollectivePlanAction(
+                action_id=_string(
+                    action_payload["action_id"],
+                    f"{action_path}.action_id",
+                ),
+                rank=_integer(
+                    action_payload["rank"],
+                    f"{action_path}.rank",
+                    nonnegative=True,
+                ),
+                kind=_enum_value(
+                    CollectivePlanActionKind,
+                    action_payload["kind"],
+                    f"{action_path}.kind",
+                ),
+                extent_id=_string(
+                    action_payload["extent_id"],
+                    f"{action_path}.extent_id",
+                ),
+                depends_on=_string_tuple(
+                    action_payload["depends_on"],
+                    f"{action_path}.depends_on",
+                ),
+            )
+        )
+
+    extents = []
+    for index, raw_extent in enumerate(_array(payload["extents"], f"{path}.extents")):
+        extent_path = f"{path}.extents[{index}]"
+        extent_payload = _object(raw_extent, extent_path)
+        _fields(
+            extent_payload,
+            extent_path,
+            required={
+                "extent_id",
+                "round_index",
+                "source_rank",
+                "destination_rank",
+                "payload_bytes",
+                "send_action_id",
+                "receive_action_id",
+                "request_payload_bytes",
+            },
+        )
+        request_payloads = []
+        for request_index, raw_entry in enumerate(
+            _array(
+                extent_payload["request_payload_bytes"],
+                f"{extent_path}.request_payload_bytes",
+            )
+        ):
+            entry_path = f"{extent_path}.request_payload_bytes[{request_index}]"
+            entry = _array(raw_entry, entry_path)
+            if len(entry) != 2:
+                _fail(entry_path, "expected a two-item array")
+            request_payloads.append(
+                (
+                    _string(entry[0], f"{entry_path}[0]"),
+                    _integer(entry[1], f"{entry_path}[1]", minimum=1),
+                )
+            )
+        extents.append(
+            CollectivePlanExtent(
+                extent_id=_string(
+                    extent_payload["extent_id"],
+                    f"{extent_path}.extent_id",
+                ),
+                round_index=_integer(
+                    extent_payload["round_index"],
+                    f"{extent_path}.round_index",
+                    nonnegative=True,
+                ),
+                source_rank=_integer(
+                    extent_payload["source_rank"],
+                    f"{extent_path}.source_rank",
+                    nonnegative=True,
+                ),
+                destination_rank=_integer(
+                    extent_payload["destination_rank"],
+                    f"{extent_path}.destination_rank",
+                    nonnegative=True,
+                ),
+                payload_bytes=_integer(
+                    extent_payload["payload_bytes"],
+                    f"{extent_path}.payload_bytes",
+                    minimum=1,
+                ),
+                send_action_id=_string(
+                    extent_payload["send_action_id"],
+                    f"{extent_path}.send_action_id",
+                ),
+                receive_action_id=_string(
+                    extent_payload["receive_action_id"],
+                    f"{extent_path}.receive_action_id",
+                ),
+                request_payload_bytes=tuple(request_payloads),
+            )
+        )
+
+    return CollectivePlan(
+        operation_id=_string(payload["operation_id"], f"{path}.operation_id"),
+        collective=_string(payload["collective"], f"{path}.collective"),
+        algorithm=_string(payload["algorithm"], f"{path}.algorithm"),
+        channel_id=_string(payload["channel_id"], f"{path}.channel_id"),
+        rank_order=_int_tuple(payload["rank_order"], f"{path}.rank_order"),
+        payload_bytes=_integer(
+            payload["payload_bytes"],
+            f"{path}.payload_bytes",
+            nonnegative=True,
+        ),
+        pair_payload_bytes=tuple(pair_payloads),
+        request_pair_payload_bytes=tuple(request_pair_payloads),
+        rounds=tuple(rounds),
+        actions=tuple(actions),
+        extents=tuple(extents),
+        entry_action_ids=_rank_action_ids_from_json(
+            payload["entry_action_ids"],
+            f"{path}.entry_action_ids",
+        ),
+        terminal_action_ids=_rank_action_ids_from_json(
+            payload["terminal_action_ids"],
+            f"{path}.terminal_action_ids",
+        ),
+        integrity_sha256=_string(
+            payload["integrity_sha256"],
+            f"{path}.integrity_sha256",
+        ),
+    )
+
+
 def execution_graph_to_json(graph: ExecutionGraph) -> dict[str, Any]:
     """Return the canonical JSON-ready form of one execution graph."""
     validate_execution_graph(graph)
-    return {
+    payload = {
         "schema": EXECUTION_GRAPH_SCHEMA,
         "execution_id": graph.execution_id,
         "step_index": graph.step_index,
@@ -783,6 +1404,11 @@ def execution_graph_to_json(graph: ExecutionGraph) -> dict[str, Any]:
         ],
         "completion_operation_ids": list(graph.completion_operation_ids),
     }
+    if graph.collective_plans:
+        payload["collective_plans"] = [
+            _collective_plan_to_json(plan) for plan in graph.collective_plans
+        ]
+    return payload
 
 
 def execution_graph_from_json(value: Any) -> ExecutionGraph:
@@ -800,7 +1426,7 @@ def execution_graph_from_json(value: Any) -> ExecutionGraph:
         payload,
         "graph",
         required={"schema", "execution_id", "step_index", "released_at_ps"},
-        optional={"operations", "completion_operation_ids"},
+        optional={"operations", "completion_operation_ids", "collective_plans"},
     )
     operations: list[ExecutionOperation] = []
     for index, raw_operation in enumerate(
@@ -858,6 +1484,12 @@ def execution_graph_from_json(value: Any) -> ExecutionGraph:
         completion_operation_ids=_string_tuple(
             payload.get("completion_operation_ids", []),
             "graph.completion_operation_ids",
+        ),
+        collective_plans=tuple(
+            _collective_plan_from_json(entry, f"graph.collective_plans[{index}]")
+            for index, entry in enumerate(
+                _array(payload.get("collective_plans", []), "graph.collective_plans")
+            )
         ),
     )
     validate_execution_graph(graph)
