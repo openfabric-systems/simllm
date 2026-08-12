@@ -290,6 +290,8 @@ class ProfileTableProvider(ComputeProvider):
         self,
         table: dict[ProfileKey, int | tuple[int, float]],
         provenance: ProfileTableProvenance | None = None,
+        *,
+        enable_family_sum: bool = False,
     ):
         self._durations: dict[ProfileKey, int] = {}
         self._uncertainties: dict[ProfileKey, float] = {}
@@ -301,6 +303,7 @@ class ProfileTableProvider(ComputeProvider):
             self._durations[key] = int(duration_ps)
             self._uncertainties[key] = float(uncertainty)
         self.provenance = provenance
+        self.enable_family_sum = enable_family_sum
 
     def estimate(self, kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate:
         key = (kernel.name, kernel.config, gpu.name)
@@ -310,7 +313,52 @@ class ProfileTableProvider(ComputeProvider):
                 bound="measured",
                 uncertainty=self._uncertainties[key],
             )
+        if self.enable_family_sum and kernel.family_kernels:
+            return self._estimate_family_sum(kernel, gpu)
         return self._interpolate(kernel, gpu)
+
+    def _estimate_family_sum(
+        self,
+        kernel: KernelSpec,
+        gpu: GpuSpec,
+    ) -> DurationEstimate:
+        """Sum independently keyed family entries for one fused kernel.
+
+        This path is opt-in. Direct table entries retain precedence, and the
+        default provider keeps the historical exact-match and interpolation
+        behavior. Relative uncertainty is the conservative sum of each
+        child's absolute uncertainty divided by the summed duration.
+        """
+
+        children = []
+        for family in kernel.family_kernels:
+            try:
+                children.append(self.estimate(family, gpu))
+            except KeyError as error:
+                raise KeyError(
+                    f"fused kernel {kernel.name!r} has no supported profile "
+                    f"for family {family.name!r}: {error}"
+                ) from error
+        duration_ps = sum(child.duration_ps for child in children)
+        if duration_ps == 0:
+            uncertainty = max(
+                (child.uncertainty for child in children),
+                default=0.0,
+            )
+        else:
+            uncertainty = sum(
+                child.duration_ps * child.uncertainty for child in children
+            ) / duration_ps
+        bound = (
+            "measured"
+            if all(child.bound == "measured" for child in children)
+            else "interpolated"
+        )
+        return DurationEstimate(
+            duration_ps=duration_ps,
+            bound=bound,
+            uncertainty=uncertainty,
+        )
 
     def _interpolate(self, kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate:
         axis_names = tuple(name for name, _ in kernel.config)
@@ -387,7 +435,12 @@ class ProfileTableProvider(ComputeProvider):
         return path
 
     @classmethod
-    def load(cls, path: str | Path) -> ProfileTableProvider:
+    def load(
+        cls,
+        path: str | Path,
+        *,
+        enable_family_sum: bool = False,
+    ) -> ProfileTableProvider:
         """Load a versioned JSON artifact; rejects any other schema loudly."""
         payload = json.loads(Path(path).read_text())
         schema = payload.get("schema")
@@ -405,4 +458,8 @@ class ProfileTableProvider(ComputeProvider):
                 str(entry["gpu"]),
             )
             table[key] = (int(entry["duration_ps"]), float(entry["uncertainty"]))
-        return cls(table, provenance=provenance)
+        return cls(
+            table,
+            provenance=provenance,
+            enable_family_sum=enable_family_sum,
+        )
