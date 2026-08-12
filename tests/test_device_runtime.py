@@ -23,6 +23,7 @@ from simllm.compute import (
     WarpSchedulerPolicy,
 )
 from simllm.core import (
+    ArbitrationCandidate,
     AtlahsWqeLedger,
     CoarseDeviceProfile,
     CoarseDeviceRuntime,
@@ -46,6 +47,8 @@ from simllm.core import (
     ResourceRef,
     RnicAuthorityMode,
     SemanticWqeSubmission,
+    StrictPriorityArbitrationPolicy,
+    WeightedRoundRobinArbitrationPolicy,
     WqeLifecycleProjection,
     collective_goal_tags,
     validate_bookkeeping_ledger,
@@ -906,6 +909,178 @@ def test_conforming_arbitration_policy_is_accepted_and_selects_from_legal_ready_
         "control-0-1",
         "control-0-0",
     ]
+
+
+class _RecordingScheduler(SmSchedulerModel):
+    """Record every ordered tuple the concurrent compute service receives."""
+
+    def __init__(self, architecture):
+        super().__init__(architecture)
+        self.calls: list[tuple[str, ...]] = []
+
+    def estimate_concurrent(self, tasks):
+        tasks = tuple(tasks)
+        self.calls.append(tuple(task.task_id for task in tasks))
+        return super().estimate_concurrent(tasks)
+
+
+def _compute_graph(execution_id, names, labels=None, depends=None) -> ExecutionGraph:
+    labels = labels or {}
+    depends = depends or {}
+    return ExecutionGraph(
+        execution_id,
+        0,
+        0,
+        tuple(
+            ExecutionOperation(
+                name,
+                0,
+                f"stream-{name}",
+                ComputeWork(name),
+                depends_on=depends.get(name, ()),
+                priority=labels.get(name, 0),
+            )
+            for name in names
+        ),
+    )
+
+
+def _run_compute_group(names, *, policy=None, labels=None, depends=None):
+    scheduler = _RecordingScheduler(_architecture())
+    runtime = CoarseDeviceRuntime(
+        kernel_services={0: scheduler},
+        kernel_launches={name: _launch(name) for name in names},
+        arbitration_policy=policy,
+    )
+    runtime.execute(_compute_graph("group", names, labels, depends))
+    return scheduler.calls, runtime
+
+
+_IDENTITY_SETTINGS = (
+    None,
+    IdentityArbitrationPolicy(),
+    StrictPriorityArbitrationPolicy(class_aware=False),
+    WeightedRoundRobinArbitrationPolicy({1: 2, 2: 1}, class_aware=False),
+)
+
+
+@pytest.mark.parametrize(
+    "labels",
+    [{}, {"a": 2, "b": 1, "c": 1}, {"a": 1, "b": 2, "c": 3}],
+)
+def test_every_identity_setting_pins_the_group_order_to_graph_order(labels):
+    baseline_calls, baseline_runtime = _run_compute_group(("a", "b", "c"))
+    assert baseline_calls == [("a", "b", "c")]
+    baseline = _canonical_report(baseline_runtime)
+    for policy in _IDENTITY_SETTINGS:
+        calls, runtime = _run_compute_group(
+            ("a", "b", "c"),
+            policy=policy,
+            labels=labels,
+        )
+        assert calls == [("a", "b", "c")]
+        assert _canonical_report(runtime) == baseline
+
+
+def test_a_class_aware_policy_moves_the_order_the_compute_service_receives():
+    identity_calls, _ = _run_compute_group(("a", "b", "c"))
+    calls, _ = _run_compute_group(
+        ("a", "b", "c"),
+        policy=StrictPriorityArbitrationPolicy(),
+        labels={"a": 2, "b": 1, "c": 1},
+    )
+    assert identity_calls == [("a", "b", "c")]
+    assert calls == [("b", "c", "a")]
+    # arbitration decides the order of the co-runnable set, never its membership
+    assert sorted(calls[0]) == sorted(identity_calls[0])
+
+
+def test_weighted_round_robin_orders_the_group_by_carried_credits():
+    calls, _ = _run_compute_group(
+        ("a", "b", "c"),
+        policy=WeightedRoundRobinArbitrationPolicy({1: 2, 2: 1}),
+        labels={"a": 2, "b": 1, "c": 1},
+    )
+    # the class-1 credit spent at the ready seam is why `a` lands second here
+    # while strict priority with the same labels grants `("b", "c", "a")`
+    assert calls == [("b", "a", "c")]
+
+
+def test_arbitration_never_moves_a_dependent_operation_ahead_of_its_predecessor():
+    calls, _ = _run_compute_group(
+        ("a", "b"),
+        policy=StrictPriorityArbitrationPolicy(),
+        labels={"a": 2, "b": 1},
+        depends={"b": ("a",)},
+    )
+    assert calls == [("a",), ("b",)]
+
+
+def test_group_arbitration_rejects_a_grant_outside_the_offered_set():
+    class _ForeignOnSecondGrant:
+        def __init__(self):
+            self.calls = 0
+
+        def select(self, candidates):
+            self.calls += 1
+            if self.calls == 2:
+                return ArbitrationCandidate("elsewhere", 0, 0, 0)
+            return min(candidates, key=lambda item: item.baseline_sequence)
+
+    policy = _ForeignOnSecondGrant()
+    scheduler = _RecordingScheduler(_architecture())
+    runtime = CoarseDeviceRuntime(
+        kernel_services={0: scheduler},
+        kernel_launches={name: _launch(name) for name in ("a", "b")},
+        arbitration_policy=policy,
+    )
+    with pytest.raises(ValueError, match="outside the legal set"):
+        runtime.execute(_compute_graph("foreign", ("a", "b")))
+    assert runtime.last_report is None
+    assert scheduler.calls == []
+
+
+def _candidates(*rows):
+    return tuple(
+        ArbitrationCandidate(operation_id, sequence, 0, label)
+        for operation_id, sequence, label in rows
+    )
+
+
+def test_strict_priority_prefers_the_smaller_class_then_baseline_order():
+    candidates = _candidates(("a", 0, 2), ("b", 1, 1), ("c", 2, 1))
+    assert StrictPriorityArbitrationPolicy().select(candidates).operation_id == "b"
+    identity = StrictPriorityArbitrationPolicy(class_aware=False)
+    assert identity.select(candidates).operation_id == "a"
+
+
+def test_weighted_round_robin_spends_and_refills_class_credits():
+    policy = WeightedRoundRobinArbitrationPolicy({1: 2, 2: 1})
+    candidates = _candidates(("a", 0, 2), ("b", 1, 1), ("c", 2, 1))
+    granted = [policy.select(candidates).operation_id for _ in range(6)]
+    assert granted == ["b", "b", "a", "b", "b", "a"]
+    assert policy.remaining_credits == {1: 0, 2: 0}
+
+
+def test_weighted_round_robin_identity_setting_ignores_labels_and_credits():
+    policy = WeightedRoundRobinArbitrationPolicy({1: 2, 2: 1}, class_aware=False)
+    candidates = _candidates(("a", 0, 2), ("b", 1, 1))
+    assert [policy.select(candidates).operation_id for _ in range(3)] == ["a"] * 3
+    assert policy.remaining_credits == {}
+
+
+def test_arbitration_policies_validate_their_configuration():
+    with pytest.raises(ValueError):
+        WeightedRoundRobinArbitrationPolicy({1: 0})
+    with pytest.raises(TypeError):
+        WeightedRoundRobinArbitrationPolicy(class_aware="yes")
+    with pytest.raises(TypeError):
+        StrictPriorityArbitrationPolicy(class_aware="yes")
+    with pytest.raises(ValueError):
+        StrictPriorityArbitrationPolicy().select(())
+    with pytest.raises(ValueError):
+        WeightedRoundRobinArbitrationPolicy().select(())
+    assert WeightedRoundRobinArbitrationPolicy({1: 3}).weight(9) == 1
 
 
 @pytest.mark.parametrize("action", [KvCacheAction.READ, KvCacheAction.WRITE])
