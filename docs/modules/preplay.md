@@ -166,6 +166,18 @@ not per-request time attribution; see
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
 
+- PLAY-13 (Precision; P1; M): replace the active captured-routing Python
+  object graph with one joined-run routing arena. Pack expert identities as
+  contiguous uint8 values in token, MoE-layer and top-k-slot order, reject
+  models wider than 256 experts, and publish a strict request index containing
+  token offset and count next to the replay run. A later process must open the
+  payload read-only through mmap and retain only request views, while
+  `simllm-routed-experts-v1` remains an explicit validation-time compatibility
+  form rather than a second live authority. Acceptance measures retained
+  routing bytes per token on the real Granite capture for one and three joined
+  requests, preserves every routed pair, per-request attribution row and GOAL
+  byte against the compatibility form, and proves malformed, truncated,
+  overlapping and wider-than-uint8 arenas fail before traffic expansion.
 - PLAY-5 (Completeness; P1; M) (remaining independent CPU half after replay
   validation): run the frozen requests and seed through the PLAY-1 runner and
   a vLLM 0.26.0 CPU build, then compare lengths, stop reasons and routing with

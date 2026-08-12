@@ -525,6 +525,23 @@ does not claim to produce these resource-contention measurements.
 
 ## Open tasks
 
+- CORE-34 (Precision; P0; M): make one per-request routing-lifetime record the
+  mutable completion authority for joined replay requests. It carries stable
+  request and join provenance, arrival time, an arena offset/count view, a
+  monotonic unique-token consumption cursor, scheduler-finish state and
+  separate dispatch/combine end masks for at most 64 model layers. The only
+  legal state path is `JOINED -> ADMITTED -> EXECUTING -> FINISH_FLAGGED ->
+  DRAINED -> CLOSED`; the arena view may be released only at `CLOSED`, which
+  requires the scheduler finish flag, full masks and cursor equal to captured
+  token count. Join final-token collective completions through the existing
+  `ExecutionGraph -> CompletionEvent -> CompletionReducer` path without
+  treating WQE or packet events as request completions. Acceptance drives the
+  real Granite replay records through clean one-request and three-request
+  lifetimes with zero live views at exit, deliberately suppresses one
+  dispatch and one combine end flag in separate runs and requires fatal
+  diagnostics naming the request, phase and missing model layer, and rejects
+  premature release or any non-closed end-of-run record without partial
+  lifecycle mutation.
 - CORE-3 (Completeness; P1; L): implement explicit KV lifecycle accounting before resource
   contention. Consume adapter observations for RESERVE, ALLOCATE,
   BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
