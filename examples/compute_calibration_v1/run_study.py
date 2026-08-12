@@ -857,7 +857,7 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
         for family in (
             "train_shape_scaling",
             "dtype_slowdown",
-            "family_sum_composition",
+            "family_sum_opt_in",
         )
     )
     all_fatal = all(results["fatal_unscored"].values())
