@@ -185,9 +185,15 @@ def pairwise_all_to_allv(
     """Direct pairwise exchange: rank s sends ``send_bytes[(s, d)]`` to d.
 
     Zero or missing entries send nothing. Completion label per rank is its
-    last receive (or last send for ranks that receive nothing). When an exact
-    semantic frontier is requested, a rank with no incident message receives
-    a zero-time completion point instead of disappearing from the collective.
+    last receive, or its first send when it receives nothing at all: a
+    source-only rank hands its successor the head of its own send chain, not
+    the tail. ``render_collective_plan`` documents and implements the same
+    compatibility rule, and the two statements are kept in agreement
+    deliberately. A last-send frontier for source-only ranks would be a
+    separate, separately frozen model decision because it moves accepted
+    timing. When an exact semantic frontier is requested, a rank with no
+    incident message receives a zero-time completion point instead of
+    disappearing from the collective.
     """
     positive_pairs = {
         (source, destination)
