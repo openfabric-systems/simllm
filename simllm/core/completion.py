@@ -15,6 +15,7 @@ from simllm.core.execution import (
     ExecutionGraph,
     ExecutionResult,
 )
+from simllm.core.request_lifetime import RequestLifetimeRegistry
 from simllm.core.runtime import QueueVisit, RuntimeOperationRecord, RuntimeReport
 from simllm.core.step import (
     AdditiveVisitTotals,
@@ -66,12 +67,18 @@ class CompletionReducer:
         clock: VirtualClock,
         *,
         bookkeeping: BookkeepingLedger | None = None,
+        lifetimes: RequestLifetimeRegistry | None = None,
     ) -> None:
         if not isinstance(clock, VirtualClock):
             raise TypeError("clock must be a VirtualClock")
         if bookkeeping is not None and not isinstance(bookkeeping, BookkeepingLedger):
             raise TypeError("bookkeeping must be a BookkeepingLedger or None")
+        if lifetimes is not None and not isinstance(
+            lifetimes, RequestLifetimeRegistry
+        ):
+            raise TypeError("lifetimes must be a RequestLifetimeRegistry or None")
         self.clock = clock
+        self.lifetimes = lifetimes
         self._request_arrivals = (
             None
             if bookkeeping is None
@@ -427,6 +434,8 @@ class CompletionReducer:
             request_metrics=tuple(metrics),
             additive_visit_totals=_visit_totals(report.visits),
         )
+        if self.lifetimes is not None:
+            self.lifetimes.consume_step(record, graph, result)
         self.clock.advance_to(result.completed_at_ps)
         self._requests = states
         self._consumed_execution_ids.add(graph.execution_id)

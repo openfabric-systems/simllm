@@ -201,6 +201,17 @@ but were rejected by the per-request gate. The result remains byte fidelity,
 not per-request time attribution; see
 [the PLAY-11 results](../../examples/per_request_fidelity_v1/RESULTS.md).
 
+PLAY-13 is complete. A join may now build one strict
+`simllm-routing-arena-index-v1` sidecar and contiguous uint8 payload directly
+from the source trace. The arena is the sole routing authority when selected;
+`simllm-routed-experts-v1` remains the validation-time compatibility form.
+The read-only mmap exposes request extents without token copies or gate
+weights, and its live views are released only by the core request lifetime.
+On the real Granite capture it retained exactly 192 bytes per forwarded token,
+32.86x and 32.48x less than the measured Python graphs for one and three
+requests. All 32 real traffic steps remained byte-identical; see
+[the routing lifetime results](../../examples/routing_lifetime_v1/RESULTS.md).
+
 ## Open tasks
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
