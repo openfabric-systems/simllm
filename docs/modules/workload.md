@@ -24,3 +24,16 @@ Arrival processes and length distributions are implemented and tested
   sessions) emitting token-ID sequences; the length-distribution part of
   this task landed with M1.
 - WORK-2: bursty/MMPP arrival process for congestion-sensitive studies.
+- WORK-3 (Completeness; P1; M): consume framework-request creation timestamps
+  through an opt-in in-process admission gate. Hold each request outside
+  `add_request` until the shared virtual clock reaches its arrival, retain
+  stable bookkeeping order for ties, and leave batching entirely to the
+  framework scheduler. Acceptance must sweep arrival offset and a burst that
+  exceeds one available scheduler slot, reproduce exact per-request queue and
+  TTFT movement, and keep the all-at-once path byte-identical.
+- WORK-4 (Completeness; P2; L): add a server-mode ingress coordinator that
+  maps external request injection to simulated time without using wall-clock
+  sleeps as model time. It must retain the in-process gate and ungated server
+  path as explicit identity modes, preserve framework scheduler authority,
+  and measure the coordinator's queue contribution separately from framework
+  queueing.

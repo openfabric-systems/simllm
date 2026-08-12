@@ -188,3 +188,10 @@ Tags follow the legend in [backends.md](backends.md#open-tasks).
   refusal boundaries that apply there, and prove an identity off mode against
   the accepted fabricated-token baseline. Add an in-process live smoke before
   claiming the path is live-reachable.
+- PLAY-12 (Completeness; P1; M): drive a joined vLLM replay through the
+  in-process arrival gate using the bookkeeping timestamps written by the
+  pre-play join. Acceptance must use a fixed capture, sweep arrival offset and
+  offered burst load through the real scheduler, preserve each request's
+  captured token count and stop reason, demonstrate exact queue plus service
+  TTFT decomposition, and compare the all-at-once bypass artifacts byte for
+  byte with the direct legacy loop.

@@ -639,6 +639,19 @@ does not claim to produce these resource-contention measurements.
   held-out queue wait and JCT within the declared measurement band. An observed
   no-copy path must stay explicitly zero, and disabling this mechanism must
   preserve the CORE-26 baseline exactly.
+- CORE-31 (Precision; P1; M): seed first-token metric history from the exact
+  framework-request creation timestamp in a supplied bookkeeping snapshot.
+  The interval from arrival to the first scheduled graph release must enter
+  critical-path queue attribution, and TTFT must equal that queue interval
+  plus first-token service exactly. Acceptance must reject scheduling before
+  arrival atomically and preserve every existing reducer result when no
+  bookkeeping snapshot is supplied.
+- CORE-32 (Completeness; P2; L): model optional framework or server admission
+  control after arrival eligibility, including rejection, rate limits,
+  concurrency caps and policy-driven deferral, without duplicating the
+  framework scheduler. The disabled policy must preserve the arrival-gated
+  baseline exactly, and policy queue time must remain distinct from arrival
+  gating and scheduler queue time.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client above the delivered HTSIM persistent flow session and strict full
   `StepResult` codec. The backend foundation retains one event list, topology,
