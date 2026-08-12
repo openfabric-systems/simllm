@@ -190,13 +190,16 @@ Missing packages and unsupported worker, model, device, dispatch and KV seams
 are rejected before the canonical v2 writer runs. The Transformers runner and
 v1 fixture remain byte-identical. SGLang replay remains PLAY-7.
 
-The v2 routing projection now has a direct strict reader for traffic replay.
+The v2 routing projection has a direct strict reader for traffic replay.
 `project_framework_routing` copies request, phase-local token, layer and
 framework-returned top-k tuple order without sorting and records the source
-artifact hash. The dispatch sequence study proved all frozen source orders and
-exact byte projections. This observation ends at the framework return value;
-it does not claim the later kernel, NCCL or RNIC WQE sequence. See
-[the dispatch sequence results](../../examples/dispatch_sequence_v1/RESULTS.md).
+artifact hash. Traffic consumes that order only for
+`RoutedMoeSupply.engine_rank`; peer EP ranks own experts but carry no
+scheduled tokens in this isolated engine step. The corrected source, pair,
+request and hop guards passed, while the timing study is void on an
+independent physical-floor guard. This observation ends at the framework
+return value; it does not claim the later kernel, NCCL or RNIC WQE sequence.
+See [the dispatch sequence results](../../examples/dispatch_sequence_v1/RESULTS.md).
 
 PLAY-11 is complete. Captured MoE traffic retains each scheduled request ID as
 a read-only partition of the aggregate directed-pair demand through direct and

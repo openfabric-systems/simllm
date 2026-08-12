@@ -1,313 +1,318 @@
 # Dispatch message sequence v1 results
 
-TRAF-21 implements the explicit `captured-message-sequence` traffic level.
-The strict v2 fixture preserved every framework-returned top-k position under
-both declared grouping rules, retained exact per-request and ordered-pair byte
-totals, and changed native packet completion in the required positive
-direction. The accepted aggregate renderer and Granite GOAL stayed byte
-identical.
+## Corrected ownership outcome
 
-The frozen magnitude predictions were partly falsified. The genuine-risk
-headline is **1 of 3 family classes and 2 of 10 parameterized instances**.
-Both inverse-rate instances passed. All four packet signed directions were
-positive, but their byte-only bands omitted the backend's full-envelope packet
-calendar. The four fluid comparisons also missed: per-token and expert-group
-timing were identical to each other, but preserving capture order made both
-faster than the ascending-pair aggregate order. These misses are retained as
-findings, not rewritten into passes.
+The corrected ownership run is **void**. It therefore has no behavioral pass
+fraction and closes no timing qualification. The run reached all twelve
+synthetic native cells and every corrected Granite cost cell, but four fluid
+cells violated a frozen fatal floor. The emitted traffic remained physically
+plausible; the run refuted the floor's assumption that dispatch and combine
+are two globally serial link loads.
 
-At Granite prefill scale, aggregate and per-expert-group rendering were
-practical under the frozen limits. The per-token plan contained 101,318
-messages. Planning completed in 1.86 s, but GOAL rendering exceeded the 30 s
-limit and reached the controlled 60 s attempt boundary. TRAF-22 owns the
-quadratic message-record validation bottleneck and the unexecuted Granite
-per-token backend cells.
+All exact ownership, sequence, ordered-pair, request, byte, transpose, hop,
+input-identity and quiescence guards passed. Those facts remain valid
+structural findings, but a fatal guard is a precondition for interpreting the
+scored relations. The raw packet and fluid predicates are retained below
+without a numerator, denominator or family score.
+
+The implementation now has one routed-contribution authority. It reads
+`RoutedMoeSupply.engine_rank` once, expands the captured token routes once, and
+returns ordered per-token dispatch contributions. The aggregate renderer
+folds those contributions into request and pair tables. The sequenced
+renderer groups the same contributions and transposes them for combine.
+Ownership can no longer drift between the two renderers through duplicated
+source traversal.
 
 ## Chronology and provenance
 
-The expectations-only commit is
-`7efd71e7e54fc6faecde17c5faebab9430a2e847`. Its registered command first ran
-with `--check-only`; no SimLLM module or source artifact was read, no native
-tool ran and no output path was created. Implementation followed in
-`04eeb5c28472ce11cc5f421097a07a12aef8e28f`. Commit
-`bd752cd8cbe3b6948c165a2e548b0c09e7cea9f2` added only a bounded Granite
-render attempt after the first scale attempt exposed the performance problem.
+The original expectations and result remain unmodified chronology. TRAF-25
+then corrected the source-multiplicity defect on main. The ownership refreeze
+superseded only the invalid source-multiplied exact and physical literals; it
+kept the original behavioral bands unchanged.
 
-The result chronology is preserved:
+| Event | Commit |
+|---|---|
+| Original expectations-only freeze | `7efd71e7e54fc6faecde17c5faebab9430a2e847` |
+| Original sequence implementation | `04eeb5ca50b4625f87f7872aa4fd204cf629bae4` |
+| Original bounded Granite attempt | `bd752cd8cbe3b6948c165a2e548b0c09e7cea9f2` |
+| Historical pre-TRAF-25 result | `fc42b4377bc5cba26d7138663a2597e7009b34b9` |
+| TRAF-25 merge | `14d8447b838e651f8321ffb0588ea02219e26e9a` |
+| Main merged into this branch | `f2e0581` |
+| Corrected ownership expectations-only freeze | `82d3ab45ea47c811fa6db0d91ac8122e255fd62b` |
+| Shared ownership implementation and observed revision | `50ea211f978229481af8ea372b3db7fc2c954701` |
 
-1. The registered converter path pointed to a stale 46,360-byte executable
-   that segfaulted on the unchanged accepted Granite GOAL. It produced no
-   backend observation. The partial directory is retained beside the result
-   as `dispatch_sequence_v1-failed-stale-txt2bin`.
-2. A converter from the same htsim source tree as the available RNIC build
-   compiled the accepted GOAL. That run completed the full synthetic matrix
-   and the aggregate and expert-group Granite cells. The per-token renderer
-   was manually stopped after more than nine minutes in
-   `GoalTrace.record_message`, which repeatedly rebuilt rank-label sets. Its
-   directory is retained as
-   `dispatch_sequence_v1-failed-unbounded-render`.
-3. The final controlled run reproduced every synthetic completion exactly,
-   kept the failed registered verdicts and stopped only the Granite per-token
-   render at 60 s. It wrote `raw_observations.json` and `summary.json`, then
-   exited nonzero because the frozen behavioral acceptance was not fully met.
-
-No rerun changed a threshold or replaced a failed observation with a pass.
-The final evidence lives under
-`$SIMLLM_WAVE6_RUN_ROOT/dispatch_sequence_v1`.
+The registered command first passed `--check-only` before the shared
+ownership implementation. Check-only read no source artifacts, invoked no
+native tool and created no output. The result-producing command wrote to the
+new external directory
+`$SIMLLM_WAVE6_RUN_ROOT/dispatch_sequence_v1-ownership-refreeze` and exited
+nonzero only after writing the void result.
 
 | Provenance field | Observed value |
 |---|---|
-| Expectations commit | `7efd71e7e54fc6faecde17c5faebab9430a2e847` |
-| SimLLM commit observed by final run | `bd752cd8cbe3b6948c165a2e548b0c09e7cea9f2` |
-| htsim gitlink observed by final run | `fc4400e4ca619223481536632074045cb6af2756` |
+| htsim gitlink | `fc4400e4ca619223481536632074045cb6af2756` |
 | `htsim_rnic` SHA-256 | `cfb5014a663791f7619fe33309114a74e82878de860c14fc8a723713501f027d` |
-| working `txt2bin` SHA-256 | `f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b` |
-| Final raw-observation SHA-256 | `82764f7a1e31dc32f31128d8647ebf548c83746e54911834dd2adae5882e312d` |
-| Final summary SHA-256 | `634e1c51311c2e9330b4af6e94cbac8d4701a26a6cafe0820fd3cbdddf7b012b` |
+| `txt2bin` SHA-256 | `f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b` |
+| Routing input SHA-256 | `24e986e989e21f1bfe7e758d4470928c82c3bbaec06072a839743b9b17d7cf5f` |
+| Step input SHA-256 | `824cd9557293328bb42b593ac893b6a067302e545b087c9219195ccb8031d755` |
+| Raw observation SHA-256 | `1c3b6681f3b4b917a70ad9111bd36452eb3bb5967afebf693d1a98e5690d2678` |
+| Summary SHA-256 | `267165bcb2770e1dd0c5c1f9b1454acaaa4d881a86ba73b2d1d03732e3184aa0` |
 
-The gitlink and executable hashes are observations. No test asserts that a
-future live submodule pin equals a frozen literal.
+Executable and gitlink hashes are observations, not frozen requirements on a
+future checkout.
 
-## Implemented contract
+## Ownership and conservation evidence
 
-`project_framework_routing` reads a strict `simllm-preplay-trace-v2` artifact
-and copies request order, phase-local token order, layer order and each
-framework-returned expert tuple without sorting. It records the source bytes'
-SHA-256. It makes no claim about a later kernel, NCCL or RNIC issue order.
+The corrected strict v2 fixture has one engine, rank 0. Its source-local
+framework-returned dispatch destinations are:
 
-`step_moe_message_sequences` derives this base order for each layer:
+```text
+source 0: 3, 1, 2, 1, 3, 2, 1, 3
+source 1:
+source 2:
+source 3:
+```
 
-1. scheduled request order;
-2. selected phase-local token order;
-3. returned top-k position, with the first position owning a repeated
-   destination;
-4. source-rank projection.
+The aggregate, expert-group and per-token levels all projected the same
+ordered-pair and per-request totals:
 
-`per-token` emits one hidden vector per token and unique remote destination.
-`per-expert-group` coalesces one request's whole-layer messages for one source
-and destination, retaining the first contributing routing position. Combine
-transposes every dispatch contribution without changing its routing ordinal.
-The plan retains every contributing `(token_index, top_k_index)` tuple.
+| Quantity | Aggregate | Expert group | Per token |
+|---|---:|---:|---:|
+| Messages, dispatch plus combine | 6 | 6 | 16 |
+| Directed bytes | 32,768 | 32,768 | 32,768 |
+| Remote vector hops | 16 | 16 | 16 |
 
-`render_sequenced_step_goal` emits the planned rows in tuple order and uses a
-source-local `irequires` chain, so sources remain mutually unordered while
-each source posts messages in capture-derived order. This is an explicit API,
-not a global configuration switch. `render_step_goal` and
-`step_moe_alltoalls` remain the aggregate default. CORE-36 remains the sole
-owner of a future unified selector and fidelity record.
+The independent synthetic ceiling is `4 * 2 * 1 * 2 = 16` hops. Every
+dispatch message sourced rank 0, every combine message returned to rank 0,
+and combine preserved the exact routing ordinals while transposing the
+directed rows.
 
-## Physical sanity before measured digits
+The new EP-width-eight regression is deliberately capable of rejecting the
+old rule. For both grouping modes it aggregates actual planned and rendered
+messages by ordered rank pair, compares every layer and phase with the
+aggregate renderer, checks dispatch source and combine destination against
+`engine_rank`, and applies an independent token/top-k/layer/phase ceiling.
+The corrected fixture emits 42 vector hops under a ceiling of 48. The old
+`for source in ranks` loop would emit 336 hops, add non-engine source pairs and
+violate both the pair comparison and the independent ceiling. It cannot pass
+the guard even if both renderers were later changed together.
 
-The registered synthetic bounds were recorded before backend execution. Peak
-incident payload is 18,432 bytes in each of two serial phases. Payload over
-link rate gives floors of 1,474,560 ps at 200 Gbit/s and 737,280 ps at 400
-Gbit/s. Serializing all per-token packet work at both endpoints gives the
-conservative ceilings of 9,000,000 ps and 4,500,000 ps. Every one of the 12
-cells lay inside its rate's bounds:
+The Granite scale projection provides a second independent discrimination.
+The old sequence loop emitted 101,318 hops and 207,499,264 bytes, above the
+20,736-hop ceiling. The corrected authority emits 12,482 hops and 25,563,136
+bytes, and the generated aggregate GOAL is 47,399 bytes with SHA-256
+`6bb83366a3936bcf1e435cab008bb55c2966777528a9e8d885dd44d47f5a4943`.
+The archived 334,432-byte GOAL and its SHA-256
+`08a0403af66ff8a9d6b18f93afd15ae0bc925cc85555acf8a0593438a3d7bc92`
+remain input provenance only.
 
-| Rate | Registered range ps | Measured range ps | Result |
-|---:|---:|---:|---|
-| 200 Gbit/s | [1,474,560, 9,000,000] | [1,477,000, 3,121,000] | pass |
-| 400 Gbit/s | [737,280, 4,500,000] | [740,000, 1,562,000] | pass |
+## Fatal physical finding
 
-The independent rate angle also behaved physically: every serialization-only
-completion was approximately halved at 400 Gbit/s, and both packet deltas
-obeyed the registered two-to-one relation within 2,000 ps.
+The frozen synthetic floor added 16,384 bytes of dispatch and 16,384 bytes of
+combine as two globally serial phases. Four observed cells were below that
+floor:
 
-For Granite, 24 layers times 4,139 ns gives a 99.336 microsecond compute
-floor. The measured 27.1 MB peak rank egress needs about 542 microseconds at
-400 Gbit/s. A serial compute-plus-peak-egress floor is therefore about 641
-microseconds. Serializing all 207.5 MB through one link plus compute gives a
-coarse 4.25 ms ceiling. The completed Granite cells, 795 to 952 microseconds,
-sit inside that independent range. The aggregate packet result of 951.890
-microseconds is also close to the separately supplied 974.838 microsecond
-capture context, so no cell implies an implausible order-of-magnitude speedup.
+| Cell | Observed ps | Frozen floor ps | Shortfall ps |
+|---|---:|---:|---:|
+| Aggregate fluid, 200 Gbit/s | 1,147,881 | 1,310,720 | 162,839 |
+| Aggregate fluid, 400 Gbit/s | 574,441 | 655,360 | 80,919 |
+| Expert-group fluid, 200 Gbit/s | 1,149,000 | 1,310,720 | 161,720 |
+| Expert-group fluid, 400 Gbit/s | 576,000 | 655,360 | 79,360 |
 
-## Raw synthetic backend observations
+This is a refuted fatal premise, so the run stays void. It is not converted
+into a lost point or repaired after observation.
 
-The matrix used zero compute, zero propagation and rates 200 and 400 Gbit/s.
-Packet cells used a 4,096-byte maximum wire packet and a 64-byte data header.
-Every native manifest reported `physical_quiescence=verified`. Exact raw FCT
-rows remain in each external completion CSV; the table reports their observed
-range without replacing those rows with an aggregate.
+The post-specified causal audit explains the digits exactly. The GOAL graph
+uses participant-local phase frontiers. At 200 Gbit/s, rank 2's 4,096-byte
+dispatch completes at 492,521 ps and its 4,096-byte combine return then runs
+to 656,361 ps. That return overlaps the tail of the two 6,144-byte dispatches,
+which also complete at 656,361 ps. Their returns complete at 1,147,881 ps.
+Thus the observed aggregate value is:
+
+```text
+1,310,720 - 163,840 + 1,001 = 1,147,881 ps
+```
+
+At 400 Gbit/s the same relation is:
+
+```text
+655,360 - 81,920 + 1,001 = 574,441 ps
+```
+
+The native fluid profile has independent source-uplink and
+destination-downlink constraints, so this opposite-direction overlap is
+intentional. The harness also takes the maximum of all flow completions and
+the GOAL completion; it did not discard a late event. Per-token happened to
+satisfy the old floor because its equal 2,048-byte dispatches reach the peer
+frontiers together. That accidental synchronization does not validate a
+global phase barrier.
+
+The safe first-principles payload floor is one critical endpoint load,
+`max(home egress, home ingress) * 8 / rate`: 655,360 ps at 200 Gbit/s and
+327,680 ps at 400 Gbit/s. Every measured cell exceeds those post-specified
+diagnostic floors. A stronger fixture-specific relation must be derived from
+the emitted dependency graph and backend resource contract before a future
+run, and a value learned from this fixture cannot be presented as its
+pre-registered oracle.
+
+## Raw synthetic observations
+
+The fixture used zero compute, zero propagation and endpoint rates of 200 and
+400 Gbit/s. Packet cells used a 4,096-byte maximum wire packet, a 64-byte data
+header and full-envelope calendar reservation. Every native manifest reported
+`physical_quiescence=verified`. The external completion CSVs retain every raw
+flow; this table reports the observed range and step completion.
 
 | Renderer | Profile | Gbit/s | Flows | Min FCT ps | Max FCT ps | Completion ps |
 |---|---|---:|---:|---:|---:|---:|
-| aggregate | rnic-nn-fluid | 200 | 18 | 491,521 | 901,120 | 1,639,401 |
-| aggregate | rnic-nn-fluid | 400 | 18 | 245,761 | 450,560 | 820,201 |
-| aggregate | rnic-nn | 200 | 18 | 660,480 | 1,310,720 | 2,463,720 |
-| aggregate | rnic-nn | 400 | 18 | 330,240 | 655,360 | 1,232,360 |
-| per-expert-group | rnic-nn-fluid | 200 | 18 | 491,521 | 737,281 | 1,477,000 |
-| per-expert-group | rnic-nn-fluid | 400 | 18 | 245,761 | 368,641 | 740,000 |
-| per-expert-group | rnic-nn | 200 | 18 | 742,400 | 1,227,800 | 2,382,000 |
-| per-expert-group | rnic-nn | 400 | 18 | 371,200 | 613,400 | 1,192,000 |
-| per-token | rnic-nn-fluid | 200 | 48 | 491,521 | 737,281 | 1,477,000 |
-| per-token | rnic-nn-fluid | 400 | 48 | 245,761 | 368,641 | 740,000 |
-| per-token | rnic-nn | 200 | 48 | 248,320 | 1,559,040 | 3,121,000 |
-| per-token | rnic-nn | 400 | 48 | 124,160 | 779,520 | 1,562,000 |
+| Aggregate | Fluid | 200 | 6 | 163,840 | 655,361 | 1,147,881 |
+| Aggregate | Fluid | 400 | 6 | 81,920 | 327,681 | 574,441 |
+| Aggregate | Packet | 200 | 6 | 491,520 | 1,070,080 | 1,890,280 |
+| Aggregate | Packet | 400 | 6 | 245,760 | 535,040 | 945,640 |
+| Expert group | Fluid | 200 | 6 | 163,840 | 655,361 | 1,149,000 |
+| Expert group | Fluid | 400 | 6 | 81,920 | 327,681 | 576,000 |
+| Expert group | Packet | 200 | 6 | 654,360 | 988,160 | 1,809,000 |
+| Expert group | Packet | 400 | 6 | 326,680 | 494,080 | 905,000 |
+| Per token | Fluid | 200 | 16 | 655,360 | 655,360 | 1,313,000 |
+| Per token | Fluid | 400 | 16 | 327,680 | 327,680 | 658,000 |
+| Per token | Packet | 200 | 16 | 248,320 | 1,395,200 | 2,544,000 |
+| Per token | Packet | 400 | 16 | 124,160 | 697,600 | 1,273,000 |
 
-## Scored behavioral evidence
+## Retained unscored behavioral findings
 
-Evidence classes remain separate. A parameterized instance passes only when
-its complete registered relation passes.
+The runner evaluated the ten behavioral predicates from raw native
+completions before applying fatal oracles. Their truth values are retained,
+but the behavioral score is withheld because the physical guard voided the
+run.
 
-| Family class | Instances | Result | Raw finding |
-|---|---:|---:|---|
-| Packet signed band | 4 | 0/4 | Every direction was positive, but magnitudes exceeded the byte-only bands. |
-| Packet inverse rate | 2 | 2/2 | Errors were 1,000 ps and 2,000 ps against the 2,000 ps limit. |
-| Fluid grouping diagnostic | 4 | 0/4 | Both sequenced modes were faster than aggregate by 162,401 ps at 200G and 80,201 ps at 400G. |
+All packet directions stayed positive, but all four magnitudes were outside
+the unchanged frozen bands:
 
-The genuine-risk headline is **1/3 family classes and 2/10 instances**.
-
-Packet signed deltas were:
-
-| Comparison | 200 Gbit/s ps | Frozen band ps | 400 Gbit/s ps | Frozen band ps |
+| Comparison | 200 Gbit/s delta ps | Frozen band ps | 400 Gbit/s delta ps | Frozen band ps |
 |---|---:|---:|---:|---:|
-| per-token minus per-expert-group | 739,000 | [15,360, 61,440] | 370,000 | [7,680, 30,720] |
-| per-token minus aggregate | 657,280 | [15,360, 61,440] | 329,640 | [7,680, 30,720] |
+| Per token minus expert group | 735,000 | [15,360, 61,440] | 368,000 | [7,680, 30,720] |
+| Per token minus aggregate | 653,720 | [15,360, 61,440] | 327,360 | [7,680, 30,720] |
 
-### Entailment check
+Both inverse-rate predicates were true: each 200 Gbit/s delta differed from
+twice its 400 Gbit/s counterpart by 1,000 ps against the frozen 2,000 ps
+tolerance. This supports a serialization mechanism, but cannot supply a score
+for a void run.
 
-The runner calculated all ten scored predicates from raw native completion
-values and wrote them before invoking the explicit sequence, conservation and
-physical-bound evaluators. Input hash checks and native quiescence validation
-necessarily preceded meaningful execution, but neither pins a completion
-delta. The renderer's fail-closed request conservation also does not entail a
-packet or fluid completion because legal message order, grouping and backend
-service can still produce any of the observed signs and magnitudes.
+The fluid comparisons also missed their unchanged 1,000 ps absolute bound:
 
-Sequence counts, authored destination lists, pair conservation, request
-conservation, combine transpose, source hashes, default GOAL identity,
-quiescence and physical bounds are fatal unscored evidence. They add nothing
-to the genuine-risk numerator or denominator. No by-construction guard is
-scored.
+| Comparison | 200 Gbit/s delta ps | 400 Gbit/s delta ps |
+|---|---:|---:|
+| Expert group minus aggregate | 1,119 | 1,559 |
+| Per token minus aggregate | 165,119 | 83,559 |
 
-## Registered misses and post-specified diagnosis
+The large per-token fluid movement follows the same dependency finding. Its
+equal-sized dispatch messages synchronize the peer frontiers and remove the
+short-return overlap available to aggregate and expert-group traffic. This is
+a post-specified explanation, not a replacement expectation.
 
-The packet bands counted 768 extra wire bytes and assumed exact-tail wire-byte
-serialization was the complete incremental service. The native manifest also
-reported `calendar_reservation=full-envelope`. Raw 400G per-token FCT steps
-include 81,920 ps intervals, exactly one 4,096-byte calendar envelope at 400
-Gbit/s. Splitting a group creates extra scheduled packet envelopes even when
-the final packet carries fewer wire bytes. The frozen upper bands are about
-12 times smaller than the measured deltas. The nearly exact two-to-one rate
-scaling shows that this is still serializer work, not an unrelated constant
-offset. This diagnosis is post-specified and does not change the 0/4 verdict.
+## Corrected Granite cost and physical sanity
 
-The fluid miss separates two questions. Per-token and per-expert-group cells
-were exactly equal at each rate, so fluid correctly erased message
-granularity for this fixture. Both preserved the same capture-derived issue
-order, while aggregate used ascending pair order. That order alone improved
-fluid completion by 80,201 ps at 400G and 162,401 ps at 200G. Fluid can answer
-the grouping-only question here, but it cannot answer an order-sensitive
-contention question by substituting the aggregate order. This diagnosis also
-leaves the four frozen aggregate comparisons failed.
+The Granite v1 order remains a Transformers reconstruction. It is scale and
+cost evidence, not an observation of framework, kernel, NCCL or wire issue
+order.
 
-## Fatal exact and structural evidence
+The corrected 54-token, 24-layer point is practical under every retained cost
+limit:
 
-All fatal checks passed:
+| Grouping | Messages | Plan s | Render s | Compile s | Render plus compile s | Peak MiB | GOAL bytes | Packet backend s | Fluid backend s |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Aggregate | 336 | 0.271 | 0.309 | 0.172 | 0.480 | 1.51 | 47,399 | 0.082 | 0.059 |
+| Expert group | 1,008 | 0.382 | 0.791 | 0.157 | 0.948 | 3.31 | 185,452 | 0.294 | 0.274 |
+| Per token | 12,482 | 0.365 | 16.708 | 0.312 | 17.020 | 17.17 | 2,243,956 | 32.890 | 24.592 |
 
-- the v2 projection retained routes `(3, 1)`, `(2, 1)`, `(3, 2)`, `(1, 3)`;
-- per-source dispatch destinations matched all four frozen sequences;
-- per-token emitted 24 dispatch and 24 combine messages;
-- expert-group and aggregate each emitted 9 dispatch and 9 combine messages;
-- every phase carried 49,152 bytes and the two phases carried 98,304 bytes;
-- all nine positive dispatch pairs and every per-request projection matched
-  the aggregate authority exactly;
-- combine was the exact transpose with unchanged routing ordinals;
-- the default generated Granite GOAL remained 334,432 bytes with SHA-256
-  `08a0403af66ff8a9d6b18f93afd15ae0bc925cc85555acf8a0593438a3d7bc92`.
+Each level carries exactly 25,563,136 directed bytes. The limits are 30
+seconds for render plus compile, 1 GiB traced peak memory, 64 MiB of GOAL text
+and 60 seconds per backend. No larger corrected size was measured, so this
+study found no corrected impractical-size boundary.
 
-The unit and integration subset passed 55/55 before the study. The final
-repository gates passed `ruff check .` and 1,040 pytest tests, with seven
-environment-dependent tests skipped. These executable checks remain a
-separate evidence class.
+The historical source-multiplied measurement remains useful cost chronology,
+but not a current workload:
 
-## Granite scale and practicality
-
-The Granite input is `simllm-preplay-trace-v1`. Its tuple order is a
-Transformers reconstruction, not a framework observation. It is used only for
-scale and cost. The routed-experts and step hashes matched their authored
-values exactly.
-
-| Grouping | Messages | Bytes | Plan s | Render s | Compile s | Peak traced MiB | GOAL bytes | Practical |
+| Grouping | Historical messages | Historical bytes | Plan s | Render s | Compile s | Peak MiB | GOAL bytes | Practical |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
-| aggregate | 2,688 | 207,499,264 | 0.461 | 1.020 | 0.196 | 10.4 | 334,432 | yes |
-| per-expert-group | 8,064 | 207,499,264 | 2.579 | 6.134 | 0.203 | 22.7 | 1,446,770 | yes |
-| per-token | 101,318 | 207,499,264 | 1.856 | greater than 60 | not reached | 45.8 during attempt | not reached | no |
+| Aggregate | 2,688 | 207,499,264 | 0.461 | 1.020 | 0.196 | 10.4 | 334,432 | yes |
+| Expert group | 8,064 | 207,499,264 | 2.579 | 6.134 | 0.203 | 22.7 | 1,446,770 | yes |
+| Per token | 101,318 | 207,499,264 | 1.856 | greater than 60 | not reached | 45.8 during attempt | not reached | no |
 
-The 54-token, 24-layer step is the measured practicality boundary: per-token
-planning is affordable, but current GOAL message recording is not. The
-interrupted unbounded attempt and the controlled attempt both stopped inside
-`GoalTrace.record_message`, whose per-message label validation scans the
-growing rank program. The controlled attempt is a lower bound, not a claimed
-completion time.
+The ownership fix changed total group bytes by 8.117 times but peak per-rank
+egress by only 2.117 times, from 27,060,224 to 12,781,568 bytes. The latter is
+the relevant bandwidth-bound scale. The corrected 400 Gbit/s peak-egress term
+is 255,631,360 ps. Adding the fixed `24 * 4,139 ns = 99,336,000 ps` compute
+gives a 354,967,360 ps context floor. Every corrected 400 Gbit/s Granite cell
+lies above it:
 
-Completed Granite native costs were:
+| Grouping | Packet completion ps | Fluid completion ps |
+|---|---:|---:|
+| Aggregate | 503,658,600 | 489,235,306 |
+| Expert group | 615,633,000 | 563,624,000 |
+| Per token | 1,095,701,000 | 610,646,000 |
 
-| Grouping | Profile | Backend wall s | Flows | Completion ps |
-|---|---|---:|---:|---:|
-| aggregate | rnic-nn | 2.541 | 2,688 | 951,889,600 |
-| aggregate | rnic-nn-fluid | 2.125 | 2,688 | 933,833,788 |
-| per-expert-group | rnic-nn | 12.663 | 8,064 | 857,093,000 |
-| per-expert-group | rnic-nn-fluid | 13.311 | 8,064 | 794,966,000 |
+Archived-to-corrected aggregate completion changed by 1.890 times for packet
+and 1.909 times for fluid. After removing fixed compute, the network-bearing
+ratios are about 2.11 and 2.14, close to the 2.117 peak-egress change and far
+from the 8.117 total-byte change. Expert-group completion changed by 1.392 and
+1.410 times while its message sequence also changed. No observed completion
+scaled with the physically irrelevant total group-byte ratio.
 
-Per-token packet and fluid runs were not attempted because no GOAL or binary
-existed after the render boundary. This omission is explicit TRAF-22 work.
+The registered 200 Gbit/s Granite context floor is 610,598,720 ps, but the
+corrected runner executed Granite only at 400 Gbit/s. The required 200/400
+Granite scaling comparison is therefore unqualified and remains in TRAF-22.
 
-## TRAF-21 closure map
+## Claim boundaries and residuals
 
-The registered clauses are quoted and mapped without weakening them:
+TRAF-21's sequence interface remains complete, but corrected timing
+qualification stays open under TRAF-22. TRAF-22 is upgraded to P0 because a
+fatal validation gate voided this run. It owns dependency-aware physical
+bounds, the missed packet and fluid relations, a held-out qualification, the
+missing 200 Gbit/s Granite point and retention of the corrected cost limits.
 
-1. **"`captured-message-sequence` preserves the v2 framework-returned
-   request, token and top-k order under both declared grouping rules."** The
-   strict v2 fixture, both plans, all four source sequences and retained
-   routing ordinals passed exactly.
-2. **"Every aggregate ordered-pair and per-request byte total matches the
-   accepted aggregate authority exactly."** Both grouping projections matched
-   every request, phase and pair, totaling 98,304 synthetic bytes and
-   207,499,264 Granite bytes.
-3. **"The default aggregate APIs and accepted artifacts remain
-   byte-identical."** No selector was added to either default API; all existing
-   goldens passed and the accepted Granite GOAL hash matched.
-4. **"The registered packet and fluid matrix reaches a native backend and
-   reports the frozen signed relations, raw FCT and completion."** All 12
-   cells reached the native backend and quiesced. Raw FCT CSVs and completion
-   values are retained. The inverse-rate relation passed; packet bands and
-   aggregate-relative fluid bands are reported as genuine-risk failures with
-   their post-specified diagnoses.
-5. **"The Granite scale record reports cost and practicality without
-   describing v1 reconstructed order as observed."** All plan counts and the
-   completed render, compile and backend costs are reported. The per-token
-   render lower bound and omitted backend cells are assigned to TRAF-22. Every
-   Granite row says `reconstructed-v1`.
-6. **"No repository-wide fidelity selector is added ahead of CORE-36."** The
-   new renderer is an explicit traffic API. CORE-36 remains untouched.
+The physical audit also found a non-causal source-frontier discrepancy:
+`pairwise_all_to_allv` documents the last source send as its source-only
+frontier, while its compatibility implementation retains the first send.
+The first send was tied for the long dispatch tail in this fixture, and peer
+receive frontiers already explain the observed overlap, so the discrepancy
+did not cause the fatal miss. TRAF-22 records it for correction before timing
+is requalified. Changing it after this run to obtain a different number would
+invalidate the evidence.
 
-TRAF-21 closes for the sequence generator, exact projections, compatibility
-identity and executed decision fixture. TRAF-22 retains the uncompleted
-Granite per-token scale path. PLAY-14 retains the unobserved kernel-to-wire
-ordering question. CORE-37 and BACK-40 were not used because the evidence did
-not identify a separate core-authority or backend-correctness defect.
+PLAY-14 retains the issue-order residual. A strict v2 trace observes what
+framework dispatch returned; it does not observe the order a fused kernel,
+NCCL or an RNIC used to post bytes. This result does not upgrade that claim.
 
-## Contradiction sweep and integrator-owned omissions
+CORE-41 owns the separate analytic locality defect that omits destination
+ingress. These all-remote native cells do not call that analytic service, so
+CORE-41 does not alter the values above. Any future analytic intra-node value
+remains pending CORE-41.
 
-The required post-closure sweep found no statement that directly contradicts
-the implemented bytes or ordering authority, but it found three
-integrator-owned omissions that this branch does not hand edit:
+TRAF-26 retains real multi-engine population. Copying one engine's routing
+table to peer sources remains forbidden. A globally serial MoE phase barrier
+would also be a new, separately frozen model decision; TRAF-9 already records
+the broader whole-layer MoE ordering approximation.
 
-- `README.md` still describes captured routing as driving the MoE all-to-all
-  without distinguishing the aggregate default from ordered per-token or
-  expert-group messages.
-- `docs/README_PRO.md` does not yet list `captured-message-sequence` in its
-  fidelity matrix or add this study to its study index. Only its generated
-  task-progress block and mechanically required module open counts changed in
-  this closure.
-- `docs/architecture.md` says dispatch and combine can use captured per-token
-  expert routing, but does not state that the default coalesces one send per
-  ordered pair or that the new explicit level preserves source-local issue
-  order and declared granularity.
+## Verification and contradiction sweep
 
-These are integration edits, not evidence gaps in TRAF-21. The module docs and
-this result remain the authoritative detailed record until the integrator
-updates those maps.
+After this report update, `ruff check .` passed and the full Python suite
+reported 1,057 passed with seven environment-dependent skips. A focused
+routed-traffic, step-communication, preplay-routing and study dry-run set
+reported 52 passed. The earlier routed-only set reported 28 passed, and the
+broader implementation set reported 128 passed with two skips.
+
+The owning traffic and preplay module docs now state the single-engine
+authority, void timing result and retained ordering boundary. The required
+post-result sweep found three integrator-owned omissions that remain outside
+this branch's scope:
+
+- `README.md` does not distinguish aggregate-default traffic from the explicit
+  sequence granularity.
+- `docs/README_PRO.md` has no message-granularity fidelity row or dispatch
+  sequence study entry.
+- `docs/architecture.md` does not describe engine-local framework-return order
+  at the explicit sequence level.
+
+Those map omissions do not change the module interface or evidence, and this
+branch does not edit them.

@@ -261,24 +261,50 @@ consumers were rerun, the framework oracle was audited as unaffected, and all
 old source-multiplied numeric surfaces are listed in
 [the token ownership results](../../examples/token_ownership_v1/RESULTS.md).
 
-TRAF-21 is complete. The explicit captured-message sequence level copies the
-strict v2 framework-returned top-k order, retains routing ordinals and exact
-per-request and per-pair projections, and supports per-token and whole-layer
-expert grouping. Its 12-cell native decision fixture preserved all exact
-bytes and changed packet completion in the registered positive direction.
-The frozen byte-only packet bands missed because the backend reserves full
-packet-calendar envelopes, while the frozen fluid comparison exposed an
-80,201 ps capture-order effect at 400 Gbit/s. The inverse-rate family passed
-2/2; the complete genuine-risk result is 1/3 family classes and 2/10
-instances. The accepted 334,432-byte Granite aggregate GOAL retained its
-SHA-256. Aggregate and expert-group Granite rendering remained practical, but
-the 101,318-message per-token render exceeded 60 seconds. See
+TRAF-21's explicit captured-message sequence interface remains complete.
+TRAF-25 now makes the aggregate and sequenced projections consume one ordered
+contribution authority owned by `RoutedMoeSupply.engine_rank`. The
+EP-width-eight regression requires exact ordered-pair equality and an
+independent hop ceiling for both grouping modes. The old source loop would add
+non-engine source pairs and emit 101,318 Granite hops against the 20,736
+ceiling, so it fails both guards.
+
+The corrected ownership refreeze reached every native cell, but the run is
+void because four aggregate or expert-group fluid cells violated a fatal
+floor that incorrectly treated full-duplex dispatch and combine loads as
+serial. No corrected behavioral fraction is reported. All exact ownership,
+pair, request, hop, input-identity and quiescence guards passed. At Granite
+scale the three modes emitted 336, 1,008 and 12,482 messages with 25,563,136
+bytes each. The per-token mode rendered and compiled in 17.020 seconds, used
+17.166 MiB peak traced memory, produced 2.140 MiB of GOAL text and completed
+its packet and fluid backend runs in 32.890 and 24.592 seconds. TRAF-22
+retains the timing qualification and missing 200 Gbit/s Granite scaling
+residual. See
 [the dispatch sequence results](../../examples/dispatch_sequence_v1/RESULTS.md).
 
 ## Open tasks
 
 ### Precision
 
+- TRAF-22 (Precision; P0; M): qualify `captured-message-sequence` timing under
+  corrected single-engine ownership. The corrected 54-token, 24-layer Granite
+  path is practical, but the 2026-08-12 ownership refreeze is void because its
+  fatal floor added reverse-direction dispatch and combine endpoint loads as
+  serial. The original byte-only packet and fluid bands also missed in the
+  retained raw findings, and the registered 200 Gbit/s Granite scaling cell
+  was not run. Replace those surrogates with bounds proved from the rendered
+  endpoint dependency frontiers and the packet backend's full-envelope
+  calendar. Align the documented source-only pairwise frontier with its
+  implementation before requalification. Preserve the void chronology, then
+  freeze and score at least one held-out payload or routing shape before its
+  first run. Acceptance requires all fatal guards to pass; exact
+  sequenced-to-aggregate per-pair and per-request equality; the independent
+  EP-width-eight hop ceiling; raw packet and fluid relations inside their
+  preregistered bounds; the missing 200/400 Gbit/s Granite scaling check;
+  unchanged aggregate-default bytes and timing; and retention of the
+  30-second render-plus-compile, 1 GiB memory, 64 MiB GOAL and 60-second
+  backend limits. PLAY-14 retains unobserved wire issue order, and CORE-41
+  retains analytic destination-ingress service.
 - TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
   zero-propagation, per-source NVLink egress surrogate against
   same-generation point-to-point and collective captures. Sweep payload and
@@ -304,15 +330,6 @@ the 101,318-message per-token render exceeded 60 seconds. See
   graph scope, move live JCT by the registered direction and magnitude, and
   retain the current supported artifact bytes and timing as the explicit off
   path.
-- TRAF-22 (Precision; P1; M): make `captured-message-sequence` practical for
-  the measured 54-token, 24-layer Granite step without weakening message or
-  routing identity. The current 101,318-message plan finishes in 1.86 s, but
-  GOAL rendering exceeds 60 s because per-message label validation scans the
-  growing rank program. Replace that quadratic validation with a checked bulk
-  or indexed path, then pre-register and execute the omitted per-token packet
-  and fluid cells. Acceptance requires render plus compile within 30 s, peak
-  traced memory within 1 GiB, GOAL text within 64 MiB, exact pair and request
-  conservation, and byte-identical aggregate and expert-group off paths.
 - TRAF-23 (Precision; P1; L): measure per-rank completion frontiers on the
   VLLM-22 path. Capture dispatch and combine return, next-compute eligibility,
   final-logits completion and terminal `requests-visible` fan-in on a B100

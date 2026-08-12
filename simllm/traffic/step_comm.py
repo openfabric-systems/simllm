@@ -1355,10 +1355,10 @@ def render_sequenced_step_goal(
 ) -> GoalTrace:
     """Render the explicit ``captured-message-sequence`` precision level.
 
-    This opt-in entry point preserves each source rank's framework-returned
-    routing sequence and the selected grouping rule. The established
-    :func:`render_step_goal` aggregate compatibility renderer remains the
-    default and has no message-granularity selector.
+    This opt-in entry point preserves the declared engine rank's
+    framework-returned routing sequence and the selected grouping rule. The
+    established :func:`render_step_goal` aggregate compatibility renderer
+    remains the default and has no message-granularity selector.
     """
 
     tp_ops = step_tp_allreduces(record, dims, tp_ranks)
