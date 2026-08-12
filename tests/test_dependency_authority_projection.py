@@ -1,4 +1,7 @@
+import subprocess
+import sys
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
@@ -10,6 +13,8 @@ from simllm.traffic import (
     render_serial_execution_graph_goal,
     verify_execution_goal_projection,
 )
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _ring(operation_id: str, logical_queue: str = "nccl") -> ExecutionOperation:
@@ -412,3 +417,27 @@ def test_projection_checker_counts_duplicate_graph_edge_occurrences():
 
     with pytest.raises(ValueError, match="edge mismatch.*extra="):
         verify_execution_goal_projection(graph, perturbed)
+
+
+def test_registered_study_script_bootstraps_repository_imports(tmp_path):
+    existing_output = tmp_path / "existing-output"
+    existing_output.mkdir()
+    result = subprocess.run(
+        (
+            sys.executable,
+            str(REPOSITORY_ROOT / "examples/dependency_authority_v1/run_study.py"),
+            "--out",
+            str(existing_output),
+        ),
+        cwd=REPOSITORY_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "ModuleNotFoundError" not in result.stderr
+    assert (
+        "production evidence requires a clean worktree" in result.stderr
+        or "refusing to overwrite existing output" in result.stderr
+    )

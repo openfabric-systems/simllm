@@ -12,6 +12,10 @@ from dataclasses import asdict, replace
 from itertools import pairwise
 from pathlib import Path
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
 EVIDENCE_AUTHORED_AGAINST = "dcbef8682b1d74fb059a95d5b8b6f0c4ae07c9eb"
 VECTOR_BYTES = (1_024, 2_048)
 PLACEMENTS = ("AAAA", "AABB", "ABCD")
@@ -120,6 +124,7 @@ def _git_revision(*args: str) -> str:
         check=True,
         capture_output=True,
         text=True,
+        cwd=REPOSITORY_ROOT,
     ).stdout.strip()
 
 
@@ -129,6 +134,7 @@ def _require_clean_worktree() -> None:
         check=True,
         capture_output=True,
         text=True,
+        cwd=REPOSITORY_ROOT,
     ).stdout
     if status:
         raise RuntimeError(
