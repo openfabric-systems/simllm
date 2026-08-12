@@ -32,7 +32,7 @@ post-specified regression checks.
 | Final pre-run expectation correction | `f9f886dd9360d76e74f7b4498094221b5e4aa6f5` |
 | Immutable plan implementation | `49af52d4e4f294e13ad06e6945bb435b81e6ecc9` |
 | Acceptance tests and renderer correction | `9229311f8f83d1405a28f7532d025c8131f06e8c` |
-| Study implementation and observed revision | `8880c16a3ceacfc726002a144c98f52ce00ed253` |
+| Study implementation | `8880c16a3ceacfc726002a144c98f52ce00ed253` |
 
 The registered `--check-only` command passed before the freeze and again
 before the production path landed. It parses the full CLI, validates only
@@ -45,6 +45,9 @@ production path was written.
 | Revision the run observed | `9229311f8f83d1405a28f7532d025c8131f06e8c` |
 | htsim gitlink the run observed | `fc4400e4ca619223481536632074045cb6af2756` |
 
+The reported run executed from the working tree at HEAD
+`9229311f8f83d1405a28f7532d025c8131f06e8c`, before its own study file was
+committed, which is why the observed revision precedes the study commit above.
 The authored and observed revisions are recorded separately. No equality
 between them, or between either and a live submodule pin, is asserted or
 tested. No third-party simulator, initialized submodule or native binary is
