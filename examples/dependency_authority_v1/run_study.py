@@ -35,13 +35,15 @@ DIRECT_JCT_PS = {
     2_048: 205_653_487,
 }
 EXPECTED_JCT_BANDS = {
-    (1_024, "AAAA"): (4_562_000, 4_562_000),
+    (1_024, "AAAA"): (6_676_000, 6_676_000),
     (1_024, "AABB"): (136_246_720, 136_246_720),
     (1_024, "ABCD"): (155_702_720, 155_702_864),
-    (2_048, "AAAA"): (9_071_000, 9_071_000),
+    (2_048, "AAAA"): (13_310_000, 13_310_000),
     (2_048, "AABB"): (176_469_440, 176_469_440),
     (2_048, "ABCD"): (215_381_440, 215_381_584),
 }
+#: represented compute the all-local cells carry outside NVLink service
+ALL_LOCAL_COMPUTE_PS = 24_000
 EXPECTED_SIGNED_CHANGE_BANDS = {
     1_024: (4_863_953, 4_864_097),
     2_048: (9_727_953, 9_728_097),
@@ -110,14 +112,20 @@ EXPECTED_CROSS_CHECK_FINDINGS = {
     },
 }
 EXPECTED_CELLS = {
-    (1_024, "AAAA"): (2_983_936, 0, 2_983_936, 4_538_000),
+    (1_024, "AAAA"): (2_983_936, 0, 2_983_936, 6_652_000),
     (1_024, "AABB"): (2_983_936, 2_011_136, 972_800, 2_194_000),
     (1_024, "ABCD"): (2_983_936, 2_983_936, 0, 0),
-    (2_048, "AAAA"): (5_967_872, 0, 5_967_872, 9_047_000),
+    (2_048, "AAAA"): (5_967_872, 0, 5_967_872, 13_286_000),
     (2_048, "AABB"): (5_967_872, 4_022_272, 1_945_600, 4_358_000),
     (2_048, "ABCD"): (5_967_872, 5_967_872, 0, 0),
 }
-PENDING_INGRESS_PRECISION_CELLS = ((1_024, "AAAA"), (2_048, "AAAA"))
+#: cells refrozen by CORE-41 from the old maximum-source-egress surrogate
+#: 4,538,000 ps and 9,047,000 ps to the maximum-endpoint-load charge
+ENDPOINT_REFROZEN_CELLS = ((1_024, "AAAA"), (2_048, "AAAA"))
+SUPERSEDED_SOURCE_EGRESS_SERVICE_PS = {
+    (1_024, "AAAA"): 4_538_000,
+    (2_048, "AAAA"): 9_047_000,
+}
 PHYSICAL_SANITY_BOUNDS_PS = {
     1_024: {
         "peak_egress_serialization_floor": 29_839_360,
@@ -176,8 +184,17 @@ def _check_frozen_registry() -> None:
         raise AssertionError("artifact boundary census drifted")
     if FROZEN_GRAPH_CENSUS["positive_flows"] != 3 * PHASE_COUNT:
         raise AssertionError("positive-flow arithmetic drifted")
-    if set(PENDING_INGRESS_PRECISION_CELLS) - expected_keys:
-        raise AssertionError("pending locality cell is outside the sweep")
+    if set(ENDPOINT_REFROZEN_CELLS) - expected_keys:
+        raise AssertionError("refrozen locality cell is outside the sweep")
+    if set(SUPERSEDED_SOURCE_EGRESS_SERVICE_PS) != set(ENDPOINT_REFROZEN_CELLS):
+        raise AssertionError("superseded service grid is incomplete")
+    for key in ENDPOINT_REFROZEN_CELLS:
+        service_ps = EXPECTED_CELLS[key][3]
+        if service_ps <= SUPERSEDED_SOURCE_EGRESS_SERVICE_PS[key]:
+            raise AssertionError("the endpoint charge must exceed its surrogate")
+        low, high = EXPECTED_JCT_BANDS[key]
+        if low != high or low - service_ps != ALL_LOCAL_COMPUTE_PS:
+            raise AssertionError("all-local compute term drifted")
     if any(len(digest) != 64 for _, digest in SOURCE_ARTIFACTS.values()):
         raise AssertionError("external source provenance is malformed")
     for vector_bytes in VECTOR_BYTES:
@@ -888,9 +905,12 @@ def run_study(source_root: Path, out: Path) -> None:
                 "vector_bytes": vector_bytes,
                 "placement": placement,
                 "precision_status": (
-                    "pending-CORE-41"
-                    if key in PENDING_INGRESS_PRECISION_CELLS
+                    "accepted-core41-refreeze"
+                    if key in ENDPOINT_REFROZEN_CELLS
                     else "accepted"
+                ),
+                "superseded_source_egress_service_ps": (
+                    SUPERSEDED_SOURCE_EGRESS_SERVICE_PS.get(key)
                 ),
                 "observed_locality": list(observed_tuple),
                 "expected_locality": list(expected),
