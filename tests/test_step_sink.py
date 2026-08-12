@@ -64,7 +64,28 @@ SAMPLE_DIMS = ModelDims(
 # M1-calibrated fluid constants (examples/m1/RESULTS.md C1/C2)
 PS_PER_BYTE_400G = 20
 PROPAGATION_PS = 2_000_000
-DEFAULT_GOAL_SHA256 = "f8aade109ba8e3a581b7d965b3a0c76c1247016a1e37491fa84efbbf377677a5"
+# Post-specified re-acceptance: the unchanged graph wire projects at causal
+# levels. Compute levels stay analytic, while these four collective artifacts
+# reach the backend. The legacy direct diagnostic remains byte-locked in
+# test_step_lowerer.py.
+DEFAULT_ARTIFACT_MANIFEST = (
+    (
+        "step-000000.artifact-0001.goal",
+        "74122635377dab6e0e605c88ac7e745d126ec6da58f9a6bf2b352d7dedad1d29",
+    ),
+    (
+        "step-000000.artifact-0002.goal",
+        "3e6ee8835bc50284cba1f20fb85250f5563b118fc9b121c41a236dad026b8e62",
+    ),
+    (
+        "step-000000.artifact-0004.goal",
+        "ffd1d5e61243f5c5d3ffd07d867ed71ae769a26757d7ceb4bc0630fea26d78e2",
+    ),
+    (
+        "step-000000.artifact-0005.goal",
+        "c5520d64fe8df27809dd1df8dc2d0e8b0e700657122bb081f51333ec6daa2e76",
+    ),
+)
 
 
 class LayerProvider(ComputeProvider):
@@ -100,6 +121,15 @@ def stub_backend(monkeypatch, makespan_ps=100_000):
             flows=[],
             quiescent=True,
         ),
+    )
+
+
+def goal_artifact_manifest(workdir, step_index):
+    return tuple(
+        (path.name, hashlib.sha256(path.read_bytes()).hexdigest())
+        for path in sorted(
+            workdir.glob(f"step-{step_index:06d}.artifact-*.goal")
+        )
     )
 
 
@@ -154,6 +184,49 @@ def test_sink_config_rejects_unknown_profile(tmp_path):
         sink(tmp_path, profile="rnic-ss")
 
 
+@pytest.mark.parametrize("profile", ["rnic-nn", "rnic-nn-fluid"])
+def test_sink_accepts_multi_artifact_stateless_profile(
+    tmp_path, monkeypatch, profile
+):
+    backend_calls = 0
+
+    def tracked_backend(_config):
+        nonlocal backend_calls
+        backend_calls += 1
+        return SimpleNamespace(
+            job_completion_time_ps=lambda: 100_000,
+            flows=[],
+            quiescent=True,
+        )
+
+    monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
+    monkeypatch.setattr(step_sink_module, "run_htsim_rnic", tracked_backend)
+
+    result = sink(tmp_path, profile=profile)(decode_record())
+
+    assert result is not None
+    assert backend_calls == 4
+
+
+def test_sink_rejects_multi_artifact_stateful_profile_before_backend(
+    tmp_path, monkeypatch
+):
+    backend_called = False
+
+    def unexpected_backend(_config):
+        nonlocal backend_called
+        backend_called = True
+        raise AssertionError("stateful backend must not execute")
+
+    monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
+    monkeypatch.setattr(step_sink_module, "run_htsim_rnic", unexpected_backend)
+
+    with pytest.raises(RuntimeError, match=r"rnic-cn.*BACK-38"):
+        sink(tmp_path, profile="rnic-cn")(decode_record())
+
+    assert not backend_called
+
+
 def test_sink_config_preserves_provider_positional_argument(tmp_path):
     provider = LayerProvider((2_600, 4_600))
     config = HtsimStepSinkConfig(
@@ -192,8 +265,11 @@ def test_sink_passes_explicit_goal_rank_count(tmp_path, monkeypatch):
     )
 
     assert s(decode_record()) is not None
-    assert (tmp_path / "padded" / "step-000004.goal").read_text().startswith(
-        "num_ranks 8\n"
+    goals = sorted((tmp_path / "padded").glob("step-000004.artifact-*.goal"))
+    assert len(goals) == 4
+    assert all(
+        goal.read_text().startswith("num_ranks 8\n")
+        for goal in goals
     )
 
 
@@ -214,9 +290,25 @@ def test_sink_uses_valid_provider_layer_breakdown(tmp_path, monkeypatch):
     assert outcome.compute_estimate_ps == 7_200
     assert outcome.per_layer_calc_ns is None
     assert outcome.layer_calc_ns == (2, 5)
-    text = (tmp_path / "layered" / "step-000004.goal").read_text()
-    assert text.count("calc 2") == 2
-    assert text.count("calc 5") == 2
+    # Post-specified re-acceptance: the unchanged graph wire projects into two
+    # analytic compute levels plus four fixed-duration backend collectives.
+    assert outcome.makespan_ps == 7_000 + 4 * 100_000
+    goals = sorted((tmp_path / "layered").glob("step-000004.artifact-*.goal"))
+    assert len(goals) == 4
+    goal_text = "\n".join(goal.read_text() for goal in goals)
+    assert ": calc " not in goal_text
+    locality = s.locality_outcomes[0]
+    assert locality.ordering_authority == "execution-graph"
+    assert locality.artifact_count == 6
+    assert locality.backend_runs == 4
+    assert locality.composed_phase_service_ps == (
+        2_000,
+        100_000,
+        100_000,
+        5_000,
+        100_000,
+        100_000,
+    )
 
 
 def test_sink_assigns_host_delay_before_first_layer_boundary(tmp_path, monkeypatch):
@@ -260,7 +352,7 @@ def test_sink_rejects_invalid_provider_layer_breakdown(tmp_path, provider, messa
         s(decode_record())
 
 
-def test_sink_default_goal_is_byte_identical_to_frozen_baseline(tmp_path, monkeypatch):
+def test_sink_default_artifact_manifest_is_reaccepted(tmp_path, monkeypatch):
     stub_backend(monkeypatch, makespan_ps=82_003_040)
     record = StepRecord(
         0,
@@ -277,10 +369,20 @@ def test_sink_default_goal_is_byte_identical_to_frozen_baseline(tmp_path, monkey
     )
 
     assert s(record) is not None
-    goal_bytes = (tmp_path / "baseline" / "step-000000.goal").read_bytes()
-    assert hashlib.sha256(goal_bytes).hexdigest() == DEFAULT_GOAL_SHA256
+    assert goal_artifact_manifest(tmp_path / "baseline", 0) == (
+        DEFAULT_ARTIFACT_MANIFEST
+    )
     assert s.outcomes[0].per_layer_calc_ns == 12_030
     assert s.outcomes[0].layer_calc_ns == (12_030, 12_030)
+    # Post-specified re-acceptance: causal-level projection leaves the graph
+    # wire unchanged and adds two analytic compute levels around four backend
+    # collective artifacts.
+    assert s.outcomes[0].makespan_ps == 24_060_000 + 4 * 82_003_040
+    locality = s.locality_outcomes[0]
+    assert locality.ordering_authority == "execution-graph"
+    assert locality.graph_execution_id == "step-0"
+    assert locality.artifact_count == locality.graph_artifact_count == 6
+    assert locality.backend_runs == len(DEFAULT_ARTIFACT_MANIFEST)
 
 
 def test_sink_uses_exact_sample_count_for_chunked_prefill(tmp_path, monkeypatch):
@@ -331,7 +433,7 @@ def test_sink_sample_count_identity_when_every_request_samples(tmp_path, monkeyp
         ScheduledRequest("d1", RequestPhase.DECODE, 1, context_length=32),
     ]
     records = [StepRecord(0, 0, scheduled), StepRecord(0, 0, scheduled, num_sampled=2)]
-    goals = []
+    artifact_manifests = []
     estimates = []
     for label, record in zip(("absent", "exact"), records, strict=True):
         s = HtsimStepSink(
@@ -344,12 +446,12 @@ def test_sink_sample_count_identity_when_every_request_samples(tmp_path, monkeyp
             )
         )
         assert s(record) is not None
-        goals.append((tmp_path / label / "step-000000.goal").read_bytes())
+        artifact_manifests.append(goal_artifact_manifest(tmp_path / label, 0))
         estimates.append(s.outcomes[0].compute_estimate_ps)
         assert s.outcomes[0].layer_calc_ns == (212, 212)
 
     assert estimates == [424_960, 424_960]
-    assert goals[0] == goals[1]
+    assert artifact_manifests[0] == artifact_manifests[1]
 
 
 def test_persistent_sink_prepares_concurrently_and_publishes_in_order(
@@ -429,10 +531,9 @@ def test_persistent_sink_prepares_concurrently_and_publishes_in_order(
     assert persistent_results == diagnostic_results
     assert persistent.outcomes == diagnostic.outcomes
     for record in records:
-        name = f"step-{record.step_index:06d}.goal"
-        assert (tmp_path / "persistent" / name).read_bytes() == (
-            tmp_path / "diagnostic" / name
-        ).read_bytes()
+        assert goal_artifact_manifest(
+            tmp_path / "persistent", record.step_index
+        ) == goal_artifact_manifest(tmp_path / "diagnostic", record.step_index)
 
 
 @pytest.mark.parametrize("max_workers", [True, 1.5, "2"])
@@ -520,9 +621,11 @@ def test_persistent_sink_failed_preparation_publishes_nothing(tmp_path, monkeypa
         persistent.prepare(records)
         results = [persistent(record) for record in records]
         assert [result.step_index for result in results if result is not None] == [0, 1]
+        # Post-specified re-acceptance: the unchanged graph wire now has two
+        # analytic compute levels and four backend collective artifacts.
         assert [result.step_latency_ps for result in results if result is not None] == [
-            100_000,
-            100_000,
+            24_060_000 + 4 * 100_000,
+            24_060_000 + 4 * 100_000,
         ]
 
 
@@ -564,9 +667,11 @@ def test_sink_end_to_end_matches_closed_form(tmp_path):
     # 2L allreduces x 2(W-1) rounds x W sends per round
     assert outcome.num_flows == 2 * SMALL_DIMS.num_layers * rounds_per_allreduce * 2
     assert 0.0 < outcome.network_share_for(SMALL_DIMS.num_layers) < 1.0
-    # the GOAL and completion CSV land in the configured workdir
-    assert (tmp_path / "sink" / "step-000004.goal").is_file()
-    assert (tmp_path / "sink" / "step-000004.rnic-nn-fluid.csv").is_file()
+    # The four collective artifacts and completion CSVs land in the workdir.
+    assert len(list((tmp_path / "sink").glob("step-000004.artifact-*.goal"))) == 4
+    assert len(
+        list((tmp_path / "sink").glob("step-000004.artifact-*.rnic-nn-fluid.csv"))
+    ) == 4
 
 
 @pytest.mark.skipif(

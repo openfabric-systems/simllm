@@ -20,6 +20,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 
+from simllm.core.execution import EffectiveDependencyEdge
 from simllm.placement import RankMapper
 
 DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND = 450_000_000_000
@@ -49,14 +50,41 @@ class DirectedCollectiveSegment:
     destination_rank: int
     payload_bytes: int
     tag: int
+    #: optional request-major partition of the physical payload
+    request_payload_bytes: tuple[tuple[str, int], ...] = ()
 
     def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "request_payload_bytes",
+            tuple(self.request_payload_bytes),
+        )
         _require_nonnegative_rank("source_rank", self.source_rank)
         _require_nonnegative_rank("destination_rank", self.destination_rank)
         if self.source_rank == self.destination_rank:
             raise ValueError("a directed collective segment cannot be a self-pair")
         _require_positive_int("payload_bytes", self.payload_bytes)
         _require_nonnegative_rank("tag", self.tag)
+        request_ids = []
+        attributed_bytes = 0
+        for index, entry in enumerate(self.request_payload_bytes):
+            path = f"request_payload_bytes[{index}]"
+            if not isinstance(entry, tuple) or len(entry) != 2:
+                raise TypeError(f"{path} must be a two-item tuple")
+            request_id, payload_bytes = entry
+            if not isinstance(request_id, str) or not request_id.strip():
+                raise ValueError(f"{path}[0] must be a nonblank string")
+            _require_positive_int(f"{path}[1]", payload_bytes)
+            request_ids.append(request_id)
+            attributed_bytes += payload_bytes
+        if len(request_ids) != len(set(request_ids)):
+            raise ValueError("request payload partition contains duplicate request IDs")
+        if request_ids != sorted(request_ids):
+            raise ValueError("request payload partition must be request-major")
+        if self.request_payload_bytes and attributed_bytes != self.payload_bytes:
+            raise ValueError(
+                "request payload partition does not sum to the physical payload"
+            )
 
 
 @dataclass(frozen=True)
@@ -67,12 +95,18 @@ class CollectiveCommunicationPhase:
     layer: int
     participants: tuple[int, ...]
     segments: tuple[DirectedCollectiveSegment, ...]
+    #: stable semantic operation that owns this rendered phase, when known
+    operation_id: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "participants", tuple(self.participants))
         object.__setattr__(self, "segments", tuple(self.segments))
         if not isinstance(self.phase_id, str) or not self.phase_id.strip():
             raise ValueError("phase_id must be a nonblank string")
+        if self.operation_id is not None and (
+            not isinstance(self.operation_id, str) or not self.operation_id.strip()
+        ):
+            raise ValueError("operation_id must be None or a nonblank string")
         _require_nonnegative_rank("layer", self.layer)
         if len(self.participants) < 2:
             raise ValueError("a communication phase needs at least two participants")
@@ -162,9 +196,13 @@ class StepLocalityPlan:
     phases: tuple[ClassifiedCommunicationPhase, ...]
     authority: str
     nvlink_bandwidth_bytes_per_second: int
+    graph_execution_id: str | None = None
+    #: complete canonical graph-edge inventory carried by this projection
+    dependency_edges: tuple[EffectiveDependencyEdge, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "phases", tuple(self.phases))
+        object.__setattr__(self, "dependency_edges", tuple(self.dependency_edges))
         if any(
             not isinstance(phase, ClassifiedCommunicationPhase)
             for phase in self.phases
@@ -172,6 +210,18 @@ class StepLocalityPlan:
             raise TypeError("locality plan phases must be classified phases")
         if self.authority not in {"placement-manifest", "compatibility-all-remote"}:
             raise ValueError("unsupported locality authority")
+        if self.graph_execution_id is not None and (
+            not isinstance(self.graph_execution_id, str)
+            or not self.graph_execution_id.strip()
+        ):
+            raise ValueError("graph_execution_id must be None or a nonblank string")
+        if self.graph_execution_id is None and self.dependency_edges:
+            raise ValueError("dependency edges require a graph execution ID")
+        if any(
+            not isinstance(boundary, EffectiveDependencyEdge)
+            for boundary in self.dependency_edges
+        ):
+            raise TypeError("dependency_edges must contain effective dependency edges")
         _require_positive_int(
             "nvlink_bandwidth_bytes_per_second",
             self.nvlink_bandwidth_bytes_per_second,

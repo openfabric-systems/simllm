@@ -22,7 +22,14 @@ patterns rather than abstract ops.
 
 COLLECTIVE_TRACE_SCHEMA = "simllm-collective-trace-v1"
 
-from simllm.traffic.execution_goal import render_serial_execution_graph_goal
+from simllm.traffic.execution_goal import (
+    ExecutionGoalArtifact,
+    ExecutionGoalArtifactBoundary,
+    ExecutionGoalProjection,
+    project_execution_graph_goal,
+    render_serial_execution_graph_goal,
+    verify_execution_goal_projection,
+)
 from simllm.traffic.locality import (
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     ClassifiedCommunicationPhase,
@@ -56,12 +63,14 @@ from simllm.traffic.step_comm import (
     TpAllReduce,
     compare_request_moe_fidelity,
     lower_step_observations,
+    plan_execution_graph_locality,
     plan_step_locality,
     render_fabric_phase_goal,
     render_step_goal,
     step_communication_phases,
     step_moe_alltoalls,
     step_tp_allreduces,
+    validate_execution_graph_locality_projection,
     validate_request_moe_fidelity,
 )
 
@@ -73,6 +82,9 @@ __all__ = [
     "ClassifiedCommunicationPhase",
     "CollectiveCommunicationPhase",
     "DirectedCollectiveSegment",
+    "ExecutionGoalArtifact",
+    "ExecutionGoalArtifactBoundary",
+    "ExecutionGoalProjection",
     "ExpertPlacementSnapshot",
     "MoeAllToAll",
     "RequestFidelityError",
@@ -87,7 +99,9 @@ __all__ = [
     "gather",
     "lower_step_observations",
     "pairwise_all_to_allv",
+    "plan_execution_graph_locality",
     "plan_step_locality",
+    "project_execution_graph_goal",
     "render_fabric_phase_goal",
     "render_serial_execution_graph_goal",
     "render_step_goal",
@@ -96,7 +110,9 @@ __all__ = [
     "step_communication_phases",
     "step_moe_alltoalls",
     "step_tp_allreduces",
+    "validate_execution_graph_locality_projection",
     "validate_expert_placement_snapshot",
     "validate_request_moe_fidelity",
     "validate_routed_moe_supply",
+    "verify_execution_goal_projection",
 ]

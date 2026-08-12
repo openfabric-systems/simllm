@@ -55,8 +55,11 @@ from simllm.core import (
     ExecutionOperation,
     RequestPhase,
     StepRecord,
+    collective_goal_tags,
     execution_graph_from_observations,
+    validate_execution_graph,
 )
+from simllm.core.execution_io import effective_dependency_edges
 from simllm.goal import GoalMessage, GoalTrace
 from simllm.placement import RankMapper
 from simllm.preplay.routing import RoutedToken
@@ -790,6 +793,7 @@ def _ring_communication_phases(
     operation: TpAllReduce,
     *,
     operation_base_tag: int,
+    operation_id: str | None = None,
 ) -> tuple[CollectiveCommunicationPhase, ...]:
     world = len(operation.ranks)
     chunk = max(1, operation.payload_bytes // world)
@@ -813,6 +817,7 @@ def _ring_communication_phases(
                 layer=operation.layer,
                 participants=operation.ranks,
                 segments=segments,
+                operation_id=operation_id,
             )
         )
     return tuple(phases)
@@ -822,7 +827,9 @@ def _moe_communication_phase(
     operation: MoeAllToAll,
     *,
     tag: int,
+    operation_id: str | None = None,
 ) -> CollectiveCommunicationPhase:
+    request_partitions = _request_partitions(operation)
     if operation.pair_payload_bytes:
         pair_payloads = operation.pair_payload_bytes
     else:
@@ -842,10 +849,15 @@ def _moe_communication_phase(
                 destination_rank=destination,
                 payload_bytes=payload_bytes,
                 tag=tag,
+                request_payload_bytes=request_partitions.get(
+                    (source, destination),
+                    (),
+                ),
             )
             for source, destination, payload_bytes in pair_payloads
             if payload_bytes > 0
         ),
+        operation_id=operation_id,
     )
 
 
@@ -895,9 +907,160 @@ def step_communication_phases(
                 _moe_communication_phase(
                     operation,
                     tag=moe_base_tag + moe_index,
+                    operation_id=_moe_operation_id(record, operation),
                 )
             )
     return tuple(phases)
+
+
+def _execution_graph_communication_phases(
+    graph: ExecutionGraph,
+    *,
+    base_tag: int,
+) -> tuple[CollectiveCommunicationPhase, ...]:
+    """Expand graph-owned collectives without reconstructing step policy."""
+
+    validate_execution_graph(graph)
+    if type(base_tag) is not int or base_tag < 0:
+        raise ValueError("base_tag must be a nonnegative integer")
+
+    tags = collective_goal_tags(graph, base_tag=base_tag)
+    phases: list[CollectiveCommunicationPhase] = []
+    for index, operation in enumerate(graph.operations):
+        work = operation.work
+        if isinstance(work, ComputeWork):
+            continue
+        if not isinstance(work, CollectiveWork):
+            raise TypeError(
+                f"graph.operations[{index}] carries unsupported "
+                f"{type(work).__name__} in the locality projection"
+            )
+        layer = operation.correlation.layer
+        if layer is None:
+            raise ValueError(
+                f"graph.operations[{index}] collective needs correlation.layer"
+            )
+        channel = work.channel_hint
+        if channel is None:
+            raise ValueError(
+                f"graph.operations[{index}] collective needs channel_hint"
+            )
+
+        operation_tags = tags[operation.operation_id]
+        if work.collective == "all-reduce" and work.algorithm_hint == "ring":
+            expected_rounds = 2 * (len(work.ranks) - 1)
+            if len(operation_tags) != expected_rounds:
+                raise AssertionError("ring tag allocation disagrees with its round count")
+            phases.extend(
+                _ring_communication_phases(
+                    TpAllReduce(
+                        layer=layer,
+                        site=channel,
+                        ranks=work.ranks,
+                        payload_bytes=work.payload_bytes,
+                    ),
+                    operation_base_tag=operation_tags[0],
+                    operation_id=operation.operation_id,
+                )
+            )
+            continue
+
+        if work.collective == "all-to-allv" and work.algorithm_hint == "pairwise":
+            if len(operation_tags) != 1:
+                raise AssertionError("pairwise tag allocation must contain one tag")
+            if work.pair_payload_bytes:
+                pair_payload_bytes = work.pair_payload_bytes
+                per_pair_bytes = 0
+            else:
+                pair_payload_bytes = ()
+                per_pair_bytes = work.payload_bytes
+            if not pair_payload_bytes and per_pair_bytes <= 0:
+                raise ValueError(
+                    f"graph.operations[{index}] is a zero-payload pairwise "
+                    "all-to-allv"
+                )
+            phases.append(
+                _moe_communication_phase(
+                    MoeAllToAll(
+                        layer=layer,
+                        phase=channel,
+                        ranks=work.ranks,
+                        per_pair_bytes=per_pair_bytes,
+                        pair_payload_bytes=pair_payload_bytes,
+                        request_pair_payload_bytes=work.request_pair_payload_bytes,
+                        placement_epoch=operation.placement_epoch,
+                    ),
+                    tag=operation_tags[0],
+                    operation_id=operation.operation_id,
+                )
+            )
+            continue
+
+        raise ValueError(
+            f"graph.operations[{index}] uses unsupported collective "
+            f"{work.collective!r} with algorithm {work.algorithm_hint!r}"
+        )
+    return tuple(phases)
+
+
+def plan_execution_graph_locality(
+    graph: ExecutionGraph,
+    *,
+    rank_mapper: RankMapper | None = None,
+    nvlink_bandwidth_bytes_per_second: int = (
+        DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
+    ),
+    base_tag: int = 1000,
+) -> StepLocalityPlan:
+    """Project graph-owned collective work into placement service phases.
+
+    Operation order, collective identities, algorithms, payloads and tags all
+    come from the validated ``ExecutionGraph``. The placement manifest only
+    classifies the resulting directed segments as local or fabric traffic.
+    Unsupported work fails during preflight, before any renderer is mutated.
+    """
+
+    if rank_mapper is not None and not isinstance(rank_mapper, RankMapper):
+        raise TypeError("rank_mapper must be RankMapper or None")
+    phases = _execution_graph_communication_phases(graph, base_tag=base_tag)
+    if rank_mapper is not None:
+        for phase in phases:
+            for rank in phase.participants:
+                rank_mapper.goal_rank(rank)
+    classified = classify_step_locality(
+        phases,
+        rank_mapper=rank_mapper,
+        bandwidth_bytes_per_second=nvlink_bandwidth_bytes_per_second,
+    )
+    return replace(
+        classified,
+        graph_execution_id=graph.execution_id,
+        dependency_edges=effective_dependency_edges(graph),
+    )
+
+
+def validate_execution_graph_locality_projection(
+    graph: ExecutionGraph,
+    plan: StepLocalityPlan,
+    *,
+    rank_mapper: RankMapper | None = None,
+    nvlink_bandwidth_bytes_per_second: int = (
+        DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
+    ),
+    base_tag: int = 1000,
+) -> None:
+    """Reject any loss, duplication or mutation in a graph locality plan."""
+
+    if not isinstance(plan, StepLocalityPlan):
+        raise TypeError("plan must be a StepLocalityPlan")
+    expected = plan_execution_graph_locality(
+        graph,
+        rank_mapper=rank_mapper,
+        nvlink_bandwidth_bytes_per_second=nvlink_bandwidth_bytes_per_second,
+        base_tag=base_tag,
+    )
+    if plan != expected:
+        raise ValueError("locality plan does not exactly project the execution graph")
 
 
 def plan_step_locality(
@@ -933,26 +1096,36 @@ def plan_step_locality(
 def render_fabric_phase_goal(
     phase: ClassifiedCommunicationPhase,
     *,
-    rank_mapper: RankMapper,
+    rank_mapper: RankMapper | None,
     num_goal_ranks: int | None = None,
 ) -> GoalTrace:
     """Render one isolated phase's cross-node segments to the fabric.
 
-    Local analytic service is intentionally outside this GOAL rank space. The
-    live sink executes each mixed-locality phase separately and composes the
-    phase as ``max(NVLink service, fabric completion)`` before advancing.
-    That external phase barrier preserves source eligibility and serial
-    collective semantics without inventing a cross-rank GOAL dependency.
+    Local analytic service is intentionally outside this GOAL rank space. This
+    artifact contains service for one already ordered graph-owned phase. The
+    caller must use the plan's effective dependency boundaries when composing
+    several phase results. With no placement mapper, semantic ranks are GOAL
+    ranks and every segment in the classified phase stays on the fabric.
     """
 
     if not isinstance(phase, ClassifiedCommunicationPhase):
         raise TypeError("phase must be a ClassifiedCommunicationPhase")
     if not phase.fabric_segments:
         raise ValueError("a fabric phase needs at least one cross-node segment")
+    if rank_mapper is not None and not isinstance(rank_mapper, RankMapper):
+        raise TypeError("rank_mapper must be RankMapper or None")
     endpoint_pairs = tuple(
         (
-            rank_mapper.goal_rank(segment.source_rank),
-            rank_mapper.goal_rank(segment.destination_rank),
+            (
+                segment.source_rank
+                if rank_mapper is None
+                else rank_mapper.goal_rank(segment.source_rank)
+            ),
+            (
+                segment.destination_rank
+                if rank_mapper is None
+                else rank_mapper.goal_rank(segment.destination_rank)
+            ),
             segment,
         )
         for segment in phase.fabric_segments
@@ -967,22 +1140,37 @@ def render_fabric_phase_goal(
     }
     minimum_ranks = max(used_goal_ranks) + 1
     if num_goal_ranks is None:
-        num_goal_ranks = max(minimum_ranks, rank_mapper.num_goal_ranks())
+        mapped_ranks = 0 if rank_mapper is None else rank_mapper.num_goal_ranks()
+        num_goal_ranks = max(minimum_ranks, mapped_ranks)
     if num_goal_ranks < minimum_ranks:
         raise ValueError(
             f"num_goal_ranks={num_goal_ranks} cannot contain rank {minimum_ranks - 1}"
         )
     trace = GoalTrace(num_goal_ranks)
     for source, destination, segment in endpoint_pairs:
-        trace.rank(source).send(
+        send = trace.rank(source).send(
             segment.payload_bytes,
             to=destination,
             tag=segment.tag,
+            operation_id=phase.phase.operation_id,
         )
-        trace.rank(destination).recv(
+        receive = trace.rank(destination).recv(
             segment.payload_bytes,
             source=source,
             tag=segment.tag,
+            operation_id=phase.phase.operation_id,
+        )
+        trace.record_message(
+            GoalMessage(
+                operation_id=phase.phase.operation_id,
+                source_rank=source,
+                destination_rank=destination,
+                payload_bytes=segment.payload_bytes,
+                tag=segment.tag,
+                send_label=send,
+                receive_label=receive,
+                request_payload_bytes=segment.request_payload_bytes,
+            )
         )
     for goal_rank in range(num_goal_ranks):
         if goal_rank not in used_goal_ranks:

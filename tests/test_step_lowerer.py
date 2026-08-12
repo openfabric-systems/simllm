@@ -24,7 +24,11 @@ from simllm.core import (
     execution_graph_from_json,
     execution_graph_to_json,
 )
-from simllm.traffic import render_serial_execution_graph_goal, render_step_goal
+from simllm.traffic import (
+    project_execution_graph_goal,
+    render_serial_execution_graph_goal,
+    render_step_goal,
+)
 
 SMALL_DIMS = ModelDims(
     num_layers=2,
@@ -56,7 +60,15 @@ SAMPLE_DIMS = ModelDims(
     dtype_bytes=2,
 )
 
-B1_ABSENT_REPLAY_SHA256 = "7087db6780f7e34f5a559a6505eeccc15d984c7b478cd8f0bc5838053825d4b6"
+DENSE_LEGACY_GOAL_SHA256 = (
+    "f8aade109ba8e3a581b7d965b3a0c76c1247016a1e37491fa84efbbf377677a5"
+)
+B1_ABSENT_LEGACY_GOAL_SHA256 = (
+    "7087db6780f7e34f5a559a6505eeccc15d984c7b478cd8f0bc5838053825d4b6"
+)
+MOE_LEGACY_GOAL_SHA256 = (
+    "2b3b73320cf02ffa11fc8a513c22edd0b450f8cedf520b28e2156fd2e60a8c0c"
+)
 
 
 class FlopProvider(ComputeProvider):
@@ -87,6 +99,22 @@ def _round_trip(graph: ExecutionGraph) -> ExecutionGraph:
     return execution_graph_from_json(execution_graph_to_json(graph))
 
 
+def _collective_message_rows(graph: ExecutionGraph) -> tuple[tuple[object, ...], ...]:
+    projection = project_execution_graph_goal(_round_trip(graph))
+    return tuple(
+        (
+            message.operation_id,
+            message.source_rank,
+            message.destination_rank,
+            message.payload_bytes,
+            message.tag,
+            message.request_payload_bytes,
+        )
+        for artifact in projection.artifacts
+        for message in artifact.trace.messages
+    )
+
+
 def test_serial_lowerer_is_the_execution_lowerer_protocol():
     lowerer = SerialStepLowerer(SerialStepLowererConfig(SMALL_DIMS, (0, 1)))
     assert isinstance(lowerer, ExecutionLowerer)
@@ -108,28 +136,64 @@ def test_dense_serial_lowering_is_per_layer_and_correlated():
     assert {operation.work.payload_bytes for operation in collectives} == {524_288}
     assert {operation.work.algorithm_hint for operation in collectives} == {"ring"}
     assert not any(operation.depends_on for operation in graph.operations)
-    assert all(
-        operation.participant_local_depends_on
-        for operation in graph.operations[2:]
-    )
+    assert [operation.participant_local_depends_on for operation in graph.operations] == [
+        (),
+        (),
+        (
+            "step-0:layer-0:rank-0:compute",
+            "step-0:layer-0:rank-1:compute",
+        ),
+        ("step-0:layer-0:tp-attention",),
+        ("step-0:layer-0:tp-mlp",),
+        ("step-0:layer-0:tp-mlp",),
+        (
+            "step-0:layer-1:rank-0:compute",
+            "step-0:layer-1:rank-1:compute",
+        ),
+        ("step-0:layer-1:tp-attention",),
+    ]
     assert graph.completion_operation_ids == ("step-0:layer-1:tp-mlp",)
 
 
-def test_dense_graph_only_goal_is_byte_identical_to_legacy_goal():
+def test_dense_graph_projects_to_ordered_artifacts_and_keeps_legacy_diagnostic():
     record = prefill_record()
     graph = SerialStepLowerer(SerialStepLowererConfig(SMALL_DIMS, (0, 1))).lower(record)
     replay_graph = _round_trip(graph)
-    replay = render_serial_execution_graph_goal(replay_graph)
+    projection = project_execution_graph_goal(replay_graph)
     legacy = render_step_goal(
         record,
         SMALL_DIMS,
         (0, 1),
         per_layer_calc_ns=12_030,
     )
-    assert replay.render() == legacy.render()
+    # Post-specified re-acceptance: the unchanged graph wire now splits at
+    # every causal level; the legacy diagnostic GOAL remains byte-identical.
+    assert [artifact.operation_ids for artifact in projection.artifacts] == [
+        (
+            "step-0:layer-0:rank-0:compute",
+            "step-0:layer-0:rank-1:compute",
+        ),
+        ("step-0:layer-0:tp-attention",),
+        ("step-0:layer-0:tp-mlp",),
+        (
+            "step-0:layer-1:rank-0:compute",
+            "step-0:layer-1:rank-1:compute",
+        ),
+        ("step-0:layer-1:tp-attention",),
+        ("step-0:layer-1:tp-mlp",),
+    ]
+    assert len(projection.boundaries) == 3
+    assert len(projection.serialized_edges) == 12
+    assert len(_collective_message_rows(graph)) == 16
+    assert (
+        hashlib.sha256(legacy.render().encode()).hexdigest()
+        == DENSE_LEGACY_GOAL_SHA256
+    )
 
 
-def test_b1_exact_sample_count_keeps_live_sink_and_serial_replay_equal(tmp_path):
+def test_b1_exact_sample_count_changes_analytic_compute_not_collective_artifacts(
+    tmp_path,
+):
     scheduled = [
         ScheduledRequest(
             "p",
@@ -158,7 +222,7 @@ def test_b1_exact_sample_count_keeps_live_sink_and_serial_replay_equal(tmp_path)
 
     exact_estimate_ps = sink.compute_estimate_ps(exact_record)
     exact_calc_ns = exact_estimate_ps // (SAMPLE_DIMS.num_layers * 1000)
-    exact_replay = render_serial_execution_graph_goal(lowerer.lower(exact_record))
+    exact_graph = lowerer.lower(exact_record)
     exact_live = render_step_goal(
         exact_record,
         SAMPLE_DIMS,
@@ -167,11 +231,10 @@ def test_b1_exact_sample_count_keeps_live_sink_and_serial_replay_equal(tmp_path)
     )
     assert exact_estimate_ps == 880_128
     assert exact_calc_ns == 440
-    assert exact_replay.render() == exact_live.render()
 
     absent_estimate_ps = sink.compute_estimate_ps(absent_record)
     absent_calc_ns = absent_estimate_ps // (SAMPLE_DIMS.num_layers * 1000)
-    absent_replay = render_serial_execution_graph_goal(lowerer.lower(absent_record))
+    absent_graph = lowerer.lower(absent_record)
     absent_live = render_step_goal(
         absent_record,
         SAMPLE_DIMS,
@@ -181,10 +244,15 @@ def test_b1_exact_sample_count_keeps_live_sink_and_serial_replay_equal(tmp_path)
     assert absent_estimate_ps == 912_896
     assert absent_calc_ns == 456
     assert absent_estimate_ps - exact_estimate_ps == 32_768
-    assert absent_replay.render() == absent_live.render()
+    assert _collective_message_rows(exact_graph) == _collective_message_rows(
+        absent_graph
+    )
     assert (
-        hashlib.sha256(absent_replay.render().encode()).hexdigest()
-        == B1_ABSENT_REPLAY_SHA256
+        hashlib.sha256(absent_live.render().encode()).hexdigest()
+        == B1_ABSENT_LEGACY_GOAL_SHA256
+    )
+    assert hashlib.sha256(exact_live.render().encode()).hexdigest() != (
+        B1_ABSENT_LEGACY_GOAL_SHA256
     )
 
 
@@ -204,7 +272,7 @@ def test_dense_tp1_lowers_and_renders_as_compute_only_work():
     assert "recv " not in rendered
 
 
-def test_moe_graph_only_goal_is_byte_identical_to_legacy_goal():
+def test_moe_graph_projects_global_serial_fallback_and_keeps_legacy_diagnostic():
     record = decode_record()
     config = SerialStepLowererConfig(
         SMALL_MOE_DIMS,
@@ -214,7 +282,7 @@ def test_moe_graph_only_goal_is_byte_identical_to_legacy_goal():
     graph = SerialStepLowerer(config).lower(record)
     compute = [operation for operation in graph.operations if isinstance(operation.work, ComputeWork)]
     per_layer_calc_ns = compute[0].work.nominal_duration_ps // 1000
-    replay = render_serial_execution_graph_goal(_round_trip(graph))
+    projection = project_execution_graph_goal(_round_trip(graph))
     legacy = render_step_goal(
         record,
         SMALL_MOE_DIMS,
@@ -222,7 +290,20 @@ def test_moe_graph_only_goal_is_byte_identical_to_legacy_goal():
         per_layer_calc_ns=per_layer_calc_ns,
         ep_ranks=(0, 1, 2, 3),
     )
-    assert replay.render() == legacy.render()
+    # Post-specified re-acceptance: the unchanged graph wire now separates
+    # per-layer compute, dispatch and combine causal levels while preserving
+    # the byte-locked legacy diagnostic.
+    assert len(projection.artifacts) == 6
+    assert len(projection.boundaries) == 3
+    assert len(projection.serialized_edges) == 24
+    assert sum(
+        artifact.trace.render().count(": send ")
+        for artifact in projection.artifacts
+    ) == legacy.render().count(": send ")
+    assert (
+        hashlib.sha256(legacy.render().encode()).hexdigest()
+        == MOE_LEGACY_GOAL_SHA256
+    )
     pairwise = [
         operation.work
         for operation in graph.operations
@@ -278,7 +359,7 @@ def test_serial_renderer_distinguishes_participant_and_operation_dependencies():
             ),
         ),
     )
-    with pytest.raises(ValueError, match="cross-rank completion barrier"):
+    with pytest.raises(ValueError, match="distributed whole-operation edge"):
         render_serial_execution_graph_goal(operation_scoped)
 
 
@@ -312,7 +393,7 @@ def test_operation_barrier_is_not_removed_by_local_transitive_reduction():
         ("target",),
     )
 
-    with pytest.raises(ValueError, match="cross-rank completion barrier"):
+    with pytest.raises(ValueError, match="distributed whole-operation edge"):
         render_serial_execution_graph_goal(graph)
 
 

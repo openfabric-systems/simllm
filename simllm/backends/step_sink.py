@@ -1,44 +1,46 @@
-"""Closed-loop step sink: one packet-level ``htsim_rnic`` run per step.
+"""Closed-loop step sink: checked graph projections executed by ``htsim_rnic``.
 
 :class:`HtsimStepSink` implements the adapters' step-sink contract (a
 callable ``StepRecord -> StepResult | None``): for every scheduler step it
-renders the step's tensor-parallel GOAL program, converts it with ``txt2bin``,
-executes it on a configured ``htsim_rnic`` profile, and returns the
-simulated makespan as the step latency. Plugged into
+lowers the step once to an authoritative ``ExecutionGraph``, projects its
+ordering into GOAL artifacts, executes them on a configured ``htsim_rnic``
+profile, and returns the simulated makespan as the step latency. Plugged into
 ``simllm.adapters.vllm.configure(step_sink=...)`` or
 ``simllm.adapters.sglang.configure(step_sink=...)`` this closes the loop:
 the network's completion time advances the virtual clock the frontend
 scheduler sees.
 
-Per-step subprocess invocation remains the documented *diagnostic* mode and
-the default. :class:`HtsimPersistentStepSink` is the opt-in acceleration for a
-finite replay whose records are known before the scheduler consumes them. It
-keeps a local worker pool alive, prepares isolated diagnostic runs
-concurrently, then serves their exact results in record order. The pinned
-backend diagnostic path still accepts one GOAL per process, so this mode
-deliberately preserves per-step reset semantics. The backend persistent flow
-protocol is now delivered; BRIDGE-2 owns the stateful online graph-level
-client above it.
+Each GOAL artifact currently runs in an isolated backend process.
+:class:`HtsimPersistentStepSink` accelerates a finite replay whose records are
+known before the scheduler consumes them by preparing complete step plans in a
+local worker pool, then serving their results in record order. It does not
+preserve simulator state between artifacts or steps. Multi-artifact
+``rnic-cn`` plans therefore fail closed until BACK-38 supplies state-preserving
+execution; the stateless ``rnic-nn`` profiles remain supported.
 
 A step with no collective work returns ``None``: the TP world has size 1
 (or the dims declare no experts, or no EP group is configured) and the
 record is a drain record with zero new tokens. ``None`` tells the adapter
 that its own compute-only estimate stands, which is exactly right when
 there is no network work to simulate. With MoE dims and ``ep_ranks``
-configured, the per-step GOAL additionally carries the dispatch and
-combine all-to-alls of every layer
-(:func:`simllm.traffic.step_moe_alltoalls`); a non-MoE configuration
-renders byte-identically to the pre-MoE sink.
+configured, the authoritative graph additionally carries the dispatch and
+combine all-to-alls of every layer. The legacy direct renderer remains the
+byte-locked diagnostic; active graph-projection artifacts have their own
+explicitly accepted manifest.
 
 When ``placement_manifest`` is present, the sink classifies every expanded
 directed segment before rendering. Same-node segments become analytic
 per-source NVLink service and only cross-node segments reach ``htsim``.
-Omitting placement retains the exact historical all-remote GOAL path.
+Omitting placement selects all-remote classification. The historical direct
+renderer remains available as a diagnostic, but the active sink uses the
+checked graph projection. Distributed whole-operation barriers become ordered
+artifact boundaries because the pinned GOAL compiler resolves dependency
+labels inside one rank block.
 
 Providers may opt into an exact per-layer duration breakdown. The sink checks
 that it sums to the fused estimate and emits the unequal layer costs. Existing
-providers inherit the optional hook's ``None`` result, retaining the original
-even split byte for byte. An optional exact sample count on the record prices
+providers inherit the optional hook's ``None`` result and retain the historical
+even timing split. An optional exact sample count on the record prices
 the LM head correctly; its absence retains the historical scheduled-request
 approximation.
 """
@@ -59,6 +61,10 @@ from simllm.backends.htsim_rnic import (
     prepare_htsim_child_lifetime,
     run_htsim_rnic,
 )
+from simllm.backends.step_lowerer import (
+    SerialStepLowerer,
+    SerialStepLowererConfig,
+)
 from simllm.compute import (
     GPU_ENVELOPES,
     ComputeProvider,
@@ -66,21 +72,21 @@ from simllm.compute import (
     HostInitiationModel,
     ModelDims,
     RooflineProvider,
-    step_kernel,
 )
-from simllm.core import StepRecord, StepResult
+from simllm.core import CollectiveWork, StepRecord, StepResult
 from simllm.goal import to_binary
 from simllm.placement import PlacementManifest, RankMapper
 from simllm.traffic import (
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     RoutedMoeSupply,
     StepLocalityPlan,
-    plan_step_locality,
+    plan_execution_graph_locality,
+    project_execution_graph_goal,
     render_fabric_phase_goal,
-    render_step_goal,
-    step_moe_alltoalls,
-    step_tp_allreduces,
+    validate_execution_graph_locality_projection,
 )
+
+_STATEFUL_MULTI_ARTIFACT_PROFILES = frozenset({"rnic-cn"})
 
 
 @dataclass
@@ -93,13 +99,12 @@ class HtsimStepSinkConfig:
     projection. ``dims`` is the per-rank sharded geometry the same deployment
     declares. ``ep_ranks`` is the optional expert-parallel
     group: when the dims declare experts (``dims.num_experts > 0``) and
-    ``ep_ranks`` are given, every step's GOAL includes the per-layer MoE
-    dispatch and combine all-to-alls over these ranks; leaving it ``None``
-    (or using dense dims) keeps the per-step GOAL byte-identical to the
-    pre-MoE sink. ``routed_moe_supply`` optionally replaces uniform pair
-    sizes with captured request routing at an explicit expert-placement
-    epoch; its absence retains the uniform GOAL bytes. ``topology`` is
-    optional: the null-network profiles
+    ``ep_ranks`` are given, the graph includes the per-layer MoE dispatch and
+    combine all-to-alls over these ranks; leaving it ``None`` (or using dense
+    dims) keeps the legacy direct-renderer diagnostic unchanged.
+    ``routed_moe_supply`` optionally replaces uniform pair sizes with captured
+    request routing at an explicit expert-placement epoch; its absence retains
+    uniform routing. ``topology`` is optional: the null-network profiles
     (``rnic-nn``, ``rnic-nn-fluid``) run on the generated manifold,
     ``rnic-cn`` takes a Clos topology file.
     """
@@ -194,7 +199,7 @@ class StepNetworkOutcome:
 
 @dataclass(frozen=True)
 class StepLocalityOutcome:
-    """Opt-in locality accounting kept separate from legacy outcome bytes."""
+    """Locality and graph-projection accounting for one simulated step."""
 
     step_index: int
     authority: str
@@ -209,20 +214,37 @@ class StepLocalityOutcome:
     compute_service_ps: int
     nvlink_service_ps: int
     nvlink_bandwidth_bytes_per_second: int
-    #: empty on the accepted monolithic all-remote compatibility path
+    #: fabric service by executed artifact; zero for analytic-only artifacts
     fabric_phase_service_ps: tuple[int, ...] = ()
-    #: empty on the accepted monolithic all-remote compatibility path
+    #: max of local and fabric service for each executed artifact
     composed_phase_service_ps: tuple[int, ...] = ()
+    #: semantic ordering owner for every active path
+    ordering_authority: str = "execution-graph"
+    #: graph identity whose checked projection was executed
+    graph_execution_id: str | None = None
+    #: complete canonical graph-edge inventory size
+    effective_dependency_edge_count: int = 0
+    #: number of GOAL or analytic artifacts executed in order
+    artifact_count: int = 0
+    #: exact graph barrier stages before any collective subphase expansion
+    graph_artifact_count: int = 0
+    #: graph edges represented by ordered artifact boundaries
+    boundary_edge_count: int = 0
+    #: other graph edges carried across a boundary and conservatively serialized
+    serialized_edge_count: int = 0
+    #: semantic operation identities attributed to each executed artifact
+    artifact_operation_ids: tuple[tuple[str, ...], ...] = ()
 
 
 @dataclass(frozen=True)
-class _PlannedLocalityPhase:
-    """One externally serialized mixed-locality communication phase."""
+class _PlannedExecutionArtifact:
+    """One checked graph-projection artifact executed at an ordered boundary."""
 
-    phase_id: str
+    artifact_id: str
+    operation_ids: tuple[str, ...]
     goal_path: Path | None
     completion_csv: Path | None
-    nvlink_service_ps: int
+    local_service_ps: int
 
 
 @dataclass(frozen=True)
@@ -231,11 +253,10 @@ class _PlannedStep:
 
     step_index: int
     virtual_time_ps: int
-    legacy_goal_path: Path | None
-    legacy_completion_csv: Path | None
-    locality_phases: tuple[_PlannedLocalityPhase, ...]
+    artifacts: tuple[_PlannedExecutionArtifact, ...]
     locality: StepLocalityPlan
     compatibility_fast_path: bool
+    compute_in_artifacts: bool
     compute_service_ps: int
     compute_estimate_ps: int
     num_sampled: int
@@ -248,6 +269,10 @@ class _PlannedStep:
     linkspeed_bps: int
     topology: Path | None
     unsafe_disable_child_lifetime_binding: bool
+    effective_dependency_edge_count: int
+    boundary_edge_count: int
+    serialized_edge_count: int
+    graph_artifact_count: int
 
 
 @dataclass(frozen=True)
@@ -299,120 +324,181 @@ class HtsimStepSink:
     def _compute_estimate(
         self, record: StepRecord
     ) -> tuple[int, tuple[int, ...] | None]:
-        """Return the whole-step estimate and optional exact layer durations."""
-        cfg = self.config
-        num_sampled = self._num_sampled(record)
-        kernel = step_kernel(cfg.dims, record, num_sampled=num_sampled)
-        fused = cfg.provider.estimate(kernel, cfg.gpu)
-        host_delay_ps = cfg.host_model.delay_ps()
-        estimate_ps = fused.duration_ps + host_delay_ps
-        estimates = cfg.provider.estimate_layers(kernel, cfg.gpu, cfg.dims.num_layers)
-        if estimates is None:
-            return estimate_ps, None
+        """Return the estimate represented by the serial graph lowerer."""
 
-        if len(estimates) != cfg.dims.num_layers:
-            raise ValueError(
-                "provider layer breakdown length "
-                f"{len(estimates)} does not match num_layers={cfg.dims.num_layers}"
-            )
-        layer_ps = tuple(estimate.duration_ps for estimate in estimates)
-        if any(duration_ps < 0 for duration_ps in layer_ps):
-            raise ValueError("provider layer breakdown durations must be nonnegative")
-        if sum(layer_ps) != fused.duration_ps:
-            raise ValueError(
-                "provider layer breakdown sum "
-                f"{sum(layer_ps)} ps does not match fused estimate {fused.duration_ps} ps"
-            )
-        return estimate_ps, (layer_ps[0] + host_delay_ps, *layer_ps[1:])
+        timing = self._serial_lowerer().timing(record)
+        if timing.per_layer_calc_ns is not None:
+            return timing.compute_estimate_ps, None
+        return (
+            timing.compute_estimate_ps,
+            tuple(duration_ns * 1000 for duration_ns in timing.layer_calc_ns),
+        )
 
     def compute_estimate_ps(self, record: StepRecord) -> int:
         """The compute-only whole-step estimate represented by the sink."""
         estimate_ps, _ = self._compute_estimate(record)
         return estimate_ps
 
-    @staticmethod
-    def _to_goal_layer_calc_ns(layer_duration_ps: Sequence[int]) -> tuple[int, ...]:
-        """Truncate cumulative layer boundaries to whole GOAL nanoseconds."""
-        previous_boundary_ns = 0
-        cumulative_ps = 0
-        layer_calc_ns = []
-        for duration_ps in layer_duration_ps:
-            cumulative_ps += duration_ps
-            boundary_ns = cumulative_ps // 1000
-            layer_calc_ns.append(boundary_ns - previous_boundary_ns)
-            previous_boundary_ns = boundary_ns
-        return tuple(layer_calc_ns)
+    def _serial_lowerer(self) -> SerialStepLowerer:
+        cfg = self.config
+        return SerialStepLowerer(
+            SerialStepLowererConfig(
+                dims=cfg.dims,
+                tp_ranks=cfg.tp_ranks,
+                ep_ranks=cfg.ep_ranks,
+                provider=cfg.provider,
+                gpu=cfg.gpu,
+                host_model=cfg.host_model,
+                routed_moe_supply=cfg.routed_moe_supply,
+            )
+        )
 
     def _plan_step(self, record: StepRecord) -> _PlannedStep | None:
         """Lower and render one record without invoking either native tool."""
 
         cfg = self.config
-        tp_ops = step_tp_allreduces(record, cfg.dims, cfg.tp_ranks)
-        moe_ops = step_moe_alltoalls(
-            record,
-            cfg.dims,
-            cfg.ep_ranks if cfg.ep_ranks is not None else [],
-            routed_supply=cfg.routed_moe_supply,
+        graph, timing = self._serial_lowerer().lower_with_timing(record)
+        collectives = tuple(
+            operation
+            for operation in graph.operations
+            if isinstance(operation.work, CollectiveWork)
         )
-        if not tp_ops and not moe_ops:
+        if not collectives:
             return None
-        if not moe_ops:
+        moe_operations = tuple(
+            operation
+            for operation in collectives
+            if operation.work.collective == "all-to-allv"
+        )
+        if not moe_operations:
             routing_mode = "none"
-        elif all(operation.pair_payload_bytes for operation in moe_ops):
+        elif all(operation.work.pair_payload_bytes for operation in moe_operations):
             routing_mode = "captured"
-        elif all(not operation.pair_payload_bytes for operation in moe_ops):
+        elif all(
+            not operation.work.pair_payload_bytes for operation in moe_operations
+        ):
             routing_mode = "uniform"
         else:
             raise AssertionError("one step cannot mix uniform and captured MoE traffic")
-        estimate_ps, layer_duration_ps = self._compute_estimate(record)
-        if layer_duration_ps is None:
-            per_layer_calc_ns = estimate_ps // (cfg.dims.num_layers * 1000)
-            layer_calc_ns = (per_layer_calc_ns,) * cfg.dims.num_layers
-            rendered_calc_ns: int | Sequence[int] = per_layer_calc_ns
-        else:
-            layer_calc_ns = self._to_goal_layer_calc_ns(layer_duration_ps)
-            per_layer_calc_ns = (
-                layer_calc_ns[0]
-                if all(value == layer_calc_ns[0] for value in layer_calc_ns)
-                else None
-            )
-            rendered_calc_ns = layer_calc_ns
-        locality = plan_step_locality(
-            record,
-            cfg.dims,
-            cfg.tp_ranks,
-            ep_ranks=cfg.ep_ranks,
-            routed_supply=cfg.routed_moe_supply,
+        locality = plan_execution_graph_locality(
+            graph,
             rank_mapper=self._rank_mapper,
             nvlink_bandwidth_bytes_per_second=(
                 cfg.nvlink_bandwidth_bytes_per_second
             ),
             base_tag=cfg.base_tag,
         )
+        validate_execution_graph_locality_projection(
+            graph,
+            locality,
+            rank_mapper=self._rank_mapper,
+            nvlink_bandwidth_bytes_per_second=(
+                cfg.nvlink_bandwidth_bytes_per_second
+            ),
+            base_tag=cfg.base_tag,
+        )
+        projection = project_execution_graph_goal(
+            graph,
+            num_goal_ranks=cfg.num_goal_ranks,
+            base_tag=cfg.base_tag,
+        )
         name = f"step-{record.step_index:06d}"
         compatibility_fast_path = self._rank_mapper is None or (
             locality.nvlink_bytes == 0 and self._rank_mapper.mode == "gpu-rank"
         )
-        legacy_goal_path = None
-        legacy_completion_csv = None
-        locality_phases: tuple[_PlannedLocalityPhase, ...] = ()
-        if compatibility_fast_path:
-            trace = render_step_goal(
-                record,
-                cfg.dims,
-                cfg.tp_ranks,
-                rendered_calc_ns,
-                ep_ranks=cfg.ep_ranks,
-                routed_supply=cfg.routed_moe_supply,
-                num_goal_ranks=cfg.num_goal_ranks,
-                base_tag=cfg.base_tag,
+        operation_by_id = {
+            operation.operation_id: operation for operation in graph.operations
+        }
+        phases_by_operation: dict[str, list] = {}
+        for phase in locality.phases:
+            operation_id = phase.phase.operation_id
+            if operation_id is None:
+                raise AssertionError("graph locality phase has no operation identity")
+            phases_by_operation.setdefault(operation_id, []).append(phase)
+        planned_artifacts = []
+        for artifact_index, artifact in enumerate(projection.artifacts):
+            operations = tuple(
+                operation_by_id[operation_id]
+                for operation_id in artifact.operation_ids
             )
-            legacy_goal_path = trace.write(cfg.workdir / f"{name}.goal")
-            legacy_completion_csv = cfg.workdir / f"{name}.{cfg.profile}.csv"
-        else:
-            assert self._rank_mapper is not None
-            phase_traces = tuple(
-                (
+            if operations and all(
+                not isinstance(operation.work, CollectiveWork)
+                for operation in operations
+            ):
+                durations = tuple(
+                    operation.work.nominal_duration_ps
+                    for operation in operations
+                )
+                if any(duration is None for duration in durations):
+                    raise ValueError("serial compute artifact has no nominal duration")
+                planned_artifacts.append(
+                    _PlannedExecutionArtifact(
+                        artifact_id=f"graph-artifact-{artifact_index}:compute",
+                        operation_ids=artifact.operation_ids,
+                        goal_path=None,
+                        completion_csv=None,
+                        local_service_ps=max(
+                            (max(duration, 1_000) for duration in durations),
+                            default=0,
+                        ),
+                    )
+                )
+                continue
+            collective_indexes = tuple(
+                index
+                for index, operation in enumerate(operations)
+                if isinstance(operation.work, CollectiveWork)
+            )
+            if len(collective_indexes) != 1:
+                raise ValueError(
+                    "serial graph artifact must contain at most one collective"
+                )
+            collective_index = collective_indexes[0]
+            collective = operations[collective_index]
+            operation_id = collective.operation_id
+            classified_phases = tuple(phases_by_operation.pop(operation_id, ()))
+            if not classified_phases:
+                raise ValueError("collective artifact has no locality service phase")
+            if compatibility_fast_path:
+                stem = f"{name}.artifact-{artifact_index:04d}"
+                planned_artifacts.append(
+                    _PlannedExecutionArtifact(
+                        artifact_id=f"graph-artifact-{artifact_index}:collective",
+                        operation_ids=artifact.operation_ids,
+                        goal_path=artifact.trace.write(
+                            cfg.workdir / f"{stem}.goal"
+                        ),
+                        completion_csv=(
+                            cfg.workdir / f"{stem}.{cfg.profile}.csv"
+                        ),
+                        local_service_ps=0,
+                    )
+                )
+                continue
+            before_compute = operations[:collective_index]
+            if before_compute:
+                durations = tuple(
+                    operation.work.nominal_duration_ps
+                    for operation in before_compute
+                )
+                if any(duration is None for duration in durations):
+                    raise ValueError("serial compute artifact has no nominal duration")
+                planned_artifacts.append(
+                    _PlannedExecutionArtifact(
+                        artifact_id=f"graph-artifact-{artifact_index}:compute-before",
+                        operation_ids=tuple(
+                            operation.operation_id for operation in before_compute
+                        ),
+                        goal_path=None,
+                        completion_csv=None,
+                        local_service_ps=max(
+                            (max(duration, 1_000) for duration in durations),
+                            default=0,
+                        ),
+                    )
+                )
+            for phase_index, phase in enumerate(classified_phases):
+                trace = (
                     render_fabric_phase_goal(
                         phase,
                         rank_mapper=self._rank_mapper,
@@ -421,50 +507,73 @@ class HtsimStepSink:
                     if phase.fabric_segments
                     else None
                 )
-                for phase in locality.phases
-            )
-            planned_phases = []
-            for phase_index, (phase, trace) in enumerate(
-                zip(locality.phases, phase_traces, strict=True)
-            ):
-                stem = f"{name}.phase-{phase_index:04d}"
-                goal_path = (
-                    trace.write(cfg.workdir / f"{stem}.goal")
-                    if trace is not None
-                    else None
+                stem = (
+                    f"{name}.artifact-{artifact_index:04d}."
+                    f"phase-{phase_index:04d}"
                 )
-                planned_phases.append(
-                    _PlannedLocalityPhase(
-                        phase_id=phase.phase.phase_id,
-                        goal_path=goal_path,
+                planned_artifacts.append(
+                    _PlannedExecutionArtifact(
+                        artifact_id=phase.phase.phase_id,
+                        operation_ids=artifact.operation_ids,
+                        goal_path=(
+                            trace.write(cfg.workdir / f"{stem}.goal")
+                            if trace is not None
+                            else None
+                        ),
                         completion_csv=(
                             cfg.workdir / f"{stem}.{cfg.profile}.csv"
                             if trace is not None
                             else None
                         ),
-                        nvlink_service_ps=phase.nvlink_service_ps,
+                        local_service_ps=phase.nvlink_service_ps,
                     )
                 )
-            locality_phases = tuple(planned_phases)
+            after_compute = operations[collective_index + 1 :]
+            if after_compute:
+                durations = tuple(
+                    operation.work.nominal_duration_ps
+                    for operation in after_compute
+                )
+                if any(duration is None for duration in durations):
+                    raise ValueError("serial compute artifact has no nominal duration")
+                planned_artifacts.append(
+                    _PlannedExecutionArtifact(
+                        artifact_id=f"graph-artifact-{artifact_index}:compute-after",
+                        operation_ids=tuple(
+                            operation.operation_id for operation in after_compute
+                        ),
+                        goal_path=None,
+                        completion_csv=None,
+                        local_service_ps=max(
+                            (max(duration, 1_000) for duration in durations),
+                            default=0,
+                        ),
+                    )
+                )
+        if phases_by_operation:
+            raise ValueError(
+                "locality projection contains collectives absent from GOAL projection"
+            )
         return _PlannedStep(
             step_index=record.step_index,
             virtual_time_ps=record.virtual_time_ps,
-            legacy_goal_path=legacy_goal_path,
-            legacy_completion_csv=legacy_completion_csv,
-            locality_phases=locality_phases,
+            artifacts=tuple(planned_artifacts),
             locality=locality,
             compatibility_fast_path=compatibility_fast_path,
+            compute_in_artifacts=True,
             compute_service_ps=(
-                sum(max(calc_ns, 1) for calc_ns in layer_calc_ns) * 1000
+                sum(max(calc_ns, 1) for calc_ns in timing.layer_calc_ns) * 1000
             ),
-            compute_estimate_ps=estimate_ps,
-            num_sampled=self._num_sampled(record),
-            sample_count_exact=record.num_sampled is not None,
-            per_layer_calc_ns=per_layer_calc_ns,
-            layer_calc_ns=layer_calc_ns,
+            compute_estimate_ps=timing.compute_estimate_ps,
+            num_sampled=timing.num_sampled,
+            sample_count_exact=timing.sample_count_exact,
+            per_layer_calc_ns=timing.per_layer_calc_ns,
+            layer_calc_ns=timing.layer_calc_ns,
             routing_mode=routing_mode,
             placement_epoch=(
-                moe_ops[0].placement_epoch if routing_mode == "captured" else None
+                moe_operations[0].placement_epoch
+                if routing_mode == "captured"
+                else None
             ),
             profile=cfg.profile,
             linkspeed_bps=cfg.linkspeed_bps,
@@ -472,6 +581,10 @@ class HtsimStepSink:
             unsafe_disable_child_lifetime_binding=(
                 cfg.unsafe_disable_child_lifetime_binding
             ),
+            effective_dependency_edge_count=len(locality.dependency_edges),
+            boundary_edge_count=len(projection.boundaries),
+            serialized_edge_count=len(projection.serialized_edges),
+            graph_artifact_count=len(projection.artifacts),
         )
 
     @staticmethod
@@ -496,52 +609,53 @@ class HtsimStepSink:
 
     @staticmethod
     def _execute_plan(plan: _PlannedStep) -> _SimulatedStep:
-        """Execute either the accepted fast path or serial mixed phases."""
+        """Execute checked artifacts in their authoritative graph order."""
 
-        if plan.compatibility_fast_path:
-            assert plan.legacy_goal_path is not None
-            assert plan.legacy_completion_csv is not None
-            run = HtsimStepSink._run_goal(
-                plan,
-                plan.legacy_goal_path,
-                plan.legacy_completion_csv,
+        backend_artifact_count = sum(
+            artifact.goal_path is not None for artifact in plan.artifacts
+        )
+        if (
+            plan.profile in _STATEFUL_MULTI_ARTIFACT_PROFILES
+            and backend_artifact_count > 1
+        ):
+            raise RuntimeError(
+                f"profile {plan.profile!r} cannot execute an ordered step with "
+                f"{backend_artifact_count} GOAL artifacts: each artifact currently "
+                "starts a fresh backend process and resets simulator state; use "
+                "'rnic-nn' or 'rnic-nn-fluid', or complete BACK-38 "
+                "state-preserving artifact execution"
             )
-            makespan_ps = run.job_completion_time_ps()
-            num_flows = len(run.flows)
-            quiescent = run.quiescent
-            backend_runs = 1
-            fabric_phase_service_ps: tuple[int, ...] = ()
-            composed_phase_service_ps: tuple[int, ...] = ()
-        else:
-            fabric_services = []
-            composed_services = []
-            num_flows = 0
-            quiescent = True
-            backend_runs = 0
-            for phase in plan.locality_phases:
-                if phase.goal_path is None:
-                    if phase.completion_csv is not None:
-                        raise AssertionError("local-only phase has a completion path")
-                    fabric_service_ps = 0
-                else:
-                    if phase.completion_csv is None:
-                        raise AssertionError("fabric phase has no completion path")
-                    run = HtsimStepSink._run_goal(
-                        plan,
-                        phase.goal_path,
-                        phase.completion_csv,
-                    )
-                    fabric_service_ps = run.job_completion_time_ps()
-                    num_flows += len(run.flows)
-                    quiescent = quiescent and run.quiescent
-                    backend_runs += 1
-                fabric_services.append(fabric_service_ps)
-                composed_services.append(
-                    max(phase.nvlink_service_ps, fabric_service_ps)
+
+        fabric_services = []
+        composed_services = []
+        num_flows = 0
+        quiescent = True
+        backend_runs = 0
+        for artifact in plan.artifacts:
+            if artifact.goal_path is None:
+                if artifact.completion_csv is not None:
+                    raise AssertionError("analytic artifact has a completion path")
+                fabric_service_ps = 0
+            else:
+                if artifact.completion_csv is None:
+                    raise AssertionError("GOAL artifact has no completion path")
+                run = HtsimStepSink._run_goal(
+                    plan,
+                    artifact.goal_path,
+                    artifact.completion_csv,
                 )
-            fabric_phase_service_ps = tuple(fabric_services)
-            composed_phase_service_ps = tuple(composed_services)
-            makespan_ps = plan.compute_service_ps + sum(composed_services)
+                fabric_service_ps = run.job_completion_time_ps()
+                num_flows += len(run.flows)
+                quiescent = quiescent and run.quiescent
+                backend_runs += 1
+            fabric_services.append(fabric_service_ps)
+            composed_services.append(
+                max(artifact.local_service_ps, fabric_service_ps)
+            )
+        fabric_phase_service_ps = tuple(fabric_services)
+        composed_phase_service_ps = tuple(composed_services)
+        represented_compute_ps = 0 if plan.compute_in_artifacts else plan.compute_service_ps
+        makespan_ps = represented_compute_ps + sum(composed_services)
         outcome = StepNetworkOutcome(
             step_index=plan.step_index,
             compute_estimate_ps=plan.compute_estimate_ps,
@@ -574,6 +688,18 @@ class HtsimStepSink:
             ),
             fabric_phase_service_ps=fabric_phase_service_ps,
             composed_phase_service_ps=composed_phase_service_ps,
+            ordering_authority="execution-graph",
+            graph_execution_id=locality.graph_execution_id,
+            effective_dependency_edge_count=(
+                plan.effective_dependency_edge_count
+            ),
+            artifact_count=len(plan.artifacts),
+            graph_artifact_count=plan.graph_artifact_count,
+            boundary_edge_count=plan.boundary_edge_count,
+            serialized_edge_count=plan.serialized_edge_count,
+            artifact_operation_ids=tuple(
+                artifact.operation_ids for artifact in plan.artifacts
+            ),
         )
         result = StepResult(
             step_index=plan.step_index,
@@ -611,9 +737,11 @@ class HtsimPersistentStepSink(HtsimStepSink):
     """Opt-in prepared replay using a persistent local worker pool.
 
     ``prepare`` copies and lowers a finite record sequence before the scheduler
-    consumes it. Native compilation and the unchanged one-GOAL simulator path
-    then run concurrently. Calls must replay the prepared values in exact
-    order; no prediction, fallback, or record substitution is permitted.
+    consumes it. Complete checked artifact plans then run concurrently. Calls
+    must replay the prepared values in exact order; no prediction, fallback,
+    or record substitution is permitted. This pool does not make backend state
+    persistent, so the same stateful multi-artifact guard as the base sink
+    applies.
 
     The executor survives across fully consumed batches until ``close``. Use a
     context manager when possible so worker shutdown belongs to the timed

@@ -53,6 +53,7 @@ from simllm.backends.step_lowerer import (
     ObservedStepLowerer,
     SerialStepLowerer,
     SerialStepLowererConfig,
+    SerialStepTiming,
 )
 from simllm.backends.step_sink import (
     HtsimPersistentStepSink,
@@ -95,6 +96,7 @@ __all__ = [
     "RnicWqeTimeline",
     "SerialStepLowerer",
     "SerialStepLowererConfig",
+    "SerialStepTiming",
     "StepLocalityOutcome",
     "StepNetworkOutcome",
     "assert_bypass_artifact_identity",

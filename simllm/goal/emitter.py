@@ -19,13 +19,102 @@ default to 0 when omitted. Convert to the binary format with
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 
 
-@dataclass
-class _Op:
+@dataclass(frozen=True)
+class GoalOperation:
+    """One rendered GOAL operation and its optional semantic owner."""
+
+    rank: int
     label: str
     text: str
+    operation_id: str | None = None
+
+
+class GoalDependencyKind(str, Enum):
+    """Authority behind one rendered GOAL dependency."""
+
+    EXECUTION_GRAPH = "execution-graph"
+    COLLECTIVE_INTERNAL = "collective-internal"
+
+
+@dataclass(frozen=True)
+class GoalGraphEdge:
+    """Stable identity of an execution-graph edge projected into GOAL."""
+
+    predecessor_id: str
+    operation_id: str
+    scope: str
+    origin: str
+    participant_rank: int | None = None
+
+    def __post_init__(self) -> None:
+        _text(self.predecessor_id, "edge.predecessor_id")
+        _text(self.operation_id, "edge.operation_id")
+        if self.scope not in {"whole-operation", "participant-local"}:
+            raise ValueError("edge.scope: expected whole-operation or participant-local")
+        if self.origin not in {"explicit", "logical-queue-fifo"}:
+            raise ValueError("edge.origin: expected explicit or logical-queue-fifo")
+        if self.scope == "participant-local":
+            if self.participant_rank is None:
+                raise ValueError("edge.participant_rank: required for participant-local edge")
+            _integer(self.participant_rank, "edge.participant_rank")
+        elif self.participant_rank is not None:
+            raise ValueError("edge.participant_rank: forbidden for whole-operation edge")
+
+
+@dataclass(frozen=True)
+class GoalDependencyProvenance:
+    """Semantic ownership of a rendered GOAL dependency."""
+
+    kind: GoalDependencyKind
+    operation_id: str
+    graph_edges: tuple[GoalGraphEdge, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.kind, GoalDependencyKind):
+            raise TypeError("dependency.kind: expected GoalDependencyKind")
+        _text(self.operation_id, "dependency.operation_id")
+        if not isinstance(self.graph_edges, tuple):
+            raise TypeError("dependency.graph_edges: in-memory contract requires a tuple")
+        for index, edge in enumerate(self.graph_edges):
+            if not isinstance(edge, GoalGraphEdge):
+                raise TypeError(f"dependency.graph_edges[{index}]: expected GoalGraphEdge")
+            if edge.operation_id != self.operation_id:
+                raise ValueError(
+                    "dependency.graph_edges: target operation does not match provenance owner"
+                )
+        if self.kind is GoalDependencyKind.EXECUTION_GRAPH and not self.graph_edges:
+            raise ValueError("dependency.graph_edges: graph provenance requires at least one edge")
+        if self.kind is GoalDependencyKind.COLLECTIVE_INTERNAL and self.graph_edges:
+            raise ValueError("dependency.graph_edges: collective-internal provenance forbids edges")
+
+
+@dataclass(frozen=True)
+class GoalDependency:
+    """One rendered dependency plus optional semantic provenance."""
+
+    rank: int
+    operation_label: str
+    predecessor_label: str
+    relation: str
+    provenance: GoalDependencyProvenance | None = None
+
+    def __post_init__(self) -> None:
+        _integer(self.rank, "dependency.rank")
+        _text(self.operation_label, "dependency.operation_label")
+        _text(self.predecessor_label, "dependency.predecessor_label")
+        if self.relation not in {"requires", "irequires"}:
+            raise ValueError("dependency.relation: expected requires or irequires")
+        if self.provenance is not None and not isinstance(
+            self.provenance, GoalDependencyProvenance
+        ):
+            raise TypeError("dependency.provenance: expected GoalDependencyProvenance")
+
+    def render(self) -> str:
+        return f"{self.operation_label} {self.relation} {self.predecessor_label}"
 
 
 def _integer(value: object, path: str, *, minimum: int = 0) -> int:
@@ -101,38 +190,90 @@ class RankProgram:
     """Operations and dependencies of a single rank."""
 
     rank: int
-    _ops: list[_Op] = field(default_factory=list)
-    _deps: list[str] = field(default_factory=list)
+    _ops: list[GoalOperation] = field(default_factory=list)
+    _deps: list[GoalDependency] = field(default_factory=list)
 
-    def _add(self, text: str) -> str:
+    def _add(self, text: str, operation_id: str | None = None) -> str:
+        if operation_id is not None:
+            _text(operation_id, "operation_id")
         label = f"r{self.rank}op{len(self._ops)}"
-        self._ops.append(_Op(label, text))
+        self._ops.append(GoalOperation(self.rank, label, text, operation_id))
         return label
 
-    def calc(self, cost: int, cpu: int | None = None) -> str:
+    def calc(
+        self,
+        cost: int,
+        cpu: int | None = None,
+        *,
+        operation_id: str | None = None,
+    ) -> str:
         suffix = f" cpu {cpu}" if cpu is not None else ""
-        return self._add(f"calc {cost}{suffix}")
+        return self._add(f"calc {cost}{suffix}", operation_id)
 
-    def send(self, size_bytes: int, to: int, tag: int = 0, nic: int | None = None) -> str:
+    def send(
+        self,
+        size_bytes: int,
+        to: int,
+        tag: int = 0,
+        nic: int | None = None,
+        *,
+        operation_id: str | None = None,
+    ) -> str:
         suffix = f" nic {nic}" if nic is not None else ""
-        return self._add(f"send {size_bytes}b to {to} tag {tag}{suffix}")
+        return self._add(f"send {size_bytes}b to {to} tag {tag}{suffix}", operation_id)
 
-    def recv(self, size_bytes: int, source: int, tag: int = 0, nic: int | None = None) -> str:
+    def recv(
+        self,
+        size_bytes: int,
+        source: int,
+        tag: int = 0,
+        nic: int | None = None,
+        *,
+        operation_id: str | None = None,
+    ) -> str:
         suffix = f" nic {nic}" if nic is not None else ""
-        return self._add(f"recv {size_bytes}b from {source} tag {tag}{suffix}")
+        return self._add(f"recv {size_bytes}b from {source} tag {tag}{suffix}", operation_id)
 
-    def requires(self, op: str, after: str) -> None:
+    def requires(
+        self,
+        op: str,
+        after: str,
+        *,
+        provenance: GoalDependencyProvenance | None = None,
+    ) -> None:
         """``op`` starts only after ``after`` has finished."""
-        self._deps.append(f"{op} requires {after}")
+        self._record_dependency(op, after, "requires", provenance)
 
-    def irequires(self, op: str, after: str) -> None:
+    def irequires(
+        self,
+        op: str,
+        after: str,
+        *,
+        provenance: GoalDependencyProvenance | None = None,
+    ) -> None:
         """``op`` starts only after ``after`` has started."""
-        self._deps.append(f"{op} irequires {after}")
+        self._record_dependency(op, after, "irequires", provenance)
+
+    def _record_dependency(
+        self,
+        op: str,
+        after: str,
+        relation: str,
+        provenance: GoalDependencyProvenance | None,
+    ) -> None:
+        labels = {operation.label for operation in self._ops}
+        if op not in labels:
+            raise ValueError(f"dependency operation label {op!r} is not present on rank {self.rank}")
+        if after not in labels:
+            raise ValueError(
+                f"dependency predecessor label {after!r} is not present on rank {self.rank}"
+            )
+        self._deps.append(GoalDependency(self.rank, op, after, relation, provenance))
 
     def render(self) -> str:
         lines = [f"rank {self.rank} {{"]
         lines += [f"{op.label}: {op.text}" for op in self._ops]
-        lines += self._deps
+        lines += [dependency.render() for dependency in self._deps]
         lines.append("}")
         return "\n".join(lines)
 
@@ -155,6 +296,18 @@ class GoalTrace:
         """Return the immutable structured projection of rendered messages."""
 
         return tuple(self._messages)
+
+    @property
+    def dependencies(self) -> tuple[GoalDependency, ...]:
+        """Return rendered dependencies with their semantic provenance."""
+
+        return tuple(dependency for rank in self._ranks for dependency in rank._deps)
+
+    @property
+    def operations(self) -> tuple[GoalOperation, ...]:
+        """Return rendered operations with their semantic owners."""
+
+        return tuple(operation for rank in self._ranks for operation in rank._ops)
 
     def record_message(self, message: GoalMessage) -> None:
         """Attach one validated physical-message projection to this trace."""
