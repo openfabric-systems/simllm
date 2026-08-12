@@ -425,6 +425,30 @@ DP event and one fixed 4,096-byte TP event, still with no
 `ExecutionObservations`, per-layer operation, or EP dispatch and combine site.
 This is component diagnostic evidence only and does not change the blocked
 behavioral denominator.
+The pre-play framework oracle adds a separate, inert-by-default vLLM general
+plugin. `VllmCpuRunner` enables it only inside an isolated CPU process. The
+plugin observes the stock `CPUWorker`, `CPUModelRunner`, v1 KV manager, block
+pool and scheduler. It records allocation, prefix-hit, eviction, preemption
+and release decisions after the owning framework method decides them. It also
+measures CUDA allocator bytes before and after model load and rejects any
+increase.
+
+The vLLM 0.26.0 CPU MoE path exposed one important capture gap: setting
+`enable_return_routed_experts` allocated a response tensor, but the monolithic
+`CPUFusedMOE` path left that tensor filled with zero because the built-in
+callback is attached to the modular route. The plugin does not use those
+zeros. It observes the exact expert IDs returned by
+`cpu_fused_moe.select_experts` immediately before the unchanged expert kernel
+uses them and passes the same IDs into the stock request capturer. The
+framework remains the sampling, scheduling, dispatch and KV authority.
+
+The 2026-08-12 study built vLLM 0.26.0+cpu from source, reached
+`CpuPlatform`, `CPUWorker`, `CPUModelRunner` and Granite on CPU, and observed a
+zero-byte CUDA allocation delta in both capacity cells. All three framework
+outputs matched the Transformers oracle exactly. Every one of 1,512 aligned
+routing rows was an order-only difference with the same selected expert set
+and zero changed all-to-all bytes. The detailed evidence is in
+[the framework-oracle results](../../examples/framework_oracle_v1/RESULTS.md).
 
 ## Open tasks
 
@@ -477,13 +501,17 @@ behavioral denominator.
   batch-queue loop's interleaved `execute_model`/`sample_tokens` pairs map
   to the right steps, plus per-stage step accounting; until then
   `supports_pp` stays False and vLLM rejects PP > 1 up front.
-- VLLM-11: observe the real vLLM KV manager and block-pool lifecycle for
-  CORE-3 without replacing its policy. Emit stable pool/block/request IDs,
-  token intervals, layer/dtype/bytes, allocation epoch, reference count,
-  cause and correlation ID for reserve/allocation, prefix binding/touch,
-  reads/writes, release/free, eviction, swap/transfer and preemption-driven
-  recompute. Do not reconstruct allocation or eviction decisions from token
-  deltas when the framework can report the actual event.
+- VLLM-11 (Precision; P1; L) (remaining after the CPU-oracle lifecycle
+  slice): the v2 oracle now observes stock-manager prefix lookup, allocation,
+  release, cached-block eviction and scheduler recompute with exact block and
+  request IDs. Its current projection is block IDs plus token counts. Extend
+  that projection for CORE-3 with stable pool identity, token intervals,
+  layer/dtype/bytes, allocation epoch, reference count, cause and correlation
+  ID, prefix bind/touch, reads/writes, swap and transfer. The identifying
+  observables are the owning manager and pool objects, not token-delta
+  reconstruction. Acceptance requires exact event cardinality, identity and
+  cause agreement against those objects, with the current v2 projection and
+  oracle-disabled path preserved byte for byte.
 - VLLM-12: capture and replay the supported model runner's device schedule as
   an `ExecutionGraph` template keyed with the same identity envelope as the
   compute profile. Preserve CUDA stream order, event waits, kernel launches,

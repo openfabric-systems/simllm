@@ -194,7 +194,7 @@ tests passed 61/61.
 
 The full Python suite passed 918 tests and skipped 7, with one integration
 failure: `test_readme_pro_progress_block_is_current`. Registering VLLM-22 and
-SGL-16 increases their module open-task counts, while this worker's contract
+SGL-17 increases their module open-task counts, while this worker's contract
 forbids editing the integrator-owned `docs/README_PRO.md`. The regenerated
 block expects 16 vLLM and 14 SGLang open tasks. This documentation drift is not
 a runtime, adapter, lowering, or study failure, but the branch does not claim a
@@ -205,13 +205,13 @@ green full-suite gate until the integrator reconciles that generated block.
 The current registered TRAF-13 clauses map as follows.
 
 > "connect at least one real framework schedule producer to
-> `ObservedStepLowerer` after VLLM-22 or SGL-16 supplies captured operation
+> `ObservedStepLowerer` after VLLM-22 or SGL-17 supplies captured operation
 > order, streams, events and completion boundaries."
 
 Not demonstrated. The new sink provides the handoff, but both the import-free
 skeleton probe and the separate live vLLM diagnostic supplied no
 `ExecutionObservations`. VLLM-22 owns the missing source-backed vLLM producer.
-SGLang was explicitly outside this implementation; SGL-16 owns its optional
+SGLang was explicitly outside this implementation; SGL-17 owns its optional
 producer and exact disabled path.
 
 > "The `DeviceRuntimeStepSink` component is ready, but its 2026-08-12
@@ -259,7 +259,7 @@ completion evidence.
 TRAF-13 therefore does not close, and no ledger closure is claimed. No new
 traffic or core residual is created: the existing TRAF-13 entry retains the
 Granite metric, perturbation, attribution, and complete serial-off-path work.
-The only newly mapped producer residuals are VLLM-22 and SGL-16.
+The only newly mapped producer residuals are VLLM-22 and SGL-17.
 
 ## Integrator-owned contradiction sweep
 
@@ -268,6 +268,6 @@ The only newly mapped producer residuals are VLLM-22 and SGL-16.
 legal concurrency, the runtime realizes overlap, and no framework supplies an
 overlap percentage. `docs/README_PRO.md:219-222` still points the
 dependency-driven-overlap roadmap item only to closed TRAF-7. It should reflect
-that TRAF-13 remains open behind VLLM-22 or SGL-16. Its generated task-progress
+that TRAF-13 remains open behind VLLM-22 or SGL-17. Its generated task-progress
 block also needs the two open-count updates described above. Per the worker
 contract, those integrator-owned files were reported rather than edited.

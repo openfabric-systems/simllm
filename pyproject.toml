@@ -32,10 +32,13 @@ Homepage = "https://github.com/openfabric-systems/simllm"
 Issues = "https://github.com/openfabric-systems/simllm/issues"
 
 # SGLang discovers and runs this before constructing its Scheduler. The
-# callable is a no-op unless SIMLLM_SGLANG_ENABLE=1, so an installed simllm
-# never changes a real SGLang deployment by accident.
+# callable is a no-op unless the simulation or oracle gate is explicit, so an
+# installed simllm never changes a real SGLang deployment by accident.
 [project.entry-points."sglang.srt.plugins"]
 simllm = "simllm.adapters.sglang.plugin:register"
+
+[project.entry-points."vllm.general_plugins"]
+simllm_oracle = "simllm.adapters.vllm.oracle:register_oracle_hooks"
 
 [tool.setuptools.packages.find]
 include = ["simllm*"]

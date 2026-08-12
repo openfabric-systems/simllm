@@ -210,7 +210,7 @@ site. It is component evidence and does not change the behavioral denominator.
   combine) and may overlap shared-expert work with the a2avs. The serial
   whole-layer calc keeps the makespan correct only to first order.
 - TRAF-13 (Completeness; P1; L): connect at least one real framework schedule
-  producer to `ObservedStepLowerer` after VLLM-22 or SGL-16 supplies captured
+  producer to `ObservedStepLowerer` after VLLM-22 or SGL-17 supplies captured
   operation order, streams, events and completion boundaries. The
   `DeviceRuntimeStepSink` component is ready, but its 2026-08-12 qualification
   observed no vLLM schedule and matched 0 of 48 required semantic MoE sites.
@@ -228,3 +228,23 @@ site. It is component evidence and does not change the behavioral denominator.
   pattern expansion over payload, world-size and routed sparse-pair sweeps with
   exact byte, round, dependency and tag conservation. The absent explicit plan
   must preserve the accepted v1 wire bytes and serial timing exactly.
+- TRAF-19 (Precision; P2; L): add a statistical flow-completion level
+  beside the fluid and packet-level network models. Fit a completion-time
+  distribution offline from packet-level runs over a declared topology,
+  load and collective shape, then draw from it, so a large sweep keeps
+  network side effects such as ECMP hash collisions, incast tails and
+  link failures as a measured tail instead of deleting them by assuming
+  an infinite pipe. The fit must carry its calibration envelope and be
+  refused outside it, the draw must be seeded and reproducible, and the
+  packet-level path stays the exact reference the fit is validated
+  against. Acceptance compares fitted quantiles against held-out
+  packet-level runs at registered accuracy, and states plainly that a
+  marginal fit does not reproduce correlations it never observed.
+- TRAF-20 (Precision; P2; M): add a fluid LogGOPSim fast level for
+  schedule-shape studies that do not need per-flow transport behavior.
+  The GOAL already compiles to the LogGOPSim toolchain, so this level
+  reuses it analytically and bypasses the event-driven RNIC path. Its
+  purpose is sweep throughput, so acceptance must state the measured
+  wall-clock gain and the measured error against the packet-level
+  reference on the same schedules, and it must refuse configurations
+  whose questions it cannot answer rather than returning a number.
