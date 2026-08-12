@@ -133,8 +133,14 @@ class CellResult:
 class CoreMetricSink:
     """Reduce every live adapter step through one shared core clock."""
 
-    def __init__(self, bookkeeper: RequestBookkeeper) -> None:
+    def __init__(
+        self,
+        bookkeeper: RequestBookkeeper,
+        *,
+        arrival_metrics: bool,
+    ) -> None:
         self.bookkeeper = bookkeeper
+        self.arrival_metrics = arrival_metrics
         self.runtime = CoarseDeviceRuntime(CoarseDeviceProfile())
         self.reducer: CompletionReducer | None = None
 
@@ -143,7 +149,11 @@ class CoreMetricSink:
             raise RuntimeError("metric sink clock is already bound")
         self.reducer = CompletionReducer(
             clock,
-            bookkeeping=self.bookkeeper.snapshot(),
+            bookkeeping=(
+                self.bookkeeper.snapshot()
+                if self.arrival_metrics
+                else None
+            ),
         )
 
     def __call__(self, record: StepRecord) -> StepResult | None:
@@ -355,7 +365,10 @@ def _drive_cell(
         if request.request_id in LOAD_REQUEST_IDS[load]
     }
     stream_path = cell_dir / "steps.jsonl"
-    sink = CoreMetricSink(bookkeeper)
+    sink = CoreMetricSink(
+        bookkeeper,
+        arrival_metrics=admission_kind == "gated",
+    )
     config = SimExecutorConfig(
         mode="virtual",
         token_id=512,
