@@ -52,6 +52,20 @@ def test_mapper_rejects_unfinished_mode():
         RankMapper(two_node_manifest(), mode="unique-nic")
 
 
+@pytest.mark.parametrize("malformation", ["schema", "duplicate", "blank-host"])
+def test_mapper_rejects_malformed_locality_authority(malformation):
+    manifest = two_node_manifest()
+    if malformation == "schema":
+        manifest.schema = "wrong-schema"
+    elif malformation == "duplicate":
+        manifest.ranks[1].global_rank = manifest.ranks[0].global_rank
+    else:
+        manifest.ranks[1].hostname = " "
+
+    with pytest.raises(ValueError):
+        RankMapper(manifest)
+
+
 def test_declared_manifest_worked_example():
     # DP=2 x PP=2 x TP=4, global_rank = (dp*PP + pp)*TP + tp: the same
     # 16-rank worked example as two_node_manifest above.

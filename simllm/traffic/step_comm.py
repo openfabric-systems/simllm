@@ -58,7 +58,16 @@ from simllm.core import (
     execution_graph_from_observations,
 )
 from simllm.goal import GoalMessage, GoalTrace
+from simllm.placement import RankMapper
 from simllm.preplay.routing import RoutedToken
+from simllm.traffic.locality import (
+    DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
+    ClassifiedCommunicationPhase,
+    CollectiveCommunicationPhase,
+    DirectedCollectiveSegment,
+    StepLocalityPlan,
+    classify_step_locality,
+)
 from simllm.traffic.patterns import pairwise_all_to_allv, ring_allreduce
 from simllm.traffic.request_fidelity import (
     AggregatePairRow,
@@ -774,4 +783,208 @@ def render_step_goal(
             trace.rank(rank).calc(0)
     if any(operation.request_pair_payload_bytes for operation in moe_ops):
         _compare_operations_to_messages(record, moe_ops, trace.messages).require_match()
+    return trace
+
+
+def _ring_communication_phases(
+    operation: TpAllReduce,
+    *,
+    operation_base_tag: int,
+) -> tuple[CollectiveCommunicationPhase, ...]:
+    world = len(operation.ranks)
+    chunk = max(1, operation.payload_bytes // world)
+    phases = []
+    for round_index in range(2 * (world - 1)):
+        segments = tuple(
+            DirectedCollectiveSegment(
+                source_rank=rank,
+                destination_rank=operation.ranks[(index + 1) % world],
+                payload_bytes=chunk,
+                tag=operation_base_tag + round_index,
+            )
+            for index, rank in enumerate(operation.ranks)
+        )
+        phases.append(
+            CollectiveCommunicationPhase(
+                phase_id=(
+                    f"layer-{operation.layer}:tp-{operation.site}:"
+                    f"round-{round_index}"
+                ),
+                layer=operation.layer,
+                participants=operation.ranks,
+                segments=segments,
+            )
+        )
+    return tuple(phases)
+
+
+def _moe_communication_phase(
+    operation: MoeAllToAll,
+    *,
+    tag: int,
+) -> CollectiveCommunicationPhase:
+    if operation.pair_payload_bytes:
+        pair_payloads = operation.pair_payload_bytes
+    else:
+        pair_payloads = tuple(
+            (source, destination, operation.per_pair_bytes)
+            for source in operation.ranks
+            for destination in operation.ranks
+            if source != destination
+        )
+    return CollectiveCommunicationPhase(
+        phase_id=f"layer-{operation.layer}:ep-{operation.phase}",
+        layer=operation.layer,
+        participants=operation.ranks,
+        segments=tuple(
+            DirectedCollectiveSegment(
+                source_rank=source,
+                destination_rank=destination,
+                payload_bytes=payload_bytes,
+                tag=tag,
+            )
+            for source, destination, payload_bytes in pair_payloads
+            if payload_bytes > 0
+        ),
+    )
+
+
+def step_communication_phases(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    *,
+    ep_ranks: Sequence[int] | None = None,
+    routed_supply: RoutedMoeSupply | None = None,
+    base_tag: int = 1000,
+) -> tuple[CollectiveCommunicationPhase, ...]:
+    """Expand a step into serial phases of positive directed transfers."""
+
+    tp_ops = step_tp_allreduces(record, dims, tp_ranks)
+    moe_ops = step_moe_alltoalls(
+        record,
+        dims,
+        ep_ranks if ep_ranks is not None else (),
+        routed_supply=routed_supply,
+    )
+    tp_by_key = {(operation.layer, operation.site): operation for operation in tp_ops}
+    moe_by_key = {(operation.layer, operation.phase): operation for operation in moe_ops}
+    tp_ranks_tuple = tuple(tp_ranks)
+    tag_stride = 2 * (len(tp_ranks_tuple) - 1) if tp_ops else 0
+    moe_base_tag = base_tag + len(tp_ops) * tag_stride
+
+    phases = []
+    for layer in range(dims.num_layers):
+        for site_index, site in enumerate(TP_ALLREDUCE_SITES):
+            operation = tp_by_key.get((layer, site))
+            if operation is None:
+                continue
+            operation_index = layer * len(TP_ALLREDUCE_SITES) + site_index
+            phases.extend(
+                _ring_communication_phases(
+                    operation,
+                    operation_base_tag=base_tag + operation_index * tag_stride,
+                )
+            )
+        for phase_index, phase in enumerate(MOE_A2A_PHASES):
+            operation = moe_by_key.get((layer, phase))
+            if operation is None:
+                continue
+            moe_index = layer * len(MOE_A2A_PHASES) + phase_index
+            phases.append(
+                _moe_communication_phase(
+                    operation,
+                    tag=moe_base_tag + moe_index,
+                )
+            )
+    return tuple(phases)
+
+
+def plan_step_locality(
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    *,
+    ep_ranks: Sequence[int] | None = None,
+    routed_supply: RoutedMoeSupply | None = None,
+    rank_mapper: RankMapper | None = None,
+    nvlink_bandwidth_bytes_per_second: int = (
+        DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
+    ),
+    base_tag: int = 1000,
+) -> StepLocalityPlan:
+    """Return the placement split before any renderer mutates a GOAL trace."""
+
+    phases = step_communication_phases(
+        record,
+        dims,
+        tp_ranks,
+        ep_ranks=ep_ranks,
+        routed_supply=routed_supply,
+        base_tag=base_tag,
+    )
+    return classify_step_locality(
+        phases,
+        rank_mapper=rank_mapper,
+        bandwidth_bytes_per_second=nvlink_bandwidth_bytes_per_second,
+    )
+
+
+def render_fabric_phase_goal(
+    phase: ClassifiedCommunicationPhase,
+    *,
+    rank_mapper: RankMapper,
+    num_goal_ranks: int | None = None,
+) -> GoalTrace:
+    """Render one isolated phase's cross-node segments to the fabric.
+
+    Local analytic service is intentionally outside this GOAL rank space. The
+    live sink executes each mixed-locality phase separately and composes the
+    phase as ``max(NVLink service, fabric completion)`` before advancing.
+    That external phase barrier preserves source eligibility and serial
+    collective semantics without inventing a cross-rank GOAL dependency.
+    """
+
+    if not isinstance(phase, ClassifiedCommunicationPhase):
+        raise TypeError("phase must be a ClassifiedCommunicationPhase")
+    if not phase.fabric_segments:
+        raise ValueError("a fabric phase needs at least one cross-node segment")
+    endpoint_pairs = tuple(
+        (
+            rank_mapper.goal_rank(segment.source_rank),
+            rank_mapper.goal_rank(segment.destination_rank),
+            segment,
+        )
+        for segment in phase.fabric_segments
+    )
+    for source, destination, _ in endpoint_pairs:
+        if source == destination:
+            raise ValueError("GOAL mapping collapsed a cross-node segment")
+    used_goal_ranks = {
+        rank
+        for source, destination, _ in endpoint_pairs
+        for rank in (source, destination)
+    }
+    minimum_ranks = max(used_goal_ranks) + 1
+    if num_goal_ranks is None:
+        num_goal_ranks = max(minimum_ranks, rank_mapper.num_goal_ranks())
+    if num_goal_ranks < minimum_ranks:
+        raise ValueError(
+            f"num_goal_ranks={num_goal_ranks} cannot contain rank {minimum_ranks - 1}"
+        )
+    trace = GoalTrace(num_goal_ranks)
+    for source, destination, segment in endpoint_pairs:
+        trace.rank(source).send(
+            segment.payload_bytes,
+            to=destination,
+            tag=segment.tag,
+        )
+        trace.rank(destination).recv(
+            segment.payload_bytes,
+            source=source,
+            tag=segment.tag,
+        )
+    for goal_rank in range(num_goal_ranks):
+        if goal_rank not in used_goal_ranks:
+            trace.rank(goal_rank).calc(0)
     return trace
