@@ -210,6 +210,65 @@ CUDA streams and dependencies. CORE-4 composes service calls, selects physical
 engines, arbitrates resources and determines inter-operation overlap. Neither
 package duplicates the other's scheduler.
 
+### Registered mixed-makespan forms
+
+A concurrent makespan is not the maximum of the isolated durations. The
+task-mix study measured two reasons, and `decompose_mixed_makespan` names the
+terms of a replay that already happened so a study or regression can compare
+them. It is a read-only projection of one `GpuConcurrentEstimate` against the
+single-task controls of the same architecture, never a second estimator.
+`MixedMakespanForm` reports the regime, both physical bounds, the issue delay
+and the residency decomposition.
+
+The G1 issue-order form. When every task admits its first CTAs at its own
+eligibility cycle, the tasks overlap and the makespan is
+
+```text
+T_mixed = max(isolated durations) + delta_issue,
+```
+
+where `delta_issue` follows the actual ordered tuple the caller submitted.
+For the frozen 8-CTA memory and NVLink egress pair, memory-first measures 329
+cycles against a 328-cycle egress control and network-first measures 328. The
+delay survives widening the per-SM scheduler budget alone and widening the
+load/store issue width alone; only widening both together removes it, so the
+binding resource is whichever per-SM issue currency is scarcer. This is not a
+label rule: `GpuTaskKind`, priority and a canonical memory-before-network sort
+are all irrelevant, and reconstructing the order from any of them would
+reproduce the number for the wrong reason.
+
+The G2 residency form. When an SM's shared memory cannot hold both tasks'
+CTAs, the second task does not backfill; it waits and then pays its whole
+isolated duration:
+
+```text
+T_mixed = admitted_cycle(gated task) + isolated duration(gated task).
+```
+
+With each CTA claiming half an SM's shared memory the isolated controls are 14
+and 229 cycles, the memory task admits at cycle 14 exactly when the compute
+task finishes, and the makespan is their 243-cycle sum. Removing the shared
+memory demand restores backfill: isolated 7 and 132, makespan 133, i.e. the
+maximum plus the same one-cycle G1 term. The admission equality is part of the
+form, because a 243-cycle makespan on its own would not identify residency as
+the cause.
+
+Submission order is therefore an input CORE-4 owns, not a property the compute
+service may infer. `CoarseDeviceRuntime` forms a co-runnable compute group in
+`ExecutionGraph` tuple order and passes that ordered tuple to
+`estimate_concurrent`, so the measured G1 term follows the graph. Under the
+identity arbitration policy that order is the deterministic baseline sequence,
+and permuting priority labels changes nothing. A future class-aware policy
+(CORE-10) may reorder only legal ready candidates, and must pass its selected
+order to the compute service for the same measured form to follow it.
+
+Both forms are the behavior of the exact frozen fixtures, replicated by
+[the mixed-makespan study](../../examples/mixed_makespan_v1/RESULTS.md)
+through the component scheduler and through the live CORE-4 metric chain.
+Neither extrapolates to other shared-memory fractions, launch shapes,
+instruction mixes or GPU architectures, and the synthetic 1 GHz profile is a
+mechanism fixture rather than any silicon calibration.
+
 ## Seed profiles and calibration ledger
 
 `GpuArchitectureProfile` contains structural limits. Its swappable
