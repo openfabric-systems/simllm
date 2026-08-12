@@ -173,3 +173,11 @@ Tags follow the legend in [backends.md](backends.md#open-tasks).
   refusal boundaries that apply there, and prove an identity off mode against
   the accepted fabricated-token baseline. Add an in-process live smoke before
   claiming the path is live-reachable.
+- PLAY-11 (Precision; P1; M): preserve each scheduled request's captured MoE
+  routing identity through the traffic expansion and the rendered aggregate
+  GOAL messages. Add a fail-closed fidelity gate that compares every
+  request, layer, phase and directed pair against that request's routed-supply
+  projection under the selected placement. Acceptance must sweep one, two and
+  three co-scheduled requests across two placements, match the exact
+  per-request byte tables, and reject a two-request attribution permutation
+  while the aggregate pair table and physical GOAL remain byte-identical.

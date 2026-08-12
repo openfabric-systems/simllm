@@ -590,6 +590,14 @@ does not claim to produce these resource-contention measurements.
   completed-prefill and decode batch, match the framework's actual token
   production mask request by request, and preserve zero-sample, all-sample and
   legacy wire behavior exactly.
+- CORE-28 (Precision; P1; M): extend the existing sparse pairwise collective
+  payload with an optional, loss-checked per-request byte partition. Keep the
+  aggregate pair table as the physical service demand and require the request
+  partition to sum to it exactly. Acceptance must preserve the partition
+  through strict execution-graph JSON round trip and graph-only GOAL
+  rendering, reject unknown, duplicate and aggregate-inconsistent request
+  entries, and keep every legacy graph byte and physical GOAL operation
+  byte-identical when attribution is absent or added.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client above the delivered HTSIM persistent flow session and strict full
   `StepResult` codec. The backend foundation retains one event list, topology,
