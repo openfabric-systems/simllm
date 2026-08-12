@@ -328,58 +328,103 @@ def render_collective_plan(
     after_provenance: Mapping[int, GoalDependencyProvenance] | None = None,
     exact_frontier: bool = False,
 ) -> dict[int, str]:
-    """Render declared endpoint actions without reconstructing an algorithm."""
+    """Render declared endpoint actions without reconstructing an algorithm.
+
+    Rounds, tags, chunk sizes, rank order, endpoint actions and their rank-local
+    predecessors all come from ``plan``. This function only chooses how a
+    finished round is exposed, which is the GOAL frontier convention the
+    accepted pattern functions already take as a parameter. An exact frontier
+    inserts one zero-time join per rank and round and routes that round's
+    declared successors through it; the compatibility frontier chains directly
+    on the declared predecessor. Neither choice moves a byte, a tag or a rank.
+    """
 
     extent_by_id = {extent.extent_id: extent for extent in plan.extents}
     round_by_index = {round_.round_index: round_ for round_ in plan.rounds}
-    label_by_action = {}
+    action_by_id = {action.action_id: action for action in plan.actions}
+    actions_by_round: dict[int, list[CollectivePlanAction]] = defaultdict(list)
+    round_by_action: dict[str, int] = {}
     for action in plan.actions:
-        extent = extent_by_id[action.extent_id]
-        tag = round_by_index[extent.round_index].tag
-        if action.kind is CollectivePlanActionKind.SEND:
-            label = trace.rank(action.rank).send(
-                extent.payload_bytes,
-                to=extent.destination_rank,
-                tag=tag,
-                operation_id=plan.operation_id,
-            )
-        else:
-            label = trace.rank(action.rank).recv(
-                extent.payload_bytes,
-                source=extent.source_rank,
-                tag=tag,
-                operation_id=plan.operation_id,
-            )
-        label_by_action[action.action_id] = label
-
+        round_index = extent_by_id[action.extent_id].round_index
+        actions_by_round[round_index].append(action)
+        round_by_action[action.action_id] = round_index
+    entry_ids = {
+        action_id
+        for _, action_ids in plan.entry_action_ids
+        for action_id in action_ids
+    }
     internal = GoalDependencyProvenance(
         GoalDependencyKind.COLLECTIVE_INTERNAL,
         plan.operation_id,
     )
-    for action in plan.actions:
-        label = label_by_action[action.action_id]
-        for dependency in action.depends_on:
-            trace.rank(action.rank).requires(
-                label,
-                label_by_action[dependency],
-                provenance=internal,
-            )
-    if after:
-        for rank, action_ids in plan.entry_action_ids:
-            predecessor = after.get(rank)
-            if predecessor is None:
-                continue
-            provenance = (
-                None
-                if after_provenance is None
-                else after_provenance.get(rank)
-            )
-            for action_id in action_ids:
-                trace.rank(rank).requires(
-                    label_by_action[action_id],
-                    predecessor,
-                    provenance=provenance,
+
+    label_by_action: dict[str, str] = {}
+    join_by_rank_round: dict[tuple[int, int], str] = {}
+    last_round_by_rank: dict[int, int] = {}
+
+    def predecessor_label(action_id: str) -> str:
+        """Return the label a declared predecessor is exposed through."""
+
+        if not exact_frontier:
+            return label_by_action[action_id]
+        return join_by_rank_round[
+            (action_by_id[action_id].rank, round_by_action[action_id])
+        ]
+
+    for round_ in plan.rounds:
+        round_actions = actions_by_round.get(round_.round_index, ())
+        for action in round_actions:
+            extent = extent_by_id[action.extent_id]
+            if action.kind is CollectivePlanActionKind.SEND:
+                label = trace.rank(action.rank).send(
+                    extent.payload_bytes,
+                    to=extent.destination_rank,
+                    tag=round_.tag,
+                    operation_id=plan.operation_id,
                 )
+            else:
+                label = trace.rank(action.rank).recv(
+                    extent.payload_bytes,
+                    source=extent.source_rank,
+                    tag=round_.tag,
+                    operation_id=plan.operation_id,
+                )
+            label_by_action[action.action_id] = label
+
+        for rank in plan.rank_order:
+            rank_actions = [
+                action for action in round_actions if action.rank == rank
+            ]
+            if not rank_actions:
+                continue
+            last_round_by_rank[rank] = round_.round_index
+            for action in rank_actions:
+                label = label_by_action[action.action_id]
+                if action.action_id in entry_ids and after and rank in after:
+                    trace.rank(rank).requires(
+                        label,
+                        after[rank],
+                        provenance=(
+                            None
+                            if after_provenance is None
+                            else after_provenance.get(rank)
+                        ),
+                    )
+                for dependency in action.depends_on:
+                    trace.rank(rank).requires(
+                        label,
+                        predecessor_label(dependency),
+                        provenance=internal,
+                    )
+            if exact_frontier:
+                join = trace.rank(rank).calc(0, operation_id=plan.operation_id)
+                for action in rank_actions:
+                    trace.rank(rank).requires(
+                        join,
+                        label_by_action[action.action_id],
+                        provenance=internal,
+                    )
+                join_by_rank_round[(rank, round_.round_index)] = join
 
     for extent in plan.extents:
         round_ = round_by_index[extent.round_index]
@@ -396,25 +441,32 @@ def render_collective_plan(
             )
         )
 
-    frontiers = {}
+    frontiers: dict[int, str] = {}
     for rank, action_ids in plan.terminal_action_ids:
-        labels = tuple(label_by_action[action_id] for action_id in action_ids)
         if exact_frontier:
-            if not labels:
-                if after and rank in after:
-                    frontiers[rank] = after[rank]
-                else:
-                    frontiers[rank] = trace.rank(rank).calc(
-                        0,
-                        operation_id=plan.operation_id,
-                    )
-                continue
-            join = trace.rank(rank).calc(0, operation_id=plan.operation_id)
-            for label in labels:
-                trace.rank(rank).requires(join, label, provenance=internal)
-            frontiers[rank] = join
-        elif labels:
-            frontiers[rank] = labels[-1]
+            last_round = last_round_by_rank.get(rank)
+            if last_round is None:
+                frontiers[rank] = (
+                    after[rank]
+                    if after and rank in after
+                    else trace.rank(rank).calc(0, operation_id=plan.operation_id)
+                )
+            else:
+                frontiers[rank] = join_by_rank_round[(rank, last_round)]
+            continue
+        # The compatibility frontier is a rank's last receive, or its first
+        # send when it receives nothing at all.
+        receives = [
+            label_by_action[action_id]
+            for action_id in action_ids
+            if action_by_id[action_id].kind is CollectivePlanActionKind.RECEIVE
+        ]
+        if receives:
+            frontiers[rank] = receives[-1]
+            continue
+        sends = [label_by_action[action_id] for action_id in action_ids]
+        if sends:
+            frontiers[rank] = sends[0]
     return frontiers
 
 
