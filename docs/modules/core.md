@@ -222,8 +222,17 @@ sum to endpoint completion exactly.
 `realized_critical_path_operation_ids` and the operation-level
 `critical_predecessor_id`, breakdown and attribution remain as explicit
 compatibility projections of that authority; they may not replace, relax or
-contradict it. CORE-46 owns proving the projection cannot contradict the
-segments.
+contradict it. CORE-46 closed that gap: the reducer now derives each scalar
+field from the segments and rejects any disagreement. The physical completion
+is the segment maximum, the scheduler-visible completion is one of the
+operation's own participant completions, the causal boundary is a participant
+completion of the named predecessor that one of the operation's own segments
+starts at, the additive `critical_predecessor_id` is present exactly when that
+boundary is the predecessor's scheduler-visible completion, and the
+operation-level breakdown spans exactly the interval that projection implies.
+An asynchronous operation may release the framework at a participant completion
+earlier than its physical maximum; it may not report a timestamp the segments
+do not carry.
 
 Every optional class or priority scheduler must sit behind a replaceable
 policy. Mandatory protocol legality and ordering constrain the ready set before
@@ -649,6 +658,19 @@ rank 0 as the predecessor while keeping the rank-1 boundary is still rejected
 atomically, so the graph is not admitted by a weaker check; see
 [the participant frontier results](../../examples/participant_frontier_v1/RESULTS.md).
 
+CORE-46 is complete. The scalar fields CORE-35 left as unjoined compatibility
+projections are now derived from those same segments and rejected on
+disagreement. The six-clause derivation held on all four accepted Granite cells
+in both graph shapes, 26,880 operation records with zero errors, and on a
+fixture whose collective ranks finish out of rank order and whose successors
+split into an additive and a participant-local boundary from one causal
+predecessor. Six single-field contradictions that the previous validator
+accepted are now rejected atomically, and all four accepted result and
+completion digests, execution counts and completion counts are unchanged. The
+rank-local frontier records number 1,305 and 2,553, exactly the intermediate
+timestamps CORE-35 found moving between the two shapes; see
+[the scalar projection results](../../examples/scalar_projection_v1/RESULTS.md).
+
 ## Pre-registered runtime sanity experiments
 
 These expectations are recorded before CORE-4 implements scheduling. CORE-2
@@ -726,19 +748,6 @@ does not claim to produce these resource-contention measurements.
   ps/byte, and require the two serializers to agree within a preregistered
   band. Report the effect on a live TTFT and TPOT and keep the all-remote path
   exact.
-- CORE-46 (Precision; P1; S): check the retained scalar operation-level report
-  projection against the participant-keyed segment authority. CORE-35 made
-  `RuntimeCriticalSegment` the conservation authority but left
-  `critical_predecessor_id`, the operation-level breakdown and attribution, and
-  `realized_critical_path_operation_ids` as unjoined compatibility fields. The
-  one-authority rule requires a read-only projection to be joined by stable
-  identity and checked for loss, duplication and timestamp disagreement, and
-  nothing asserts today that the scalar fields are derivable from the segments.
-  Identify the exact derivation, then require it on the Granite participant-local
-  and barrier cells plus a fixture whose collective ranks finish out of order.
-  Acceptance must reject a hand-built report whose scalar predecessor
-  contradicts its segments, and must preserve every accepted timestamp, digest
-  and completion identity exactly.
 - CORE-47 (Precision; P1; M): retire the whole-operation barrier tightening from
   the routing-lifetime study path. `_runtime_report_compatible_graph` exists
   only because the scalar report rejected a participant-local frontier, which
