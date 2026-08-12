@@ -6,6 +6,7 @@ from simllm.goal import GoalTrace
 from simllm.traffic import (
     binomial_broadcast,
     gather,
+    ordered_pairwise_messages,
     pairwise_all_to_allv,
     ring_allreduce,
     scatter,
@@ -80,6 +81,70 @@ def test_pairwise_all_to_allv_rejects_incomplete_request_partition():
             operation_id="a2av",
             request_send_bytes={},
         )
+
+
+def test_ordered_pairwise_messages_preserves_rows_and_source_issue_order():
+    trace = GoalTrace(3)
+    start = {rank: trace.rank(rank).calc(1) for rank in range(3)}
+    done = ordered_pairwise_messages(
+        trace,
+        ranks=[0, 1, 2],
+        messages=(
+            ("alpha", 0, 2, 4),
+            ("beta", 1, 2, 5),
+            ("alpha", 0, 1, 6),
+        ),
+        tag=7,
+        after=start,
+        operation_id="sequenced-a2av",
+    )
+
+    assert [
+        (
+            message.request_payload_bytes[0][0],
+            message.source_rank,
+            message.destination_rank,
+            message.payload_bytes,
+        )
+        for message in trace.messages
+    ] == [
+        ("alpha", 0, 2, 4),
+        ("beta", 1, 2, 5),
+        ("alpha", 0, 1, 6),
+    ]
+    first, _, third = trace.messages
+    source_order = [
+        dependency
+        for dependency in trace.dependencies
+        if dependency.operation_label == third.send_label
+    ]
+    assert len(source_order) == 1
+    assert source_order[0].relation == "irequires"
+    assert source_order[0].predecessor_label == first.send_label
+    assert set(done) == {0, 1, 2}
+    assert all(
+        any(
+            dependency.operation_label == frontier
+            and dependency.relation == "requires"
+            for dependency in trace.dependencies
+        )
+        for frontier in done.values()
+    )
+
+
+def test_ordered_pairwise_messages_rejects_before_mutating_without_identity():
+    trace = GoalTrace(2)
+
+    with pytest.raises(ValueError, match="require operation_id"):
+        ordered_pairwise_messages(
+            trace,
+            ranks=[0, 1],
+            messages=(("alpha", 0, 1, 4),),
+            tag=7,
+        )
+
+    assert trace.operations == ()
+    assert trace.messages == ()
 
 
 def test_binomial_broadcast_rounds():

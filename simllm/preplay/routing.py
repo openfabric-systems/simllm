@@ -16,6 +16,12 @@ from simllm.core._wire import (
     _object,
     _string,
 )
+from simllm.preplay.framework_schema import (
+    FRAMEWORK_PREPLAY_TRACE_SCHEMA,
+    FrameworkPreplayTrace,
+    validate_framework_preplay_trace,
+)
+from simllm.preplay.framework_trace import read_framework_preplay_trace
 from simllm.preplay.join import PreplayReplayRun, validate_preplay_replay_run
 from simllm.preplay.schema import PREPLAY_TRACE_SCHEMA, ForwardPhase
 from simllm.preplay.trace import read_preplay_trace
@@ -218,7 +224,10 @@ def validate_routed_experts(value: RoutedExperts) -> None:
         raise TypeError("projection: expected RoutedExperts")
     if value.schema != ROUTED_EXPERTS_SCHEMA:
         raise ValueError(f"projection.schema: unsupported schema {value.schema!r}")
-    if value.trace_schema != PREPLAY_TRACE_SCHEMA:
+    if value.trace_schema not in {
+        PREPLAY_TRACE_SCHEMA,
+        FRAMEWORK_PREPLAY_TRACE_SCHEMA,
+    }:
         raise ValueError(
             "projection.trace_schema: unsupported schema "
             f"{value.trace_schema!r}"
@@ -543,6 +552,59 @@ def project_preplay_routing(run: PreplayReplayRun) -> RoutedExperts:
         top_k=trace.provenance.top_k,
         moe_layer_indices=trace.provenance.moe_layer_indices,
         requests=tuple(requests),
+    )
+    validate_routed_experts(projection)
+    return projection
+
+
+def project_framework_routing(path: str | Path) -> RoutedExperts:
+    """Project a strict v2 framework trace without reordering expert tuples.
+
+    The framework trace already owns request order, forwarded-token order,
+    layer order and the post-selection top-k tuple. This projection copies
+    those tuples exactly. It does not infer a later kernel or wire issue order.
+    """
+
+    source = Path(path)
+    trace_bytes = source.read_bytes()
+    trace = read_framework_preplay_trace(source)
+    validate_framework_preplay_trace(trace)
+    if not isinstance(trace, FrameworkPreplayTrace):
+        raise TypeError("framework trace reader returned an unexpected value")
+
+    requests = tuple(
+        RoutedRequest(
+            request_id=request.request_id,
+            prompt_token_count=len(request.input_token_ids),
+            output_token_count=len(request.output_token_ids),
+            tokens=tuple(
+                RoutedToken(
+                    phase=dispatch.phase,
+                    token_index=dispatch.token_index,
+                    token_id=dispatch.token_id,
+                    layers=tuple(
+                        RoutedLayer(
+                            layer_index=layer.layer_index,
+                            expert_ids=layer.expert_ids,
+                        )
+                        for layer in dispatch.routing
+                    ),
+                )
+                for dispatch in (
+                    *request.prefill_dispatch,
+                    *request.decode_dispatch,
+                )
+            ),
+        )
+        for request in trace.requests
+    )
+    projection = RoutedExperts(
+        trace_schema=trace.provenance.schema,
+        trace_sha256=hashlib.sha256(trace_bytes).hexdigest(),
+        expert_count=trace.provenance.expert_count,
+        top_k=trace.provenance.top_k,
+        moe_layer_indices=trace.provenance.moe_layer_indices,
+        requests=requests,
     )
     validate_routed_experts(projection)
     return projection
