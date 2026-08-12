@@ -423,6 +423,8 @@ def join_preplay_arrivals(
     arrivals: Iterable[RequestArrival],
     trace_path: str | Path,
     bookkeeper: RequestBookkeeper,
+    *,
+    routing_arena_index_path: str | Path | None = None,
 ) -> PreplayReplayRun:
     """Join realized arrivals to a trace and append all records atomically.
 
@@ -478,7 +480,16 @@ def join_preplay_arrivals(
         )
     run = PreplayReplayRun(trace=trace_reference, requests=tuple(joined))
     validate_preplay_replay_run(run)
-    bookkeeper.extend(
+    facts = tuple(
         _bookkeeping_record(request, trace_reference) for request in run.requests
     )
+    if routing_arena_index_path is not None:
+        # Validate the ledger transaction before publishing either sidecar. The
+        # real append sees the same immutable snapshot after the arena build.
+        RequestBookkeeper(bookkeeper.snapshot()).extend(facts)
+        from simllm.preplay.arena import build_routing_arena
+
+        arena = build_routing_arena(run, routing_arena_index_path)
+        arena.close()
+    bookkeeper.extend(facts)
     return run

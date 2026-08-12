@@ -11,6 +11,7 @@ from simllm.core.execution import (
     ExecutionGraph,
     ExecutionResult,
 )
+from simllm.core.request_lifetime import RequestLifetimeRegistry
 from simllm.core.runtime import QueueVisit, RuntimeOperationRecord, RuntimeReport
 from simllm.core.step import (
     AdditiveVisitTotals,
@@ -57,10 +58,20 @@ class CompletionReducer:
     predecessor choices come from the supplied runtime result and report.
     """
 
-    def __init__(self, clock: VirtualClock) -> None:
+    def __init__(
+        self,
+        clock: VirtualClock,
+        *,
+        lifetimes: RequestLifetimeRegistry | None = None,
+    ) -> None:
         if not isinstance(clock, VirtualClock):
             raise TypeError("clock must be a VirtualClock")
+        if lifetimes is not None and not isinstance(
+            lifetimes, RequestLifetimeRegistry
+        ):
+            raise TypeError("lifetimes must be a RequestLifetimeRegistry or None")
         self.clock = clock
+        self.lifetimes = lifetimes
         self._requests: dict[str, _RequestMetricState] = {}
         self._consumed_execution_ids: set[str] = set()
 
@@ -387,6 +398,8 @@ class CompletionReducer:
             request_metrics=tuple(metrics),
             additive_visit_totals=_visit_totals(report.visits),
         )
+        if self.lifetimes is not None:
+            self.lifetimes.consume_step(record, graph, result)
         self.clock.advance_to(result.completed_at_ps)
         self._requests = states
         self._consumed_execution_ids.add(graph.execution_id)

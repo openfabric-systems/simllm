@@ -5,7 +5,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from simllm.core.request_lifetime import RequestLifetimeRegistry
 from simllm.placement.manifest import PLACEMENT_SCHEMA, PlacementManifest
+from simllm.preplay.arena import RoutingArena
 from simllm.preplay.routing import RoutedExperts, validate_routed_experts
 
 
@@ -111,9 +113,11 @@ def validate_expert_placement_snapshot(value: ExpertPlacementSnapshot) -> None:
 class RoutedMoeSupply:
     """Captured assignments, placement snapshots and explicit step epochs."""
 
-    routed_experts: RoutedExperts
     placements: tuple[ExpertPlacementSnapshot, ...]
     step_placement_epochs: tuple[tuple[int, int], ...]
+    routed_experts: RoutedExperts | None = None
+    routing_arena: RoutingArena | None = None
+    lifetimes: RequestLifetimeRegistry | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "placements", tuple(self.placements))
@@ -148,7 +152,52 @@ def validate_routed_moe_supply(value: RoutedMoeSupply) -> None:
 
     if not isinstance(value, RoutedMoeSupply):
         raise TypeError("supply: expected RoutedMoeSupply")
-    validate_routed_experts(value.routed_experts)
+    if (value.routed_experts is None) == (value.routing_arena is None):
+        raise ValueError(
+            "supply: select exactly one routed_experts or routing_arena authority"
+        )
+    if value.routed_experts is not None:
+        validate_routed_experts(value.routed_experts)
+        if value.lifetimes is not None:
+            raise ValueError(
+                "supply.lifetimes: only an enabled routing arena owns live views"
+            )
+    else:
+        arena = value.routing_arena
+        assert arena is not None
+        if not isinstance(arena, RoutingArena):
+            raise TypeError("supply.routing_arena: expected RoutingArena")
+        if arena.closed:
+            raise ValueError("supply.routing_arena: arena is closed")
+        if not isinstance(value.lifetimes, RequestLifetimeRegistry):
+            raise TypeError(
+                "supply.lifetimes: arena authority requires RequestLifetimeRegistry"
+            )
+        arena_ids = {request.request_id for request in arena.requests}
+        lifetime_ids = {request.request_id for request in value.lifetimes.requests}
+        if arena_ids != lifetime_ids:
+            raise ValueError(
+                "supply.lifetimes: request identities disagree with routing arena"
+            )
+        for request in arena.requests:
+            lifetime = value.lifetimes.by_request_id(request.request_id)
+            descriptor = lifetime.view
+            if descriptor.arena_id != arena.arena_id:
+                raise ValueError(
+                    f"supply.lifetimes[{request.request_id!r}]: arena identity disagrees"
+                )
+            if (
+                descriptor.token_offset != request.token_offset
+                or descriptor.token_count != request.token_count
+                or descriptor.prompt_token_count != request.prompt_token_count
+            ):
+                raise ValueError(
+                    f"supply.lifetimes[{request.request_id!r}]: view extent disagrees"
+                )
+            if lifetime.moe_layer_indices != arena.moe_layer_indices:
+                raise ValueError(
+                    f"supply.lifetimes[{request.request_id!r}]: layers disagree"
+                )
     if not isinstance(value.placements, tuple):
         raise TypeError("supply.placements: in-memory contract requires a tuple")
     if not value.placements:

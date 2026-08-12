@@ -229,6 +229,10 @@ def validate_routed_experts(value: RoutedExperts) -> None:
         "projection.expert_count",
         minimum=1,
     )
+    if expert_count > 256:
+        raise ValueError(
+            "projection.expert_count: uint8 routing supports at most 256 experts"
+        )
     top_k = _integer(value.top_k, "projection.top_k", minimum=1)
     if top_k > expert_count:
         raise ValueError("projection.top_k: cannot exceed expert_count")
