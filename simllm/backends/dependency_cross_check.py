@@ -8,12 +8,15 @@ support a meaningful cross-check.
 
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, deque
 from collections.abc import Iterable
 from dataclasses import dataclass
 
 from simllm.core.execution import ExecutionGraph
-from simllm.core.execution_io import operation_participant_ranks
+from simllm.core.execution_io import (
+    effective_dependency_edges,
+    operation_participant_ranks,
+)
 from simllm.goal import GoalGraphEdge, GoalMessage, GoalTrace
 
 
@@ -63,6 +66,9 @@ class DependencyCrossCheckPlan:
     operation_ids: tuple[str, ...]
     expected_message_count: int
     ordering_comparisons: tuple[DependencyOrderingComparison, ...]
+    frontier_boundary_keys: tuple[
+        tuple[str, str, str, str, int | None], ...
+    ]
     boundary_tags: tuple[
         tuple[str, str, tuple[int, ...], tuple[int, ...]], ...
     ]
@@ -78,7 +84,11 @@ class DependencyCrossCheckReport:
     step_index: int
     ordering_comparisons: tuple[DependencyOrderingComparison, ...]
     phase_frontier_comparisons: tuple[DependencyPhaseFrontierComparison, ...]
+    ordering_edge_count: int
     ordering_disagreement_count: int
+    ordering_disagreement_classes: tuple[tuple[str, str, int], ...]
+    frontier_boundary_count: int
+    boundary_ordering_disagreement_count: int
     phase_frontier_disagreement_count: int
     authority_completion_ps: int
     cross_check_completion_ps: int
@@ -111,33 +121,148 @@ def _message_identity(message: GoalMessage) -> tuple[object, ...]:
     )
 
 
-def _requires_reachability(trace: GoalTrace) -> dict[str, frozenset[str]]:
-    labels = {operation.label for operation in trace.operations}
-    successors: dict[str, set[str]] = {label: set() for label in labels}
+def _edge_identity(
+    edge: GoalGraphEdge | DependencyOrderingComparison,
+) -> tuple[str, str, str, str, int | None]:
+    return (
+        edge.predecessor_id,
+        edge.operation_id,
+        edge.scope,
+        edge.origin,
+        edge.participant_rank,
+    )
+
+
+@dataclass(frozen=True)
+class _RequiresGraph:
+    """Iterative, query-directed reachability for one direct GOAL program.
+
+    Materializing the full transitive closure is quadratic for serial schedules
+    and exhausts memory at realistic rank and layer counts.  Cross-checking
+    asks only whether selected boundary labels are reachable, so retain the
+    linear direct graph and search one queried source at a time.
+    """
+
+    successors: dict[str, tuple[str, ...]]
+    predecessors: dict[str, tuple[str, ...]]
+    ranks: dict[str, int]
+    owner_keys: dict[str, tuple[str, int]]
+    _cache: dict[tuple[str, str], bool]
+    _frontier_cache: dict[
+        tuple[str, ...], tuple[tuple[str, ...], tuple[str, ...]]
+    ]
+
+    def reaches(self, predecessor_label: str, operation_label: str) -> bool:
+        if predecessor_label not in self.successors:
+            raise ValueError(
+                f"direct GOAL requires predecessor {predecessor_label!r} is unknown"
+            )
+        if operation_label not in self.successors:
+            raise ValueError(
+                f"direct GOAL requires target {operation_label!r} is unknown"
+            )
+        if self.ranks[predecessor_label] != self.ranks[operation_label]:
+            return False
+        key = (predecessor_label, operation_label)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        pending = list(self.successors[predecessor_label])
+        visited: set[str] = set()
+        while pending:
+            label = pending.pop()
+            if label == operation_label:
+                self._cache[key] = True
+                return True
+            if label in visited:
+                continue
+            visited.add(label)
+            pending.extend(self.successors[label])
+        self._cache[key] = False
+        return False
+
+
+def _require_acyclic(
+    successors: dict[object, set[object]],
+    *,
+    description: str,
+) -> None:
+    indegree = {label: 0 for label in successors}
+    for next_labels in successors.values():
+        for next_label in next_labels:
+            indegree[next_label] += 1
+    ready = deque(label for label, degree in indegree.items() if degree == 0)
+    visited = 0
+    while ready:
+        label = ready.popleft()
+        visited += 1
+        for next_label in successors[label]:
+            indegree[next_label] -= 1
+            if indegree[next_label] == 0:
+                ready.append(next_label)
+    if visited != len(successors):
+        raise ValueError(f"direct GOAL {description} contains a cycle")
+
+
+def _requires_graph(trace: GoalTrace) -> _RequiresGraph:
+    operations = trace.operations
+    labels = {operation.label for operation in operations}
+    successors: dict[str, list[str]] = {label: [] for label in labels}
+    predecessors: dict[str, list[str]] = {label: [] for label in labels}
     for dependency in trace.dependencies:
         if dependency.relation == "requires":
-            successors[dependency.predecessor_label].add(
-                dependency.operation_label
-            )
+            try:
+                successors[dependency.predecessor_label].append(
+                    dependency.operation_label
+                )
+                predecessors[dependency.operation_label].append(
+                    dependency.predecessor_label
+                )
+            except KeyError as exc:
+                raise ValueError(
+                    "direct GOAL requires dependency cites an unknown label"
+                ) from exc
+    _require_acyclic(
+        {label: set(next_labels) for label, next_labels in successors.items()},
+        description="requires dependencies",
+    )
 
-    reachable: dict[str, frozenset[str]] = {}
-
-    def visit(label: str, active: set[str]) -> frozenset[str]:
-        if label in reachable:
-            return reachable[label]
-        if label in active:
-            raise ValueError("direct GOAL requires dependencies contain a cycle")
-        next_active = active | {label}
-        result: set[str] = set()
-        for successor in successors[label]:
-            result.add(successor)
-            result.update(visit(successor, next_active))
-        reachable[label] = frozenset(result)
-        return reachable[label]
-
-    for label in labels:
-        visit(label, set())
-    return reachable
+    ranks = {operation.label: operation.rank for operation in operations}
+    owner_keys = {
+        operation.label: (
+            operation.operation_id
+            if operation.operation_id is not None
+            else f"unowned:{operation.label}",
+            operation.rank,
+        )
+        for operation in operations
+    }
+    owner_successors: dict[tuple[str, int], set[tuple[str, int]]] = {
+        owner: set() for owner in owner_keys.values()
+    }
+    for predecessor_label, next_labels in successors.items():
+        predecessor_owner = owner_keys[predecessor_label]
+        for operation_label in next_labels:
+            operation_owner = owner_keys[operation_label]
+            if predecessor_owner != operation_owner:
+                owner_successors[predecessor_owner].add(operation_owner)
+    _require_acyclic(
+        owner_successors,
+        description="semantic-owner dependency projection",
+    )
+    return _RequiresGraph(
+        successors={
+            label: tuple(next_labels) for label, next_labels in successors.items()
+        },
+        predecessors={
+            label: tuple(previous_labels)
+            for label, previous_labels in predecessors.items()
+        },
+        ranks=ranks,
+        owner_keys=owner_keys,
+        _cache={},
+        _frontier_cache={},
+    )
 
 
 def _owned_labels(
@@ -161,22 +286,30 @@ def _owned_labels(
 
 def _entry_and_terminal_labels(
     operation_labels: tuple[str, ...],
-    reachable: dict[str, frozenset[str]],
+    requires: _RequiresGraph,
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    cached = requires._frontier_cache.get(operation_labels)
+    if cached is not None:
+        return cached
     owned = set(operation_labels)
+    owner_keys = {requires.owner_keys[label] for label in owned}
+    if len(owner_keys) != 1:
+        raise ValueError("direct GOAL operation labels do not share one semantic owner")
     entries = tuple(
         label
         for label in operation_labels
-        if not any(label in reachable[other] for other in owned if other != label)
+        if not any(previous in owned for previous in requires.predecessors[label])
     )
     terminals = tuple(
         label
         for label in operation_labels
-        if not (reachable[label] & (owned - {label}))
+        if not any(next_label in owned for next_label in requires.successors[label])
     )
     if not entries or not terminals:
         raise ValueError("direct GOAL operation has no requires entry or terminal")
-    return entries, terminals
+    result = entries, terminals
+    requires._frontier_cache[operation_labels] = result
+    return result
 
 
 def _boundary_ordering_comparison(
@@ -184,13 +317,21 @@ def _boundary_ordering_comparison(
     *,
     graph_ranks: dict[str, tuple[int, ...]],
     labels: dict[str, dict[int, tuple[str, ...]]],
-    reachable: dict[str, frozenset[str]],
+    requires: _RequiresGraph,
 ) -> DependencyOrderingComparison:
     predecessor_ranks = graph_ranks[edge.predecessor_id]
     target_ranks = graph_ranks[edge.operation_id]
 
+    checked_predecessor_ranks = predecessor_ranks
+    checked_target_ranks = target_ranks
+    if edge.scope == "participant-local":
+        if edge.participant_rank is None:
+            raise ValueError("participant-local boundary lacks its participant rank")
+        checked_predecessor_ranks = (edge.participant_rank,)
+        checked_target_ranks = (edge.participant_rank,)
+
     predecessor_terminals: list[tuple[int, tuple[str, ...]]] = []
-    for rank in predecessor_ranks:
+    for rank in checked_predecessor_ranks:
         try:
             rank_labels = labels[edge.predecessor_id][rank]
         except KeyError as exc:
@@ -198,11 +339,11 @@ def _boundary_ordering_comparison(
                 "direct GOAL lacks a predecessor participant for boundary "
                 f"{edge.predecessor_id!r} to {edge.operation_id!r} on rank {rank}"
             ) from exc
-        _, terminals = _entry_and_terminal_labels(rank_labels, reachable)
+        _, terminals = _entry_and_terminal_labels(rank_labels, requires)
         predecessor_terminals.append((rank, terminals))
 
     target_entries: list[tuple[int, tuple[str, ...]]] = []
-    for rank in target_ranks:
+    for rank in checked_target_ranks:
         try:
             rank_labels = labels[edge.operation_id][rank]
         except KeyError as exc:
@@ -210,18 +351,13 @@ def _boundary_ordering_comparison(
                 "direct GOAL lacks a target participant for boundary "
                 f"{edge.predecessor_id!r} to {edge.operation_id!r} on rank {rank}"
             ) from exc
-        entries, _ = _entry_and_terminal_labels(rank_labels, reachable)
+        entries, _ = _entry_and_terminal_labels(rank_labels, requires)
         target_entries.append((rank, entries))
 
-    required_predecessor_ranks = predecessor_ranks
+    required_predecessor_ranks = checked_predecessor_ranks
     checked_target_entries = target_entries
     if edge.scope == "participant-local":
-        if edge.participant_rank is None:
-            raise ValueError("participant-local boundary lacks its participant rank")
         required_predecessor_ranks = (edge.participant_rank,)
-        checked_target_entries = [
-            entry for entry in target_entries if entry[0] == edge.participant_rank
-        ]
         if not checked_target_entries:
             raise ValueError("participant-local boundary rank is absent from target")
 
@@ -235,7 +371,7 @@ def _boundary_ordering_comparison(
             missing_terminals = tuple(
                 terminal
                 for terminal in terminals
-                if any(entry not in reachable[terminal] for entry in entries)
+                if any(not requires.reaches(terminal, entry) for entry in entries)
             )
             if missing_terminals:
                 missing_ranks.append(predecessor_rank)
@@ -294,15 +430,38 @@ def plan_dependency_cross_check(
         operation.operation_id: operation_participant_ranks(operation)
         for operation in graph.operations
     }
-    reachable = _requires_reachability(direct_trace)
+    requires = _requires_graph(direct_trace)
+    ordering_edges = tuple(
+        GoalGraphEdge(
+            edge.predecessor_id,
+            edge.operation_id,
+            edge.scope.value,
+            edge.origin.value,
+            edge.participant_rank,
+        )
+        for edge in effective_dependency_edges(graph)
+    )
+    ordering_edge_keys = tuple(_edge_identity(edge) for edge in ordering_edges)
+    ordering_edge_key_set = set(ordering_edge_keys)
+    boundary_keys = tuple(_edge_identity(edge) for edge in boundary_edges)
+    if len(boundary_keys) != len(set(boundary_keys)):
+        raise ValueError("cross-check frontier boundary inventory contains duplicates")
+    unexpected_boundaries = tuple(
+        key for key in boundary_keys if key not in ordering_edge_key_set
+    )
+    if unexpected_boundaries:
+        raise ValueError(
+            "cross-check frontier boundary is absent from the execution graph: "
+            f"{unexpected_boundaries[0]!r}"
+        )
     ordering = tuple(
         _boundary_ordering_comparison(
             edge,
             graph_ranks=graph_ranks,
             labels=labels,
-            reachable=reachable,
+            requires=requires,
         )
-        for edge in boundary_edges
+        for edge in ordering_edges
     )
     tags_by_operation: dict[str, set[int]] = {
         operation_id: set() for operation_id in graph_operation_ids
@@ -325,6 +484,7 @@ def plan_dependency_cross_check(
         operation_ids=graph_operation_ids,
         expected_message_count=len(expected_messages),
         ordering_comparisons=ordering,
+        frontier_boundary_keys=boundary_keys,
         boundary_tags=boundary_tags,
     )
 
@@ -463,9 +623,7 @@ def complete_dependency_cross_check(
         signed_difference = (
             cross_check_gap - authority_gap if evaluated else None
         )
-        disagreement = bool(
-            evaluated and cross_check_gap < 0 <= authority_gap
-        )
+        disagreement = bool(evaluated and cross_check_gap != authority_gap)
         frontier_comparisons.append(
             DependencyPhaseFrontierComparison(
                 predecessor_id=predecessor_id,
@@ -493,6 +651,17 @@ def complete_dependency_cross_check(
     ordering_count = sum(
         comparison.disagreement for comparison in plan.ordering_comparisons
     )
+    ordering_classes = Counter(
+        (comparison.scope, comparison.origin)
+        for comparison in plan.ordering_comparisons
+        if comparison.disagreement
+    )
+    boundary_keys = set(plan.frontier_boundary_keys)
+    boundary_ordering_count = sum(
+        comparison.disagreement
+        for comparison in plan.ordering_comparisons
+        if _edge_identity(comparison) in boundary_keys
+    )
     frontier_count = sum(
         comparison.disagreement for comparison in frontier_comparisons
     )
@@ -503,7 +672,14 @@ def complete_dependency_cross_check(
         step_index=plan.step_index,
         ordering_comparisons=plan.ordering_comparisons,
         phase_frontier_comparisons=tuple(frontier_comparisons),
+        ordering_edge_count=len(plan.ordering_comparisons),
         ordering_disagreement_count=ordering_count,
+        ordering_disagreement_classes=tuple(
+            (scope, origin, count)
+            for (scope, origin), count in sorted(ordering_classes.items())
+        ),
+        frontier_boundary_count=len(plan.frontier_boundary_keys),
+        boundary_ordering_disagreement_count=boundary_ordering_count,
         phase_frontier_disagreement_count=frontier_count,
         authority_completion_ps=authority_completion_ps,
         cross_check_completion_ps=cross_check_completion_ps,

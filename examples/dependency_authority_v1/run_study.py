@@ -443,6 +443,7 @@ def _cross_check_finding(
     vector_bytes: int,
     authority_jct_ps: int,
     authority_flow_count: int,
+    authority_edge_count: int,
     authority_workdir: Path,
     cross_check_result,
     report,
@@ -478,9 +479,22 @@ def _cross_check_finding(
             and report.cross_check_mechanism == "atlahs-independent-goal"
         ),
         "complete_ordering_inventory": (
-            len(report.ordering_comparisons) == ADJACENT_TRANSITIONS
-            and report.ordering_disagreement_count
+            len(report.ordering_comparisons) == authority_edge_count
+            and report.ordering_edge_count == authority_edge_count
+        ),
+        "registered_boundary_ordering_differences": (
+            report.frontier_boundary_count == ADJACENT_TRANSITIONS
+            and report.boundary_ordering_disagreement_count
             == expected["ordering_scope_differences"]
+        ),
+        "post_specified_full_ordering_census": (
+            report.ordering_edge_count == 423
+            and report.ordering_disagreement_count == 235
+            and report.ordering_disagreement_classes
+            == (
+                ("participant-local", "explicit", 188),
+                ("whole-operation", "logical-queue-fifo", 47),
+            )
         ),
         "complete_phase_frontier_inventory": (
             len(phase_comparisons) == ADJACENT_TRANSITIONS
@@ -542,7 +556,16 @@ def _cross_check_finding(
         "vector_bytes": vector_bytes,
         "registered": expected,
         "observed": {
-            "ordering_scope_differences": report.ordering_disagreement_count,
+            "ordering_scope_differences": (
+                report.boundary_ordering_disagreement_count
+            ),
+            "full_ordering_edge_count": report.ordering_edge_count,
+            "full_ordering_scope_differences": (
+                report.ordering_disagreement_count
+            ),
+            "full_ordering_disagreement_classes": (
+                report.ordering_disagreement_classes
+            ),
             "negative_phase_frontiers": len(negative_cross_gaps),
             "first_phase_frontier_gap_ps": evaluated_cross_gaps[0],
             "minimum_phase_frontier_gap_ps": min(evaluated_cross_gaps),
@@ -619,27 +642,6 @@ def run_study(out: Path) -> None:
             cells[(vector_bytes, placement)] = cell
             sinks[(vector_bytes, placement)] = sink
 
-    cross_check_findings = []
-    for vector_bytes in VECTOR_BYTES:
-        cross_check_result, report, _ = _run_cross_check(
-            out,
-            vector_bytes=vector_bytes,
-            supply=supply,
-        )
-        authority_cell = cells[(vector_bytes, "ABCD")]
-        cross_check_findings.append(
-            _cross_check_finding(
-                vector_bytes=vector_bytes,
-                authority_jct_ps=authority_cell["jct_ps"],
-                authority_flow_count=authority_cell["network"]["num_flows"],
-                authority_workdir=(
-                    out / f"vector-{vector_bytes}" / "ABCD"
-                ),
-                cross_check_result=cross_check_result,
-                report=report,
-            )
-        )
-
     signed_instances = []
     causal_instances = []
     for vector_bytes in VECTOR_BYTES:
@@ -674,6 +676,32 @@ def run_study(out: Path) -> None:
             "passed": negative_control["passed"],
         },
     }
+
+    # Score decision-relevant relations before cross-check guards that inspect
+    # the same completion values or registered signed-change bands.
+    cross_check_findings = []
+    for vector_bytes in VECTOR_BYTES:
+        cross_check_result, report, _ = _run_cross_check(
+            out,
+            vector_bytes=vector_bytes,
+            supply=supply,
+        )
+        authority_cell = cells[(vector_bytes, "ABCD")]
+        cross_check_findings.append(
+            _cross_check_finding(
+                vector_bytes=vector_bytes,
+                authority_jct_ps=authority_cell["jct_ps"],
+                authority_flow_count=authority_cell["network"]["num_flows"],
+                authority_edge_count=authority_cell["locality"][
+                    "effective_dependency_edge_count"
+                ],
+                authority_workdir=(
+                    out / f"vector-{vector_bytes}" / "ABCD"
+                ),
+                cross_check_result=cross_check_result,
+                report=report,
+            )
+        )
 
     exact_cells = []
     for key, cell in cells.items():
@@ -970,7 +998,8 @@ def run_study(out: Path) -> None:
         "entailment": (
             "Signed JCT was evaluated from live StepResult values and mutation "
             "rejection from the specifically diagnosed checker outcome before "
-            "exact cells, inventories or hashes. The frozen causal-gap family "
+            "any cross-check equality or signed-band guard and before exact "
+            "cells, inventories or hashes. The frozen causal-gap family "
             "was reclassified fatal-unscored because ordered artifact offsets "
             "make nonnegative cross-artifact gaps true by construction."
         ),

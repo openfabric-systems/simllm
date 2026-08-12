@@ -6,8 +6,19 @@ from simllm.backends.dependency_cross_check import (
     complete_dependency_cross_check,
     plan_dependency_cross_check,
 )
-from simllm.core import CollectiveWork, ExecutionGraph, ExecutionOperation
+from simllm.backends.step_lowerer import SerialStepLowerer, SerialStepLowererConfig
+from simllm.compute import ModelDims
+from simllm.core import (
+    CollectiveWork,
+    ComputeWork,
+    ExecutionGraph,
+    ExecutionOperation,
+    RequestPhase,
+    ScheduledRequest,
+    StepRecord,
+)
 from simllm.goal import GoalGraphEdge, GoalMessage, GoalTrace
+from simllm.traffic import render_step_goal
 
 
 def _graph() -> ExecutionGraph:
@@ -92,6 +103,7 @@ def test_plan_reports_missing_cross_rank_requires_as_a_finding():
     assert plan.step_index == 0
     assert plan.operation_ids == ("first", "second")
     assert plan.expected_message_count == 2
+    assert len(plan.frontier_boundary_keys) == 1
     assert len(plan.ordering_comparisons) == 1
     comparison = plan.ordering_comparisons[0]
     assert comparison.predecessor_ranks == (0, 1)
@@ -113,6 +125,12 @@ def test_complete_reports_frontier_and_completion_disagreements():
     assert report.execution_id == "cross-check"
     assert report.step_index == 0
     assert report.ordering_disagreement_count == 1
+    assert report.ordering_disagreement_classes == (
+        ("whole-operation", "logical-queue-fifo", 1),
+    )
+    assert report.ordering_edge_count == 1
+    assert report.frontier_boundary_count == 1
+    assert report.boundary_ordering_disagreement_count == 1
     assert report.phase_frontier_disagreement_count == 1
     frontier = report.phase_frontier_comparisons[0]
     assert frontier.authority_predecessor_completion_ps == 100
@@ -203,3 +221,104 @@ def test_frontier_without_message_tags_is_explicitly_unevaluated():
     assert not report.phase_frontier_comparisons[0].evaluated
     assert report.phase_frontier_comparisons[0].authority_gap_ps is None
     assert report.phase_frontier_disagreement_count == 0
+
+
+def test_phase_frontier_reports_any_unequal_gap_not_only_early_entry():
+    report = _complete(
+        _plan(),
+        cross_check_rows=((10, 0, 100), (20, 110, 190)),
+        cross_check_completion_ps=190,
+    )
+
+    comparison = report.phase_frontier_comparisons[0]
+    assert comparison.authority_gap_ps == 0
+    assert comparison.cross_check_gap_ps == 10
+    assert comparison.signed_gap_difference_ps == 10
+    assert comparison.disagreement
+    assert report.phase_frontier_disagreement_count == 1
+
+
+def test_plan_compares_full_effective_edge_inventory_not_only_frontiers():
+    first = ExecutionOperation(
+        "first",
+        0,
+        "first-queue",
+        ComputeWork("first", nominal_duration_ps=1_000),
+    )
+    second = ExecutionOperation(
+        "second",
+        0,
+        "second-queue",
+        ComputeWork("second", nominal_duration_ps=1_000),
+        participant_local_depends_on=("first",),
+    )
+    graph = ExecutionGraph("full", 0, 0, (first, second), ("second",))
+    trace = GoalTrace(1)
+    first_label = trace.rank(0).calc(1, operation_id="first")
+    second_label = trace.rank(0).calc(1, operation_id="second")
+    trace.rank(0).requires(second_label, first_label)
+
+    plan = plan_dependency_cross_check(graph, trace, (), ())
+
+    assert len(plan.ordering_comparisons) == 1
+    assert plan.ordering_comparisons[0].scope == "participant-local"
+    assert not plan.ordering_comparisons[0].disagreement
+    assert plan.frontier_boundary_keys == ()
+    assert plan.boundary_tags == ()
+
+
+def test_requires_cycle_is_rejected_without_recursive_traversal():
+    trace = _direct_trace()
+    first = trace.operations[0].label
+    second = trace.operations[1].label
+    trace.rank(0).requires(first, second)
+
+    with pytest.raises(ValueError, match="requires dependencies contains a cycle"):
+        plan_dependency_cross_check(_graph(), trace, (_edge(),), trace.messages)
+
+
+def test_cross_check_planner_scales_to_reference_width_without_backend():
+    dims = ModelDims(
+        num_layers=1,
+        hidden_size=128,
+        intermediate_size=256,
+        num_heads=1,
+        num_kv_heads=1,
+        head_size=128,
+        vocab_size=256,
+        dtype_bytes=2,
+    )
+    ranks = tuple(range(64))
+    record = StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest(
+                "request",
+                RequestPhase.DECODE,
+                num_new_tokens=1,
+                context_length=8,
+            )
+        ],
+    )
+    graph = SerialStepLowerer(
+        SerialStepLowererConfig(dims=dims, tp_ranks=ranks)
+    ).lower(record)
+    direct = render_step_goal(
+        record,
+        dims,
+        ranks,
+        1,
+        num_goal_ranks=64,
+    )
+
+    plan = plan_dependency_cross_check(
+        graph,
+        direct,
+        (),
+        direct.messages,
+    )
+
+    assert len(graph.operations) == 66
+    assert len(plan.operation_ids) == 66
+    assert len(plan.ordering_comparisons) == 129
