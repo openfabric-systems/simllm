@@ -262,16 +262,16 @@ def _memory_rows(
         arena_per_token = arena_bytes / tokens
         reduction = legacy_bytes / arena_bytes
         expected = MEMORY_CELLS[request_count]
-        passed = (
+        legacy_band_passed = (
             tokens == expected["tokens"]
             and expected["legacy_bytes_per_token_band"][0]
             <= legacy_per_token
             <= expected["legacy_bytes_per_token_band"][1]
-            and arena_per_token <= expected["arena_bytes_per_token_max"]
-            and expected["reduction_band"][0]
+        )
+        reduction_passed = (
+            expected["reduction_band"][0]
             <= reduction
             <= expected["reduction_band"][1]
-            and arena_per_token < legacy_per_token
         )
         rows.append(
             {
@@ -282,7 +282,13 @@ def _memory_rows(
                 "legacy_bytes_per_token": legacy_per_token,
                 "arena_bytes_per_token": arena_per_token,
                 "reduction": reduction,
-                "passed": passed,
+                "legacy_band_passed": legacy_band_passed,
+                "reduction_passed": reduction_passed,
+                "arena_bound_passed": (
+                    arena_per_token <= expected["arena_bytes_per_token_max"]
+                ),
+                "direction_passed": arena_per_token < legacy_per_token,
+                "passed": legacy_band_passed and reduction_passed,
             }
         )
     return rows
