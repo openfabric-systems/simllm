@@ -207,9 +207,31 @@ boundary across one prefill and one decode step: only DP bookkeeping and one
 fixed TP event appeared per step, with no observation graph or semantic EP
 site. It is component evidence and does not change the behavioral denominator.
 
+TRAF-25 is registered against a source-multiplicity correctness defect in the
+captured and uniform MoE renderers. One `StepRecord` contains one engine's
+scheduled tokens, but the current renderer sources every token from every EP
+rank. The expectations-only ownership study declares a single engine rank and
+idle peer schedulers for this projection. No implementation or result-producing
+run has occurred at registration time.
+
 ## Open tasks
 
 ### Precision
+
+- TRAF-25 (Precision; P0; M): make one declared EP engine rank the sole source
+  of every token in one captured `StepRecord`; peer ranks own experts but hold
+  zero scheduled tokens in this isolated projection. Remove source
+  multiplication from both captured and uniform paths rather than preserving
+  it as compatibility. Acceptance requires: (1) TP and MoE consume the same
+  `record.total_new_tokens` population; (2) each request's dispatch bytes come
+  only from its engine rank and combine is the exact transpose; (3) EP-width-8
+  tests conserve per-layer token sources, satisfy the independent
+  `total_new_tokens * top_k * num_layers * 2` hop bound and agree with the
+  routed-token projection; (4) the Granite EP-width sweep reports total bytes
+  and peak-rank egress separately, then moves fluid and packet-level makespan
+  in the preregistered direction above the physical serialization floor; and
+  (5) every affected routed study is refrozen or explicitly reported as an
+  unavailable rerun, with old and corrected published numbers listed.
 
 - TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
   zero-propagation, per-source NVLink egress surrogate against
@@ -238,6 +260,16 @@ site. It is component evidence and does not change the behavioral denominator.
   path.
 
 ### Completeness
+
+- TRAF-26 (Completeness; P2; L): extend the isolated one-engine routed-step
+  projection to a full DP times EP group population. Each peer engine must
+  carry an explicit captured workload or a reproducible independently sampled
+  workload, and its routing must be independently observed or sampled.
+  Replaying one engine's routing table on every peer is forbidden because it
+  manufactures correlated hot-expert incast. Acceptance compares group bytes,
+  peak egress, incast fan-in, TTFT and TPOT against a multi-engine capture,
+  while selecting the isolated mode preserves every accepted TRAF-25 byte,
+  timestamp and completion order exactly.
 
 - TRAF-13 (Completeness; P1; L): connect at least one real framework schedule
   producer to `ObservedStepLowerer` after VLLM-22 or SGL-17 supplies captured
