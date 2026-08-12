@@ -62,6 +62,7 @@ def _routed_supply(path: Path) -> Any:
         placements=(placement,),
         step_placement_epochs=tuple((step, 0) for step in range(4_096)),
         routed_experts=read_routed_experts(path),
+        engine_rank=0,
     )
 
 

@@ -91,6 +91,21 @@ GRANITE_MOE_DIMS = ModelDims(
     local_num_experts=16,
 )
 
+EP8_MOE_DIMS = ModelDims(
+    num_layers=2,
+    hidden_size=4,
+    intermediate_size=8,
+    num_heads=2,
+    num_kv_heads=2,
+    head_size=2,
+    vocab_size=16,
+    dtype_bytes=2,
+    num_experts=8,
+    top_k=4,
+    moe_intermediate_size=4,
+    local_num_experts=1,
+)
+
 _EPOCH1_LAYER13_RANK0 = {
     2,
     7,
@@ -123,8 +138,8 @@ def _token(
     phase: ForwardPhase,
     token_index: int,
     token_id: int,
-    layer0: tuple[int, int],
-    layer1: tuple[int, int],
+    layer0: tuple[int, ...],
+    layer1: tuple[int, ...],
 ) -> RoutedToken:
     return RoutedToken(
         phase=phase,
@@ -200,6 +215,7 @@ def _tiny_manifest(epoch: int) -> PlacementManifest:
 
 def _tiny_supply() -> RoutedMoeSupply:
     return RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=_routing(),
         placements=tuple(
             ExpertPlacementSnapshot.from_manifest(_tiny_manifest(epoch), (0, 1))
@@ -256,6 +272,7 @@ def _granite_supply() -> RoutedMoeSupply:
         RequestBookkeeper(),
     )
     return RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=project_preplay_routing(run),
         placements=tuple(
             ExpertPlacementSnapshot.from_manifest(
@@ -282,6 +299,109 @@ def _granite_record(step_index: int) -> StepRecord:
         ],
         num_sampled=1,
     )
+
+
+def _ep8_supply() -> RoutedMoeSupply:
+    request_routes = {
+        "alpha": (
+            ((0, 1, 2, 3), (4, 5, 6, 7)),
+            ((0, 2, 4, 6), (1, 3, 5, 7)),
+        ),
+        "beta": (
+            ((1, 3, 5, 7), (0, 2, 4, 6)),
+        ),
+    }
+    routed = RoutedExperts(
+        trace_schema=PREPLAY_TRACE_SCHEMA,
+        trace_sha256="b" * 64,
+        expert_count=8,
+        top_k=4,
+        moe_layer_indices=(0, 1),
+        requests=tuple(
+            RoutedRequest(
+                request_id=request_id,
+                prompt_token_count=len(routes),
+                output_token_count=1,
+                tokens=tuple(
+                    _token(
+                        ForwardPhase.PREFILL,
+                        token_index,
+                        100 + token_index,
+                        layer0,
+                        layer1,
+                    )
+                    for token_index, (layer0, layer1) in enumerate(routes)
+                ),
+            )
+            for request_id, routes in request_routes.items()
+        ),
+    )
+    placement = ExpertPlacementSnapshot(
+        placement_epoch=0,
+        expert_owners=tuple(
+            (layer, expert, expert)
+            for layer in range(EP8_MOE_DIMS.num_layers)
+            for expert in range(EP8_MOE_DIMS.num_experts)
+        ),
+    )
+    return RoutedMoeSupply(
+        engine_rank=3,
+        routed_experts=routed,
+        placements=(placement,),
+        step_placement_epochs=((0, 0),),
+    )
+
+
+def _ep8_record() -> StepRecord:
+    return StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest(
+                "alpha",
+                RequestPhase.PREFILL,
+                2,
+                context_length=2,
+            ),
+            ScheduledRequest(
+                "beta",
+                RequestPhase.PREFILL,
+                1,
+                context_length=1,
+            ),
+        ],
+        num_sampled=2,
+    )
+
+
+def _ep8_compute_hops_by_layer(
+    supply: RoutedMoeSupply,
+    record: StepRecord,
+) -> dict[int, int]:
+    routed = supply.routed_experts
+    assert routed is not None
+    owners = supply.placement_for_step(0).owner_map()
+    result = {layer: 0 for layer in range(EP8_MOE_DIMS.num_layers)}
+    for scheduled in record.scheduled:
+        request = routed.by_request_id(scheduled.request_id)
+        assert scheduled.phase is RequestPhase.PREFILL
+        start = scheduled.context_length - scheduled.num_new_tokens
+        tokens = tuple(
+            token
+            for token in request.tokens
+            if token.phase is ForwardPhase.PREFILL
+            and start <= token.token_index < scheduled.context_length
+        )
+        assert len(tokens) == scheduled.num_new_tokens
+        for token in tokens:
+            for layer in range(EP8_MOE_DIMS.num_layers):
+                remote_destinations = {
+                    owners[(layer, expert)]
+                    for expert in token.layers[layer].expert_ids
+                    if owners[(layer, expert)] != supply.engine_rank
+                }
+                result[layer] += len(remote_destinations)
+    return result
 
 
 def test_manifest_snapshot_and_supply_select_explicit_epochs():
@@ -311,10 +431,69 @@ def test_captured_expansion_deduplicates_destinations_and_transposes_combine():
         (1, "combine", 0),
     ]
     assert ops[0].per_pair_bytes == 0
-    assert ops[0].pair_payload_bytes == ((0, 1, 16), (1, 0, 8))
-    assert ops[1].pair_payload_bytes == ((0, 1, 8), (1, 0, 16))
-    assert ops[2].pair_payload_bytes == ((0, 1, 8), (1, 0, 16))
-    assert ops[3].pair_payload_bytes == ((0, 1, 16), (1, 0, 8))
+    assert ops[0].pair_payload_bytes == ((0, 1, 16),)
+    assert ops[1].pair_payload_bytes == ((1, 0, 16),)
+    assert ops[2].pair_payload_bytes == ((0, 1, 8),)
+    assert ops[3].pair_payload_bytes == ((1, 0, 8),)
+
+
+def test_ep8_token_sources_conserve_hops_and_match_compute_projection():
+    supply = _ep8_supply()
+    record = _ep8_record()
+    operations = step_moe_alltoalls(
+        record,
+        EP8_MOE_DIMS,
+        tuple(range(8)),
+        routed_supply=supply,
+    )
+    trace = render_step_goal(
+        record,
+        EP8_MOE_DIMS,
+        (3,),
+        1,
+        ep_ranks=tuple(range(8)),
+        routed_supply=supply,
+    )
+    vector_bytes = EP8_MOE_DIMS.hidden_size * EP8_MOE_DIMS.dtype_bytes
+    projected_dispatch_hops = _ep8_compute_hops_by_layer(supply, record)
+    dispatch_operations = {
+        operation.layer: operation
+        for operation in operations
+        if operation.phase == "dispatch"
+    }
+
+    for layer, expected_hops in projected_dispatch_hops.items():
+        operation = dispatch_operations[layer]
+        emitted_hops = sum(
+            size // vector_bytes
+            for _, _, size in operation.pair_payload_bytes
+        )
+        assert emitted_hops == expected_hops
+        assert {source for source, _, _ in operation.pair_payload_bytes} == {
+            supply.engine_rank
+        }
+
+    emitted_hops = sum(message.payload_bytes for message in trace.messages) // vector_bytes
+    compute_projected_hops = 2 * sum(projected_dispatch_hops.values())
+    hop_upper_bound = (
+        record.total_new_tokens
+        * EP8_MOE_DIMS.top_k
+        * EP8_MOE_DIMS.num_layers
+        * 2
+    )
+    assert emitted_hops == compute_projected_hops == 42
+    assert emitted_hops <= hop_upper_bound == 48
+    assert all(
+        source == supply.engine_rank
+        for operation in dispatch_operations.values()
+        for _, source, _, _ in operation.request_pair_payload_bytes
+    )
+    assert all(
+        destination == supply.engine_rank
+        for operation in operations
+        if operation.phase == "combine"
+        for _, _, destination, _ in operation.request_pair_payload_bytes
+    )
 
 
 def test_epoch_change_and_phase_slices_change_only_selected_routes():
@@ -350,9 +529,9 @@ def test_epoch_change_and_phase_slices_change_only_selected_routes():
     )
 
     assert epoch1[0].placement_epoch == 1
-    assert epoch1[0].pair_payload_bytes == ((0, 1, 8), (1, 0, 16))
+    assert epoch1[0].pair_payload_bytes == ((0, 1, 8),)
     assert first_prefill[0].pair_payload_bytes == ((0, 1, 8),)
-    assert first_decode[0].pair_payload_bytes == ((0, 1, 8), (1, 0, 8))
+    assert first_decode[0].pair_payload_bytes == ((0, 1, 8),)
 
 
 def test_granite_fixture_matches_frozen_epoch_pair_tables():
@@ -375,11 +554,9 @@ def test_granite_fixture_matches_frozen_epoch_pair_tables():
             1_081_344 if epoch == 0 else 1_077_248
         )
         for layer, op in enumerate(dispatch):
-            expected = ((0, 1, 45_056), (1, 0, 45_056))
-            if layer == 2:
-                expected = ((0, 1, 45_056), (1, 0, 43_008))
+            expected = ((0, 1, 45_056),)
             if epoch == 1 and layer == 13:
-                expected = ((0, 1, 40_960), (1, 0, 38_912))
+                expected = ((0, 1, 40_960),)
             assert op.pair_payload_bytes == expected
 
 
@@ -413,6 +590,7 @@ def test_arena_authority_matches_validation_projection_without_cursor_mutation(
             ),
         )
     packed = RoutedMoeSupply(
+        engine_rank=0,
         placements=legacy.placements,
         step_placement_epochs=legacy.step_placement_epochs,
         routing_arena=arena,
@@ -477,13 +655,10 @@ def test_render_and_lowerer_carry_the_same_sparse_tables_and_epoch():
     ]
 
     assert "send 8b to 1 tag 1000" in trace.render()
-    assert "send 16b to 0 tag 1000" in trace.render()
+    assert "send 16b to 0 tag 1000" not in trace.render()
     assert [operation.placement_epoch for operation in collectives] == [1, 1, 1, 1]
     assert collectives[0].work.payload_bytes == 0
-    assert collectives[0].work.pair_payload_bytes == (
-        (0, 1, 8),
-        (1, 0, 16),
-    )
+    assert collectives[0].work.pair_payload_bytes == ((0, 1, 8),)
 
 
 def test_observed_lowerer_binds_captured_pair_tables_and_epoch():
@@ -553,7 +728,7 @@ def test_step_sink_uses_captured_supply_and_reports_authority(tmp_path, monkeypa
     assert len(goals) == 4
     goal = "\n".join(path.read_text() for path in goals)
     assert "send 8b to 1 tag 1000" in goal
-    assert "send 16b to 0 tag 1000" in goal
+    assert "send 16b to 0 tag 1000" not in goal
 
 
 def test_step_sink_reports_no_realized_moe_traffic_with_supply(tmp_path, monkeypatch):
@@ -591,7 +766,7 @@ def test_step_sink_reports_no_realized_moe_traffic_with_supply(tmp_path, monkeyp
     assert sink.outcomes[0].placement_epoch is None
 
 
-def test_uniform_path_keeps_frozen_goal_bytes():
+def test_uniform_path_uses_one_declared_engine_population():
     record = _granite_record(0)
     payload = render_step_goal(
         record,
@@ -602,12 +777,20 @@ def test_uniform_path_keeps_frozen_goal_bytes():
     ).render().encode()
     operations = step_moe_alltoalls(record, GRANITE_MOE_DIMS, (0, 1))
 
-    assert len(payload) == 13_200
+    assert len(payload) == 7_418
     assert hashlib.sha256(payload).hexdigest() == (
-        "d708e998685b617478e891b316728d14b8ac6185a62b73817f80af1c5adff518"
+        "94f0a1f3a17f59db1a1a88c1885a5eae2f71c0e0703dbba1d4b055c0e567b21c"
     )
-    assert all(operation.per_pair_bytes == 180_224 for operation in operations)
-    assert all(operation.pair_payload_bytes == () for operation in operations)
+    assert all(operation.per_pair_bytes == 0 for operation in operations)
+    assert all(
+        operation.pair_payload_bytes
+        == (
+            ((0, 1, 180_224),)
+            if operation.phase == "dispatch"
+            else ((1, 0, 180_224),)
+        )
+        for operation in operations
+    )
 
 
 @pytest.mark.parametrize(
@@ -618,6 +801,7 @@ def test_uniform_path_keeps_frozen_goal_bytes():
         ("layers", "disagree with model layers"),
         ("missing-owner", "missing owner"),
         ("outside-rank", "outside ep_ranks"),
+        ("engine-rank", "engine_rank: rank 2 is outside ep_ranks"),
         ("missing-request", "absent from routed-experts projection"),
         ("prefill-slice", "outside captured count"),
         ("decode-slice", "outside captured count"),
@@ -645,6 +829,8 @@ def test_captured_expansion_rejects_inconsistent_inputs(change, message):
             expert_owners=entries,
         )
         supply = replace(supply, placements=(changed, supply.placements[1]))
+    elif change == "engine-rank":
+        supply = replace(supply, engine_rank=2)
     elif change == "missing-request":
         record.scheduled[0].request_id = "missing"
     elif change == "prefill-slice":
@@ -668,21 +854,31 @@ def test_supply_and_manifest_snapshot_reject_invalid_epoch_state():
 
     with pytest.raises(ValueError, match="duplicate placement_epoch"):
         RoutedMoeSupply(
+            engine_rank=0,
             routed_experts=_routing(),
             placements=(first, first),
             step_placement_epochs=((0, 0),),
         )
     with pytest.raises(ValueError, match="sorted by step index"):
         RoutedMoeSupply(
+            engine_rank=0,
             routed_experts=_routing(),
             placements=(first, second),
             step_placement_epochs=((1, 1), (0, 0)),
         )
     with pytest.raises(ValueError, match="has no snapshot"):
         RoutedMoeSupply(
+            engine_rank=0,
             routed_experts=_routing(),
             placements=(first, second),
             step_placement_epochs=((0, 7),),
+        )
+    with pytest.raises(ValueError, match="expected a nonnegative integer"):
+        RoutedMoeSupply(
+            engine_rank=-1,
+            routed_experts=_routing(),
+            placements=(first, second),
+            step_placement_epochs=((0, 0),),
         )
 
     manifest = _tiny_manifest(0)

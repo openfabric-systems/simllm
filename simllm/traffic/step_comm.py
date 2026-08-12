@@ -17,9 +17,10 @@ operations.
 Expert parallel (:func:`step_moe_alltoalls`): per MoE layer, a dispatch
 pairwise all-to-allv (tokens to their experts' owner ranks) followed by a
 combine pairwise all-to-allv (expert outputs back). An optional captured
-routing supply selects per-token destinations at an explicit placement epoch;
-its absence retains the uniform compatibility assumption documented on the
-function.
+routing supply selects per-token destinations at an explicit placement epoch
+and declares the one engine rank that owns this record's tokens. Its absence
+uses the first EP rank as the documented single-engine source for a uniform
+destination approximation.
 
 This is a deliberately first-order model of step traffic; each
 simplification is a numbered task in docs/modules/traffic.md:
@@ -681,51 +682,53 @@ def _routed_moe_alltoalls(
             "placement snapshot: owner ranks outside ep_ranks: "
             + ", ".join(str(rank) for rank in sorted(invalid_ranks))
         )
+    source = supply.engine_rank
+    if source not in ranks:
+        raise ValueError(
+            f"supply.engine_rank: rank {source} is outside ep_ranks"
+        )
 
     scheduled_requests = _scheduled_routed_tokens(record, supply)
     vector_bytes = dims.hidden_size * dims.dtype_bytes
     operations = []
     for layer in expected_layers:
         request_send_bytes: dict[tuple[str, int, int], int] = {}
-        for source in ranks:
-            for scheduled_request in scheduled_requests:
-                if supply.routed_experts is not None:
-                    expert_rows = (
-                        token.layers[layer].expert_ids
-                        for token in scheduled_request.tokens
+        for scheduled_request in scheduled_requests:
+            if supply.routed_experts is not None:
+                expert_rows = (
+                    token.layers[layer].expert_ids
+                    for token in scheduled_request.tokens
+                )
+            else:
+                arena = supply.routing_arena
+                lifetimes = supply.lifetimes
+                assert arena is not None and lifetimes is not None
+                view = lifetimes.by_request_id(scheduled_request.request_id).view
+                expert_rows = (
+                    arena.expert_ids_at(
+                        view.token_offset,
+                        view.token_count,
+                        token_index,
+                        layer,
                     )
-                else:
-                    arena = supply.routing_arena
-                    lifetimes = supply.lifetimes
-                    assert arena is not None and lifetimes is not None
-                    view = lifetimes.by_request_id(scheduled_request.request_id).view
-                    expert_rows = (
-                        arena.expert_ids_at(
-                            view.token_offset,
-                            view.token_count,
-                            token_index,
-                            layer,
-                        )
-                        for token_index in scheduled_request.arena_token_indices
+                    for token_index in scheduled_request.arena_token_indices
+                )
+            for expert_ids in expert_rows:
+                destinations = {owners[(layer, expert)] for expert in expert_ids}
+                for destination in destinations:
+                    if destination == source:
+                        continue
+                    key = (
+                        scheduled_request.request_id,
+                        source,
+                        destination,
                     )
-                for expert_ids in expert_rows:
-                    destinations = {owners[(layer, expert)] for expert in expert_ids}
-                    for destination in destinations:
-                        if destination == source:
-                            continue
-                        key = (
-                            scheduled_request.request_id,
-                            source,
-                            destination,
-                        )
-                        request_send_bytes[key] = request_send_bytes.get(key, 0) + vector_bytes
+                    request_send_bytes[key] = request_send_bytes.get(key, 0) + vector_bytes
         request_dispatch = tuple(
             (request_id, source, destination, size)
             for (request_id, source, destination), size in sorted(request_send_bytes.items())
         )
         dispatch = _aggregate_request_pairs(request_dispatch)
-        # A routed token has a destination owner, and at least one of the two
-        # or more EP sources is remote from that owner, so dispatch is nonempty.
         request_combine = tuple(
             sorted(
                 (request_id, destination, source, size)
@@ -773,21 +776,25 @@ def step_moe_alltoalls(
     outputs, both over the expert-parallel group ``ep_ranks`` of W ranks.
 
     With ``routed_supply``, the scheduled request slices select exact captured
-    input tokens. Expert ownership at the step's explicit placement epoch maps
-    each token to destination ranks. Dispatch deduplicates several selected
-    experts on the same destination into one hidden vector, and combine is the
-    exact reverse table after owner-side pre-reduction.
+    input tokens owned by ``routed_supply.engine_rank``. The other EP ranks
+    own experts but contribute zero scheduled tokens to this isolated engine
+    step. Expert ownership at the step's explicit placement epoch maps each
+    token to destination ranks. Dispatch deduplicates several selected experts
+    on the same destination into one hidden vector, and combine is the exact
+    reverse table after owner-side pre-reduction.
 
-    Without a routed supply, the compatibility assumption spreads the
-    ``total_new_tokens * top_k`` (token, expert) assignments evenly over
-    the W ranks, so each rank sends
+    Without a routed supply, the uniform approximation uses ``ep_ranks[0]``
+    as the one engine rank. It spreads that engine's
+    ``total_new_tokens * top_k`` (token, expert) assignments evenly over the W
+    expert-owner ranks, so the engine sends
 
         per_pair_bytes = total_new_tokens * top_k * hidden_size
                          * dtype_bytes // W
 
-    to every OTHER rank in both phases; the 1/W share routed to a rank's
-    own resident experts stays local and never touches the fabric. The floor
-    division remains part of this explicit compatibility path.
+    to every other rank in dispatch, and combine transposes those pairs. The
+    1/W share routed to the engine rank's resident experts stays local and
+    never touches the fabric. The floor division remains part of this explicit
+    approximation.
 
     Empty means: dense dims (``num_experts == 0``), an EP world smaller
     than 2, or a zero-new-token drain record. The uniform path also returns
@@ -805,8 +812,25 @@ def step_moe_alltoalls(
     )
     if per_pair <= 0:
         return []
+    source = ranks[0]
+    dispatch = tuple(
+        (source, destination, per_pair)
+        for destination in ranks
+        if destination != source
+    )
+    combine = tuple(
+        (destination, source, per_pair)
+        for destination in ranks
+        if destination != source
+    )
     return [
-        MoeAllToAll(layer=layer, phase=phase, ranks=ranks, per_pair_bytes=per_pair)
+        MoeAllToAll(
+            layer=layer,
+            phase=phase,
+            ranks=ranks,
+            per_pair_bytes=0,
+            pair_payload_bytes=(dispatch if phase == "dispatch" else combine),
+        )
         for layer in range(dims.num_layers)
         for phase in MOE_A2A_PHASES
     ]
@@ -973,6 +997,10 @@ def render_step_goal(
     tag_stride = 2 * (len(ranks) - 1) if tp_ops else 0
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
     moe_by_key = {(op.layer, op.phase): op for op in moe_ops}
+    moe_tag_by_key = {
+        (op.layer, op.phase): moe_base_tag + index
+        for index, op in enumerate(moe_ops)
+    }
     if num_goal_ranks is None:
         num_goal_ranks = max(participants) + 1
     minimum_ranks = max(participants) + 1
@@ -1009,7 +1037,6 @@ def render_step_goal(
                 previous = {**previous, **done}
         if moe_ops:
             for phase_index in range(len(MOE_A2A_PHASES)):
-                moe_index = layer * len(MOE_A2A_PHASES) + phase_index
                 op = moe_by_key.get((layer, MOE_A2A_PHASES[phase_index]))
                 if op is None:
                     continue
@@ -1026,7 +1053,7 @@ def render_step_goal(
                     trace,
                     ranks=list(op.ranks),
                     send_bytes=send_bytes,
-                    tag=moe_base_tag + moe_index,
+                    tag=moe_tag_by_key[(op.layer, op.phase)],
                     after=previous,
                     operation_id=_moe_operation_id(record, op),
                     request_send_bytes=(
@@ -1139,6 +1166,10 @@ def step_communication_phases(
     tp_ranks_tuple = tuple(tp_ranks)
     tag_stride = 2 * (len(tp_ranks_tuple) - 1) if tp_ops else 0
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
+    moe_tag_by_key = {
+        (operation.layer, operation.phase): moe_base_tag + index
+        for index, operation in enumerate(moe_ops)
+    }
 
     phases = []
     for layer in range(dims.num_layers):
@@ -1157,11 +1188,10 @@ def step_communication_phases(
             operation = moe_by_key.get((layer, phase))
             if operation is None:
                 continue
-            moe_index = layer * len(MOE_A2A_PHASES) + phase_index
             phases.append(
                 _moe_communication_phase(
                     operation,
-                    tag=moe_base_tag + moe_index,
+                    tag=moe_tag_by_key[(operation.layer, operation.phase)],
                     operation_id=_moe_operation_id(record, operation),
                 )
             )
@@ -1230,10 +1260,7 @@ def _execution_graph_communication_phases(
                 pair_payload_bytes = ()
                 per_pair_bytes = work.payload_bytes
             if not pair_payload_bytes and per_pair_bytes <= 0:
-                raise ValueError(
-                    f"graph.operations[{index}] is a zero-payload pairwise "
-                    "all-to-allv"
-                )
+                continue
             phases.append(
                 _moe_communication_phase(
                     MoeAllToAll(

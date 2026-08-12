@@ -15,86 +15,93 @@ from typing import Any
 EXPECTATIONS_COMMIT = "eaa8b23860c7a5e357dc509fcf0897176a40df66"
 
 SYNTHETIC_GOALS = {
-    (0, 1): (744, "1eb2bbff8a981523b5f6733420aa9d5d3509aa473ed991409b8d455e619e5864", 6, 48),
-    (0, 2): (952, "78a8e80589b156374b965634dd82251931219398c1e2cf2454b06cbe3629916c", 8, 80),
-    (0, 3): (964, "8e38bf44631b9f3d7020452886552502fa567ec44559d05b5401a5dbbc825ab6", 8, 128),
-    (1, 1): (744, "8c1738dbd01f320b0f5f005b9ea6acd19145c77db67af89eaac4a78219d494de", 6, 48),
-    (1, 2): (960, "3023c39e472980ed6c689410a21fa626db3a73cf8a3d83bde425d8d41cfd4361", 8, 112),
-    (1, 3): (964, "60cb32ca80a57d03b627de51d01fd292c0e87da3ec1482760faa8d304b075440", 8, 176),
+    (0, 1): (336, "67f0ef85f98a00e057252b999623985abc1915fad36f4117bc799515a45122ba", 2, 16),
+    (0, 2): (540, "9990c84751f1de0422eede0db306a743e5099d86f87f0d4500040d66155e653d", 4, 32),
+    (0, 3): (548, "da71e8f850c078dd4885df8b273da4636e2faef2b0ff91c68b41581aeef8b036", 4, 64),
+    (1, 1): (336, "4d2dc2857898f78c251d164d9aaf90dbf09ebac03844aa202e96aab8846e5288", 2, 16),
+    (1, 2): (544, "c3c171774a9a7bf530b68656a6b83d5d5e148ca4219a817fe3a965bb2a2673dd", 4, 48),
+    (1, 3): (548, "2d87fcc70ee4d2837127a300a4c576061cc711d76388fc4e60fbc29aa9df73e0", 4, 80),
 }
 
 SYNTHETIC_PERMUTATIONS = {
-    (0, 2): (0, 12, 96, -16),
-    (0, 3): (0, 12, 96, -16),
+    (0, 2): (0, 8, 64, 0),
+    (0, 3): (0, 8, 64, 0),
     (1, 2): (0, 4, 32, 16),
     (1, 3): (0, 4, 32, 16),
 }
 
 SYNTHETIC_JCT_PS = {
-    (0, 1, 200_000_000_000): 8_003_280,
-    (0, 1, 400_000_000_000): 8_002_640,
-    (0, 2, 200_000_000_000): 8_003_920,
-    (0, 2, 400_000_000_000): 8_002_960,
+    (0, 1, 200_000_000_000): 4_002_640,
+    (0, 1, 400_000_000_000): 4_002_320,
+    (0, 2, 200_000_000_000): 8_003_280,
+    (0, 2, 400_000_000_000): 8_002_640,
     (0, 3, 200_000_000_000): 8_004_560,
     (0, 3, 400_000_000_000): 8_003_280,
-    (1, 1, 200_000_000_000): 8_003_280,
-    (1, 1, 400_000_000_000): 8_002_640,
-    (1, 2, 200_000_000_000): 8_004_560,
-    (1, 2, 400_000_000_000): 8_003_280,
-    (1, 3, 200_000_000_000): 8_005_840,
-    (1, 3, 400_000_000_000): 8_003_920,
+    (1, 1, 200_000_000_000): 4_002_640,
+    (1, 1, 400_000_000_000): 4_002_320,
+    (1, 2, 200_000_000_000): 8_003_920,
+    (1, 2, 400_000_000_000): 8_002_960,
+    (1, 3, 200_000_000_000): 8_005_200,
+    (1, 3, 400_000_000_000): 8_003_600,
 }
 
 SYNTHETIC_DISPATCH = {
-    (0, "alpha", 0): ((0, 1, 8), (1, 0, 8)),
-    (0, "alpha", 1): ((1, 0, 8),),
-    (0, "beta", 0): ((1, 0, 8),),
+    (0, "alpha", 0): ((0, 1, 8),),
+    (0, "alpha", 1): (),
+    (0, "beta", 0): (),
     (0, "beta", 1): ((0, 1, 8),),
     (0, "gamma", 0): ((0, 1, 8),),
-    (0, "gamma", 1): ((0, 1, 8), (1, 0, 8)),
-    (1, "alpha", 0): ((1, 0, 8),),
-    (1, "alpha", 1): ((0, 1, 8), (1, 0, 8)),
-    (1, "beta", 0): ((0, 1, 8), (1, 0, 8)),
-    (1, "beta", 1): ((0, 1, 8), (1, 0, 8)),
-    (1, "gamma", 0): ((0, 1, 8), (1, 0, 8)),
-    (1, "gamma", 1): ((0, 1, 8), (1, 0, 8)),
+    (0, "gamma", 1): ((0, 1, 8),),
+    (1, "alpha", 0): (),
+    (1, "alpha", 1): ((0, 1, 8),),
+    (1, "beta", 0): ((0, 1, 8),),
+    (1, "beta", 1): ((0, 1, 8),),
+    (1, "gamma", 0): ((0, 1, 8),),
+    (1, "gamma", 1): ((0, 1, 8),),
 }
 
 GRANITE_REQUESTS = {
     "r0": (
-        2_688,
-        84_439_040,
-        80_824,
-        "d2d5564c0507ae8e9946e377dfd9df0fca3eab20910d150faba03b1576e5e75a",
+        336,
+        10_403_840,
+        10_104,
+        "f9c8347a94fbf15909cb49c94b82c823e5393c41d44434d50510e270fb4600e1",
     ),
     "r1": (
-        2_688,
-        46_190_592,
-        80_516,
-        "5f7603ec085e76e86b022b688404c428c90344115ac675ef40b59e609b90f568",
+        336,
+        5_701_632,
+        10_064,
+        "0fb47ae417244b7c8c7da2ceb3970cb8aa5f3813160dbbd276aaddbb521a388a",
     ),
     "r2": (
-        2_688,
-        76_869_632,
-        80_810,
-        "c441be8e81936ef0d32d32d59dfaf20f08bf496d588836edfee84058dbe0c89f",
+        336,
+        9_457_664,
+        10_102,
+        "ba0f617b41ae8bcdf152ce077cc886fe466cfee7fd1156f19190fb9a7a39c48a",
     ),
 }
 
 GRANITE_ALL = (
-    8_064,
-    207_499_264,
-    242_146,
-    "bcb21232c6f433e64ca0efb9bbfdaab4c008b087249f5d4b849dfb9bc646c077",
+    1_008,
+    25_563_136,
+    30_266,
+    "cea3513d33aebae3336169818d7141497e9eff0a4f12409c5bf6fab39b8200ba",
+)
+
+GRANITE_GOAL = (
+    47_399,
+    "6bb83366a3936bcf1e435cab008bb55c2966777528a9e8d885dd44d47f5a4943",
+    336,
+    25_563_136,
 )
 
 GRANITE_PERMUTATION = {
     "aggregate_mismatch_count": 0,
-    "request_mismatch_count": 5_348,
-    "l1_error_bytes": 76_496_896,
+    "request_mismatch_count": 668,
+    "l1_error_bytes": 9_404_416,
     "request_delta_bytes": {
-        "r0": -38_248_448,
-        "r1": 38_248_448,
+        "r0": -4_702_208,
+        "r1": 4_702_208,
         "r2": 0,
     },
 }
@@ -135,7 +142,7 @@ def _check_frozen_registry() -> None:
         raise AssertionError("Granite request bytes do not conserve the total")
     digests = [value[1] for value in SYNTHETIC_GOALS.values()]
     digests += [value[3] for value in GRANITE_REQUESTS.values()]
-    digests.append(GRANITE_ALL[3])
+    digests.extend((GRANITE_ALL[3], GRANITE_GOAL[1]))
     if any(len(digest) != 64 for digest in digests):
         raise AssertionError("frozen SHA-256 values must contain 64 digits")
 
@@ -328,6 +335,7 @@ def _synthetic_inputs() -> tuple[Any, Any]:
         ),
     )
     supply = RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=routed,
         placements=(epoch0, epoch1),
         step_placement_epochs=tuple(
@@ -437,14 +445,14 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
     from simllm.core import execution_graph_from_json, execution_graph_to_json
     from simllm.traffic import (
         compare_request_moe_fidelity,
-        render_serial_execution_graph_goal,
+        project_execution_graph_goal,
         render_step_goal,
     )
 
     dims, supply = _synthetic_inputs()
     provider = _fixed_provider(2_000)
     traces = {}
-    graph_traces = {}
+    graph_messages_by_cell = {}
     positive = []
     permutations = []
     fatal_rows = []
@@ -480,18 +488,26 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
             )
             graph_json = execution_graph_to_json(lowerer.lower(record))
             graph = execution_graph_from_json(graph_json)
-            graph_trace = render_serial_execution_graph_goal(graph)
+            projection = project_execution_graph_goal(graph)
+            graph_messages = tuple(
+                message
+                for artifact in projection.artifacts
+                for message in artifact.trace.messages
+            )
             graph_report = compare_request_moe_fidelity(
                 record,
                 dims,
                 (0, 1),
                 supply,
-                graph_trace.messages,
+                graph_messages,
             )
             label = f"epoch-{epoch}-requests-{count}"
             trace.write(output_dir / f"{label}.goal")
             _write_json(output_dir / f"{label}.graph.json", graph_json)
-            graph_trace.write(output_dir / f"{label}.graph.goal")
+            for artifact_index, artifact in enumerate(projection.artifacts):
+                artifact.trace.write(
+                    output_dir / f"{label}.graph-artifact-{artifact_index:04d}.goal"
+                )
             positive.append(
                 {
                     "epoch": epoch,
@@ -506,7 +522,7 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
                 }
             )
             traces[(epoch, count)] = trace
-            graph_traces[(epoch, count)] = graph_trace
+            graph_messages_by_cell[(epoch, count)] = graph_messages
 
             if count >= 2:
                 permuted = _swap_requests(trace.messages, "alpha", "beta")
@@ -557,7 +573,7 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
     for epoch in (0, 1):
         for count in (1, 2, 3):
             trace = traces[(epoch, count)]
-            graph_trace = graph_traces[(epoch, count)]
+            graph_messages = graph_messages_by_cell[(epoch, count)]
             record = _synthetic_record(epoch, count)
             report = compare_request_moe_fidelity(
                 record,
@@ -581,10 +597,30 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
                 dims,
                 (0, 1),
                 supply,
-                graph_trace.messages,
+                graph_messages,
             )
             graph_rows_passed = graph_report.observed_request_rows == exact_rows
-            graph_goal_matches = graph_trace.render() == trace.render()
+            direct_rows = tuple(
+                (
+                    message.operation_id,
+                    message.source_rank,
+                    message.destination_rank,
+                    message.payload_bytes,
+                    message.request_payload_bytes,
+                )
+                for message in trace.messages
+            )
+            graph_rows = tuple(
+                (
+                    message.operation_id,
+                    message.source_rank,
+                    message.destination_rank,
+                    message.payload_bytes,
+                    message.request_payload_bytes,
+                )
+                for message in graph_messages
+            )
+            graph_messages_match = graph_rows == direct_rows
             written_goal = (output_dir / f"epoch-{epoch}-requests-{count}.goal").read_text(
                 encoding="utf-8"
             )
@@ -596,13 +632,13 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
                     "request_rows_match_frozen": row_passed,
                     "graph_request_rows_match_frozen": graph_rows_passed,
                     "physical_goal_matches_frozen": physical_passed,
-                    "graph_goal_matches_direct": graph_goal_matches,
+                    "graph_messages_match_direct": graph_messages_match,
                     "written_goal_matches_direct": written_goal == trace.render(),
                     "passed": (
                         row_passed
                         and graph_rows_passed
                         and physical_passed
-                        and graph_goal_matches
+                        and graph_messages_match
                         and written_goal == trace.render()
                     ),
                 }
@@ -656,6 +692,7 @@ def _granite_supply(arguments: argparse.Namespace, record: Any) -> Any:
         ),
     )
     return RoutedMoeSupply(
+        engine_rank=0,
         routed_experts=routed,
         placements=(placement,),
         step_placement_epochs=((record.step_index, 0),),
@@ -738,8 +775,8 @@ def _run_granite(arguments: argparse.Namespace, out: Path) -> dict[str, Any]:
         and permutation_report.l1_error_bytes == expected_permutation["l1_error_bytes"]
         and dict(permutation_report.request_delta_bytes)
         == expected_permutation["request_delta_bytes"]
-        and goal["send_count"] == 2_688
-        and goal["total_send_bytes"] == 207_499_264
+        and goal["send_count"] == GRANITE_GOAL[2]
+        and goal["total_send_bytes"] == GRANITE_GOAL[3]
         and gate_rejected
     )
     permutation = {
@@ -792,10 +829,10 @@ def _run_granite(arguments: argparse.Namespace, out: Path) -> dict[str, Any]:
     }
     (output_dir / "all.canonical.json").write_bytes(canonical_all)
     physical_matches = goal == {
-        "goal_bytes": 334_432,
-        "goal_sha256": SOURCE_ARTIFACTS["aggregate_goal"][1],
-        "send_count": 2_688,
-        "total_send_bytes": 207_499_264,
+        "goal_bytes": GRANITE_GOAL[0],
+        "goal_sha256": GRANITE_GOAL[1],
+        "send_count": GRANITE_GOAL[2],
+        "total_send_bytes": GRANITE_GOAL[3],
     }
     if not (
         all(item["matches_frozen"] for item in request_oracles.values())
@@ -827,6 +864,7 @@ def _run_granite(arguments: argparse.Namespace, out: Path) -> dict[str, Any]:
 
 def _run_native_sanity(arguments: argparse.Namespace, out: Path) -> dict[str, Any]:
     from simllm.backends import HtsimStepSink, HtsimStepSinkConfig
+    from simllm.traffic import render_step_goal
 
     dims, supply = _synthetic_inputs()
     provider = _fixed_provider(2_000)
@@ -859,7 +897,14 @@ def _run_native_sanity(arguments: argparse.Namespace, out: Path) -> dict[str, An
                 outcome = sink.outcomes[0]
                 expected = SYNTHETIC_JCT_PS[(epoch, count, bandwidth)]
                 goal_observation = _goal_observation(
-                    (workdir / f"step-{record.step_index:06d}.goal").read_text(encoding="utf-8")
+                    render_step_goal(
+                        record,
+                        dims,
+                        (0,),
+                        1,
+                        ep_ranks=(0, 1),
+                        routed_supply=supply,
+                    ).render()
                 )
                 expected_goal = SYNTHETIC_GOALS[(epoch, count)]
                 structural_passed = (
