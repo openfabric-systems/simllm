@@ -424,29 +424,46 @@ DP event and one fixed 4,096-byte TP event, still with no
 That historical component evidence does not change the earlier blocked
 behavioral denominator.
 
-VLLM-22 is complete as of 2026-08-12. The opt-in `granite-dbo` producer at the
+VLLM-22 remains open as of 2026-08-12. The opt-in `granite-dbo` producer at the
 `SimWorker` model-forward boundary translates each real vLLM v0.26.0 scheduler
-step into the audited Granite per-layer schedule. It records source submission
-order, per-rank compute and shared communication queues, participant-local
-DeepEP event waits, microbatch request correlation and request-visible
-completion frontiers. The producer derives no overlap percentage or edge from
-the serial compatibility graph. Unsupported model families, TP or PP shapes,
-explicit microbatch sizes, padded DBO and multi-token DBO splits fail
-explicitly; VLLM-23 owns those optional shapes.
+step into a Granite per-layer schedule. It records source submission order,
+per-rank compute and shared communication queues, participant-local edges,
+microbatch request correlation and request-visible completion frontiers. The
+producer derives no overlap percentage or edge from the serial compatibility
+graph. Unsupported model families, TP or PP shapes, explicit microbatch sizes,
+padded DBO and multi-token DBO splits fail explicitly; VLLM-23 owns those
+optional shapes. The audited vLLM wrapper supplies the event-wait argument and
+contains no wrapper-level global barrier, but `deep_ep` itself was not
+installed. Rank-local behavior below that wrapper is inferred rather than
+directly source-backed.
 
 The live eight-rank replay emitted observations on all 32 nonempty steps. All
 steps carried 24 layers and 48 unique dispatch/combine sites; 23 DBO steps
-carried 96 invocations. Traffic rebinding preserved 121,646 request-pair rows
-and 440,115,200 bytes across all six mode and placement cells, and completion
-reduction returned the original request IDs. Both serial-to-observed TPOT
-reductions passed their frozen bands. Both dependency perturbations moved
-TPOT positively but missed their frozen minimums, yielding `2/4` genuine-risk
-instances. The exact observed-versus-serial TTFT expectation also failed
-because the source permits rank-local next-layer progress after combine.
-TRAF-23 owns measured frontier and perturbation-magnitude precision. The
+carried 96 invocations. The run is void with findings because the fatal
+`ttft_exact_single_batch` guard was violated. That guard tested the same
+serial-versus-observed equivalence premise required to attribute the two
+in-band TPOT reductions to DBO. DBO-off steps 24 through 31 bound the measured
+non-DBO residual at 1.231 percent of the mean DBO reduction on both placements,
+but the failure is not orthogonal and no behavioral pass fraction is reported.
+
+Both arms use participant-local frontiers. Their structural differences are
+the open TRAF-9 whole-layer MoE ordering approximation and the observed arm's
+terminal logits plus `requests-visible` fan-in. TRAF-23 owns measured
+frontiers only. The retained 440,115,200 directed bytes are a pre-TRAF-25
+conservation identity over the source-multiplied table and are not portable.
+The adapter emits zero-byte semantic all-to-allv markers, so the observed path
+does not independently cross-check a routed-MoE byte count before traffic
+planning replaces them. VLLM-24 owns that P0 validation gap. The
 producer-disabled path passed all 64 per-step direct serial comparisons and
 both accepted graph and legacy diagnostic GOAL hashes. See
 [the observed-schedule results](../../examples/vllm_observed_schedule_v1/RESULTS.md).
+
+This branch also added a post-specified component test showing that one fake
+Granite configuration maps to `num_experts=32`, `top_k=8`,
+`moe_intermediate_size=512` and `local_num_experts=4`. The VLLM-22 freeze
+registered no VLLM-6 acceptance relation, so that component result does not
+partially close VLLM-6. Its complete geometry and executor-group clauses remain
+open below.
 The pre-play framework oracle adds a separate, inert-by-default vLLM general
 plugin. `VllmCpuRunner` enables it only inside an isolated CPU process. The
 plugin observes the stock `CPUWorker`, `CPUModelRunner`, v1 KV manager, block
@@ -524,15 +541,30 @@ and zero changed all-to-all bytes. The detailed evidence is in
   matrix. Hold out at least one model and group size; require modeled median
   and p95 call cost within a pre-registered relative or additive band, then
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
+- VLLM-24 (Precision; P0; M): restore an independent routed-MoE byte
+  cross-check on the active observation path. The Granite producer currently
+  emits zero-byte semantic all-to-allv markers;
+  `_validate_observed_collective` permits empty pair and request-pair tables,
+  and `_validate_microbatch_partition` only recombines work produced by the
+  same traffic planner. After TRAF-25, carry source-observed token ownership or
+  an equivalent independent per-request pair projection across the adapter
+  seam and require exact agreement with the traffic plan for source rank,
+  destination rank, request identity, per-source egress and total directed
+  bytes. The semantic-marker path may remain an explicit no-byte-evidence
+  mode, but it must not satisfy or be cited as a byte-correctness guard.
 
 ### Completeness
 
-- VLLM-6 (Completeness; P1; M) (remaining after VLLM-22 landed Granite MoE
-  geometry in `model_dims_from_vllm_config`): the executor-level
-  `SimExecutor` still passes no `ep_ranks` to a sink and does not derive its
-  expert group from the active parallel configuration. Acceptance must bind
-  the exact group used by vLLM, preserve the explicit no-EP path and retain
-  the VLLM-22 `SimWorker` schedule and serial-off identities exactly.
+- VLLM-6 (Completeness; P1; M): complete the adapter's MoE geometry and expert
+  group binding. This branch has post-specified component evidence for one
+  Granite `model_dims_from_vllm_config` mapping, but no expectations-only
+  acceptance relation preceded it, so the geometry clause remains open.
+  Register exact mappings for expert count, top-k, per-expert intermediate
+  size and local experts across enabled and no-MoE configurations, including
+  failure and default behavior. Then make `SimExecutor` derive the exact
+  expert group from the active parallel configuration and pass `ep_ranks` to
+  its sink. Acceptance must preserve the explicit no-EP path and the VLLM-22
+  `SimWorker` schedule and serial-off identities exactly.
 - VLLM-13 (Completeness; P1; L) (remaining GPU-present half after the flagged
   skeleton): the skeleton DP coordination half has landed through
   `SimGroupCoordinator`, including consumption of its local padded-token
@@ -569,14 +601,29 @@ and zero changed all-to-all bytes. The detailed evidence is in
   Freeze a fixed-workload signed TTFT/TPOT relation and quantitative band before
   implementation. The disabled projection must preserve every accepted
   VLLM-13 timestamp, token, record, and completion order exactly.
+- VLLM-22 (Completeness; P0; L): qualify the real vLLM
+  `ExecutionObservations` producer for the frozen Granite boundary. The
+  2026-08-12 run emitted all 24 ordered layers and 48 semantic MoE sites but is
+  void because `ttft_exact_single_batch` violated the frozen arm-equivalence
+  premise. A future expectations-only qualification must distinguish DBO from
+  the TRAF-9 and terminal-frontier differences, preserve exact submission
+  order, logical streams, dependencies, request correlation and completion
+  frontiers, and reach TTFT and TPOT through the supported metric chain. It
+  must name the wrapper or measured mechanism that makes each concurrency
+  legal and derive no edge from an overlap percentage or compatibility
+  schedule. Completion reduction must return the original request identities;
+  per-request routed-byte acceptance depends on TRAF-25 and VLLM-24. With the
+  producer absent, preserve the legacy sink call, serial graph and GOAL bytes,
+  timestamps and completion order exactly.
 - VLLM-23 (Completeness; P2; L): extend the source-backed observation producer
-  beyond the accepted Granite TP1, PP1, uniform one-token decode boundary.
+  beyond the implemented Granite TP1, PP1, uniform one-token decode boundary.
   Add exact request and token-interval correlation for multi-token or padded
   DBO splits, explicit `ubatch_size`, TP greater than one and PP greater than
   one. The current path rejects each shape before emitting a plausible
   schedule. Acceptance must exercise every enabled shape through traffic
   rebinding and request completion while preserving those explicit refusals,
-  the accepted Granite schedule and the producer-disabled serial path exactly.
+  the implemented Granite schedule and the producer-disabled serial path
+  exactly.
 
 ### Uncategorized
 

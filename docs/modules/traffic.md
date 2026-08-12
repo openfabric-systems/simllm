@@ -188,7 +188,8 @@ changed JCT by exactly 999 ps, and the absent-observation graph and GOAL bytes
 retained their accepted hashes. All 16 scored relations, 22 exact-oracle rows
 and 12 fatal unscored guards passed; see
 [the overlap results](../../examples/compute_comm_overlap_v1/RESULTS.md).
-The vLLM adapter now emits one accepted source-backed schedule. The runtime's
+The vLLM adapter now emits one implemented source-backed schedule. Its current
+qualification is void, as recorded below. The runtime's
 physical collective expansion and GPU-side contention gaps remain explicit
 under TRAF-14, CORE-26, CORE-27 and COMP-22.
 The 2026-08-12 TRAF-13 qualification added `DeviceRuntimeStepSink`, which binds
@@ -204,20 +205,33 @@ A separate pre-VLLM-22 live diagnostic confirmed that earlier boundary across
 one prefill and one decode step. It is historical component evidence and does
 not change that blocked denominator.
 
-TRAF-13 is complete as of the source-backed vLLM qualification on 2026-08-12.
-The eight-rank Granite replay emitted observations for all 32 nonempty steps,
-preserved 24 ordered layers and 48 unique semantic MoE sites per step, and
-routed them through traffic binding, the coarse runtime, completion events,
-`StepResult`, TTFT and TPOT. Both serial-to-observed TPOT reductions passed
-their frozen bands. Adding one dependency increased TPOT on every applicable
-step in both placements, proving the observed edges are metric-live, although
-the two frozen perturbation minimums failed. All request-pair identities and
-440,115,200 bytes survived across six cells. The explicit producer-disabled
-path passed all 64 direct serial per-step comparisons and both accepted
-fixture hashes. The single-batch observed schedule also refuted the frozen
-exact-TTFT assumption because rank-local DeepEP completion permits legal
-next-layer progress before the slowest participant. TRAF-23 owns measured
-frontier and perturbation-magnitude precision. See
+TRAF-13 remains open after the source-backed vLLM qualification on 2026-08-12.
+The eight-rank Granite replay emitted observations for all 32 nonempty steps
+and reached traffic binding, the coarse runtime, completion events,
+`StepResult`, TTFT and TPOT. The run is void with findings because the fatal
+`ttft_exact_single_batch` guard was violated. That guard tested the same
+serial-versus-observed arm-equivalence premise needed to attribute the two
+in-band TPOT reductions to DBO, so the failure is not orthogonal to the raw
+behavioral findings. Retained DBO-off steps 24 through 31 bound the measured
+non-DBO residual at 1.231 percent of the mean DBO reduction on both placements,
+but do not restore a score.
+
+The residual is not caused by participant-local dependency scope, which both
+lowerers use. The structural differences are the open TRAF-9 whole-layer MoE
+ordering approximation and the observed arm's terminal logits plus
+`requests-visible` fan-in. The vLLM wrapper shows event waits and no
+wrapper-level global barrier, but `deep_ep` itself was not installed; lower
+level rank-local completion is inferred, not directly source-backed.
+
+The retained 440,115,200 directed bytes are a pre-TRAF-25 conservation
+identity over the source-multiplied table and are not portable. The duration
+model keys on maximum per-source egress, not total bytes. Under TRAF-25,
+dispatch egress from the owning rank stays fixed while combine collapses, so
+the communication term changes by roughly a factor of two rather than the
+eightfold total-byte change. `_validate_microbatch_partition` conserves the
+inflated planner table against itself and cannot detect the defect; it is not a
+byte-correctness guard. Both reduction bands are consequently non-portable
+across TRAF-25. See
 [the source-backed results](../../examples/vllm_observed_schedule_v1/RESULTS.md).
 
 ## Open tasks
@@ -249,18 +263,16 @@ frontier and perturbation-magnitude precision. See
   graph scope, move live JCT by the registered direction and magnitude, and
   retain the current supported artifact bytes and timing as the explicit off
   path.
-- TRAF-23 (Precision; P1; L): replace the source-derived rank-local DeepEP
-  completion-frontier timing surrogate on the VLLM-22 path with measured CUDA
-  event evidence. The accepted study observed perturbation increases of
-  31,864 ps on the single node and 286,799.261 ps cross-node, below the frozen
-  100,000 ps and 5,000,000 ps minimums, and observed legal single-batch TTFT
-  reductions where exact equality had been expected. Capture per-rank
-  dispatch/combine return, next-compute eligibility and final visibility on a
-  B100 NVLink node and a 400 Gbit/s cross-node placement. Fit only identifiable
-  latency and frontier terms, hold out at least one payload and step shape,
-  and require registered held-out error plus signed TTFT/TPOT movement. The
-  current source schedule and producer-disabled serial identities remain the
-  exact off paths.
+- TRAF-23 (Precision; P1; L): measure per-rank completion frontiers on the
+  VLLM-22 path. Capture dispatch and combine return, next-compute eligibility,
+  final-logits completion and terminal `requests-visible` fan-in on a B100
+  NVLink node and a 400 Gbit/s cross-node placement. Fit only identifiable
+  latency and frontier terms, hold out at least one payload and step shape, and
+  require registered held-out error bounds on those measured frontiers. Any
+  one-edge perturbation criterion must be no larger than one measured target
+  collective's service time; a whole-step reduction fraction is not an
+  admissible minimum. The current source schedule and producer-disabled serial
+  identities remain the exact off paths.
 - TRAF-19 (Precision; P2; L): add a statistical flow-completion level
   beside the fluid and packet-level network models. Fit a completion-time
   distribution offline from packet-level runs over a declared topology,
@@ -284,6 +296,17 @@ frontier and perturbation-magnitude precision. See
 
 ### Completeness
 
+- TRAF-13 (Completeness; P0; L): qualify at least one real framework schedule
+  producer through `ObservedStepLowerer`. The 2026-08-12 VLLM-22 run reached
+  the full metric chain but is void because `ttft_exact_single_batch` violated
+  the frozen arm-equivalence premise. A future expectations-only qualification
+  must distinguish DBO from the TRAF-9 and terminal-frontier differences,
+  preserve every captured order and dependency fact through traffic binding,
+  `DeviceRuntime`, `CompletionEvent`, `StepResult`, TTFT and TPOT, and show a
+  registered live-metric relation. Disabling the producer must select the
+  serial lowerer and preserve every accepted serial graph, GOAL byte,
+  timestamp and completion order exactly. Routed-byte acceptance depends on
+  TRAF-25 and VLLM-24.
 - TRAF-15 (Completeness; P2; M): project arbitrary legal forward, non-monotone
   and general non-contiguous or fan-in DAGs through the step sink. The current
   projector rejects unsupported order classes before writing an artifact.
