@@ -26,7 +26,7 @@ from simllm.core.bookkeeping_io import (
     bookkeeping_ledger_to_json,
 )
 from simllm.core.clock import VirtualClock
-from simllm.core.completion import CompletionReducer
+from simllm.core.completion import CompletionReducer, sampled_request_ids
 from simllm.core.execution import (
     COLLECTIVE_PLAN_SCHEMA,
     COMPLETION_EVENT_SCHEMA,
@@ -294,6 +294,7 @@ __all__ = [
     "run_provenance_from_json",
     "run_provenance_to_bytes",
     "run_provenance_to_json",
+    "sampled_request_ids",
     "step_record_from_json",
     "step_record_to_json",
     "step_records_from_jsonl",
