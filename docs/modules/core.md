@@ -665,3 +665,14 @@ does not claim to produce these resource-contention measurements.
   timestamp regression before publishing a result. The explicit diagnostic
   and BRIDGE-1 prepared modes remain the identity off paths and must preserve
   every accepted byte and timestamp when the online session is disabled.
+- CORE-36 (Completeness; P1; M): make precision-level selection one
+  validated surface. Each seam is currently selected separately through a
+  provider object, a profile string, the presence of a placement
+  manifest, a build option or an environment variable, so a run cannot
+  state its full fidelity configuration in one place and a result cannot
+  be read back with the precision that produced it. Define one
+  configuration naming the level of every seam, validate it up front,
+  refuse incompatible combinations explicitly rather than silently
+  degrading, and stamp the resolved selection into the run provenance
+  next to the existing schema and hash fields. The current per-seam
+  spellings remain supported and byte-identical while they are migrated.
