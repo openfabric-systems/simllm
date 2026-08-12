@@ -510,9 +510,18 @@ def parse_nsight_cuda_gpu_trace_csv(
     """
 
     with Path(path).open(newline="", encoding="utf-8") as stream:
-        reader = csv.DictReader(stream)
-        if not reader.fieldnames:
-            raise ValueError("Nsight CSV has no header")
+        header = None
+        for line in stream:
+            candidate = next(csv.reader([line]))
+            if len(candidate) >= 2 and (
+                _normalize_header(candidate[0]) == "startns"
+                and _normalize_header(candidate[1]) == "durationns"
+            ):
+                header = candidate
+                break
+        if header is None:
+            raise ValueError("Nsight CSV has no CUDA GPU trace header")
+        reader = csv.DictReader(stream, fieldnames=header)
         name_col = _find_column(reader.fieldnames, "Name")
         duration_col = _find_column(reader.fieldnames, "Duration (ns)", "Duration")
         grid_cols = tuple(

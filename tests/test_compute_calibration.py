@@ -161,6 +161,8 @@ def test_nsight_csv_parser_preserves_order_samples_and_launch(tmp_path):
         },
     ]
     with path.open("w", newline="", encoding="utf-8") as stream:
+        stream.write("Generating SQLite file from report\n")
+        stream.write("Processing report with cuda_gpu_trace.py...\n")
         writer = csv.DictWriter(stream, fieldnames=headers)
         writer.writeheader()
         writer.writerows(rows)
@@ -192,7 +194,7 @@ def test_nsight_csv_parser_preserves_order_samples_and_launch(tmp_path):
 def test_nsight_csv_parser_rejects_missing_target_rows(tmp_path):
     path = tmp_path / "trace.csv"
     path.write_text(
-        "Duration (ns),GrdX,GrdY,GrdZ,BlkX,BlkY,BlkZ,Reg/Trd,StcSMem,"
+        "Start (ns),Duration (ns),GrdX,GrdY,GrdZ,BlkX,BlkY,BlkZ,Reg/Trd,StcSMem,"
         "DymSMem,Device,Ctx,Strm,Name\n",
         encoding="utf-8",
     )
