@@ -445,14 +445,14 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
     from simllm.core import execution_graph_from_json, execution_graph_to_json
     from simllm.traffic import (
         compare_request_moe_fidelity,
-        render_serial_execution_graph_goal,
+        project_execution_graph_goal,
         render_step_goal,
     )
 
     dims, supply = _synthetic_inputs()
     provider = _fixed_provider(2_000)
     traces = {}
-    graph_traces = {}
+    graph_messages_by_cell = {}
     positive = []
     permutations = []
     fatal_rows = []
@@ -488,18 +488,26 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
             )
             graph_json = execution_graph_to_json(lowerer.lower(record))
             graph = execution_graph_from_json(graph_json)
-            graph_trace = render_serial_execution_graph_goal(graph)
+            projection = project_execution_graph_goal(graph)
+            graph_messages = tuple(
+                message
+                for artifact in projection.artifacts
+                for message in artifact.trace.messages
+            )
             graph_report = compare_request_moe_fidelity(
                 record,
                 dims,
                 (0, 1),
                 supply,
-                graph_trace.messages,
+                graph_messages,
             )
             label = f"epoch-{epoch}-requests-{count}"
             trace.write(output_dir / f"{label}.goal")
             _write_json(output_dir / f"{label}.graph.json", graph_json)
-            graph_trace.write(output_dir / f"{label}.graph.goal")
+            for artifact_index, artifact in enumerate(projection.artifacts):
+                artifact.trace.write(
+                    output_dir / f"{label}.graph-artifact-{artifact_index:04d}.goal"
+                )
             positive.append(
                 {
                     "epoch": epoch,
@@ -514,7 +522,7 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
                 }
             )
             traces[(epoch, count)] = trace
-            graph_traces[(epoch, count)] = graph_trace
+            graph_messages_by_cell[(epoch, count)] = graph_messages
 
             if count >= 2:
                 permuted = _swap_requests(trace.messages, "alpha", "beta")
@@ -565,7 +573,7 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
     for epoch in (0, 1):
         for count in (1, 2, 3):
             trace = traces[(epoch, count)]
-            graph_trace = graph_traces[(epoch, count)]
+            graph_messages = graph_messages_by_cell[(epoch, count)]
             record = _synthetic_record(epoch, count)
             report = compare_request_moe_fidelity(
                 record,
@@ -589,10 +597,30 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
                 dims,
                 (0, 1),
                 supply,
-                graph_trace.messages,
+                graph_messages,
             )
             graph_rows_passed = graph_report.observed_request_rows == exact_rows
-            graph_goal_matches = graph_trace.render() == trace.render()
+            direct_rows = tuple(
+                (
+                    message.operation_id,
+                    message.source_rank,
+                    message.destination_rank,
+                    message.payload_bytes,
+                    message.request_payload_bytes,
+                )
+                for message in trace.messages
+            )
+            graph_rows = tuple(
+                (
+                    message.operation_id,
+                    message.source_rank,
+                    message.destination_rank,
+                    message.payload_bytes,
+                    message.request_payload_bytes,
+                )
+                for message in graph_messages
+            )
+            graph_messages_match = graph_rows == direct_rows
             written_goal = (output_dir / f"epoch-{epoch}-requests-{count}.goal").read_text(
                 encoding="utf-8"
             )
@@ -604,13 +632,13 @@ def _run_synthetic(out: Path) -> tuple[dict[str, Any], dict[tuple[int, int], Any
                     "request_rows_match_frozen": row_passed,
                     "graph_request_rows_match_frozen": graph_rows_passed,
                     "physical_goal_matches_frozen": physical_passed,
-                    "graph_goal_matches_direct": graph_goal_matches,
+                    "graph_messages_match_direct": graph_messages_match,
                     "written_goal_matches_direct": written_goal == trace.render(),
                     "passed": (
                         row_passed
                         and graph_rows_passed
                         and physical_passed
-                        and graph_goal_matches
+                        and graph_messages_match
                         and written_goal == trace.render()
                     ),
                 }
