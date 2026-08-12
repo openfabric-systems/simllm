@@ -22,34 +22,76 @@ VECTOR_BYTES = 2_048
 PACKET_WIRE_BYTES = 4_096
 HEADER_BYTES = 64
 ROUTES = ((3, 1), (2, 1), (3, 2), (1, 3))
-MESSAGE_COUNTS = {
-    "aggregate": 18,
-    "per-expert-group": 18,
-    "per-token": 48,
+CORRECTED_SYNTHETIC = {
+    "engine_rank": 0,
+    "source_sequences": {
+        "0": (3, 1, 2, 1, 3, 2, 1, 3),
+        "1": (),
+        "2": (),
+        "3": (),
+    },
+    "pair_payload_bytes": {
+        "dispatch": ((0, 1, 6_144), (0, 2, 4_096), (0, 3, 6_144)),
+        "combine": ((1, 0, 6_144), (2, 0, 4_096), (3, 0, 6_144)),
+    },
+    "message_counts": {
+        "aggregate": 6,
+        "per-expert-group": 6,
+        "per-token": 16,
+    },
+    "total_bytes": 32_768,
+    "hop_count": 16,
+    "hop_ceiling": 16,
+    "physical_bounds_ps": {
+        200_000_000_000: (1_310_720, 5_500_000),
+        400_000_000_000: (655_360, 2_750_000),
+    },
 }
-TOTAL_BYTES = 98_304
-PACKET_DELTA_BANDS_PS = {
+ARCHIVED_SOURCE_MULTIPLIED_SYNTHETIC = {
+    "total_bytes": 98_304,
+    "hop_count": 48,
+}
+FROZEN_PACKET_DELTA_BANDS_PS = {
     200_000_000_000: (15_360, 61_440),
     400_000_000_000: (7_680, 30_720),
 }
-PHYSICAL_BOUNDS_PS = {
-    200_000_000_000: (1_474_560, 9_000_000),
-    400_000_000_000: (737_280, 4_500_000),
-}
-FLUID_ABS_DELTA_MAX_PS = 1_000
-RATE_SCALING_TOLERANCE_PS = 2_000
-SCORED_FAMILIES = 3
-SCORED_INSTANCES = 10
+FROZEN_FLUID_ABS_DELTA_MAX_PS = 1_000
+FROZEN_RATE_SCALING_TOLERANCE_PS = 2_000
+FROZEN_SCORED_FAMILIES = 3
+FROZEN_SCORED_INSTANCES = 10
 GRANITE_ROUTING_SHA256 = (
     "24e986e989e21f1bfe7e758d4470928c82c3bbaec06072a839743b9b17d7cf5f"
 )
 GRANITE_STEPS_SHA256 = (
     "824cd9557293328bb42b593ac893b6a067302e545b087c9219195ccb8031d755"
 )
-GRANITE_AGGREGATE_GOAL = (
+ARCHIVED_DEFECTIVE_GRANITE_GOAL = (
     334_432,
     "08a0403af66ff8a9d6b18f93afd15ae0bc925cc85555acf8a0593438a3d7bc92",
 )
+CORRECTED_GRANITE = {
+    "engine_rank": 0,
+    "total_new_tokens": 54,
+    "message_counts": {
+        "aggregate": 336,
+        "per-expert-group": 1_008,
+        "per-token": 12_482,
+    },
+    "total_bytes": 25_563_136,
+    "hop_ceiling": 20_736,
+    "peak_egress_bytes": 12_781_568,
+    "aggregate_goal": (
+        47_399,
+        "6bb83366a3936bcf1e435cab008bb55c2966777528a9e8d885dd44d47f5a4943",
+    ),
+    "compute_ps": 99_336_000,
+    "compute_plus_peak_egress_floor_ps": {
+        200_000_000_000: 610_598_720,
+        400_000_000_000: 354_967_360,
+    },
+}
+ARCHIVED_DEFECTIVE_GRANITE_HOPS = 101_318
+REFREEZE_EXPECTATIONS_COMMIT = "82d3ab45ea47c811fa6db0d91ac8122e255fd62b"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_TIMEOUT_S = 600
 GRANITE_RENDER_COMPILE_LIMIT_S = 30.0
@@ -89,28 +131,87 @@ def check_only(args: argparse.Namespace) -> None:
         raise AssertionError("packet arithmetic inputs drifted")
     if ROUTES != ((3, 1), (2, 1), (3, 2), (1, 3)):
         raise AssertionError("observed route fixture drifted")
-    if MESSAGE_COUNTS != {
-        "aggregate": 18,
-        "per-expert-group": 18,
-        "per-token": 48,
+    if CORRECTED_SYNTHETIC["message_counts"] != {
+        "aggregate": 6,
+        "per-expert-group": 6,
+        "per-token": 16,
     }:
         raise AssertionError("message-count registry drifted")
-    if TOTAL_BYTES != 2 * 24 * VECTOR_BYTES:
+    if CORRECTED_SYNTHETIC["total_bytes"] != 2 * 8 * VECTOR_BYTES:
         raise AssertionError("fixture byte arithmetic drifted")
-    if PACKET_DELTA_BANDS_PS[200_000_000_000] != tuple(
-        2 * value for value in PACKET_DELTA_BANDS_PS[400_000_000_000]
+    if CORRECTED_SYNTHETIC["hop_count"] != 16:
+        raise AssertionError("fixture hop count drifted")
+    if CORRECTED_SYNTHETIC["hop_ceiling"] != 4 * 2 * 1 * 2:
+        raise AssertionError("fixture hop ceiling drifted")
+    if CORRECTED_SYNTHETIC["source_sequences"] != {
+        "0": (3, 1, 2, 1, 3, 2, 1, 3),
+        "1": (),
+        "2": (),
+        "3": (),
+    }:
+        raise AssertionError("fixture source-sequence registry drifted")
+    if CORRECTED_SYNTHETIC["pair_payload_bytes"] != {
+        "dispatch": ((0, 1, 6_144), (0, 2, 4_096), (0, 3, 6_144)),
+        "combine": ((1, 0, 6_144), (2, 0, 4_096), (3, 0, 6_144)),
+    }:
+        raise AssertionError("fixture pair registry drifted")
+    if (
+        ARCHIVED_SOURCE_MULTIPLIED_SYNTHETIC["hop_count"]
+        <= CORRECTED_SYNTHETIC["hop_ceiling"]
+    ):
+        raise AssertionError("archived source multiplication does not fail the guard")
+    if FROZEN_PACKET_DELTA_BANDS_PS[200_000_000_000] != tuple(
+        2 * value for value in FROZEN_PACKET_DELTA_BANDS_PS[400_000_000_000]
     ):
         raise AssertionError("packet delta bands do not scale inversely with rate")
-    if any(floor <= 0 or ceiling < floor for floor, ceiling in PHYSICAL_BOUNDS_PS.values()):
+    if any(
+        floor <= 0 or ceiling < floor
+        for floor, ceiling in CORRECTED_SYNTHETIC["physical_bounds_ps"].values()
+    ):
         raise AssertionError("physical bounds are malformed")
-    if FLUID_ABS_DELTA_MAX_PS != 1_000 or RATE_SCALING_TOLERANCE_PS != 2_000:
+    if (
+        FROZEN_FLUID_ABS_DELTA_MAX_PS != 1_000
+        or FROZEN_RATE_SCALING_TOLERANCE_PS != 2_000
+    ):
         raise AssertionError("relation tolerances drifted")
-    if (SCORED_FAMILIES, SCORED_INSTANCES) != (3, 10):
+    if (FROZEN_SCORED_FAMILIES, FROZEN_SCORED_INSTANCES) != (3, 10):
         raise AssertionError("evidence accounting drifted")
     if any(len(value) != 64 for value in (GRANITE_ROUTING_SHA256, GRANITE_STEPS_SHA256)):
         raise AssertionError("Granite input hash is malformed")
-    if GRANITE_AGGREGATE_GOAL[0] <= 0 or len(GRANITE_AGGREGATE_GOAL[1]) != 64:
-        raise AssertionError("Granite aggregate oracle is malformed")
+    if any(
+        size <= 0 or len(digest) != 64
+        for size, digest in (
+            ARCHIVED_DEFECTIVE_GRANITE_GOAL,
+            CORRECTED_GRANITE["aggregate_goal"],
+        )
+    ):
+        raise AssertionError("Granite aggregate registry is malformed")
+    if CORRECTED_GRANITE["message_counts"] != {
+        "aggregate": 336,
+        "per-expert-group": 1_008,
+        "per-token": 12_482,
+    }:
+        raise AssertionError("Granite message-count registry drifted")
+    if (
+        CORRECTED_GRANITE["total_bytes"]
+        != CORRECTED_GRANITE["message_counts"]["per-token"] * VECTOR_BYTES
+    ):
+        raise AssertionError("Granite byte arithmetic drifted")
+    if CORRECTED_GRANITE["hop_ceiling"] != 54 * 8 * 24 * 2:
+        raise AssertionError("Granite hop ceiling drifted")
+    if (
+        CORRECTED_GRANITE["message_counts"]["per-token"]
+        > CORRECTED_GRANITE["hop_ceiling"]
+    ):
+        raise AssertionError("Granite routed hops exceed the independent ceiling")
+    if ARCHIVED_DEFECTIVE_GRANITE_HOPS <= CORRECTED_GRANITE["hop_ceiling"]:
+        raise AssertionError("archived Granite source multiplication evades the guard")
+    if CORRECTED_GRANITE["peak_egress_bytes"] != 12_781_568:
+        raise AssertionError("Granite peak-egress registry drifted")
+    if REFREEZE_EXPECTATIONS_COMMIT != (
+        "82d3ab45ea47c811fa6db0d91ac8122e255fd62b"
+    ):
+        raise AssertionError("refreeze commit registry drifted")
     if any(not str(path) for path in (args.out, args.granite_root, args.htsim_rnic, args.txt2bin)):
         raise AssertionError("registered path argument is empty")
     print(
@@ -191,23 +292,31 @@ def _validate_result_inputs(args: argparse.Namespace) -> dict[str, Any]:
     expected = {
         "routing": GRANITE_ROUTING_SHA256,
         "steps": GRANITE_STEPS_SHA256,
-        "aggregate_goal": GRANITE_AGGREGATE_GOAL[1],
+        "aggregate_goal": ARCHIVED_DEFECTIVE_GRANITE_GOAL[1],
     }
     for label, digest in expected.items():
         observations[label]["authored_against_sha256"] = digest
         observations[label]["matches_authored_against"] = (
             observations[label]["sha256"] == digest
         )
-        if not observations[label]["matches_authored_against"]:
-            raise AssertionError(f"Granite {label} changed before the study")
-    if observations["aggregate_goal"]["bytes"] != GRANITE_AGGREGATE_GOAL[0]:
-        raise AssertionError("accepted Granite aggregate GOAL size changed")
+    aggregate_size_matches = (
+        observations["aggregate_goal"]["bytes"]
+        == ARCHIVED_DEFECTIVE_GRANITE_GOAL[0]
+    )
     return {
         "artifacts": observations,
+        "archived_aggregate_size_matches": aggregate_size_matches,
         "observed_simllm_commit": _git_object("HEAD"),
         "observed_htsim_gitlink": _git_object("HEAD:third_party/htsim"),
         "htsim_binary": _path_observation(args.htsim_rnic),
         "txt2bin_binary": _path_observation(args.txt2bin),
+        "all_passed": (
+            aggregate_size_matches
+            and all(
+                bool(observation["matches_authored_against"])
+                for observation in observations.values()
+            )
+        ),
     }
 
 
@@ -309,6 +418,7 @@ def _synthetic_fixture(output_dir: Path) -> tuple[Any, Any, Any, Any]:
         expert_owners=tuple((0, expert, expert) for expert in range(4)),
     )
     supply = RoutedMoeSupply(
+        engine_rank=CORRECTED_SYNTHETIC["engine_rank"],
         routed_experts=routing,
         placements=(placement,),
         step_placement_epochs=((0, 0),),
@@ -486,7 +596,7 @@ def _evaluate_behavior(cells: dict[str, dict[str, Any]]) -> dict[str, Any]:
     packet_signed = []
     for rate in RATES_BPS:
         subject = completion("per-token", "rnic-nn", rate)
-        floor, ceiling = PACKET_DELTA_BANDS_PS[rate]
+        floor, ceiling = FROZEN_PACKET_DELTA_BANDS_PS[rate]
         for comparator in ("per-expert-group", "aggregate"):
             delta = subject - completion(comparator, "rnic-nn", rate)
             packet_signed.append(
@@ -518,8 +628,8 @@ def _evaluate_behavior(cells: dict[str, dict[str, Any]]) -> dict[str, Any]:
                 "delta_200g_ps": delta_200,
                 "delta_400g_ps": delta_400,
                 "absolute_scaling_error_ps": error,
-                "maximum_error_ps": RATE_SCALING_TOLERANCE_PS,
-                "passed": error <= RATE_SCALING_TOLERANCE_PS,
+                "maximum_error_ps": FROZEN_RATE_SCALING_TOLERANCE_PS,
+                "passed": error <= FROZEN_RATE_SCALING_TOLERANCE_PS,
             }
         )
 
@@ -536,18 +646,25 @@ def _evaluate_behavior(cells: dict[str, dict[str, Any]]) -> dict[str, Any]:
                     "grouping": grouping,
                     "rate_bps": rate,
                     "raw_delta_ps": delta,
-                    "maximum_absolute_delta_ps": FLUID_ABS_DELTA_MAX_PS,
-                    "passed": abs(delta) <= FLUID_ABS_DELTA_MAX_PS,
+                    "maximum_absolute_delta_ps": FROZEN_FLUID_ABS_DELTA_MAX_PS,
+                    "passed": abs(delta) <= FROZEN_FLUID_ABS_DELTA_MAX_PS,
                 }
             )
     instances = packet_signed + inverse_rate + fluid
+    family_results = {
+        "packet_signed_delta": all(row["passed"] for row in packet_signed),
+        "packet_inverse_rate": all(row["passed"] for row in inverse_rate),
+        "fluid_grouping": all(row["passed"] for row in fluid),
+    }
     return {
         "packet_signed_delta": packet_signed,
         "packet_inverse_rate": inverse_rate,
         "fluid_grouping": fluid,
-        "registered_family_classes": SCORED_FAMILIES,
-        "registered_instances": SCORED_INSTANCES,
+        "registered_family_classes": FROZEN_SCORED_FAMILIES,
+        "registered_instances": FROZEN_SCORED_INSTANCES,
+        "passed_family_classes": sum(family_results.values()),
         "passed_instances": sum(bool(row["passed"]) for row in instances),
+        "family_results": family_results,
         "all_passed": all(bool(row["passed"]) for row in instances),
     }
 
@@ -555,7 +672,9 @@ def _evaluate_behavior(cells: dict[str, dict[str, Any]]) -> dict[str, Any]:
 def _evaluate_physical_bounds(cells: dict[str, dict[str, Any]]) -> dict[str, Any]:
     rows = []
     for key, cell in sorted(cells.items()):
-        floor, ceiling = PHYSICAL_BOUNDS_PS[int(cell["rate_bps"])]
+        floor, ceiling = CORRECTED_SYNTHETIC["physical_bounds_ps"][
+            int(cell["rate_bps"])
+        ]
         completion = int(cell["job_completion_time_ps"])
         rows.append(
             {
@@ -592,36 +711,56 @@ def _evaluate_synthetic_exact(
         for source in range(4)
     }
     expected_sequences = {
-        "0": [3, 1, 2, 1, 3, 2, 1, 3],
-        "1": [3, 2, 3, 2, 3],
-        "2": [3, 1, 1, 3, 1, 3],
-        "3": [1, 2, 1, 2, 1],
+        source: list(destinations)
+        for source, destinations in CORRECTED_SYNTHETIC[
+            "source_sequences"
+        ].items()
     }
     routing_routes = tuple(
         token.layers[0].expert_ids for token in routing.requests[0].tokens
+    )
+    observed_hops = (
+        sum(message.payload_bytes for message in (*dispatch.messages, *combine.messages))
+        // VECTOR_BYTES
     )
     checks = {
         "v2_top_k_tuple_order": routing_routes == ROUTES,
         "per_token_message_count": (
             len(dispatch.messages) + len(combine.messages)
-            == MESSAGE_COUNTS["per-token"]
+            == CORRECTED_SYNTHETIC["message_counts"]["per-token"]
         ),
         "expert_group_message_count": (
             len(grouped_dispatch.messages) + len(grouped_combine.messages)
-            == MESSAGE_COUNTS["per-expert-group"]
+            == CORRECTED_SYNTHETIC["message_counts"]["per-expert-group"]
         ),
         "aggregate_message_count": (
-            len(traces["aggregate"].messages) == MESSAGE_COUNTS["aggregate"]
+            len(traces["aggregate"].messages)
+            == CORRECTED_SYNTHETIC["message_counts"]["aggregate"]
         ),
         "source_sequences": source_sequences == expected_sequences,
+        "engine_source": all(
+            message.source_rank == CORRECTED_SYNTHETIC["engine_rank"]
+            for message in dispatch.messages
+        ),
         "total_bytes": (
             sum(message.payload_bytes for message in dispatch.messages)
             + sum(message.payload_bytes for message in combine.messages)
-            == TOTAL_BYTES
+            == CORRECTED_SYNTHETIC["total_bytes"]
+        ),
+        "hop_count": (
+            observed_hops
+            == CORRECTED_SYNTHETIC["hop_count"]
+            <= CORRECTED_SYNTHETIC["hop_ceiling"]
         ),
         "per_token_pair_projection": (
             dispatch.pair_payload_bytes == aggregate_dispatch.pair_payload_bytes
             and combine.pair_payload_bytes == aggregate_combine.pair_payload_bytes
+        ),
+        "exact_pair_payloads": (
+            dispatch.pair_payload_bytes
+            == CORRECTED_SYNTHETIC["pair_payload_bytes"]["dispatch"]
+            and combine.pair_payload_bytes
+            == CORRECTED_SYNTHETIC["pair_payload_bytes"]["combine"]
         ),
         "expert_group_request_projection": (
             grouped_dispatch.request_pair_payload_bytes
@@ -650,6 +789,8 @@ def _evaluate_synthetic_exact(
     return {
         "checks": checks,
         "source_sequences": source_sequences,
+        "observed_hops": observed_hops,
+        "hop_ceiling": CORRECTED_SYNTHETIC["hop_ceiling"],
         "all_passed": all(checks.values()),
     }
 
@@ -731,6 +872,7 @@ def _run_granite(
         args.granite_root / "replay-400g" / "routed-experts.json"
     )
     supply = RoutedMoeSupply(
+        engine_rank=CORRECTED_GRANITE["engine_rank"],
         routed_experts=routing,
         placements=(
             ExpertPlacementSnapshot(
@@ -827,8 +969,8 @@ def _run_granite(
                 "trace_schema": routing.trace_schema,
                 "order_authority": "reconstructed-v1",
                 "plan_item_count": len(plan),
-                "message_count": planned_message_count,
-                "message_bytes": planned_message_bytes,
+                "planned_message_count": planned_message_count,
+                "planned_message_bytes": planned_message_bytes,
                 "plan_ns": plan_ns,
                 "plan_peak_traced_bytes": plan_peak,
                 "render_timed_out": True,
@@ -846,11 +988,11 @@ def _run_granite(
         to_binary(goal_path, binary_path, tool=args.txt2bin)
         compile_ns = time.perf_counter_ns() - start
         goal = _goal_observation(trace)
-        if grouping == "aggregate" and (
-            goal["goal_bytes"],
-            goal["goal_sha256"],
-        ) != GRANITE_AGGREGATE_GOAL:
-            raise AssertionError("generated aggregate Granite GOAL changed")
+        matches_corrected_aggregate_goal = (
+            grouping != "aggregate"
+            or (goal["goal_bytes"], goal["goal_sha256"])
+            == CORRECTED_GRANITE["aggregate_goal"]
+        )
 
         backends = {}
         for profile in PROFILES:
@@ -893,6 +1035,8 @@ def _run_granite(
             "trace_schema": routing.trace_schema,
             "order_authority": "reconstructed-v1",
             "plan_item_count": len(plan),
+            "planned_message_count": planned_message_count,
+            "planned_message_bytes": planned_message_bytes,
             "plan_ns": plan_ns,
             "render_ns": render_ns,
             "render_timed_out": False,
@@ -904,6 +1048,7 @@ def _run_granite(
             "render_plus_compile_ns": render_ns + compile_ns,
             "backends": backends,
             "practical_for_large_sweeps": practical,
+            "matches_corrected_aggregate_goal": matches_corrected_aggregate_goal,
         }
         _write_json(output_dir / "progress.json", observations)
     return {
@@ -911,6 +1056,13 @@ def _run_granite(
         "total_new_tokens": record.total_new_tokens,
         "trace_schema": routing.trace_schema,
         "order_authority": "reconstructed-v1, not framework-observed",
+        "pre_measurement_physical_sanity": {
+            "peak_egress_bytes": CORRECTED_GRANITE["peak_egress_bytes"],
+            "compute_ps": CORRECTED_GRANITE["compute_ps"],
+            "compute_plus_peak_egress_floor_ps": CORRECTED_GRANITE[
+                "compute_plus_peak_egress_floor_ps"
+            ],
+        },
         "thresholds": {
             "render_plus_compile_s": GRANITE_RENDER_COMPILE_LIMIT_S,
             "peak_traced_bytes": GRANITE_MEMORY_LIMIT_BYTES,
@@ -921,6 +1073,83 @@ def _run_granite(
         },
         "groupings": observations,
     }
+
+
+def _evaluate_granite_exact(granite: dict[str, Any]) -> dict[str, Any]:
+    grouping_checks = {}
+    for grouping in GROUPINGS:
+        observation = granite["groupings"].get(grouping, {})
+        grouping_checks[grouping] = {
+            "message_count": (
+                observation.get("planned_message_count")
+                == CORRECTED_GRANITE["message_counts"][grouping]
+            ),
+            "message_bytes": (
+                observation.get("planned_message_bytes")
+                == CORRECTED_GRANITE["total_bytes"]
+            ),
+        }
+    checks = {
+        "total_new_tokens": (
+            granite["total_new_tokens"] == CORRECTED_GRANITE["total_new_tokens"]
+        ),
+        "message_counts_and_bytes": all(
+            all(checks.values()) for checks in grouping_checks.values()
+        ),
+        "hop_ceiling": (
+            CORRECTED_GRANITE["message_counts"]["per-token"]
+            <= CORRECTED_GRANITE["hop_ceiling"]
+        ),
+        "aggregate_goal_identity": bool(
+            granite["groupings"]
+            .get("aggregate", {})
+            .get("matches_corrected_aggregate_goal")
+        ),
+    }
+    return {
+        "checks": checks,
+        "grouping_checks": grouping_checks,
+        "hop_count": CORRECTED_GRANITE["message_counts"]["per-token"],
+        "hop_ceiling": CORRECTED_GRANITE["hop_ceiling"],
+        "all_passed": all(checks.values()),
+    }
+
+
+def _evaluate_quiescence(
+    synthetic_cells: dict[str, dict[str, Any]],
+    granite: dict[str, Any],
+) -> dict[str, Any]:
+    synthetic = {
+        key: bool(cell["quiescent"])
+        for key, cell in sorted(synthetic_cells.items())
+    }
+    granite_completed = {}
+    for grouping, observation in granite["groupings"].items():
+        for profile, backend in observation.get("backends", {}).items():
+            if backend.get("timed_out"):
+                continue
+            granite_completed[f"{grouping}.{profile}"] = bool(backend["quiescent"])
+    return {
+        "synthetic": synthetic,
+        "granite_completed": granite_completed,
+        "all_passed": all((*synthetic.values(), *granite_completed.values())),
+    }
+
+
+def _behavior_report(
+    behavior: dict[str, Any],
+    *,
+    fatal_passed: bool,
+) -> dict[str, Any]:
+    report = dict(behavior)
+    if fatal_passed:
+        report["score_status"] = "reported"
+        return report
+    report["passed_family_classes"] = None
+    report["passed_instances"] = None
+    report["all_passed"] = None
+    report["score_status"] = "withheld because fatal guards voided the run"
+    return report
 
 
 def run_study(args: argparse.Namespace) -> None:
@@ -945,7 +1174,8 @@ def run_study(args: argparse.Namespace) -> None:
         "schema": "simllm-dispatch-sequence-v1-raw",
         "input_observations": input_observations,
         "pre_measurement_physical_bounds_ps": {
-            str(rate): list(bounds) for rate, bounds in PHYSICAL_BOUNDS_PS.items()
+            str(rate): list(bounds)
+            for rate, bounds in CORRECTED_SYNTHETIC["physical_bounds_ps"].items()
         },
         "synthetic_renderers": render_observations,
         "synthetic_cells": {},
@@ -973,25 +1203,43 @@ def run_study(args: argparse.Namespace) -> None:
     exact = _evaluate_synthetic_exact(plans, traces, routing)
     physical = _evaluate_physical_bounds(raw["synthetic_cells"])
     granite = _run_granite(args, granite_dir)
+    granite_exact = _evaluate_granite_exact(granite)
+    quiescence = _evaluate_quiescence(raw["synthetic_cells"], granite)
+    fatal_passed = all(
+        (
+            bool(input_observations["all_passed"]),
+            bool(exact["all_passed"]),
+            bool(physical["all_passed"]),
+            bool(granite_exact["all_passed"]),
+            bool(quiescence["all_passed"]),
+        )
+    )
+    if not fatal_passed:
+        run_status = "void"
+    elif behavior["all_passed"]:
+        run_status = "passed"
+    else:
+        run_status = "failed"
     summary = {
         "schema": "simllm-dispatch-sequence-v1-summary",
         "expectation_commit": "7efd71e7e54fc6faecde17c5faebab9430a2e847",
-        "behavior": behavior,
+        "refreeze_expectations_commit": REFREEZE_EXPECTATIONS_COMMIT,
+        "run_status": run_status,
+        "behavior": _behavior_report(behavior, fatal_passed=fatal_passed),
         "fatal_unscored": {
             "synthetic_exact": exact,
             "physical_bounds": physical,
             "input_identity": input_observations,
+            "granite_exact": granite_exact,
+            "quiescence": quiescence,
+            "all_passed": fatal_passed,
         },
         "granite_scale_and_cost": granite,
-        "success": (
-            behavior["all_passed"]
-            and exact["all_passed"]
-            and physical["all_passed"]
-        ),
+        "success": run_status == "passed",
     }
     _write_json(args.out / "summary.json", summary)
-    if not summary["success"]:
-        raise AssertionError("dispatch sequence study did not meet frozen acceptance")
+    if run_status != "passed":
+        raise AssertionError(f"dispatch sequence study ended {run_status}")
     print(
         f"dispatch sequence study passed {behavior['passed_instances']}/"
         f"{behavior['registered_instances']} genuine-risk instances"
