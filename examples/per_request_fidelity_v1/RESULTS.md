@@ -12,6 +12,10 @@ per-request comparison detected the attribution error and the fail-closed gate
 rejected it. Exact tables, hashes, conservation checks, native reachability and
 structural validation are reported separately and do not increase that score.
 
+The physical byte, hash and JCT values below are the historical pre-TRAF-25
+source-multiplied observations. The corrected single-engine tables are in
+[the token ownership results](../token_ownership_v1/RESULTS.md#per_request_fidelity_v1).
+
 ## Provenance and chronology
 
 The expectations were frozen at commit

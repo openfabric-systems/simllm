@@ -1,6 +1,348 @@
 # Dependency authority v1 results
 
-## Post-closure amendment: selectable independent cross-check
+## TRAF-27 corrected ownership refreeze
+
+TRAF-27 is complete for the corrected routed-token ownership scope. The
+single-home-rank renderer preserved the dependency architecture: the
+`ExecutionGraph` projection remains the sole ordering and completion authority,
+and the independently selected ATLAHS GOAL remains a diagnostic cross-check
+that cannot change `StepResult`. Both genuine-risk families passed, with
+**2/2 families and 3/3 parameterized instances**. Every fatal guard passed.
+Fatal guards are not reported as a fraction.
+
+The ownership correction changed population bytes, direct artifacts, native
+flow count, cross-check frontiers and both direct-versus-graph timing gaps. It
+did not change the graph operation or dependency inventory. The corrected
+all-remote graph JCTs are 155,702,768 ps and 215,381,488 ps. The corrected
+direct completions are 150,838,767 ps and 205,653,487 ps, leaving positive
+graph-minus-direct gaps of 4,864,001 ps and 9,728,001 ps.
+
+### Chronology, command and provenance
+
+The corrected expectations were frozen in
+`bf6780f21c3029b3dbc06c1ea1868c1eeb03ec97` before the result-producing run.
+The predictions and check-only literals genuinely preceded both production
+runs, but that commit's message omitted common4's required precise worktree
+status. Immediately before the commit, all five intended expectation paths
+were staged, with no unstaged or untracked path remaining. The dry run used
+the tracked `run_study.py --check-only` path; no separate untracked harness
+existed. It validated only frozen literals and arithmetic and created no
+artifact. This paragraph is a post-run process disclosure. It does not
+retroactively alter the freeze or repair the commit-message metadata
+nonconformance, so this report does not describe the commit as fully
+contract-compliant preregistration. The frozen predictions still preceded all
+observations and can fail independently of the later fatal guards.
+
+The runner preparation landed at
+`7618c7106d3e34703a615725776aa633f93f934f`. Its first clean completed run
+produced summary SHA-256
+`0cd050e6cff44439cb47d1836c0bde88198050b4fef166cad71310d5aaa2ab25`, but
+that run is rejected as acceptance evidence. TRAF-B1 subtracted the frozen
+direct-JCT prediction before executing the direct cross-check, so the direct
+side of the scored relation was not a raw observation. The run and its passing
+fatal checks are retained, but it contributes no genuine-risk score.
+
+Commit `536185687bfebb35b4ccbb86ad665ab6fa079155` corrected only that evaluation
+order. It executes both mechanisms, records the raw graph and direct
+completions, scores their signed difference, and only then applies registered
+completion, artifact and comparator guards. The final clean production run
+observed that revision and produced summary SHA-256
+`ade89d9c3180bf71a778ed7b68ceb9ce01fccef5c2f5ec1a73ec40f977a4eab5`.
+
+The production command was:
+
+```bash
+.venv/bin/python examples/dependency_authority_v1/run_study.py \
+  --source-root "$SIMLLM_MOE_E2E_ROOT" \
+  --out "$SIMLLM_DEPENDENCY_AUTHORITY_RUN_ROOT"
+```
+
+The tracked 22-token Granite `length-cap` trace remained the dependency-study
+workload and matched SHA-256
+`36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341`.
+The separate full Granite capture was supplied through
+`SIMLLM_MOE_E2E_ROOT` as provenance only. The run recorded relative names,
+sizes and the three frozen hashes for `capture/granite-greedy.jsonl`,
+`replay-400g/steps.jsonl` and `replay-400g/routed-experts.json`; it stored no
+external absolute path. This separation avoids mixing the 54-token,
+three-request full capture with the historical 22-token dependency sweep.
+
+| Provenance field | Observed value |
+|---|---|
+| TRAF-27 expectations-only commit | `bf6780f21c3029b3dbc06c1ea1868c1eeb03ec97` |
+| Initial completed but rejected run revision | `7618c7106d3e34703a615725776aa633f93f934f` |
+| Rejected `summary.json` SHA-256 | `0cd050e6cff44439cb47d1836c0bde88198050b4fef166cad71310d5aaa2ab25` |
+| Raw-relation correction and final run revision | `536185687bfebb35b4ccbb86ad665ab6fa079155` |
+| htsim gitlink observed by the run | `fc4400e4ca619223481536632074045cb6af2756` |
+| `txt2bin` SHA-256 | `f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b` |
+| `htsim_rnic` SHA-256 | `cfb5014a663791f7619fe33309114a74e82878de860c14fc8a723713501f027d` |
+| Accepted `summary.json` SHA-256 | `ade89d9c3180bf71a778ed7b68ceb9ce01fccef5c2f5ec1a73ec40f977a4eab5` |
+| Runtime | Python 3.12.12 on Linux x86-64 |
+
+The two native executable hashes are inherited historical accepted
+provenance, not new scored evidence. The clean run recorded them in its
+summary, and both match the historical accepted hashes.
+
+The authored-against revisions, observed SimLLM revision and observed htsim
+gitlink are separate provenance facts. No frozen equality constrains a future
+live submodule pin.
+
+### Physical sanity before exact comparison
+
+The measured values first passed the frozen physical bounds:
+
+| Vector bytes | Peak-egress serialization floor ps | Direct JCT ps | Graph phase-chain floor ps | Graph JCT ps | Conservative ceiling ps |
+|---:|---:|---:|---:|---:|---:|
+| 1,024 | 29,839,360 | 150,838,767 | 155,702,720 | 155,702,768 | 347,702,720 |
+| 2,048 | 59,678,720 | 205,653,487 | 215,381,440 | 215,381,488 | 407,381,440 |
+
+The direct result lies above the critical-rank serialization floor and below
+the conservative all-flow ceiling in both cells. The graph result is exactly
+48 ps above its stricter phase-chain floor in each cell and remains far below
+the ceiling. Doubling the vector adds 59,678,720 ps to graph JCT, exactly the
+additional serialization term, while the 96,000,000 ps propagation total and
+24,000 ps represented compute remain fixed. This independent scaling check
+agrees with the network bound.
+
+The graph JCT fell only about 3.2 percent and 4.5 percent from the
+source-multiplied observations. It did not fall by either the 3.978 total-byte
+ratio or the 2.007 peak-egress ratio. Fixed per-phase propagation and the
+realized critical port, rather than aggregate group bytes alone, control the
+result. As end-to-end context, the separate corrected 54-token EP-width-eight
+study is slower than this smaller 22-token EP-width-four fixture, as its larger
+traffic population and represented compute require. It is context, not an
+oracle for these cells.
+
+### Corrected six-cell sweep
+
+All six cells matched the corrected `nvlink_locality_v1` byte and timing rows.
+Each cell ran three identical controlled replays, so TTFT and TPOT equal the
+listed JCT. Those metric projections establish live reachability but are
+algebraically entailed by the fixed replay and add no scored evidence.
+
+| Vector bytes | Placement | Total bytes | Fabric bytes | NVLink bytes | NVLink service ps | StepResult JCT ps | Native flows | Precision status |
+|---:|---|---:|---:|---:|---:|---:|---:|---|
+| 1,024 | `AAAA` | 2,983,936 | 0 | 2,983,936 | 4,538,000 | 4,562,000 | 0 | baseline only, pending CORE-41 |
+| 1,024 | `AABB` | 2,983,936 | 2,011,136 | 972,800 | 2,194,000 | 136,246,720 | 96 | accepted |
+| 1,024 | `ABCD` | 2,983,936 | 2,983,936 | 0 | 0 | 155,702,768 | 144 | accepted |
+| 2,048 | `AAAA` | 5,967,872 | 0 | 5,967,872 | 9,047,000 | 9,071,000 | 0 | baseline only, pending CORE-41 |
+| 2,048 | `AABB` | 5,967,872 | 4,022,272 | 1,945,600 | 4,358,000 | 176,469,440 | 96 | accepted |
+| 2,048 | `ABCD` | 5,967,872 | 5,967,872 | 0 | 0 | 215,381,488 | 144 | accepted |
+
+The single-node values are reproducible observations, not accepted precision.
+The analytic locality service charges maximum source egress but omits maximum
+destination ingress. That proxy undercharges the corrected combine star.
+CORE-41 owns the ingress-aware correction; its expected services are 6,652,000
+ps and 13,286,000 ps rather than the current 4,538,000 ps and 9,047,000 ps.
+The `AABB` cells have one local pair in each direction and the `ABCD` cells
+have no local service, so this defect does not affect their reported JCTs.
+
+### Structural and artifact result
+
+Ownership changed sparse payloads without changing declared graph
+participation or dependencies. Both payloads reproduced the frozen structural
+inventory:
+
+| Quantity | Observed value |
+|---|---:|
+| Operations | 144 |
+| Effective dependency edges | 423 |
+| Participant-local edges | 284 |
+| Whole-operation FIFO edges | 139 |
+| Causal graph artifacts | 72 |
+| Required distributed FIFO boundaries | 47 |
+| Other serialized edges | 376 |
+| Backend GOAL artifacts | 48 |
+| All-remote physical flows | 144 |
+
+Explicit and omitted all-remote placement produced the same 48 GOAL payloads,
+423 effective edges and 72 graph artifacts at both vector sizes. The active
+manifest aggregate SHA-256 values are
+`1d18818582c79ac428cb521378412e7b3cf1568da2a4ea8f07ef5136863bfd35`
+and
+`7ff0a45824b0d3aea1c1e99add16c0d973b089ea6ad1e2847d54f30b48641eb9`.
+These post-run manifest identities are fatal-unscored locks, not scored
+behavioral evidence.
+
+The independently rendered direct GOALs matched the corrected accepted
+artifacts:
+
+| Vector bytes | Bytes | SHA-256 |
+|---:|---:|---|
+| 1,024 | 20,392 | `917961edf996753223857d64010fc61e4f6b08672f18dcadf42c70d60ee36c4a` |
+| 2,048 | 20,392 | `16ee686eda4634886b117788b3893c893f5e12ea819736e0afdbdf63bab0e826` |
+
+### Corrected authority cross-check
+
+The ownership correction changed the diagnostic disagreement census but not
+its conclusion. `execution-graph-projection` remained authoritative and
+`atlahs-independent-goal` remained the selected cross-check. Selecting it
+preserved the graph completion and authoritative artifacts exactly. Both
+mechanisms executed the same 144-message inventory and reached quiescence.
+
+| Vector bytes | Edges audited | Ordering differences | Unequal and negative frontiers | First direct gap ps | Minimum direct gap ps | Direct completion ps | Graph completion ps | Graph minus direct ps |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1,024 | 423 | 94 (47 participant-local, 47 whole-operation FIFO) | 32/47 | -81,920 | -716,800 | 150,838,767 | 155,702,768 | +4,864,001 |
+| 2,048 | 423 | 94 (47 participant-local, 47 whole-operation FIFO) | 32/47 | -163,840 | -1,433,600 | 205,653,487 | 215,381,488 | +9,728,001 |
+
+The 47 whole-operation FIFO differences survive because direct rank-local
+entry is still weaker than the graph's distributed barrier. Participant-local
+syntactic differences fell from 188 to 47 because the single-source star
+removed the old replicated source frontiers. The numerical disagreements are
+useful findings. They do not authorize the direct mechanism to replace or
+modify the graph result.
+
+### Evidence classes and entailment
+
+Evidence classes remain separate:
+
+| Evidence class | Outcome | Scoring |
+|---|---|---|
+| Signed graph-minus-direct JCT | 2 payload instances passed | scored genuine risk |
+| Missing-edge negative control | 1 mutated-edge instance passed | scored genuine risk |
+| Exact six-cell rows | all matched | fatal-unscored |
+| Structural, artifact and identity inventories | all matched | fatal-unscored |
+| Cross-check completeness and registered findings | both payload rows matched | fatal-unscored diagnostic evidence |
+| Physical bounds and quiescence | all passed | fatal-unscored |
+| Composed causal gaps | all passed | by-construction and fatal-unscored |
+| External source identity and revision provenance | source hashes matched; revisions recorded separately | configuration evidence |
+
+The genuine-risk headline is **2/2 families and 3/3 instances**. The runner
+evaluated each signed difference from the raw graph `StepResult` and direct
+completion before exact timing, artifact or comparator guards. Prior corrected
+graph observations constrain the absolute graph value, but they do not entail
+the corrected direct-versus-graph gap in this consumer. The missing-edge
+mutation was likewise evaluated from the checker's raw rejection before exact
+edge counts. No earlier fatal oracle pins either scored family.
+
+All exact cells, inventories, hashes, authority labels, cross-check
+completeness, identity paths, source hashes and quiescence checks passed. They
+are prerequisites for interpreting the score, so they remain fatal and
+unscored. Had any one failed, this run would have been void rather than losing
+a point.
+
+### Repository gates
+
+The final tracked state passed these independent gates:
+
+| Gate | Result |
+|---|---|
+| Registered production CLI with `--check-only` | Passed; validated the frozen registry without reading either path, invoking a native binary or creating output |
+| `.venv/bin/ruff check .` | Passed |
+| `.venv/bin/pytest -q` | 1,050 passed, 7 skipped |
+| `python3 scripts/task_progress.py --check` | Passed |
+| `git diff --check` | Passed |
+| `git ls-files -s third_party/htsim` | Preserved gitlink `fc4400e4ca619223481536632074045cb6af2756` |
+
+The `scripts/check_docs_format.py` command named by the local agent rules is
+not present in this checkout. The complete available Python suite passed, and
+the task-progress drift checker passed separately.
+
+### TRAF-27 closure map
+
+Every registered acceptance clause is quoted and mapped to evidence below.
+
+1. Input identity
+
+   > "The tracked dependency workload and all three external provenance inputs
+   > match their frozen hashes, and no external absolute path is stored."
+
+   The summary records the tracked trace SHA-256 and all three external
+   relative paths, sizes and SHA-256 values. All matched. Configuration names
+   the tracked trace as the workload and the full capture as provenance only;
+   no absolute source path appears in the record.
+
+2. Ownership and structure
+
+   > "Corrected ownership yields 144 positive flows and the frozen byte rows,
+   > while graph operations, effective edges, artifacts, boundaries and
+   > serialized edges remain in their exact singleton bands."
+
+   Both all-remote cells produced 144 flows. All six byte rows matched, and
+   both payloads retained 144 operations, 423 edges, 72 graph artifacts, 47
+   boundaries, 376 serialized edges and 48 backend artifacts.
+
+3. Timing and physics
+
+   > "Both graph JCTs and both raw graph-minus-direct relations land in the
+   > registered bands and within the physical floors and ceilings."
+
+   The graph JCTs were 155,702,768 ps and 215,381,488 ps. Their raw positive
+   gaps were 4,864,001 ps and 9,728,001 ps. Every value landed inside its
+   frozen band and the physical table above.
+
+4. Sole authority and comparison
+
+   > "`ExecutionGraph` remains authoritative, selecting ATLAHS changes no graph
+   > result or authoritative artifact, and the comparator reports the registered
+   > 423-edge inventory and 94 disagreements."
+
+   Both typed reports name the graph projection as authority, preserve its
+   completion and artifact manifest, audit all 423 edges, and report exactly
+   94 differences split 47 plus 47. The direct result remains diagnostic.
+
+5. Fatal acceptance
+
+   > "Exact cells, causal projection, negative-control acceptance, quiescence,
+   > identity and provenance guards all pass. Any failure makes the run void;
+   > fatal guards are not reported as fractions."
+
+   Every fatal field in the summary is true. The valid projection was accepted,
+   the removed FIFO boundary was rejected with the named missing edge, both
+   mechanisms were quiescent, and all identity and provenance checks passed.
+   The result reports that outcome without converting fatal guards into a
+   fraction.
+
+6. Precision boundary and publication seam
+
+   > "Single-node analytic values are explicitly pending CORE-41, all stale
+   > published current-value surfaces are corrected, historical consumers point
+   > to the corrected table, and every remaining contradiction is reported."
+
+   The single-node rows above and the owning module text explicitly mark
+   CORE-41 pending. Every listed current-value surface in `README.md`,
+   `docs/README_PRO.md`, `docs/modules/traffic.md`, `docs/modules/core.md` and
+   `examples/routed_supply_v1/RESULTS.md` is corrected, and the historical
+   consumer results point to this corrected section. This file labels the
+   lower TRAF-12 values as historical. Residual contradictions in adjacent
+   non-owning module documents and the architecture wording hits required by
+   the closure sweep are reported below and were not edited here.
+
+### Contradiction sweep
+
+The post-closure sweep found no stale ownership or dependency numeric claim in
+the now-corrected `README.md` and `docs/README_PRO.md`. The latter now points
+the historical preplay result to its corrected 48-flow replay. It found no
+numeric ownership contradiction in `docs/architecture.md`.
+
+Two adjacent module summaries outside TRAF-27's owning documents still state
+the historical comparator result as current:
+
+- `docs/modules/backends.md:410-414` reports 235 differences, including 188
+  participant-local mismatches, and 46/47 unequal early frontiers;
+- `docs/modules/goal.md:62-66` repeats the 188 participant-local mismatches and
+  46/47 frontier result.
+
+For the corrected renderer, both should read 94 differences, split 47
+participant-local and 47 whole-operation FIFO, with 32/47 unequal early
+frontiers. They are reported here rather than edited because the task owns
+only the traffic and core module documents.
+
+The sweep also retained two older architecture wording hits unrelated to the
+ownership numbers. `docs/architecture.md:456-459` describes a closed-loop path
+through `CoarseDeviceRuntime`, while the demonstrated `HtsimStepSink` composes
+checked artifact service directly into `StepResult`.
+`docs/architecture.md:503-508` still attributes the already closed
+reconciliation to TRAF-12. The one-authority semantic statement agrees with
+this run; only its task-status wording is stale.
+
+Everything below this point is retained TRAF-12 chronology. Its
+source-multiplied bytes, 576-flow inventory, 235 disagreement count and older
+timings remain true for that historical workload, but they are not current
+acceptance values. The corrected TRAF-27 tables above are authoritative for
+the single-home-rank renderer.
+
+## Historical TRAF-12 post-closure amendment: selectable independent cross-check
 
 TRAF-12 remains closed for the demonstrated serial step-sink scope, with a
 more precise per-run authority contract. Exactly one mechanism decides
@@ -110,13 +452,16 @@ integrator branch was PR 40 commit
 | `txt2bin` SHA-256 | `f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b` |
 | `htsim_rnic` SHA-256 | `cfb5014a663791f7619fe33309114a74e82878de860c14fc8a723713501f027d` |
 
-The native hashes are unchanged from the original production record. Run the
-amended study from the repository root with:
+The native hashes are unchanged from the original production record. At that
+historical revision, the amended study command was:
 
 ```bash
 .venv/bin/python examples/dependency_authority_v1/run_study.py \
   --out "${SIMLLM_DEPENDENCY_AUTHORITY_AMENDMENT_RUN_ROOT:?configure this variable}"
 ```
+
+That command requires the historical revision. Current HEAD uses the TRAF-27
+command with `--source-root` shown above.
 
 ### Amendment artifact acceptance and scoring
 
@@ -197,12 +542,14 @@ The compiler revision used to author the source evidence and the gitlink
 observed during production are deliberately separate provenance facts. This
 report does not assert that either must equal a future live submodule pin.
 
-Reproduce the production run from the repository root with:
+At that historical revision, the production command was:
 
 ```bash
 .venv/bin/python examples/dependency_authority_v1/run_study.py \
   --out "${SIMLLM_DEPENDENCY_AUTHORITY_RUN_ROOT:?configure this variable}"
 ```
+
+Current HEAD requires the TRAF-27 command with `--source-root` shown above.
 
 ## Declared sweep
 

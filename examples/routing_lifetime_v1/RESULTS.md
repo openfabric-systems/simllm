@@ -15,6 +15,10 @@ lifecycle bit was suppressed. Exact uint8 layout, traffic identity, source
 identity, view ownership and unit executables remain separate fatal-unscored
 evidence classes.
 
+The traffic byte and hash values below are the historical pre-TRAF-25
+source-multiplied observations. The corrected single-engine traffic table is in
+[the token ownership results](../token_ownership_v1/RESULTS.md#routing_lifetime_v1).
+
 ## Provenance and chronology
 
 The expectations were frozen at commit

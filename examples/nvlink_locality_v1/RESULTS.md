@@ -11,6 +11,13 @@ GOAL actually advances each rank from its own completion frontier, so adjacent
 phases overlap. This report preserves that failed expectation and assigns the
 active causal-semantics gap to TRAF-12.
 
+The byte, service and JCT values below are the historical pre-TRAF-25
+source-multiplied observations. The corrected single-engine table is in
+[the token ownership results](../token_ownership_v1/RESULTS.md#nvlink_locality_v1).
+Its corrected single-node values are baseline observations pending CORE-41's
+destination-ingress correction, as recorded in
+[the dependency authority refreeze](../dependency_authority_v1/RESULTS.md#corrected-six-cell-sweep).
+
 ## Chronology and provenance
 
 The expectations-only commit is

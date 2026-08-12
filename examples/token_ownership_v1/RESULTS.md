@@ -186,6 +186,10 @@ The 2,048-byte GOAL changed from 72,819 bytes and
 `bcd72e63546d03efaddd48c16e160457d1e28f19795036d1f871788d78cf5a02`
 to 20,392 bytes and
 `16ee686eda4634886b117788b3893c893f5e12ea819736e0afdbdf63bab0e826`.
+The corrected `AAAA` service and JCT values in this historical TRAF-25 table
+are reproducible baselines, not precision acceptance oracles. CORE-41 now owns
+the missing destination-ingress charge for the corrected combine star; see
+[the dependency authority refreeze](../dependency_authority_v1/RESULTS.md#traf-27-corrected-ownership-refreeze).
 
 ### per_request_fidelity_v1
 
@@ -312,40 +316,43 @@ TRAF-25 registered this acceptance:
 > unavailable rerun, with old and corrected published numbers listed.
 
 The declared `engine_rank`, source-0 uniform approximation and unchanged
-110,592-byte TP payload cover clause 1. The per-request table and transpose
-oracles cover clause 2. The 42-of-48 unit fixture and 12,482-of-20,736 Granite
-projection cover clause 3. The EP-width and live-makespan tables plus physical
-bounds cover clause 4. The six consumer sections and retained result hashes
-cover clause 5 only in part.
+110,592-byte TP payload covered clause 1. The per-request table and transpose
+oracles covered clause 2. The 42-of-48 unit fixture and 12,482-of-20,736 Granite
+projection covered clause 3. The EP-width and live-makespan tables plus physical
+bounds covered clause 4. At TRAF-25 closure, the six consumer sections and
+retained result hashes covered clause 5 only in part.
 
-Clause 5 is not fully met, and this is the one deferred piece. A seventh
-routed consumer was missed: `examples/dependency_authority_v1/run_study.py`
+At TRAF-25 closure, clause 5 was not fully met and had one deferred piece. A
+seventh routed consumer was missed:
+`examples/dependency_authority_v1/run_study.py`
 renders captured MoE traffic through `_routed_supply(_routed_projection(...))`
 imported from `nvlink_locality_v1`, at lines 207, 213, 268, 271 and 406, and
-this branch leaves it untouched. Its frozen registry at lines 22 to 57 still
-carries pre-correction literals: `GRAPH_ARTIFACT_COUNT = 72`,
+the TRAF-25 branch left it untouched. Its frozen registry at lines 22 to 57
+carried pre-correction literals: `GRAPH_ARTIFACT_COUNT = 72`,
 `LEGACY_GOAL_ORACLES` at 72,819 bytes, and
 `LEGACY_JCT_PS = {1024: 156_569_755, 2048: 217_222_486}`. That study would
-fail if rerun today, so it is reported here as an unavailable rerun rather
-than as a refrozen consumer. It must be rerun and refrozen before any further
-branch merges through this renderer.
+have failed at TRAF-25 closure, so it was reported here as an unavailable rerun
+rather than as a refrozen consumer. TRAF-27 subsequently reran and refroze it;
+see [the corrected dependency authority results](../dependency_authority_v1/RESULTS.md).
 
 ## Contradiction sweep
 
-The post-closure sweep found no contradictory token-population statement in
-`docs/architecture.md`. It found two integrator-owned routed-supply index rows
-that still say the absent-capture uniform path "stays byte-locked":
+The TRAF-25 post-closure sweep found no contradictory token-population
+statement in `docs/architecture.md`. At that time it found two integrator-owned
+routed-supply index rows that still said the absent-capture uniform path
+"stays byte-locked":
 `README.md:167` and `docs/README_PRO.md:568`. That was true across the original
 TRAF-2 captured-routing seam, but is no longer a current identity claim because
 TRAF-25 intentionally corrected the uniform source population from 96 to 48
-flows in the two-rank study. The rows are reported here and intentionally not
-edited.
+flows in the two-rank study. Those rows were reported and intentionally not
+edited at TRAF-25 closure; TRAF-27 subsequently corrected both summaries.
 
-`docs/README_PRO.md:566` also points readers to the historical PLAY-5 result
-without mentioning that its 96-send per-step traffic table has been superseded
-by the corrected 48-send replay. The 13/13 scheduler, TTFT and TPOT result is
-still correct, so this is a stale numeric-summary omission rather than a
-contradictory behavioral claim. It is likewise left for integration.
+At that time `docs/README_PRO.md:566` also pointed readers to the historical
+PLAY-5 result without mentioning that its 96-send per-step traffic table had
+been superseded by the corrected 48-send replay. The 13/13 scheduler, TTFT and
+TPOT result remained correct, so this was a stale numeric-summary omission
+rather than a contradictory behavioral claim. TRAF-27 subsequently corrected
+that summary too.
 
 ## Repository gates
 

@@ -426,6 +426,8 @@ def test_registered_study_script_bootstraps_repository_imports(tmp_path):
         (
             sys.executable,
             str(REPOSITORY_ROOT / "examples/dependency_authority_v1/run_study.py"),
+            "--source-root",
+            str(tmp_path / "source-root"),
             "--out",
             str(existing_output),
         ),

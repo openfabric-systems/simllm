@@ -6,6 +6,11 @@ The final registered run used implementation commit `6c76dd8` on 2026-08-11.
 It completed the replay half exactly and reached an environmental blocker in
 the independent CPU half.
 
+The 96-send counts below are the historical pre-TRAF-25 observations. The
+corrected replay used 48 sends per step while retaining every JCT and all 13
+scored relations; see
+[the token ownership results](../token_ownership_v1/RESULTS.md#preplay_validation_v1).
+
 ## Post-specified fix round 1 corrections
 
 The notes in this section were authored after the original results were
