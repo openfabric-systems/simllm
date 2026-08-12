@@ -580,3 +580,15 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   two GPU cycles or 10 percent in every cell. Report the synthetic
   before-versus-calibrated after error for every cell. The disabled coupling
   and host-CPU paths must retain every accepted timestamp and artifact byte.
+- COMP-22 (Precision; P1; L): calibrate the GPU resource demand of the active
+  cross-node collective path before CORE-26 and CORE-27 replace TRAF-7's
+  independent-resource surrogate. Capture pinned NCCL collectives across
+  payload, participant and channel-count sweeps, alone and beside compute- and
+  HBM-bound kernels. Use kernel residency, channel occupancy, SM issue, HBM
+  read/write traffic, network ingress/egress and any copy-engine or GPUDirect
+  activity as identifying observables. Record an explicit zero for resources
+  absent from the measured path. Replace the synthetic demands only when an
+  independent holdout predicts task completion and queue wait within the larger
+  of two GPU cycles or 10 percent in every cell, and report the surrogate's
+  before-versus-calibrated error. The calibration-off path must preserve every
+  accepted TRAF-7 timestamp and artifact byte.

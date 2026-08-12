@@ -13,12 +13,14 @@ import simllm.backends.step_sink as step_sink_module
 from simllm.backends import (
     HtsimStepSink,
     HtsimStepSinkConfig,
+    ObservedStepLowerer,
     SerialStepLowerer,
     SerialStepLowererConfig,
 )
 from simllm.compute import ComputeProvider, DurationEstimate, ModelDims
 from simllm.core import (
     CollectiveWork,
+    ExecutionObservations,
     RequestBookkeeper,
     RequestPhase,
     ScheduledRequest,
@@ -393,6 +395,36 @@ def test_render_and_lowerer_carry_the_same_sparse_tables_and_epoch():
     )
 
 
+def test_observed_lowerer_binds_captured_pair_tables_and_epoch():
+    supply = _tiny_supply()
+    record = _prefill_record(1)
+    config = SerialStepLowererConfig(
+        TINY_MOE_DIMS,
+        (0,),
+        ep_ranks=(0, 1),
+        provider=FixedProvider(2_000),
+        routed_moe_supply=supply,
+    )
+    serial = SerialStepLowerer(config).lower(record)
+    marker_operations = tuple(
+        replace(
+            operation,
+            work=replace(operation.work, algorithm_hint=None),
+            placement_epoch=0,
+        )
+        if isinstance(operation.work, CollectiveWork)
+        else operation
+        for operation in serial.operations
+    )
+
+    observed = ObservedStepLowerer(config).lower(
+        record,
+        ExecutionObservations(marker_operations, serial.completion_operation_ids),
+    )
+
+    assert observed == serial
+
+
 def test_step_sink_uses_captured_supply_and_reports_authority(tmp_path, monkeypatch):
     monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
     monkeypatch.setattr(
@@ -591,3 +623,57 @@ def test_drain_dense_and_single_rank_bypasses_remain_empty():
         (0,),
         routed_supply=supply,
     ) == []
+
+
+def test_observed_lowerer_preserves_per_request_attribution():
+    """The observed path must carry request attribution, not just pair totals.
+
+    The traffic planner owns collective semantics, so a schedule observed from
+    a framework carries no request attribution of its own. If the planner does
+    not rebind it, per-request fidelity silently disappears on exactly the path
+    a live adapter will use.
+    """
+
+    supply = _tiny_supply()
+    record = _prefill_record(1)
+    config = SerialStepLowererConfig(
+        TINY_MOE_DIMS,
+        (0,),
+        ep_ranks=(0, 1),
+        provider=FixedProvider(2_000),
+        routed_moe_supply=supply,
+    )
+    serial = SerialStepLowerer(config).lower(record)
+    bare_markers = tuple(
+        replace(
+            operation,
+            work=replace(
+                operation.work,
+                algorithm_hint=None,
+                request_pair_payload_bytes=(),
+            ),
+            placement_epoch=0,
+        )
+        if isinstance(operation.work, CollectiveWork)
+        else operation
+        for operation in serial.operations
+    )
+
+    observed = ObservedStepLowerer(config).lower(
+        record,
+        ExecutionObservations(bare_markers, serial.completion_operation_ids),
+    )
+
+    attributed = [
+        operation
+        for operation in observed.operations
+        if isinstance(operation.work, CollectiveWork)
+        and operation.work.request_pair_payload_bytes
+    ]
+    assert attributed, "observed lowering dropped every per-request attribution"
+    for expected, actual in zip(serial.operations, observed.operations, strict=True):
+        if isinstance(expected.work, CollectiveWork):
+            assert (
+                actual.work.request_pair_payload_bytes
+                == expected.work.request_pair_payload_bytes
+            )
