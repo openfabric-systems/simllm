@@ -1057,4 +1057,19 @@ is difficult.
   `txt2bin` build target.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
-  cannot satisfy the resolver) and pin a known-good HTSIM commit.
+  cannot satisfy the resolver) and pin a known-good HTSIM commit. Audited on
+  2026-08-13 at the pinned ATLAHS commit: the registered description is
+  accurate and the defect is in the ATLAHS sources, so the fix belongs in that
+  repo and this entry stays open. `scripts/build.py` resolves an HTSIM source
+  directory only when a candidate has both a `CMakeLists.txt` file and a
+  `datacenter` directory. The vendored tree at `sim/htsim-backend/sim` has the
+  directory and no `CMakeLists.txt` at any of the three candidate spellings;
+  it is upstream Broadcom csg-htsim with a Makefile build and zero `rnic`
+  sources, so it could not produce `htsim_rnic` even with CMake. Two strings
+  nonetheless advertise it as a working default: the `resolve_htsim_sim_dir`
+  docstring in `scripts/build.py` calls the in-tree backend "the compatibility
+  fallback", and the `--htsim-root` help in `atlahs_entry.py` promises "then
+  the vendored compatibility tree by default". The sibling preference ahead of
+  it also looks for a directory named `HTSIM`, which no case-sensitive
+  checkout of this layout provides. None of this affects SimLLM runs, which
+  invoke the simulators directly rather than through the launcher.
