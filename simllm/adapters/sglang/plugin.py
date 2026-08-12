@@ -7,7 +7,7 @@ SimLLM declares :func:`register` as that entry point (see pyproject.toml),
 and it applies a ``REPLACE`` hook on ``Scheduler.init_tp_model_worker``, the
 same construction point where SGLang swaps in its MLX worker.
 
-Two gates keep this inert unless explicitly requested:
+Two independent gates keep this inert unless explicitly requested:
 
 - ``SIMLLM_SGLANG_ENABLE=1`` must be set, because SGLang loads *every*
   discovered plugin when its own ``SGLANG_PLUGINS`` allowlist is unset;
@@ -15,6 +15,9 @@ Two gates keep this inert unless explicitly requested:
   hijack every real run.
 - SGLang's ``SGLANG_PLUGINS=simllm`` allowlist works as an additional
   opt-in when other plugins are present.
+- ``SIMLLM_SGLANG_ORACLE_CAPTURE=1`` installs observation-only KV hooks and
+  never replaces the stock worker. It is mutually exclusive with the
+  simulated-worker gate.
 
 :func:`install` is the in-process alternative for drivers that construct
 the scheduler themselves (tests, notebooks): it applies the same
@@ -29,9 +32,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["ENABLE_ENV", "install", "register"]
+__all__ = ["ENABLE_ENV", "ORACLE_ENABLE_ENV", "install", "register"]
 
 ENABLE_ENV = "SIMLLM_SGLANG_ENABLE"
+ORACLE_ENABLE_ENV = "SIMLLM_SGLANG_ORACLE_CAPTURE"
 
 #: dotted path of the method the plugin replaces, at the pinned commit
 HOOK_TARGET = "sglang.srt.managers.scheduler.Scheduler.init_tp_model_worker"
@@ -62,12 +66,26 @@ def enabled(env: Any = None) -> bool:
 def register() -> None:
     """Entry point for SGLang's ``sglang.srt.plugins`` group.
 
-    A no-op unless ``SIMLLM_SGLANG_ENABLE=1``, so an installed simllm never
-    changes the behavior of a real SGLang deployment by accident.
+    A no-op unless exactly one explicit simulation or oracle gate is active,
+    so an installed simllm never changes a real deployment by accident.
     """
-    if not enabled():
+    oracle_active = os.environ.get(ORACLE_ENABLE_ENV, "") == "1"
+    simulation_active = enabled()
+    if oracle_active and simulation_active:
+        raise RuntimeError(
+            f"{ORACLE_ENABLE_ENV}=1 is mutually exclusive with {ENABLE_ENV}=1"
+        )
+    if oracle_active:
+        from simllm.adapters.sglang.oracle import register_oracle_hooks
+
+        register_oracle_hooks()
+        logger.info("simllm SGLang framework-oracle observation hooks active")
+        return
+    if not simulation_active:
         logger.info(
-            "simllm SGLang plugin present but inactive (%s != 1)", ENABLE_ENV
+            "simllm SGLang plugin present but inactive (%s and %s != 1)",
+            ENABLE_ENV,
+            ORACLE_ENABLE_ENV,
         )
         return
     from sglang.srt.plugins.hook_registry import HookRegistry, HookType
