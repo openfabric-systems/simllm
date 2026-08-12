@@ -608,6 +608,30 @@ def parse_nsight_cuda_gpu_trace_csv(
     return tuple(result)
 
 
+def parse_nsight_cuda_gpu_trace_csvs(
+    paths: Sequence[str | Path],
+    plan: Sequence[CapturePlanCell],
+) -> tuple[KernelCaptureCell, ...]:
+    """Parse one ordered Nsight report per capture-plan cell.
+
+    Nsight Systems emits a separately numbered report for each repeated CUDA
+    profiler range. Keeping those reports separate prevents an export or sort
+    step from changing the registered cell order.
+    """
+
+    if len(paths) != len(plan):
+        raise ValueError(
+            f"Nsight report count {len(paths)} does not match plan cell count {len(plan)}"
+        )
+    cells = []
+    for path, expected in zip(paths, plan, strict=True):
+        parsed = parse_nsight_cuda_gpu_trace_csv(path, (expected,))
+        if len(parsed) != 1:
+            raise AssertionError("single-cell Nsight report produced multiple cells")
+        cells.append(parsed[0])
+    return tuple(cells)
+
+
 def _family_holdout_uncertainty(
     artifact: ComputeCalibrationArtifact,
     provisional: ProfileTableProvider,

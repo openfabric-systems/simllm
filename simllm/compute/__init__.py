@@ -44,6 +44,7 @@ from simllm.compute.calibration import (
     held_out_errors,
     nearest_rank,
     parse_nsight_cuda_gpu_trace_csv,
+    parse_nsight_cuda_gpu_trace_csvs,
     physical_duration_bounds_ps,
     sha256_file,
 )
@@ -239,6 +240,7 @@ __all__ = [
     "nccl_stack_events_to_json",
     "nearest_rank",
     "parse_nsight_cuda_gpu_trace_csv",
+    "parse_nsight_cuda_gpu_trace_csvs",
     "physical_duration_bounds_ps",
     "rnic_submission_producer_task",
     "save_gpu_model_artifact",

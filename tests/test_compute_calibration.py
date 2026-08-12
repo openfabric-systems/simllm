@@ -20,6 +20,7 @@ from simllm.compute import (
     calibration_artifact_to_profile_table,
     nearest_rank,
     parse_nsight_cuda_gpu_trace_csv,
+    parse_nsight_cuda_gpu_trace_csvs,
     physical_duration_bounds_ps,
 )
 
@@ -216,6 +217,46 @@ def test_nsight_csv_parser_rejects_missing_target_rows(tmp_path):
     )
     with pytest.raises(ValueError, match="0 target rows; expected 1"):
         parse_nsight_cuda_gpu_trace_csv(path, plan)
+
+
+def test_nsight_csv_report_set_preserves_registered_cell_order(tmp_path):
+    first = tmp_path / "capture.1.csv"
+    second = tmp_path / "capture.2.csv"
+    header = (
+        "Start (ns),Duration (ns),GrdX,GrdY,GrdZ,BlkX,BlkY,BlkZ,Reg/Trd,"
+        "StcSMem (byte),DymSMem (byte),Device,Ctx,Strm,Name\n"
+    )
+    row = (
+        "1,{duration},1024,1,1,256,1,1,20,0,0,"
+        "NVIDIA GeForce GTX 1660 Ti (0),1,7,"
+        "simllm_kv_read_kernel<float>(float*, float const*)\n"
+    )
+    first.write_text(header + row.format(duration="12.5"), encoding="utf-8")
+    second.write_text(header + row.format(duration="25.0"), encoding="utf-8")
+    plans = tuple(
+        CapturePlanCell(
+            family="kv_read",
+            dtype="fp32",
+            gpu_profile=GPU.name,
+            config=(("kv_tokens", shape),),
+            split=split,
+            sample_count=1,
+            work_items=262_144 * shape,
+            source_flops=0,
+            compulsory_input_bytes=1_048_576 * shape,
+            total_bytes=2_097_152 * shape,
+            expected_grid_x=1024,
+            expected_block_x=256,
+        )
+        for shape, split in ((1, TRAIN_SPLIT), (2, HELD_OUT_SPLIT))
+    )
+
+    cells = parse_nsight_cuda_gpu_trace_csvs((first, second), plans)
+
+    assert [cell.config for cell in cells] == [plan.config for plan in plans]
+    assert [cell.durations_ps for cell in cells] == [(12_500,), (25_000,)]
+    with pytest.raises(ValueError, match="report count 1 does not match"):
+        parse_nsight_cuda_gpu_trace_csvs((first,), plans)
 
 
 def test_calibration_artifact_round_trip_and_train_only_table(tmp_path):

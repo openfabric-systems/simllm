@@ -375,7 +375,7 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
         RooflineProvider,
         calibration_artifact_to_profile_table,
         held_out_errors,
-        parse_nsight_cuda_gpu_trace_csv,
+        parse_nsight_cuda_gpu_trace_csvs,
         physical_duration_bounds_ps,
         sha256_file,
     )
@@ -470,30 +470,79 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
         timeout=900,
     )
     _write_log(capture_dir / "nsys_profile.log", capture_run)
-    report = report_prefix.with_suffix(".nsys-rep")
-    if not report.is_file():
-        raise RuntimeError(f"Nsight Systems did not produce {report}")
-    stats_run = _run(
-        (
-            nsys,
-            "stats",
-            "--report",
-            "cuda_gpu_trace",
-            "--format",
-            "csv",
-            "--output",
-            "-",
-            report,
-        ),
-        timeout=300,
+    report_pattern = re.compile(
+        rf"{re.escape(report_prefix.name)}\.(?P<index>[1-9][0-9]*)\.nsys-rep"
     )
-    trace_csv = capture_dir / "cuda_gpu_trace.csv"
-    trace_csv.write_text(stats_run.stdout, encoding="utf-8")
+    indexed_reports = {}
+    for candidate in capture_dir.glob(f"{report_prefix.name}.*.nsys-rep"):
+        match = report_pattern.fullmatch(candidate.name)
+        if match is None:
+            raise RuntimeError(f"unexpected repeated capture report name: {candidate}")
+        index = int(match.group("index"))
+        if index in indexed_reports:
+            raise RuntimeError(f"duplicate repeated capture report index: {index}")
+        indexed_reports[index] = candidate
+    expected_indexes = list(range(1, len(plan) + 1))
+    if sorted(indexed_reports) != expected_indexes:
+        raise RuntimeError(
+            "Nsight Systems repeated report indexes do not match capture plan: "
+            f"observed {sorted(indexed_reports)}, expected {expected_indexes}"
+        )
+    reports = tuple(indexed_reports[index] for index in expected_indexes)
+
+    trace_paths = []
+    stats_stderr = []
+    manifest_rows = []
+    for index, (report, plan_cell) in enumerate(zip(reports, plan, strict=True), start=1):
+        stats_run = _run(
+            (
+                nsys,
+                "stats",
+                "--report",
+                "cuda_gpu_trace",
+                "--format",
+                "csv",
+                "--output",
+                "-",
+                report,
+            ),
+            timeout=300,
+        )
+        trace_csv = capture_dir / f"cuda_gpu_trace.{index}.csv"
+        trace_csv.write_text(stats_run.stdout, encoding="utf-8")
+        trace_paths.append(trace_csv)
+        stats_stderr.append(f"capture range {index}:\n{stats_run.stderr}")
+        manifest_rows.append(
+            {
+                "capture_range": index,
+                "family": plan_cell.family,
+                "dtype": plan_cell.dtype,
+                "config": dict(plan_cell.config),
+                "split": plan_cell.split,
+                "report": report.name,
+                "report_sha256": sha256_file(report),
+                "trace_csv": trace_csv.name,
+                "trace_csv_sha256": sha256_file(trace_csv),
+            }
+        )
     (capture_dir / "nsys_stats.stderr.log").write_text(
-        stats_run.stderr,
+        "\n".join(stats_stderr),
         encoding="utf-8",
     )
-    cells = parse_nsight_cuda_gpu_trace_csv(trace_csv, plan)
+    capture_manifest = capture_dir / "capture_manifest.json"
+    capture_manifest.write_text(
+        json.dumps(
+            {
+                "schema": "simllm-nsight-capture-manifest-v1",
+                "reports": manifest_rows,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    cells = parse_nsight_cuda_gpu_trace_csvs(trace_paths, plan)
     after = _device_snapshot(nvidia_smi)
 
     provenance = ComputeCalibrationProvenance(
@@ -507,7 +556,7 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
         source_sha256=sha256_file(source),
         binary_sha256=sha256_file(binary),
         static_sass_sha256=sha256_file(sass_path),
-        capture_sha256=sha256_file(report),
+        capture_sha256=sha256_file(capture_manifest),
         creation_date=expectations["capture"]["creation_date"],
         warmup_policy=(
             f"{expectations['capture']['warmup_launches_per_cell']} target launches "
@@ -757,6 +806,7 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
             "clock_after": after,
         },
         "capture_inventory": {
+            "capture_reports": len(reports),
             "cells": len(artifact.cells),
             "train_cells": sum(cell.split == "train" for cell in artifact.cells),
             "held_out_cells": sum(cell.split == "held-out" for cell in artifact.cells),
