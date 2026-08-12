@@ -254,13 +254,16 @@ form, because a 243-cycle makespan on its own would not identify residency as
 the cause.
 
 Submission order is therefore an input CORE-4 owns, not a property the compute
-service may infer. `CoarseDeviceRuntime` forms a co-runnable compute group in
-`ExecutionGraph` tuple order and passes that ordered tuple to
-`estimate_concurrent`, so the measured G1 term follows the graph. Under the
-identity arbitration policy that order is the deterministic baseline sequence,
-and permuting priority labels changes nothing. A future class-aware policy
-(CORE-10) may reorder only legal ready candidates, and must pass its selected
-order to the compute service for the same measured form to follow it.
+service may infer. `CoarseDeviceRuntime` fixes the membership of a co-runnable
+compute group, orders it by repeated arbitration grants, and passes that
+ordered tuple to `estimate_concurrent`, so the measured G1 term follows the
+order the runtime actually chose. Under the identity policy every grant is the
+deterministic baseline sequence, which is `ExecutionGraph` tuple order, and
+permuting priority labels changes nothing. A class-aware policy reorders only
+legal ready candidates, and
+[the arbitrated-order study](../../examples/arbitrated_order_v1/RESULTS.md)
+measured the same one-cycle G1 term following that reordered tuple through the
+live metric chain.
 
 Both forms are the behavior of the exact frozen fixtures, replicated by
 [the mixed-makespan study](../../examples/mixed_makespan_v1/RESULTS.md)
@@ -445,8 +448,10 @@ them through the component scheduler and through the live CORE-4 metric chain,
 passing 11 genuine-risk instances across four families with all 124 fatal
 guards holding. Its residuals are COMP-24 (the forms cover one fixture and one
 residency-gated task), COMP-25 (no production step path selects the concurrent
-kernel service) and CORE-49 (the co-runnable group is built in graph order
-regardless of the arbitration policy). The built-in
+kernel service) and CORE-49, which closed with
+[the arbitrated-order study](../../examples/arbitrated_order_v1/RESULTS.md):
+the co-runnable group is now ordered by repeated arbitration grants rather than
+by graph order. The built-in
 A100/H100 profiles are unvalidated bootstrap seeds and do not establish
 production accuracy: their pipeline initiation intervals are derived from
 published per-SM unit counts, not measured.
