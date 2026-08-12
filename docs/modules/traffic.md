@@ -255,10 +255,36 @@ families passed and no fatal guard was violated; the absent-plan arm keeps its
 559-byte v1 wire form and its exact runtime timing, including under a nonzero
 collective channel service. See
 [the collective plan results](../../examples/collective_plan_v1/RESULTS.md).
-The plan is opt-in today, so TRAF-28 owns making it the lowering default and
-retiring the surrogate, and CORE-48 owns the missing cross-node
-destination-ingress serializer that keeps a converging combine structural
-rather than physical evidence.
+CORE-48 owns the missing cross-node destination-ingress serializer that keeps a
+converging combine structural rather than physical evidence.
+
+The 2026-08-13 TRAF-28 qualification then made that plan the lowering default
+and closed the task. `SerialStepLowererConfig.attach_collective_plan` and the
+matching `lower_step_observations` keyword default to True, so both shipped
+lowerers hand the runtime a fully planned graph and the runtime's own semantic
+reconstruction is unreachable on the production path. Setting the flag False is
+the explicit bypass: the graph then carries no plan, its v1 wire form omits the
+field so the accepted 559-byte anchor is unchanged, and the runtime falls back
+to its own expansion. The first run is void because its physical bound charged
+the swept fabric rate to a live arm placed entirely on one node, where the
+coarse runtime serves same-node sends over a fixed NVLink rate; the transport
+refreeze pinned one rank per node and made the bound charge each extent to the
+link the model selects. The corrected run passed 4/4 scored families over 20
+instances with every fatal guard held. Default and bypass produced identical
+completion times, quiescence, completion events and every WQE timestamp across
+two tensor-parallel widths, two rates and both lowering paths. A changed plan
+tag and a changed semantic rank order are both rejected with zero work requests
+submitted on the default path, while the bypass absorbs the same rank-order
+change silently at unchanged 196,608 bytes and unchanged 4,730,040 ps. With the
+absent-plan branch made fatal, every default cell still executes and every
+bypass cell raises. On the replayed 54-token Granite step the live TTFT and
+TPOT are 709,803,840 ps and 132,794,880 ps at 400 Gbit/s and exactly the
+inverse-rate pair at 200 Gbit/s, with both network terms scaling by 2.0000. The
+reconstruction is now dead code on the production path and live code on the
+compatibility path: the explicit bypass, deserialized v1 graphs without a plan
+field, and directly constructed `ExecutionGraph` values still reach it, so
+deleting it requires first retiring the absent-plan wire form. See
+[the plan default results](../../examples/collective_plan_default_v1/RESULTS.md).
 The 2026-08-12 TRAF-13 qualification added `DeviceRuntimeStepSink`, which binds
 the adapter's sole `VirtualClock` and carries optional observations through
 `ObservedStepLowerer`, `CoarseDeviceRuntime`, `CompletionEvent`,
@@ -331,40 +357,40 @@ pair, request, hop, input-identity and quiescence guards passed. At Granite
 scale the three modes emitted 336, 1,008 and 12,482 messages with 25,563,136
 bytes each. The per-token mode rendered and compiled in 17.020 seconds, used
 17.166 MiB peak traced memory, produced 2.140 MiB of GOAL text and completed
-its packet and fluid backend runs in 32.890 and 24.592 seconds. TRAF-22
-retains the timing qualification and missing 200 Gbit/s Granite scaling
-residual. See
+its packet and fluid backend runs in 32.890 and 24.592 seconds. That run keeps
+its void record and its raw observations. See
 [the dispatch sequence results](../../examples/dispatch_sequence_v1/RESULTS.md).
+
+The 2026-08-13 TRAF-22 requalification is a fresh qualification on the
+corrected floor and closes the task. The modeled port is full duplex, so the
+payload floor of a single-home-rank step is one endpoint charged in its busier
+direction, `max(egress, ingress) * 8 / rate`: 655,360 ps at 200 Gbit/s and
+327,680 ps at 400 Gbit/s on the retained synthetic fixture, exactly half the
+summed floors the void freeze used. Every bound is now computed from the
+actually rendered messages, the packet ceiling from the backend's
+full-envelope calendar, and the freeze added a held-out routing shape and
+1,024-byte payload that had never been rendered or executed. All six fatal
+guard groups held and all 34 scored instances in 5 families passed across 24
+synthetic and 12 Granite cells. The registered but previously unexecuted
+200/400 Gbit/s Granite scaling check passed on all six cells, with every
+network-term ratio within 0.06 percent of two after subtracting the
+rate-independent `24 * 4,139 ns` compute. Granite at 200 Gbit/s completes in
+908,419,960 ps packet and 879,134,570 ps fluid for the aggregate default,
+1,131,907,000 and 1,027,865,000 for expert groups, and 2,092,043,000 and
+1,121,909,000 per token. The aggregate default reproduced its GOAL identity and
+both retained 400 Gbit/s completions exactly, which is also the evidence that
+the pairwise frontier documentation alignment and the collective-plan lowering
+default moved no rendered byte. The per-token 200 Gbit/s packet backend ran
+58.02 seconds against the 60-second limit, which is the measured practical
+boundary of this scale point. The documented `pairwise_all_to_allv` source-only
+frontier now matches its implementation, a rank's first send; moving it to the
+last send would change accepted timing and needs its own freeze. See
+[the requalification results](../../examples/dispatch_sequence_v2/RESULTS.md).
 
 ## Open tasks
 
 ### Precision
 
-- TRAF-22 (Precision; P0; M): qualify `captured-message-sequence` timing under
-  corrected single-engine ownership. The corrected 54-token, 24-layer Granite
-  path is practical, but the 2026-08-12 ownership refreeze is void because its
-  fatal floor added reverse-direction dispatch and combine endpoint loads as
-  serial. The original byte-only packet and fluid bands also missed in the
-  retained raw findings, and the registered 200 Gbit/s Granite scaling cell
-  was not run. Replace those surrogates with bounds proved from the rendered
-  endpoint dependency frontiers and the packet backend's full-envelope
-  calendar. Align the documented source-only pairwise frontier with its
-  implementation before requalification. Preserve the void chronology, then
-  freeze and score at least one held-out payload or routing shape before its
-  first run. Acceptance requires all fatal guards to pass; exact
-  sequenced-to-aggregate per-pair and per-request equality; the independent
-  EP-width-eight hop ceiling; raw packet and fluid relations inside their
-  preregistered bounds; the missing 200/400 Gbit/s Granite scaling check;
-  unchanged aggregate-default bytes and timing; and retention of the
-  30-second render-plus-compile, 1 GiB memory, 64 MiB GOAL and 60-second
-  backend limits. PLAY-14 retains unobserved wire issue order. CORE-41 closed
-  the analytic destination-ingress gap and supplies the safe full-duplex floor
-  this requalification should use: the synthetic home endpoint carries 16,384
-  bytes in each direction, so `max(egress, ingress)` is 655,360 ps at 200
-  Gbit/s and 327,680 ps at 400 Gbit/s, exactly half the summed floors the void
-  freeze used, and the retained fluid observations exceed them. That makes the
-  requalification recoverable; it does not unvoid or rescore the historical
-  run, whose chronology is preserved.
 - TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
   zero-propagation, per-endpoint NVLink surrogate against
   same-generation point-to-point and collective captures. Sweep payload and
@@ -374,18 +400,6 @@ residual. See
   completion error is at most 10 percent or 1 microsecond, whichever is
   larger. Report the before/after TTFT and TPOT effect and retain the exact
   all-remote identity path.
-- TRAF-28 (Precision; P1; M): make the traffic-owned collective plan the
-  default on the production lowering path so the coarse runtime's semantic-work
-  expansion can be retired. TRAF-14 made the plan the sole authority whenever it
-  is present, but no shipped lowerer attaches one, so every default graph still
-  reaches the runtime's own reconstruction and the two expansions can drift for
-  exactly the graphs nobody opted in. Attach the plan in `SerialStepLowerer` and
-  `lower_step_observations`, keep an explicit bypass that preserves the accepted
-  559-byte v1 wire form and its serial timing, and requalify with the TRAF-14
-  perturbation family plus a live TTFT and TPOT arm on a real replayed step
-  rather than the tiny sentinel. Acceptance must show the runtime reconstruction
-  unreachable on the default path and removable without changing any accepted
-  number.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide
