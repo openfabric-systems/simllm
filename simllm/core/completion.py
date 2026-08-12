@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
+from simllm.core.bookkeeping import (
+    BookkeepingLedger,
+    framework_request_arrivals,
+)
 from simllm.core.clock import VirtualClock
 from simllm.core.execution import (
     EventPhase,
@@ -62,16 +66,27 @@ class CompletionReducer:
         self,
         clock: VirtualClock,
         *,
+        bookkeeping: BookkeepingLedger | None = None,
         lifetimes: RequestLifetimeRegistry | None = None,
     ) -> None:
         if not isinstance(clock, VirtualClock):
             raise TypeError("clock must be a VirtualClock")
+        if bookkeeping is not None and not isinstance(bookkeeping, BookkeepingLedger):
+            raise TypeError("bookkeeping must be a BookkeepingLedger or None")
         if lifetimes is not None and not isinstance(
             lifetimes, RequestLifetimeRegistry
         ):
             raise TypeError("lifetimes must be a RequestLifetimeRegistry or None")
         self.clock = clock
         self.lifetimes = lifetimes
+        self._request_arrivals = (
+            None
+            if bookkeeping is None
+            else {
+                arrival.request_id: arrival.arrived_at_ps
+                for arrival in framework_request_arrivals(bookkeeping)
+            }
+        )
         self._requests: dict[str, _RequestMetricState] = {}
         self._consumed_execution_ids: set[str] = set()
 
@@ -301,6 +316,22 @@ class CompletionReducer:
         }
         metrics: list[RequestMetric] = []
 
+        if self._request_arrivals is not None:
+            for scheduled in record.scheduled:
+                if scheduled.request_id in states:
+                    continue
+                arrived_at_ps = self._request_arrivals.get(scheduled.request_id)
+                if arrived_at_ps is None:
+                    raise ValueError(
+                        f"scheduled request {scheduled.request_id!r} has no "
+                        "framework-request bookkeeping origin"
+                    )
+                if arrived_at_ps > record.virtual_time_ps:
+                    raise ValueError(
+                        f"scheduled request {scheduled.request_id!r} predates its "
+                        f"bookkeeping arrival at {arrived_at_ps} ps"
+                    )
+
         for scheduled in record.scheduled:
             endpoint_candidates = [
                 operation_id
@@ -327,9 +358,14 @@ class CompletionReducer:
             endpoint_at_ps = by_id[endpoint_id].completed_at_ps
             state = states.get(scheduled.request_id)
             if state is None:
+                first_observed_at_ps = record.virtual_time_ps
+                if self._request_arrivals is not None:
+                    first_observed_at_ps = self._request_arrivals[
+                        scheduled.request_id
+                    ]
                 state = _RequestMetricState(
-                    first_observed_at_ps=record.virtual_time_ps,
-                    accounted_through_ps=record.virtual_time_ps,
+                    first_observed_at_ps=first_observed_at_ps,
+                    accounted_through_ps=first_observed_at_ps,
                 )
                 states[scheduled.request_id] = state
             if graph.released_at_ps < state.accounted_through_ps:
