@@ -439,7 +439,14 @@ NVLink egress cursor, concurrent multi-task scheduling
 exact-oracle rows and 6 passing behavioral relation families over 17
 instances. Its 21 structural invariants are unscored, and its two superseded
 registration misses remain visible as the chronology behind findings G1 and
-G2 (COMP-12). The built-in
+G2. Those two findings now have registered forms: the
+[mixed-makespan study](../../examples/mixed_makespan_v1/RESULTS.md) replicates
+them through the component scheduler and through the live CORE-4 metric chain,
+passing 11 genuine-risk instances across four families with all 124 fatal
+guards holding. Its residuals are COMP-24 (the forms cover one fixture and one
+residency-gated task), COMP-25 (no production step path selects the concurrent
+kernel service) and CORE-49 (the co-runnable group is built in graph order
+regardless of the arbitration policy). The built-in
 A100/H100 profiles are unvalidated bootstrap seeds and do not establish
 production accuracy: their pipeline initiation intervals are derived from
 published per-SM unit counts, not measured.
@@ -583,15 +590,6 @@ and an explicit reason:
   captures rather than the current synthetic profiles, and reconcile the
   intra-node split with TRAF-10 so one collective is never counted both
   here and on the fabric backend.
-- COMP-12 (Precision; P1; M): register the corrected mixed-makespan forms
-  measured by the [task-mix study](../../examples/gpu_task_mix/RESULTS.md).
-  Findings G1
-  and G2 there show that a concurrent makespan is
-  `max(isolated durations)` plus a submission-order issue delay, and that
-  tasks whose CTAs exhaust an SM's shared memory serialize on residency
-  instead of backfilling. Both need a pre-registered form of their own,
-  including how the issue-order delay should behave once CORE-4 owns
-  submission policy.
 - COMP-17 (Precision; P1; M): after COMP-6 supplies per-invocation captured
   shapes, populate `estimate_layers` for `ProfileTableProvider` and
   `TraceCalibratedGpuProvider`. The current surrogate is the step sink's even
@@ -649,6 +647,31 @@ and an explicit reason:
   samples. Report the deterministic point-table error before the
   distributional result. The deterministic providers remain exact
   compatibility levels and their accepted artifacts stay byte-identical.
+- COMP-24 (Precision; P1; M): extend the registered mixed-makespan forms
+  beyond the single frozen fixture they were measured on. COMP-12 registered
+  one issue-order pair and one residency-gated pair, so
+  `decompose_mixed_makespan` refuses a replay in which more than one task
+  waited for residency, and no measured row covers other shared-memory
+  fractions, register or warp pressure, launch shapes or instruction mixes.
+  The surrogate being replaced is the assumption that the two-task rows
+  generalize. Use isolated controls, admission cycles and concurrent
+  makespans as the identifying observables, sweep the residency currencies
+  independently so the binding one is identified rather than assumed, and
+  require the extended form to predict each held-out cell exactly on the
+  synthetic fixture before any silicon claim. The registered two-task rows
+  must stay exact.
+- COMP-25 (Precision; P1; M): connect the concurrent kernel service to a
+  production step path. The trace-driven SM scheduler is reachable through
+  `CoarseDeviceRuntime(kernel_services=...)` and COMP-12 demonstrated the
+  chain to `StepResult`, TTFT and TPOT, but no production study or step sink
+  selects it. Every reported production step therefore takes the scalar
+  `ComputeWork.nominal_duration_ps` path, whose concurrent makespan is the
+  independent-resource maximum and carries neither registered form. Supply
+  the per-operation `KernelLaunch` records a production step needs (COMP-6
+  owns the per-invocation shapes), select the service explicitly, and report
+  the before-versus-after TTFT and TPOT change on one accepted study. The
+  explicit scalar off path must keep every accepted baseline timestamp
+  exactly.
 
 ### Completeness
 

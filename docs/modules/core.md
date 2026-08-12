@@ -608,6 +608,20 @@ does not claim to produce these resource-contention measurements.
   and its live JCT effect; preserve symmetric and all-remote timestamps
   exactly. Revisit the dependency-authority `AAAA` values, which remain
   baseline observations rather than precision oracles until this lands.
+- CORE-49 (Precision; P1; S): pass the arbitrated order, not the graph order,
+  to the concurrent compute service. `_select_ready_operation` consults the
+  arbitration policy, but `_compute_group` then rebuilds the co-runnable group
+  as `sorted(candidates, key=operation_index)`, i.e. `ExecutionGraph` tuple
+  order, and never consults the policy. Under the identity policy the two
+  orders coincide, which is why COMP-12 could register the measured
+  submission-order issue delay against the graph order and observe it live. A
+  CORE-10 class-aware policy would reorder its selection while the compute
+  service still received graph order, so the registered issue-order term would
+  follow an order the runtime no longer chose. Derive the group order from the
+  same policy decision that selected the first operation, and use the
+  concurrent makespan and per-task admission cycles as the identifying
+  observables. Identity arbitration and class-label permutation must preserve
+  every accepted timestamp, wait, byte count and completion order exactly.
 - CORE-35 (Precision; P1; M): make the coarse runtime report conserve
   participant-local dependency frontiers in multi-rank serial MoE graphs. The
   routing-lifetime study's first three-request run executed those frontiers,
