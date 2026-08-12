@@ -66,12 +66,17 @@ own modules.
   runtime's realized predecessor chain for each correlated request endpoint,
   accumulates TTFT across non-sampling prefill chunks, computes exact TPOT,
   advances `VirtualClock` only to framework completion and retains later
-  asynchronous events as physical evidence.
+  asynchronous events as physical evidence. Its optional bookkeeping input
+  seeds each request's first-token history at the framework-request creation
+  timestamp; omitting it selects the exact legacy timing origin.
 - `simllm-request-bookkeeping-v1`: an append-only `BookkeepingLedger` of
   request-stage transitions, created-object records and the same
   `CompletionEvent` objects returned by the runtime. `RequestBookkeeper`
   assigns sequence numbers, validates lineage, registers a graph without
   mutating it, and queries by request, execution or object ancestry.
+  `framework_request_arrivals` validates the complete ledger and returns one
+  ordered arrival projection per framework request from
+  `CreatedObjectRecord.created_at_ps`.
 
 Created objects use typed portable identities and opaque owner-native handles:
 framework request and vRAM allocation, execution operation, NCCL command,
@@ -396,6 +401,14 @@ identities and fails closed when a count alone is ambiguous. The reducer
 consumes each execution ID once, including zero-latency results, and the v1
 reader treats an explicit null sampled-identity field as absent.
 
+CORE-31 is complete. When supplied a bookkeeping snapshot, the reducer now
+starts each request at its exact framework-request creation timestamp and
+attributes arrival-to-first-release time to the request critical-path queue.
+Scheduling before arrival rejects without advancing the clock or metric
+history, while omitting bookkeeping retains legacy results. The joined live
+vLLM study matched queue plus service to TTFT exactly in all 12 request rows;
+see [the CORE-31 results](../../examples/arrival_admission_v1/RESULTS.md).
+
 CORE-4 is complete for the coordinated first coarse bypass profile and the
 frozen Tier B structural fixture.
 `CoarseDeviceRuntime` implements host-launch and CUDA-stream order, dependency
@@ -639,6 +652,12 @@ does not claim to produce these resource-contention measurements.
   held-out queue wait and JCT within the declared measurement band. An observed
   no-copy path must stay explicitly zero, and disabling this mechanism must
   preserve the CORE-26 baseline exactly.
+- CORE-32 (Completeness; P2; L): model optional framework or server admission
+  control after arrival eligibility, including rejection, rate limits,
+  concurrency caps and policy-driven deferral, without duplicating the
+  framework scheduler. The disabled policy must preserve the arrival-gated
+  baseline exactly, and policy queue time must remain distinct from arrival
+  gating and scheduler queue time.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client above the delivered HTSIM persistent flow session and strict full
   `StepResult` codec. The backend foundation retains one event list, topology,
