@@ -650,6 +650,19 @@ does not claim to produce these resource-contention measurements.
   concurrent makespan and per-task admission cycles as the identifying
   observables. Identity arbitration and class-label permutation must preserve
   every accepted timestamp, wait, byte count and completion order exactly.
+- CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
+  destination-ingress serializer. Semantic sends serialize per source RNIC and
+  nothing at the receiver, so an all-remote many-to-one combine completes at
+  the maximum single-source egress rather than at a contended arrival. The
+  TRAF-14 qualification could therefore only report its converging four-rank
+  combine as structural evidence: 100 ps at 400 Gbit/s and 200 ps at
+  200 Gbit/s are the largest single extent, not a physical oracle. Identify the
+  correction from explicit per-endpoint byte ledgers, sweep payload and fan-in
+  across dispatch-star, combine-star and symmetric all-remote fixtures, and
+  require exact byte conservation, the preregistered ingress-bound increase and
+  its live TTFT and TPOT effect, while symmetric and single-source cases keep
+  their accepted timestamps. Scope boundary: CORE-41 owns the analytic
+  intra-node routed service and must preserve all-remote timestamps exactly.
 - CORE-42 (Precision; P0; S): requalify
   [nvlink_locality_v1](../../examples/nvlink_locality_v1/RESULTS.md) under the
   CORE-41 endpoint charge. Its two all-local `AAAA` cells are still frozen at

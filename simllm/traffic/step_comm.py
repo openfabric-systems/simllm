@@ -65,6 +65,7 @@ from simllm.core.execution_io import effective_dependency_edges
 from simllm.goal import GoalMessage, GoalTrace
 from simllm.placement import RankMapper
 from simllm.preplay.routing import RoutedToken
+from simllm.traffic.collective_plan import collective_plan_by_operation
 from simllm.traffic.locality import (
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     ClassifiedCommunicationPhase,
@@ -1642,6 +1643,7 @@ def _execution_graph_communication_phases(
         raise ValueError("base_tag must be a nonnegative integer")
 
     tags = collective_goal_tags(graph, base_tag=base_tag)
+    plan_by_operation = collective_plan_by_operation(graph)
     phases: list[CollectiveCommunicationPhase] = []
     for index, operation in enumerate(graph.operations):
         work = operation.work
@@ -1662,6 +1664,41 @@ def _execution_graph_communication_phases(
             raise ValueError(
                 f"graph.operations[{index}] collective needs channel_hint"
             )
+
+        if plan_by_operation:
+            plan = plan_by_operation[operation.operation_id]
+            site = "tp" if plan.collective == "all-reduce" else "ep"
+            extents_by_round: dict[int, list] = {}
+            for extent in plan.extents:
+                extents_by_round.setdefault(extent.round_index, []).append(extent)
+            for round_ in plan.rounds:
+                extents = extents_by_round.get(round_.round_index, [])
+                if not extents:
+                    continue
+                suffix = (
+                    f":round-{round_.round_index}" if len(plan.rounds) > 1 else ""
+                )
+                phases.append(
+                    CollectiveCommunicationPhase(
+                        phase_id=f"layer-{layer}:{site}-{channel}{suffix}",
+                        layer=layer,
+                        participants=plan.rank_order,
+                        segments=tuple(
+                            DirectedCollectiveSegment(
+                                source_rank=extent.source_rank,
+                                destination_rank=extent.destination_rank,
+                                payload_bytes=extent.payload_bytes,
+                                tag=round_.tag,
+                                request_payload_bytes=(
+                                    extent.request_payload_bytes
+                                ),
+                            )
+                            for extent in extents
+                        ),
+                        operation_id=operation.operation_id,
+                    )
+                )
+            continue
 
         operation_tags = tags[operation.operation_id]
         if work.collective == "all-reduce" and work.algorithm_hint == "ring":
