@@ -52,7 +52,10 @@ and still produce a real simulation.
   SHA-256, while each request carries a
   `simllm-preplay-routing-reference-v1` pointer to its trace row. One atomic
   `RequestBookkeeper.extend` call pins all framework-request objects only
-  after the complete join validates.
+  after the complete join validates. The optional in-process workload gate
+  consumes those creation timestamps and delays the framework handoff until
+  the shared virtual clock reaches each arrival. The join remains a read-only
+  source of eligibility and does not choose a framework batch.
 - **Replay.** The vLLM adapter serves the predefined token ids instead of a
   fabricated token and honors the oracle's stop position, so the scheduler
   sees the true completion step; the traffic layer consumes the captured
@@ -109,6 +112,14 @@ bookkeeping. Its one-request and two-request study passed exact field
 projection, a 7,000 ps arrival shift, trace-hash authority, cardinality scaling
 and rollback gates; the evidence is recorded in
 [the PLAY-2 results](../../examples/preplay_arrival_join_v1/RESULTS.md).
+
+PLAY-12 is complete. A joined fixed Granite replay now passes through the
+in-process arrival gate into the real vLLM scheduler. Arrival offset and
+offered burst sweeps passed all 8/8 genuine-risk instances, every request kept
+its captured tokens and stop reason, all 12 first-token rows conserved queue
+plus service exactly, and the all-at-once bypass matched the direct loop byte
+for byte; see [the PLAY-12 results](../../examples/arrival_admission_v1/RESULTS.md).
+Server ingress and framework admission policy remain outside this path.
 
 The joined routing supply now has its own strict
 `simllm-routed-experts-v1` projection. It preserves joined request order,
@@ -188,10 +199,3 @@ Tags follow the legend in [backends.md](backends.md#open-tasks).
   refusal boundaries that apply there, and prove an identity off mode against
   the accepted fabricated-token baseline. Add an in-process live smoke before
   claiming the path is live-reachable.
-- PLAY-12 (Completeness; P1; M): drive a joined vLLM replay through the
-  in-process arrival gate using the bookkeeping timestamps written by the
-  pre-play join. Acceptance must use a fixed capture, sweep arrival offset and
-  offered burst load through the real scheduler, preserve each request's
-  captured token count and stop reason, demonstrate exact queue plus service
-  TTFT decomposition, and compare the all-at-once bypass artifacts byte for
-  byte with the direct legacy loop.

@@ -36,6 +36,7 @@
     "CORE-21",
     "CORE-24",
     "CORE-28",
+    "CORE-31",
     "GOAL-1",
     "HTSIM-3",
     "HTSIM-9",
@@ -47,6 +48,7 @@
     "PLAY-3",
     "PLAY-4",
     "PLAY-11",
+    "PLAY-12",
     "SGL-1",
     "SGL-2",
     "TRAF-1",
@@ -56,7 +58,8 @@
     "VLLM-1",
     "VLLM-2",
     "VLLM-15",
-    "VLLM-16"
+    "VLLM-16",
+    "WORK-3"
   ],
   "retired_never_landed": [
     "HTSIM-19"
