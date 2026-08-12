@@ -11,6 +11,7 @@ import pytest
 
 import simllm.backends.step_sink as step_sink_module
 from simllm.backends import (
+    DeviceRuntimeStepSink,
     HtsimStepSink,
     HtsimStepSinkConfig,
     ObservedStepLowerer,
@@ -25,6 +26,7 @@ from simllm.core import (
     RequestPhase,
     ScheduledRequest,
     StepRecord,
+    VirtualClock,
 )
 from simllm.placement import PlacementManifest, RankPlacement
 from simllm.preplay import (
@@ -659,10 +661,11 @@ def test_observed_lowerer_preserves_per_request_attribution():
         for operation in serial.operations
     )
 
-    observed = ObservedStepLowerer(config).lower(
-        record,
-        ExecutionObservations(bare_markers, serial.completion_operation_ids),
+    observations = ExecutionObservations(
+        bare_markers,
+        serial.completion_operation_ids,
     )
+    observed = ObservedStepLowerer(config).lower(record, observations)
 
     attributed = [
         operation
@@ -677,3 +680,13 @@ def test_observed_lowerer_preserves_per_request_attribution():
                 actual.work.request_pair_payload_bytes
                 == expected.work.request_pair_payload_bytes
             )
+
+    clock = VirtualClock()
+    sink = DeviceRuntimeStepSink(config)
+    sink.bind_clock(clock)
+    result = sink(record, observations)
+
+    assert sink.outcomes[0].graph == observed
+    assert [metric.request_id for metric in result.request_metrics] == ["alpha"]
+    assert result.request_metrics[0].ttft_ps == result.step_latency_ps
+    assert clock.now_ps == result.completed_at_ps

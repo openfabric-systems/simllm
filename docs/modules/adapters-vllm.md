@@ -396,6 +396,36 @@ vLLM v0.26.0 chunked-prefill smoke emits sample counts `(0, 1, 1)` for
 scheduled-token counts `(2, 1, 1)`. Manually constructed records may still
 omit the optional field; v1 readers and that compatibility path are unchanged.
 
+The TRAF-13 component slice added the observation-aware step-sink handoff on
+2026-08-12. `_SimStepRuntime` binds its single virtual clock into an explicitly
+observation-capable sink and passes that sink the translated `StepRecord` plus
+optional `ExecutionObservations`; legacy one-argument sinks retain their exact
+call contract. `DeviceRuntimeStepSink` owns observed lowering, the coarse
+device runtime, completion reduction, and the returned `StepResult`. A focused
+component fixture routed supplied observations through that chain, produced
+200 completion events and request metrics for both scheduled requests, and
+preserved the frozen serial graph and GOAL digests. These are component and
+fatal-unscored identity results only. They do not establish a framework
+schedule producer or a live TTFT or TPOT effect.
+
+The registered source and component qualification then stopped before every
+behavioral relation, as predicted by the expectations-only commit `409b4ad`.
+The four-layer skeleton invoked the observation-capable sink once with no
+`ExecutionObservations` and exposed one fixed 4,096-byte `all_reduce`, zero of
+the required 48 semantic Granite MoE sites, and no layer, logical-stream,
+dependency, request, or completion-frontier fields. The audited active source
+also supplied no legal next-layer overlap for the frozen replay. No placement
+or TTFT/TPOT row ran, so the genuine-risk result is `0/0, blocked before
+behavioral execution`, not a failed or passed overlap fraction. VLLM-22 owns
+the missing producer and its live qualification.
+
+A separate post-run diagnostic reached a real vLLM 0.26.0 `LLM` using the
+Granite skeleton runner. Its prefill and decode steps each exposed one 64-byte
+DP event and one fixed 4,096-byte TP event, still with no
+`ExecutionObservations`, per-layer operation, or EP dispatch and combine site.
+This is component diagnostic evidence only and does not change the blocked
+behavioral denominator.
+
 ## Open tasks
 
 - VLLM-3: sim-native metrics export via a `vllm.stat_logger_plugins` stat
@@ -514,3 +544,15 @@ omit the optional field; v1 readers and that compatibility path are unchanged.
   matrix. Hold out at least one model and group size; require modeled median
   and p95 call cost within a pre-registered relative or additive band, then
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
+- VLLM-22 (Completeness; P1; L): add a real source-backed vLLM
+  `ExecutionObservations` producer for each translated step. For the frozen
+  Granite replay it must observe all 24 ordered layers and exactly 48 semantic
+  MoE sites, one dispatch and one combine per layer, with exact submission
+  order, logical streams, program-order and event-wait dependencies, request
+  correlation, and completion frontier. Name the active source mechanism that
+  makes every claimed concurrency legal, and derive no edge from an overlap
+  percentage or compatibility schedule. Extend the per-request regression to
+  the adapter-emitted schedule, proving that traffic rebinding preserves every
+  request-pair byte and that completion reduction returns the correct request
+  identities. With the producer absent, preserve the legacy sink call, serial
+  graph and GOAL bytes, timestamps, and completion order exactly.

@@ -31,7 +31,7 @@ class DeviceStepOutcome:
 
 
 class DeviceRuntimeStepSink:
-    """Run a vLLM step through observed lowering and completion reduction.
+    """Run a framework step through observed lowering and completion reduction.
 
     This sink owns one persistent runtime and one request-metric history. The
     adapter supplies the same ``VirtualClock`` used to timestamp the
