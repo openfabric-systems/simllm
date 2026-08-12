@@ -91,7 +91,35 @@ def _stub_backend(monkeypatch, *, makespan_ps: int = 123_456) -> None:
     monkeypatch.setattr(step_sink_module, "run_htsim_rnic", run)
 
 
-def test_classifier_uses_per_source_local_egress_and_whole_ns_rounding():
+def _local_phase(phase_id, width, pairs, payload_bytes):
+    return CollectiveCommunicationPhase(
+        phase_id=phase_id,
+        layer=0,
+        participants=tuple(range(width)),
+        segments=tuple(
+            DirectedCollectiveSegment(source, destination, payload_bytes, 7)
+            for source, destination in pairs
+        ),
+    )
+
+
+def _classify_local(phase, width):
+    return classify_step_locality(
+        (phase,),
+        rank_mapper=RankMapper(_manifest(["node"] * width)),
+    ).phases[0]
+
+
+def _symmetric_pairs(width):
+    return tuple(
+        (source, destination)
+        for source in range(width)
+        for destination in range(width)
+        if source != destination
+    )
+
+
+def test_classifier_uses_per_endpoint_local_bytes_and_whole_ns_rounding():
     phase = CollectiveCommunicationPhase(
         phase_id="mixed",
         layer=0,
@@ -122,16 +150,159 @@ def test_classifier_uses_per_source_local_egress_and_whole_ns_rounding():
         901,
         900,
     ]
-    assert classified.nvlink_source_service_ns == (
-        (0, 1),
+    assert classified.nvlink_endpoint_bytes == (
+        (0, 450, 451),
+        (1, 451, 450),
+        (2, 901, 900),
+        (3, 900, 901),
+    )
+    assert classified.nvlink_endpoint_service_ns == (
+        (0, 2),
         (1, 2),
         (2, 3),
-        (3, 2),
+        (3, 3),
     )
+    assert classified.nvlink_peak_endpoint_bytes == 901
     assert classified.nvlink_service_ps == 3_000
     assert plan.fabric_bytes == 444
     assert plan.nvlink_bytes == 2_702
     assert plan.total_directed_bytes == 3_146
+
+
+@pytest.mark.parametrize("width", (2, 4, 8))
+@pytest.mark.parametrize("payload_bytes", (1_024, 2_048))
+def test_symmetric_and_star_phases_share_one_peak_endpoint_charge(width, payload_bytes):
+    """Group bytes differ by a factor of W, the peak endpoint load does not."""
+
+    symmetric = _classify_local(
+        _local_phase("symmetric", width, _symmetric_pairs(width), payload_bytes),
+        width,
+    )
+    dispatch = _classify_local(
+        _local_phase(
+            "dispatch",
+            width,
+            tuple((0, destination) for destination in range(1, width)),
+            payload_bytes,
+        ),
+        width,
+    )
+    combine = _classify_local(
+        _local_phase(
+            "combine",
+            width,
+            tuple((source, 0) for source in range(1, width)),
+            payload_bytes,
+        ),
+        width,
+    )
+
+    peak_bytes = (width - 1) * payload_bytes
+    assert symmetric.nvlink_bytes == width * peak_bytes
+    assert dispatch.nvlink_bytes == peak_bytes
+    assert combine.nvlink_bytes == peak_bytes
+    for classified in (symmetric, dispatch, combine):
+        assert classified.nvlink_peak_endpoint_bytes == peak_bytes
+        assert classified.nvlink_service_ps == symmetric.nvlink_service_ps
+
+
+def test_combine_incast_is_charged_on_the_home_rank_ingress():
+    """The many-to-one home rank absorbs the sum, not the per-source maximum."""
+
+    combine = _classify_local(
+        _local_phase("combine", 8, tuple((source, 0) for source in range(1, 8)), 1_024),
+        8,
+    )
+
+    assert combine.nvlink_endpoint_bytes[0] == (0, 0, 7_168)
+    assert combine.nvlink_endpoint_bytes[1:] == tuple(
+        (rank, 1_024, 0) for rank in range(1, 8)
+    )
+    assert combine.nvlink_endpoint_service_ns[0] == (0, 16)
+    assert combine.nvlink_service_ps == 16_000
+    assert sum(egress for _, egress, _ in combine.nvlink_endpoint_bytes) == 7_168
+    assert sum(ingress for _, _, ingress in combine.nvlink_endpoint_bytes) == 7_168
+
+
+def test_full_duplex_endpoint_does_not_add_the_two_directions():
+    """A symmetric endpoint keeps one direction's charge, not their sum."""
+
+    symmetric = _classify_local(
+        _local_phase("symmetric", 4, _symmetric_pairs(4), 1_024),
+        4,
+    )
+
+    assert symmetric.nvlink_endpoint_bytes == tuple(
+        (rank, 3_072, 3_072) for rank in range(4)
+    )
+    assert symmetric.nvlink_peak_endpoint_bytes == 3_072
+    assert symmetric.nvlink_service_ps == 7_000
+
+
+def test_ledger_that_disagrees_with_the_local_segments_is_rejected():
+    from simllm.traffic.locality import ClassifiedCommunicationPhase
+
+    phase = _local_phase("combine", 4, ((1, 0), (2, 0), (3, 0)), 1_024)
+
+    with pytest.raises(ValueError, match="disagrees with the local segments"):
+        ClassifiedCommunicationPhase(
+            phase=phase,
+            fabric_segments=(),
+            nvlink_segments=phase.segments,
+            nvlink_endpoint_bytes=(
+                (0, 0, 3_072),
+                (1, 1_024, 0),
+                (2, 1_024, 0),
+                (3, 1_024, 1),
+            ),
+            nvlink_bandwidth_bytes_per_second=450_000_000_000,
+            nvlink_service_ps=7_000,
+        )
+
+
+def test_service_that_disagrees_with_the_ledger_is_rejected():
+    from simllm.traffic.locality import ClassifiedCommunicationPhase
+
+    phase = _local_phase("combine", 4, ((1, 0), (2, 0), (3, 0)), 1_024)
+
+    with pytest.raises(ValueError, match="disagrees with the endpoint ledger"):
+        ClassifiedCommunicationPhase(
+            phase=phase,
+            fabric_segments=(),
+            nvlink_segments=phase.segments,
+            nvlink_endpoint_bytes=(
+                (0, 0, 3_072),
+                (1, 1_024, 0),
+                (2, 1_024, 0),
+                (3, 1_024, 0),
+            ),
+            nvlink_bandwidth_bytes_per_second=450_000_000_000,
+            nvlink_service_ps=3_000,
+        )
+
+
+def test_all_remote_phase_carries_an_empty_endpoint_ledger():
+    segments = (
+        DirectedCollectiveSegment(0, 1, 1_024, 7),
+        DirectedCollectiveSegment(1, 0, 1_024, 7),
+    )
+    phase = CollectiveCommunicationPhase(
+        phase_id="remote",
+        layer=0,
+        participants=(0, 1),
+        segments=segments,
+    )
+
+    classified = classify_step_locality(
+        (phase,),
+        rank_mapper=RankMapper(_manifest(["a", "b"])),
+    ).phases[0]
+
+    assert classified.nvlink_segments == ()
+    assert classified.nvlink_endpoint_bytes == ()
+    assert classified.nvlink_endpoint_service_ns == ()
+    assert classified.nvlink_peak_endpoint_bytes == 0
+    assert classified.nvlink_service_ps == 0
 
 
 def test_absent_placement_is_all_remote_without_reordering():

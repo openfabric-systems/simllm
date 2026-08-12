@@ -65,10 +65,22 @@ the flow-level work the GOAL emitter renders.
   from the graph and rejects a lost, duplicated or mutated operation, edge,
   rank, payload, tag or request partition.
 - In the placement-enabled path, each phase's intra-node segments use a flat
-  analytic per-source egress serializer. The declared first-cut rate is
-  450,000,000,000 bytes/s and source service is
-  `ceil(local_egress_bytes * 1e9 / rate)` whole nanoseconds. Only cross-node
-  segments reach `render_fabric_phase_goal` and htsim. `HtsimStepSink`
+  analytic per-endpoint serializer. `ClassifiedCommunicationPhase` carries an
+  explicit sorted `nvlink_endpoint_bytes` ledger of
+  `(rank, egress_bytes, ingress_bytes)` built from the local segments
+  themselves, with no transpose or symmetry assumption, and rebuilds it in
+  `__post_init__` so a ledger, byte conservation or service that disagrees with
+  its own segments cannot be constructed. The declared first-cut rate is
+  450,000,000,000 bytes/s. The modeled port is full duplex, matching NVLink and
+  NVSwitch ports, so one endpoint's load is
+  `max(egress_bytes, ingress_bytes)`, its service is
+  `ceil(endpoint_load * 1e9 / rate)` whole nanoseconds, and the serial phase
+  costs the largest of them. The rejected alternative, a shared half-duplex port
+  charged `egress_bytes + ingress_bytes`, would double a symmetric exchange the
+  hardware serves on independent lanes; see
+  [the endpoint service results](../../examples/endpoint_service_v1/RESULTS.md).
+  Only cross-node segments reach `render_fabric_phase_goal` and htsim.
+  `HtsimStepSink`
   executes graph-ordered causal artifacts. Within a placement-split collective
   it uses `max(local_service, fabric_service)` for each directed phase and sums
   those phase services. An all-intra-node step invokes no fabric backend. The
@@ -280,7 +292,9 @@ level rank-local completion is inferred, not directly source-backed.
 
 The retained 440,115,200 directed bytes are a pre-TRAF-25 conservation
 identity over the source-multiplied table and are not portable. The duration
-model keys on maximum per-source egress, not total bytes. Under TRAF-25,
+model keys on maximum per-endpoint load, not total bytes. It keyed on maximum
+per-source egress until CORE-41, which was the same quantity only while the
+local traffic matrix stayed symmetric. Under TRAF-25,
 dispatch egress from the owning rank stays fixed while combine collapses, so
 the communication term changes by roughly a factor of two rather than the
 eightfold total-byte change. `_validate_microbatch_partition` conserves the
@@ -343,10 +357,16 @@ residual. See
   preregistered bounds; the missing 200/400 Gbit/s Granite scaling check;
   unchanged aggregate-default bytes and timing; and retention of the
   30-second render-plus-compile, 1 GiB memory, 64 MiB GOAL and 60-second
-  backend limits. PLAY-14 retains unobserved wire issue order, and CORE-41
-  retains analytic destination-ingress service.
+  backend limits. PLAY-14 retains unobserved wire issue order. CORE-41 closed
+  the analytic destination-ingress gap and supplies the safe full-duplex floor
+  this requalification should use: the synthetic home endpoint carries 16,384
+  bytes in each direction, so `max(egress, ingress)` is 655,360 ps at 200
+  Gbit/s and 327,680 ps at 400 Gbit/s, exactly half the summed floors the void
+  freeze used, and the retained fluid observations exceed them. That makes the
+  requalification recoverable; it does not unvoid or rescore the historical
+  run, whose chronology is preserved.
 - TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
-  zero-propagation, per-source NVLink egress surrogate against
+  zero-propagation, per-endpoint NVLink surrogate against
   same-generation point-to-point and collective captures. Sweep payload and
   participant count on the reference eight-GPU node, hold out at least one
   payload per participant width, and replace the constant with the smallest

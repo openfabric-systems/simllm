@@ -58,20 +58,41 @@ def _wait_until_not_live(pid: int, timeout_s: float = 5.0) -> None:
 
 
 def _wait_for_marker(directory: Path, timeout_s: float = 5.0) -> dict[str, object]:
+    """Wait for exactly one marker that also parses as complete JSON.
+
+    A marker becomes visible in the directory before its contents are
+    written, so treating the glob hit as readiness can read an empty or
+    partial file. Keep polling until it parses.
+    """
+
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
         markers = list(directory.glob("*.json"))
         if len(markers) == 1:
-            return json.loads(markers[0].read_text(encoding="utf-8"))
+            try:
+                return json.loads(markers[0].read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                pass
         time.sleep(0.02)
     pytest.fail("owned child marker was not published")
 
 
 def _wait_for_pid_file(path: Path, timeout_s: float = 5.0) -> int:
+    """Wait for the PID file to exist AND to hold a complete integer.
+
+    Creating the file and writing its contents are two steps, so a reader
+    that treats existence as readiness can observe it empty or partial. The
+    window is wide enough on Windows to fail a run, so keep polling until
+    the content parses instead of trusting the first sighting.
+    """
+
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
         if path.is_file():
-            return int(path.read_text(encoding="ascii"))
+            try:
+                return int(path.read_text(encoding="ascii").strip())
+            except ValueError:
+                pass
         time.sleep(0.02)
     pytest.fail(f"target PID file was not published: {path}")
 
