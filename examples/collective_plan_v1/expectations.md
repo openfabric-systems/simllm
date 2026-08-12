@@ -27,6 +27,11 @@ pre-freeze source audit found these independent in-repository surfaces:
   reconstructs ring chunks, successors, rounds and pairwise extents. In
   particular, line 1793 uses `payload // W` without the traffic pattern's
   one-byte floor.
+- `simllm/core/runtime.py:1192-1212` rejects a ring payload smaller than its
+  rank count and rejects an empty semantic pairwise collective before that
+  duplicated expansion runs. The explicit traffic-plan path must consume the
+  GOAL-valid declared extents instead of applying those surrogate-only
+  restrictions. The absent-plan path retains them exactly.
 - `simllm/traffic/execution_goal.py:160-173` states the accepted empty sparse
   collective frontier and tag order, while lines 286-330 reconstruct the two
   supported patterns for graph rendering.
@@ -108,23 +113,25 @@ instance can fail independently of the later exact oracle.
 
 The 3-byte, four-rank ring is the drift sentinel. The accepted GOAL pattern
 has six rounds of one-byte messages. The current absent-plan compatibility
-runtime floors `3 // 4` to zero bytes. With all non-network service constants
-zero, distinct source RNICs and no propagation term, the explicit plan must
-therefore produce these raw relations before any exact row is checked:
+runtime rejects the operation because `3 < 4`, before its separate
+`3 // 4` expansion can invent zero-byte work. With all non-network service
+constants zero, distinct source RNICs and no propagation term, the explicit
+plan must instead reach these raw values before any exact row is checked:
 
-| Rate | Explicit-plan step latency | Absent-plan step latency | Signed explicit minus absent |
-|---:|---:|---:|---:|
-| 400 Gbit/s | 120 ps | 0 ps | +120 ps |
-| 200 Gbit/s | 240 ps | 0 ps | +240 ps |
+| Rate | Explicit-plan step latency | Legacy absent-plan outcome |
+|---:|---:|---|
+| 400 Gbit/s | 120 ps | Rejects the sub-chunk semantic surrogate |
+| 200 Gbit/s | 240 ps | Rejects the sub-chunk semantic surrogate |
 
 Three consecutive request steps, one prefill then two decode, pass through
 `CoarseDeviceRuntime`, `CompletionEvent`, `RuntimeReport`,
 `CompletionReducer`, `StepResult`, TTFT and TPOT. The explicit-plan arm must
-increase TTFT and TPOT by exactly 120 ps at 400 Gbit/s and 240 ps at
-200 Gbit/s relative to the absent-plan arm. These four metric instances form
-the second genuine-risk family. The 200 Gbit/s explicit metric must be exactly
-twice the 400 Gbit/s metric; this scaling check is fatal-unscored because the
-four exact signed metric instances already pin it.
+produce TTFT and TPOT of exactly 120 ps at 400 Gbit/s and 240 ps at
+200 Gbit/s. These four metric instances form the second genuine-risk family.
+A runtime that reconstructs from semantic work fails before producing these
+metrics. The 200 Gbit/s explicit metric must be exactly twice the 400 Gbit/s
+metric; this scaling check is fatal-unscored because the four exact metric
+instances already pin it.
 
 For every divisible ring cell and both link rates, explicit-plan and
 absent-plan runtime WQE rows, completion order and serial timing must be
@@ -201,8 +208,8 @@ identity and zero-work assertions are fatal but unscored.
 
 ## Entailment analysis
 
-The runner must evaluate the two perturbation outcomes and four signed live
-metric changes from raw validation and runtime observations before checking
+The runner must evaluate the two perturbation outcomes and four live metric
+values from raw validation and runtime observations before checking
 any fixed plan, GOAL, wire, WQE or timing oracle. No earlier fatal check pins a
 scored quantity. The later exact rows reuse some values for regression and do
 not count again. The registered headline is therefore two families and six
