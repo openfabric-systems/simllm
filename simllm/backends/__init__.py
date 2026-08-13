@@ -67,6 +67,11 @@ from simllm.backends.rnic_records import (
     rnic_session_config_from_json,
     rnic_session_result_from_json,
 )
+from simllm.backends.step_attribution import (
+    HtsimRequestMetricReducer,
+    RequestLatencyTotals,
+    attribute_step,
+)
 from simllm.backends.step_lowerer import (
     ObservedStepLowerer,
     SerialStepLowerer,
@@ -104,6 +109,7 @@ __all__ = [
     "FlowCompletion",
     "HtsimDcqcnConfig",
     "HtsimPersistentStepSink",
+    "HtsimRequestMetricReducer",
     "HtsimRnicConfig",
     "HtsimStepSink",
     "HtsimStepSinkConfig",
@@ -112,6 +118,7 @@ __all__ = [
     "LogGopsimRunResult",
     "NormalizedFct",
     "ObservedStepLowerer",
+    "RequestLatencyTotals",
     "RnicAuthorityCounters",
     "RnicBookkeepingProjection",
     "RnicCompletionProjection",
@@ -129,6 +136,7 @@ __all__ = [
     "StepLocalityOutcome",
     "StepNetworkOutcome",
     "assert_bypass_artifact_identity",
+    "attribute_step",
     "build_htsim_dcqcn_command",
     "build_htsim_rnic_command",
     "build_htsim_uec_command",
