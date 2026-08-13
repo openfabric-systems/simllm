@@ -1,4 +1,14 @@
 {
+  "attempt_two_refreeze": {
+    "attempt_one_status": "void",
+    "attempt_one_summary_sha256": "ab2e565e2293d14dd72a7de6bb961b6ff6089738824277b6b40e87e38b965df3",
+    "class": "post_specified",
+    "corrected_predicate": "every enabled step provider_compute_ps inside intervals_ps.ideal_compute",
+    "device_consistent_turing_roofline_ps": 2751146667,
+    "guard": "G10_provider_input",
+    "reason": "the frozen predicate compared a raw provider value against a quantized literal",
+    "widened_scored_intervals": []
+  },
   "cells": [
     {
       "collective_latency_profile": null,
@@ -37,6 +47,7 @@
       "source_cell": "a-ep8-200g"
     }
   ],
+  "collectives_per_step": 48,
   "constants_ps": {
     "accepted_decode_compute": 99024000,
     "accepted_decode_network_400g": 105502734,
@@ -44,8 +55,8 @@
     "collective_floor_width8": 30128029,
     "eager_point_per_launch": 2364255,
     "graph_point_per_launch": 809306,
-    "quantized_eager567": 1340533000,
     "quantized_delta": 984438000,
+    "quantized_eager567": 1340533000,
     "quantized_graph440": 356095000
   },
   "disabled_path_literals": {
@@ -85,20 +96,50 @@
     "steps_jsonl_sha256": "f7c3b85866ce0fdb6d87c1f706ad6fd21153210c79d3c21d874b7642267eb11a",
     "total_routed_bytes": 50802688
   },
-  "endpoint_envelope_bytes": [14, 458752],
+  "endpoint_envelope_bytes": [
+    14,
+    458752
+  ],
   "intervals_ps": {
     "additive": {
-      "on-eager567-400g": [2882678392, 2926678392],
-      "on-graph440-200g": [1898240392, 2002240392],
-      "on-graph440-400g": [1898240392, 1942240392]
+      "on-eager567-400g": [
+        2882678392,
+        2926678392
+      ],
+      "on-graph440-200g": [
+        1898240392,
+        2002240392
+      ],
+      "on-graph440-400g": [
+        1898240392,
+        1942240392
+      ]
     },
-    "ideal_compute": [95000000, 105000000],
-    "network_200g": [96000000, 200000000],
-    "network_400g": [96000000, 140000000],
+    "ideal_compute": [
+      95000000,
+      105000000
+    ],
+    "network_200g": [
+      96000000,
+      200000000
+    ],
+    "network_400g": [
+      96000000,
+      140000000
+    ],
     "overlapped": {
-      "on-eager567-400g": [1637145392, 1691145392],
-      "on-graph440-200g": [1637145392, 1751145392],
-      "on-graph440-400g": [1637145392, 1691145392]
+      "on-eager567-400g": [
+        1637145392,
+        1691145392
+      ],
+      "on-graph440-200g": [
+        1637145392,
+        1751145392
+      ],
+      "on-graph440-400g": [
+        1637145392,
+        1691145392
+      ]
     }
   },
   "published_projections_ps": {
@@ -122,8 +163,14 @@
       "class": "scored_behavioral",
       "kind": "bandwidth_compression",
       "minimum_matched_compositions": 2,
-      "published_disabled_path_ratio_range": [1.0441, 1.476],
-      "ratio_band": [1.0, 1.03]
+      "published_disabled_path_ratio_range": [
+        1.0441,
+        1.476
+      ],
+      "ratio_band": [
+        1.0,
+        1.03
+      ]
     }
   },
   "residual_ids": {
@@ -139,7 +186,9 @@
     "all_reduces_per_layer": 2,
     "layers": 24,
     "overlap_counterfactual_hidden_ps": 723072696,
-    "share_band": [0.48, 0.78]
-  },
-  "collectives_per_step": 48
+    "share_band": [
+      0.48,
+      0.78
+    ]
+  }
 }

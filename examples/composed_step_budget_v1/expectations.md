@@ -403,6 +403,42 @@ Counts from different classes are never summed into one headline.
   traffic-coverage arithmetic, the overlap counter-candidate, the implied
   decode rate and every physical-sanity position statement.
 
+## Attempt two, post-specified refreeze of one fatal predicate
+
+This section is written after production attempt one ran and is labelled
+post-specified. It is not a pre-registered claim, and attempt one is retained
+as void rather than reinterpreted.
+
+Attempt one violated fatal guard **G10 host term reach**, so it is VOID with
+findings and no behavioral pass fraction from it is interpretable. The cause is
+in the guard's own predicate, not in the model and not in the measurement. G10
+required the accepted literal 99,024,000 ps to appear among the enabled cells'
+raw `provider_compute_ps` values. That literal is the accepted mission cell's
+`compute_service_ps`, which is the provider estimate after the serial lowerer
+floors each of the 24 layers to whole GOAL nanoseconds. The raw provider value
+before that quantization is 99,032,502 ps, so the frozen predicate compared a
+raw quantity against a quantized literal and could not hold for any run,
+correct or otherwise.
+
+The corrected predicate keeps the guard's stated intent, that the pinned
+provider kept the accepted compute input and did not silently price compute
+against the calibrated device's own memory roof:
+
+> **G10 host term reach, attempt two.** Each enabled cell reports the frozen
+> host profile and launch count, and every enabled step's raw
+> `provider_compute_ps` lies inside the already frozen `CQ` interval
+> `[95,000,000, 105,000,000]` ps. A device-consistent GTX 1660 Ti roofline for
+> the same 554,631,168 bytes would be 2,751,146,667 ps at the 0.7 derate, i.e.
+> 26 times the ceiling of that interval, so the corrected predicate still fails
+> immediately if the provider is not pinned.
+
+What this refreeze does not do, stated explicitly because that is the integrity
+question: it widens no interval of F1, F2 or F3, it changes no constant, it
+changes no modeled behavior, and it introduces no new relation. `CQ` is reused
+from the original freeze rather than invented here. Attempt two is a clean
+rerun of the identical four cells at the corrected commit, and the report
+states whether every attempt-one raw value reproduces exactly.
+
 ## Reproduction
 
 The frozen check-only command validates every input and every arithmetic fact
