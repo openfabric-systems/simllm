@@ -21,15 +21,17 @@ Its fatal harness did not execute a mixed-placement collective, and its stored
 genuine risk. Its raw measurements remain valid, but neither task closes on
 that run.
 
-Production attempt three is **not void**. Every fatal guard held, including a
-two-node mixed-placement collective with simultaneous local and fabric
-service. All **3 of 3** non-entailed genuine-risk behavioral families passed,
-for a genuine-risk fraction of **100 percent**. C1 contains three held-out
-instances, which are reported separately from the family count. The registered
-C3 sensitivity also passes, but is exact-unscored because fatal guards uniquely
-determine its ratio. TRAF-11 and COMP-11 each close only on their own registered
-clauses: the undemonstrated point-to-point source clause moves to TRAF-31, and
-the undemonstrated detailed-mechanism clauses move to COMP-31.
+The final classification replay of production attempt three is **not void**.
+Every fatal guard held, including a two-node mixed-placement collective with
+simultaneous local and fabric service. All **2 of 2 non-entailed genuine-risk
+families (C1, C2)** passed, for **100 percent genuine risk**. C1 contains three
+held-out instances, which are reported separately from the family count. C3
+and C4 also pass, but both are exact-unscored because exact guards and fixed
+fixture construction entail their predicates. `step_service_conservation`,
+not C4's predicate, carries the TTFT and TPOT reach claim. TRAF-11 and COMP-11
+each close only on their own registered clauses: the undemonstrated
+point-to-point source clause moves to TRAF-31, and the undemonstrated
+detailed-mechanism clauses move to COMP-31.
 
 ## Freeze chronology and two-sided integrity
 
@@ -39,9 +41,10 @@ result-producing run. The original expectations SHA-256 was
 `9bcbdc22bbd4525cbbc51782f1574d1f0097f6793c0cb075dc4be5c11a5d52a8`.
 The original freeze classified four families as scored, and included the
 calibration parameters, physical bounds and closure scope. Independent closure
-review found that C3's exact fatal oracles entail its ratio, so this report
-post-specifically removes C3 from the genuine-risk denominator. It does not
-discard or weaken the registered relation.
+review found that C3's exact fatal oracles entail its ratio. The B1 fix-round
+then found that C4's exact guards and fixture construction likewise entail its
+predicate. This report post-specifically removes both from the genuine-risk
+denominator without discarding or weakening either registered relation.
 
 Attempt one ran at `cec7109adeb9656de92f9ef5ea54572accdc3208`. Its summary
 SHA-256 is
@@ -61,11 +64,17 @@ Commit `a7bca21` made the matching harness correction, and attempt two ran at
 
 Independent closure review then found the entailed C3 classification and the
 missing mixed-placement coverage. Commit `4401401` corrected both evidence
-defects without changing modeled behavior. Attempt three ran at
+defects without changing modeled behavior. Attempt three initially ran at
 `4401401c9bafd995050aa5cf83fff50c8ccf3b75`; its summary SHA-256 is
 `fe55272c7a45b69874ae10b4848649d5eb80624f44ef5c5f0f300a24959cee81`.
-All raw C1 through C4 values are identical between attempts two and three.
-The specific mixed cell is post-specified coverage of the frozen no-duplicate
+The B1 fix-round then found that C4 was also entailed. Commit `5eb8041` moved
+C4 beside C3 as exact-unscored evidence and added a classification regression.
+A clean classification replay of attempt three ran at
+`5eb8041db9260e32f4da82dc9143958e255a6a65`; its `summary.json` SHA-256 is
+`eb34411f3db57383490833eeed12828ceb90cee5afe1ef071c60f07231c16485`.
+All 1,350 non-summary files are byte-identical to the initial attempt-three
+record, and all raw C1 through C4 values remain identical to attempt two. The
+specific mixed cell is post-specified coverage of the frozen no-duplicate
 charge clause. It is fatal-unscored evidence, not a new behavioral relation.
 
 Every commit after the first measured run is classified here:
@@ -74,31 +83,37 @@ Every commit after the first measured run is classified here:
 |---|---|---|---|
 | `3a6126e` | Refreezes a fatal harness premise after a void run | unchanged | raw C1 through C4 values unchanged; the accepted cancellation oracle changes from an invalid 2,000,000 ps literal to the executed 2,000,001 ps quantized value |
 | `a7bca21` | Fixes the evidence harness to implement that refreeze | unchanged | 6,014,081 and 10,028,161 ps before and after; only the fatal comparison changes |
-| `4401401` | Fixes evidence classification and adds missing mixed-placement coverage | unchanged | C1 through C4 are identical before and after; the headline changes from invalid 4/4 to 3/3, and the new mixed cell measures one previously unexercised frozen guard |
-| closure commit containing this report | Reconciles documentation and the ledger and adds an LF portability lock | unchanged | no measurement rerun and no measured value changes |
+| `4401401` | Fixes the first evidence classification defect and adds missing mixed-placement coverage | unchanged | C1 through C4 are identical before and after; the headline changes from invalid 4/4 to still-invalid 3/3, and the new mixed cell measures one previously unexercised frozen guard |
+| `702976e` | Reconciles documentation and the ledger and adds an LF portability lock | unchanged | no measurement rerun and no measured value changes |
+| `d3cdbcd` | Merges current main before the fix round | unchanged for this study | the later clean replay reproduces all 1,350 non-summary files exactly |
+| `5eb8041` | Fixes the remaining C4 classification defect and adds a regression lock | unchanged | the valid headline changes from 3/3 to 2/2; all raw C1 through C4 values and all 1,350 non-summary files remain identical |
+| fix-round report commit | Reconciles the accepted replay and composition disclosures | unchanged | no measurement rerun and no measured value changes |
 
-No post-measurement commit changes an execution graph, lowerer, collective
-plan, backend call, calibrated parameter or service equation. The physical
-propagation reference remains 2,000,000 ps. The later commits change only a
-fatal quantization oracle, evidence classification and guard coverage.
+No post-measurement commit changes this study's execution graph, lowerer,
+collective plan, backend call, calibrated parameter or service equation. The
+physical propagation reference remains 2,000,000 ps. The study-specific later
+commits change only a fatal quantization oracle, evidence classification, guard
+coverage and reporting.
 
 ## What ran
 
 Attempts one and two used 9 sink cells, 6 all-local calibration cells and one
 unsupported-width preflight. Attempt three added mixed-placement off,
-explicit-legacy and enabled cells. Its 19 cell directories comprise 12 backend
-sink configurations, 6 all-local calibration cells and the unsupported-width
-preflight. The backend sink configurations executed 18 steps through 450
-backend invocations and produced 450 GOAL, 450 binary and 450 CSV artifacts.
-The mixed cells place four ranks on each of two nodes. Attempt three occupies
-5.9 MiB, and the complete retained wave output, including all three attempts
-and the source attachment, occupies about 18 MiB of allocated disk.
+explicit-legacy and enabled cells. Each of its two classification records has
+19 cell directories comprising 12 backend sink configurations, 6 all-local
+calibration cells and the unsupported-width preflight. The accepted replay's
+backend sink configurations executed 18 steps through 450 backend invocations
+and produced 450 GOAL, 450 binary and 450 CSV artifacts. The mixed cells place
+four ranks on each of two nodes. The accepted replay occupies 5.9 MiB, and the
+complete retained wave output, including both earlier attempts, both
+attempt-three classification records and the source attachment, occupies
+about 24 MiB of allocated disk.
 
 The non-void record observed:
 
 | Provenance item | Value |
 |---|---|
-| SimLLM revision | `4401401c9bafd995050aa5cf83fff50c8ccf3b75` |
+| SimLLM revision | `5eb8041db9260e32f4da82dc9143958e255a6a65` |
 | attempt-two refreeze retained for attempt three | `3a6126e174e859d5c222e137dc9e2d94ead6db29` |
 | htsim gitlink observed | `fc4400e4ca619223481536632074045cb6af2756` |
 | `htsim_rnic` SHA-256 | `32035c778e40e9b11dd32d081350a36a92872855a97dc4b5f217c634420c0816` |
@@ -186,7 +201,8 @@ These bounds were written before either production value was read.
 4. **End-to-end deployment envelope.** The
    [mission error budget](../end_to_end_replay_v1/RESULTS.md#error-budget) is
    1.1 to 4.5 ms per decode step. The old simulated point is 0.205 ms, and the
-   configured floor predicts about 1.651 ms before host or compute calibration.
+   configured floor gives about 1.651 ms when added to that rounded published
+   literal, before resolving composition with the same-wave host-cost work.
 
 The measured values are shown only after those bounds:
 
@@ -196,14 +212,19 @@ The measured values are shown only after those bounds:
 | 4 | 6,827 | 50,000,000 | 16,180,000 | 15,832,905 | inside |
 | 8 | 7,965 | 50,000,000 | 30,310,000 | 30,230,390 | inside |
 
-The configured 1.446145392 ms step addition is 0.4 percent above the nominal
-1.44 ms upper endpoint, but inside its frozen 1.302 to 1.591 ms calibration
-uncertainty and below the 1.60 ms duplicate-charge tripwire. This is an
-upper-edge reduced form, not evidence of absolute accuracy. The bandwidth
-increment is exactly 4.014080 us, and the composed mission point is
-1.651145392 ms, inside the 1.1 to 4.5 ms real-system envelope. These three
-angles are independent: link capacity, a real collective capture and an
-end-to-end comparable-deployment budget.
+The configured 1.446145392 ms addition is 0.4 percent above the mission
+budget's nominal 1.44 ms upper endpoint, although it remains inside the frozen
+1.302 to 1.591 ms calibration range and below the 1.60 ms duplicate-charge
+tripwire. Its width-8 intercept comes from a DGX B200 intra-node NVLink
+ALL-REDUCE and is applied unchanged to the reference step's cross-node pairwise
+ALL-TO-ALLV operations. That operation mismatch can bias the residual in
+either direction, so this record does not claim that the floor is settled. The
+1.651145392 ms mission point is arithmetic on main's published literals,
+`0.205000000 + 1.446145392 ms`; it is not a measured composed run. The
+bandwidth increment is exactly 4.014080 us, and the arithmetic mission point
+sits inside the 1.1 to 4.5 ms real-system envelope as a plausibility check.
+These three angles are independent: link capacity, a real collective capture
+and an end-to-end comparable-deployment budget.
 
 ## C1: held-out completion error
 
@@ -253,10 +274,10 @@ base, and the artifact-equation guard pins enabled service to base plus raw
 transport. Together they uniquely determine both ratios. The original freeze
 incorrectly argued that evaluating the ratio first avoided entailment;
 evaluation order cannot restore mathematical independence. C3 is therefore
-retained as an exact, fatal-unscored mechanism check and removed from the
-behavioral numerator and denominator.
+retained as an exact-unscored mechanism check and removed from the behavioral
+numerator and denominator.
 
-## C4: TTFT and TPOT reachability
+## C4: exact TTFT and TPOT reach relation, unscored
 
 The fixture defines TTFT as its first prefill-shaped `StepResult` and TPOT as
 the mean of two equal decode-shaped `StepResult` values.
@@ -266,10 +287,17 @@ the mean of two equal decode-shaped `StepResult` values.
 | TTFT | 0.635809968 | 2.081955360 | 1.446145392 | 227.45% |
 | TPOT | 0.209194608 | 1.655340000 | 1.446145392 | 691.29% |
 
-Both metrics rise, each by exactly 48 times the width-8 base latency. TTFT
-rises strictly less in relative terms because the prefill-shaped baseline is
-larger. C4 passes and proves that the selected term reaches the
-scheduler-visible `StepResult`; it is not only a component probe.
+Both metrics rise by exactly
+`48 * 30,128,029 = 1,446,145,392 ps`. This relation is exact-unscored.
+`operation_inventory`, `one_base_charge_per_semantic_collective`,
+`artifact_field_equations`, `step_service_conservation`, and the enabled GOAL,
+backend-artifact and backend-outcome identity guards fix both absolute deltas
+before C4 evaluates. With equal deltas, the relative-order clause reduces to
+`ttft_off > tpot_off`, which the fixed 32-token prefill at 458,752 endpoint
+bytes and one-token decode at 14,336 endpoint bytes makes true by construction.
+C4 therefore contributes no behavioral numerator or denominator. TTFT and
+TPOT reach remains established by `step_service_conservation`, which connects
+the collective artifacts to scheduler-visible `StepResult` values.
 
 ## Fatal guards
 
@@ -308,10 +336,10 @@ Evidence classes remain separate:
 
 - **Fatal-unscored:** all declared guards held in attempt three. They carry no
   numerator or denominator.
-- **Scored behavioral:** **3 of 3 non-entailed families**, or **100 percent
-  genuine risk**. These are C1, C2 and C4.
-- **Exact sensitivity relation:** C3 passes but is fatal-unscored because its
-  exact guards entail it.
+- **Scored behavioral:** **2 of 2 non-entailed families**, or **100 percent
+  genuine risk**. These are C1 and C2.
+- **Exact-unscored relations:** C3 and C4 pass, but their predicates are
+  entailed and carry no numerator or denominator.
 - **Parameterized instances:** three C1 holdouts inside one family, all within
   their bar.
 - **Native regression executables:** reported under validation, never added to
@@ -320,34 +348,51 @@ Evidence classes remain separate:
 
 C1 reads production-model predictions rather than merely echoing the frozen
 integer prediction, so a formula or rounding defect can fail it while the
-reported parameter fields remain correct. C2 reads live sink completion; the
-fatal guards do not pin its width ordering or serialization response. C4's
-relative TTFT versus TPOT response depends on the raw off-path baselines, which
-the exact charge and sum guards do not pin. C3 is different: its three fatal
-oracles uniquely determine the scored ratio, so it is reclassified above.
+reported parameter fields remain correct. C2 reads live sink completion in the
+local-width cells. Those cells sit outside `active_cells`, so the fatal
+base-charge and step-service guards do not determine their enabled latencies or
+deltas. C3's exact transport, parameter and artifact guards determine both
+ratios. C4's identity, inventory, charge, artifact-equation and
+step-conservation guards determine both deltas, while the fixed fixture
+determines their relative order. C3 and C4 are therefore exact-unscored.
 Artifact sums, identity, the exact 48-charge delta and unsupported-width
-rejection are likewise exact, configuration-forced or by-construction
-evidence and are deliberately not scored.
+rejection are likewise exact, configuration-forced or by-construction evidence
+and are deliberately not scored.
 
 ## Error budget
 
-This change moves mission error-budget item 2, the collective latency floor.
-It does not move the fixed host term or the compute calibration term.
+This branch moves mission error-budget item 2, the collective latency floor.
+It does not itself implement the fixed host term or change the compute
+calibration term. The same-wave host-cost branch creates a composition question
+that is disclosed below.
 
 | Term | Before | After | Change |
 |---|---:|---:|---:|
-| representative network | 0.106000000 ms | 1.552145392 ms | +1.446145392 ms, 14.6429x total |
-| representative whole step | 0.205000000 ms | 1.651145392 ms | +1.446145392 ms, 8.0544x total |
-| fixed per-step host cost | 0 ms | 0 ms | unchanged |
+| representative network budget arithmetic | 0.106000000 ms | 1.552145392 ms | +1.446145392 ms, 14.6429x total |
+| representative whole-step budget arithmetic | 0.205000000 ms | 1.651145392 ms | +1.446145392 ms, 8.0544x total; not a measured composition |
+| fixed per-step host cost in this branch | 0 ms | 0 ms | unchanged here; same-wave profile branch discussed below |
 | compute model | flat 0.7 roofline on default B100 | same | unchanged |
 
-Against the unchanged 1.1 to 4.5 ms comparable-deployment band, the old model
-was optimistic by about 5.37x to 21.95x. The new point leaves a real-to-model
-ratio of 0.67x to 2.73x. The lower endpoint below one is not an accuracy win.
-It warns that an all-reduce-derived, upper-edge floor can overprice the
-mission's all-to-all while host and compute terms remain independently
-uncalibrated. The result supports the presence, separation and live effect of
-the floor, not absolute deployment timing.
+`codex/comp2_host_step_cost` lands fixed host cost in the same integration
+wave. Under the overlap semantics in that branch's `simllm/compute/host.py`, a
+whole-step composition of `max(C + network, N * g)` gives 1.650672126 ms,
+rounded to 1.650672 ms, for all four profiles. The exact inputs are
+`C = 0.099024000 ms`, raw network service of `0.105502734 ms` and this branch's
+`1.446145392 ms` floor. The largest launch demand is 1.340532585 ms, so it is
+smaller than the collective-bearing step service. The separate 1.651145392 ms
+table value instead adds the floor to main's rounded 0.205000000 ms literal.
+An additive host and network composition gives different values. Neither
+branch resolved or measured whether these terms compose additively or by
+whole-step overlap, so this report leaves that choice unresolved.
+
+Against the unchanged 1.1 to 4.5 ms comparable-deployment band, the old budget
+arithmetic was optimistic by about 5.37x to 21.95x. The new arithmetic point
+leaves a real-to-model ratio of 0.67x to 2.73x. The lower endpoint below one is
+not an accuracy win. Transferring an ALL-REDUCE intercept to cross-node
+ALL-TO-ALLV can overprice or underprice the mission operation, and the host
+composition is unresolved, so the direction of the residual error is
+ambiguous. The result supports the presence, separation and live effect of the
+floor, not absolute deployment timing.
 
 ## Batched closure scope
 
@@ -374,7 +419,7 @@ Evidence mapping:
 | one holdout per width | C1's 4 KiB row at every width |
 | smallest identifiable form | one shared endpoint slope, concurrent full-duplex endpoint ledgers priced by their maximum, and three observed-width intercepts; unsupported widths reject |
 | held-out error bar | C1, every error below the larger of 10 percent or 1 us |
-| TTFT and TPOT effect | C4, exact +1.446145392 ms and registered relative order |
+| TTFT and TPOT effect | fatal-unscored `step_service_conservation` connects the 48 calibrated charges to TTFT and TPOT `StepResult` values; C4 retains the exact +1.446145392 ms observation as entailed, unscored evidence |
 | exact all-remote identity | fatal off and enabled placement guards plus artifact identity |
 
 **TRAF-11 closes**, with only its missing same-generation point-to-point
@@ -463,7 +508,7 @@ rather than added to the behavioral score, were:
 | Ruff | all checks passed |
 | module-doc format | 10 module docs matched; 28 legacy untagged entries remain outside this task |
 | task-progress reconciliation | generated block and module-status open counts current |
-| Pytest | 1,436 passed, 7 skipped |
+| Pytest | 1,498 passed, 7 skipped |
 | staged-diff hygiene | `git diff --check` clean |
 
 The production runner requires explicit paths and confines output under
@@ -473,7 +518,7 @@ The production runner requires explicit paths and confines output under
 SIMLLM_COLLECTIVE_FLOOR_RUN_ROOT=<output-root> \
 SIMLLM_TXT2BIN=<path-to-txt2bin> \
 .venv/bin/python examples/collective_latency_floor_v1/run_study.py \
-  --run-dir <output-root>/production-v3 \
+  --run-dir <output-root>/production-v4 \
   --htsim-rnic <path-to-htsim_rnic>
 ```
 

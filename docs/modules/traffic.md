@@ -447,18 +447,24 @@ the fluid backend's whole-picosecond result one picosecond low. Attempt two
 changed only those harness oracles and preserved every raw measurement, but
 closure review found that C3 was mathematically entailed and that the fatal
 harness lacked a mixed-placement cell. Attempt three changed no modeled
-behavior: all three non-entailed genuine-risk families passed, the registered
-sensitivity relation held as exact-unscored evidence, and every fatal guard
-held, including a two-node collective with simultaneous local and fabric
-service.
+behavior. The final classification replay passed both non-entailed genuine-risk
+families, C1 and C2; C3 and C4 passed as exact-unscored relations; and every
+fatal guard held, including a two-node collective with simultaneous local and
+fabric service. TTFT and TPOT reach is established by
+`step_service_conservation`.
 The 4 KiB held-out errors at participant widths 2, 4 and 8 were 0.261, 0.347
 and 0.080 microseconds. The selected profile adds 1.446145392 ms across the
 reference step's 48 collectives, moving the mission network budget from
-0.106 ms to 1.552145392 ms and the composed step from 0.205 ms to
-1.651145392 ms. The legacy and all-remote identity paths remained exact. The
-public evidence supplies a B200 collective capture and a vendor capacity
-ceiling, but not the same-generation point-to-point payload capture required
-by the original clause.
+0.106 ms to 1.552145392 ms. The 1.651145392 ms whole-step figure is arithmetic
+on main's published 0.205 ms literal, not a measured composed run. It applies a
+DGX B200 intra-node NVLink ALL-REDUCE intercept unchanged to cross-node
+pairwise ALL-TO-ALLV. The 1.446145392 ms addition is 0.4 percent above the
+mission budget's nominal 1.44 ms endpoint, so the direction of residual error
+remains ambiguous. The same-wave fixed host term was not composed here, and
+additivity versus overlap remains unresolved. The legacy and all-remote
+identity paths remained exact. The public evidence supplies a B200 collective
+capture and a vendor capacity ceiling, but not the same-generation
+point-to-point payload capture required by the original clause.
 
 ## Open tasks
 
