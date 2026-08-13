@@ -856,6 +856,9 @@ is difficult.
   projection in a state-preserving session, reconcile every artifact and
   completion identity, and retain the current rejection and stateless-profile
   bytes as the explicit off paths.
+  BACK-38 is blocked behind HTSIM-28 because the delivered session cannot
+  reuse a completion time it has just exposed as the dependent injection
+  boundary; see [the protocol audit](../../examples/congestion_chain_v1/RESULTS.md).
 
 ### Completeness
 
@@ -1048,6 +1051,19 @@ is difficult.
   worst case reaches 564.7 us against a 220 us bound. Decide per experiment,
   with evidence, whether the transport regressed or the authored bound is
   stale. Never relax a bound to match an observation without that evidence.
+- HTSIM-28 (Precision; P1; M): add the minimum persistent flow-session repair
+  needed for exact dependency boundaries: either an atomic operation that
+  advances until a named accepted sequence set completes and permits a
+  dependent injection at that exact current simulator time, or native
+  dependency-gated injection scheduled at predecessor completion. The
+  delivered HTSIM-18 protocol cannot do this because `advance` latches the
+  caller horizon before events run and `inject` rejects eligibility at or
+  before that horizon. Preserve fail-before-mutation checks, contiguous
+  sequence ordering and one-session authority; a caller-selected polling
+  quantum is not an equivalent repair. Acceptance must demonstrate the exact
+  completion-to-injection boundary without replaying processed events and
+  preserve every existing-verb off-path result
+  ([protocol audit](../../examples/congestion_chain_v1/RESULTS.md)).
 
 ### Completeness
 

@@ -40,10 +40,14 @@ but it did so before any treatment value was observed: only
 
 The protocol audit observed HTSIM commit
 `1f2c124c9738edcfa0f6044b4667c230e75a542c`. Its
-`htsim/sim/datacenter/rnic_flow_session.cpp` blob is byte-identical to the
-blob at the later locally available backend gate commit audited on this date.
-This is observed provenance, not a frozen equality with a live gitlink. The
-session-capable binary inspected without invocation had SHA-256
+`htsim/sim/datacenter/rnic_flow_session.cpp` is Git blob
+`43e9a2b4e8cbc1549fb59bfc6ca7eeb06b88cfa6`. The same blob is present at the
+SimLLM-pinned gitlink `fc4400e4ca619223481536632074045cb6af2756` and at the
+current HTSIM tip audited on this date,
+`9800ea3296ff4bb017ac4d60df94917e4c8c3f0d`. The limitation therefore holds at
+the revision this repository ships and at the backend tip, rather than being
+an artifact of an old checkout. The session-capable binary inspected without
+invocation had SHA-256
 `500c5afb8c29335d19bd7b77a166168c05d56f744fcf3d9df16be49ff2ee304f`.
 The check-only command used the supplied executable with SHA-256
 `32035c778e40e9b11dd32d081350a36a92872855a97dc4b5f217c634420c0816`;
