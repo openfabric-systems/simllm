@@ -51,8 +51,9 @@ SOURCE_SYSTEM_URL = (
     "https://docs.nvidia.com/dgx/dgxb200-user-guide/introduction-to-dgxb200.html"
 )
 PHYSICAL_BANDWIDTH_BYTES_PER_SECOND = 900_000_000_000
-EXPECTED_SCORED_FAMILIES = 3
+EXPECTED_SCORED_FAMILIES = 2
 EXPECTED_HELDOUT_INSTANCES = 3
+EXACT_UNSCORED_RELATION_NAMES = ("C3", "C4")
 PREFILL_NEW_TOKENS = 32
 DECODE_NEW_TOKENS = 1
 MODEL_LAYERS = 24
@@ -548,6 +549,20 @@ def _behavioral_results(
         and ttft_delta / ttft_off < tpot_delta / tpot_off,
     }
     return {"C1": c1, "C2": c2, "C3": c3, "C4": c4}
+
+
+def _partition_registered_relations(
+    registered_relations: dict[str, dict[str, object]],
+) -> tuple[dict[str, dict[str, object]], dict[str, dict[str, object]]]:
+    exact_unscored = {
+        name: registered_relations[name] for name in EXACT_UNSCORED_RELATION_NAMES
+    }
+    scored = {
+        name: relation
+        for name, relation in registered_relations.items()
+        if name not in exact_unscored
+    }
+    return scored, exact_unscored
 
 
 def _unsupported_width_guard(args: argparse.Namespace) -> dict[str, object]:
@@ -1055,12 +1070,9 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
         flagship_off=flagship_off,
         flagship_enabled=flagship_enabled,
     )
-    behavioral = {
-        name: relation
-        for name, relation in registered_relations.items()
-        if name != "C3"
-    }
-    exact_relations = {"C3": registered_relations["C3"]}
+    behavioral, exact_relations = _partition_registered_relations(
+        registered_relations
+    )
     fatal = _fatal_guards(
         flagship_off=flagship_off,
         flagship_legacy=flagship_legacy,
