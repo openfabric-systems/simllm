@@ -52,6 +52,55 @@ class _RequestMetricState:
     latest_metric: RequestMetric | None = None
 
 
+def sampled_request_ids(record: StepRecord) -> set[str]:
+    """Return the scheduled requests that emit a token in this step.
+
+    The rule is the scheduler's own, not a model: an explicit
+    ``sampled_request_ids`` is authoritative, an absent ``num_sampled`` means
+    every scheduled request samples, and a partial count is resolved only when
+    it coincides exactly with the scheduled decode set. Any other partial count
+    is ambiguous and is refused rather than guessed.
+    """
+
+    scheduled_ids = [request.request_id for request in record.scheduled]
+    if len(scheduled_ids) != len(set(scheduled_ids)):
+        raise ValueError("StepRecord.scheduled contains duplicate request IDs")
+
+    explicit = record.sampled_request_ids
+    if explicit is not None:
+        if len(explicit) != len(set(explicit)):
+            raise ValueError("sampled_request_ids must be unique")
+        unknown = sorted(set(explicit) - set(scheduled_ids))
+        if unknown:
+            raise ValueError(
+                f"sampled_request_ids contains unscheduled requests: {unknown}"
+            )
+        if record.num_sampled is not None and len(explicit) != record.num_sampled:
+            raise ValueError("sampled_request_ids cardinality must equal num_sampled")
+        return set(explicit)
+
+    if record.num_sampled is None:
+        return set(scheduled_ids)
+    if record.num_sampled == 0:
+        return set()
+    if record.num_sampled == len(scheduled_ids):
+        return set(scheduled_ids)
+
+    decode_ids = {
+        request.request_id
+        for request in record.scheduled
+        if request.phase is RequestPhase.DECODE
+    }
+    if record.num_sampled < len(decode_ids):
+        raise ValueError("num_sampled is smaller than the scheduled decode set")
+    if record.num_sampled == len(decode_ids):
+        return decode_ids
+    raise ValueError(
+        "partial sampled-request identity is ambiguous; provide "
+        "StepRecord.sampled_request_ids (CORE-17)"
+    )
+
+
 def _visit_totals(visits: tuple[QueueVisit, ...]) -> AdditiveVisitTotals:
     return AdditiveVisitTotals(
         queue_wait_ps=sum(visit.queue_wait_ps for visit in visits),
@@ -190,47 +239,7 @@ class CompletionReducer:
             if state.latest_metric is not None
         )
 
-    @staticmethod
-    def _sampled_request_ids(record: StepRecord) -> set[str]:
-        scheduled_ids = [request.request_id for request in record.scheduled]
-        if len(scheduled_ids) != len(set(scheduled_ids)):
-            raise ValueError("StepRecord.scheduled contains duplicate request IDs")
-
-        explicit = record.sampled_request_ids
-        if explicit is not None:
-            if len(explicit) != len(set(explicit)):
-                raise ValueError("sampled_request_ids must be unique")
-            unknown = sorted(set(explicit) - set(scheduled_ids))
-            if unknown:
-                raise ValueError(
-                    f"sampled_request_ids contains unscheduled requests: {unknown}"
-                )
-            if record.num_sampled is not None and len(explicit) != record.num_sampled:
-                raise ValueError(
-                    "sampled_request_ids cardinality must equal num_sampled"
-                )
-            return set(explicit)
-
-        if record.num_sampled is None:
-            return set(scheduled_ids)
-        if record.num_sampled == 0:
-            return set()
-        if record.num_sampled == len(scheduled_ids):
-            return set(scheduled_ids)
-
-        decode_ids = {
-            request.request_id
-            for request in record.scheduled
-            if request.phase is RequestPhase.DECODE
-        }
-        if record.num_sampled < len(decode_ids):
-            raise ValueError("num_sampled is smaller than the scheduled decode set")
-        if record.num_sampled == len(decode_ids):
-            return decode_ids
-        raise ValueError(
-            "partial sampled-request identity is ambiguous; provide "
-            "StepRecord.sampled_request_ids (CORE-17)"
-        )
+    _sampled_request_ids = staticmethod(sampled_request_ids)
 
     @staticmethod
     def _validate_inputs(
@@ -653,4 +662,4 @@ class CompletionReducer:
         return step_result
 
 
-__all__ = ["CompletionReducer"]
+__all__ = ["CompletionReducer", "sampled_request_ids"]

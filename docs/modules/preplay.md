@@ -223,6 +223,32 @@ On the real Granite capture it retained exactly 192 bytes per forwarded token,
 requests. All 32 real traffic steps remained byte-identical; see
 [the routing lifetime results](../../examples/routing_lifetime_v1/RESULTS.md).
 
+The whole mission claim now has one registered study rather than forty scoped
+ones. `end_to_end_replay_v1` takes a pinned twelve-request Granite capture
+through the live vLLM scheduler with arrival gating and token pinning, drives
+the captured per-token routing onto a packet-level fabric timed by
+`htsim_rnic`, and returns per-request TTFT and TPOT with a seven-component
+partition that conserves exactly. Across five cells, 220 simulated steps and
+10,560 backend invocations, all ten fatal guards held, thirteen of thirteen
+exact-oracle relations passed and three of four behavioral relations passed.
+Served token sequences, finish reasons and request identities are exact; an
+independent standard-library recomputation of the capture matched every one of
+20,976 token-layer expert selections, 104,580 per-request directed-pair byte
+rows and 55,738 rows read back out of the executed GOAL artifacts; every
+request's TTFT and TPOT decomposes with no unattributed remainder and no
+component counted twice; and every TTFT is strictly positive, which the earlier
+unregistered exploration failed for two of three requests. The study makes no
+absolute-accuracy claim: it states an error budget putting the simulated decode
+latency roughly 5x to 22x optimistic against a real deployment, dominated by a
+zero fixed per-step cost and by a measured 2.000 us collective floor where a
+real small-message all-to-all costs 15 to 30 us. Two mechanism notes worth
+carrying forward, neither registered because no clause claimed either: the
+seven-component attribution is reachable from the packet-level path only
+through the new `simllm.backends.step_attribution` projection rather than from
+inside the sink, and the additive visit work sum is not reachable there at all
+because that sink records no queue visit. See
+[the end-to-end results](../../examples/end_to_end_replay_v1/RESULTS.md).
+
 ## Open tasks
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
@@ -237,6 +263,20 @@ Tags follow the legend in [backends.md](backends.md#open-tasks).
   Acceptance requires at least one low-capacity pressure-group preemption,
   none at high capacity, exact event-to-counter reconciliation, and retention
   of the published negative `64` versus `256` result as chronology.
+- PLAY-15 (Precision; P1; M): separate a per-request latency's serialization
+  response from its co-scheduling response under arrival gating.
+  `end_to_end_replay_v1` registered that halving the link rate raises every
+  request's TTFT and TPOT by strictly less than two. Every step makespan over
+  identical scheduling compositions obeyed that on both halvings, at 1.044 to
+  1.476 and 1.085 to 1.645, and so did every TTFT, but `r01` moved its TPOT by
+  2.628 from 200 to 100 Gbit/s because the slower fabric let `r02`'s 18-token
+  prefill fall between its second and third tokens, changing one of its only
+  two inter-token intervals from a 2-token decode step to a 20-token prefill
+  step. The identifying observation is the scheduling composition behind each
+  inter-token interval. Acceptance requires TPOT reported with its intervals
+  split into composition-stable and composition-changed classes, a registered
+  bound that applies only to the stable class, an explicit co-scheduling term
+  for the rest, and the existing exact conservation identity unchanged.
 - PLAY-14 (Precision; P1; L): replace framework-return order as the dispatch
   issue surrogate with an observed per-message post sequence from the
   framework collective or kernel boundary through NCCL and RNIC WQE
