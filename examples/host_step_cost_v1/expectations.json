@@ -1,0 +1,139 @@
+{
+  "schema": "simllm-host-step-cost-v1-expectations-v1",
+  "study": "host_step_cost_v1",
+  "task": "COMP-2",
+  "calibration_attempt": 2,
+  "prior_attempt": {
+    "study": "compute_fidelity_v1",
+    "disposition": "void_with_findings",
+    "fatal_guard": "XFER-G4",
+    "integer_scaling_residual_ps": 1,
+    "launch_csv_sha256": {
+      "initial": "9da18198061cacb033e0c679d36e3af40dd79e37f9af4d00640a63deeee2c393",
+      "post_fix": "0886226e39fac00bd508355958e4c381c354a126e2c03c2818883087fbf4a2f7",
+      "registered": "ca7aa21f93ec5131a9e89632693d660132e353c30fd7b32f93992f0bb69f1858"
+    },
+    "graph_replay_ps": [624665, 630356, 630124],
+    "eager_host_bound_ps": [2327730, 2337286, 2331958],
+    "stamped_device_gap_ps": [1280480, 1270640, 1602561],
+    "serialized_launch_ps": [5021995, 5096963, 5053538]
+  },
+  "capture": {
+    "device_name": "NVIDIA GeForce GTX 1660 Ti",
+    "device_key": "gtx1660-ti-sm75",
+    "gpu_uuid": "GPU-a90a812a-41bf-4f2f-c96d-d83e6eae6bd0",
+    "compute_capability": "7.5",
+    "driver_version": "550.90.07",
+    "cuda_version": "12.4.99",
+    "host_cpu": "AMD Ryzen 9 3950X 16-Core Processor",
+    "launch_iterations": 20000,
+    "graph_nodes": 512,
+    "graph_replays": 200,
+    "long_isolated_iterations": 200,
+    "long_backtoback_iterations": 400,
+    "acceptance_ps": {
+      "graph_replay": [600000, 700000],
+      "eager_host_bound": [2000000, 2700000],
+      "stamped_device_gap": [500000, 3000000],
+      "serialized_launch": [3000000, 20000000]
+    }
+  },
+  "launch_count": {
+    "framework": "vllm",
+    "framework_version": "0.26.0",
+    "model_geometry": "24-layer top-8 Granite MoE",
+    "minimum": 440,
+    "maximum": 567
+  },
+  "representative_step": {
+    "source_cell": "end_to_end_replay_v1/a-ep8-400g",
+    "decode_step_index": 1,
+    "prefill_step_index": 0,
+    "modeled_compute_ps": 99024000,
+    "modeled_decode_network_ps": 105502734,
+    "modeled_decode_makespan_ps": 204526734,
+    "modeled_prefill_makespan_ps": 372217008,
+    "retained_omitted_multiple": [1.79, 12.31],
+    "derived_decode_multiplier": [1.8666493447, 6.9600298512],
+    "acceptance_decode_multiplier": [1.80, 7.10]
+  },
+  "live_fixture": {
+    "request_id": "r00",
+    "arrival_ps": 0,
+    "steps": [
+      {"step_index": 0, "phase": "prefill", "new_tokens": 19, "context_length": 19},
+      {"step_index": 1, "phase": "decode", "new_tokens": 1, "context_length": 20},
+      {"step_index": 2, "phase": "decode", "new_tokens": 1, "context_length": 21}
+    ],
+    "model": {
+      "num_layers": 24,
+      "hidden_size": 1024,
+      "num_experts": 32,
+      "top_k": 8,
+      "ep_world": 8
+    },
+    "network_profile": "rnic-nn-fluid",
+    "linkspeed_bps": 400000000000,
+    "fixed_compute_ps": [99024000, 99024000, 99048000],
+    "ideal_step_ps": {
+      "prefill": 372217008,
+      "decode": [204526734, 204386898],
+      "tpot": 204456816
+    },
+    "network_physical_bounds_ps": {
+      "prefill": [96000000, 273193008],
+      "decode_step_1": [96000000, 105502768],
+      "decode_step_2": [96000000, 105338928]
+    },
+    "input_sha256": {
+      "steps_jsonl": "f7c3b85866ce0fdb6d87c1f706ad6fd21153210c79d3c21d874b7642267eb11a",
+      "routed_experts_json": "2c3e5c961ed432a6eb9633983d4ccedc2cd2c26ccb24415f9f4092fac7b58dba"
+    }
+  },
+  "mission_budget": {
+    "modeled_network_ps": 105502734,
+    "plausible_collective_network_ps": [720000000, 1440000000],
+    "acceptance_conditional_turing_residual_optimism": [1.35, 4.70],
+    "b100_host_step_cost": "unknown"
+  },
+  "ideal_compatibility": {
+    "study": "end_to_end_replay_v1",
+    "canonicalization": "remove wall_seconds from each cell.json, serialize all cells by name with sorted keys and compact separators, append LF",
+    "aggregate_cell_sha256": "5b51c31c1d83422cecfcbd975bf67690c6cccfd8ca4437ffef3e54985ee615fe",
+    "step_record_sha256": {
+      "a-ep4-400g": "fba28840dacc858e67e2202c24b82012a114ee2cf4512b9c72a7c9a2718365cc",
+      "a-ep8-100g": "893fd939460556a6e0639572ef41db58b478c72850f3a43b62de626bbade5706",
+      "a-ep8-200g": "4aebcbdaf27aa6db599101b65e61546de8419283e9b9092237031d9f5796bb08",
+      "a-ep8-400g": "f7c3b85866ce0fdb6d87c1f706ad6fd21153210c79d3c21d874b7642267eb11a",
+      "b-ep8-400g": "997028d3806ed86c43ff558afcb92358bdb78ad4e076e11a75e2622072cc65ea"
+    }
+  },
+  "scored_calibration_relations": {
+    "CAL-1_graph_replay_in_band": 1,
+    "CAL-2_eager_host_bound_in_band": 1,
+    "CAL-3_device_gap_in_band": 1,
+    "CAL-4_serialized_enclosure_in_band": 1
+  },
+  "scored_live_relations": {
+    "LIVE-1_decode_multiplier_in_band": 4,
+    "LIVE-2_tpot_multiplier_in_band": 4,
+    "LIVE-3_ttft_relative_increase_is_smaller": 4
+  },
+  "derived_unscored_checks": [
+    "CAL-D1_graph_cheaper_than_eager",
+    "LIVE-D1_two_parameter_directions"
+  ],
+  "fatal_unscored_guards": [
+    "CAL-G1_device_identity",
+    "CAL-G2_host_and_toolchain_identity",
+    "CAL-G3_positive_measurements",
+    "CAL-G4_zero_work_is_exactly_zero",
+    "CAL-G5_causal_measurement_enclosures",
+    "CAL-G6_clean_revision_and_stable_capture_sources",
+    "LIVE-G1_profile_provenance",
+    "LIVE-G2_device_mismatch_fails_closed",
+    "LIVE-G3_step_and_metric_conservation",
+    "LIVE-G4_budget_arithmetic",
+    "OFF-G1_ideal_named_study_exact_identity"
+  ]
+}
