@@ -1,10 +1,12 @@
 # SGLang MoE workload v1 results
 
-The frozen study is **void with findings**. All 10 scored geometry, workload,
-and external timing-reducer rows passed, but one frozen fatal guard failed:
-`TraceLengths` deliberately cycles a short trace, while the expectation file
-said every short trace would be rejected. A fatal failure voids the behavioral
-score, so 10/10 is retained for diagnosis and is not reported as a pass rate.
+The frozen study is **void with findings**. Frozen fatal guard
+`workload-short-length-trace-rejected` was violated, so no behavioral pass
+fraction is interpretable. It failed because `TraceLengths` deliberately cycles
+a short trace while the expectation file said every short trace would be
+rejected, i.e. the freeze's own assumption was refuted. The 9 scored geometry,
+workload and external timing-reducer rows all matched and are retained for
+diagnosis rather than reported as a pass rate.
 
 No live SGLang process or GPU was run. The retained study rows are diagnostic,
 not qualifying evidence. Separate import-free tests cover MoE geometry,
@@ -19,19 +21,26 @@ the first run. Its content remains unchanged and that commit remains an
 ancestor of this result. Later integration merged current `main` without
 rewriting that original chronology.
 
-The first working-tree harness execution printed `PASS`, 10/10 scored rows,
-and 18 guards. That was a false-green harness defect: it had not executed the
-frozen short-length-trace guard or several other frozen fatal-family instances.
-Review expanded the harness to 42 guard instances. The corrected run retained
-10/10 matching rows but became void at 41/42. The original false-green output
-does not qualify any behavior and is disclosed here rather than removed from
-the chronology.
+The first working-tree harness execution printed `PASS` and a full scored
+sweep. That was a false-green harness defect: it had not executed the frozen
+short-length-trace guard or several other frozen fatal-family instances.
+Review expanded the harness to cover every fatal clause the freeze enumerates
+as fatal, and the corrected run is void. Two frozen behavior statements outside
+that enumeration still have no guard instance, namely that a first Poisson
+arrival is not shifted to zero and that equal arrival times retain caller
+order, the latter having no tie in either arrival family. The original false-green output does not qualify any
+behavior and is disclosed here rather than removed from the chronology. Guard
+instance counts are deliberately not published as a ratio: the fatal class has
+no near-miss, one violated guard removes the precondition under which every
+scored number means what it claims, and the instantiation count is a property
+of the harness rather than a frozen denominator.
 
 Implementation commit `0fae22e38e890c8a364ea3c467b35917f3eb2e3e` was then
-replayed from a clean worktree. The corrected output was `VOID`, with 10/10
-diagnostic matches retained and 41/42 fatal guard instances. The external
-`summary.json` has SHA-256
-`20f900418c813290b06fd652c0c85756d697f7fbbe399b14f10ea4ecb59865a2`.
+replayed from a clean worktree, with the post-review reclassification below
+applied. The corrected output is `VOID`, with 9 diagnostic matches retained.
+The external `summary.json` has SHA-256
+`6055c4511a91ec7781a441bfacd01719e223de8403342fa6dc19651c782c2176`, and it
+carries the guard totals as separate integers rather than as a fraction.
 
 The audited study ran with:
 
@@ -47,10 +56,48 @@ Git; the tracked report records the compact findings.
 
 | Evidence class | Retained matches | Total | Interpretation |
 |---|---:|---:|---|
-| exact MoE geometry rows | 4 | 4 | Granite, Mixtral, Qwen3 MoE, dense TP identity |
+| exact MoE geometry rows | 3 | 3 | Granite, Mixtral and Qwen3-shaped routed geometry |
 | deterministic workload rows | 4 | 4 | trace/Poisson arrivals crossed with fixed/trace lengths |
 | external timing-reducer rows | 2 | 2 | exact arrival-origin TTFT, TPOT, and submission lateness |
-| fatal guard instances | 41 | 42 | one failure voids the scored rows |
+
+The fatal guards are not tabulated here, because they are not a scored class
+and a ratio over them would read as a degree of voidness. One frozen fatal
+guard was violated and the run is void; the remaining guards held.
+
+Two post-review reclassifications, applied before the replay above and
+disclosed rather than folded in silently:
+
+- The `llama-dense-tp4` geometry cell is now a fatal-unscored guard,
+  `geometry-configuration-forced-llama-dense-tp4`, not a scored row. Its
+  expected tuple is all zeros because a dense config cannot report routed-MoE
+  fields, so it cannot fail for any correct reader, and AGENTS.md keeps
+  configuration-forced assertions out of every behavioral denominator. Its
+  zero-expert fact was already asserted by the
+  `geometry-dense-identity-and-granite-ratios` guard, which evaluates a dense
+  llama at `tp_size=1` and `intermediate_size=512`; the two are not the same
+  assertion, since the cell also pins `top_k`, `moe_intermediate_size` and
+  `local_num_experts` at `tp_size=4` and `intermediate_size=14336`. The new
+  guard keeps the full tuple, so nothing is lost, and the reclassification
+  rests on the configuration-forced rule rather than on duplication. Geometry
+  therefore reports 3 scored rows, not 4.
+- The `trace_quantization_ok` conjunct is inert for the two Poisson cells,
+  where the arrival name is not `trace`. Those two workload rows therefore
+  carry only determinism and seed orthogonality, and are strictly weaker
+  evidence than the two trace cells.
+
+One further disclosure, post-specified and deliberately not applied to the
+frozen expectations, since a freeze is never rewritten after a run: the
+`qwen3-moe` cell's 64 experts, top-8 and expert width 1408 do not reproduce any
+published Qwen3 MoE checkpoint. The pinned SGLang tree defines no `qwen3_moe`
+config of its own: it imports Hugging Face's `Qwen3MoeConfig`, whose defaults
+are 128 experts, top-8 and width 768. Every geometry cell in this study is a
+synthetic config assembled on one shared 1024-hidden, 24-layer backbone, so the
+cell tests that the reader consumes the `num_experts` / `num_experts_per_tok` /
+`moe_intermediate_size` field names of that family, not that it reproduces a
+checkpoint. Nothing downstream consumes the tuple, so the reclassified counts
+above are unaffected. The rows below are labeled "shaped" for that reason, and
+a cell carrying real checkpoint geometry belongs to SGL-4's calibrated
+comparison rather than here.
 
 The failed guard is `workload-short-length-trace-rejected`. The established
 `TraceLengths.sample(n)` contract cycles its file when the requested count is
@@ -61,14 +108,16 @@ rows. The frozen statement treated the two provider contracts as identical;
 the result refutes that assumption rather than changing either contract after
 observation.
 
-The geometry rows map exactly to:
+The geometry rows map exactly to the synthetic cells below. Every one is a
+config assembled on the shared 1024-hidden, 24-layer backbone, so the names
+identify which family's field names are being consumed, not a checkpoint:
 
-| Cell | Experts | Top-k | Expert width | Resident experts |
-|---|---:|---:|---:|---:|
-| Granite pilot | 32 | 8 | 512 | 32 |
-| Mixtral | 8 | 2 | 14336 | 8 |
-| Qwen3 MoE | 64 | 8 | 1408 | 64 |
-| dense Llama TP4 | 0 | 0 | none | 0 |
+| Cell | Experts | Top-k | Expert width | Resident experts | Class |
+|---|---:|---:|---:|---:|---|
+| Granite-pilot-shaped | 32 | 8 | 512 | 32 | scored |
+| Mixtral-shaped | 8 | 2 | 14336 | 8 | scored |
+| Qwen3-shaped | 64 | 8 | 1408 | 64 | scored, and see the checkpoint disclosure above |
+| dense Llama TP4 | 0 | 0 | none | 0 | fatal-unscored, configuration-forced |
 
 Unknown and contradictory MoE identities, missing or invalid fields, top-k
 bounds, shared experts, mixed routed/dense layers, MLA, next-token-prediction

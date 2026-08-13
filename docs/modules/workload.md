@@ -46,7 +46,7 @@ without a framework dependency. The SGLang client maps it to native streaming
 payloads and preserves the distinction between logical arrival, actual client
 submission, and token visibility. The frozen study is void because its short
 length-trace guard contradicted the established `TraceLengths` cycling
-contract; its 6/6 matching workload and timing rows remain diagnostic only. See
+contract; its matching workload and timing rows remain diagnostic only. See
 [the SGLang MoE workload results](../../examples/sglang_moe_workload_v1/RESULTS.md).
 
 ## Open tasks

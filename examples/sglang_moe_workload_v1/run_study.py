@@ -59,6 +59,12 @@ GEOMETRY_CELLS: dict[str, dict[str, Any]] = {
     },
 }
 
+#: Cells whose expected geometry is forced by the configuration rather than
+#: measured. A dense model cannot report routed-MoE fields, so its all-zero
+#: tuple cannot fail for any correct reader. AGENTS.md keeps these fatal when
+#: violated and out of every behavioral denominator.
+CONFIGURATION_FORCED_GEOMETRY_CELLS = frozenset({"llama-dense-tp4"})
+
 
 def _model_config(**overrides: Any) -> Any:
     fields = {
@@ -120,6 +126,7 @@ def _guard(
 
 def _geometry_results() -> tuple[list[dict[str, Any]], list[dict[str, Any]], Any]:
     scored: list[dict[str, Any]] = []
+    forced_guards: list[dict[str, Any]] = []
     for name, raw_cell in GEOMETRY_CELLS.items():
         cell = dict(raw_cell)
         expected = cell.pop("expected")
@@ -131,15 +138,27 @@ def _geometry_results() -> tuple[list[dict[str, Any]], list[dict[str, Any]], Any
             dims.moe_intermediate_size,
             dims.local_num_experts,
         )
-        scored.append(
-            {
-                "family": "geometry",
-                "cell": name,
-                "passed": actual == expected,
-                "expected": list(expected),
-                "actual": list(actual),
-            }
-        )
+        row = {
+            "family": "geometry",
+            "cell": name,
+            "passed": actual == expected,
+            "expected": list(expected),
+            "actual": list(actual),
+        }
+        if name in CONFIGURATION_FORCED_GEOMETRY_CELLS:
+            # A dense config cannot report routed-MoE geometry, so this cell's
+            # all-zero tuple is configuration-forced. AGENTS.md keeps such an
+            # assertion fatal when violated and unscored otherwise, and the same
+            # claim is already asserted by the dense-identity guard below.
+            forced_guards.append(
+                {
+                    "guard": f"geometry-configuration-forced-{name}",
+                    "passed": row["passed"],
+                    "detail": f"expected {list(expected)}, observed {list(actual)}",
+                }
+            )
+        else:
+            scored.append(row)
 
     dense = model_dims_from_sglang(_model_config(intermediate_size=512))
     granite = model_dims_from_sglang(_granite_config())
@@ -253,7 +272,7 @@ def _geometry_results() -> tuple[list[dict[str, Any]], list[dict[str, Any]], Any
             },
         },
     ]
-    return scored, guards, granite
+    return scored, forced_guards + guards, granite
 
 
 def _write_inputs(run_dir: Path) -> dict[str, Path]:
