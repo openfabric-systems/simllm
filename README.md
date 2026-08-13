@@ -317,7 +317,7 @@ status and numbered open tasks; the README stays a map.
 | Module | Purpose | Doc |
 |---|---|---|
 | `simllm/core` | Virtual clock, scheduler-step records, execution graphs, central bookkeeping, completion contracts | [core](docs/modules/core.md) |
-| `simllm/workload` | Arrival processes, length distributions, shared-prefix structure | [workload](docs/modules/workload.md) |
+| `simllm/workload` | Arrival processes, length distributions, deterministic generation requests, shared-prefix structure | [workload](docs/modules/workload.md) |
 | `simllm/compute` | Pluggable compute-time providers, the GPU service model and its concurrent task primitive, host initiation, and the NCCL stack skeleton | [compute](docs/modules/compute.md) |
 | `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
 | `simllm/traffic` | Semantic collectives to physical flows | [traffic](docs/modules/traffic.md) |
@@ -325,7 +325,7 @@ status and numbered open tasks; the README stays a map.
 | `simllm/preplay` | Offline CPU inference oracle: capture, arrival join, vLLM replay and routed-expert supply, with the independent CPU comparison still open | [preplay](docs/modules/preplay.md) |
 | `simllm/backends` | htsim / LogGOPSim invocation + result parsing, submodule pins | [backends](docs/modules/backends.md) |
 | `simllm/adapters/vllm` | `SimExecutor` (pluggable, no fork), placement exporter, the simulated communicator and the flagged model-runner skeleton | [adapters-vllm](docs/modules/adapters-vllm.md) |
-| `simllm/adapters/sglang` | `SimTpModelWorker`, placement exporter and the simulated communicator | [adapters-sglang](docs/modules/adapters-sglang.md) |
+| `simllm/adapters/sglang` | `SimTpModelWorker`, single-GPU MoE geometry, open-loop generate driver and the simulated communicator | [adapters-sglang](docs/modules/adapters-sglang.md) |
 
 ## Development
 
