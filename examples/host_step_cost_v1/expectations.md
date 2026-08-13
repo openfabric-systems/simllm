@@ -1,17 +1,24 @@
 # Host step cost v1 frozen expectations
 
-This is the expectations-only record for COMP-2. It precedes the attempt-two
-capture, the corrected capture harness, the calibrated host-step model, and
-every result-producing run on this branch. The first compute-fidelity run stays
-void with findings. This study does not edit its expectations or results and
-does not promote its behavioral score.
+The initial expectations-only commits for COMP-2 preceded the corrected
+attempt-two capture, its harness, and every result-producing run on this
+branch. Attempt two was nonvoid: all fatal guards held, so its measurements are
+interpretable. It nevertheless missed CAL-1 because graph replay measured
+809,068 ps against the frozen 600,000 to 700,000 ps band. Three of four scored
+calibration relations passed, so the frozen phase gate rejected the attempt
+before any host-step model was installed. The retained artifact is
+`calibration_attempt2.json`.
 
-Attempt two has two ordered phases. First, it repeats the fixed-cost capture on
-the same device under a corrected fatal oracle. Phase two starts only if the
-capture is nonvoid and all four scored calibration relations pass. A nonvoid
-but rejected capture stops the study and requires a new disclosed freeze before
-installation. Second, it installs those device-bound constants and follows
-them through `ExecutionGraph`, the serial
+This expectations-only revision discloses and refreezes attempt three. It
+widens only CAL-1 to 600,000 to 1,000,000 ps using the now-known attempt-two
+observation, incorporates that observation into the empirical uncertainty and
+flagship bounds, and leaves every fatal predicate unchanged. This is not a
+retroactive pass for attempt two. Attempt three first repeats the fixed-cost
+capture on the same device under the corrected fatal oracle. Installation
+starts only if the capture is nonvoid and all four scored calibration
+relations pass. A nonvoid but rejected capture again stops the study and
+requires a new disclosed freeze. Only then does the study install the
+device-bound constants and follow them through `ExecutionGraph`, the serial
 lowerer, the packet-level step sink, `StepResult`, TTFT, and TPOT. A B100 or
 H100 query is not allowed to borrow the Turing values.
 
@@ -30,10 +37,16 @@ predictions:
   630,124 ps; eager host-bound costs of 2,327,730, 2,337,286 and 2,331,958 ps;
   stamped device gaps of 1,280,480, 1,270,640 and 1,602,561 ps; and serialized
   launch-plus-synchronize costs of 5,021,995, 5,096,963 and 5,053,538 ps.
-  They remain findings from void runs. Their ranges set an attempt-two
+  They remain findings from void runs. Their ranges set the original
   replication target, not a confidence interval. Their `launch.csv` content
   identities are frozen in `expectations.json` as `initial`, `post_fix` and
   `registered`, so the three value rows cannot be silently reordered.
+- Corrected attempt two, run from clean commit `13ae8a9`, held every fatal
+  guard and observed graph replay 809,068 ps, eager host-bound launch 2,544,074
+  ps, stamped device gap 1,573,280 ps and serialized launch 5,605,330 ps. Its
+  raw launch content SHA-256 is frozen in `expectations.json`. The graph value
+  alone missed its scored band, so the run is nonvoid but not accepted. These
+  values are known inputs to attempt three, not new predictions.
 - `examples/compute_fidelity_v1/RESULTS.md:372-390` retains 440 to 567 launches
   per 24-layer top-8 Granite MoE decode step and an omitted excess of 1.79 to
   12.31 times the 99,366,034 ps modeled compute.
@@ -47,7 +60,8 @@ predictions:
   The five-cell baseline digests in `expectations.json` were computed before
   this freeze. They are fatal compatibility oracles, not genuine-risk scores.
 
-Attempt two is therefore a replication. Its genuinely risky facts are whether
+Attempt three is therefore a disclosed replication after a calibration-band
+miss. Its genuinely risky facts are whether
 the device still lands in the predeclared ranges and whether the new model
 composes to the predeclared end-to-end bands without changing the identity
 path.
@@ -73,7 +87,7 @@ source surfaces were re-read before this freeze:
   at `_SimStepRuntime.settle`; it does not time individual coordinator calls.
   VLLM-21 owns that distinct call-cost calibration.
 
-## Corrected attempt-two calibration
+## Corrected attempt-three calibration
 
 The capture must identify exactly this environment before any measurement is
 accepted:
@@ -94,16 +108,18 @@ accepted:
 The corrected XFER-G4 is fatal and unscored: a zero-flop, zero-byte
 `RooflineProvider` query must return exactly 0 ps. Integer quantization cannot
 confound zero. The positive-work single/double residual remains descriptive and
-must still be reported, but it is not a fatal predicate in attempt two.
+must still be reported, but it is not a fatal predicate in attempt three.
 
-The incorrectly signed attempt-one FIX-2 is not silently reused. Attempt two
+The incorrectly signed attempt-one FIX-2 is not silently reused. Attempt three
 registers the quantity the probe directly measures: stamped batch wall time
 minus summed in-kernel global-timer spans, divided by launch count, must be
 strictly positive and inside its frozen band.
 
 ### Scored calibration relations
 
-- **CAL-1**, one instance: graph replay is in `[600,000, 700,000]` ps per node.
+- **CAL-1**, one instance: graph replay is in `[600,000, 1,000,000]` ps per
+  node. The upper bound is a disclosed attempt-three refreeze after attempt two
+  observed 809,068 ps outside the original 700,000 ps ceiling.
 - **CAL-2**, one instance: eager host-bound throughput is in
   `[2,000,000, 2,700,000]` ps per launch.
 - **CAL-3**, one instance: the stamped device gap is in
@@ -111,7 +127,7 @@ strictly positive and inside its frozen band.
 - **CAL-4**, one instance: serialized launch plus synchronization is in
   `[3,000,000, 20,000,000]` ps per launch.
 
-Each relation is evaluated directly on raw attempt-two capture output before
+Each relation is evaluated directly on raw attempt-three capture output before
 any exact inventory or provenance comparison. Device identity does not pin a
 duration, the zero-work oracle does not pin a positive launch cost, and none of
 CAL-1 through CAL-4 entails another. The calibration genuine-risk denominator
@@ -121,7 +137,7 @@ CAL-2 bands already entail it.
 
 ### Fatal calibration guards
 
-A violation makes attempt two void and COMP-2 stays open. These guards are
+A violation makes attempt three void and COMP-2 stays open. These guards are
 unscored:
 
 - **CAL-G1** exact GPU model, key, UUID and compute capability.
@@ -139,15 +155,15 @@ unscored:
   revision and content identities; it does not compare a frozen commit literal
   to a moving repository pin.
 
-## Physical sanity before the attempt-two digits are read
+## Physical sanity before the attempt-three digits are read
 
 The launch measurements have a causal floor of 0 ps. A negative host or device
 gap is impossible.
 
 For graph and eager measurements, the per-launch ceiling is the enclosing
 empty serialized operation on the same run: one launch followed by device
-synchronization. The prior enclosing values were 5.022 to 5.097 microseconds,
-and the attempt-two serialized value has its own scored 3 to 20 microsecond
+synchronization. The four known enclosing values were 5.022 to 5.605 microseconds,
+and the attempt-three serialized value has its own scored 3 to 20 microsecond
 band. A graph node or pipelined eager launch above that enclosing path is a
 harness defect. The stamped real-kernel gap instead has a causal floor of 0 ps
 and a ceiling of the stamped batch wall time divided by 400 launches.
@@ -162,11 +178,13 @@ omitted_excess = max(0, launch_floor - C)
 ```
 
 The model must never add `N * g` on top of `C`, because the host can run ahead
-of device service. At the old extrema, graph replay puts the launch floor at
-274.9 to 357.4 microseconds and eager launching at 1.024 to 1.325 milliseconds.
-Both lie below the serialized enclosure of `N * serialized_launch`, and both
-lie above the 99.366 microsecond modeled kernel service. The attempt-two value
-must satisfy the same two inequalities before its precision is discussed.
+of device service. Across the four now-known captures, graph replay puts the
+launch floor at 274.9 to 458.7 microseconds and eager launching at 1.024 to
+1.442 milliseconds. Both lie below the serialized enclosure of
+`N * serialized_launch`, and both lie above the 99.366 microsecond modeled
+kernel service. Attempt two did too.
+The attempt-three value must satisfy the same two inequalities before its
+precision is discussed.
 
 For the modeled number itself, the first-principles floor is
 `max(C, N * g)`: neither the kernel service nor the serial launch demand can be
@@ -210,7 +228,7 @@ Three independent sanity angles are required in the report:
    host-bound stream;
 2. the independently stamped device gap must stay positive and below its batch
    wall time; and
-3. the resulting 0.28 to 1.33 ms prior-observed Turing launch floor must be
+3. the resulting 0.27 to 1.44 ms prior-observed Turing launch floor must be
    compared with the mission's independent generic 0.3 to 3 ms host-cost
    plausibility bracket. Its lower edge is about 0.025 ms below that generic
    floor and must be reported, while the rest overlaps. It is neither a B100
@@ -221,9 +239,9 @@ Three independent sanity angles are required in the report:
 
 ## Installed model and uncertainty
 
-Two calibrated profile classes are installed, each carrying the attempt-two
+Two calibrated profile classes are installed, each carrying the attempt-three
 point value and a sample-limited empirical interval formed by the minimum and
-maximum of the three prior observations plus attempt two:
+maximum of the four prior observations plus attempt three:
 
 - `turing-cuda-graph`, launch class `cuda-graph-node`;
 - `turing-eager-host`, launch class `eager-host-bound`.
@@ -231,7 +249,7 @@ maximum of the three prior observations plus attempt two:
 The profile also carries the device key, model, UUID, host CPU, driver, CUDA
 version, source study, launch count and the empirical lower and upper
 per-launch values. The interval is not called a confidence interval. Runtime
-uses the attempt-two point value; reporting carries the empirical bounds.
+uses the attempt-three point value; reporting carries the empirical bounds.
 
 The exact `ideal` profile remains 0 ps with 0 uncertainty. A nonideal profile
 may execute only when `GpuSpec.name == "gtx1660-ti-sm75"`. Queries naming
@@ -262,16 +280,27 @@ observed schedule applies it once when that path is explicitly selected.
 
 ## Flagship end-to-end relations
 
-For the exact named mission decode fixture, the representative multiplier
-derived from the retained finding is
+For the exact named mission decode fixture, the original retained finding
+still derives this step-makespan range:
 
 ```text
 1 + (99,024,000 / 204,526,734) * [1.79, 12.31]
   = [1.8666493447, 6.9600298512].
 ```
 
-The acceptance band is `[1.80, 7.10]`. It encloses the three prior empirical
-captures and deliberately leaves the attempt-two result at risk; the wider
+Attempt two then raised the known empirical high endpoint. Across all four
+known captures and both launch-count endpoints, the direct composition is
+
+```text
+low  = (105,502,734 + max(99,024,000, 440 * 624,665)) / 204,526,734
+     = 1.8596851696
+high = (105,502,734 + max(99,024,000, 567 * 2,544,074)) / 204,526,734
+     = 7.5686569757
+```
+
+The acceptance band is `[1.80, 7.75]`. It encloses the four prior empirical
+captures, including the disclosed attempt-two measurement, and deliberately
+leaves the attempt-three result at risk; the wider
 CAL bands do not guarantee LIVE acceptance. The study sweeps two independent
 parameters: launch class (graph and eager) and launch count (440 and 567).
 
@@ -294,7 +323,7 @@ guard. Request arrival is 0 ps, TTFT is the prefill completion, and TPOT is the
 exact mean of the two distinct following decode intervals.
 
 - **LIVE-1**, four instances: every end-to-end decode-step multiplier is
-  inside `[1.80, 7.10]`.
+  inside `[1.80, 7.75]`.
 - **LIVE-2**, four instances: TPOT rises by a multiplier inside the same band.
   The raw per-request TPOT is checked before component conservation guards.
 - **LIVE-3**, four instances: TTFT increases strictly, but its relative
@@ -353,7 +382,7 @@ plausible real = launch_floor + [0.72, 1.44] ms
 over the measured graph-to-eager launch range. The scored calibration bands
 and launch-count endpoints bound this ratio in `[1.35, 4.70]` before the new
 digits are read. The report must give the tighter interval recomputed from the
-actual attempt-two value. This is a conditional Turing launch-throughput
+actual attempt-three value. This is a conditional Turing launch-throughput
 sensitivity beside the mission's generic 5x to 22x budget, not a replacement
 for that full budget. It assumes residual scheduler, sampler and Python costs
 are zero. Those unmeasured residuals remain explicit unknowns, so the absolute
@@ -380,7 +409,7 @@ so its site location is not part of the tracked contract.
 ```bash
 .venv/bin/python examples/host_step_cost_v1/run_calibration.py \
   --cuda-root "${SIMLLM_CUDA_ROOT}" \
-  --out "${SIMLLM_WAVE12_RUN_ROOT}/host-step-calibration-attempt2" \
+  --out "${SIMLLM_WAVE12_RUN_ROOT}/host-step-calibration-attempt3" \
   --check-only
 
 .venv/bin/python examples/host_step_cost_v1/run_study.py \
@@ -426,7 +455,7 @@ COMP-28 must consume that evidence instead of duplicating its hardware
 campaign; it owns only the scalar compatibility projection while the
 structural path is disabled.
 
-COMP-2 closes only if every following clause is demonstrated: the attempt-two
+COMP-2 closes only if every following clause is demonstrated: the attempt-three
 capture is nonvoid; each constant carries device and launch-class provenance
 plus sample-limited uncertainty and refuses a mismatched device; the host model,
 serial lowerer, packet sink and coordinator dispatch apply one shared term

@@ -2,7 +2,7 @@
   "schema": "simllm-host-step-cost-v1-expectations-v1",
   "study": "host_step_cost_v1",
   "task": "COMP-2",
-  "calibration_attempt": 2,
+  "calibration_attempt": 3,
   "prior_attempt": {
     "study": "compute_fidelity_v1",
     "disposition": "void_with_findings",
@@ -18,6 +18,20 @@
     "stamped_device_gap_ps": [1280480, 1270640, 1602561],
     "serialized_launch_ps": [5021995, 5096963, 5053538]
   },
+  "prior_attempt_two": {
+    "disposition": "not_accepted",
+    "behavioral_score_interpretable": true,
+    "observed_commit": "13ae8a9c513faa87a5bf1dba65b113de333b02b7",
+    "calibration_sha256": "b953c539d11ebe6c79db3fb8bfe0c3949006ab43015c96ac2f9a03e2b9a7d8f0",
+    "launch_csv_sha256": "33d40005f2993c30b43101324e6f23dd1dd5824522c6c63fc87b606b38b44f02",
+    "graph_replay_ps": 809068,
+    "eager_host_bound_ps": 2544074,
+    "stamped_device_gap_ps": 1573280,
+    "serialized_launch_ps": 5605330,
+    "fatal_guard_failures": [],
+    "scored_relations_passed": 3,
+    "scored_relations_total": 4
+  },
   "capture": {
     "device_name": "NVIDIA GeForce GTX 1660 Ti",
     "device_key": "gtx1660-ti-sm75",
@@ -32,7 +46,7 @@
     "long_isolated_iterations": 200,
     "long_backtoback_iterations": 400,
     "acceptance_ps": {
-      "graph_replay": [600000, 700000],
+      "graph_replay": [600000, 1000000],
       "eager_host_bound": [2000000, 2700000],
       "stamped_device_gap": [500000, 3000000],
       "serialized_launch": [3000000, 20000000]
@@ -55,7 +69,8 @@
     "modeled_prefill_makespan_ps": 372217008,
     "retained_omitted_multiple": [1.79, 12.31],
     "derived_decode_multiplier": [1.8666493447, 6.9600298512],
-    "acceptance_decode_multiplier": [1.80, 7.10]
+    "known_profile_decode_multiplier": [1.8596851696, 7.5686569757],
+    "acceptance_decode_multiplier": [1.80, 7.75]
   },
   "live_fixture": {
     "request_id": "r00",
