@@ -184,30 +184,6 @@ The hardware/CC boundary, mlx5 hook, CX-7 evidence rules and full boundary
 campaign are in
 [docs/papers/rnic-hardware-calibration.md](docs/papers/rnic-hardware-calibration.md).
 
-## Precision levels
-
-Not every question needs the most detailed model, and paying for detail
-you do not need is how a simulator becomes too slow to use. SimLLM is
-built so each seam of the stack, from the workload down to the NIC, can
-run at a chosen precision, and so the run records which precision it
-used.
-
-At each seam there is a compatibility level whose results are locked byte
-for byte, one or more analytic levels, and, where the evidence exists, a
-calibrated level fitted offline against captured runs. Switching a level
-changes how long things take and how much they vary. It never changes
-what happened: the same requests produce the same tokens, the same stop
-reasons and the same collective shape at every level.
-
-The network seam shows why that matters. Its fluid closed form is fast
-and smooth, its packet-level model reproduces congestion and is slow, and
-a registered statistical level (TRAF-19) will draw flow completions from
-a distribution fitted on packet-level runs, so a large sweep can keep
-effects like ECMP hash collisions and link failures as a measured tail
-instead of deleting them. The full matrix of seams, levels and owning
-tasks is in the
-[developer guide](docs/README_PRO.md#fidelity-levels-and-switches).
-
 ## Models
 
 What SimLLM models today and what is planned next. Each task ID links to
@@ -317,7 +293,7 @@ status and numbered open tasks; the README stays a map.
 | Module | Purpose | Doc |
 |---|---|---|
 | `simllm/core` | Virtual clock, scheduler-step records, execution graphs, central bookkeeping, completion contracts | [core](docs/modules/core.md) |
-| `simllm/workload` | Arrival processes, length distributions, shared-prefix structure | [workload](docs/modules/workload.md) |
+| `simllm/workload` | Arrival processes, length distributions, deterministic generation requests, shared-prefix structure | [workload](docs/modules/workload.md) |
 | `simllm/compute` | Pluggable compute-time providers, the GPU service model and its concurrent task primitive, host initiation, and the NCCL stack skeleton | [compute](docs/modules/compute.md) |
 | `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
 | `simllm/traffic` | Semantic collectives to physical flows | [traffic](docs/modules/traffic.md) |
@@ -325,7 +301,7 @@ status and numbered open tasks; the README stays a map.
 | `simllm/preplay` | Offline CPU inference oracle: capture, arrival join, vLLM replay and routed-expert supply, with the independent CPU comparison still open | [preplay](docs/modules/preplay.md) |
 | `simllm/backends` | htsim / LogGOPSim invocation + result parsing, submodule pins | [backends](docs/modules/backends.md) |
 | `simllm/adapters/vllm` | `SimExecutor` (pluggable, no fork), placement exporter, the simulated communicator and the flagged model-runner skeleton | [adapters-vllm](docs/modules/adapters-vllm.md) |
-| `simllm/adapters/sglang` | `SimTpModelWorker`, placement exporter and the simulated communicator | [adapters-sglang](docs/modules/adapters-sglang.md) |
+| `simllm/adapters/sglang` | `SimTpModelWorker`, single-GPU MoE geometry, open-loop generate driver and the simulated communicator | [adapters-sglang](docs/modules/adapters-sglang.md) |
 
 ## Development
 

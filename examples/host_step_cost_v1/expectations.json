@@ -1,0 +1,387 @@
+{
+  "schema": "simllm-host-step-cost-v1-expectations-v1",
+  "study": "host_step_cost_v1",
+  "task": "COMP-2",
+  "calibration_attempt": 3,
+  "live_attempt": 3,
+  "prior_live_attempt": {
+    "attempt": 1,
+    "disposition": "void_with_findings",
+    "failed_fatal_guard": "LIVE-G3_step_and_metric_conservation",
+    "observed_commit": "8a620e9e394c95441d6090c588d12c8aaad5733b",
+    "original_result_commit": "f5e2e745f5a09c0e34a1891a86389ec7baf67c6c",
+    "original_result_sha256": "fa59a14d5bcb71cf7f2790e00c45d9b3d51261c49cbf3ed0e1ee1eaf028aeb2c",
+    "retained_void_commit": "12976024e3912e76a6312829b95eb5e20f5530bc",
+    "retained_void_sha256": "6a78848373f8a21d32902975531efb18967f0440490bf420caa0d032421ebb38",
+    "score_interpretable": false,
+    "finding_count": 12,
+    "compute_floor_findings": [
+      {
+        "profile": "turing-cuda-graph",
+        "launch_count": 440,
+        "floor_ps": 356094640,
+        "service_ps": 356088000,
+        "shortfall_ps": 6640
+      },
+      {
+        "profile": "turing-cuda-graph",
+        "launch_count": 567,
+        "floor_ps": 458876502,
+        "service_ps": 458856000,
+        "shortfall_ps": 20502
+      },
+      {
+        "profile": "turing-eager-host",
+        "launch_count": 440,
+        "floor_ps": 1040272200,
+        "service_ps": 1040256000,
+        "shortfall_ps": 16200
+      },
+      {
+        "profile": "turing-eager-host",
+        "launch_count": 567,
+        "floor_ps": 1340532585,
+        "service_ps": 1340520000,
+        "shortfall_ps": 12585
+      }
+    ]
+  },
+  "live_attempt_two": {
+    "evidence_class": "nonvoid_entailed_repair_regression",
+    "genuine_risk_instances": 0,
+    "entailed_findings": 12,
+    "composition": "F=max(provider_duration_ps, launch_count*point_ps_per_launch)",
+    "whole_nanosecond_enclosure": "Q=ceil(F/1000)*1000",
+    "ideal_delta_ps": 0,
+    "expected_rows": [
+      {
+        "profile": "turing-cuda-graph",
+        "launch_count": 440,
+        "attempt_one_service_ps": 356088000,
+        "floor_ps": 356094640,
+        "service_ps": 356095000,
+        "step_delta_ps": 7000,
+        "step_latency_ps": [629288008, 461597734, 461433898],
+        "completion_ps": [629288008, 1090885742, 1552319640],
+        "ttft_ps": 629288008,
+        "tpot_ps": 461515816
+      },
+      {
+        "profile": "turing-cuda-graph",
+        "launch_count": 567,
+        "attempt_one_service_ps": 458856000,
+        "floor_ps": 458876502,
+        "service_ps": 458877000,
+        "step_delta_ps": 21000,
+        "step_latency_ps": [732070008, 564379734, 564215898],
+        "completion_ps": [732070008, 1296449742, 1860665640],
+        "ttft_ps": 732070008,
+        "tpot_ps": 564297816
+      },
+      {
+        "profile": "turing-eager-host",
+        "launch_count": 440,
+        "attempt_one_service_ps": 1040256000,
+        "floor_ps": 1040272200,
+        "service_ps": 1040273000,
+        "step_delta_ps": 17000,
+        "step_latency_ps": [1313466008, 1145775734, 1145611898],
+        "completion_ps": [1313466008, 2459241742, 3604853640],
+        "ttft_ps": 1313466008,
+        "tpot_ps": 1145693816
+      },
+      {
+        "profile": "turing-eager-host",
+        "launch_count": 567,
+        "attempt_one_service_ps": 1340520000,
+        "floor_ps": 1340532585,
+        "service_ps": 1340533000,
+        "step_delta_ps": 13000,
+        "step_latency_ps": [1613726008, 1446035734, 1445871898],
+        "completion_ps": [1613726008, 3059761742, 4505633640],
+        "ttft_ps": 1613726008,
+        "tpot_ps": 1445953816
+      }
+    ],
+    "raw_provider_ps": [99024000, 99024000, 99048000],
+    "point_budget_expected": [1.4249530295494066, 3.891039465111412],
+    "empirical_budget_expected": [1.3969639214081737, 4.508550408760237]
+  },
+  "live_attempt_three": {
+    "attempt": 3,
+    "disposition": "post_specified_entailed_conformance_and_reach",
+    "evidence_class": "nonvoid_entailed_conformance_and_reach",
+    "genuine_risk_instances": 0,
+    "entailed_findings": 12,
+    "prior_attempt_two": {
+      "observed_commit": "12d337eaf47b7912b649038f451faf256de90b33",
+      "result_commit": "a484f38e78df177a37f45b2878ad80aa9329c69f",
+      "result_sha256": "06e4eacb2838cbec8434aae788732a225b8bd9d74379fe008e3e441e11cfac81",
+      "run_status": "nonvoid_repair_regression",
+      "genuine_risk_instances": 0,
+      "entailed_findings": 12,
+      "entailing_fatal_guards": [
+        "LIVE-G3_step_and_metric_conservation",
+        "LIVE-G5_GOAL_quantized_compute_encloses_host_floor",
+        "LIVE-G6_observed_schedule_attribution"
+      ]
+    },
+    "fixture": {
+      "source_cell": "end_to_end_replay_v1/a-ep8-200g",
+      "request_id": "r00",
+      "arrival_ps": 0,
+      "step_indices": [0, 1, 2],
+      "network_profile": "rnic-nn-fluid",
+      "linkspeed_bps": 200000000000,
+      "fixed_compute_ps": [99024000, 99024000, 99048000],
+      "prior_observed_ideal_step_ps": [549409968, 214029454, 213725778],
+      "prior_observed_network_ps": [450385968, 115005454, 114677778],
+      "prior_observed_micro_fixture_tpot_ps": 213877616,
+      "network_physical_bounds_ps": [
+        [96000000, 450385968],
+        [96000000, 115005488],
+        [96000000, 114677808]
+      ],
+      "input_sha256": {
+        "steps_jsonl": "4aebcbdaf27aa6db599101b65e61546de8419283e9b9092237031d9f5796bb08",
+        "routed_experts_json": "2c3e5c961ed432a6eb9633983d4ccedc2cd2c26ccb24415f9f4092fac7b58dba"
+      }
+    },
+    "acceptance": {
+      "profile_launch_bands": [
+        {
+          "profile": "turing-cuda-graph",
+          "launch_count": 440,
+          "multiplier_band": [2.17, 2.23],
+          "point_decode_projection": 2.201101040981023,
+          "point_tpot_projection": 2.2018976310265215
+        },
+        {
+          "profile": "turing-cuda-graph",
+          "launch_count": 567,
+          "multiplier_band": [2.65, 2.71],
+          "point_decode_projection": 2.6813246647818856,
+          "point_tpot_projection": 2.6824621796794292
+        },
+        {
+          "profile": "turing-eager-host",
+          "launch_count": 440,
+          "multiplier_band": [5.34, 5.46],
+          "point_decode_projection": 5.397754525879415,
+          "point_tpot_projection": 5.400820514101859
+        },
+        {
+          "profile": "turing-eager-host",
+          "launch_count": 567,
+          "multiplier_band": [6.73, 6.88],
+          "point_decode_projection": 6.800645550401675,
+          "point_tpot_projection": 6.804707492157571
+        }
+      ],
+      "ttft_relative_increase": "strictly positive and strictly smaller than TPOT",
+      "ttft_to_tpot_increment_ratio_band": [0.38, 0.4],
+      "point_increment_ratio_projection": 0.38928601309978417,
+      "prior_empirical_decode_endpoints": [1.8215177711007944, 7.277014564546803],
+      "prior_empirical_tpot_endpoints": [1.8220448838367451, 7.281414694654162]
+    },
+    "physical_sanity_ps": {
+      "raw_physical_step_floor_by_profile_and_count": {
+        "turing-cuda-graph-n440": 452094640,
+        "turing-cuda-graph-n567": 554876502,
+        "turing-eager-host-n440": 1136272200,
+        "turing-eager-host-n567": 1436532585
+      },
+      "step_ceiling_by_launch_count": {
+        "n440": [2924009008, 2588628494, 2588324818],
+        "n567": [3609404640, 3274024126, 3273720450]
+      },
+      "network_plus_represented_step_bounds": {
+        "turing-cuda-graph-n440": [[452095000, 806480968], [452095000, 471100488], [452095000, 470772808]],
+        "turing-cuda-graph-n567": [[554877000, 909262968], [554877000, 573882488], [554877000, 573554808]],
+        "turing-eager-host-n440": [[1136273000, 1490658968], [1136273000, 1155278488], [1136273000, 1154950808]],
+        "turing-eager-host-n567": [[1436533000, 1790918968], [1436533000, 1455538488], [1436533000, 1455210808]]
+      }
+    },
+    "scored_relations": {},
+    "entailed_relations": {
+      "LIVE-1_decode_multiplier_in_band": 4,
+      "LIVE-2_tpot_multiplier_in_band": 4,
+      "LIVE-3_ttft_relative_increase_is_smaller": 4
+    },
+    "fatal_unscored_guards": [
+      "LIVE-G1_profile_provenance_and_stable_revision",
+      "LIVE-G2_device_mismatch_fails_closed",
+      "LIVE-G3_source_identity_and_ideal_baseline",
+      "LIVE-G4_component_and_request_conservation",
+      "LIVE-G5_physical_enclosures_and_exact_Q",
+      "LIVE-G6_budget_arithmetic"
+    ],
+    "derived_unscored_checks": [
+      "HOLD-D1_two_parameter_directions",
+      "HOLD-D2_network_service_matches_ideal",
+      "native_exact_Q_conformance"
+    ],
+    "unreachable_limit_diagnostics": {
+      "supports_genuine_risk": false,
+      "LIVE-1_and_LIVE-2": "96,000,000 ps is the unreachable zero-byte network limit for this nonzero-byte fixture",
+      "LIVE-3": "the prefill zero-byte limit and decode interval ceilings do not form an executable frozen-fixture countermodel"
+    }
+  },
+  "prior_ideal_replay": {
+    "observed_commit": "f5e2e745f5a09c0e34a1891a86389ec7baf67c6c",
+    "aggregate_cell_sha256": "5b51c31c1d83422cecfcbd975bf67690c6cccfd8ca4437ffef3e54985ee615fe",
+    "all_step_record_digests_matched": true,
+    "final_implementation_rerun_required": true
+  },
+  "prior_attempt": {
+    "study": "compute_fidelity_v1",
+    "disposition": "void_with_findings",
+    "fatal_guard": "XFER-G4",
+    "integer_scaling_residual_ps": 1,
+    "launch_csv_sha256": {
+      "initial": "9da18198061cacb033e0c679d36e3af40dd79e37f9af4d00640a63deeee2c393",
+      "post_fix": "0886226e39fac00bd508355958e4c381c354a126e2c03c2818883087fbf4a2f7",
+      "registered": "ca7aa21f93ec5131a9e89632693d660132e353c30fd7b32f93992f0bb69f1858"
+    },
+    "graph_replay_ps": [624665, 630356, 630124],
+    "eager_host_bound_ps": [2327730, 2337286, 2331958],
+    "stamped_device_gap_ps": [1280480, 1270640, 1602561],
+    "serialized_launch_ps": [5021995, 5096963, 5053538]
+  },
+  "prior_attempt_two": {
+    "disposition": "not_accepted",
+    "behavioral_score_interpretable": true,
+    "observed_commit": "13ae8a9c513faa87a5bf1dba65b113de333b02b7",
+    "calibration_sha256": "b953c539d11ebe6c79db3fb8bfe0c3949006ab43015c96ac2f9a03e2b9a7d8f0",
+    "launch_csv_sha256": "33d40005f2993c30b43101324e6f23dd1dd5824522c6c63fc87b606b38b44f02",
+    "graph_replay_ps": 809068,
+    "eager_host_bound_ps": 2544074,
+    "stamped_device_gap_ps": 1573280,
+    "serialized_launch_ps": 5605330,
+    "fatal_guard_failures": [],
+    "scored_relations_passed": 3,
+    "scored_relations_total": 4
+  },
+  "capture": {
+    "device_name": "NVIDIA GeForce GTX 1660 Ti",
+    "device_key": "gtx1660-ti-sm75",
+    "gpu_uuid": "GPU-a90a812a-41bf-4f2f-c96d-d83e6eae6bd0",
+    "compute_capability": "7.5",
+    "driver_version": "550.90.07",
+    "cuda_version": "12.4.99",
+    "host_cpu": "AMD Ryzen 9 3950X 16-Core Processor",
+    "launch_iterations": 20000,
+    "graph_nodes": 512,
+    "graph_replays": 200,
+    "long_isolated_iterations": 200,
+    "long_backtoback_iterations": 400,
+    "acceptance_ps": {
+      "graph_replay": [600000, 1000000],
+      "eager_host_bound": [2000000, 2700000],
+      "stamped_device_gap": [500000, 3000000],
+      "serialized_launch": [3000000, 20000000]
+    }
+  },
+  "launch_count": {
+    "framework": "vllm",
+    "framework_version": "0.26.0",
+    "model_geometry": "24-layer top-8 Granite MoE",
+    "minimum": 440,
+    "maximum": 567
+  },
+  "representative_step": {
+    "evidence_class": "attempt_two_historical_entailed",
+    "source_cell": "end_to_end_replay_v1/a-ep8-400g",
+    "decode_step_index": 1,
+    "prefill_step_index": 0,
+    "modeled_compute_ps": 99024000,
+    "modeled_decode_network_ps": 105502734,
+    "modeled_decode_makespan_ps": 204526734,
+    "modeled_prefill_makespan_ps": 372217008,
+    "retained_omitted_multiple": [1.79, 12.31],
+    "derived_decode_multiplier": [1.8666493447, 6.9600298512],
+    "known_profile_decode_multiplier": [1.8596851696, 7.5686569757],
+    "acceptance_decode_multiplier": [1.80, 7.75]
+  },
+  "live_fixture": {
+    "request_id": "r00",
+    "arrival_ps": 0,
+    "steps": [
+      {"step_index": 0, "phase": "prefill", "new_tokens": 19, "context_length": 19},
+      {"step_index": 1, "phase": "decode", "new_tokens": 1, "context_length": 20},
+      {"step_index": 2, "phase": "decode", "new_tokens": 1, "context_length": 21}
+    ],
+    "model": {
+      "num_layers": 24,
+      "hidden_size": 1024,
+      "num_experts": 32,
+      "top_k": 8,
+      "ep_world": 8
+    },
+    "network_profile": "rnic-nn-fluid",
+    "linkspeed_bps": 400000000000,
+    "fixed_compute_ps": [99024000, 99024000, 99048000],
+    "ideal_step_ps": {
+      "prefill": 372217008,
+      "decode": [204526734, 204386898],
+      "tpot": 204456816
+    },
+    "network_physical_bounds_ps": {
+      "prefill": [96000000, 273193008],
+      "decode_step_1": [96000000, 105502768],
+      "decode_step_2": [96000000, 105338928]
+    },
+    "input_sha256": {
+      "steps_jsonl": "f7c3b85866ce0fdb6d87c1f706ad6fd21153210c79d3c21d874b7642267eb11a",
+      "routed_experts_json": "2c3e5c961ed432a6eb9633983d4ccedc2cd2c26ccb24415f9f4092fac7b58dba"
+    }
+  },
+  "mission_budget": {
+    "modeled_network_ps": 105502734,
+    "plausible_collective_network_ps": [720000000, 1440000000],
+    "acceptance_conditional_turing_residual_optimism": [1.35, 4.70],
+    "b100_host_step_cost": "unknown"
+  },
+  "ideal_compatibility": {
+    "study": "end_to_end_replay_v1",
+    "canonicalization": "remove wall_seconds from each cell.json, serialize all cells by name with sorted keys and compact separators, append LF",
+    "aggregate_cell_sha256": "5b51c31c1d83422cecfcbd975bf67690c6cccfd8ca4437ffef3e54985ee615fe",
+    "step_record_sha256": {
+      "a-ep4-400g": "fba28840dacc858e67e2202c24b82012a114ee2cf4512b9c72a7c9a2718365cc",
+      "a-ep8-100g": "893fd939460556a6e0639572ef41db58b478c72850f3a43b62de626bbade5706",
+      "a-ep8-200g": "4aebcbdaf27aa6db599101b65e61546de8419283e9b9092237031d9f5796bb08",
+      "a-ep8-400g": "f7c3b85866ce0fdb6d87c1f706ad6fd21153210c79d3c21d874b7642267eb11a",
+      "b-ep8-400g": "997028d3806ed86c43ff558afcb92358bdb78ad4e076e11a75e2622072cc65ea"
+    }
+  },
+  "scored_calibration_relations": {
+    "CAL-1_graph_replay_in_band": 1,
+    "CAL-2_eager_host_bound_in_band": 1,
+    "CAL-3_device_gap_in_band": 1,
+    "CAL-4_serialized_enclosure_in_band": 1
+  },
+  "attempt_two_relations_originally_scored": {
+    "LIVE-1_decode_multiplier_in_band": 4,
+    "LIVE-2_tpot_multiplier_in_band": 4,
+    "LIVE-3_ttft_relative_increase_is_smaller": 4
+  },
+  "derived_unscored_checks": [
+    "CAL-D1_graph_cheaper_than_eager",
+    "LIVE-D1_two_parameter_directions"
+  ],
+  "fatal_unscored_guards": [
+    "CAL-G1_device_identity",
+    "CAL-G2_host_and_toolchain_identity",
+    "CAL-G3_positive_measurements",
+    "CAL-G4_zero_work_is_exactly_zero",
+    "CAL-G5_causal_measurement_enclosures",
+    "CAL-G6_clean_revision_and_stable_capture_sources",
+    "LIVE-G1_profile_provenance",
+    "LIVE-G2_device_mismatch_fails_closed",
+    "LIVE-G3_step_and_metric_conservation",
+    "LIVE-G4_budget_arithmetic",
+    "LIVE-G5_GOAL_quantized_compute_encloses_host_floor",
+    "LIVE-G6_observed_schedule_attribution",
+    "OFF-G1_ideal_named_study_exact_identity"
+  ]
+}

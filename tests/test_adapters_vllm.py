@@ -44,6 +44,7 @@ from simllm.adapters.vllm import (
     vllm_batch_slices,
     write_step_records,
 )
+from simllm.adapters.vllm.worker import _skeleton_fallback_latency
 from simllm.compute import GpuSpec, HostInitiationModel, RooflineProvider
 from simllm.core import (
     CollectiveWork,
@@ -289,6 +290,23 @@ def make_sim_worker(
         _simllm_clock=clock,
         _simllm_config=simllm_config,
     )
+
+
+def test_skeleton_worker_nonideal_host_cost_requires_timing_sink(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    model = HostInitiationModel.turing_cuda_graph(440)
+    gpu = GpuSpec("gtx1660-ti-sm75", peak_flops=1.0, mem_bandwidth=1.0)
+    reset_configuration()
+    try:
+        configure(host_model=model, gpu=gpu)
+        with pytest.raises(RuntimeError, match="requires a host-model-aware"):
+            make_sim_worker()
+    finally:
+        reset_configuration()
+
+    assert _skeleton_fallback_latency(HostInitiationModel.ideal()) == 0
+    with pytest.raises(RuntimeError, match="requires a timing sink result"):
+        _skeleton_fallback_latency(model)
 
 
 def joined_replay_path(tmp_path: Path, *, trace_path: Path | None = None) -> Path:
@@ -1674,6 +1692,44 @@ def test_observation_sink_binds_the_worker_clock_and_receives_absent_schedule(
         assert len(sink.calls) == 1
         assert sink.calls[0][0] is worker.step_records[0]
         assert sink.calls[0][1] is None
+        assert worker.step_results[0].step_latency_ps == 7_000
+        assert clock.now_ps == 130_000
+    finally:
+        reset_configuration()
+
+
+def test_observation_producer_off_preserves_the_one_argument_legacy_sink(
+    monkeypatch,
+):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    reset_configuration()
+    calls = []
+
+    def legacy_sink(record):
+        calls.append(record)
+        return StepResult(
+            step_index=record.step_index,
+            step_latency_ps=7_000,
+            completed_at_ps=record.virtual_time_ps + 7_000,
+        )
+
+    try:
+        configure(step_sink=legacy_sink)
+        clock = VirtualClock(start_ps=123_000)
+        worker = make_sim_worker(
+            clock,
+            simllm_config=SimExecutorConfig(observed_schedule="off"),
+        )
+        worker.init_device()
+        step = FakeSchedulerOutput(
+            scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+            num_scheduled_tokens={"r0": 4},
+        )
+
+        assert worker.execute_model(step) is None
+
+        assert calls == [worker.step_records[0]]
+        assert worker.model_runner.latest_observations is None
         assert worker.step_results[0].step_latency_ps == 7_000
         assert clock.now_ps == 130_000
     finally:

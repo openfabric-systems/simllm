@@ -22,6 +22,13 @@ patterns rather than abstract ops.
 
 COLLECTIVE_TRACE_SCHEMA = "simllm-collective-trace-v1"
 
+from simllm.traffic.collective_latency import (
+    B200_NCCL_2_27_LOCAL_PROFILE,
+    LEGACY_COLLECTIVE_LATENCY_PROFILE,
+    CollectiveLatencyProfile,
+    critical_collective_endpoint_bytes,
+    resolve_collective_latency_profile,
+)
 from simllm.traffic.collective_plan import (
     DEFAULT_COLLECTIVE_PLAN_BASE_TAG,
     collective_plan_by_operation,
@@ -106,11 +113,13 @@ from simllm.traffic.step_comm import (
 
 __all__ = [
     "ALWAYS_APPLIED_RULES",
+    "B200_NCCL_2_27_LOCAL_PROFILE",
     "CAPTURED_ONLY_RULES",
     "COLLECTIVE_TRACE_SCHEMA",
     "CONSERVATION_RULES",
     "DEFAULT_COLLECTIVE_PLAN_BASE_TAG",
     "DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND",
+    "LEGACY_COLLECTIVE_LATENCY_PROFILE",
     "MOE_A2A_PHASES",
     "OBSERVED_ABSENT_BYTE_EVIDENCE",
     "OBSERVED_MIXED_BYTE_EVIDENCE",
@@ -122,6 +131,7 @@ __all__ = [
     "TP_ALLREDUCE_SITES",
     "ClassifiedCommunicationPhase",
     "CollectiveCommunicationPhase",
+    "CollectiveLatencyProfile",
     "DirectedCollectiveSegment",
     "ExecutionGoalArtifact",
     "ExecutionGoalArtifactBoundary",
@@ -144,6 +154,7 @@ __all__ = [
     "collective_plan_by_operation",
     "compare_goal_request_attribution",
     "compare_request_moe_fidelity",
+    "critical_collective_endpoint_bytes",
     "gather",
     "lower_step_observations",
     "observed_routed_byte_evidence",
@@ -158,6 +169,7 @@ __all__ = [
     "render_sequenced_step_goal",
     "render_serial_execution_graph_goal",
     "render_step_goal",
+    "resolve_collective_latency_profile",
     "ring_allreduce",
     "routed_moe_conservation",
     "routed_moe_conservation_report",

@@ -1,0 +1,202 @@
+{
+  "attempt": 2,
+  "behavioral_score_interpretable": true,
+  "capture_shape": {
+    "graph_nodes": 512,
+    "graph_replays": 200,
+    "launch_iterations": 20000,
+    "long_backtoback_iterations": 400,
+    "long_isolated_iterations": 200
+  },
+  "derived_unscored_checks": [
+    {
+      "id": "CAL-D1_graph_cheaper_than_eager",
+      "passed": true,
+      "scored": false
+    }
+  ],
+  "descriptive_positive_scaling_residual_ps": 1,
+  "device": {
+    "compile_target": "sm_75",
+    "compute_capability": "7.5",
+    "cuda_version": "12.4.99",
+    "device_key": "gtx1660-ti-sm75",
+    "device_name": "NVIDIA GeForce GTX 1660 Ti",
+    "driver_version": "550.90.07",
+    "gpu_uuid": "GPU-a90a812a-41bf-4f2f-c96d-d83e6eae6bd0",
+    "host_cpu": "AMD Ryzen 9 3950X 16-Core Processor"
+  },
+  "expectation_commit": "b30118d397005796d4a0b132cee603a4bb2b03b1",
+  "fatal_guard_failures": [],
+  "fatal_guards": [
+    {
+      "detail": {
+        "compute_capability": "7.5",
+        "device_key": "gtx1660-ti-sm75",
+        "device_name": "NVIDIA GeForce GTX 1660 Ti",
+        "gpu_uuid": "GPU-a90a812a-41bf-4f2f-c96d-d83e6eae6bd0"
+      },
+      "id": "CAL-G1_device_identity",
+      "passed": true
+    },
+    {
+      "detail": {
+        "compile_target": "sm_75",
+        "cuda_version": "12.4.99",
+        "driver_version": "550.90.07",
+        "host_cpu": "AMD Ryzen 9 3950X 16-Core Processor"
+      },
+      "id": "CAL-G2_host_and_toolchain_identity",
+      "passed": true
+    },
+    {
+      "detail": {
+        "counts": {
+          "empty_iterations": 20000,
+          "empty_serialized_iterations": 5000,
+          "graph_nodes": 512,
+          "graph_replays": 200,
+          "long_backtoback_iterations": 400,
+          "long_isolated_iterations": 200
+        },
+        "measurements_ps": {
+          "cpu_enqueue": 2543565,
+          "eager_host_bound": 2544074,
+          "graph_replay": 809068,
+          "serialized_launch": 5605330,
+          "stamped_batch_wall": 6033152103,
+          "stamped_device_gap": 1573280,
+          "stamped_kernel_service": 13509600
+        }
+      },
+      "id": "CAL-G3_positive_measurements",
+      "passed": true
+    },
+    {
+      "detail": {
+        "doubled_ps": 1587301587,
+        "positive_scaling_residual_ps": 1,
+        "single_ps": 793650793,
+        "zero_work_ps": 0
+      },
+      "id": "CAL-G4_zero_work_is_exactly_zero",
+      "passed": true
+    },
+    {
+      "detail": {
+        "eager_host_bound_ps": 2544074,
+        "empty_serialized_ps": 5605330,
+        "graph_replay_ps": 809068,
+        "stamped_batch_wall_per_launch_ps": 15082880,
+        "stamped_device_gap_ps": 1573280
+      },
+      "id": "CAL-G5_causal_measurement_enclosures",
+      "passed": true
+    },
+    {
+      "detail": {
+        "entry_hashes": {
+          "capture_harness_sha256": "228534f4ab3508da01d3fc053113e3f3abd4d0f4447a9022432192c82d662d8e",
+          "probe_source_sha256": "047144cd3593c74d2619d8ad50f214bf089dbe1bbe9474fedf6e83ff0cc33d46"
+        },
+        "entry_head": "13ae8a9c513faa87a5bf1dba65b113de333b02b7",
+        "exit_hashes": {
+          "capture_harness_sha256": "228534f4ab3508da01d3fc053113e3f3abd4d0f4447a9022432192c82d662d8e",
+          "probe_source_sha256": "047144cd3593c74d2619d8ad50f214bf089dbe1bbe9474fedf6e83ff0cc33d46"
+        },
+        "exit_head": "13ae8a9c513faa87a5bf1dba65b113de333b02b7",
+        "repository_clean_before_output": true
+      },
+      "id": "CAL-G6_clean_revision_and_stable_capture_sources",
+      "passed": true
+    }
+  ],
+  "measurements_ps": {
+    "cpu_enqueue": 2543565,
+    "eager_host_bound": 2544074,
+    "graph_replay": 809068,
+    "serialized_launch": 5605330,
+    "stamped_batch_wall": 6033152103,
+    "stamped_device_gap": 1573280,
+    "stamped_kernel_service": 13509600
+  },
+  "observed_commit": "13ae8a9c513faa87a5bf1dba65b113de333b02b7",
+  "profiles": {
+    "turing-cuda-graph": {
+      "empirical_max_ps_per_launch": 809068,
+      "empirical_min_ps_per_launch": 624665,
+      "empirical_observations_ps": [
+        624665,
+        630356,
+        630124,
+        809068
+      ],
+      "launch_class": "cuda-graph-node",
+      "point_ps_per_launch": 809068,
+      "uncertainty_kind": "sample-limited empirical range, not a confidence interval"
+    },
+    "turing-eager-host": {
+      "empirical_max_ps_per_launch": 2544074,
+      "empirical_min_ps_per_launch": 2327730,
+      "empirical_observations_ps": [
+        2327730,
+        2337286,
+        2331958,
+        2544074
+      ],
+      "launch_class": "eager-host-bound",
+      "point_ps_per_launch": 2544074,
+      "uncertainty_kind": "sample-limited empirical range, not a confidence interval"
+    }
+  },
+  "raw_artifacts": {
+    "identity_sha256": "d759c917dbb248438c373ee131110c419dd59cde87de836bc72e38aa1ea430e2",
+    "launch_sha256": "33d40005f2993c30b43101324e6f23dd1dd5824522c6c63fc87b606b38b44f02"
+  },
+  "run_status": "not_accepted",
+  "schema": "simllm-host-step-calibration-v1",
+  "scored_relations": [
+    {
+      "acceptance_ps": [
+        600000,
+        700000
+      ],
+      "id": "CAL-1_graph_replay_in_band",
+      "observed_ps": 809068,
+      "passed": false
+    },
+    {
+      "acceptance_ps": [
+        2000000,
+        2700000
+      ],
+      "id": "CAL-2_eager_host_bound_in_band",
+      "observed_ps": 2544074,
+      "passed": true
+    },
+    {
+      "acceptance_ps": [
+        500000,
+        3000000
+      ],
+      "id": "CAL-3_device_gap_in_band",
+      "observed_ps": 1573280,
+      "passed": true
+    },
+    {
+      "acceptance_ps": [
+        3000000,
+        20000000
+      ],
+      "id": "CAL-4_serialized_enclosure_in_band",
+      "observed_ps": 5605330,
+      "passed": true
+    }
+  ],
+  "source_identity": {
+    "capture_harness_sha256": "228534f4ab3508da01d3fc053113e3f3abd4d0f4447a9022432192c82d662d8e",
+    "probe_source_sha256": "047144cd3593c74d2619d8ad50f214bf089dbe1bbe9474fedf6e83ff0cc33d46"
+  },
+  "study": "host_step_cost_v1",
+  "task": "COMP-2"
+}

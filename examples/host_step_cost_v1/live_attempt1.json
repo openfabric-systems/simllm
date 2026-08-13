@@ -1,0 +1,805 @@
+{
+  "behavioral_score_interpretable": false,
+  "audit_finding": {
+    "disposition": "void_with_findings",
+    "finding": "represented GOAL compute service fell below max(provider service, launch count times per-launch cost)",
+    "reviewed_after_result_commit": "f5e2e745f5a09c0e34a1891a86389ec7baf67c6c",
+    "rows": [
+      {
+        "compute_estimate_ps": 356094640,
+        "compute_service_ps": 356088000,
+        "launch_count": 440,
+        "profile": "turing-cuda-graph",
+        "shortfall_ps": 6640
+      },
+      {
+        "compute_estimate_ps": 458876502,
+        "compute_service_ps": 458856000,
+        "launch_count": 567,
+        "profile": "turing-cuda-graph",
+        "shortfall_ps": 20502
+      },
+      {
+        "compute_estimate_ps": 1040272200,
+        "compute_service_ps": 1040256000,
+        "launch_count": 440,
+        "profile": "turing-eager-host",
+        "shortfall_ps": 16200
+      },
+      {
+        "compute_estimate_ps": 1340532585,
+        "compute_service_ps": 1340520000,
+        "launch_count": 567,
+        "profile": "turing-eager-host",
+        "shortfall_ps": 12585
+      }
+    ]
+  },
+  "calibration_sha256": "2a4ab022227601d8aca36627e760490abca86cdc237a5b3b5149303ded99cd12",
+  "conditional_turing_budget": {
+    "acceptance": [
+      1.35,
+      4.7
+    ],
+    "b100_host_step_cost": "unknown",
+    "endpoints": [
+      {
+        "launch_count": 440,
+        "plausible_network_ps": 720000000,
+        "profile": "turing-cuda-graph",
+        "ratio": 2.331240818540705
+      },
+      {
+        "launch_count": 440,
+        "plausible_network_ps": 1440000000,
+        "profile": "turing-cuda-graph",
+        "ratio": 3.891041719834394
+      },
+      {
+        "launch_count": 567,
+        "plausible_network_ps": 720000000,
+        "profile": "turing-cuda-graph",
+        "ratio": 2.088802044446582
+      },
+      {
+        "launch_count": 567,
+        "plausible_network_ps": 1440000000,
+        "profile": "turing-cuda-graph",
+        "ratio": 3.3645399775125675
+      },
+      {
+        "launch_count": 440,
+        "plausible_network_ps": 720000000,
+        "profile": "turing-eager-host",
+        "ratio": 1.536315857299074
+      },
+      {
+        "launch_count": 440,
+        "plausible_network_ps": 1440000000,
+        "profile": "turing-eager-host",
+        "ratio": 2.1647115209102665
+      },
+      {
+        "launch_count": 567,
+        "plausible_network_ps": 720000000,
+        "profile": "turing-eager-host",
+        "ratio": 1.4249531515073595
+      },
+      {
+        "launch_count": 567,
+        "plausible_network_ps": 1440000000,
+        "profile": "turing-eager-host",
+        "ratio": 1.92286630102705
+      }
+    ],
+    "maximum": 3.891041719834394,
+    "minimum": 1.4249531515073595,
+    "passed": true,
+    "residual_scheduler_sampler_python_cost": "unknown and omitted"
+  },
+  "derived_unscored_checks": [
+    {
+      "id": "LIVE-D1_two_parameter_directions",
+      "passed": true,
+      "rows": [
+        {
+          "kind": "launch_count",
+          "passed": true,
+          "profile": "turing-cuda-graph"
+        },
+        {
+          "kind": "launch_count",
+          "passed": true,
+          "profile": "turing-eager-host"
+        },
+        {
+          "kind": "launch_class",
+          "launch_count": 440,
+          "passed": true
+        },
+        {
+          "kind": "launch_class",
+          "launch_count": 567,
+          "passed": true
+        }
+      ],
+      "scored": false
+    }
+  ],
+  "exact_ideal_offpath": "pending separate five-cell mission rerun",
+  "expectation_commit": "f23a01f47ca7abcfacdb703d4d97958a608349ec",
+  "fatal_guard_failures": [
+    "LIVE-G3_step_and_metric_conservation"
+  ],
+  "fatal_guards": [
+    {
+      "detail": {
+        "end_head": "8a620e9e394c95441d6090c588d12c8aaad5733b",
+        "observed_head": "8a620e9e394c95441d6090c588d12c8aaad5733b",
+        "profile_check": {
+          "failures": [],
+          "passed": true
+        },
+        "source_sha256": "4be36a7a7c19a2edb93628fc2663753f725df0719ef0e60ea7698dc61001aef0"
+      },
+      "id": "LIVE-G1_profile_provenance",
+      "passed": true
+    },
+    {
+      "detail": {
+        "passed": true,
+        "rows": [
+          {
+            "device": "b100",
+            "lowerer_failed": true,
+            "passed": true,
+            "profile": "turing-cuda-graph",
+            "sink_failed": true,
+            "workdir_absent": true
+          },
+          {
+            "device": "h100",
+            "lowerer_failed": true,
+            "passed": true,
+            "profile": "turing-cuda-graph",
+            "sink_failed": true,
+            "workdir_absent": true
+          },
+          {
+            "device": "b100",
+            "lowerer_failed": true,
+            "passed": true,
+            "profile": "turing-eager-host",
+            "sink_failed": true,
+            "workdir_absent": true
+          },
+          {
+            "device": "h100",
+            "lowerer_failed": true,
+            "passed": true,
+            "profile": "turing-eager-host",
+            "sink_failed": true,
+            "workdir_absent": true
+          }
+        ]
+      },
+      "id": "LIVE-G2_device_mismatch_fails_closed",
+      "passed": true
+    },
+    {
+      "detail": {
+        "ideal_exact": true,
+        "physical": {
+          "passed": true,
+          "rows": [
+            {
+              "ceiling_ps": 2746816048,
+              "floor_ps": 452094640,
+              "launch_count": 440,
+              "observed_ps": 629281008,
+              "passed": true,
+              "profile": "turing-cuda-graph",
+              "step_index": 0
+            },
+            {
+              "ceiling_ps": 2579125808,
+              "floor_ps": 452094640,
+              "launch_count": 440,
+              "observed_ps": 461590734,
+              "passed": true,
+              "profile": "turing-cuda-graph",
+              "step_index": 1
+            },
+            {
+              "ceiling_ps": 2578985968,
+              "floor_ps": 452094640,
+              "launch_count": 440,
+              "observed_ps": 461426898,
+              "passed": true,
+              "profile": "turing-cuda-graph",
+              "step_index": 2
+            },
+            {
+              "ceiling_ps": 3432211680,
+              "floor_ps": 554876502,
+              "launch_count": 567,
+              "observed_ps": 732049008,
+              "passed": true,
+              "profile": "turing-cuda-graph",
+              "step_index": 0
+            },
+            {
+              "ceiling_ps": 3264521440,
+              "floor_ps": 554876502,
+              "launch_count": 567,
+              "observed_ps": 564358734,
+              "passed": true,
+              "profile": "turing-cuda-graph",
+              "step_index": 1
+            },
+            {
+              "ceiling_ps": 3264381600,
+              "floor_ps": 554876502,
+              "launch_count": 567,
+              "observed_ps": 564194898,
+              "passed": true,
+              "profile": "turing-cuda-graph",
+              "step_index": 2
+            },
+            {
+              "ceiling_ps": 2746816048,
+              "floor_ps": 1136272200,
+              "launch_count": 440,
+              "observed_ps": 1313449008,
+              "passed": true,
+              "profile": "turing-eager-host",
+              "step_index": 0
+            },
+            {
+              "ceiling_ps": 2579125808,
+              "floor_ps": 1136272200,
+              "launch_count": 440,
+              "observed_ps": 1145758734,
+              "passed": true,
+              "profile": "turing-eager-host",
+              "step_index": 1
+            },
+            {
+              "ceiling_ps": 2578985968,
+              "floor_ps": 1136272200,
+              "launch_count": 440,
+              "observed_ps": 1145594898,
+              "passed": true,
+              "profile": "turing-eager-host",
+              "step_index": 2
+            },
+            {
+              "ceiling_ps": 3432211680,
+              "floor_ps": 1436532585,
+              "launch_count": 567,
+              "observed_ps": 1613713008,
+              "passed": true,
+              "profile": "turing-eager-host",
+              "step_index": 0
+            },
+            {
+              "ceiling_ps": 3264521440,
+              "floor_ps": 1436532585,
+              "launch_count": 567,
+              "observed_ps": 1446022734,
+              "passed": true,
+              "profile": "turing-eager-host",
+              "step_index": 1
+            },
+            {
+              "ceiling_ps": 3264381600,
+              "floor_ps": 1436532585,
+              "launch_count": 567,
+              "observed_ps": 1445858898,
+              "passed": true,
+              "profile": "turing-eager-host",
+              "step_index": 2
+            }
+          ]
+        }
+      },
+      "id": "LIVE-G3_step_and_metric_conservation",
+      "passed": false,
+      "post_run_finding": "calibrated compute service undercut its frozen max(C, N*g) physical floor"
+    },
+    {
+      "detail": {
+        "acceptance": [
+          1.35,
+          4.7
+        ],
+        "b100_host_step_cost": "unknown",
+        "endpoints": [
+          {
+            "launch_count": 440,
+            "plausible_network_ps": 720000000,
+            "profile": "turing-cuda-graph",
+            "ratio": 2.331240818540705
+          },
+          {
+            "launch_count": 440,
+            "plausible_network_ps": 1440000000,
+            "profile": "turing-cuda-graph",
+            "ratio": 3.891041719834394
+          },
+          {
+            "launch_count": 567,
+            "plausible_network_ps": 720000000,
+            "profile": "turing-cuda-graph",
+            "ratio": 2.088802044446582
+          },
+          {
+            "launch_count": 567,
+            "plausible_network_ps": 1440000000,
+            "profile": "turing-cuda-graph",
+            "ratio": 3.3645399775125675
+          },
+          {
+            "launch_count": 440,
+            "plausible_network_ps": 720000000,
+            "profile": "turing-eager-host",
+            "ratio": 1.536315857299074
+          },
+          {
+            "launch_count": 440,
+            "plausible_network_ps": 1440000000,
+            "profile": "turing-eager-host",
+            "ratio": 2.1647115209102665
+          },
+          {
+            "launch_count": 567,
+            "plausible_network_ps": 720000000,
+            "profile": "turing-eager-host",
+            "ratio": 1.4249531515073595
+          },
+          {
+            "launch_count": 567,
+            "plausible_network_ps": 1440000000,
+            "profile": "turing-eager-host",
+            "ratio": 1.92286630102705
+          }
+        ],
+        "maximum": 3.891041719834394,
+        "minimum": 1.4249531515073595,
+        "passed": true,
+        "residual_scheduler_sampler_python_cost": "unknown and omitted"
+      },
+      "id": "LIVE-G4_budget_arithmetic",
+      "passed": true
+    }
+  ],
+  "observed_commit": "8a620e9e394c95441d6090c588d12c8aaad5733b",
+  "rows": [
+    {
+      "fallback_calls": 0,
+      "host_model": {
+        "cuda_version": null,
+        "device_key": null,
+        "device_name": null,
+        "driver_version": null,
+        "empirical_max_ps_per_launch": 0,
+        "empirical_min_ps_per_launch": 0,
+        "gpu_uuid": null,
+        "host_cpu": null,
+        "launch_class": "none",
+        "launch_count": 0,
+        "point_ps_per_launch": 0,
+        "profile": "ideal",
+        "source_study": null,
+        "uncertainty_kind": null
+      },
+      "launch_count": 0,
+      "profile": "ideal",
+      "runtime_step_count": 3,
+      "steps": [
+        {
+          "completed_at_ps": 372217008,
+          "compute_estimate_ps": 99024000,
+          "compute_service_ps": 99024000,
+          "network_service_ps": 273193008,
+          "num_flows": 336,
+          "released_at_ps": 0,
+          "step_index": 0,
+          "step_latency_ps": 372217008,
+          "total_directed_bytes": 8859648
+        },
+        {
+          "completed_at_ps": 576743742,
+          "compute_estimate_ps": 99024000,
+          "compute_service_ps": 99024000,
+          "network_service_ps": 105502734,
+          "num_flows": 232,
+          "released_at_ps": 372217008,
+          "step_index": 1,
+          "step_latency_ps": 204526734,
+          "total_directed_bytes": 475136
+        },
+        {
+          "completed_at_ps": 781130640,
+          "compute_estimate_ps": 99048000,
+          "compute_service_ps": 99048000,
+          "network_service_ps": 105338898,
+          "num_flows": 228,
+          "released_at_ps": 576743742,
+          "step_index": 2,
+          "step_latency_ps": 204386898,
+          "total_directed_bytes": 466944
+        }
+      ],
+      "tpot_denominator": 1,
+      "tpot_numerator": 204456816,
+      "ttft_ps": 372217008
+    },
+    {
+      "fallback_calls": 0,
+      "host_model": {
+        "cuda_version": "12.4.99",
+        "device_key": "gtx1660-ti-sm75",
+        "device_name": "NVIDIA GeForce GTX 1660 Ti",
+        "driver_version": "550.90.07",
+        "empirical_max_ps_per_launch": 809306,
+        "empirical_min_ps_per_launch": 624665,
+        "gpu_uuid": "GPU-a90a812a-41bf-4f2f-c96d-d83e6eae6bd0",
+        "host_cpu": "AMD Ryzen 9 3950X 16-Core Processor",
+        "launch_class": "cuda-graph-node",
+        "launch_count": 440,
+        "point_ps_per_launch": 809306,
+        "profile": "turing-cuda-graph",
+        "source_study": "examples/host_step_cost_v1",
+        "uncertainty_kind": "sample-limited empirical range, not a confidence interval"
+      },
+      "launch_count": 440,
+      "profile": "turing-cuda-graph",
+      "runtime_step_count": 3,
+      "steps": [
+        {
+          "completed_at_ps": 629281008,
+          "compute_estimate_ps": 356094640,
+          "compute_service_ps": 356088000,
+          "network_service_ps": 273193008,
+          "num_flows": 336,
+          "released_at_ps": 0,
+          "step_index": 0,
+          "step_latency_ps": 629281008,
+          "total_directed_bytes": 8859648
+        },
+        {
+          "completed_at_ps": 1090871742,
+          "compute_estimate_ps": 356094640,
+          "compute_service_ps": 356088000,
+          "network_service_ps": 105502734,
+          "num_flows": 232,
+          "released_at_ps": 629281008,
+          "step_index": 1,
+          "step_latency_ps": 461590734,
+          "total_directed_bytes": 475136
+        },
+        {
+          "completed_at_ps": 1552298640,
+          "compute_estimate_ps": 356094640,
+          "compute_service_ps": 356088000,
+          "network_service_ps": 105338898,
+          "num_flows": 228,
+          "released_at_ps": 1090871742,
+          "step_index": 2,
+          "step_latency_ps": 461426898,
+          "total_directed_bytes": 466944
+        }
+      ],
+      "tpot_denominator": 1,
+      "tpot_numerator": 461508816,
+      "ttft_ps": 629281008
+    },
+    {
+      "fallback_calls": 0,
+      "host_model": {
+        "cuda_version": "12.4.99",
+        "device_key": "gtx1660-ti-sm75",
+        "device_name": "NVIDIA GeForce GTX 1660 Ti",
+        "driver_version": "550.90.07",
+        "empirical_max_ps_per_launch": 809306,
+        "empirical_min_ps_per_launch": 624665,
+        "gpu_uuid": "GPU-a90a812a-41bf-4f2f-c96d-d83e6eae6bd0",
+        "host_cpu": "AMD Ryzen 9 3950X 16-Core Processor",
+        "launch_class": "cuda-graph-node",
+        "launch_count": 567,
+        "point_ps_per_launch": 809306,
+        "profile": "turing-cuda-graph",
+        "source_study": "examples/host_step_cost_v1",
+        "uncertainty_kind": "sample-limited empirical range, not a confidence interval"
+      },
+      "launch_count": 567,
+      "profile": "turing-cuda-graph",
+      "runtime_step_count": 3,
+      "steps": [
+        {
+          "completed_at_ps": 732049008,
+          "compute_estimate_ps": 458876502,
+          "compute_service_ps": 458856000,
+          "network_service_ps": 273193008,
+          "num_flows": 336,
+          "released_at_ps": 0,
+          "step_index": 0,
+          "step_latency_ps": 732049008,
+          "total_directed_bytes": 8859648
+        },
+        {
+          "completed_at_ps": 1296407742,
+          "compute_estimate_ps": 458876502,
+          "compute_service_ps": 458856000,
+          "network_service_ps": 105502734,
+          "num_flows": 232,
+          "released_at_ps": 732049008,
+          "step_index": 1,
+          "step_latency_ps": 564358734,
+          "total_directed_bytes": 475136
+        },
+        {
+          "completed_at_ps": 1860602640,
+          "compute_estimate_ps": 458876502,
+          "compute_service_ps": 458856000,
+          "network_service_ps": 105338898,
+          "num_flows": 228,
+          "released_at_ps": 1296407742,
+          "step_index": 2,
+          "step_latency_ps": 564194898,
+          "total_directed_bytes": 466944
+        }
+      ],
+      "tpot_denominator": 1,
+      "tpot_numerator": 564276816,
+      "ttft_ps": 732049008
+    },
+    {
+      "fallback_calls": 0,
+      "host_model": {
+        "cuda_version": "12.4.99",
+        "device_key": "gtx1660-ti-sm75",
+        "device_name": "NVIDIA GeForce GTX 1660 Ti",
+        "driver_version": "550.90.07",
+        "empirical_max_ps_per_launch": 2544074,
+        "empirical_min_ps_per_launch": 2327730,
+        "gpu_uuid": "GPU-a90a812a-41bf-4f2f-c96d-d83e6eae6bd0",
+        "host_cpu": "AMD Ryzen 9 3950X 16-Core Processor",
+        "launch_class": "eager-host-bound",
+        "launch_count": 440,
+        "point_ps_per_launch": 2364255,
+        "profile": "turing-eager-host",
+        "source_study": "examples/host_step_cost_v1",
+        "uncertainty_kind": "sample-limited empirical range, not a confidence interval"
+      },
+      "launch_count": 440,
+      "profile": "turing-eager-host",
+      "runtime_step_count": 3,
+      "steps": [
+        {
+          "completed_at_ps": 1313449008,
+          "compute_estimate_ps": 1040272200,
+          "compute_service_ps": 1040256000,
+          "network_service_ps": 273193008,
+          "num_flows": 336,
+          "released_at_ps": 0,
+          "step_index": 0,
+          "step_latency_ps": 1313449008,
+          "total_directed_bytes": 8859648
+        },
+        {
+          "completed_at_ps": 2459207742,
+          "compute_estimate_ps": 1040272200,
+          "compute_service_ps": 1040256000,
+          "network_service_ps": 105502734,
+          "num_flows": 232,
+          "released_at_ps": 1313449008,
+          "step_index": 1,
+          "step_latency_ps": 1145758734,
+          "total_directed_bytes": 475136
+        },
+        {
+          "completed_at_ps": 3604802640,
+          "compute_estimate_ps": 1040272200,
+          "compute_service_ps": 1040256000,
+          "network_service_ps": 105338898,
+          "num_flows": 228,
+          "released_at_ps": 2459207742,
+          "step_index": 2,
+          "step_latency_ps": 1145594898,
+          "total_directed_bytes": 466944
+        }
+      ],
+      "tpot_denominator": 1,
+      "tpot_numerator": 1145676816,
+      "ttft_ps": 1313449008
+    },
+    {
+      "fallback_calls": 0,
+      "host_model": {
+        "cuda_version": "12.4.99",
+        "device_key": "gtx1660-ti-sm75",
+        "device_name": "NVIDIA GeForce GTX 1660 Ti",
+        "driver_version": "550.90.07",
+        "empirical_max_ps_per_launch": 2544074,
+        "empirical_min_ps_per_launch": 2327730,
+        "gpu_uuid": "GPU-a90a812a-41bf-4f2f-c96d-d83e6eae6bd0",
+        "host_cpu": "AMD Ryzen 9 3950X 16-Core Processor",
+        "launch_class": "eager-host-bound",
+        "launch_count": 567,
+        "point_ps_per_launch": 2364255,
+        "profile": "turing-eager-host",
+        "source_study": "examples/host_step_cost_v1",
+        "uncertainty_kind": "sample-limited empirical range, not a confidence interval"
+      },
+      "launch_count": 567,
+      "profile": "turing-eager-host",
+      "runtime_step_count": 3,
+      "steps": [
+        {
+          "completed_at_ps": 1613713008,
+          "compute_estimate_ps": 1340532585,
+          "compute_service_ps": 1340520000,
+          "network_service_ps": 273193008,
+          "num_flows": 336,
+          "released_at_ps": 0,
+          "step_index": 0,
+          "step_latency_ps": 1613713008,
+          "total_directed_bytes": 8859648
+        },
+        {
+          "completed_at_ps": 3059735742,
+          "compute_estimate_ps": 1340532585,
+          "compute_service_ps": 1340520000,
+          "network_service_ps": 105502734,
+          "num_flows": 232,
+          "released_at_ps": 1613713008,
+          "step_index": 1,
+          "step_latency_ps": 1446022734,
+          "total_directed_bytes": 475136
+        },
+        {
+          "completed_at_ps": 4505594640,
+          "compute_estimate_ps": 1340532585,
+          "compute_service_ps": 1340520000,
+          "network_service_ps": 105338898,
+          "num_flows": 228,
+          "released_at_ps": 3059735742,
+          "step_index": 2,
+          "step_latency_ps": 1445858898,
+          "total_directed_bytes": 466944
+        }
+      ],
+      "tpot_denominator": 1,
+      "tpot_numerator": 1445940816,
+      "ttft_ps": 1613713008
+    }
+  ],
+  "run_status": "void",
+  "schema": "simllm-host-step-cost-v1-results-v1",
+  "scored_relations": [
+    {
+      "acceptance": [
+        1.8,
+        7.75
+      ],
+      "id": "LIVE-1_decode_multiplier_in_band",
+      "launch_count": 440,
+      "observed": 2.2568723656438965,
+      "passed": true,
+      "profile": "turing-cuda-graph"
+    },
+    {
+      "acceptance": [
+        1.8,
+        7.75
+      ],
+      "id": "LIVE-2_tpot_multiplier_in_band",
+      "launch_count": 440,
+      "observed": 2.257243485587685,
+      "passed": true,
+      "profile": "turing-cuda-graph"
+    },
+    {
+      "id": "LIVE-3_ttft_relative_increase_is_smaller",
+      "launch_count": 440,
+      "passed": true,
+      "profile": "turing-cuda-graph",
+      "tpot_multiplier": 2.257243485587685,
+      "ttft_multiplier": 1.690629376076227
+    },
+    {
+      "acceptance": [
+        1.8,
+        7.75
+      ],
+      "id": "LIVE-1_decode_multiplier_in_band",
+      "launch_count": 567,
+      "observed": 2.7593396861263133,
+      "passed": true,
+      "profile": "turing-cuda-graph"
+    },
+    {
+      "acceptance": [
+        1.8,
+        7.75
+      ],
+      "id": "LIVE-2_tpot_multiplier_in_band",
+      "launch_count": 567,
+      "observed": 2.7598826345803995,
+      "passed": true,
+      "profile": "turing-cuda-graph"
+    },
+    {
+      "id": "LIVE-3_ttft_relative_increase_is_smaller",
+      "launch_count": 567,
+      "passed": true,
+      "profile": "turing-cuda-graph",
+      "tpot_multiplier": 2.7598826345803995,
+      "ttft_multiplier": 1.9667263780702895
+    },
+    {
+      "acceptance": [
+        1.8,
+        7.75
+      ],
+      "id": "LIVE-1_decode_multiplier_in_band",
+      "launch_count": 440,
+      "observed": 5.601999853965301,
+      "passed": true,
+      "profile": "turing-eager-host"
+    },
+    {
+      "acceptance": [
+        1.8,
+        7.75
+      ],
+      "id": "LIVE-2_tpot_multiplier_in_band",
+      "launch_count": 440,
+      "observed": 5.6035149055632365,
+      "passed": true,
+      "profile": "turing-eager-host"
+    },
+    {
+      "id": "LIVE-3_ttft_relative_increase_is_smaller",
+      "launch_count": 440,
+      "passed": true,
+      "profile": "turing-eager-host",
+      "tpot_multiplier": 5.6035149055632365,
+      "ttft_multiplier": 3.5287184082678995
+    },
+    {
+      "acceptance": [
+        1.8,
+        7.75
+      ],
+      "id": "LIVE-1_decode_multiplier_in_band",
+      "launch_count": 567,
+      "observed": 7.070091550965655,
+      "passed": true,
+      "profile": "turing-eager-host"
+    },
+    {
+      "acceptance": [
+        1.8,
+        7.75
+      ],
+      "id": "LIVE-2_tpot_multiplier_in_band",
+      "launch_count": 567,
+      "observed": 7.072108645182071,
+      "passed": true,
+      "profile": "turing-eager-host"
+    },
+    {
+      "id": "LIVE-3_ttft_relative_increase_is_smaller",
+      "launch_count": 567,
+      "passed": true,
+      "profile": "turing-eager-host",
+      "tpot_multiplier": 7.072108645182071,
+      "ttft_multiplier": 4.335409111665311
+    }
+  ],
+  "study": "host_step_cost_v1",
+  "task": "COMP-2"
+}

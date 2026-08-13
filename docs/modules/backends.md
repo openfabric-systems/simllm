@@ -328,7 +328,7 @@ compute-free. The
 exact issue-sharing and residency-delay relations while retaining all accepted
 default bytes. BACK-37 owns the remaining GPU CQ-consumer and runner-callback
 work. VLLM-13 and CORE-5 consume the recorded CQ-owner decision once that path
-is live. COMP-2's fixed CPU-proxy and GPU-initiated constants remain the
+is live. COMP-28's fixed CPU-proxy and GPU-initiated constants remain the
 analytical fallback while structural submission is disabled.
 
 ### WQE authority and projection contract
@@ -871,6 +871,9 @@ is difficult.
   projection in a state-preserving session, reconcile every artifact and
   completion identity, and retain the current rejection and stateless-profile
   bytes as the explicit off paths.
+  BACK-38 is blocked behind HTSIM-28 because the delivered session cannot
+  reuse a completion time it has just exposed as the dependent injection
+  boundary; see [the protocol audit](../../examples/congestion_chain_v1/RESULTS.md).
 
 ### Completeness
 
