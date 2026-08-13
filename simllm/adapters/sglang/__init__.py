@@ -23,6 +23,12 @@ reuses VLLM-14's torch-optional shape and immutable event base, adds SGLang's
 ``output_tensor_list`` all-gather form, and emits zero-time semantic
 ``CollectiveWork`` through the COMP-15 compatibility stack.
 
+:mod:`simllm.adapters.sglang.pump` is the in-process driver seam. It builds an
+SGLang ``Scheduler`` in the calling process and unrolls ``event_loop_normal``
+into a synchronous step, which is what lets ``configure(step_sink=...)`` reach
+the worker at all: the hooks are process local and SGLang normally builds the
+scheduler in a child process.
+
 Exports are resolved lazily through the module ``__getattr__``, so importing
 this package pulls in neither the worker module nor SGLang until a name is
 actually used.
@@ -44,6 +50,13 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "ORACLE_LOG_ENV": ("oracle", "ORACLE_LOG_ENV"),
     "ORACLE_OBSERVATION_SCHEMA": ("oracle", "ORACLE_OBSERVATION_SCHEMA"),
     "PreparedSglangSubmission": ("client", "PreparedSglangSubmission"),
+    "PumpCompletion": ("pump", "PumpCompletion"),
+    "PumpStepOutcome": ("pump", "PumpStepOutcome"),
+    "SchedulerOutputCollector": ("pump", "SchedulerOutputCollector"),
+    "SglangSchedulerPump": ("pump", "SglangSchedulerPump"),
+    "build_in_process_scheduler": ("pump", "build_in_process_scheduler"),
+    "read_output_batch": ("pump", "read_output_batch"),
+    "tokenized_generate_request": ("pump", "tokenized_generate_request"),
     "SglangHttpSubmitter": ("client", "SglangHttpSubmitter"),
     "SglangOpenLoopDriver": ("client", "SglangOpenLoopDriver"),
     "GroupCoordinatorEvent": ("communicator", "GroupCoordinatorEvent"),
@@ -87,15 +100,20 @@ __all__ = [
     "GroupCoordinatorEventStream",
     "GroupCoordinatorObserver",
     "PreparedSglangSubmission",
+    "PumpCompletion",
+    "PumpStepOutcome",
+    "SchedulerOutputCollector",
     "SglStepTranslator",
     "SglangHttpSubmitter",
     "SglangOpenLoopDriver",
+    "SglangSchedulerPump",
     "ShapeDType",
     "ShapeTensor",
     "SimGroupCoordinator",
     "SimTpModelWorker",
     "SimWorkerConfig",
     "SimWorkerHooks",
+    "build_in_process_scheduler",
     "configure",
     "install",
     "latest_worker",
@@ -103,10 +121,12 @@ __all__ = [
     "mark_oracle_submission_group",
     "model_dims_from_sglang",
     "observe_schedule_batch",
+    "read_output_batch",
     "register",
     "sglang_generate_payload",
     "sglang_is_available",
     "token_completion_times_from_sglang_chunks",
+    "tokenized_generate_request",
 ]
 
 
