@@ -23,6 +23,11 @@ if TYPE_CHECKING:
         KernelLaunch,
         SmSchedulerModel,
     )
+from simllm.core.authority import (
+    check_bookkeeping_projection,
+    class_service_bytes,
+    work_completed_bytes,
+)
 from simllm.core.bookkeeping import (
     BookkeepingScope,
     CreatedObjectKind,
@@ -1355,6 +1360,8 @@ class CoarseDeviceRuntime:
                     scheduled,
                     all_wqes,
                     events,
+                    result,
+                    report,
                 )
             if native_transaction is not None:
                 native_transaction.prepare()
@@ -2832,23 +2839,6 @@ class CoarseDeviceRuntime:
         if projection.eligible_at_ps != submission.eligible_at_ps:
             raise ValueError("WQE projection changed external eligibility time")
 
-    @staticmethod
-    def _work_completed_bytes(operation: ExecutionOperation) -> int | None:
-        work = operation.work
-        if isinstance(work, ComputeWork):
-            return work.hbm_bytes
-        if isinstance(work, DmaWork):
-            return work.byte_count
-        if isinstance(work, KvCacheWork):
-            return work.byte_count
-        if isinstance(work, CollectiveWork):
-            if work.pair_payload_bytes:
-                return sum(entry[2] for entry in work.pair_payload_bytes)
-            return work.payload_bytes
-        if isinstance(work, ControlWork):
-            return work.payload_bytes
-        return None
-
     def _completion_events(
         self,
         graph: ExecutionGraph,
@@ -2957,7 +2947,7 @@ class CoarseDeviceRuntime:
                     phase=EventPhase.COMPLETED,
                     timestamp_ps=outcome.logical_completed_at_ps,
                     resource=final_visit.resource,
-                    completed_bytes=self._work_completed_bytes(operation),
+                    completed_bytes=work_completed_bytes(operation),
                 )
             )
         sequenced.sort(key=lambda item: (item[0], item[1]))
@@ -3242,11 +3232,6 @@ class CoarseDeviceRuntime:
                 raise ValueError(
                     "realized critical-path segments do not conserve graph JCT"
                 )
-        class_bytes: dict[int, int] = defaultdict(int)
-        for operation in graph.operations:
-            if isinstance(operation.work, ControlWork):
-                fanout = max(1, len(operation.work.destination_ranks))
-                class_bytes[operation.priority] += operation.work.payload_bytes * fanout
         return RuntimeReport(
             execution_id=graph.execution_id,
             authority=wqe_authority.authority_name,
@@ -3257,7 +3242,7 @@ class CoarseDeviceRuntime:
             critical_path_queue_ps=critical_path_queue_ps,
             realized_critical_path_operation_ids=critical_chain,
             realized_critical_path_segments=critical_segment_chain,
-            class_service_bytes=tuple(sorted(class_bytes.items())),
+            class_service_bytes=class_service_bytes(graph),
             random_draw_count=wqe_authority.random_draw_count,
         )
 
@@ -3338,9 +3323,19 @@ class CoarseDeviceRuntime:
         scheduled: Mapping[str, _ScheduledOperation],
         wqes: Sequence[WqeLifecycleProjection],
         events: tuple[CompletionEvent, ...],
+        result: ExecutionResult,
+        report: RuntimeReport,
     ) -> None:
+        """Stage the append and join it to the authority before committing.
+
+        The staged copy is discarded either way, so a ledger that disagrees
+        with the runtime report aborts the execution before the caller's
+        bookkeeper, the runtime state or the WQE authority is mutated.
+        """
+
         staged = RequestBookkeeper(bookkeeper.snapshot())
         self._append_bookkeeping(staged, graph, scheduled, wqes, events)
+        check_bookkeeping_projection(staged.snapshot(), graph, result, report)
 
     def _append_bookkeeping(
         self,

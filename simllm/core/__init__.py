@@ -3,6 +3,11 @@
 Nothing in this package may import vLLM or SGLang.
 """
 
+from simllm.core.authority import (
+    check_bookkeeping_projection,
+    check_completion_event_projection,
+    work_completed_bytes,
+)
 from simllm.core.bookkeeping import (
     BOOKKEEPING_SCHEMA,
     BookkeepingEntry,
@@ -288,6 +293,8 @@ __all__ = [
     "WqeLifecycleProjection",
     "bookkeeping_ledger_from_json",
     "bookkeeping_ledger_to_json",
+    "check_bookkeeping_projection",
+    "check_completion_event_projection",
     "check_precision_selection",
     "collective_goal_tags",
     "collective_plan_integrity_sha256",
@@ -325,6 +332,7 @@ __all__ = [
     "step_result_to_json",
     "validate_bookkeeping_ledger",
     "validate_execution_graph",
+    "work_completed_bytes",
     "write_run_provenance",
     "write_step_records",
 ]
