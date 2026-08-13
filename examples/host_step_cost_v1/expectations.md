@@ -412,14 +412,19 @@ scope demonstrated here, that untouched historical network-submission clause
 moves to exactly one residual, COMP-28 `(Precision; P2; L)`, with this frozen
 acceptance wording:
 
-> Calibrate the GPU-initiated and CPU-proxy network-submission host-initiation
-> profiles retained from COMP-2's original clause. The landed Turing CUDA-graph
-> and eager-host profiles price fixed per-step launch demand; they do not
-> identify the ready-to-RNIC-visible delay of either network submission path.
-> Measure both paths on one declared GPU, host and RNIC envelope, use
-> application-ready and RNIC-visible timestamps as the identifying observables,
-> and require each held-out prediction to remain within its predeclared capture
-> uncertainty. The ideal zero-cost profile remains the exact compatibility path.
+> After COMP-21 supplies device-bound structural captures for CPU-proxy and
+> GPU-initiated network submission, fit and validate their scalar
+> host-initiation projections for the analytical fallback used only while
+> structural submission is disabled. Carry GPU, host, RNIC and submission-class
+> provenance plus predeclared capture uncertainty; held-out
+> ready-to-RNIC-visible latency must remain within that uncertainty. The ideal
+> zero-cost profile remains the exact compatibility path.
+
+This boundary is intentional. COMP-21 already owns the active producer-task
+capture, including producer completion and RNIC-visible doorbell observables.
+COMP-28 must consume that evidence instead of duplicating its hardware
+campaign; it owns only the scalar compatibility projection while the
+structural path is disabled.
 
 COMP-2 closes only if every following clause is demonstrated: the attempt-two
 capture is nonvoid; each constant carries device and launch-class provenance
