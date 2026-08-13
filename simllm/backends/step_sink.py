@@ -33,13 +33,20 @@ accepted manifest.
 
 When ``placement_manifest`` is present, the sink classifies every expanded
 directed segment before rendering. Same-node segments become analytic
-per-source NVLink service and only cross-node segments reach ``htsim``.
+per-endpoint NVLink service and only cross-node segments reach ``htsim``.
 Omitting placement selects all-remote classification. The historical direct
 renderer remains available as a diagnostic, but the active sink uses the
 checked graph projection. Distributed whole-operation barriers become ordered
 artifact boundaries because the pinned GOAL compiler resolves dependency
 labels inside one rank block. Dependency cross-check selection stays a
 diagnostic switch and never names a fidelity level.
+
+An explicit ``collective_latency_profile`` adds one calibrated base latency at
+the semantic collective boundary and selects that profile's local endpoint
+rate. The default and explicit ``legacy`` selectors retain every historical
+artifact and timestamp. The backend remains authoritative for propagation,
+wire serialization and contention; the calibrated run record exposes its raw
+transport beside the added base and a separately named propagation reference.
 
 The provider object, profile string and placement-manifest presence remain the
 operational selectors. ``HtsimStepSinkConfig`` reports the levels they select
@@ -105,17 +112,26 @@ from simllm.goal import to_binary
 from simllm.placement import PlacementManifest, RankMapper
 from simllm.traffic import (
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
+    CollectiveLatencyProfile,
     RoutedMoeSupply,
     StepLocalityPlan,
+    critical_collective_endpoint_bytes,
     plan_execution_graph_locality,
     project_execution_graph_goal,
     render_fabric_phase_goal,
     render_step_goal,
+    resolve_collective_latency_profile,
     validate_execution_graph_locality_projection,
 )
 
 _STATEFUL_MULTI_ARTIFACT_PROFILES = frozenset({"rnic-cn"})
 DEPENDENCY_CROSS_CHECK_MODES = ("atlahs-goal",)
+
+
+def _require_nonnegative_timing(name: str, value: object) -> int:
+    if type(value) is not int or value < 0:
+        raise ValueError(f"{name} must be a nonnegative integer")
+    return value
 
 
 @dataclass
@@ -171,6 +187,15 @@ class HtsimStepSinkConfig:
     dependency_cross_check_tolerance_ps: int = 0
     #: optional explicit fidelity surface checked against the legacy spellings
     precision: PrecisionConfig | None = None
+    #: calibrated base-latency model; None and ``legacy`` select the exact off path
+    collective_latency_profile: str | CollectiveLatencyProfile | None = None
+    #: immutable profile resolved during validation, never set by a caller
+    resolved_collective_latency_profile: CollectiveLatencyProfile | None = field(
+        init=False,
+        repr=False,
+        compare=False,
+        default=None,
+    )
     #: the seams this configuration selects; set by validation, never by a caller
     selected_precision_levels: dict[str, object] = field(
         init=False,
@@ -200,6 +225,26 @@ class HtsimStepSinkConfig:
             raise ValueError(
                 "nvlink_bandwidth_bytes_per_second must be a positive integer"
             )
+        self.resolved_collective_latency_profile = (
+            resolve_collective_latency_profile(self.collective_latency_profile)
+        )
+        if (
+            self.resolved_collective_latency_profile is not None
+            and self.nvlink_bandwidth_bytes_per_second
+            != DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
+        ):
+            raise ValueError(
+                "a calibrated collective_latency_profile owns its bandwidth; "
+                "do not also override nvlink_bandwidth_bytes_per_second"
+            )
+        if (
+            self.resolved_collective_latency_profile is not None
+            and self.profile != "rnic-nn-fluid"
+        ):
+            raise ValueError(
+                "the calibrated collective_latency_profile currently requires "
+                "profile='rnic-nn-fluid' so its propagation reference is explicit"
+            )
         if (
             self.dependency_cross_check is not None
             and self.dependency_cross_check not in DEPENDENCY_CROSS_CHECK_MODES
@@ -207,6 +252,14 @@ class HtsimStepSinkConfig:
             raise ValueError(
                 "dependency_cross_check must be None or one of "
                 f"{DEPENDENCY_CROSS_CHECK_MODES}"
+            )
+        if (
+            self.resolved_collective_latency_profile is not None
+            and self.dependency_cross_check is not None
+        ):
+            raise ValueError(
+                "dependency_cross_check does not model the calibrated collective "
+                "latency profile; disable one of the two selections"
             )
         if (
             type(self.dependency_cross_check_tolerance_ps) is not int
@@ -305,6 +358,153 @@ class StepLocalityOutcome:
 
 
 @dataclass(frozen=True)
+class CollectiveArtifactTiming:
+    """Read-only calibrated decomposition of one executed graph artifact."""
+
+    artifact_id: str
+    operation_ids: tuple[str, ...]
+    collective_operation_id: str | None
+    participant_count: int | None
+    critical_endpoint_bytes: int | None
+    local_service_ps: int
+    fabric_transport_ps: int
+    collective_base_latency_ps: int
+    composed_service_ps: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "operation_ids", tuple(self.operation_ids))
+        if not isinstance(self.artifact_id, str) or not self.artifact_id.strip():
+            raise ValueError("artifact_id must be a nonblank string")
+        if any(
+            not isinstance(operation_id, str) or not operation_id.strip()
+            for operation_id in self.operation_ids
+        ):
+            raise ValueError("operation_ids must contain nonblank strings")
+        for name in (
+            "local_service_ps",
+            "fabric_transport_ps",
+            "collective_base_latency_ps",
+            "composed_service_ps",
+        ):
+            _require_nonnegative_timing(name, getattr(self, name))
+        if self.collective_operation_id is None:
+            if self.participant_count is not None or self.critical_endpoint_bytes is not None:
+                raise ValueError(
+                    "non-collective artifacts cannot carry participant or endpoint fields"
+                )
+            if self.collective_base_latency_ps:
+                raise ValueError("non-collective artifacts cannot carry a base latency")
+        else:
+            if (
+                not isinstance(self.collective_operation_id, str)
+                or not self.collective_operation_id.strip()
+            ):
+                raise ValueError("collective_operation_id must be a nonblank string")
+            if self.collective_operation_id not in self.operation_ids:
+                raise ValueError(
+                    "collective_operation_id must belong to the artifact operations"
+                )
+            if type(self.participant_count) is not int or self.participant_count < 2:
+                raise ValueError("participant_count must be an integer of at least two")
+            _require_nonnegative_timing(
+                "critical_endpoint_bytes",
+                self.critical_endpoint_bytes,
+            )
+        expected = self.collective_base_latency_ps + max(
+            self.local_service_ps,
+            self.fabric_transport_ps,
+        )
+        if self.composed_service_ps != expected:
+            raise ValueError("composed service disagrees with its calibrated terms")
+
+
+@dataclass(frozen=True)
+class StepCollectiveTimingOutcome:
+    """Calibrated collective terms for one scheduler-visible step."""
+
+    step_index: int
+    profile_id: str
+    bandwidth_bytes_per_second: int
+    participant_latency_ps: tuple[tuple[int, int], ...]
+    propagation_reference_ps: int
+    artifacts: tuple[CollectiveArtifactTiming, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "participant_latency_ps",
+            tuple(tuple(entry) for entry in self.participant_latency_ps),
+        )
+        object.__setattr__(self, "artifacts", tuple(self.artifacts))
+        _require_nonnegative_timing("step_index", self.step_index)
+        if not isinstance(self.profile_id, str) or not self.profile_id.strip():
+            raise ValueError("profile_id must be a nonblank string")
+        if (
+            type(self.bandwidth_bytes_per_second) is not int
+            or self.bandwidth_bytes_per_second <= 0
+        ):
+            raise ValueError("bandwidth_bytes_per_second must be a positive integer")
+        _require_nonnegative_timing(
+            "propagation_reference_ps",
+            self.propagation_reference_ps,
+        )
+        latency_by_width: dict[int, int] = {}
+        for index, entry in enumerate(self.participant_latency_ps):
+            if len(entry) != 2:
+                raise ValueError(
+                    f"participant_latency_ps[{index}] must be a two-item tuple"
+                )
+            width, latency_ps = entry
+            if type(width) is not int or width < 2:
+                raise ValueError("participant latency widths must be at least two")
+            _require_nonnegative_timing("participant latency", latency_ps)
+            if width in latency_by_width:
+                raise ValueError("participant latency widths must be unique")
+            latency_by_width[width] = latency_ps
+        if tuple(latency_by_width) != tuple(sorted(latency_by_width)):
+            raise ValueError("participant latency widths must be increasing")
+        if any(
+            not isinstance(artifact, CollectiveArtifactTiming)
+            for artifact in self.artifacts
+        ):
+            raise TypeError("artifacts must contain CollectiveArtifactTiming values")
+        grouped: dict[str, list[CollectiveArtifactTiming]] = {}
+        for artifact in self.artifacts:
+            if artifact.collective_operation_id is not None:
+                grouped.setdefault(artifact.collective_operation_id, []).append(
+                    artifact
+                )
+        for operation_id, artifacts in grouped.items():
+            widths = {artifact.participant_count for artifact in artifacts}
+            endpoint_values = {
+                artifact.critical_endpoint_bytes for artifact in artifacts
+            }
+            if len(widths) != 1 or len(endpoint_values) != 1:
+                raise ValueError(
+                    f"collective {operation_id!r} has inconsistent timing identity"
+                )
+            width = next(iter(widths))
+            endpoint_bytes = next(iter(endpoint_values))
+            if width not in latency_by_width:
+                raise ValueError(
+                    f"collective {operation_id!r} has an unsupported participant count"
+                )
+            expected_base = latency_by_width[width]
+            observed_bases = [
+                artifact.collective_base_latency_ps for artifact in artifacts
+            ]
+            if endpoint_bytes == 0:
+                if any(observed_bases):
+                    raise ValueError("empty collective received a base latency")
+            elif sum(observed_bases) != expected_base or sum(
+                base_latency_ps > 0 for base_latency_ps in observed_bases
+            ) > 1:
+                raise ValueError(
+                    f"collective {operation_id!r} did not receive exactly one base latency"
+                )
+
+
+@dataclass(frozen=True)
 class _PlannedExecutionArtifact:
     """One checked graph-projection artifact executed at an ordered boundary."""
 
@@ -313,6 +513,10 @@ class _PlannedExecutionArtifact:
     goal_path: Path | None
     completion_csv: Path | None
     local_service_ps: int
+    collective_operation_id: str | None = None
+    participant_count: int | None = None
+    critical_endpoint_bytes: int | None = None
+    collective_base_latency_ps: int = 0
 
 
 @dataclass(frozen=True)
@@ -354,6 +558,7 @@ class _PlannedStep:
     serialized_edge_count: int
     graph_artifact_count: int
     dependency_cross_check: _PlannedDependencyCrossCheck | None
+    collective_latency_profile: CollectiveLatencyProfile | None
 
 
 @dataclass(frozen=True)
@@ -363,6 +568,7 @@ class _SimulatedStep:
     result: StepResult | None
     outcome: StepNetworkOutcome | None
     locality_outcome: StepLocalityOutcome | None
+    collective_timing_outcome: StepCollectiveTimingOutcome | None
     dependency_cross_check_report: DependencyCrossCheckReport | None
 
 
@@ -396,6 +602,8 @@ class HtsimStepSink:
         self.outcomes: list[StepNetworkOutcome] = []
         #: locality projection for the same simulated steps, in call order
         self.locality_outcomes: list[StepLocalityOutcome] = []
+        #: calibrated decompositions; deliberately empty on the legacy/off path
+        self.collective_timing_outcomes: list[StepCollectiveTimingOutcome] = []
         #: explicitly selected independent dependency comparisons, in call order
         self.dependency_cross_check_reports: list[DependencyCrossCheckReport] = []
 
@@ -449,6 +657,33 @@ class HtsimStepSink:
         )
         if not collectives:
             return None
+        collective_profile = cfg.resolved_collective_latency_profile
+        effective_nvlink_bandwidth = (
+            collective_profile.bandwidth_bytes_per_second
+            if collective_profile is not None
+            else cfg.nvlink_bandwidth_bytes_per_second
+        )
+        collective_timing_parameters: dict[str, tuple[int, int, int]] = {}
+        if collective_profile is not None:
+            for operation in collectives:
+                endpoint_bytes = critical_collective_endpoint_bytes(operation.work)
+                participant_count = len(operation.work.ranks)
+                calibrated_base_latency_ps = collective_profile.base_latency_ps(
+                    participant_count
+                )
+                if endpoint_bytes:
+                    collective_profile.validate_endpoint_bytes(
+                        participant_count,
+                        endpoint_bytes,
+                    )
+                    base_latency_ps = calibrated_base_latency_ps
+                else:
+                    base_latency_ps = 0
+                collective_timing_parameters[operation.operation_id] = (
+                    participant_count,
+                    endpoint_bytes,
+                    base_latency_ps,
+                )
         moe_operations = tuple(
             operation
             for operation in collectives
@@ -464,7 +699,7 @@ class HtsimStepSink:
             graph,
             rank_mapper=self._rank_mapper,
             nvlink_bandwidth_bytes_per_second=(
-                cfg.nvlink_bandwidth_bytes_per_second
+                effective_nvlink_bandwidth
             ),
             base_tag=cfg.base_tag,
         )
@@ -473,7 +708,7 @@ class HtsimStepSink:
             locality,
             rank_mapper=self._rank_mapper,
             nvlink_bandwidth_bytes_per_second=(
-                cfg.nvlink_bandwidth_bytes_per_second
+                effective_nvlink_bandwidth
             ),
             base_tag=cfg.base_tag,
         )
@@ -567,6 +802,7 @@ class HtsimStepSink:
             collective_index = collective_indexes[0]
             collective = operations[collective_index]
             operation_id = collective.operation_id
+            timing_parameters = collective_timing_parameters.get(operation_id)
             classified_phases = tuple(phases_by_operation.pop(operation_id, ()))
             if not classified_phases:
                 work = collective.work
@@ -586,6 +822,17 @@ class HtsimStepSink:
                             goal_path=None,
                             completion_csv=None,
                             local_service_ps=0,
+                            collective_operation_id=operation_id,
+                            participant_count=(
+                                timing_parameters[0]
+                                if timing_parameters is not None
+                                else None
+                            ),
+                            critical_endpoint_bytes=(
+                                timing_parameters[1]
+                                if timing_parameters is not None
+                                else None
+                            ),
                         )
                     )
                     continue
@@ -603,6 +850,22 @@ class HtsimStepSink:
                             cfg.workdir / f"{stem}.{cfg.profile}.csv"
                         ),
                         local_service_ps=0,
+                        collective_operation_id=operation_id,
+                        participant_count=(
+                            timing_parameters[0]
+                            if timing_parameters is not None
+                            else None
+                        ),
+                        critical_endpoint_bytes=(
+                            timing_parameters[1]
+                            if timing_parameters is not None
+                            else None
+                        ),
+                        collective_base_latency_ps=(
+                            timing_parameters[2]
+                            if timing_parameters is not None
+                            else 0
+                        ),
                     )
                 )
                 continue
@@ -657,6 +920,22 @@ class HtsimStepSink:
                             else None
                         ),
                         local_service_ps=phase.nvlink_service_ps,
+                        collective_operation_id=operation_id,
+                        participant_count=(
+                            timing_parameters[0]
+                            if timing_parameters is not None
+                            else None
+                        ),
+                        critical_endpoint_bytes=(
+                            timing_parameters[1]
+                            if timing_parameters is not None
+                            else None
+                        ),
+                        collective_base_latency_ps=(
+                            timing_parameters[2]
+                            if timing_parameters is not None and phase_index == 0
+                            else 0
+                        ),
                     )
                 )
             after_compute = operations[collective_index + 1 :]
@@ -736,6 +1015,7 @@ class HtsimStepSink:
             serialized_edge_count=len(projection.serialized_edges),
             graph_artifact_count=len(projection.artifacts),
             dependency_cross_check=planned_cross_check,
+            collective_latency_profile=collective_profile,
         )
 
     @staticmethod
@@ -822,7 +1102,8 @@ class HtsimStepSink:
                 backend_runs += 1
             fabric_services.append(fabric_service_ps)
             composed_services.append(
-                max(artifact.local_service_ps, fabric_service_ps)
+                artifact.collective_base_latency_ps
+                + max(artifact.local_service_ps, fabric_service_ps)
             )
             artifact_offset_ps += composed_services[-1]
         fabric_phase_service_ps = tuple(fabric_services)
@@ -912,6 +1193,37 @@ class HtsimStepSink:
                 artifact.operation_ids for artifact in plan.artifacts
             ),
         )
+        collective_timing_outcome = None
+        if plan.collective_latency_profile is not None:
+            profile = plan.collective_latency_profile
+            collective_timing_outcome = StepCollectiveTimingOutcome(
+                step_index=plan.step_index,
+                profile_id=profile.profile_id,
+                bandwidth_bytes_per_second=profile.bandwidth_bytes_per_second,
+                participant_latency_ps=profile.participant_latency_ps,
+                propagation_reference_ps=profile.propagation_reference_ps,
+                artifacts=tuple(
+                    CollectiveArtifactTiming(
+                        artifact_id=artifact.artifact_id,
+                        operation_ids=artifact.operation_ids,
+                        collective_operation_id=artifact.collective_operation_id,
+                        participant_count=artifact.participant_count,
+                        critical_endpoint_bytes=artifact.critical_endpoint_bytes,
+                        local_service_ps=artifact.local_service_ps,
+                        fabric_transport_ps=fabric_service_ps,
+                        collective_base_latency_ps=(
+                            artifact.collective_base_latency_ps
+                        ),
+                        composed_service_ps=composed_service_ps,
+                    )
+                    for artifact, fabric_service_ps, composed_service_ps in zip(
+                        plan.artifacts,
+                        fabric_phase_service_ps,
+                        composed_phase_service_ps,
+                        strict=True,
+                    )
+                ),
+            )
         result = StepResult(
             step_index=plan.step_index,
             step_latency_ps=makespan_ps,
@@ -921,6 +1233,7 @@ class HtsimStepSink:
             result=result,
             outcome=outcome,
             locality_outcome=locality_outcome,
+            collective_timing_outcome=collective_timing_outcome,
             dependency_cross_check_report=cross_check_report,
         )
 
@@ -931,6 +1244,7 @@ class HtsimStepSink:
                 result=None,
                 outcome=None,
                 locality_outcome=None,
+                collective_timing_outcome=None,
                 dependency_cross_check_report=None,
             )
         return self._execute_plan(plan)
@@ -940,6 +1254,10 @@ class HtsimStepSink:
             self.outcomes.append(simulation.outcome)
         if simulation.locality_outcome is not None:
             self.locality_outcomes.append(simulation.locality_outcome)
+        if simulation.collective_timing_outcome is not None:
+            self.collective_timing_outcomes.append(
+                simulation.collective_timing_outcome
+            )
         if simulation.dependency_cross_check_report is not None:
             self.dependency_cross_check_reports.append(
                 simulation.dependency_cross_check_report
@@ -1027,6 +1345,7 @@ class HtsimPersistentStepSink(HtsimStepSink):
                     result=None,
                     outcome=None,
                     locality_outcome=None,
+                    collective_timing_outcome=None,
                     dependency_cross_check_report=None,
                 )
                 for future in futures
