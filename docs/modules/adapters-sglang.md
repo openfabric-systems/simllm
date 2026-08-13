@@ -293,8 +293,14 @@ communication by exactly the whole of it.
 
 ## Open tasks
 
-- SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic
-  vs shared-prefix workload structure.
+Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
+worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin
+framework (`sglang.srt.plugins` entry points plus `HookRegistry` `REPLACE`
+hooks, run before scheduler construction) is a supported non-fork selection
+seam, so no upstream flag is needed.
+
+### Precision
+
 - SGL-4 (Precision; P1; L) (remaining half): a paced-mode run checked against
   SGLang's own wall-clock metrics, a workload that actually exercises radix
   hits
@@ -308,19 +314,6 @@ communication by exactly the whole of it.
   mixed/bursty cases. Report p50 through p99.9 TTFT/TPOT and attributed queue,
   KV, kernel, collective, DMA, WQE/NIC, flow and control residuals. Calibrate
   early stages and reserve later stages as holdouts.
-- SGL-5: logprobs, speculative decoding and the dLLM/hybrid modes are
-  refused or unreachable rather than fabricated.
-- SGL-6: overlap-schedule support (the scheduler-side dual-stream loop with
-  its result queue; needs delayed-sample semantics in the fabricated
-  result). Its observed host-side order and completion waits lower to graph
-  dependencies; device overlap itself remains owned by CORE-4/TRAF-7.
-- SGL-7: mamba/hybrid-attention models need the auxiliary-state pool the
-  stub does not build; the stub currently builds a plain `ReqToTokenPool`
-  only.
-- SGL-8: a live closed-loop run with `HtsimStepSink` installed via
-  `configure(step_sink=...)` on the CPU-engine smoke path, mirroring the
-  vLLM tp=8 run of examples/m4 (the M4 slice covered this adapter by
-  JSONL replay only).
 - SGL-9 (Precision; P1; L) (remaining after the CPU-oracle lifecycle slice):
   the v2 fallback now observes stock Radix prefix matching, token-slot
   allocation, radix eviction and decode retraction with request and slot IDs.
@@ -332,37 +325,12 @@ communication by exactly the whole of it.
   event cardinality, identity and cause agreement against those objects, a
   direct comparison with VLLM-11, and byte preservation of the current v2 and
   oracle-disabled paths.
-- SGL-10: capture and replay the supported model runner's CUDA stream/event,
-  kernel and NCCL schedule as an `ExecutionGraph` template keyed by the same
-  identity envelope as its compute table. Bind batch shapes, radix events and
-  overlap-scheduler dependencies at runtime; never infer device concurrency
-  from a single elapsed phase duration.
-- SGL-11 (Completeness; P1; L) (remaining after the zero-time first slice):
-  extend the SGLang-shaped mirror only as accepted adapter modes make further
-  pinned `GroupCoordinator` calls reachable. In particular, DCP attention and
-  MoE paths still invoke `all_gather_into_tensor`, `reduce_scatter_tensor`,
-  `all_gatherv`, and `reduce_scatterv`; the current dense TP worker neither
-  claims nor silently fabricates them. Freeze each supported call site's
-  signature, shape contract, enabled behavior, and exact disabled baseline
-  before adding it. The landed slice mirrors `all_reduce`, `all_gather`,
-  `broadcast`, `send`, and `recv`, including SGLang's added
-  `all_gather(..., output_tensor_list=None)` form, on the shared VLLM-14
-  zero-time event base. SGL-13 owns runtime projection, SGL-14 owns native
-  operation-specific lowerings, and SGL-15 preserves the real-call
-  bottleneck-study clause.
 - SGL-12 (Precision; P1; M): source and populate exact
   `StepRecord.num_sampled` at the worker seam. Distinguish a mid-prompt extend
   row from the extend step that reaches `origin_input_ids`, including radix
   hits, retracted prefills and MIXED batches; prove the count matches the rows
   for which SGLang consumes a generated token. Keep the absent field as the
   explicit compatibility path.
-- SGL-13 (Completeness; P1; L): now that CORE-4 and CORE-5 have landed,
-  project each
-  simulated SGLang communicator `CollectiveWork` through the single runtime
-  authority into `CompletionEvent`, `StepResult`, and TTFT/TPOT. Freeze a
-  fixed-workload signed metric relation and quantitative band first. The
-  disabled projection must preserve every accepted SGLang worker timestamp,
-  token, record byte, and completion order exactly.
 - SGL-14 (Precision; P1; M): replace the zero-time
   `ncclAllReduce`-shaped compatibility call for SGLang all-gather, broadcast,
   send, and receive with native COMP stack entries when those entries exist.
@@ -378,15 +346,6 @@ communication by exactly the whole of it.
   one model and group size, require modeled median and p95 call cost within a
   pre-registered band, then verify the signed TTFT/TPOT effect and exact
   zero-cost bypass.
-- SGL-17 (Completeness; P2; L): add the SGLang communicator's source-backed
-  observed schedule as `ExecutionObservations`, including exact per-layer
-  semantic sites, logical streams, submission and program order, event-wait
-  dependencies, request correlation, and completion frontier for every
-  supported call. Derive concurrency only from the active communicator and
-  scheduler source, with no overlap percentage or compatibility-schedule
-  inference. When the producer is disabled or absent, preserve the accepted
-  worker records, event sidecar, sink calls, timestamps, tokens, and completion
-  order exactly.
 - SGL-16 (Precision; P1; M): replace the framework-oracle fallback's Granite
   model-order layer inference with stable layer IDs supplied by SGLang. The
   current surrogate cycles missing capture labels through the model's 24 MoE
@@ -397,8 +356,58 @@ communication by exactly the whole of it.
   request outputs and KV events relative to the current qualified Granite
   fallback.
 
-Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
-worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin
-framework (`sglang.srt.plugins` entry points plus `HookRegistry` `REPLACE`
-hooks, run before scheduler construction) is a supported non-fork selection
-seam, so no upstream flag is needed.
+### Completeness
+
+- SGL-11 (Completeness; P1; L) (remaining after the zero-time first slice):
+  extend the SGLang-shaped mirror only as accepted adapter modes make further
+  pinned `GroupCoordinator` calls reachable. In particular, DCP attention and
+  MoE paths still invoke `all_gather_into_tensor`, `reduce_scatter_tensor`,
+  `all_gatherv`, and `reduce_scatterv`; the current dense TP worker neither
+  claims nor silently fabricates them. Freeze each supported call site's
+  signature, shape contract, enabled behavior, and exact disabled baseline
+  before adding it. The landed slice mirrors `all_reduce`, `all_gather`,
+  `broadcast`, `send`, and `recv`, including SGLang's added
+  `all_gather(..., output_tensor_list=None)` form, on the shared VLLM-14
+  zero-time event base. SGL-13 owns runtime projection, SGL-14 owns native
+  operation-specific lowerings, and SGL-15 preserves the real-call
+  bottleneck-study clause.
+- SGL-13 (Completeness; P1; L): now that CORE-4 and CORE-5 have landed,
+  project each
+  simulated SGLang communicator `CollectiveWork` through the single runtime
+  authority into `CompletionEvent`, `StepResult`, and TTFT/TPOT. Freeze a
+  fixed-workload signed metric relation and quantitative band first. The
+  disabled projection must preserve every accepted SGLang worker timestamp,
+  token, record byte, and completion order exactly.
+- SGL-17 (Completeness; P2; L): add the SGLang communicator's source-backed
+  observed schedule as `ExecutionObservations`, including exact per-layer
+  semantic sites, logical streams, submission and program order, event-wait
+  dependencies, request correlation, and completion frontier for every
+  supported call. Derive concurrency only from the active communicator and
+  scheduler source, with no overlap percentage or compatibility-schedule
+  inference. When the producer is disabled or absent, preserve the accepted
+  worker records, event sidecar, sink calls, timestamps, tokens, and completion
+  order exactly.
+
+### Uncategorized
+
+- SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic
+  vs shared-prefix workload structure.
+- SGL-5: logprobs, speculative decoding and the dLLM/hybrid modes are
+  refused or unreachable rather than fabricated.
+- SGL-6: overlap-schedule support (the scheduler-side dual-stream loop with
+  its result queue; needs delayed-sample semantics in the fabricated
+  result). Its observed host-side order and completion waits lower to graph
+  dependencies; device overlap itself remains owned by CORE-4/TRAF-7.
+- SGL-7: mamba/hybrid-attention models need the auxiliary-state pool the
+  stub does not build; the stub currently builds a plain `ReqToTokenPool`
+  only.
+- SGL-8: a live closed-loop run with `HtsimStepSink` installed via
+  `configure(step_sink=...)` on the CPU-engine smoke path, mirroring the
+  vLLM tp=8 run of examples/m4 (the M4 slice covered this adapter by
+  JSONL replay only).
+- SGL-10: capture and replay the supported model runner's CUDA stream/event,
+  kernel and NCCL schedule as an `ExecutionGraph` template keyed by the same
+  identity envelope as its compute table. Bind batch shapes, radix events and
+  overlap-scheduler dependencies at runtime; never infer device concurrency
+  from a single elapsed phase duration.
+

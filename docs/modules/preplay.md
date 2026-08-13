@@ -23,6 +23,30 @@ request's route, length and output are predefined, which is what lets the
 skeleton coupling mode (VLLM-13) run its name-mirrored virtual functions
 and still produce a real simulation.
 
+## Interface
+
+The surface other code uses, all exported from `simllm.preplay`:
+
+- **Capture.** `TransformersCpuRunner` is the baseline runner; `VllmCpuRunner`
+  and `SglangCpuRunner` capture through the real frameworks. Each is
+  configured by `SamplingConfig` and `SamplingMode` and yields a
+  `PreplayTrace` or `FrameworkPreplayTrace` of `RequestTrace` and
+  `ForwardTokenTrace` records with per-layer `LayerRouting`.
+- **Artifacts.** `PREPLAY_TRACE_SCHEMA`, `FRAMEWORK_PREPLAY_TRACE_SCHEMA`,
+  `ROUTED_EXPERTS_SCHEMA`, `ROUTING_ARENA_SCHEMA` and
+  `PREPLAY_REPLAY_RUN_SCHEMA` tag the on-disk forms. `PreplayTraceWriter` and
+  `PreplayTraceReader` stream them per request, and the `write_*` and
+  `validate_*` families are the only supported way to emit or accept one.
+- **Join.** `RequestArrival` plus a trace joins into `PreplayReplayRun` of
+  `JoinedRequest` records, which is what pins each request's arrival, output
+  length, stop reason and routing for a replay.
+- **Routing supply.** `RoutingArena` with `RoutingArenaIndex` and
+  `RoutingArenaRequestView` is the packed per-token routing form the traffic
+  expansion consumes; `RoutingReference` names the artifact a run used.
+- **Observed dispatch.** `ObservedTokenDispatch` and `ObservedLayerDispatch`
+  under `OBSERVED_DISPATCH_SOURCE` carry framework-observed routing, and
+  `KvCacheEvent` with `KvEventKind` carries the framework's own KV decisions.
+
 ## Design
 
 - **Runner.** Given the model identity (name, revision, dtype, tokenizer

@@ -50,6 +50,9 @@ ctest --test-dir build/rnic --output-on-failure
 
 - Keep the core framework-agnostic: nothing in `simllm/core`, `simllm/goal`
   or `simllm/backends` may import vLLM or SGLang.
+- Module docs under `docs/modules/` follow the skeleton in
+  [docs/modules/FORMAT.md](docs/modules/FORMAT.md). `pytest -q` checks it; run
+  `python scripts/check_docs_format.py` for the messages on their own.
 - Changes to the backend simulators belong in their own repos
   (`third_party/atlahs`, `third_party/htsim`); SimLLM only pins refs.
 - Add a test for every new module. CI must stay green.
