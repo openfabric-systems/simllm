@@ -62,14 +62,14 @@ any digest, audit or conservation guard runs. The fatal guards below constrain
 input identity and arena legality; none of them constrains a completion
 timestamp or an exit count.
 
-### LIFE-C1, lifecycle exits retained on the executed graph, 2 instances
+### LIFE-C1, lifecycle exits retained on the executed graph, 2 instances, originally scored
 
 Raw `(closed, live, views)` at exit is `(1, 0, 0)` for the one-request cell and
 `(3, 0, 0)` for the three-request cell, read before `audit_closed()`. This is
 the first clause of the acceptance: retiring the barrier must not cost a
 lifecycle exit.
 
-### LIFE-C2, suppression diagnostics retained on the executed graph, 2 instances
+### LIFE-C2, suppression diagnostics retained on the executed graph, 2 instances, originally scored
 
 With the `r0` dispatch layer-7 end flag suppressed, and separately the `r2`
 combine layer-19 end flag, the executed graph must still produce exactly one
@@ -209,3 +209,17 @@ arms, is unchanged.
 
 Nothing else is amended. The LIFE-C4 and LIFE-C5 literals, their direction and
 their causal rule stay exactly as registered before the void run.
+
+## Post-run evidence-accounting correction
+
+Integrator review after the accepted run found that LIFE-C1 and LIFE-C2 are
+duplicate scoring surfaces. LIFE-C1 projects the same `clean_one` and
+`clean_three` objects and pass predicate already scored by LIFE-B1. LIFE-C2
+reuses the exact `suppression_rows` list and pass predicate already scored by
+LIFE-B2. The runner retains both comparator views as unscored duplicate
+records, but they add no family or instance.
+
+The final scored population is therefore the six unique families MEM-B1,
+LIFE-B1, LIFE-B2, LIFE-C3, LIFE-C4 and LIFE-C5, with 14 instances. The earlier
+five-family comparator registry above is retained as chronology, not as the
+final evidence classification.

@@ -71,12 +71,16 @@ FROZEN_ANALYTIC_PS = {
     ("total", 200_000_000_000): 2_169_586_000,
 }
 
-#: scored behavioral registry, after the pre-run amendment in expectations.md
-#: that reclassified the entailed analytic scaling instances as fatal-unscored
+#: scored behavioral registry after the evidence-accounting corrections
 SCORED_FAMILIES = {
     "CORE-F1": PHASES_PER_STEP * REPLAY_STEPS * len(MATCHED_RATES),
     "CORE-F2": REPLAY_STEPS,
+}
+
+#: entailed identities that remain fatal-unscored evidence
+ENTAILED_FATAL_FAMILIES = {
     "CORE-F3": REPLAY_STEPS * len(MATCHED_RATES),
+    "analytic_scaling_identity": REPLAY_STEPS,
 }
 
 #: recorded source artifacts under the capture tree
@@ -185,8 +189,13 @@ def _check_frozen_registry() -> None:
     if _analytic_charge_ps(51, 20) != 2 * ANALYTIC_QUANTUM_PS:
         raise AssertionError("a load past the quantum must take the next nanosecond")
 
-    if SCORED_FAMILIES != {"CORE-F1": 3_072, "CORE-F2": 32, "CORE-F3": 64}:
+    if SCORED_FAMILIES != {"CORE-F1": 3_072, "CORE-F2": 32}:
         raise AssertionError("scored evidence registry drifted")
+    if ENTAILED_FATAL_FAMILIES != {
+        "CORE-F3": 64,
+        "analytic_scaling_identity": 32,
+    }:
+        raise AssertionError("entailed fatal evidence registry drifted")
     step_propagation_ps = PHASES_PER_STEP * PROPAGATION_PS
     if step_propagation_ps != 96_000_000:
         raise AssertionError("per-step propagation literal drifted")
@@ -240,8 +249,8 @@ def check_only(args: argparse.Namespace) -> None:
         raise AssertionError("registered path argument is empty")
     print(
         "check-only validated the matched rate pairs, the capture ledger, the "
-        "frozen serialization and analytic literals and three scored families; "
-        "no artifacts produced"
+        "frozen serialization and analytic literals, two scored families and "
+        "two entailed fatal families; no artifacts produced"
     )
 
 
@@ -734,15 +743,19 @@ def _raw_behavioral(
     families = {
         "CORE-F1": {"instances": phase_rows},
         "CORE-F2": {"instances": scaling_rows},
-        "CORE-F3": {"instances": composition_rows},
     }
-    families["analytic_scaling_identity"] = analytic_scaling_rows
-    entailed = families.pop("analytic_scaling_identity")
     for name, family in families.items():
         family["passed"] = all(row["passed"] for row in family["instances"])
         family["instance_count"] = len(family["instances"])
         if family["instance_count"] != SCORED_FAMILIES[name]:
             raise AssertionError(f"{name} instance count disagrees with the freeze")
+    entailed = {
+        "CORE-F3": composition_rows,
+        "analytic_scaling_identity": analytic_scaling_rows,
+    }
+    for name, rows in entailed.items():
+        if len(rows) != ENTAILED_FATAL_FAMILIES[name]:
+            raise AssertionError(f"{name} instance count disagrees with the registry")
     return families, entailed
 
 
@@ -970,12 +983,13 @@ def _run(args: argparse.Namespace) -> dict[str, Any]:
         )
         arms[name] = _run_arm(args.out, name, records, args.source_root)
 
-    behavioral, analytic_scaling = _raw_behavioral(inventories, arms)
+    behavioral, entailed = _raw_behavioral(inventories, arms)
     fatal = _fatal_checks(inventories, arms)
-    fatal["analytic_scaling_identity"] = {
-        "rows": analytic_scaling,
-        "passed": all(row["passed"] for row in analytic_scaling),
-    }
+    for name, rows in entailed.items():
+        fatal[name] = {
+            "rows": rows,
+            "passed": all(row["passed"] for row in rows),
+        }
 
     arrivals = {"r0": 0, "r1": 2_000_000_000, "r2": 4_000_000_000}
     metrics = {

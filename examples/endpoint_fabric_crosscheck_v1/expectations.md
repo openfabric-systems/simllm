@@ -6,9 +6,9 @@ Nothing here is an implementation of the comparison, and no measured fabric
 value appears below.
 
 CORE-43 asks one question: two independently written serializers, the analytic
-intra-node endpoint charge in `simllm/traffic/locality.py` and the packet-level
-fluid manifold in the htsim backend, are handed the same directed traffic. Do
-they agree?
+intra-node endpoint charge in `simllm/traffic/locality.py` and the closed-form
+`rnic-nn-fluid` manifold in the htsim backend, are handed the same directed
+traffic. Do they agree?
 
 ## What is being compared, and why it can disagree
 
@@ -215,7 +215,7 @@ untouched. Registered:
 A term that moved by 1.05 or by 4 would fail. The registered direction is a
 factor of exactly 2 on the serialization term and exactly 1 on propagation.
 
-### CORE-F3, live composition, 64 instances
+### CORE-F3, live composition, 64 instances, originally scored
 
 One instance per step per rate. The registered closed form for a step's
 latency is
@@ -232,7 +232,9 @@ per step, where the lower bound is `96,000,000 - 48 * 999`. This is the
 relation that requires both serializers to reach a live `StepResult` on the
 supported metric chain, not to stop at a component ledger. An implementation
 that computed both component numbers correctly and composed them onto the wrong
-artifact fails CORE-F3 while passing CORE-F1.
+artifact was expected to fail CORE-F3 while passing CORE-F1. The post-run
+correction below shows why that expected independence does not hold in the
+implemented composition.
 
 ## Fatal-unscored guards
 
@@ -342,8 +344,23 @@ keeps its 32 fluid instances as its scored population. The fluid instances are
 genuine risk: nothing in the freeze pins what the max-min allocator does when
 its capacity is halved.
 
-The revised scored population is CORE-F1 with 3,072 instances, CORE-F2 with 32,
-and CORE-F3 with 64, for 3,168 scored instances across three families.
+At this pre-run stage the revised scored population was CORE-F1 with 3,072
+instances, CORE-F2 with 32, and CORE-F3 with 64, for 3,168 scored instances
+across three families.
 
 The CORE-F1 and CORE-F3 bounds are unaffected. Both compare a quantized value
 with its own unquantized ideal, where `999` is the correct bound.
+
+## Post-run evidence-accounting correction
+
+Integrator review after the accepted run found that CORE-F3 is entailed by
+CORE-F1 plus the compute-identity fatal guard. `step_latency_ps` is the
+represented compute term plus the sum of `composed_phase_service_ps`, and
+CORE-F1 reads `A_p` and `F_p` from those same composed arrays. With compute
+identity holding, `remote - local == sum(F_p) - sum(A_p)` identically, so
+summing CORE-F1's 48 per-phase band reproduces CORE-F3's band exactly.
+
+CORE-F3's 64 rows are therefore fatal-unscored live-composition evidence. The
+final scored population is CORE-F1 with 3,072 instances and CORE-F2 with 32,
+for 3,104 scored instances across two families. The earlier three-family count
+above is retained as chronology, not as the final evidence classification.

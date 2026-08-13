@@ -1,11 +1,11 @@
 # Endpoint versus fabric serializer cross-check results
 
 CORE-43 is complete. The analytic intra-node endpoint charge and the
-packet-level fluid manifold were handed the same directed traffic, the real
+`rnic-nn-fluid` manifold were handed the same directed traffic, the real
 Granite MoE capture at EP width eight over all 48 phases of all 32 recorded
 steps, at matched rates. They agree.
 
-The primary result is **3/3 genuine-risk families and 3,168/3,168 instances**.
+The primary result is **2/2 genuine-risk families and 3,104/3,104 instances**.
 Every fatal guard passed. Fatal guards are not reported as a fraction.
 
 The headline number is the one CORE-43 existed to produce. On the prefill step
@@ -40,6 +40,13 @@ the freeze already fixes as an input, so it is entailed and may not be scored.
 Both landed before the implementation and before any run. The corrected
 allowance was needed: the observed analytic residual reaches exactly -48,000 ps,
 which the original literal would have failed by 48 ps.
+
+**A post-run evidence-accounting correction.** Integrator review found that
+CORE-F3 is entailed by CORE-F1 plus the compute-identity fatal guard. The live
+step latency sums the same composed phase-service arrays that supply CORE-F1,
+so summing CORE-F1's 48 per-phase bands reproduces CORE-F3's registered band
+exactly. Its 64 rows remain fatal-unscored live-composition evidence and no
+longer increase the behavioral score.
 
 **A textual fix for CI.** Commit `eb9dd4ff1d3c3173c731ac55993dd24b5a5a615b`
 spelled a two-sided tolerance sign in words because the tracked-markdown
@@ -101,13 +108,14 @@ the +1 ps epoch rounding at each rate, not a modeling difference. Propagation is
 
 **Deployment plausibility.** Prefill step 0 carries 25.6 MB of peak endpoint
 load. At 400 Gbit/s that is 511 microseconds of pure serialization for a
-54-token prefill of a 1B-parameter, 400M-active MoE, which is not a plausible
-deployment number and is exactly why the single-node NVLink placement is the
-realistic one. The measured live TTFT confirms the direction: 706.6 ms across
-the fabric against 156.2 ms on NVLink. Decode TPOT on NVLink is 101.9 ms, of
-which 99.36 ms is the roofline compute term, so the decode step is weight-read
-bound and the network is 2.5 percent of it. That is the expected shape for a
-model whose active weights dominate a small all-to-all.
+54-token prefill of a 1B-parameter, 400M-active MoE, a substantial placement
+penalty that favors the single-node NVLink placement. The measured live TTFT
+confirms the direction: 706.6 microseconds across the fabric against 156.2
+microseconds on NVLink. Decode TPOT on NVLink is 101.9 microseconds, of which
+99.36 microseconds is the roofline compute term, so the decode step is
+weight-read bound and the network is 2.5 percent of it. At the corrected
+microsecond scale both TTFTs are physically plausible; the deployment argument
+is the 4.52 times fabric penalty, not an implausible absolute latency.
 
 Three independent framings were used rather than three passes over the same
 reasoning: serialization physics against the byte ledger, the fluid allocator's
@@ -161,7 +169,7 @@ factor of **1.510**.
 
 ## Scored behavioral relations
 
-All three families were evaluated from raw analytic and fluid observations
+Both families were evaluated from raw analytic and fluid observations
 before any exact ledger, conservation, physical-bound, artifact or identity
 guard ran. No earlier fatal oracle pins a scored instance: the fatal guards
 constrain the byte population and the identity of the two arms, and not one of
@@ -231,7 +239,9 @@ rounding while the slower arm carries it once. The registered direction, a
 factor of exactly 2 on serialization and exactly 1 on propagation, holds: the
 propagation total is 96,000,000 ps per step at both rates.
 
-### CORE-F3, live composition, 64/64
+## Fatal-unscored live composition identity
+
+### CORE-F3, 64 rows
 
 One instance per step per rate, on live `StepResult` latencies through the
 supported metric chain.
@@ -241,10 +251,13 @@ supported metric chain.
 | 400 Gbit/s | 32 | 95,971,648 to 95,991,128 | 95,952,048 to 96,000,336 |
 | 200 Gbit/s | 32 | 95,962,440 to 95,991,248 | 95,952,048 to 96,000,336 |
 
-This is the relation that required both serializers to reach a live step
-latency rather than stop at a component ledger. An implementation that computed
-both component numbers correctly and composed them onto the wrong artifact
-would pass CORE-F1 and fail here. The prefill step decomposes exactly:
+These rows demonstrate that both serializers reach a live step latency, but
+they do not add an independent behavioral relation. `step_latency_ps` is the
+represented compute term plus the sum of the same composed phase-service
+arrays that supply CORE-F1. With compute identity holding, `remote - local` is
+identically `sum(F_p) - sum(A_p)`, and summing CORE-F1's per-phase band over 48
+phases reproduces the registered CORE-F3 band exactly. The prefill step
+decomposes exactly:
 610,626,000 ps locally as 99,336,000 ps of compute plus 511,290,000 ps of
 analytic service, and 706,598,768 ps remotely as the same compute plus
 511,262,768 ps of fluid serialization plus 96,000,000 ps of propagation.
@@ -266,14 +279,16 @@ artifacts, `HtsimStepSink` and `StepResult`, for request `r0` of the capture.
 Three readings, in decreasing order of how much they say:
 
 - **Placement dominates TPOT.** At the same 20 ps per byte, moving this traffic
-  off the node costs 95.98 ms of TTFT and 95.98 ms of TPOT, all of it the
-  48 fixed propagation delays. At the deployment NVLink rate the local arm's
-  TPOT falls to 101.9 ms, of which the compute term is 99.36 ms, so the network
-  is 2.5 percent of a decode step and the fabric arm's is 54 percent.
+  off the node costs 95.98 microseconds of TTFT and 95.98 microseconds of TPOT,
+  dominated by the 96-microsecond total from the 48 fixed propagation delays,
+  with only a nanosecond-scale serializer quantization residual. At the
+  deployment NVLink rate the local arm's TPOT falls to 101.9 microseconds, of
+  which the compute term is 99.36 microseconds, so the network is 2.5 percent
+  of a decode step and the fabric arm's is 54 percent.
 - **Rate scaling reaches the live metric.** Halving the link rate adds
-  511.3 ms to the local TTFT and 511.3 ms to the remote TTFT, which is the
-  serialization term doubling while the compute and propagation terms do not
-  move.
+  511.3 microseconds to the local TTFT and 511.3 microseconds to the remote
+  TTFT, which is the serialization term doubling while the compute and
+  propagation terms do not move.
 - **The control arm is bit-identical to its reference.** Every TTFT and TPOT
   digit is the same, which is the live face of the all-remote exactness guard.
 
@@ -292,6 +307,7 @@ All passed. A single violation would have voided the run.
 | Compute identity across all six arms | 32 | all passed |
 | Analytic projection identity: executed artifact service equals the independently classified phase service | 96 | all passed |
 | Analytic scaling identity, entailed and reclassified before the run | 32 | all passed |
+| CORE-F3 live composition identity, entailed by CORE-F1 and compute identity | 64 | all passed |
 
 Each phase was lowered and classified a second time inside the study, so the
 endpoint ledger, the peak endpoint load and the segment multiset were checked
@@ -317,7 +333,7 @@ the original `47,952` would have failed by 48 ps.
 |---|---|---|
 | 1. The capture-scale traffic is run all-local and all-remote at EP width eight over all 48 Granite phases, and the two serializers are compared on identical directed traffic | Six arms over all 32 recorded steps; byte-population identity 256/256 proves the segment multisets match phase by phase | met |
 | 2. The analytic charge and the fluid serialization term agree inside the preregistered band at every phase, or the study identifies which side is wrong instead of widening the band | CORE-F1 3,072/3,072 inside the band; the fluid excess is 0 or 1 ps against a registered ceiling of 7; the entire disagreement is the analytic model's declared nanosecond quantum | met |
-| 3. The effect on a live TTFT and TPOT is reported through the supported metric chain | CORE-F3 64/64 and the TTFT and TPOT table above, with the 1.510 times capture-scale TTFT effect of the CORE-41 correction stated | met |
+| 3. The effect on a live TTFT and TPOT is reported through the supported metric chain | CORE-F3 has 64 fatal-unscored live-composition rows and the TTFT and TPOT table above states the 1.510 times capture-scale TTFT effect of the CORE-41 correction | met |
 | 4. The all-remote path is exact: it is unaffected by the analytic serializer's configuration | All-remote exactness 3/3 over 4,608 artifact digests and every timestamp | met |
 
 All four clauses are met, so CORE-43 closes. Nothing it registered was left

@@ -769,7 +769,7 @@ demonstrated and keeps the task open; see
 [the cross-layer authority results](../../examples/cross_layer_authority_v1/RESULTS.md).
 
 CORE-43 is complete. The analytic intra-node endpoint charge and the
-packet-level fluid manifold were run on the same Granite capture traffic at EP
+`rnic-nn-fluid` manifold were run on the same Granite capture traffic at EP
 width eight, all-local and all-remote, over all 48 phases of all 32 recorded
 steps at matched rates of 20 and 40 picoseconds per byte. They agree at every
 one of 3,072 phase instances inside the preregistered band, with the fluid

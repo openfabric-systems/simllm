@@ -102,6 +102,20 @@ LIFECYCLE_CELLS = {
     },
 }
 
+SCORED_RELATION_INSTANCES = {
+    "MEM-B1": 2,
+    "LIFE-B1": 2,
+    "LIFE-B2": 2,
+    "LIFE-C3": 2,
+    "LIFE-C4": 4,
+    "LIFE-C5": 2,
+}
+
+UNSCORED_DUPLICATE_RELATIONS = {
+    "LIFE-C1": "LIFE-B1",
+    "LIFE-C2": "LIFE-B2",
+}
+
 
 def _check_frozen_registry() -> None:
     if set(MEMORY_CELLS) != {1, 3}:
@@ -124,6 +138,15 @@ def _check_frozen_registry() -> None:
     }
     if suppressions != {("r0", "dispatch", 7), ("r2", "combine", 19)}:
         raise AssertionError("suppression registry disagrees with expectations")
+    if len(SCORED_RELATION_INSTANCES) != 6:
+        raise AssertionError("scored relation family count drifted")
+    if sum(SCORED_RELATION_INSTANCES.values()) != 14:
+        raise AssertionError("scored relation instance count drifted")
+    if UNSCORED_DUPLICATE_RELATIONS != {
+        "LIFE-C1": "LIFE-B1",
+        "LIFE-C2": "LIFE-B2",
+    }:
+        raise AssertionError("unscored duplicate relation registry drifted")
     _check_comparator_registry()
 
 
@@ -1303,25 +1326,6 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
             "rows": suppression_rows,
             "passed": all(row["passed"] for row in suppression_rows),
         },
-        "LIFE-C1": {
-            "classification": "scored-behavioral",
-            "genuine_risk": "2/2",
-            "rows": [
-                {
-                    "request_count": count,
-                    "raw_exit": cell["raw_exit"],
-                    "passed": cell["passed"],
-                }
-                for count, cell in ((1, clean_one), (3, clean_three))
-            ],
-            "passed": clean_one["passed"] and clean_three["passed"],
-        },
-        "LIFE-C2": {
-            "classification": "scored-behavioral",
-            "genuine_risk": "2/2",
-            "rows": suppression_rows,
-            "passed": all(row["passed"] for row in suppression_rows),
-        },
         "LIFE-C3": {
             "classification": "scored-behavioral",
             "genuine_risk": "2/2",
@@ -1341,6 +1345,35 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
             "passed": all(row["passed"] for row in attribution_rows),
         },
     }
+    unscored_duplicates = {
+        "LIFE-C1": {
+            "classification": "unscored-duplicate-projection",
+            "duplicates": UNSCORED_DUPLICATE_RELATIONS["LIFE-C1"],
+            "rows": [
+                {
+                    "request_count": count,
+                    "raw_exit": cell["raw_exit"],
+                    "passed": cell["passed"],
+                }
+                for count, cell in ((1, clean_one), (3, clean_three))
+            ],
+            "passed": scored["LIFE-B1"]["passed"],
+        },
+        "LIFE-C2": {
+            "classification": "unscored-duplicate-projection",
+            "duplicates": UNSCORED_DUPLICATE_RELATIONS["LIFE-C2"],
+            "rows": scored["LIFE-B2"]["rows"],
+            "passed": scored["LIFE-B2"]["passed"],
+        },
+    }
+    if set(scored) != set(SCORED_RELATION_INSTANCES):
+        raise AssertionError("scored relation registry disagrees with evidence policy")
+    observed_scored_instances = {
+        name: 4 if name == "LIFE-C4" else len(family["rows"])
+        for name, family in scored.items()
+    }
+    if observed_scored_instances != SCORED_RELATION_INSTANCES:
+        raise AssertionError("scored relation instances disagree with the registry")
     fatal = {
         "input_identity": {
             "classification": "fatal-unscored-configuration",
@@ -1401,14 +1434,12 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
             str(count): comparison for count, comparison in sorted(comparisons.items())
         },
         "scored_relations": scored,
+        "unscored_duplicate_relations": unscored_duplicates,
         "fatal_unscored": fatal,
         "evidence_class_counts": {
             "run_configurations": 4,
             "scored_behavioral_families": len(scored),
-            "scored_behavioral_instances": sum(
-                len(family["rows"]) if family is not scored["LIFE-C4"] else 4
-                for family in scored.values()
-            ),
+            "scored_behavioral_instances": sum(observed_scored_instances.values()),
             "fatal_exact_step_rows": len(traffic["rows"]),
             "fatal_structural_families": 5,
             "native_test_executables": 0,
@@ -1417,6 +1448,8 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
     _write_json(arguments.out / "results.json", result)
     if not all(value["passed"] for value in scored.values()):
         raise AssertionError("a scored behavioral relation failed")
+    if not all(value["passed"] for value in unscored_duplicates.values()):
+        raise AssertionError("an unscored duplicate projection failed")
     if not all(value["passed"] for value in fatal.values()):
         raise AssertionError("a fatal unscored oracle failed")
     return result
@@ -1427,9 +1460,9 @@ def main() -> None:
     _check_frozen_registry()
     if arguments.check_only:
         print(
-            "check-only validated two memory cells, two clean lifecycle cells, "
-            "two suppression cells, two comparator cells and five source "
-            "records; no artifacts produced"
+            "check-only validated six scored families, 14 scored instances, two "
+            "unscored duplicate views and five source records; no artifacts "
+            "produced"
         )
         return
     result = _run(arguments)

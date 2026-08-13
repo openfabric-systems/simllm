@@ -30,5 +30,7 @@ def test_check_only_validates_registry_without_inspecting_paths_or_writing(
         text=True,
     )
 
+    assert "six scored families, 14 scored instances" in result.stdout
+    assert "two unscored duplicate views" in result.stdout
     assert "no artifacts produced" in result.stdout
     assert not output.exists()

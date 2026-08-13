@@ -272,9 +272,14 @@ CORE-47 is complete. The lowerer's participant-local graph is now the executed
 path of this study, and the whole-operation barrier runs beside it as an
 explicit comparator that never selects a reported value.
 
-The rerun result is **5/5 comparator families and 12/12 instances**, on top of
-the three original families this study already carried, for 8 families and 18
-scored instances in one run. Every fatal guard passed.
+The corrected rerun adds **3/3 unique comparator families and 8/8 instances**
+on top of the three original families and six instances, for **6 families and
+14 scored instances** in one run. The earlier 8-family, 18-instance headline
+double-counted four rows. LIFE-C1 projects the same `clean_one` and
+`clean_three` objects and pass predicate as LIFE-B1, while LIFE-C2 reuses the
+same `suppression_rows` list and predicate as LIFE-B2. Both comparator views
+remain below as unscored retention records so the correction is visible. Every
+fatal guard passed.
 
 ### Chronology, including one void run
 
@@ -332,7 +337,7 @@ earlier. Not one of the 58 step boundaries moves. The three-request cell moves
 2,553 of 7,680 (33.2 percent) against the one-request cell's 1,305 of 5,760
 (22.7 percent).
 
-### LIFE-C1, lifecycle exits retained, 2/2
+### LIFE-C1, lifecycle exits retained, 2 unscored duplicate rows
 
 | Cell | Raw exit (closed, live, views) | Registered |
 |---|---|---|
@@ -342,17 +347,19 @@ earlier. Not one of the 58 step boundaries moves. The three-request cell moves
 Read from the raw registry counters before `audit_closed()`. The comparator arm
 produced the same exits, and its full state trace, including every consumption
 cursor and both end-flag masks at every step, is identical to the executed arm.
+These are the same two clean lifecycle cells and the same pass predicate as
+LIFE-B1, so they add no scored family or instance.
 
-### LIFE-C2, suppression diagnostics retained, 2/2
+### LIFE-C2, suppression diagnostics retained, 2 unscored duplicate rows
 
 | Suppressed flag | Raw subjectless completions | Exit state | View live | Diagnostic |
 |---|---:|---|---|---|
 | `r0` dispatch layer 7 | 1 | `finish-flagged` | yes | `request 'r0': state=finish-flagged; dispatch missing layers [7]; routing view live` |
 | `r2` combine layer 19 | 1 | `finish-flagged` | yes | `request 'r2': state=finish-flagged; combine missing layers [19]; routing view live` |
 
-This is the one scored surface that reads the raw event stream rather than
-registry state, so it was the surface most exposed to the ordering change. It
-did not move. `arena.close()` was rejected with `BufferError` in both cells.
+This retained view uses the exact `suppression_rows` list and pass predicate
+already scored as LIFE-B2, so it adds no scored family or instance.
+`arena.close()` was rejected with `BufferError` in both cells.
 
 ### LIFE-C3, scheduler-visible boundaries unchanged, 2/2
 
@@ -438,7 +445,7 @@ distinguishes a real retirement from a renamed one.
 | Clause | Evidence | Status |
 |---|---|---|
 | 1. The study is rerun on the unchanged graph, and the barrier arm is retained as an explicit comparator rather than as the executed path | `_barrier_comparator_graph` keeps its body and is applied only to the second arm; the executed-arm fatal guard proves which graph ran | met |
-| 2. Every lifecycle exit, suppression diagnostic and scheduler-visible boundary is retained | LIFE-C1 2/2, LIFE-C2 2/2, LIFE-C3 2/2, plus the identical state trace | met |
+| 2. Every lifecycle exit, suppression diagnostic and scheduler-visible boundary is retained | LIFE-C1 and LIFE-C2 remain unscored duplicate views of LIFE-B1 and LIFE-B2; LIFE-C3 passes 2/2, plus the identical state trace | met |
 | 3. Each moved intermediate value is stated with its cause | LIFE-C5 covers all 3,858 moved values with zero unattributed; the per-value inventory is in the run artifact | met |
 
 All three clauses are met, so CORE-47 closes. No residual clause was left
