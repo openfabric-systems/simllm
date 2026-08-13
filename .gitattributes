@@ -21,3 +21,5 @@ examples/m4/fixtures/*.jsonl text eol=lf
 examples/rnic_authority_v1/*.json text eol=lf
 examples/persistent_session_wall_v1/*.json text eol=lf
 examples/collective_latency_floor_v1/expectations.md text eol=lf
+tests/fixtures/preplay/*.json text eol=lf
+tests/fixtures/preplay/*.jsonl text eol=lf

@@ -1,0 +1,1 @@
+{"final_clock_ps":3820,"served_token_ids":{"alpha":[101,102,0],"beta":[201]},"step_results":[{"completed_at_ps":1220,"step_index":0,"step_latency_ps":1220},{"completed_at_ps":2680,"step_index":1,"step_latency_ps":1460},{"completed_at_ps":3820,"step_index":2,"step_latency_ps":1140},{"completed_at_ps":3820,"step_index":3,"step_latency_ps":0}]}
