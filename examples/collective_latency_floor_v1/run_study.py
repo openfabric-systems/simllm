@@ -40,8 +40,9 @@ SENSITIVITY_TRANSPORT_PS = {
 }
 EXPECTATIONS_COMMIT = "3a6126e174e859d5c222e137dc9e2d94ead6db29"
 EXPECTATIONS_SHA256 = "986c5952099bb6200736618a33580217b58ab3bbf9cb9ec97df1efc8b6962a28"
-STUDY_ATTEMPT = 2
+STUDY_ATTEMPT = 3
 PRIOR_VOID_REVISION = "cec7109adeb9656de92f9ef5ea54572accdc3208"
+PRIOR_INSUFFICIENT_REVISION = "a7bca21de7ecfcf3abd056335f71a21acc7808ce"
 SOURCE_ZIP_SHA256 = "91629a3b4a6eff4ac2e8bbc2261a928dbcca42f07c02d7f1fe15f9d981d0713f"
 SOURCE_LOCAL_TSV_SHA256 = "639348d43e625d8b7199c45db29ec7a848165974142016fab7b85ca34564a8f3"
 SOURCE_URL = "https://github.com/user-attachments/files/21326711/nccl-test-result.zip"
@@ -50,7 +51,7 @@ SOURCE_SYSTEM_URL = (
     "https://docs.nvidia.com/dgx/dgxb200-user-guide/introduction-to-dgxb200.html"
 )
 PHYSICAL_BANDWIDTH_BYTES_PER_SECOND = 900_000_000_000
-EXPECTED_SCORED_FAMILIES = 4
+EXPECTED_SCORED_FAMILIES = 3
 EXPECTED_HELDOUT_INSTANCES = 3
 PREFILL_NEW_TOKENS = 32
 DECODE_NEW_TOKENS = 1
@@ -651,6 +652,9 @@ def _fatal_guards(
     sensitivity_enabled_slow: dict[str, Any],
     explicit_off_fast: dict[str, Any],
     explicit_enabled_fast: dict[str, Any],
+    mixed_off: dict[str, Any],
+    mixed_legacy: dict[str, Any],
+    mixed_enabled: dict[str, Any],
     local_rows: tuple[dict[str, object], ...],
     unsupported: dict[str, object],
 ) -> dict[str, bool]:
@@ -660,6 +664,9 @@ def _fatal_guards(
     default_legacy_identity = _identity_payload(flagship_off) == _identity_payload(
         flagship_legacy
     )
+    mixed_default_legacy_identity = _identity_payload(
+        mixed_off
+    ) == _identity_payload(mixed_legacy)
     off_remote_identity = (
         sensitivity_off_fast["step_results"] == explicit_off_fast["step_results"]
         and sensitivity_off_fast["network_outcomes"]
@@ -686,6 +693,7 @@ def _fatal_guards(
         sensitivity_enabled_fast,
         sensitivity_enabled_slow,
         explicit_enabled_fast,
+        mixed_enabled,
     )
     charge_once = True
     field_equations = True
@@ -787,6 +795,8 @@ def _fatal_guards(
             sensitivity_off_slow,
             sensitivity_enabled_fast,
             sensitivity_enabled_slow,
+            mixed_off,
+            mixed_enabled,
         )
         for locality in cell["locality_outcomes"]
     ) and all(row["fabric_directed_bytes"] == 0 for row in local_rows)
@@ -815,6 +825,8 @@ def _fatal_guards(
             sensitivity_off_slow,
             sensitivity_enabled_fast,
             sensitivity_enabled_slow,
+            mixed_off,
+            mixed_enabled,
         )
         for outcome in cell["network_outcomes"]
     )
@@ -834,6 +846,7 @@ def _fatal_guards(
             (flagship_off, flagship_enabled),
             (sensitivity_off_fast, sensitivity_enabled_fast),
             (sensitivity_off_slow, sensitivity_enabled_slow),
+            (mixed_off, mixed_enabled),
         )
     )
     backend_artifact_identity = all(
@@ -842,6 +855,7 @@ def _fatal_guards(
             (flagship_off, flagship_enabled),
             (sensitivity_off_fast, sensitivity_enabled_fast),
             (sensitivity_off_slow, sensitivity_enabled_slow),
+            (mixed_off, mixed_enabled),
         )
     )
     backend_outcome_identity = all(
@@ -851,6 +865,28 @@ def _fatal_guards(
             (flagship_off, flagship_enabled),
             (sensitivity_off_fast, sensitivity_enabled_fast),
             (sensitivity_off_slow, sensitivity_enabled_slow),
+            (mixed_off, mixed_enabled),
+        )
+    )
+    mixed_locality = mixed_enabled["locality_outcomes"][0]
+    mixed_groups: dict[str, list[dict[str, Any]]] = {}
+    for row in _collective_rows(mixed_enabled):
+        mixed_groups.setdefault(row["collective_operation_id"], []).append(row)
+    mixed_split_authority = (
+        mixed_locality["fabric_directed_bytes"] > 0
+        and mixed_locality["nvlink_directed_bytes"] > 0
+        and mixed_locality["backend_runs"] > 0
+        and len(mixed_groups) == 2
+        and all(
+            any(row["local_service_ps"] > 0 for row in rows)
+            and any(row["fabric_transport_ps"] > 0 for row in rows)
+            and sum(row["collective_base_latency_ps"] for row in rows)
+            == profile.base_latency_ps(8)
+            and sum(
+                row["collective_base_latency_ps"] > 0 for row in rows
+            )
+            == 1
+            for rows in mixed_groups.values()
         )
     )
     parameter_identity = (
@@ -869,11 +905,15 @@ def _fatal_guards(
     )
     return {
         "default_and_explicit_legacy_identity": default_legacy_identity,
+        "mixed_default_and_explicit_legacy_identity": (
+            mixed_default_legacy_identity
+        ),
         "all_remote_identity_off": off_remote_identity,
         "all_remote_identity_enabled": enabled_remote_identity,
         "enabled_goal_byte_identity": goal_identity,
         "enabled_backend_artifact_identity": backend_artifact_identity,
         "enabled_backend_outcome_identity": backend_outcome_identity,
+        "mixed_split_single_authority": mixed_split_authority,
         "one_base_charge_per_semantic_collective": charge_once
         and local_charge_once,
         "artifact_field_equations": field_equations,
@@ -977,8 +1017,35 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
         step_specs=((0, 14),),
         dims=sensitivity_dims,
     )
+    mixed_hosts = ("node-a",) * 4 + ("node-b",) * 4
+    mixed_off = _sink_cell(
+        args,
+        name="mixed-placement-off-400g",
+        linkspeed_bps=400_000_000_000,
+        placement_hosts=mixed_hosts,
+        step_specs=((0, 14),),
+        dims=sensitivity_dims,
+    )
+    mixed_legacy = _sink_cell(
+        args,
+        name="mixed-placement-legacy-400g",
+        linkspeed_bps=400_000_000_000,
+        collective_latency_profile=LEGACY_COLLECTIVE_LATENCY_PROFILE,
+        placement_hosts=mixed_hosts,
+        step_specs=((0, 14),),
+        dims=sensitivity_dims,
+    )
+    mixed_enabled = _sink_cell(
+        args,
+        name="mixed-placement-enabled-400g",
+        linkspeed_bps=400_000_000_000,
+        collective_latency_profile=profile,
+        placement_hosts=mixed_hosts,
+        step_specs=((0, 14),),
+        dims=sensitivity_dims,
+    )
     unsupported = _unsupported_width_guard(args)
-    behavioral = _behavioral_results(
+    registered_relations = _behavioral_results(
         heldout=heldout,
         local_rows=local_rows,
         sensitivity_off_fast=sensitivity_cells[(False, 400_000_000_000)],
@@ -988,6 +1055,12 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
         flagship_off=flagship_off,
         flagship_enabled=flagship_enabled,
     )
+    behavioral = {
+        name: relation
+        for name, relation in registered_relations.items()
+        if name != "C3"
+    }
+    exact_relations = {"C3": registered_relations["C3"]}
     fatal = _fatal_guards(
         flagship_off=flagship_off,
         flagship_legacy=flagship_legacy,
@@ -998,6 +1071,9 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
         sensitivity_enabled_slow=sensitivity_cells[(True, 200_000_000_000)],
         explicit_off_fast=explicit_off_fast,
         explicit_enabled_fast=explicit_enabled_fast,
+        mixed_off=mixed_off,
+        mixed_legacy=mixed_legacy,
+        mixed_enabled=mixed_enabled,
         local_rows=local_rows,
         unsupported=unsupported,
     )
@@ -1010,8 +1086,12 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
     summary: dict[str, object] = {
         "study_attempt": STUDY_ATTEMPT,
         "prior_void_revision": PRIOR_VOID_REVISION,
-        "attempt_two_change_kind": (
-            "fatal harness oracle refreeze; no modeled behavior change"
+        "prior_nonvoid_but_insufficient_revision": (
+            PRIOR_INSUFFICIENT_REVISION
+        ),
+        "attempt_three_change_kind": (
+            "evidence classification and mixed-placement coverage fixes; "
+            "no modeled behavior change"
         ),
         "void": bool(violated),
         "violated_fatal_guards": violated,
@@ -1021,6 +1101,7 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
             None if violated else EXPECTED_SCORED_FAMILIES
         ),
         "behavioral_family_passed": behavioral_family_passed,
+        "exact_unscored_relations": exact_relations,
         "heldout_instance_total": EXPECTED_HELDOUT_INSTANCES,
         "fatal_guards": fatal,
         "heldout": heldout,
@@ -1037,6 +1118,11 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
         "all_remote_explicit": {
             "off-400g": explicit_off_fast,
             "enabled-400g": explicit_enabled_fast,
+        },
+        "mixed_placement": {
+            "off-400g": mixed_off,
+            "legacy-400g": mixed_legacy,
+            "enabled-400g": mixed_enabled,
         },
         "unsupported_width": unsupported,
         "error_budget_ps": {

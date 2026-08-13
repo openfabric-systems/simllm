@@ -304,6 +304,54 @@ def test_active_all_local_profile_owns_bandwidth_and_charges_once_per_operation(
     )
 
 
+def test_active_mixed_placement_has_one_authority_across_local_and_fabric(
+    tmp_path,
+    monkeypatch,
+):
+    backend_calls = _stub_backend(monkeypatch)
+    profile = B200_NCCL_2_27_LOCAL_PROFILE
+    sink = HtsimStepSink(
+        _config(
+            tmp_path / "mixed",
+            tp_ranks=(0, 1, 2, 3),
+            placement_manifest=_manifest(
+                ("node-a", "node-a", "node-b", "node-b")
+            ),
+            collective_latency_profile=profile,
+        )
+    )
+
+    result = sink(_record())
+
+    assert result is not None
+    assert backend_calls
+    locality = sink.locality_outcomes[0]
+    timing = sink.collective_timing_outcomes[0]
+    assert locality.fabric_directed_bytes > 0
+    assert locality.nvlink_directed_bytes > 0
+    grouped = {}
+    for row in timing.artifacts:
+        if row.collective_operation_id is not None:
+            grouped.setdefault(row.collective_operation_id, []).append(row)
+    assert len(grouped) == 2
+    for rows in grouped.values():
+        assert any(row.local_service_ps > 0 for row in rows)
+        assert any(row.fabric_transport_ps > 0 for row in rows)
+        assert sum(row.collective_base_latency_ps for row in rows) == (
+            profile.base_latency_ps(4)
+        )
+        assert sum(row.collective_base_latency_ps > 0 for row in rows) == 1
+        assert all(
+            row.composed_service_ps
+            == row.collective_base_latency_ps
+            + max(row.local_service_ps, row.fabric_transport_ps)
+            for row in rows
+        )
+    assert result.step_latency_ps == sum(
+        row.composed_service_ps for row in timing.artifacts
+    )
+
+
 def test_active_profile_rejects_unsupported_width_before_artifacts_or_publish(
     tmp_path,
     monkeypatch,
