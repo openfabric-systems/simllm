@@ -135,6 +135,8 @@ __all__ = [
     "GPU_ENVELOPES",
     "PINNED_VLLM_VERSION",
     "PS_PER_SECOND",
+    "ExpertGroupStepSink",
+    "ExpertParallelGeometry",
     "ModelDims",
     "ObservationStepSink",
     "ReplayTokenSource",
@@ -145,6 +147,8 @@ __all__ = [
     "TranslatedStep",
     "configure",
     "estimate_step_latency_ps",
+    "expert_group_ranks",
+    "expert_parallel_geometry",
     "fabricate_sampled_tokens",
     "latest_executor",
     "model_dims_from_vllm_config",
@@ -181,6 +185,21 @@ class ObservationStepSink(Protocol):
         observations: ExecutionObservations | None,
     ) -> StepResult:
         """Return the authoritative result for one translated step."""
+        ...
+
+
+@runtime_checkable
+class ExpertGroupStepSink(Protocol):
+    """A sink that accepts the adapter's derived expert-parallel group.
+
+    The adapter binds the group once, before any step, and only when the
+    active parallel configuration actually uses expert parallelism. A sink
+    that does not implement this stays on whatever group its own
+    configuration declared, which is the explicit no-EP path.
+    """
+
+    def bind_expert_group(self, ep_ranks: Sequence[int]) -> None:
+        """Bind the adapter-derived expert-parallel group before any step."""
         ...
 
 
@@ -697,6 +716,102 @@ def _weight_element_bytes_from_quant(quant_config: Any, default: float) -> float
     return default
 
 
+@dataclass(frozen=True)
+class ExpertParallelGeometry:
+    """vLLM's resolved MoE parallel shape, as seen by one global rank.
+
+    ``flatten_tp_size`` is vLLM's ``dp * pcp * tp`` flattened device set
+    (``fused_moe/config.py:1113-1121``). Expert parallelism is only in use when
+    that set holds more than one device AND the flag is set
+    (``fused_moe/config.py:1204-1207``); enabling the flag on a single device
+    does nothing. In use, a device owns whole experts and the expert weights
+    are not tensor-sharded (``moe_tp_size`` 1, ``ep_size`` the flattened size);
+    out of use, the experts are tensor-sharded over the whole flattened set
+    (``fused_moe/config.py:1217-1252``).
+
+    ``ep_ranks`` is the expert-parallel group of this rank in vLLM's
+    ``ExternalDP x DP x PP x PCP x TP`` layout order
+    (``distributed/parallel_state.py:1789-1801``), i.e. every rank sharing this
+    rank's ExternalDP index and pipeline stage, ordered by ``(dp, pcp, tp)``
+    (``distributed/parallel_state.py:1893-1919``). ``ep_rank`` is this rank's
+    index inside it, which equals vLLM's flattened TP rank.
+    """
+
+    flatten_tp_size: int
+    use_ep: bool
+    ep_size: int
+    moe_tp_size: int
+    ep_ranks: tuple[int, ...]
+    ep_rank: int
+
+
+def _parallel_size(parallel_config: Any, name: str) -> int:
+    return max(int(getattr(parallel_config, name, 1) or 1), 1)
+
+
+def _num_redundant_experts(parallel_config: Any) -> int:
+    eplb_config = getattr(parallel_config, "eplb_config", None)
+    if eplb_config is None:
+        return 0
+    return max(int(getattr(eplb_config, "num_redundant_experts", 0) or 0), 0)
+
+
+def expert_parallel_geometry(vllm_config: VllmConfig) -> ExpertParallelGeometry:
+    """Resolve the MoE parallel shape of the config's own global rank."""
+
+    parallel_config = vllm_config.parallel_config
+    data_parallel = _parallel_size(parallel_config, "data_parallel_size")
+    context_parallel = _parallel_size(parallel_config, "prefill_context_parallel_size")
+    tensor_parallel = _parallel_size(parallel_config, "tensor_parallel_size")
+    pipeline_parallel = _parallel_size(parallel_config, "pipeline_parallel_size")
+    rank = max(int(getattr(parallel_config, "rank", 0) or 0), 0)
+
+    flatten_tp_size = data_parallel * context_parallel * tensor_parallel
+    use_ep = (
+        bool(getattr(parallel_config, "enable_expert_parallel", False))
+        and flatten_tp_size > 1
+    )
+    stride = context_parallel * tensor_parallel
+    block = data_parallel * pipeline_parallel * stride
+    base = (rank // block) * block
+    stage = (rank % block) // stride % pipeline_parallel
+    ep_ranks = tuple(
+        base
+        + ((replica * pipeline_parallel + stage) * context_parallel + context)
+        * tensor_parallel
+        + tensor
+        for replica in range(data_parallel)
+        for context in range(context_parallel)
+        for tensor in range(tensor_parallel)
+    )
+    return ExpertParallelGeometry(
+        flatten_tp_size=flatten_tp_size,
+        use_ep=use_ep,
+        ep_size=flatten_tp_size if use_ep else 1,
+        moe_tp_size=1 if use_ep else flatten_tp_size,
+        ep_ranks=ep_ranks,
+        ep_rank=ep_ranks.index(rank),
+    )
+
+
+def expert_group_ranks(vllm_config: VllmConfig) -> tuple[int, ...] | None:
+    """The rank's expert-parallel group, or ``None`` for a dense model.
+
+    vLLM creates no expert-parallel group at all for a non-MoE model
+    (``distributed/parallel_state.py:1893-1896``), so a dense config has no
+    group to report rather than a group of one.
+    """
+
+    model_config = vllm_config.model_config
+    text_config = _safe(lambda: model_config.hf_text_config)
+    is_moe = getattr(model_config, "is_moe", None)
+    if is_moe is None:
+        is_moe = bool(getattr(text_config, "num_local_experts", None))
+    if not is_moe:
+        return None
+    return expert_parallel_geometry(vllm_config).ep_ranks
+
+
 def model_dims_from_vllm_config(vllm_config: VllmConfig) -> ModelDims:
     """Read the per-rank geometry off a ``VllmConfig``.
 
@@ -736,9 +851,20 @@ def model_dims_from_vllm_config(vllm_config: VllmConfig) -> ModelDims:
         )
     )
     raw_num_experts = getattr(text_config, "num_local_experts", None)
-    num_experts = (
+    # The Hugging Face field named num_local_experts is the GLOBAL expert count
+    # of one Granite MoE layer; vLLM passes it straight through as num_experts
+    # (model_executor/models/granitemoe.py:247-254). vLLM then adds the EPLB
+    # redundant copies to obtain its global count
+    # (model_executor/layers/fused_moe/layer.py:73-96), which defaults to zero
+    # (config/parallel.py:70).
+    routed_experts = (
         int(geom("num_experts", lambda: raw_num_experts, 0))
         if raw_num_experts is not None
+        else 0
+    )
+    num_experts = (
+        routed_experts + _num_redundant_experts(parallel_config)
+        if routed_experts > 0
         else 0
     )
     top_k = (
@@ -752,16 +878,23 @@ def model_dims_from_vllm_config(vllm_config: VllmConfig) -> ModelDims:
         if num_experts > 0
         else 0
     )
-    ep_size = (
-        max(int(getattr(parallel_config, "data_parallel_size", 1) or 1), 1)
-        if bool(getattr(parallel_config, "enable_expert_parallel", False))
-        else 1
-    )
-    if num_experts > 0 and num_experts % ep_size:
+    geometry = expert_parallel_geometry(vllm_config)
+    if num_experts > 0 and geometry.ep_size > num_experts:
         raise ValueError(
-            "vLLM MoE expert count must divide the enabled expert-parallel size"
+            f"vLLM expert-parallel world {geometry.ep_size} exceeds the "
+            f"{num_experts} experts of an MoE layer, so a rank would own none "
+            "and receive no dispatched token"
         )
-    local_num_experts = num_experts // ep_size if num_experts > 0 else 0
+    if num_experts > 0:
+        # model_executor/layers/fused_moe/expert_map_manager.py:62-69 spreads
+        # the global experts as evenly as possible and gives the low EP ranks
+        # the remainder; an uneven division is legal for the expert map.
+        base_experts, remainder = divmod(num_experts, geometry.ep_size)
+        local_num_experts = (
+            base_experts + 1 if geometry.ep_rank < remainder else base_experts
+        )
+    else:
+        local_num_experts = 0
     dtype_bytes = int(geom("dtype_bytes", lambda: model_config.dtype.itemsize, 2))
     dims = ModelDims(
         num_layers=int(
@@ -787,8 +920,12 @@ def model_dims_from_vllm_config(vllm_config: VllmConfig) -> ModelDims:
         defaulted_fields=tuple(defaulted),
         num_experts=num_experts,
         top_k=top_k,
+        # Under expert parallelism a device owns whole experts and the expert
+        # weights are not tensor-sharded at all (moe tp_size becomes 1); without
+        # it they shard across the FLATTENED dp * pcp * tp device set, not
+        # across tp alone (fused_moe/config.py:1217-1252, 1324-1329).
         moe_intermediate_size=(
-            max(intermediate // tp_size, 1) if num_experts > 0 else None
+            max(intermediate // geometry.moe_tp_size, 1) if num_experts > 0 else None
         ),
         local_num_experts=local_num_experts,
     )
@@ -1165,6 +1302,10 @@ class SimExecutor(_ExecutorBase):
             getattr(parallel_config, "world_size", 0) or self.tp_size * self.pp_size
         )
         self.dims = model_dims_from_vllm_config(self.vllm_config)
+        self.expert_parallel = expert_parallel_geometry(self.vllm_config)
+        #: the rank's expert-parallel group, or None for a dense model
+        self.ep_ranks = expert_group_ranks(self.vllm_config)
+        self._bind_expert_group()
         self.step_index = 0
         self._model_answers = _ModelAnswers(
             vllm_config=self.vllm_config,
@@ -1417,6 +1558,22 @@ class SimExecutor(_ExecutorBase):
     def _resolve_token_id(self) -> int:
         """Fabricated token id: mid-vocabulary, never a stop token."""
         return _resolve_token_id(self.dims.vocab_size, self.config.token_id)
+
+    def _bind_expert_group(self) -> None:
+        """Hand the derived expert group to a sink that accepts one.
+
+        Binding happens exactly once, before any step, and only when the active
+        parallel configuration actually uses expert parallelism. Every other
+        configuration performs no binding at all, so a sink keeps whatever
+        ``ep_ranks`` its own configuration declared.
+        """
+
+        if not self.expert_parallel.use_ep or self.ep_ranks is None:
+            return
+        sink = self.step_sink
+        if not isinstance(sink, ExpertGroupStepSink):
+            return
+        sink.bind_expert_group(self.ep_ranks)
 
     def _sample_output_fields(
         self,

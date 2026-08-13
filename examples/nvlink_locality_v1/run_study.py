@@ -19,14 +19,22 @@ PLACEMENTS = {
     "AABB": ("a", "a", "b", "b"),
     "ABCD": ("a", "b", "c", "d"),
 }
+#: CORE-42 requalification: the all-local services are the maximum endpoint
+#: load charged by CORE-41, not the superseded 4,538,000 ps and 9,047,000 ps
+#: maximum source egress. Every AABB and ABCD row is unchanged.
 EXPECTED_CELLS = {
-    (1_024, "AAAA"): (2_983_936, 0, 2_983_936, 4_538_000),
+    (1_024, "AAAA"): (2_983_936, 0, 2_983_936, 6_652_000),
     (1_024, "AABB"): (2_983_936, 2_011_136, 972_800, 2_194_000),
     (1_024, "ABCD"): (2_983_936, 2_983_936, 0, 0),
-    (2_048, "AAAA"): (5_967_872, 0, 5_967_872, 9_047_000),
+    (2_048, "AAAA"): (5_967_872, 0, 5_967_872, 13_286_000),
     (2_048, "AABB"): (5_967_872, 4_022_272, 1_945_600, 4_358_000),
     (2_048, "ABCD"): (5_967_872, 5_967_872, 0, 0),
 }
+#: whole-nanosecond quantization window allowed over the exact serialization
+#: floor of an all-local cell: one nanosecond per serial phase
+NVLINK_QUANTIZATION_WINDOW_PS = 48_000
+#: exact serialization floors of the all-local cells, in picoseconds
+NVLINK_SERVICE_FLOORS_PS = {1_024: 6_630_969, 2_048: 13_261_938}
 DIRECT_GOAL_ORACLES = {
     1_024: (
         20_392,
@@ -38,16 +46,19 @@ DIRECT_GOAL_ORACLES = {
     ),
 }
 EXPECTED_JCT_BANDS = {
-    (1_024, "AAAA"): (4_562_000, 4_562_000),
+    (1_024, "AAAA"): (6_676_000, 6_676_000),
     (1_024, "AABB"): (136_246_720, 136_246_720),
     (1_024, "ABCD"): (155_702_720, 155_702_864),
-    (2_048, "AAAA"): (9_071_000, 9_071_000),
+    (2_048, "AAAA"): (13_310_000, 13_310_000),
     (2_048, "AABB"): (176_469_440, 176_469_440),
     (2_048, "ABCD"): (215_381_440, 215_381_584),
 }
+#: fixed compute estimate carried by every cell, in picoseconds
+COMPUTE_ESTIMATE_PS = 24_000
 EXPECTED_PHASES = 48
 EXPECTED_POSITIVE_PAIRS = 144
 EXPECTATIONS_COMMIT = "dd1eefebc84091c547d8cad10225b21ab85a7706"
+REQUALIFICATION_EXPECTATIONS_COMMIT = "a455bc4581b79fcd8d3c0021a50e449276afb477"
 EVIDENCE_AUTHORED_AGAINST = "6973bd0e3ed6091c403c7055ee01c2d8ae0ae970"
 
 
@@ -86,6 +97,22 @@ def _check_frozen_registry() -> None:
             raise AssertionError("JCT direction is not strictly increasing")
     if EXPECTED_CELLS[(2_048, "ABCD")][0] != 2 * EXPECTED_CELLS[(1_024, "ABCD")][0]:
         raise AssertionError("payload sweep no longer doubles directed bytes")
+    for vector_bytes, floor_ps in NVLINK_SERVICE_FLOORS_PS.items():
+        service_ps = EXPECTED_CELLS[(vector_bytes, "AAAA")][3]
+        if not floor_ps <= service_ps <= floor_ps + NVLINK_QUANTIZATION_WINDOW_PS:
+            raise AssertionError(
+                "registered all-local service leaves its serialization window"
+            )
+        jct_low, jct_high = EXPECTED_JCT_BANDS[(vector_bytes, "AAAA")]
+        if jct_low != jct_high or jct_low != service_ps + COMPUTE_ESTIMATE_PS:
+            raise AssertionError(
+                "registered all-local JCT is not service plus the fixed compute term"
+            )
+    doubling_slack_ps = (
+        2 * EXPECTED_CELLS[(1_024, "AAAA")][3] - EXPECTED_CELLS[(2_048, "AAAA")][3]
+    )
+    if not 0 <= doubling_slack_ps <= NVLINK_QUANTIZATION_WINDOW_PS:
+        raise AssertionError("registered payload doubling leaves its quantization window")
     if any(size <= 0 or len(digest) != 64 for size, digest in DIRECT_GOAL_ORACLES.values()):
         raise AssertionError("direct GOAL oracle is malformed")
     if EXPECTED_PHASES <= 0 or EXPECTED_POSITIVE_PAIRS <= 0:
@@ -95,8 +122,8 @@ def _check_frozen_registry() -> None:
 def check_only(args: argparse.Namespace) -> None:
     _check_frozen_registry()
     print(
-        f"check-only out={args.out}; validated the frozen TRAF-10 registry "
-        "and produced no artifacts"
+        f"check-only out={args.out}; validated the frozen TRAF-10 registry and "
+        "its CORE-42 requalification literals, and produced no artifacts"
     )
 
 
@@ -236,7 +263,10 @@ def _run_cell(
 
     class FixedProvider(ComputeProvider):
         def estimate(self, kernel, gpu):
-            return DurationEstimate(duration_ps=24_000, bound="declared-fixed")
+            return DurationEstimate(
+                duration_ps=COMPUTE_ESTIMATE_PS,
+                bound="declared-fixed",
+            )
 
     workdir = out / f"vector-{vector_bytes}" / placement_name
     sink = HtsimStepSink(
@@ -642,6 +672,33 @@ def _fatal_checks(
             for vector_bytes, (_, sink) in omitted.items()
         }
     )
+    physical_bounds = []
+    for vector_bytes in VECTOR_BYTES:
+        floor_ps = NVLINK_SERVICE_FLOORS_PS[vector_bytes]
+        ceiling_ps = floor_ps + NVLINK_QUANTIZATION_WINDOW_PS
+        locality = cells[(vector_bytes, "AAAA")]["locality"]
+        observed_service_ps = locality["nvlink_service_ps"]
+        observed_jct_ps = cells[(vector_bytes, "AAAA")]["jct_ps"]
+        physical_bounds.append(
+            {
+                "vector_bytes": vector_bytes,
+                "serialization_floor_ps": floor_ps,
+                "quantization_ceiling_ps": ceiling_ps,
+                "observed_nvlink_service_ps": observed_service_ps,
+                "observed_jct_ps": observed_jct_ps,
+                "passed": floor_ps <= observed_service_ps <= ceiling_ps
+                and observed_jct_ps == observed_service_ps + COMPUTE_ESTIMATE_PS,
+            }
+        )
+    observed_doubling_slack_ps = (
+        2 * cells[(1_024, "AAAA")]["locality"]["nvlink_service_ps"]
+        - cells[(2_048, "AAAA")]["locality"]["nvlink_service_ps"]
+    )
+    payload_doubling = {
+        "observed_slack_ps": observed_doubling_slack_ps,
+        "window_ps": NVLINK_QUANTIZATION_WINDOW_PS,
+        "passed": 0 <= observed_doubling_slack_ps <= NVLINK_QUANTIZATION_WINDOW_PS,
+    }
     phase_guards = [
         _phase_partition_guards(vector_bytes, supply)
         for vector_bytes in VECTOR_BYTES
@@ -653,6 +710,8 @@ def _fatal_checks(
         "all_intra_zero_fabric": all_intra,
         "all_remote_zero_nvlink": all_remote,
         "metric_visibility": metric_visibility,
+        "physical_bounds": physical_bounds,
+        "payload_doubling": payload_doubling,
         "phase_partition": phase_guards,
         "single_node_tp_widths": tp_widths,
         "quiescence": quiescence,
@@ -663,6 +722,8 @@ def _fatal_checks(
         and all(row["passed"] for row in all_intra)
         and all(row["passed"] for row in all_remote)
         and all(row["passed"] for row in metric_visibility)
+        and all(row["passed"] for row in physical_bounds)
+        and payload_doubling["passed"]
         and all(row["passed"] for row in phase_guards)
         and all(row["passed"] for row in tp_widths)
         and all(quiescence.values())
@@ -713,6 +774,9 @@ def run_study(out: Path) -> dict[str, object]:
         "schema": "simllm-nvlink-locality-study-v1",
         "provenance": {
             "expectations_commit": EXPECTATIONS_COMMIT,
+            "requalification_expectations_commit": (
+                REQUALIFICATION_EXPECTATIONS_COMMIT
+            ),
             "evidence_authored_against": EVIDENCE_AUTHORED_AGAINST,
             "observed_simllm_revision": _git_revision("HEAD"),
             "observed_htsim_gitlink": _git_revision("HEAD:third_party/htsim"),
@@ -727,9 +791,9 @@ def run_study(out: Path) -> dict[str, object]:
             "profile": "rnic-nn-fluid",
             "linkspeed_bps": 400_000_000_000,
             "nvlink_bandwidth_bytes_per_second": NVLINK_BYTES_PER_SECOND,
-            "nvlink_model": "declared-flat-per-source-egress",
+            "nvlink_model": "declared-flat-maximum-endpoint-load",
             "nvlink_calibrated": False,
-            "compute_estimate_ps": 24_000,
+            "compute_estimate_ps": COMPUTE_ESTIMATE_PS,
             "vector_bytes": list(VECTOR_BYTES),
             "placements": {key: list(value) for key, value in PLACEMENTS.items()},
         },

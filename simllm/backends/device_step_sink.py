@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, replace
 
 from simllm.backends.step_lowerer import ObservedStepLowerer, SerialStepLowererConfig
 from simllm.core import (
@@ -80,6 +81,33 @@ class DeviceRuntimeStepSink:
             raise RuntimeError("cannot bind a clock after step execution")
         self._clock = clock
         self._reducer = CompletionReducer(clock)
+
+    def bind_expert_group(self, ep_ranks: Sequence[int]) -> None:
+        """Adopt the adapter-derived expert-parallel group before any step.
+
+        The adapter binds this only when the active parallel configuration uses
+        expert parallelism, so a configuration that declared its own group and
+        an adapter that derives the same one agree silently, while a
+        disagreement is a hard error rather than a quiet override.
+        """
+
+        ranks = tuple(ep_ranks)
+        if not ranks:
+            raise ValueError("ep_ranks must not be empty")
+        current = self.lowerer.config.ep_ranks
+        if current is not None and tuple(current) != ranks:
+            raise RuntimeError(
+                "DeviceRuntimeStepSink already declares expert-parallel group "
+                f"{tuple(current)}, which disagrees with the adapter-derived "
+                f"{ranks}"
+            )
+        if current is not None:
+            return
+        if self._outcomes:
+            raise RuntimeError("cannot bind an expert group after step execution")
+        self.lowerer = ObservedStepLowerer(
+            replace(self.lowerer.config, ep_ranks=ranks)
+        )
 
     def __call__(
         self,
