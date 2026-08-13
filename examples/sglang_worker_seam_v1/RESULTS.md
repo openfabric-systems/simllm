@@ -123,7 +123,12 @@ All held; none is reported as a fraction.
 - Fatal guards: seven predicates, all held, never scored.
 - Structural evidence, separate: the import-free adapter tests in
   `tests/test_adapters_sglang.py` and the byte-lock test in
-  `tests/test_sglang_communicator.py`.
+  `tests/test_sglang_communicator.py`. One of those tests is skipped unless
+  SGLang is installed and asserts that every field this adapter reads with
+  getattr exists on the pinned `Req`, `ScheduleBatch` and `SamplingParams`.
+  It was executed once against the installed pin, outside CI and after the
+  measured run, and passed; a rename upstream would otherwise turn a getattr
+  default into a silent wrong answer.
 
 ## What this run does not demonstrate
 

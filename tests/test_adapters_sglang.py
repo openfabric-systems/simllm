@@ -373,11 +373,56 @@ def test_a_step_with_no_consuming_row_reports_zero_sampled():
 
 
 @pytest.mark.skipif(not SGLANG_INSTALLED, reason="requires the pinned SGLang install")
-def test_pinned_sglang_request_exposes_the_transcribed_fields():
-    from sglang.srt.managers.schedule_batch import Req
+def test_pinned_sglang_classes_carry_every_transcribed_field():
+    """The names this adapter reads with getattr exist on the pinned classes.
 
-    for name in ("inflight_middle_chunks", "is_retracted", "output_ids", "finished"):
-        assert hasattr(Req, name) or name in Req.__init__.__code__.co_names
+    Skipped wherever SGLang is absent, which includes CI. It is the structural
+    half of the SGL-12 transcription: a rename upstream turns a getattr default
+    into a silent wrong answer, and this test turns it into a failure.
+    """
+
+    import inspect
+
+    from sglang.srt.managers.schedule_batch import Req, ScheduleBatch
+    from sglang.srt.sampling.sampling_params import SamplingParams
+
+    request_source = inspect.getsource(Req.__init__)
+    for name in (
+        "inflight_middle_chunks",
+        "is_retracted",
+        "origin_input_ids",
+        "output_ids",
+        "cached_tokens",
+        "vocab_size",
+        "eos_token_ids",
+        "tokenizer",
+    ):
+        assert f"self.{name}" in request_source, name
+    assert callable(Req.finished)
+    assert "self.grammar" in inspect.getsource(Req)
+
+    for name in (
+        "reqs",
+        "forward_mode",
+        "seq_lens_cpu",
+        "extend_lens",
+        "decoding_reqs",
+        "return_logprob",
+        "device",
+        "spec_algorithm",
+    ):
+        assert name in ScheduleBatch.__dataclass_fields__, name
+
+    sampling_source = inspect.getsource(SamplingParams)
+    for name in (
+        "max_new_tokens",
+        "min_new_tokens",
+        "ignore_eos",
+        "stop_token_ids",
+        "stop_strs",
+        "stop_regex_strs",
+    ):
+        assert f"    {name}:" in sampling_source or f"self.{name}" in sampling_source, name
 
 
 # Geometry
