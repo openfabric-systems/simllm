@@ -40,6 +40,7 @@ HTML_ROOT_URL = re.compile(
     r"\b(?:href|src)\s*=\s*([\"'])/(?!/).*?\1",
     flags=re.IGNORECASE,
 )
+MARKDOWN_API_ROUTE = re.compile(r"`/(?:generate|v1/[A-Za-z0-9_.{}-]+)`")
 PERSONAL_SCRIPT_PATH = re.compile(
     r"(?:/(?:home|Users|data[0-9]*|scratch|gpfs|nfs)/[^/\s`'\"]+|"
     r"[A-Za-z]:[\\/](?:Users|Documents and Settings)[\\/][^\\/\s`'\"]+|"
@@ -83,7 +84,9 @@ def _line_matches(text: str, pattern: re.Pattern[str]) -> list[tuple[int, str]]:
 
 def _mask_document_urls(text: str) -> str:
     return "\n".join(
-        HTML_ROOT_URL.sub("", MARKDOWN_ROOT_URL.sub("", line))
+        MARKDOWN_API_ROUTE.sub(
+            "", HTML_ROOT_URL.sub("", MARKDOWN_ROOT_URL.sub("", line))
+        )
         for line in text.splitlines()
     )
 
@@ -167,11 +170,13 @@ def test_absolute_path_matcher_ignores_portable_path_forms() -> None:
         "[Guide](" + "/docs/guide)",
         '<a href="' + '/docs/guide">Guide</a>',
         '<img src="' + '/assets/plot.png">',
+        "`" + "/generate" + "`",
     )
     assert not any(
         POSIX_ABSOLUTE_PATH.search(_mask_document_urls(url))
         for url in root_relative_urls
     )
+    assert POSIX_ABSOLUTE_PATH.search(_mask_document_urls("`" + "/usr" + "`"))
 
 
 def test_architecture_exception_does_not_allow_a_deeper_path() -> None:
