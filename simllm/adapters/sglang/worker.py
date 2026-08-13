@@ -79,6 +79,7 @@ import os
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from numbers import Integral
 from typing import Any
 
 from simllm.adapters.sglang._version import PINNED_SGLANG_COMMIT
@@ -494,7 +495,333 @@ class SglStepTranslator:
 
 # Geometry
 
-def model_dims_from_sglang(model_config: Any, tp_size: int = 1) -> ModelDims:
+_MOE_SENTINEL_FIELDS = (
+    "num_local_experts",
+    "num_experts",
+    "num_experts_per_tok",
+    "moe_intermediate_size",
+    "n_routed_experts",
+    "moe_num_experts",
+    "moe_top_k",
+    "ffn_config",
+)
+
+_UNSUPPORTED_MOE_MODEL_TYPES = {
+    "afmoe",
+    "bailing_moe",
+    "cohere2_moe",
+    "dbrx",
+    "deepseek_v2",
+    "deepseek_v3",
+    "exaone_moe",
+    "glm4_moe",
+    "gpt_oss",
+    "hunyuan_moe",
+    "kimi_linear",
+    "lfm2_moe",
+    "qwen2_moe",
+}
+
+_UNSUPPORTED_MOE_ARCHITECTURES = {
+    "quantmixtralforcausallm",
+    "qwen2moeforcausallm",
+    "deepseekv2forcausallm",
+    "deepseekv3forcausallm",
+    "dbrxforcausallm",
+}
+
+
+def _config_field_values(model_config: Any, hf: Any, name: str) -> tuple[Any, ...]:
+    """Read one config field without counting a mirrored wrapper twice."""
+
+    values: list[Any] = []
+    sources = (hf,) if hf is model_config else (hf, model_config)
+    for source in sources:
+        if source is None:
+            continue
+        try:
+            value = getattr(source, name, None)
+        except Exception as exc:  # noqa: BLE001 - framework config accessors move
+            logger.debug("SGLang config accessor for %s failed: %s", name, exc)
+            continue
+        if value is not None:
+            values.append(value)
+    return tuple(values)
+
+
+def _strict_positive_int(name: str, values: tuple[Any, ...]) -> int:
+    if not values:
+        raise ValueError(f"SGLang MoE config is missing required field {name}")
+    normalized: list[int] = []
+    for value in values:
+        if isinstance(value, bool) or not isinstance(value, Integral):
+            raise ValueError(  # noqa: TRY004 - frozen public validation contract
+                f"SGLang MoE field {name} must be an integer, got {value!r}"
+            )
+        number = int(value)
+        if number <= 0:
+            raise ValueError(f"SGLang MoE field {name} must be positive, got {number}")
+        normalized.append(number)
+    if len(set(normalized)) != 1:
+        raise ValueError(f"SGLang MoE aliases for {name} disagree: {normalized}")
+    return normalized[0]
+
+
+def _strict_nonnegative_int(name: str, value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise TypeError(f"SGLang MoE field {name} must be an integer, got {value!r}")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"SGLang MoE field {name} must be nonnegative, got {result}")
+    return result
+
+
+def _matching_moe_family(model_config: Any, hf: Any) -> str | None:
+    model_types = {
+        str(value).strip().lower().replace("-", "_")
+        for value in _config_field_values(model_config, hf, "model_type")
+        if str(value).strip()
+    }
+    architectures: set[str] = set()
+    for value in _config_field_values(model_config, hf, "architectures"):
+        if isinstance(value, str):
+            architectures.add(value.strip().lower())
+        else:
+            try:
+                architectures.update(str(item).strip().lower() for item in value)
+            except TypeError as exc:
+                raise ValueError("SGLang model architectures must be a string sequence") from exc
+
+    matches: list[str] = []
+    if "granitemoe" in model_types or "granitemoeforcausallm" in architectures:
+        matches.append("granite")
+    if "mixtral" in model_types or "mixtralforcausallm" in architectures:
+        matches.append("mixtral")
+    if "qwen3_moe" in model_types or "qwen3moeforcausallm" in architectures:
+        matches.append("qwen3_moe")
+    supported = set(matches)
+    if len(supported) > 1:
+        raise ValueError(f"SGLang model config identifies conflicting MoE families: {matches}")
+    explicit_unsupported = bool(
+        model_types.intersection(_UNSUPPORTED_MOE_MODEL_TYPES)
+        or architectures.intersection(_UNSUPPORTED_MOE_ARCHITECTURES)
+    )
+    if supported and explicit_unsupported:
+        raise ValueError(
+            "SGLang model_type and architectures identify conflicting MoE families: "
+            f"model_types={sorted(model_types)}, architectures={sorted(architectures)}"
+        )
+    if supported:
+        return next(iter(supported))
+    architecture_identifies_moe = any(
+        "moe" in name or "mixtral" in name or "dbrx" in name for name in architectures
+    )
+    return "unsupported" if explicit_unsupported or architecture_identifies_moe else None
+
+
+def _sglang_moe_parallel_sizes(
+    tp_size: Any, moe_ep_size: Any, moe_dp_size: Any
+) -> tuple[int, int, int]:
+    """Derive SGLang's implicit MoE TP width from declared parallel sizes."""
+
+    tp = _strict_positive_int("tp_size", (tp_size,))
+    ep = _strict_positive_int("moe_ep_size", (moe_ep_size,))
+    dp = _strict_positive_int("moe_dp_size", (moe_dp_size,))
+    denominator = ep * dp
+    if tp % denominator:
+        raise ValueError(
+            f"SGLang tp_size {tp} must be divisible by moe_ep_size * moe_dp_size "
+            f"({ep} * {dp})"
+        )
+    return ep, tp // denominator, dp
+
+
+def _has_moe_sentinel(model_config: Any, hf: Any) -> bool:
+    return any(
+        _config_field_values(model_config, hf, name) for name in _MOE_SENTINEL_FIELDS
+    )
+
+
+def _reject_unsupported_moe_mechanisms(model_config: Any, hf: Any) -> None:
+    positive_fields = (
+        "n_shared_experts",
+        "shared_expert_intermediate_size",
+        "moe_shared_expert_intermediate_size",
+        "first_k_dense_replace",
+        "num_dense_layers",
+        "num_nextn_predict_layers",
+        "kv_lora_rank",
+        "q_lora_rank",
+        "qk_nope_head_dim",
+        "qk_rope_head_dim",
+    )
+    for name in positive_fields:
+        for value in _config_field_values(model_config, hf, name):
+            if isinstance(value, bool) or not isinstance(value, Integral):
+                raise TypeError(
+                    f"SGLang MoE mechanism field {name} must be an integer, got {value!r}"
+                )
+            if int(value) > 0:
+                raise NotImplementedError(
+                    f"SGLang MoE field {name}={int(value)} needs shared, hybrid, or MLA "
+                    "geometry that ModelDims cannot represent; tracked by SGL-18"
+                )
+
+    for name in ("use_mla", "quantization", "quantization_config"):
+        for value in _config_field_values(model_config, hf, name):
+            if value and str(value).strip().lower() not in {"none", "false"}:
+                raise NotImplementedError(
+                    f"SGLang MoE field {name} needs MLA or quantized-weight geometry "
+                    "that this reader cannot represent; tracked by SGL-18"
+                )
+
+    for value in _config_field_values(model_config, hf, "moe_layer_freq"):
+        if isinstance(value, bool) or not isinstance(value, Integral):
+            raise TypeError(
+                f"SGLang MoE mechanism field moe_layer_freq must be an integer, got {value!r}"
+            )
+        if int(value) != 1:
+            raise NotImplementedError(
+                "SGLang mixed dense/routed layer schedules need per-layer geometry; "
+                "tracked by SGL-18"
+            )
+    for value in _config_field_values(model_config, hf, "decoder_sparse_step"):
+        if isinstance(value, bool) or not isinstance(value, Integral):
+            raise TypeError(
+                "SGLang MoE mechanism field decoder_sparse_step must be an integer, "
+                f"got {value!r}"
+            )
+        if int(value) != 1:
+            raise NotImplementedError(
+                "SGLang mixed dense/routed layer schedules need per-layer geometry; "
+                "tracked by SGL-18"
+            )
+    for value in _config_field_values(model_config, hf, "mlp_only_layers"):
+        if value:
+            raise NotImplementedError(
+                "SGLang mixed dense/routed layer schedules need per-layer geometry; "
+                "tracked by SGL-18"
+            )
+
+
+def _moe_geometry(
+    model_config: Any,
+    hf: Any,
+    *,
+    tp_size: Any,
+    moe_ep_size: Any,
+    moe_tp_size: Any,
+    moe_dp_size: Any,
+    ep_num_redundant_experts: Any,
+) -> tuple[int, int, int, int] | None:
+    family = _matching_moe_family(model_config, hf)
+    has_sentinel = _has_moe_sentinel(model_config, hf)
+    if family is None and not has_sentinel:
+        return None
+    is_multimodal = any(
+        bool(value)
+        for value in _config_field_values(model_config, hf, "is_multimodal")
+    )
+    outer_hf = getattr(model_config, "hf_config", None)
+    outer_architectures = _config_field_values(outer_hf, outer_hf, "architectures")
+    text_config = getattr(outer_hf, "text_config", None) or getattr(
+        outer_hf, "llm_config", None
+    )
+    wrapped_text_backbone = bool(
+        outer_hf is not None
+        and outer_hf is not hf
+        and outer_architectures
+        and text_config is hf
+    )
+    if family is not None and (is_multimodal or wrapped_text_backbone):
+        raise NotImplementedError(
+            "SGLang multimodal MoE wrappers need vision and text geometry; "
+            "tracked by SGL-18"
+        )
+    if family in (None, "unsupported"):
+        label = "unknown" if family is None else "shared or hybrid"
+        raise NotImplementedError(
+            f"SGLang {label} MoE config cannot be projected as dense; tracked by SGL-18"
+        )
+
+    tp_value = _strict_positive_int("tp_size", (tp_size,))
+    ep_size = _strict_positive_int("moe_ep_size", (moe_ep_size,))
+    dp_size = _strict_positive_int("moe_dp_size", (moe_dp_size,))
+    if (tp_value, ep_size, dp_size) != (1, 1, 1):
+        raise NotImplementedError(
+            "SGLang MoE geometry currently requires TP=EP=MoE-DP=1; "
+            f"got tp_size={tp_value}, moe_ep_size={ep_size}, "
+            f"moe_dp_size={dp_size}; tracked by SGL-18"
+        )
+    _, derived_tp_size, _ = _sglang_moe_parallel_sizes(
+        tp_value, ep_size, dp_size
+    )
+    parallel = {
+        "tp_size": tp_value,
+        "moe_ep_size": ep_size,
+        "moe_tp_size": derived_tp_size
+        if moe_tp_size is None
+        else _strict_positive_int("moe_tp_size", (moe_tp_size,)),
+        "moe_dp_size": dp_size,
+    }
+    if set(parallel.values()) != {1}:
+        raise NotImplementedError(
+            "SGLang MoE geometry currently requires TP=EP=MoE-DP=1; "
+            f"got {parallel}; tracked by SGL-18"
+        )
+    _reject_unsupported_moe_mechanisms(model_config, hf)
+    redundant_experts = _strict_nonnegative_int(
+        "ep_num_redundant_experts", ep_num_redundant_experts
+    )
+    if redundant_experts:
+        raise NotImplementedError(
+            "SGLang redundant expert copies need explicit physical ownership "
+            "geometry; tracked by SGL-18"
+        )
+
+    expert_aliases = tuple(
+        value
+        for name in ("num_local_experts", "num_experts", "n_routed_experts")
+        for value in _config_field_values(model_config, hf, name)
+    )
+    num_experts = _strict_positive_int("num_experts", expert_aliases)
+    top_k = _strict_positive_int(
+        "num_experts_per_tok",
+        tuple(
+            value
+            for name in ("num_experts_per_tok", "moe_top_k")
+            for value in _config_field_values(model_config, hf, name)
+        ),
+    )
+    if top_k > num_experts:
+        raise ValueError(
+            f"SGLang MoE top-k {top_k} exceeds global expert count {num_experts}"
+        )
+    width_fields = (
+        ("intermediate_size", "moe_intermediate_size")
+        if family in ("granite", "mixtral")
+        else ("moe_intermediate_size",)
+    )
+    expert_width = _strict_positive_int(
+        "moe_intermediate_size",
+        tuple(
+            value
+            for name in width_fields
+            for value in _config_field_values(model_config, hf, name)
+        ),
+    )
+    return num_experts, top_k, expert_width, num_experts
+
+
+def model_dims_from_sglang(
+    model_config: Any,
+    tp_size: int = 1,
+    *,
+    moe_ep_size: int = 1,
+    moe_tp_size: int | None = None,
+    moe_dp_size: int = 1,
+    ep_num_redundant_experts: int = 0,
+) -> ModelDims:
     """Read the per-rank geometry off an SGLang ``ModelConfig``.
 
     The geometry class itself is framework-neutral
@@ -504,6 +831,7 @@ def model_dims_from_sglang(model_config: Any, tp_size: int = 1) -> ModelDims:
     fallback is never silent: the defaulted field names are warned once and
     stamped on ``ModelDims.defaulted_fields``.
     """
+    raw_tp_size = tp_size
     tp_size = max(int(tp_size or 1), 1)
     defaulted: list[str] = []
 
@@ -520,6 +848,15 @@ def model_dims_from_sglang(model_config: Any, tp_size: int = 1) -> ModelDims:
 
     hf = getattr(model_config, "hf_text_config", None) or getattr(
         model_config, "hf_config", None
+    )
+    moe = _moe_geometry(
+        model_config,
+        hf,
+        tp_size=raw_tp_size,
+        moe_ep_size=moe_ep_size,
+        moe_tp_size=moe_tp_size,
+        moe_dp_size=moe_dp_size,
+        ep_num_redundant_experts=ep_num_redundant_experts,
     )
     hidden_size = int(geom("hidden_size", lambda: getattr(hf, "hidden_size", None), 4096))
     num_heads_total = int(
@@ -581,6 +918,10 @@ def model_dims_from_sglang(model_config: Any, tp_size: int = 1) -> ModelDims:
         ),
         dtype_bytes=int(geom("dtype_bytes", lambda: getattr(dtype, "itemsize", None), 2)),
         defaulted_fields=tuple(defaulted),
+        num_experts=0 if moe is None else moe[0],
+        top_k=0 if moe is None else moe[1],
+        moe_intermediate_size=None if moe is None else moe[2],
+        local_num_experts=0 if moe is None else moe[3],
     )
     if defaulted:
         logger.warning(
@@ -855,7 +1196,15 @@ class SimTpModelWorker(_TpWorkerBase):
         self._coordinator_event_stream: GroupCoordinatorEventStream | None = None
         super().__init__(*args, **kwargs)
         tp_size = int(getattr(self.server_args, "tp_size", 1) or 1)
-        self.dims = model_dims_from_sglang(self.model_config, tp_size)
+        self.dims = model_dims_from_sglang(
+            self.model_config,
+            tp_size,
+            moe_ep_size=getattr(self.ps, "moe_ep_size", 1) or 1,
+            moe_dp_size=getattr(self.ps, "moe_dp_size", 1) or 1,
+            ep_num_redundant_experts=int(
+                getattr(self.server_args, "ep_num_redundant_experts", 0) or 0
+            ),
+        )
         self.token_id = self._resolve_token_id()
         self._configure_simulated_communicator()
         _LATEST[:] = [self]
