@@ -267,7 +267,6 @@ def _expected_operation_ids(step_index: int) -> tuple[str, ...]:
 
 def _source_inventory(live_path: Path) -> dict[str, object]:
     from simllm.core import (
-        CollectiveWork,
         OperationCorrelation,
         execution_graph_from_json,
         step_record_from_json,
@@ -292,21 +291,6 @@ def _source_inventory(live_path: Path) -> dict[str, object]:
             tuple(operation.operation_id for operation in operations)
             == _expected_operation_ids(record.step_index)
         )
-        queues_valid = True
-        for operation in operations:
-            operation_id = operation.operation_id
-            if isinstance(operation.work, CollectiveWork):
-                expected_queue = "cuda:0:comm:ep"
-            elif operation_id.endswith(":requests-visible"):
-                expected_queue = (
-                    "cuda:0:visibility:1"
-                    if ":ubatch-1:" in operation_id
-                    else "cuda:0:visibility:0"
-                )
-            else:
-                expected_queue = f"cuda:{operation.rank}:compute"
-            queues_valid = queues_valid and operation.logical_queue == expected_queue
-        logical_stream_checks.append(queues_valid)
 
         operation_by_id = {
             operation.operation_id: operation for operation in operations
@@ -322,6 +306,7 @@ def _source_inventory(live_path: Path) -> dict[str, object]:
             source_slices = ((None, scheduled_ids),)
         expected_dependencies = {}
         expected_correlations = {}
+        expected_rank_queues = {}
         previous_combines: dict[int, str] = {}
         for layer in range(overlap.NUM_LAYERS):
             for slice_index, (microbatch, request_ids) in enumerate(source_slices):
@@ -345,9 +330,15 @@ def _source_inventory(live_path: Path) -> dict[str, object]:
                 for operation_id in pre_ids:
                     expected_dependencies[operation_id] = ((), previous)
                     expected_correlations[operation_id] = correlation
+                for rank, operation_id in enumerate(pre_ids):
+                    expected_rank_queues[operation_id] = (
+                        rank,
+                        f"cuda:{rank}:compute",
+                    )
                 dispatch_id = f"{prefix}:ep-dispatch"
                 expected_dependencies[dispatch_id] = ((), pre_ids)
                 expected_correlations[dispatch_id] = correlation
+                expected_rank_queues[dispatch_id] = (0, "cuda:0:comm:ep")
                 expert_ids = tuple(
                     f"{prefix}:rank-{rank}:experts"
                     for rank in range(overlap.DP_SIZE)
@@ -355,9 +346,15 @@ def _source_inventory(live_path: Path) -> dict[str, object]:
                 for operation_id in expert_ids:
                     expected_dependencies[operation_id] = ((), (dispatch_id,))
                     expected_correlations[operation_id] = correlation
+                for rank, operation_id in enumerate(expert_ids):
+                    expected_rank_queues[operation_id] = (
+                        rank,
+                        f"cuda:{rank}:compute",
+                    )
                 combine_id = f"{prefix}:ep-combine"
                 expected_dependencies[combine_id] = ((), expert_ids)
                 expected_correlations[combine_id] = correlation
+                expected_rank_queues[combine_id] = (0, "cuda:0:comm:ep")
                 previous_combines[slice_index] = combine_id
 
         logits = tuple(
@@ -371,9 +368,10 @@ def _source_inventory(live_path: Path) -> dict[str, object]:
             request_ids=scheduled_ids,
             batch_id=f"step-{record.step_index}",
         )
-        for logits_id in logits:
+        for rank, logits_id in enumerate(logits):
             expected_dependencies[logits_id] = ((), final_combines)
             expected_correlations[logits_id] = logits_correlation
+            expected_rank_queues[logits_id] = (rank, f"cuda:{rank}:compute")
         for slice_index, (microbatch, request_ids) in enumerate(source_slices):
             ubatch = 0 if microbatch is None else microbatch
             completion_id = (
@@ -384,6 +382,10 @@ def _source_inventory(live_path: Path) -> dict[str, object]:
                 request_ids=request_ids,
                 batch_id=f"step-{record.step_index}",
                 microbatch=microbatch,
+            )
+            expected_rank_queues[completion_id] = (
+                0,
+                f"cuda:0:visibility:{slice_index}",
             )
         dependency_checks.append(
             set(expected_dependencies) == set(operation_by_id)
@@ -401,6 +403,17 @@ def _source_inventory(live_path: Path) -> dict[str, object]:
             and all(
                 operation_by_id[operation_id].correlation == correlation
                 for operation_id, correlation in expected_correlations.items()
+            )
+        )
+        logical_stream_checks.append(
+            set(expected_rank_queues) == set(operation_by_id)
+            and all(
+                (
+                    operation_by_id[operation_id].rank,
+                    operation_by_id[operation_id].logical_queue,
+                )
+                == expected
+                for operation_id, expected in expected_rank_queues.items()
             )
         )
         frontier_valid = True
@@ -434,14 +447,23 @@ def _source_inventory(live_path: Path) -> dict[str, object]:
     )
     tree = ast.parse(schedule_path.read_text(encoding="utf-8"), schedule_path)
     imported_modules = set()
+    imported_symbols = set()
     referenced_names = set()
     referenced_attributes = set()
     argument_names = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             imported_modules.update(alias.name for alias in node.names)
+            imported_symbols.update(alias.name for alias in node.names)
+            imported_symbols.update(
+                alias.asname for alias in node.names if alias.asname is not None
+            )
         elif isinstance(node, ast.ImportFrom):
             imported_modules.add(node.module or "")
+            imported_symbols.update(alias.name for alias in node.names)
+            imported_symbols.update(
+                alias.asname for alias in node.names if alias.asname is not None
+            )
         elif isinstance(node, ast.Name):
             referenced_names.add(node.id)
         elif isinstance(node, ast.Attribute):
@@ -461,11 +483,16 @@ def _source_inventory(live_path: Path) -> dict[str, object]:
         "percent",
         "random",
     )
-    identifiers = referenced_names | referenced_attributes | argument_names
+    identifiers = (
+        referenced_names
+        | referenced_attributes
+        | argument_names
+        | imported_symbols
+    )
     synthetic_concurrency_absent = (
         not any(module == "random" for module in imported_modules)
         and not any(module.startswith("simllm.backends") for module in imported_modules)
-        and not forbidden_names & referenced_names
+        and not forbidden_names & identifiers
         and not any(
             fragment in identifier.lower()
             for identifier in identifiers
@@ -489,7 +516,7 @@ def _single_batch_identity(
     live_path: Path,
     routed_experts: Path,
 ) -> dict[str, object]:
-    """Compare control and observed from the same single-batch input time."""
+    """Compare control and observed after the same sequential request history."""
 
     from simllm.backends import DeviceRuntimeStepSink, SerialStepLowererConfig
     from simllm.compute import RooflineProvider
@@ -519,23 +546,30 @@ def _single_batch_identity(
     cumulative_checks = []
     cumulative_details = []
     for placement in overlap.COMM_CEILING_PS:
+        clocks = (VirtualClock(), VirtualClock())
+        sinks = tuple(
+            DeviceRuntimeStepSink(
+                config,
+                runtime=CoarseDeviceRuntime(overlap._profile(placement)),
+            )
+            for _ in range(2)
+        )
+        for sink, clock in zip(sinks, clocks, strict=True):
+            sink.bind_clock(clock)
         for row in rows:
-            record = step_record_from_json(row["record"])
-            if record.step_index not in overlap.SINGLE_BATCH_STEP_INDICES:
-                continue
+            source_record = step_record_from_json(row["record"])
+            if clocks[0].now_ps != clocks[1].now_ps:
+                raise RuntimeError("single-batch comparison prefix clocks diverged")
+            record = replace(source_record, virtual_time_ps=clocks[0].now_ps)
             observed = overlap._observations_from_source(row["source_graph"])
             control, added_edges = overlap._control_observations(
                 observed,
                 record.step_index,
             )
+            is_target = record.step_index in overlap.SINGLE_BATCH_STEP_INDICES
+            arm_observations = (control, observed) if is_target else (observed, observed)
             artifacts = []
-            for observations in (control, observed):
-                clock = VirtualClock(start_ps=record.virtual_time_ps)
-                sink = DeviceRuntimeStepSink(
-                    config,
-                    runtime=CoarseDeviceRuntime(overlap._profile(placement)),
-                )
-                sink.bind_clock(clock)
+            for sink, observations in zip(sinks, arm_observations, strict=True):
                 step_result = sink(record, observations)
                 outcome = sink.outcomes[-1]
                 artifacts.append(
@@ -547,6 +581,10 @@ def _single_batch_identity(
                         "step_result": step_result_to_json(step_result),
                     }
                 )
+            if not is_target:
+                if artifacts[0] != artifacts[1]:
+                    raise RuntimeError("identical single-batch prefixes diverged")
+                continue
             identical = added_edges == 0 and artifacts[0] == artifacts[1]
             checks.append(identical)
             details.append(
@@ -555,6 +593,10 @@ def _single_batch_identity(
                     "control_edges": added_edges,
                     "identical": identical,
                     "placement": placement,
+                    "prefix_steps": record.step_index,
+                    "request_metrics": artifacts[0]["step_result"][
+                        "request_metrics"
+                    ],
                     "step_index": record.step_index,
                 }
             )

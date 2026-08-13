@@ -164,6 +164,18 @@ def test_independent_dependency_and_correlation_grammar_can_fail(tmp_path):
     inventory = study._source_inventory(path)
     assert not all(inventory["correlation_grammar_checks"])
 
+    stream_operations = list(observations.operations)
+    stream_operations[0] = replace(
+        stream_operations[0],
+        rank=1,
+        logical_queue="cuda:1:compute",
+    )
+    changed_stream = replace(observations, operations=tuple(stream_operations))
+    path.write_text(json.dumps(_inventory_row(record, changed_stream)) + "\n")
+    inventory = study._source_inventory(path)
+    assert all(inventory["exact_submission_order_checks"])
+    assert not all(inventory["logical_stream_checks"])
+
 
 def test_behavioral_registry_scores_raw_serial_to_observed_tpot():
     study = _load(STUDY_PATH, "vllm_producer_qualification_behavior")
