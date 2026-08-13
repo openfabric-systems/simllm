@@ -1,10 +1,11 @@
 # Compute fidelity v1 results
 
-Run on 2026-08-13. All 12 fatal guards held and 101 of 102 genuine-risk
-instances passed. The one refuted relation, FIX-2, was refuted for a reason
-worth keeping: the inequality it registered had the wrong sign for the
-quantity it meant to capture, and the correctly measured quantity is reported
-beside it.
+Run on 2026-08-13. The run is **void with findings** because frozen fatal guard
+XFER-G4 was violated by a 1 ps integer-quantization residual. The measured rows
+and the post-specified zero-work check are retained, but no behavioral pass
+fraction is interpretable. FIX-2 was also refuted for a reason worth keeping:
+the inequality registered the wrong sign for the quantity it meant to capture,
+and the correctly measured quantity is reported beside it.
 
 Three results, in the order that decides how much of SimLLM's serving numbers
 can be defended:
@@ -21,7 +22,7 @@ can be defended:
    seam is machine-checked to fail closed on a B100 query rather than borrow
    one.
 3. The fixed per-step cost that the modeled compute path omits entirely is
-   worth between 2.8 and 13.3 times the whole modeled decode compute of a
+   worth between 1.79 and 12.31 times the whole modeled decode compute of a
    24-layer top-8 MoE step. This is the largest identified error in the
    project's serving numbers, and it is larger than the network corrections
    that preceded it.
@@ -38,34 +39,53 @@ as prior observations, so the genuine-risk denominator is the 47 cells whose
 raw samples had never been read, and it writes out the proposed stability
 refreeze in full before any statistic could shape it.
 
-The implementation commit is `7de897701e93d16873bf9350139fa9f71d870703`, which
-is the commit every registered run observed. The check-only command ran after
-it, validated the 50-cell inventory, the 47-cell denominator, the 102 scored
-instances, the 12 fatal guards and the `[440, 567]` launch bracket, invoked no
-CUDA and created no output directory.
+The implementation commit is `7de897701e93d16873bf9350139fa9f71d870703`.
+Every capture recorded that value as `HEAD`, but the final two did not observe
+a clean revision. The registered capture ran from a dirty worktree whose
+runner content was committed afterward as
+`96632de6ea1eb37285c271a86848ee739a7d2332`. That commit is a post-run content
+anchor, not an observed revision. No commit identifies the intermediate second
+runner. Accordingly, `results.json` records `observed_commit` as `null`, the
+recorded `HEAD`, the dirty state, the later content anchor and the captured
+runner's SHA-256 separately.
 
-Three captures ran. Each change between them was a harness defect, never a
-frozen band, and all three replicate the same scored outcome:
+For precision, `bounds.*.omitted_low_us` and `omitted_high_us` already existed
+in `7de8977`; those keys do not prove dirtiness. The registered artifact's
+post-specified XFER-G4 detail fields, effective-clock rows and corrected TTFT
+projection do. The provenance conclusion is unchanged, but it rests on the
+right evidence.
+
+The check-only command ran after the implementation commit. It validated the
+50-cell inventory, the 47-cell denominator, the 102 registered instances, the
+12 fatal guards and the `[440, 567]` launch bracket, invoked no CUDA and created
+no output directory. The runner now refuses tracked or untracked worktree
+changes before creating an output directory and rechecks the revision before
+writing results, so a future capture cannot repeat this provenance error.
+
+Three captures ran. The launch and stability measurements are retained, but
+the XFER-G4 predicate was changed after its frozen exact form failed. That
+change cannot turn either later capture into a valid run:
 
 | external output suffix | outcome |
 |---|---|
-| `compute-fidelity-v1` | VOID. 101 of 102 scored instances passed but the fatal guard XFER-G4 failed by 1 picosecond, because it asserted exact integer equality between a doubled kernel and twice a single kernel whose true value is 793,650,793.65 ps and is rounded once per call. |
-| `compute-fidelity-v1-final` | All 12 fatal guards held, 101 of 102 scored. The TTFT projection still added the whole per-step fixed cost to a makespan that already contains the compute term. |
-| `compute-fidelity-v1-registered` | The registered run. All 12 fatal guards held, 101 of 102 scored, and the projection replaces the compute term instead of adding to it. |
+| `compute-fidelity-v1` | VOID. Frozen XFER-G4 failed by 1 ps because it required exact integer equality between a doubled kernel and twice a single kernel whose real-valued duration is rounded once per call. This runner matches committed `7de8977`. |
+| `compute-fidelity-v1-final` | VOID against the unchanged freeze. A dirty intermediate runner relaxed XFER-G4 after observing its failure, and the TTFT projection still added the whole per-step fixed cost to a makespan that already contains the compute term. No commit identifies this runner. |
+| `compute-fidelity-v1-registered` | VOID against the unchanged freeze. This dirty runner used the improved zero-work check and replaced the modeled compute by adding only the omitted excess. Its content was committed later as `96632de`; the corrected upstream anchors and ratios in this report are post-specified projection repairs. |
 
-The XFER-G4 correction did not weaken the claim. The claim is that the roofline
-provider carries no additive launch, scheduling or sampling constant, and it is
-now tested in a form integer rounding cannot reach: a kernel with zero flops
-and zero bytes returns exactly 0 ps. The proportionality check keeps its
-original form with one picosecond of rounding allowed, which is six orders of
-magnitude below the smallest per-launch cost this study measures.
+The substantive XFER-G4 finding survives, but the frozen guard did not hold.
+`RooflineProvider` returns exactly 0 ps for a kernel with zero flops and zero
+bytes, a post-specified check that integer rounding cannot confound. Its
+real-valued roofline formula has no additive launch, scheduling or sampling
+constant, while its integer-picosecond API is not exactly proportional for the
+registered pair: the residual is 1 ps. The artifact therefore records XFER-G4
+as failed and the run as void.
 
 The compact tracked artifacts are:
 
 | artifact | SHA-256 | role |
 |---|---|---|
-| [results.json](results.json) | `a85df887f588d498b954bcf316ca83c8e1dc85f382d91e55c9d002db524aa66d` | per-cell statistics, per-launch attribution rows, launch measurements, bounds and every guard |
-| [expectations.json](expectations.json) | frozen at `62c088e` | matrix, bands, launch enumeration and inventory |
+| [results.json](results.json) | `a35be0170e6b287aa28cb1a80b7ffd5189735ac47f633464facbb9c0f39f0ee7` | per-cell statistics, per-launch attribution rows, launch measurements, corrected projections, provenance and every guard |
+| [expectations.json](expectations.json) | `1af653f703770043b16db06ca710a5a1f9536a072728fcb676012161fadaeaab` | frozen behavioral registry plus the explicitly post-specified upstream projection-anchor corrections |
 | probe source | `51fe1b90460d8f9755ffbc0b6b7835215acd7117c04a332e78dcfb39040dd170` | `tools/compute_capture/gpu_fixed_cost_probe.cu` |
 | input calibration artifact | `0be6dad653ff32a0f4667b5cb05f7ddaefdc06e8f6f1cea032bb8d285b42023f` | the immutable Turing capture this study re-reads, unchanged |
 
@@ -109,13 +129,14 @@ timer span is 100.352 us, a 0.54 percent difference (guard G6 allowed 25
 percent). CUPTI activity timing and the GPU's global timer are separate
 mechanisms, so this is a real cross-validation and not a restatement.
 
-Third angle, end-to-end plausibility. The modeled 224.0 us decode step implies
-4,464 tokens per second for a single request. Real single-request decode of a
-model this size is reported in milliseconds per token, not hundreds of
-microseconds. The bound in part FIX below moves the modeled step to between
-0.40 and 1.45 ms, which is the scale at which such deployments are actually
-reported, and it identifies the missing term rather than tuning a derate to
-match.
+Third angle, end-to-end plausibility. The landed mission study publishes an S5
+decode-step makespan band of 204 to 215 us, rather than the unsourced 224 us
+anchor used by the original projection. Applying the Turing omitted-excess
+measurement moves that whole-step band to 381.9 to 472.9 us under graph replay
+and 1,130.7 to 1,437.9 us eager. S5 includes both one-request and two-request
+steps, so its reciprocal is not per-request TPOT and no token-rate claim is
+derived from it. These are post-specified fixed-schedule projections, not B100
+predictions.
 
 ## Part VAR: what the 2 percent ceiling actually measured
 
@@ -290,13 +311,15 @@ accident; it has to be deliberately rewritten, which is what COMP-1 requires.
 
 ### There is no fixed term anywhere in the compute path
 
-Guard XFER-G4 establishes it structurally: `RooflineProvider` returns exactly
-0 ps for a kernel with zero flops and zero bytes, and doubling the work doubles
-the duration to within 1 ps of integer rounding. A modeled step is exactly its
-kernel service time. Guard XFER-G3 confirms `HostInitiationModel()` defaults to
+Frozen guard XFER-G4 does not establish exact proportionality: it fails by 1 ps
+because the public duration is integer-quantized. The post-specified zero-work
+check returns exactly 0 ps, and inspection of the homogeneous roofline formula
+shows no additive term before rounding. A modeled step is exactly its kernel
+service time. Guard XFER-G3 confirms `HostInitiationModel()` defaults to
 `initiation_delay_ps = 0` with profile `ideal`, and that model is in any case a
 per-send network initiation delay, not a per-kernel launch cost. Nothing in the
-compute path prices kernel launch, scheduling or sampling.
+compute path prices kernel launch, scheduling or sampling. The no-additive-term
+finding is retained, while the run remains void under the frozen guard.
 
 ### Launches per eager decode step
 
@@ -354,15 +377,15 @@ running ahead the two overlap, so the step floor is
 omits is `max(0, launches * per-launch cost - modeled compute)`. Against the
 modeled 99.36603 us B100 decode compute, over the frozen `[440, 567]` bracket:
 
-| per-launch regime | ns per launch | step fixed cost | omitted | multiple of modeled compute |
+| per-launch regime | ns per launch | step fixed cost | omitted excess | omitted excess / modeled compute |
 |---|---:|---:|---:|---:|
-| CUDA-graph replay | 630.12 | 277.3 to 357.3 us | 177.9 to 257.9 us | 2.79x to 3.60x |
-| device-side gap only | 1,602.56 | 705.1 to 908.7 us | 605.8 to 809.3 us | 7.10x to 9.14x |
-| eager, host-bound | 2,331.96 | 1,026.1 to 1,322.2 us | 926.7 to 1,222.9 us | 10.33x to 13.31x |
+| CUDA-graph replay | 630.12 | 277.3 to 357.3 us | 177.9 to 257.9 us | 1.79x to 2.60x |
+| device-side gap only | 1,602.56 | 705.1 to 908.7 us | 605.8 to 809.3 us | 6.10x to 8.14x |
+| eager, host-bound | 2,331.96 | 1,026.1 to 1,322.2 us | 926.7 to 1,222.9 us | 9.33x to 12.31x |
 
 The lower end of that bracket is the honest floor for a production deployment,
 because vLLM captures decode steps into CUDA graphs. Even there, the omitted
-fixed cost is 2.8 to 3.6 times the entire modeled compute of the step. The
+excess is 1.79 to 2.60 times the entire modeled compute of the step. The
 eager figure is the upper bound and the one that applies to any step a
 deployment cannot capture.
 
@@ -373,19 +396,19 @@ adding to it:
 
 | regime | modeled TTFT | TTFT with the fixed cost | increase |
 |---|---:|---:|---:|
-| CUDA-graph replay | 974.8 us | 1,152.7 to 1,232.8 us | +18.2% to +26.5% |
-| device-side gap only | 974.8 us | 1,580.6 to 1,784.1 us | +62.1% to +83.0% |
-| eager, host-bound | 974.8 us | 1,901.5 to 2,197.7 us | +95.1% to +125.4% |
+| CUDA-graph replay | 706.6 us | 884.5 to 964.5 us | +25.2% to +36.5% |
+| device-side gap only | 706.6 us | 1,312.4 to 1,515.9 us | +85.7% to +114.5% |
+| eager, host-bound | 706.6 us | 1,633.3 to 1,929.5 us | +131.1% to +173.1% |
 
-The decode step moves further, because it is smaller. The published 224.0 us
-step becomes 401.9 to 481.9 us under graph replay and 1,150.7 to 1,446.9 us
-eager, i.e. a modeled 4,464 tokens per second per request becomes 2,075 to
-2,488 under graph replay and 691 to 869 eager.
+The decode step moves further because it is smaller. The published S5 band of
+204 to 215 us becomes 381.9 to 472.9 us under graph replay and 1,130.7 to
+1,437.9 us eager. This is a whole-step projection and is not converted into a
+per-request token rate.
 
 That is the mission-relevant conclusion. After the network corrections, a
 decode step was compute bound at roughly 99 us of modeled compute against a few
-microseconds of communication. The fixed per-step cost the model omits is
-between 2.8 and 13.3 times that compute, so the step is not compute bound at
+microseconds of communication. The fixed per-step excess the model omits is
+between 1.79 and 12.31 times that compute, so the step is not compute bound at
 all: it is launch bound, and the binding constraint on every reported TTFT,
 TPOT and goodput number is a term the model does not have a place to put.
 
@@ -399,24 +422,26 @@ and a B100 host would very likely land below 2.3 us per eager launch and below
 turn it into one.
 
 What survives the transfer is the structure, not the constant. The launch count
-is a property of the model geometry and the framework, not of the GPU. The
-conclusion that the omitted term is a multiple of the modeled compute rather
-than a correction to it survives any plausible per-launch cost: it would take a
-per-launch cost below 225.8 ns for the graph-replay bound to fall under the
-modeled 99.4 us even at the low end of the launch bracket, which is 36 percent
-of what this device measures for a graph node. Establishing the production
-constant needs the target architecture, which is COMP-5.
+is a property of the model geometry and the framework, not of the GPU. At the
+low end of the bracket, 440 launches, the omitted excess remains at least one
+whole modeled compute only when the per-launch cost is at least 451.7 ns. That
+threshold is 71.7 percent of this device's measured 630.12 ns graph-node cost.
+The omission becomes zero at or below 225.8 ns. Establishing where a production
+host sits relative to those thresholds needs the target architecture, which is
+COMP-5.
 
-## Genuine-risk evidence
+## Genuine-risk evidence retained from the void run
 
-| scored family | passed | total | why it could fail independently |
-|---|---:|---:|---|
-| VAR-S1 trimmed CV below ceiling | 47 | 47 | a genuinely dispersed kernel spreads its central mass and fails regardless of the tail |
-| VAR-S3 maximum excursion ratio bounded | 47 | 47 | a heavy or unbounded tail exceeds the bound even when the core is tight; a statement about the tail, not the core |
-| VAR-S2 aggregate excursion fraction | 1 | 1 | a frequent rather than sparse disturbance |
-| PROBE reproduction, attribution and sparsity | 3 | 3 | the device could have been clean, or the excursions could have refused to attribute to one cause |
-| FIX launch bracket and bound | 3 | 4 | FIX-2 refuted; the registered inequality had the wrong sign for its intent |
-| **total** | **101** | **102** | |
+The frozen fatal precondition failed, so the observations below are findings
+and not an acceptance score.
+
+| registered family | retained observation | why it could fail independently |
+|---|---|---|
+| VAR-S1 trimmed CV below ceiling | every one of the 47 never-observed cells is below the ceiling | a genuinely dispersed kernel spreads its central mass and fails regardless of the tail |
+| VAR-S3 maximum excursion ratio bounded | every one of the 47 never-observed cells is bounded | a heavy or unbounded tail exceeds the bound even when the core is tight; a statement about the tail, not the core |
+| VAR-S2 aggregate excursion fraction | the aggregate fraction is 0.341 percent | a frequent rather than sparse disturbance |
+| PROBE reproduction, attribution and sparsity | excursions reproduce, attribute and remain sparse | the device could have been clean, or the excursions could have refused to attribute to one cause |
+| FIX launch bracket and bound | FIX-1, FIX-3 and FIX-4 hold; FIX-2 is refuted | FIX-2 registered the wrong sign for its intent |
 
 Entailment analysis. Every VAR relation was computed from raw samples before
 any artifact-identity, inventory or reproduction guard ran. Those guards assert
@@ -443,7 +468,7 @@ by-construction evidence and never increase a behavioral denominator:
 | XFER-G1 tracked table declares the Turing GPU and no envelope key | PASS |
 | XFER-G2 table raises `KeyError` on a `b100` query | PASS |
 | XFER-G3 `HostInitiationModel()` defaults to zero delay, profile `ideal` | PASS |
-| XFER-G4 roofline is exactly proportional with no additive term | PASS |
+| XFER-G4 roofline returned duration is exactly proportional | **FAIL, +1 ps residual; run VOID** |
 | XFER-G5 envelope floors and ratios reproduce to 1e-9 relative | PASS |
 
 ## Closure scope
@@ -463,7 +488,7 @@ by-construction evidence and never increase a behavioral denominator:
 | "100 percent kernel identity coverage for the supported run" | PASS for the benchmark families only, unchanged. |
 | "held-out per-kernel median error below 10 percent and p95 below 20 percent" | PASS at 0.674 and 1.773 percent, unchanged from the previous study. |
 | "per-phase median below 5 percent and p95 below 10 percent" | NOT DEMONSTRATED. |
-| "compute-only step error below 5 percent" | NOT DEMONSTRATED, and now known to be unreachable while the fixed per-step cost is absent: the omitted term alone is 2.8 to 13.3 times the modeled compute. |
+| "compute-only step error below 5 percent" | NOT DEMONSTRATED, and now known to be unreachable while the fixed per-step cost is absent: the omitted excess alone is 1.79 to 12.31 times the modeled compute. |
 | B100 efficiency-surface transfer | NOT DEMONSTRATED. Machine-checked to fail closed instead. |
 
 COMP-1 stays open. What changed is the reason: it is no longer open because
@@ -501,8 +526,10 @@ Two findings are recorded as prose here and in the module doc's narrative,
 which is where the rule says they belong:
 
 - There is no seam anywhere in the compute path that can carry a fixed
-  per-step cost. `RooflineProvider` is exactly proportional,
-  `ProfileTableProvider` returns a measured kernel duration, and
+  per-step cost. `RooflineProvider` has a homogeneous real-valued formula and
+  returns zero for zero work, though its integer result failed the frozen exact
+  proportionality guard by 1 ps. `ProfileTableProvider` returns a measured
+  kernel duration, and
   `HostInitiationModel` is a per-send network initiation delay rather than a
   per-kernel launch cost. Adding an uncalibrated knob would have been the
   fabricated number this study exists to avoid, so none was added. COMP-1
@@ -515,8 +542,8 @@ which is where the rule says they belong:
 
 ## Contradiction sweep
 
-No integrator-owned overview file was edited. The sweep found two statements
-that now need nuance:
+Rerun against merged `origin/main` on 2026-08-13. No integrator-owned overview
+file was edited. The sweep found four statements that need nuance:
 
 - `docs/README_PRO.md` says production SASS calibration and populated profile
   tables remain blocked on capture hardware under COMP-5. Half of that blocker
@@ -526,8 +553,17 @@ that now need nuance:
 - `docs/architecture.md` describes `initiation_delay_ps` as the analytical
   fallback for launch-path studies. That is true for the network launch path,
   per send. It does not cover the per-kernel launch path inside a step, which
-  this study bounds at 2.8 to 13.3 times the whole modeled compute of a decode
+  this study bounds at 1.79 to 12.31 times the whole modeled compute of a decode
   step and for which no seam exists.
+- `examples/end_to_end_replay_v1/RESULTS.md` and `docs/modules/preplay.md` carry
+  a prior 0.3 to 3 ms fixed-cost plausibility range and the composite 5x to 22x
+  optimism budget derived from it. Those are declared estimates, not silicon
+  measurements. This Turing bracket refines their fixed-cost component but
+  cannot replace a B100-facing value.
+- `docs/README_PRO.md` calls a fixed per-step compute constant landed. A caller
+  can supply constant service through a provider, but that seam does not
+  separately attribute launch, scheduling or sampling and does not model the
+  omitted term measured here.
 
 `README.md` still correctly calls SASS offline calibration planned under
 COMP-1 and COMP-5.
@@ -535,9 +571,9 @@ COMP-1 and COMP-5.
 ## Validation
 
 The probe compiled for `sm_75` and both modes ran to completion on all three
-captures. `ruff check .` passed and the full suite passed 1,304 tests with 7
-skips. `python3 scripts/task_progress.py --check` reports no drift, and no task
-closes, so `docs/task-ledger.json` and the generated progress block
-intentionally do not change. The registered study command reached its final
-acceptance assertion and exited nonzero solely because the scored relation
-FIX-2 was refuted.
+captures. Fix-round `ruff check .`, the full test suite and
+`python3 scripts/task_progress.py --check` pass. No task closes, so
+`docs/task-ledger.json` and the generated progress block intentionally do not
+change. The dirty registered harness exited nonzero when FIX-2 was refuted, but
+the unchanged freeze also makes every capture void because XFER-G4 failed. The
+tracked artifact and report now carry that controlling disposition.

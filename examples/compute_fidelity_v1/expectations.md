@@ -1,4 +1,4 @@
-# Compute fidelity v1: frozen expectations
+# Compute fidelity v1: frozen expectations and corrected projections
 
 This freeze precedes the implementation of `run_study.py`, the CUDA probe
 `tools/compute_capture/gpu_fixed_cost_probe.cu`, and every measurement this
@@ -6,6 +6,13 @@ study reports. It targets the three questions that decide whether SimLLM's
 serving numbers can be defended, because after the network corrections a
 decode step is compute bound: roughly 99 microseconds of modeled compute
 against a few microseconds of communication.
+
+The behavioral registry remains exactly the freeze in commit `62c088e`. After
+the run, the token-ownership study retracted the prefill projection anchor and
+the mission study landed a real decode-step band. This copy corrects those two
+non-scored projection inputs to 706,622,768 ps and 204,000,000 to 215,000,000
+ps. The corrections are post-specified and do not repair or change any frozen
+guard, especially XFER-G4.
 
 The study has three parts, kept deliberately separate so a stall in one does
 not invalidate the others:
@@ -36,9 +43,11 @@ labeled post-specified, not pre-registered.
 3. The remaining 47 cells' raw samples have not been read. No quartile,
    trimmed or excursion statistic has been computed for any of the 50 cells,
    including the three above.
-4. The wave context publishes the motivating end-to-end numbers: prefill step
-   0 makespan 974,838,253 ps, a representative decode step near 224,000,000 ps,
-   and about 99.4 us of modeled per-step compute.
+4. The corrected projection inputs are the token-ownership study's live prefill
+   step 0 makespan of 706,622,768 ps and the mission study's published S5
+   decode-step band of 204,000,000 to 215,000,000 ps. They landed after this
+   freeze and are post-specified projection evidence. The roughly 99.4 us of
+   modeled per-step compute was already published.
 5. The active weight-byte figure 556,449,792 and the default envelope
    `GPU_ENVELOPES["b100"]` at 8.0e12 bytes/s with a 0.7 derate are published
    repository facts.
@@ -358,12 +367,13 @@ Scored relations, 4 instances:
   exceeds the modeled 99.36603428571428 us decode compute, i.e. the omitted
   cost is not a rounding error on the mission's binding constraint.
 
-The TTFT statement is a projection, not a scored relation: the published
-prefill step 0 makespan of 974,838,253 ps gains the same per-step fixed cost
-once, and this study reports the resulting bracket in both eager and
-graph-replay form without claiming either is the production value. The Turing
-launch costs are a Turing measurement on this host's CPU; they anchor an order
-of magnitude, they are not a B100 launch model, and the study says so.
+The TTFT and decode-step statements are projections, not scored relations. The
+corrected live prefill step 0 makespan of 706,622,768 ps and the mission S5
+decode-step band of 204,000,000 to 215,000,000 ps gain only the omitted excess
+once. This study reports the resulting bracket in eager and graph-replay form
+without claiming either is the production value. The Turing launch costs are a
+Turing measurement on this host's CPU; they anchor an order of magnitude, they
+are not a B100 launch model, and the study says so.
 
 ## Fatal unscored guards
 

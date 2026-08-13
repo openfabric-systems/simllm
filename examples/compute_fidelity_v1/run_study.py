@@ -130,6 +130,15 @@ def _write_log(path: Path, completed: subprocess.CompletedProcess[str]) -> None:
 
 
 def _git_revision() -> str:
+    status = _run(
+        ("git", "status", "--porcelain=v1", "--untracked-files=all"),
+        timeout=60,
+    ).stdout.strip()
+    if status:
+        raise RuntimeError(
+            "production evidence requires a clean worktree before its revision "
+            "can be recorded; commit or move every tracked and untracked change first"
+        )
     return _run(("git", "rev-parse", "HEAD"), timeout=60).stdout.strip()
 
 
@@ -356,15 +365,11 @@ def _xfer_guards(expectations: dict[str, Any]) -> list[dict[str, Any]]:
         }
     )
 
-    # The first registered run asserted exact integer equality between the
-    # doubled kernel and twice the single kernel. That failed by 1 ps, because
-    # the true value 793,650,793.65 ps is rounded once per call and not because
-    # the provider carries a fixed term. The claim is therefore tested in the
-    # rounding-free form as well: a kernel with no work must return exactly
-    # zero, which no additive launch, scheduling or sampling constant could
-    # survive. The proportionality check keeps its original form with the one
-    # picosecond of unavoidable integer rounding allowed, six orders of
-    # magnitude below any per-launch cost this study measures.
+    # The frozen guard requires exact proportionality of the integer-picosecond
+    # API result. The 1 ps quantization residual therefore violates it and voids
+    # the run. The zero-work result is retained only as a post-specified check
+    # of the substantive no-additive-term finding; it cannot repair the frozen
+    # predicate after the result is known.
     roofline = RooflineProvider()
     gpu = GPU_ENVELOPES["b100"]
     zero = roofline.estimate(KernelSpec(name="probe", flops=0.0, bytes_moved=0.0), gpu)
@@ -378,12 +383,14 @@ def _xfer_guards(expectations: dict[str, Any]) -> list[dict[str, Any]]:
     guards.append(
         {
             "id": "XFER-G4_roofline_has_no_additive_term",
-            "passed": zero.duration_ps == 0 and abs(residual_ps) <= 1,
+            "passed": residual_ps == 0,
             "detail": {
-                "zero_work_ps": zero.duration_ps,
-                "single_ps": single.duration_ps,
                 "doubled_ps": doubled.duration_ps,
+                "frozen_exact_proportionality": residual_ps == 0,
+                "post_specified_zero_work_check_passed": zero.duration_ps == 0,
                 "proportionality_residual_ps": residual_ps,
+                "single_ps": single.duration_ps,
+                "zero_work_ps": zero.duration_ps,
             },
         }
     )
@@ -429,6 +436,7 @@ def _xfer_guards(expectations: dict[str, Any]) -> list[dict[str, Any]]:
 def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
     from simllm.compute import ComputeCalibrationArtifact, sha256_file
 
+    observed_commit = _git_revision()
     if args.out.exists():
         raise FileExistsError(f"immutable output directory already exists: {args.out}")
     args.out.mkdir(parents=True)
@@ -713,15 +721,22 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
     def _bound(per_launch_ns: float) -> dict[str, float]:
         low_us = launches[0] * per_launch_ns / 1000.0
         high_us = launches[1] * per_launch_ns / 1000.0
+        omitted_low_us = max(0.0, low_us - modeled_us)
+        omitted_high_us = max(0.0, high_us - modeled_us)
         return {
             "per_launch_ns": per_launch_ns,
             "step_fixed_low_us": low_us,
             "step_fixed_high_us": high_us,
-            "omitted_low_us": max(0.0, low_us - modeled_us),
-            "omitted_high_us": max(0.0, high_us - modeled_us),
+            "omitted_low_us": omitted_low_us,
+            "omitted_high_us": omitted_high_us,
+            "omitted_multiple_low": omitted_low_us / modeled_us,
+            "omitted_multiple_high": omitted_high_us / modeled_us,
         }
 
     prefill_us = fixed["published_prefill_step0_makespan_ps"] / 1.0e6
+    decode_low_us, decode_high_us = (
+        value / 1.0e6 for value in fixed["published_decode_step_makespan_band_ps"]
+    )
     bounds = {
         "graph_replay": _bound(launch["empty_graph_ns"]),
         "device_gap": _bound(launch["stamped_device_gap_ns"]),
@@ -742,13 +757,47 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
         }
         for name, value in bounds.items()
     }
+    decode_step = {
+        name: {
+            "modeled_decode_step_low_us": decode_low_us,
+            "modeled_decode_step_high_us": decode_high_us,
+            "step_with_fixed_low_us": decode_low_us + value["omitted_low_us"],
+            "step_with_fixed_high_us": decode_high_us + value["omitted_high_us"],
+        }
+        for name, value in bounds.items()
+    }
 
     guards.extend(_xfer_guards(expectations))
+    final_commit = _git_revision()
+    if final_commit != observed_commit:
+        raise RuntimeError(
+            "repository HEAD changed during the capture; production evidence cannot "
+            "identify one executed revision"
+        )
+    failed_guards = [guard["id"] for guard in guards if not guard["passed"]]
+    scored_passed = sum(int(item["passed"]) for item in scored.values())
+    scored_total = sum(int(item["total"]) for item in scored.values())
+    if failed_guards:
+        run_status = "void"
+    elif scored_passed != scored_total:
+        run_status = "not_accepted"
+    else:
+        run_status = "accepted"
 
     results = {
         "schema": "simllm-compute-fidelity-v1-results-v1",
         "expectation_commit": EXPECTATION_COMMIT,
-        "observed_commit": _git_revision(),
+        "observed_commit": observed_commit,
+        "capture_provenance": {
+            "capture_harness_content_commit": observed_commit,
+            "capture_harness_content_commit_timing": "observed_clean_head",
+            "capture_harness_sha256": sha256_file(Path(__file__)),
+            "recorded_head_commit": observed_commit,
+            "repository_clean": True,
+        },
+        "behavioral_score_interpretable": not failed_guards,
+        "run_status": run_status,
+        "fatal_guard_failures": failed_guards,
         "probe_source_sha256": sha256_file(PROBE_SOURCE),
         "calibration_sha256": sha256_file(CALIBRATION_PATH),
         "profile_table_sha256": sha256_file(PROFILE_TABLE_PATH),
@@ -760,6 +809,7 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
         "launch_bracket": launches,
         "bounds": bounds,
         "ttft_projection": ttft,
+        "decode_step_projection": decode_step,
         "scored": scored,
         "fatal_guards": guards,
     }
@@ -770,18 +820,17 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
         json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
 
-    failed_guards = [guard["id"] for guard in guards if not guard["passed"]]
-    scored_passed = sum(int(item["passed"]) for item in scored.values())
-    scored_total = sum(int(item["total"]) for item in scored.values())
-    print(f"fatal guards: {len(guards) - len(failed_guards)} of {len(guards)} held")
-    for guard_id in failed_guards:
-        print(f"  VIOLATED: {guard_id}")
+    if failed_guards:
+        print("fatal guard violations:")
+        for guard_id in failed_guards:
+            print(f"  {guard_id}")
+        print("run is VOID for closure purposes: a fatal guard was violated")
+        print("behavioral score suppressed because the fatal precondition failed")
+        return 1
+    print(f"all {len(guards)} fatal guards held")
     for name, item in scored.items():
         print(f"scored {name}: {item['passed']} of {item['total']}")
     print(f"scored total: {scored_passed} of {scored_total}")
-    if failed_guards:
-        print("run is VOID for closure purposes: a fatal guard was violated")
-        return 1
     if scored_passed != scored_total:
         print("registered acceptance not met: a scored relation was refuted")
         return 1

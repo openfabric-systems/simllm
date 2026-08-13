@@ -1003,10 +1003,13 @@
       "unattributed": 4
     }
   },
+  "behavioral_score_interpretable": false,
   "bounds": {
     "device_gap": {
       "omitted_high_us": 809.2860527142857,
       "omitted_low_us": 605.7608057142858,
+      "omitted_multiple_high": 8.144493825599273,
+      "omitted_multiple_low": 6.09625623150561,
       "per_launch_ns": 1602.561,
       "step_fixed_high_us": 908.6520869999999,
       "step_fixed_low_us": 705.12684
@@ -1014,6 +1017,8 @@
     "eager_host_bound": {
       "omitted_high_us": 1222.8541517142858,
       "omitted_low_us": 926.6954857142857,
+      "omitted_multiple_high": 12.306560893817354,
+      "omitted_multiple_low": 9.326079000493184,
       "per_launch_ns": 2331.958,
       "step_fixed_high_us": 1322.220186,
       "step_fixed_low_us": 1026.06152
@@ -1021,12 +1026,21 @@
     "graph_replay": {
       "omitted_high_us": 257.91427371428574,
       "omitted_low_us": 177.8885257142857,
+      "omitted_multiple_high": 2.5955979381514447,
+      "omitted_multiple_low": 1.7902347315460942,
       "per_launch_ns": 630.124,
       "step_fixed_high_us": 357.280308,
       "step_fixed_low_us": 277.25455999999997
     }
   },
   "calibration_sha256": "0be6dad653ff32a0f4667b5cb05f7ddaefdc06e8f6f1cea032bb8d285b42023f",
+  "capture_provenance": {
+    "capture_harness_content_commit": "96632de6ea1eb37285c271a86848ee739a7d2332",
+    "capture_harness_content_commit_timing": "committed_after_capture",
+    "capture_harness_sha256": "7b24342d4f3923f12aeb78525506bfe8f3691be0c6dd94bab5e07c7528c352a8",
+    "recorded_head_commit": "7de897701e93d16873bf9350139fa9f71d870703",
+    "repository_clean": false
+  },
   "cells": [
     {
       "all_sample_cv": 0.005826402691820397,
@@ -1929,7 +1943,30 @@
       "trimmed_cv": 0.0018308084062243308
     }
   ],
+  "decode_step_projection": {
+    "device_gap": {
+      "modeled_decode_step_high_us": 215.0,
+      "modeled_decode_step_low_us": 204.0,
+      "step_with_fixed_high_us": 1024.2860527142857,
+      "step_with_fixed_low_us": 809.7608057142858
+    },
+    "eager_host_bound": {
+      "modeled_decode_step_high_us": 215.0,
+      "modeled_decode_step_low_us": 204.0,
+      "step_with_fixed_high_us": 1437.8541517142858,
+      "step_with_fixed_low_us": 1130.6954857142857
+    },
+    "graph_replay": {
+      "modeled_decode_step_high_us": 215.0,
+      "modeled_decode_step_low_us": 204.0,
+      "step_with_fixed_high_us": 472.91427371428574,
+      "step_with_fixed_low_us": 381.8885257142857
+    }
+  },
   "expectation_commit": "62c088e",
+  "fatal_guard_failures": [
+    "XFER-G4_roofline_has_no_additive_term"
+  ],
   "fatal_guards": [
     {
       "detail": {
@@ -2066,12 +2103,14 @@
     {
       "detail": {
         "doubled_ps": 1587301587,
+        "frozen_exact_proportionality": false,
+        "post_specified_zero_work_check_passed": true,
         "proportionality_residual_ps": 1,
         "single_ps": 793650793,
         "zero_work_ps": 0
       },
       "id": "XFER-G4_roofline_has_no_additive_term",
-      "passed": true
+      "passed": false
     },
     {
       "detail": {
@@ -2131,7 +2170,7 @@
     440,
     567
   ],
-  "observed_commit": "7de897701e93d16873bf9350139fa9f71d870703",
+  "observed_commit": null,
   "probe_identity": {
     "compute_capability": "7.5",
     "device_name": "NVIDIA GeForce GTX 1660 Ti",
@@ -2198,6 +2237,7 @@
       "trimmed_cv": 0.00841608223223759
     }
   ],
+  "run_status": "void",
   "schema": "simllm-compute-fidelity-v1-results-v1",
   "scored": {
     "FIX_launch_cost_bracket_and_bound": {
@@ -2262,25 +2302,25 @@
   },
   "ttft_projection": {
     "device_gap": {
-      "modeled_ttft_us": 974.838253,
-      "relative_increase_high": 0.830174698442292,
-      "relative_increase_low": 0.6213962201935522,
-      "ttft_with_fixed_high_us": 1784.1243057142856,
-      "ttft_with_fixed_low_us": 1580.5990587142858
+      "modeled_ttft_us": 706.622768,
+      "relative_increase_high": 1.1452872584403986,
+      "relative_increase_low": 0.8572619410903072,
+      "ttft_with_fixed_high_us": 1515.9088207142856,
+      "ttft_with_fixed_low_us": 1312.3835737142858
     },
     "eager_host_bound": {
-      "modeled_ttft_us": 974.838253,
-      "relative_increase_high": 1.2544174871585447,
-      "relative_increase_low": 0.9506146100262703,
-      "ttft_with_fixed_high_us": 2197.6924047142857,
-      "ttft_with_fixed_low_us": 1901.5337387142858
+      "modeled_ttft_us": 706.622768,
+      "relative_increase_high": 1.7305614920609038,
+      "relative_increase_low": 1.3114430042173306,
+      "ttft_with_fixed_high_us": 1929.4769197142857,
+      "ttft_with_fixed_low_us": 1633.3182537142857
     },
     "graph_replay": {
-      "modeled_ttft_us": 974.838253,
-      "relative_increase_high": 0.2645713511144764,
-      "relative_increase_low": 0.18248004237302504,
-      "ttft_with_fixed_high_us": 1232.7525267142858,
-      "ttft_with_fixed_low_us": 1152.7267787142857
+      "modeled_ttft_us": 706.622768,
+      "relative_increase_high": 0.36499570264948744,
+      "relative_increase_low": 0.25174468439189285,
+      "ttft_with_fixed_high_us": 964.5370417142857,
+      "ttft_with_fixed_low_us": 884.5112937142857
     }
   }
 }

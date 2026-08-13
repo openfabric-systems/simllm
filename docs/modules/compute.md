@@ -434,7 +434,8 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   the administrator action COMP-5 requires.
 - Fixed per-step cost. Kernel service time is not step time. A modeled step is
   exactly the sum of its kernel service: `RooflineProvider` returns 0 ps for a
-  zero-work kernel and is exactly proportional above that,
+  zero-work kernel and uses a homogeneous roofline formula above that, with its
+  public integer-picosecond result subject to rounding,
   `ProfileTableProvider` returns a measured kernel duration, and
   `HostInitiationModel` is a per-send network initiation delay rather than a
   per-kernel launch cost, so nothing in this package prices kernel launch,
@@ -442,10 +443,12 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   for a 24-layer top-8 MoE decode step: 440 to 567 device-visible launches in
   eager mode, at a Turing-measured 630 ns per CUDA-graph node, 1,603 ns of
   device-side inter-kernel gap, or 2,332 ns per host-bound eager launch, which
-  is 2.8 to 13.3 times the whole modeled decode compute of that step. The
-  launch count is a property of the model geometry and the framework rather
-  than of the GPU, so the multiple survives a much cheaper per-launch cost; the
-  constant itself is Turing evidence and does not transfer. Calibrating it on
+  leaves an omitted excess of 1.79 to 12.31 times the whole modeled decode
+  compute of that step. The launch count is a property of the model geometry
+  and the framework rather than of the GPU, but the constant itself is Turing
+  evidence and does not transfer. At 440 launches, the omitted excess remains
+  at least one modeled compute only above 451.7 ns per launch and disappears at
+  or below 225.8 ns. Calibrating the production constant on
   the target architecture belongs to this task's "launch overhead, host delay
   and queueing are measured separately from kernel service" clause, and no knob
   is added to the step path until it is measured.
@@ -510,11 +513,13 @@ high-duration samples put 3 of 50 final cells above the 2 percent coefficient
 of variation ceiling, and the preceding post-fix capture missed 2 of 50.
 These Turing numbers validate the method and do not transfer to Hopper.
 
-The [fidelity study](../../examples/compute_fidelity_v1/RESULTS.md) held all 12
-of its fatal guards and passed 101 of 102 genuine-risk instances, and it changes
-what is known about that failure and about the modeled step. Re-reading the same
-immutable capture shows the ceiling was failed by 7 samples out of 2,050, one in
-each of 7 cells, while the worst excursion-trimmed coefficient of variation
+The [fidelity study](../../examples/compute_fidelity_v1/RESULTS.md) is void with
+findings because frozen fatal guard XFER-G4's exact proportionality predicate
+failed by a 1 ps integer-quantization residual. Its behavioral pass fraction is
+therefore uninterpretable. The measurement layer still changes what is known
+about the earlier stability failure and the modeled step. Re-reading the same
+immutable capture shows the ceiling was failed by 7 samples out of 2,050, one
+in each of 7 cells, while the worst excursion-trimmed coefficient of variation
 anywhere in the capture is 1.054 percent. A 4,000-launch device probe that
 records each block's own cycle span and residency alongside its wall duration
 attributes 93.4 percent of a fresh excursion population to longer block
@@ -522,11 +527,10 @@ residency at an unchanged 1,869 MHz effective SM clock and the remainder to
 clock-state drops to 76.9 percent of that clock, so the tail is the display GPU
 rather than the kernel. The stability bar above is refrozen accordingly, with
 the original all-sample form retained unchanged for the controlled environment
-the production capture must use. The same study bounds the fixed per-step cost
-the compute path omits entirely at 2.8 to 13.3 times the whole modeled decode
-compute of a 24-layer top-8 MoE step, which means a modeled decode step is
-launch bound rather than compute bound. It registers no new task ID: COMP-1 and
-COMP-5 both stay open and keep every clause they registered.
+the production capture must use. The same study measures a fixed per-step cost
+whose omitted excess is 1.79 to 12.31 times the whole modeled decode compute of
+a 24-layer top-8 MoE step. It registers no new task ID: COMP-1 and COMP-5 both
+stay open and keep every clause they registered.
 
 The M5 first slice landed the COMP-1 groundwork: `step_kernels`, the
 `simllm-profile-table-v1` artifact with provenance, and 1D log-linear
@@ -624,10 +628,11 @@ and an explicit reason:
   framework kernels on the target architecture, collecting the full activity,
   counter and dynamic-SASS ledger, calibrating pinned Accel-Sim replay, and
   validating immutable held-out kernels. Second, the step model has no fixed
-  per-step cost at all, and the fidelity study bounds that omission at 2.8 to
-  13.3 times the whole modeled decode compute of a 24-layer top-8 MoE step, so
-  the compute-only step error clause is unreachable until launch overhead, host
-  delay and queueing are measured on the target architecture and given a seam.
+  per-step cost at all, and the fidelity study measures an omitted excess of
+  1.79 to 12.31 times the whole modeled decode compute of a 24-layer top-8 MoE
+  step, so the compute-only step error clause is unreachable until launch
+  overhead, host delay and queueing are measured on the target architecture and
+  given a seam.
   Do not add an uncalibrated launch constant in the meantime. Acceptance remains
   the environment-scoped stability bar with the controlled form required for the
   production capture, held-out kernel median error below 10 percent and p95

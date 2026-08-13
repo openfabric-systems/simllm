@@ -126,8 +126,8 @@
   "fixed_cost": {
     "cpu_enqueue_band_ns": [300, 20000],
     "modeled_decode_compute_us": 99.36603428571428,
-    "published_prefill_step0_makespan_ps": 974838253,
-    "published_decode_step_makespan_ps": 224000000
+    "published_prefill_step0_makespan_ps": 706622768,
+    "published_decode_step_makespan_band_ps": [204000000, 215000000]
   },
   "scored_relations": {
     "VAR-S1_trimmed_cv_below_ceiling": 47,
