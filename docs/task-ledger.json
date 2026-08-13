@@ -6,6 +6,7 @@
   ],
   "closed": [
     "BACK-1",
+    "BACK-2",
     "BACK-4",
     "BACK-5",
     "BACK-6",
@@ -45,6 +46,7 @@
     "CORE-41",
     "CORE-49",
     "GOAL-1",
+    "HTSIM-2",
     "HTSIM-3",
     "HTSIM-9",
     "HTSIM-15",
@@ -75,9 +77,7 @@
     "VLLM-2",
     "VLLM-15",
     "VLLM-16",
-    "WORK-3",
-    "BACK-2",
-    "HTSIM-2"
+    "WORK-3"
   ],
   "retired_never_landed": [
     "HTSIM-19"
