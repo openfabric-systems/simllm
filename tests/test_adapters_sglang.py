@@ -5,6 +5,7 @@ checked) without a GPU stack installed."""
 import importlib.util
 import sys
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 import pytest
 
@@ -16,6 +17,7 @@ from simllm.adapters.sglang import (
     observe_schedule_batch,
 )
 from simllm.adapters.sglang.plugin import ENABLE_ENV, enabled
+from simllm.adapters.sglang.worker import _sglang_moe_parallel_sizes
 from simllm.core import RequestPhase
 
 SGLANG_INSTALLED = importlib.util.find_spec("sglang") is not None
@@ -246,6 +248,293 @@ def test_model_dims_from_sglang_defaults_loudly():
     assert dims.hidden_size == 4096
     assert "hidden_size" in dims.defaulted_fields
     assert "num_layers" in dims.defaulted_fields
+
+
+def _model_config(**hf_overrides):
+    fields = {
+        "model_type": "llama",
+        "architectures": ["LlamaForCausalLM"],
+        "hidden_size": 1024,
+        "intermediate_size": 4096,
+        "num_attention_heads": 16,
+        "num_key_value_heads": 4,
+        "vocab_size": 49152,
+    }
+    fields.update(hf_overrides)
+    hf = SimpleNamespace(**fields)
+    config = SimpleNamespace(
+        hf_text_config=hf,
+        num_hidden_layers=24,
+        num_attention_heads=hf.num_attention_heads,
+        head_dim=hf.hidden_size // hf.num_attention_heads,
+        vocab_size=hf.vocab_size,
+        dtype=SimpleNamespace(itemsize=2),
+    )
+    config.get_num_kv_heads = lambda tp_size: max(hf.num_key_value_heads // tp_size, 1)
+    return config
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected"),
+    [
+        (
+            {
+                "model_type": "granitemoe",
+                "architectures": ["GraniteMoeForCausalLM"],
+                "intermediate_size": 512,
+                "num_local_experts": 32,
+                "num_experts_per_tok": 8,
+            },
+            (32, 8, 512, 32),
+        ),
+        (
+            {
+                "model_type": "mixtral",
+                "architectures": ["MixtralForCausalLM"],
+                "intermediate_size": 14336,
+                "num_local_experts": 8,
+                "num_experts_per_tok": 2,
+            },
+            (8, 2, 14336, 8),
+        ),
+        (
+            {
+                "model_type": "qwen3_moe",
+                "architectures": ["Qwen3MoeForCausalLM"],
+                "num_experts": 64,
+                "num_experts_per_tok": 8,
+                "moe_intermediate_size": 1408,
+            },
+            (64, 8, 1408, 64),
+        ),
+    ],
+)
+def test_model_dims_from_sglang_reads_supported_single_gpu_moe(fields, expected):
+    dims = model_dims_from_sglang(_model_config(**fields))
+    assert (
+        dims.num_experts,
+        dims.top_k,
+        dims.moe_intermediate_size,
+        dims.local_num_experts,
+    ) == expected
+
+
+def test_granite_moe_changes_active_and_resident_mlp_geometry():
+    dense = model_dims_from_sglang(_model_config(intermediate_size=512))
+    moe = model_dims_from_sglang(
+        _model_config(
+            model_type="granitemoe",
+            architectures=["GraniteMoeForCausalLM"],
+            intermediate_size=512,
+            num_local_experts=32,
+            num_experts_per_tok=8,
+        )
+    )
+    assert moe.mlp_active_params == 8 * dense.mlp_active_params
+    assert moe.mlp_resident_params == 32 * dense.mlp_resident_params
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {
+            "model_type": "custom_moe",
+            "architectures": ["CustomMoeForCausalLM"],
+            "num_experts": 8,
+            "num_experts_per_tok": 2,
+            "moe_intermediate_size": 512,
+        },
+        {
+            "model_type": "qwen2_moe",
+            "architectures": ["Qwen2MoeForCausalLM"],
+            "num_experts": 60,
+            "num_experts_per_tok": 4,
+            "moe_intermediate_size": 1408,
+            "shared_expert_intermediate_size": 5632,
+        },
+        {
+            "model_type": "deepseek_v3",
+            "architectures": ["DeepseekV3ForCausalLM"],
+            "n_routed_experts": 256,
+            "num_experts_per_tok": 8,
+            "moe_intermediate_size": 2048,
+            "n_shared_experts": 1,
+        },
+        {
+            "model_type": "dbrx",
+            "architectures": ["DbrxForCausalLM"],
+            "ffn_config": SimpleNamespace(
+                moe_num_experts=16, moe_top_k=4, ffn_hidden_size=3584
+            ),
+        },
+        {
+            "model_type": "custom_moe",
+            "architectures": ["CustomMoeForCausalLM"],
+        },
+        {
+            "model_type": "quant_mixtral",
+            "architectures": ["QuantMixtralForCausalLM"],
+            "intermediate_size": 14336,
+            "num_local_experts": 8,
+            "num_experts_per_tok": 2,
+        },
+    ],
+)
+def test_model_dims_from_sglang_rejects_unsupported_moe_instead_of_dense(fields):
+    with pytest.raises(NotImplementedError, match="SGL-18"):
+        model_dims_from_sglang(_model_config(**fields))
+
+
+def test_model_dims_from_sglang_rejects_partial_or_disagreeing_moe_geometry():
+    missing_top_k = _model_config(
+        model_type="granitemoe",
+        architectures=["GraniteMoeForCausalLM"],
+        intermediate_size=512,
+        num_local_experts=32,
+    )
+    with pytest.raises(ValueError, match="num_experts_per_tok"):
+        model_dims_from_sglang(missing_top_k)
+
+    disagreeing = _model_config(
+        model_type="granitemoe",
+        architectures=["GraniteMoeForCausalLM"],
+        intermediate_size=512,
+        num_local_experts=32,
+        num_experts=16,
+        num_experts_per_tok=8,
+    )
+    with pytest.raises(ValueError, match="disagree"):
+        model_dims_from_sglang(disagreeing)
+
+    invalid_top_k = _model_config(
+        model_type="granitemoe",
+        architectures=["GraniteMoeForCausalLM"],
+        intermediate_size=512,
+        num_local_experts=8,
+        num_experts_per_tok=9,
+    )
+    with pytest.raises(ValueError, match="exceeds"):
+        model_dims_from_sglang(invalid_top_k)
+
+    noninteger_experts = _model_config(
+        model_type="granitemoe",
+        architectures=["GraniteMoeForCausalLM"],
+        intermediate_size=512,
+        num_local_experts=32.0,
+        num_experts_per_tok=8,
+    )
+    with pytest.raises(ValueError, match="must be an integer"):
+        model_dims_from_sglang(noninteger_experts)
+
+
+def test_model_dims_from_sglang_rejects_conflicting_family_identity():
+    config = _model_config(
+        model_type="qwen2_moe",
+        architectures=["GraniteMoeForCausalLM"],
+        intermediate_size=512,
+        num_local_experts=32,
+        num_experts_per_tok=8,
+    )
+    with pytest.raises(ValueError, match="conflicting MoE families"):
+        model_dims_from_sglang(config)
+
+
+@pytest.mark.parametrize(
+    "parallel",
+    [
+        {"tp_size": 2, "moe_tp_size": 2},
+        {"moe_ep_size": 2},
+        {"moe_dp_size": 2},
+    ],
+)
+def test_model_dims_from_sglang_rejects_distributed_moe_first_slice(parallel):
+    config = _model_config(
+        model_type="granitemoe",
+        architectures=["GraniteMoeForCausalLM"],
+        intermediate_size=512,
+        num_local_experts=32,
+        num_experts_per_tok=8,
+    )
+    with pytest.raises(NotImplementedError, match="TP=EP=MoE-DP=1"):
+        model_dims_from_sglang(config, **parallel)
+
+
+def test_model_dims_from_sglang_rejects_redundant_expert_copies():
+    config = _model_config(
+        model_type="qwen3_moe",
+        architectures=["Qwen3MoeForCausalLM"],
+        num_experts=64,
+        num_experts_per_tok=8,
+        moe_intermediate_size=1408,
+    )
+    with pytest.raises(NotImplementedError, match="redundant expert"):
+        model_dims_from_sglang(config, ep_num_redundant_experts=1)
+
+
+def test_sglang_moe_tp_size_is_derived_from_parallel_state():
+    assert _sglang_moe_parallel_sizes(8, 2, 2) == (2, 2, 2)
+    with pytest.raises(ValueError, match="must be divisible"):
+        _sglang_moe_parallel_sizes(6, 2, 2)
+
+
+def test_dense_projection_does_not_validate_irrelevant_moe_parallel_sizes():
+    dense = model_dims_from_sglang(
+        _model_config(), tp_size=1, moe_ep_size=2, moe_dp_size=2
+    )
+    assert dense.num_experts == 0
+
+
+def test_model_dims_from_sglang_rejects_multimodal_moe_wrapper():
+    text = _model_config(
+        model_type="qwen3_moe",
+        architectures=["Qwen3MoeForCausalLM"],
+        num_experts=64,
+        num_experts_per_tok=8,
+        moe_intermediate_size=1408,
+    ).hf_text_config
+    outer = SimpleNamespace(
+        architectures=["InternVLChatModel"],
+        model_type="internvl_chat",
+        llm_config=text,
+    )
+    config = SimpleNamespace(
+        hf_text_config=text,
+        hf_config=outer,
+        is_multimodal=True,
+        num_hidden_layers=24,
+        num_attention_heads=16,
+        head_dim=64,
+        vocab_size=49152,
+        dtype=SimpleNamespace(itemsize=2),
+        get_num_kv_heads=lambda tp_size: max(4 // tp_size, 1),
+    )
+    with pytest.raises(NotImplementedError, match="multimodal MoE"):
+        model_dims_from_sglang(config)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("shared_expert_intermediate_size", 1024),
+        ("decoder_sparse_step", 2),
+        ("mlp_only_layers", [0]),
+        ("kv_lora_rank", 512),
+        ("use_mla", True),
+        ("quantization", "fp8"),
+        ("num_nextn_predict_layers", 1),
+    ],
+)
+def test_model_dims_from_sglang_rejects_unrepresentable_moe_mechanisms(field, value):
+    config = _model_config(
+        model_type="qwen3_moe",
+        architectures=["Qwen3MoeForCausalLM"],
+        num_experts=64,
+        num_experts_per_tok=8,
+        moe_intermediate_size=1408,
+        **{field: value},
+    )
+    with pytest.raises(NotImplementedError, match="SGL-18"):
+        model_dims_from_sglang(config)
 
 
 # Configuration
