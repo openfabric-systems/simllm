@@ -24,6 +24,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--replay-run", type=Path, required=True)
     parser.add_argument("--routed-experts", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--producer-mode",
+        choices=("enabled", "disabled"),
+        default="enabled",
+    )
     return parser.parse_args()
 
 
@@ -78,6 +83,13 @@ def _canonical_identity(value: object) -> dict[str, object]:
     return {
         "bytes": len(wire),
         "sha256": hashlib.sha256(wire).hexdigest(),
+    }
+
+
+def _byte_identity(value: bytes) -> dict[str, object]:
+    return {
+        "bytes": len(value),
+        "sha256": hashlib.sha256(value).hexdigest(),
     }
 
 
@@ -155,11 +167,106 @@ class _LiveObservationSink:
         return result
 
 
-def _configure_rank_environment(rank: int, port: int) -> None:
+class _LiveLegacySink:
+    """Exercise the producer-off one-argument sink and exact serial path."""
+
+    def __init__(self, output: Path, routed_experts: Path) -> None:
+        from simllm.backends import (
+            DeviceRuntimeStepSink,
+            SerialStepLowerer,
+            SerialStepLowererConfig,
+        )
+        from simllm.compute import RooflineProvider
+        from simllm.core import CoarseDeviceProfile, CoarseDeviceRuntime
+
+        class _OneRankPerNodeProfile(CoarseDeviceProfile):
+            def node_gpu(self, rank: int) -> tuple[int, int]:
+                super().node_gpu(rank)
+                return rank, 0
+
+        self._config = SerialStepLowererConfig(
+            _model_dims(),
+            (0,),
+            ep_ranks=tuple(range(DP_SIZE)),
+            provider=RooflineProvider(efficiency=0.7),
+            routed_moe_supply=_routed_supply(routed_experts),
+        )
+        self._lowerer = SerialStepLowerer(self._config)
+        self._delegate = DeviceRuntimeStepSink(
+            self._config,
+            runtime=CoarseDeviceRuntime(
+                _OneRankPerNodeProfile(rnic_rate_bps=400_000_000_000)
+            ),
+        )
+        self._output = output
+        self._clock = None
+        self._calls = 0
+
+    def __call__(self, record: Any) -> Any:
+        from simllm.core import (
+            VirtualClock,
+            execution_graph_to_json,
+            execution_result_to_json,
+            step_record_to_json,
+            step_result_to_json,
+        )
+        from simllm.traffic import project_execution_graph_goal, render_step_goal
+
+        if self._clock is None:
+            self._clock = VirtualClock(start_ps=record.virtual_time_ps)
+            self._delegate.bind_clock(self._clock)
+        if self._clock.now_ps != record.virtual_time_ps:
+            raise RuntimeError("legacy serial sink clock drifted from the adapter")
+        result = self._delegate(record, None)
+        outcome = self._delegate.outcomes[-1]
+        graph_json = execution_graph_to_json(outcome.graph)
+        execution_json = execution_result_to_json(outcome.execution_result)
+        goal = render_step_goal(
+            record,
+            self._config.dims,
+            self._config.tp_ranks,
+            per_layer_calc_ns=self._lowerer.timing(record).layer_calc_ns,
+            ep_ranks=self._config.ep_ranks,
+            routed_supply=self._config.routed_moe_supply,
+        ).render().encode()
+        projection = project_execution_graph_goal(outcome.graph)
+        projection_identity = {
+            "artifacts": [
+                _byte_identity(artifact.trace.render().encode())
+                for artifact in projection.artifacts
+            ],
+            "boundaries": len(projection.boundaries),
+            "serialized_edges": len(projection.serialized_edges),
+            "step_index": record.step_index,
+        }
+        row = {
+            "execution_result_identity": _canonical_identity(execution_json),
+            "legacy_call_arity": 1,
+            "legacy_call_index": self._calls,
+            "legacy_goal_identity": _byte_identity(goal),
+            "lowered_graph_identity": _canonical_identity(graph_json),
+            "observations_absent": True,
+            "projected_goal_identity": projection_identity,
+            "record": step_record_to_json(record),
+            "record_identity": _canonical_identity(step_record_to_json(record)),
+            "source_graph": None,
+            "step_result": step_result_to_json(result),
+        }
+        if self._calls == 0:
+            self._output.write_text("", encoding="utf-8")
+        with self._output.open("a", encoding="utf-8", newline="\n") as stream:
+            stream.write(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n")
+        self._calls += 1
+        return result
+
+
+def _configure_rank_environment(rank: int, port: int, producer_mode: str) -> None:
     values = {
         "OMP_NUM_THREADS": "1",
         "SIMLLM_VLLM_MODE": "virtual",
-        "SIMLLM_VLLM_OBSERVED_SCHEDULE": "granite-dbo",
+        "SIMLLM_VLLM_OBSERVED_SCHEDULE": (
+            "granite-dbo" if producer_mode == "enabled" else "off"
+        ),
         "SIMLLM_VLLM_WORKER_MODE": "skeleton",
         "TOKENIZERS_PARALLELISM": "false",
         "VLLM_DISABLE_REQUEST_ID_RANDOMIZATION": "1",
@@ -183,10 +290,11 @@ def _run_rank(
     replay_run: str,
     routed_experts: str,
     output_dir: str,
+    producer_mode: str,
 ) -> None:
     output = Path(output_dir)
     try:
-        _configure_rank_environment(rank, port)
+        _configure_rank_environment(rank, port, producer_mode)
         from vllm import LLM, SamplingParams
 
         from simllm.adapters.vllm import SimExecutorConfig, configure, reset_configuration
@@ -195,9 +303,16 @@ def _run_rank(
         trace = read_preplay_trace(capture)
         if trace.provenance.model_revision != MODEL_REVISION:
             raise RuntimeError("capture model revision disagrees with the frozen replay")
-        sink = _LiveObservationSink(
-            output / "live_observations.jsonl",
-            Path(routed_experts),
+        sink = (
+            _LiveObservationSink(
+                output / "live_observations.jsonl",
+                Path(routed_experts),
+            )
+            if producer_mode == "enabled"
+            else _LiveLegacySink(
+                output / "live_observations.jsonl",
+                Path(routed_experts),
+            )
         )
         reset_configuration()
         configure(
@@ -209,7 +324,9 @@ def _run_rank(
                     str(output / "live_steps.jsonl") if rank == 0 else None
                 ),
                 replay_run_path=replay_run if rank == 0 else None,
-                observed_schedule="granite-dbo",
+                observed_schedule=(
+                    "granite-dbo" if producer_mode == "enabled" else "off"
+                ),
             ),
         )
         llm = LLM(
@@ -279,6 +396,7 @@ def _run_rank(
             {
                 "rank": rank,
                 "request_count": len(requests),
+                "producer_mode": producer_mode,
                 "status": "PASS",
             },
         )
@@ -316,6 +434,7 @@ def main() -> int:
                 str(args.replay_run),
                 str(args.routed_experts),
                 str(args.output_dir),
+                args.producer_mode,
             ),
             name=f"vllm-observed-rank-{rank}",
         )
@@ -338,6 +457,7 @@ def main() -> int:
             "data_parallel_size": DP_SIZE,
             "exit_codes": exit_codes,
             "model_revision": MODEL_REVISION,
+            "producer_mode": args.producer_mode,
             "status": "PASS",
         },
     )
