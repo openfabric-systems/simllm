@@ -1,10 +1,31 @@
 # Collective latency floor v1 expectations
 
-This is the expectations-only record for TRAF-11 and the calibrated-floor
-slice of COMP-11. It freezes the external-source audit, calibration split,
-model form, physical bounds, live metric relations, compatibility guards and
-production command before the behavior is implemented or any result-producing
-run occurs.
+The original expectations-only record for TRAF-11 and the calibrated-floor
+slice of COMP-11 froze the external-source audit, calibration split, model
+form, physical bounds, live metric relations, compatibility guards and
+production command before the behavior was implemented or any
+result-producing run occurred. The attempt-two refreeze below is explicitly
+post-observation and does not rewrite that chronology.
+
+## Attempt-two refreeze disclosure
+
+Production attempt one at SimLLM revision
+`cec7109adeb9656de92f9ef5ea54572accdc3208` was void. Its sensitivity fixture
+returned the upper endpoint of the previously published fluid-backend
+completion quantization range, while the original fatal oracle admitted only
+the lower endpoint. Both `sensitivity_fixture_identity` and
+`propagation_rate_cancellation` therefore failed, no behavioral score was
+interpretable, and no owning task closed.
+
+The earlier mission result reports rate-cancelled propagation from 2,000,000
+to 2,000,001 ps over 912 artifacts. Attempt two refreezes this fixture at its
+executed integer completion values: 6,014,081 ps at 400 Gbit/s and 10,028,161
+ps at 200 Gbit/s, whose difference remains exactly 4,014,080 ps and whose
+rate-cancelled value is 2,000,001 ps. The separately reported physical-model
+reference remains 2,000,000 ps. This amendment changes only fatal, unscored
+harness oracles. It changes no calibrated parameter, modeled behavior, scored
+relation, execution graph or closure clause. Any later production result is
+reported as attempt two under this refreeze.
 
 ## Claim boundary
 
@@ -158,11 +179,11 @@ The latency is charged once by the semantic collective authority. It is never
 charged independently by both local and fabric projections. The backend stays
 the sole authority for propagation, wire serialization and fabric contention.
 For `rnic-nn-fluid`, the calibrated profile carries the separately named
-2,000,000 ps propagation reference measured by `end_to_end_replay_v1`; the
+2,000,000 ps propagation reference identified by `end_to_end_replay_v1`; the
 run record must expose that reference, raw fabric transport, collective base
 latency and composed service in distinct fields. The timing path must validate
-the reference by rate cancellation rather than assuming it changes backend
-behavior.
+the reference against the backend's published one-picosecond completion
+quantization envelope rather than assuming it changes backend behavior.
 
 The floor is inferred from the B200 collective intercept after removing the
 fitted byte term. It is a reduced-form non-serialization NCCL floor. The public
@@ -179,19 +200,23 @@ are:
 
 | Rate | Transport ps | With calibrated floor ps |
 |---:|---:|---:|
-| 400 Gbit/s | 6,014,080 | 36,142,109 |
-| 200 Gbit/s | 10,028,160 | 40,156,189 |
+| 400 Gbit/s | 6,014,081 | 36,142,110 |
+| 200 Gbit/s | 10,028,161 | 40,156,190 |
 
-The transport values are 2,000,000 ps propagation plus 20 or 40 ps per byte.
-The slow-rate to fast-rate ratio is 1.667447 before the floor. With the floor,
-the raw ratio must lie in `[1.10, 1.12]` and be strictly closer to one than the
-off-path ratio. This relation is evaluated from raw executed services before
-the propagation-reference and decomposition guards. It is one genuine-risk
-family over one rate pair. A rescaled bandwidth with no additive floor fails.
+The transport values are the 2,000,000 ps propagation model, 20 or 40 ps per
+byte, and the backend's one-picosecond completion quantization for this
+fixture. The slow-rate to fast-rate ratio is 1.667447 before the floor. With
+the floor, the raw ratio must lie in `[1.10, 1.12]` and be strictly closer to
+one than the off-path ratio. This relation is evaluated from raw executed
+services before the propagation-reference and decomposition guards. It is one
+genuine-risk family over one rate pair. A rescaled bandwidth with no additive
+floor fails.
 
-The same two rates must recover 2,000,000 ps by cancelling the byte term:
-`2 * transport_400g_ps - transport_200g_ps`. That exact propagation check is
-fatal-unscored. A violation voids the run.
+The same two rates must recover exactly 2,000,001 ps by cancelling the byte
+term: `2 * transport_400g_ps - transport_200g_ps`. This is the separately
+reported 2,000,000 ps propagation reference plus the fixture's registered
+one-picosecond backend quantization. That exact check is fatal-unscored. A
+violation voids the run.
 
 ## Flagship TTFT and TPOT relation
 
@@ -276,8 +301,9 @@ guards are never reported as a fraction.
 - The run record exposes profile identity, effective bandwidth, supported
   participant table, per-artifact base latency, raw fabric transport, the
   2,000,000 ps propagation reference and composed service as distinct fields.
-- Rate cancellation recovers exactly 2,000,000 ps of propagation on both the
-  off and enabled paths.
+- Rate cancellation recovers exactly 2,000,001 ps on both the off and enabled
+  paths, decomposed as the 2,000,000 ps propagation reference plus the
+  registered one-picosecond backend completion quantization.
 - Unsupported participant widths fail before an output file or published
   result is mutated.
 - Backend quiescence, operation inventory, byte conservation and positive
