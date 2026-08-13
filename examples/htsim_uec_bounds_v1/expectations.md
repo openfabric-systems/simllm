@@ -12,6 +12,32 @@ final default gate is not green, HTSIM-25 remains open. HTSIM-8 is judged
 separately and remains open unless the final eight-plan gate exits zero and a
 deliberate bound mutant is rejected and then removed.
 
+## Attempt chronology and attempt-two refreeze
+
+Attempt one used the unmodified bound-authorship binary. It is void. Before any
+historical FCT could be observed, all three completed plans violated the frozen
+historical-observability guard: the packet summaries showed that every
+simulation ran, but the common validator saw zero completions. Source review
+then found both completion-print blocks commented out at authorship commit
+`896cc765aabce04b0707a42eacf8774275a5d771` in
+`htsim/sim/uec.cpp:823-868`. The interrupted evidence is retained outside Git
+and is not scored or used for closure.
+
+This section refreezes attempt two before its first run. Attempt two builds an
+authorship transport projection with exactly the four comment-delimiter edits
+from commit `77943e48aec31cc5c7cff4e93e0296fce5a50097` ("Re-enable UEC
+flow completion prints"). That commit changes four lines in
+`htsim/sim/uec.cpp:834-882`: it removes the opening and closing comment tokens
+around the two already-authored `cout` blocks. It changes no event, state,
+packet, route, random draw or timing expression. The projection therefore
+exposes the authorship binary's existing completion times without changing its
+modeled behavior.
+
+Attempt two is independently admissible only if a source diff proves those
+four print-only edits are the projection's entire change from `896cc765` and
+the projected binary emits the completion and packet-summary vocabulary. Any
+additional source difference voids attempt two.
+
 ## Prior evidence and external-source audit
 
 The starting failure inventory is prior published evidence, not a result of
@@ -203,6 +229,8 @@ tasks open; they are never reported as a pass fraction.
 - The plan and matrix inputs used for current and historical binaries are
   byte-identical projections of the authored files. Only `Binary`, absolute
   input location and external log location may change in a projected plan.
+- The authorship source projection differs from `896cc765` only by the four
+  print-enabling comment-delimiter edits audited above.
 - Every simulator process exits zero, every declared connection completes and
   every experiment emits the packet summary expected by the common validator.
 - Every reported FCT lies within its pre-stated physical floor and model
@@ -270,7 +298,7 @@ Bulk outputs remain outside Git. The registered study command is:
 HTSIM_SOURCE_ROOT="${HTSIM_SOURCE_ROOT:?configure the backend source}" \
 .venv/bin/python examples/htsim_uec_bounds_v1/run_study.py \
   --out "${SIMLLM_DATA_ROOT:?configure the data root}/htsim_uec_bounds_v1" \
-  --candidate "authorship=${HTSIM_AUTHORSHIP_BINARY:?build the authorship binary}" \
+  --candidate "authorship-print-projection=${HTSIM_AUTHORSHIP_BINARY:?build the print-only authorship projection}" \
   --candidate "prechange=${HTSIM_PRECHANGE_BINARY:?build the pre-change binary}"
 ```
 
