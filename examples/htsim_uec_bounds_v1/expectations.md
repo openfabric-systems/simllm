@@ -3,7 +3,7 @@
 The original expectations-only record for this UEC validation-bound
 reconciliation preceded the first result-producing command and every backend
 implementation change made for HTSIM-25. This tracked record now includes the
-disclosed attempt-five refreeze after four void attempts. The study does not
+disclosed attempt-six refreeze after five void attempts. The study does not
 claim a TTFT or TPOT relation.
 Its decision-relevant result is whether every known bound miss has a causal
 classification strong enough to make the native backend gate citable.
@@ -13,7 +13,7 @@ final default gate is not green, HTSIM-25 remains open. HTSIM-8 is judged
 separately and remains open unless the final eight-plan gate exits zero and a
 deliberate bound mutant is rejected and then removed.
 
-## Attempt chronology and attempt-five refreeze
+## Attempt chronology and attempt-six refreeze
 
 Attempt one used the unmodified bound-authorship binary. It is void. Before any
 historical FCT could be observed, all three completed plans violated the frozen
@@ -105,6 +105,32 @@ output path. No backend code, modeled behavior, harness implementation,
 expectation or measured-value rule changed after the interrupted attempt-four
 invocation. Attempt five remains a disclosed post-start rerun because earlier
 void attempts exposed findings.
+
+Attempt five is void. A post-run method audit found that the implementation
+snapshots the plan, inputs and comparator immediately before each whole
+`validate.py` plan invocation and again after that invocation returns. It does
+not execute a new snapshot between that comparator's individual simulator
+children. The attempt-four freeze said the audit ran “before every simulator
+child” and “again after every plan run”; a strict reading requires a distinct
+audit execution per child. The plan-boundary audit could miss a transient
+change made after one child and restored byte-exact before comparator return.
+The complete attempt-five evidence is retained as useful findings, but the
+method deviation voids it for closure.
+
+This section refreezes attempt six before its first measured invocation. The
+implemented and registered guarantee is now exact: one byte snapshot and
+projection audit runs immediately before each whole `validate.py` plan
+invocation, and the same bytes are checked again after that invocation
+returns. The pre-invocation audit temporally precedes all simulator children
+in the plan. The post-invocation audit detects a change that persists through
+comparator return. This method does not claim to detect a transient
+change-and-restore event between children. Attempt six uses the unchanged
+candidate binaries, workload, target identities, causal classes, numeric
+formulas, bound rules, relations, fatal guards, projection implementation and
+exact source/input manifests. No backend code, modeled behavior, harness
+implementation, outcome expectation or measured-value rule changes after
+attempt five. Only this post-start evidence-method guarantee and a fresh
+`attempt6-baseline` output path are refrozen.
 
 ## Prior evidence and external-source audit
 
@@ -382,12 +408,12 @@ Bulk outputs remain outside Git. The registered study command is:
 ```bash
 HTSIM_SOURCE_ROOT="${HTSIM_PRECHANGE_SOURCE_ROOT:?configure a detached HTSIM worktree at 1ae1215}" \
 .venv/bin/python examples/htsim_uec_bounds_v1/run_study.py \
-  --out "${SIMLLM_DATA_ROOT:?configure the data root}/attempt5-baseline" \
+  --out "${SIMLLM_DATA_ROOT:?configure the data root}/attempt6-baseline" \
   --candidate "authorship-print-projection=${HTSIM_AUTHORSHIP_BINARY:?build the print-only authorship projection}" \
   --candidate "prechange=${HTSIM_PRECHANGE_BINARY:?build the pre-change binary}"
 ```
 
-The same command with `--check-only` must run before this attempt-five
+The same command with `--check-only` must run before this attempt-six
 expectations commit against a detached Git worktree at `1ae1215`. Check-only
 invokes the backend comparator's `-dryrun` path for all eight plans, validates
 the frozen inventory and candidate syntax, prints the external plan, and
@@ -400,10 +426,9 @@ bisection commits are recorded in RESULTS with compiler provenance; they do
 not change the registered workload or comparator.
 
 The untracked harness present at this refreeze is the already-reviewed
-attempt-four implementation. It contains the frozen plan and target
-registries, comparator orchestration, raw observation parsing, byte-preserving
-projection and independent audit, source/input snapshots, check-only
-validation and a portability-only switch from a literal `python3` child to
-the current interpreter. It contains no backend fix, classification outcome
-or observed timing, and it is unchanged after the interrupted attempt-four
-invocation.
+plan-boundary implementation used by attempt five. It contains the frozen plan
+and target registries, comparator orchestration, raw observation parsing,
+byte-preserving projection and independent audit, source/input snapshots,
+check-only validation and a portability-only switch from a literal `python3`
+child to the current interpreter. It contains no backend fix, classification outcome
+or observed timing, and it is unchanged after the attempt-five invocation.
