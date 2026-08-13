@@ -439,6 +439,41 @@ call the compute service model rather than grow a second SM or SASS model in
 `simllm.core`. The compute slice therefore does not claim whole-task execution
 timing or compute/copy overlap.
 
+## Pre-registered runtime sanity experiments
+
+These expectations are recorded before CORE-4 implements scheduling. CORE-2
+does not claim to produce these resource-contention measurements.
+
+1. **Dependency versus legal overlap.** Release one compute operation of C
+   picoseconds and one DMA operation of D picoseconds on independent logical
+   queues with ideal independent resources. With no edge, makespan must be
+   `max(C, D)`; adding a dependency must make it `C + D`. Sweep both the
+   dependency setting and two demand pairs, `(C, D) = (10 us, 40 us)` and
+   `(80 us, 40 us)`. Every result must match exactly in the ideal profile.
+2. **Eight GPU-affine RNICs.** Each active GPU submits one aligned WQE of B
+   bytes from its own FIFO/QP to its own rail RNIC, with no propagation or
+   protocol overhead in the ideal profile. Sweep active GPUs N in `{1, 8}`
+   and per-port rate R in `{200, 400}` Gbit/s. The phase makespan must be
+   `8 * B / R` seconds independent of N, aggregate useful throughput must be
+   `N * R`, and doubling R halves makespan exactly. Per-GPU FIFO order must
+   remain stable under both rates.
+3. **Tail attribution conservation.** For every completed operation, the sum
+   of critical-path time attributed to launch queue, device queue, service and
+   completion delivery must equal its end-to-end latency exactly. Separately
+   report the sum over all queue visits, which may exceed latency when visits
+   overlap and therefore must not enter that identity. No interval may be
+   negative, and graph completion must equal the latest required completion
+   event. Sweep synchronous versus asynchronous control delivery and two
+   control-class labels under identity. Class labels must move nothing; only
+   dependency-reachable work may move. Priority-caused movement belongs to the
+   class-aware policies, never to identity.
+4. **Identity arbitration is the exact off path.** Run each shared resource
+   with omitted class arbitration and with the explicit identity policy, then
+   permute class labels without changing arrivals or service demand. Event
+   order, every timestamp, all wait and byte counters, random draws and final
+   JCT must remain byte-identical. A separately enabled priority policy may
+   change only the order of simultaneously legal ready requests.
+
 ## Status
 
 Step records and the virtual clock (`VirtualClock`: heap-ordered events,
@@ -798,41 +833,6 @@ and never earlier. PLAY-13 and CORE-34 were accepted under the barrier
 configuration, and that qualification is now discharged; see
 [the routing lifetime results](../../examples/routing_lifetime_v1/RESULTS.md).
 
-## Pre-registered runtime sanity experiments
-
-These expectations are recorded before CORE-4 implements scheduling. CORE-2
-does not claim to produce these resource-contention measurements.
-
-1. **Dependency versus legal overlap.** Release one compute operation of C
-   picoseconds and one DMA operation of D picoseconds on independent logical
-   queues with ideal independent resources. With no edge, makespan must be
-   `max(C, D)`; adding a dependency must make it `C + D`. Sweep both the
-   dependency setting and two demand pairs, `(C, D) = (10 us, 40 us)` and
-   `(80 us, 40 us)`. Every result must match exactly in the ideal profile.
-2. **Eight GPU-affine RNICs.** Each active GPU submits one aligned WQE of B
-   bytes from its own FIFO/QP to its own rail RNIC, with no propagation or
-   protocol overhead in the ideal profile. Sweep active GPUs N in `{1, 8}`
-   and per-port rate R in `{200, 400}` Gbit/s. The phase makespan must be
-   `8 * B / R` seconds independent of N, aggregate useful throughput must be
-   `N * R`, and doubling R halves makespan exactly. Per-GPU FIFO order must
-   remain stable under both rates.
-3. **Tail attribution conservation.** For every completed operation, the sum
-   of critical-path time attributed to launch queue, device queue, service and
-   completion delivery must equal its end-to-end latency exactly. Separately
-   report the sum over all queue visits, which may exceed latency when visits
-   overlap and therefore must not enter that identity. No interval may be
-   negative, and graph completion must equal the latest required completion
-   event. Sweep synchronous versus asynchronous control delivery and two
-   control-class labels under identity. Class labels must move nothing; only
-   dependency-reachable work may move. Priority-caused movement belongs to the
-   class-aware policies, never to identity.
-4. **Identity arbitration is the exact off path.** Run each shared resource
-   with omitted class arbitration and with the explicit identity policy, then
-   permute class labels without changing arrivals or service demand. Event
-   order, every timestamp, all wait and byte counters, random draws and final
-   JCT must remain byte-identical. A separately enabled priority policy may
-   change only the order of simultaneously legal ready requests.
-
 ## Open tasks
 
 ### Precision
@@ -985,24 +985,6 @@ does not claim to produce these resource-contention measurements.
   each destination on its exact local predecessor frontier, conserve the
   selected causal timestamp through reporting and completion reduction, and
   preserve every accepted control byte and timestamp when the path is absent.
-- CORE-26 (Precision; P1; L): replace the cross-node collective path's current
-  independent GPU-versus-RNIC surrogate with one runtime composition of the
-  GPU-resident NCCL task and the existing WQE/NIC authority. Consume the
-  resource demands calibrated by COMP-22 and compose with CORE-13 and COMP-11
-  rather than adding a second SM, HBM or NVLink scheduler. Sweep payload,
-  participant count, channel count and compute-neighbor pressure across the
-  crossover; require TTFT and TPOT to enter the measured overlap bands and
-  reconcile every GPU and network byte exactly. Zero GPU demand and disabled
-  composition must preserve every accepted TRAF-7 timestamp and artifact byte.
-- CORE-27 (Precision; P1; L): add only the data-mover resources that COMP-22
-  observes on the cross-node NCCL path, including copy-engine or GPUDirect DMA
-  visits when present, plus their shared-HBM interaction and downstream
-  visibility. The current surrogate charges no such visit. Identify eligibility,
-  grant, release and consumer-visible completion from a reproducible concurrent
-  capture; vary transfer size, direction and competing copy pressure and match
-  held-out queue wait and JCT within the declared measurement band. An observed
-  no-copy path must stay explicitly zero, and disabling this mechanism must
-  preserve the CORE-26 baseline exactly.
 - CORE-32 (Completeness; P2; L): model optional framework or server admission
   control after arrival eligibility, including rejection, rate limits,
   concurrency caps and policy-driven deferral, without duplicating the

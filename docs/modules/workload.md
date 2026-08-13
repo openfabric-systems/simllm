@@ -31,13 +31,18 @@ Shared-prefix prompt structure is not started.
 
 ## Open tasks
 
-- WORK-1: shared-prefix prompt structure (system-prompt pools, multi-turn
-  sessions) emitting token-ID sequences; the length-distribution part of
-  this task landed with M1.
-- WORK-2: bursty/MMPP arrival process for congestion-sensitive studies.
+### Completeness
+
 - WORK-4 (Completeness; P2; L): add a server-mode ingress coordinator that
   maps external request injection to simulated time without using wall-clock
   sleeps as model time. It must retain the in-process gate and ungated server
   path as explicit identity modes, preserve framework scheduler authority,
   and measure the coordinator's queue contribution separately from framework
   queueing.
+
+### Uncategorized
+
+- WORK-1: shared-prefix prompt structure (system-prompt pools, multi-turn
+  sessions) emitting token-ID sequences; the length-distribution part of
+  this task landed with M1.
+- WORK-2: bursty/MMPP arrival process for congestion-sensitive studies.
