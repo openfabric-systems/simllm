@@ -12,7 +12,7 @@ final default gate is not green, HTSIM-25 remains open. HTSIM-8 is judged
 separately and remains open unless the final eight-plan gate exits zero and a
 deliberate bound mutant is rejected and then removed.
 
-## Attempt chronology and attempt-two refreeze
+## Attempt chronology and attempt-three refreeze
 
 Attempt one used the unmodified bound-authorship binary. It is void. Before any
 historical FCT could be observed, all three completed plans violated the frozen
@@ -23,7 +23,13 @@ then found both completion-print blocks commented out at authorship commit
 `htsim/sim/uec.cpp:823-868`. The interrupted evidence is retained outside Git
 and is not scored or used for closure.
 
-This section refreezes attempt two before its first run. Attempt two builds an
+Attempt two is also void. Its transport projection was still print-only, but a
+post-start source-diff count found two redundant empty lines removed at
+end-of-file where the attempt-two refreeze permitted one. No result from that
+attempt is scored or used for closure. Its interrupted evidence is retained
+outside Git.
+
+This section refreezes attempt three before its first run. Attempt three builds an
 authorship transport projection with exactly the four comment-delimiter edits
 from commit `77943e48aec31cc5c7cff4e93e0296fce5a50097` ("Re-enable UEC
 flow completion prints"). That commit changes four lines in
@@ -33,12 +39,13 @@ packet, route, random draw or timing expression. The projection therefore
 exposes the authorship binary's existing completion times without changing its
 modeled behavior.
 
-Attempt two is independently admissible only if a source diff proves those
+Attempt three is independently admissible only if a source diff proves those
 four print-only edits are the projection's only executable-source change from
 `896cc765` and the projected binary emits the completion and packet-summary
-vocabulary. The file-editing path may normalize one redundant empty line at
-end-of-file; the source diff must report exactly four changed code lines plus
-that one empty-line deletion. Any other source difference voids attempt two.
+vocabulary. The file-editing path normalizes end-of-file by removing the
+source's two trailing empty lines; the source diff must report exactly four
+changed code lines plus those two empty-line deletions, i.e. four insertions
+and six deletions. Any other source difference voids attempt three.
 
 ## Prior evidence and external-source audit
 
