@@ -109,8 +109,8 @@ FROZEN_FAMILY_B: dict[tuple[str, int], tuple[int, Fraction, int]] = {
     ),
     ("preempted", K_FAST): (
         10_244_194_304,
-        Fraction(7_925_804_032),
-        25_690_518_528,
+        Fraction(7_935_808_128),
+        25_730_534_912,
     ),
     ("unconstrained", K_SLOW): (
         10_248_388_608,
@@ -119,16 +119,15 @@ FROZEN_FAMILY_B: dict[tuple[str, int], tuple[int, Fraction, int]] = {
     ),
     ("preempted", K_SLOW): (
         10_248_388_608,
-        Fraction(7_931_608_064),
-        25_701_037_056,
+        Fraction(7_941_616_256),
+        25_741_069_824,
     ),
 }
 
-#: k -> frozen TPOT rise caused by the preemption
-FROZEN_TPOT_DELTA: dict[int, int] = {
-    K_FAST: 2_079_995_904,
-    K_SLOW: 2_079_991_808,
-}
+#: the frozen TPOT rise caused by the preemption, identical at every HBM rate
+#: because the resumed step and the decode step it replaces move exactly the
+#: same 259 token equivalents of KV
+FROZEN_TPOT_DELTA_PS = 2_090_000_000
 
 #: blocks D releases and blocks of D that are evicted, preempted arm
 FROZEN_D_RELEASED_BLOCKS = 17
@@ -181,7 +180,9 @@ def family_b_steps(arm: str, k: int) -> tuple[int, ...]:
     """Return the frozen step latencies of family B, in graph order."""
 
     prompt = D_PROMPT_TOKENS
-    resumed_tokens = prompt + 2
+    #: preemption zeroes the token cursor while the sequence keeps its three
+    #: generated tokens, so the resumed step recomputes every one of them
+    resumed_tokens = prompt + 3
     step_4 = (
         resumed_tokens * PREFILL_PS_PER_TOKEN + resumed_tokens * k
         if arm == "preempted"
@@ -255,28 +256,37 @@ def check_only() -> None:
         _equal(f"family B {arm} k={k}", frozen, family_b_expected(arm, k))
     for k in (K_FAST, K_SLOW):
         delta = FROZEN_FAMILY_B[("preempted", k)][1] - FROZEN_FAMILY_B[("unconstrained", k)][1]
-        _equal(f"tpot delta k={k}", Fraction(FROZEN_TPOT_DELTA[k]), delta)
-        _equal(f"tpot delta closed form k={k}", Fraction(8_320_000_000 - k, 4), delta)
+        _equal(f"tpot delta k={k}", Fraction(FROZEN_TPOT_DELTA_PS), delta)
+        _equal(
+            f"tpot delta closed form k={k}",
+            Fraction(10_360_000_000 - 2_000_000_000, 4),
+            delta,
+        )
         _equal(
             f"ttft unchanged k={k}",
             FROZEN_FAMILY_B[("unconstrained", k)][0],
             FROZEN_FAMILY_B[("preempted", k)][0],
         )
-        resumed_kv = (D_PROMPT_TOKENS + 2) * k
-        replaced_kv = (D_PROMPT_TOKENS + 3) * k
-        if resumed_kv >= replaced_kv:
-            _fail(f"resumed kv sign k={k}", "smaller than the replaced step", resumed_kv)
-        _equal(f"resumed kv gap k={k}", k, replaced_kv - resumed_kv)
+        resumed_kv = (D_PROMPT_TOKENS + 3) * k
+        replaced_kv = (D_PROMPT_TOKENS + 2) * k + k
+        _equal(f"resumed kv cancels k={k}", replaced_kv, resumed_kv)
 
-    _check_mechanism_absent()
+    state = _check_mechanism_absent()
     print(
         "check-only validated the frozen KV ladder, both metric tables and the "
-        "physical byte arithmetic, and confirmed the lowering is absent"
+        f"physical byte arithmetic, and confirmed the {state}"
     )
 
 
-def _check_mechanism_absent() -> None:
-    """Assert this commit cannot yet let a KV byte reach a metric."""
+def _check_mechanism_absent() -> str:
+    """Assert a KV byte cannot reach a metric without a declared pool.
+
+    Before the implementation landed this was the absence proof that made the
+    pre-registration claim checkable: no pool type existed and every
+    byte-carrying KV operation was refused. Afterwards the same assertion is
+    the off-path guard, because a runtime with no declared pool must still
+    refuse that operation exactly as it did then.
+    """
 
     from simllm import core
     from simllm.core import (
@@ -287,10 +297,7 @@ def _check_mechanism_absent() -> None:
         KvCacheWork,
     )
 
-    for name in ("KvPoolSpec", "KvLifecycleLedger"):
-        if hasattr(core, name):
-            _fail(f"absent {name}", "not exported before implementation", "exported")
-
+    landed = all(hasattr(core, name) for name in ("KvPoolSpec", "KvLifecycleLedger"))
     graph = ExecutionGraph(
         "kv-absent",
         0,
@@ -307,8 +314,9 @@ def _check_mechanism_absent() -> None:
     try:
         CoarseDeviceRuntime().execute(graph)
     except ValueError:
-        return
-    _fail("byte-carrying KV", "refused in preflight", "accepted")
+        return "off path intact" if landed else "mechanism absent"
+    _fail("byte-carrying KV without a pool", "refused in preflight", "accepted")
+    raise AssertionError("unreachable")
 
 
 def _run(out: Path) -> dict[str, Any]:

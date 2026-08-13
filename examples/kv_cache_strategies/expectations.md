@@ -40,6 +40,40 @@ framework (VLLM-11 and SGL-9 own the capture halves), and does not touch
 `simllm/traffic`. The fixture below is a mechanism fixture with deliberately
 tiny pools; it is not a deployment sizing claim.
 
+## Amendment 1, before any run
+
+The family B token bookkeeping was wrong when this file was first committed at
+`5a36cbe`, and re-deriving it against the vLLM cursor found the error before
+any run of the study existed. The correction is recorded here rather than
+edited silently, and the original commit is left intact.
+
+The defect. A decode step writes the KV of the token it is querying, so after
+D's step 2 the resident context is 258 tokens while D's sequence is 259 tokens
+long: token 3 was generated in step 2 and its KV is written by the step that
+queries it. Preemption sets `num_computed_tokens = 0`
+(`vllm/v1/core/sched/scheduler.py:1225`) while `num_tokens` keeps counting
+generated tokens, so the resumed step recomputes 259 tokens, not the 258 this
+file first claimed.
+
+What changes. Only the preempted arm of family B: its step 4 becomes
+`259 * 40,000,000 + 259 * k`, and the tables and relations below carry the
+corrected values. Family A is untouched, because a fresh prefill has no
+generated tokens to miscount.
+
+What this makes sharper, not weaker. The original B3 predicted that the
+resumed step moves one token equivalent fewer than the decode step it
+replaces. With the correct cursor the two are exactly equal: the resumed step
+writes 259 tokens, and the decode step it replaces reads 258 and writes 1.
+The KV terms therefore cancel exactly, and the TPOT rise is
+`(10,360,000,000 - 2,000,000,000) / 4 = 2,090,000,000` ps at *every* HBM rate.
+A bandwidth-independent delta is a stricter prediction than the original
+bandwidth-dependent one, and it is the one this study is now registered on.
+
+Superseded values, recorded so the amendment is auditable: step 4 preempted
+`258 * (40,000,000 + k)`; TPOT preempted 7,925,804,032 and 7,931,608,064 ps;
+token-4 interval 25,690,518,528 and 25,701,037,056 ps; TPOT delta 2,079,995,904
+and 2,079,991,808 ps.
+
 ## Derived semantics: pinned vLLM 0.26.0
 
 Every rule in the state machine is derived from the pinned sources at
@@ -298,14 +332,17 @@ One request D and one pressure request G replay on one rank.
 - Step 3: G prefills 384 tokens, 24 blocks. D is not scheduled in this step in
   either arm, so the resulting scheduler gap is identical in both arms and
   cancels from the comparison.
-- Step 4: in the unconstrained arm D decodes token 4 with context 258. In the
-  constrained arm D was preempted during step 3, so step 4 recomputes all 258
-  tokens, rewrites their KV and yields token 4.
-- Step 5: D decodes token 5. Context 259.
+- Step 4: in the unconstrained arm D decodes token 4 with a resident context of
+  258. In the constrained arm D was preempted during step 3, so step 4
+  recomputes all 259 tokens of its sequence, rewrites their KV and yields
+  token 4.
+- Step 5: D decodes token 5. Resident context 259.
 
 A prefill step emits `WRITE` only, because its attention reads the KV it is
 writing inside the same kernel. A decode step emits a `READ` of the resident
-context and a `WRITE` of the single new token.
+context and a `WRITE` of the token it is querying, so after each decode step
+the resident context is one token longer while the sequence has grown by the
+token that step generated.
 
 Step latencies in picoseconds, with k the KV cost of one token:
 
@@ -315,7 +352,7 @@ step 1 = 2,000,000,000 + 257 * k
 step 2 = 2,000,000,000 + 258 * k
 step 3 = 384 * 40,000,000 + 384 * k
 step 4 unconstrained = 2,000,000,000 + 259 * k
-step 4 preempted     = 258 * 40,000,000 + 258 * k
+step 4 preempted     = 259 * 40,000,000 + 259 * k
 step 5 = 2,000,000,000 + 260 * k
 ```
 
@@ -325,30 +362,31 @@ their exact rational mean.
 | Arm | k | TTFT | TPOT | token-4 interval |
 |---|---|---|---|---|
 | unconstrained | 16,384 | 10,244,194,304 | 5,845,808,128 | 17,370,534,912 |
-| preempted | 16,384 | 10,244,194,304 | 7,925,804,032 | 25,690,518,528 |
+| preempted | 16,384 | 10,244,194,304 | 7,935,808,128 | 25,730,534,912 |
 | unconstrained | 32,768 | 10,248,388,608 | 5,851,616,256 | 17,381,069,824 |
-| preempted | 32,768 | 10,248,388,608 | 7,931,608,064 | 25,701,037,056 |
+| preempted | 32,768 | 10,248,388,608 | 7,941,616,256 | 25,741,069,824 |
 
 Registered relations for family B:
 
-- B1 direction: preemption raises TPOT. The rise is 2,079,995,904 ps at
-  k=16,384 and 2,079,991,808 ps at k=32,768, i.e. a factor of 1.3558 and
-  1.3554.
-- B2 closed form: `TPOT_delta = (8,320,000,000 - k) / 4` exactly.
-- B3 sign of the byte term: the resumed step writes 258 token equivalents
-  while the decode step it replaces moves 259 (a 258-token read plus a
-  one-token write), so the resumed step's KV byte term is *smaller* by exactly
-  one token equivalent, k ps, even though the step is 5.15 times longer. A
-  model that assumed constraint always adds KV bytes gets this sign wrong.
+- B1 direction: preemption raises TPOT. The rise is exactly 2,090,000,000 ps
+  at both rates, i.e. a factor of 1.3575 at k=16,384 and 1.3572 at k=32,768.
+- B2 closed form: `TPOT_delta = (10,360,000,000 - 2,000,000,000) / 4`, with no
+  k term at all.
+- B3 cancellation of the byte term: the resumed step writes 259 token
+  equivalents and the decode step it replaces moves 259 (a 258-token read plus
+  a one-token write), so their KV terms are exactly equal and the TPOT rise is
+  independent of HBM bandwidth, even though the step is 5.17 times longer. A
+  model that assumed constraint always adds KV bytes predicts a rise that
+  grows as bandwidth falls; this one does not move at all.
 - B4 TTFT unchanged: D's TTFT is identical in both arms to 0 ps, because the
   preemption happens after the first token. Constraint that arrives late must
   not retroactively move TTFT.
 - B5 unconstrained control: with capacity above the threshold no preemption is
   observed, no eviction of D's blocks is accounted, and every step latency
   equals the unconstrained column to 0 ps.
-- B6 accounting: the ledger reports 17 released blocks and 16 evicted blocks
-  for D in the preempted arm (its partial tail block holds no full-block
-  content and is freed, not evicted) and zero evictions of D's blocks in the
+- B6 accounting: the ledger reports 17 released references and 16 evicted
+  blocks for D in the preempted arm (its partial tail block holds no
+  full-block content and is freed, not evicted) and zero evictions in the
   unconstrained arm.
 
 ## Evidence classes and scoring
