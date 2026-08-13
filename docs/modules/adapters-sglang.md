@@ -191,6 +191,23 @@ not part of its eight-instance behavioral headline.
 
 ## Open tasks
 
+### Precision
+
+### Completeness
+
+- SGL-18 (Completeness; P2; L): extend the strict single-GPU routed-MoE
+  geometry reader to SGLang's distributed and hybrid MoE families. Source
+  per-rank expert ownership and expert tensor sharding from the active
+  `moe_ep_size`, `moe_dp_size`, and `moe_tp_size`; represent shared experts,
+  mixed dense/routed layer schedules, and MLA before enabling families that
+  require them. The single-GPU Granite, Mixtral, and Qwen3 MoE path remains
+  the explicit supported baseline. Every unsupported sentinel combination
+  must keep failing before it can be priced as dense. Acceptance requires
+  exact per-rank active FLOPs and resident bytes, a supported end-to-end
+  TTFT/TPOT change, and byte-identical dense and single-GPU baselines.
+
+### Uncategorized
+
 - SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic
   vs shared-prefix workload structure.
 - SGL-4 (Precision; P1; L) (remaining half): a paced-mode run checked against
