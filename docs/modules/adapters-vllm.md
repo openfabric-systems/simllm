@@ -436,20 +436,20 @@ DP event and one fixed 4,096-byte TP event, still with no
 That historical component evidence does not change the earlier blocked
 behavioral denominator.
 
-VLLM-22 remains open as of 2026-08-12. The opt-in `granite-dbo` producer at the
-`SimWorker` model-forward boundary translates each real vLLM v0.26.0 scheduler
-step into a Granite per-layer schedule. It records source submission order,
-per-rank compute and shared communication queues, participant-local edges,
-microbatch request correlation and request-visible completion frontiers. The
-producer derives no overlap percentage or edge from the serial compatibility
-graph. Unsupported model families, TP or PP shapes, explicit microbatch sizes,
-padded DBO and multi-token DBO splits fail explicitly; VLLM-23 owns those
-optional shapes. The audited vLLM wrapper supplies the event-wait argument and
-contains no wrapper-level global barrier, but `deep_ep` itself was not
-installed. Rank-local behavior below that wrapper is inferred rather than
-directly source-backed.
+The 2026-08-12 VLLM-22 qualification was void. The opt-in `granite-dbo`
+producer at the `SimWorker` model-forward boundary translates each real vLLM
+v0.26.0 scheduler step into a Granite per-layer schedule. It records source
+submission order, per-rank compute and shared communication queues,
+participant-local edges, microbatch request correlation and request-visible
+completion frontiers. The producer derives no overlap percentage or edge from
+the serial compatibility graph. Unsupported model families, TP or PP shapes,
+explicit microbatch sizes, padded DBO and multi-token DBO splits fail
+explicitly; VLLM-23 owns those optional shapes. The audited vLLM wrapper
+supplies the event-wait argument and contains no wrapper-level global barrier,
+but `deep_ep` itself was not installed. Rank-local behavior below that wrapper
+is inferred rather than directly source-backed.
 
-The live eight-rank replay emitted observations on all 32 nonempty steps. All
+That live eight-rank replay emitted observations on all 32 nonempty steps. All
 steps carried 24 layers and 48 unique dispatch/combine sites; 23 DBO steps
 carried 96 invocations. The run is void with findings because the fatal
 `ttft_exact_single_batch` guard was violated. That guard tested the same
@@ -467,8 +467,8 @@ The adapter emits zero-byte semantic all-to-allv markers. Those are an explicit
 `no-byte-evidence` observation mode, named by
 `simllm.traffic.observed_routed_byte_evidence`, and they no longer stand in for
 a byte check: VLLM-24 closed that P0 gap. The
-producer-disabled path passed all 64 per-step direct serial comparisons and
-both accepted graph and legacy diagnostic GOAL hashes. See
+producer-disabled component path passed all 64 per-step direct serial
+comparisons and both accepted graph and legacy diagnostic GOAL hashes. See
 [the observed-schedule results](../../examples/vllm_observed_schedule_v1/RESULTS.md).
 
 The 2026-08-13 TRAF-13 requalification drove the same unmodified producer
@@ -481,9 +481,33 @@ the frozen routed table allows. The producer's structural signature is a
 frontier, which cancel because the LM-head compute is relocated rather than
 added; the remainder is the microbatch split's byte accounting. On the
 single-batch prefill the serial and observed arms are now exactly equal on both
-placements. VLLM-22 stays open here: its clauses are covered by that evidence,
-but closing it was outside the change that produced it. See
+placements. That study covered the traffic-side decomposition but deliberately
+left the adapter-owned qualification to a later closure. See
 [the observed-overlap results](../../examples/vllm_observed_overlap_v1/RESULTS.md).
+
+VLLM-22 is complete. Expectations were frozen at commit `6459c3c` before
+implementation and the first measured run. The closing qualification drove
+the real eight-rank vLLM v0.26.0 replay through all 32 nonempty steps and the
+supported `ExecutionObservations` to `CompletionEvent`, `StepResult`, TTFT and
+TPOT chain. Its three genuine-risk instances passed: the producer reduced
+per-request TPOT by 1.436193 percent on one node and 11.587805 percent across
+nodes, and the absolute reductions scaled by 8.999138 across the ninefold
+link-rate change. No fatal guard was violated.
+
+All 32 steps passed independently derived submission-order, dependency,
+correlation, rank, logical-stream, completion-frontier and original-request
+identity checks. Sequential single-batch comparison preserved full reducer
+history before requiring exact graphs, execution events, timestamps,
+completion order, `StepResult` and request metrics. The source audit names
+the cooperative DBO wrapper, shared compute and communication streams and
+DeepEP event waits, and found no overlap knob or compatibility-derived edge.
+The disabled real replay made one one-argument legacy sink call per step and
+matched the independent serial reference through the standard exact artifact
+comparator for record, graph, diagnostic and graph-derived GOAL, execution,
+completion and request-metric bytes. A tracked test calls that actual wrapper
+without vLLM or `third_party` and proves the lock fails under one-byte
+mutations. See
+[the producer qualification results](../../examples/vllm_producer_qualification_v1/RESULTS.md).
 
 VLLM-24 is complete. Expectations were frozen at commit `20f6017` and amended
 at `1a4db9b`, both before the harness and every result-producing run; the
@@ -651,21 +675,6 @@ and zero changed all-to-all bytes. The detailed evidence is in
   Freeze a fixed-workload signed TTFT/TPOT relation and quantitative band before
   implementation. The disabled projection must preserve every accepted
   VLLM-13 timestamp, token, record, and completion order exactly.
-- VLLM-22 (Completeness; P0; L): qualify the real vLLM
-  `ExecutionObservations` producer for the frozen Granite boundary. The
-  2026-08-12 run emitted all 24 ordered layers and 48 semantic MoE sites but is
-  void because `ttft_exact_single_batch` violated the frozen arm-equivalence
-  premise. A future expectations-only qualification must distinguish DBO from
-  the TRAF-9 and terminal-frontier differences, preserve exact submission
-  order, logical streams, dependencies, request correlation and completion
-  frontiers, and reach TTFT and TPOT through the supported metric chain. It
-  must name the wrapper or measured mechanism that makes each concurrency
-  legal and derive no edge from an overlap percentage or compatibility
-  schedule. Completion reduction must return the original request identities;
-  per-request routed-byte acceptance depends on TRAF-25 and VLLM-24, both of
-  which have landed. With the
-  producer absent, preserve the legacy sink call, serial graph and GOAL bytes,
-  timestamps and completion order exactly.
 - VLLM-23 (Completeness; P2; L): extend the source-backed observation producer
   beyond the implemented Granite TP1, PP1, uniform one-token decode boundary.
   Add exact request and token-interval correlation for multi-token or padded
