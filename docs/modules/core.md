@@ -290,7 +290,7 @@ dictionary:
 | Payload | Semantic owner | Runtime lowering |
 |---|---|---|
 | `ComputeWork` | Model runner plus `ComputeProvider` | launch queue, CUDA stream, GPU work queue, hardware scheduler and HBM |
-| `KvCacheWork` | Real framework KV/prefix-cache manager | zero-byte lifecycle observation only in CORE-4; byte-carrying READ/WRITE fails preflight until CORE-3 supplies HBM lowering |
+| `KvCacheWork` | Real framework KV/prefix-cache manager | `KvLifecycleLedger` accounting in preflight, then the rank's HBM queue for a byte-carrying action; refused before authority mutation when no pool is declared |
 | `DmaWork` | Data-mover planner | DMA descriptor, directional copy engine, source/destination memory queues |
 | `CollectiveWork` | Framework/NCCL observation plus traffic planner | NCCL channels, DMA/HBM work, WQEs and network flows |
 | `ControlWork` | Framework or runtime controller | synchronous or asynchronous labeled local/fabric control path; priority only under an opted-in policy |
@@ -498,8 +498,40 @@ rows are separately validated surfaces. `CoarseDeviceRuntime` now supplies
 their concrete graph-operation/tag/WQE correlation.
 
 Actual framework observation producers remain VLLM-11/12 and SGL-9/10.
-Explicit KV state semantics remain CORE-3. BACK-9 and BACK-12 own the remaining
-structural RNIC objects and arbitration depth.
+BACK-9 and BACK-12 own the remaining structural RNIC objects and arbitration
+depth.
+
+Explicit KV state semantics now exist. `simllm/core/kv.py` holds the sole
+mutable KV authority: `KvLifecycleLedger` replays the observed vocabulary
+against a `KvPoolSpec` of fixed capacity, keeping each block in exactly one of
+`FREE`, `LIVE` or `RECLAIMABLE`, and refusing a stream that breaks allocation,
+ownership, reference-count, capacity or byte conservation. Every rule is
+derived from the pinned vLLM 0.26.0 sources with file and line citations in the
+module docstring, including the three that a plausible account of paged
+attention gets wrong: eviction is lazy, so a cached block may only be
+reallocated after an explicit `EVICT`; a request frees in reverse order, so a
+shared prefix outlives its creator; and a block becomes reusable only once it
+is full, which is what separates a voluntary `FREE` from an involuntary
+`EVICT`. `BIND_PREFIX` is the reuse decision and `TOUCH` the reference-count
+mechanism, split so a hit is never counted twice.
+
+`CoarseDeviceRuntime` consumes that accounting during preflight, before any
+resource is scheduled, on a clone that is adopted only when the whole graph is
+legal. A byte-carrying action is then served from the rank's HBM queue at the
+profile's `hbm_rate_bps` and attributed to `kv_ps`, so KV bytes reach
+`RequestMetric`, TTFT and TPOT. Both off paths are exact: with no pool declared
+a byte-carrying read or write is still refused before authority mutation, and
+with a pool declared a zero-byte observation preserves every timestamp and
+completion event.
+
+The [KV lifecycle study](../../examples/kv_cache_strategies/RESULTS.md)
+demonstrates the live relation. Shrinking the pool from 64 to 32 blocks raises
+the replayed request's TTFT by exactly 2.0000x, a preemption raises TPOT by
+exactly 2,090,000,000 ps at both HBM rates, and capacities above the
+constraint threshold leave TTFT bit-identical. All 20 scored genuine-risk
+instances pass, all 17 entailed relations hold and none of the 56 fatal guards
+is violated. CORE-3 stays open for the case matrix, the remaining sweep axes
+and the remaining reporting surface.
 
 CORE-5 is complete for the supported core path. `CompletionReducer` consumes
 the required graph boundary and the runtime's corrected critical-path
@@ -768,22 +800,6 @@ does not claim to produce these resource-contention measurements.
   Acceptance must retain every lifecycle exit, suppression diagnostic and
   scheduler-visible boundary, and must state each moved intermediate value with
   its cause.
-- CORE-3 (Completeness; P1; L): implement explicit KV lifecycle accounting before resource
-  contention. Consume adapter observations for RESERVE, ALLOCATE,
-  BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
-  TRANSFER and RECOMPUTE. Enforce allocation, ownership, reference-count and
-  byte-conservation invariants. Add `examples/kv_cache_strategies/` with
-  pre-registered vLLM and SGLang cases: no reuse, repeated system prefixes,
-  competing prefix pools, multi-turn sessions, chunked prefill, capacity
-  pressure, eviction, preemption/recompute, mixed contexts and bursts. Sweep
-  capacity, block size, arrival rate, length, sharing and concurrency; report
-  live/reserved/reclaimable bytes, fragmentation, hits, eviction reason and
-  age, reads/writes, transfers, recompute, preemption, capacity wait and
-  TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9. Until this
-  lands, CORE-4 accepts zero-byte lifecycle observations but rejects every
-  byte-carrying READ or WRITE during preflight rather than reporting silent
-  zero-cost HBM work. Acceptance must enable those same fixtures through the
-  HBM service and preserve the explicit zero-byte path exactly.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
@@ -843,22 +859,24 @@ does not claim to produce these resource-contention measurements.
 
 ### Completeness
 
-- CORE-3 (Completeness; P1; L): implement explicit KV lifecycle accounting before resource
-  contention. Consume adapter observations for RESERVE, ALLOCATE,
-  BIND_PREFIX, TOUCH, READ, WRITE, RETAIN/RELEASE, EVICT, FREE, SWAP,
-  TRANSFER and RECOMPUTE. Enforce allocation, ownership, reference-count and
-  byte-conservation invariants. Add `examples/kv_cache_strategies/` with
-  pre-registered vLLM and SGLang cases: no reuse, repeated system prefixes,
-  competing prefix pools, multi-turn sessions, chunked prefill, capacity
-  pressure, eviction, preemption/recompute, mixed contexts and bursts. Sweep
-  capacity, block size, arrival rate, length, sharing and concurrency; report
-  live/reserved/reclaimable bytes, fragmentation, hits, eviction reason and
-  age, reads/writes, transfers, recompute, preemption, capacity wait and
-  TTFT/TPOT tails. Adapter capture halves are VLLM-11 and SGL-9. Until this
-  lands, CORE-4 accepts zero-byte lifecycle observations but rejects every
-  byte-carrying READ or WRITE during preflight rather than reporting silent
-  zero-cost HBM work. Acceptance must enable those same fixtures through the
-  HBM service and preserve the explicit zero-byte path exactly.
+- CORE-3 (Completeness; P1; L): widen the KV lifecycle case matrix, sweep and
+  reporting surface. The accounting itself has landed: `KvLifecycleLedger`
+  consumes all thirteen vocabulary members before resource contention, enforces
+  the allocation, ownership, reference-count, capacity and byte-conservation
+  invariants, and reaches TTFT and TPOT through the HBM queue with both off
+  paths preserved exactly; see
+  [the KV lifecycle study](../../examples/kv_cache_strategies/RESULTS.md),
+  which registered and demonstrated no reuse, repeated system prefixes,
+  capacity pressure, eviction and preemption/recompute over a six-level
+  capacity sweep at two HBM rates. What remains, all still under this ID
+  because its own entry already registered it: the SGLang cases, and the vLLM
+  cases for competing prefix pools, multi-turn sessions, chunked prefill,
+  mixed contexts and bursts; sweeps over block size, arrival rate, length,
+  sharing and concurrency; and reporting for fragmentation, eviction age, a
+  preemption counter, capacity wait and TTFT/TPOT tails. The observation
+  streams must come from the adapter capture halves VLLM-11 and SGL-9 rather
+  than from the study's own vLLM-policy fixture. Acceptance keeps the frozen
+  cells of the landed study bit-identical.
 - CORE-9 (Completeness; P1; M): replace the bookkeeping-v1 WQE compatibility
   shape with a versioned structural projection while retaining a strict v1
   reader. A send WQE names one local SQ and send CQ, a receive WQE names one RQ

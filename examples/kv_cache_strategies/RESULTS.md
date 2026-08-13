@@ -209,6 +209,28 @@ registry entry is narrowed to the remaining scope rather than removed, and
 **zero new task IDs were registered**: a clause that its own entry still
 carries does not need a second identity. CORE-50 and CORE-51 remain unused.
 
+## Contradiction sweep
+
+Statements this change makes stale, reported rather than edited:
+
+- `docs/architecture.md:275`, "CORE-3 still owns explicit KV lifecycle". CORE-3
+  still owns the case matrix, the remaining sweeps and the remaining reporting
+  surface, but no longer the accounting or its path to a metric.
+- `docs/architecture.md:210-213`, which says physical KV reads and writes lower
+  to HBM operations, swap and remote movement lower to DMA plus network work,
+  and recompute lowers to compute plus a KV write. The first is now true. Swap
+  and transfer are accounted and byte-carrying but lower to the HBM queue
+  rather than to DMA plus network; recompute is accounted as tokens and is not
+  lowered at all.
+- `docs/README_PRO.md:193-199`, which lists explicit KV lifecycle as a roadmap
+  item to be "validated in a dedicated `examples/kv_cache_strategies/` study
+  before KV bytes couple to resource contention". That study now exists and
+  those bytes now couple to the HBM queue; what remains on this roadmap line
+  is the adapter capture.
+- `README.md:292`, "Planned on this axis: explicit KV-lifecycle capture". The
+  capture halves VLLM-11 and SGL-9 are indeed still planned; the core-side
+  accounting they will feed is not.
+
 ## What this does not claim
 
 The serialized KV write is an upper bound on the KV term. A real attention
