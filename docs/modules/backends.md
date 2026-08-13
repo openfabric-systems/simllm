@@ -55,6 +55,20 @@ backend submodules.
   backend DCQCN PR); same completion-CSV schema and quiescence contract.
 - `HtsimUecConfig` + `build_htsim_uec_command`: argv construction for
   GOAL-driven `htsim_uec` runs.
+- `LogGopsimConfig` + `build_loggopsim_command` + `run_loggopsim` +
+  `parse_loggopsim_stdout` (BACK-2): the flow-level analytical seam. The same
+  binary GOAL is costed with the LogGOPS model instead of a packet fabric, so
+  a sweep that only needs a schedule completion time does not pay for a
+  packet-level run. LogGOPS parameters keep the tool's own units, `L`, `o`,
+  `g` and `O` in whole nanoseconds and `G` in nanoseconds per byte, under
+  explicit `_ns` field names; parsed times convert to picoseconds by exactly
+  1000. The parser reads both output shapes the tool can print, the per-host
+  block and the batch-mode maximum, and treats a nonfinite `Average FCT` as
+  absent. Discovery is `SIMLLM_LOGGOPSIM`, the `build/loggopsim` CMake
+  layout, the ATLAHS submodule's own make output, then `PATH`; with none of
+  those present the runner raises and names the environment variable. This is
+  an invocation helper only, and TRAF-20 still owns the fluid fast fidelity
+  level.
 - `HtsimStepSink` + `HtsimStepSinkConfig` (M4): the closed-loop step sink,
   a callable `StepRecord -> StepResult | None` matching the adapters' sink
   contract. Per step its serial lowerer builds one `ExecutionGraph`; that
@@ -533,8 +547,10 @@ Service class is an accounting label in this closed slice; it does not affect
 scheduling. The existing deterministic reservation order, including mandatory
 posted forward progress, is the baseline that CORE-8's identity policy must
 preserve. BACK-16 adds event-time mechanism precision without class-based
-reordering. Optional class-aware policies remain CORE-10 completeness work,
-and selecting identity must reproduce the accepted BACK-10 rows byte for byte.
+reordering. The class-aware strict-priority and weighted-round-robin policies
+that CORE-10 landed live at the core graph-operation seam and no PCIe
+reservation consults them, so selecting identity must still reproduce the
+accepted BACK-10 rows byte for byte and no PCIe row moves.
 BACK-16 owns active-path timing precision and calibration; BACK-17 owns
 optional PCIe feature completeness.
 
@@ -726,6 +742,41 @@ BACK-4 was retracted on 2026-08-03. Multi-QP striping as a DCQCN mitigation
 was withdrawn by maintainer decision: DCQCN is the expected-fail comparator,
 and its ECMP-collision and slow-start behavior is the phenomenon under study.
 
+HTSIM-2 closed on 2026-08-13. `rnic-cn` now carries
+`-rnic_cn_goodput_trace_csv` with `-rnic_cn_goodput_trace_bin_ps`,
+`-rnic_cn_state_trace_csv`, and `-rnic_cn_queue_trace_csv` with
+`-rnic_cn_queue_trace_max_rows`. Every flag is off by default, each pair is
+all or nothing, and all five are rejected for the profiles that cannot produce
+them. The two shared trace components were already profile neutral; the new
+`AtlahsQueueTrace` is the third, consuming the ns-tm3 switch observation
+boundary that no profile previously read. Seven recording points sit in the
+reviewed runtime, goodput at the receiver's in-order release and sender state
+at declare, rate activation, immediate feedback, nflow raise, retirement and
+delivery completion. The untraced binary is byte-identical to the pre-change
+binary and the traced run differs only by one observation manifest line
+([rnic_cn_trace_v1](../../examples/rnic_cn_trace_v1/RESULTS.md), 22 of 27
+scored instances, backend ctest 358 of 358).
+
+Two frozen relations in that study were refuted and are recorded here because
+they bear on how the traces may be read. Goodput is binned on the receiver's
+in-order release, not on wire arrival, so a bin total may exceed the link's
+per-bin byte budget by the resequencing burst; the observed excess never
+exceeded one maximum DATA payload. And the `rnic-cn` control-packet population
+is time driven and therefore rate dependent, while the DATA population is not:
+the same GOAL produced exactly 1024 DATA switch enqueues at both 400 and
+200 Gbit/s and 242 against 772 control enqueues. Comparisons across link rates
+must separate the two.
+
+BACK-2 closed on 2026-08-13. `simllm/backends/loggopsim.py` drives the
+unmodified LogGOPSim binary over the same binary GOAL the htsim helpers use.
+Fifteen exact argument and parse oracles pin the option grammar, both output
+shapes and the picosecond conversion, and a live two-by-two sweep over message
+size and per-byte gap reproduces the LogGOPS cost model on four of four scored
+instances with an invariant 6500 ns constant, every cell above its own
+serialization floor
+([loggopsim_helper_v1](../../examples/loggopsim_helper_v1/RESULTS.md)). The
+helper is the invocation seam only; TRAF-20 still owns the fluid fast level.
+
 ## Open tasks
 
 Every task is labeled `(Category; priority; difficulty)`. P0 is a correctness,
@@ -786,8 +837,9 @@ is difficult.
   forward-progress rules before baseline selection; a resource-blocked
   non-posted read is not a legal ready candidate, so an eligible posted write
   can use the idle link. Identity ignores service class and must preserve every
-  accepted BACK-10 row, timestamp, counter and random draw exactly. CORE-10
-  owns optional non-identity class reordering.
+  accepted BACK-10 row, timestamp, counter and random draw exactly. Optional
+  non-identity class reordering here would reuse the landed core policies
+  rather than growing a second policy surface.
   Add variable measured replay, the remaining PCIe RO/IDO/TC/VC ordering
   matrix and provenance-bearing CX-7 calibration. Calibrate tag-capacity knees
   for every mode enabled by BACK-17. Preserve deterministic replay and
@@ -807,8 +859,6 @@ is difficult.
 
 ### Completeness
 
-- BACK-2 (Completeness; P2; S): LogGOPSim invocation helper for fast
-  flow-level sweeps.
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
   the structural **RDMA
   Work Queue**, merging the old WQE lifecycle and per-WQE-start work. Model
@@ -922,9 +972,6 @@ is difficult.
 
 ### Precision
 
-- HTSIM-2 (Precision; P1; M): goodput/state/queue trace flags for `rnic-cn`;
-  they need trace
-  hooks in the reviewed runtime first.
 - HTSIM-5 (Precision; P1; L): persistent DCQCN policy state across hardware
   WQEs. On
   2026-08-07 the former hardware-specific per-WQE-start scope was merged into
@@ -1013,4 +1060,19 @@ is difficult.
   `txt2bin` build target.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
-  cannot satisfy the resolver) and pin a known-good HTSIM commit.
+  cannot satisfy the resolver) and pin a known-good HTSIM commit. Audited on
+  2026-08-13 at the pinned ATLAHS commit: the registered description is
+  accurate and the defect is in the ATLAHS sources, so the fix belongs in that
+  repo and this entry stays open. `scripts/build.py` resolves an HTSIM source
+  directory only when a candidate has both a `CMakeLists.txt` file and a
+  `datacenter` directory. The vendored tree at `sim/htsim-backend/sim` has the
+  directory and no `CMakeLists.txt` at any of the three candidate spellings;
+  it is upstream Broadcom csg-htsim with a Makefile build and zero `rnic`
+  sources, so it could not produce `htsim_rnic` even with CMake. Two strings
+  nonetheless advertise it as a working default: the `resolve_htsim_sim_dir`
+  docstring in `scripts/build.py` calls the in-tree backend "the compatibility
+  fallback", and the `--htsim-root` help in `atlahs_entry.py` promises "then
+  the vendored compatibility tree by default". The sibling preference ahead of
+  it also looks for a directory named `HTSIM`, which no case-sensitive
+  checkout of this layout provides. None of this affects SimLLM runs, which
+  invoke the simulators directly rather than through the launcher.

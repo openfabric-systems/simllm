@@ -36,6 +36,15 @@ from simllm.backends.htsim_rnic import (
     parse_completion_csv,
     run_htsim_rnic,
 )
+from simllm.backends.loggopsim import (
+    LOGGOPSIM_NETWORK_TYPES,
+    LogGopsimConfig,
+    LogGopsimRunResult,
+    build_loggopsim_command,
+    find_loggopsim,
+    parse_loggopsim_stdout,
+    run_loggopsim,
+)
 from simllm.backends.rnic_records import (
     BypassArtifactComparison,
     BypassArtifactPaths,
@@ -80,6 +89,7 @@ from simllm.backends.step_sink import (
 
 __all__ = [
     "DEPENDENCY_CROSS_CHECK_MODES",
+    "LOGGOPSIM_NETWORK_TYPES",
     "NATIVE_AUTHORITY",
     "RNIC_PROFILES",
     "BypassArtifactComparison",
@@ -104,6 +114,8 @@ __all__ = [
     "HtsimStepSink",
     "HtsimStepSinkConfig",
     "HtsimUecConfig",
+    "LogGopsimConfig",
+    "LogGopsimRunResult",
     "NormalizedFct",
     "ObservedStepLowerer",
     "RequestLatencyTotals",
@@ -128,14 +140,17 @@ __all__ = [
     "build_htsim_dcqcn_command",
     "build_htsim_rnic_command",
     "build_htsim_uec_command",
+    "build_loggopsim_command",
     "canonical_bypass_parameters",
     "compare_bypass_artifacts",
     "complete_dependency_cross_check",
     "find_htsim_dcqcn",
     "find_htsim_rnic",
+    "find_loggopsim",
     "invoke_composed_tier_a_producer",
     "normalized_fct",
     "parse_completion_csv",
+    "parse_loggopsim_stdout",
     "plan_dependency_cross_check",
     "read_bypass_artifacts",
     "rnic_bookkeeping_projection_from_json",
@@ -143,4 +158,5 @@ __all__ = [
     "rnic_session_result_from_json",
     "run_htsim_dcqcn",
     "run_htsim_rnic",
+    "run_loggopsim",
 ]

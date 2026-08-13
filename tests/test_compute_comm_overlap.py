@@ -390,16 +390,32 @@ def test_observed_lowerer_absent_observations_has_reaccepted_graph_artifacts():
         ],
         num_sampled=None,
     )
-    graph = ObservedStepLowerer(
+    # TRAF-28 made the traffic-owned plan the lowering default. The accepted
+    # artifacts below now belong to the explicit absent-plan bypass, which must
+    # stay byte-identical, and the default graph must differ from the bypass
+    # only by the plan it carries.
+    bypass = ObservedStepLowerer(
+        SerialStepLowererConfig(
+            dims,
+            (0, 1),
+            provider=FlopProvider(),
+            attach_collective_plan=False,
+        )
+    ).lower(record)
+    default = ObservedStepLowerer(
         SerialStepLowererConfig(dims, (0, 1), provider=FlopProvider())
     ).lower(record)
+    assert bypass.collective_plans == ()
+    assert len(default.collective_plans) == sum(
+        isinstance(operation.work, CollectiveWork) for operation in default.operations
+    )
+    assert replace(default, collective_plans=()) == bypass
+
+    graph = bypass
+    payload = execution_graph_to_json(graph)
+    assert "collective_plans" not in payload
     wire = (
-        json.dumps(
-            execution_graph_to_json(graph),
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        + "\n"
+        json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
     ).encode()
     projection = project_execution_graph_goal(graph)
     goal_manifest = tuple(
@@ -409,6 +425,19 @@ def test_observed_lowerer_absent_observations_has_reaccepted_graph_artifacts():
         )
         for artifact in projection.artifacts
     )
+    default_projection = project_execution_graph_goal(default)
+    assert (
+        tuple(
+            (
+                len(artifact.trace.render().encode()),
+                hashlib.sha256(artifact.trace.render().encode()).hexdigest(),
+            )
+            for artifact in default_projection.artifacts
+        )
+        == goal_manifest
+    )
+    assert len(default_projection.boundaries) == len(projection.boundaries)
+    assert len(default_projection.serialized_edges) == len(projection.serialized_edges)
 
     assert len(wire) == 4_127
     assert hashlib.sha256(wire).hexdigest() == (

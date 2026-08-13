@@ -110,6 +110,89 @@ def _visit_totals(visits: tuple[QueueVisit, ...]) -> AdditiveVisitTotals:
     )
 
 
+def _validate_scalar_projection(
+    record: RuntimeOperationRecord,
+    by_id: dict[str, RuntimeOperationRecord],
+    released_at_ps: int,
+) -> None:
+    """Check one operation's scalar fields against its critical segments.
+
+    The segments are the conservation authority. The operation-level
+    completion, causal boundary, additive predecessor and critical-path
+    breakdown are compatibility projections of that authority, so each one is
+    derived here from the segments and required to agree exactly. An
+    asynchronous operation may release the framework at a participant
+    completion earlier than its physical maximum, but it may never report a
+    timestamp the segments do not carry.
+    """
+
+    name = record.operation_id
+    segments = record.critical_segments
+    if not segments:
+        raise ValueError(f"operation {name!r} has no critical segment")
+    completions = [segment.completed_at_ps for segment in segments]
+    if record.physical_completed_at_ps != max(completions):
+        raise ValueError(
+            f"operation {name!r} physical completion disagrees with its "
+            "critical segments"
+        )
+    if record.completed_at_ps not in completions:
+        raise ValueError(
+            f"operation {name!r} completion is not a participant critical-segment "
+            "completion"
+        )
+    causal_id = record.causal_predecessor_id
+    boundary_ps = record.causal_predecessor_completed_at_ps
+    if (causal_id is None) != (boundary_ps is None):
+        raise ValueError(
+            f"operation {name!r} causal predecessor identity and boundary disagree"
+        )
+    if causal_id is None:
+        if record.critical_predecessor_id is not None:
+            raise ValueError(
+                f"operation {name!r} names an additive predecessor without a causal one"
+            )
+        segment_start_ps = released_at_ps
+    else:
+        predecessor = by_id.get(causal_id)
+        if predecessor is None:
+            raise ValueError(
+                f"operation {name!r} names an unknown causal predecessor"
+            )
+        if boundary_ps not in {
+            segment.completed_at_ps for segment in predecessor.critical_segments
+        }:
+            raise ValueError(
+                f"operation {name!r} causal boundary is not a participant completion "
+                f"of {causal_id!r}"
+            )
+        if not any(
+            segment.predecessor_operation_id == causal_id
+            and segment.started_at_ps == boundary_ps
+            for segment in segments
+        ):
+            raise ValueError(
+                f"operation {name!r} has no critical segment admitted from "
+                f"{causal_id!r} at its causal boundary"
+            )
+        expected_additive_id = (
+            causal_id if boundary_ps == predecessor.completed_at_ps else None
+        )
+        if record.critical_predecessor_id != expected_additive_id:
+            raise ValueError(
+                f"operation {name!r} additive predecessor disagrees with the "
+                "critical segment that admitted it"
+            )
+        segment_start_ps = (
+            boundary_ps if expected_additive_id is not None else released_at_ps
+        )
+    if record.breakdown.operation_latency_ps != record.completed_at_ps - segment_start_ps:
+        raise ValueError(
+            f"operation {name!r} critical-path breakdown does not span its own "
+            "projected segment"
+        )
+
+
 class CompletionReducer:
     """Reduce authoritative runtime evidence and advance one virtual clock.
 
@@ -269,6 +352,13 @@ class CompletionReducer:
                 raise ValueError("critical segment names an unknown predecessor segment")
             if segment.started_at_ps != predecessor_segment.completed_at_ps:
                 raise ValueError("critical segment predecessor timestamp disagrees")
+
+        # CORE-46: the scalar operation-level fields are a read-only projection
+        # of the participant-keyed segments above, so they are joined by the
+        # stable (operation, participant rank) identity and checked for loss,
+        # duplication and timestamp disagreement rather than trusted.
+        for operation_record in report.operations:
+            _validate_scalar_projection(operation_record, by_id, graph.released_at_ps)
 
         report_segment_chain = report.realized_critical_path_segments
         if any(key not in critical_segments for key in report_segment_chain):

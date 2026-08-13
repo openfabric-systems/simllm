@@ -138,6 +138,8 @@ from simllm.core.runtime import (
     RuntimeOperationRecord,
     RuntimeReport,
     SemanticWqeSubmission,
+    StrictPriorityArbitrationPolicy,
+    WeightedRoundRobinArbitrationPolicy,
     WqeLifecycleProjection,
     collective_goal_tags,
 )
@@ -260,7 +262,9 @@ __all__ = [
     "StepRecord",
     "StepRecordStream",
     "StepResult",
+    "StrictPriorityArbitrationPolicy",
     "VirtualClock",
+    "WeightedRoundRobinArbitrationPolicy",
     "WorkPayload",
     "WorkloadLevel",
     "WqeLifecycleProjection",

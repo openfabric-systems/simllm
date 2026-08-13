@@ -222,8 +222,17 @@ sum to endpoint completion exactly.
 `realized_critical_path_operation_ids` and the operation-level
 `critical_predecessor_id`, breakdown and attribution remain as explicit
 compatibility projections of that authority; they may not replace, relax or
-contradict it. CORE-46 owns proving the projection cannot contradict the
-segments.
+contradict it. CORE-46 closed that gap: the reducer now derives each scalar
+field from the segments and rejects any disagreement. The physical completion
+is the segment maximum, the scheduler-visible completion is one of the
+operation's own participant completions, the causal boundary is a participant
+completion of the named predecessor that one of the operation's own segments
+starts at, the additive `critical_predecessor_id` is present exactly when that
+boundary is the predecessor's scheduler-visible completion, and the
+operation-level breakdown spans exactly the interval that projection implies.
+An asynchronous operation may release the framework at a participant completion
+earlier than its physical maximum; it may not report a timestamp the segments
+do not carry.
 
 Every optional class or priority scheduler must sit behind a replaceable
 policy. Mandatory protocol legality and ordering constrain the ready set before
@@ -236,16 +245,39 @@ class labels are permuted. A non-identity policy may reorder only legal ready
 requests. For example, it cannot violate SQ ordering or PCIe forward-progress
 rules.
 
-The coarse runtime calls this seam only to select among simultaneously legal
-ready graph operations. Framework-launch FIFO, logical-queue FIFO, dependency
-release, NCCL round order and WQ protocol order are mandatory rather than
-optional arbitration. A co-runnable compute set is dispatched as one set, so
-there is no losing candidate to prioritize within that call. Compatible copy
-engines use deterministic earliest-availability routing after the operation
-has won the ready seam; native RNIC arbitration remains owned by its sole
-session. These policy-free points do not inspect class labels. Any object
-conforming to `ArbitrationPolicy` may replace identity at the ready seam, while
-CORE-10 owns the first supported non-identity behavior.
+The coarse runtime calls this seam at two points, and both grant one operation
+at a time. It selects among simultaneously legal ready graph operations, and
+once the winner is compute work it then orders the co-runnable set by repeated
+grants, offering the members not yet granted in the deterministic baseline
+order. Membership of that set is computed before arbitration and is never
+changed by it: the policy decides only the order in which the members reach
+`SmSchedulerModel.estimate_concurrent`, which replays them in the order it
+receives and therefore charges the submission-order issue term registered by
+COMP-12 to whichever task the policy submitted second. Under identity every
+grant is the smallest remaining baseline sequence, so the ordered tuple is the
+`ExecutionGraph` tuple order the seam produced before the policy reached it.
+
+Framework-launch FIFO, logical-queue FIFO, dependency release, NCCL round order
+and WQ protocol order are mandatory rather than optional arbitration.
+Compatible copy engines use deterministic earliest-availability routing after
+the operation has won the ready seam; native RNIC arbitration remains owned by
+its sole session. These policy-free points do not inspect class labels.
+
+Three policies ship. `IdentityArbitrationPolicy` is the feature-off path.
+`StrictPriorityArbitrationPolicy` grants the smallest class label and falls
+back to baseline order, so it is stateless and a total order over any candidate
+set. `WeightedRoundRobinArbitrationPolicy` gives each class label its weight of
+grants per round and carries the credits between grants, so a favored class
+wins more often without starving the others; a new round begins when every
+class present has spent its credits. Both carry an explicit `class_aware=False`
+identity setting that reproduces the identity policy grant for grant, which is
+what keeps a class-label permutation a no-op on the accepted baseline. Any
+other object conforming to `ArbitrationPolicy` may replace them.
+[The arbitrated-order study](../../examples/arbitrated_order_v1/RESULTS.md)
+closed CORE-49 and CORE-10 on this seam: it passes 8 genuine-risk instances
+across two families with all 44 fatal guards holding, moves a live step JCT,
+TTFT and TPOT by exactly the one registered issue cycle under a reordering
+policy, and pins the identity ordered tuples as literal values.
 
 The pre-implementation queue conformance expectations were first frozen in
 [examples/queue_contract_v1](../../examples/queue_contract_v1/expectations.md)
@@ -557,7 +589,15 @@ exactly. Local-NVLink comparison rejects at preflight; TRAF-16 owns its
 frontier precision. CORE-41 closed the ingress gap and refroze the two
 single-node `AAAA` cells from 4,538,000 ps and 9,047,000 ps of service to
 6,652,000 ps and 13,286,000 ps, carrying JCT to 6,676,000 ps and 13,310,000 ps;
-every `AABB` and `ABCD` row is unchanged. The repository-wide fidelity
+every `AABB` and `ABCD` row is unchanged. CORE-42 then requalified
+[nvlink_locality_v1](../../examples/nvlink_locality_v1/RESULTS.md) against those
+refrozen cells: 3/3 genuine-risk families and 8/8 instances pass, both services
+sit inside their exact serialization floor and their 48,000 ps
+whole-nanosecond ceiling, and the refrozen all-local instances are classified
+as genuine risk narrowed to the charge rule, the phase split and the rounding,
+because the conserved local byte total already pins their magnitude inside that
+window and the star fixture cannot falsify the full-duplex ruling.
+The repository-wide fidelity
 selector is `PrecisionConfig`; the cross-check switch is a diagnostic and
 names no seam level.
 
@@ -641,6 +681,19 @@ rank 0 as the predecessor while keeping the rank-1 boundary is still rejected
 atomically, so the graph is not admitted by a weaker check; see
 [the participant frontier results](../../examples/participant_frontier_v1/RESULTS.md).
 
+CORE-46 is complete. The scalar fields CORE-35 left as unjoined compatibility
+projections are now derived from those same segments and rejected on
+disagreement. The six-clause derivation held on all four accepted Granite cells
+in both graph shapes, 26,880 operation records with zero errors, and on a
+fixture whose collective ranks finish out of rank order and whose successors
+split into an additive and a participant-local boundary from one causal
+predecessor. Six single-field contradictions that the previous validator
+accepted are now rejected atomically, and all four accepted result and
+completion digests, execution counts and completion counts are unchanged. The
+rank-local frontier records number 1,305 and 2,553, exactly the intermediate
+timestamps CORE-35 found moving between the two shapes; see
+[the scalar projection results](../../examples/scalar_projection_v1/RESULTS.md).
+
 ## Pre-registered runtime sanity experiments
 
 These expectations are recorded before CORE-4 implements scheduling. CORE-2
@@ -667,7 +720,8 @@ does not claim to produce these resource-contention measurements.
    negative, and graph completion must equal the latest required completion
    event. Sweep synchronous versus asynchronous control delivery and two
    control-class labels under identity. Class labels must move nothing; only
-   dependency-reachable work may move. CORE-10 owns priority-caused movement.
+   dependency-reachable work may move. Priority-caused movement belongs to the
+   class-aware policies, never to identity.
 4. **Identity arbitration is the exact off path.** Run each shared resource
    with omitted class arbitration and with the explicit identity policy, then
    permute class labels without changing arrivals or service demand. Event
@@ -679,20 +733,6 @@ does not claim to produce these resource-contention measurements.
 
 ### Precision
 
-- CORE-49 (Precision; P1; S): pass the arbitrated order, not the graph order,
-  to the concurrent compute service. `_select_ready_operation` consults the
-  arbitration policy, but `_compute_group` then rebuilds the co-runnable group
-  as `sorted(candidates, key=operation_index)`, i.e. `ExecutionGraph` tuple
-  order, and never consults the policy. Under the identity policy the two
-  orders coincide, which is why COMP-12 could register the measured
-  submission-order issue delay against the graph order and observe it live. A
-  CORE-10 class-aware policy would reorder its selection while the compute
-  service still received graph order, so the registered issue-order term would
-  follow an order the runtime no longer chose. Derive the group order from the
-  same policy decision that selected the first operation, and use the
-  concurrent makespan and per-task admission cycles as the identifying
-  observables. Identity arbitration and class-label permutation must preserve
-  every accepted timestamp, wait, byte count and completion order exactly.
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
   nothing at the receiver, so an all-remote many-to-one combine completes at
@@ -706,18 +746,6 @@ does not claim to produce these resource-contention measurements.
   its live TTFT and TPOT effect, while symmetric and single-source cases keep
   their accepted timestamps. Scope boundary: CORE-41 owns the analytic
   intra-node routed service and must preserve all-remote timestamps exactly.
-- CORE-42 (Precision; P0; S): requalify
-  [nvlink_locality_v1](../../examples/nvlink_locality_v1/RESULTS.md) under the
-  CORE-41 endpoint charge. Its two all-local `AAAA` cells are still frozen at
-  the superseded maximum-source-egress service of 4,538,000 ps and 9,047,000 ps,
-  so that runner now rejects its own fixture. Unlike the dependency-authority
-  rows, which were recorded as baseline observations, these `AAAA` cells are
-  scored TRAF-B2 instances, so requalification needs its own expectations-only
-  commit that registers 6,652,000 ps, 13,286,000 ps and the corresponding JCTs
-  before the rerun, rather than an edit folded into another change. Acceptance
-  reruns the study, keeps every `AABB` and `ABCD` row exact, and states whether
-  the refrozen `AAAA` instances still carry genuine risk or become exact-oracle
-  evidence.
 - CORE-43 (Precision; P1; M): cross-validate the analytic endpoint charge
   against the fabric backend's realized per-endpoint serialization on identical
   traffic. CORE-41 demonstrated the correction at EP width four on a real
@@ -730,19 +758,6 @@ does not claim to produce these resource-contention measurements.
   ps/byte, and require the two serializers to agree within a preregistered
   band. Report the effect on a live TTFT and TPOT and keep the all-remote path
   exact.
-- CORE-46 (Precision; P1; S): check the retained scalar operation-level report
-  projection against the participant-keyed segment authority. CORE-35 made
-  `RuntimeCriticalSegment` the conservation authority but left
-  `critical_predecessor_id`, the operation-level breakdown and attribution, and
-  `realized_critical_path_operation_ids` as unjoined compatibility fields. The
-  one-authority rule requires a read-only projection to be joined by stable
-  identity and checked for loss, duplication and timestamp disagreement, and
-  nothing asserts today that the scalar fields are derivable from the segments.
-  Identify the exact derivation, then require it on the Granite participant-local
-  and barrier cells plus a fixture whose collective ranks finish out of order.
-  Acceptance must reject a hand-built report whose scalar predecessor
-  contradicts its segments, and must preserve every accepted timestamp, digest
-  and completion identity exactly.
 - CORE-47 (Precision; P1; M): retire the whole-operation barrier tightening from
   the routing-lifetime study path. `_runtime_report_compatible_graph` exists
   only because the scalar report rejected a participant-local frontier, which
@@ -855,12 +870,6 @@ does not claim to produce these resource-contention measurements.
   explicit aliases only. Acceptance covers send, RQ receive, SRQ receive,
   one-sided no-receive and unsignaled no-CQE records plus v1 round-trip
   compatibility.
-- CORE-10 (Completeness; P2; M): add non-identity arbitration policies only
-  after CORE-8 establishes the policy seam and exact identity baseline. Start
-  with strict priority and weighted round robin over legal ready candidates;
-  keep per-SQ ordering and protocol forward-progress rules outside the policy.
-  Every policy has an explicit identity setting whose class-label permutation
-  leaves the accepted baseline byte-identical.
 - CORE-14 (Completeness; P2; L): generalize `CoarseDeviceProfile` beyond the
   fixed eight GPUs, eight affine RNICs and arithmetic rank mapping. Consume the
   repository placement and fabric manifests through the existing schemas,
