@@ -171,6 +171,20 @@ def test_ideal_is_exact_identity_and_legacy_scalar_stays_additive():
     assert legacy.exposed_ps == 800
 
 
+def test_lowerer_and_packet_sink_defaults_are_exact_ideal(tmp_path):
+    lowerer = SerialStepLowererConfig(DIMS, (0,))
+    packet = HtsimStepSinkConfig(
+        profile="rnic-nn-fluid",
+        tp_ranks=(0,),
+        dims=DIMS,
+        workdir=tmp_path / "packet",
+    )
+
+    assert lowerer.host_model == HostInitiationModel.ideal()
+    assert packet.host_model == HostInitiationModel.ideal()
+    assert lowerer.host_model.delay_ps() == packet.host_model.delay_ps() == 0
+
+
 @pytest.mark.parametrize("device", ["b100", "h100"])
 def test_calibrated_profile_rejects_unmeasured_devices_before_output(tmp_path, device):
     model = HostInitiationModel.turing_cuda_graph(440)
