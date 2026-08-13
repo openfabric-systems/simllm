@@ -768,6 +768,19 @@ and the shared golden fixtures frozen in
 demonstrated and keeps the task open; see
 [the cross-layer authority results](../../examples/cross_layer_authority_v1/RESULTS.md).
 
+CORE-47 is complete. The routing-lifetime study executes the lowerer's graph
+unchanged, and the whole-operation barrier is retained beside it as an explicit
+comparator that never selects a reported value. Every lifecycle exit,
+suppression diagnostic and state trace is retained, and all 58 scheduler-visible
+step boundaries agree between the two arms, including the two step-0 boundaries
+CORE-35 published. The moved intermediate values reproduced CORE-35's counts
+exactly, 1,305 of 5,760 and 2,553 of 7,680, and every one of the 3,858 of them
+is the completion of a compute operation admitted from an `ep-combine` frontier
+whose participants finished at different times, always later under the barrier
+and never earlier. PLAY-13 and CORE-34 were accepted under the barrier
+configuration, and that qualification is now discharged; see
+[the routing lifetime results](../../examples/routing_lifetime_v1/RESULTS.md).
+
 ## Pre-registered runtime sanity experiments
 
 These expectations are recorded before CORE-4 implements scheduling. CORE-2
@@ -832,16 +845,6 @@ does not claim to produce these resource-contention measurements.
   ps/byte, and require the two serializers to agree within a preregistered
   band. Report the effect on a live TTFT and TPOT and keep the all-remote path
   exact.
-- CORE-47 (Precision; P1; M): retire the whole-operation barrier tightening from
-  the routing-lifetime study path. `_runtime_report_compatible_graph` exists
-  only because the scalar report rejected a participant-local frontier, which
-  CORE-35 fixed, so that study's accepted intermediate timestamps were produced
-  under a stricter ordering than the lowerer emits. Rerun it on the unchanged
-  graph, record which of its surfaces move and which are unchanged, and keep the
-  barrier arm as an explicit comparator rather than as the executed path.
-  Acceptance must retain every lifecycle exit, suppression diagnostic and
-  scheduler-visible boundary, and must state each moved intermediate value with
-  its cause.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
