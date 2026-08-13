@@ -192,6 +192,30 @@ not submission or an arbitrary simulator callback time;
 may retain finer visits than the public event stream, but it must reduce them
 with these meanings and pass the shared conformance fixtures.
 
+`simllm/core/authority.py` is where those projections stop being a declaration
+and become a check. The `RuntimeReport` is the authority: its queue visits own
+visit timing, its WQE projections own WQE lifecycle timing, its operation
+records own operation completion, and the `ExecutionGraph` owns the semantic
+bytes an operation declares. The completion stream must equal, as a multiset
+joined on `(operation_id, subject_object_id, phase, resource)`, the four phase
+events of every subjectless visit, the five lifecycle events of every WQE and
+one logical completion per operation. The bookkeeping ledger must carry one
+network-WQE object per reported WQE with that WQE's creation time, bytes, tag,
+ranks, sequences and channel, exactly the result's completion events for the
+execution, and exactly one completion stage at the result boundary. Loss,
+duplication and timestamp disagreement are separated in the rejection message.
+`CompletionReducer` enforces the event half, which puts the check on the
+consumer boundary every device runtime passes through; the runtime enforces the
+ledger half inside its staged append, whose staged copy is discarded on
+failure, so a disagreeing ledger aborts before the caller's bookkeeper, the
+runtime state or the WQE authority is mutated.
+
+Two byte quantities stay deliberately distinct there. An operation's logical
+completion event carries the graph's declared semantic payload, while
+`PROGRESS` and WQE events carry the bytes a resource actually served. A ring
+all-reduce declares one payload and physically moves several times that, so the
+two are never summed and each is checked against its own owner.
+
 Two reductions remain deliberately separate. `sum_visit_wait_ps` sums work
 waiting across resource visits and may exceed elapsed time when visits overlap.
 `critical_path_queue_ps` includes only waits on the realized dependency and
@@ -693,6 +717,23 @@ completion digests, execution counts and completion counts are unchanged. The
 rank-local frontier records number 1,305 and 2,553, exactly the intermediate
 timestamps CORE-35 found moving between the two shapes; see
 [the scalar projection results](../../examples/scalar_projection_v1/RESULTS.md).
+
+CORE-8 is partly demonstrated and stays open. Its cross-layer projection half
+is now enforced: the completion stream and the request bookkeeper are joined to
+the runtime report by stable identity and rejected on loss, duplication or
+timestamp disagreement. The clauses held unchanged on 719 runtime reports, 593
+reducer inputs and 38,540 completion events before the check existed, so
+enforcing them moved no accepted timestamp, digest or completion identity.
+Thirteen hand-built contradictions that both consumers accepted are now
+rejected, including a `QUEUED` event rendered at logical submission and an
+eligibility/grant swap, which a zero-wait visit could never separate. The
+registered sweep reproduced its four closed-form job completion times exactly,
+with the serialization term scaling as 1/bandwidth and the visibility term
+constant. The cross-language half of CORE-8, the native reservation timeline
+and the shared golden fixtures frozen in
+[queue_contract_v1](../../examples/queue_contract_v1/expectations.md), is not
+demonstrated and keeps the task open; see
+[the cross-layer authority results](../../examples/cross_layer_authority_v1/RESULTS.md).
 
 ## Pre-registered runtime sanity experiments
 
