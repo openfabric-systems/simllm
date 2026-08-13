@@ -117,3 +117,4 @@ def test_tracked_calibration_is_accepted_when_present():
         "turing-cuda-graph",
         "turing-eager-host",
     }
+    assert artifact["attempt"] == 3

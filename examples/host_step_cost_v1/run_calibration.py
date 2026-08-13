@@ -555,7 +555,7 @@ def _capture(args: argparse.Namespace, environment: dict[str, Any]) -> int:
     if scored_passed != len(scored):
         print("registered calibration acceptance was not met")
         return 1
-    print("calibration attempt two accepted")
+    print(f"calibration attempt {values['calibration_attempt']} accepted")
     return 0
 
 
