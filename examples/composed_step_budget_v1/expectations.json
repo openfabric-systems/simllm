@@ -1,0 +1,194 @@
+{
+  "attempt_two_refreeze": {
+    "attempt_one_status": "void",
+    "attempt_one_summary_sha256": "ab2e565e2293d14dd72a7de6bb961b6ff6089738824277b6b40e87e38b965df3",
+    "class": "post_specified",
+    "corrected_predicate": "every enabled step provider_compute_ps inside intervals_ps.ideal_compute",
+    "device_consistent_turing_roofline_ps": 2751146667,
+    "guard": "G10_provider_input",
+    "reason": "the frozen predicate compared a raw provider value against a quantized literal",
+    "widened_scored_intervals": []
+  },
+  "cells": [
+    {
+      "collective_latency_profile": null,
+      "enabled": false,
+      "host_launch_count": 0,
+      "host_profile": "ideal",
+      "label": "off-400g",
+      "linkspeed_bps": 400000000000,
+      "source_cell": "a-ep8-400g"
+    },
+    {
+      "collective_latency_profile": "b200-nccl-2.27-local-v1",
+      "enabled": true,
+      "host_launch_count": 440,
+      "host_profile": "turing-cuda-graph",
+      "label": "on-graph440-400g",
+      "linkspeed_bps": 400000000000,
+      "source_cell": "a-ep8-400g"
+    },
+    {
+      "collective_latency_profile": "b200-nccl-2.27-local-v1",
+      "enabled": true,
+      "host_launch_count": 567,
+      "host_profile": "turing-eager-host",
+      "label": "on-eager567-400g",
+      "linkspeed_bps": 400000000000,
+      "source_cell": "a-ep8-400g"
+    },
+    {
+      "collective_latency_profile": "b200-nccl-2.27-local-v1",
+      "enabled": true,
+      "host_launch_count": 440,
+      "host_profile": "turing-cuda-graph",
+      "label": "on-graph440-200g",
+      "linkspeed_bps": 200000000000,
+      "source_cell": "a-ep8-200g"
+    }
+  ],
+  "collectives_per_step": 48,
+  "constants_ps": {
+    "accepted_decode_compute": 99024000,
+    "accepted_decode_network_400g": 105502734,
+    "collective_floor_total": 1446145392,
+    "collective_floor_width8": 30128029,
+    "eager_point_per_launch": 2364255,
+    "graph_point_per_launch": 809306,
+    "quantized_delta": 984438000,
+    "quantized_eager567": 1340533000,
+    "quantized_graph440": 356095000
+  },
+  "disabled_path_literals": {
+    "capture_sha256": "ef570a67fd8bbbb6a8d73b8ad9f73171d3eaaf9a51efc04f676bd9f25c8988fe",
+    "htsim_invocations": 1968,
+    "peak_rank_egress_bytes": 25401344,
+    "request_routed_bytes": {
+      "r00": 19607552,
+      "r01": 8028160,
+      "r02": 23166976
+    },
+    "requests": {
+      "r00": {
+        "collective_ps": 273193008,
+        "kernel_ps": 99024000,
+        "queue_ps": 0,
+        "ttft_ps": 372217008
+      },
+      "r01": {
+        "collective_ps": 247633968,
+        "kernel_ps": 99192000,
+        "queue_ps": 189740578,
+        "ttft_ps": 536566546
+      },
+      "r02": {
+        "collective_ps": 276879408,
+        "kernel_ps": 99264000,
+        "queue_ps": 168485372,
+        "ttft_ps": 544628780
+      }
+    },
+    "scheduler_steps": 41,
+    "step_latency_ps": {
+      "0": 372217008,
+      "1": 204526734
+    },
+    "steps_jsonl_sha256": "f7c3b85866ce0fdb6d87c1f706ad6fd21153210c79d3c21d874b7642267eb11a",
+    "total_routed_bytes": 50802688
+  },
+  "endpoint_envelope_bytes": [
+    14,
+    458752
+  ],
+  "intervals_ps": {
+    "additive": {
+      "on-eager567-400g": [
+        2882678392,
+        2926678392
+      ],
+      "on-graph440-200g": [
+        1898240392,
+        2002240392
+      ],
+      "on-graph440-400g": [
+        1898240392,
+        1942240392
+      ]
+    },
+    "ideal_compute": [
+      95000000,
+      105000000
+    ],
+    "network_200g": [
+      96000000,
+      200000000
+    ],
+    "network_400g": [
+      96000000,
+      140000000
+    ],
+    "overlapped": {
+      "on-eager567-400g": [
+        1637145392,
+        1691145392
+      ],
+      "on-graph440-200g": [
+        1637145392,
+        1751145392
+      ],
+      "on-graph440-400g": [
+        1637145392,
+        1691145392
+      ]
+    }
+  },
+  "published_projections_ps": {
+    "additive_eager567": 2892181126,
+    "additive_graph440": 1907743126,
+    "disagreement_factor": 1.7521233202,
+    "overlapped": 1650672126
+  },
+  "relations": {
+    "F1": {
+      "class": "scored_behavioral",
+      "kind": "composition_rule"
+    },
+    "F2": {
+      "class": "scored_behavioral",
+      "exact_difference_ps": 984438000,
+      "kind": "host_profile_separation",
+      "minimum_matched_compositions": 2
+    },
+    "F3": {
+      "class": "scored_behavioral",
+      "kind": "bandwidth_compression",
+      "minimum_matched_compositions": 2,
+      "published_disabled_path_ratio_range": [
+        1.0441,
+        1.476
+      ],
+      "ratio_band": [
+        1.0,
+        1.03
+      ]
+    }
+  },
+  "residual_ids": {
+    "collective_floor_defect": "TRAF-32",
+    "host_term_defect": "COMP-32",
+    "step_contract_defect": "CORE-50"
+  },
+  "schema": "simllm-composed-step-budget-expectations-v1",
+  "source_study": "end_to_end_replay_v1",
+  "study": "composed_step_budget_v1",
+  "traffic_coverage": {
+    "added_floor_ps": 1446145392,
+    "all_reduces_per_layer": 2,
+    "layers": 24,
+    "overlap_counterfactual_hidden_ps": 723072696,
+    "share_band": [
+      0.48,
+      0.78
+    ]
+  }
+}

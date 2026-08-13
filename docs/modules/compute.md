@@ -604,10 +604,30 @@ The fixed 99,024,000 ps input is B100-derived. Its 554,631,168 bytes need
 1,925,802,667 ps on the Turing device's 288 GB/s roof and 2,751,146,667 ps at
 the 0.7 derate, above all four launch floors, so the hybrid rows are not a
 device-consistent Turing step prediction. The reported rows use
-`network + max(C, N * g)`. With the same-wave TRAF-11 collective floor now
-landed, `max(C + network, N * g)` instead gives 1.650672 ms for all four
-profiles; whether overlap or additive composition is correct remains
-unresolved, and no combined magnitude is claimed.
+`network + max(C, N * g)`.
+
+The [composed step budget study](../../examples/composed_step_budget_v1/RESULTS.md)
+settled the composition by measurement instead of arithmetic. Running the
+mission chain with the host profile and the TRAF-11 collective floor both
+enabled shows that the merged code computes
+`max(C, N * g) + collective floor + raw fabric`: the launch demand overlaps
+provider compute and nothing else. The alternative `max(C + network, N * g)`
+reading, which would have given 1.650672 ms for every profile, appears in none
+of the study's 93 decode-step observations. Attempt one of that study is void
+because one of its own fatal predicates compared a raw provider value against a
+quantized literal; attempt two held all ten guards, passed 3 of 3 scored
+families, and reproduced attempt one's raw values exactly. A case A decode step
+at 400 Gbit/s measures 1.916754 ms at CUDA graph with 440 launches and
+2.901192 ms at eager host with 567, against 0.204527 ms with both features
+disabled, which the same run reproduced byte for byte. Composition is exact:
+over 31 matched decode compositions the two host profiles separate by exactly
+984,438,000 ps, the difference of their quantized launch demands, in every
+pair. The composition is consistent with the launch count's own registered
+exclusion of collective launches, so it is not a defect and no task ID was
+registered for it. What the study makes plain is that the modeled compute
+contributes zero exposed picoseconds once a calibrated host profile is
+selected, because the launch floor masks every provider estimate below it, and
+that 94.03 to 96.05 percent of the composed step is transferred constants.
 
 The M5 first slice landed the COMP-1 groundwork: `step_kernels`, the
 `simllm-profile-table-v1` artifact with provenance, and 1D log-linear

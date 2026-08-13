@@ -1,0 +1,165 @@
+{
+  "attempt": "production attempt two",
+  "cells": {
+    "off-400g": {
+      "htsim_invocations": 1968,
+      "scheduler_steps": 41,
+      "simulated_steps": 41,
+      "total_routed_bytes": 50802688,
+      "wall_seconds": 641.21
+    },
+    "on-eager567-400g": {
+      "htsim_invocations": 1584,
+      "scheduler_steps": 33,
+      "simulated_steps": 33,
+      "total_routed_bytes": 50802688,
+      "wall_seconds": 559.08
+    },
+    "on-graph440-200g": {
+      "htsim_invocations": 1584,
+      "scheduler_steps": 33,
+      "simulated_steps": 33,
+      "total_routed_bytes": 50802688,
+      "wall_seconds": 551.63
+    },
+    "on-graph440-400g": {
+      "htsim_invocations": 1584,
+      "scheduler_steps": 33,
+      "simulated_steps": 33,
+      "total_routed_bytes": 50802688,
+      "wall_seconds": 558.66
+    }
+  },
+  "composed_decode_step": {
+    "on-eager567-400g": {
+      "collective_floor_ps": 1446145392,
+      "decode_step_range_ps": [
+        2891689602,
+        2911104680
+      ],
+      "decode_steps": 31,
+      "half_overlap_counterfactual_share": 0.2492329381427159,
+      "implied_tokens_per_second": 344.68586564180805,
+      "median_decode_step_ps": 2901192360,
+      "optimism_versus_comparable_band": [
+        0.37915445220598887,
+        1.5510863953881362
+      ],
+      "quantized_host_service_ps": 1340533000,
+      "raw_fabric_ps": 114513968,
+      "simulated_fabric_share": 0.039471346188158306,
+      "tensor_parallel_addition_share": 0.4984658762854318,
+      "transferred_constant_share": 0.9605286538118417
+    },
+    "on-graph440-200g": {
+      "collective_floor_ps": 1446145392,
+      "decode_step_range_ps": [
+        1916262802,
+        1955092920
+      ],
+      "decode_steps": 31,
+      "half_overlap_counterfactual_share": 0.37362917765592685,
+      "implied_tokens_per_second": 516.7242238890001,
+      "median_decode_step_ps": 1935268280,
+      "optimism_versus_comparable_band": [
+        0.5683966462779,
+        2.3252590075005
+      ],
+      "quantized_host_service_ps": 356095000,
+      "raw_fabric_ps": 133027888,
+      "simulated_fabric_share": 0.06873873218239282,
+      "tensor_parallel_addition_share": 0.7472583553118537,
+      "transferred_constant_share": 0.9312612678176072
+    },
+    "on-graph440-400g": {
+      "collective_floor_ps": 1446145392,
+      "decode_step_range_ps": [
+        1907251602,
+        1926666680
+      ],
+      "decode_steps": 31,
+      "half_overlap_counterfactual_share": 0.37723805986281933,
+      "implied_tokens_per_second": 521.7152603737915,
+      "median_decode_step_ps": 1916754360,
+      "optimism_versus_comparable_band": [
+        0.5738867864111706,
+        2.3477186716820615
+      ],
+      "quantized_host_service_ps": 356095000,
+      "raw_fabric_ps": 114513968,
+      "simulated_fabric_share": 0.05974368463155602,
+      "tensor_parallel_addition_share": 0.7544761197256387,
+      "transferred_constant_share": 0.940256315368444
+    }
+  },
+  "composition": "max(provider_compute, launch_count * per_launch) + collective floor + raw fabric",
+  "disabled_path": {
+    "decode_step_1_ps": 204526734,
+    "optimism_versus_comparable_band": [
+      5.378270011391273,
+      22.0020136829643
+    ],
+    "prefill_step_0_ps": 372217008,
+    "steps_jsonl_sha256": "f7c3b85866ce0fdb6d87c1f706ad6fd21153210c79d3c21d874b7642267eb11a"
+  },
+  "exact_unscored": {
+    "E1": true,
+    "E2": true,
+    "E3": true
+  },
+  "fatal_guards_held": [
+    "G10_provider_input",
+    "G1_disabled_path_identity",
+    "G2_oracle_identity",
+    "G3_conservation",
+    "G4_inactive_components",
+    "G5_replay_identity",
+    "G6_backend_health",
+    "G7_floor_reach",
+    "G8_endpoint_envelope",
+    "G9_device_disclosure"
+  ],
+  "post_specified_diagnostics": {
+    "cross_cell_exact_rows": 18,
+    "cross_cell_violations": 0,
+    "exposed_provider_compute_ps": 0,
+    "provider_compute_ps_range": [
+      99032502,
+      99585462
+    ],
+    "rate_cancelled_propagation_ps": [
+      96000006,
+      96000048
+    ]
+  },
+  "schema": "simllm-composed-step-budget-result-v1",
+  "scored_behavioral": {
+    "F1": {
+      "decode_step_observations": 93,
+      "passed": true
+    },
+    "F2": {
+      "matched_compositions": 31,
+      "observed_difference_ps": [
+        984438000
+      ],
+      "passed": true
+    },
+    "F3": {
+      "matched_compositions": 31,
+      "observed_ratio_range": [
+        1.0047247043811895,
+        1.0147541037041239
+      ],
+      "passed": true,
+      "published_disabled_path_ratio_range": [
+        1.0441,
+        1.476
+      ]
+    }
+  },
+  "study": "composed_step_budget_v1",
+  "summary_sha256": "c26de5bce08c8edd1ff5093ec03469514bea8d8924bacb28c21ace82eb110f68",
+  "violated_fatal_guards": [],
+  "void": false
+}
