@@ -200,6 +200,20 @@ for exactly that reason: after the change they would be entailed by the check
 being added, so counting 38,540 events as passing instances would be counting
 the implementation against itself.
 
+Added by the integrator at merge review, post-specified and not part of the
+freeze: one of the thirteen carries less independent weight than the other
+twelve. Contradiction C8 and the logical-completion byte clause are checked
+through a shared derivation rather than through two independent ones, because
+the producer and the checker both reduce the same graph quantity through the
+same helpers (`simllm/core/runtime.py:3092` and `simllm/core/authority.py:335`
+both call `class_service_bytes`; `simllm/core/runtime.py:2797` and
+`simllm/core/authority.py:249` both call `work_completed_bytes`). The mutation
+C8 injects is still refused, so the instance is real, but a defect living
+inside the shared helper would move producer and checker together and neither
+would notice. The freeze disclosed the shared derivation; it did not draw this
+consequence for the score, and drawing it here does not change any measured
+value.
+
 ## Physical sanity
 
 Three independent angles, per the maintainer rule, before any digit was
