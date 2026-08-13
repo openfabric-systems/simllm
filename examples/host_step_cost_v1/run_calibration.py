@@ -17,6 +17,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 EXPECTATIONS = HERE / "expectations.json"
 CALIBRATION = HERE / "calibration.json"
+ATTEMPT_TWO = HERE / "calibration_attempt2.json"
 PROBE_SOURCE = ROOT / "tools" / "compute_capture" / "gpu_fixed_cost_probe.cu"
 
 
@@ -102,6 +103,16 @@ def _environment(args: argparse.Namespace) -> dict[str, Any]:
         raise AssertionError("prior observation inventory drifted")
     if any(len(value) != 64 for value in prior["launch_csv_sha256"].values()):
         raise AssertionError("prior launch content identity drifted")
+    prior_two = values.get("prior_attempt_two")
+    if prior_two is not None:
+        if prior_two["disposition"] != "not_accepted":
+            raise AssertionError("attempt-two disposition drifted")
+        if not prior_two["behavioral_score_interpretable"]:
+            raise AssertionError("attempt-two interpretability drifted")
+        if not ATTEMPT_TWO.is_file():
+            raise FileNotFoundError("attempt-two calibration artifact is missing")
+        if _sha256(ATTEMPT_TWO) != prior_two["calibration_sha256"]:
+            raise RuntimeError("attempt-two calibration artifact identity drifted")
     capture = values["capture"]
     if capture["device_key"] != "gtx1660-ti-sm75":
         raise AssertionError("capture device key drifted")
@@ -455,23 +466,29 @@ def _capture(args: argparse.Namespace, environment: dict[str, Any]) -> int:
     status = _disposition(guards, scored)
 
     prior = values["prior_attempt"]
+    prior_two = values.get("prior_attempt_two", {})
     profile_specs = (
         (
             "turing-cuda-graph",
             "cuda-graph-node",
             "graph_replay",
             prior["graph_replay_ps"],
+            prior_two.get("graph_replay_ps"),
         ),
         (
             "turing-eager-host",
             "eager-host-bound",
             "eager_host_bound",
             prior["eager_host_bound_ps"],
+            prior_two.get("eager_host_bound_ps"),
         ),
     )
     profiles = {}
-    for profile, launch_class, key, old_values in profile_specs:
-        observations = [*old_values, measured_ps[key]]
+    for profile, launch_class, key, old_values, attempt_two_value in profile_specs:
+        observations = [*old_values]
+        if attempt_two_value is not None:
+            observations.append(attempt_two_value)
+        observations.append(measured_ps[key])
         profiles[profile] = {
             "launch_class": launch_class,
             "point_ps_per_launch": measured_ps[key],
