@@ -222,8 +222,17 @@ sum to endpoint completion exactly.
 `realized_critical_path_operation_ids` and the operation-level
 `critical_predecessor_id`, breakdown and attribution remain as explicit
 compatibility projections of that authority; they may not replace, relax or
-contradict it. CORE-46 owns proving the projection cannot contradict the
-segments.
+contradict it. CORE-46 closed that gap: the reducer now derives each scalar
+field from the segments and rejects any disagreement. The physical completion
+is the segment maximum, the scheduler-visible completion is one of the
+operation's own participant completions, the causal boundary is a participant
+completion of the named predecessor that one of the operation's own segments
+starts at, the additive `critical_predecessor_id` is present exactly when that
+boundary is the predecessor's scheduler-visible completion, and the
+operation-level breakdown spans exactly the interval that projection implies.
+An asynchronous operation may release the framework at a participant completion
+earlier than its physical maximum; it may not report a timestamp the segments
+do not carry.
 
 Every optional class or priority scheduler must sit behind a replaceable
 policy. Mandatory protocol legality and ordering constrain the ready set before
@@ -580,7 +589,15 @@ exactly. Local-NVLink comparison rejects at preflight; TRAF-16 owns its
 frontier precision. CORE-41 closed the ingress gap and refroze the two
 single-node `AAAA` cells from 4,538,000 ps and 9,047,000 ps of service to
 6,652,000 ps and 13,286,000 ps, carrying JCT to 6,676,000 ps and 13,310,000 ps;
-every `AABB` and `ABCD` row is unchanged. The repository-wide fidelity
+every `AABB` and `ABCD` row is unchanged. CORE-42 then requalified
+[nvlink_locality_v1](../../examples/nvlink_locality_v1/RESULTS.md) against those
+refrozen cells: 3/3 genuine-risk families and 8/8 instances pass, both services
+sit inside their exact serialization floor and their 48,000 ps
+whole-nanosecond ceiling, and the refrozen all-local instances are classified
+as genuine risk narrowed to the charge rule, the phase split and the rounding,
+because the conserved local byte total already pins their magnitude inside that
+window and the star fixture cannot falsify the full-duplex ruling.
+The repository-wide fidelity
 selector is `PrecisionConfig`; the cross-check switch is a diagnostic and
 names no seam level.
 
@@ -664,6 +681,19 @@ rank 0 as the predecessor while keeping the rank-1 boundary is still rejected
 atomically, so the graph is not admitted by a weaker check; see
 [the participant frontier results](../../examples/participant_frontier_v1/RESULTS.md).
 
+CORE-46 is complete. The scalar fields CORE-35 left as unjoined compatibility
+projections are now derived from those same segments and rejected on
+disagreement. The six-clause derivation held on all four accepted Granite cells
+in both graph shapes, 26,880 operation records with zero errors, and on a
+fixture whose collective ranks finish out of rank order and whose successors
+split into an additive and a participant-local boundary from one causal
+predecessor. Six single-field contradictions that the previous validator
+accepted are now rejected atomically, and all four accepted result and
+completion digests, execution counts and completion counts are unchanged. The
+rank-local frontier records number 1,305 and 2,553, exactly the intermediate
+timestamps CORE-35 found moving between the two shapes; see
+[the scalar projection results](../../examples/scalar_projection_v1/RESULTS.md).
+
 ## Pre-registered runtime sanity experiments
 
 These expectations are recorded before CORE-4 implements scheduling. CORE-2
@@ -716,18 +746,6 @@ does not claim to produce these resource-contention measurements.
   its live TTFT and TPOT effect, while symmetric and single-source cases keep
   their accepted timestamps. Scope boundary: CORE-41 owns the analytic
   intra-node routed service and must preserve all-remote timestamps exactly.
-- CORE-42 (Precision; P0; S): requalify
-  [nvlink_locality_v1](../../examples/nvlink_locality_v1/RESULTS.md) under the
-  CORE-41 endpoint charge. Its two all-local `AAAA` cells are still frozen at
-  the superseded maximum-source-egress service of 4,538,000 ps and 9,047,000 ps,
-  so that runner now rejects its own fixture. Unlike the dependency-authority
-  rows, which were recorded as baseline observations, these `AAAA` cells are
-  scored TRAF-B2 instances, so requalification needs its own expectations-only
-  commit that registers 6,652,000 ps, 13,286,000 ps and the corresponding JCTs
-  before the rerun, rather than an edit folded into another change. Acceptance
-  reruns the study, keeps every `AABB` and `ABCD` row exact, and states whether
-  the refrozen `AAAA` instances still carry genuine risk or become exact-oracle
-  evidence.
 - CORE-43 (Precision; P1; M): cross-validate the analytic endpoint charge
   against the fabric backend's realized per-endpoint serialization on identical
   traffic. CORE-41 demonstrated the correction at EP width four on a real
@@ -740,19 +758,6 @@ does not claim to produce these resource-contention measurements.
   ps/byte, and require the two serializers to agree within a preregistered
   band. Report the effect on a live TTFT and TPOT and keep the all-remote path
   exact.
-- CORE-46 (Precision; P1; S): check the retained scalar operation-level report
-  projection against the participant-keyed segment authority. CORE-35 made
-  `RuntimeCriticalSegment` the conservation authority but left
-  `critical_predecessor_id`, the operation-level breakdown and attribution, and
-  `realized_critical_path_operation_ids` as unjoined compatibility fields. The
-  one-authority rule requires a read-only projection to be joined by stable
-  identity and checked for loss, duplication and timestamp disagreement, and
-  nothing asserts today that the scalar fields are derivable from the segments.
-  Identify the exact derivation, then require it on the Granite participant-local
-  and barrier cells plus a fixture whose collective ranks finish out of order.
-  Acceptance must reject a hand-built report whose scalar predecessor
-  contradicts its segments, and must preserve every accepted timestamp, digest
-  and completion identity exactly.
 - CORE-47 (Precision; P1; M): retire the whole-operation barrier tightening from
   the routing-lifetime study path. `_runtime_report_compatible_graph` exists
   only because the scalar report rejected a participant-local frontier, which

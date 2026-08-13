@@ -227,3 +227,180 @@ reconciled without editing it in this branch:
 `README.md:244-245`, which says intra-node traffic stays off the fabric, is
 consistent with this result. These hits are reported only, as required by the
 wave contract.
+
+## CORE-42 requalification under the endpoint charge
+
+CORE-41 replaced the analytic intra-node service with the maximum endpoint
+load, which left the two all-local `AAAA` cells of this study frozen at the
+superseded maximum source egress. The runner therefore rejected its own
+fixture. The study was requalified against the corrected charge and now passes
+**3/3 genuine-risk families and 8/8 parameterized instances**, with every
+fatal-unscored guard holding.
+
+The sections above this one remain the historical TRAF-10 record and are not
+rewritten. Their `AAAA` and `AABB` numbers belong to the pre-TRAF-25
+source-multiplied workload.
+
+### Chronology and provenance
+
+| Provenance field | Revision or value |
+|---|---|
+| Requalification expectations commit | `a455bc4581b79fcd8d3c0021a50e449276afb477` |
+| SimLLM revision observed by the rerun | `6ca7bcd0c2db974ee99bb826fbc4f040f546e393` |
+| htsim gitlink observed by the rerun | `fc4400e4ca619223481536632074045cb6af2756` |
+| `htsim_rnic` SHA-256 | `cfb5014a663791f7619fe33309114a74e82878de860c14fc8a723713501f027d` |
+| `txt2bin` SHA-256 | `f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b` |
+| Captured trace SHA-256 | `36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341` |
+| `summary.json` SHA-256 | `489cbd9f962ac45654c13df6f2ebc931123da2dd52d85f10e81099d066515ebe` |
+| Runtime | Python 3.12.12 on Linux x86-64 |
+
+[The requalification expectations](requalification_expectations.md) landed
+first and registered every corrected literal, followed by one provenance-only
+commit that carries the freeze identity into the summary, and then the rerun.
+The freeze was run with `--check-only` before it was committed; that path
+imported no SimLLM module, invoked no native tool and wrote nothing. No
+literal was changed after the rerun. The observed revisions are recorded as
+observations and none is asserted equal to a live submodule pin.
+
+Two identical runs exist. The first was executed at the freeze commit itself
+and produced the same values; the second, reported here, was executed after
+the provenance-only commit so that the recorded revision is exactly the tree
+that ran. Neither run's numbers were used to change a frozen literal.
+
+### Physical sanity before the exact comparison
+
+The floor no all-local cell can beat is its local byte total over the declared
+one-direction rate, because rank 0 is the star hub of all 48 phases and
+carries every dispatch byte and every combine byte. The ceiling adds the
+whole-nanosecond quantization of 48 serial phases.
+
+| Vector bytes | Floor ps | Ceiling ps | Observed service ps | Position |
+|---:|---:|---:|---:|---|
+| 1,024 | 6,630,969 | 6,678,969 | 6,652,000 | floor + 21,031 |
+| 2,048 | 13,261,938 | 13,309,938 | 13,286,000 | floor + 24,062 |
+
+The observed doubling slack was `2 x 6,652,000 - 13,286,000 = 18,000` ps,
+inside the registered `[0, 48,000]` ps window, so the payload sweep moved the
+serialization term by 1.99729 rather than by exactly 2, which is the
+quantization the whole-nanosecond phase model predicts. The realized hub
+throughput is 449 GB/s against a declared 450 GB/s, as a saturated star hub
+requires. The fabric points were rederived from `96,000,000 + 20 * fabric
+bytes + 24,000` ps before comparison and matched exactly.
+
+### Raw observations
+
+| Vector bytes | Placement | Fabric bytes | NVLink bytes | Service ps | JCT ps |
+|---:|---|---:|---:|---:|---:|
+| 1,024 | `AAAA` | 0 | 2,983,936 | 6,652,000 | 6,676,000 |
+| 1,024 | `AABB` | 2,011,136 | 972,800 | 2,194,000 | 136,246,720 |
+| 1,024 | `ABCD` | 2,983,936 | 0 | 0 | 155,702,768 |
+| 2,048 | `AAAA` | 0 | 5,967,872 | 13,286,000 | 13,310,000 |
+| 2,048 | `AABB` | 4,022,272 | 1,945,600 | 4,358,000 | 176,469,440 |
+| 2,048 | `ABCD` | 5,967,872 | 0 | 0 | 215,381,488 |
+
+Every `AABB` and `ABCD` row is exactly the registered value. Both all-remote
+JCTs landed inside their registered 144 ps bands, at the lower edge plus 48 ps.
+Both `AAAA` cells matched the independently derived corrected service and its
+JCT, which is that service plus the fixed 24,000 ps compute term.
+
+### Scored behavioral evidence
+
+| Family | Instances | Result | Raw relation |
+|---|---:|---|---|
+| TRAF-B1 locality response | 2 | 2/2 pass | Fabric bytes rise and local bytes fall strictly over node span at both payloads. |
+| TRAF-B2 local service | 4 | 4/4 pass | Each nonzero local service equals the registered maximum-endpoint-load form. |
+| TRAF-B3 live metric | 2 | 2/2 pass | All six cells reached `StepResult` with their registered point or band and the strict `AAAA < AABB < ABCD` order. |
+
+The scored headline is **3/3 families over 8 instances**. TRAF-B3 is the family
+that failed in the original TRAF-10 run against a phase-additive band that the
+byte-identical legacy renderer did not obey; it passes here against the
+graph-authoritative band that TRAF-12 and TRAF-27 established.
+
+### Entailment check and the registered classification
+
+The runner read raw fabric and local byte counters, the raw analytic service
+and the live `StepResult` latencies before any exact cell, conservation,
+digest, zero, transpose or identity oracle, so no earlier fatal guard pinned a
+scored instance.
+
+The requalification freeze decided in advance how to classify the refrozen
+`AAAA` instances, and the run confirms the arithmetic it was based on.
+
+- **They still carry genuine risk.** The superseded egress-only charge
+  reproduces 4,538,000 ps and 9,047,000 ps on the same pair table, which is
+  2,114,000 ps and 4,239,000 ps outside the registered window. TRAF-B2 is
+  evaluated before the exact-cell oracle, so a regression to that charge fails
+  the scored family rather than only a fatal guard.
+- **Their magnitude is nearly entailed.** Because rank 0 is the hub of every
+  phase, the sum of per-phase peak endpoint loads is identically the local byte
+  total, which the fatal exact-cell and conservation guards already pin. Given
+  those guards, the endpoint charge can only land inside a 48,000 ps
+  quantization window, i.e. 0.72 percent wide at 1,024 bytes and 0.36 percent
+  at 2,048 bytes. What survives as scored discrimination is the charge rule,
+  the per-phase byte split and the rounding, not the magnitude.
+- **This fixture cannot falsify the duplex ruling.** The hub is pure egress in
+  a dispatch phase and pure ingress in a combine phase, so a half-duplex
+  `egress + ingress` port produces exactly the same service. The full-duplex
+  choice in `simllm/traffic/locality.py` is not demonstrated by these cells and
+  is not claimed here.
+- **The `AABB` instances are controls, not charge evidence.** Their local group
+  is one directed pair per phase, where the endpoint charge and the superseded
+  egress charge are algebraically identical. They discriminate the declared
+  rate, the locality split and the rounding only.
+
+So the answer CORE-42 asked for is: genuine risk, narrowed. The instances are
+not exact-oracle evidence, because a wrong charge still fails them before any
+oracle runs, but they are a much weaker probe of the endpoint model than their
+size suggests, and a fixture with a non-star local traffic matrix is what would
+test the duplex ruling. That belongs to CORE-43's cross-validation of the
+analytic charge against the fabric backend's realized serialization.
+
+### Fatal and unscored evidence
+
+All guards passed: the six exact byte and service cells; both direct GOAL
+oracles at 20,392 bytes with their frozen SHA-256 values; explicit `ABCD` and
+omitted placement agreeing on 48 GOAL artifacts, 48 flow CSVs and the legacy
+network outcome; both all-local cells with zero fabric bytes, zero fabric
+segments, zero backend runs, zero flows and zero GOAL files; both all-remote
+cells with zero local bytes on the compatibility fast path; controlled TTFT
+and TPOT equal to the cell JCT; the new serialization floor, quantization
+ceiling and payload-doubling window; 48 phases and 144 positive pairs with an
+exact partition, exact dispatch and combine transpose and stable tags at both
+payloads; single-node TP widths 1 through 8 with zero fabric bytes; and
+physical quiescence on all eight live cells. These are fatal, not scored, and
+are never reported as a fraction.
+
+### CORE-42 closure map
+
+| Registered clause | Evidence and disposition |
+|---|---|
+| "requalify nvlink_locality_v1 under the CORE-41 endpoint charge" | The study reran end to end from the registered command and passed 3/3 families and 8/8 instances. |
+| "Its two all-local `AAAA` cells are still frozen at the superseded maximum-source-egress service of 4,538,000 ps and 9,047,000 ps, so that runner now rejects its own fixture" | Both cells are refrozen at 6,652,000 ps and 13,286,000 ps and the runner accepts its fixture again. |
+| "requalification needs its own expectations-only commit that registers 6,652,000 ps, 13,286,000 ps and the corresponding JCTs before the rerun, rather than an edit folded into another change" | `a455bc4581b79fcd8d3c0021a50e449276afb477` registered both services and both 6,676,000 ps and 13,310,000 ps job completion times, with a check-only dry run, before any rerun. |
+| "Acceptance reruns the study" | Rerun at `6ca7bcd0c2db974ee99bb826fbc4f040f546e393`, summary SHA-256 above. |
+| "keeps every `AABB` and `ABCD` row exact" | All eight unchanged rows matched, including both independently rederived fabric points and both all-remote bands. |
+| "states whether the refrozen `AAAA` instances still carry genuine risk or become exact-oracle evidence" | Answered above: genuine risk, narrowed to the charge rule, phase split and rounding by the conserved byte total, with the duplex ruling explicitly untested by this fixture. |
+
+CORE-42 closes. No registered clause went undemonstrated, so no new task ID was
+required.
+
+### Contradiction sweep
+
+The required sweep after closure found integrator-owned text that should be
+reconciled, reported here rather than edited:
+
+- `README.md:280` still describes the NVLink model as "One flat per-GPU egress
+  serializer". That is the compute-owned egress cursor, which is a different
+  authority from the traffic-owned analytic term, and it is now the only
+  remaining per-source-egress NVLink charge in the repository.
+- `docs/architecture.md:561-566` says concurrent kernels share "a per-GPU
+  NVLink egress cursor" and that "The intra-node NVLink path deliberately stays
+  inside this model instead of reaching the fabric backend". The traffic-owned
+  analytic path charges the maximum endpoint load instead, and the two
+  authorities are not enabled together in any study.
+- `docs/README_PRO.md:296` lists the locality row as "intra-node NVLink split,
+  flat analytic rate", which no longer distinguishes the superseded source
+  charge from the endpoint charge that CORE-41 landed.
+
+The earlier TRAF-10 sweep entries about `unique-nic` and the NCCL-kernel
+description remain open in the same form.

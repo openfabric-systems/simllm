@@ -153,7 +153,7 @@ the task text:
 
 | Module | Closed | Registered | Progress |
 |---|---:|---:|---|
-| [core](modules/core.md) | 19 | 41 | `████████░░░░░░░░░░` |
+| [core](modules/core.md) | 21 | 41 | `█████████░░░░░░░░░` |
 | [workload](modules/workload.md) | 1 | 4 | `████░░░░░░░░░░░░░░` |
 | [compute](modules/compute.md) | 3 | 22 | `██░░░░░░░░░░░░░░░░` |
 | [placement](modules/placement.md) | 0 | 3 | `░░░░░░░░░░░░░░░░░░` |
@@ -533,7 +533,7 @@ One line per module; the linked doc is the source of truth.
 
 | Module | Status | Open |
 |---|---|---|
-| [core](modules/core.md) | Implemented: virtual clock, step records, execution contracts, incremental append validation, the coarse DeviceRuntime, the completion reduction to StepResult and per-request TTFT/TPOT with seven-component critical-path attribution, and the structural RNIC network seam consuming composed native observations; the demonstrated CORE-15 live-seam clauses closed on Tier B, with the same-graph comparison retained as CORE-21; BRIDGE-1 closed for the pinned-binary prepared-replay scope with the online stateful session moved to BRIDGE-2, CORE-24 and HTSIM-18 | [22 open](modules/core.md#open-tasks) |
+| [core](modules/core.md) | Implemented: virtual clock, step records, execution contracts, incremental append validation, the coarse DeviceRuntime, the completion reduction to StepResult and per-request TTFT/TPOT with seven-component critical-path attribution, and the structural RNIC network seam consuming composed native observations; the demonstrated CORE-15 live-seam clauses closed on Tier B, with the same-graph comparison retained as CORE-21; BRIDGE-1 closed for the pinned-binary prepared-replay scope with the online stateful session moved to BRIDGE-2, CORE-24 and HTSIM-18 | [20 open](modules/core.md#open-tasks) |
 | [workload](modules/workload.md) | Partial: Poisson/trace arrivals, fixed/lognormal/trace lengths | [3 open](modules/workload.md#open-tasks) |
 | [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven GPU service primitive with concurrent compute/memory/NCCL scheduling and A100/H100 bootstrap profiles, the audited zero-time NCCL stack skeleton with real-source-verified names, plus the optional GPU-side RNIC producer task coupling that makes submission cadence compete for SM residency and issue budget with the surrounding kernels | [19 open](modules/compute.md#open-tasks) |
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | [3 open](modules/placement.md#open-tasks) |
