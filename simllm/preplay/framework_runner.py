@@ -94,7 +94,9 @@ def prompt_sha256(prompt: str) -> str:
 
 
 @contextmanager
-def _oracle_environment(sidecar: Path, torch_num_threads: int) -> Iterator[None]:
+def _oracle_environment(
+    sidecar: Path, torch_num_threads: int, layer_audit: bool = False
+) -> Iterator[None]:
     existing_pythonpath = os.environ.get("PYTHONPATH")
     repository = str(_REPOSITORY_ROOT)
     pythonpath = (
@@ -108,6 +110,7 @@ def _oracle_environment(sidecar: Path, torch_num_threads: int) -> Iterator[None]
         "OMP_NUM_THREADS": str(torch_num_threads),
         "SIMLLM_SGLANG_ENABLE": "0",
         "SIMLLM_SGLANG_ORACLE_CAPTURE": "1",
+        "SIMLLM_SGLANG_ORACLE_LAYER_AUDIT": "1" if layer_audit else "0",
         "SIMLLM_SGLANG_ORACLE_LOG": str(sidecar),
         "SGLANG_PLUGINS": "simllm",
         "SGLANG_USE_CPU_ENGINE": "1",
@@ -334,17 +337,33 @@ def _sidecar_events(
     if len(marker_positions) != 1:
         raise RuntimeError("SGLang oracle sidecar requires exactly one capture-start")
     captured = rows[marker_positions[0] + 1 :]
-    layer_rows = [
-        row for row in captured if row.get("kind") == "dispatch-layer-qualified"
-    ]
+    # The layer binding is read off the constructed model, so it is qualified
+    # during initialization rather than inside one request's capture window.
+    layer_rows = [row for row in rows if row.get("kind") == "dispatch-layer-qualified"]
     if not layer_rows:
-        raise RuntimeError("SGLang Granite dispatch layer mapping was not qualified")
+        raise RuntimeError("SGLang dispatch layer identity was not qualified")
     for row in layer_rows:
         if (
-            row.get("mapping") != "granite-model-order"
+            row.get("mapping") != "framework-layer-id"
             or row.get("selected_experts_unchanged") is not True
         ):
             raise RuntimeError("SGLang dispatch layer mapping is not observation-only")
+        layer_ids = row.get("layer_ids")
+        if (
+            not isinstance(layer_ids, list)
+            or not layer_ids
+            or any(type(value) is not int or value < 0 for value in layer_ids)
+            or len(set(layer_ids)) != len(layer_ids)
+        ):
+            raise RuntimeError("SGLang dispatch layer ids are not unique framework ids")
+    for row in rows:
+        if (
+            row.get("kind") == "dispatch-layer-agreement"
+            and row.get("agrees") is not True
+        ):
+            raise RuntimeError(
+                "SGLang framework layer id disagrees with the replaced surrogate"
+            )
     worker_rows = [row for row in captured if row.get("kind") == "worker-qualified"]
     if not worker_rows:
         raise RuntimeError("SGLang stock worker qualification was not observed")
@@ -418,7 +437,11 @@ class SglangCpuRunner:
         torch_num_threads: int = 8,
         engine_seed: int = 173,
         capture_host: str | None = None,
+        layer_audit: bool = False,
     ):
+        if not isinstance(layer_audit, bool):
+            raise TypeError("layer_audit must be a bool")
+        self.layer_audit = layer_audit
         self.model_id = _string(model_id, "model_id")
         self.model_revision = _string(model_revision, "model_revision")
         self.model_path = Path(model_path)
@@ -487,7 +510,7 @@ class SglangCpuRunner:
         sidecar.parent.mkdir(parents=True, exist_ok=True)
         sidecar.write_text("", encoding="utf-8")
 
-        with _oracle_environment(sidecar, self.torch_num_threads):
+        with _oracle_environment(sidecar, self.torch_num_threads, self.layer_audit):
             if "sglang" in sys.modules:
                 raise RuntimeError(
                     "SGLang was imported before CPU oracle environment selection"
@@ -635,7 +658,7 @@ class SglangCpuRunner:
             moe_layer_indices=tuple(range(layer_count)),
             kv_page_size=actual_page_size,
             kv_token_capacity=actual_token_capacity,
-            dispatch_layer_mapping="granite-model-order",
+            dispatch_layer_mapping="framework-layer-id",
         )
         request_rows = tuple(
             _request_from_response(responses[request.request_id], request, provenance)

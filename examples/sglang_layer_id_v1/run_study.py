@@ -269,6 +269,22 @@ def _observation_rows(cell_dir: Path, kind: str) -> list[dict[str, Any]]:
     ]
 
 
+# Wall-clock fields of the capture itself. They are the only response content
+# excluded from R1: no two runs of any code can make them equal, and the frozen
+# relation names the response content it compares rather than the file bytes.
+WALL_CLOCK_META_FIELDS = ("e2e_latency", "response_sent_to_client_ts")
+
+
+def _comparable_responses(path: Path) -> str:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    for row in payload["requests"]:
+        meta = row["response"].get("meta_info")
+        if isinstance(meta, dict):
+            for field in WALL_CLOCK_META_FIELDS:
+                meta.pop(field, None)
+    return _canonical(payload)
+
+
 def _rotation_changes(trace: list[dict[str, Any]]) -> tuple[int, int]:
     """Tokens whose layer-to-expert map changes under a one-layer rotation."""
 
@@ -306,7 +322,7 @@ def compare(args: argparse.Namespace) -> int:
             for phase, directory in directories.items()
         }
         responses = {
-            phase: (directory / "responses.json").read_bytes()
+            phase: _comparable_responses(directory / "responses.json")
             for phase, directory in directories.items()
         }
 
@@ -362,7 +378,9 @@ def compare(args: argparse.Namespace) -> int:
         if CELLS[name]["expect_preemption"]:
             for phase, trace in traces.items():
                 kv_rows = _rows_of_type(trace, "kv-event")
-                preemptions = [row for row in kv_rows if row.get("kind") == "preemption"]
+                preemptions = [
+                    row for row in kv_rows if row.get("event_kind") == "preemption"
+                ]
                 request_rows = {
                     row["request_id"]: row for row in _rows_of_type(trace, "request")
                 }
@@ -404,7 +422,8 @@ def compare(args: argparse.Namespace) -> int:
             "R1",
             name,
             responses["baseline"] == responses["treatment"],
-            f"{len(responses['baseline'])} vs {len(responses['treatment'])} bytes",
+            f"{len(responses['baseline'])} vs {len(responses['treatment'])} "
+            "comparable response characters",
         )
         _score(
             scored,
