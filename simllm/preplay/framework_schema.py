@@ -31,6 +31,9 @@ from simllm.preplay.schema import (
 
 FRAMEWORK_PREPLAY_TRACE_SCHEMA = "simllm-preplay-trace-v2"
 OBSERVED_DISPATCH_SOURCE = "observed-dispatch"
+# No runner emits "granite-model-order" any more: SGL-16 replaced the SGLang
+# fallback's model-order surrogate with SGLang's own layer identity. The value
+# stays readable so traces captured before that replacement still load.
 _DISPATCH_LAYER_MAPPINGS = {"framework-layer-id", "granite-model-order"}
 
 _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")

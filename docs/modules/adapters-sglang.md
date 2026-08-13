@@ -189,6 +189,108 @@ therefore remains component evidence in
 [the framework-oracle results](../../examples/framework_oracle_v1/RESULTS.md),
 not part of its eight-instance behavioral headline.
 
+The fallback's dispatch layer label now comes from SGLang. The pinned Granite
+MoE block builds its router without a layer identity (`TopK(top_k=...,
+renormalize=True)` at `models/granitemoe.py:65-68`) while handing the same
+block's explicit `layer_id` to `FusedMoE` at `:71-79`, so the `None` reaches
+SGLang's single capture gate (`layers/moe/topk.py:1829-1845`) and would index
+the capture buffer at `state_capturer/base.py:38-40`. An AROUND hook on
+`RoutedExpertsCapturer.create` reads the identity off the constructed model,
+takes each router's own `layer_id` when a model forwards one and otherwise the
+unique sibling `layer_id`, refuses any router whose resolved id disagrees with
+the layer index in its registered module name, and binds the result by
+`TopKConfig` identity. The gate hook substitutes that id only where SGLang
+passes `None`; the capturer hook infers nothing and rejects an unlabeled
+capture, which also covers models that bypass the gate
+(`models/inkling_common/moe.py:450`). Provenance is `framework-layer-id`, the
+same value the vLLM runner writes. With `SIMLLM_SGLANG_ORACLE_LAYER_AUDIT=1`
+every capture is additionally compared against the replaced model-order
+surrogate and a disagreement is fatal; the audit is off by default and adds no
+sidecar row when off.
+
+The SGL-16 replacement is frozen by expectations-only commit `f786510` and
+reported in
+[examples/sglang_layer_id_v1/RESULTS.md](../../examples/sglang_layer_id_v1/RESULTS.md).
+Two prompt shapes and one real decode-retraction cell ran twice on a live CPU
+engine at the pinned commit, once with the surrogate and once with the
+framework identity. All nine frozen relation instances passed, of which 3 of 9
+are genuine-risk behavioral evidence; the run is not void, every frozen fatal
+guard held. The remaining six are retained as three R2 allocator-orthogonality
+checks and three R3 treatment-trace validity controls. The study recorded 1,752
+audited captures with zero label disagreements, byte-identical raw framework
+responses, KV events and per-token dispatch rows, and one retraction of `p3` at
+framework step 18 that resumed to its length cap in both phases.
+The pressure probing behind that cell also established two properties of the
+pinned scheduler worth recording: it clamps `max_new_tokens` to the token-pool
+capacity rather than retracting a lone oversized request, and its prefill
+admission reserves decode headroom, so a retraction needs more concurrent
+requests than the pool can hold.
+
+### Distance from the vLLM path
+
+The mission names two frameworks. This is where the second one actually
+stands, measured against what the vLLM path already does rather than against
+this module's own task list.
+
+- A real engine drives the schedule: partial. SGLang's real `Scheduler`,
+  `RadixCache` and pools do run, and the plugin replaces only the TP worker.
+  But the seam sits below the scheduler's decision record. The emitted
+  `StepRecord` carries `scheduled` and nothing else; `finished_request_ids` is
+  always empty and there is no preempted set, while the vLLM executor ingests
+  vLLM's own `SchedulerOutput` including completions and preemptions and adds
+  a drain step.
+- Per-request identity survives to `StepResult`: absent. `request_id` reaches
+  `StepRecord` and stops there. The SGLang sink alias takes one argument, so
+  the two-argument observation sink that builds a per-request metric cannot be
+  attached to this adapter at all. SGL-12 and SGL-13 own the pieces.
+- Per-token routing reaches traffic: not demonstrated. The capture side is
+  real and the v2 trace projects into the same `RoutedExperts` authority that
+  `RoutedMoeSupply` consumes, but no SGLang trace has driven a placement
+  manifest, a GOAL emission, a backend run or a metric. Every routed study to
+  date used a vLLM trace.
+- The observed schedule comes from the framework: absent. The only
+  `ExecutionObservations` producer in the repository is on the vLLM side.
+  SGL-10 and SGL-17 own the SGLang equivalents.
+
+Two further gaps are worth naming because they are not visible from the task
+list. The adapter has never driven htsim live (SGL-8); the M4 coverage was
+JSONL replay of a recorded run. And `configure()` is only reachable from an
+in-process scheduler driver, so a normal `launch_server` run, where SGLang
+builds the worker inside its own scheduler subprocess, cannot install a sink
+at all and falls back to the JSONL sidecar.
+
+The honest summary is that SGLang today is a real frontend whose decisions are
+observed and recorded, not a real frontend whose decisions reach the reported
+metric. The landed SGL-16 source and component slice improves the fidelity of
+what is recorded. It does not move the adapter onto the metric chain, so
+SGL-16 remains open under its current Precision tag until a supported path
+reaches the reported metrics.
+
+### Why SGL-14 is blocked rather than deferred
+
+SGL-14 asks for native COMP stack entries for all-gather, broadcast, send and
+receive "when those entries exist". They do not. `simllm.compute.nccl_stack`
+exports exactly one collective entry point, `ncclAllReduce`, alongside
+`ncclCommInitRank`; there is no `ncclAllGather`, `ncclBroadcast`, `ncclSend`
+or `ncclRecv` anywhere in `simllm/compute`. Creating them is COMP work: COMP-14
+owns the non-ring algorithm builders and COMP-15 owns the absent receive leg.
+The ring-layout servable-domain restriction SGL-14 also asks to remove lives
+in the same COMP module, in the layout validator every positive-payload call
+passes through, and the `ncclAllReduce`-shaped lowering itself lives in the
+shared VLLM-14 base that both adapters subclass, so removing it there would
+change the vLLM path too. No adapter-side change can satisfy the clause, and
+SGL-14 stays open with that precondition recorded rather than partially
+closed.
+
+While it stays open, the cost the SGLang communicator publishes for every
+mirrored collective is zero. That is a declared modeling choice, not a
+measurement and not a claim that the cost is negligible: the named alternative
+is the calibrated dispatch, custom-op routing, device-communicator selection
+and synchronization measurement that SGL-15 registers, with SGL-13 projecting
+the result onto `CompletionEvent`, `StepResult` and TTFT or TPOT. Until those
+land, any figure computed with the SGLang communicator enabled understates
+communication by exactly the whole of it.
+
 ## Open tasks
 
 - SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic

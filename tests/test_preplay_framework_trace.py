@@ -333,12 +333,13 @@ def test_sidecar_projection_requires_stock_cpu_worker_and_real_allocations():
             "device": "cpu",
             "pinned": False,
         },
-        {"kind": "capture-start", "request_ids": ["request-0"]},
         {
             "kind": "dispatch-layer-qualified",
-            "mapping": "granite-model-order",
+            "layer_ids": [0, 1],
+            "mapping": "framework-layer-id",
             "selected_experts_unchanged": True,
         },
+        {"kind": "capture-start", "request_ids": ["request-0"]},
         {
             "kind": "worker-qualified",
             "worker_class": "TpModelWorker",

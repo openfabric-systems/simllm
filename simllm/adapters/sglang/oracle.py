@@ -11,12 +11,14 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import re
 from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
 __all__ = [
     "ORACLE_ENABLE_ENV",
+    "ORACLE_LAYER_AUDIT_ENV",
     "ORACLE_LOG_ENV",
     "ORACLE_OBSERVATION_SCHEMA",
     "mark_oracle_capture_start",
@@ -26,8 +28,10 @@ __all__ = [
 ]
 
 ORACLE_ENABLE_ENV = "SIMLLM_SGLANG_ORACLE_CAPTURE"
+ORACLE_LAYER_AUDIT_ENV = "SIMLLM_SGLANG_ORACLE_LAYER_AUDIT"
 ORACLE_LOG_ENV = "SIMLLM_SGLANG_ORACLE_LOG"
 ORACLE_OBSERVATION_SCHEMA = "simllm-sglang-framework-observation-v1"
+DISPATCH_LAYER_MAPPING = "framework-layer-id"
 
 _ALLOC_EXTEND_TARGET = "sglang.srt.mem_cache.allocation.alloc_for_extend"
 _ALLOC_DECODE_TARGET = "sglang.srt.mem_cache.allocation.alloc_for_decode"
@@ -38,13 +42,25 @@ _HOST_CACHE_TARGET = "sglang.srt.state_capturer.base.BaseHostCache.__init__"
 _ROUTED_CAPTURE_TARGET = (
     "sglang.srt.state_capturer.routed_experts.RoutedExpertsCapturer.capture"
 )
+_CAPTURER_CREATE_TARGET = (
+    "sglang.srt.state_capturer.routed_experts.RoutedExpertsCapturer.create"
+)
+_CAPTURE_GATE_TARGET = (
+    "sglang.srt.layers.moe.topk.capture_routed_experts_if_allowed"
+)
 _WORKER_TARGET = (
     "sglang.srt.managers.tp_worker.TpModelWorker.forward_batch_generation"
 )
 
 _worker_qualified_emitted = False
-_capture_layer_qualified_emitted = False
-_capture_next_layer: dict[int, int] = {}
+# Framework layer identity, keyed by the identity of the per-module TopKConfig
+# that SGLang hands to its single capture gate. ``_layer_id_modules`` keeps a
+# strong reference to the routers so CPython cannot recycle an id() key.
+_topk_config_layer_ids: dict[int, int] = {}
+_layer_id_modules: list[Any] = []
+# Audit-only mirror of the replaced surrogate, keyed by capturer identity.
+_audit_next_layer: dict[int, int] = {}
+_MODULE_LAYER_INDEX = re.compile(r"(?:^|\.)layers\.(\d+)(?:\.|$)")
 
 
 def oracle_enabled(env: Any = None) -> bool:
@@ -52,6 +68,13 @@ def oracle_enabled(env: Any = None) -> bool:
 
     env = os.environ if env is None else env
     return env.get(ORACLE_ENABLE_ENV, "") == "1"
+
+
+def layer_audit_enabled(env: Any = None) -> bool:
+    """Whether every capture is checked against the replaced surrogate."""
+
+    env = os.environ if env is None else env
+    return env.get(ORACLE_LAYER_AUDIT_ENV, "") == "1"
 
 
 def _log_path() -> Path:
@@ -371,37 +394,160 @@ def _initialize_cpu_host_cache(
     )
 
 
+def _explicit_layer_id(module: Any) -> int | None:
+    value = getattr(module, "layer_id", None)
+    return value if type(value) is int and value >= 0 else None
+
+
+def _resolve_router_layer_ids(model: Any) -> list[tuple[Any, int, str]]:
+    """Read SGLang's own layer identity for every routed-expert gate.
+
+    The pinned Granite MoE block passes its constructor ``layer_id`` to
+    ``FusedMoE`` but not to ``TopK`` (``models/granitemoe.py:65-79``), so the
+    label the capturer needs exists in the framework one sibling away. This
+    reads it there, or from the router itself when a model does forward it,
+    and cross-checks the answer against the layer index inside the router's
+    own registered module name before accepting it.
+    """
+
+    from sglang.srt.layers.moe.topk import TopK
+
+    named = list(model.named_modules())
+    children_by_parent: dict[str, list[Any]] = {}
+    for name, module in named:
+        parent = name.rsplit(".", 1)[0] if "." in name else ""
+        children_by_parent.setdefault(parent, []).append(module)
+
+    resolved: list[tuple[Any, int, str]] = []
+    for name, module in named:
+        if not isinstance(module, TopK):
+            continue
+        own = _explicit_layer_id(module)
+        if own is not None:
+            layer_id, source = own, "topk.layer_id"
+        else:
+            parent = name.rsplit(".", 1)[0] if "." in name else ""
+            siblings = {
+                sibling_id
+                for sibling in children_by_parent.get(parent, ())
+                if sibling is not module
+                and (sibling_id := _explicit_layer_id(sibling)) is not None
+            }
+            if len(siblings) != 1:
+                raise RuntimeError(
+                    f"SGLang router {name!r} has no unique sibling layer id; "
+                    f"found {sorted(siblings)}"
+                )
+            layer_id, source = siblings.pop(), "sibling.layer_id"
+        match = _MODULE_LAYER_INDEX.search(name)
+        if match is None:
+            raise RuntimeError(
+                f"SGLang router {name!r} carries no registered layer index"
+            )
+        if int(match.group(1)) != layer_id:
+            raise RuntimeError(
+                f"SGLang router {name!r} disagrees with its explicit layer id "
+                f"{layer_id}"
+            )
+        resolved.append((module, layer_id, source))
+    if not resolved:
+        raise RuntimeError("SGLang model exposes no routed-expert gate")
+    layer_ids = [layer_id for _, layer_id, _ in resolved]
+    if len(set(layer_ids)) != len(layer_ids):
+        raise RuntimeError(f"SGLang layer ids are not unique: {sorted(layer_ids)}")
+    return resolved
+
+
+def _observe_capturer_create(original: Callable[..., Any], **kwargs: Any) -> Any:
+    """Bind SGLang's explicit layer identity to its capture gate."""
+
+    capturer = original(**kwargs)
+    if capturer is None:
+        return capturer
+    _topk_config_layer_ids.clear()
+    _layer_id_modules.clear()
+    _audit_next_layer.clear()
+    resolved = _resolve_router_layer_ids(kwargs["model"])
+    layer_count = int(capturer.num_layers)
+    sources = set()
+    for module, layer_id, source in resolved:
+        if not 0 <= layer_id < layer_count:
+            raise RuntimeError(
+                f"SGLang layer id {layer_id} is outside the capture buffer"
+            )
+        _topk_config_layer_ids[id(module.topk_config)] = layer_id
+        _layer_id_modules.append(module)
+        sources.add(source)
+    _emit(
+        "dispatch-layer-qualified",
+        layer_count=layer_count,
+        layer_ids=sorted(layer_id for _, layer_id, _ in resolved),
+        mapping=DISPATCH_LAYER_MAPPING,
+        selected_experts_unchanged=True,
+        source=sorted(sources),
+    )
+    return capturer
+
+
+def _observe_capture_gate(
+    original: Callable[..., Any],
+    topk_config: Any,
+    layer_id: int | None,
+    topk_ids: Any,
+) -> Any:
+    """Supply the layer id the pinned Granite router never carries.
+
+    ``topk_ids`` is forwarded untouched. ``layer_id`` reaches only the capture
+    label on this path: the pinned source uses it otherwise in the CUDA-only LP
+    solver branch (``layers/moe/topk.py:1877``) and the benchmark round-robin
+    override (``:2226``), neither reachable on the CPU engine this oracle
+    selects.
+    """
+
+    if layer_id is None:
+        layer_id = _topk_config_layer_ids.get(id(topk_config))
+        if layer_id is None:
+            raise RuntimeError(
+                "SGLang routed-expert gate has no framework layer id; the "
+                "capturer binding did not see this router"
+            )
+    return original(topk_config, layer_id, topk_ids)
+
+
 def _observe_routed_capture(
     original: Callable[..., Any],
     capturer: Any,
     layer_id: int | None,
     topk_indices: Any,
 ) -> Any:
-    """Label Granite's actual post-selection rows without recomputing them.
+    """Refuse an unlabeled capture and, on request, audit the label.
 
-    The pinned SGLang Granite model does not pass its constructor layer ID to
-    ``TopK``. Its 24 MoE modules execute in model-list order, so the observer
-    assigns missing capture labels in that order and leaves ``topk_indices``
-    byte-for-byte untouched.
+    Nothing is inferred here. A ``None`` label means a capture path reached the
+    capturer without passing SGLang's own layer identity, which would silently
+    file one layer's experts under another.
     """
 
-    global _capture_layer_qualified_emitted
     if layer_id is None:
+        raise RuntimeError(
+            "SGLang post-selection capture carries no framework layer id"
+        )
+    if layer_audit_enabled():
         identity = id(capturer)
-        inferred = _capture_next_layer.get(identity, 0)
         layer_count = int(capturer.num_layers)
-        if not 0 <= inferred < layer_count:
-            raise RuntimeError("SGLang inferred dispatch layer is out of range")
-        _capture_next_layer[identity] = (inferred + 1) % layer_count
-        layer_id = inferred
-        if not _capture_layer_qualified_emitted:
-            _emit(
-                "dispatch-layer-qualified",
-                layer_count=layer_count,
-                mapping="granite-model-order",
-                selected_experts_unchanged=True,
+        expected = _audit_next_layer.get(identity, 0)
+        _audit_next_layer[identity] = (expected + 1) % layer_count
+        agrees = expected == layer_id
+        _emit(
+            "dispatch-layer-agreement",
+            agrees=agrees,
+            framework_layer_id=layer_id,
+            model_order_layer_id=expected,
+        )
+        if not agrees:
+            raise RuntimeError(
+                f"SGLang framework layer id {layer_id} disagrees with the "
+                f"replaced model-order surrogate {expected}"
             )
-            _capture_layer_qualified_emitted = True
     return original(capturer, layer_id, topk_indices)
 
 
@@ -411,8 +557,10 @@ def register_oracle_hooks() -> None:
     _log_path().parent.mkdir(parents=True, exist_ok=True)
     from sglang.srt.plugins.hook_registry import HookRegistry, HookType
 
-    for target, hook in (
+    targets = (
         (_HOST_CACHE_TARGET, _initialize_cpu_host_cache),
+        (_CAPTURER_CREATE_TARGET, _observe_capturer_create),
+        (_CAPTURE_GATE_TARGET, _observe_capture_gate),
         (_ROUTED_CAPTURE_TARGET, _observe_routed_capture),
         (_ALLOC_EXTEND_TARGET, _observe_alloc_for_extend),
         (_ALLOC_DECODE_TARGET, _observe_alloc_for_decode),
@@ -420,19 +568,11 @@ def register_oracle_hooks() -> None:
         (_REMOVE_TARGET, _observe_remove_event),
         (_RETRACT_TARGET, _observe_retract_decode),
         (_WORKER_TARGET, _observe_worker_forward),
-    ):
+    )
+    for target, hook in targets:
         HookRegistry.register(target, hook, HookType.AROUND)
     _emit(
         "plugin-active",
-        hook_targets=[
-            _HOST_CACHE_TARGET,
-            _ROUTED_CAPTURE_TARGET,
-            _ALLOC_EXTEND_TARGET,
-            _ALLOC_DECODE_TARGET,
-            _PREFIX_TARGET,
-            _REMOVE_TARGET,
-            _RETRACT_TARGET,
-            _WORKER_TARGET,
-        ],
+        hook_targets=[target for target, _ in targets],
         process_id=os.getpid(),
     )
