@@ -460,11 +460,29 @@ on main's published 0.205 ms literal, not a measured composed run. It applies a
 DGX B200 intra-node NVLink ALL-REDUCE intercept unchanged to cross-node
 pairwise ALL-TO-ALLV. The 1.446145392 ms addition is 0.4 percent above the
 mission budget's nominal 1.44 ms endpoint, so the direction of residual error
-remains ambiguous. The same-wave fixed host term was not composed here, and
-additivity versus overlap remains unresolved. The legacy and all-remote
+remains ambiguous. The legacy and all-remote
 identity paths remained exact. The public evidence supplies a B200 collective
 capture and a vendor capacity ceiling, but not the same-generation
 point-to-point payload capture required by the original clause.
+
+The [composed step budget study](../../examples/composed_step_budget_v1/RESULTS.md)
+then measured the composition that study left open. Running the mission chain
+with the floor and the same-wave host term both enabled charges the floor
+additively: a step is `max(C, N * g)` plus one 30,128,029 ps base latency per
+semantic collective plus the raw fabric transport, so the arithmetic
+1.651145392 ms whole-step figure above understates the measured 1.916754 ms
+CUDA-graph composition by 13.9 percent and describes no host profile. The floor
+stays outside the raw transport: over 31 matched decode compositions
+`2 * fabric(400G) - fabric(200G)` returns 96,000,006 to 96,000,048 ps, the
+mission study's own 48 propagation charges of 2.000 us plus backend
+quantization. It also compresses bandwidth sensitivity as an additive term
+should, moving the 400 to 200 Gbit/s decode-step ratio from the published
+1.0441 to 1.4760 down to 1.0047 to 1.0148. Two limits are now quantified rather
+than asserted: the floor is 74.73 to 75.45 percent of the composed step at the
+CUDA-graph profile, so the transferred ALL-REDUCE intercept dominates a number
+this repository reports, and the width-8 endpoint envelope's 458,752-byte
+ceiling was reached to within 17 percent by a 34-token prefill step, so a
+larger case would be rejected at planning time.
 
 ## Open tasks
 

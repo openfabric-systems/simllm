@@ -613,11 +613,13 @@ def _diagnostics(
         decode = _decode_steps(cells[label])
         if not decode:
             continue
-        latencies = sorted(step["step_latency_ps"] for step in decode)
-        median = latencies[len(latencies) // 2]
+        ordered = sorted(decode, key=lambda step: step["step_latency_ps"])
+        median_step = ordered[len(ordered) // 2]
+        latencies = [step["step_latency_ps"] for step in ordered]
+        median = median_step["step_latency_ps"]
         composition = compositions[label]
         by_index = {step["step_index"]: step for step in composition["steps"]}
-        sample = by_index[decode[len(decode) // 2]["step_index"]]
+        sample = by_index[median_step["step_index"]]
         rows.append(
             {
                 "cell": label,

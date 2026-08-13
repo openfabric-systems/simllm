@@ -490,3 +490,31 @@ def test_g10_rejects_a_device_consistent_calibrated_roofline():
     assert study._provider_input_guard(pinned, frozen)["held"] is True
     assert study._provider_input_guard(device_consistent, frozen)["held"] is False
     assert study._provider_input_guard({}, frozen)["held"] is False
+
+
+def test_diagnostic_shares_use_the_median_step_and_sum_to_one():
+    study = _study()
+    frozen = study.check_module().load_expectations()
+    label = "on-graph440-400g"
+    latencies = [1_926_666_680, 1_907_251_602, 1_916_426_672]
+    cells = {label: dict(_decode_cell(latencies), requests=[])}
+    compositions = {
+        label: {
+            "steps": [
+                {
+                    "step_index": index,
+                    "step_latency_ps": latency,
+                    "compute_service_ps": 356_095_000,
+                    "collective_base_sum_ps": 1_446_145_392,
+                    "fabric_service_sum_ps": latency - 356_095_000 - 1_446_145_392,
+                }
+                for index, latency in enumerate(latencies)
+            ]
+        }
+    }
+
+    row = study._diagnostics(cells, compositions, frozen)["composed_steps"][0]
+
+    assert row["median_decode_step_ps"] == 1_916_426_672
+    total = row["compute_share"] + row["collective_floor_share"] + row["fabric_share"]
+    assert total == pytest.approx(1.0, abs=1e-12)
