@@ -57,6 +57,36 @@ MEMORY_CELLS = {
     },
 }
 
+#: CORE-47 comparator registry, frozen by refreeze_expectations.md. Every
+#: literal is CORE-35's independently published measurement of the same cells;
+#: nothing here is recomputed from a run.
+COMPARATOR_CELLS = {
+    1: {
+        "executions": 25,
+        "completions": 5_760,
+        "agreeing_timestamps": 4_455,
+        "moved_timestamps": 1_305,
+        "executed_target_ps": 10_480_742,
+        "barrier_target_ps": 10_790_217,
+        "step_zero_boundary_ps": 154_568_365,
+    },
+    3: {
+        "executions": 33,
+        "completions": 7_680,
+        "agreeing_timestamps": 5_127,
+        "moved_timestamps": 2_553,
+        "executed_target_ps": 13_812_156,
+        "barrier_target_ps": 14_485_720,
+        "step_zero_boundary_ps": 234_886_380,
+    },
+}
+
+COMPARATOR_TARGET_OPERATION_ID = "step-0:layer-1:rank-1:compute"
+COMPARATOR_TARGET_PARTICIPANT_RANK = 1
+
+#: the executed graph shape and the comparator retained beside it
+GRAPH_SHAPES = ("participant-local", "barrier")
+
 LIFECYCLE_CELLS = {
     "clean-one": {"request_count": 1, "closed": 1, "live": 0, "views": 0},
     "clean-three": {"request_count": 3, "closed": 3, "live": 0, "views": 0},
@@ -70,6 +100,20 @@ LIFECYCLE_CELLS = {
         "phase": "combine",
         "layer": 19,
     },
+}
+
+SCORED_RELATION_INSTANCES = {
+    "MEM-B1": 2,
+    "LIFE-B1": 2,
+    "LIFE-B2": 2,
+    "LIFE-C3": 2,
+    "LIFE-C4": 4,
+    "LIFE-C5": 2,
+}
+
+UNSCORED_DUPLICATE_RELATIONS = {
+    "LIFE-C1": "LIFE-B1",
+    "LIFE-C2": "LIFE-B2",
 }
 
 
@@ -94,6 +138,55 @@ def _check_frozen_registry() -> None:
     }
     if suppressions != {("r0", "dispatch", 7), ("r2", "combine", 19)}:
         raise AssertionError("suppression registry disagrees with expectations")
+    if len(SCORED_RELATION_INSTANCES) != 6:
+        raise AssertionError("scored relation family count drifted")
+    if sum(SCORED_RELATION_INSTANCES.values()) != 14:
+        raise AssertionError("scored relation instance count drifted")
+    if UNSCORED_DUPLICATE_RELATIONS != {
+        "LIFE-C1": "LIFE-B1",
+        "LIFE-C2": "LIFE-B2",
+    }:
+        raise AssertionError("unscored duplicate relation registry drifted")
+    _check_comparator_registry()
+
+
+def _check_comparator_registry() -> None:
+    """Validate the CORE-47 comparator literals without running anything."""
+
+    if set(COMPARATOR_CELLS) != {1, 3}:
+        raise AssertionError("comparator registry must cover both lifecycle cells")
+    for request_count, cell in COMPARATOR_CELLS.items():
+        expected_executions = 25 if request_count == 1 else 33
+        if cell["executions"] != expected_executions:
+            raise AssertionError("comparator execution count drifted")
+        if cell["agreeing_timestamps"] + cell["moved_timestamps"] != cell["completions"]:
+            raise AssertionError("comparator timestamp partition does not conserve")
+        if cell["barrier_target_ps"] <= cell["executed_target_ps"]:
+            raise AssertionError("the barrier arm must never be earlier")
+        if cell["moved_timestamps"] <= 0:
+            raise AssertionError("a moved intermediate value is expected here")
+        if cell["step_zero_boundary_ps"] <= cell["barrier_target_ps"]:
+            raise AssertionError("an intermediate value cannot outlast its step")
+    one, three = COMPARATOR_CELLS[1], COMPARATOR_CELLS[3]
+    if three["moved_timestamps"] <= one["moved_timestamps"]:
+        raise AssertionError("the wider cell must move strictly more values")
+    if (
+        three["moved_timestamps"] * one["completions"]
+        <= one["moved_timestamps"] * three["completions"]
+    ):
+        raise AssertionError("the wider cell must move a larger fraction")
+    if three["step_zero_boundary_ps"] <= one["step_zero_boundary_ps"]:
+        raise AssertionError("three requests cannot finish their first step before one")
+    gaps = {
+        count: cell["barrier_target_ps"] - cell["executed_target_ps"]
+        for count, cell in COMPARATOR_CELLS.items()
+    }
+    if gaps != {1: 309_475, 3: 673_564}:
+        raise AssertionError("comparator target gap literals drifted")
+    if not COMPARATOR_TARGET_OPERATION_ID.endswith(":compute"):
+        raise AssertionError("the comparator target must be a compute operation")
+    if COMPARATOR_TARGET_PARTICIPANT_RANK <= 0:
+        raise AssertionError("the decision case is a non-first participant rank")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -217,6 +310,7 @@ def _join_cell(
     output: Path,
     external_run: Any,
     request_count: int,
+    label: str = "",
 ) -> tuple[Any, Any]:
     from simllm.core import RequestBookkeeper
     from simllm.preplay import (
@@ -226,7 +320,7 @@ def _join_cell(
         write_preplay_replay_run,
     )
 
-    directory = output / f"requests-{request_count}"
+    directory = output / f"requests-{request_count}{label}"
     directory.mkdir(parents=True, exist_ok=False)
     arrivals = tuple(
         RequestArrival(
@@ -488,15 +582,17 @@ def _filtered_record(source: Any, request_ids: set[str], virtual_time_ps: int) -
     )
 
 
-def _runtime_report_compatible_graph(graph: Any) -> Any:
-    """Tighten local frontiers to barriers for the coarse report reducer.
+def _barrier_comparator_graph(graph: Any) -> Any:
+    """Tighten local frontiers to whole-operation barriers, as a comparator.
 
-    The coarse runtime can execute participant-local stagger, but its additive
-    operation report currently rejects a later rank whose selected local path
-    starts before the operation's one global critical predecessor. This study
-    makes no timing claim, so it preserves every operation, request, layer,
-    work item and completion boundary while tightening only those dependency
-    frontiers to whole-operation barriers.
+    This was the executed projection until CORE-47. It existed because the
+    coarse additive operation report rejected a later rank whose selected local
+    path started before the operation's one global critical predecessor, which
+    CORE-35 fixed by keying the report's conserved segments on the participant.
+    The lowerer's own participant-local graph is now the executed path, and this
+    stricter ordering is retained only as the arm the executed one is compared
+    against. It preserves every operation, request, layer, work item and
+    completion identity and changes only the dependency frontiers.
     """
 
     from simllm.core import ExecutionGraph, validate_execution_graph
@@ -530,17 +626,21 @@ def _run_clean_lifecycle(
     supply: Any,
     source_steps: tuple[Any, ...],
     request_ids: tuple[str, ...],
+    shape: str = "participant-local",
 ) -> tuple[dict[str, Any], list[tuple[Any, Any, Any, Any]]]:
     from simllm.backends import SerialStepLowerer, SerialStepLowererConfig
     from simllm.core import (
         CoarseDeviceProfile,
         CoarseDeviceRuntime,
         CompletionReducer,
+        EventPhase,
         StepRecord,
         VirtualClock,
     )
 
     del joined
+    if shape not in GRAPH_SHAPES:
+        raise ValueError(f"unsupported graph shape: {shape!r}")
     dims = _granite_dims()
     lowerer = SerialStepLowerer(
         SerialStepLowererConfig(
@@ -559,13 +659,64 @@ def _run_clean_lifecycle(
     selected = source_steps[:25] if request_ids == ("r0",) else source_steps
     evidence: list[tuple[Any, Any, Any, Any]] = []
     states = []
+    completions: list[list[Any]] = []
+    boundaries: list[dict[str, Any]] = []
+    operation_facts: dict[tuple[int, str], dict[str, Any]] = {}
+    local_edge_totals = {"with_local_edges": 0, "operations": 0}
+
+    def observe(record: Any, graph: Any, execution: Any, report: Any, step_result: Any) -> None:
+        for event in execution.events:
+            if event.phase is not EventPhase.COMPLETED:
+                continue
+            completions.append(
+                [
+                    record.step_index,
+                    event.operation_id,
+                    event.subject_object_id,
+                    event.timestamp_ps,
+                ]
+            )
+        boundaries.append(
+            {
+                "step_index": record.step_index,
+                "execution_completed_at_ps": execution.completed_at_ps,
+                "step_result_completed_at_ps": step_result.completed_at_ps,
+                "quiesced_at_ps": execution.quiesced_at_ps,
+            }
+        )
+        for operation in graph.operations:
+            local_edge_totals["operations"] += 1
+            if operation.participant_local_depends_on:
+                local_edge_totals["with_local_edges"] += 1
+        by_id = {item.operation_id: item for item in report.operations}
+        for operation in graph.operations:
+            record_item = by_id.get(operation.operation_id)
+            completions_by_rank = (
+                dict(record_item.participant_completed_at_ps) if record_item else {}
+            )
+            values = list(completions_by_rank.values())
+            operation_facts[(record.step_index, operation.operation_id)] = {
+                "predecessors": list(
+                    dict.fromkeys(
+                        (*operation.depends_on, *operation.participant_local_depends_on)
+                    )
+                ),
+                "participant_local_predecessors": list(
+                    operation.participant_local_depends_on
+                ),
+                "has_participant_spread": bool(values) and min(values) < max(values),
+            }
+
     for source in selected:
         record = _filtered_record(source, wanted, clock.now_ps)
-        graph = _runtime_report_compatible_graph(lowerer.lower(record))
+        graph = lowerer.lower(record)
+        if shape == "barrier":
+            graph = _barrier_comparator_graph(graph)
         execution = runtime.execute(graph)
         report = runtime.last_report
         assert report is not None
-        reducer.reduce(record, graph, execution, report)
+        step_result = reducer.reduce(record, graph, execution, report)
+        observe(record, graph, execution, report, step_result)
         evidence.append((record, graph, execution, report))
         states.append(
             {
@@ -591,11 +742,14 @@ def _run_clean_lifecycle(
             num_sampled=0,
             sampled_request_ids=[],
         )
-        graph = _runtime_report_compatible_graph(lowerer.lower(drain_source))
+        graph = lowerer.lower(drain_source)
+        if shape == "barrier":
+            graph = _barrier_comparator_graph(graph)
         execution = runtime.execute(graph)
         report = runtime.last_report
         assert report is not None
-        reducer.reduce(drain_source, graph, execution, report)
+        step_result = reducer.reduce(drain_source, graph, execution, report)
+        observe(drain_source, graph, execution, report, step_result)
         evidence.append((drain_source, graph, execution, report))
         states.append(
             {
@@ -629,10 +783,27 @@ def _run_clean_lifecycle(
     # LIFE-B1 is evaluated from raw counts before this entailing fatal audit.
     lifetimes.audit_closed()
     arena.close()
+    target_key = (0, COMPARATOR_TARGET_OPERATION_ID)
+    target_completed_at_ps = None
+    for step_index, operation_id, subject, timestamp_ps in completions:
+        if (step_index, operation_id) == target_key and subject is None:
+            target_completed_at_ps = timestamp_ps
     return {
         "request_ids": list(request_ids),
+        "shape": shape,
         "raw_exit": raw,
         "state_trace": states,
+        "executions": len(boundaries),
+        "completion_count": len(completions),
+        "completions": completions,
+        "boundaries": boundaries,
+        "operation_facts": {
+            f"{step_index}|{operation_id}": value
+            for (step_index, operation_id), value in operation_facts.items()
+        },
+        "operations_with_participant_local_edges": local_edge_totals["with_local_edges"],
+        "graph_operations": local_edge_totals["operations"],
+        "target_completed_at_ps": target_completed_at_ps,
         "passed": passed,
     }, evidence
 
@@ -758,6 +929,132 @@ def _run_suppression(
     }
 
 
+def _shape_comparison(
+    request_count: int,
+    executed: dict[str, Any],
+    barrier: dict[str, Any],
+) -> dict[str, Any]:
+    """Diff every surface the ordering change could touch, value by value."""
+
+    expected = COMPARATOR_CELLS[request_count]
+    executed_by_identity = {
+        (step_index, operation_id, subject): timestamp_ps
+        for step_index, operation_id, subject, timestamp_ps in executed["completions"]
+    }
+    barrier_by_identity = {
+        (step_index, operation_id, subject): timestamp_ps
+        for step_index, operation_id, subject, timestamp_ps in barrier["completions"]
+    }
+    # Cross-arm emission order is deliberately not compared: the timestamps
+    # this study exists to record are what reorder a time-ordered stream.
+    identities_equal = set(executed_by_identity) == set(barrier_by_identity)
+    duplicate_free = len(executed_by_identity) == len(executed["completions"]) and len(
+        barrier_by_identity
+    ) == len(barrier["completions"])
+
+    moved_operations = {
+        (identity[0], identity[1])
+        for identity, executed_ps in executed_by_identity.items()
+        if barrier_by_identity.get(identity, executed_ps) != executed_ps
+    }
+    moved = []
+    earlier_under_barrier = 0
+    agreeing = 0
+    unattributed = 0
+    direct_cause = 0
+    propagated_only = 0
+    for identity, executed_ps in executed_by_identity.items():
+        barrier_ps = barrier_by_identity.get(identity)
+        if barrier_ps is None:
+            continue
+        if barrier_ps == executed_ps:
+            agreeing += 1
+            continue
+        if barrier_ps < executed_ps:
+            earlier_under_barrier += 1
+        step_index, operation_id, subject = identity
+        facts = executed["operation_facts"].get(f"{step_index}|{operation_id}", {})
+        local_predecessors = facts.get("participant_local_predecessors", [])
+        spread = [
+            predecessor
+            for predecessor in local_predecessors
+            if executed["operation_facts"]
+            .get(f"{step_index}|{predecessor}", {})
+            .get("has_participant_spread", False)
+        ]
+        propagated = [
+            predecessor
+            for predecessor in local_predecessors
+            if (step_index, predecessor) in moved_operations
+        ]
+        if spread:
+            direct_cause += 1
+        elif propagated:
+            propagated_only += 1
+        else:
+            unattributed += 1
+        moved.append(
+            {
+                "step_index": step_index,
+                "operation_id": operation_id,
+                "subject_object_id": subject,
+                "executed_ps": executed_ps,
+                "barrier_ps": barrier_ps,
+                "delta_ps": barrier_ps - executed_ps,
+                "participant_local_predecessors": local_predecessors,
+                "predecessors_with_participant_spread": spread,
+                "cause": "predecessor participant spread"
+                if spread
+                else ("propagated from a moved predecessor" if propagated else "none"),
+            }
+        )
+
+    boundaries_equal = executed["boundaries"] == barrier["boundaries"]
+    step_zero = next(
+        row for row in executed["boundaries"] if row["step_index"] == 0
+    )
+
+    return {
+        "request_count": request_count,
+        "executions": {
+            "executed": executed["executions"],
+            "barrier": barrier["executions"],
+            "expected": expected["executions"],
+        },
+        "completion_count": {
+            "executed": executed["completion_count"],
+            "barrier": barrier["completion_count"],
+            "expected": expected["completions"],
+        },
+        "identity_multiset_equal": identities_equal,
+        "identities_duplicate_free": duplicate_free,
+        "agreeing_timestamps": agreeing,
+        "moved_timestamps": len(moved),
+        "expected_agreeing_timestamps": expected["agreeing_timestamps"],
+        "expected_moved_timestamps": expected["moved_timestamps"],
+        "earlier_under_barrier": earlier_under_barrier,
+        "moved_with_direct_cause": direct_cause,
+        "moved_propagated_only": propagated_only,
+        "moved_unattributed": unattributed,
+        "boundaries_equal": boundaries_equal,
+        "step_zero_boundary_ps": step_zero["step_result_completed_at_ps"],
+        "step_zero_execution_completed_at_ps": step_zero["execution_completed_at_ps"],
+        "final_boundary_ps": executed["boundaries"][-1]["step_result_completed_at_ps"],
+        "expected_step_zero_boundary_ps": expected["step_zero_boundary_ps"],
+        "executed_target_ps": executed["target_completed_at_ps"],
+        "barrier_target_ps": barrier["target_completed_at_ps"],
+        "expected_executed_target_ps": expected["executed_target_ps"],
+        "expected_barrier_target_ps": expected["barrier_target_ps"],
+        "executed_operations_with_participant_local_edges": (
+            executed["operations_with_participant_local_edges"]
+        ),
+        "barrier_operations_with_participant_local_edges": (
+            barrier["operations_with_participant_local_edges"]
+        ),
+        "moved_values": moved,
+    }
+
+
 def _write_json(path: Path, value: Any) -> None:
     path.write_text(
         json.dumps(value, indent=2, sort_keys=True) + "\n",
@@ -845,6 +1142,38 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
         ("r0", "r1", "r2"),
     )
 
+    # CORE-47: the barrier is retained beside the executed graph as an explicit
+    # comparator. Each arm needs its own arena, lifetimes and supply because a
+    # lifecycle run consumes them.
+    comparator_cells = {
+        count: _join_cell(arguments, arguments.out, external_run, count, "-barrier")
+        for count in (1, 3)
+    }
+    comparisons = {}
+    for count, request_ids in ((1, ("r0",)), (3, ("r0", "r1", "r2"))):
+        joined_barrier, arena_barrier = comparator_cells[count]
+        lifetimes_barrier = create_request_lifetimes(joined_barrier, arena_barrier)
+        supply_barrier = _supply(
+            replace(routed, requests=routed.requests[:count]),
+            steps,
+            arena=arena_barrier,
+            lifetimes=lifetimes_barrier,
+        )
+        barrier_cell, _ = _run_clean_lifecycle(
+            joined_barrier,
+            arena_barrier,
+            supply_barrier,
+            steps,
+            request_ids,
+            shape="barrier",
+        )
+        executed_cell = clean_one if count == 1 else clean_three
+        comparisons[count] = _shape_comparison(count, executed_cell, barrier_cell)
+        comparisons[count]["barrier_raw_exit"] = barrier_cell["raw_exit"]
+        comparisons[count]["barrier_state_trace_equal"] = (
+            barrier_cell["state_trace"] == executed_cell["state_trace"]
+        )
+
     suppression_root = arguments.out / "suppression"
     suppression_root.mkdir()
     suppression_rows = []
@@ -863,6 +1192,120 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
             suppression_root / f"{name}.routing.json",
         )
         suppression_rows.append(_run_suppression(joined, arena, evidence, target))
+
+    boundary_rows = [
+        {
+            "request_count": count,
+            "boundaries_equal": comparison["boundaries_equal"],
+            "step_zero_boundary_ps": comparison["step_zero_boundary_ps"],
+            "expected_step_zero_boundary_ps": (
+                comparison["expected_step_zero_boundary_ps"]
+            ),
+            "final_boundary_ps": comparison["final_boundary_ps"],
+            "passed": (
+                comparison["boundaries_equal"]
+                and comparison["step_zero_boundary_ps"]
+                == comparison["expected_step_zero_boundary_ps"]
+                and comparison["step_zero_execution_completed_at_ps"]
+                == comparison["expected_step_zero_boundary_ps"]
+            ),
+        }
+        for count, comparison in sorted(comparisons.items())
+    ]
+    moved_rows = []
+    for count, comparison in sorted(comparisons.items()):
+        moved_rows.append(
+            {
+                "request_count": count,
+                "surface": "moved timestamp count",
+                "observed": comparison["moved_timestamps"],
+                "expected": comparison["expected_moved_timestamps"],
+                "observed_agreeing": comparison["agreeing_timestamps"],
+                "expected_agreeing": comparison["expected_agreeing_timestamps"],
+                "passed": (
+                    comparison["moved_timestamps"]
+                    == comparison["expected_moved_timestamps"]
+                    and comparison["agreeing_timestamps"]
+                    == comparison["expected_agreeing_timestamps"]
+                ),
+            }
+        )
+        moved_rows.append(
+            {
+                "request_count": count,
+                "surface": "decision target",
+                "observed_executed_ps": comparison["executed_target_ps"],
+                "observed_barrier_ps": comparison["barrier_target_ps"],
+                "expected_executed_ps": comparison["expected_executed_target_ps"],
+                "expected_barrier_ps": comparison["expected_barrier_target_ps"],
+                "passed": (
+                    comparison["executed_target_ps"]
+                    == comparison["expected_executed_target_ps"]
+                    and comparison["barrier_target_ps"]
+                    == comparison["expected_barrier_target_ps"]
+                ),
+            }
+        )
+    attribution_rows = [
+        {
+            "request_count": count,
+            "moved": comparison["moved_timestamps"],
+            "with_direct_cause": comparison["moved_with_direct_cause"],
+            "propagated_only": comparison["moved_propagated_only"],
+            "unattributed": comparison["moved_unattributed"],
+            "earlier_under_barrier": comparison["earlier_under_barrier"],
+            "passed": (
+                comparison["moved_unattributed"] == 0
+                and comparison["earlier_under_barrier"] == 0
+                and comparison["moved_with_direct_cause"] > 0
+            ),
+        }
+        for count, comparison in sorted(comparisons.items())
+    ]
+    executed_shape_rows = [
+        {
+            "request_count": count,
+            "executed_operations_with_participant_local_edges": comparison[
+                "executed_operations_with_participant_local_edges"
+            ],
+            "barrier_operations_with_participant_local_edges": comparison[
+                "barrier_operations_with_participant_local_edges"
+            ],
+            "passed": (
+                comparison["executed_operations_with_participant_local_edges"] > 0
+                and comparison["barrier_operations_with_participant_local_edges"] == 0
+            ),
+        }
+        for count, comparison in sorted(comparisons.items())
+    ]
+    identity_rows = [
+        {
+            "request_count": count,
+            "identity_multiset_equal": comparison["identity_multiset_equal"],
+            "identities_duplicate_free": comparison["identities_duplicate_free"],
+            "executions_equal": (
+                comparison["executions"]["executed"]
+                == comparison["executions"]["barrier"]
+                == comparison["executions"]["expected"]
+            ),
+            "completion_counts_equal": (
+                comparison["completion_count"]["executed"]
+                == comparison["completion_count"]["barrier"]
+                == comparison["completion_count"]["expected"]
+            ),
+            "passed": (
+                comparison["identity_multiset_equal"]
+                and comparison["identities_duplicate_free"]
+                and comparison["executions"]["executed"]
+                == comparison["executions"]["barrier"]
+                == comparison["executions"]["expected"]
+                and comparison["completion_count"]["executed"]
+                == comparison["completion_count"]["barrier"]
+                == comparison["completion_count"]["expected"]
+            ),
+        }
+        for count, comparison in sorted(comparisons.items())
+    ]
 
     scored = {
         "MEM-B1": {
@@ -883,7 +1326,54 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
             "rows": suppression_rows,
             "passed": all(row["passed"] for row in suppression_rows),
         },
+        "LIFE-C3": {
+            "classification": "scored-behavioral",
+            "genuine_risk": "2/2",
+            "rows": boundary_rows,
+            "passed": all(row["passed"] for row in boundary_rows),
+        },
+        "LIFE-C4": {
+            "classification": "scored-behavioral",
+            "genuine_risk": "4/4",
+            "rows": moved_rows,
+            "passed": all(row["passed"] for row in moved_rows),
+        },
+        "LIFE-C5": {
+            "classification": "scored-behavioral",
+            "genuine_risk": "2/2",
+            "rows": attribution_rows,
+            "passed": all(row["passed"] for row in attribution_rows),
+        },
     }
+    unscored_duplicates = {
+        "LIFE-C1": {
+            "classification": "unscored-duplicate-projection",
+            "duplicates": UNSCORED_DUPLICATE_RELATIONS["LIFE-C1"],
+            "rows": [
+                {
+                    "request_count": count,
+                    "raw_exit": cell["raw_exit"],
+                    "passed": cell["passed"],
+                }
+                for count, cell in ((1, clean_one), (3, clean_three))
+            ],
+            "passed": scored["LIFE-B1"]["passed"],
+        },
+        "LIFE-C2": {
+            "classification": "unscored-duplicate-projection",
+            "duplicates": UNSCORED_DUPLICATE_RELATIONS["LIFE-C2"],
+            "rows": scored["LIFE-B2"]["rows"],
+            "passed": scored["LIFE-B2"]["passed"],
+        },
+    }
+    if set(scored) != set(SCORED_RELATION_INSTANCES):
+        raise AssertionError("scored relation registry disagrees with evidence policy")
+    observed_scored_instances = {
+        name: 4 if name == "LIFE-C4" else len(family["rows"])
+        for name, family in scored.items()
+    }
+    if observed_scored_instances != SCORED_RELATION_INSTANCES:
+        raise AssertionError("scored relation instances disagree with the registry")
     fatal = {
         "input_identity": {
             "classification": "fatal-unscored-configuration",
@@ -901,6 +1391,16 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
                 row["arena_close_with_live_view_rejected"]
                 for row in suppression_rows
             ),
+        },
+        "completion_identity_multiset": {
+            "classification": "fatal-unscored-structural",
+            "rows": identity_rows,
+            "passed": all(row["passed"] for row in identity_rows),
+        },
+        "executed_graph_is_unchanged": {
+            "classification": "fatal-unscored-structural",
+            "rows": executed_shape_rows,
+            "passed": all(row["passed"] for row in executed_shape_rows),
         },
     }
     result = {
@@ -923,26 +1423,33 @@ def _run(arguments: argparse.Namespace) -> dict[str, Any]:
             "ep_ranks": list(range(8)),
             "placement_rule": "expert_id modulo 8",
             "lifecycle_dependency_projection": (
-                "participant-local frontiers tightened to whole-operation barriers "
-                "for coarse additive-report compatibility after run-1 exposed its "
-                "overlap rejection; operation, work, request, layer and completion "
-                "identities are unchanged"
+                "the lowerer's participant-local graph is executed unchanged after "
+                "CORE-35 made the coarse report's conserved segments participant "
+                "keyed; the whole-operation barrier is retained beside it as an "
+                "explicit comparator arm and never selects the reported result"
             ),
+            "graph_shapes": list(GRAPH_SHAPES),
+        },
+        "shape_comparisons": {
+            str(count): comparison for count, comparison in sorted(comparisons.items())
         },
         "scored_relations": scored,
+        "unscored_duplicate_relations": unscored_duplicates,
         "fatal_unscored": fatal,
         "evidence_class_counts": {
-            "run_configurations": 2,
-            "scored_behavioral_families": 3,
-            "scored_behavioral_instances": 6,
+            "run_configurations": 4,
+            "scored_behavioral_families": len(scored),
+            "scored_behavioral_instances": sum(observed_scored_instances.values()),
             "fatal_exact_step_rows": len(traffic["rows"]),
-            "fatal_structural_families": 3,
+            "fatal_structural_families": 5,
             "native_test_executables": 0,
         },
     }
     _write_json(arguments.out / "results.json", result)
     if not all(value["passed"] for value in scored.values()):
         raise AssertionError("a scored behavioral relation failed")
+    if not all(value["passed"] for value in unscored_duplicates.values()):
+        raise AssertionError("an unscored duplicate projection failed")
     if not all(value["passed"] for value in fatal.values()):
         raise AssertionError("a fatal unscored oracle failed")
     return result
@@ -953,8 +1460,9 @@ def main() -> None:
     _check_frozen_registry()
     if arguments.check_only:
         print(
-            "check-only validated two memory cells, two clean lifecycle cells, "
-            "two suppression cells and five source records; no artifacts produced"
+            "check-only validated six scored families, 14 scored instances, two "
+            "unscored duplicate views and five source records; no artifacts "
+            "produced"
         )
         return
     result = _run(arguments)
