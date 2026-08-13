@@ -39,13 +39,22 @@ The surface other code uses, all exported from `simllm.preplay`:
   `validate_*` families are the only supported way to emit or accept one.
 - **Join.** `RequestArrival` plus a trace joins into `PreplayReplayRun` of
   `JoinedRequest` records, which is what pins each request's arrival, output
-  length, stop reason and routing for a replay.
+  length, stop reason and routing for a replay. `join_preplay_arrivals` reads a
+  v1 trace and `join_framework_arrivals` a v2 one; both produce the same run
+  record, and `read_replay_oracle_requests` is how a replay reads either named
+  trace. The v2 join also returns a read-only
+  `FrameworkKvReconciliation` beside the run.
 - **Routing supply.** `RoutingArena` with `RoutingArenaIndex` and
   `RoutingArenaRequestView` is the packed per-token routing form the traffic
   expansion consumes; `RoutingReference` names the artifact a run used.
 - **Observed dispatch.** `ObservedTokenDispatch` and `ObservedLayerDispatch`
   under `OBSERVED_DISPATCH_SOURCE` carry framework-observed routing, and
   `KvCacheEvent` with `KvEventKind` carries the framework's own KV decisions.
+- **KV reconciliation.** `FRAMEWORK_KV_RECONCILIATION_SCHEMA` tags the
+  read-only `FrameworkKvReconciliation` of `KvRequestReconciliation` rows,
+  `KvAgreement` classes and `KvDefect` codes that
+  `reconcile_framework_kv_events` produces from a v2 capture beside a joined
+  run.
 
 ## Design
 
@@ -90,9 +99,11 @@ The surface other code uses, all exported from `simllm.preplay`:
   attached to its routed token slice and becomes a read-only partition of the
   aggregate physical pair table. Direct and execution-graph GOAL renderers
   fail closed unless every request, layer, phase and directed pair agrees with
-  that routed authority under the selected placement. Joining the observed v2
-  request and KV records is PLAY-8. The SGLang adapter serves joined replay
-  tokens; its live in-process smoke is PLAY-16.
+  that routed authority under the selected placement. A v2 capture joins into
+  the same replay run through `join_framework_arrivals`, and its KV event
+  stream is reconciled beside that run rather than consulted by it. The
+  SGLang adapter serves joined replay tokens; its live in-process smoke is
+  PLAY-16.
 - **Honesty rule.** A CPU run is one realization, not the deployment's
   exact token stream: CPU and GPU numerics differ, so sampled ids can
   diverge between the oracle and silicon. Greedy or fixed-seed sampling is
@@ -288,6 +299,29 @@ inside the sink, and the additive visit work sum is not reachable there at all
 because that sink records no queue visit. See
 [the end-to-end results](../../examples/end_to_end_replay_v1/RESULTS.md).
 
+PLAY-8 is complete. `join_framework_arrivals` reads a `simllm-preplay-trace-v2`
+capture into the same `simllm-preplay-replay-run-v1` record the v1 join
+produces, over the same replay identities, so the vLLM replay seam, the core
+bookkeeping projection and the routed-expert projection consume it unchanged;
+the seam now resolves its named trace through one schema-dispatched oracle
+reader. The capture's KV event stream stays evidence: it is projected into a
+separate read-only `simllm-preplay-kv-reconciliation-v1` record, a prefix-hit
+shortfall and a preempted request's recompute surplus are admissible, a
+counter that disagrees with its own events is a defect, and a defect is
+reported rather than raised. Three real SGLang Granite captures joined into
+sixteen live cells: 24 of 24 exact-oracle relations passed, including 376
+step latencies matching an independent closed form to the picosecond; 62 of 63
+scored instances passed; and no fatal guard was violated. Pinning the oracle
+length moved `p4`'s TTFT 1.909 ms earlier, exactly the four steps the frozen
+schedule predicted, while every TPOT moved by under 0.04 percent because the
+modeled step is dominated by streaming resident expert weights. The one failure
+refuted the study's own pessimistic prediction: the capture's release and
+eviction records do reconstruct pool occupancy, peaking at exactly the declared
+96-token capacity. The v1 join and absent-replay paths are locked byte- and
+timestamp-identical in pytest against baselines captured before the
+implementation existed. See
+[the framework join results](../../examples/preplay_framework_join_v1/RESULTS.md).
+
 ## Open tasks
 
 Tags follow the legend in [backends.md](backends.md#open-tasks).
@@ -335,9 +369,3 @@ Tags follow the legend in [backends.md](backends.md#open-tasks).
   the scheduler's own admission and completion decisions, exact agreement
   between served and oracle token IDs, and a byte-identical record stream when
   no replay run is selected.
-- PLAY-8 (Completeness; P1; L): join `simllm-preplay-trace-v2` into the live
-  replay path. Bind its observed per-request outputs and expert routing to the
-  existing replay identities, retain the framework scheduler as the sole KV
-  authority, and reconcile its per-request KV event stream with the oracle
-  record. The explicit v1 join and absent-replay paths must remain byte- and
-  timestamp-identical when v2 is not selected.
