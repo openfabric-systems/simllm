@@ -328,7 +328,7 @@ compute-free. The
 exact issue-sharing and residency-delay relations while retaining all accepted
 default bytes. BACK-37 owns the remaining GPU CQ-consumer and runner-callback
 work. VLLM-13 and CORE-5 consume the recorded CQ-owner decision once that path
-is live. COMP-2's fixed CPU-proxy and GPU-initiated constants remain the
+is live. COMP-28's fixed CPU-proxy and GPU-initiated constants remain the
 analytical fallback while structural submission is disabled.
 
 ### WQE authority and projection contract
