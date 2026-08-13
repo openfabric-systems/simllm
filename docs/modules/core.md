@@ -768,6 +768,23 @@ and the shared golden fixtures frozen in
 demonstrated and keeps the task open; see
 [the cross-layer authority results](../../examples/cross_layer_authority_v1/RESULTS.md).
 
+CORE-43 is complete. The analytic intra-node endpoint charge and the
+packet-level fluid manifold were run on the same Granite capture traffic at EP
+width eight, all-local and all-remote, over all 48 phases of all 32 recorded
+steps at matched rates of 20 and 40 picoseconds per byte. They agree at every
+one of 3,072 phase instances inside the preregistered band, with the fluid
+manifold exceeding bytes over rate by 0 or 1 picosecond and never more, against
+a registered ceiling of one picosecond per directed segment. On the prefill step
+at 400 Gbit/s the analytic charge is 511,290,000 ps against 511,262,768 ps of
+realized fluid serialization, and the whole 27,232 ps difference is the analytic
+model's declared whole-nanosecond GOAL calc quantum. Live step latencies
+compose both serializers correctly: the all-remote arm exceeds the all-local one
+by the 48 fixed propagation delays in every step at both rates, and the
+all-remote path is bit-identical when the analytic bandwidth is changed under
+it. The capture-scale effect of the CORE-41 correction on this traffic is a
+factor of 1.510 on live TTFT; see
+[the endpoint fabric cross-check results](../../examples/endpoint_fabric_crosscheck_v1/RESULTS.md).
+
 CORE-47 is complete. The routing-lifetime study executes the lowerer's graph
 unchanged, and the whole-operation barrier is retained beside it as an explicit
 comparator that never selects a reported value. Every lifecycle exit,
@@ -833,18 +850,6 @@ does not claim to produce these resource-contention measurements.
   its live TTFT and TPOT effect, while symmetric and single-source cases keep
   their accepted timestamps. Scope boundary: CORE-41 owns the analytic
   intra-node routed service and must preserve all-remote timestamps exactly.
-- CORE-43 (Precision; P1; M): cross-validate the analytic endpoint charge
-  against the fabric backend's realized per-endpoint serialization on identical
-  traffic. CORE-41 demonstrated the correction at EP width four on a real
-  capture fixture and at widths two, four and eight on synthetic fixtures, but
-  not at the capture scale where the recomputed undercharge is 1.676 times: EP
-  width eight over all 48 Granite phases, egress-only 15,249,408 bytes against
-  true rank-0 endpoint bytes of 25,563,136. Run that traffic all-local and
-  all-remote, compare the analytic charge with the fluid backend's
-  serialization term, which already decomposes as the full endpoint total at 20
-  ps/byte, and require the two serializers to agree within a preregistered
-  band. Report the effect on a live TTFT and TPOT and keep the all-remote path
-  exact.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
