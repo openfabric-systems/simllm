@@ -2,10 +2,12 @@
 
 ## Outcome
 
-The behavioral result is accepted. Corrected calibration attempt three is
-nonvoid and passes 4 of 4 independent genuine-risk calibration relations.
-Held-out live attempt three is nonvoid and passes 12 of 12 post-specified
-genuine-risk instances. All fatal calibration and holdout guards held. The
+The COMP-2 installation result is accepted. Corrected calibration attempt
+three is nonvoid and passes 3 genuinely risky relations plus 1 post-specified
+replication (CAL-1, whose band was widened after the attempt-two miss at
+809,068 ps). Held-out live attempt three is a nonvoid end-to-end conformance
+and reach demonstration with a genuine-risk denominator of zero and 12
+retained entailed rows. All fatal calibration and holdout guards held. The
 exact ideal compatibility guard also held. Fatal guards are conditions for an
 interpretable run, never part of a score.
 
@@ -28,17 +30,18 @@ portability gates all pass.
 
 | Evidence class | Outcome | Scored? |
 |---|---|---|
-| Corrected calibration attempt three | 4/4 independent relations pass | Yes, its own genuine-risk fraction |
+| Corrected calibration attempt three | 3/3 genuinely risky relations plus 1/1 post-specified CAL-1 replication pass | Genuine-risk denominator is 3; CAL-1 is retained separately |
 | Live attempt one | VOID with findings after one fatal physical guard failed | No fraction is interpretable |
 | Live attempt two | Nonvoid repair regression; 12 entailed observations retained | No, genuine-risk denominator is zero |
-| Held-out live attempt three | 12/12 post-specified genuine-risk instances pass | Yes, its own genuine-risk fraction |
+| Held-out live attempt three | Nonvoid conformance and reach; 12 entailed rows retained | No, genuine-risk denominator is zero |
 | Calibration and live fatal guards | Every guard in the accepted runs held | No, fatal conditions are unscored |
 | Ideal compatibility OFF-G1 | Held on a fresh five-cell accepted-study replay | No, identity is fatal and unscored |
 | Named mission study exact oracles | 13/13 in the fresh ideal replay | Separate native evidence class |
 | Direction, network-identity and native-Q checks | Passed | No, derived or conformance-only |
 
-The calibration and holdout fractions are not added together. The attempt-two
-rows are not added to either denominator.
+The holdout supplies no magnitude fraction. CAL-1 is not added to the
+calibration genuine-risk denominator, and the attempt-two rows are not added
+to any denominator.
 
 ## Physical sanity registered before precision
 
@@ -68,6 +71,12 @@ The representative fixed input moves 554,631,168 bytes. Its memory floor on
 an 8 TB/s roof is 69,328,896 ps. A deliberately conservative 1 TB/s ceiling
 is 554,631,168 ps. The fixed provider value of 99,024,000 ps lies inside this
 range.
+
+Device-consistency disclosure: the fixed 99,024,000 ps input is B100-derived;
+the same bytes require 1,925,802,667 ps on the Turing device's 288 GB/s roof,
+or 2,751,146,667 ps at the 0.7 derate, above all four launch floors. These
+hybrid rows are sensitivity evidence, not a device-consistent Turing step
+prediction.
 
 ### Network and whole-step bounds
 
@@ -143,10 +152,10 @@ profile was installed from it.
 
 Expectations-only commit `f23a01f` disclosed calibration attempt three. It
 widened CAL-1 from `[600,000, 700,000]` to `[600,000, 1,000,000]` ps after the
-known miss and widened the then-planned 400 Gbit/s live band from `[1.80,
+known miss and widened the post-specified 400 Gbit/s live band from `[1.80,
 7.10]` to `[1.80, 7.75]` after incorporating the known empirical endpoint.
 This is a post-specified attempt-three refreeze, not a retroactive pass for
-attempt two.
+attempt two or a pre-registered risk claim.
 
 Calibration attempt three ran from clean commit `5663447` and was accepted
 before the model was installed. The first live implementation run then ran at
@@ -197,18 +206,21 @@ toolchain identity; positive measurements; exact zero-work behavior; causal
 measurement enclosures; and a clean, stable revision with stable harness and
 probe hashes. They are unscored.
 
-The four independent scored relations passed:
+All four calibration acceptance checks passed, with different evidence labels:
 
 | Relation | Frozen band (ps) | Observed (ps) | Result |
 |---|---:|---:|---|
-| CAL-1 graph replay | `[600,000, 1,000,000]` | 809,306 | PASS |
+| CAL-1 graph replay, post-specified replication | `[600,000, 1,000,000]` | 809,306 | PASS |
 | CAL-2 eager host-bound launch | `[2,000,000, 2,700,000]` | 2,364,255 | PASS |
 | CAL-3 stamped device gap | `[500,000, 3,000,000]` | 1,635,680 | PASS |
 | CAL-4 serialized launch enclosure | `[3,000,000, 20,000,000]` | 5,396,816 | PASS |
 
-The genuine-risk calibration fraction is 4/4. CAL-D1, graph replay being
-cheaper than eager launch, is entailed by the disjoint bands and remains
-unscored.
+The calibration evidence is 3/3 genuinely risky relations plus 1/1
+post-specified replication (CAL-1, whose band was widened after the
+attempt-two miss at 809,068 ps). The replication was 809,306 ps on the same
+device and harness, 238 ps or 0.0294 percent above the known value. CAL-D1,
+graph replay being cheaper than eager launch, is entailed by the disjoint bands
+and remains unscored.
 
 The other measurements pass the physical checks. CPU enqueue was 2,364,085
 ps, only 170 ps below eager throughput. The stamped batch wall time was
@@ -301,8 +313,9 @@ unscored entailed findings. Its artifact SHA-256 is
 
 The post-specified holdout used accepted mission cell `a-ep8-200g`, request
 `r00`, steps 0 through 2, fixed provider services 99,024,000, 99,024,000 and
-99,048,000 ps, and the cell's exact routed-expert input. Unlike attempt two,
-no exact calibrated timestamp or scored numerator was frozen.
+99,048,000 ps, and the cell's exact routed-expert input. The freeze also
+carried the prior network-service literals and the point multiplier
+projections computed from them.
 
 The ideal row reproduced source step services 549,409,968, 214,029,454 and
 213,725,778 ps, partitioned into network services 450,385,968, 115,005,454 and
@@ -319,10 +332,12 @@ The calibrated rows were:
 | Eager host | 567 | 1,340,533,000 | 1,790,918,968 | 1,455,538,454 | 1,455,210,778 | 1,455,374,616 |
 
 All measured steps lie inside both predeclared physical enclosures. Network
-service matched the ideal row in all 12 calibrated steps, but HOLD-D2 checks
-that only after scoring as a survivable, unscored diagnostic.
+service matched the ideal row in all 12 calibrated steps. HOLD-D2 remains a
+survivable diagnostic in the evaluator, but the frozen traffic and
+deterministic fluid law leave no executable alternate service for this
+fixture.
 
-The genuine-risk relations passed 12/12:
+The 12 entailed conformance and reach rows held:
 
 | Profile | Launches | LIVE-1 decode multiplier | LIVE-2 TPOT multiplier | LIVE-3 TTFT multiplier | LIVE-3 increment ratio | Result |
 |---|---:|---:|---:|---:|---:|---|
@@ -331,21 +346,27 @@ The genuine-risk relations passed 12/12:
 | Eager host | 440 | 5.3977545259 in `[5.34, 5.46]` | 5.4008205141 in `[5.34, 5.46]` | 2.7131997139 | 0.3892909762 in `[0.38, 0.40]` | PASS |
 | Eager host | 567 | 6.8006455504 in `[6.73, 6.88]` | 6.8047074922 in `[6.73, 6.88]` | 3.2597132784 | 0.3892897758 in `[0.38, 0.40]` | PASS |
 
-LIVE-1 contributes 4/4, LIVE-2 contributes 4/4 and LIVE-3 contributes 4/4.
-All six fatal holdout guards held, with no fatal fraction. They checked
-profile provenance and revision stability, device mismatch rejection, source
-and ideal identity, component and request conservation, physical enclosures
-plus native `Q`, and conditional budget arithmetic.
+LIVE-1 retains 4 rows, LIVE-2 retains 4 rows and LIVE-3 retains 4 rows. None
+enters a scored collection, so the genuine-risk denominator is zero. All six
+fatal holdout guards held, with no fatal fraction. They checked profile
+provenance and revision stability, device mismatch rejection, source and ideal
+identity, component and request conservation, physical enclosures plus native
+`Q`, and conditional budget arithmetic.
 
-The relations are not entailed. Fatal-valid countermodels put calibrated
-network service at the 96,000,000 ps floor and miss every LIVE-1 and LIVE-2
-lower band. A separate fatal-valid prefill-floor and decode-ceiling
-countermodel moves every LIVE-3 increment ratio outside `[0.38, 0.40]`.
-HOLD-D1 launch-count and launch-class directions remain unscored by
-construction. Native exact-`Q` conformance remains a separate unscored class.
+The post-run label audit found the rows entailed. All eight LIVE-1 and LIVE-2
+observations equal their frozen point projections to the last float digit.
+The frozen nonzero traffic under the deterministic fluid law fixes network
+service, LIVE-G5 fixes `Q`, and conservation fixes each step latency. For
+graph-440 decode, the registered upper edge was 477,285,682 ps while the
+physical ceiling was 471,100,488 ps; missing the lower edge would require network
+service to fall 5.79 percent below its frozen 115,005,454 ps value. The old
+96,000,000 ps construction is the unreachable zero-byte limit, so it is
+retained only as an unscored interval-limit diagnostic and cannot establish
+magnitude risk. HOLD-D1 directions and native exact-`Q` conformance also
+remain unscored.
 
 The tracked holdout artifact has SHA-256
-`98bb687ad90eae8e856281e594b2af1a94303b2b02d9adbe72ba6393053d0add`.
+`f2631a8ad3a39cfd1713ba607ad562b9b53dd7a573b356cd74ec6e1dd0409adf`.
 The expectation commit is `d9905fb`; the observed clean commit is `ad1b0aa`.
 
 ## Exact ideal off path
@@ -397,6 +418,14 @@ The sample-limited empirical endpoints give `[1.3969639214, 4.5085504088]`.
 Both lie inside the frozen broad `[1.35, 4.70]` enclosure. These budget rows
 are derived and unscored.
 
+The reported rows assume `network + max(C, N * g)`: provider and host launch
+demand overlap, while network service is outside that overlap. Once the
+same-wave TRAF-11 collective floor lands, the alternative
+`max(C + network, N * g)` reading gives 1.650672 ms for all four profiles.
+Whether the collective-bearing service overlaps launch demand or composes
+additively remains unresolved, so no combined host-plus-collective magnitude
+is claimed here.
+
 This is not a replacement for the mission study's generic 5x to 22x absolute
 budget. It is a conditional launch-throughput sensitivity on one GTX 1660 Ti
 and one host. Residual scheduling, sampling and Python costs remain unknown
@@ -414,7 +443,7 @@ commit through the final tracked evidence is classified here.
 |---|---|---|
 | `3c114e5` | Evidence only | Retained the nonvoid calibration-attempt-two miss. No modeled behavior changed. |
 | `112746c` | Capture-harness defect fix | Made attempt identity data driven. No modeled behavior or measured value changed. |
-| `f23a01f` | Expectations-only, post-specified calibration refreeze | No implementation behavior changed. CAL-1 changed from `[600,000, 700,000]` to `[600,000, 1,000,000]` ps and the planned 400 Gbit/s live band changed from `[1.80, 7.10]` to `[1.80, 7.75]` after the known miss. |
+| `f23a01f` | Expectations-only, post-specified calibration refreeze | No implementation behavior changed. CAL-1 changed from `[600,000, 700,000]` to `[600,000, 1,000,000]` ps and the post-specified 400 Gbit/s live band changed from `[1.80, 7.10]` to `[1.80, 7.75]` after the known miss. |
 | `5663447` | Capture harness | Added attempt-two to the five-sample empirical range. No modeled behavior changed. |
 | `09b9a00` | Evidence only | Recorded accepted calibration attempt three. No modeled behavior changed. |
 | `915d222` | Reporting defect fix | Corrected the selected attempt label. No modeled behavior or measurement changed. |
@@ -428,18 +457,18 @@ commit through the final tracked evidence is classified here.
 | `a484f38` | Evidence only | Recorded the nonvoid attempt-two repair regression. Its original score classification is corrected here to zero scored and 12 entailed. No modeled behavior changed. |
 | `13623e0` | Evidence only | Recorded OFF-G1. No modeled behavior changed. |
 | `d9905fb` | Expectations-only, post-specified holdout freeze | Reclassified attempt two and froze the 200 Gbit/s holdout before running it. No modeled behavior changed. |
-| `994e4b5` | Holdout harness and tests | Built the held-out evaluator and explicit non-entailment checks. No modeled behavior changed. |
+| `994e4b5` | Holdout harness and tests | Built the held-out evaluator and interval-limit checks, later found unreachable for the frozen fixture. No modeled behavior changed. |
 | `ad1b0aa` | Fail-closed defect fix before the holdout run | The unsupported nonideal empty worker fallback changed from returning 0 ps to raising an error; the supported timing-sink path and all successful modeled timestamps were unchanged. The ideal empty fallback remained 0 ps. |
 | `3b04ec6` | Evidence only | Recorded accepted holdout attempt three. No modeled behavior changed. |
 | `a630d13` | Regression test only | Locked the exact ideal defaults in both step-sink configurations. No modeled behavior changed. |
 | `7c957ad` | Registry, ledger and module documentation | Closed COMP-2, registered COMP-28 and reconciled progress counts. No modeled behavior changed. |
-| This results commit | Evidence documentation only | Records the already observed evidence, closure mapping, validation and contradiction sweep. No modeled behavior changed. |
+| This evidence-label fix | Evidence classification only | Reclassifies CAL-1 as a post-specified replication and the 12 holdout rows as entailed conformance and reach evidence. Raw measurements and modeled behavior do not change. |
 
 The only modeled timestamp change made after seeing a failed live number was
 the quantization repair at `42a0432`. It was disclosed as attempt two and
 refrozen in `30f1f7f` before implementation and rerun. The later empty-fallback
 change fixes unsupported validation behavior, landed before the holdout run,
-and does not change the supported scored path or supply magnitude evidence.
+and does not supply magnitude evidence.
 
 ## Closure scope and evidence mapping
 
@@ -447,19 +476,19 @@ Only COMP-2 is being closed in this batch.
 
 | Task | Closed? | Basis |
 |---|---|---|
-| COMP-2 | Yes | Calibration 4/4, held-out live 12/12, every fatal guard held, OFF-G1 held, registry and ledger reconciled |
+| COMP-2 | Yes | Calibration 3/3 genuine-risk plus 1/1 post-specified replication; 12/12 entailed holdout conformance and reach rows; every fatal guard held; OFF-G1 held; registry and ledger reconciled |
 
 The frozen closure clauses map as follows:
 
 | Registered clause | Evidence |
 |---|---|
-| “calibration attempt three is nonvoid and accepted” | `calibration.json` has no fatal failures, reports `accepted`, and passes CAL-1 through CAL-4 at 4/4. |
+| “calibration attempt three is nonvoid and accepted” | `calibration.json` has no fatal failures and reports `accepted`; CAL-2 through CAL-4 pass as 3/3 genuinely risky relations, and CAL-1 passes as a post-specified replication. |
 | “each constant carries device and launch-class provenance plus sample-limited uncertainty and refuses a mismatched device” | The two factory profiles carry the full GPU, host, driver, CUDA, launch-class and five-sample range. CAL-G1/G2 and LIVE-G1/G2 held; both profiles reject B100 and H100 before output. |
 | “the host model, serial lowerer, packet sink and coordinator dispatch apply one shared term exactly once” | The lowerer is the sole timing authority; sink and adapters validate its exact model. Attempt-two and holdout conservation, raw-versus-represented attribution, `F`/`Q` enclosure and no-double-charge checks held. |
-| “live holdout attempt three is nonvoid and both profiles pass its decode-multiplier, TPOT and TTFT relations” | The clean `ad1b0aa` holdout has no fatal failures and passes LIVE-1 4/4, LIVE-2 4/4 and LIVE-3 4/4. Fatal-valid countermodels establish non-entailment. |
+| “live holdout attempt three is nonvoid and both profiles pass its decode-multiplier, TPOT and TTFT relations” | The clean `ad1b0aa` holdout has no fatal failures and retains 12/12 entailed conformance and reach rows across LIVE-1, LIVE-2 and LIVE-3. Its genuine-risk denominator is zero, so it proves installation reach but not magnitude. |
 | “the named accepted study matches exactly on the ideal path” | OFF-G1 matched the aggregate digest and all five step streams after a nonvoid mission replay with 13/13 native exact oracles. |
 | “the mission budget is recomputed” | The conditional point interval is `[1.4249530295, 3.8910394651]`; the empirical interval is `[1.3969639214, 4.5085504088]`; B100 remains explicitly unknown. |
-| “the owning registry tag, bucket and ledger reconcile” | COMP-2 was tagged `(Precision; P1; L)` and moved alone into Precision at `f376bcc`. Commit `7c957ad` removed the closed entry, registered COMP-28 in Precision and added COMP-2 to the ledger. The progress check reports 83 of 194 tasks closed, 111 open, with compute at 4 of 23 closed. |
+| “the owning registry tag, bucket and ledger reconcile” | COMP-2 was tagged `(Precision; P1; L)` and moved alone into Precision at `f376bcc`. Commit `7c957ad` removed the closed entry, registered COMP-28 in Precision and added COMP-2 to the ledger. After merging main, the progress check reports 83 of 195 tasks closed, 112 open, with compute at 4 of 23 closed. |
 
 The original legacy entry registered:
 
@@ -522,22 +551,18 @@ The result-producing evidence is complete:
 - live attempt one: VOID with findings, retained;
 - live attempt two: nonvoid entailed repair regression, observed at `12d337e`;
 - OFF-G1: held, observed at `a484f38`;
-- live holdout attempt three: accepted, observed at `ad1b0aa`.
+- live holdout attempt three: accepted conformance and reach demonstration with
+  zero genuine-risk instances, observed at `ad1b0aa`.
 
-Initial and refrozen check-only runs passed without creating output. Final
-closure gates passed:
+Initial and refrozen check-only runs passed without creating output. The
+evidence-label fix gates pass:
 
 - **PASS:** `.venv/bin/ruff check .`
-- **PASS:** `.venv/bin/pytest -q` reports 1,445 passed and 7 skipped.
-- **PASS:** Python 3.10 byte-compilation covers `simllm`, the study and its
-  focused tests.
+- **PASS:** `.venv/bin/pytest -q` reports 1,506 passed and 7 skipped.
 - **PASS:** `python3 scripts/check_docs_format.py` reports all 10 module docs
   conform; it notes 27 unrelated untagged legacy entries.
-- **PASS:** `.venv/bin/python scripts/task_progress.py --check` reports current
-  task-progress and module-status counts: 83 of 194 closed, 111 open.
-- **PASS:** before this report is committed, the tracked worktree is clean and
-  this report is the sole untracked file. The final clean status is a handoff
-  check because recording that observation necessarily changes this file.
+- **PASS:** `python3 scripts/task_progress.py --check` reports current
+  task-progress and module-status counts: 83 of 195 closed, 112 open.
 
 All bulk artifacts remain under the branch-local external run root. The seven
 retained run directories occupy 290 MB total: the calibration attempts use

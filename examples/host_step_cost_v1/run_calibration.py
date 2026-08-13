@@ -88,8 +88,18 @@ def _environment(args: argparse.Namespace) -> dict[str, Any]:
         raise AssertionError("attempt-two live inventory drifted")
     if values["live_attempt_two"]["genuine_risk_instances"] != 0:
         raise AssertionError("attempt-two entailed findings became scored evidence")
-    if sum(values["live_attempt_three"]["scored_relations"].values()) != 12:
-        raise AssertionError("held-out live inventory drifted")
+    holdout = values["live_attempt_three"]
+    if (
+        holdout["evidence_class"] != "nonvoid_entailed_conformance_and_reach"
+        or holdout["scored_relations"]
+        or holdout["genuine_risk_instances"] != 0
+    ):
+        raise AssertionError("entailed holdout rows became scored evidence")
+    if (
+        holdout["entailed_findings"] != 12
+        or sum(holdout["entailed_relations"].values()) != 12
+    ):
+        raise AssertionError("held-out entailed inventory drifted")
     calibration_guards = [
         name
         for name in values["fatal_unscored_guards"]

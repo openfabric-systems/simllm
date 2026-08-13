@@ -99,9 +99,11 @@ def test_frozen_calibration_inventory_and_corrected_oracle():
         expectations["attempt_two_relations_originally_scored"].values()
     ) == 12
     assert expectations["live_attempt_two"]["genuine_risk_instances"] == 0
-    assert sum(
-        expectations["live_attempt_three"]["scored_relations"].values()
-    ) == 12
+    holdout = expectations["live_attempt_three"]
+    assert holdout["scored_relations"] == {}
+    assert holdout["genuine_risk_instances"] == 0
+    assert holdout["entailed_findings"] == 12
+    assert sum(holdout["entailed_relations"].values()) == 12
     assert expectations["prior_attempt"]["integer_scaling_residual_ps"] == 1
     assert study._zero_work_oracle() == {
         "zero_work_ps": 0,

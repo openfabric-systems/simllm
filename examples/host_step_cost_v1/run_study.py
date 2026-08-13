@@ -115,8 +115,15 @@ def _check(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     if not all(row["passed"] for row in calibration["scored_relations"]):
         raise RuntimeError("accepted calibration unexpectedly has a scored miss")
     attempt = _holdout(values)
-    if sum(attempt["scored_relations"].values()) != 12:
-        raise AssertionError("holdout scored inventory drifted")
+    if attempt["scored_relations"]:
+        raise AssertionError("entailed holdout rows became scored evidence")
+    if (
+        attempt["evidence_class"] != "nonvoid_entailed_conformance_and_reach"
+        or attempt["genuine_risk_instances"] != 0
+        or attempt["entailed_findings"] != 12
+        or sum(attempt["entailed_relations"].values()) != 12
+    ):
+        raise AssertionError("holdout entailed inventory drifted")
     if attempt["fatal_unscored_guards"] != list(HOLDOUT_FATAL_GUARDS):
         raise AssertionError("holdout fatal guard inventory drifted")
     if sum(values["attempt_two_relations_originally_scored"].values()) != 12:
@@ -224,9 +231,12 @@ def _check(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     source_identity = _source_identity_checks(args, fixture)
     if not source_identity["passed"]:
         raise RuntimeError("held-out source input identity drifted")
-    countermodels = _non_entailment_checks(values, calibration)
-    if not countermodels["passed"]:
-        raise AssertionError("fatal guards now entail a holdout score")
+    limit_diagnostic = _unreachable_limit_diagnostic(values, calibration)
+    if (
+        not limit_diagnostic["passed"]
+        or limit_diagnostic["supports_genuine_risk"] is not False
+    ):
+        raise AssertionError("unreachable holdout limit diagnostic drifted")
     root_value = os.environ.get("SIMLLM_WAVE12_RUN_ROOT")
     if not root_value:
         raise RuntimeError("SIMLLM_WAVE12_RUN_ROOT must be configured")
@@ -865,7 +875,7 @@ def _observed_schedule_checks(
     return {"passed": all(row["passed"] for row in details), "rows": details}
 
 
-def _score_rows(
+def _entailed_relation_rows(
     rows: list[dict[str, Any]], values: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     holdout = _holdout(values)
@@ -881,7 +891,7 @@ def _score_rows(
     increment_band = holdout["acceptance"][
         "ttft_to_tpot_increment_ratio_band"
     ]
-    scores = []
+    relations = []
     for row in rows:
         if row["profile"] == "ideal":
             continue
@@ -901,7 +911,7 @@ def _score_rows(
             and increment_band[0] <= increment_ratio <= increment_band[1]
         )
         common = {"profile": row["profile"], "launch_count": row["launch_count"]}
-        scores.extend(
+        relations.extend(
             (
                 {
                     "id": "LIVE-1_decode_multiplier_in_band",
@@ -961,7 +971,7 @@ def _score_rows(
                 ),
             }
         )
-    return scores, {
+    return relations, {
         "id": "HOLD-D1_two_parameter_directions",
         "scored": False,
         "passed": all(row["passed"] for row in derived_rows),
@@ -969,10 +979,10 @@ def _score_rows(
     }
 
 
-def _non_entailment_checks(
+def _unreachable_limit_diagnostic(
     values: dict[str, Any], calibration: dict[str, Any]
 ) -> dict[str, Any]:
-    """Exhibit fatal-valid countermodels that miss every scored family."""
+    """Retain the old zero-byte limit arithmetic without treating it as risk."""
 
     holdout = _holdout(values)
     fixture = holdout["fixture"]
@@ -982,6 +992,16 @@ def _non_entailment_checks(
     increment_band = acceptance["ttft_to_tpot_increment_ratio_band"]
     physical = holdout["physical_sanity_ps"]
     serialized = calibration["measurements_ps"]["serialized_launch"]
+    zero_byte_limits = [
+        bounds[0] for bounds in fixture["network_physical_bounds_ps"]
+    ]
+    frozen_network = fixture["prior_observed_network_ps"]
+    frozen_fixture_has_nonzero_serialization = all(
+        observed > zero_byte_limit
+        for observed, zero_byte_limit in zip(
+            frozen_network, zero_byte_limits, strict=True
+        )
+    )
     rows = []
     for frozen in acceptance["profile_launch_bands"]:
         profile = frozen["profile"]
@@ -994,14 +1014,14 @@ def _non_entailment_checks(
             _whole_nanosecond_enclosure(floor) for floor in raw_floors
         ]
         represented = represented_steps[0]
-        network_floor = fixture["network_physical_bounds_ps"][1][0]
-        decode_multiplier = (represented + network_floor) / ideal_steps[1]
-        tpot_multiplier = (represented + network_floor) / ideal_tpot
+        decode_zero_byte_limit = zero_byte_limits[1]
+        decode_multiplier = (represented + decode_zero_byte_limit) / ideal_steps[1]
+        tpot_multiplier = (represented + decode_zero_byte_limit) / ideal_tpot
         band = frozen["multiplier_band"]
         live1_passed = band[0] <= decode_multiplier <= band[1]
         live2_passed = band[0] <= tpot_multiplier <= band[1]
 
-        ttft_network = fixture["network_physical_bounds_ps"][0][0]
+        ttft_network = zero_byte_limits[0]
         decode_networks = [
             bounds[1] for bounds in fixture["network_physical_bounds_ps"][1:]
         ]
@@ -1040,8 +1060,8 @@ def _non_entailment_checks(
                 strict=True,
             )
         ]
-        physical_valid = (
-            all(bounds[0] <= network_floor <= bounds[1]
+        loose_interval_valid = (
+            all(bounds[0] <= decode_zero_byte_limit <= bounds[1]
                 for bounds in fixture["network_physical_bounds_ps"][1:])
             and fixture["network_physical_bounds_ps"][0][0]
             <= ttft_network
@@ -1067,22 +1087,30 @@ def _non_entailment_checks(
                 "profile": profile,
                 "launch_count": count,
                 "represented_compute_ps": represented,
-                "fatal_physical_bounds_hold": physical_valid,
+                "loose_physical_intervals_hold": loose_interval_valid,
+                "executable_for_frozen_fixture": (
+                    not frozen_fixture_has_nonzero_serialization
+                ),
                 "live1_floor_multiplier": decode_multiplier,
-                "live1_countermodel_misses": not live1_passed,
+                "live1_limit_misses": not live1_passed,
                 "live2_floor_multiplier": tpot_multiplier,
-                "live2_countermodel_misses": not live2_passed,
-                "live3_countermodel_increment_ratio": increment_ratio,
-                "live3_countermodel_misses": not live3_passed,
-                "passed": physical_valid
+                "live2_limit_misses": not live2_passed,
+                "live3_limit_increment_ratio": increment_ratio,
+                "live3_limit_misses": not live3_passed,
+                "passed": frozen_fixture_has_nonzero_serialization
+                and loose_interval_valid
                 and not live1_passed
                 and not live2_passed
                 and not live3_passed,
             }
         )
     return {
-        "evidence_class": "logical_non_entailment_countermodel",
+        "evidence_class": "unreachable_zero_byte_limit_diagnostic",
+        "frozen_fixture_has_nonzero_serialization": (
+            frozen_fixture_has_nonzero_serialization
+        ),
         "scored": False,
+        "supports_genuine_risk": False,
         "passed": all(row["passed"] for row in rows),
         "rows": rows,
     }
@@ -1217,7 +1245,7 @@ def _production(
             for launch_count in (440, 567)
         ),
     ]
-    scores, directions = _score_rows(rows, values)
+    entailed_relations, directions = _entailed_relation_rows(rows, values)
     mismatch = _mismatch_checks(args)
     provenance = _profile_guard(rows, calibration)
     physical = _physical_checks(rows, values, calibration)
@@ -1225,7 +1253,7 @@ def _production(
     quantized_compute = _quantized_compute_checks(rows)
     observed_schedule = _observed_schedule_checks(rows, values)
     network_diagnostic = _network_service_diagnostic(rows)
-    non_entailment = _non_entailment_checks(values, calibration)
+    limit_diagnostic = _unreachable_limit_diagnostic(values, calibration)
     budget = _budget(rows, values)
     fixture = _fixture(values)
     ideal = rows[0]
@@ -1296,10 +1324,10 @@ def _production(
         },
     ]
     fatal_failures = [row["id"] for row in guards if not row["passed"]]
-    passed = sum(1 for row in scores if row["passed"])
+    passed = sum(1 for row in entailed_relations if row["passed"])
     if fatal_failures:
         status = "void"
-    elif passed != len(scores):
+    elif passed != len(entailed_relations):
         status = "not_accepted"
     else:
         status = "accepted"
@@ -1308,7 +1336,7 @@ def _production(
         "study": "host_step_cost_v1",
         "task": "COMP-2",
         "live_attempt": values["live_attempt"],
-        "evidence_class": "post_specified_genuine_risk_holdout",
+        "evidence_class": "nonvoid_entailed_conformance_and_reach",
         "expectation_commit": _expectation_commit(),
         "observed_commit": observed_head,
         "calibration_sha256": _sha256(CALIBRATION),
@@ -1316,12 +1344,14 @@ def _production(
         "behavioral_score_interpretable": not fatal_failures,
         "fatal_guard_failures": fatal_failures,
         "fatal_guards": guards,
-        "scored_relations": scores,
-        "genuine_risk_instances": len(scores),
+        "scored_relations": [],
+        "genuine_risk_instances": 0,
+        "entailed_findings": len(entailed_relations),
+        "entailed_relations": entailed_relations,
         "derived_unscored_checks": [
             directions,
             network_diagnostic,
-            non_entailment,
+            limit_diagnostic,
         ],
         "rows": rows,
         "conditional_turing_budget": budget,
@@ -1343,11 +1373,15 @@ def _production(
         print("behavioral score suppressed")
         return 1
     print("all live fatal guards held")
-    print(f"scored live relations: {passed} of {len(scores)}")
-    if passed != len(scores):
-        print("registered live acceptance was not met")
+    print(
+        "entailed conformance and reach rows: "
+        f"{passed} of {len(entailed_relations)}"
+    )
+    print("genuine-risk instances: 0")
+    if passed != len(entailed_relations):
+        print("registered conformance and reach acceptance was not met")
         return 1
-    print("held-out host-step magnitude study passed")
+    print("held-out host-step conformance and reach demonstration passed")
     return 0
 
 
@@ -1357,7 +1391,7 @@ def main() -> int:
     if args.check_only:
         print(
             "check-only: holdout registry, arithmetic, inputs, tools and "
-            "non-entailment countermodels valid; htsim not invoked; "
+            "unreachable limit diagnostic valid; htsim not invoked; "
             "no output created"
         )
         return 0

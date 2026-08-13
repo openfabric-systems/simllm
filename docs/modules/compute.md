@@ -569,16 +569,17 @@ stay open and keep every clause they registered.
 The [fixed host-step study](../../examples/host_step_cost_v1/RESULTS.md)
 re-established that measurement under a corrected freeze before installing
 anything. Corrected calibration attempt three was nonvoid and accepted: all
-four genuinely risky calibration relations passed and all six fatal guards
-held. It measured 809,306 ps per CUDA-graph node and 2,364,255 ps per
-host-bound eager launch on the declared Turing device, with the empirical
-ranges and provenance recorded above. The live `a-ep8-200g` holdout then
-passed all 12 genuine-risk instances across decode-multiplier, TPOT and
-relative-TTFT families, with all six fatal guards holding. Across graph versus
-eager launch and 440 versus 567 launches, decode multipliers were 2.2011,
-2.6813, 5.3978 and 6.8006; TPOT multipliers were 2.2019, 2.6825, 5.4008 and
-6.8047. TTFT rose in every row by a strictly smaller relative amount because
-the same fixed launch demand was amortized over the larger prefill step.
+3 genuinely risky relations plus 1 post-specified replication passed (CAL-1,
+whose band was widened after the attempt-two miss at 809,068 ps), and all six
+fatal guards held. It measured 809,306 ps per CUDA-graph node and 2,364,255 ps
+per host-bound eager launch on the declared Turing device, with the empirical
+ranges and provenance recorded above. The live `a-ep8-200g` holdout is a
+nonvoid end-to-end conformance and reach demonstration with a genuine-risk
+denominator of zero and 12 retained entailed rows. Across graph versus eager
+launch and 440 versus 567 launches, decode multipliers were 2.2011, 2.6813,
+5.3978 and 6.8006; TPOT multipliers were 2.2019, 2.6825, 5.4008 and 6.8047.
+Those values show that the installed cost reaches TTFT and TPOT, not that its
+magnitude was independently predicted.
 
 The ideal compatibility guard is separate, fatal and unscored. A fresh
 five-cell `end_to_end_replay_v1` replay was nonvoid, retained all 13 of that
@@ -588,7 +589,8 @@ void because repeated per-layer integer floors underrepresented
 `max(C, N * g)` by 6,640 to 20,502 ps. The corrected second attempt verifies
 the exact whole-nanosecond enclosure, but its magnitude rows are unscored
 because fatal exact-row oracles entail them. The held-out third attempt, not
-that regression, supplies the magnitude evidence.
+that regression, supplies live conformance and reach evidence but no magnitude
+score.
 
 For the mission error budget, item 1 moves from zero to a measured launch
 floor only in the device-bound Turing sensitivity. Correlating that launch
@@ -598,6 +600,14 @@ empirical endpoints gives 1.396964 to 4.508550 times. These ranges assume all
 unmeasured scheduler, sampler and Python costs are zero and sit beside, rather
 than replace, the mission's generic 5 to 22 times budget. The reference B100
 host cost is unknown, so no absolute B100 composed optimism range is supported.
+The fixed 99,024,000 ps input is B100-derived. Its 554,631,168 bytes need
+1,925,802,667 ps on the Turing device's 288 GB/s roof and 2,751,146,667 ps at
+the 0.7 derate, above all four launch floors, so the hybrid rows are not a
+device-consistent Turing step prediction. The reported rows use
+`network + max(C, N * g)`. Once the same-wave TRAF-11
+collective floor lands, `max(C + network, N * g)` instead gives 1.650672 ms for
+all four profiles; whether overlap or additive composition is correct remains
+unresolved, and no combined magnitude is claimed.
 
 The M5 first slice landed the COMP-1 groundwork: `step_kernels`, the
 `simllm-profile-table-v1` artifact with provenance, and 1D log-linear

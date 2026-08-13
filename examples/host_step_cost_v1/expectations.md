@@ -15,8 +15,8 @@ observation, incorporates that observation into the empirical uncertainty and
 flagship bounds, and leaves every fatal predicate unchanged. This is not a
 retroactive pass for attempt two. Attempt three first repeats the fixed-cost
 capture on the same device under the corrected fatal oracle. Installation
-starts only if the capture is nonvoid and all four scored calibration
-relations pass. A nonvoid but rejected capture again stops the study and
+starts only if the capture is nonvoid and all four calibration acceptance
+checks pass. A nonvoid but rejected capture again stops the study and
 requires a new disclosed freeze. Only then does the study install the
 device-bound constants and follow them through `ExecutionGraph`, the serial
 lowerer, the packet-level step sink, `StepResult`, TTFT, and TPOT. A B100 or
@@ -53,9 +53,11 @@ This expectations-only amendment freezes live holdout attempt three after that
 audit. It changes no modeled behavior and does not reinterpret attempt two as
 void. The holdout uses the previously unused accepted mission cell
 `a-ep8-200g`; it freezes broad magnitude relations without freezing calibrated
-timestamps or the exact represented service that would determine them. The
-holdout is explicitly post-specified. Its purpose is to carry the magnitude
-risk that attempt two cannot honestly carry.
+timestamps. The holdout is explicitly post-specified. The freeze intended it
+to carry the magnitude risk that attempt two cannot honestly carry. Post-run
+evidence review corrected that label: the frozen source service, deterministic
+fluid law, exact `Q` and conservation entail its 12 rows, so it instead carries
+nonvoid conformance and reach evidence with a genuine-risk denominator of zero.
 
 ## Chronology and prior observations
 
@@ -111,10 +113,10 @@ predictions:
   matched. That fatal compatibility guard is unscored.
 
 Calibration attempt three is therefore a disclosed replication after a
-calibration-band miss. Its genuinely risky facts are whether
-the device still lands in the predeclared ranges and whether the new model
-composes to the predeclared end-to-end bands without changing the identity
-path.
+calibration-band miss. CAL-1 is a post-specified replication because its band
+was widened after the 809,068 ps miss; CAL-2 through CAL-4 retain genuine risk.
+The end-to-end holdout proves conformance and reach without changing the
+identity path, but it supplies no magnitude score.
 
 ## External source audit
 
@@ -165,11 +167,12 @@ registers the quantity the probe directly measures: stamped batch wall time
 minus summed in-kernel global-timer spans, divided by launch count, must be
 strictly positive and inside its frozen band.
 
-### Scored calibration relations
+### Calibration relations and evidence labels
 
-- **CAL-1**, one instance: graph replay is in `[600,000, 1,000,000]` ps per
-  node. The upper bound is a disclosed attempt-three refreeze after attempt two
-  observed 809,068 ps outside the original 700,000 ps ceiling.
+- **CAL-1**, one post-specified replication: graph replay is in
+  `[600,000, 1,000,000]` ps per node. The upper bound is a disclosed
+  attempt-three refreeze after attempt two observed 809,068 ps outside the
+  original 700,000 ps ceiling.
 - **CAL-2**, one instance: eager host-bound throughput is in
   `[2,000,000, 2,700,000]` ps per launch.
 - **CAL-3**, one instance: the stamped device gap is in
@@ -180,10 +183,12 @@ strictly positive and inside its frozen band.
 Each relation is evaluated directly on raw attempt-three capture output before
 any exact inventory or provenance comparison. Device identity does not pin a
 duration, the zero-work oracle does not pin a positive launch cost, and none of
-CAL-1 through CAL-4 entails another. The calibration genuine-risk denominator
-is four. Graph replay being cheaper than eager host-bound launching is still
-checked, but it is a derived, unscored check because the disjoint CAL-1 and
-CAL-2 bands already entail it.
+CAL-1 through CAL-4 entails another. That mechanical non-entailment does not
+restore pre-registration after CAL-1's band was widened on known data. The
+calibration genuine-risk denominator is three, with CAL-1 retained separately
+as a post-specified replication. Graph replay being cheaper than eager
+host-bound launching is still checked, but it is a derived, unscored check
+because the disjoint CAL-1 and CAL-2 bands already entail it.
 
 ### Fatal calibration guards
 
@@ -403,7 +408,8 @@ high = (105,502,734 + max(99,024,000, 567 * 2,544,074)) / 204,526,734
      = 7.5686569757
 ```
 
-The attempt-two acceptance band was `[1.80, 7.75]`. It encloses the four prior
+The post-specified attempt-two acceptance band was `[1.80, 7.75]`, widened from
+`[1.80, 7.10]` after the attempt-two miss was known. It encloses the four prior
 empirical captures, including the disclosed calibration attempt-two
 measurement. The live repair run swept two independent parameters: launch
 class (graph and eager) and launch count (440 and 567). Its exact repair
@@ -429,7 +435,7 @@ arrival is 0 ps, TTFT is the prefill completion, and TPOT is the exact mean of
 the two distinct following decode intervals.
 
 - **LIVE-1**, four entailed findings: every end-to-end decode-step multiplier
-  is inside `[1.80, 7.75]`.
+  is inside the post-specified `[1.80, 7.75]` band.
 - **LIVE-2**, four entailed findings: TPOT rises by a multiplier inside the same
   band.
 - **LIVE-3**, four entailed findings: TTFT increases strictly, but its relative
@@ -461,13 +467,13 @@ Attempt two had six additional fatal, unscored preconditions:
 - **LIVE-G6** observed-schedule attribution keeps raw provider service separate
   from the same represented service `Q`.
 
-## Live attempt-three held-out magnitude
+## Live attempt-three held-out conformance and reach
 
 Attempt two cannot close the flagship relation because its fatal exact-row
 oracles entail the reported multipliers. Live attempt three is post-specified
 after that audit and uses the accepted mission cell `a-ep8-200g`, request
-`r00`, steps 0 through 2. This cell has not been run with a calibrated host
-profile. The accepted source observations are known before the holdout:
+`r00`, steps 0 through 2. This cell had not been run with a calibrated host
+profile. The accepted source observations were known before the holdout:
 
 | Quantity | Step 0 | Step 1 | Step 2 |
 |---|---:|---:|---:|
@@ -513,8 +519,9 @@ below its upper endpoint. This is a Turing sensitivity and supplies no B100
 host constant.
 
 Point composition with the prior accepted network observations predicts the
-following bands. Each band is rounded outward beyond the point projection;
-neither a fatal guard nor a by-construction relation requires it to hold.
+following bands. Each band is rounded outward beyond the point projection.
+Post-run review found that the deterministic network service and exact `Q`
+make every resulting relation an entailed conformance and reach row.
 
 | Profile | Launches | Decode projection | TPOT projection | Frozen band for each |
 |---|---:|---:|---:|---:|
@@ -523,16 +530,17 @@ neither a fatal guard nor a by-construction relation requires it to hold.
 | Eager host | 440 | 5.3977545259 | 5.4008205141 | `[5.34, 5.46]` |
 | Eager host | 567 | 6.8006455504 | 6.8047074922 | `[6.73, 6.88]` |
 
-- **LIVE-1**, four genuine-risk instances: decode step 1 is inside its
+- **LIVE-1**, four entailed rows: decode step 1 is inside its
   profile-and-count band.
-- **LIVE-2**, four genuine-risk instances: the micro-fixture TPOT is inside the
-  same profile-and-count band.
-- **LIVE-3**, four genuine-risk instances: `1 < TTFT multiplier < TPOT
-  multiplier`, and `(TTFT multiplier - 1) / (TPOT multiplier - 1)` is inside
-  `[0.38, 0.40]`. The point composition predicts 0.3892860131.
+- **LIVE-2**, four entailed rows: the micro-fixture TPOT is inside the same
+  profile-and-count band.
+- **LIVE-3**, four entailed rows: `1 < TTFT multiplier < TPOT multiplier`, and
+  `(TTFT multiplier - 1) / (TPOT multiplier - 1)` is inside `[0.38, 0.40]`.
+  The point composition predicts 0.3892860131.
 
-The three relation families stay separate. LIVE-D1 checks launch-count and
-launch-class directions but is unscored by construction.
+The three relation families stay separate, all are unscored, and the
+genuine-risk denominator is zero. LIVE-D1 checks launch-count and launch-class
+directions but is also unscored by construction.
 
 The holdout fatal guards are conditions, never a score:
 
@@ -540,30 +548,28 @@ The holdout fatal guards are conditions, never a score:
   and stable harness source.
 - **LIVE-G2** requires B100 and H100 mismatch rejection before output.
 - **LIVE-G3** requires exact source input identities and the exact ideal source
-  row. Fixing the denominator does not fix a calibrated numerator.
+  row.
 - **LIVE-G4** requires structural component conservation, sequential release
   and completion, exact request reductions, raw provider attribution, bytes,
   flow counts and operation order. It does not require calibrated network
   service to equal the ideal network service.
 - **LIVE-G5** requires every whole step to stay inside the physical bounds and
-  retains exact `Q` as a component conformance invariant. Since calibrated
-  network service remains free anywhere inside its physical interval, this
-  does not determine a scored timestamp.
+  retains exact `Q` as a component conformance invariant.
 - **LIVE-G6** requires the already frozen conditional mission-budget
   arithmetic to remain exact. It does not use the 200 Gbit/s holdout
   timestamps.
 
 Calibrated network service matching the ideal row is reported afterward as
-LIVE-D2, a survivable unscored diagnostic. If it fails while the physical and
-conservation guards hold, the raw multiplier observations remain
-interpretable. Native exact-`Q` tests remain a separate conformance class.
+LIVE-D2, a survivable unscored diagnostic. The actual equality across all 12
+calibrated steps, together with the frozen nonzero traffic and deterministic
+fluid law, fixes the network term. Exact `Q` and conservation then entail the
+12 rows. Native exact-`Q` tests remain a separate conformance class.
 
-The non-entailment check uses fatal-valid countermodels. Setting calibrated
-network service to its 96,000,000 ps floor misses every LIVE-1 and LIVE-2
-lower band while all fatal ranges can still hold. Setting prefill network
-service to its floor and decode network service to its ceiling moves the
-LIVE-3 increment ratio outside `[0.38, 0.40]`. Thus no earlier fatal oracle
-pins any scored relation.
+The original non-entailment check substituted the 96,000,000 ps
+pre-serialization floor. Post-run review found that value is the zero-byte
+limit and is not executable for this nonzero-byte fixture. The arithmetic is
+retained as an unreachable interval-limit diagnostic, but it does not support
+genuine risk or a magnitude score.
 
 ## Exact ideal off path
 
@@ -593,9 +599,10 @@ simulated = represented_launch_floor + 0.105502734 ms
 plausible real = represented_launch_floor + [0.72, 1.44] ms
 ```
 
-over the measured graph-to-eager launch range. The scored calibration bands
-and launch-count endpoints bound this ratio in `[1.35, 4.70]` before the new
-digits are read. The report must give the tighter interval recomputed from the
+over the measured graph-to-eager launch range. The calibration acceptance
+bands and launch-count endpoints bound this ratio in `[1.35, 4.70]` before the
+new digits are read. CAL-1's widened band is post-specified. The report must
+give the tighter interval recomputed from the
 actual attempt-three value. Before live attempt two, the exact point interval
 using `Q` is frozen as `[1.4249530295, 3.8910394651]`. Propagating the retained
 sample-limited empirical endpoints gives `[1.3969639214, 4.5085504088]`. Both
@@ -614,8 +621,9 @@ Turing result.
 The calibration and attempt-two check-only commands validate their historical
 registry structure, arithmetic, runtime inputs and output containment without
 running CUDA or htsim. The holdout check-only command validates the newly
-frozen cell identity, point projections, score bands, physical bounds,
-countermodels, tools and output containment without invoking htsim. The
+frozen cell identity, point projections, entailed bands, physical bounds,
+unreachable limit diagnostic, tools and output containment without invoking
+htsim. The
 unchanged mission check-only command validates its pinned model, tool and
 frozen mission inputs without running vLLM. Result-producing runs evaluate the
 content digests and guards that require produced artifacts; check-only does not

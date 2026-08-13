@@ -34,6 +34,11 @@ def _inputs() -> tuple[dict[str, Any], dict[str, Any]]:
     )
 
 
+def _canonical_sha256(value: Any) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _request_fields(step_latencies: list[int]) -> dict[str, Any]:
     tpot = Fraction(step_latencies[1] + step_latencies[2], 2)
     return {
@@ -113,7 +118,7 @@ def _holdout_rows(
                 network = ideal_network
             elif network_mode == "floor":
                 network = [bounds[0] for bounds in physical_network]
-            elif network_mode == "ratio_countermodel":
+            elif network_mode == "ratio_limit":
                 network = [physical_network[0][0]] + [
                     bounds[1] for bounds in physical_network[1:]
                 ]
@@ -149,7 +154,11 @@ def test_frozen_holdout_inventory_and_budget_arithmetic():
     holdout = expectations["live_attempt_three"]
 
     assert expectations["live_attempt"] == 3
-    assert sum(holdout["scored_relations"].values()) == 12
+    assert holdout["evidence_class"] == "nonvoid_entailed_conformance_and_reach"
+    assert holdout["genuine_risk_instances"] == 0
+    assert holdout["scored_relations"] == {}
+    assert holdout["entailed_findings"] == 12
+    assert sum(holdout["entailed_relations"].values()) == 12
     assert holdout["fatal_unscored_guards"] == list(study.HOLDOUT_FATAL_GUARDS)
     assert expectations["live_attempt_two"]["genuine_risk_instances"] == 0
     assert sum(expectations["attempt_two_relations_originally_scored"].values()) == 12
@@ -222,45 +231,92 @@ def test_tracked_holdout_result_is_accepted_when_present():
     if not HOLDOUT_PATH.exists():
         pytest.skip("held-out host-step study has not run yet")
     result = json.loads(HOLDOUT_PATH.read_text(encoding="utf-8"))
+    expectations, _ = _inputs()
 
     assert result["schema"] == "simllm-host-step-holdout-v1-results-v1"
     assert result["run_status"] == "accepted"
     assert result["behavioral_score_interpretable"] is True
     assert result["fatal_guard_failures"] == []
-    assert result["genuine_risk_instances"] == 12
-    assert len(result["scored_relations"]) == 12
-    assert all(row["passed"] for row in result["scored_relations"])
+    assert result["evidence_class"] == "nonvoid_entailed_conformance_and_reach"
+    assert result["genuine_risk_instances"] == 0
+    assert result["scored_relations"] == []
+    assert result["entailed_findings"] == 12
+    assert len(result["entailed_relations"]) == 12
+    assert all(row["passed"] for row in result["entailed_relations"])
+    assert _canonical_sha256(result["rows"]) == (
+        "0fea62f4a2f853ce56dcf6779c64fff8cc22f9b445d03074b6e9f1cb510723cf"
+    )
+    assert _canonical_sha256(result["entailed_relations"]) == (
+        "08c5893671d412c2de2e05d384f9e34236695aa2cdeb758465f9317b27dd1c84"
+    )
+    network_vectors = {
+        tuple(step["network_service_ps"] for step in row["steps"])
+        for row in result["rows"]
+    }
+    assert network_vectors == {(450_385_968, 115_005_454, 114_677_778)}
+    assert all(
+        step["step_latency_ps"]
+        == step["network_service_ps"] + step["compute_service_ps"]
+        for row in result["rows"]
+        for step in row["steps"]
+    )
+    projections = {
+        (row["profile"], row["launch_count"]): row
+        for row in expectations["live_attempt_three"]["acceptance"][
+            "profile_launch_bands"
+        ]
+    }
+    for row in result["entailed_relations"]:
+        projection = projections[(row["profile"], row["launch_count"])]
+        if row["id"] == "LIVE-1_decode_multiplier_in_band":
+            assert row["observed"] == projection["point_decode_projection"]
+        elif row["id"] == "LIVE-2_tpot_multiplier_in_band":
+            assert row["observed"] == projection["point_tpot_projection"]
+    scored_identities = {
+        (row["id"], row["profile"], row["launch_count"])
+        for row in result["scored_relations"]
+    }
+    entailed_identities = {
+        (row["id"], row["profile"], row["launch_count"])
+        for row in result["entailed_relations"]
+    }
+    assert len(entailed_identities) == 12
+    assert scored_identities.isdisjoint(entailed_identities)
 
 
-def test_point_composition_passes_row_bands_and_increment_ratio():
+def test_point_composition_retains_entailed_conformance_and_reach_rows():
     study = _study_module()
     expectations, calibration = _inputs()
     rows = _holdout_rows(expectations, calibration, "prior")
 
-    scores, directions = study._score_rows(rows, expectations)
+    relations, directions = study._entailed_relation_rows(rows, expectations)
 
-    assert len(scores) == 12
-    assert all(row["passed"] for row in scores)
+    assert len(relations) == 12
+    assert all(row["passed"] for row in relations)
     assert directions["id"] == "HOLD-D1_two_parameter_directions"
     assert directions["passed"]
-    live3 = [row for row in scores if row["id"].startswith("LIVE-3")]
+    live3 = [row for row in relations if row["id"].startswith("LIVE-3")]
     assert all(0.38 <= row["increment_ratio"] <= 0.4 for row in live3)
 
 
-def test_fatal_valid_countermodels_can_fail_every_scored_family():
+def test_unreachable_limits_do_not_supply_genuine_risk():
     study = _study_module()
     expectations, calibration = _inputs()
 
-    frozen_countermodels = study._non_entailment_checks(expectations, calibration)
-    assert frozen_countermodels["passed"]
-    assert len(frozen_countermodels["rows"]) == 4
-    assert all(row["fatal_physical_bounds_hold"] for row in frozen_countermodels["rows"])
-    assert all(row["live1_countermodel_misses"] for row in frozen_countermodels["rows"])
-    assert all(row["live2_countermodel_misses"] for row in frozen_countermodels["rows"])
-    assert all(row["live3_countermodel_misses"] for row in frozen_countermodels["rows"])
+    limit = study._unreachable_limit_diagnostic(expectations, calibration)
+    assert limit["evidence_class"] == "unreachable_zero_byte_limit_diagnostic"
+    assert limit["supports_genuine_risk"] is False
+    assert limit["frozen_fixture_has_nonzero_serialization"] is True
+    assert limit["passed"]
+    assert len(limit["rows"]) == 4
+    assert all(row["loose_physical_intervals_hold"] for row in limit["rows"])
+    assert not any(row["executable_for_frozen_fixture"] for row in limit["rows"])
+    assert all(row["live1_limit_misses"] for row in limit["rows"])
+    assert all(row["live2_limit_misses"] for row in limit["rows"])
+    assert all(row["live3_limit_misses"] for row in limit["rows"])
 
     floor_rows = _holdout_rows(expectations, calibration, "floor")
-    floor_scores, _ = study._score_rows(floor_rows, expectations)
+    floor_relations, _ = study._entailed_relation_rows(floor_rows, expectations)
     assert study._physical_checks(floor_rows, expectations, calibration)["passed"]
     assert study._conservation_checks(floor_rows, expectations)["passed"]
     assert study._quantized_compute_checks(floor_rows)["passed"]
@@ -268,15 +324,15 @@ def test_fatal_valid_countermodels_can_fail_every_scored_family():
     assert study._budget(floor_rows, expectations)["passed"]
     assert not any(
         row["passed"]
-        for row in floor_scores
+        for row in floor_relations
         if row["id"] in {
             "LIVE-1_decode_multiplier_in_band",
             "LIVE-2_tpot_multiplier_in_band",
         }
     )
 
-    ratio_rows = _holdout_rows(expectations, calibration, "ratio_countermodel")
-    ratio_scores, _ = study._score_rows(ratio_rows, expectations)
+    ratio_rows = _holdout_rows(expectations, calibration, "ratio_limit")
+    ratio_relations, _ = study._entailed_relation_rows(ratio_rows, expectations)
     assert study._physical_checks(ratio_rows, expectations, calibration)["passed"]
     assert study._conservation_checks(ratio_rows, expectations)["passed"]
     assert study._quantized_compute_checks(ratio_rows)["passed"]
@@ -284,7 +340,7 @@ def test_fatal_valid_countermodels_can_fail_every_scored_family():
     assert study._budget(ratio_rows, expectations)["passed"]
     assert not any(
         row["passed"]
-        for row in ratio_scores
+        for row in ratio_relations
         if row["id"] == "LIVE-3_ttft_relative_increase_is_smaller"
     )
 

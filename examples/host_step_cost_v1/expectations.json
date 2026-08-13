@@ -109,7 +109,10 @@
   },
   "live_attempt_three": {
     "attempt": 3,
-    "disposition": "post_specified_after_attempt_two_entailment_audit",
+    "disposition": "post_specified_entailed_conformance_and_reach",
+    "evidence_class": "nonvoid_entailed_conformance_and_reach",
+    "genuine_risk_instances": 0,
+    "entailed_findings": 12,
     "prior_attempt_two": {
       "observed_commit": "12d337eaf47b7912b649038f451faf256de90b33",
       "result_commit": "a484f38e78df177a37f45b2878ad80aa9329c69f",
@@ -199,7 +202,8 @@
         "turing-eager-host-n567": [[1436533000, 1790918968], [1436533000, 1455538488], [1436533000, 1455210808]]
       }
     },
-    "scored_relations": {
+    "scored_relations": {},
+    "entailed_relations": {
       "LIVE-1_decode_multiplier_in_band": 4,
       "LIVE-2_tpot_multiplier_in_band": 4,
       "LIVE-3_ttft_relative_increase_is_smaller": 4
@@ -217,9 +221,10 @@
       "HOLD-D2_network_service_matches_ideal",
       "native_exact_Q_conformance"
     ],
-    "non_entailment_countermodels": {
-      "LIVE-1_and_LIVE-2": "network service at the fatal-valid 96,000,000 ps floor misses every tight lower band",
-      "LIVE-3": "prefill network service at its floor and decode service at its ceiling moves the increment ratio outside [0.38, 0.40]"
+    "unreachable_limit_diagnostics": {
+      "supports_genuine_risk": false,
+      "LIVE-1_and_LIVE-2": "96,000,000 ps is the unreachable zero-byte network limit for this nonzero-byte fixture",
+      "LIVE-3": "the prefill zero-byte limit and decode interval ceilings do not form an executable frozen-fixture countermodel"
     }
   },
   "prior_ideal_replay": {

@@ -389,66 +389,72 @@
       "survivable": true
     },
     {
-      "evidence_class": "logical_non_entailment_countermodel",
+      "evidence_class": "unreachable_zero_byte_limit_diagnostic",
+      "frozen_fixture_has_nonzero_serialization": true,
       "passed": true,
       "rows": [
         {
-          "fatal_physical_bounds_hold": true,
+          "loose_physical_intervals_hold": true,
+          "executable_for_frozen_fixture": false,
           "launch_count": 440,
-          "live1_countermodel_misses": true,
+          "live1_limit_misses": true,
           "live1_floor_multiplier": 2.112302730071909,
-          "live2_countermodel_misses": true,
+          "live2_limit_misses": true,
           "live2_floor_multiplier": 2.1138023158066246,
-          "live3_countermodel_increment_ratio": -0.14737220323638764,
-          "live3_countermodel_misses": true,
+          "live3_limit_increment_ratio": -0.14737220323638764,
+          "live3_limit_misses": true,
           "passed": true,
           "profile": "turing-cuda-graph",
           "represented_compute_ps": 356095000
         },
         {
-          "fatal_physical_bounds_hold": true,
+          "loose_physical_intervals_hold": true,
+          "executable_for_frozen_fixture": false,
           "launch_count": 567,
-          "live1_countermodel_misses": true,
+          "live1_limit_misses": true,
           "live1_floor_multiplier": 2.592526353872771,
-          "live2_countermodel_misses": true,
+          "live2_limit_misses": true,
           "live2_floor_multiplier": 2.594366864459533,
-          "live3_countermodel_increment_ratio": 0.005914386913966361,
-          "live3_countermodel_misses": true,
+          "live3_limit_increment_ratio": 0.005914386913966361,
+          "live3_limit_misses": true,
           "passed": true,
           "profile": "turing-cuda-graph",
           "represented_compute_ps": 458877000
         },
         {
-          "fatal_physical_bounds_hold": true,
+          "loose_physical_intervals_hold": true,
+          "executable_for_frozen_fixture": false,
           "launch_count": 440,
-          "live1_countermodel_misses": true,
+          "live1_limit_misses": true,
           "live1_floor_multiplier": 5.3089562149703005,
-          "live2_countermodel_misses": true,
+          "live2_limit_misses": true,
           "live2_floor_multiplier": 5.312725198881963,
-          "live3_countermodel_increment_ratio": 0.2427205498677522,
-          "live3_countermodel_misses": true,
+          "live3_limit_increment_ratio": 0.2427205498677522,
+          "live3_limit_misses": true,
           "passed": true,
           "profile": "turing-eager-host",
           "represented_compute_ps": 1040273000
         },
         {
-          "fatal_physical_bounds_hold": true,
+          "loose_physical_intervals_hold": true,
+          "executable_for_frozen_fixture": false,
           "launch_count": 567,
-          "live1_countermodel_misses": true,
+          "live1_limit_misses": true,
           "live1_floor_multiplier": 6.711847239492561,
-          "live2_countermodel_misses": true,
+          "live2_limit_misses": true,
           "live2_floor_multiplier": 6.716612176937675,
-          "live3_countermodel_increment_ratio": 0.27816787262063486,
-          "live3_countermodel_misses": true,
+          "live3_limit_increment_ratio": 0.27816787262063486,
+          "live3_limit_misses": true,
           "passed": true,
           "profile": "turing-eager-host",
           "represented_compute_ps": 1340533000
         }
       ],
-      "scored": false
+      "scored": false,
+      "supports_genuine_risk": false
     }
   ],
-  "evidence_class": "post_specified_genuine_risk_holdout",
+  "evidence_class": "nonvoid_entailed_conformance_and_reach",
   "exact_ideal_offpath": {
     "guard": "OFF-G1_ideal_named_study_exact_identity",
     "status": "accepted in separate tracked compatibility artifact"
@@ -1718,7 +1724,8 @@
       "passed": true
     }
   ],
-  "genuine_risk_instances": 12,
+  "entailed_findings": 12,
+  "genuine_risk_instances": 0,
   "live_attempt": 3,
   "observed_commit": "ad1b0aab48a9fe2f9348aefc0f2b2bbee04a2ae3",
   "prior_attempt_two": {
@@ -7918,7 +7925,7 @@
   ],
   "run_status": "accepted",
   "schema": "simllm-host-step-holdout-v1-results-v1",
-  "scored_relations": [
+  "entailed_relations": [
     {
       "acceptance": [
         2.17,
@@ -8060,6 +8067,7 @@
       "ttft_multiplier": 3.2597132784456506
     }
   ],
+  "scored_relations": [],
   "study": "host_step_cost_v1",
   "task": "COMP-2"
 }
