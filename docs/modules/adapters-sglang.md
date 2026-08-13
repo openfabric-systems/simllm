@@ -87,6 +87,29 @@ RadixCache prefix matching, eviction and the token/request pool accounting
 are scheduler-side index bookkeeping and stay real, so radix hit rates and
 vRAM pressure respond to the workload exactly as in production.
 
+The geometry reader accepts strict single-GPU routed-MoE projections for
+Granite MoE, Mixtral, and all-layer Qwen3 MoE. It maps global routed experts,
+top-k, per-expert width, and resident experts into `ModelDims`; the shared
+compute provider then uses top-k for active FLOPs and resident experts for
+weight bytes. Any MoE sentinel on an unknown family, shared experts, a mixed
+dense/routed schedule, MLA, next-token-predict layers, or TP/EP/MoE-DP greater
+than one fails before a dense estimate can be produced. Quantized MoE weights
+also fail until their element width is sourced explicitly. Dense geometry and
+its loud fallback behavior are unchanged.
+
+External workload driving (`simllm/adapters/sglang/client.py`) is a separate
+standard-library surface. `sglang_generate_payload` maps one immutable
+workload request to the pinned native streaming `/generate` schema.
+`SglangOpenLoopDriver` paces every request against one monotonic origin while
+prior requests remain in flight, and `SglangHttpSubmitter` records cumulative
+streamed-token visibility. Client submission lateness stays separate from
+TTFT and from simulated framework queueing. No SGLang import or GPU is needed
+for payload, pacing, chunk, or metric tests. The standard-library transport is
+bounded to 64 requests by default and rejects a larger plan unless the caller
+explicitly provisions one response-drain thread per request; larger studies
+need a selector or async transport so delayed reads do not distort visibility.
+SGL-4's offered-load HTTP campaign owns that scalable transport requirement.
+
 Simulated communication (`simllm/adapters/sglang/communicator.py`) is a
 separate opt-in. `SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE` binds one logical TP
 group to `SimModelRunnerStub`; `SIMLLM_SGLANG_COMMUNICATOR_EVENTS` optionally
@@ -291,6 +314,19 @@ the result onto `CompletionEvent`, `StepResult` and TTFT or TPOT. Until those
 land, any figure computed with the SGLang communicator enabled understates
 communication by exactly the whole of it.
 
+The single-GPU MoE and workload-driver slice is frozen by expectations-only
+commit `c48e785` and reported in
+[examples/sglang_moe_workload_v1/RESULTS.md](../../examples/sglang_moe_workload_v1/RESULTS.md).
+The import-free study retains diagnostic geometry, request-realization,
+payload, and stream-reduction rows. It qualifies nothing because the frozen
+run is void: its short length-trace guard contradicted the established
+`TraceLengths` cycling contract. Separate import-free tests cover those seams
+and native open-loop submission. No live SGLang or GPU ran, and the change does
+not move the adapter onto the simulated metric chain described above. SGL-4
+remains the live comparison, SGL-12 and SGL-13 remain the missing metric-chain
+links, WORK-4 remains virtual server ingress, and SGL-18 owns distributed and
+hybrid MoE geometry.
+
 ## Open tasks
 
 ### Precision
@@ -298,11 +334,14 @@ communication by exactly the whole of it.
 ### Completeness
 
 - SGL-18 (Completeness; P2; L): extend the strict single-GPU routed-MoE
-  geometry reader to SGLang's distributed and hybrid MoE families. Source
+  geometry reader to SGLang's distributed, redundant-copy, and unsupported
+  single-GPU MoE families, including DBRX and QuantMixtral. Source
   per-rank expert ownership and expert tensor sharding from the active
   `moe_ep_size`, `moe_dp_size`, and `moe_tp_size`; represent shared experts,
-  mixed dense/routed layer schedules, and MLA before enabling families that
-  require them. The single-GPU Granite, Mixtral, and Qwen3 MoE path remains
+  redundant physical copies, mixed dense/routed layer schedules, MLA, DBRX's
+  nested `ffn_config`, multimodal wrapper compute, and quantized MoE weight widths
+  before enabling families that require them. The single-GPU Granite,
+  Mixtral, and Qwen3 MoE path remains
   the explicit supported baseline. Every unsupported sentinel combination
   must keep failing before it can be priced as dense. Acceptance requires
   exact per-rank active FLOPs and resident bytes, a supported end-to-end

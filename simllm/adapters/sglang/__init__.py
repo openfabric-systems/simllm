@@ -43,6 +43,9 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "ORACLE_ENABLE_ENV": ("oracle", "ORACLE_ENABLE_ENV"),
     "ORACLE_LOG_ENV": ("oracle", "ORACLE_LOG_ENV"),
     "ORACLE_OBSERVATION_SCHEMA": ("oracle", "ORACLE_OBSERVATION_SCHEMA"),
+    "PreparedSglangSubmission": ("client", "PreparedSglangSubmission"),
+    "SglangHttpSubmitter": ("client", "SglangHttpSubmitter"),
+    "SglangOpenLoopDriver": ("client", "SglangOpenLoopDriver"),
     "GroupCoordinatorEvent": ("communicator", "GroupCoordinatorEvent"),
     "GroupCoordinatorEventStream": ("communicator", "GroupCoordinatorEventStream"),
     "GroupCoordinatorObserver": ("communicator", "GroupCoordinatorObserver"),
@@ -54,6 +57,11 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "SimTpModelWorker": ("worker", "SimTpModelWorker"),
     "SimWorkerConfig": ("worker", "SimWorkerConfig"),
     "SimWorkerHooks": ("worker", "SimWorkerHooks"),
+    "sglang_generate_payload": ("client", "sglang_generate_payload"),
+    "token_completion_times_from_sglang_chunks": (
+        "client",
+        "token_completion_times_from_sglang_chunks",
+    ),
     "configure": ("worker", "configure"),
     "latest_worker": ("worker", "latest_worker"),
     "model_dims_from_sglang": ("worker", "model_dims_from_sglang"),
@@ -78,7 +86,10 @@ __all__ = [
     "GroupCoordinatorEvent",
     "GroupCoordinatorEventStream",
     "GroupCoordinatorObserver",
+    "PreparedSglangSubmission",
     "SglStepTranslator",
+    "SglangHttpSubmitter",
+    "SglangOpenLoopDriver",
     "ShapeDType",
     "ShapeTensor",
     "SimGroupCoordinator",
@@ -93,7 +104,9 @@ __all__ = [
     "model_dims_from_sglang",
     "observe_schedule_batch",
     "register",
+    "sglang_generate_payload",
     "sglang_is_available",
+    "token_completion_times_from_sglang_chunks",
 ]
 
 

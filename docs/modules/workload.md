@@ -18,6 +18,18 @@ synthetic token-ID sequences with controllable shared-prefix structure.
   `ALL_AT_ONCE` is the default identity mode and exposes every request without
   advancing time or mutating bookkeeping. The supplied framework callback
   remains the only handoff into `add_request`.
+- `realize_generation_requests(...)`: freeze caller IDs, arrival providers,
+  prompt/output length providers, and a prompt builder into immutable
+  `GenerationRequest` rows. Arrival seconds use decimal round-half-up to
+  integer picoseconds; ties retain caller order and the first Poisson arrival
+  is not shifted.
+- `HashedTokenPrompts(vocab_size, seed, first_token_id)`: deterministic private
+  synthetic prompts for length/load studies. It deliberately adds no shared
+  prefixes; WORK-1 remains the authority for controlled prefix structure.
+- `reduce_transport_observations(requests, observations)`: validate one
+  streamed-token observation per request and report client-observed TTFT,
+  exact TPOT, and submission lateness. These `ObservedRequestTiming` rows are
+  external evidence and never replace core `RequestMetric` values.
 
 ## Status
 
@@ -28,6 +40,14 @@ framework. The live vLLM sweep passed all 8/8 genuine-risk arrival and offered
 load instances, and the all-at-once mode retained every compared artifact
 byte; see [the WORK-3 results](../../examples/arrival_admission_v1/RESULTS.md).
 Shared-prefix prompt structure is not started.
+
+The deterministic generation-request seam is also implemented and tested
+without a framework dependency. The SGLang client maps it to native streaming
+payloads and preserves the distinction between logical arrival, actual client
+submission, and token visibility. The frozen study is void because its short
+length-trace guard contradicted the established `TraceLengths` cycling
+contract; its 6/6 matching workload and timing rows remain diagnostic only. See
+[the SGLang MoE workload results](../../examples/sglang_moe_workload_v1/RESULTS.md).
 
 ## Open tasks
 
