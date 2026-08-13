@@ -58,7 +58,16 @@ bookkeeping inherited, the MLX-worker pattern) and
   (`Req.cached_tokens`, final by forward time) is reported once, on the
   request's first prefill record; a decode row never consumes that
   one-time report, so a retracted request that resumes as a prefill still
-  reports its hit. Step latency comes from the shared
+  reports its hit. Each record also carries the exact sampled count and the
+  identity of the rows SGLang consumes a generated token from: an extend or
+  mixed row counts only when its in-flight middle chunks are drained and it
+  is neither finished nor retracted, and every decode row counts. Both fields
+  are emitted together, because a count alone is refused as ambiguous
+  whenever the sampling rows are not exactly the scheduled decode set, which
+  two concurrent prefills violate. `SIMLLM_SGLANG_SAMPLE_IDENTITY=0` is the
+  explicit compatibility path: both fields stay absent, every consumer reads
+  the whole scheduled batch as sampled, and the records are byte-identical to
+  the pre-SGL-12 stream. Step latency comes from the shared
   `simllm.compute` roofline (`ModelDims` built by
   `model_dims_from_sglang`, geometry fallbacks warned and stamped on
   `defaulted_fields`); a sink that returns a `StepResult` overrides the
@@ -74,7 +83,22 @@ bookkeeping inherited, the MLX-worker pattern) and
 Timing has the same two modes as the vLLM adapter: `paced` (sleep the
 simulated latency) and `virtual` (return immediately). Objects (a provider,
 a host model, a sink) go through `configure()`, which reaches the worker
-when the scheduler runs in this process.
+when the scheduler runs in this process. `reset_configuration()` clears every
+hook and is the boundary between independent in-process runs, with the same
+semantics as the vLLM adapter's: without it a multi-cell driver leaks one
+cell's sink, device or replay configuration into the next.
+
+Token serving has two paths. The default fabricates one mid-vocabulary token
+for every row. `SIMLLM_SGLANG_REPLAY_RUN` instead names a joined pre-play
+replay run, and `SglReplayTokenSource` then verifies the trace against its
+recorded digest, requires each request to enter SGLang with
+`max_new_tokens` equal to its oracle length, refuses stop strings, stop
+regexes, an oracle token that would match a stop or EOS id before the last
+position, structured output, speculative batches and logprob batches, and
+serves each request's predefined token at the output index the scheduler
+itself reports (`len(Req.output_ids)` at forward time). A mid-prompt chunk,
+whose token SGLang discards, keeps the fabricated token and does not move the
+oracle index. With no replay run configured the fabricated path is unchanged.
 
 Completion visibility: the worker never sees finish decisions (EOS and
 `max_new_tokens` are applied in `process_batch_result` after the forward
@@ -82,6 +106,40 @@ returns) and there is no drain step at this seam, so
 `finished_request_ids` is always empty and a record consumer infers a
 request's completion from the last record that schedules it, the same
 convention as the vLLM adapter's in-process path.
+
+In-process driving (`simllm/adapters/sglang/pump.py`) is what makes
+`configure()` reachable at all. SGLang builds its `Scheduler` inside an
+`mp.Process` and loads plugins in `run_scheduler_process`, so hooks set in a
+parent process never reach the worker. `build_in_process_scheduler` removes
+the boundary instead of reaching across it: it constructs the pinned
+`Scheduler` in the calling process after `install()` and `configure(...)`
+have run, mirroring `run_scheduler_process` minus the parts that only make
+sense in a child (`publish(server_args, role="scheduler")` is required,
+because the constructor reads the process-global config bags; the
+parent-death watchdog and the process-title rewrite are not applied). SGLang
+carries its own in-tree precedent for this in `srt/ray/scheduler_actor.py`.
+`SglangSchedulerPump` then unrolls the body of `event_loop_normal` into one
+synchronous `step()`: plan, run and settle a batch when the plan carries
+one, call the scheduler's idle handler when it does not, publish
+`last_batch`, all under `torch.no_grad()` because the real loop is decorated
+`@DynamicGradMode()`, and with `cur_batch_for_debug` assigned because the
+watchdog reads it. Ingress is the caller's own list through
+`process_input_requests`, so an arrival gate on the worker's `VirtualClock`
+decides when a request enters and the framework alone decides what to run.
+
+The pump's only mutation of scheduler state is the egress socket. Generation
+results leave through `scheduler.output_streamer.send_to_detokenizer`, a
+`SenderWrapper` around a `zmq.PUSH` socket with no listener in this
+configuration; the pump replaces that one object with
+`SchedulerOutputCollector` and reads finished requests, their finish reason,
+their token counts, their radix hit and their retraction count out of the
+payloads. That is the completion signal the worker seam cannot report.
+`attach_output_collector=False` is the exact off path and mutates nothing.
+The pump refuses to run with chunked prefill enabled, because
+`StepRecord.num_sampled` is unpopulated at this seam (SGL-12) and a
+mid-prompt extend row would otherwise be counted as a generated token. The
+module imports without SGLang and without torch, and its ordering contract is
+tested against a stub scheduler.
 
 RadixCache prefix matching, eviction and the token/request pool accounting
 are scheduler-side index bookkeeping and stay real, so radix hit rates and
@@ -158,9 +216,25 @@ For a current reproduction, `SIMLLM_SGLANG_ENV` may document a compatible
 environment in local configuration, but it does not define the identity of the
 recorded run.
 
-Joined pre-play token replay is not implemented in this adapter. It remains
-the explicit PLAY-7 follow-up in [preplay.md](preplay.md#open-tasks), including
-the fabricated-token identity off path and a real in-process smoke.
+SGL-12 is closed. Every record now carries the exact sampled count and
+identity, transcribed from the pinned `process_batch_result_prefill` and
+`process_batch_result_decode` rules rather than modeled, and the absent-field
+stream stays selectable and byte-identical. The frozen twelve-cell study in
+[examples/sglang_worker_seam_v1/RESULTS.md](../../examples/sglang_worker_seam_v1/RESULTS.md)
+drove one stub batch stream per cell through the adapter seam and the shared
+metric chain in both states: all 82 scored exact-oracle rows matched to the
+picosecond and no fatal guard was violated. Without the fields a chunked
+request's reported TTFT was the completion of its first extend step, i.e. 49.9
+percent of its true TTFT with two chunks and 33.2 percent with three, and its
+token count and TPOT were inflated by the mid-prompt steps. No live SGLang
+scheduler was in that loop: the batch stubs carry the pinned attribute names,
+so observed agreement with a running scheduler is SGL-22.
+
+Joined pre-play token replay is implemented as `SglReplayTokenSource` with its
+fabricated-token identity off path, both import-free tested. It has not been
+driven by a live in-process SGLang scheduler and has not reached a reported
+metric, so its live smoke and live reachability are PLAY-16 in
+[preplay.md](preplay.md#open-tasks).
 
 The recorded smoke JSONL is exercised against the closed-loop sink as of
 the M4 first slice: all 9 records load through
@@ -168,8 +242,27 @@ the M4 first slice: all 9 records load through
 `simllm.backends.HtsimStepSink` behind a declared tp=8 manifest, with
 monotonic virtual time and every step's simulated latency above the
 compute-only estimate (examples/m4/RESULTS.md check E). The live
-closed-loop run of that slice used the vLLM adapter; the SGLang worker's
-sink seam is the same contract but has not driven htsim live yet (SGL-8).
+closed-loop run of that slice used the vLLM adapter. SGL-8 closed the
+remaining half: the sink seam now drives `htsim_rnic` live from a real
+scheduler in one process, reported in
+[examples/sglang_end_to_end_v1/RESULTS.md](../../examples/sglang_end_to_end_v1/RESULTS.md).
+
+That slice is frozen by expectations-only commit `8907c53`. On 2026-08-13 four
+requests entered a real `Scheduler` through the arrival gate on the worker's
+own clock, across four fabric cells and one sink-free control, for 95 simulated
+steps and 4,560 `htsim_rnic` invocations. All 11 fatal guards held, so the run
+is not void; 5 of 5 scored exact relations and 4 of 4 scored behavioral
+relations passed, in two classes that are never summed. Per-request TTFT and
+TPOT match an independent standard-library recomputation exactly over 192
+intervals, the 40,596 per-request directed-byte rows and 24,136 executed GOAL
+rows agree with a recomputation straight from the trace, and the measured
+per-step compute service inverts to within 0.1 percent of the hand-counted
+resident weight bytes at both expert-parallel widths. The closed loop is
+demonstrated rather than assumed: the framework took 26, 24 and 21 scheduler
+steps at 400, 200 and 100 Gbit/s for the identical workload, while the
+sink-free control took 16. This is the first SGLang run in this repository to
+drive `htsim_rnic` at all, and the first routed study driven by an SGLang trace
+rather than a vLLM one.
 
 The SGL-11 zero-time communicator slice is frozen by expectations-only commit
 `b0c5b73` and reported in
@@ -185,7 +278,10 @@ step starts.
 Post-specified integration review added a tracked LF byte fixture under
 `tests/fixtures/sglang`. A CI-runnable test drives `SglStepTranslator`,
 `observe_tp_step`, and `StepRecordStream` on one shared clock in both flag
-states; both streams must equal the fixture exactly. The pinned call-site
+states; both streams must equal the fixture exactly. SGL-12 added the sampled
+count and identity to every record, so that original fixture is now the
+compatibility baseline and the current default has a second fixture beside it.
+The communicator flag must move neither. The pinned call-site
 audit now derives every observed row from AST, and the correction supplement
 in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
 `output_tensor_list` callers without rewriting the frozen expectations file.
@@ -262,32 +358,37 @@ this module's own task list.
   always empty and there is no preempted set, while the vLLM executor ingests
   vLLM's own `SchedulerOutput` including completions and preemptions and adds
   a drain step.
-- Per-request identity survives to `StepResult`: absent. `request_id` reaches
-  `StepRecord` and stops there. The SGLang sink alias takes one argument, so
-  the two-argument observation sink that builds a per-request metric cannot be
-  attached to this adapter at all. SGL-12 and SGL-13 own the pieces.
-- Per-token routing reaches traffic: not demonstrated. The capture side is
-  real and the v2 trace projects into the same `RoutedExperts` authority that
-  `RoutedMoeSupply` consumes, but no SGLang trace has driven a placement
-  manifest, a GOAL emission, a backend run or a metric. Every routed study to
-  date used a vLLM trace.
+- Per-request identity reaches TTFT and TPOT: present, by the same route the
+  vLLM path uses. `request_id` reaches `StepRecord`, the record now carries
+  exactly which requests produced a token, and `HtsimRequestMetricReducer`
+  projects the sink's own per-step outcomes into per-request TTFT and TPOT
+  with the seven-component partition. What is still absent is a runtime
+  `CompletionEvent` path out of the adapter itself: the SGLang sink alias
+  takes one argument, so the two-argument observation sink cannot be
+  attached. SGL-13 owns that piece.
+- Per-token routing reaches traffic: demonstrated. An SGLang v2 trace projects
+  through `RoutedExperts` into `RoutedMoeSupply`, drives the per-layer MoE
+  all-to-alls, is emitted as GOAL, executed by `htsim_rnic` and reaches TTFT
+  and TPOT. Before SGL-8 every routed study in this repository used a vLLM
+  trace.
 - The observed schedule comes from the framework: absent. The only
-  `ExecutionObservations` producer in the repository is on the vLLM side.
-  SGL-10 and SGL-17 own the SGLang equivalents.
+  `ExecutionObservations` producer in the repository is on the vLLM side, so
+  the lowering is serial. SGL-10 and SGL-17 own the SGLang equivalents.
 
-Two further gaps are worth naming because they are not visible from the task
-list. The adapter has never driven htsim live (SGL-8); the M4 coverage was
-JSONL replay of a recorded run. And `configure()` is only reachable from an
-in-process scheduler driver, so a normal `launch_server` run, where SGLang
-builds the worker inside its own scheduler subprocess, cannot install a sink
-at all and falls back to the JSONL sidecar.
+One gap is worth naming because it is not visible from the task list.
+`configure()` is only reachable from an in-process scheduler driver, so a
+normal `launch_server` run, where SGLang builds the worker inside its own
+scheduler subprocess, still cannot install a sink and falls back to the JSONL
+sidecar. The pump does not change that; it makes the in-process driver a
+supported surface instead of a study-local one.
 
-The honest summary is that SGLang today is a real frontend whose decisions are
-observed and recorded, not a real frontend whose decisions reach the reported
-metric. The landed SGL-16 source and component slice improves the fidelity of
-what is recorded. It does not move the adapter onto the metric chain, so
-SGL-16 remains open under its current Precision tag until a supported path
-reaches the reported metrics.
+The honest summary is that SGLang is now a real frontend whose decisions reach
+the reported metric on one supported path, the in-process pump, and a real
+frontend whose decisions are only observed and recorded on every other path.
+The routing authority the SGL-8 run consumed is the SGL-16 framework-layer-id
+trace, so the live-reachability precondition SGL-16 recorded is met by that
+run. SGL-16 is not closed here: this study registered no SGL-16 acceptance
+clause and a demo cannot close a precision task by association.
 
 ### Why SGL-14 is blocked rather than deferred
 
@@ -323,9 +424,9 @@ run is void: its short length-trace guard contradicted the established
 `TraceLengths` cycling contract. Separate import-free tests cover those seams
 and native open-loop submission. No live SGLang or GPU ran, and the change does
 not move the adapter onto the simulated metric chain described above. SGL-4
-remains the live comparison, SGL-12 and SGL-13 remain the missing metric-chain
-links, WORK-4 remains virtual server ingress, and SGL-18 owns unsupported MoE
-geometry and mechanisms.
+remains the live comparison, SGL-13 remains the missing metric-chain link
+(SGL-12 has since closed), WORK-4 remains virtual server ingress, and SGL-18
+owns unsupported MoE geometry and mechanisms.
 
 ## Open tasks
 
@@ -360,12 +461,6 @@ seam, so no upstream flag is needed.
   event cardinality, identity and cause agreement against those objects, a
   direct comparison with VLLM-11, and byte preservation of the current v2 and
   oracle-disabled paths.
-- SGL-12 (Precision; P1; M): source and populate exact
-  `StepRecord.num_sampled` at the worker seam. Distinguish a mid-prompt extend
-  row from the extend step that reaches `origin_input_ids`, including radix
-  hits, retracted prefills and MIXED batches; prove the count matches the rows
-  for which SGLang consumes a generated token. Keep the absent field as the
-  explicit compatibility path.
 - SGL-14 (Precision; P1; M): replace the zero-time
   `ncclAllReduce`-shaped compatibility call for SGLang all-gather, broadcast,
   send, and receive with native COMP stack entries when those entries exist.
@@ -390,6 +485,17 @@ seam, so no upstream flag is needed.
   requires zero layer-label disagreements and byte-identical expert IDs,
   request outputs and KV events relative to the current qualified Granite
   fallback.
+- SGL-22 (Precision; P1; M): confirm the transcribed sampled-row rule against
+  a live SGLang scheduler. SGL-12 landed the rule and its exact
+  `num_sampled` and `sampled_request_ids`, but the evidence is source
+  transcription plus stub batches carrying the pinned attribute names; no
+  running scheduler has been observed agreeing with it. The identifying
+  observation is SGLang's own consumption of the worker's `next_token_ids`,
+  i.e. the per-request `output_ids` growth in `process_batch_result`.
+  Acceptance requires a live in-process run that exercises chunked prefill, a
+  MIXED batch and a decode retraction, exact per-step agreement between the
+  emitted sampled identity and the requests whose `output_ids` grew, and an
+  unchanged compatibility stream.
 
 ### Completeness
 
@@ -449,10 +555,6 @@ seam, so no upstream flag is needed.
 - SGL-7: mamba/hybrid-attention models need the auxiliary-state pool the
   stub does not build; the stub currently builds a plain `ReqToTokenPool`
   only.
-- SGL-8: a live closed-loop run with `HtsimStepSink` installed via
-  `configure(step_sink=...)` on the CPU-engine smoke path, mirroring the
-  vLLM tp=8 run of examples/m4 (the M4 slice covered this adapter by
-  JSONL replay only).
 - SGL-10: capture and replay the supported model runner's CUDA stream/event,
   kernel and NCCL schedule as an `ExecutionGraph` template keyed by the same
   identity envelope as its compute table. Bind batch shapes, radix events and

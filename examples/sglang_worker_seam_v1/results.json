@@ -1,0 +1,3744 @@
+{
+  "entailed_rows": [
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "mixed-2chunk-fast:R:compat:sampling-steps"
+    },
+    {
+      "expected": 3,
+      "observed": 3,
+      "passed": true,
+      "row": "mixed-2chunk-fast:R:compat:token-count"
+    },
+    {
+      "expected": "15166976000",
+      "observed": "15166976000",
+      "passed": true,
+      "row": "mixed-2chunk-fast:R:compat:tpot"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "mixed-2chunk-fast:D:compat:sampling-steps"
+    },
+    {
+      "expected": [
+        1,
+        2
+      ],
+      "observed": [
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "mixed-2chunk-fast:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "mixed-2chunk-fast:R:fixed:token-count"
+    },
+    {
+      "expected": "15167104000",
+      "observed": "15167104000",
+      "passed": true,
+      "row": "mixed-2chunk-fast:R:fixed:tpot"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "mixed-2chunk-fast:D:fixed:sampling-steps"
+    },
+    {
+      "expected": 15166848000,
+      "observed": 15166848000,
+      "passed": true,
+      "row": "mixed-2chunk-fast:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "mixed-2chunk-slow:R:compat:sampling-steps"
+    },
+    {
+      "expected": 3,
+      "observed": 3,
+      "passed": true,
+      "row": "mixed-2chunk-slow:R:compat:token-count"
+    },
+    {
+      "expected": "30333984000",
+      "observed": "30333984000",
+      "passed": true,
+      "row": "mixed-2chunk-slow:R:compat:tpot"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "mixed-2chunk-slow:D:compat:sampling-steps"
+    },
+    {
+      "expected": [
+        1,
+        2
+      ],
+      "observed": [
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "mixed-2chunk-slow:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "mixed-2chunk-slow:R:fixed:token-count"
+    },
+    {
+      "expected": "30334240000",
+      "observed": "30334240000",
+      "passed": true,
+      "row": "mixed-2chunk-slow:R:fixed:tpot"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "mixed-2chunk-slow:D:fixed:sampling-steps"
+    },
+    {
+      "expected": 30333728000,
+      "observed": 30333728000,
+      "passed": true,
+      "row": "mixed-2chunk-slow:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "mixed-3chunk-fast:R:compat:sampling-steps"
+    },
+    {
+      "expected": 4,
+      "observed": 4,
+      "passed": true,
+      "row": "mixed-3chunk-fast:R:compat:token-count"
+    },
+    {
+      "expected": "45461728000/3",
+      "observed": "45461728000/3",
+      "passed": true,
+      "row": "mixed-3chunk-fast:R:compat:tpot"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "mixed-3chunk-fast:D:compat:sampling-steps"
+    },
+    {
+      "expected": [
+        2,
+        3
+      ],
+      "observed": [
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "mixed-3chunk-fast:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "mixed-3chunk-fast:R:fixed:token-count"
+    },
+    {
+      "expected": "15167232000",
+      "observed": "15167232000",
+      "passed": true,
+      "row": "mixed-3chunk-fast:R:fixed:tpot"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "mixed-3chunk-fast:D:fixed:sampling-steps"
+    },
+    {
+      "expected": 30294496000,
+      "observed": 30294496000,
+      "passed": true,
+      "row": "mixed-3chunk-fast:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "mixed-3chunk-slow:R:compat:sampling-steps"
+    },
+    {
+      "expected": 4,
+      "observed": 4,
+      "passed": true,
+      "row": "mixed-3chunk-slow:R:compat:token-count"
+    },
+    {
+      "expected": "90923552000/3",
+      "observed": "90923552000/3",
+      "passed": true,
+      "row": "mixed-3chunk-slow:R:compat:tpot"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "mixed-3chunk-slow:D:compat:sampling-steps"
+    },
+    {
+      "expected": [
+        2,
+        3
+      ],
+      "observed": [
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "mixed-3chunk-slow:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "mixed-3chunk-slow:R:fixed:token-count"
+    },
+    {
+      "expected": "30334496000",
+      "observed": "30334496000",
+      "passed": true,
+      "row": "mixed-3chunk-slow:R:fixed:tpot"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "mixed-3chunk-slow:D:fixed:sampling-steps"
+    },
+    {
+      "expected": 60589056000,
+      "observed": 60589056000,
+      "passed": true,
+      "row": "mixed-3chunk-slow:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "paired-2chunk-fast:R:compat:sampling-steps"
+    },
+    {
+      "expected": 3,
+      "observed": 3,
+      "passed": true,
+      "row": "paired-2chunk-fast:R:compat:token-count"
+    },
+    {
+      "expected": "15140448000",
+      "observed": "15140448000",
+      "passed": true,
+      "row": "paired-2chunk-fast:R:compat:tpot"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "observed": [
+        0
+      ],
+      "passed": true,
+      "row": "paired-2chunk-fast:S:compat:sampling-steps"
+    },
+    {
+      "expected": [
+        1,
+        2
+      ],
+      "observed": [
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "paired-2chunk-fast:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "paired-2chunk-fast:R:fixed:token-count"
+    },
+    {
+      "expected": "15140512000",
+      "observed": "15140512000",
+      "passed": true,
+      "row": "paired-2chunk-fast:R:fixed:tpot"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "observed": [
+        0
+      ],
+      "passed": true,
+      "row": "paired-2chunk-fast:S:fixed:sampling-steps"
+    },
+    {
+      "expected": 15140384000,
+      "observed": 15140384000,
+      "passed": true,
+      "row": "paired-2chunk-fast:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "paired-2chunk-slow:R:compat:sampling-steps"
+    },
+    {
+      "expected": 3,
+      "observed": 3,
+      "passed": true,
+      "row": "paired-2chunk-slow:R:compat:token-count"
+    },
+    {
+      "expected": "30280896000",
+      "observed": "30280896000",
+      "passed": true,
+      "row": "paired-2chunk-slow:R:compat:tpot"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "observed": [
+        0
+      ],
+      "passed": true,
+      "row": "paired-2chunk-slow:S:compat:sampling-steps"
+    },
+    {
+      "expected": [
+        1,
+        2
+      ],
+      "observed": [
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "paired-2chunk-slow:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "paired-2chunk-slow:R:fixed:token-count"
+    },
+    {
+      "expected": "30281024000",
+      "observed": "30281024000",
+      "passed": true,
+      "row": "paired-2chunk-slow:R:fixed:tpot"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "observed": [
+        0
+      ],
+      "passed": true,
+      "row": "paired-2chunk-slow:S:fixed:sampling-steps"
+    },
+    {
+      "expected": 30280768000,
+      "observed": 30280768000,
+      "passed": true,
+      "row": "paired-2chunk-slow:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "paired-3chunk-fast:R:compat:sampling-steps"
+    },
+    {
+      "expected": 4,
+      "observed": 4,
+      "passed": true,
+      "row": "paired-3chunk-fast:R:compat:token-count"
+    },
+    {
+      "expected": "45381952000/3",
+      "observed": "45381952000/3",
+      "passed": true,
+      "row": "paired-3chunk-fast:R:compat:tpot"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "observed": [
+        0
+      ],
+      "passed": true,
+      "row": "paired-3chunk-fast:S:compat:sampling-steps"
+    },
+    {
+      "expected": [
+        2,
+        3
+      ],
+      "observed": [
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "paired-3chunk-fast:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "paired-3chunk-fast:R:fixed:token-count"
+    },
+    {
+      "expected": "15140512000",
+      "observed": "15140512000",
+      "passed": true,
+      "row": "paired-3chunk-fast:R:fixed:tpot"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "observed": [
+        0
+      ],
+      "passed": true,
+      "row": "paired-3chunk-fast:S:fixed:sampling-steps"
+    },
+    {
+      "expected": 30241440000,
+      "observed": 30241440000,
+      "passed": true,
+      "row": "paired-3chunk-fast:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "paired-3chunk-slow:R:compat:sampling-steps"
+    },
+    {
+      "expected": 4,
+      "observed": 4,
+      "passed": true,
+      "row": "paired-3chunk-slow:R:compat:token-count"
+    },
+    {
+      "expected": "90763904000/3",
+      "observed": "90763904000/3",
+      "passed": true,
+      "row": "paired-3chunk-slow:R:compat:tpot"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "observed": [
+        0
+      ],
+      "passed": true,
+      "row": "paired-3chunk-slow:S:compat:sampling-steps"
+    },
+    {
+      "expected": [
+        2,
+        3
+      ],
+      "observed": [
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "paired-3chunk-slow:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "paired-3chunk-slow:R:fixed:token-count"
+    },
+    {
+      "expected": "30281024000",
+      "observed": "30281024000",
+      "passed": true,
+      "row": "paired-3chunk-slow:R:fixed:tpot"
+    },
+    {
+      "expected": [
+        0
+      ],
+      "observed": [
+        0
+      ],
+      "passed": true,
+      "row": "paired-3chunk-slow:S:fixed:sampling-steps"
+    },
+    {
+      "expected": 60482880000,
+      "observed": 60482880000,
+      "passed": true,
+      "row": "paired-3chunk-slow:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "solo-2chunk-fast:R:compat:sampling-steps"
+    },
+    {
+      "expected": 3,
+      "observed": 3,
+      "passed": true,
+      "row": "solo-2chunk-fast:R:compat:token-count"
+    },
+    {
+      "expected": "15140448000",
+      "observed": "15140448000",
+      "passed": true,
+      "row": "solo-2chunk-fast:R:compat:tpot"
+    },
+    {
+      "expected": [
+        1,
+        2
+      ],
+      "observed": [
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "solo-2chunk-fast:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "solo-2chunk-fast:R:fixed:token-count"
+    },
+    {
+      "expected": "15140512000",
+      "observed": "15140512000",
+      "passed": true,
+      "row": "solo-2chunk-fast:R:fixed:tpot"
+    },
+    {
+      "expected": 15140384000,
+      "observed": 15140384000,
+      "passed": true,
+      "row": "solo-2chunk-fast:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "observed": [
+        0,
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "solo-2chunk-slow:R:compat:sampling-steps"
+    },
+    {
+      "expected": 3,
+      "observed": 3,
+      "passed": true,
+      "row": "solo-2chunk-slow:R:compat:token-count"
+    },
+    {
+      "expected": "30280896000",
+      "observed": "30280896000",
+      "passed": true,
+      "row": "solo-2chunk-slow:R:compat:tpot"
+    },
+    {
+      "expected": [
+        1,
+        2
+      ],
+      "observed": [
+        1,
+        2
+      ],
+      "passed": true,
+      "row": "solo-2chunk-slow:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "solo-2chunk-slow:R:fixed:token-count"
+    },
+    {
+      "expected": "30281024000",
+      "observed": "30281024000",
+      "passed": true,
+      "row": "solo-2chunk-slow:R:fixed:tpot"
+    },
+    {
+      "expected": 30280768000,
+      "observed": 30280768000,
+      "passed": true,
+      "row": "solo-2chunk-slow:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "solo-3chunk-fast:R:compat:sampling-steps"
+    },
+    {
+      "expected": 4,
+      "observed": 4,
+      "passed": true,
+      "row": "solo-3chunk-fast:R:compat:token-count"
+    },
+    {
+      "expected": "45381952000/3",
+      "observed": "45381952000/3",
+      "passed": true,
+      "row": "solo-3chunk-fast:R:compat:tpot"
+    },
+    {
+      "expected": [
+        2,
+        3
+      ],
+      "observed": [
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "solo-3chunk-fast:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "solo-3chunk-fast:R:fixed:token-count"
+    },
+    {
+      "expected": "15140512000",
+      "observed": "15140512000",
+      "passed": true,
+      "row": "solo-3chunk-fast:R:fixed:tpot"
+    },
+    {
+      "expected": 30241440000,
+      "observed": 30241440000,
+      "passed": true,
+      "row": "solo-3chunk-fast:R:ttft-error"
+    },
+    {
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "observed": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "solo-3chunk-slow:R:compat:sampling-steps"
+    },
+    {
+      "expected": 4,
+      "observed": 4,
+      "passed": true,
+      "row": "solo-3chunk-slow:R:compat:token-count"
+    },
+    {
+      "expected": "90763904000/3",
+      "observed": "90763904000/3",
+      "passed": true,
+      "row": "solo-3chunk-slow:R:compat:tpot"
+    },
+    {
+      "expected": [
+        2,
+        3
+      ],
+      "observed": [
+        2,
+        3
+      ],
+      "passed": true,
+      "row": "solo-3chunk-slow:R:fixed:sampling-steps"
+    },
+    {
+      "expected": 2,
+      "observed": 2,
+      "passed": true,
+      "row": "solo-3chunk-slow:R:fixed:token-count"
+    },
+    {
+      "expected": "30281024000",
+      "observed": "30281024000",
+      "passed": true,
+      "row": "solo-3chunk-slow:R:fixed:tpot"
+    },
+    {
+      "expected": 60482880000,
+      "observed": 60482880000,
+      "passed": true,
+      "row": "solo-3chunk-slow:R:ttft-error"
+    },
+    {
+      "expected": true,
+      "observed": true,
+      "passed": true,
+      "row": "mixed-2chunk-fast:R:bandwidth-ratio-in-band"
+    },
+    {
+      "expected": true,
+      "observed": true,
+      "passed": true,
+      "row": "mixed-3chunk-fast:R:bandwidth-ratio-in-band"
+    },
+    {
+      "expected": true,
+      "observed": true,
+      "passed": true,
+      "row": "paired-2chunk-fast:R:bandwidth-ratio-in-band"
+    },
+    {
+      "expected": true,
+      "observed": true,
+      "passed": true,
+      "row": "paired-3chunk-fast:R:bandwidth-ratio-in-band"
+    },
+    {
+      "expected": true,
+      "observed": true,
+      "passed": true,
+      "row": "solo-2chunk-fast:R:bandwidth-ratio-in-band"
+    },
+    {
+      "expected": true,
+      "observed": true,
+      "passed": true,
+      "row": "solo-3chunk-fast:R:bandwidth-ratio-in-band"
+    }
+  ],
+  "guards": [
+    {
+      "cell": "mixed-2chunk-fast",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "mixed-2chunk-fast",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "mixed-2chunk-fast",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "mixed-2chunk-slow",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "mixed-2chunk-slow",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "mixed-2chunk-slow",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "mixed-3chunk-fast",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "mixed-3chunk-fast",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "mixed-3chunk-fast",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "mixed-3chunk-slow",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "mixed-3chunk-slow",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "mixed-3chunk-slow",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "paired-2chunk-fast",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "paired-2chunk-fast",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "paired-2chunk-fast",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "paired-2chunk-slow",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "paired-2chunk-slow",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "paired-2chunk-slow",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "paired-3chunk-fast",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "paired-3chunk-fast",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "paired-3chunk-fast",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "paired-3chunk-slow",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "paired-3chunk-slow",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "paired-3chunk-slow",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "solo-2chunk-fast",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "solo-2chunk-fast",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "solo-2chunk-fast",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "solo-2chunk-slow",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "solo-2chunk-slow",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "solo-2chunk-slow",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "solo-3chunk-fast",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "solo-3chunk-fast",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "solo-3chunk-fast",
+      "guard": "G7",
+      "held": true
+    },
+    {
+      "cell": "solo-3chunk-slow",
+      "guard": "G1",
+      "held": true
+    },
+    {
+      "cell": "solo-3chunk-slow",
+      "guard": "G4",
+      "held": true
+    },
+    {
+      "cell": "solo-3chunk-slow",
+      "guard": "G7",
+      "held": true
+    }
+  ],
+  "observations": {
+    "mixed-2chunk-fast": {
+      "compat": {
+        "metrics": {
+          "D": [
+            {
+              "completed_at_ps": 15114304000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15114304000
+            },
+            {
+              "completed_at_ps": 30281152000,
+              "token_index": 2,
+              "tpot_ps": "15166848000",
+              "ttft_ps": 15114304000
+            },
+            {
+              "completed_at_ps": 45448256000,
+              "token_index": 3,
+              "tpot_ps": "15166976000",
+              "ttft_ps": 15114304000
+            }
+          ],
+          "R": [
+            {
+              "completed_at_ps": 15114304000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15114304000
+            },
+            {
+              "completed_at_ps": 30281152000,
+              "token_index": 2,
+              "tpot_ps": "15166848000",
+              "ttft_ps": 15114304000
+            },
+            {
+              "completed_at_ps": 45448256000,
+              "token_index": 3,
+              "tpot_ps": "15166976000",
+              "ttft_ps": 15114304000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "D": [
+            0,
+            1,
+            2
+          ],
+          "R": [
+            0,
+            1,
+            2
+          ]
+        },
+        "step_completed_at_ps": [
+          15114304000,
+          30281152000,
+          45448256000
+        ],
+        "step_latency_ps": [
+          15114304000,
+          15166848000,
+          15167104000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "D": [
+            {
+              "completed_at_ps": 15114304000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15114304000
+            },
+            {
+              "completed_at_ps": 30281152000,
+              "token_index": 2,
+              "tpot_ps": "15166848000",
+              "ttft_ps": 15114304000
+            },
+            {
+              "completed_at_ps": 45448256000,
+              "token_index": 3,
+              "tpot_ps": "15166976000",
+              "ttft_ps": 15114304000
+            }
+          ],
+          "R": [
+            {
+              "completed_at_ps": 30281152000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30281152000
+            },
+            {
+              "completed_at_ps": 45448256000,
+              "token_index": 2,
+              "tpot_ps": "15167104000",
+              "ttft_ps": 30281152000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "D": [
+            0,
+            1,
+            2
+          ],
+          "R": [
+            1,
+            2
+          ]
+        },
+        "step_completed_at_ps": [
+          15114304000,
+          30281152000,
+          45448256000
+        ],
+        "step_latency_ps": [
+          15114304000,
+          15166848000,
+          15167104000
+        ]
+      }
+    },
+    "mixed-2chunk-slow": {
+      "compat": {
+        "metrics": {
+          "D": [
+            {
+              "completed_at_ps": 30228608000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30228608000
+            },
+            {
+              "completed_at_ps": 60562336000,
+              "token_index": 2,
+              "tpot_ps": "30333728000",
+              "ttft_ps": 30228608000
+            },
+            {
+              "completed_at_ps": 90896576000,
+              "token_index": 3,
+              "tpot_ps": "30333984000",
+              "ttft_ps": 30228608000
+            }
+          ],
+          "R": [
+            {
+              "completed_at_ps": 30228608000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30228608000
+            },
+            {
+              "completed_at_ps": 60562336000,
+              "token_index": 2,
+              "tpot_ps": "30333728000",
+              "ttft_ps": 30228608000
+            },
+            {
+              "completed_at_ps": 90896576000,
+              "token_index": 3,
+              "tpot_ps": "30333984000",
+              "ttft_ps": 30228608000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "D": [
+            0,
+            1,
+            2
+          ],
+          "R": [
+            0,
+            1,
+            2
+          ]
+        },
+        "step_completed_at_ps": [
+          30228608000,
+          60562336000,
+          90896576000
+        ],
+        "step_latency_ps": [
+          30228608000,
+          30333728000,
+          30334240000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "D": [
+            {
+              "completed_at_ps": 30228608000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30228608000
+            },
+            {
+              "completed_at_ps": 60562336000,
+              "token_index": 2,
+              "tpot_ps": "30333728000",
+              "ttft_ps": 30228608000
+            },
+            {
+              "completed_at_ps": 90896576000,
+              "token_index": 3,
+              "tpot_ps": "30333984000",
+              "ttft_ps": 30228608000
+            }
+          ],
+          "R": [
+            {
+              "completed_at_ps": 60562336000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 60562336000
+            },
+            {
+              "completed_at_ps": 90896576000,
+              "token_index": 2,
+              "tpot_ps": "30334240000",
+              "ttft_ps": 60562336000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "D": [
+            0,
+            1,
+            2
+          ],
+          "R": [
+            1,
+            2
+          ]
+        },
+        "step_completed_at_ps": [
+          30228608000,
+          60562336000,
+          90896576000
+        ],
+        "step_latency_ps": [
+          30228608000,
+          30333728000,
+          30334240000
+        ]
+      }
+    },
+    "mixed-3chunk-fast": {
+      "compat": {
+        "metrics": {
+          "D": [
+            {
+              "completed_at_ps": 15088064000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15088064000
+            },
+            {
+              "completed_at_ps": 30215584000,
+              "token_index": 2,
+              "tpot_ps": "15127520000",
+              "ttft_ps": 15088064000
+            },
+            {
+              "completed_at_ps": 45382560000,
+              "token_index": 3,
+              "tpot_ps": "15147248000",
+              "ttft_ps": 15088064000
+            },
+            {
+              "completed_at_ps": 60549792000,
+              "token_index": 4,
+              "tpot_ps": "45461728000/3",
+              "ttft_ps": 15088064000
+            }
+          ],
+          "R": [
+            {
+              "completed_at_ps": 15088064000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15088064000
+            },
+            {
+              "completed_at_ps": 30215584000,
+              "token_index": 2,
+              "tpot_ps": "15127520000",
+              "ttft_ps": 15088064000
+            },
+            {
+              "completed_at_ps": 45382560000,
+              "token_index": 3,
+              "tpot_ps": "15147248000",
+              "ttft_ps": 15088064000
+            },
+            {
+              "completed_at_ps": 60549792000,
+              "token_index": 4,
+              "tpot_ps": "45461728000/3",
+              "ttft_ps": 15088064000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "D": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "R": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "step_completed_at_ps": [
+          15088064000,
+          30215584000,
+          45382560000,
+          60549792000
+        ],
+        "step_latency_ps": [
+          15088064000,
+          15127520000,
+          15166976000,
+          15167232000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "D": [
+            {
+              "completed_at_ps": 15088064000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15088064000
+            },
+            {
+              "completed_at_ps": 30215584000,
+              "token_index": 2,
+              "tpot_ps": "15127520000",
+              "ttft_ps": 15088064000
+            },
+            {
+              "completed_at_ps": 45382560000,
+              "token_index": 3,
+              "tpot_ps": "15147248000",
+              "ttft_ps": 15088064000
+            },
+            {
+              "completed_at_ps": 60549792000,
+              "token_index": 4,
+              "tpot_ps": "45461728000/3",
+              "ttft_ps": 15088064000
+            }
+          ],
+          "R": [
+            {
+              "completed_at_ps": 45382560000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 45382560000
+            },
+            {
+              "completed_at_ps": 60549792000,
+              "token_index": 2,
+              "tpot_ps": "15167232000",
+              "ttft_ps": 45382560000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "D": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "R": [
+            2,
+            3
+          ]
+        },
+        "step_completed_at_ps": [
+          15088064000,
+          30215584000,
+          45382560000,
+          60549792000
+        ],
+        "step_latency_ps": [
+          15088064000,
+          15127520000,
+          15166976000,
+          15167232000
+        ]
+      }
+    },
+    "mixed-3chunk-slow": {
+      "compat": {
+        "metrics": {
+          "D": [
+            {
+              "completed_at_ps": 30176160000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30176160000
+            },
+            {
+              "completed_at_ps": 60431232000,
+              "token_index": 2,
+              "tpot_ps": "30255072000",
+              "ttft_ps": 30176160000
+            },
+            {
+              "completed_at_ps": 90765216000,
+              "token_index": 3,
+              "tpot_ps": "30294528000",
+              "ttft_ps": 30176160000
+            },
+            {
+              "completed_at_ps": 121099712000,
+              "token_index": 4,
+              "tpot_ps": "90923552000/3",
+              "ttft_ps": 30176160000
+            }
+          ],
+          "R": [
+            {
+              "completed_at_ps": 30176160000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30176160000
+            },
+            {
+              "completed_at_ps": 60431232000,
+              "token_index": 2,
+              "tpot_ps": "30255072000",
+              "ttft_ps": 30176160000
+            },
+            {
+              "completed_at_ps": 90765216000,
+              "token_index": 3,
+              "tpot_ps": "30294528000",
+              "ttft_ps": 30176160000
+            },
+            {
+              "completed_at_ps": 121099712000,
+              "token_index": 4,
+              "tpot_ps": "90923552000/3",
+              "ttft_ps": 30176160000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "D": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "R": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "step_completed_at_ps": [
+          30176160000,
+          60431232000,
+          90765216000,
+          121099712000
+        ],
+        "step_latency_ps": [
+          30176160000,
+          30255072000,
+          30333984000,
+          30334496000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "D": [
+            {
+              "completed_at_ps": 30176160000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30176160000
+            },
+            {
+              "completed_at_ps": 60431232000,
+              "token_index": 2,
+              "tpot_ps": "30255072000",
+              "ttft_ps": 30176160000
+            },
+            {
+              "completed_at_ps": 90765216000,
+              "token_index": 3,
+              "tpot_ps": "30294528000",
+              "ttft_ps": 30176160000
+            },
+            {
+              "completed_at_ps": 121099712000,
+              "token_index": 4,
+              "tpot_ps": "90923552000/3",
+              "ttft_ps": 30176160000
+            }
+          ],
+          "R": [
+            {
+              "completed_at_ps": 90765216000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 90765216000
+            },
+            {
+              "completed_at_ps": 121099712000,
+              "token_index": 2,
+              "tpot_ps": "30334496000",
+              "ttft_ps": 90765216000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "D": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "R": [
+            2,
+            3
+          ]
+        },
+        "step_completed_at_ps": [
+          30176160000,
+          60431232000,
+          90765216000,
+          121099712000
+        ],
+        "step_latency_ps": [
+          30176160000,
+          30255072000,
+          30333984000,
+          30334496000
+        ]
+      }
+    },
+    "paired-2chunk-fast": {
+      "compat": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 15101056000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15101056000
+            },
+            {
+              "completed_at_ps": 30241440000,
+              "token_index": 2,
+              "tpot_ps": "15140384000",
+              "ttft_ps": 15101056000
+            },
+            {
+              "completed_at_ps": 45381952000,
+              "token_index": 3,
+              "tpot_ps": "15140448000",
+              "ttft_ps": 15101056000
+            }
+          ],
+          "S": [
+            {
+              "completed_at_ps": 15101056000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15101056000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            0,
+            1,
+            2
+          ],
+          "S": [
+            0
+          ]
+        },
+        "step_completed_at_ps": [
+          15101056000,
+          30241440000,
+          45381952000
+        ],
+        "step_latency_ps": [
+          15101056000,
+          15140384000,
+          15140512000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 30241440000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30241440000
+            },
+            {
+              "completed_at_ps": 45381952000,
+              "token_index": 2,
+              "tpot_ps": "15140512000",
+              "ttft_ps": 30241440000
+            }
+          ],
+          "S": [
+            {
+              "completed_at_ps": 15101056000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15101056000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            1,
+            2
+          ],
+          "S": [
+            0
+          ]
+        },
+        "step_completed_at_ps": [
+          15101056000,
+          30241440000,
+          45381952000
+        ],
+        "step_latency_ps": [
+          15101056000,
+          15140384000,
+          15140512000
+        ]
+      }
+    },
+    "paired-2chunk-slow": {
+      "compat": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 30202112000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30202112000
+            },
+            {
+              "completed_at_ps": 60482880000,
+              "token_index": 2,
+              "tpot_ps": "30280768000",
+              "ttft_ps": 30202112000
+            },
+            {
+              "completed_at_ps": 90763904000,
+              "token_index": 3,
+              "tpot_ps": "30280896000",
+              "ttft_ps": 30202112000
+            }
+          ],
+          "S": [
+            {
+              "completed_at_ps": 30202112000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30202112000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            0,
+            1,
+            2
+          ],
+          "S": [
+            0
+          ]
+        },
+        "step_completed_at_ps": [
+          30202112000,
+          60482880000,
+          90763904000
+        ],
+        "step_latency_ps": [
+          30202112000,
+          30280768000,
+          30281024000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 60482880000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 60482880000
+            },
+            {
+              "completed_at_ps": 90763904000,
+              "token_index": 2,
+              "tpot_ps": "30281024000",
+              "ttft_ps": 60482880000
+            }
+          ],
+          "S": [
+            {
+              "completed_at_ps": 30202112000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30202112000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            1,
+            2
+          ],
+          "S": [
+            0
+          ]
+        },
+        "step_completed_at_ps": [
+          30202112000,
+          60482880000,
+          90763904000
+        ],
+        "step_latency_ps": [
+          30202112000,
+          30280768000,
+          30281024000
+        ]
+      }
+    },
+    "paired-3chunk-fast": {
+      "compat": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 15074848000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15074848000
+            },
+            {
+              "completed_at_ps": 30175904000,
+              "token_index": 2,
+              "tpot_ps": "15101056000",
+              "ttft_ps": 15074848000
+            },
+            {
+              "completed_at_ps": 45316288000,
+              "token_index": 3,
+              "tpot_ps": "15120720000",
+              "ttft_ps": 15074848000
+            },
+            {
+              "completed_at_ps": 60456800000,
+              "token_index": 4,
+              "tpot_ps": "45381952000/3",
+              "ttft_ps": 15074848000
+            }
+          ],
+          "S": [
+            {
+              "completed_at_ps": 15074848000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15074848000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "S": [
+            0
+          ]
+        },
+        "step_completed_at_ps": [
+          15074848000,
+          30175904000,
+          45316288000,
+          60456800000
+        ],
+        "step_latency_ps": [
+          15074848000,
+          15101056000,
+          15140384000,
+          15140512000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 45316288000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 45316288000
+            },
+            {
+              "completed_at_ps": 60456800000,
+              "token_index": 2,
+              "tpot_ps": "15140512000",
+              "ttft_ps": 45316288000
+            }
+          ],
+          "S": [
+            {
+              "completed_at_ps": 15074848000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15074848000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            2,
+            3
+          ],
+          "S": [
+            0
+          ]
+        },
+        "step_completed_at_ps": [
+          15074848000,
+          30175904000,
+          45316288000,
+          60456800000
+        ],
+        "step_latency_ps": [
+          15074848000,
+          15101056000,
+          15140384000,
+          15140512000
+        ]
+      }
+    },
+    "paired-3chunk-slow": {
+      "compat": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 30149696000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30149696000
+            },
+            {
+              "completed_at_ps": 60351808000,
+              "token_index": 2,
+              "tpot_ps": "30202112000",
+              "ttft_ps": 30149696000
+            },
+            {
+              "completed_at_ps": 90632576000,
+              "token_index": 3,
+              "tpot_ps": "30241440000",
+              "ttft_ps": 30149696000
+            },
+            {
+              "completed_at_ps": 120913600000,
+              "token_index": 4,
+              "tpot_ps": "90763904000/3",
+              "ttft_ps": 30149696000
+            }
+          ],
+          "S": [
+            {
+              "completed_at_ps": 30149696000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30149696000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "S": [
+            0
+          ]
+        },
+        "step_completed_at_ps": [
+          30149696000,
+          60351808000,
+          90632576000,
+          120913600000
+        ],
+        "step_latency_ps": [
+          30149696000,
+          30202112000,
+          30280768000,
+          30281024000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 90632576000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 90632576000
+            },
+            {
+              "completed_at_ps": 120913600000,
+              "token_index": 2,
+              "tpot_ps": "30281024000",
+              "ttft_ps": 90632576000
+            }
+          ],
+          "S": [
+            {
+              "completed_at_ps": 30149696000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30149696000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            2,
+            3
+          ],
+          "S": [
+            0
+          ]
+        },
+        "step_completed_at_ps": [
+          30149696000,
+          60351808000,
+          90632576000,
+          120913600000
+        ],
+        "step_latency_ps": [
+          30149696000,
+          30202112000,
+          30280768000,
+          30281024000
+        ]
+      }
+    },
+    "solo-2chunk-fast": {
+      "compat": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 15087936000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15087936000
+            },
+            {
+              "completed_at_ps": 30228320000,
+              "token_index": 2,
+              "tpot_ps": "15140384000",
+              "ttft_ps": 15087936000
+            },
+            {
+              "completed_at_ps": 45368832000,
+              "token_index": 3,
+              "tpot_ps": "15140448000",
+              "ttft_ps": 15087936000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            0,
+            1,
+            2
+          ]
+        },
+        "step_completed_at_ps": [
+          15087936000,
+          30228320000,
+          45368832000
+        ],
+        "step_latency_ps": [
+          15087936000,
+          15140384000,
+          15140512000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 30228320000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30228320000
+            },
+            {
+              "completed_at_ps": 45368832000,
+              "token_index": 2,
+              "tpot_ps": "15140512000",
+              "ttft_ps": 30228320000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            1,
+            2
+          ]
+        },
+        "step_completed_at_ps": [
+          15087936000,
+          30228320000,
+          45368832000
+        ],
+        "step_latency_ps": [
+          15087936000,
+          15140384000,
+          15140512000
+        ]
+      }
+    },
+    "solo-2chunk-slow": {
+      "compat": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 30175904000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30175904000
+            },
+            {
+              "completed_at_ps": 60456672000,
+              "token_index": 2,
+              "tpot_ps": "30280768000",
+              "ttft_ps": 30175904000
+            },
+            {
+              "completed_at_ps": 90737696000,
+              "token_index": 3,
+              "tpot_ps": "30280896000",
+              "ttft_ps": 30175904000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            0,
+            1,
+            2
+          ]
+        },
+        "step_completed_at_ps": [
+          30175904000,
+          60456672000,
+          90737696000
+        ],
+        "step_latency_ps": [
+          30175904000,
+          30280768000,
+          30281024000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 60456672000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 60456672000
+            },
+            {
+              "completed_at_ps": 90737696000,
+              "token_index": 2,
+              "tpot_ps": "30281024000",
+              "ttft_ps": 60456672000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            1,
+            2
+          ]
+        },
+        "step_completed_at_ps": [
+          30175904000,
+          60456672000,
+          90737696000
+        ],
+        "step_latency_ps": [
+          30175904000,
+          30280768000,
+          30281024000
+        ]
+      }
+    },
+    "solo-3chunk-fast": {
+      "compat": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 15061728000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 15061728000
+            },
+            {
+              "completed_at_ps": 30162784000,
+              "token_index": 2,
+              "tpot_ps": "15101056000",
+              "ttft_ps": 15061728000
+            },
+            {
+              "completed_at_ps": 45303168000,
+              "token_index": 3,
+              "tpot_ps": "15120720000",
+              "ttft_ps": 15061728000
+            },
+            {
+              "completed_at_ps": 60443680000,
+              "token_index": 4,
+              "tpot_ps": "45381952000/3",
+              "ttft_ps": 15061728000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "step_completed_at_ps": [
+          15061728000,
+          30162784000,
+          45303168000,
+          60443680000
+        ],
+        "step_latency_ps": [
+          15061728000,
+          15101056000,
+          15140384000,
+          15140512000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 45303168000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 45303168000
+            },
+            {
+              "completed_at_ps": 60443680000,
+              "token_index": 2,
+              "tpot_ps": "15140512000",
+              "ttft_ps": 45303168000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            2,
+            3
+          ]
+        },
+        "step_completed_at_ps": [
+          15061728000,
+          30162784000,
+          45303168000,
+          60443680000
+        ],
+        "step_latency_ps": [
+          15061728000,
+          15101056000,
+          15140384000,
+          15140512000
+        ]
+      }
+    },
+    "solo-3chunk-slow": {
+      "compat": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 30123488000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 30123488000
+            },
+            {
+              "completed_at_ps": 60325600000,
+              "token_index": 2,
+              "tpot_ps": "30202112000",
+              "ttft_ps": 30123488000
+            },
+            {
+              "completed_at_ps": 90606368000,
+              "token_index": 3,
+              "tpot_ps": "30241440000",
+              "ttft_ps": 30123488000
+            },
+            {
+              "completed_at_ps": 120887392000,
+              "token_index": 4,
+              "tpot_ps": "90763904000/3",
+              "ttft_ps": 30123488000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "preempted_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "step_completed_at_ps": [
+          30123488000,
+          60325600000,
+          90606368000,
+          120887392000
+        ],
+        "step_latency_ps": [
+          30123488000,
+          30202112000,
+          30280768000,
+          30281024000
+        ]
+      },
+      "fixed": {
+        "metrics": {
+          "R": [
+            {
+              "completed_at_ps": 90606368000,
+              "token_index": 1,
+              "tpot_ps": null,
+              "ttft_ps": 90606368000
+            },
+            {
+              "completed_at_ps": 120887392000,
+              "token_index": 2,
+              "tpot_ps": "30281024000",
+              "ttft_ps": 90606368000
+            }
+          ]
+        },
+        "record_keys": [
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ],
+          [
+            "finished_request_ids",
+            "num_sampled",
+            "preempted_request_ids",
+            "sampled_request_ids",
+            "scheduled",
+            "schema",
+            "step_index",
+            "virtual_time_ps"
+          ]
+        ],
+        "sampling_steps": {
+          "R": [
+            2,
+            3
+          ]
+        },
+        "step_completed_at_ps": [
+          30123488000,
+          60325600000,
+          90606368000,
+          120887392000
+        ],
+        "step_latency_ps": [
+          30123488000,
+          30202112000,
+          30280768000,
+          30281024000
+        ]
+      }
+    }
+  },
+  "schema": "simllm-sglang-worker-seam-results-v1",
+  "scored_rows": {
+    "E1_step_latency_ps": [
+      {
+        "expected": 15114304000,
+        "observed": 15114304000,
+        "passed": true,
+        "row": "mixed-2chunk-fast:step0"
+      },
+      {
+        "expected": 15166848000,
+        "observed": 15166848000,
+        "passed": true,
+        "row": "mixed-2chunk-fast:step1"
+      },
+      {
+        "expected": 15167104000,
+        "observed": 15167104000,
+        "passed": true,
+        "row": "mixed-2chunk-fast:step2"
+      },
+      {
+        "expected": 30228608000,
+        "observed": 30228608000,
+        "passed": true,
+        "row": "mixed-2chunk-slow:step0"
+      },
+      {
+        "expected": 30333728000,
+        "observed": 30333728000,
+        "passed": true,
+        "row": "mixed-2chunk-slow:step1"
+      },
+      {
+        "expected": 30334240000,
+        "observed": 30334240000,
+        "passed": true,
+        "row": "mixed-2chunk-slow:step2"
+      },
+      {
+        "expected": 15088064000,
+        "observed": 15088064000,
+        "passed": true,
+        "row": "mixed-3chunk-fast:step0"
+      },
+      {
+        "expected": 15127520000,
+        "observed": 15127520000,
+        "passed": true,
+        "row": "mixed-3chunk-fast:step1"
+      },
+      {
+        "expected": 15166976000,
+        "observed": 15166976000,
+        "passed": true,
+        "row": "mixed-3chunk-fast:step2"
+      },
+      {
+        "expected": 15167232000,
+        "observed": 15167232000,
+        "passed": true,
+        "row": "mixed-3chunk-fast:step3"
+      },
+      {
+        "expected": 30176160000,
+        "observed": 30176160000,
+        "passed": true,
+        "row": "mixed-3chunk-slow:step0"
+      },
+      {
+        "expected": 30255072000,
+        "observed": 30255072000,
+        "passed": true,
+        "row": "mixed-3chunk-slow:step1"
+      },
+      {
+        "expected": 30333984000,
+        "observed": 30333984000,
+        "passed": true,
+        "row": "mixed-3chunk-slow:step2"
+      },
+      {
+        "expected": 30334496000,
+        "observed": 30334496000,
+        "passed": true,
+        "row": "mixed-3chunk-slow:step3"
+      },
+      {
+        "expected": 15101056000,
+        "observed": 15101056000,
+        "passed": true,
+        "row": "paired-2chunk-fast:step0"
+      },
+      {
+        "expected": 15140384000,
+        "observed": 15140384000,
+        "passed": true,
+        "row": "paired-2chunk-fast:step1"
+      },
+      {
+        "expected": 15140512000,
+        "observed": 15140512000,
+        "passed": true,
+        "row": "paired-2chunk-fast:step2"
+      },
+      {
+        "expected": 30202112000,
+        "observed": 30202112000,
+        "passed": true,
+        "row": "paired-2chunk-slow:step0"
+      },
+      {
+        "expected": 30280768000,
+        "observed": 30280768000,
+        "passed": true,
+        "row": "paired-2chunk-slow:step1"
+      },
+      {
+        "expected": 30281024000,
+        "observed": 30281024000,
+        "passed": true,
+        "row": "paired-2chunk-slow:step2"
+      },
+      {
+        "expected": 15074848000,
+        "observed": 15074848000,
+        "passed": true,
+        "row": "paired-3chunk-fast:step0"
+      },
+      {
+        "expected": 15101056000,
+        "observed": 15101056000,
+        "passed": true,
+        "row": "paired-3chunk-fast:step1"
+      },
+      {
+        "expected": 15140384000,
+        "observed": 15140384000,
+        "passed": true,
+        "row": "paired-3chunk-fast:step2"
+      },
+      {
+        "expected": 15140512000,
+        "observed": 15140512000,
+        "passed": true,
+        "row": "paired-3chunk-fast:step3"
+      },
+      {
+        "expected": 30149696000,
+        "observed": 30149696000,
+        "passed": true,
+        "row": "paired-3chunk-slow:step0"
+      },
+      {
+        "expected": 30202112000,
+        "observed": 30202112000,
+        "passed": true,
+        "row": "paired-3chunk-slow:step1"
+      },
+      {
+        "expected": 30280768000,
+        "observed": 30280768000,
+        "passed": true,
+        "row": "paired-3chunk-slow:step2"
+      },
+      {
+        "expected": 30281024000,
+        "observed": 30281024000,
+        "passed": true,
+        "row": "paired-3chunk-slow:step3"
+      },
+      {
+        "expected": 15087936000,
+        "observed": 15087936000,
+        "passed": true,
+        "row": "solo-2chunk-fast:step0"
+      },
+      {
+        "expected": 15140384000,
+        "observed": 15140384000,
+        "passed": true,
+        "row": "solo-2chunk-fast:step1"
+      },
+      {
+        "expected": 15140512000,
+        "observed": 15140512000,
+        "passed": true,
+        "row": "solo-2chunk-fast:step2"
+      },
+      {
+        "expected": 30175904000,
+        "observed": 30175904000,
+        "passed": true,
+        "row": "solo-2chunk-slow:step0"
+      },
+      {
+        "expected": 30280768000,
+        "observed": 30280768000,
+        "passed": true,
+        "row": "solo-2chunk-slow:step1"
+      },
+      {
+        "expected": 30281024000,
+        "observed": 30281024000,
+        "passed": true,
+        "row": "solo-2chunk-slow:step2"
+      },
+      {
+        "expected": 15061728000,
+        "observed": 15061728000,
+        "passed": true,
+        "row": "solo-3chunk-fast:step0"
+      },
+      {
+        "expected": 15101056000,
+        "observed": 15101056000,
+        "passed": true,
+        "row": "solo-3chunk-fast:step1"
+      },
+      {
+        "expected": 15140384000,
+        "observed": 15140384000,
+        "passed": true,
+        "row": "solo-3chunk-fast:step2"
+      },
+      {
+        "expected": 15140512000,
+        "observed": 15140512000,
+        "passed": true,
+        "row": "solo-3chunk-fast:step3"
+      },
+      {
+        "expected": 30123488000,
+        "observed": 30123488000,
+        "passed": true,
+        "row": "solo-3chunk-slow:step0"
+      },
+      {
+        "expected": 30202112000,
+        "observed": 30202112000,
+        "passed": true,
+        "row": "solo-3chunk-slow:step1"
+      },
+      {
+        "expected": 30280768000,
+        "observed": 30280768000,
+        "passed": true,
+        "row": "solo-3chunk-slow:step2"
+      },
+      {
+        "expected": 30281024000,
+        "observed": 30281024000,
+        "passed": true,
+        "row": "solo-3chunk-slow:step3"
+      }
+    ],
+    "E2_request_ttft_ps": [
+      {
+        "expected": 15114304000,
+        "observed": 15114304000,
+        "passed": true,
+        "row": "mixed-2chunk-fast:R:compat"
+      },
+      {
+        "expected": 30281152000,
+        "observed": 30281152000,
+        "passed": true,
+        "row": "mixed-2chunk-fast:R:fixed"
+      },
+      {
+        "expected": 30228608000,
+        "observed": 30228608000,
+        "passed": true,
+        "row": "mixed-2chunk-slow:R:compat"
+      },
+      {
+        "expected": 60562336000,
+        "observed": 60562336000,
+        "passed": true,
+        "row": "mixed-2chunk-slow:R:fixed"
+      },
+      {
+        "expected": 15088064000,
+        "observed": 15088064000,
+        "passed": true,
+        "row": "mixed-3chunk-fast:R:compat"
+      },
+      {
+        "expected": 45382560000,
+        "observed": 45382560000,
+        "passed": true,
+        "row": "mixed-3chunk-fast:R:fixed"
+      },
+      {
+        "expected": 30176160000,
+        "observed": 30176160000,
+        "passed": true,
+        "row": "mixed-3chunk-slow:R:compat"
+      },
+      {
+        "expected": 90765216000,
+        "observed": 90765216000,
+        "passed": true,
+        "row": "mixed-3chunk-slow:R:fixed"
+      },
+      {
+        "expected": 15101056000,
+        "observed": 15101056000,
+        "passed": true,
+        "row": "paired-2chunk-fast:R:compat"
+      },
+      {
+        "expected": 30241440000,
+        "observed": 30241440000,
+        "passed": true,
+        "row": "paired-2chunk-fast:R:fixed"
+      },
+      {
+        "expected": 30202112000,
+        "observed": 30202112000,
+        "passed": true,
+        "row": "paired-2chunk-slow:R:compat"
+      },
+      {
+        "expected": 60482880000,
+        "observed": 60482880000,
+        "passed": true,
+        "row": "paired-2chunk-slow:R:fixed"
+      },
+      {
+        "expected": 15074848000,
+        "observed": 15074848000,
+        "passed": true,
+        "row": "paired-3chunk-fast:R:compat"
+      },
+      {
+        "expected": 45316288000,
+        "observed": 45316288000,
+        "passed": true,
+        "row": "paired-3chunk-fast:R:fixed"
+      },
+      {
+        "expected": 30149696000,
+        "observed": 30149696000,
+        "passed": true,
+        "row": "paired-3chunk-slow:R:compat"
+      },
+      {
+        "expected": 90632576000,
+        "observed": 90632576000,
+        "passed": true,
+        "row": "paired-3chunk-slow:R:fixed"
+      },
+      {
+        "expected": 15087936000,
+        "observed": 15087936000,
+        "passed": true,
+        "row": "solo-2chunk-fast:R:compat"
+      },
+      {
+        "expected": 30228320000,
+        "observed": 30228320000,
+        "passed": true,
+        "row": "solo-2chunk-fast:R:fixed"
+      },
+      {
+        "expected": 30175904000,
+        "observed": 30175904000,
+        "passed": true,
+        "row": "solo-2chunk-slow:R:compat"
+      },
+      {
+        "expected": 60456672000,
+        "observed": 60456672000,
+        "passed": true,
+        "row": "solo-2chunk-slow:R:fixed"
+      },
+      {
+        "expected": 15061728000,
+        "observed": 15061728000,
+        "passed": true,
+        "row": "solo-3chunk-fast:R:compat"
+      },
+      {
+        "expected": 45303168000,
+        "observed": 45303168000,
+        "passed": true,
+        "row": "solo-3chunk-fast:R:fixed"
+      },
+      {
+        "expected": 30123488000,
+        "observed": 30123488000,
+        "passed": true,
+        "row": "solo-3chunk-slow:R:compat"
+      },
+      {
+        "expected": 90606368000,
+        "observed": 90606368000,
+        "passed": true,
+        "row": "solo-3chunk-slow:R:fixed"
+      }
+    ],
+    "E3_control_ttft_ps": [
+      {
+        "expected": 15114304000,
+        "observed": 15114304000,
+        "passed": true,
+        "row": "mixed-2chunk-fast:D:compat"
+      },
+      {
+        "expected": 15114304000,
+        "observed": 15114304000,
+        "passed": true,
+        "row": "mixed-2chunk-fast:D:fixed"
+      },
+      {
+        "expected": 30228608000,
+        "observed": 30228608000,
+        "passed": true,
+        "row": "mixed-2chunk-slow:D:compat"
+      },
+      {
+        "expected": 30228608000,
+        "observed": 30228608000,
+        "passed": true,
+        "row": "mixed-2chunk-slow:D:fixed"
+      },
+      {
+        "expected": 15088064000,
+        "observed": 15088064000,
+        "passed": true,
+        "row": "mixed-3chunk-fast:D:compat"
+      },
+      {
+        "expected": 15088064000,
+        "observed": 15088064000,
+        "passed": true,
+        "row": "mixed-3chunk-fast:D:fixed"
+      },
+      {
+        "expected": 30176160000,
+        "observed": 30176160000,
+        "passed": true,
+        "row": "mixed-3chunk-slow:D:compat"
+      },
+      {
+        "expected": 30176160000,
+        "observed": 30176160000,
+        "passed": true,
+        "row": "mixed-3chunk-slow:D:fixed"
+      },
+      {
+        "expected": 15101056000,
+        "observed": 15101056000,
+        "passed": true,
+        "row": "paired-2chunk-fast:S:compat"
+      },
+      {
+        "expected": 15101056000,
+        "observed": 15101056000,
+        "passed": true,
+        "row": "paired-2chunk-fast:S:fixed"
+      },
+      {
+        "expected": 30202112000,
+        "observed": 30202112000,
+        "passed": true,
+        "row": "paired-2chunk-slow:S:compat"
+      },
+      {
+        "expected": 30202112000,
+        "observed": 30202112000,
+        "passed": true,
+        "row": "paired-2chunk-slow:S:fixed"
+      },
+      {
+        "expected": 15074848000,
+        "observed": 15074848000,
+        "passed": true,
+        "row": "paired-3chunk-fast:S:compat"
+      },
+      {
+        "expected": 15074848000,
+        "observed": 15074848000,
+        "passed": true,
+        "row": "paired-3chunk-fast:S:fixed"
+      },
+      {
+        "expected": 30149696000,
+        "observed": 30149696000,
+        "passed": true,
+        "row": "paired-3chunk-slow:S:compat"
+      },
+      {
+        "expected": 30149696000,
+        "observed": 30149696000,
+        "passed": true,
+        "row": "paired-3chunk-slow:S:fixed"
+      }
+    ]
+  },
+  "summary": {
+    "entailed_conformance": {
+      "passed": 106,
+      "total": 106
+    },
+    "guards_violated": [],
+    "scored": {
+      "E1_step_latency_ps": {
+        "passed": 42,
+        "total": 42
+      },
+      "E2_request_ttft_ps": {
+        "passed": 24,
+        "total": 24
+      },
+      "E3_control_ttft_ps": {
+        "passed": 16,
+        "total": 16
+      }
+    },
+    "scored_total": {
+      "passed": 82,
+      "total": 82
+    }
+  }
+}

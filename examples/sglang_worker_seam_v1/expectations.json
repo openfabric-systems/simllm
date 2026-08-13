@@ -1,0 +1,1216 @@
+{
+  "cells": {
+    "mixed-2chunk-fast": {
+      "bandwidth_bytes_per_s": 2000000000000,
+      "chunks": 2,
+      "composition": "mixed",
+      "control_request": {
+        "request_id": "D",
+        "sampling_steps": [
+          0,
+          1,
+          2
+        ],
+        "ttft_ps": 15114304000
+      },
+      "quantization_margin_ps": [
+        1536,
+        17408,
+        23552
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2
+        ],
+        "compat_token_count": 3,
+        "compat_tpot_ps": "15166976000",
+        "compat_ttft_ps": 15114304000,
+        "fixed_sampling_steps": [
+          1,
+          2
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "15167104000",
+        "fixed_ttft_ps": 30281152000,
+        "ttft_error_ps": 15166848000
+      },
+      "roofline_compute_ps": [
+        8485722914,
+        5767395016,
+        30648827
+      ],
+      "roofline_memory_ps": [
+        15114305536,
+        15166865408,
+        15167127552
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            600,
+            600
+          ],
+          [
+            "D",
+            1,
+            201
+          ]
+        ],
+        [
+          [
+            "R",
+            400,
+            1000
+          ],
+          [
+            "D",
+            1,
+            202
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ],
+          [
+            "D",
+            1,
+            203
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15114305536,
+        15166865408,
+        15167127552
+      ],
+      "step_completed_at_ps": [
+        15114304000,
+        30281152000,
+        45448256000
+      ],
+      "step_latency_ps": [
+        15114304000,
+        15166848000,
+        15167104000
+      ]
+    },
+    "mixed-2chunk-slow": {
+      "bandwidth_bytes_per_s": 1000000000000,
+      "chunks": 2,
+      "composition": "mixed",
+      "control_request": {
+        "request_id": "D",
+        "sampling_steps": [
+          0,
+          1,
+          2
+        ],
+        "ttft_ps": 30228608000
+      },
+      "quantization_margin_ps": [
+        3072,
+        2816,
+        15104
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2
+        ],
+        "compat_token_count": 3,
+        "compat_tpot_ps": "30333984000",
+        "compat_ttft_ps": 30228608000,
+        "fixed_sampling_steps": [
+          1,
+          2
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "30334240000",
+        "fixed_ttft_ps": 60562336000,
+        "ttft_error_ps": 30333728000
+      },
+      "roofline_compute_ps": [
+        8485722914,
+        5767395016,
+        30648827
+      ],
+      "roofline_memory_ps": [
+        30228611072,
+        30333730816,
+        30334255104
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            600,
+            600
+          ],
+          [
+            "D",
+            1,
+            201
+          ]
+        ],
+        [
+          [
+            "R",
+            400,
+            1000
+          ],
+          [
+            "D",
+            1,
+            202
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ],
+          [
+            "D",
+            1,
+            203
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15114305536,
+        15166865408,
+        15167127552
+      ],
+      "step_completed_at_ps": [
+        30228608000,
+        60562336000,
+        90896576000
+      ],
+      "step_latency_ps": [
+        30228608000,
+        30333728000,
+        30334240000
+      ]
+    },
+    "mixed-3chunk-fast": {
+      "bandwidth_bytes_per_s": 2000000000000,
+      "chunks": 3,
+      "composition": "mixed",
+      "control_request": {
+        "request_id": "D",
+        "sampling_steps": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "ttft_ps": 15088064000
+      },
+      "quantization_margin_ps": [
+        27136,
+        23808,
+        20480,
+        26624
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "compat_token_count": 4,
+        "compat_tpot_ps": "45461728000/3",
+        "compat_ttft_ps": 15088064000,
+        "fixed_sampling_steps": [
+          2,
+          3
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "15167232000",
+        "fixed_ttft_ps": 45382560000,
+        "ttft_error_ps": 30294496000
+      },
+      "roofline_compute_ps": [
+        5641565372,
+        4290266005,
+        4337452449,
+        30649352
+      ],
+      "roofline_memory_ps": [
+        15088091136,
+        15127543808,
+        15166996480,
+        15167258624
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            400,
+            400
+          ],
+          [
+            "D",
+            1,
+            201
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            700
+          ],
+          [
+            "D",
+            1,
+            202
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            1000
+          ],
+          [
+            "D",
+            1,
+            203
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ],
+          [
+            "D",
+            1,
+            204
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15088091136,
+        15127543808,
+        15166996480,
+        15167258624
+      ],
+      "step_completed_at_ps": [
+        15088064000,
+        30215584000,
+        45382560000,
+        60549792000
+      ],
+      "step_latency_ps": [
+        15088064000,
+        15127520000,
+        15166976000,
+        15167232000
+      ]
+    },
+    "mixed-3chunk-slow": {
+      "bandwidth_bytes_per_s": 1000000000000,
+      "chunks": 3,
+      "composition": "mixed",
+      "control_request": {
+        "request_id": "D",
+        "sampling_steps": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "ttft_ps": 30176160000
+      },
+      "quantization_margin_ps": [
+        22272,
+        15616,
+        8960,
+        21248
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "compat_token_count": 4,
+        "compat_tpot_ps": "90923552000/3",
+        "compat_ttft_ps": 30176160000,
+        "fixed_sampling_steps": [
+          2,
+          3
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "30334496000",
+        "fixed_ttft_ps": 90765216000,
+        "ttft_error_ps": 60589056000
+      },
+      "roofline_compute_ps": [
+        5641565372,
+        4290266005,
+        4337452449,
+        30649352
+      ],
+      "roofline_memory_ps": [
+        30176182272,
+        30255087616,
+        30333992960,
+        30334517248
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            400,
+            400
+          ],
+          [
+            "D",
+            1,
+            201
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            700
+          ],
+          [
+            "D",
+            1,
+            202
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            1000
+          ],
+          [
+            "D",
+            1,
+            203
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ],
+          [
+            "D",
+            1,
+            204
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15088091136,
+        15127543808,
+        15166996480,
+        15167258624
+      ],
+      "step_completed_at_ps": [
+        30176160000,
+        60431232000,
+        90765216000,
+        121099712000
+      ],
+      "step_latency_ps": [
+        30176160000,
+        30255072000,
+        30333984000,
+        30334496000
+      ]
+    },
+    "paired-2chunk-fast": {
+      "bandwidth_bytes_per_s": 2000000000000,
+      "chunks": 2,
+      "composition": "paired",
+      "control_request": {
+        "request_id": "S",
+        "sampling_steps": [
+          0
+        ],
+        "ttft_ps": 15101056000
+      },
+      "quantization_margin_ps": [
+        11264,
+        4864,
+        7936
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2
+        ],
+        "compat_token_count": 3,
+        "compat_tpot_ps": "15140448000",
+        "compat_ttft_ps": 15101056000,
+        "fixed_sampling_steps": [
+          1,
+          2
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "15140512000",
+        "fixed_ttft_ps": 30241440000,
+        "ttft_error_ps": 15140384000
+      },
+      "roofline_compute_ps": [
+        9870145224,
+        5752280317,
+        15533604
+      ],
+      "roofline_memory_ps": [
+        15101067264,
+        15140388864,
+        15140519936
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            600,
+            600
+          ],
+          [
+            "S",
+            100,
+            100
+          ]
+        ],
+        [
+          [
+            "R",
+            400,
+            1000
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15101067264,
+        15140388864,
+        15140519936
+      ],
+      "step_completed_at_ps": [
+        15101056000,
+        30241440000,
+        45381952000
+      ],
+      "step_latency_ps": [
+        15101056000,
+        15140384000,
+        15140512000
+      ]
+    },
+    "paired-2chunk-slow": {
+      "bandwidth_bytes_per_s": 1000000000000,
+      "chunks": 2,
+      "composition": "paired",
+      "control_request": {
+        "request_id": "S",
+        "sampling_steps": [
+          0
+        ],
+        "ttft_ps": 30202112000
+      },
+      "quantization_margin_ps": [
+        22528,
+        9728,
+        15872
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2
+        ],
+        "compat_token_count": 3,
+        "compat_tpot_ps": "30280896000",
+        "compat_ttft_ps": 30202112000,
+        "fixed_sampling_steps": [
+          1,
+          2
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "30281024000",
+        "fixed_ttft_ps": 60482880000,
+        "ttft_error_ps": 30280768000
+      },
+      "roofline_compute_ps": [
+        9870145224,
+        5752280317,
+        15533604
+      ],
+      "roofline_memory_ps": [
+        30202134528,
+        30280777728,
+        30281039872
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            600,
+            600
+          ],
+          [
+            "S",
+            100,
+            100
+          ]
+        ],
+        [
+          [
+            "R",
+            400,
+            1000
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15101067264,
+        15140388864,
+        15140519936
+      ],
+      "step_completed_at_ps": [
+        30202112000,
+        60482880000,
+        90763904000
+      ],
+      "step_latency_ps": [
+        30202112000,
+        30280768000,
+        30281024000
+      ]
+    },
+    "paired-3chunk-fast": {
+      "bandwidth_bytes_per_s": 2000000000000,
+      "chunks": 3,
+      "composition": "paired",
+      "control_request": {
+        "request_id": "S",
+        "sampling_steps": [
+          0
+        ],
+        "ttft_ps": 15074848000
+      },
+      "quantization_margin_ps": [
+        4864,
+        11264,
+        4864,
+        7936
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "compat_token_count": 4,
+        "compat_tpot_ps": "45381952000/3",
+        "compat_ttft_ps": 15074848000,
+        "fixed_sampling_steps": [
+          2,
+          3
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "15140512000",
+        "fixed_ttft_ps": 45316288000,
+        "ttft_error_ps": 30241440000
+      },
+      "roofline_compute_ps": [
+        7025987682,
+        4275151306,
+        4322337226,
+        15533604
+      ],
+      "roofline_memory_ps": [
+        15074852864,
+        15101067264,
+        15140388864,
+        15140519936
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            400,
+            400
+          ],
+          [
+            "S",
+            100,
+            100
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            700
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            1000
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15074852864,
+        15101067264,
+        15140388864,
+        15140519936
+      ],
+      "step_completed_at_ps": [
+        15074848000,
+        30175904000,
+        45316288000,
+        60456800000
+      ],
+      "step_latency_ps": [
+        15074848000,
+        15101056000,
+        15140384000,
+        15140512000
+      ]
+    },
+    "paired-3chunk-slow": {
+      "bandwidth_bytes_per_s": 1000000000000,
+      "chunks": 3,
+      "composition": "paired",
+      "control_request": {
+        "request_id": "S",
+        "sampling_steps": [
+          0
+        ],
+        "ttft_ps": 30149696000
+      },
+      "quantization_margin_ps": [
+        9728,
+        22528,
+        9728,
+        15872
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "compat_token_count": 4,
+        "compat_tpot_ps": "90763904000/3",
+        "compat_ttft_ps": 30149696000,
+        "fixed_sampling_steps": [
+          2,
+          3
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "30281024000",
+        "fixed_ttft_ps": 90632576000,
+        "ttft_error_ps": 60482880000
+      },
+      "roofline_compute_ps": [
+        7025987682,
+        4275151306,
+        4322337226,
+        15533604
+      ],
+      "roofline_memory_ps": [
+        30149705728,
+        30202134528,
+        30280777728,
+        30281039872
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            400,
+            400
+          ],
+          [
+            "S",
+            100,
+            100
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            700
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            1000
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15074852864,
+        15101067264,
+        15140388864,
+        15140519936
+      ],
+      "step_completed_at_ps": [
+        30149696000,
+        60351808000,
+        90632576000,
+        120913600000
+      ],
+      "step_latency_ps": [
+        30149696000,
+        30202112000,
+        30280768000,
+        30281024000
+      ]
+    },
+    "solo-2chunk-fast": {
+      "bandwidth_bytes_per_s": 2000000000000,
+      "chunks": 2,
+      "composition": "solo",
+      "control_request": null,
+      "quantization_margin_ps": [
+        24064,
+        4864,
+        7936
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2
+        ],
+        "compat_token_count": 3,
+        "compat_tpot_ps": "15140448000",
+        "compat_ttft_ps": 15087936000,
+        "fixed_sampling_steps": [
+          1,
+          2
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "15140512000",
+        "fixed_ttft_ps": 30228320000,
+        "ttft_error_ps": 15140384000
+      },
+      "roofline_compute_ps": [
+        8470608740,
+        5752280317,
+        15533604
+      ],
+      "roofline_memory_ps": [
+        15087960064,
+        15140388864,
+        15140519936
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            600,
+            600
+          ]
+        ],
+        [
+          [
+            "R",
+            400,
+            1000
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15087960064,
+        15140388864,
+        15140519936
+      ],
+      "step_completed_at_ps": [
+        15087936000,
+        30228320000,
+        45368832000
+      ],
+      "step_latency_ps": [
+        15087936000,
+        15140384000,
+        15140512000
+      ]
+    },
+    "solo-2chunk-slow": {
+      "bandwidth_bytes_per_s": 1000000000000,
+      "chunks": 2,
+      "composition": "solo",
+      "control_request": null,
+      "quantization_margin_ps": [
+        16128,
+        9728,
+        15872
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2
+        ],
+        "compat_token_count": 3,
+        "compat_tpot_ps": "30280896000",
+        "compat_ttft_ps": 30175904000,
+        "fixed_sampling_steps": [
+          1,
+          2
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "30281024000",
+        "fixed_ttft_ps": 60456672000,
+        "ttft_error_ps": 30280768000
+      },
+      "roofline_compute_ps": [
+        8470608740,
+        5752280317,
+        15533604
+      ],
+      "roofline_memory_ps": [
+        30175920128,
+        30280777728,
+        30281039872
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            600,
+            600
+          ]
+        ],
+        [
+          [
+            "R",
+            400,
+            1000
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15087960064,
+        15140388864,
+        15140519936
+      ],
+      "step_completed_at_ps": [
+        30175904000,
+        60456672000,
+        90737696000
+      ],
+      "step_latency_ps": [
+        30175904000,
+        30280768000,
+        30281024000
+      ]
+    },
+    "solo-3chunk-fast": {
+      "bandwidth_bytes_per_s": 2000000000000,
+      "chunks": 3,
+      "composition": "solo",
+      "control_request": null,
+      "quantization_margin_ps": [
+        17664,
+        11264,
+        4864,
+        7936
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "compat_token_count": 4,
+        "compat_tpot_ps": "45381952000/3",
+        "compat_ttft_ps": 15061728000,
+        "fixed_sampling_steps": [
+          2,
+          3
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "15140512000",
+        "fixed_ttft_ps": 45303168000,
+        "ttft_error_ps": 30241440000
+      },
+      "roofline_compute_ps": [
+        5626451197,
+        4275151306,
+        4322337226,
+        15533604
+      ],
+      "roofline_memory_ps": [
+        15061745664,
+        15101067264,
+        15140388864,
+        15140519936
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            400,
+            400
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            700
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            1000
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15061745664,
+        15101067264,
+        15140388864,
+        15140519936
+      ],
+      "step_completed_at_ps": [
+        15061728000,
+        30162784000,
+        45303168000,
+        60443680000
+      ],
+      "step_latency_ps": [
+        15061728000,
+        15101056000,
+        15140384000,
+        15140512000
+      ]
+    },
+    "solo-3chunk-slow": {
+      "bandwidth_bytes_per_s": 1000000000000,
+      "chunks": 3,
+      "composition": "solo",
+      "control_request": null,
+      "quantization_margin_ps": [
+        3328,
+        22528,
+        9728,
+        15872
+      ],
+      "request_R": {
+        "compat_sampling_steps": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "compat_token_count": 4,
+        "compat_tpot_ps": "90763904000/3",
+        "compat_ttft_ps": 30123488000,
+        "fixed_sampling_steps": [
+          2,
+          3
+        ],
+        "fixed_token_count": 2,
+        "fixed_tpot_ps": "30281024000",
+        "fixed_ttft_ps": 90606368000,
+        "ttft_error_ps": 60482880000
+      },
+      "roofline_compute_ps": [
+        5626451197,
+        4275151306,
+        4322337226,
+        15533604
+      ],
+      "roofline_memory_ps": [
+        30123491328,
+        30202134528,
+        30280777728,
+        30281039872
+      ],
+      "rows": [
+        [
+          [
+            "R",
+            400,
+            400
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            700
+          ]
+        ],
+        [
+          [
+            "R",
+            300,
+            1000
+          ]
+        ],
+        [
+          [
+            "R",
+            1,
+            1001
+          ]
+        ]
+      ],
+      "step_bytes": [
+        15061745664,
+        15101067264,
+        15140388864,
+        15140519936
+      ],
+      "step_completed_at_ps": [
+        30123488000,
+        60325600000,
+        90606368000,
+        120887392000
+      ],
+      "step_latency_ps": [
+        30123488000,
+        30202112000,
+        30280768000,
+        30281024000
+      ]
+    }
+  },
+  "derived_geometry": {
+    "attention_flops_per_pair": 524288,
+    "attention_params": 1342177280,
+    "base_bytes": 15009316864,
+    "dense_flops_per_new_token": 13958643712,
+    "head_flops_per_sampled_token": 1050673152,
+    "kv_bytes_per_token": 131072,
+    "lm_head_bytes": 1050673152,
+    "mlp_params": 5637144576,
+    "weight_bytes": 13958643712
+  },
+  "fixture": {
+    "bandwidths_bytes_per_s": {
+      "fast": 2000000000000,
+      "slow": 1000000000000
+    },
+    "chunk_sizes": {
+      "2": [
+        600,
+        400
+      ],
+      "3": [
+        400,
+        300,
+        300
+      ]
+    },
+    "decode_companion_context": 200,
+    "efficiency": "1/2",
+    "host_model": "ideal",
+    "paired_prompt_tokens": 100,
+    "peak_flops": 2000000000000000,
+    "prompt_tokens": 1000,
+    "provider": "roofline",
+    "quantum_ps": 32000,
+    "tp_ranks": [
+      0
+    ]
+  },
+  "model_dims": {
+    "dtype_bytes": 2,
+    "head_size": 128,
+    "hidden_size": 4096,
+    "intermediate_size": 14336,
+    "num_heads": 32,
+    "num_kv_heads": 8,
+    "num_layers": 32,
+    "vocab_size": 128256
+  },
+  "schema": "simllm-sglang-worker-seam-expectations-v1",
+  "scored_rows": {
+    "E1_step_latency_ps": 42,
+    "E2_request_ttft_ps": 24,
+    "E3_control_ttft_ps": 16,
+    "total": 82
+  }
+}
