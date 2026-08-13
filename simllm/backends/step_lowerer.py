@@ -41,6 +41,7 @@ from simllm.traffic import (
     TP_ALLREDUCE_SITES,
     RoutedMoeSupply,
     lower_step_observations,
+    plan_execution_graph_collectives,
     step_moe_alltoalls,
     step_tp_allreduces,
 )
@@ -54,6 +55,11 @@ class SerialStepLowererConfig:
     backend mapping step may translate them to simulator endpoint ranks.
     ``routed_moe_supply`` optionally replaces the uniform MoE compatibility
     payload with captured ordered-pair sizes and the selected placement epoch.
+
+    ``attach_collective_plan`` defaults to True, which makes the immutable
+    traffic-owned ``CollectivePlan`` the physical authority of every lowered
+    graph. Setting it False is the explicit compatibility bypass described on
+    :class:`SerialStepLowerer`.
     """
 
     dims: ModelDims
@@ -63,6 +69,7 @@ class SerialStepLowererConfig:
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel)
     routed_moe_supply: RoutedMoeSupply | None = None
+    attach_collective_plan: bool = True
 
     def __post_init__(self) -> None:
         tp_ranks = tuple(self.tp_ranks)
@@ -84,6 +91,8 @@ class SerialStepLowererConfig:
             self.routed_moe_supply, RoutedMoeSupply
         ):
             raise TypeError("routed_moe_supply must be RoutedMoeSupply or None")
+        if not isinstance(self.attach_collective_plan, bool):
+            raise TypeError("attach_collective_plan must be a bool")
         object.__setattr__(self, "tp_ranks", tp_ranks)
         object.__setattr__(self, "ep_ranks", ep_ranks)
 
@@ -125,10 +134,24 @@ class SerialStepLowerer(ExecutionLowerer):
     observation tuple is empty.  With no observations, a non-drain record is
     rendered as one compute operation per participant and layer, followed by
     the same TP and EP collective sequence as the diagnostic GOAL path.
+
+    Every lowered graph carries the traffic-owned ``CollectivePlan`` by
+    default, so the runtime schedules declared rounds, tags, chunks and
+    directed extents instead of reconstructing them from semantic work.
+    ``SerialStepLowererConfig.attach_collective_plan=False`` is the explicit
+    bypass and preserves the accepted absent-plan v1 wire form, its serial
+    timing and its completion order exactly.
     """
 
     def __init__(self, config: SerialStepLowererConfig) -> None:
         self.config = config
+
+    def _finish(self, graph: ExecutionGraph) -> ExecutionGraph:
+        """Attach the traffic-owned plan unless the bypass was selected."""
+
+        if not self.config.attach_collective_plan:
+            return graph
+        return plan_execution_graph_collectives(graph)
 
     @staticmethod
     def _to_goal_layer_calc_ns(
@@ -216,10 +239,12 @@ class SerialStepLowerer(ExecutionLowerer):
     ) -> ExecutionGraph:
         execution_id = _execution_id(record)
         if observations is not None:
-            return execution_graph_from_observations(
-                record,
-                observations,
-                execution_id=execution_id,
+            return self._finish(
+                execution_graph_from_observations(
+                    record,
+                    observations,
+                    execution_id=execution_id,
+                )
             )
 
         if record.total_new_tokens <= 0:
@@ -232,7 +257,7 @@ class SerialStepLowerer(ExecutionLowerer):
             return graph
 
         timing = self.timing(record)
-        return self._lower_serial(record, execution_id, timing)
+        return self._finish(self._lower_serial(record, execution_id, timing))
 
     def lower_with_timing(
         self,
@@ -250,7 +275,10 @@ class SerialStepLowerer(ExecutionLowerer):
             )
             validate_execution_graph(graph)
             return graph, timing
-        return self._lower_serial(record, execution_id, timing), timing
+        return (
+            self._finish(self._lower_serial(record, execution_id, timing)),
+            timing,
+        )
 
     def _lower_serial(
         self,
@@ -384,6 +412,9 @@ class ObservedStepLowerer(ExecutionLowerer):
     collectives while preserving the adapter's queues and dependency edges.
     Omitting observations delegates to :class:`SerialStepLowerer` so accepted
     serial graph and GOAL artifacts are unchanged.
+
+    Both paths carry the traffic-owned ``CollectivePlan`` by default and honour
+    ``SerialStepLowererConfig.attach_collective_plan`` as the explicit bypass.
     """
 
     def __init__(self, config: SerialStepLowererConfig) -> None:
@@ -405,4 +436,5 @@ class ObservedStepLowerer(ExecutionLowerer):
             observations,
             ep_ranks=cfg.ep_ranks,
             routed_supply=cfg.routed_moe_supply,
+            attach_collective_plan=cfg.attach_collective_plan,
         )

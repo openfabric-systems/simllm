@@ -608,3 +608,137 @@ def test_serial_lowerer_config_rejects_bad_rank_sets():
         SerialStepLowererConfig(SMALL_DIMS, (0, 0))
     with pytest.raises(ValueError, match="non-negative"):
         SerialStepLowererConfig(SMALL_DIMS, (-1,))
+
+
+def _runtime_record(graph: ExecutionGraph, rate_bps: int):
+    """Every timestamp and completion order one graph produces."""
+
+    from simllm.core import CoarseDeviceProfile, CoarseDeviceRuntime
+
+    runtime = CoarseDeviceRuntime(CoarseDeviceProfile(rnic_rate_bps=rate_bps))
+    events: list = []
+    result = runtime.execute(graph, on_event=events.append)
+    wqes = tuple(
+        (
+            record.operation_id,
+            record.source_rank,
+            record.destination_rank,
+            record.payload_bytes,
+            record.goal_tag,
+            record.channel_id,
+            record.submitted_at_ps,
+            record.eligible_at_ps,
+            record.started_at_ps,
+            record.finished_at_ps,
+            record.completed_at_ps,
+        )
+        for record in runtime.bypass_ledger.records
+    )
+    return (
+        result.completed_at_ps,
+        result.quiesced_at_ps,
+        tuple(events),
+        wqes,
+    )
+
+
+@pytest.mark.parametrize("record_factory", [prefill_record, decode_record])
+@pytest.mark.parametrize("tp_ranks", [(0, 8), (0, 8, 16, 24)])
+def test_collective_plan_is_the_lowering_default(record_factory, tp_ranks):
+    """TRAF-28: the shipped lowerer attaches one plan per collective."""
+
+    config = SerialStepLowererConfig(SMALL_DIMS, tp_ranks, provider=FlopProvider())
+    graph = SerialStepLowerer(config).lower(record_factory())
+
+    collectives = [
+        operation
+        for operation in graph.operations
+        if isinstance(operation.work, CollectiveWork)
+    ]
+    assert collectives
+    assert len(graph.collective_plans) == len(collectives)
+    assert {plan.operation_id for plan in graph.collective_plans} == {
+        operation.operation_id for operation in collectives
+    }
+
+
+@pytest.mark.parametrize("record_factory", [prefill_record, decode_record])
+@pytest.mark.parametrize("tp_ranks", [(0, 8), (0, 8, 16, 24)])
+@pytest.mark.parametrize("rate_bps", [200_000_000_000, 400_000_000_000])
+def test_absent_plan_bypass_preserves_the_accepted_wire_and_timing(
+    record_factory,
+    tp_ranks,
+    rate_bps,
+):
+    """TRAF-28 compatibility clause: the bypass changes nothing observable."""
+
+    record = record_factory()
+    default = SerialStepLowerer(
+        SerialStepLowererConfig(SMALL_DIMS, tp_ranks, provider=FlopProvider())
+    ).lower(record)
+    bypass = SerialStepLowerer(
+        SerialStepLowererConfig(
+            SMALL_DIMS,
+            tp_ranks,
+            provider=FlopProvider(),
+            attach_collective_plan=False,
+        )
+    ).lower(record)
+
+    # The v1 wire form of the bypass omits the field entirely, so an accepted
+    # absent-plan graph keeps its exact byte count and digest.
+    payload = execution_graph_to_json(bypass)
+    assert "collective_plans" not in payload
+    assert bypass.collective_plans == ()
+    assert replace(default, collective_plans=()) == bypass
+    assert _round_trip(bypass) == bypass
+
+    # Same wire bytes, same timestamps, same completion order.
+    assert _runtime_record(default, rate_bps) == _runtime_record(bypass, rate_bps)
+
+
+def test_observed_lowering_default_and_bypass_agree_with_serial():
+    """The observation path carries the same default and the same bypass."""
+
+    from simllm.backends import ObservedStepLowerer
+
+    record = prefill_record()
+    tp_ranks = (0, 8, 16, 24)
+    serial_bypass = SerialStepLowerer(
+        SerialStepLowererConfig(
+            SMALL_DIMS,
+            tp_ranks,
+            provider=FlopProvider(),
+            attach_collective_plan=False,
+        )
+    ).lower(record)
+    observations = ExecutionObservations(
+        operations=serial_bypass.operations,
+        completion_operation_ids=serial_bypass.completion_operation_ids,
+    )
+    default = ObservedStepLowerer(
+        SerialStepLowererConfig(SMALL_DIMS, tp_ranks, provider=FlopProvider())
+    ).lower(record, observations)
+    bypass = ObservedStepLowerer(
+        SerialStepLowererConfig(
+            SMALL_DIMS,
+            tp_ranks,
+            provider=FlopProvider(),
+            attach_collective_plan=False,
+        )
+    ).lower(record, observations)
+
+    assert bypass.collective_plans == ()
+    assert len(default.collective_plans) == sum(
+        isinstance(operation.work, CollectiveWork) for operation in default.operations
+    )
+    assert replace(default, collective_plans=()) == bypass
+    assert _runtime_record(default, 400_000_000_000) == _runtime_record(
+        bypass,
+        400_000_000_000,
+    )
+
+
+def test_serial_lowerer_config_rejects_a_non_bool_plan_selector():
+    with pytest.raises(TypeError, match="attach_collective_plan"):
+        SerialStepLowererConfig(SMALL_DIMS, (0, 8), attach_collective_plan=1)
