@@ -11,6 +11,24 @@ findings are treated as prior information only, and every quantitative figure
 it reported predates the landed TRAF-25 token-ownership correction, so no
 number is carried over.
 
+## Amendment record
+
+The control arm's edge scheme was amended once, after the first freeze and
+before any arm was executed. The originally frozen scheme gated microbatch
+one's pre-dispatch on microbatch zero's combine of the same layer. That is
+unconstructible: both shared logical queues contribute implicit FIFO edges in
+submission order, and microbatch one's pre-dispatch is submitted before
+microbatch zero's combine, so the graph validator correctly rejects the result
+as a cycle. The replacement below imposes the only total order those FIFO
+chains admit and was confirmed constructible on one step.
+
+At the moment of the amendment no latency, TTFT, TPOT, overlap, structure or
+terminal value had been observed in any arm. The two facts observed were that
+the graph is legal and that the control arm shows zero cross-microbatch
+temporal overlap where the observed arm shows 8,256 overlapping visit pairs on
+that step. Both are unscored construction facts. Every scored band below is
+unchanged from the first freeze.
+
 ## What the void run got wrong, and what this study changes
 
 The void run compared two arms: the serial compatibility lowering and the
@@ -46,20 +64,36 @@ policy.
    emitted it.
 
 The `control` arm is a concurrency control, not a claim about any vLLM
-configuration. Its added edges are, for every layer `L` in 0 through 23 and
-every EP rank `r`:
+configuration.
 
-- microbatch one's `layer-L:rank-r:pre-dispatch` waits on the whole of
-  microbatch zero's `layer-L:ep-combine`;
-- for `L` below 23, microbatch zero's `layer-(L+1):rank-r:pre-dispatch` waits
-  on the whole of microbatch one's `layer-L:ep-combine`.
+Both shared logical queues, the per-rank compute queue and the single EP
+communication queue, already contribute implicit whole-operation FIFO edges in
+submission order. The control arm therefore cannot invent an arbitrary order:
+the only total order it can impose is the one those two FIFO chains interleave
+into. Per layer that order is pre-dispatch zero, pre-dispatch one, dispatch
+zero, experts zero, dispatch one, experts one, combine zero, combine one, and
+then the next layer. Program order and both FIFO chains are subsequences of
+it.
 
-That is 47 boundaries times eight ranks, so exactly 376 added edges on each
-DBO step and exactly zero on each single-batch step. The two microbatches
-become one strictly alternating chain, so no compute of one microbatch can
-run while any communication of the other is in service. Within one microbatch
-the audited source order already alternates compute and communication, so the
-control arm realizes no compute-communication concurrency at all.
+The edges that are not already implied, for every layer `L` in 0 through 23
+and every EP rank `r`, are:
+
+- `ubatch-0:layer-L:ep-dispatch` waits on the whole of
+  `ubatch-1:layer-L:rank-r:pre-dispatch`;
+- `ubatch-1:layer-L:ep-dispatch` waits on the whole of
+  `ubatch-0:layer-L:rank-r:experts`;
+- `ubatch-0:layer-L:ep-combine` waits on the whole of
+  `ubatch-1:layer-L:rank-r:experts`;
+- for `L` below 23, `ubatch-0:layer-(L+1):rank-r:pre-dispatch` waits on the
+  whole of `ubatch-1:layer-L:ep-combine`.
+
+That is 24 edges per layer for the first three rules and 8 per layer boundary
+for the fourth, so exactly `24 * 24 + 23 * 8 = 760` added edges on each DBO
+step and exactly zero on each single-batch step. Under that total order no
+operation of one microbatch runs while any operation of the other is in
+service, and because the audited source order already alternates compute and
+communication inside one microbatch, the control arm realizes no
+compute-communication concurrency at all.
 
 ## The decomposition this makes possible
 
@@ -259,8 +293,8 @@ Control-arm construction:
    position, rank, logical queue, work object, correlation, `not_before_ps`,
    priority and completion endpoints, and the control `depends_on` set is a
    superset of the observed one.
-2. `control_edge_counts`: exactly 376 added edges on each of the 23 DBO steps,
-   exactly 0 on each of the 9 single-batch steps, so 8,648 in total.
+2. `control_edge_counts`: exactly 760 added edges on each of the 23 DBO steps,
+   exactly 0 on each of the 9 single-batch steps, so 17,480 in total.
 3. `control_has_no_cross_microbatch_concurrency`: in the control arm, no queue
    visit belonging to microbatch zero overlaps in realized time with any queue
    visit belonging to microbatch one, on any step.

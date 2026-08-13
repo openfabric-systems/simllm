@@ -39,8 +39,8 @@ NONEMPTY_STEPS = 32
 R0_DECODE_STEP_INDICES = tuple(range(1, 24))
 #: step 0 is the 54-token prefill; steps 24 through 31 are one-request decodes
 SINGLE_BATCH_STEP_INDICES = (0, *range(24, 32))
-#: 47 microbatch boundaries times eight EP ranks
-CONTROL_EDGES_PER_DBO_STEP = 376
+#: 24 per-layer merge edges times 24 layers plus 8 per layer boundary
+CONTROL_EDGES_PER_DBO_STEP = 760
 CONTROL_EDGES_TOTAL = CONTROL_EDGES_PER_DBO_STEP * len(R0_DECODE_STEP_INDICES)
 
 NVLINK_RATE_BPS = 3_600_000_000_000
@@ -197,9 +197,11 @@ def check_expectation_registry(args: argparse.Namespace) -> None:
         == NONEMPTY_STEPS
     )
 
-    # control edges: 47 microbatch boundaries times eight ranks
-    assert CONTROL_EDGES_PER_DBO_STEP == (2 * NUM_LAYERS - 1) * DP_SIZE
-    assert CONTROL_EDGES_TOTAL == 8_648
+    # control edges: three merge rules per layer plus one per layer boundary
+    assert CONTROL_EDGES_PER_DBO_STEP == (
+        3 * DP_SIZE * NUM_LAYERS + DP_SIZE * (NUM_LAYERS - 1)
+    )
+    assert CONTROL_EDGES_TOTAL == 17_480
 
     # the ceilings are arithmetic over the frozen routed table, not fitted
     for placement, rate in (
