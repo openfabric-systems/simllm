@@ -1,5 +1,40 @@
 {
-  "behavioral_score_interpretable": true,
+  "behavioral_score_interpretable": false,
+  "audit_finding": {
+    "disposition": "void_with_findings",
+    "finding": "represented GOAL compute service fell below max(provider service, launch count times per-launch cost)",
+    "reviewed_after_result_commit": "f5e2e745f5a09c0e34a1891a86389ec7baf67c6c",
+    "rows": [
+      {
+        "compute_estimate_ps": 356094640,
+        "compute_service_ps": 356088000,
+        "launch_count": 440,
+        "profile": "turing-cuda-graph",
+        "shortfall_ps": 6640
+      },
+      {
+        "compute_estimate_ps": 458876502,
+        "compute_service_ps": 458856000,
+        "launch_count": 567,
+        "profile": "turing-cuda-graph",
+        "shortfall_ps": 20502
+      },
+      {
+        "compute_estimate_ps": 1040272200,
+        "compute_service_ps": 1040256000,
+        "launch_count": 440,
+        "profile": "turing-eager-host",
+        "shortfall_ps": 16200
+      },
+      {
+        "compute_estimate_ps": 1340532585,
+        "compute_service_ps": 1340520000,
+        "launch_count": 567,
+        "profile": "turing-eager-host",
+        "shortfall_ps": 12585
+      }
+    ]
+  },
   "calibration_sha256": "2a4ab022227601d8aca36627e760490abca86cdc237a5b3b5149303ded99cd12",
   "conditional_turing_budget": {
     "acceptance": [
@@ -93,7 +128,9 @@
   ],
   "exact_ideal_offpath": "pending separate five-cell mission rerun",
   "expectation_commit": "f23a01f47ca7abcfacdb703d4d97958a608349ec",
-  "fatal_guard_failures": [],
+  "fatal_guard_failures": [
+    "LIVE-G3_step_and_metric_conservation"
+  ],
   "fatal_guards": [
     {
       "detail": {
@@ -267,7 +304,8 @@
         }
       },
       "id": "LIVE-G3_step_and_metric_conservation",
-      "passed": true
+      "passed": false,
+      "post_run_finding": "calibrated compute service undercut its frozen max(C, N*g) physical floor"
     },
     {
       "detail": {
@@ -638,7 +676,7 @@
       "ttft_ps": 1613713008
     }
   ],
-  "run_status": "accepted",
+  "run_status": "void",
   "schema": "simllm-host-step-cost-v1-results-v1",
   "scored_relations": [
     {
