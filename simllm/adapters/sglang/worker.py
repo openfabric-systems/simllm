@@ -41,6 +41,17 @@ Environment variable            Meaning (default)
 ``SIMLLM_SGLANG_HOST_INIT_PS``  per-step host initiation delay in ps (``0``).
 ``SIMLLM_SGLANG_TOKEN_ID``      token id fabricated for every generated token
                                 (``vocab_size // 2``).
+``SIMLLM_SGLANG_SAMPLE_IDENTITY``
+                                ``0`` selects the compatibility path in which
+                                ``StepRecord.num_sampled`` and
+                                ``sampled_request_ids`` stay absent, so every
+                                scheduled row is read as having produced a
+                                token; any other value keeps the exact
+                                sampled identity (``1``).
+``SIMLLM_SGLANG_REPLAY_RUN``    joined pre-play replay run (JSON) whose
+                                predefined token IDs are served instead of the
+                                fabricated one; unset keeps the fabricated
+                                path exactly (unset).
 ``SIMLLM_SGLANG_STEP_RECORDS``  JSONL path for the step records; each record
                                 is appended the moment its step completes
                                 (unset).
@@ -92,6 +103,7 @@ from simllm.adapters.sglang.communicator import (
     ShapeTensor,
     SimGroupCoordinator,
 )
+from simllm.adapters.sglang.replay import SglReplayTokenSource, sample_adapter_tokens
 from simllm.compute import (
     GPU_ENVELOPES,
     PS_PER_SECOND,
@@ -117,6 +129,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "PINNED_SGLANG_COMMIT",
     "BatchRow",
+    "SglReplayTokenSource",
     "SglStepTranslator",
     "SimTpModelWorker",
     "SimWorkerConfig",
@@ -125,6 +138,7 @@ __all__ = [
     "latest_worker",
     "model_dims_from_sglang",
     "observe_schedule_batch",
+    "reset_configuration",
     "sglang_is_available",
 ]
 
@@ -219,6 +233,17 @@ def _env_float(env: Mapping[str, str], name: str, default: float | None) -> floa
         raise ValueError(f"{name} must be a float, got {value!r}") from exc
 
 
+#: spellings of an explicitly disabled flag; anything else keeps the default
+_FALSE_SPELLINGS = frozenset({"0", "false", "no", "off"})
+
+
+def _env_flag(env: Mapping[str, str], name: str, default: bool) -> bool:
+    value = env.get(name)
+    if value is None or not value.strip():
+        return default
+    return value.strip().lower() not in _FALSE_SPELLINGS
+
+
 @dataclass(frozen=True)
 class SimWorkerConfig:
     """Worker settings that have no SGLang CLI flag.
@@ -234,11 +259,18 @@ class SimWorkerConfig:
     efficiency: float = 0.7
     host_initiation_ps: int = 0
     token_id: int | None = None
+    #: emit the exact sampled count and identity on every step record; False
+    #: is the explicit compatibility path whose records keep both fields
+    #: absent, so every consumer reads the whole scheduled batch as sampled
+    sample_identity: bool = True
     step_records_path: str | None = None
+    replay_run_path: str | None = None
     communicator_tp_size: int | None = None
     communicator_events_path: str | None = None
 
     def __post_init__(self) -> None:
+        if not isinstance(self.sample_identity, bool):
+            raise TypeError("sample_identity must be a bool")
         if self.mode not in ("virtual", "paced"):
             raise ValueError(
                 f"SIMLLM_SGLANG_MODE must be virtual or paced, got {self.mode!r}"
@@ -268,7 +300,9 @@ class SimWorkerConfig:
             efficiency=_env_float(env, "SIMLLM_SGLANG_EFFICIENCY", 0.7) or 0.7,
             host_initiation_ps=_env_int(env, "SIMLLM_SGLANG_HOST_INIT_PS", 0) or 0,
             token_id=_env_int(env, "SIMLLM_SGLANG_TOKEN_ID", None),
+            sample_identity=_env_flag(env, "SIMLLM_SGLANG_SAMPLE_IDENTITY", True),
             step_records_path=_env_str(env, "SIMLLM_SGLANG_STEP_RECORDS", None),
+            replay_run_path=_env_str(env, "SIMLLM_SGLANG_REPLAY_RUN", None),
             communicator_tp_size=_env_int(
                 env, "SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE", None
             ),
@@ -337,6 +371,24 @@ def configure(
     return _HOOKS
 
 
+def reset_configuration() -> SimWorkerHooks:
+    """Clear every process-wide worker injection hook.
+
+    This is the explicit boundary between independent in-process scheduler
+    runs, with the same semantics as the vLLM adapter's reset. Without it a
+    driver that runs several cells in one process leaks the first cell's sink,
+    provider, device or replay configuration into the next one, which would
+    silently attribute one cell's fabric and timing to another.
+    """
+
+    _HOOKS.step_sink = None
+    _HOOKS.compute_provider = None
+    _HOOKS.gpu = None
+    _HOOKS.host_model = None
+    _HOOKS.config = None
+    return _HOOKS
+
+
 def latest_worker() -> SimTpModelWorker | None:
     """The most recently constructed worker in this process, if any."""
     return _LATEST[-1] if _LATEST else None
@@ -356,6 +408,13 @@ class BatchRow:
     #: cumulative radix-cache hit of this request (``Req.cached_tokens``);
     #: the translator reports it once, on the request's first record
     cached_tokens: int = 0
+    #: whether SGLang consumes this row's generated token (see
+    #: :func:`observe_schedule_batch`); a mid-prompt chunked-prefill row does
+    #: not, and its fabricated token is discarded by the scheduler
+    produces_token: bool = True
+    #: tokens this request has already generated (``len(Req.output_ids)``),
+    #: which is the output index of the token this row would produce
+    num_output_tokens: int = 0
 
 
 def _context_length(batch: Any, index: int, req: Any) -> int:
@@ -379,6 +438,46 @@ def _context_length(batch: Any, index: int, req: Any) -> int:
     return len(origin) + len(output)
 
 
+def _output_index(req: Any) -> int:
+    """Tokens this request has already generated (``len(Req.output_ids)``)."""
+
+    output = getattr(req, "output_ids", ()) or ()
+    try:
+        return len(output)
+    except TypeError:
+        return 0
+
+
+def _extend_row_produces_token(req: Any) -> bool:
+    """Whether SGLang consumes this extend or mixed row's generated token.
+
+    Transcribed from ``process_batch_result_prefill`` at the pinned commit:
+    the row is skipped when ``(req.finished() and req.inflight_middle_chunks
+    <= 0) or req.is_retracted``, and the token is appended only inside
+    ``if req.inflight_middle_chunks <= 0``. The three fields are read here, at
+    forward time, which is the same non-overlap scheduler iteration in which
+    the result path reads them (``recv_requests`` cannot run between
+    ``run_batch`` and ``process_batch_result``).
+    """
+
+    chunks = getattr(req, "inflight_middle_chunks", 0)
+    try:
+        if int(chunks) > 0:
+            return False
+    except (TypeError, ValueError):
+        return True
+    if bool(getattr(req, "is_retracted", False)):
+        return False
+    finished = getattr(req, "finished", None)
+    if callable(finished):
+        try:
+            return not bool(finished())
+        except Exception as exc:  # noqa: BLE001 - a stub may not model finishing
+            logger.debug("SGLang Req.finished() failed: %s", exc)
+            return True
+    return True
+
+
 def observe_schedule_batch(batch: Any) -> list[BatchRow]:
     """Read one ``ScheduleBatch`` into plain rows, in ``reqs`` order.
 
@@ -397,6 +496,9 @@ def observe_schedule_batch(batch: Any) -> list[BatchRow]:
       read; every row computes exactly one token.
     - ``Req.cached_tokens`` is final by forward time (``prepare_for_extend``
       accounts the admission-time radix hit before ``run_batch``).
+    - Every row of a decode batch consumes its generated token; an extend or
+      mixed row consumes one only under :func:`_extend_row_produces_token`,
+      so a mid-prompt chunk is not a token (SGL-12).
     """
     reqs = list(getattr(batch, "reqs", ()) or ())
     if not reqs:
@@ -416,6 +518,8 @@ def observe_schedule_batch(batch: Any) -> list[BatchRow]:
                     is_decode=True,
                     num_new_tokens=1,
                     context_length=_context_length(batch, index, req),
+                    produces_token=True,
+                    num_output_tokens=_output_index(req),
                 )
             )
         return rows
@@ -441,6 +545,8 @@ def observe_schedule_batch(batch: Any) -> list[BatchRow]:
                 cached_tokens=(
                     0 if is_decode_row else int(getattr(req, "cached_tokens", 0) or 0)
                 ),
+                produces_token=_extend_row_produces_token(req),
+                num_output_tokens=_output_index(req),
             )
         )
     return rows
@@ -454,10 +560,23 @@ class SglStepTranslator:
     record), matching the vLLM adapter's convention. The id set grows with
     the total number of requests seen; there is no finish signal at this
     seam to prune on (see the module docstring).
+
+    ``sample_identity`` (the default) stamps the exact sampled count and the
+    identity of the rows that produced a token, so a mid-prompt chunked
+    prefill is not counted as a token and a request's TTFT lands on the step
+    that actually generated its first token. Both fields are emitted
+    together: a partial count with no identity list is refused as ambiguous
+    by :func:`simllm.core.sampled_request_ids` whenever the sampling rows are
+    not exactly the scheduled decode set, which a MIXED batch or two
+    concurrent prefills can violate. ``sample_identity=False`` is the
+    explicit compatibility path: both fields stay absent and every consumer
+    reads the whole scheduled batch as sampled, byte for byte as before
+    SGL-12.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, sample_identity: bool = True) -> None:
         self._cached_reported: set[str] = set()
+        self.sample_identity = bool(sample_identity)
 
     def __len__(self) -> int:
         return len(self._cached_reported)
@@ -466,7 +585,10 @@ class SglStepTranslator:
         self, *, step_index: int, virtual_time_ps: int, rows: list[BatchRow]
     ) -> StepRecord:
         scheduled: list[ScheduledRequest] = []
+        sampled: list[str] = []
         for row in rows:
+            if row.produces_token:
+                sampled.append(row.rid)
             report_cache = (
                 not row.is_decode
                 and row.cached_tokens > 0
@@ -486,10 +608,18 @@ class SglStepTranslator:
                     context_length=row.context_length,
                 )
             )
+        if not self.sample_identity:
+            return StepRecord(
+                step_index=step_index,
+                virtual_time_ps=virtual_time_ps,
+                scheduled=scheduled,
+            )
         return StepRecord(
             step_index=step_index,
             virtual_time_ps=virtual_time_ps,
             scheduled=scheduled,
+            num_sampled=len(sampled),
+            sampled_request_ids=sampled,
         )
 
 
@@ -1189,7 +1319,9 @@ class SimTpModelWorker(_TpWorkerBase):
             else None
         )
         self.clock = VirtualClock()
-        self.translator = SglStepTranslator()
+        self.translator = SglStepTranslator(
+            sample_identity=self.sim_config.sample_identity
+        )
         self.step_index = 0
         self.simulated_tp_group: SimGroupCoordinator | None = None
         self.coordinator_observer: GroupCoordinatorObserver | None = None
@@ -1206,6 +1338,14 @@ class SimTpModelWorker(_TpWorkerBase):
             ),
         )
         self.token_id = self._resolve_token_id()
+        self.replay = (
+            SglReplayTokenSource.from_path(
+                self.sim_config.replay_run_path,
+                max_context_len=int(self.model_config.context_len),
+            )
+            if self.sim_config.replay_run_path
+            else None
+        )
         self._configure_simulated_communicator()
         _LATEST[:] = [self]
         logger.info(
@@ -1335,12 +1475,23 @@ class SimTpModelWorker(_TpWorkerBase):
         )
         self.step_index += 1
         self._model_runner.observe_tp_step()
-        self._settle(record, num_sampled=len(rows))
+        num_sampled = (
+            len(rows) if record.num_sampled is None else record.num_sampled
+        )
+        self._settle(record, num_sampled=num_sampled)
 
         device = getattr(batch, "device", None) or "cpu"
-        next_token_ids = torch.full(
-            (len(rows),), self.token_id, dtype=torch.long, device=device
-        )
+        if self.replay is None:
+            # The fabricated identity off path keeps its accepted construction.
+            next_token_ids = torch.full(
+                (len(rows),), self.token_id, dtype=torch.long, device=device
+            )
+        else:
+            next_token_ids = torch.tensor(
+                sample_adapter_tokens(self.replay, batch, rows, self.token_id),
+                dtype=torch.long,
+                device=device,
+            )
         return GenerationBatchResult(
             logits_output=LogitsProcessorOutput(next_token_logits=None),
             next_token_ids=next_token_ids,

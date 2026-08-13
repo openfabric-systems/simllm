@@ -25,6 +25,12 @@ from simllm.core import CollectiveWork, StepRecordStream, VirtualClock
 FROZEN_FLAG_IDENTITY_FIXTURE = (
     Path(__file__).parent / "fixtures" / "sglang" / "communicator_flag_identity.jsonl"
 )
+FROZEN_SAMPLED_IDENTITY_FIXTURE = (
+    Path(__file__).parent
+    / "fixtures"
+    / "sglang"
+    / "communicator_flag_identity_sampled.jsonl"
+)
 
 
 def make_group(
@@ -266,7 +272,7 @@ def _stream_frozen_steps(path: Path, *, env: dict[str, str]):
                 chunk_bytes=1_024,
             )
         )
-    translator = SglStepTranslator()
+    translator = SglStepTranslator(sample_identity=config.sample_identity)
     stream = StepRecordStream(path)
     rows_by_step = (
         [
@@ -300,20 +306,44 @@ def _stream_frozen_steps(path: Path, *, env: dict[str, str]):
 
 
 def test_flag_states_preserve_frozen_step_record_bytes(tmp_path):
+    """The communicator flag never changes the step-record bytes.
+
+    The property is checked in both sampled-identity states. SGL-12 added the
+    exact sampled count and identity to every record, so the accepted
+    pre-SGL-12 fixture is now the compatibility baseline
+    (``SIMLLM_SGLANG_SAMPLE_IDENTITY=0``) and the current default has its own
+    frozen fixture. Neither fixture may move when the communicator is bound.
+    """
+
+    compatibility = {"SIMLLM_SGLANG_SAMPLE_IDENTITY": "0"}
     expected = FROZEN_FLAG_IDENTITY_FIXTURE.read_bytes()
+    expected_sampled = FROZEN_SAMPLED_IDENTITY_FIXTURE.read_bytes()
 
     baseline_bytes, baseline_events = _stream_frozen_steps(
         tmp_path / "flag_off.jsonl",
-        env={},
+        env=compatibility,
     )
     enabled_bytes, enabled_events = _stream_frozen_steps(
         tmp_path / "flag_on.jsonl",
+        env={**compatibility, "SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE": "4"},
+    )
+    sampled_baseline_bytes, _ = _stream_frozen_steps(
+        tmp_path / "sampled_flag_off.jsonl",
+        env={},
+    )
+    sampled_enabled_bytes, sampled_events = _stream_frozen_steps(
+        tmp_path / "sampled_flag_on.jsonl",
         env={"SIMLLM_SGLANG_COMMUNICATOR_TP_SIZE": "4"},
     )
 
     assert b"\r\n" not in expected
+    assert b"\r\n" not in expected_sampled
     assert baseline_bytes == expected
     assert enabled_bytes == expected
     assert baseline_bytes == enabled_bytes
+    assert sampled_baseline_bytes == expected_sampled
+    assert sampled_enabled_bytes == expected_sampled
+    assert sampled_baseline_bytes != baseline_bytes
     assert baseline_events == ()
     assert [event.timestamp_ps for event in enabled_events] == [123_000, 124_000]
+    assert [event.timestamp_ps for event in sampled_events] == [123_000, 124_000]
