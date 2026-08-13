@@ -152,11 +152,12 @@ Two supporting observations from the same data:
 | additive, eager 567 | 2.892181 ms | 2.891690 to 2.911105 ms |
 | overlapped, both profiles | 1.650672 ms | not observed in any of 93 decode steps |
 
-The published additive projections land 491,524 ps below the minimum measured
-decode step of their cell, a 0.026 percent difference, because the projection
-used the accepted step-1 fabric service while the enabled schedule reaches
-r00's decode tokens in a different order. The overlapped projection is
-2.11e8 ps outside the nearest measured value.
+Both published additive projections land 491,524 ps **above** the minimum
+measured decode step of their cell, a 0.026 percent difference and the same
+absolute offset in both cells, because the projection used the accepted step-1
+fabric service while the enabled schedule reaches r00's decode tokens in a
+different order. The overlapped projection is 256,579,476 ps below the nearest
+measured value of any enabled cell.
 
 ## Fatal guards
 
@@ -465,8 +466,9 @@ change reconciles.
 | `python3 scripts/task_progress.py --check` | generated block and module-status open counts current |
 
 Both retained run directories live outside Git under the branch-local run
-root and occupy 85 MB each, 170 MB in total, with the largest single file well
-under a megabyte. No deletion command was used at any point.
+root and occupy 85 MB each, 169 MB in total. The largest single file in either
+is the 2,520,119-byte oracle capture, and the largest per-cell artifact is a
+632,923-byte `cell.json`. No deletion command was used at any point.
 
 ## Reproduction
 
