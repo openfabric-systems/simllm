@@ -1956,11 +1956,12 @@ class CoarseDeviceRuntime:
     ) -> _ScheduledOperation:
         """Serve one byte-carrying KV operation from the rank's HBM queue.
 
-        The byte count is the KV authority's accounting, never the graph's own
-        field re-read here, so a lifecycle stream that the ledger refused can
-        never reach a resource. Service is the exact serialization of those
-        bytes at the profile's HBM rate, which is the floor no memory system
-        beats; the visit is attributed to ``kv_ps``.
+        The byte count is the graph's declared ``KvCacheWork.byte_count``,
+        validated by the KV lifecycle ledger and projected into
+        ``KvServiceDemand.byte_count`` before resource scheduling. A lifecycle
+        stream that the ledger refuses cannot reach a resource. Service is the
+        exact serialization of those bytes at the profile's HBM rate, which is
+        the floor no memory system beats; the visit is attributed to ``kv_ps``.
         """
 
         assert isinstance(operation.work, KvCacheWork)

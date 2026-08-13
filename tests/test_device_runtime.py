@@ -29,6 +29,7 @@ from simllm.core import (
     CoarseDeviceRuntime,
     CollectiveWork,
     CompletionEvent,
+    CompletionReducer,
     ComputeWork,
     ControlMode,
     ControlWork,
@@ -46,11 +47,15 @@ from simllm.core import (
     OperationCorrelation,
     QueueVisit,
     RequestBookkeeper,
+    RequestPhase,
     ResourceKind,
     ResourceRef,
     RnicAuthorityMode,
+    ScheduledRequest,
     SemanticWqeSubmission,
+    StepRecord,
     StrictPriorityArbitrationPolicy,
+    VirtualClock,
     WeightedRoundRobinArbitrationPolicy,
     WqeLifecycleProjection,
     collective_goal_tags,
@@ -1297,6 +1302,56 @@ def test_byte_carrying_kv_write_serializes_on_the_rank_hbm_queue():
     assert (row.live_blocks, row.write_bytes) == (2, 32 * _KV_BYTES_PER_TOKEN)
     assert kv_report.demand("r-write").byte_count == 32 * _KV_BYTES_PER_TOKEN
     assert kv_report.demand("r-allocate").byte_count == 0
+
+
+def test_byte_carrying_kv_write_survives_both_projection_gates():
+    profile = replace(_profile(), hbm_rate_bps=_KV_RATE_BPS)
+    runtime = CoarseDeviceRuntime(profile, kv_pools=[_kv_pool()])
+    graph = ExecutionGraph(
+        "kv-projection",
+        0,
+        0,
+        _kv_prefill_operations("r", ("b0", "b1"), 32),
+        completion_operation_ids=("r-write",),
+    )
+    write_operation = graph.operations[-1]
+    assert isinstance(write_operation.work, KvCacheWork)
+    declared_bytes = write_operation.work.byte_count
+
+    result = runtime.execute(graph, bookkeeping=RequestBookkeeper())
+    report = runtime.last_report
+    assert report is not None
+    CompletionReducer(VirtualClock(0)).reduce(
+        StepRecord(
+            step_index=0,
+            virtual_time_ps=0,
+            scheduled=[ScheduledRequest("r", RequestPhase.PREFILL, 32)],
+            num_sampled=1,
+            sampled_request_ids=["r"],
+        ),
+        graph,
+        result,
+        report,
+    )
+
+    hbm_visit = next(
+        visit
+        for visit in report.visits
+        if visit.operation_id == "r-write"
+        and visit.resource.kind is ResourceKind.HBM_QUEUE
+    )
+    logical_completion = next(
+        event
+        for event in result.events
+        if event.operation_id == "r-write"
+        and event.phase is EventPhase.COMPLETED
+        and event.subject_object_id is None
+    )
+    assert (
+        hbm_visit.service_bytes
+        == logical_completion.completed_bytes
+        == declared_bytes
+    )
 
 
 def test_two_kv_writes_on_one_rank_share_the_hbm_queue_in_series():
