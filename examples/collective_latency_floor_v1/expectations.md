@@ -321,8 +321,12 @@ TRAF-11's registered clause is:
 
 C1 owns the quantitative held-out bar, C2 owns local live reachability and the
 participant sweep, C4 owns TTFT/TPOT, and the fatal identity guard owns the
-all-remote path. TRAF-11 closes only if all four mappings hold in a non-void
-run. Any failed registered clause takes only TRAF-31 or TRAF-32.
+all-remote path. The public collective capture and vendor capacity ceiling do
+not demonstrate the quoted same-generation point-to-point payload capture.
+Even if every registered relation and guard holds in a non-void run, TRAF-11
+may be retired only while registering TRAF-31 for that exact undemonstrated
+source clause. A failed scored relation or fatal guard instead leaves TRAF-11
+open; it does not manufacture another residual task. TRAF-32 remains unused.
 
 COMP-11's registered clause is:
 
@@ -336,10 +340,10 @@ COMP-11's registered clause is:
 C1 and C2 own calibrated latency/bandwidth. C3 plus the one-charge fatal guard
 own reconciliation with the TRAF-10 split. This study does not demonstrate the
 quoted peer topology, per-link routing, receiving-HBM, reduction-lane or proxy
-clauses. COMP-11 therefore cannot close on the floor evidence alone. If the
-other clauses are not already demonstrated by independent accepted evidence at
-closure time, only COMP-31 may receive that exact residual. Adjacent ideas do
-not receive IDs.
+clauses. Even if the registered floor evidence is non-void, COMP-11 may be
+retired only while registering COMP-31 for those exact undemonstrated clauses.
+A failed scored relation or fatal guard instead leaves COMP-11 open. Adjacent
+ideas do not receive IDs.
 
 ## Registered command and pre-freeze dry run
 
@@ -354,4 +358,3 @@ Before this expectations commit, the exact command is run with
 the frozen source shapes, integer arithmetic, physical-bound ordering and
 native executable inputs, imports no SimLLM target module, invokes no native
 tool and creates no output directory or artifact.
-
