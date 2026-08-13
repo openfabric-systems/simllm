@@ -4,8 +4,9 @@ TRAF-13 is closed. A real eight-rank vLLM v0.26.0 replay emitted
 `ExecutionObservations` for all 32 nonempty scheduler steps, and a third,
 structure-matched control arm separated the dual batch overlap (DBO) effect
 from the TRAF-9 layer-ordering and terminal-frontier differences instead of
-assuming they were absent. All 19 fatal unscored guards passed. Four of six
-scored instances passed.
+assuming they were absent. All 19 registered fatal unscored guards passed, and
+the reclassified B3 fatal-unscored structural invariant held. Three of five
+genuine-risk instances passed.
 
 The headline is a measurement, not an assumption:
 
@@ -81,8 +82,9 @@ The classes answer different questions and are never added together.
 |---|---:|---|
 | Physical placement configurations | 2 | Single-node NVLink and one rank per node at 400 Gbit/s |
 | Raw runtime cells | 6 | Serial, control and observed on both placements, 32 steps each |
-| Behavioral instances | 6 | 4 passed, 2 failed (both are the same refuted TTFT direction) |
-| Fatal unscored guards | 19 | All passed |
+| Genuine-risk behavioral instances | 5 | 3 passed, 2 failed (both are the same refuted TTFT direction) |
+| Registered fatal unscored guards | 19 | All passed |
+| Reclassified fatal-unscored structural invariants | 1 | B3 held at exactly 1.000000 |
 | Live framework ranks | 8 | All exited successfully |
 | Live nonempty scheduler steps | 32 | 32 emitted observations |
 | Control edges added | 17,480 | 760 on each of 23 DBO steps, 0 on each of 9 single-batch steps |
@@ -161,11 +163,14 @@ critical-path communication confirms this directly: the control arm minus the
 serial arm is 903.913 ps single-node and 7,123.478 ps cross-node, which equals
 the structural residual exactly.
 
-## Scored relations
+## Behavioral relations and the reclassified invariant
 
 Raw per-step latencies for all six cells were collected first, then the
-decomposition, then the scored relations, then the producer inventory, the
-fixture and the fatal guards. No fatal guard pins a scored value.
+decomposition, then the six instances in the frozen scored registry, then the
+producer inventory, the fixture and the 19 registered fatal guards. The
+post-run evidence review below removes B3 from the genuine-risk denominator
+without changing the frozen runner or result artifact. No registered fatal
+guard pins a remaining scored value.
 
 ### B1. The overlap effect sits inside its arithmetic band, 2 of 2 passed
 
@@ -185,17 +190,22 @@ The cross-node to single-node ratio is 8.998441, against the exact link-rate
 ratio of 9.0 and a frozen band of 7.5 to 10.5. The 0.017 percent shortfall is
 the same per-extent rounding described above.
 
-### B3. The terminal frontier does not scale with the link rate, 1 of 1 passed
+### B3. Terminal rate invariance, fatal-unscored structural invariant
 
 The mean terminal term is 17,974,330.217 ps on both placements, so the ratio is
 exactly 1.000000 against a frozen band of 0.95 to 1.05. The terminal frontier
 is per-rank logits compute plus a zero-duration visibility endpoint and moves
-no bytes.
+no bytes. This keeps B3's measured evidence and frozen number, but it no longer
+receives a score. The fatal invariant is exact equality of the two terminal
+values; the old band is retained only as frozen chronology.
 
-B2 and B3 are the discriminator this task existed to produce. The same pair of
-placements moves one term by 8.998 and the other by exactly 1.000, so the
-overlap effect cannot be a compute artifact and the terminal frontier cannot be
-a fabric cost.
+B2 discriminates: the same pair of placements moves overlap by 8.998, so the
+effect cannot be a compute artifact. B3 is a structural invariant carrying no
+evidential weight for this frozen producer. Its only post-collective operations
+are per-rank logits `ComputeWork` and zero-duration visibility `ComputeWork`.
+The producer emits no `ControlWork`, and every operation consuming
+placement-dependent link-rate service is `CollectiveWork`, so that service
+defines rather than follows the last collective completion.
 
 ### B4. The corrected single-batch TTFT relation, 0 of 2 passed
 
@@ -348,31 +358,40 @@ The plan-attached default graph differs from that fixture by its
 ## Entailment and evidence accounting
 
 The six raw mode workers completed before the decomposition, and the
-decomposition completed before the scored relations. The producer inventory,
-the fixture and all 19 fatal guards were interpreted afterwards.
+decomposition completed before the six originally scored instances. The
+producer inventory, the fixture and all 19 registered fatal guards were
+interpreted afterwards. The immutable result artifact therefore retains its
+original 4-of-6 classification; this report-level evidence review corrects the
+genuine-risk accounting to 3 of 5 without changing any measurement.
 
-No fatal guard pins a scored value. The only guard that touches a scored
-quantity is `overlap_within_ceiling`, whose bound is 1.05 times the arithmetic
-ceiling and is therefore strictly looser than B1's upper end of 1.00 times it.
-The `decomposition_identity` guard is algebra over three measured latencies and
-is by construction. `overlap_zero_on_single_batch_steps` and
-`control_edge_counts` are construction facts. Source hashes, byte conservation,
-serial identities and the absent overlap knob are fixed-value or
+No registered fatal guard pins a remaining genuine-risk value. The only one
+that touches such a quantity is `overlap_within_ceiling`, whose bound is 1.05
+times the arithmetic ceiling and is therefore strictly looser than B1's upper
+end of 1.00 times it. The `decomposition_identity` guard is algebra over three
+measured latencies and is by construction. `overlap_zero_on_single_batch_steps`
+and `control_edge_counts` are construction facts. Source hashes, byte
+conservation, serial identities and the absent overlap knob are fixed-value or
 configuration-forced guards. None of them increases a behavioral denominator.
 
-Each scored instance could fail after reaching execution. An overlap outside
-either band would miss B1. A lowering that ignored the observation tuple would
-produce zero overlap and miss B1 and B2. A terminal frontier charged to the
-fabric would miss B3. B4 did fail, which is itself the demonstration that these
-were live tests rather than restatements of the model.
+Each of the five genuine-risk instances could fail after reaching execution.
+An overlap outside either band would miss B1. A lowering that ignored the
+observation tuple would produce zero overlap and miss B1 and B2. B4 did fail,
+which is itself the demonstration that these were live tests rather than
+restatements of the model.
+
+B3 is excluded from that denominator. `_phase_timestamps` defines its interval
+strictly after the last `CollectiveWork` completion. This producer emits only
+logits compute and zero-duration visibility compute after that point, while all
+of its placement-dependent link-rate service belongs to `CollectiveWork`. The
+observed 1.000000 ratio is therefore a fatal-unscored structural invariant, not
+a relation that could lose under the frozen producer contract.
 
 | Frozen behavioral family | Instances | Passed |
 |---|---:|---:|
 | B1 overlap band | 2 | 2 |
 | B2 overlap rate ratio | 1 | 1 |
-| B3 terminal rate invariance | 1 | 1 |
 | B4 single-batch TTFT direction | 2 | 0 |
-| Total | 6 | 4 |
+| Total genuine-risk | 5 | 3 |
 
 ## TRAF-13 evidence map
 
@@ -403,7 +422,7 @@ cell.
 > "and show a registered live-metric relation."
 
 B1 on both placements and B2 across them, all on `r0` TPOT, the repository's
-signature metric. B3 is the accompanying invariance.
+signature metric. B3 is the accompanying fatal-unscored structural invariant.
 
 > "Disabling the producer must select the serial lowerer and preserve every
 > accepted serial graph, GOAL byte, timestamp and completion order exactly."
@@ -418,7 +437,7 @@ Both are landed and the run consumed them: the routed tables are post-TRAF-25
 and the VLLM-24 conservation guard runs inside the lowering path on every step.
 
 Every registered clause is demonstrated, so TRAF-13 closes and **zero new task
-IDs are registered**. The two failed scored instances are one refuted
+IDs are registered**. The two failed genuine-risk instances are one refuted
 directional expectation of this study's own, not a registered clause left
 undemonstrated: no TRAF-13 clause asks for a signed single-batch TTFT
 difference. TRAF-29, TRAF-30 and VLLM-25 remain unused.
@@ -445,13 +464,12 @@ difference. TRAF-29, TRAF-30 and VLLM-25 remain unused.
 
 ## Contradiction sweep
 
-`README.md` and `docs/architecture.md` contain no TRAF-13 state.
-`docs/README_PRO.md` line 294 has one prose hit in the fidelity-level table:
-the dependency row still reads "landed, TRAF-7; live producer is TRAF-13",
-which is stale once TRAF-13 closes. The generated progress block and module
-open counts are mechanically reconciled for ledger CI; that prose row is left
-for the integrator. The void run's expectations and results retain their
-original chronology and are not rewritten, rescored or unvoided.
+`README.md` and `docs/architecture.md` contain no TRAF-13 state. The
+fidelity-level table in `docs/README_PRO.md` now records the live vLLM producer
+as landed, with no TRAF-13 forward reference. The generated progress block and
+module open counts are mechanically reconciled for ledger CI. The void run's
+expectations and results retain their original chronology and remain unchanged
+and void.
 
 VLLM-22 in `docs/modules/adapters-vllm.md` registers clauses that this run's
 evidence also covers, but VLLM-22 is not in this change's assignment and is

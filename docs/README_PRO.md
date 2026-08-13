@@ -291,7 +291,7 @@ Legend: **landed** is usable today, **registered** names the owning task.
 | | profile table and trace-calibrated service model | calibrated, mean only | landed as bootstrap, COMP-1 owns real calibration |
 | | per-kernel latency distribution | calibrated, distribution | registered, COMP-23 |
 | Dependency | serial per-layer chain | deterministic | landed, compatibility level |
-| | observed framework schedule with realized overlap | deterministic | landed, TRAF-7; live producer is TRAF-13 |
+| | observed framework schedule with realized overlap | deterministic | landed, TRAF-7; live vLLM producer landed |
 | Locality | all segments remote on the fabric | deterministic | landed, compatibility level |
 | | intra-node NVLink split, flat analytic rate | deterministic analytic | landed, TRAF-10 |
 | | measured NVLink bandwidth, latency and concurrency | calibrated | registered, TRAF-11 |

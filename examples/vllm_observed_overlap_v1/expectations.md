@@ -250,19 +250,28 @@ One instance. `overlap_cross / overlap_single` must lie in the inclusive band
 rates, because overlap is bounded by and closely tracks a term that is pure
 serialization.
 
-### B3. The terminal frontier does not scale with the link rate
+### B3. Terminal rate invariance, reclassified fatal-unscored
 
-One instance. `terminal_observed`, averaged over `r0`'s 23 decode steps, is
-the time from the last collective completion to step completion in the
-observed arm. Its cross-node to single-node ratio must lie in the inclusive
-band 0.95 through 1.05, with an expectation of 1.0, because the terminal
-frontier is per-rank logits compute plus a zero-duration visibility endpoint
-and moves no bytes.
+The freeze originally counted one instance. `terminal_observed`, averaged over
+`r0`'s 23 decode steps, is the time from the last collective completion to step
+completion in the observed arm. Its cross-node to single-node ratio had an
+inclusive band of 0.95 through 1.05 and an expectation of 1.0, because the
+terminal frontier is per-rank logits compute plus a zero-duration visibility
+endpoint and moves no bytes.
 
-B2 and B3 together are the discriminator this task exists to produce: the same
-two placements must move one term by about nine and the other not at all. A
-terminal fan-in charged to the fabric would fail B3, and an overlap effect that
-was really a compute artifact would fail B2.
+Post-specified evidence review reclassifies B3 as a fatal-unscored structural
+invariant for this frozen producer. The interval starts strictly after the last
+`CollectiveWork` completion. The producer's only later operations are logits
+`ComputeWork` and zero-duration visibility `ComputeWork`; it emits no
+`ControlWork`, and all placement-dependent link-rate service belongs to
+`CollectiveWork`. The frozen number and its measured evidence remain, but the
+relation cannot lose under this producer contract. The fatal invariant is
+exact equality of the two terminal values; the old 0.95 through 1.05 band is
+retained only as frozen chronology and carries no score.
+
+B2 discriminates: the two placements must move overlap by about nine, and an
+overlap effect that was really a compute artifact would fail B2. B3 is a
+structural invariant carrying no evidential weight.
 
 ### B4. The corrected single-batch TTFT relation
 
@@ -278,13 +287,18 @@ The void run asserted equality here. Asserting strict inequality is a genuine
 test, because equality remains the outcome if the refuted premise were right,
 and the sign could a priori have gone the other way.
 
-Six scored instances in total: two for B1, one for B2, one for B3 and two for
-B4.
+The freeze originally counted six scored instances: two for B1, one for B2,
+one for B3 and two for B4. After the post-specified B3 reclassification, the
+corrected denominator is five genuine-risk instances: two for B1, one for B2
+and two for B4. B3 remains fatal-unscored evidence.
 
 ## Fatal unscored guards
 
-A violation of any guard below voids the run. Fatal means void, not a lost
-point, and these are never reported as a pass fraction.
+A violation of any fatal invariant in this section voids the run. Fatal means
+void, not a lost point, and these are never reported as a pass fraction. B3 is
+a post-specified fatal-unscored structural invariant alongside the 19 numbered
+pre-run guards; it keeps its original label rather than rewriting the frozen
+numbering.
 
 Control-arm construction:
 
@@ -359,9 +373,11 @@ The explicit off path:
 
 Guards 1 through 5 and 9 through 19 are conservation identities, construction
 facts or fixed hashes and never enter a behavioral denominator. Guards 6
-through 8 are physical bounds. None of them pins a scored value: the scored
-bands are evaluated first, and the only guard that touches a scored quantity,
-guard 6, is strictly looser than B1's upper end.
+through 8 are physical bounds. B3 is also a construction fact and does not
+enter the corrected five-instance denominator. None of these invariants pins a
+remaining scored value: the scored bands are evaluated first, and the only
+numbered guard that touches a scored quantity, guard 6, is strictly looser than
+B1's upper end.
 
 ## What a void looks like
 

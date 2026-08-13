@@ -320,11 +320,17 @@ into two microbatch collectives, predicted at 791.5 and 7,123.5 ps from the
 frozen routed table. Overlap is 1,450,472.652 and 13,051,993.043 ps, which is
 99.61 and 99.59 percent of the arithmetic communication ceiling registered
 before the run. The cross-node to single-node overlap ratio is 8.998 against
-the exact 9.0 link-rate ratio, while the terminal term's ratio is exactly
-1.000, so the two mechanisms are separated by their response to bandwidth. All
-19 fatal guards passed and 4 of 6 scored instances passed; the two failures are
-one refuted expectation that the serial arm would stay strictly slower on the
-single-batch prefill, where the two arms are in fact exactly equal. See
+the exact 9.0 link-rate ratio, so B2 discriminates the overlap mechanism by its
+response to bandwidth. The terminal term's ratio is exactly 1.000, but B3 is
+reclassified post-specified as a fatal-unscored structural invariant carrying
+no evidential weight for this frozen producer: its interval starts after the
+last collective completion, and the only later operations are logits compute
+and zero-duration visibility compute. The producer emits no control work, and
+all placement-dependent link-rate service defines the collective frontier
+instead. All 19 registered fatal guards and the reclassified invariant held,
+and 3 of 5 genuine-risk instances passed; the two failures are one refuted
+expectation that the serial arm would stay strictly slower on the single-batch
+prefill, where the two arms are in fact exactly equal. See
 [the observed-overlap results](../../examples/vllm_observed_overlap_v1/RESULTS.md).
 
 The vLLM wrapper shows event waits and no wrapper-level global barrier, but
