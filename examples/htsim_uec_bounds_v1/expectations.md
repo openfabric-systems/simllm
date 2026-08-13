@@ -34,9 +34,11 @@ exposes the authorship binary's existing completion times without changing its
 modeled behavior.
 
 Attempt two is independently admissible only if a source diff proves those
-four print-only edits are the projection's entire change from `896cc765` and
-the projected binary emits the completion and packet-summary vocabulary. Any
-additional source difference voids attempt two.
+four print-only edits are the projection's only executable-source change from
+`896cc765` and the projected binary emits the completion and packet-summary
+vocabulary. The file-editing path may normalize one redundant empty line at
+end-of-file; the source diff must report exactly four changed code lines plus
+that one empty-line deletion. Any other source difference voids attempt two.
 
 ## Prior evidence and external-source audit
 
@@ -230,7 +232,8 @@ tasks open; they are never reported as a pass fraction.
   byte-identical projections of the authored files. Only `Binary`, absolute
   input location and external log location may change in a projected plan.
 - The authorship source projection differs from `896cc765` only by the four
-  print-enabling comment-delimiter edits audited above.
+  print-enabling comment-delimiter edits and the permitted redundant empty-line
+  normalization audited above.
 - Every simulator process exits zero, every declared connection completes and
   every experiment emits the packet summary expected by the common validator.
 - Every reported FCT lies within its pre-stated physical floor and model
