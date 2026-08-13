@@ -404,11 +404,51 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   the model artifact's identity in table provenance. Both artifacts are
   immutable; changing an identity field produces a new record.
 - Initial acceptance bars, to be tightened from evidence: 100 percent kernel
-  identity coverage for the supported run; measured coefficient of variation
-  below 2 percent for controlled microbenchmarks; held-out per-kernel median
-  absolute percentage error below 10 percent and p95 below 20 percent;
-  per-phase median below 5 percent and p95 below 10 percent; compute-only
-  step error below 5 percent. Every miss is reported, never averaged away.
+  identity coverage for the supported run; the stability bar below; held-out
+  per-kernel median absolute percentage error below 10 percent and p95 below
+  20 percent; per-phase median below 5 percent and p95 below 10 percent;
+  compute-only step error below 5 percent. Every miss is reported, never
+  averaged away.
+- Stability bar, environment-scoped. In a **controlled** environment, defined
+  as a non-display device with locked application clocks and exclusive compute
+  access, the bar is the original one: measured coefficient of variation below
+  2 percent over every sample of a cell. That remains the bar the production
+  target-architecture capture must meet. In an environment explicitly declared
+  as a **shared display GPU without clock control**, a cell is stable when its
+  excursion-trimmed coefficient of variation is below 2 percent, its excursion
+  fraction is below 10 percent of the cell's samples, and its maximum excursion
+  ratio is below 1.35, where an excursion is a sample above 1.05 times the cell
+  median. Every cell additionally reports its all-sample coefficient of
+  variation and its full excursion census; no sample is ever discarded from the
+  artifact. The
+  [fidelity study](../../examples/compute_fidelity_v1/RESULTS.md) froze this
+  form before evaluating it, and measured why the second form is the one that
+  identifies kernel service-time stability on a display GPU: across the tracked
+  Turing capture, 7 samples out of 2,050 exceed the excursion threshold, one in
+  each of 7 cells, and the three cells that failed the all-sample bar have
+  trimmed coefficients of variation of 0.172, 0.212 and 0.842 percent. A fresh
+  4,000-launch probe of the worst of those cells attributes 93.4 percent of its
+  excursions to longer block residency at an unchanged 1,869 MHz effective SM
+  clock, and the remainder to clock-state drops to 76.9 percent of that clock.
+  Neither is kernel service-time variation, and neither is removable without
+  the administrator action COMP-5 requires.
+- Fixed per-step cost. Kernel service time is not step time. A modeled step is
+  exactly the sum of its kernel service: `RooflineProvider` returns 0 ps for a
+  zero-work kernel and is exactly proportional above that,
+  `ProfileTableProvider` returns a measured kernel duration, and
+  `HostInitiationModel` is a per-send network initiation delay rather than a
+  per-kernel launch cost, so nothing in this package prices kernel launch,
+  scheduling or sampling. The fidelity study bounds what that omission is worth
+  for a 24-layer top-8 MoE decode step: 440 to 567 device-visible launches in
+  eager mode, at a Turing-measured 630 ns per CUDA-graph node, 1,603 ns of
+  device-side inter-kernel gap, or 2,332 ns per host-bound eager launch, which
+  is 2.8 to 13.3 times the whole modeled decode compute of that step. The
+  launch count is a property of the model geometry and the framework rather
+  than of the GPU, so the multiple survives a much cheaper per-launch cost; the
+  constant itself is Turing evidence and does not transfer. Calibrating it on
+  the target architecture belongs to this task's "launch overhead, host delay
+  and queueing are measured separately from kernel service" clause, and no knob
+  is added to the step path until it is measured.
 - Simulator starting point: Accel-Sim v1.3.0 in SASS trace-driven mode over
   GPGPU-Sim 4.x with a compatible NVBit tracer. Tool versions remain pinned
   per artifact because modern framework kernels and GPU architectures may
@@ -424,10 +464,14 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   the GTX 1660 Ti with driver 550.90.07. Nsight Compute attaches but returns
   `ERR_NVGPUCTRPERM` because the loaded driver has
   `RmProfilingAdminOnly: 1`; no performance counters are collected. The
-  display GPU also produced isolated timing outliers above the registered
-  stability ceiling. Production closure needs counter permission, a stable
-  capture environment and allocation on the exact target architecture with a
-  compatible dynamic SASS and Accel-Sim path.
+  display GPU also produced isolated timing outliers above the original
+  all-sample stability ceiling, and the fidelity study identified their two
+  mechanisms: blocks resident longer because the desktop shares the SM, and
+  discrete drops of the effective SM clock. Both need permissions this project
+  does not have, so the controlled-environment form of the stability bar cannot
+  be met here at all. Production closure needs counter permission, a non-display
+  device with lockable clocks, and allocation on the exact target architecture
+  with a compatible dynamic SASS and Accel-Sim path.
 
 ## Status
 
@@ -465,6 +509,24 @@ bootstrap. The frozen study is nevertheless an overall failure: isolated
 high-duration samples put 3 of 50 final cells above the 2 percent coefficient
 of variation ceiling, and the preceding post-fix capture missed 2 of 50.
 These Turing numbers validate the method and do not transfer to Hopper.
+
+The [fidelity study](../../examples/compute_fidelity_v1/RESULTS.md) held all 12
+of its fatal guards and passed 101 of 102 genuine-risk instances, and it changes
+what is known about that failure and about the modeled step. Re-reading the same
+immutable capture shows the ceiling was failed by 7 samples out of 2,050, one in
+each of 7 cells, while the worst excursion-trimmed coefficient of variation
+anywhere in the capture is 1.054 percent. A 4,000-launch device probe that
+records each block's own cycle span and residency alongside its wall duration
+attributes 93.4 percent of a fresh excursion population to longer block
+residency at an unchanged 1,869 MHz effective SM clock and the remainder to
+clock-state drops to 76.9 percent of that clock, so the tail is the display GPU
+rather than the kernel. The stability bar above is refrozen accordingly, with
+the original all-sample form retained unchanged for the controlled environment
+the production capture must use. The same study bounds the fixed per-step cost
+the compute path omits entirely at 2.8 to 13.3 times the whole modeled decode
+compute of a 24-layer top-8 MoE step, which means a modeled decode step is
+launch bound rather than compute bound. It registers no new task ID: COMP-1 and
+COMP-5 both stay open and keep every clause they registered.
 
 The M5 first slice landed the COMP-1 groundwork: `step_kernels`, the
 `simllm-profile-table-v1` artifact with provenance, and 1D log-linear
@@ -552,18 +614,26 @@ and an explicit reason:
   train-only table compilation, interpolation and the provider seam, but its
   numbers are synthetic TU116 evidence. Its final run passed held-out
   calibrated median and p95 error at 0.674 percent and 1.773 percent versus
-  17.782 percent and 25.069 percent for the flat 0.7 roofline surrogate. It
-  failed the fatal stability guard in 3 of 50 cells, with a preceding post-fix
-  capture failing 2 of 50. Replace the active A100/H100 bootstrap and flat
-  roofline surrogate only after capturing exact production framework kernels
-  on the target architecture, collecting the full activity, counter and
-  dynamic-SASS ledger, calibrating pinned Accel-Sim replay, and validating
-  immutable held-out kernels. Acceptance remains every controlled cell below
-  2 percent coefficient of variation, held-out kernel median error below
-  10 percent and p95 below 20 percent, per-phase median below 5 percent and
-  p95 below 10 percent, and compute-only step error below 5 percent. The
-  roofline and calibration-off paths must retain accepted artifacts and
-  timestamps byte for byte.
+  17.782 percent and 25.069 percent for the flat 0.7 roofline surrogate.
+  Stability is no longer the reason this task is open: the fidelity study
+  showed the 3-of-50 miss came from 7 samples in 2,050 against a worst trimmed
+  coefficient of variation of 1.054 percent, and refroze the bar in the
+  environment-scoped form above. Two things now block it. First, no
+  target-architecture evidence exists: replace the active A100/H100 bootstrap
+  and the flat 0.7 roofline surrogate only after capturing exact production
+  framework kernels on the target architecture, collecting the full activity,
+  counter and dynamic-SASS ledger, calibrating pinned Accel-Sim replay, and
+  validating immutable held-out kernels. Second, the step model has no fixed
+  per-step cost at all, and the fidelity study bounds that omission at 2.8 to
+  13.3 times the whole modeled decode compute of a 24-layer top-8 MoE step, so
+  the compute-only step error clause is unreachable until launch overhead, host
+  delay and queueing are measured on the target architecture and given a seam.
+  Do not add an uncalibrated launch constant in the meantime. Acceptance remains
+  the environment-scoped stability bar with the controlled form required for the
+  production capture, held-out kernel median error below 10 percent and p95
+  below 20 percent, per-phase median below 5 percent and p95 below 10 percent,
+  and compute-only step error below 5 percent. The roofline and calibration-off
+  paths must retain accepted artifacts and timestamps byte for byte.
 - COMP-5 (Precision; P1; L): provide the production capture
   environment required by COMP-1. On 2026-08-12 the local GTX 1660 Ti with
   driver 550.90.07 successfully produced CUPTI activity timing through Nsight
@@ -573,12 +643,20 @@ and an explicit reason:
   is an administrator disabling that restriction or granting the documented
   profiling capability, followed by a successful counter probe. The display
   GPU also produced isolated samples above the 2 percent per-cell variation
-  ceiling in two consecutive post-fix captures. Production closure therefore
+  ceiling in two consecutive post-fix captures, and the fidelity study measured
+  the two mechanisms behind them: 93.4 percent of a fresh 4,000-launch excursion
+  population is blocks staying resident longer at an unchanged 1,869 MHz
+  effective SM clock, i.e. the desktop sharing the SM, and the rest is the
+  effective clock dropping to 76.9 percent of that value. Locking clocks and
+  freeing the device from the display are both administrator actions, so the
+  controlled-environment stability form cannot be met on this host at all, no
+  matter how the capture is disciplined. Production closure therefore
   needs a stable non-display or exclusive capture environment, controlled
   clocks, and allocation on the exact A100, H100 or B100 target with compatible
   dynamic NVBit tracing and Accel-Sim support. Acceptance is a nonempty
   activity trace, successful required-counter probe, exact tool and GPU
-  provenance, and every registered cell below the stability ceiling.
+  provenance, and every registered cell below the controlled-environment
+  stability ceiling.
 - COMP-7 (Precision; P1; M): MoE compute assumes perfectly balanced routing:
   every rank computes `top_k` experts' flops for its own tokens and streams all
   resident experts once. Consume the landed `simllm-routed-experts-v1`

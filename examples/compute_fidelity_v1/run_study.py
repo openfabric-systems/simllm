@@ -253,11 +253,29 @@ def _attribute(
     baseline_clock = 1000.0 * sum(cycles) / sum(
         sample["block_resident_ns_sum"] for sample in samples
     )
+    # Descriptive only, never scored: the effective SM clock of an excursion
+    # relative to the whole run's effective clock separates a clock-state drop
+    # from longer block residency at an unchanged clock. The frozen attribution
+    # rule above uses cycle counts and is evaluated exactly as registered; this
+    # measurement is reported beside it because a memory-bound kernel spends
+    # fewer SM cycles when its clock drops, which the frozen rule does not
+    # anticipate.
+    for row in rows:
+        row["effective_clock_ratio"] = (
+            row["effective_clock_mhz"] / baseline_clock if baseline_clock else 0.0
+        )
+    clock_state_rows = [row for row in rows if row["effective_clock_ratio"] < 0.9]
     dominant = max(
         (("clock", clock_caused), ("residency", residency_caused)),
         key=lambda item: item[1],
     )
     return {
+        "effective_clock_drop_count": len(clock_state_rows),
+        "effective_clock_drop_minimum_ratio": (
+            min(row["effective_clock_ratio"] for row in clock_state_rows)
+            if clock_state_rows
+            else 1.0
+        ),
         "duration_key": duration_key,
         "median_duration_ns": median_duration,
         "median_block_cycle_sum": median_cycles,
@@ -269,7 +287,7 @@ def _attribute(
         "unattributed": unattributed,
         "dominant_cause": dominant[0] if excursions else "none",
         "dominant_fraction": (dominant[1] / excursions) if excursions else 0.0,
-        "rows": rows[:64],
+        "rows": rows,
     }
 
 
@@ -338,22 +356,34 @@ def _xfer_guards(expectations: dict[str, Any]) -> list[dict[str, Any]]:
         }
     )
 
+    # The first registered run asserted exact integer equality between the
+    # doubled kernel and twice the single kernel. That failed by 1 ps, because
+    # the true value 793,650,793.65 ps is rounded once per call and not because
+    # the provider carries a fixed term. The claim is therefore tested in the
+    # rounding-free form as well: a kernel with no work must return exactly
+    # zero, which no additive launch, scheduling or sampling constant could
+    # survive. The proportionality check keeps its original form with the one
+    # picosecond of unavoidable integer rounding allowed, six orders of
+    # magnitude below any per-launch cost this study measures.
     roofline = RooflineProvider()
     gpu = GPU_ENVELOPES["b100"]
+    zero = roofline.estimate(KernelSpec(name="probe", flops=0.0, bytes_moved=0.0), gpu)
     single = roofline.estimate(
         KernelSpec(name="probe", flops=1.0e12, bytes_moved=5.564e8), gpu
     )
     doubled = roofline.estimate(
         KernelSpec(name="probe", flops=2.0e12, bytes_moved=1.1128e9), gpu
     )
+    residual_ps = doubled.duration_ps - 2 * single.duration_ps
     guards.append(
         {
             "id": "XFER-G4_roofline_has_no_additive_term",
-            "passed": doubled.duration_ps == 2 * single.duration_ps,
+            "passed": zero.duration_ps == 0 and abs(residual_ps) <= 1,
             "detail": {
+                "zero_work_ps": zero.duration_ps,
                 "single_ps": single.duration_ps,
                 "doubled_ps": doubled.duration_ps,
-                "implied_fixed_term_ps": 2 * single.duration_ps - doubled.duration_ps,
+                "proportionality_residual_ps": residual_ps,
             },
         }
     )
@@ -697,13 +727,18 @@ def _production(args: argparse.Namespace, expectations: dict[str, Any]) -> int:
         "device_gap": _bound(launch["stamped_device_gap_ns"]),
         "eager_host_bound": _bound(launch["empty_stream_pipelined_ns"]),
     }
+    # A step is not the sum of its service time and its launch cost: with the
+    # host running ahead the two overlap, so the step floor is
+    # max(kernel service, launches * per-launch cost). The modeled makespan
+    # already contains the compute term, so the projection replaces that term
+    # rather than adding to it, i.e. it adds only the omitted excess.
     ttft = {
         name: {
             "modeled_ttft_us": prefill_us,
-            "ttft_with_fixed_low_us": prefill_us + value["step_fixed_low_us"],
-            "ttft_with_fixed_high_us": prefill_us + value["step_fixed_high_us"],
-            "relative_increase_low": value["step_fixed_low_us"] / prefill_us,
-            "relative_increase_high": value["step_fixed_high_us"] / prefill_us,
+            "ttft_with_fixed_low_us": prefill_us + value["omitted_low_us"],
+            "ttft_with_fixed_high_us": prefill_us + value["omitted_high_us"],
+            "relative_increase_low": value["omitted_low_us"] / prefill_us,
+            "relative_increase_high": value["omitted_high_us"] / prefill_us,
         }
         for name, value in bounds.items()
     }
