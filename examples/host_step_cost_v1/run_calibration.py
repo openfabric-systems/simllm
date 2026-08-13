@@ -84,10 +84,19 @@ def _environment(args: argparse.Namespace) -> dict[str, Any]:
         raise AssertionError("calibration identity drifted")
     if sum(values["scored_calibration_relations"].values()) != 4:
         raise AssertionError("scored calibration inventory drifted")
-    if sum(values["scored_live_relations"].values()) != 12:
-        raise AssertionError("scored live inventory drifted")
-    if len(values["fatal_unscored_guards"]) != 11:
-        raise AssertionError("fatal guard inventory drifted")
+    if sum(values["attempt_two_relations_originally_scored"].values()) != 12:
+        raise AssertionError("attempt-two live inventory drifted")
+    if values["live_attempt_two"]["genuine_risk_instances"] != 0:
+        raise AssertionError("attempt-two entailed findings became scored evidence")
+    if sum(values["live_attempt_three"]["scored_relations"].values()) != 12:
+        raise AssertionError("held-out live inventory drifted")
+    calibration_guards = [
+        name
+        for name in values["fatal_unscored_guards"]
+        if name.startswith("CAL-G")
+    ]
+    if len(calibration_guards) != 6:
+        raise AssertionError("fatal calibration guard inventory drifted")
     prior = values["prior_attempt"]
     if prior["disposition"] != "void_with_findings":
         raise AssertionError("prior void disposition drifted")

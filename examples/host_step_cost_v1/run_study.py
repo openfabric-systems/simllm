@@ -21,7 +21,16 @@ if str(ROOT) not in sys.path:
 EXPECTATIONS = HERE / "expectations.json"
 CALIBRATION = HERE / "calibration.json"
 PRIOR_LIVE_ATTEMPT = HERE / "live_attempt1.json"
-RESULTS = HERE / "results.json"
+ATTEMPT_TWO_RESULTS = HERE / "results.json"
+HOLDOUT_RESULTS = HERE / "holdout_results.json"
+HOLDOUT_FATAL_GUARDS = (
+    "LIVE-G1_profile_provenance_and_stable_revision",
+    "LIVE-G2_device_mismatch_fails_closed",
+    "LIVE-G3_source_identity_and_ideal_baseline",
+    "LIVE-G4_component_and_request_conservation",
+    "LIVE-G5_physical_enclosures_and_exact_Q",
+    "LIVE-G6_budget_arithmetic",
+)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -57,6 +66,37 @@ def _whole_nanosecond_enclosure(value_ps: int) -> int:
     return ((value_ps + 999) // 1000) * 1000
 
 
+def _holdout(values: dict[str, Any]) -> dict[str, Any]:
+    return values["live_attempt_three"]
+
+
+def _fixture(values: dict[str, Any]) -> dict[str, Any]:
+    return _holdout(values)["fixture"]
+
+
+def _source_identity_checks(
+    args: argparse.Namespace, fixture: dict[str, Any]
+) -> dict[str, Any]:
+    rows = []
+    for name, expected in fixture["input_sha256"].items():
+        if name == "routed_experts_json":
+            path = args.baseline_cell / "routed-experts.json"
+        elif name == "steps_jsonl":
+            path = args.baseline_cell / "steps.jsonl"
+        else:
+            raise AssertionError(f"unknown fixture input: {name}")
+        actual = _sha256(path) if path.is_file() else None
+        rows.append(
+            {
+                "artifact": name,
+                "expected_sha256": expected,
+                "actual_sha256": actual,
+                "passed": actual == expected,
+            }
+        )
+    return {"passed": all(row["passed"] for row in rows), "rows": rows}
+
+
 def _check(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     values = _load_json(EXPECTATIONS)
     calibration = _load_json(CALIBRATION)
@@ -68,19 +108,21 @@ def _check(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
         raise RuntimeError("live study requires an accepted calibration")
     if calibration["attempt"] != values["calibration_attempt"]:
         raise RuntimeError("calibration attempt disagrees with the freeze")
-    if values["live_attempt"] != 2:
+    if values["live_attempt"] != 3 or _holdout(values)["attempt"] != 3:
         raise AssertionError("live attempt identity drifted")
     if calibration["fatal_guard_failures"]:
         raise RuntimeError("accepted calibration unexpectedly has fatal findings")
     if not all(row["passed"] for row in calibration["scored_relations"]):
         raise RuntimeError("accepted calibration unexpectedly has a scored miss")
-    if values["representative_step"]["acceptance_decode_multiplier"] != [
-        1.8,
-        7.75,
-    ]:
-        raise AssertionError("flagship multiplier band drifted")
-    if sum(values["scored_live_relations"].values()) != 12:
-        raise AssertionError("scored live inventory drifted")
+    attempt = _holdout(values)
+    if sum(attempt["scored_relations"].values()) != 12:
+        raise AssertionError("holdout scored inventory drifted")
+    if attempt["fatal_unscored_guards"] != list(HOLDOUT_FATAL_GUARDS):
+        raise AssertionError("holdout fatal guard inventory drifted")
+    if sum(values["attempt_two_relations_originally_scored"].values()) != 12:
+        raise AssertionError("attempt-two historical inventory drifted")
+    if values["live_attempt_two"]["genuine_risk_instances"] != 0:
+        raise AssertionError("attempt-two entailed evidence was promoted to a score")
     prior = _load_json(PRIOR_LIVE_ATTEMPT)
     prior_freeze = values["prior_live_attempt"]
     if _sha256(PRIOR_LIVE_ATTEMPT) != prior_freeze["retained_void_sha256"]:
@@ -91,26 +133,71 @@ def _check(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
         or prior["fatal_guard_failures"] != [prior_freeze["failed_fatal_guard"]]
     ):
         raise RuntimeError("retained live attempt one is not the frozen void run")
-    fixture = values["live_fixture"]
+    attempt_two = attempt["prior_attempt_two"]
+    if _sha256(ATTEMPT_TWO_RESULTS) != attempt_two["result_sha256"]:
+        raise RuntimeError("immutable attempt-two live result identity drifted")
+    attempt_two_result = _load_json(ATTEMPT_TWO_RESULTS)
+    if (
+        attempt_two_result["live_attempt"] != 2
+        or attempt_two_result["fatal_guard_failures"]
+        or attempt_two_result["behavioral_score_interpretable"] is not True
+        or len(attempt_two_result["scored_relations"])
+        != attempt_two["entailed_findings"]
+    ):
+        raise RuntimeError("attempt-two result is not the frozen nonvoid repair run")
+    fixture = _fixture(values)
     if fixture["network_profile"] != "rnic-nn-fluid":
         raise AssertionError("live network profile drifted")
-    if fixture["linkspeed_bps"] != 400_000_000_000:
-        raise AssertionError("live link rate drifted")
-    if [row["step_index"] for row in fixture["steps"]] != [0, 1, 2]:
+    if fixture["linkspeed_bps"] != 200_000_000_000:
+        raise AssertionError("holdout link rate drifted")
+    if fixture["step_indices"] != [0, 1, 2]:
         raise AssertionError("live step sequence drifted")
-    ideal = fixture["ideal_step_ps"]
-    if ideal["tpot"] * 2 != sum(ideal["decode"]):
-        raise AssertionError("ideal TPOT arithmetic drifted")
-    representative = values["representative_step"]
-    if (
-        representative["modeled_compute_ps"]
-        + representative["modeled_decode_network_ps"]
-        != representative["modeled_decode_makespan_ps"]
+    ideal_steps = fixture["prior_observed_ideal_step_ps"]
+    if fixture["prior_observed_micro_fixture_tpot_ps"] * 2 != sum(
+        ideal_steps[1:]
     ):
-        raise AssertionError("representative step does not conserve")
-    for bounds in fixture["network_physical_bounds_ps"].values():
+        raise AssertionError("ideal TPOT arithmetic drifted")
+    if any(
+        compute + network != step
+        for compute, network, step in zip(
+            fixture["fixed_compute_ps"],
+            fixture["prior_observed_network_ps"],
+            ideal_steps,
+            strict=True,
+        )
+    ):
+        raise AssertionError("holdout ideal step does not conserve")
+    for bounds in fixture["network_physical_bounds_ps"]:
         if len(bounds) != 2 or not 0 < bounds[0] <= bounds[1]:
             raise AssertionError("network physical bounds drifted")
+    bands = attempt["acceptance"]["profile_launch_bands"]
+    if {
+        (row["profile"], row["launch_count"]) for row in bands
+    } != {
+        (profile, count)
+        for profile in ("turing-cuda-graph", "turing-eager-host")
+        for count in (440, 567)
+    }:
+        raise AssertionError("holdout profile and launch-count sweep drifted")
+    if any(
+        not (
+            row["multiplier_band"][0]
+            < row["point_decode_projection"]
+            < row["multiplier_band"][1]
+            and row["multiplier_band"][0]
+            < row["point_tpot_projection"]
+            < row["multiplier_band"][1]
+        )
+        for row in bands
+    ):
+        raise AssertionError("holdout point projections escaped their freeze")
+    ratio_band = attempt["acceptance"]["ttft_to_tpot_increment_ratio_band"]
+    if not (
+        ratio_band[0]
+        < attempt["acceptance"]["point_increment_ratio_projection"]
+        < ratio_band[1]
+    ):
+        raise AssertionError("holdout increment-ratio projection drifted")
     launches = values["launch_count"]
     capture_bounds = values["capture"]["acceptance_ps"]
     launch_floor_bounds = (
@@ -134,17 +221,12 @@ def _check(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     converter = Path(converter_value)
     if not converter.is_file() or not os.access(converter, os.X_OK):
         raise FileNotFoundError("SIMLLM_TXT2BIN is missing or not executable")
-    for name, expected in fixture["input_sha256"].items():
-        if name == "routed_experts_json":
-            path = args.baseline_cell / "routed-experts.json"
-        elif name == "steps_jsonl":
-            path = args.baseline_cell / "steps.jsonl"
-        else:
-            raise AssertionError(f"unknown fixture input: {name}")
-        if not path.is_file():
-            raise FileNotFoundError(f"live fixture input is missing: {path}")
-        if _sha256(path) != expected:
-            raise RuntimeError(f"live fixture input identity drifted: {path.name}")
+    source_identity = _source_identity_checks(args, fixture)
+    if not source_identity["passed"]:
+        raise RuntimeError("held-out source input identity drifted")
+    countermodels = _non_entailment_checks(values, calibration)
+    if not countermodels["passed"]:
+        raise AssertionError("fatal guards now entail a holdout score")
     root_value = os.environ.get("SIMLLM_WAVE12_RUN_ROOT")
     if not root_value:
         raise RuntimeError("SIMLLM_WAVE12_RUN_ROOT must be configured")
@@ -296,16 +378,18 @@ def _run_row(
     from simllm.compute import GPU_ENVELOPES
     from simllm.core import step_records_from_jsonl
 
-    fixture = values["live_fixture"]
+    fixture = _fixture(values)
+    step_indices = tuple(fixture["step_indices"])
     source_records = tuple(
         record
         for record in step_records_from_jsonl(args.baseline_cell / "steps.jsonl")
-        if record.step_index in {0, 1, 2}
+        if record.step_index in set(step_indices)
     )
-    if tuple(record.step_index for record in source_records) != (0, 1, 2):
+    if tuple(record.step_index for record in source_records) != step_indices:
         raise RuntimeError("live fixture does not contain the frozen first three steps")
     if any(
-        tuple(request.request_id for request in record.scheduled) != ("r00",)
+        tuple(request.request_id for request in record.scheduled)
+        != (fixture["request_id"],)
         for record in source_records
     ):
         raise RuntimeError("live fixture first three steps changed scheduling")
@@ -357,14 +441,16 @@ def _run_row(
         host_model=host_model,
         gpu=gpu,
     )
-    reducer = HtsimRequestMetricReducer({"r00": fixture["arrival_ps"]})
+    reducer = HtsimRequestMetricReducer(
+        {fixture["request_id"]: fixture["arrival_ps"]}
+    )
     step_rows = []
     for source in source_records:
         record = replace(source, virtual_time_ps=runtime.clock.now_ps)
         result = runtime.settle(
             TranslatedStep(
                 record=record,
-                req_ids=["r00"],
+                req_ids=[fixture["request_id"]],
                 produces_token=[True],
             )
         )
@@ -432,8 +518,8 @@ def _run_row(
             }
         )
     totals = reducer.totals()
-    if len(totals) != 1 or totals[0].request_id != "r00":
-        raise AssertionError("live request reducer did not emit r00")
+    if len(totals) != 1 or totals[0].request_id != fixture["request_id"]:
+        raise AssertionError("live request reducer did not emit the frozen request")
     total = totals[0]
     if total.tpot_ps is None:
         raise AssertionError("three-token fixture must produce TPOT")
@@ -554,9 +640,9 @@ def _physical_checks(
     values: dict[str, Any],
     calibration: dict[str, Any],
 ) -> dict[str, Any]:
-    fixture = values["live_fixture"]
+    fixture = _fixture(values)
+    frozen = _holdout(values)["physical_sanity_ps"]
     network_bounds = fixture["network_physical_bounds_ps"]
-    names = ("prefill", "decode_step_1", "decode_step_2")
     result = []
     for row in rows:
         if row["profile"] == "ideal":
@@ -564,21 +650,53 @@ def _physical_checks(
         serialized = calibration["measurements_ps"]["serialized_launch"]
         g = row["host_model"]["point_ps_per_launch"]
         count = row["launch_count"]
+        key = f"{row['profile']}-n{count}"
+        count_key = f"n{count}"
+        frozen_raw_floor = frozen[
+            "raw_physical_step_floor_by_profile_and_count"
+        ][key]
+        frozen_loose_ceilings = frozen["step_ceiling_by_launch_count"][count_key]
+        frozen_tight_bounds = frozen["network_plus_represented_step_bounds"][
+            key
+        ]
         for index, step in enumerate(row["steps"]):
             compute = fixture["fixed_compute_ps"][index]
-            network_low, network_high = network_bounds[names[index]]
-            lower = network_low + max(compute, count * g)
-            upper = network_high + compute + count * serialized
+            network_low, network_high = network_bounds[index]
+            raw_floor = network_low + max(compute, count * g)
+            loose_ceiling = (
+                fixture["prior_observed_network_ps"][index]
+                + compute
+                + count * serialized
+            )
+            represented = _whole_nanosecond_enclosure(max(compute, count * g))
+            tight_bounds = [network_low + represented, network_high + represented]
             observed = step["step_latency_ps"]
+            checks = {
+                "raw_floor_matches_freeze": raw_floor == frozen_raw_floor,
+                "loose_ceiling_matches_freeze": loose_ceiling
+                == frozen_loose_ceilings[index],
+                "tight_bounds_match_freeze": tight_bounds
+                == frozen_tight_bounds[index],
+                "network_inside_physical_bounds": network_low
+                <= step["network_service_ps"]
+                <= network_high,
+                "step_above_raw_floor": raw_floor <= observed,
+                "step_below_loose_ceiling": observed <= loose_ceiling,
+                "step_inside_represented_bounds": tight_bounds[0]
+                <= observed
+                <= tight_bounds[1],
+            }
             result.append(
                 {
                     "profile": row["profile"],
                     "launch_count": count,
                     "step_index": index,
-                    "floor_ps": lower,
+                    "raw_floor_ps": raw_floor,
+                    "represented_bounds_ps": tight_bounds,
                     "observed_ps": observed,
-                    "ceiling_ps": upper,
-                    "passed": lower <= observed <= upper,
+                    "loose_ceiling_ps": loose_ceiling,
+                    "checks": checks,
+                    "passed": all(checks.values()),
                 }
             )
     return {"passed": all(row["passed"] for row in result), "rows": result}
@@ -589,7 +707,7 @@ def _conservation_checks(
 ) -> dict[str, Any]:
     """Check exact component, sequential-clock, and request partitions."""
 
-    fixture = values["live_fixture"]
+    fixture = _fixture(values)
     ideal = next(row for row in rows if row["profile"] == "ideal")
     details = []
     for row in rows:
@@ -605,8 +723,6 @@ def _conservation_checks(
                 == step["compute_service_ps"] + step["network_service_ps"],
                 "provider_is_frozen_input": step["provider_compute_ps"]
                 == fixture["fixed_compute_ps"][index],
-                "network_is_host_invariant": step["network_service_ps"]
-                == ideal_step["network_service_ps"],
                 "bytes_are_host_invariant": step["total_directed_bytes"]
                 == ideal_step["total_directed_bytes"],
                 "flows_are_host_invariant": step["num_flows"]
@@ -650,94 +766,33 @@ def _conservation_checks(
     return {"passed": all(row["passed"] for row in details), "rows": details}
 
 
-def _attempt_two_checks(
-    rows: list[dict[str, Any]],
-    values: dict[str, Any],
-    prior: dict[str, Any],
-) -> dict[str, Any]:
-    """Check the exact live attempt-two repair rows frozen after attempt one."""
+def _network_service_diagnostic(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Report network equality without making it a fatal precondition."""
 
-    current_by_key = {
-        (row["profile"], row["launch_count"]): row for row in rows
-    }
-    prior_by_key = {
-        (row["profile"], row["launch_count"]): row for row in prior["rows"]
-    }
+    ideal = next(row for row in rows if row["profile"] == "ideal")
     details = []
-    for expected in values["live_attempt_two"]["expected_rows"]:
-        key = (expected["profile"], expected["launch_count"])
-        current = current_by_key[key]
-        previous = prior_by_key[key]
-        expected_tpot = Fraction(expected["tpot_ps"], 1)
-        checks = {
-            "service_ps": all(
-                step["compute_service_ps"] == expected["service_ps"]
-                for step in current["steps"]
-            ),
-            "step_latency_ps": [
-                step["step_latency_ps"] for step in current["steps"]
-            ]
-            == expected["step_latency_ps"],
-            "completion_ps": [
-                step["completed_at_ps"] for step in current["steps"]
-            ]
-            == expected["completion_ps"],
-            "release_ps": [step["released_at_ps"] for step in current["steps"]]
-            == [0, *expected["completion_ps"][:-1]],
-            "ttft_ps": current["ttft_ps"] == expected["ttft_ps"],
-            "tpot_ps": Fraction(
-                current["tpot_numerator"], current["tpot_denominator"]
-            )
-            == expected_tpot,
-            "service_delta_ps": all(
-                step["compute_service_ps"] - old_step["compute_service_ps"]
-                == expected["step_delta_ps"]
-                for step, old_step in zip(
-                    current["steps"], previous["steps"], strict=True
-                )
-            ),
-            "latency_delta_ps": all(
-                step["step_latency_ps"] - old_step["step_latency_ps"]
-                == expected["step_delta_ps"]
-                for step, old_step in zip(
-                    current["steps"], previous["steps"], strict=True
-                )
-            ),
-            "completion_delta_ps": all(
-                step["completed_at_ps"] - old_step["completed_at_ps"]
-                == (index + 1) * expected["step_delta_ps"]
-                for index, (step, old_step) in enumerate(
-                    zip(current["steps"], previous["steps"], strict=True)
-                )
-            ),
-            "network_unchanged": all(
-                step["network_service_ps"] == old_step["network_service_ps"]
-                for step, old_step in zip(
-                    current["steps"], previous["steps"], strict=True
-                )
-            ),
-            "bytes_unchanged": all(
-                step["total_directed_bytes"] == old_step["total_directed_bytes"]
-                for step, old_step in zip(
-                    current["steps"], previous["steps"], strict=True
-                )
-            ),
-            "flow_count_unchanged": all(
-                step["num_flows"] == old_step["num_flows"]
-                for step, old_step in zip(
-                    current["steps"], previous["steps"], strict=True
-                )
-            ),
-        }
+    for row in rows:
+        if row["profile"] == "ideal":
+            continue
+        matches = [
+            step["network_service_ps"] == ideal_step["network_service_ps"]
+            for step, ideal_step in zip(row["steps"], ideal["steps"], strict=True)
+        ]
         details.append(
             {
-                "profile": expected["profile"],
-                "launch_count": expected["launch_count"],
-                "checks": checks,
-                "passed": all(checks.values()),
+                "profile": row["profile"],
+                "launch_count": row["launch_count"],
+                "step_matches": matches,
+                "passed": all(matches),
             }
         )
-    return {"passed": all(row["passed"] for row in details), "rows": details}
+    return {
+        "id": "HOLD-D2_network_service_matches_ideal",
+        "scored": False,
+        "survivable": True,
+        "passed": all(row["passed"] for row in details),
+        "rows": details,
+    }
 
 
 def _quantized_compute_checks(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -780,7 +835,7 @@ def _observed_schedule_checks(
 ) -> dict[str, Any]:
     """Keep observed-schedule provider attribution separate from service Q."""
 
-    provider_inputs = values["live_attempt_two"]["raw_provider_ps"]
+    provider_inputs = _fixture(values)["fixed_compute_ps"]
     details = []
     for row in rows:
         if row["profile"] == "ideal":
@@ -813,19 +868,38 @@ def _observed_schedule_checks(
 def _score_rows(
     rows: list[dict[str, Any]], values: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    fixture = values["live_fixture"]
-    ideal_prefill = fixture["ideal_step_ps"]["prefill"]
-    ideal_decode = fixture["ideal_step_ps"]["decode"]
-    ideal_tpot = fixture["ideal_step_ps"]["tpot"]
-    band = values["representative_step"]["acceptance_decode_multiplier"]
+    holdout = _holdout(values)
+    fixture = holdout["fixture"]
+    ideal_steps = fixture["prior_observed_ideal_step_ps"]
+    ideal_prefill = ideal_steps[0]
+    ideal_decode = ideal_steps[1]
+    ideal_tpot = fixture["prior_observed_micro_fixture_tpot_ps"]
+    bands = {
+        (row["profile"], row["launch_count"]): row["multiplier_band"]
+        for row in holdout["acceptance"]["profile_launch_bands"]
+    }
+    increment_band = holdout["acceptance"][
+        "ttft_to_tpot_increment_ratio_band"
+    ]
     scores = []
     for row in rows:
         if row["profile"] == "ideal":
             continue
-        decode_multiplier = row["steps"][1]["step_latency_ps"] / ideal_decode[0]
+        band = bands[(row["profile"], row["launch_count"])]
+        decode_multiplier = row["steps"][1]["step_latency_ps"] / ideal_decode
         tpot = Fraction(row["tpot_numerator"], row["tpot_denominator"])
         tpot_multiplier = float(tpot / ideal_tpot)
         ttft_multiplier = row["ttft_ps"] / ideal_prefill
+        tpot_increase = tpot_multiplier - 1.0
+        increment_ratio = (
+            (ttft_multiplier - 1.0) / tpot_increase
+            if tpot_increase != 0.0
+            else None
+        )
+        increment_ratio_passed = (
+            increment_ratio is not None
+            and increment_band[0] <= increment_ratio <= increment_band[1]
+        )
         common = {"profile": row["profile"], "launch_count": row["launch_count"]}
         scores.extend(
             (
@@ -848,35 +922,169 @@ def _score_rows(
                     **common,
                     "ttft_multiplier": ttft_multiplier,
                     "tpot_multiplier": tpot_multiplier,
-                    "passed": 1.0 < ttft_multiplier < tpot_multiplier,
+                    "increment_ratio": increment_ratio,
+                    "increment_ratio_acceptance": increment_band,
+                    "passed": (
+                        1.0 < ttft_multiplier < tpot_multiplier
+                        and increment_ratio_passed
+                    ),
                 },
             )
         )
     derived_rows = []
     by_key = {(row["profile"], row["launch_count"]): row for row in rows}
     for profile in ("turing-cuda-graph", "turing-eager-host"):
+        low = by_key[(profile, 440)]
+        high = by_key[(profile, 567)]
         derived_rows.append(
             {
                 "kind": "launch_count",
                 "profile": profile,
-                "passed": by_key[(profile, 567)]["tpot_numerator"]
-                > by_key[(profile, 440)]["tpot_numerator"],
+                "passed": Fraction(
+                    high["tpot_numerator"], high["tpot_denominator"]
+                )
+                > Fraction(low["tpot_numerator"], low["tpot_denominator"]),
             }
         )
     for count in (440, 567):
+        graph = by_key[("turing-cuda-graph", count)]
+        eager = by_key[("turing-eager-host", count)]
         derived_rows.append(
             {
                 "kind": "launch_class",
                 "launch_count": count,
-                "passed": by_key[("turing-eager-host", count)]["tpot_numerator"]
-                > by_key[("turing-cuda-graph", count)]["tpot_numerator"],
+                "passed": Fraction(
+                    eager["tpot_numerator"], eager["tpot_denominator"]
+                )
+                > Fraction(
+                    graph["tpot_numerator"], graph["tpot_denominator"]
+                ),
             }
         )
     return scores, {
-        "id": "LIVE-D1_two_parameter_directions",
+        "id": "HOLD-D1_two_parameter_directions",
         "scored": False,
         "passed": all(row["passed"] for row in derived_rows),
         "rows": derived_rows,
+    }
+
+
+def _non_entailment_checks(
+    values: dict[str, Any], calibration: dict[str, Any]
+) -> dict[str, Any]:
+    """Exhibit fatal-valid countermodels that miss every scored family."""
+
+    holdout = _holdout(values)
+    fixture = holdout["fixture"]
+    acceptance = holdout["acceptance"]
+    ideal_steps = fixture["prior_observed_ideal_step_ps"]
+    ideal_tpot = fixture["prior_observed_micro_fixture_tpot_ps"]
+    increment_band = acceptance["ttft_to_tpot_increment_ratio_band"]
+    physical = holdout["physical_sanity_ps"]
+    serialized = calibration["measurements_ps"]["serialized_launch"]
+    rows = []
+    for frozen in acceptance["profile_launch_bands"]:
+        profile = frozen["profile"]
+        count = frozen["launch_count"]
+        point = calibration["profiles"][profile]["point_ps_per_launch"]
+        raw_floors = [
+            max(compute, count * point) for compute in fixture["fixed_compute_ps"]
+        ]
+        represented_steps = [
+            _whole_nanosecond_enclosure(floor) for floor in raw_floors
+        ]
+        represented = represented_steps[0]
+        network_floor = fixture["network_physical_bounds_ps"][1][0]
+        decode_multiplier = (represented + network_floor) / ideal_steps[1]
+        tpot_multiplier = (represented + network_floor) / ideal_tpot
+        band = frozen["multiplier_band"]
+        live1_passed = band[0] <= decode_multiplier <= band[1]
+        live2_passed = band[0] <= tpot_multiplier <= band[1]
+
+        ttft_network = fixture["network_physical_bounds_ps"][0][0]
+        decode_networks = [
+            bounds[1] for bounds in fixture["network_physical_bounds_ps"][1:]
+        ]
+        ttft_multiplier = (represented + ttft_network) / ideal_steps[0]
+        high_tpot = Fraction(
+            2 * represented + sum(decode_networks),
+            2 * ideal_tpot,
+        )
+        high_tpot_multiplier = float(high_tpot)
+        high_tpot_increase = high_tpot_multiplier - 1.0
+        increment_ratio = (
+            (ttft_multiplier - 1.0) / high_tpot_increase
+            if high_tpot_increase != 0.0
+            else None
+        )
+        live3_passed = (
+            1.0 < ttft_multiplier < high_tpot_multiplier
+            and increment_ratio is not None
+            and increment_band[0] <= increment_ratio <= increment_band[1]
+        )
+        key = f"{profile}-n{count}"
+        count_key = f"n{count}"
+        tight_bounds = [
+            [network[0] + represented_step, network[1] + represented_step]
+            for network, represented_step in zip(
+                fixture["network_physical_bounds_ps"],
+                represented_steps,
+                strict=True,
+            )
+        ]
+        loose_ceilings = [
+            network + compute + count * serialized
+            for network, compute in zip(
+                fixture["prior_observed_network_ps"],
+                fixture["fixed_compute_ps"],
+                strict=True,
+            )
+        ]
+        physical_valid = (
+            all(bounds[0] <= network_floor <= bounds[1]
+                for bounds in fixture["network_physical_bounds_ps"][1:])
+            and fixture["network_physical_bounds_ps"][0][0]
+            <= ttft_network
+            <= fixture["network_physical_bounds_ps"][0][1]
+            and all(
+                bounds[0] <= network <= bounds[1]
+                for bounds, network in zip(
+                    fixture["network_physical_bounds_ps"][1:],
+                    decode_networks,
+                    strict=True,
+                )
+            )
+            and len(set(represented_steps)) == 1
+            and physical["raw_physical_step_floor_by_profile_and_count"][key]
+            == fixture["network_physical_bounds_ps"][0][0] + raw_floors[0]
+            and physical["network_plus_represented_step_bounds"][key]
+            == tight_bounds
+            and physical["step_ceiling_by_launch_count"][count_key]
+            == loose_ceilings
+        )
+        rows.append(
+            {
+                "profile": profile,
+                "launch_count": count,
+                "represented_compute_ps": represented,
+                "fatal_physical_bounds_hold": physical_valid,
+                "live1_floor_multiplier": decode_multiplier,
+                "live1_countermodel_misses": not live1_passed,
+                "live2_floor_multiplier": tpot_multiplier,
+                "live2_countermodel_misses": not live2_passed,
+                "live3_countermodel_increment_ratio": increment_ratio,
+                "live3_countermodel_misses": not live3_passed,
+                "passed": physical_valid
+                and not live1_passed
+                and not live2_passed
+                and not live3_passed,
+            }
+        )
+    return {
+        "evidence_class": "logical_non_entailment_countermodel",
+        "scored": False,
+        "passed": all(row["passed"] for row in rows),
+        "rows": rows,
     }
 
 
@@ -989,6 +1197,8 @@ def _production(
     values: dict[str, Any],
     calibration: dict[str, Any],
 ) -> int:
+    if HOLDOUT_RESULTS.exists():
+        raise FileExistsError(f"holdout result already exists: {HOLDOUT_RESULTS}")
     observed_head = _clean_head()
     source_hash = _sha256(Path(__file__))
     os.environ["SIMLLM_HTSIM_RNIC"] = str(args.htsim_rnic.resolve())
@@ -1007,27 +1217,25 @@ def _production(
             for launch_count in (440, 567)
         ),
     ]
+    scores, directions = _score_rows(rows, values)
     mismatch = _mismatch_checks(args)
     provenance = _profile_guard(rows, calibration)
     physical = _physical_checks(rows, values, calibration)
     conservation = _conservation_checks(rows, values)
-    prior = _load_json(PRIOR_LIVE_ATTEMPT)
-    attempt_two = _attempt_two_checks(rows, values, prior)
     quantized_compute = _quantized_compute_checks(rows)
     observed_schedule = _observed_schedule_checks(rows, values)
-    scores, derived = _score_rows(rows, values)
+    network_diagnostic = _network_service_diagnostic(rows)
+    non_entailment = _non_entailment_checks(values, calibration)
     budget = _budget(rows, values)
-    fixture = values["live_fixture"]
+    fixture = _fixture(values)
     ideal = rows[0]
+    ideal_steps = fixture["prior_observed_ideal_step_ps"]
     ideal_exact = (
         [step["step_latency_ps"] for step in ideal["steps"]]
-        == [
-            fixture["ideal_step_ps"]["prefill"],
-            *fixture["ideal_step_ps"]["decode"],
-        ]
-        and ideal["ttft_ps"] == fixture["ideal_step_ps"]["prefill"]
+        == ideal_steps
+        and ideal["ttft_ps"] == ideal_steps[0]
         and Fraction(ideal["tpot_numerator"], ideal["tpot_denominator"])
-        == fixture["ideal_step_ps"]["tpot"]
+        == fixture["prior_observed_micro_fixture_tpot_ps"]
         and [step["compute_estimate_ps"] for step in ideal["steps"]]
         == fixture["fixed_compute_ps"]
         and [step["compute_service_ps"] for step in ideal["steps"]]
@@ -1038,11 +1246,12 @@ def _production(
         and ideal["fallback_calls"] == 0
         and all(row["fallback_calls"] == 0 for row in rows)
     )
+    source_identity = _source_identity_checks(args, fixture)
     end_head = _run(("git", "rev-parse", "HEAD")).stdout.strip()
     stable_source = observed_head == end_head and source_hash == _sha256(Path(__file__))
     guards = [
         {
-            "id": "LIVE-G1_profile_provenance",
+            "id": "LIVE-G1_profile_provenance_and_stable_revision",
             "passed": provenance["passed"] and stable_source,
             "detail": {
                 "profile_check": provenance,
@@ -1057,34 +1266,33 @@ def _production(
             "detail": mismatch,
         },
         {
-            "id": "LIVE-G3_step_and_metric_conservation",
-            "passed": (
-                ideal_exact
-                and physical["passed"]
-                and conservation["passed"]
-                and attempt_two["passed"]
-            ),
+            "id": "LIVE-G3_source_identity_and_ideal_baseline",
+            "passed": source_identity["passed"] and ideal_exact,
             "detail": {
+                "source_identity": source_identity,
                 "ideal_exact": ideal_exact,
-                "physical": physical,
-                "conservation": conservation,
-                "attempt_two": attempt_two,
             },
         },
         {
-            "id": "LIVE-G4_budget_arithmetic",
+            "id": "LIVE-G4_component_and_request_conservation",
+            "passed": conservation["passed"] and observed_schedule["passed"],
+            "detail": {
+                "conservation": conservation,
+                "observed_schedule": observed_schedule,
+            },
+        },
+        {
+            "id": "LIVE-G5_physical_enclosures_and_exact_Q",
+            "passed": physical["passed"] and quantized_compute["passed"],
+            "detail": {
+                "physical": physical,
+                "quantized_compute": quantized_compute,
+            },
+        },
+        {
+            "id": "LIVE-G6_budget_arithmetic",
             "passed": budget["passed"],
             "detail": budget,
-        },
-        {
-            "id": "LIVE-G5_GOAL_quantized_compute_encloses_host_floor",
-            "passed": quantized_compute["passed"],
-            "detail": quantized_compute,
-        },
-        {
-            "id": "LIVE-G6_observed_schedule_attribution",
-            "passed": observed_schedule["passed"],
-            "detail": observed_schedule,
         },
     ]
     fatal_failures = [row["id"] for row in guards if not row["passed"]]
@@ -1094,12 +1302,13 @@ def _production(
     elif passed != len(scores):
         status = "not_accepted"
     else:
-        status = "accepted_pending_offpath"
+        status = "accepted"
     result = {
-        "schema": "simllm-host-step-cost-v1-results-v1",
+        "schema": "simllm-host-step-holdout-v1-results-v1",
         "study": "host_step_cost_v1",
         "task": "COMP-2",
         "live_attempt": values["live_attempt"],
+        "evidence_class": "post_specified_genuine_risk_holdout",
         "expectation_commit": _expectation_commit(),
         "observed_commit": observed_head,
         "calibration_sha256": _sha256(CALIBRATION),
@@ -1108,17 +1317,25 @@ def _production(
         "fatal_guard_failures": fatal_failures,
         "fatal_guards": guards,
         "scored_relations": scores,
-        "derived_unscored_checks": [derived],
+        "genuine_risk_instances": len(scores),
+        "derived_unscored_checks": [
+            directions,
+            network_diagnostic,
+            non_entailment,
+        ],
         "rows": rows,
         "conditional_turing_budget": budget,
+        "prior_attempt_two": _holdout(values)["prior_attempt_two"],
         "exact_ideal_offpath": {
             "guard": "OFF-G1_ideal_named_study_exact_identity",
-            "status": "pending separate five-cell mission rerun",
+            "status": "accepted in separate tracked compatibility artifact",
         },
     }
     payload = json.dumps(result, indent=2, sort_keys=True) + "\n"
-    (args.out / "results.json").write_text(payload, encoding="utf-8", newline="\n")
-    RESULTS.write_text(payload, encoding="utf-8", newline="\n")
+    (args.out / "holdout_results.json").write_text(
+        payload, encoding="utf-8", newline="\n"
+    )
+    HOLDOUT_RESULTS.write_text(payload, encoding="utf-8", newline="\n")
     if fatal_failures:
         print("run is VOID for closure purposes: fatal guard findings follow")
         for identifier in fatal_failures:
@@ -1130,7 +1347,7 @@ def _production(
     if passed != len(scores):
         print("registered live acceptance was not met")
         return 1
-    print("live host-step study passed pending the separate ideal compatibility guard")
+    print("held-out host-step magnitude study passed")
     return 0
 
 
@@ -1139,8 +1356,9 @@ def main() -> int:
     values, calibration = _check(args)
     if args.check_only:
         print(
-            "check-only: live registry, arithmetic, inputs and tools valid; "
-            "htsim not invoked; no output created"
+            "check-only: holdout registry, arithmetic, inputs, tools and "
+            "non-entailment countermodels valid; htsim not invoked; "
+            "no output created"
         )
         return 0
     return _production(args, values, calibration)

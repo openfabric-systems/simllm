@@ -94,6 +94,14 @@ def test_frozen_calibration_inventory_and_corrected_oracle():
     expectations = json.loads(EXPECTATIONS_PATH.read_text(encoding="utf-8"))
 
     assert sum(expectations["scored_calibration_relations"].values()) == 4
+    assert "scored_live_relations" not in expectations
+    assert sum(
+        expectations["attempt_two_relations_originally_scored"].values()
+    ) == 12
+    assert expectations["live_attempt_two"]["genuine_risk_instances"] == 0
+    assert sum(
+        expectations["live_attempt_three"]["scored_relations"].values()
+    ) == 12
     assert expectations["prior_attempt"]["integer_scaling_residual_ps"] == 1
     assert study._zero_work_oracle() == {
         "zero_work_ps": 0,
