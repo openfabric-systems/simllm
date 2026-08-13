@@ -225,7 +225,10 @@ step starts.
 Post-specified integration review added a tracked LF byte fixture under
 `tests/fixtures/sglang`. A CI-runnable test drives `SglStepTranslator`,
 `observe_tp_step`, and `StepRecordStream` on one shared clock in both flag
-states; both streams must equal the fixture exactly. The pinned call-site
+states; both streams must equal the fixture exactly. SGL-12 added the sampled
+count and identity to every record, so that original fixture is now the
+compatibility baseline and the current default has a second fixture beside it.
+The communicator flag must move neither. The pinned call-site
 audit now derives every observed row from AST, and the correction supplement
 in `examples/sgl_communicator_v1/RESULTS.md` identifies the actual
 `output_tensor_list` callers without rewriting the frozen expectations file.
