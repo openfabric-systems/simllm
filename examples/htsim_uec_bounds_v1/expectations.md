@@ -2,9 +2,9 @@
 
 The original expectations-only record for this UEC validation-bound
 reconciliation preceded the first result-producing command and every backend
-implementation change made for HTSIM-25. This tracked update is the disclosed
-attempt-four refreeze after three void attempts; it precedes the plan-projector
-repair and attempt-four run. The study does not claim a TTFT or TPOT relation.
+implementation change made for HTSIM-25. This tracked record now includes the
+disclosed attempt-five refreeze after four void attempts. The study does not
+claim a TTFT or TPOT relation.
 Its decision-relevant result is whether every known bound miss has a causal
 classification strong enough to make the native backend gate citable.
 
@@ -13,7 +13,7 @@ final default gate is not green, HTSIM-25 remains open. HTSIM-8 is judged
 separately and remains open unless the final eight-plan gate exits zero and a
 deliberate bound mutant is rejected and then removed.
 
-## Attempt chronology and attempt-four refreeze
+## Attempt chronology and attempt-five refreeze
 
 Attempt one used the unmodified bound-authorship binary. It is void. Before any
 historical FCT could be observed, all three completed plans violated the frozen
@@ -88,6 +88,23 @@ bound rule is changed to fit those numbers. The classification and relation
 expectations already precede the first measured attempt; the only new
 assertions are plan-byte integrity and the source-derived horizon-unit
 correction below.
+
+Attempt four is void. Its first measured invocation used `python3.10` as the
+study driver instead of the registered `.venv/bin/python`. Independent review
+caught the command deviation after the sender plan completed and while the
+receiver plan was running. The process was interrupted, and its partial
+artifacts are retained outside Git as off-protocol findings. They are unscored
+and unused for closure.
+
+This section refreezes attempt five before its first measured invocation.
+Attempt five uses the already-frozen candidate binaries, workload, target
+identities, causal classes, bound rules, relations, fatal guards, projection
+implementation and exact source/input manifests without change. It uses the
+literal registered `.venv/bin/python` driver and a fresh `attempt5-baseline`
+output path. No backend code, modeled behavior, harness implementation,
+expectation or measured-value rule changed after the interrupted attempt-four
+invocation. Attempt five remains a disclosed post-start rerun because earlier
+void attempts exposed findings.
 
 ## Prior evidence and external-source audit
 
@@ -365,12 +382,12 @@ Bulk outputs remain outside Git. The registered study command is:
 ```bash
 HTSIM_SOURCE_ROOT="${HTSIM_PRECHANGE_SOURCE_ROOT:?configure a detached HTSIM worktree at 1ae1215}" \
 .venv/bin/python examples/htsim_uec_bounds_v1/run_study.py \
-  --out "${SIMLLM_DATA_ROOT:?configure the data root}/attempt4-baseline" \
+  --out "${SIMLLM_DATA_ROOT:?configure the data root}/attempt5-baseline" \
   --candidate "authorship-print-projection=${HTSIM_AUTHORSHIP_BINARY:?build the print-only authorship projection}" \
   --candidate "prechange=${HTSIM_PRECHANGE_BINARY:?build the pre-change binary}"
 ```
 
-The same command with `--check-only` must run before this attempt-four
+The same command with `--check-only` must run before this attempt-five
 expectations commit against a detached Git worktree at `1ae1215`. Check-only
 invokes the backend comparator's `-dryrun` path for all eight plans, validates
 the frozen inventory and candidate syntax, prints the external plan, and
@@ -382,10 +399,11 @@ an artifact. Historical build commands and any mechanically selected
 bisection commits are recorded in RESULTS with compiler provenance; they do
 not change the registered workload or comparator.
 
-The untracked harness present at this refreeze still contains the defective
-always-final-LF plan projector. It also contains only the frozen plan and
-target registries, comparator orchestration, raw observation parsing,
-check-only validation and a portability-only switch from a literal `python3`
-child to the current interpreter. The EOF-preserving implementation has not
-started. The harness contains no backend fix, classification outcome or
-observed timing.
+The untracked harness present at this refreeze is the already-reviewed
+attempt-four implementation. It contains the frozen plan and target
+registries, comparator orchestration, raw observation parsing, byte-preserving
+projection and independent audit, source/input snapshots, check-only
+validation and a portability-only switch from a literal `python3` child to
+the current interpreter. It contains no backend fix, classification outcome
+or observed timing, and it is unchanged after the interrupted attempt-four
+invocation.
