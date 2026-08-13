@@ -10,7 +10,8 @@ raises TPOT from 5,845,808,128 ps to 7,935,808,128 ps, exactly 1.3575x. Both
 moves reproduce the frozen tables to 0 ps. Above the constraint threshold the
 metric does not move at all: capacities 48, 56 and 64 give bit-identical TTFT.
 
-- 20 of 20 scored genuine-risk instances passed.
+- 16 of 16 pre-registered scored genuine-risk instances passed.
+- 4 of 4 post-specified family B exact-row regression checks passed.
 - 17 of 17 entailed relations held.
 - 0 of 56 fatal guards violated. The run is interpretable.
 
@@ -19,11 +20,20 @@ metric does not move at all: capacities 48, 56 and 64 give bit-identical TTFT.
 - `5a36cbe` froze the expectations. No implementation existed; the check-only
   dry run confirmed that no KV pool type was exported and that every
   byte-carrying KV read or write was refused in preflight.
-- `e33f265` landed the ledger and the HBM lowering.
-- `6e791db` amended the freeze, before any run of the study existed, after
-  re-deriving family B's token cursor against the vLLM sources. The amendment
-  is disclosed below and recorded in full in `expectations.md`.
-- This file reports the first and only executed measurement.
+- `e33f265` landed the ledger and the HBM lowering at
+  `2026-08-13 02:44:23 +0200`.
+- `6e791db` amended the family B literals at
+  `2026-08-13 02:48:39 +0200`, after the implementation. The four scored
+  family B exact timing instances are therefore post-specified regression
+  checks. Family A remains pre-registered.
+- The executable 259-token fixture that produces the amended values did not
+  exist until `e8d0541` at `2026-08-13 02:58:31 +0200`, so the literals could
+  not have been fitted to an observation already produced by that fixture.
+  This mitigating fact does not restore pre-registration.
+- Two executions occurred. The first was VOID because it reported 12
+  fatal-guard violations; its 2 scored failures are retained below as
+  findings, not as closure evidence. After checker-only repairs, the second
+  execution produced the interpretable result reported here.
 
 ## The amendment, stated plainly
 
@@ -33,20 +43,21 @@ resident context is 258 tokens while the sequence is 259 tokens long.
 Preemption zeroes `num_computed_tokens` (`vllm/v1/core/sched/scheduler.py:1225`)
 and keeps `num_tokens`, so the resumed step recomputes 259 tokens, not 258.
 
-The correction made the registration stricter rather than easier. The original
+The corrected regression check is stricter rather than easier. The original
 predicted that the resumed step moves one token equivalent fewer KV bytes than
 the decode step it replaces, so the TPOT rise would grow as bandwidth fell.
 With the correct cursor the resumed step writes exactly as many token
 equivalents as the decode step reads and writes, the KV terms cancel, and the
-rise is bandwidth-independent. The run confirms the corrected form: the rise is
-2,090,000,000 ps at 8 TB/s and 2,090,000,000 ps at 4 TB/s, identical to the
+rise is bandwidth-independent. The run confirms the corrected form: the rise
+is 2,090,000,000 ps at 8 TB/s and 2,090,000,000 ps at 4 TB/s, identical to the
 picosecond.
 
-## Two harness defects, both in the checker
+## First execution: VOID after two checker defects
 
-The first execution reported 12 fatal-guard violations and 2 scored failures.
-Both were comparison defects in the study's own checker, not in the model or
-the frozen values, and neither frozen number changed:
+The first execution was VOID: 12 fatal-guard violations made its scored
+outcome uninterpretable. Its 2 scored failures are retained here as findings,
+not as closure evidence. Both findings came from comparison defects in the
+study's own checker, not from the model or the frozen values:
 
 - the guard compared the ledger's cumulative `write_bytes` counter, which
   spans all three replayed requests, against one request's write;
@@ -56,8 +67,13 @@ the frozen values, and neither frozen number changed:
 
 Both now compare like with like: the byte guard uses the whole replay's
 expected write total, and the accounting instance reads the preempted
-request's `RELEASE` demand from the KV report. Every metric guard passed on
-the first execution and is unchanged.
+request's `RELEASE` demand from the KV report. The repairs changed no frozen
+literal and no model semantics. The path-limited `e8d0541` diff reports 952
+additions and 3 deletions in `run_study.py`; all three deletions remove the
+pre-execution `_run` `RuntimeError` stub, and zero checker lines are deleted.
+The executable fixture and repaired checker are additions. Every metric guard
+passed on the first execution and is unchanged. The second execution violated
+no fatal guard and is the interpretable run reported above.
 
 ## Physical sanity, three independent angles
 
@@ -135,10 +151,14 @@ first), and it is why `FREE` exists in the vocabulary separately from `EVICT`.
 
 Never summed across classes.
 
-**Scored genuine-risk instances, 20 of 20 passed.** Twelve family A exact rows
-(TTFT, kv_ps and kernel_ps per capacity and rate), four family B exact rows
-(six step latencies, TTFT, exact rational TPOT and the token-4 interval per arm
-and rate), two eviction-ladder rows and two preemption-accounting rows.
+**Pre-registered scored genuine-risk instances, 16 of 16 passed.** Twelve
+family A exact rows (TTFT, kv_ps and kernel_ps per capacity and rate), two
+eviction-ladder rows and two unchanged preemption-accounting rows.
+
+**Post-specified regression checks, 4 of 4 passed.** These are the four family
+B exact rows (six step latencies, TTFT, exact rational TPOT and the token-4
+interval per arm and rate). The family B oracle was materially amended after
+the implementation.
 
 **Entailed relations, 17 of 17 held, unscored.** Direction, plateau, hit
 ladder, bandwidth doubling of only the KV term, the 2.0000x magnitude, the
@@ -184,10 +204,11 @@ Each registered clause, mapped to evidence.
    cases: no reuse, repeated system prefixes, competing prefix pools,
    multi-turn sessions, chunked prefill, capacity pressure, eviction,
    preemption/recompute, mixed contexts and bursts" - **partly met**. No reuse,
-   repeated system prefixes, capacity pressure, eviction and
-   preemption/recompute are pre-registered and executed. Competing prefix
-   pools, multi-turn sessions, chunked prefill, mixed contexts, bursts and
-   every SGLang case are not.
+   repeated system prefixes, capacity pressure and eviction are pre-registered
+   and executed. Preemption/recompute is executed, with its four exact timing
+   rows treated as post-specified regression checks; its unchanged accounting
+   checks remain pre-registered. Competing prefix pools, multi-turn sessions,
+   chunked prefill, mixed contexts, bursts and every SGLang case are not.
 5. "Sweep capacity, block size, arrival rate, length, sharing and concurrency" -
    **partly met**. Capacity is swept over six levels and HBM rate over two.
    Block size, arrival rate, length, sharing and concurrency are not.
@@ -211,17 +232,17 @@ carries does not need a second identity. CORE-50 and CORE-51 remain unused.
 
 ## Contradiction sweep
 
-Statements this change makes stale, reported rather than edited:
+Statements the original change made stale and their current disposition:
 
-- `docs/architecture.md:275`, "CORE-3 still owns explicit KV lifecycle". CORE-3
-  still owns the case matrix, the remaining sweeps and the remaining reporting
-  surface, but no longer the accounting or its path to a metric.
+- `docs/architecture.md:275` now records that explicit KV lifecycle accounting
+  and its HBM metric path are implemented, while CORE-3 retains the case
+  matrix, remaining sweeps, reporting surface and lowering gap.
 - `docs/architecture.md:210-213`, which says physical KV reads and writes lower
   to HBM operations, swap and remote movement lower to DMA plus network work,
   and recompute lowers to compute plus a KV write. The first is now true. Swap
   and transfer are accounted and byte-carrying but lower to the HBM queue
   rather than to DMA plus network; recompute is accounted as tokens and is not
-  lowered at all.
+  lowered at all. This divergence is now carried explicitly by CORE-3.
 - `docs/README_PRO.md:193-199`, which lists explicit KV lifecycle as a roadmap
   item to be "validated in a dedicated `examples/kv_cache_strategies/` study
   before KV bytes couple to resource contention". That study now exists and

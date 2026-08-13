@@ -272,7 +272,9 @@ references do not impose their original transient scope on later users.
   supported scopes: strict graph/result JSON with serial diagnostic lowering
   and graph-only replay, the coarse `DeviceRuntime` including the frozen
   Tier B structural fixture, and completion reduction with seven-component
-  attribution. CORE-3 still owns explicit KV lifecycle.
+  attribution. Explicit KV lifecycle accounting and its HBM metric path are
+  implemented. CORE-3 still owns the remaining case matrix, sweeps, reporting
+  surface and the `SWAP`, `TRANSFER` and `RECOMPUTE` lowering gap.
   Dependency semantics are explicit per edge: `depends_on` waits for complete
   predecessor operations, while `participant_local_depends_on` lets
   distributed collective ranks arrive after their own predecessor frontiers.

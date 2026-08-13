@@ -40,12 +40,23 @@ framework (VLLM-11 and SGL-9 own the capture halves), and does not touch
 `simllm/traffic`. The fixture below is a mechanism fixture with deliberately
 tiny pools; it is not a deployment sizing claim.
 
-## Amendment 1, before any run
+## Amendment 1, post-specified after implementation
+
+The implementation landed in `e33f265` at `2026-08-13 02:44:23 +0200`. This
+amendment landed in `6e791db` at `2026-08-13 02:48:39 +0200`, so it followed
+the implementation. The four scored family B exact timing instances that use
+the amended literals are post-specified regression checks, not pre-registered
+expectations. Family A remains pre-registered.
+
+The executable 259-token fixture that produces these values did not exist
+until `e8d0541` at `2026-08-13 02:58:31 +0200`. The corrected literals
+therefore could not have been fitted to an observation already produced by
+that fixture. This mitigating fact does not restore pre-registration.
 
 The family B token bookkeeping was wrong when this file was first committed at
-`5a36cbe`, and re-deriving it against the vLLM cursor found the error before
-any run of the study existed. The correction is recorded here rather than
-edited silently, and the original commit is left intact.
+`5a36cbe`, and re-deriving it against the vLLM cursor found the error. The
+correction is recorded here rather than edited silently, and the original
+commit is left intact.
 
 The defect. A decode step writes the KV of the token it is querying, so after
 D's step 2 the resident context is 258 tokens while D's sequence is 259 tokens
@@ -67,7 +78,8 @@ writes 259 tokens, and the decode step it replaces reads 258 and writes 1.
 The KV terms therefore cancel exactly, and the TPOT rise is
 `(10,360,000,000 - 2,000,000,000) / 4 = 2,090,000,000` ps at *every* HBM rate.
 A bandwidth-independent delta is a stricter prediction than the original
-bandwidth-dependent one, and it is the one this study is now registered on.
+bandwidth-dependent one, and it is the post-specified family B regression form
+this study checks.
 
 Superseded values, recorded so the amendment is auditable: step 4 preempted
 `258 * (40,000,000 + k)`; TPOT preempted 7,925,804,032 and 7,931,608,064 ps;
@@ -368,6 +380,10 @@ their exact rational mean.
 
 Registered relations for family B:
 
+The four exact timing instances, one for each arm and rate, are post-specified
+regression checks because Amendment 1 materially changed the family B oracle.
+The unchanged preemption-accounting expectations remain pre-registered.
+
 - B1 direction: preemption raises TPOT. The rise is exactly 2,090,000,000 ps
   at both rates, i.e. a factor of 1.3575 at k=16,384 and 1.3572 at k=32,768.
 - B2 closed form: `TPOT_delta = (10,360,000,000 - 2,000,000,000) / 4`, with no
@@ -402,6 +418,11 @@ Separate classes, never summed:
   step-latency identity once A6 fixes the ladder, and A7 is entailed by A3.
   B5 is entailed by B4 plus the unconstrained column of A. They are reported
   as consistency rows, not as separate scored instances.
+
+At the instance level, the 12 family A exact rows, two eviction-ladder rows
+and two unchanged preemption-accounting rows are the 16 pre-registered scored
+instances. The four family B exact timing rows are post-specified regression
+checks and are reported separately from that headline.
 
 Entailment analysis. The exact TTFT table (A3) is not independent evidence
 once the ladder (A6) and the decomposition (A5) both hold, because

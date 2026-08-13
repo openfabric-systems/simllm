@@ -528,10 +528,11 @@ The [KV lifecycle study](../../examples/kv_cache_strategies/RESULTS.md)
 demonstrates the live relation. Shrinking the pool from 64 to 32 blocks raises
 the replayed request's TTFT by exactly 2.0000x, a preemption raises TPOT by
 exactly 2,090,000,000 ps at both HBM rates, and capacities above the
-constraint threshold leave TTFT bit-identical. All 20 scored genuine-risk
-instances pass, all 17 entailed relations hold and none of the 56 fatal guards
-is violated. CORE-3 stays open for the case matrix, the remaining sweep axes
-and the remaining reporting surface.
+constraint threshold leave TTFT bit-identical. All 16 pre-registered scored
+instances and all four post-specified family B regression checks pass, all 17
+entailed relations hold and none of the 56 fatal guards is violated. CORE-3
+stays open for the case matrix, the remaining sweep axes, the remaining
+reporting surface and the `SWAP`, `TRANSFER` and `RECOMPUTE` lowering gap.
 
 CORE-5 is complete for the supported core path. `CompletionReducer` consumes
 the required graph boundary and the runtime's corrected critical-path
@@ -876,7 +877,15 @@ does not claim to produce these resource-contention measurements.
   preemption counter, capacity wait and TTFT/TPOT tails. The observation
   streams must come from the adapter capture halves VLLM-11 and SGL-9 rather
   than from the study's own vLLM-policy fixture. Acceptance keeps the frozen
-  cells of the landed study bit-identical.
+  cells of the landed study bit-identical. One further lowering divergence
+  remains under this ID: `SWAP` and `TRANSFER` are byte-carrying and currently
+  served only from the rank's HBM queue by `_schedule_kv_traffic`, while
+  `RECOMPUTE` is accounted as tokens and is not lowered at all. Complete the
+  architecture contract by lowering swap and remote movement to DMA plus
+  network work, and recompute to compute plus a KV write. Acceptance must
+  preserve the zero-byte and absent-action paths exactly and carry declared
+  bytes and tokens through the runtime report and TTFT/TPOT projection without
+  loss or duplication.
 - CORE-9 (Completeness; P1; M): replace the bookkeeping-v1 WQE compatibility
   shape with a versioned structural projection while retaining a strict v1
   reader. A send WQE names one local SQ and send CQ, a receive WQE names one RQ
