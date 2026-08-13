@@ -12,7 +12,7 @@ from __future__ import annotations
 import enum
 import re
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
@@ -59,6 +59,12 @@ from simllm.core.execution_io import (
     execution_result_to_json,
     operation_participant_ranks,
     validate_execution_graph,
+)
+from simllm.core.kv import (
+    KvAccountingReport,
+    KvLifecycleLedger,
+    KvPoolSpec,
+    KvServiceDemand,
 )
 from simllm.core.precision import (
     PrecisionConfig,
@@ -132,6 +138,9 @@ class CoarseDeviceProfile:
     rnics_per_node: int = DEFAULT_RNICS_PER_NODE
     rnic_rate_bps: int = DEFAULT_RNIC_RATE_BPS
     nvlink_rate_bps: int = DEFAULT_NVLINK_RATE_BPS
+    #: per-GPU HBM rate that serves byte-carrying KV work; zero keeps that
+    #: lowering off and leaves every KV operation a timing-neutral marker
+    hbm_rate_bps: int = 0
     launch_service_ps: int = 0
     control_service_ps: int = 0
     nccl_channel_service_ps: int = 0
@@ -149,6 +158,7 @@ class CoarseDeviceProfile:
         for name in ("rnic_rate_bps", "nvlink_rate_bps"):
             _require_int(name, getattr(self, name), positive=True)
         for name in (
+            "hbm_rate_bps",
             "launch_service_ps",
             "control_service_ps",
             "nccl_channel_service_ps",
@@ -1083,6 +1093,7 @@ class CoarseDeviceRuntime:
         arbitration_policy: ArbitrationPolicy | None = None,
         kernel_services: Mapping[int, SmSchedulerModel] | None = None,
         kernel_launches: Mapping[str, KernelLaunch] | None = None,
+        kv_pools: Iterable[KvPoolSpec] | None = None,
         precision: PrecisionConfig | None = None,
     ) -> None:
         from simllm.compute import KernelLaunch, SmSchedulerModel
@@ -1131,8 +1142,20 @@ class CoarseDeviceRuntime:
                 raise TypeError("native_session does not implement NativeRnicSession")
             self._bypass_ledger = None
             self._native_session = native_session
+        #: sole mutable KV lifecycle authority, or None when no pool is declared
+        self._kv_ledger = None if kv_pools is None else KvLifecycleLedger(kv_pools)
+        #: accounting validated by the current preflight, adopted only on success
+        self._pending_kv: tuple[KvLifecycleLedger, tuple[KvServiceDemand, ...]] | None = None
         self._state = _RuntimeState()
         self.last_report: RuntimeReport | None = None
+        #: read-only projection of the KV authority after the last execution
+        self.last_kv_report: KvAccountingReport | None = None
+
+    @property
+    def kv_ledger(self) -> KvLifecycleLedger | None:
+        """Expose the KV authority for audit, never as a second mutable seam."""
+
+        return self._kv_ledger
 
     @property
     def bypass_ledger(self) -> AtlahsWqeLedger | None:
@@ -1342,6 +1365,9 @@ class CoarseDeviceRuntime:
             self._state = state
             if bypass is not None:
                 self._bypass_ledger = bypass
+            if self._pending_kv is not None:
+                self._kv_ledger, kv_demands = self._pending_kv
+                self.last_kv_report = self._kv_ledger.report(kv_demands)
             self.last_report = report
         except BaseException:
             if native_transaction is not None and not native_committed:
@@ -1436,14 +1462,55 @@ class CoarseDeviceRuntime:
                     self.profile.node_gpu(rank)
             elif isinstance(work, KvCacheWork):
                 if (
-                    work.action in {KvCacheAction.READ, KvCacheAction.WRITE}
+                    self._kv_ledger is None
+                    and work.action in {KvCacheAction.READ, KvCacheAction.WRITE}
                     and work.byte_count > 0
                 ):
                     raise ValueError(
-                        "byte-carrying KV READ/WRITE requires CORE-3 HBM lowering"
+                        "byte-carrying KV READ/WRITE requires a declared KV pool; "
+                        "construct the runtime with kv_pools"
                     )
             else:
                 raise TypeError(f"unsupported work payload {type(work).__name__}")
+        self._pending_kv = self._account_kv(graph)
+
+    def _account_kv(
+        self,
+        graph: ExecutionGraph,
+    ) -> tuple[KvLifecycleLedger, tuple[KvServiceDemand, ...]] | None:
+        """Replay this graph's KV lifecycle before any resource is scheduled.
+
+        The accounting runs on a clone, so a graph refused here leaves the pool
+        exactly as the previous execution left it. Nothing in this method looks
+        at a queue: it answers what the cache did and how many bytes that
+        implies, and the scheduler decides only when those bytes move.
+        """
+
+        if self._kv_ledger is None:
+            return None
+        pending = self._kv_ledger.clone()
+        demands = pending.consume(
+            (operation.operation_id, operation.work)
+            for operation in graph.operations
+            if isinstance(operation.work, KvCacheWork)
+        )
+        if self.profile.hbm_rate_bps == 0:
+            for demand in demands:
+                if demand.byte_count:
+                    raise ValueError(
+                        f"KV operation {demand.operation_id!r} moves "
+                        f"{demand.byte_count} bytes but the profile declares no HBM "
+                        "rate; set hbm_rate_bps to serve it"
+                    )
+        return pending, demands
+
+    def _kv_demand_bytes(self, operation_id: str) -> int:
+        if self._pending_kv is None:
+            return 0
+        for demand in self._pending_kv[1]:
+            if demand.operation_id == operation_id:
+                return demand.byte_count
+        return 0
 
     def _schedule_launches(
         self,
@@ -1798,6 +1865,18 @@ class CoarseDeviceRuntime:
                 state,
             )
         if isinstance(operation.work, KvCacheWork):
+            demand_bytes = self._kv_demand_bytes(operation.operation_id)
+            if demand_bytes:
+                return self._schedule_kv_traffic(
+                    graph,
+                    operation,
+                    by_rank[operation.rank],
+                    causal_witnesses[operation.rank],
+                    eligible_at_ps,
+                    launch,
+                    state,
+                    demand_bytes,
+                )
             completed = max(launch.completed_at_ps, by_rank[operation.rank])
             causal_witness = causal_witnesses[operation.rank]
             return _ScheduledOperation(
@@ -1845,6 +1924,69 @@ class CoarseDeviceRuntime:
                 wqe_authority,
             )
         raise AssertionError("preflight accepted unsupported work")
+
+    def _schedule_kv_traffic(
+        self,
+        graph: ExecutionGraph,
+        operation: ExecutionOperation,
+        ready_at_ps: int,
+        causal_witness: _CausalWitness | None,
+        eligible_at_ps: int,
+        launch: QueueVisit,
+        state: _RuntimeState,
+        demand_bytes: int,
+    ) -> _ScheduledOperation:
+        """Serve one byte-carrying KV operation from the rank's HBM queue.
+
+        The byte count is the KV authority's accounting, never the graph's own
+        field re-read here, so a lifecycle stream that the ledger refused can
+        never reach a resource. Service is the exact serialization of those
+        bytes at the profile's HBM rate, which is the floor no memory system
+        beats; the visit is attributed to ``kv_ps``.
+        """
+
+        assert isinstance(operation.work, KvCacheWork)
+        rank = operation.rank
+        node, gpu = self.profile.node_gpu(rank)
+        ready_at_ps = max(launch.completed_at_ps, ready_at_ps)
+        started_at_ps = max(ready_at_ps, state.hbm_available.get(rank, 0))
+        finished_at_ps = started_at_ps + _serialization_ps(
+            demand_bytes,
+            self.profile.hbm_rate_bps,
+        )
+        completed_at_ps = finished_at_ps + self.profile.completion_delivery_ps
+        state.hbm_available[rank] = finished_at_ps
+        hbm_visit = QueueVisit(
+            execution_id=graph.execution_id,
+            operation_id=operation.operation_id,
+            resource=ResourceRef(
+                ResourceKind.HBM_QUEUE,
+                f"node-{node}:gpu-{gpu}:hbm",
+            ),
+            submitted_at_ps=launch.completed_at_ps,
+            eligible_at_ps=ready_at_ps,
+            started_at_ps=started_at_ps,
+            finished_at_ps=finished_at_ps,
+            completed_at_ps=completed_at_ps,
+            service_bytes=demand_bytes,
+        )
+        return _ScheduledOperation(
+            operation=operation,
+            logical_completed_at_ps=completed_at_ps,
+            physical_completed_at_ps=completed_at_ps,
+            participant_completed_at_ps={rank: completed_at_ps},
+            participant_paths={rank: [launch, hbm_visit]},
+            participant_causal_witnesses={rank: causal_witness},
+            visits=[launch, hbm_visit],
+            logical_paths=[[launch, hbm_visit]],
+            eligible_at_ps=eligible_at_ps,
+            critical_predecessor_id=(
+                None if causal_witness is None else causal_witness.predecessor_id
+            ),
+            critical_predecessor_completed_at_ps=(
+                None if causal_witness is None else causal_witness.completed_at_ps
+            ),
+        )
 
     def _schedule_dma(
         self,

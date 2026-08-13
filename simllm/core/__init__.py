@@ -74,6 +74,16 @@ from simllm.core.execution_io import (
     operation_participant_ranks,
     validate_execution_graph,
 )
+from simllm.core.kv import (
+    BYTE_CARRYING_ACTIONS,
+    KV_ACCOUNTING_SCHEMA,
+    KvAccountingReport,
+    KvBlockState,
+    KvLifecycleLedger,
+    KvPoolAccounting,
+    KvPoolSpec,
+    KvServiceDemand,
+)
 from simllm.core.precision import (
     AUTHORITY_MODE_RNIC_LEVELS,
     COMPUTE_LEVEL_ATTRIBUTE,
@@ -166,6 +176,7 @@ from simllm.core.step_io import step_result_from_json, step_result_to_json
 __all__ = [
     "AUTHORITY_MODE_RNIC_LEVELS",
     "BOOKKEEPING_SCHEMA",
+    "BYTE_CARRYING_ACTIONS",
     "COLLECTIVE_PLAN_SCHEMA",
     "COMPLETION_EVENT_SCHEMA",
     "COMPUTE_LEVEL_ATTRIBUTE",
@@ -176,6 +187,7 @@ __all__ = [
     "DEFAULT_RNIC_RATE_BPS",
     "EXECUTION_GRAPH_SCHEMA",
     "EXECUTION_RESULT_SCHEMA",
+    "KV_ACCOUNTING_SCHEMA",
     "LEGACY_RESULT_SCHEMA",
     "PRECISION_CONFIG_SCHEMA",
     "PRECISION_SEAMS",
@@ -226,8 +238,14 @@ __all__ = [
     "FrameworkRequestArrival",
     "IdentityArbitrationPolicy",
     "JoinProvenance",
+    "KvAccountingReport",
+    "KvBlockState",
     "KvCacheAction",
     "KvCacheWork",
+    "KvLifecycleLedger",
+    "KvPoolAccounting",
+    "KvPoolSpec",
+    "KvServiceDemand",
     "LatencyAttribution",
     "LocalityLevel",
     "NativeRnicSession",
