@@ -477,3 +477,16 @@ def test_f3_fails_when_the_halving_is_not_compressed():
     assert result["evaluated"] is True
     assert result["passed"] is False
     assert result["observed_ratio_range"][1] == pytest.approx(1.2)
+
+
+def test_g10_rejects_a_device_consistent_calibrated_roofline():
+    study = _study()
+    frozen = study.check_module().load_expectations()
+    pinned = {"a": {"steps": [{"step_index": 0, "provider_compute_ps": 99_032_502}]}}
+    device_consistent = {
+        "a": {"steps": [{"step_index": 0, "provider_compute_ps": 2_751_146_667}]}
+    }
+
+    assert study._provider_input_guard(pinned, frozen)["held"] is True
+    assert study._provider_input_guard(device_consistent, frozen)["held"] is False
+    assert study._provider_input_guard({}, frozen)["held"] is False

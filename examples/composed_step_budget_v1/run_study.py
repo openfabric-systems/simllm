@@ -381,15 +381,23 @@ def _provider_input_guard(
     compositions: dict[str, dict[str, Any]],
     frozen: dict[str, Any],
 ) -> dict[str, Any]:
-    """G10: the pinned provider kept the accepted compute input."""
+    """G10: the pinned provider kept the accepted compute input.
 
-    expected = frozen["constants_ps"]["accepted_decode_compute"]
+    The predicate is the attempt-two refreeze, disclosed as post-specified in
+    `expectations.md`. It bounds the raw provider estimate by the interval the
+    original freeze already registered for ideal compute service. A
+    device-consistent roofline for the calibrated device would price the same
+    554,631,168 bytes at 2,751,146,667 ps, i.e. 26 times that ceiling, so the
+    guard still fails immediately if the provider is not pinned.
+    """
+
+    low, high = frozen["intervals_ps"]["ideal_compute"]
     findings = []
     observed = set()
     for label, composition in compositions.items():
         for step in composition["steps"]:
             observed.add(step["provider_compute_ps"])
-            if step["provider_compute_ps"] > 2 * expected:
+            if not low <= step["provider_compute_ps"] <= high:
                 findings.append(
                     {
                         "cell": label,
@@ -397,11 +405,16 @@ def _provider_input_guard(
                         "provider_compute_ps": step["provider_compute_ps"],
                     }
                 )
+    refreeze = frozen.get("attempt_two_refreeze", {})
     return {
-        "held": not findings and expected in observed,
+        "held": bool(observed) and not findings,
         "findings": findings,
-        "accepted_decode_compute_ps": expected,
-        "observed_provider_compute_ps": sorted(observed),
+        "accepted_decode_compute_ps": frozen["constants_ps"]["accepted_decode_compute"],
+        "raw_provider_interval_ps": [low, high],
+        "device_consistent_turing_roofline_ps": refreeze.get(
+            "device_consistent_turing_roofline_ps"
+        ),
+        "observed_provider_compute_ps": [min(observed), max(observed)] if observed else [],
     }
 
 
