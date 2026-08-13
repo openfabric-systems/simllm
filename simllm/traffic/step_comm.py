@@ -88,6 +88,14 @@ from simllm.traffic.request_fidelity import (
     RequestPairRow,
     compare_goal_request_attribution,
 )
+from simllm.traffic.routed_conservation import (
+    ROUTED_EVIDENCE_CAPTURED,
+    ROUTED_EVIDENCE_UNIFORM,
+    RoutedConservationReport,
+    RoutedPhaseTable,
+    RoutedTokenOwnership,
+    routed_moe_conservation_report,
+)
 from simllm.traffic.routed_moe import RoutedMoeSupply
 
 #: the two allreduce sites of one transformer layer, in execution order
@@ -354,6 +362,110 @@ def _validate_microbatch_partition(
             )
 
 
+#: an observation whose all-to-allv sites carry no directed byte table
+OBSERVED_NO_BYTE_EVIDENCE = "no-byte-evidence"
+#: an observation whose all-to-allv sites all carry a directed byte table
+OBSERVED_PAIR_TABLE_EVIDENCE = "observed-pair-table"
+#: an observation carrying byte tables on some routed sites and not others
+OBSERVED_MIXED_BYTE_EVIDENCE = "mixed"
+#: an observation with no routed site at all
+OBSERVED_ABSENT_BYTE_EVIDENCE = "absent"
+
+
+def observed_routed_byte_evidence(observations: ExecutionObservations) -> str:
+    """Name what routed byte evidence an observation carries, if any.
+
+    The Granite producer emits zero-byte semantic all-to-allv markers, which
+    are a legitimate way to identify a call site without claiming its bytes.
+    They are not byte evidence, and naming that explicitly keeps a study from
+    citing the marker path as a byte-correctness guard.
+    """
+
+    if not isinstance(observations, ExecutionObservations):
+        raise TypeError("observations must be ExecutionObservations")
+    with_table = 0
+    without_table = 0
+    for operation in observations.operations:
+        work = operation.work
+        if not isinstance(work, CollectiveWork) or work.collective != "all-to-allv":
+            continue
+        if work.pair_payload_bytes or work.request_pair_payload_bytes:
+            with_table += 1
+        else:
+            without_table += 1
+    if not with_table and not without_table:
+        return OBSERVED_ABSENT_BYTE_EVIDENCE
+    if with_table and without_table:
+        return OBSERVED_MIXED_BYTE_EVIDENCE
+    return (
+        OBSERVED_PAIR_TABLE_EVIDENCE if with_table else OBSERVED_NO_BYTE_EVIDENCE
+    )
+
+
+def _routed_phase_tables(
+    operations: Sequence[MoeAllToAll],
+) -> tuple[RoutedPhaseTable, ...]:
+    return tuple(
+        RoutedPhaseTable(
+            layer=operation.layer,
+            phase=operation.phase,
+            pair_payload_bytes=operation.pair_payload_bytes,
+            request_pair_payload_bytes=operation.request_pair_payload_bytes,
+        )
+        for operation in operations
+    )
+
+
+def routed_moe_conservation(
+    record: StepRecord,
+    dims: ModelDims,
+    ep_ranks: Sequence[int] | None,
+    routed_supply: RoutedMoeSupply | None,
+) -> RoutedConservationReport | None:
+    """Check the step's routed byte plan against independent token ownership.
+
+    Returns ``None`` when the step plans no MoE traffic. The ownership side is
+    built from the record's per-request scheduled token counts, the declared
+    engine rank and the model geometry, none of which comes from the per-token
+    routing walk that produced the byte table.
+    """
+
+    ranks = tuple(ep_ranks) if ep_ranks is not None else ()
+    if not ranks:
+        return None
+    operations = step_moe_alltoalls(
+        record,
+        dims,
+        ranks,
+        routed_supply=routed_supply,
+    )
+    if not operations:
+        return None
+    ownership = RoutedTokenOwnership(
+        engine_rank=(
+            routed_supply.engine_rank if routed_supply is not None else ranks[0]
+        ),
+        request_token_counts=tuple(
+            (request.request_id, request.num_new_tokens)
+            for request in record.scheduled
+            if request.num_new_tokens > 0
+        ),
+        num_layers=dims.num_layers,
+        top_k=dims.top_k,
+        vector_bytes=dims.hidden_size * dims.dtype_bytes,
+    )
+    return routed_moe_conservation_report(
+        _routed_phase_tables(operations),
+        ownership,
+        ranks,
+        evidence_mode=(
+            ROUTED_EVIDENCE_CAPTURED
+            if routed_supply is not None
+            else ROUTED_EVIDENCE_UNIFORM
+        ),
+    )
+
+
 def lower_step_observations(
     record: StepRecord,
     dims: ModelDims,
@@ -377,8 +489,16 @@ def lower_step_observations(
     Every collective planned from each observed microbatch must be observed
     exactly once. Repeated semantic sites are legal only across distinct,
     request-partitioned microbatches, whose traffic must recombine to the
-    full-step plan exactly. The
-    returned standard :class:`ExecutionGraph` leaves realized concurrency to
+    full-step plan exactly.
+
+    An observation may identify a routed call site with a zero-byte semantic
+    marker instead of a directed byte table; use
+    :func:`observed_routed_byte_evidence` to name which it did. That marker is
+    not byte evidence and does not stand in for one, so the full-step routed
+    plan always passes through :func:`routed_moe_conservation`, whose ownership
+    side is independent of the routing walk that produced the plan.
+
+    The returned standard :class:`ExecutionGraph` leaves realized concurrency to
     :class:`~simllm.core.DeviceRuntime`; this function has no timing or overlap
     parameter.
 
@@ -418,6 +538,9 @@ def lower_step_observations(
         batch_records,
         planned,
     )
+    conservation = routed_moe_conservation(record, dims, ep_ranks, routed_supply)
+    if conservation is not None:
+        conservation.require_conserved()
     lowered: list[ExecutionOperation] = []
     observed_keys: set[tuple[int | None, str, int, str]] = set()
     for index, operation in enumerate(observations.operations):
@@ -1351,6 +1474,10 @@ def render_step_goal(
     for rank in range(num_goal_ranks):
         if rank not in used:
             trace.rank(rank).calc(0)
+    if moe_ops:
+        report = routed_moe_conservation(record, dims, ep_ranks, routed_supply)
+        if report is not None:
+            report.require_conserved()
     if any(operation.request_pair_payload_bytes for operation in moe_ops):
         _compare_operations_to_messages(record, moe_ops, trace.messages).require_match()
     return trace
