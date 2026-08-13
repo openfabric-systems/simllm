@@ -492,10 +492,78 @@ def read_routed_experts(path: str | Path) -> RoutedExperts:
     return routed_experts_from_json(value)
 
 
+def _project_framework_run(run: PreplayReplayRun) -> RoutedExperts:
+    """Project a joined version 2 capture, restricted to the joined requests.
+
+    Request order, forwarded-token order, layer order and the framework's own
+    post-selection top-k tuple order are copied without sorting, exactly as
+    :func:`project_framework_routing` does for a whole capture.
+    """
+
+    source = Path(run.trace.path)
+    trace_bytes = source.read_bytes()
+    digest = hashlib.sha256(trace_bytes).hexdigest()
+    if digest != run.trace.sha256:
+        raise ValueError(
+            "run.trace.sha256: trace bytes changed after the pre-play join"
+        )
+    trace = read_framework_preplay_trace(source)
+    trace_requests = {request.request_id: request for request in trace.requests}
+    requests: list[RoutedRequest] = []
+    for index, joined in enumerate(run.requests):
+        path = f"run.requests[{index}]"
+        try:
+            request = trace_requests[joined.routing_reference.request_id]
+        except KeyError as exc:
+            raise ValueError(
+                f"{path}.routing_reference.request_id: request is absent from trace"
+            ) from exc
+        if request.request_id != joined.request_id:
+            raise ValueError(
+                f"{path}.routing_reference.request_id: must match joined request"
+            )
+        if request.output_token_ids != joined.output_token_ids:
+            raise ValueError(f"{path}.output_token_ids: disagree with trace authority")
+        requests.append(
+            RoutedRequest(
+                request_id=request.request_id,
+                prompt_token_count=len(request.input_token_ids),
+                output_token_count=len(request.output_token_ids),
+                tokens=tuple(
+                    RoutedToken(
+                        phase=dispatch.phase,
+                        token_index=dispatch.token_index,
+                        token_id=dispatch.token_id,
+                        layers=tuple(
+                            RoutedLayer(
+                                layer_index=layer.layer_index,
+                                expert_ids=layer.expert_ids,
+                            )
+                            for layer in dispatch.routing
+                        ),
+                    )
+                    for dispatch in (*request.prefill_dispatch, *request.decode_dispatch)
+                ),
+            )
+        )
+    projection = RoutedExperts(
+        trace_schema=trace.provenance.schema,
+        trace_sha256=digest,
+        expert_count=trace.provenance.expert_count,
+        top_k=trace.provenance.top_k,
+        moe_layer_indices=trace.provenance.moe_layer_indices,
+        requests=tuple(requests),
+    )
+    validate_routed_experts(projection)
+    return projection
+
+
 def project_preplay_routing(run: PreplayReplayRun) -> RoutedExperts:
     """Project the exact trace bytes and joined request order into assignments."""
 
     validate_preplay_replay_run(run)
+    if run.trace.schema == FRAMEWORK_PREPLAY_TRACE_SCHEMA:
+        return _project_framework_run(run)
     source = Path(run.trace.path)
     trace_bytes = source.read_bytes()
     digest = hashlib.sha256(trace_bytes).hexdigest()
