@@ -131,6 +131,15 @@ class RnicAuthorityMode(str, enum.Enum):
 
 
 @dataclass(frozen=True)
+class _PendingKvAccounting:
+    """One preflight's KV accounting, held until the whole graph is legal."""
+
+    ledger: KvLifecycleLedger
+    demands: tuple[KvServiceDemand, ...]
+    bytes_by_operation: Mapping[str, int]
+
+
+@dataclass(frozen=True)
 class CoarseDeviceProfile:
     """Fixed first device profile plus ideal study-adjustable rates."""
 
@@ -1145,7 +1154,7 @@ class CoarseDeviceRuntime:
         #: sole mutable KV lifecycle authority, or None when no pool is declared
         self._kv_ledger = None if kv_pools is None else KvLifecycleLedger(kv_pools)
         #: accounting validated by the current preflight, adopted only on success
-        self._pending_kv: tuple[KvLifecycleLedger, tuple[KvServiceDemand, ...]] | None = None
+        self._pending_kv: _PendingKvAccounting | None = None
         self._state = _RuntimeState()
         self.last_report: RuntimeReport | None = None
         #: read-only projection of the KV authority after the last execution
@@ -1366,8 +1375,8 @@ class CoarseDeviceRuntime:
             if bypass is not None:
                 self._bypass_ledger = bypass
             if self._pending_kv is not None:
-                self._kv_ledger, kv_demands = self._pending_kv
-                self.last_kv_report = self._kv_ledger.report(kv_demands)
+                self._kv_ledger = self._pending_kv.ledger
+                self.last_kv_report = self._kv_ledger.report(self._pending_kv.demands)
             self.last_report = report
         except BaseException:
             if native_transaction is not None and not native_committed:
@@ -1474,10 +1483,7 @@ class CoarseDeviceRuntime:
                 raise TypeError(f"unsupported work payload {type(work).__name__}")
         self._pending_kv = self._account_kv(graph)
 
-    def _account_kv(
-        self,
-        graph: ExecutionGraph,
-    ) -> tuple[KvLifecycleLedger, tuple[KvServiceDemand, ...]] | None:
+    def _account_kv(self, graph: ExecutionGraph) -> _PendingKvAccounting | None:
         """Replay this graph's KV lifecycle before any resource is scheduled.
 
         The accounting runs on a clone, so a graph refused here leaves the pool
@@ -1502,15 +1508,20 @@ class CoarseDeviceRuntime:
                         f"{demand.byte_count} bytes but the profile declares no HBM "
                         "rate; set hbm_rate_bps to serve it"
                     )
-        return pending, demands
+        return _PendingKvAccounting(
+            ledger=pending,
+            demands=demands,
+            bytes_by_operation={
+                demand.operation_id: demand.byte_count
+                for demand in demands
+                if demand.byte_count
+            },
+        )
 
     def _kv_demand_bytes(self, operation_id: str) -> int:
         if self._pending_kv is None:
             return 0
-        for demand in self._pending_kv[1]:
-            if demand.operation_id == operation_id:
-                return demand.byte_count
-        return 0
+        return self._pending_kv.bytes_by_operation.get(operation_id, 0)
 
     def _schedule_launches(
         self,
