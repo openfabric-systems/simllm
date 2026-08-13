@@ -1,10 +1,12 @@
-"""Study-entrypoint regression checks for request routing lifetimes."""
+"""Study-entrypoint regression checks for the endpoint versus fabric cross-check."""
 
 from __future__ import annotations
 
 import subprocess
 import sys
 from pathlib import Path
+
+STUDY = "examples/endpoint_fabric_crosscheck_v1/run_study.py"
 
 
 def test_check_only_validates_registry_without_inspecting_paths_or_writing(
@@ -17,11 +19,15 @@ def test_check_only_validates_registry_without_inspecting_paths_or_writing(
     result = subprocess.run(
         [
             sys.executable,
-            str(repository / "examples/routing_lifetime_v1/run_study.py"),
+            str(repository / STUDY),
             "--out",
             str(output),
             "--source-root",
             str(missing),
+            "--htsim-rnic",
+            str(missing / "htsim_rnic"),
+            "--txt2bin",
+            str(missing / "txt2bin"),
             "--check-only",
         ],
         cwd=repository,
@@ -30,7 +36,6 @@ def test_check_only_validates_registry_without_inspecting_paths_or_writing(
         text=True,
     )
 
-    assert "six scored families, 14 scored instances" in result.stdout
-    assert "two unscored duplicate views" in result.stdout
+    assert "two scored families and two entailed fatal families" in result.stdout
     assert "no artifacts produced" in result.stdout
     assert not output.exists()

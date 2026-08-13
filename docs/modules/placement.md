@@ -57,6 +57,8 @@ no manifest schema change. General `unique-nic` projection remains PLACE-2.
 
 ## Open tasks
 
+### Completeness
+
 - PLACE-1 (Completeness; P2; L): fabric topology schema contents and general
   NIC selection in the mapper, sourcing intra-node structure from NCCL
   topology dumps. This is no longer blocked: CORE-4 validated the first
@@ -70,6 +72,9 @@ no manifest schema change. General `unique-nic` projection remains PLACE-2.
   `gpu-rank` and `unique-nic`
   happen to have the same cardinality there, but the general mapper must not
   assume that affinity.
+
+### Uncategorized
+
 - PLACE-3: expert-parallel group memberships and declared expert ownership
   in `declared_manifest`. The builder emits tp/pp/dp groups only, so the
   M5 MoE studies pass an explicit `ep_ranks` list to `HtsimStepSink`
