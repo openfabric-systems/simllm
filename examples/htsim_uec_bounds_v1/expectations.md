@@ -1,18 +1,19 @@
 # HTSIM-25 and HTSIM-8 UEC bound reconciliation expectations
 
-This is the expectations-only record for the UEC validation-bound
-reconciliation. It precedes the first result-producing command in this study
-and every backend implementation change made for HTSIM-25. The study does not
-claim a TTFT or TPOT relation. Its decision-relevant result is whether every
-known bound miss has a causal classification strong enough to make the native
-backend gate citable.
+The original expectations-only record for this UEC validation-bound
+reconciliation preceded the first result-producing command and every backend
+implementation change made for HTSIM-25. This tracked update is the disclosed
+attempt-four refreeze after three void attempts; it precedes the plan-projector
+repair and attempt-four run. The study does not claim a TTFT or TPOT relation.
+Its decision-relevant result is whether every known bound miss has a causal
+classification strong enough to make the native backend gate citable.
 
 If any case remains causally ambiguous, if any fatal guard fails, or if the
 final default gate is not green, HTSIM-25 remains open. HTSIM-8 is judged
 separately and remains open unless the final eight-plan gate exits zero and a
 deliberate bound mutant is rejected and then removed.
 
-## Attempt chronology and attempt-three refreeze
+## Attempt chronology and attempt-four refreeze
 
 Attempt one used the unmodified bound-authorship binary. It is void. Before any
 historical FCT could be observed, all three completed plans violated the frozen
@@ -39,13 +40,54 @@ packet, route, random draw or timing expression. The projection therefore
 exposes the authorship binary's existing completion times without changing its
 modeled behavior.
 
-Attempt three is independently admissible only if a source diff proves those
-four print-only edits are the projection's only executable-source change from
+Attempt three is also void. Later independent review found that the plan
+projector appended a final LF to two tracked plans that have none:
+`validate_load_balancing_snd.txt` and
+`validate_uec_connreuse.txt`. The frozen plan-byte guard permits no EOF
+normalization. Attempt three's evidence is retained, unscored and unused for
+closure.
+
+This section refreezes attempt four before the plan projector is repaired and
+before its first invocation. The workload, candidate binaries, 17 target
+identities, causal classes, bound-update rules, paired relations, gate and
+mutant remain unchanged from the expectations frozen before any measured
+attempt. The only evidence-method change is that projected plans must preserve
+each source plan's exact line-ending sequence and final-newline state while
+making only the already-authorized matrix, topology, binary and external-log
+path substitutions. The result summary must record source and projected plan
+digests and final-newline states. Any source or projected plan outside that
+exact rule voids attempt four.
+
+The projector reads bytes and retains each line terminator. It replaces only
+the body of a matrix row, `!Binary` row or `!Param -topo` row. It inserts
+exactly one `!Param -o` immediately after a terminated Binary row, using that
+row's original terminator, and rejects a pre-existing log parameter or an
+unterminated Binary row. Every other byte and the source EOF state stay exact.
+An independently implemented synchronized audit consumes exactly one
+projected row per source row plus the one authorized log row after each
+Binary, reconstructs the source bytes, rejects an extra or missing projected
+row, and requires matching source/projected EOF states. The audit runs in
+memory during post-implementation check-only, before every simulator child and
+again after every plan run. Per plan, the summary records source and projected
+SHA-256, EOF state, replacement and insertion counts, and successful exact
+round trip. It also records the SHA-256 of every unique referenced matrix and
+topology input.
+
+Attempt four uses the same authorship transport projection as attempt three.
+It is independently admissible only if a source diff proves the four
+print-only edits are the projection's only executable-source change from
 `896cc765` and the projected binary emits the completion and packet-summary
-vocabulary. The file-editing path normalizes end-of-file by removing the
-source's two trailing empty lines; the source diff must report exactly four
-changed code lines plus those two empty-line deletions, i.e. four insertions
-and six deletions. Any other source difference voids attempt three.
+vocabulary. The source file-editing path removes its two redundant trailing
+empty lines; the source diff must report exactly four changed code lines plus
+those two empty-line deletions, i.e. four insertions and six deletions. Any
+other source difference voids attempt four.
+
+Because attempt three exposed numbers before this evidence-method repair,
+attempt four is disclosed as a post-start rerun. No outcome expectation or
+bound rule is changed to fit those numbers. The classification and relation
+expectations already precede the first measured attempt; the only new
+assertions are plan-byte integrity and the source-derived horizon-unit
+correction below.
 
 ## Prior evidence and external-source audit
 
@@ -155,7 +197,8 @@ classifications:
 Repository history, source behavior and independent physical relations are the
 required causal evidence. Current disagreement alone is never sufficient for
 the first two classifications. If more than one classification remains
-plausible, the instance is unresolved and the fatal completeness guard fails.
+plausible, the instance is unresolved, C1 fails for that instance and HTSIM-25
+stays open. It does not void otherwise interpretable evidence.
 
 Planned genuine-risk fraction: `17/17`. A competent investigation could find
 an unexplained onset, a source/result disagreement, or a physical relation
@@ -173,8 +216,10 @@ observation.
 For a bound that was wrong at authorship, use the first applicable independent
 rule:
 
-1. derive it from a matched plan that differs in one declared resource, while
-   preserving that matched plan's fractional slack;
+1. derive it from a matched plan that differs in one active modeled resource,
+   while preserving that matched plan's fractional slack; an observation
+   cutoff may differ only when source semantics and the pre-stated physical
+   range prove both cutoff values causally inert for the matched observations;
 2. for a permutation path, use 1.20 times serialization plus the source's 9 us
    fixed allowance, with the actual slowest eligible link rate for a tail
    statistic, rounded upward to the next 5 us;
@@ -185,24 +230,32 @@ edit must name its rule and operands in the result report.
 
 ## Physical sanity stated before measurement
 
-All bounds below are stated before this study reads a new measured value.
-Crossing a floor or ceiling is a fatal finding, not a scored loss.
+All serialization floors below were stated before this study read a measured
+value. Crossing a floor is a fatal finding, not a scored loss. The first three
+attempt freezes mislabeled `-end` literals as microseconds. Source review for
+attempt four establishes that `main_uec.cpp` passes `-end` through
+`timeFromMs`, so the actual horizons are 1,000 times those labels. This
+source-derived unit correction is refrozen before attempt four. Attempt four
+also retains each original numeric inequality as a separate, deliberately
+tighter fatal study cap: every FCT must be no greater in microseconds than its
+plan's numeric `-end` literal. That legacy cap is not called a physical model
+horizon, and it is preserved without reference to a prior observation.
 
 - The 1024-node 100 KB incast sends 1023 flows into one 100 Gbit/s receiver.
   Its receiver-serialization floor is
-  `1023 * 100,000 * 8 / 100e9 = 8,184 us`; its configured 15,000 us experiment
-  horizon is the model ceiling for a completed flow in this study.
+  `1023 * 100,000 * 8 / 100e9 = 8,184 us`; its configured 15,000 ms experiment
+  horizon is 15,000,000 us.
 - The overlapped 3-to-1 matrix delivers 2,500,000 bytes to node 0. Its receiver
-  floor is `2,500,000 * 8 / 100e9 = 200 us`; its configured 1,000 us horizon is
-  the model ceiling.
+  floor is `2,500,000 * 8 / 100e9 = 200 us`; its configured 1,000 ms horizon is
+  1,000,000 us.
 - Every reported 2 MB permutation flow has a healthy-link serialization floor
   of `2,000,000 * 8 / 100e9 = 160 us`. A flow serialized wholly on a configured
   25 Gbit/s degraded link needs 640 us before propagation and protocol work.
-  The small failed permutation has a 2,000 us horizon and the large failed
-  permutations have a 3,000 us horizon.
+  The small failed permutation has a 2,000 ms, or 2,000,000 us, horizon and the
+  large failed permutations have a 3,000 ms, or 3,000,000 us, horizon.
 - The outcast per-flow value is bounded below by that flow's own bytes divided
   by 100 Gbit/s, read from the matrix before its observation is read, and above
-  by the plan's 3,000 us horizon.
+  by the plan's 3,000 ms, or 3,000,000 us, horizon.
 
 The real-system plausibility check is deliberately modest: 2 MB cannot cross a
 100 Gbit/s NIC in less than 160 us, and a path actually held at 25 Gbit/s cannot
@@ -237,15 +290,18 @@ tasks open; they are never reported as a pass fraction.
   17 target identities, with no duplicate target.
 - The plan and matrix inputs used for current and historical binaries are
   byte-identical projections of the authored files. Only `Binary`, absolute
-  input location and external log location may change in a projected plan.
+  matrix or topology input location and external log location may change in a
+  projected plan. Every source line ending and the exact final-newline state
+  must be preserved.
 - The authorship source projection differs from `896cc765` only by the four
   print-enabling comment-delimiter edits and the permitted redundant empty-line
   normalization audited above.
 - Every simulator process exits zero, every declared connection completes and
   every experiment emits the packet summary expected by the common validator.
-- Every reported FCT lies within its pre-stated physical floor and model
-  ceiling.
-- Every target receives exactly one unambiguous causal classification.
+- Every reported FCT lies within its pre-stated physical floor, corrected model
+  horizon and deliberately tighter legacy study cap.
+- Every frozen target has exactly one observed decision row. This structural
+  completeness guard does not decide which causal classification is correct.
 - The deliberate mutant is absent from the final backend tree.
 
 Plan counts, digests and fixed command strings are by-construction change-set
@@ -278,11 +334,13 @@ Planned genuine-risk fraction: `1/1`.
 ## Entailment analysis
 
 C1 evaluates causal provenance, not whether the final numeric bounds pass, so
-the final gate cannot entail it. P1 reads raw current observations before the
-gate status and is not entailed by that status. G1 is the one authoritative
-full-gate acceptance relation; per-experiment final passes are not scored again.
-M1 reads the mutant gate return code before its expected failure text, and a
-clean-gate pass cannot entail rejection of a different input.
+the final gate cannot entail it. The structural target-row guard establishes
+only that C1 has an input; it does not pin a causal class. P1 reads raw current
+observations before the gate status and is not entailed by that status. G1 is
+the one authoritative full-gate acceptance relation; per-experiment final
+passes are not scored again. M1 reads the mutant gate return code before its
+expected failure text, and a clean-gate pass cannot entail rejection of a
+different input.
 
 ## Closure scope
 
@@ -290,7 +348,7 @@ HTSIM-25 registers: "reconcile the authored UEC validation bounds with current
 backend behavior" and "Decide per experiment, with evidence, whether the
 transport regressed or the authored bound is stale. Never relax a bound to
 match an observation without that evidence." C1 plus the bound-update rule and
-fatal completeness guard must demonstrate both clauses for all 17 cases.
+structural completeness guard must demonstrate both clauses for all 17 cases.
 
 HTSIM-8 registers the remaining acceptance clause that the repaired full
 default gate exits zero and is citable as release evidence. G1 and M1 must
@@ -305,21 +363,29 @@ that was not part of these clauses.
 Bulk outputs remain outside Git. The registered study command is:
 
 ```bash
-HTSIM_SOURCE_ROOT="${HTSIM_SOURCE_ROOT:?configure the backend source}" \
+HTSIM_SOURCE_ROOT="${HTSIM_PRECHANGE_SOURCE_ROOT:?configure a detached HTSIM worktree at 1ae1215}" \
 .venv/bin/python examples/htsim_uec_bounds_v1/run_study.py \
-  --out "${SIMLLM_DATA_ROOT:?configure the data root}/htsim_uec_bounds_v1" \
+  --out "${SIMLLM_DATA_ROOT:?configure the data root}/attempt4-baseline" \
   --candidate "authorship-print-projection=${HTSIM_AUTHORSHIP_BINARY:?build the print-only authorship projection}" \
   --candidate "prechange=${HTSIM_PRECHANGE_BINARY:?build the pre-change binary}"
 ```
 
-The same command with `--check-only` must run before this expectations commit.
-Check-only invokes the backend comparator's `-dryrun` path for all eight plans,
-validates the frozen inventory and candidate syntax, prints the external plan,
-and creates no artifacts or measurements. Historical build commands and any
-mechanically selected bisection commits are recorded in RESULTS with compiler
-provenance; they do not change the registered workload or comparator.
+The same command with `--check-only` must run before this attempt-four
+expectations commit against a detached Git worktree at `1ae1215`. Check-only
+invokes the backend comparator's `-dryrun` path for all eight plans, validates
+the frozen inventory and candidate syntax, prints the external plan, and
+creates no artifacts or measurements. A separate read-only EOF inventory must
+confirm that exactly the sender load-balancing and connection-reuse plans lack
+a final LF before implementation. After implementation, check-only must also
+exercise the exact in-memory projection and independent audit without creating
+an artifact. Historical build commands and any mechanically selected
+bisection commits are recorded in RESULTS with compiler provenance; they do
+not change the registered workload or comparator.
 
-The untracked harness present at freeze time contains only the frozen plan and
-target registries, plan projection, comparator orchestration, raw observation
-parsing and check-only validation. It contains no backend fix, classification
-outcome or observed timing.
+The untracked harness present at this refreeze still contains the defective
+always-final-LF plan projector. It also contains only the frozen plan and
+target registries, comparator orchestration, raw observation parsing,
+check-only validation and a portability-only switch from a literal `python3`
+child to the current interpreter. The EOF-preserving implementation has not
+started. The harness contains no backend fix, classification outcome or
+observed timing.
