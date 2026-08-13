@@ -1698,6 +1698,44 @@ def test_observation_sink_binds_the_worker_clock_and_receives_absent_schedule(
         reset_configuration()
 
 
+def test_observation_producer_off_preserves_the_one_argument_legacy_sink(
+    monkeypatch,
+):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    reset_configuration()
+    calls = []
+
+    def legacy_sink(record):
+        calls.append(record)
+        return StepResult(
+            step_index=record.step_index,
+            step_latency_ps=7_000,
+            completed_at_ps=record.virtual_time_ps + 7_000,
+        )
+
+    try:
+        configure(step_sink=legacy_sink)
+        clock = VirtualClock(start_ps=123_000)
+        worker = make_sim_worker(
+            clock,
+            simllm_config=SimExecutorConfig(observed_schedule="off"),
+        )
+        worker.init_device()
+        step = FakeSchedulerOutput(
+            scheduled_new_reqs=[FakeNewRequest("r0", prompt(4))],
+            num_scheduled_tokens={"r0": 4},
+        )
+
+        assert worker.execute_model(step) is None
+
+        assert calls == [worker.step_records[0]]
+        assert worker.model_runner.latest_observations is None
+        assert worker.step_results[0].step_latency_ps == 7_000
+        assert clock.now_ps == 130_000
+    finally:
+        reset_configuration()
+
+
 def test_framework_observations_cannot_be_silently_sent_to_a_legacy_sink():
     from simllm.adapters.vllm.executor import _SimStepRuntime
 

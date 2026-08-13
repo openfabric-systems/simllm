@@ -2,9 +2,12 @@
 
 The placement manifest remains the sole authority for whether two semantic
 global ranks share a node. This module classifies already expanded directed
-segments before any fabric rendering. Local segments use a declared flat
+segments before any fabric rendering. Local segments use a declared
 per-endpoint NVLink serializer; remote segments remain inputs to the existing
-fabric backend.
+fabric backend. The default retains the accepted flat rate. An explicitly
+selected collective profile can replace that rate, while its semantic base
+latency stays outside this phase-local projection so a ring is charged once
+rather than once per round.
 
 Each local endpoint is charged from an explicit byte ledger that carries both
 directions, never from a source-side surrogate. The modeled port is full
@@ -20,8 +23,8 @@ whole nanoseconds, so one endpoint's phase service is
 
     ceil(endpoint_load * 1e9 / bandwidth_bytes_per_second)
 
-nanoseconds, and the serial phase costs the largest of them. No propagation
-term is added. TRAF-11 owns calibration against same-generation measurements.
+nanoseconds, and the serial phase costs the largest of them. No propagation or
+semantic collective base term is added here.
 
 Egress alone was an exact proxy only while every routed token was sourced by
 every expert-parallel rank, which made the local traffic matrix symmetric. Once

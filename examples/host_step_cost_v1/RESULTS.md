@@ -419,8 +419,8 @@ Both lie inside the frozen broad `[1.35, 4.70]` enclosure. These budget rows
 are derived and unscored.
 
 The reported rows assume `network + max(C, N * g)`: provider and host launch
-demand overlap, while network service is outside that overlap. Once the
-same-wave TRAF-11 collective floor lands, the alternative
+demand overlap, while network service is outside that overlap. With the
+same-wave TRAF-11 collective floor now landed, the alternative
 `max(C + network, N * g)` reading gives 1.650672 ms for all four profiles.
 Whether the collective-bearing service overlaps launch demand or composes
 additively remains unresolved, so no combined host-plus-collective magnitude
@@ -488,7 +488,7 @@ The frozen closure clauses map as follows:
 | “live holdout attempt three is nonvoid and both profiles pass its decode-multiplier, TPOT and TTFT relations” | The clean `ad1b0aa` holdout has no fatal failures and retains 12/12 entailed conformance and reach rows across LIVE-1, LIVE-2 and LIVE-3. Its genuine-risk denominator is zero, so it proves installation reach but not magnitude. |
 | “the named accepted study matches exactly on the ideal path” | OFF-G1 matched the aggregate digest and all five step streams after a nonvoid mission replay with 13/13 native exact oracles. |
 | “the mission budget is recomputed” | The conditional point interval is `[1.4249530295, 3.8910394651]`; the empirical interval is `[1.3969639214, 4.5085504088]`; B100 remains explicitly unknown. |
-| “the owning registry tag, bucket and ledger reconcile” | COMP-2 was tagged `(Precision; P1; L)` and moved alone into Precision at `f376bcc`. Commit `7c957ad` removed the closed entry, registered COMP-28 in Precision and added COMP-2 to the ledger. After merging main, the progress check reports 83 of 195 tasks closed, 112 open, with compute at 4 of 23 closed. |
+| “the owning registry tag, bucket and ledger reconcile” | COMP-2 was tagged `(Precision; P1; L)` and moved alone into Precision at `f376bcc`. Commit `7c957ad` removed the closed entry, registered COMP-28 in Precision and added COMP-2 to the ledger. After merging main, the progress check reports 86 of 198 tasks closed, 112 open, with compute at 5 of 24 closed. |
 
 The original legacy entry registered:
 
@@ -558,11 +558,11 @@ Initial and refrozen check-only runs passed without creating output. The
 evidence-label fix gates pass:
 
 - **PASS:** `.venv/bin/ruff check .`
-- **PASS:** `.venv/bin/pytest -q` reports 1,506 passed and 7 skipped.
+- **PASS:** `.venv/bin/pytest -q` reports 1,548 passed and 7 skipped.
 - **PASS:** `python3 scripts/check_docs_format.py` reports all 10 module docs
   conform; it notes 27 unrelated untagged legacy entries.
 - **PASS:** `python3 scripts/task_progress.py --check` reports current
-  task-progress and module-status counts: 83 of 195 closed, 112 open.
+  task-progress and module-status counts: 86 of 198 closed, 112 open.
 
 All bulk artifacts remain under the branch-local external run root. The seven
 retained run directories occupy 290 MB total: the calibration attempts use

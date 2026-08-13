@@ -84,8 +84,11 @@ the flow-level work the GOAL emitter renders.
   executes graph-ordered causal artifacts. Within a placement-split collective
   it uses `max(local_service, fabric_service)` for each directed phase and sums
   those phase services. An all-intra-node step invokes no fabric backend. The
-  analytic value is uncalibrated; TRAF-11 owns its replacement with
-  same-generation evidence.
+  450,000,000,000 bytes/s value remains the exact `None` and `legacy`
+  compatibility level. Selecting `b200-nccl-2.27-local-v1` replaces its
+  endpoint rate and adds one width-indexed semantic-collective base latency
+  outside the phase-local maximum. TRAF-31 owns the missing same-generation
+  point-to-point capture.
 - `lower_step_observations` joins that traffic plan to framework-neutral
   `ExecutionObservations`. The adapter tuple order, logical queues, dependency
   edges, gates, priorities, correlations and completion frontier pass through
@@ -437,19 +440,48 @@ frontier now matches its implementation, a rank's first send; moving it to the
 last send would change accepted timing and needs its own freeze. See
 [the requalification results](../../examples/dispatch_sequence_v2/RESULTS.md).
 
+The [collective latency floor study](../../examples/collective_latency_floor_v1/RESULTS.md)
+closes TRAF-11, with its sole undemonstrated source clause moved to TRAF-31.
+Attempt one is retained as void because two fatal sensitivity oracles encoded
+the fluid backend's whole-picosecond result one picosecond low. Attempt two
+changed only those harness oracles and preserved every raw measurement, but
+closure review found that C3 was mathematically entailed and that the fatal
+harness lacked a mixed-placement cell. Attempt three changed no modeled
+behavior. The final classification replay passed both non-entailed genuine-risk
+families, C1 and C2; C3 and C4 passed as exact-unscored relations; and every
+fatal guard held, including a two-node collective with simultaneous local and
+fabric service. TTFT and TPOT reach is established by
+`step_service_conservation`.
+The 4 KiB held-out errors at participant widths 2, 4 and 8 were 0.261, 0.347
+and 0.080 microseconds. The selected profile adds 1.446145392 ms across the
+reference step's 48 collectives, moving the mission network budget from
+0.106 ms to 1.552145392 ms. The 1.651145392 ms whole-step figure is arithmetic
+on main's published 0.205 ms literal, not a measured composed run. It applies a
+DGX B200 intra-node NVLink ALL-REDUCE intercept unchanged to cross-node
+pairwise ALL-TO-ALLV. The 1.446145392 ms addition is 0.4 percent above the
+mission budget's nominal 1.44 ms endpoint, so the direction of residual error
+remains ambiguous. The same-wave fixed host term was not composed here, and
+additivity versus overlap remains unresolved. The legacy and all-remote
+identity paths remained exact. The public evidence supplies a B200 collective
+capture and a vendor capacity ceiling, but not the same-generation
+point-to-point payload capture required by the original clause.
+
 ## Open tasks
 
 ### Precision
 
-- TRAF-11 (Precision; P1; L): calibrate the current flat 450 GB/s,
-  zero-propagation, per-endpoint NVLink surrogate against
-  same-generation point-to-point and collective captures. Sweep payload and
-  participant count on the reference eight-GPU node, hold out at least one
-  payload per participant width, and replace the constant with the smallest
-  identifiable bandwidth, latency and concurrency form whose held-out phase
-  completion error is at most 10 percent or 1 microsecond, whichever is
-  larger. Report the before/after TTFT and TPOT effect and retain the exact
-  all-remote identity path.
+- TRAF-31 (Precision; P1; L): obtain the same-generation point-to-point
+  payload capture absent from the `b200-nccl-2.27-local-v1` calibration. The
+  selectable profile currently identifies its 70,027,079,100 bytes/s endpoint
+  serializer from a public eight-B200 all-reduce capture and uses the DGX B200
+  aggregate NVSwitch specification only as a physical ceiling. Capture pinned
+  B200 NVLink point-to-point completion across the profile's 8-byte to
+  256-KiB payload envelope and representative peer placements on the
+  eight-GPU node, reserving at least one payload as holdout. Validate or refit
+  the serializer and require held-out completion error no larger than
+  10 percent or 1 microsecond, whichever is larger. Report the current-profile
+  before error, rerun the collective holdouts after any refit, and preserve the
+  exact `legacy` and all-remote identity paths.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide

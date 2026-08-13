@@ -162,7 +162,7 @@ has four replaceable mechanisms:
    the intra-node path that keeps NVLink traffic off the fabric backend
    (TRAF-10). It is one flat same-generation egress serializer: peer
    topology, per-link routing, ingress service and reduction lanes are
-   absent under COMP-11. A calibration without an `nvlink` profile rejects
+   absent under COMP-31. A calibration without an `nvlink` profile rejects
    NVLink instructions rather than pricing them as HBM.
 
 ### Concurrent task scheduling
@@ -210,7 +210,7 @@ per GPU, chunked across channel CTAs and their warps, each chunk loaded
 from HBM and stored to NVLink. This makes a collective a schedulable
 kernel like any other, so it contends with compute and memory work
 instead of being priced in isolation. Proxy operations, ingress and
-multi-ring topologies are COMP-11.
+multi-ring topologies are COMP-31.
 
 The [task-mix study](../../examples/gpu_task_mix/RESULTS.md) measures
 what limits each kind: compute scales with SMs and with the pipeline
@@ -604,9 +604,9 @@ The fixed 99,024,000 ps input is B100-derived. Its 554,631,168 bytes need
 1,925,802,667 ps on the Turing device's 288 GB/s roof and 2,751,146,667 ps at
 the 0.7 derate, above all four launch floors, so the hybrid rows are not a
 device-consistent Turing step prediction. The reported rows use
-`network + max(C, N * g)`. Once the same-wave TRAF-11
-collective floor lands, `max(C + network, N * g)` instead gives 1.650672 ms for
-all four profiles; whether overlap or additive composition is correct remains
+`network + max(C, N * g)`. With the same-wave TRAF-11 collective floor now
+landed, `max(C + network, N * g)` instead gives 1.650672 ms for all four
+profiles; whether overlap or additive composition is correct remains
 unresolved, and no combined magnitude is claimed.
 
 The M5 first slice landed the COMP-1 groundwork: `step_kernels`, the
@@ -653,6 +653,18 @@ The [NCCL stack skeleton study](../../examples/nccl_stack_v1/RESULTS.md)
 reports 5 of 5 passing behavioral relation families over all 35 instances and
 10 of 10 fatal unscored structural invariants. This zero-time component stream
 is not yet projected onto the live TTFT/TPOT metric chain.
+
+The same [collective latency floor study](../../examples/collective_latency_floor_v1/RESULTS.md)
+closes COMP-11, with its undemonstrated mechanism clauses moved exactly to
+COMP-31. The selectable profile replaces the flat local endpoint rate, adds
+one participant-indexed base latency at the semantic collective boundary and
+reports that base separately from raw fabric transport and the 2.000
+microsecond propagation reference. The one-charge and exact identity guards
+show that local and fabric projections do not advance or price the same
+collective twice, including in a two-node mixed-placement collective with
+simultaneous positive local and fabric service. The study does not demonstrate
+peer topology, per-link routing, receiving-HBM interaction, reduction lanes or
+proxy operations.
 
 ### NCCL stack name audit
 
@@ -745,16 +757,19 @@ and an explicit reason:
   projection through `RoutedMoeSupply`, using the same selected placement
   epoch as traffic, to drive per-rank effective expert load and hot-expert
   imbalance.
-- COMP-11 (Precision; P1; L): deepen the active NVLink and NCCL ring model.
-  The v1 egress path is one
-  flat per-GPU serializer and the ring builder emits only the egress half
-  of an all-reduce. Add peer topology and per-link routing, ingress
-  service and its interaction with the receiving GPU's HBM, reduction
-  lanes so a collective's arithmetic is priced, and proxy operations.
-  Calibrate the egress latency and bandwidth from real
-  captures rather than the current synthetic profiles, and reconcile the
-  intra-node split with TRAF-10 so one collective is never counted both
-  here and on the fabric backend.
+- COMP-31 (Precision; P1; L): complete the mechanism detail retained from
+  COMP-11 after the calibrated endpoint serializer and semantic collective
+  floor landed. The active selectable model still projects local traffic onto
+  one endpoint serializer and folds unresolved stack work into a
+  participant-indexed base. Add peer topology and per-link routing, ingress
+  service and receiving-HBM interaction, priced reduction lanes and proxy
+  operations. Identify those terms from pinned B200 per-link traffic, HBM
+  counters, reduction-kernel timing and proxy timestamps over payload and
+  participant sweeps with held-out cells. Require exact byte and work
+  conservation, one timing authority for every term, no local/fabric double
+  count, and held-out phase-completion error no larger than 10 percent or
+  1 microsecond, whichever is larger. Report the reduced-form profile's
+  before error and preserve the exact `legacy` and all-remote identity paths.
 - COMP-17 (Precision; P1; M): after COMP-6 supplies per-invocation captured
   shapes, populate `estimate_layers` for `ProfileTableProvider` and
   `TraceCalibratedGpuProvider`. The current surrogate is the step sink's even

@@ -80,9 +80,11 @@ from simllm.backends.step_lowerer import (
 )
 from simllm.backends.step_sink import (
     DEPENDENCY_CROSS_CHECK_MODES,
+    CollectiveArtifactTiming,
     HtsimPersistentStepSink,
     HtsimStepSink,
     HtsimStepSinkConfig,
+    StepCollectiveTimingOutcome,
     StepLocalityOutcome,
     StepNetworkOutcome,
 )
@@ -95,6 +97,7 @@ __all__ = [
     "BypassArtifactComparison",
     "BypassArtifactPaths",
     "BypassArtifacts",
+    "CollectiveArtifactTiming",
     "ComposedRnicCell",
     "ComposedRnicObservationError",
     "ComposedRnicObservations",
@@ -133,6 +136,7 @@ __all__ = [
     "SerialStepLowerer",
     "SerialStepLowererConfig",
     "SerialStepTiming",
+    "StepCollectiveTimingOutcome",
     "StepLocalityOutcome",
     "StepNetworkOutcome",
     "assert_bypass_artifact_identity",
