@@ -137,6 +137,23 @@ def _validate_source(args: argparse.Namespace) -> None:
     if observed_tpot != SOURCE_TPOT_PS:
         raise SystemExit(f"frozen TPOT rows changed: {observed_tpot}")
 
+    steps = cell.get("steps")
+    if type(steps) is not list or len(steps) != SOURCE_STEP_COUNT:
+        raise SystemExit("frozen source step summaries changed cardinality")
+    records = [
+        _object(json.loads(line), f"source StepRecord {index}")
+        for index, line in enumerate(step_path.read_text(encoding="utf-8").splitlines())
+        if line
+    ]
+    for index, (record, step) in enumerate(zip(records[:-1], steps[:-1])):
+        next_release = records[index + 1].get("virtual_time_ps")
+        if step.get("completed_at_ps") != next_release:
+            raise SystemExit(
+                "frozen source no longer has contiguous closed-loop releases at "
+                f"step {record.get('step_index')}: completion "
+                f"{step.get('completed_at_ps')!r}, next release {next_release!r}"
+            )
+
 
 def check_only(args: argparse.Namespace) -> None:
     """Validate frozen inputs and arithmetic without producing artifacts."""

@@ -10,10 +10,22 @@ artifact-free `--check-only` command recorded below.
 The study replays the accepted case-A, EP-8, 100 Gbit/s mission schedule from
 `end_to_end_replay_v1`. That source schedule came from a real vLLM scheduler
 with the pinned CPU oracle, arrival gating, captured per-token routing and
-three requests. Replaying its exact `StepRecord` sequence keeps the GOAL and
+three requests. Replaying its exact scheduler decisions keeps the GOAL and
 arrival schedule identical between the accepted `rnic-nn-fluid` comparator and
 the new `rnic-cn` treatment. The source artifacts are bulk inputs supplied by
 `--mission-run`; this tracked study contains no site path.
+
+The source `StepRecord` bytes remain immutable inputs, but their absolute
+`virtual_time_ps` values are fluid-result timestamps and cannot be reused as
+treatment completion timestamps. All 35 adjacent source records release
+exactly at the preceding fluid completion. For treatment record `i`, the
+effective release is therefore frozen as
+`max(source[i].virtual_time_ps, treatment[i - 1].completed_at_ps)`, with the
+first release equal to its source value. The projected record changes no field
+other than `virtual_time_ps`. This is the closed-loop causal recurrence: it
+preserves every declared arrival and scheduler decision, prevents an active
+request from moving backward when congestion lengthens a step, and reduces to
+the source record byte for byte when treatment and source completion agree.
 
 This branch is gated on HTSIM-8 and HTSIM-25. The expectations-only commit is
 allowed before that gate turns green. Behavioral implementation and the first
@@ -102,9 +114,11 @@ The session treatment has three cells:
 | `cn-100g-b` | `rnic-cn` | 100 Gbit/s | identical deterministic repeat |
 | `cn-200g` | `rnic-cn` | 200 Gbit/s | independent bandwidth sanity parameter |
 
-Every cell consumes the same 36 `StepRecord` values, arrivals, routed-expert
-projection, expert placement and graph lowering. The two 100 Gbit/s cells use
-the same seed and every other configuration byte. Each cell opens exactly one
+Every cell consumes the same 36 source `StepRecord` values, arrivals,
+routed-expert projection, expert placement and graph lowering. Each cell uses
+the frozen causal recurrence above to derive its effective release time while
+preserving every other `StepRecord` field. The two 100 Gbit/s cells use the
+same seed and every other configuration byte. Each cell opens exactly one
 backend process and one flow session for the whole replay. No retained packet
 trace is requested.
 
@@ -216,7 +230,8 @@ reported as a fraction and do not enter a behavioral denominator.
 - the backend HTSIM-8 plus HTSIM-25 gate was green before implementation and
   before the first session invocation;
 - all source hashes, graph identities, GOAL bytes, arrivals and routing bytes
-  equal the frozen inputs;
+  equal the frozen inputs, and every effective treatment release obeys the
+  frozen causal recurrence with no other `StepRecord` field changed;
 - one process and one session serve each treatment cell, with no sequence gap,
   duplicate injection, missing completion or foreign completion;
 - canonical lifecycle timestamps are monotonic and agree exactly with native
