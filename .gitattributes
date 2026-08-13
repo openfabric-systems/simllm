@@ -24,5 +24,6 @@ examples/htsim_uec_bounds_v1/*.md text eol=lf
 examples/htsim_uec_bounds_v1/*.py text eol=lf
 tests/test_htsim_uec_bounds_study.py text eol=lf
 examples/collective_latency_floor_v1/expectations.md text eol=lf
+examples/sglang_worker_seam_v1/*.json text eol=lf
 tests/fixtures/preplay/*.json text eol=lf
 tests/fixtures/preplay/*.jsonl text eol=lf
