@@ -169,6 +169,14 @@ def check_only(args: argparse.Namespace) -> None:
         raise AssertionError("case A must be the leading prefix of case B")
     if len(CASE_REQUEST_IDS["b"]) != 4 * len(CASE_REQUEST_IDS["a"]):
         raise AssertionError("the registered expansion changed its factor")
+    if HOST_PROFILES[0] != "ideal" or PROVIDER_ENVELOPE != "b100":
+        raise AssertionError("the accepted host and envelope defaults changed")
+    selection = _composition_selection(args)
+    if selection["is_default"] != (
+        selection["host_model"].is_ideal
+        and selection["collective_latency_profile"] is None
+    ):
+        raise AssertionError("default composition detection disagrees with itself")
     print(
         f"check-only run-dir={args.run_dir}; validated the frozen end-to-end "
         "inputs and produced no artifacts"
@@ -305,6 +313,88 @@ def _cell_spec(name: str) -> tuple[str, int, int]:
         if cell_name == name:
             return case, ep_world, bandwidth
     raise SystemExit(f"unknown cell {name!r}")
+
+
+#: host profiles a caller may select; ``ideal`` is the accepted default
+HOST_PROFILES = ("ideal", "turing-cuda-graph", "turing-eager-host")
+#: the compute envelope every cell prices against, whatever device key is shown
+PROVIDER_ENVELOPE = "b100"
+#: the device key a calibrated host profile requires before it will compose
+CALIBRATED_DEVICE_KEY = "gtx1660-ti-sm75"
+
+
+def _pinned_envelope_provider(envelope: str, efficiency: float) -> Any:
+    """Return a roofline provider bound to one envelope, ignoring its argument.
+
+    A calibrated host profile refuses every GPU key but its own, so a cell that
+    selects one must present that device key to the host model. The compute
+    input must not move for that reason alone: this provider keeps the accepted
+    envelope while the configuration presents the calibrated device key. The
+    resulting rows are an explicitly disclosed device hybrid, exactly as
+    ``examples/host_step_cost_v1`` labelled them, and never a device-consistent
+    prediction for either device.
+    """
+
+    from simllm.compute import GPU_ENVELOPES, ComputeProvider, RooflineProvider
+
+    pinned = GPU_ENVELOPES[envelope]
+    inner = RooflineProvider(efficiency)
+
+    class PinnedEnvelopeProvider(ComputeProvider):
+        """Price every kernel against one fixed envelope."""
+
+        precision_compute_level = getattr(inner, "precision_compute_level", None)
+
+        def estimate(self, kernel: Any, gpu: Any) -> Any:
+            return inner.estimate(kernel, pinned)
+
+        def estimate_layers(self, kernel: Any, gpu: Any, num_layers: int) -> Any:
+            return inner.estimate_layers(kernel, pinned, num_layers)
+
+    return PinnedEnvelopeProvider()
+
+
+def _composition_selection(args: argparse.Namespace) -> dict[str, Any]:
+    """Resolve the host model, GPU key, provider and collective selector.
+
+    The default is the accepted configuration exactly: the ideal host profile,
+    the ``b100`` envelope under its own device key, and no collective latency
+    profile. ``is_default`` is what keeps every accepted artifact byte
+    identical, because the extra composition record is written only when a
+    caller selected something other than those defaults.
+    """
+
+    from simllm.compute import GPU_ENVELOPES, HostInitiationModel, RooflineProvider
+
+    profile = getattr(args, "host_profile", "ideal") or "ideal"
+    launches = int(getattr(args, "host_launch_count", 0) or 0)
+    collective = getattr(args, "collective_latency_profile", None)
+    if profile not in HOST_PROFILES:
+        raise SystemExit(f"unknown host profile {profile!r}")
+    if profile == "ideal":
+        if launches:
+            raise SystemExit("the ideal host profile takes no launch count")
+        host_model = HostInitiationModel.ideal()
+        gpu = GPU_ENVELOPES[PROVIDER_ENVELOPE]
+        provider = RooflineProvider(ROOFLINE_EFFICIENCY)
+    else:
+        if launches <= 0:
+            raise SystemExit("a calibrated host profile needs a positive launch count")
+        host_model = (
+            HostInitiationModel.turing_cuda_graph(launches)
+            if profile == "turing-cuda-graph"
+            else HostInitiationModel.turing_eager_host(launches)
+        )
+        gpu = GPU_ENVELOPES[CALIBRATED_DEVICE_KEY]
+        provider = _pinned_envelope_provider(PROVIDER_ENVELOPE, ROOFLINE_EFFICIENCY)
+    return {
+        "collective_latency_profile": collective,
+        "gpu": gpu,
+        "host_model": host_model,
+        "is_default": profile == "ideal" and collective is None,
+        "provider": provider,
+        "provider_envelope": PROVIDER_ENVELOPE,
+    }
 
 
 def _dims(ep_world: int) -> Any:
@@ -472,7 +562,6 @@ def _cell(args: argparse.Namespace, name: str) -> None:
         HtsimStepSinkConfig,
         attribute_step,
     )
-    from simllm.compute import HostInitiationModel, RooflineProvider
     from simllm.core import RequestBookkeeper, framework_request_arrivals
     from simllm.preplay import (
         RequestArrival,
@@ -486,9 +575,11 @@ def _cell(args: argparse.Namespace, name: str) -> None:
     from simllm.workload import AdmissionMode, RequestAdmissionGate
 
     case, ep_world, bandwidth = _cell_spec(name)
+    selection = _composition_selection(args)
+    label = getattr(args, "cell_label", None) or name
     request_ids = CASE_REQUEST_IDS[case]
     ep_ranks = tuple(range(ep_world))
-    cell_dir = args.run_dir / "cells" / name
+    cell_dir = args.run_dir / "cells" / label
     cell_dir.mkdir(parents=True, exist_ok=False)
     trace_path = args.run_dir / "capture" / "greedy.jsonl"
     trace = read_preplay_trace(trace_path)
@@ -537,7 +628,7 @@ def _cell(args: argparse.Namespace, name: str) -> None:
     )
     dims = _dims(ep_world)
     workdir = cell_dir / "htsim"
-    host_model = HostInitiationModel.ideal()
+    host_model = selection["host_model"]
     sink = HtsimStepSink(
         HtsimStepSinkConfig(
             profile=PROFILE,
@@ -546,9 +637,11 @@ def _cell(args: argparse.Namespace, name: str) -> None:
             workdir=workdir,
             ep_ranks=ep_ranks,
             linkspeed_bps=bandwidth,
-            provider=RooflineProvider(ROOFLINE_EFFICIENCY),
+            provider=selection["provider"],
+            gpu=selection["gpu"],
             host_model=host_model,
             routed_moe_supply=supply,
+            collective_latency_profile=selection["collective_latency_profile"],
         )
     )
 
@@ -562,6 +655,8 @@ def _cell(args: argparse.Namespace, name: str) -> None:
     configure(
         step_sink=sink,
         host_model=host_model,
+        gpu=None if selection["is_default"] else selection["gpu"],
+        compute_provider=None if selection["is_default"] else selection["provider"],
         config=SimExecutorConfig(
             mode="virtual",
             token_id=512,
@@ -831,6 +926,126 @@ def _cell(args: argparse.Namespace, name: str) -> None:
         "conservation": conservation,
     }
     (cell_dir / "cell.json").write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    if not selection["is_default"]:
+        _write_composition_record(
+            cell_dir,
+            name=name,
+            label=label,
+            bandwidth=bandwidth,
+            selection=selection,
+            records=records,
+            results=results,
+            network_by_step=network_by_step,
+            locality_by_step=locality_by_step,
+            collective_outcomes=sink.collective_timing_outcomes,
+        )
+
+
+def _write_composition_record(
+    cell_dir: Path,
+    *,
+    name: str,
+    label: str,
+    bandwidth: int,
+    selection: dict[str, Any],
+    records: Any,
+    results: Any,
+    network_by_step: dict[int, Any],
+    locality_by_step: dict[int, Any],
+    collective_outcomes: Any,
+) -> None:
+    """Publish the selected composition terms for a non-default cell.
+
+    This file exists only when a caller selected a host profile or collective
+    latency profile other than the accepted defaults, so every artifact of the
+    accepted configuration stays byte identical. Every value here is read back
+    out of the sink's own published outcomes; nothing is recomputed.
+    """
+
+    host_model = selection["host_model"]
+    timing_by_step = {
+        outcome.step_index: outcome for outcome in collective_outcomes
+    }
+    steps = []
+    for record, result in zip(records, results, strict=True):
+        network = network_by_step.get(record.step_index)
+        locality = locality_by_step.get(record.step_index)
+        if network is None or locality is None:
+            continue
+        timing = timing_by_step.get(record.step_index)
+        base_charges = (
+            [artifact.collective_base_latency_ps for artifact in timing.artifacts]
+            if timing is not None
+            else []
+        )
+        endpoint_bytes = (
+            [
+                artifact.critical_endpoint_bytes
+                for artifact in timing.artifacts
+                if artifact.collective_operation_id is not None
+            ]
+            if timing is not None
+            else []
+        )
+        participants = (
+            sorted(
+                {
+                    artifact.participant_count
+                    for artifact in timing.artifacts
+                    if artifact.collective_operation_id is not None
+                }
+            )
+            if timing is not None
+            else []
+        )
+        steps.append(
+            {
+                "step_index": record.step_index,
+                "step_latency_ps": result.step_latency_ps,
+                "compute_service_ps": locality.compute_service_ps,
+                "provider_compute_ps": network.provider_compute_ps,
+                "host_launch_floor_ps": network.host_launch_floor_ps,
+                "exposed_host_ps": network.exposed_host_ps,
+                "fabric_service_sum_ps": sum(locality.fabric_phase_service_ps),
+                "collective_base_sum_ps": sum(base_charges),
+                "collective_base_charges": sum(
+                    1 for value in base_charges if value > 0
+                ),
+                "distinct_base_charge_ps": sorted(
+                    {value for value in base_charges if value > 0}
+                ),
+                "critical_endpoint_bytes": endpoint_bytes,
+                "participant_counts": participants,
+                "scheduled": [
+                    {
+                        "request_id": scheduled.request_id,
+                        "phase": scheduled.phase.value,
+                        "num_new_tokens": scheduled.num_new_tokens,
+                        "context_length": scheduled.context_length,
+                    }
+                    for scheduled in record.scheduled
+                ],
+            }
+        )
+    payload = {
+        "schema": "simllm-end-to-end-composition-v1",
+        "label": label,
+        "source_cell": name,
+        "bandwidth_bps": bandwidth,
+        "gpu_key": selection["gpu"].name,
+        "provider_envelope": selection["provider_envelope"],
+        "host_profile": host_model.profile,
+        "host_launch_class": host_model.launch_class,
+        "host_launch_count": host_model.launch_count,
+        "host_point_ps_per_launch": host_model.point_ps_per_launch,
+        "host_launch_floor_ps": host_model.launch_floor_ps,
+        "collective_latency_profile": selection["collective_latency_profile"],
+        "steps": steps,
+    }
+    (cell_dir / "composition.json").write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
@@ -1560,7 +1775,21 @@ FREEZE_COMMIT = "0e3d38b"
 # ------------------------------------------------------------------ driver ---
 
 
-def _run_child(args: argparse.Namespace, mode: str) -> None:
+def child_command(
+    args: argparse.Namespace,
+    mode: str,
+    *,
+    cell_label: str | None = None,
+    host_profile: str = "ideal",
+    host_launch_count: int = 0,
+    collective_latency_profile: str | None = None,
+) -> list[str]:
+    """Return the exact child command line for one stage of this study.
+
+    Every optional argument defaults to the accepted configuration, so the
+    default command is the one the accepted study already ran.
+    """
+
     command = [
         sys.executable,
         str(Path(__file__).resolve()),
@@ -1573,12 +1802,36 @@ def _run_child(args: argparse.Namespace, mode: str) -> None:
         "--internal",
         mode,
     ]
+    if cell_label is not None:
+        command += ["--cell-label", cell_label]
+    if host_profile != "ideal":
+        command += [
+            "--host-profile",
+            host_profile,
+            "--host-launch-count",
+            str(host_launch_count),
+        ]
+    if collective_latency_profile is not None:
+        command += ["--collective-latency-profile", collective_latency_profile]
+    return command
+
+
+def _run_child(args: argparse.Namespace, mode: str) -> None:
+    command = child_command(args, mode)
     completed = subprocess.run(command, check=False, env=os.environ.copy())
     if completed.returncode != 0:
         raise SystemExit(f"child stage {mode!r} failed with code {completed.returncode}")
 
 
 def run_study(args: argparse.Namespace) -> dict[str, Any]:
+    if not _composition_selection(args)["is_default"]:
+        raise SystemExit(
+            "the five-cell accepted study runs the accepted configuration only; "
+            "drive a non-default host or collective profile one cell at a time "
+            "with --internal cell:<name> --cell-label <label>"
+        )
+    if getattr(args, "cell_label", None) is not None:
+        raise SystemExit("--cell-label applies to a single --internal cell stage")
     args.run_dir.mkdir(parents=True, exist_ok=False)
     os.environ["SIMLLM_HTSIM_RNIC"] = str(args.htsim_rnic)
     _run_child(args, "capture")
@@ -1599,6 +1852,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--internal", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--cell-label",
+        default=None,
+        help="output directory name for a single cell; defaults to the cell name",
+    )
+    parser.add_argument(
+        "--host-profile",
+        choices=HOST_PROFILES,
+        default="ideal",
+        help="fixed per-step host profile; the accepted default is 'ideal'",
+    )
+    parser.add_argument(
+        "--host-launch-count",
+        type=int,
+        default=0,
+        help="launch count a calibrated host profile multiplies by its point",
+    )
+    parser.add_argument(
+        "--collective-latency-profile",
+        default=None,
+        help="calibrated collective latency profile; the accepted default is off",
+    )
     return parser.parse_args()
 
 
