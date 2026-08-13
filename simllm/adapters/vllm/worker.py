@@ -667,8 +667,12 @@ class SimWorker(_GpuWorkerBase):
         self.compute_provider = _HOOKS.compute_provider or RooflineProvider(
             efficiency=self.sim_config.efficiency
         )
-        self.host_model = _HOOKS.host_model or HostInitiationModel(
-            initiation_delay_ps=self.sim_config.host_initiation_ps
+        self.host_model = _HOOKS.host_model or (
+            HostInitiationModel(
+                initiation_delay_ps=self.sim_config.host_initiation_ps
+            )
+            if self.sim_config.host_initiation_ps
+            else HostInitiationModel.ideal()
         )
         tp_size = int(getattr(parallel_config, "tensor_parallel_size", 1) or 1)
         worker_world_size = int(
@@ -702,6 +706,8 @@ class SimWorker(_GpuWorkerBase):
             fallback_latency=lambda translated: 0,
             clock=_simllm_clock,
             is_authority=is_authority,
+            host_model=self.host_model,
+            gpu=self.gpu,
         )
         self.clock = self._runtime.clock
         self.step_records = self._runtime.step_records

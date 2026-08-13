@@ -67,7 +67,7 @@ class SerialStepLowererConfig:
     ep_ranks: Sequence[int] | None = None
     provider: ComputeProvider = field(default_factory=lambda: RooflineProvider(efficiency=0.7))
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
-    host_model: HostInitiationModel = field(default_factory=HostInitiationModel)
+    host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
     routed_moe_supply: RoutedMoeSupply | None = None
     attach_collective_plan: bool = True
 
@@ -93,6 +93,9 @@ class SerialStepLowererConfig:
             raise TypeError("routed_moe_supply must be RoutedMoeSupply or None")
         if not isinstance(self.attach_collective_plan, bool):
             raise TypeError("attach_collective_plan must be a bool")
+        if not isinstance(self.host_model, HostInitiationModel):
+            raise TypeError("host_model must be a HostInitiationModel")
+        self.host_model.validate_device(self.gpu)
         object.__setattr__(self, "tp_ranks", tp_ranks)
         object.__setattr__(self, "ep_ranks", ep_ranks)
 
@@ -112,6 +115,16 @@ class SerialStepTiming:
     num_sampled: int
     sample_count_exact: bool
     uncertainty_fraction: float
+    host_profile: str = "ideal"
+    host_launch_class: str = "none"
+    host_launch_count: int = 0
+    provider_compute_ps: int = 0
+    host_launch_floor_ps: int = 0
+    host_launch_floor_lower_ps: int = 0
+    host_launch_floor_upper_ps: int = 0
+    host_empirical_lower_ps: int = 0
+    host_empirical_upper_ps: int = 0
+    exposed_host_ps: int = 0
 
 
 def _execution_id(record: StepRecord) -> str:
@@ -183,8 +196,8 @@ class SerialStepLowerer(ExecutionLowerer):
             num_sampled = len(record.scheduled)
         kernel = step_kernel(cfg.dims, record, num_sampled=num_sampled)
         fused = cfg.provider.estimate(kernel, cfg.gpu)
-        host_delay_ps = cfg.host_model.delay_ps()
-        compute_estimate_ps = fused.duration_ps + host_delay_ps
+        represented = cfg.host_model.represented_estimate(fused, cfg.gpu)
+        compute_estimate_ps = represented.duration_ps
         estimates = cfg.provider.estimate_layers(
             kernel,
             cfg.gpu,
@@ -216,7 +229,10 @@ class SerialStepLowerer(ExecutionLowerer):
                     f"{fused.duration_ps} ps"
                 )
             layer_calc_ns = self._to_goal_layer_calc_ns(
-                (layer_duration_ps[0] + host_delay_ps, *layer_duration_ps[1:])
+                (
+                    layer_duration_ps[0] + represented.exposed_ps,
+                    *layer_duration_ps[1:],
+                )
             )
             per_layer_calc_ns = (
                 layer_calc_ns[0]
@@ -229,7 +245,17 @@ class SerialStepLowerer(ExecutionLowerer):
             per_layer_calc_ns=per_layer_calc_ns,
             num_sampled=num_sampled,
             sample_count_exact=record.num_sampled is not None,
-            uncertainty_fraction=fused.uncertainty,
+            uncertainty_fraction=represented.uncertainty_fraction,
+            host_profile=cfg.host_model.profile,
+            host_launch_class=cfg.host_model.launch_class,
+            host_launch_count=cfg.host_model.launch_count,
+            provider_compute_ps=represented.provider_duration_ps,
+            host_launch_floor_ps=represented.launch_floor_ps,
+            host_launch_floor_lower_ps=represented.launch_floor_lower_ps,
+            host_launch_floor_upper_ps=represented.launch_floor_upper_ps,
+            host_empirical_lower_ps=represented.empirical_lower_ps,
+            host_empirical_upper_ps=represented.empirical_upper_ps,
+            exposed_host_ps=represented.exposed_ps,
         )
 
     def lower(

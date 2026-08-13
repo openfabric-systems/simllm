@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 
 from simllm.backends.step_lowerer import ObservedStepLowerer, SerialStepLowererConfig
+from simllm.compute import HostInitiationModel
 from simllm.core import (
     CoarseDeviceRuntime,
     CompletionReducer,
@@ -67,6 +68,12 @@ class DeviceRuntimeStepSink:
         """Completed calls in submission order."""
 
         return tuple(self._outcomes)
+
+    @property
+    def host_model(self) -> HostInitiationModel:
+        """The host model shared by observed and serial lowering."""
+
+        return self.lowerer.config.host_model
 
     def bind_clock(self, clock: VirtualClock) -> None:
         """Bind the adapter's sole clock before the first step."""

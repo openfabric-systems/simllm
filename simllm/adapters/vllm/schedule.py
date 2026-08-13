@@ -208,7 +208,8 @@ def _represented_compute(
         num_sampled = len(record.scheduled)
     kernel = step_kernel(dims, record, num_sampled=num_sampled)
     fused = provider.estimate(kernel, gpu)
-    provider_ps = fused.duration_ps + host_model.delay_ps()
+    represented = host_model.represented_estimate(fused, gpu)
+    provider_ps = represented.duration_ps
     estimates = provider.estimate_layers(kernel, gpu, dims.num_layers)
     if estimates is None:
         per_layer_ns = provider_ps // (dims.num_layers * 1000)
@@ -221,9 +222,15 @@ def _represented_compute(
             raise ValueError("provider layer breakdown durations must be nonnegative")
         if sum(durations) != fused.duration_ps:
             raise ValueError("provider layer breakdown does not conserve fused duration")
-        durations[0] += host_model.delay_ps()
+        durations[0] += represented.exposed_ps
         represented_ps = (sum(durations) // 1000) * 1000
-    return represented_ps, provider_ps, fused.bound, fused.uncertainty, kernel
+    return (
+        represented_ps,
+        provider_ps,
+        represented.bound,
+        represented.uncertainty_fraction,
+        kernel,
+    )
 
 
 def _integer_family_value(family: Any, name: str) -> int:

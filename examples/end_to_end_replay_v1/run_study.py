@@ -472,7 +472,7 @@ def _cell(args: argparse.Namespace, name: str) -> None:
         HtsimStepSinkConfig,
         attribute_step,
     )
-    from simllm.compute import RooflineProvider
+    from simllm.compute import HostInitiationModel, RooflineProvider
     from simllm.core import RequestBookkeeper, framework_request_arrivals
     from simllm.preplay import (
         RequestArrival,
@@ -537,6 +537,7 @@ def _cell(args: argparse.Namespace, name: str) -> None:
     )
     dims = _dims(ep_world)
     workdir = cell_dir / "htsim"
+    host_model = HostInitiationModel.ideal()
     sink = HtsimStepSink(
         HtsimStepSinkConfig(
             profile=PROFILE,
@@ -546,6 +547,7 @@ def _cell(args: argparse.Namespace, name: str) -> None:
             ep_ranks=ep_ranks,
             linkspeed_bps=bandwidth,
             provider=RooflineProvider(ROOFLINE_EFFICIENCY),
+            host_model=host_model,
             routed_moe_supply=supply,
         )
     )
@@ -559,6 +561,7 @@ def _cell(args: argparse.Namespace, name: str) -> None:
     reset_configuration()
     configure(
         step_sink=sink,
+        host_model=host_model,
         config=SimExecutorConfig(
             mode="virtual",
             token_id=512,

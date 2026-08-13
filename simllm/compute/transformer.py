@@ -34,6 +34,11 @@ from .host import HostInitiationModel
 
 #: Dense (non-sparse) BF16 tensor-core peak FLOP/s and HBM bytes/s.
 GPU_ENVELOPES: dict[str, GpuSpec] = {
+    "gtx1660-ti-sm75": GpuSpec(
+        name="gtx1660-ti-sm75",
+        peak_flops=5.437e12,
+        mem_bandwidth=288e9,
+    ),
     "a100": GpuSpec(name="a100", peak_flops=312e12, mem_bandwidth=2.039e12),
     "h100": GpuSpec(name="h100", peak_flops=989.5e12, mem_bandwidth=3.35e12),
     "h200": GpuSpec(name="h200", peak_flops=989.5e12, mem_bandwidth=4.8e12),
@@ -318,6 +323,6 @@ def estimate_step_latency_ps(
     gpu: GpuSpec,
     host_model: HostInitiationModel,
 ) -> int:
-    """Simulated duration of one step: kernel estimate plus host initiation."""
+    """Simulated duration after one host-launch composition."""
     kernel = step_kernel(dims, record, num_sampled)
-    return provider.estimate(kernel, gpu).duration_ps + host_model.delay_ps()
+    return host_model.represented_estimate(provider.estimate(kernel, gpu), gpu).duration_ps
