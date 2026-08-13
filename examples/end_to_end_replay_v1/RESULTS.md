@@ -450,6 +450,38 @@ seven-component attribution from inside the sink rather than from a study-driven
 reducer, are recorded in this report and in the module doc as narrative, because
 no clause claimed either.
 
+## Contradiction sweep
+
+Hits are reported here rather than edited, since this study did not register a
+clause about any of them.
+
+1. `README.md:17` reads "SimLLM predicts the serving performance (TTFT, TPOT,
+   goodput, SLO attainment) of large LLM deployments **before you buy or
+   reserve the hardware**". This study is the first registered evidence about
+   that sentence, and it does not carry it. What the chain demonstrably does is
+   conserve and decompose per-request TTFT and TPOT and rank configurations
+   against each other. Absolute prediction is 5x to 22x optimistic on decode
+   latency by the budget above, and goodput and SLO attainment are not
+   demonstrated at all here. The sentence states an aspiration in the present
+   tense.
+2. `README.md:19` reads "with a packet-level network underneath rather than a
+   `bytes / bandwidth` estimate". True of the repository's capability, but this
+   study ran `rnic-nn-fluid`, the explicit ideal baseline, whose service was
+   measured here to be exactly 2.000 us of propagation plus bytes at the
+   declared rate. A reader could take the sentence to mean every run is
+   congestion-aware; this one deliberately was not, and the ideal profile is
+   what makes C5.1 exact.
+3. Neither `README.md` nor `docs/README_PRO.md` says that
+   `GPU_ENVELOPES["b100"]` is what a caller gets when `gpu=` is omitted. Both
+   name the 8 by 8 B100 reference configuration, and `docs/README_PRO.md:190`
+   correctly labels the A100 and H100 parameters as bootstrap seeds, but the
+   silent default is the specific hazard this study's error budget item 4
+   quantifies at 2.4x.
+4. `docs/architecture.md:520` lists "per-request TTFT/TPOT/queueing delay" among
+   the sim-native metrics. That is now true of the packet-level path only
+   through `simllm.backends.step_attribution`; before this change the
+   packet-level sink published a whole-step makespan and no per-request row.
+
 ## Reproduction
 
 ```
