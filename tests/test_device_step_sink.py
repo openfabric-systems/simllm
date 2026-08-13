@@ -1,7 +1,10 @@
 import hashlib
+import importlib.util
 import json
+import sys
 from dataclasses import FrozenInstanceError, replace
 from fractions import Fraction
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -26,6 +29,7 @@ from simllm.core import (
     VirtualClock,
     execution_graph_to_json,
     execution_result_to_json,
+    step_record_to_json,
     step_result_to_json,
 )
 from simllm.traffic import project_execution_graph_goal, render_step_goal
@@ -154,26 +158,16 @@ def _serial_artifact_bundle(config, outcomes) -> BypassArtifacts:
     lowerer = SerialStepLowerer(config)
     diagnostic_goal = bytearray()
     projected_goal = bytearray()
+    record_rows = []
     graph_rows = []
     execution_rows = []
-    completion_rows = []
     step_rows = []
     request_rows = []
     for outcome in outcomes:
+        record_rows.append(step_record_to_json(outcome.record))
         graph_rows.append(execution_graph_to_json(outcome.graph))
         execution = execution_result_to_json(outcome.execution_result)
         execution_rows.append(execution)
-        completion_rows.append(
-            [
-                (
-                    event["operation_id"],
-                    event["phase"],
-                    event["timestamp_ps"],
-                    event.get("subject_object_id"),
-                )
-                for event in execution["events"]
-            ]
-        )
         step = step_result_to_json(outcome.step_result)
         step_rows.append(step)
         request_rows.append(
@@ -193,6 +187,8 @@ def _serial_artifact_bundle(config, outcomes) -> BypassArtifacts:
                 config.dims,
                 config.tp_ranks,
                 per_layer_calc_ns=lowerer.timing(outcome.record).layer_calc_ns,
+                ep_ranks=config.ep_ranks,
+                routed_supply=config.routed_moe_supply,
             )
             .render()
             .encode()
@@ -206,6 +202,7 @@ def _serial_artifact_bundle(config, outcomes) -> BypassArtifacts:
                     ],
                     "boundaries": len(projection.boundaries),
                     "serialized_edges": len(projection.serialized_edges),
+                    "step_index": outcome.record.step_index,
                 }
             )
         )
@@ -215,7 +212,7 @@ def _serial_artifact_bundle(config, outcomes) -> BypassArtifacts:
         # locks the graph-derived GOAL artifact bytes, following the existing
         # comparator convention for an unavailable compiler.
         goal_binary=bytes(projected_goal),
-        topology=_canonical_bytes(graph_rows),
+        topology=_canonical_bytes(record_rows),
         profile="coarse-device-default",
         seed=0,
         baseline_parameters=canonical_bypass_parameters(
@@ -224,9 +221,45 @@ def _serial_artifact_bundle(config, outcomes) -> BypassArtifacts:
                 "tp_ranks": ",".join(str(rank) for rank in config.tp_ranks),
             }
         ),
-        completion_csv=_canonical_bytes(execution_rows),
-        canonical_completion=_canonical_bytes(completion_rows),
+        completion_csv=_canonical_bytes(graph_rows),
+        canonical_completion=_canonical_bytes(execution_rows),
         step_results=_canonical_bytes(step_rows),
+        replay_summary=_canonical_bytes(request_rows),
+    )
+
+
+def _legacy_row_artifact_bundle(config, rows) -> BypassArtifacts:
+    request_rows = [
+        [
+            (
+                metric["request_id"],
+                metric["completed_at_ps"],
+                metric["ttft_ps"],
+                metric["tpot_ps"],
+            )
+            for metric in row["step_result"]["request_metrics"]
+        ]
+        for row in rows
+    ]
+    return BypassArtifacts(
+        goal_text="".join(row["legacy_goal"] for row in rows).encode(),
+        goal_binary=b"".join(
+            _canonical_bytes(row["projected_goal"]) for row in rows
+        ),
+        topology=_canonical_bytes([row["record"] for row in rows]),
+        profile="coarse-device-default",
+        seed=0,
+        baseline_parameters=canonical_bypass_parameters(
+            {
+                "num_layers": config.dims.num_layers,
+                "tp_ranks": ",".join(str(rank) for rank in config.tp_ranks),
+            }
+        ),
+        completion_csv=_canonical_bytes([row["lowered_graph"] for row in rows]),
+        canonical_completion=_canonical_bytes(
+            [row["execution_result"] for row in rows]
+        ),
+        step_results=_canonical_bytes([row["step_result"] for row in rows]),
         replay_summary=_canonical_bytes(request_rows),
     )
 
@@ -275,6 +308,59 @@ def test_producer_disabled_path_preserves_complete_serial_artifact_bytes():
     assert request_rows[1][0][0] == "r0"
     assert request_rows[1][0][3] == {"denominator": 1, "numerator": 2_004_552}
 
+    for field in (
+        "goal_text",
+        "goal_binary",
+        "topology",
+        "completion_csv",
+        "canonical_completion",
+        "step_results",
+        "replay_summary",
+    ):
+        changed = replace(candidate, **{field: getattr(candidate, field) + b"!"})
+        with pytest.raises(ValueError, match=field):
+            assert_bypass_artifact_identity(reference, changed)
+
+
+def test_live_legacy_wrapper_preserves_complete_serial_artifact_bytes(tmp_path):
+    driver_path = (
+        Path(__file__).resolve().parents[1]
+        / "examples"
+        / "vllm_observed_schedule_v1"
+        / "live_driver.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "vllm_legacy_byte_lock_driver",
+        driver_path,
+    )
+    assert spec is not None and spec.loader is not None
+    driver = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = driver
+    spec.loader.exec_module(driver)
+
+    config = SerialStepLowererConfig(DIMS, (0, 1), provider=FixedProvider())
+    output = tmp_path / "legacy-observations.jsonl"
+    sink = object.__new__(driver._LiveLegacySink)
+    sink._config = config
+    sink._lowerer = SerialStepLowerer(config)
+    sink._delegate = DeviceRuntimeStepSink(config)
+    sink._output = output
+    sink._clock = None
+    sink._calls = 0
+
+    sink(_record(0, 123_000, RequestPhase.PREFILL))
+    sink(_record(1, sink._clock.now_ps, RequestPhase.DECODE))
+    rows = [json.loads(line) for line in output.read_text().splitlines()]
+
+    reference = _serial_artifact_bundle(config, _direct_serial_outcomes(config))
+    candidate = _legacy_row_artifact_bundle(config, rows)
+    comparison = assert_bypass_artifact_identity(reference, candidate)
+
+    assert comparison.equivalent
+    assert [row["legacy_call_arity"] for row in rows] == [1, 1]
+    assert [row["legacy_call_index"] for row in rows] == [0, 1]
+    assert all(row["observations_absent"] is True for row in rows)
+    assert all(row["source_graph"] is None for row in rows)
     for field in (
         "goal_text",
         "goal_binary",

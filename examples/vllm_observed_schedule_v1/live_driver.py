@@ -230,6 +230,14 @@ class _LiveLegacySink:
             routed_supply=self._config.routed_moe_supply,
         ).render().encode()
         projection = project_execution_graph_goal(outcome.graph)
+        projection_json = {
+            "artifacts": [
+                artifact.trace.render() for artifact in projection.artifacts
+            ],
+            "boundaries": len(projection.boundaries),
+            "serialized_edges": len(projection.serialized_edges),
+            "step_index": record.step_index,
+        }
         projection_identity = {
             "artifacts": [
                 _byte_identity(artifact.trace.render().encode())
@@ -240,12 +248,16 @@ class _LiveLegacySink:
             "step_index": record.step_index,
         }
         row = {
+            "execution_result": execution_json,
             "execution_result_identity": _canonical_identity(execution_json),
             "legacy_call_arity": 1,
             "legacy_call_index": self._calls,
+            "legacy_goal": goal.decode(),
             "legacy_goal_identity": _byte_identity(goal),
+            "lowered_graph": graph_json,
             "lowered_graph_identity": _canonical_identity(graph_json),
             "observations_absent": True,
+            "projected_goal": projection_json,
             "projected_goal_identity": projection_identity,
             "record": step_record_to_json(record),
             "record_identity": _canonical_identity(step_record_to_json(record)),
