@@ -73,7 +73,13 @@ def _environment(args: argparse.Namespace) -> dict[str, Any]:
     values = _load_expectations()
     if values["schema"] != "simllm-host-step-cost-v1-expectations-v1":
         raise AssertionError("expectation schema drifted")
-    if values["task"] != "COMP-2" or values["calibration_attempt"] != 2:
+    attempt = values["calibration_attempt"]
+    if (
+        values["task"] != "COMP-2"
+        or isinstance(attempt, bool)
+        or not isinstance(attempt, int)
+        or attempt < 2
+    ):
         raise AssertionError("calibration identity drifted")
     if sum(values["scored_calibration_relations"].values()) != 4:
         raise AssertionError("scored calibration inventory drifted")
@@ -478,7 +484,7 @@ def _capture(args: argparse.Namespace, environment: dict[str, Any]) -> int:
         "schema": "simllm-host-step-calibration-v1",
         "study": "host_step_cost_v1",
         "task": "COMP-2",
-        "attempt": 2,
+        "attempt": values["calibration_attempt"],
         "expectation_commit": _expectation_commit(),
         "observed_commit": observed_head,
         "run_status": status,
