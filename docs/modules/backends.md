@@ -777,6 +777,21 @@ serialization floor
 ([loggopsim_helper_v1](../../examples/loggopsim_helper_v1/RESULTS.md)). The
 helper is the invocation seam only; TRAF-20 still owns the fluid fast level.
 
+HTSIM-25 and HTSIM-8 closed on 2026-08-13, each against its own acceptance
+clauses. An exact bound-authorship reproduction classified all 17 previously
+out-of-bounds experiments as wrong at authorship, with zero stale bounds, zero
+simulator regressions and zero unresolved cases. Five corrected authorities
+preserve fractional slack from plans matched on one active modeled resource;
+the failed-link family uses the actual 25 Gbit/s serialization floor rather
+than aggregate capacity to bound a maximum per-flow statistic. The exact final
+backend commit runs all eight default plans and all 95 experiments with raw
+gate status zero.
+A deliberate tracked-plan mutant returns nonzero, byte-exact restoration is
+proved, and the restored plan returns zero
+([htsim_uec_bounds_v1](../../examples/htsim_uec_bounds_v1/RESULTS.md), C1
+17 of 17, P1 11 of 11, G1 1 of 1 and M1 1 of 1 kept as separate evidence
+classes).
+
 ## Open tasks
 
 Every task is labeled `(Category; priority; difficulty)`. P0 is a correctness,
@@ -1021,50 +1036,6 @@ is difficult.
   HTSIM-6 and BACK-9: policy lookahead removes the repeated declare cost,
   structural WQ backpressure limits how much work can be exposed, and the
   event-loop scaling needs its own look.
-- HTSIM-8 (Precision; P0; M): make the backend `commit_check.sh` gate citable
-  as release evidence.
-  The three registered code defects are repaired on
-  `codex/htsim8_commit_check`: the absent-baseline comparison and the remote
-  fetch are removed in favor of the absolute bounds each plan already authors,
-  an empty completion set reports the empty case instead of dividing by it,
-  and `set -euo pipefail` plus a nonzero validator status make every failed
-  command fail the gate
-  ([htsim_commit_gate_v1](../../examples/htsim_commit_gate_v1/RESULTS.md),
-  `2/2` raw rejection instances plus a tracked-plan defect that was rejected
-  and then removed). What remains is acceptance. On its first honest run the
-  repaired gate rejects the backend checkout: 17 of 95 experiments miss their
-  authored FCT bounds and 7 of the 8 default plans fail, so the gate is red
-  and cannot yet be cited as a passing release gate. This closes when HTSIM-25
-  resolves the bound drift and the full default gate exits zero.
-- HTSIM-25 (Precision; P0; L): reconcile the authored UEC validation bounds
-  with current backend behavior.
-  The repaired gate is the first enforcement these bounds have ever received:
-  `bf83fa2` put the UEC completion prints behind
-  `HTSIM_TRACE_FLOW_COMPLETIONS`, which the gate never set, so every
-  experiment since then parsed zero completions and reached the zero division
-  instead of comparing anything. Every failure is a missed FCT bound, never a
-  completion-count, input or status failure, and each observation sits above
-  its own serialization floor, so none is physically impossible. The drift
-  concentrates in two places: `Small permutation, INC (16 nodes)` misses its
-  210 us bound by 9 to 14 percent in all three congestion-control modes, and 9
-  of the 17 failures are in the two `-failed 8` load-balancing plans, where the
-  worst case reaches 564.7 us against a 220 us bound. Decide per experiment,
-  with evidence, whether the transport regressed or the authored bound is
-  stale. Never relax a bound to match an observation without that evidence.
-- HTSIM-28 (Precision; P1; M): add the minimum persistent flow-session repair
-  needed for exact dependency boundaries: either an atomic operation that
-  advances until a named accepted sequence set completes and permits a
-  dependent injection at that exact current simulator time, or native
-  dependency-gated injection scheduled at predecessor completion. The
-  delivered HTSIM-18 protocol cannot do this because `advance` latches the
-  caller horizon before events run and `inject` rejects eligibility at or
-  before that horizon. Preserve fail-before-mutation checks, contiguous
-  sequence ordering and one-session authority; a caller-selected polling
-  quantum is not an equivalent repair. Acceptance must demonstrate the exact
-  completion-to-injection boundary without replaying processed events and
-  preserve every existing-verb off-path result
-  ([protocol audit](../../examples/congestion_chain_v1/RESULTS.md)).
-
 ### Completeness
 
 - HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
