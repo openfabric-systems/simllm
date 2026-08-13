@@ -29,6 +29,7 @@ from simllm.core import (
     CoarseDeviceRuntime,
     CollectiveWork,
     CompletionEvent,
+    CompletionReducer,
     ComputeWork,
     ControlMode,
     ControlWork,
@@ -39,15 +40,22 @@ from simllm.core import (
     ExecutionGraph,
     ExecutionOperation,
     IdentityArbitrationPolicy,
+    KvBlockState,
     KvCacheAction,
     KvCacheWork,
+    KvPoolSpec,
+    OperationCorrelation,
     QueueVisit,
     RequestBookkeeper,
+    RequestPhase,
     ResourceKind,
     ResourceRef,
     RnicAuthorityMode,
+    ScheduledRequest,
     SemanticWqeSubmission,
+    StepRecord,
     StrictPriorityArbitrationPolicy,
+    VirtualClock,
     WeightedRoundRobinArbitrationPolicy,
     WqeLifecycleProjection,
     collective_goal_tags,
@@ -1099,9 +1107,11 @@ def test_byte_carrying_kv_read_write_fails_closed_before_state_mutation(action):
             ),
         ),
     )
-    with pytest.raises(ValueError, match="CORE-3"):
+    with pytest.raises(ValueError, match="requires a declared KV pool"):
         runtime.execute(graph)
     assert runtime.last_report is None
+    assert runtime.last_kv_report is None
+    assert runtime.kv_ledger is None
     assert runtime.bypass_ledger is not None
     assert runtime.bypass_ledger.records == ()
 
@@ -1207,3 +1217,261 @@ def test_completion_queue_events_project_eligibility_and_grant_timestamps():
         ResourceKind.COMPLETION_QUEUE,
         second.cq_id,
     )
+
+
+_KV_BLOCK_BYTES = 2_097_152
+_KV_BLOCK_TOKENS = 16
+_KV_BYTES_PER_TOKEN = _KV_BLOCK_BYTES // _KV_BLOCK_TOKENS
+#: 8 TB/s, i.e. exactly 8 bytes per picosecond
+_KV_RATE_BPS = 64_000_000_000_000
+
+
+def _kv_pool(capacity: int = 8) -> KvPoolSpec:
+    return KvPoolSpec(
+        pool_id="kv:0",
+        block_bytes=_KV_BLOCK_BYTES,
+        block_tokens=_KV_BLOCK_TOKENS,
+        capacity_blocks=capacity,
+    )
+
+
+def _kv_prefill_operations(request: str, blocks: tuple[str, ...], tokens: int):
+    correlation = OperationCorrelation(request_ids=(request,))
+    allocate_id = f"{request}-allocate"
+    write_id = f"{request}-write"
+    return (
+        ExecutionOperation(
+            allocate_id,
+            0,
+            "kv",
+            KvCacheWork(
+                KvCacheAction.ALLOCATE,
+                "kv:0",
+                request_id=request,
+                block_ids=blocks,
+                token_start=0,
+                token_end=tokens,
+            ),
+            correlation=correlation,
+        ),
+        ExecutionOperation(
+            write_id,
+            0,
+            "kv",
+            KvCacheWork(
+                KvCacheAction.WRITE,
+                "kv:0",
+                request_id=request,
+                block_ids=blocks,
+                token_start=0,
+                token_end=tokens,
+                byte_count=tokens * _KV_BYTES_PER_TOKEN,
+            ),
+            depends_on=(allocate_id,),
+            correlation=correlation,
+        ),
+    )
+
+
+def test_byte_carrying_kv_write_serializes_on_the_rank_hbm_queue():
+    profile = replace(_profile(), hbm_rate_bps=_KV_RATE_BPS)
+    runtime = CoarseDeviceRuntime(profile, kv_pools=[_kv_pool()])
+    graph = ExecutionGraph(
+        "kv-write",
+        0,
+        0,
+        _kv_prefill_operations("r", ("b0", "b1"), 32),
+        completion_operation_ids=("r-write",),
+    )
+    result = runtime.execute(graph)
+    # 32 tokens x 131,072 B at 8 B/ps is the exact serialization floor
+    assert result.completed_at_ps == 32 * 16_384
+    report = runtime.last_report
+    assert report is not None
+    hbm = [
+        visit
+        for visit in report.visits
+        if visit.resource.kind is ResourceKind.HBM_QUEUE
+    ]
+    assert len(hbm) == 1
+    assert hbm[0].service_bytes == 32 * _KV_BYTES_PER_TOKEN
+    assert hbm[0].service_ps == 32 * 16_384
+    kv_report = runtime.last_kv_report
+    assert kv_report is not None
+    row = kv_report.pool("kv:0")
+    assert (row.live_blocks, row.write_bytes) == (2, 32 * _KV_BYTES_PER_TOKEN)
+    assert kv_report.demand("r-write").byte_count == 32 * _KV_BYTES_PER_TOKEN
+    assert kv_report.demand("r-allocate").byte_count == 0
+
+
+def test_byte_carrying_kv_write_survives_both_projection_gates():
+    profile = replace(_profile(), hbm_rate_bps=_KV_RATE_BPS)
+    runtime = CoarseDeviceRuntime(profile, kv_pools=[_kv_pool()])
+    graph = ExecutionGraph(
+        "kv-projection",
+        0,
+        0,
+        _kv_prefill_operations("r", ("b0", "b1"), 32),
+        completion_operation_ids=("r-write",),
+    )
+    write_operation = graph.operations[-1]
+    assert isinstance(write_operation.work, KvCacheWork)
+    declared_bytes = write_operation.work.byte_count
+
+    result = runtime.execute(graph, bookkeeping=RequestBookkeeper())
+    report = runtime.last_report
+    assert report is not None
+    CompletionReducer(VirtualClock(0)).reduce(
+        StepRecord(
+            step_index=0,
+            virtual_time_ps=0,
+            scheduled=[ScheduledRequest("r", RequestPhase.PREFILL, 32)],
+            num_sampled=1,
+            sampled_request_ids=["r"],
+        ),
+        graph,
+        result,
+        report,
+    )
+
+    hbm_visit = next(
+        visit
+        for visit in report.visits
+        if visit.operation_id == "r-write"
+        and visit.resource.kind is ResourceKind.HBM_QUEUE
+    )
+    logical_completion = next(
+        event
+        for event in result.events
+        if event.operation_id == "r-write"
+        and event.phase is EventPhase.COMPLETED
+        and event.subject_object_id is None
+    )
+    assert (
+        hbm_visit.service_bytes
+        == logical_completion.completed_bytes
+        == declared_bytes
+    )
+
+
+def test_two_kv_writes_on_one_rank_share_the_hbm_queue_in_series():
+    profile = replace(_profile(), hbm_rate_bps=_KV_RATE_BPS)
+    runtime = CoarseDeviceRuntime(profile, kv_pools=[_kv_pool()])
+    graph = ExecutionGraph(
+        "kv-serial",
+        0,
+        0,
+        _kv_prefill_operations("first", ("b0", "b1"), 32)
+        + _kv_prefill_operations("second", ("b2", "b3"), 32),
+    )
+    result = runtime.execute(graph)
+    assert result.completed_at_ps == 2 * 32 * 16_384
+
+
+def test_halving_the_hbm_rate_exactly_doubles_the_kv_service():
+    graphs = {}
+    for rate in (_KV_RATE_BPS, _KV_RATE_BPS // 2):
+        profile = replace(_profile(), hbm_rate_bps=rate)
+        runtime = CoarseDeviceRuntime(profile, kv_pools=[_kv_pool()])
+        graph = ExecutionGraph(
+            f"kv-rate-{rate}",
+            0,
+            0,
+            _kv_prefill_operations("r", ("b0", "b1"), 32),
+            completion_operation_ids=("r-write",),
+        )
+        graphs[rate] = runtime.execute(graph).completed_at_ps
+    assert graphs[_KV_RATE_BPS // 2] == 2 * graphs[_KV_RATE_BPS]
+
+
+def test_a_declared_pool_leaves_the_zero_byte_path_bit_identical():
+    operations = (
+        ExecutionOperation(
+            "kv",
+            0,
+            "kv",
+            KvCacheWork(
+                KvCacheAction.ALLOCATE,
+                "kv:0",
+                request_id="r",
+                block_ids=("b0",),
+            ),
+        ),
+        ExecutionOperation(
+            "kernel",
+            0,
+            "compute",
+            ComputeWork("kernel", nominal_duration_ps=1_000),
+            depends_on=("kv",),
+        ),
+    )
+    baseline = CoarseDeviceRuntime(_profile()).execute(
+        ExecutionGraph("kv-zero-baseline", 0, 7, operations)
+    )
+    profile = replace(_profile(), hbm_rate_bps=_KV_RATE_BPS)
+    accounted_runtime = CoarseDeviceRuntime(profile, kv_pools=[_kv_pool()])
+    accounted = accounted_runtime.execute(
+        ExecutionGraph("kv-zero-accounted", 0, 7, operations)
+    )
+    assert accounted.completed_at_ps == baseline.completed_at_ps
+    assert accounted.quiesced_at_ps == baseline.quiesced_at_ps
+    assert [
+        (event.operation_id, event.phase, event.timestamp_ps)
+        for event in accounted.events
+    ] == [
+        (event.operation_id, event.phase, event.timestamp_ps)
+        for event in baseline.events
+    ]
+    assert accounted_runtime.last_kv_report is not None
+    assert accounted_runtime.last_kv_report.pool("kv:0").live_blocks == 1
+
+
+def test_a_declared_pool_without_an_hbm_rate_refuses_byte_carrying_kv():
+    runtime = CoarseDeviceRuntime(_profile(), kv_pools=[_kv_pool()])
+    graph = ExecutionGraph(
+        "kv-no-rate",
+        0,
+        0,
+        _kv_prefill_operations("r", ("b0",), 16),
+    )
+    with pytest.raises(ValueError, match="declares no HBM rate"):
+        runtime.execute(graph)
+    assert runtime.last_kv_report is None
+
+
+def test_a_refused_graph_leaves_the_kv_authority_unchanged():
+    profile = replace(_profile(), hbm_rate_bps=_KV_RATE_BPS)
+    runtime = CoarseDeviceRuntime(profile, kv_pools=[_kv_pool()])
+    runtime.execute(
+        ExecutionGraph(
+            "kv-first",
+            0,
+            0,
+            _kv_prefill_operations("r", ("b0", "b1"), 32),
+            completion_operation_ids=("r-write",),
+        )
+    )
+    committed = runtime.last_kv_report.pool("kv:0")
+    illegal = ExecutionGraph(
+        "kv-illegal",
+        1,
+        0,
+        (
+            ExecutionOperation(
+                "steal",
+                0,
+                "kv",
+                KvCacheWork(
+                    KvCacheAction.ALLOCATE,
+                    "kv:0",
+                    request_id="other",
+                    block_ids=("b0",),
+                ),
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match="needs an explicit evict"):
+        runtime.execute(illegal)
+    assert runtime.last_kv_report.pool("kv:0") == committed
+    assert runtime.kv_ledger is not None
+    assert runtime.kv_ledger.block_state("kv:0", "b0") is KvBlockState.LIVE

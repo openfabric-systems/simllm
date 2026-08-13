@@ -3,6 +3,11 @@
 Nothing in this package may import vLLM or SGLang.
 """
 
+from simllm.core.authority import (
+    check_bookkeeping_projection,
+    check_completion_event_projection,
+    work_completed_bytes,
+)
 from simllm.core.bookkeeping import (
     BOOKKEEPING_SCHEMA,
     BookkeepingEntry,
@@ -73,6 +78,16 @@ from simllm.core.execution_io import (
     execution_result_to_json,
     operation_participant_ranks,
     validate_execution_graph,
+)
+from simllm.core.kv import (
+    BYTE_CARRYING_ACTIONS,
+    KV_ACCOUNTING_SCHEMA,
+    KvAccountingReport,
+    KvBlockState,
+    KvLifecycleLedger,
+    KvPoolAccounting,
+    KvPoolSpec,
+    KvServiceDemand,
 )
 from simllm.core.precision import (
     AUTHORITY_MODE_RNIC_LEVELS,
@@ -166,6 +181,7 @@ from simllm.core.step_io import step_result_from_json, step_result_to_json
 __all__ = [
     "AUTHORITY_MODE_RNIC_LEVELS",
     "BOOKKEEPING_SCHEMA",
+    "BYTE_CARRYING_ACTIONS",
     "COLLECTIVE_PLAN_SCHEMA",
     "COMPLETION_EVENT_SCHEMA",
     "COMPUTE_LEVEL_ATTRIBUTE",
@@ -176,6 +192,7 @@ __all__ = [
     "DEFAULT_RNIC_RATE_BPS",
     "EXECUTION_GRAPH_SCHEMA",
     "EXECUTION_RESULT_SCHEMA",
+    "KV_ACCOUNTING_SCHEMA",
     "LEGACY_RESULT_SCHEMA",
     "PRECISION_CONFIG_SCHEMA",
     "PRECISION_SEAMS",
@@ -226,8 +243,14 @@ __all__ = [
     "FrameworkRequestArrival",
     "IdentityArbitrationPolicy",
     "JoinProvenance",
+    "KvAccountingReport",
+    "KvBlockState",
     "KvCacheAction",
     "KvCacheWork",
+    "KvLifecycleLedger",
+    "KvPoolAccounting",
+    "KvPoolSpec",
+    "KvServiceDemand",
     "LatencyAttribution",
     "LocalityLevel",
     "NativeRnicSession",
@@ -270,6 +293,8 @@ __all__ = [
     "WqeLifecycleProjection",
     "bookkeeping_ledger_from_json",
     "bookkeeping_ledger_to_json",
+    "check_bookkeeping_projection",
+    "check_completion_event_projection",
     "check_precision_selection",
     "collective_goal_tags",
     "collective_plan_integrity_sha256",
@@ -307,6 +332,7 @@ __all__ = [
     "step_result_to_json",
     "validate_bookkeeping_ledger",
     "validate_execution_graph",
+    "work_completed_bytes",
     "write_run_provenance",
     "write_step_records",
 ]
