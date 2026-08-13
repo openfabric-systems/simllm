@@ -82,6 +82,16 @@ SKELETON_WORKER_MODE = "skeleton"
 SKELETON_TP_PAYLOAD_BYTES = 4_096
 
 
+def _skeleton_fallback_latency(host_model: HostInitiationModel) -> int:
+    """Keep the deliberately empty fallback exclusive to the ideal profile."""
+
+    if not host_model.is_ideal:
+        raise RuntimeError(
+            "a nonideal SimWorker host model requires a timing sink result"
+        )
+    return 0
+
+
 @dataclass(frozen=True)
 class _DpCoordinationTensor(ShapeTensor):
     """Shape tensor carrying the skeleton's projected padded-token row."""
@@ -674,6 +684,11 @@ class SimWorker(_GpuWorkerBase):
             if self.sim_config.host_initiation_ps
             else HostInitiationModel.ideal()
         )
+        if not self.host_model.is_ideal and _HOOKS.step_sink is None:
+            raise RuntimeError(
+                "a nonideal SimWorker host model requires a host-model-aware "
+                "timing sink"
+            )
         tp_size = int(getattr(parallel_config, "tensor_parallel_size", 1) or 1)
         worker_world_size = int(
             getattr(parallel_config, "world_size", tp_size * pp_size) or tp_size * pp_size
@@ -703,7 +718,9 @@ class SimWorker(_GpuWorkerBase):
         self._runtime = _SimStepRuntime(
             config=self.sim_config,
             step_sink=_HOOKS.step_sink,
-            fallback_latency=lambda translated: 0,
+            fallback_latency=lambda translated: _skeleton_fallback_latency(
+                self.host_model
+            ),
             clock=_simllm_clock,
             is_authority=is_authority,
             host_model=self.host_model,
