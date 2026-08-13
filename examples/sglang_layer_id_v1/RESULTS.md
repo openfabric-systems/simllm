@@ -5,8 +5,10 @@ which precedes both the implementation and every run reported here. The
 baseline phase ran at that commit; the treatment phase ran after the
 implementation landed.
 
-**Status: 9 of 9 scored behavioral instances passed, 26 of 26 fatal guards
-held.** SGL-16 closes on the clauses it registered.
+**Status: the run is not void, every frozen fatal guard held. All nine frozen
+relation instances passed; 3 of 9 are genuine-risk behavioral evidence.**
+SGL-16 remains open under its current `(Precision; P1; M)` tag because this
+component evidence does not reach the repository's reported metric chain.
 
 ## What changed
 
@@ -59,17 +61,22 @@ with no equality assumed). Model
 | `long` | 1 | 96 | 8 | 256 | 103 |
 | `preempt` | 8 | 8 | 20 | 96 | 216 |
 
-## Fatal, unscored guards: 26 of 26 held
+## Fatal, unscored guards
+
+The run is not void, every frozen fatal guard held. G8 is a post-freeze
+consistency guard and is reported as a named addition to the frozen G1 through
+G7 set.
 
 | guard | result |
 |---|---|
-| G1, stock worker, runner, model and CPU parameters, both phases, all cells | held, 6 of 6 |
-| G2, unpinned CPU capture storage, both phases, all cells | held, 6 of 6 |
-| G3, `granite-model-order` in baseline and `framework-layer-id` in treatment | held, 3 of 3 |
-| G4, resolved ids are exactly `0`..`23`, one per MoE module, each agreeing with its registered module name | held, 3 of 3 |
-| G5, real decode retraction and resume in the `preempt` cell, both phases | held, 2 of 2, one retraction and one resume each |
-| G6, zero layer-label disagreements over every audited capture | held, 3 of 3, 1,752 audited captures total |
-| G8, derived `request` and `observed-dispatch` trace rows identical between phases | held, 3 of 3 |
+| G1, stock worker, runner, model and CPU parameters, both phases, all cells | held in both phases for every cell |
+| G2, unpinned CPU capture storage, both phases, all cells | held in both phases for every cell |
+| G3, `granite-model-order` in baseline and `framework-layer-id` in treatment | held in every cell |
+| G4, resolved ids are exactly `0`..`23`, one per MoE module, each agreeing with its registered module name | held in every cell |
+| G5, real decode retraction and resume in the `preempt` cell, both phases | held in both phases; one retraction and one resume in each |
+| G6, zero layer-label disagreements over every audited capture | held in every cell; 1,752 audited captures and zero disagreements |
+| G7, frozen, no writes outside the run directory and `--check-only` writes nothing | held on the harness-visible write surface; every explicit output path is rooted under `--run-dir`, and the dry check reported `artifacts_written == 0` |
+| G8, post-freeze addition, derived `request` and `observed-dispatch` trace rows identical between phases | held in every cell |
 
 G5 detail: SGLang retracted `p3` under decode pressure at framework step 18,
 released its 24 token slots, and `p3` still reached its 20-token length cap
@@ -77,45 +84,62 @@ with `framework_preemption_count == 1`. The same retraction occurred in both
 phases.
 
 G6 detail: 96 audited captures in `short`, 192 in `long`, 1,464 in `preempt`,
-zero disagreements. This guard is fatal-unscored rather than scored because R1
-entails it: the routed-expert buffer is indexed by the label, so identical
-response bytes cannot coexist with a disagreeing label on an exercised layer.
-Reporting it as a scored fraction would have double-counted one observation.
+zero disagreements. Under the frozen configuration, G6 and R1 mutually entail
+one another: the routed-expert buffer is indexed by the label, and the frozen
+reachability proof excludes any other effect of the replacement. G6 is
+therefore fatal-unscored rather than independent behavioral evidence.
 
-## Scored behavioral relations: 9 of 9
+G7 detail: every explicit write in `run_study.py` targets a path derived from
+`--run-dir`. Lines 484-487 partly enforce that boundary by requiring an
+explicit absolute run directory and rejecting the repository root. The dry
+check reported `artifacts_written == 0`. This is evidence over the harness's
+visible write surface, not a filesystem-wide write trace.
+
+## Frozen relation outcomes: 3 of 9 genuine-risk
+
+All nine frozen relation instances passed. After review, only R1's three cells
+count as genuine-risk behavioral evidence. R2 is an orthogonality check, and
+R3 is a validity control.
 
 | family | cell | result |
 |---|---|---|
-| R1, raw framework response identity | `short` | passed, 11,700 comparable characters equal |
+| R1, genuine-risk raw framework response identity | `short` | passed, 11,700 comparable characters equal |
 | R1 | `long` | passed, 105,953 equal |
 | R1 | `preempt` | passed, 225,016 equal |
-| R2, KV event identity | `short` | passed, 5 events |
+| R2, KV-event orthogonality check | `short` | passed, 5 events |
 | R2 | `long` | passed, 9 events |
 | R2 | `preempt` | passed, 186 events |
-| R3, discriminating power | `short` | passed, 11 of 11 tokens change under a one-layer rotation |
+| R3, treatment-trace validity control | `short` | passed, 11 of 11 tokens change under a one-layer rotation |
 | R3 | `long` | passed, 103 of 103 |
 | R3 | `preempt` | passed, 216 of 216 |
 
-R3 is the reason R1 and R2 mean anything. Every forwarded token in every cell
-changes at least one layer's expert tuple when the labels are rotated by one,
-so a byte-identical result is not something this workload would have produced
-regardless of the labels.
+R2 is retained as an orthogonality check. The frozen reachability analysis
+shows that `layer_id` cannot reach the allocator in this CPU configuration, so
+KV-event identity can detect collateral effects but does not test the label
+replacement. R3 is retained as a validity control. It examines only the
+treatment trace and confirms that each token's 24 layer tuples are not all
+identical; it never compares the two phases. G6 and R1 mutually entail one
+another under the frozen configuration and are not independent evidence. The
+corrected genuine-risk fraction is 3 of 9.
 
 ## Harness correction, reported rather than hidden
 
-The first comparator implementation compared `responses.json` as whole files
-and reported R1 as 0 of 3 with the byte counts equal for two cells and 6 apart
-for the third. The differences were exactly two fields per request,
+The first comparator pass was void on a G5 instrument defect. It read a `kind`
+key from trace rows that spell it `event_kind`, so the fatal guard evaluated as
+failed even though the underlying retraction and resume were present in both
+phases. A void run has no interpretable behavioral fraction, so none is
+reported for that pass.
+
+The same comparator initially compared `responses.json` as whole files and
+flagged all three R1 cells. Its only observed differences were
 `meta_info.e2e_latency` and `meta_info.response_sent_to_client_ts`, which are
 wall-clock properties of the capture process and which no two runs of any code
 can make equal. The frozen expectation names the response content it compares
-rather than the file bytes, so the comparator was corrected to drop those two
-fields and nothing else, and the run was re-scored. Both scores are reported
-here: 6 of 9 before the correction with the three failures attributable in
-full to wall-clock capture timing, and 9 of 9 after. The fatal G5 guard also
-failed on the first pass because the comparator read a `kind` key from trace
-rows that spell it `event_kind`; that was corrected in the same pass and the
-underlying retraction was present in both phases from the start.
+rather than the file bytes, so the corrected comparator drops those two fields
+and nothing else and reads `event_kind`. The pre-correction `summary.json` was
+overwritten rather than retained, which is a limitation of the evidence trail.
+After correction, the run was not void and all nine frozen relation instances
+passed; 3 of 9 count as genuine-risk behavioral evidence.
 
 No expectation, cell, relation or threshold was changed. The correction is to
 the reader, not to the claim.
@@ -141,9 +165,9 @@ the SGLang v2 trace is shaped for the traffic path. It does not establish that
 any SGLang run has driven it: no placement manifest, GOAL emission, backend
 run or metric was produced from an SGLang trace in this study or any other.
 
-## Closure scope
+## Landed scope and remaining closure condition
 
-Each registered SGL-16 clause, quoted, with its evidence:
+Each registered SGL-16 clause, quoted, with the component evidence that landed:
 
 - "replace the framework-oracle fallback's Granite model-order layer inference
   with stable layer IDs supplied by SGLang": done. The surrogate is gone from
@@ -167,24 +191,29 @@ Each registered SGL-16 clause, quoted, with its evidence:
 - "and byte-identical expert IDs, request outputs and KV events relative to
   the current qualified Granite fallback": R1 covers the base64 routed-expert
   payload, output token ids, finish reasons and the cached-token and
-  preemption counters; R2 covers the KV events; G8 covers the derived
-  per-token dispatch rows.
+  preemption counters; R2 covers the KV events; the post-freeze G8 consistency
+  guard covers the derived per-token dispatch rows.
 
-Nothing the clause registered is undemonstrated, so this closure registers
-zero new IDs.
+The source change and component study landed against every clause quoted above.
+SGL-16 nevertheless remains open because no supported SGLang path connects
+this routing identity through a placement manifest, GOAL emission, backend
+run, `CompletionEvent`, `StepResult`, and TTFT or TPOT. Reopening the existing
+ID preserves that missing precision condition without inventing a new tag or
+registering a new ID.
 
-Two limitations belong in the record and do not carry IDs, because no
-registered clause claimed either: only one model exercises the
-sibling-`layer_id` resolution path, and a model whose MoE blocks are a strict
-subset of its decoder layers would break the audit comparator rather than the
-binding, since the comparator is the surrogate this task removed.
+Two further component-coverage limitations remain under the reopened SGL-16:
+only one model exercises the sibling-`layer_id` resolution path, and a model
+whose MoE blocks are a strict subset of its decoder layers would break the
+audit comparator rather than the binding, since the comparator is the
+surrogate this task removed.
 
 ## Contradiction sweep
 
 - `README.md` and `docs/architecture.md` contain no statement about the
-  SGLang dispatch layer label, so neither contradicts this closure.
+  SGLang dispatch layer label, so neither contradicts the landed component
+  evidence or the reopened status.
 - `docs/README_PRO.md` carries the generated task-progress block, which is
-  regenerated here for ledger consistency, and no prose claim about the layer
+  regenerated here with SGL-16 open, and no prose claim about the layer
   surrogate.
 - `examples/framework_oracle_v1/RESULTS.md:253` says "SGL-16 owns replacement
   of the fallback's Granite model-order layer-label surrogate". That is a

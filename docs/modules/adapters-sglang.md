@@ -213,10 +213,13 @@ reported in
 [examples/sglang_layer_id_v1/RESULTS.md](../../examples/sglang_layer_id_v1/RESULTS.md).
 Two prompt shapes and one real decode-retraction cell ran twice on a live CPU
 engine at the pinned commit, once with the surrogate and once with the
-framework identity: 9 of 9 scored instances and 26 of 26 fatal guards, with
-1,752 audited captures and zero label disagreements, byte-identical raw
-framework responses, KV events and per-token dispatch rows, and one retraction
-of `p3` at framework step 18 that resumed to its length cap in both phases.
+framework identity. All nine frozen relation instances passed, of which 3 of 9
+are genuine-risk behavioral evidence; the run is not void, every frozen fatal
+guard held. The remaining six are retained as three R2 allocator-orthogonality
+checks and three R3 treatment-trace validity controls. The study recorded 1,752
+audited captures with zero label disagreements, byte-identical raw framework
+responses, KV events and per-token dispatch rows, and one retraction of `p3` at
+framework step 18 that resumed to its length cap in both phases.
 The pressure probing behind that cell also established two properties of the
 pinned scheduler worth recording: it clamps `max_new_tokens` to the token-pool
 capacity rather than retracting a lone oversized request, and its prefill
@@ -258,8 +261,10 @@ at all and falls back to the JSONL sidecar.
 
 The honest summary is that SGLang today is a real frontend whose decisions are
 observed and recorded, not a real frontend whose decisions reach the reported
-metric. Closing SGL-16 improves the fidelity of what is recorded. It does not
-move the adapter onto the metric chain.
+metric. The landed SGL-16 source and component slice improves the fidelity of
+what is recorded. It does not move the adapter onto the metric chain, so
+SGL-16 remains open under its current Precision tag until a supported path
+reaches the reported metrics.
 
 ### Why SGL-14 is blocked rather than deferred
 
@@ -382,10 +387,18 @@ communication by exactly the whole of it.
   inference. When the producer is disabled or absent, preserve the accepted
   worker records, event sidecar, sink calls, timestamps, tokens, and completion
   order exactly.
+- SGL-16 (Precision; P1; M): replace the framework-oracle fallback's Granite
+  model-order layer inference with stable layer IDs supplied by SGLang. The
+  current surrogate cycles missing capture labels through the model's 24 MoE
+  modules in execution order; the identifying observable is an explicit
+  framework layer ID at the post-selection capturer. Freeze at least two
+  prompt shapes and a preemption resume before changing it. Acceptance
+  requires zero layer-label disagreements and byte-identical expert IDs,
+  request outputs and KV events relative to the current qualified Granite
+  fallback.
+
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
 worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin
 framework (`sglang.srt.plugins` entry points plus `HookRegistry` `REPLACE`
 hooks, run before scheduler construction) is a supported non-fork selection
-seam, so no upstream flag is needed. SGL-16 (the framework-oracle fallback's
-dispatch layer identity) closed 2026-08-13 against a live CPU engine at the
-pinned commit; it registered no residual IDs.
+seam, so no upstream flag is needed.
