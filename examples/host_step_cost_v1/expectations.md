@@ -22,6 +22,26 @@ device-bound constants and follow them through `ExecutionGraph`, the serial
 lowerer, the packet-level step sink, `StepResult`, TTFT, and TPOT. A B100 or
 H100 query is not allowed to borrow the Turing values.
 
+This expectations-only amendment freezes live attempt two after review of the
+first implementation run. Calibration attempt three was accepted before the
+model was installed. The first live run at clean observed commit `8a620e9`
+was initially labeled accepted and recorded by `f5e2e74`. Review then compared
+the represented GOAL compute service with the physical composition already
+frozen below and found every calibrated step below
+`F = max(C, N * g)`. Per-layer integer flooring lost 6,640 to 20,502 ps. That
+violates a fatal physical precondition, so live attempt one is **VOID with
+findings**. Its behavioral observations have no interpretable pass fraction
+and cannot close COMP-2.
+
+This amendment precedes the calibrated quantization repair and the live
+attempt-two run. It does not widen LIVE-1, LIVE-2 or LIVE-3. The repair changes
+only explicitly selected calibrated behavior from repeated per-layer floors to
+the smallest whole-nanosecond enclosure. The ideal branch is excluded from the
+repair and must remain byte-identical. A first five-cell ideal replay at
+`f5e2e74` already reproduced the frozen aggregate digest and all five
+step-record digests; the same check is repeated after the repair against the
+final implementation.
+
 ## Chronology and prior observations
 
 The following values were known before this freeze and therefore are not new
@@ -59,6 +79,11 @@ predictions:
   every deterministic field of cell `a-ep8-400g` and on its step-record bytes.
   The five-cell baseline digests in `expectations.json` were computed before
   this freeze. They are fatal compatibility oracles, not genuine-risk scores.
+- Live attempt one represented graph launch counts 440 and 567 with compute
+  service 356,088,000 and 458,856,000 ps, below their launch floors by 6,640
+  and 20,502 ps. Its eager rows represented 1,040,256,000 and 1,340,520,000
+  ps, below their floors by 16,200 and 12,585 ps. The retained void artifact
+  is `live_attempt1.json`. All 12 behavioral observations are findings only.
 
 Attempt three is therefore a disclosed replication after a calibration-band
 miss. Its genuinely risky facts are whether
@@ -237,6 +262,59 @@ Three independent sanity angles are required in the report:
    compute term, so the flat-roofline derate cannot dominate this conditional
    sensitivity.
 
+## Live attempt-two quantization repair
+
+The calibrated point composition remains
+`F = max(provider_duration_ps, N * g)`. GOAL carries whole nanoseconds, so its
+first-principles floor is `F` and the narrowest representable ceiling is less
+than `F + 1,000` ps. Live attempt two freezes the exact carrier value
+
+```text
+Q = ceil(F / 1,000) * 1,000 ps.
+```
+
+For every calibrated step, **LIVE-G5** requires
+`compute_estimate_ps == F`, `compute_service_ps == Q`, and therefore
+`F <= Q < F + 1,000`. It is fatal and unscored because integer enclosure is a
+representation invariant, not magnitude evidence. The loose independent
+ceiling `C + N * serialized_launch` remains in force. Ideal and legacy
+profiles retain their old quantization path.
+
+The repair is frozen to move the four calibrated rows as follows. Every step
+within a row gets the same delta; completion timestamps after steps 0, 1 and 2
+move by one, two and three times that delta. Network service, byte counts, flow
+counts, operation order and completion order must not change.
+
+| Profile | Launches | Attempt-one service (ps) | Frozen `F` (ps) | Attempt-two `Q` (ps) | Per-step delta (ps) |
+|---|---:|---:|---:|---:|---:|
+| CUDA graph | 440 | 356,088,000 | 356,094,640 | 356,095,000 | 7,000 |
+| CUDA graph | 567 | 458,856,000 | 458,876,502 | 458,877,000 | 21,000 |
+| Eager host | 440 | 1,040,256,000 | 1,040,272,200 | 1,040,273,000 | 17,000 |
+| Eager host | 567 | 1,340,520,000 | 1,340,532,585 | 1,340,533,000 | 13,000 |
+
+The resulting fixed-schedule metrics are frozen below. These exact rows check
+the disclosed defect repair and stay fatal and unscored; LIVE-1 through
+LIVE-3 retain their existing bands and remain the genuinely risky evidence.
+
+| Profile | Launches | TTFT (ps) | Decode step 1 (ps) | TPOT (ps) | Final completion (ps) |
+|---|---:|---:|---:|---:|---:|
+| CUDA graph | 440 | 629,288,008 | 461,597,734 | 461,515,816 | 1,552,319,640 |
+| CUDA graph | 567 | 732,070,008 | 564,379,734 | 564,297,816 | 1,860,665,640 |
+| Eager host | 440 | 1,313,466,008 | 1,145,775,734 | 1,145,693,816 | 3,604,853,640 |
+| Eager host | 567 | 1,613,726,008 | 1,446,035,734 | 1,445,953,816 | 4,505,633,640 |
+
+The observed vLLM schedule has a second projection invariant. **LIVE-G6**
+requires `provider_compute_ps` to remain the raw provider value, 99,024,000 ps
+for fixture steps 0 and 1 and 99,048,000 ps for step 2, while its separately
+reported represented service equals the same `Q` as the serial lowerer. This
+attribution check is fatal and unscored. Correcting the attribution moves no
+timestamp.
+
+LIVE-G3 is tightened to require exact component conservation with `Q`, exact
+sequential releases and completions, exact request TTFT and TPOT partitions,
+and one shared adapter and sink model. The ideal row must retain zero delta.
+OFF-G1 repeats the full five-cell digest check after the repair.
+
 ## Installed model and uncertainty
 
 Two calibrated profile classes are installed, each carrying the attempt-three
@@ -337,7 +415,7 @@ launch class, 567 launches costing more than 440, and at fixed count, eager
 costing more than graph, are both derived by construction from positive
 `N * g`. They remain checked as LIVE-D1 but are unscored.
 
-The implementation run has four additional fatal, unscored preconditions:
+The implementation run has six additional fatal, unscored preconditions:
 
 - **LIVE-G1** each selected constant and empirical interval exactly matches the
   accepted calibration artifact and carries its declared provenance;
@@ -345,11 +423,15 @@ The implementation run has four additional fatal, unscored preconditions:
   graph, work directory, timestamp or sink call;
 - **LIVE-G3** every step, request interval and TTFT or TPOT partition conserves
   exactly, the ideal replay matches the three source durations above, and the
-  adapter and sink agree on one host model without double application; and
+  adapter and sink agree on one host model without double application;
 - **LIVE-G4** the minimum and maximum over every actual profile and launch
   count at both plausible network endpoints stay inside `[1.35, 4.70]` and
   match direct integer arithmetic. This is derived from the accepted
-  calibration bands and is not scored.
+  calibration bands and is not scored;
+- **LIVE-G5** every calibrated GOAL service is exactly the narrow whole-ns
+  enclosure `Q` and never undercuts `F`; and
+- **LIVE-G6** observed-schedule attribution keeps raw provider service separate
+  from the same represented service `Q`.
 
 ## Exact ideal off path
 
@@ -375,14 +457,17 @@ run, item 1 moves from zero to the measured launch floor. Correlating the same
 launch term in the simulated and plausible-real expressions gives
 
 ```text
-simulated = launch_floor + 0.105502734 ms
-plausible real = launch_floor + [0.72, 1.44] ms
+simulated = represented_launch_floor + 0.105502734 ms
+plausible real = represented_launch_floor + [0.72, 1.44] ms
 ```
 
 over the measured graph-to-eager launch range. The scored calibration bands
 and launch-count endpoints bound this ratio in `[1.35, 4.70]` before the new
 digits are read. The report must give the tighter interval recomputed from the
-actual attempt-three value. This is a conditional Turing launch-throughput
+actual attempt-three value. Before live attempt two, the exact point interval
+using `Q` is frozen as `[1.4249530295, 3.8910394651]`. Propagating the retained
+sample-limited empirical endpoints gives `[1.3969639214, 4.5085504088]`. Both
+are derived and unscored. This is a conditional Turing launch-throughput
 sensitivity beside the mission's generic 5x to 22x budget, not a replacement
 for that full budget. It assumes residual scheduler, sampler and Python costs
 are zero. Those unmeasured residuals remain explicit unknowns, so the absolute
@@ -400,7 +485,10 @@ without running a CUDA workload or htsim and without creating output. The
 unchanged mission check-only command validates its pinned model, tool and
 frozen mission inputs without running vLLM or creating output. Result-producing
 runs evaluate the content digests and fatal identity guards that need produced
-artifacts; check-only does not claim to pre-evaluate those outcomes.
+artifacts; check-only does not claim to pre-evaluate those outcomes. In this
+amendment the live check-only still validates the original relation inventory,
+input identities, broad budget enclosure, tools and output containment. The
+result run evaluates the newly frozen exact attempt-two rows and LIVE-G5/G6.
 `${SIMLLM_WAVE12_RUN_ROOT}` is the branch-local
 bulk-output root. `${SIMLLM_MISSION_BASELINE}` names the externally retained
 accepted `a-ep8-400g` cell; its two required content digests are frozen above,
@@ -415,7 +503,7 @@ so its site location is not part of the tracked contract.
 .venv/bin/python examples/host_step_cost_v1/run_study.py \
   --htsim-rnic "${SIMLLM_HTSIM_RNIC}" \
   --baseline-cell "${SIMLLM_MISSION_BASELINE}" \
-  --out "${SIMLLM_WAVE12_RUN_ROOT}/host-step-cost-v1" \
+  --out "${SIMLLM_WAVE12_RUN_ROOT}/host-step-cost-v1-attempt2" \
   --check-only
 
 SIMLLM_TXT2BIN="${SIMLLM_TXT2BIN}" \
@@ -423,7 +511,7 @@ PYTHONPATH=. "${SIMLLM_VLLM_PYTHON}" \
   examples/end_to_end_replay_v1/run_study.py \
   --cache-dir "${SIMLLM_MODEL_CACHE}" \
   --htsim-rnic "${SIMLLM_HTSIM_RNIC}" \
-  --run-dir "${SIMLLM_WAVE12_RUN_ROOT}/end-to-end-ideal-offpath" \
+  --run-dir "${SIMLLM_WAVE12_RUN_ROOT}/end-to-end-ideal-offpath-attempt2" \
   --check-only
 ```
 

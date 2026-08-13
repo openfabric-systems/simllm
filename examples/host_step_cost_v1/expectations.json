@@ -3,6 +3,113 @@
   "study": "host_step_cost_v1",
   "task": "COMP-2",
   "calibration_attempt": 3,
+  "live_attempt": 2,
+  "prior_live_attempt": {
+    "attempt": 1,
+    "disposition": "void_with_findings",
+    "failed_fatal_guard": "LIVE-G3_step_and_metric_conservation",
+    "observed_commit": "8a620e9e394c95441d6090c588d12c8aaad5733b",
+    "original_result_commit": "f5e2e745f5a09c0e34a1891a86389ec7baf67c6c",
+    "original_result_sha256": "fa59a14d5bcb71cf7f2790e00c45d9b3d51261c49cbf3ed0e1ee1eaf028aeb2c",
+    "retained_void_commit": "12976024e3912e76a6312829b95eb5e20f5530bc",
+    "retained_void_sha256": "6a78848373f8a21d32902975531efb18967f0440490bf420caa0d032421ebb38",
+    "score_interpretable": false,
+    "finding_count": 12,
+    "compute_floor_findings": [
+      {
+        "profile": "turing-cuda-graph",
+        "launch_count": 440,
+        "floor_ps": 356094640,
+        "service_ps": 356088000,
+        "shortfall_ps": 6640
+      },
+      {
+        "profile": "turing-cuda-graph",
+        "launch_count": 567,
+        "floor_ps": 458876502,
+        "service_ps": 458856000,
+        "shortfall_ps": 20502
+      },
+      {
+        "profile": "turing-eager-host",
+        "launch_count": 440,
+        "floor_ps": 1040272200,
+        "service_ps": 1040256000,
+        "shortfall_ps": 16200
+      },
+      {
+        "profile": "turing-eager-host",
+        "launch_count": 567,
+        "floor_ps": 1340532585,
+        "service_ps": 1340520000,
+        "shortfall_ps": 12585
+      }
+    ]
+  },
+  "live_attempt_two": {
+    "composition": "F=max(provider_duration_ps, launch_count*point_ps_per_launch)",
+    "whole_nanosecond_enclosure": "Q=ceil(F/1000)*1000",
+    "ideal_delta_ps": 0,
+    "expected_rows": [
+      {
+        "profile": "turing-cuda-graph",
+        "launch_count": 440,
+        "attempt_one_service_ps": 356088000,
+        "floor_ps": 356094640,
+        "service_ps": 356095000,
+        "step_delta_ps": 7000,
+        "step_latency_ps": [629288008, 461597734, 461433898],
+        "completion_ps": [629288008, 1090885742, 1552319640],
+        "ttft_ps": 629288008,
+        "tpot_ps": 461515816
+      },
+      {
+        "profile": "turing-cuda-graph",
+        "launch_count": 567,
+        "attempt_one_service_ps": 458856000,
+        "floor_ps": 458876502,
+        "service_ps": 458877000,
+        "step_delta_ps": 21000,
+        "step_latency_ps": [732070008, 564379734, 564215898],
+        "completion_ps": [732070008, 1296449742, 1860665640],
+        "ttft_ps": 732070008,
+        "tpot_ps": 564297816
+      },
+      {
+        "profile": "turing-eager-host",
+        "launch_count": 440,
+        "attempt_one_service_ps": 1040256000,
+        "floor_ps": 1040272200,
+        "service_ps": 1040273000,
+        "step_delta_ps": 17000,
+        "step_latency_ps": [1313466008, 1145775734, 1145611898],
+        "completion_ps": [1313466008, 2459241742, 3604853640],
+        "ttft_ps": 1313466008,
+        "tpot_ps": 1145693816
+      },
+      {
+        "profile": "turing-eager-host",
+        "launch_count": 567,
+        "attempt_one_service_ps": 1340520000,
+        "floor_ps": 1340532585,
+        "service_ps": 1340533000,
+        "step_delta_ps": 13000,
+        "step_latency_ps": [1613726008, 1446035734, 1445871898],
+        "completion_ps": [1613726008, 3059761742, 4505633640],
+        "ttft_ps": 1613726008,
+        "tpot_ps": 1445953816
+      }
+    ],
+    "raw_provider_ps": [99024000, 99024000, 99048000],
+    "point_budget_expected": [1.4249530295494066, 3.891039465111412],
+    "empirical_budget_expected": [1.3969639214081737, 4.508550408760237]
+  },
+  "prior_ideal_replay": {
+    "observed_commit": "f5e2e745f5a09c0e34a1891a86389ec7baf67c6c",
+    "aggregate_cell_sha256": "5b51c31c1d83422cecfcbd975bf67690c6cccfd8ca4437ffef3e54985ee615fe",
+    "all_step_record_digests_matched": true,
+    "final_implementation_rerun_required": true
+  },
   "prior_attempt": {
     "study": "compute_fidelity_v1",
     "disposition": "void_with_findings",
@@ -149,6 +256,8 @@
     "LIVE-G2_device_mismatch_fails_closed",
     "LIVE-G3_step_and_metric_conservation",
     "LIVE-G4_budget_arithmetic",
+    "LIVE-G5_GOAL_quantized_compute_encloses_host_floor",
+    "LIVE-G6_observed_schedule_attribution",
     "OFF-G1_ideal_named_study_exact_identity"
   ]
 }
