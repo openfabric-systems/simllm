@@ -1,15 +1,21 @@
 import json
+import sys
+import types
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 import pytest
 
 from simllm.adapters.sglang.oracle import (
     ORACLE_ENABLE_ENV,
+    ORACLE_LAYER_AUDIT_ENV,
     ORACLE_LOG_ENV,
     ORACLE_OBSERVATION_SCHEMA,
     _initialize_cpu_host_cache,
     _observe_alloc_for_decode,
     _observe_alloc_for_extend,
+    _observe_capture_gate,
+    _observe_capturer_create,
     _observe_match_prefix,
     _observe_remove_event,
     _observe_retract_decode,
@@ -18,6 +24,62 @@ from simllm.adapters.sglang.oracle import (
     oracle_enabled,
 )
 from simllm.adapters.sglang.plugin import ENABLE_ENV, register
+
+
+class FakeTopK:
+    """Stands in for SGLang's router, which carries no Granite layer id."""
+
+    def __init__(self):
+        self.layer_id = None
+        self.topk_config = object()
+
+
+class FakeFusedMoe:
+    """Stands in for the sibling SGLang does give an explicit layer id."""
+
+    def __init__(self, layer_id):
+        self.layer_id = layer_id
+
+
+class FakeCapturer:
+    def __init__(self, num_layers):
+        self.num_layers = num_layers
+
+
+class FakeGraniteModel:
+    """Reproduces the pinned Granite module tree that loses the layer id."""
+
+    def __init__(self, layer_count):
+        self.routers = []
+        self._named = []
+        for index in range(layer_count):
+            router = FakeTopK()
+            router.sibling = FakeFusedMoe(index)
+            prefix = f"model.layers.{index}.block_sparse_moe"
+            self._named.append((prefix, object()))
+            self._named.append((f"{prefix}.topk", router))
+            self._named.append((f"{prefix}.experts", router.sibling))
+            self.routers.append(router)
+
+    def named_modules(self):
+        return list(self._named)
+
+
+@contextmanager
+def fake_topk_module(monkeypatch):
+    """Expose ``sglang.srt.layers.moe.topk.TopK`` without installing SGLang."""
+
+    names = (
+        "sglang",
+        "sglang.srt",
+        "sglang.srt.layers",
+        "sglang.srt.layers.moe",
+        "sglang.srt.layers.moe.topk",
+    )
+    for name in names:
+        monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+    sys.modules["sglang.srt.layers.moe.topk"].TopK = FakeTopK
+    yield
 
 
 @dataclass
@@ -144,33 +206,123 @@ def test_cpu_dispatch_capture_uses_unpinned_cpu_storage(monkeypatch, tmp_path):
     ]
 
 
-def test_missing_granite_layer_ids_are_labeled_without_changing_experts(
+def test_dispatch_layer_ids_come_from_sglang_and_not_from_capture_order(
     monkeypatch, tmp_path
 ):
     path = configure_sidecar(monkeypatch, tmp_path)
+    model = FakeGraniteModel(3)
+    capturer = FakeCapturer(3)
 
-    class Capturer:
-        num_layers = 2
+    with fake_topk_module(monkeypatch):
+        returned = _observe_capturer_create(
+            lambda **_kwargs: capturer,
+            model=model,
+            model_config=object(),
+            num_tokens=64,
+            max_running_requests=2,
+            device="cpu",
+        )
+
+    assert returned is capturer
+    assert sidecar_rows(path) == [
+        {
+            "kind": "dispatch-layer-qualified",
+            "layer_count": 3,
+            "layer_ids": [0, 1, 2],
+            "mapping": "framework-layer-id",
+            "schema": ORACLE_OBSERVATION_SCHEMA,
+            "selected_experts_unchanged": True,
+            "source": ["sibling.layer_id"],
+        }
+    ]
 
     selected = object()
     calls = []
 
-    def original(capturer, layer_id, topk_indices):
-        calls.append((capturer, layer_id, topk_indices))
-        return topk_indices
+    def original(topk_config, layer_id, topk_ids):
+        calls.append((topk_config, layer_id, topk_ids))
 
-    capturer = Capturer()
-    assert _observe_routed_capture(original, capturer, None, selected) is selected
-    assert _observe_routed_capture(original, capturer, None, selected) is selected
-    assert [call[1] for call in calls] == [0, 1]
+    # SGLang visits its routers in registration order here, but the label is
+    # bound to the router, not to the order.
+    for router in reversed(model.routers):
+        _observe_capture_gate(original, router.topk_config, None, selected)
+
+    assert [call[1] for call in calls] == [2, 1, 0]
     assert all(call[2] is selected for call in calls)
-    assert sidecar_rows(path)[0] == {
-        "kind": "dispatch-layer-qualified",
-        "layer_count": 2,
-        "mapping": "granite-model-order",
-        "schema": ORACLE_OBSERVATION_SCHEMA,
-        "selected_experts_unchanged": True,
-    }
+
+
+def test_capture_gate_refuses_a_router_the_binding_never_saw(monkeypatch, tmp_path):
+    configure_sidecar(monkeypatch, tmp_path)
+    model = FakeGraniteModel(2)
+    with fake_topk_module(monkeypatch):
+        _observe_capturer_create(
+            lambda **_kwargs: FakeCapturer(2),
+            model=model,
+            model_config=object(),
+            num_tokens=64,
+            max_running_requests=2,
+            device="cpu",
+        )
+
+    with pytest.raises(RuntimeError, match="no framework layer id"):
+        _observe_capture_gate(lambda *_args: None, object(), None, object())
+
+
+def test_router_layer_id_must_agree_with_its_registered_module_name(
+    monkeypatch, tmp_path
+):
+    configure_sidecar(monkeypatch, tmp_path)
+    model = FakeGraniteModel(2)
+    model.routers[1].sibling.layer_id = 7
+
+    with fake_topk_module(monkeypatch), pytest.raises(RuntimeError, match="disagrees"):
+        _observe_capturer_create(
+            lambda **_kwargs: FakeCapturer(8),
+            model=model,
+            model_config=object(),
+            num_tokens=64,
+            max_running_requests=2,
+            device="cpu",
+        )
+
+
+def test_post_selection_capture_refuses_an_unlabeled_row(monkeypatch, tmp_path):
+    configure_sidecar(monkeypatch, tmp_path)
+
+    with pytest.raises(RuntimeError, match="no framework layer id"):
+        _observe_routed_capture(
+            lambda *_args: None, FakeCapturer(2), None, object()
+        )
+
+
+def test_layer_audit_reports_agreement_and_refuses_a_disagreement(
+    monkeypatch, tmp_path
+):
+    path = configure_sidecar(monkeypatch, tmp_path)
+    monkeypatch.setenv(ORACLE_LAYER_AUDIT_ENV, "1")
+    capturer = FakeCapturer(2)
+    selected = object()
+
+    assert (
+        _observe_routed_capture(lambda *_args: selected, capturer, 0, selected)
+        is selected
+    )
+    with pytest.raises(RuntimeError, match="disagrees with the replaced"):
+        _observe_routed_capture(lambda *_args: selected, capturer, 0, selected)
+
+    assert [row["agrees"] for row in sidecar_rows(path)] == [True, False]
+    assert [row["framework_layer_id"] for row in sidecar_rows(path)] == [0, 0]
+    assert [row["model_order_layer_id"] for row in sidecar_rows(path)] == [0, 1]
+
+
+def test_layer_audit_is_off_by_default(monkeypatch, tmp_path):
+    path = configure_sidecar(monkeypatch, tmp_path)
+    monkeypatch.delenv(ORACLE_LAYER_AUDIT_ENV, raising=False)
+    selected = object()
+
+    _observe_routed_capture(lambda *_args: selected, FakeCapturer(2), 1, selected)
+
+    assert not path.exists()
 
 
 def test_allocation_hooks_record_exact_request_slots(monkeypatch, tmp_path):
