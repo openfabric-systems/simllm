@@ -992,8 +992,12 @@ configuration, and that qualification is now discharged; see
   baseline exactly, and policy queue time must remain distinct from arrival
   gating and scheduler queue time.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
-  client above the delivered HTSIM persistent flow session and strict full
-  `StepResult` codec. The backend foundation retains one event list, topology,
+  client using the delivered strict full `StepResult` codec and an HTSIM
+  persistent flow session extended with HTSIM-28. BRIDGE-2 is blocked behind
+  HTSIM-28 because the delivered HTSIM-18 protocol cannot express the exact
+  completion-to-dependent-injection boundary; see
+  [the protocol audit](../../examples/congestion_chain_v1/RESULTS.md). The
+  backend foundation retains one event list, topology,
   native RNIC authority and transport policy across flow injections; its
   frozen study demonstrated byte-identical stateless-equivalent latencies,
   discriminating retained queue state and lower wall time. The remaining
