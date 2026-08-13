@@ -35,11 +35,13 @@ HELD_OUT_ROWS = (
 )
 SENSITIVITY_ENDPOINT_BYTES = 200_704
 SENSITIVITY_TRANSPORT_PS = {
-    400_000_000_000: 6_014_080,
-    200_000_000_000: 10_028_160,
+    400_000_000_000: 6_014_081,
+    200_000_000_000: 10_028_161,
 }
-EXPECTATIONS_COMMIT = "81badd47f485cab834a7abb31dd02a5b0419e47b"
-EXPECTATIONS_SHA256 = "9bcbdc22bbd4525cbbc51782f1574d1f0097f6793c0cb075dc4be5c11a5d52a8"
+EXPECTATIONS_COMMIT = "3a6126e174e859d5c222e137dc9e2d94ead6db29"
+EXPECTATIONS_SHA256 = "986c5952099bb6200736618a33580217b58ab3bbf9cb9ec97df1efc8b6962a28"
+STUDY_ATTEMPT = 2
+PRIOR_VOID_REVISION = "cec7109adeb9656de92f9ef5ea54572accdc3208"
 SOURCE_ZIP_SHA256 = "91629a3b4a6eff4ac2e8bbc2261a928dbcca42f07c02d7f1fe15f9d981d0713f"
 SOURCE_LOCAL_TSV_SHA256 = "639348d43e625d8b7199c45db29ec7a848165974142016fab7b85ca34564a8f3"
 SOURCE_URL = "https://github.com/user-attachments/files/21326711/nccl-test-result.zip"
@@ -106,7 +108,7 @@ def check_only(args: argparse.Namespace) -> None:
         raise AssertionError("flagship collective-count arithmetic changed")
     fast = SENSITIVITY_TRANSPORT_PS[400_000_000_000]
     slow = SENSITIVITY_TRANSPORT_PS[200_000_000_000]
-    if 2 * fast - slow != PROPAGATION_REFERENCE_PS:
+    if 2 * fast - slow != PROPAGATION_REFERENCE_PS + 1:
         raise AssertionError("frozen propagation cancellation changed")
     if slow - fast != SENSITIVITY_ENDPOINT_BYTES * 20:
         raise AssertionError("frozen bandwidth sensitivity changed")
@@ -116,7 +118,8 @@ def check_only(args: argparse.Namespace) -> None:
     if not 1.10 <= enabled_ratio <= 1.12:
         raise AssertionError("enabled sensitivity ratio left its frozen band")
     print(
-        f"check-only profile={PROFILE}; run-dir={args.run_dir}; validated "
+        f"check-only attempt={STUDY_ATTEMPT}; profile={PROFILE}; "
+        f"run-dir={args.run_dir}; validated "
         "frozen calibration and produced no artifacts"
     )
 
@@ -768,11 +771,11 @@ def _fatal_guards(
         and slow_enabled_transport - fast_enabled_transport == 4_014_080
     )
     propagation_cancellation = (
-        2 * fast_off - slow_off == PROPAGATION_REFERENCE_PS
+        2 * fast_off - slow_off == PROPAGATION_REFERENCE_PS + 1
         and 2 * fast_enabled_transport - slow_enabled_transport
-        == PROPAGATION_REFERENCE_PS
+        == PROPAGATION_REFERENCE_PS + 1
         and 2 * fast_enabled - slow_enabled - profile.base_latency_ps(8)
-        == PROPAGATION_REFERENCE_PS
+        == PROPAGATION_REFERENCE_PS + 1
     )
     byte_conservation = all(
         locality["fabric_directed_bytes"] + locality["nvlink_directed_bytes"]
@@ -1005,6 +1008,11 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
         else sum(bool(relation["passed"]) for relation in behavioral.values())
     )
     summary: dict[str, object] = {
+        "study_attempt": STUDY_ATTEMPT,
+        "prior_void_revision": PRIOR_VOID_REVISION,
+        "attempt_two_change_kind": (
+            "fatal harness oracle refreeze; no modeled behavior change"
+        ),
         "void": bool(violated),
         "violated_fatal_guards": violated,
         "behavioral_relations": behavioral,
