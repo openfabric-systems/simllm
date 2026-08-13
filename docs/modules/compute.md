@@ -639,6 +639,8 @@ and an explicit reason:
   below 20 percent, per-phase median below 5 percent and p95 below 10 percent,
   and compute-only step error below 5 percent. The roofline and calibration-off
   paths must retain accepted artifacts and timestamps byte for byte.
+- COMP-2 (Precision; P1; L): calibrated host-initiation profiles
+  (GPU-initiated vs CPU-proxy constants) for launch-path sensitivity studies.
 - COMP-5 (Precision; P1; L): provide the production capture
   environment required by COMP-1. On 2026-08-12 the local GTX 1660 Ti with
   driver 550.90.07 successfully produced CUPTI activity timing through Nsight
@@ -808,8 +810,6 @@ and an explicit reason:
 
 ### Uncategorized
 
-- COMP-2: calibrated host-initiation profiles (GPU-initiated vs CPU-proxy
-  constants) for launch-path sensitivity studies.
 - COMP-4: multi-axis interpolation in `ProfileTableProvider`. The landed
   rule interpolates along one config axis with every other axis pinned to
   covered values; a query differing on two or more axes raises `KeyError`
