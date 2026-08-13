@@ -547,8 +547,10 @@ Service class is an accounting label in this closed slice; it does not affect
 scheduling. The existing deterministic reservation order, including mandatory
 posted forward progress, is the baseline that CORE-8's identity policy must
 preserve. BACK-16 adds event-time mechanism precision without class-based
-reordering. Optional class-aware policies remain CORE-10 completeness work,
-and selecting identity must reproduce the accepted BACK-10 rows byte for byte.
+reordering. The class-aware strict-priority and weighted-round-robin policies
+that CORE-10 landed live at the core graph-operation seam and no PCIe
+reservation consults them, so selecting identity must still reproduce the
+accepted BACK-10 rows byte for byte and no PCIe row moves.
 BACK-16 owns active-path timing precision and calibration; BACK-17 owns
 optional PCIe feature completeness.
 
@@ -835,8 +837,9 @@ is difficult.
   forward-progress rules before baseline selection; a resource-blocked
   non-posted read is not a legal ready candidate, so an eligible posted write
   can use the idle link. Identity ignores service class and must preserve every
-  accepted BACK-10 row, timestamp, counter and random draw exactly. CORE-10
-  owns optional non-identity class reordering.
+  accepted BACK-10 row, timestamp, counter and random draw exactly. Optional
+  non-identity class reordering here would reuse the landed core policies
+  rather than growing a second policy surface.
   Add variable measured replay, the remaining PCIe RO/IDO/TC/VC ordering
   matrix and provenance-bearing CX-7 calibration. Calibrate tag-capacity knees
   for every mode enabled by BACK-17. Preserve deterministic replay and
