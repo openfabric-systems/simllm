@@ -471,6 +471,20 @@ producer-disabled path passed all 64 per-step direct serial comparisons and
 both accepted graph and legacy diagnostic GOAL hashes. See
 [the observed-schedule results](../../examples/vllm_observed_schedule_v1/RESULTS.md).
 
+The 2026-08-13 TRAF-13 requalification drove the same unmodified producer
+through a third, structure-matched arm and measured what the void run could
+only name. Adding cross-microbatch serialization edges and nothing else
+isolates DBO at 1,450,472.652 ps per decode step on one node and
+13,051,993.043 ps across nodes, 99.6 percent of the communication ceiling that
+the frozen routed table allows. The producer's structural signature is a
++17.97 microsecond layer-ordering shift against a -17.97 microsecond terminal
+frontier, which cancel because the LM-head compute is relocated rather than
+added; the remainder is the microbatch split's byte accounting. On the
+single-batch prefill the serial and observed arms are now exactly equal on both
+placements. VLLM-22 stays open here: its clauses are covered by that evidence,
+but closing it was outside the change that produced it. See
+[the observed-overlap results](../../examples/vllm_observed_overlap_v1/RESULTS.md).
+
 VLLM-24 is complete. Expectations were frozen at commit `20f6017` and amended
 at `1a4db9b`, both before the harness and every result-producing run; the
 amendment corrected two frozen rule statements that were written as if every

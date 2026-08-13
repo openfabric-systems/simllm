@@ -298,23 +298,44 @@ A separate pre-VLLM-22 live diagnostic confirmed that earlier boundary across
 one prefill and one decode step. It is historical component evidence and does
 not change that blocked denominator.
 
-TRAF-13 remains open after the source-backed vLLM qualification on 2026-08-12.
-The eight-rank Granite replay emitted observations for all 32 nonempty steps
-and reached traffic binding, the coarse runtime, completion events,
-`StepResult`, TTFT and TPOT. The run is void with findings because the fatal
-`ttft_exact_single_batch` guard was violated. That guard tested the same
-serial-versus-observed arm-equivalence premise needed to attribute the two
-in-band TPOT reductions to DBO, so the failure is not orthogonal to the raw
-behavioral findings. Retained DBO-off steps 24 through 31 bound the measured
-non-DBO residual at 1.231 percent of the mean DBO reduction on both placements,
-but do not restore a score.
+TRAF-13 is complete. The source-backed vLLM qualification on 2026-08-12 was
+void because the fatal `ttft_exact_single_batch` guard tested a
+serial-versus-observed arm-equivalence premise that is false, and that premise
+was also what attributed its decode reductions to DBO. The 2026-08-13
+requalification does not assume the premise. It adds a third arm: the observed
+operation tuple with only cross-microbatch serialization edges added, holding
+every operation identity, queue, work object, correlation and completion
+endpoint byte-identical. Overlap is `control - observed`, structure is
+`serial - control`, and structure splits at the last collective completion into
+a layer-ordering term and a terminal-frontier term.
 
-The residual is not caused by participant-local dependency scope, which both
-lowerers use. The structural differences are the open TRAF-9 whole-layer MoE
-ordering approximation and the observed arm's terminal logits plus
-`requests-visible` fan-in. The vLLM wrapper shows event waits and no
-wrapper-level global barrier, but `deep_ep` itself was not installed; lower
-level rank-local completion is inferred, not directly source-backed.
+The two structural causes are now measured rather than named. On a decode step
+the TRAF-9 whole-layer ordering moves the MoE phase by about +17.97
+microseconds and the observed arm's terminal logits plus `requests-visible`
+frontier moves the tail by about -17.97 microseconds, because the producer
+relocates the LM-head compute while conserving the per-rank total. They cancel
+to -903.913 ps single-node and -7,123.478 ps cross-node, and that remainder is
+the extra summed peak per-source egress created by splitting each collective
+into two microbatch collectives, predicted at 791.5 and 7,123.5 ps from the
+frozen routed table. Overlap is 1,450,472.652 and 13,051,993.043 ps, which is
+99.61 and 99.59 percent of the arithmetic communication ceiling registered
+before the run. The cross-node to single-node overlap ratio is 8.998 against
+the exact 9.0 link-rate ratio, so B2 discriminates the overlap mechanism by its
+response to bandwidth. The terminal term's ratio is exactly 1.000, but B3 is
+reclassified post-specified as a fatal-unscored structural invariant carrying
+no evidential weight for this frozen producer: its interval starts after the
+last collective completion, and the only later operations are logits compute
+and zero-duration visibility compute. The producer emits no control work, and
+all placement-dependent link-rate service defines the collective frontier
+instead. All 19 registered fatal guards and the reclassified invariant held,
+and 3 of 5 genuine-risk instances passed; the two failures are one refuted
+expectation that the serial arm would stay strictly slower on the single-batch
+prefill, where the two arms are in fact exactly equal. See
+[the observed-overlap results](../../examples/vllm_observed_overlap_v1/RESULTS.md).
+
+The vLLM wrapper shows event waits and no wrapper-level global barrier, but
+`deep_ep` itself was not installed; lower level rank-local completion is
+inferred, not directly source-backed.
 
 The retained 440,115,200 directed bytes are a pre-TRAF-25 conservation
 identity over the source-multiplied table and are not portable. The duration
@@ -479,17 +500,6 @@ last send would change accepted timing and needs its own freeze. See
   while selecting the isolated mode preserves every accepted TRAF-25 byte,
   timestamp and completion order exactly.
 
-- TRAF-13 (Completeness; P0; L): qualify at least one real framework schedule
-  producer through `ObservedStepLowerer`. The 2026-08-12 VLLM-22 run reached
-  the full metric chain but is void because `ttft_exact_single_batch` violated
-  the frozen arm-equivalence premise. A future expectations-only qualification
-  must distinguish DBO from the TRAF-9 and terminal-frontier differences,
-  preserve every captured order and dependency fact through traffic binding,
-  `DeviceRuntime`, `CompletionEvent`, `StepResult`, TTFT and TPOT, and show a
-  registered live-metric relation. Disabling the producer must select the
-  serial lowerer and preserve every accepted serial graph, GOAL byte,
-  timestamp and completion order exactly. Routed-byte acceptance depends on
-  TRAF-25 and VLLM-24, both of which have landed.
 - TRAF-15 (Completeness; P2; M): project arbitrary legal forward, non-monotone
   and general non-contiguous or fan-in DAGs through the step sink. The current
   projector rejects unsupported order classes before writing an artifact.
