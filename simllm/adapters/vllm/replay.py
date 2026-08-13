@@ -12,7 +12,7 @@ from simllm.preplay import (
     JoinedRequest,
     PreplayReplayRun,
     read_preplay_replay_run,
-    read_preplay_trace,
+    read_replay_oracle_requests,
     validate_preplay_replay_run,
 )
 
@@ -74,10 +74,12 @@ class ReplayTokenSource:
                 "joined replay trace SHA-256 mismatch: "
                 f"recorded {self.run.trace.sha256}, observed {digest}"
             )
-        trace = read_preplay_trace(source)
+        trace = read_replay_oracle_requests(
+            source, trace_schema=self.run.trace.schema
+        )
         for request in self.run.requests:
             try:
-                oracle = trace.by_request_id(request.routing_reference.request_id)
+                oracle = trace[request.routing_reference.request_id]
             except KeyError as exc:
                 raise ValueError(
                     f"joined request {request.request_id!r} has no routing trace row"

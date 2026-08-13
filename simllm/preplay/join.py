@@ -26,11 +26,16 @@ from simllm.core import (
     RequestBookkeeper,
 )
 from simllm.core._wire import _fields, _integer, _object, _string
+from simllm.preplay.framework_schema import FRAMEWORK_PREPLAY_TRACE_SCHEMA
+from simllm.preplay.framework_trace import read_framework_preplay_trace
 from simllm.preplay.schema import PREPLAY_TRACE_SCHEMA, StopReason
 from simllm.preplay.trace import read_preplay_trace
 
 PREPLAY_REPLAY_RUN_SCHEMA = "simllm-preplay-replay-run-v1"
 PREPLAY_ROUTING_REFERENCE_SCHEMA = "simllm-preplay-routing-reference-v1"
+
+#: trace artifacts a replay run may name, in the order they were introduced.
+JOINABLE_TRACE_SCHEMAS = (PREPLAY_TRACE_SCHEMA, FRAMEWORK_PREPLAY_TRACE_SCHEMA)
 
 _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -122,7 +127,7 @@ def _validate_arrival(value: RequestArrival, path: str) -> None:
 def _validate_trace_reference(value: TraceArtifactReference, path: str) -> None:
     if not isinstance(value, TraceArtifactReference):
         raise TypeError(f"{path}: expected TraceArtifactReference")
-    if value.schema != PREPLAY_TRACE_SCHEMA:
+    if value.schema not in JOINABLE_TRACE_SCHEMAS:
         raise ValueError(f"{path}.schema: unsupported schema {value.schema!r}")
     _require_text(value.path, f"{path}.path")
     _require_sha256(value.sha256, f"{path}.sha256")
@@ -133,7 +138,7 @@ def _validate_routing_reference(value: RoutingReference, path: str) -> None:
         raise TypeError(f"{path}: expected RoutingReference")
     if value.schema != PREPLAY_ROUTING_REFERENCE_SCHEMA:
         raise ValueError(f"{path}.schema: unsupported schema {value.schema!r}")
-    if value.trace_schema != PREPLAY_TRACE_SCHEMA:
+    if value.trace_schema not in JOINABLE_TRACE_SCHEMAS:
         raise ValueError(
             f"{path}.trace_schema: unsupported schema {value.trace_schema!r}"
         )
@@ -188,6 +193,10 @@ def validate_preplay_replay_run(value: PreplayReplayRun) -> None:
         if request.routing_reference.trace_sha256 != value.trace.sha256:
             raise ValueError(
                 f"{path}.routing_reference.trace_sha256: must match run.trace.sha256"
+            )
+        if request.routing_reference.trace_schema != value.trace.schema:
+            raise ValueError(
+                f"{path}.routing_reference.trace_schema: must match run.trace.schema"
             )
         request_ids.append(request.request_id)
         object_ids.append(request.bookkeeping_object_id)
@@ -368,6 +377,71 @@ def read_preplay_replay_run(path: str | Path) -> PreplayReplayRun:
     return preplay_replay_run_from_json(payload)
 
 
+@dataclass(frozen=True, kw_only=True)
+class ReplayOracleRequest:
+    """One request outcome a replay pins, read from either trace schema.
+
+    The two capture contracts disagree about almost everything else, but a
+    replay only ever needs the prompt it must fit, the token sequence it must
+    serve and the stop reason it must reproduce. Reading both schemas into this
+    one shape is what lets the replay seam stay schema agnostic.
+    """
+
+    request_id: str
+    input_token_ids: tuple[int, ...]
+    output_token_ids: tuple[int, ...]
+    stop_reason: StopReason
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "input_token_ids", tuple(self.input_token_ids))
+        object.__setattr__(self, "output_token_ids", tuple(self.output_token_ids))
+
+
+def peek_trace_schema(path: str | Path) -> str | None:
+    """Return the schema tag of a trace's first row, or None if unreadable.
+
+    Used only to reject a trace of the wrong schema by name instead of letting
+    the wrong strict reader fail with an unrelated structural complaint. A file
+    this cannot classify is left to the real reader, unchanged.
+    """
+
+    try:
+        with Path(path).open("r", encoding="utf-8") as stream:
+            first_line = stream.readline()
+        payload = json.loads(first_line)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    schema = payload.get("schema")
+    return schema if isinstance(schema, str) else None
+
+
+def read_replay_oracle_requests(
+    path: str | Path,
+    *,
+    trace_schema: str,
+) -> dict[str, ReplayOracleRequest]:
+    """Read one trace of either joinable schema into replay oracle records."""
+
+    source = Path(path)
+    if trace_schema == PREPLAY_TRACE_SCHEMA:
+        requests: Iterable[Any] = read_preplay_trace(source).requests
+    elif trace_schema == FRAMEWORK_PREPLAY_TRACE_SCHEMA:
+        requests = read_framework_preplay_trace(source).requests
+    else:
+        raise ValueError(f"trace_schema: unsupported schema {trace_schema!r}")
+    return {
+        request.request_id: ReplayOracleRequest(
+            request_id=request.request_id,
+            input_token_ids=request.input_token_ids,
+            output_token_ids=request.output_token_ids,
+            stop_reason=request.stop_reason,
+        )
+        for request in requests
+    }
+
+
 def _bookkeeping_object_id(request_id: str) -> str:
     digest = hashlib.sha256(request_id.encode("utf-8")).hexdigest()
     return f"preplay-request-v1:{digest}"
@@ -435,6 +509,11 @@ def join_preplay_arrivals(
     if not isinstance(bookkeeper, RequestBookkeeper):
         raise TypeError("bookkeeper: expected RequestBookkeeper")
     source = Path(trace_path)
+    if peek_trace_schema(source) == FRAMEWORK_PREPLAY_TRACE_SCHEMA:
+        raise ValueError(
+            f"trace_path: {FRAMEWORK_PREPLAY_TRACE_SCHEMA} is joined by "
+            "join_framework_arrivals, not by the version 1 arrival join"
+        )
     trace_bytes = source.read_bytes()
     trace = read_preplay_trace(source)
     trace_reference = TraceArtifactReference(

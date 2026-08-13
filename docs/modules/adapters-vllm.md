@@ -377,8 +377,9 @@ attempts exposed internal-ID randomization and the offline wrapper's
 integer-only output sort; both remain explicit in
 [the PLAY-3 results](../../examples/preplay_adapter_replay_v1/RESULTS.md),
 along with their post-specified regression status. Speculative decoding and
-structured output remain refused. SGLang replay is not implied by this status
-and remains PLAY-7 in [preplay.md](preplay.md#open-tasks).
+structured output remain refused. SGLang replay is not implied by this status;
+the SGLang adapter has since landed its own replay token source, whose live
+in-process smoke is PLAY-16 in [preplay.md](preplay.md#open-tasks).
 The VLLM-14 zero-time coordinator slice is implemented as of 2026-08-10. Its
 expectations-only commit is `29221e4`, which precedes implementation and every
 result-producing target run. The import-free study in

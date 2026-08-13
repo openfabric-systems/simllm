@@ -5,22 +5,36 @@ checked) without a GPU stack installed."""
 import importlib.util
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from simllm.adapters.sglang import (
     BatchRow,
+    SglReplayTokenSource,
     SglStepTranslator,
     SimWorkerConfig,
+    configure,
     model_dims_from_sglang,
     observe_schedule_batch,
+    reset_configuration,
 )
 from simllm.adapters.sglang.plugin import ENABLE_ENV, enabled
+from simllm.adapters.sglang.replay import sample_adapter_tokens
 from simllm.adapters.sglang.worker import _sglang_moe_parallel_sizes
-from simllm.core import RequestPhase
+from simllm.core import RequestPhase, StepRecord, sampled_request_ids, step_record_to_json
+from simllm.preplay import (
+    ForwardPhase,
+    RequestArrival,
+    join_preplay_arrivals,
+    read_preplay_trace,
+    write_preplay_replay_run,
+    write_preplay_trace,
+)
 
 SGLANG_INSTALLED = importlib.util.find_spec("sglang") is not None
+GOLDEN_TRACE = Path(__file__).parents[1] / "examples/preplay_trace_v1/writer_golden.jsonl"
 
 
 # ScheduleBatch stubs: same attribute names as SGLang @ 8f2a3ad, nothing else
@@ -40,6 +54,14 @@ class FakeForwardMode:
         return self._mode == "idle"
 
 
+class FakeSpecAlgorithm:
+    def __init__(self, none: bool = True) -> None:
+        self._none = none
+
+    def is_none(self) -> bool:
+        return self._none
+
+
 @dataclass
 class FakeReq:
     """Shaped like ``sglang.srt.managers.schedule_batch.Req``."""
@@ -49,6 +71,19 @@ class FakeReq:
     cached_tokens: int = 0
     origin_input_ids: list = field(default_factory=list)
     output_ids: list = field(default_factory=list)
+    #: positive while this request's prefill is still being chunked; SGLang
+    #: increments it before the batch is built and discards the row's token
+    inflight_middle_chunks: int = 0
+    is_retracted: bool = False
+    finished_reason: object | None = None
+    sampling_params: object | None = None
+    grammar: object | None = None
+    eos_token_ids: set | None = None
+    vocab_size: int | None = None
+    tokenizer: object | None = None
+
+    def finished(self) -> bool:
+        return self.finished_reason is not None
 
 
 @dataclass
@@ -63,6 +98,7 @@ class FakeScheduleBatch:
     decoding_reqs: list | None = None
     return_logprob: bool = False
     device: str = "cpu"
+    spec_algorithm: FakeSpecAlgorithm = field(default_factory=FakeSpecAlgorithm)
 
 
 # Import surface
@@ -207,6 +243,186 @@ def test_mixed_decode_row_never_reports_a_cache_hit():
                         context_length=150, cached_tokens=60)]
     record2 = translator.translate(step_index=1, virtual_time_ps=1, rows=resumed)
     assert record2.scheduled[0].num_cached_tokens == 60
+
+
+# Sampled-row identity (SGL-12)
+
+def test_mid_prompt_chunk_row_consumes_no_generated_token():
+    # SGLang increments inflight_middle_chunks on the chunked request before
+    # building the batch, and process_batch_result_prefill then decrements it
+    # instead of appending the sampled token.
+    batch = FakeScheduleBatch(
+        reqs=[
+            FakeReq("chunked", inflight_middle_chunks=1, origin_input_ids=[0] * 1000),
+            FakeReq("whole", origin_input_ids=[0] * 40),
+        ],
+        seq_lens_cpu=[600, 40],
+        extend_lens=[600, 40],
+    )
+    rows = observe_schedule_batch(batch)
+    assert [(row.rid, row.produces_token) for row in rows] == [
+        ("chunked", False),
+        ("whole", True),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("field_name", "value"),
+    [("is_retracted", True), ("finished_reason", "length")],
+)
+def test_retracted_and_finished_extend_rows_consume_no_generated_token(field_name, value):
+    req = FakeReq("r", origin_input_ids=[0] * 8)
+    setattr(req, field_name, value)
+    batch = FakeScheduleBatch(reqs=[req], seq_lens_cpu=[8], extend_lens=[8])
+    assert observe_schedule_batch(batch)[0].produces_token is False
+
+
+def test_resumed_prefill_after_retraction_consumes_a_token_again():
+    # prepare_for_extend clears is_retracted for every admitted row, so the
+    # resumed prefill is a token-producing row and keeps its output index.
+    req = FakeReq("r", origin_input_ids=[0] * 8, output_ids=[7, 9], cached_tokens=4)
+    batch = FakeScheduleBatch(reqs=[req], seq_lens_cpu=[10], extend_lens=[6])
+    row = observe_schedule_batch(batch)[0]
+    assert row.produces_token is True
+    assert row.num_output_tokens == 2
+
+
+def test_decode_rows_always_consume_a_generated_token():
+    batch = FakeScheduleBatch(
+        reqs=[FakeReq("a", output_ids=[1, 2]), FakeReq("b", output_ids=[3])],
+        forward_mode=FakeForwardMode("decode"),
+        seq_lens_cpu=[513, 41],
+    )
+    rows = observe_schedule_batch(batch)
+    assert [(row.produces_token, row.num_output_tokens) for row in rows] == [
+        (True, 2),
+        (True, 1),
+    ]
+
+
+def test_mixed_batch_counts_only_the_rows_sglang_consumes():
+    running = FakeReq("old", output_ids=[5])
+    batch = FakeScheduleBatch(
+        reqs=[FakeReq("new", inflight_middle_chunks=1), running],
+        forward_mode=FakeForwardMode("mixed"),
+        seq_lens_cpu=[64, 201],
+        extend_lens=[64, 1],
+        decoding_reqs=[running],
+    )
+    record = SglStepTranslator().translate(
+        step_index=0, virtual_time_ps=0, rows=observe_schedule_batch(batch)
+    )
+    assert record.num_sampled == 1
+    assert record.sampled_request_ids == ["old"]
+    assert sampled_request_ids(record) == {"old"}
+
+
+def test_two_prefill_rows_need_the_identity_list_not_only_the_count():
+    # One mid-prompt chunk and one prefill that completes its prompt: the
+    # count alone is ambiguous because the scheduled decode set is empty, and
+    # the shared completion rule refuses to guess.
+    batch = FakeScheduleBatch(
+        reqs=[FakeReq("chunked", inflight_middle_chunks=1), FakeReq("whole")],
+        seq_lens_cpu=[600, 40],
+        extend_lens=[600, 40],
+    )
+    record = SglStepTranslator().translate(
+        step_index=0, virtual_time_ps=0, rows=observe_schedule_batch(batch)
+    )
+    assert record.num_sampled == 1
+    assert record.sampled_request_ids == ["whole"]
+    assert sampled_request_ids(record) == {"whole"}
+
+    count_only = StepRecord(
+        step_index=record.step_index,
+        virtual_time_ps=record.virtual_time_ps,
+        scheduled=record.scheduled,
+        num_sampled=1,
+    )
+    with pytest.raises(ValueError, match="ambiguous"):
+        sampled_request_ids(count_only)
+
+
+def test_absent_identity_counts_every_scheduled_row_as_sampled():
+    rows = [
+        BatchRow(rid="chunked", is_decode=False, num_new_tokens=600,
+                 context_length=600, produces_token=False),
+        BatchRow(rid="whole", is_decode=False, num_new_tokens=40, context_length=40),
+    ]
+    record = SglStepTranslator(sample_identity=False).translate(
+        step_index=0, virtual_time_ps=0, rows=rows
+    )
+    assert record.num_sampled is None
+    assert record.sampled_request_ids is None
+    payload = step_record_to_json(record)
+    assert "num_sampled" not in payload
+    assert "sampled_request_ids" not in payload
+    # This is the defect the compatibility path preserves on purpose.
+    assert sampled_request_ids(record) == {"chunked", "whole"}
+
+
+def test_a_step_with_no_consuming_row_reports_zero_sampled():
+    rows = [
+        BatchRow(rid="chunked", is_decode=False, num_new_tokens=400,
+                 context_length=400, produces_token=False)
+    ]
+    record = SglStepTranslator().translate(step_index=0, virtual_time_ps=0, rows=rows)
+    assert record.num_sampled == 0
+    assert record.sampled_request_ids == []
+    assert sampled_request_ids(record) == set()
+
+
+@pytest.mark.skipif(not SGLANG_INSTALLED, reason="requires the pinned SGLang install")
+def test_pinned_sglang_classes_carry_every_transcribed_field():
+    """The names this adapter reads with getattr exist on the pinned classes.
+
+    Skipped wherever SGLang is absent, which includes CI. It is the structural
+    half of the SGL-12 transcription: a rename upstream turns a getattr default
+    into a silent wrong answer, and this test turns it into a failure.
+    """
+
+    import inspect
+
+    from sglang.srt.managers.schedule_batch import Req, ScheduleBatch
+    from sglang.srt.sampling.sampling_params import SamplingParams
+
+    request_source = inspect.getsource(Req.__init__)
+    for name in (
+        "inflight_middle_chunks",
+        "is_retracted",
+        "origin_input_ids",
+        "output_ids",
+        "cached_tokens",
+        "vocab_size",
+        "eos_token_ids",
+        "tokenizer",
+    ):
+        assert f"self.{name}" in request_source, name
+    assert callable(Req.finished)
+    assert "self.grammar" in inspect.getsource(Req)
+
+    for name in (
+        "reqs",
+        "forward_mode",
+        "seq_lens_cpu",
+        "extend_lens",
+        "decoding_reqs",
+        "return_logprob",
+        "device",
+        "spec_algorithm",
+    ):
+        assert name in ScheduleBatch.__dataclass_fields__, name
+
+    sampling_source = inspect.getsource(SamplingParams)
+    for name in (
+        "max_new_tokens",
+        "min_new_tokens",
+        "ignore_eos",
+        "stop_token_ids",
+        "stop_strs",
+        "stop_regex_strs",
+    ):
+        assert f"    {name}:" in sampling_source or f"self.{name}" in sampling_source, name
 
 
 # Geometry
@@ -578,3 +794,317 @@ def test_config_rejects_bad_values():
         SimWorkerConfig.from_env(
             {"SIMLLM_SGLANG_COMMUNICATOR_EVENTS": "/tmp/events.jsonl"}
         )
+
+
+def test_sample_identity_defaults_on_and_needs_an_explicit_off_spelling():
+    assert SimWorkerConfig.from_env({}).sample_identity is True
+    assert SimWorkerConfig.from_env({"SIMLLM_SGLANG_SAMPLE_IDENTITY": ""}).sample_identity
+    assert SimWorkerConfig.from_env({"SIMLLM_SGLANG_SAMPLE_IDENTITY": "1"}).sample_identity
+    for spelling in ("0", "false", "No", " off "):
+        config = SimWorkerConfig.from_env({"SIMLLM_SGLANG_SAMPLE_IDENTITY": spelling})
+        assert config.sample_identity is False
+
+
+def test_replay_run_path_defaults_to_the_fabricated_token_path(tmp_path):
+    assert SimWorkerConfig.from_env({}).replay_run_path is None
+    path = str(tmp_path / "joined-replay.json")
+    assert SimWorkerConfig.from_env(
+        {"SIMLLM_SGLANG_REPLAY_RUN": path}
+    ).replay_run_path == path
+
+
+def test_reset_configuration_drops_every_stale_hook():
+    def first_sink(record):
+        return None
+
+    try:
+        hooks = configure(step_sink=first_sink, config=SimWorkerConfig())
+        assert hooks.step_sink is first_sink
+        cleared = reset_configuration()
+        assert cleared.step_sink is None
+        assert cleared.config is None
+        assert cleared.compute_provider is None
+        assert cleared.gpu is None
+        assert cleared.host_model is None
+        # A second cell's configure must not observe the first cell's sink.
+        second = configure(config=SimWorkerConfig(mode="paced"))
+        assert second.step_sink is None
+        assert second.config.mode == "paced"
+    finally:
+        reset_configuration()
+
+
+# Pre-play replay serving
+
+def joined_replay_path(tmp_path, *, trace_path=None, name="joined-replay.json"):
+    from simllm.core import RequestBookkeeper
+
+    run = join_preplay_arrivals(
+        (RequestArrival(request_id="request-golden", arrived_at_ps=0),),
+        GOLDEN_TRACE if trace_path is None else trace_path,
+        RequestBookkeeper(),
+    )
+    return write_preplay_replay_run(run, tmp_path / name)
+
+
+def joined_two_token_replay_path(tmp_path):
+    """A joined run whose oracle is two tokens, 20 then 21."""
+
+    from dataclasses import replace
+
+    source = read_preplay_trace(GOLDEN_TRACE)
+    request = source.requests[0]
+    decode = replace(
+        request.prefill_tokens[0],
+        phase=ForwardPhase.DECODE,
+        token_index=0,
+        token_id=20,
+    )
+    request = replace(
+        request,
+        max_new_tokens=2,
+        output_token_ids=(20, 21),
+        decode_tokens=(decode,),
+    )
+    trace_path = write_preplay_trace(
+        tmp_path / "two-token-trace.jsonl", source.provenance, (request,)
+    )
+    return joined_replay_path(
+        tmp_path, trace_path=trace_path, name="joined-two-token-replay.json"
+    )
+
+
+def replay_sampling_params(output_length=1, **overrides):
+    fields = {
+        "max_new_tokens": output_length,
+        "min_new_tokens": 0,
+        "ignore_eos": False,
+        "stop_token_ids": None,
+        "stop_strs": None,
+        "stop_regex_strs": None,
+    }
+    fields.update(overrides)
+    return SimpleNamespace(**fields)
+
+
+def replay_batch(*, chunked=False, params=None, **req_overrides):
+    req = FakeReq(
+        "request-golden",
+        origin_input_ids=[10],
+        sampling_params=replay_sampling_params() if params is None else params,
+        vocab_size=1024,
+        inflight_middle_chunks=1 if chunked else 0,
+        **req_overrides,
+    )
+    return FakeScheduleBatch(reqs=[req], seq_lens_cpu=[1], extend_lens=[1])
+
+
+def test_replay_serves_the_oracle_token_at_the_reported_output_index(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    batch = replay_batch()
+    rows = observe_schedule_batch(batch)
+
+    assert source.sample(batch, rows, fallback_token_id=512) == [20]
+    snapshot = source.snapshot()
+    assert snapshot.served_token_ids == (("request-golden", (20,)),)
+    assert snapshot.completed_request_ids == ("request-golden",)
+
+
+def test_replay_leaves_a_mid_prompt_chunk_on_the_fabricated_token(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    chunk = replay_batch(chunked=True)
+    chunk_rows = observe_schedule_batch(chunk)
+    assert chunk_rows[0].produces_token is False
+
+    assert source.sample(chunk, chunk_rows, fallback_token_id=512) == [512]
+    assert source.snapshot().served_token_ids == (("request-golden", ()),)
+    assert source.snapshot().completed_request_ids == ()
+
+    # The oracle index did not move, so the next producing row still serves
+    # the request's first predefined token.
+    final = replay_batch()
+    assert source.sample(final, observe_schedule_batch(final), fallback_token_id=512) == [20]
+
+
+def test_replay_validation_does_not_move_the_oracle(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    batch = replay_batch()
+    rows = observe_schedule_batch(batch)
+    source.validate_step(batch, rows)
+    source.validate_step(batch, rows)
+    assert source.snapshot().served_token_ids == (("request-golden", ()),)
+
+
+def test_replay_pins_scheduler_visible_completion_to_the_oracle_length(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    batch = replay_batch(params=replay_sampling_params(output_length=8))
+    with pytest.raises(RuntimeError, match="max_new_tokens=1"):
+        source.sample(batch, observe_schedule_batch(batch), fallback_token_id=512)
+
+
+def test_replay_refuses_an_exhausted_oracle(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    batch = replay_batch()
+    assert source.sample(batch, observe_schedule_batch(batch), fallback_token_id=512) == [20]
+    served = replay_batch(output_ids=[20])
+    with pytest.raises(RuntimeError, match="exhausted its oracle"):
+        source.sample(served, observe_schedule_batch(served), fallback_token_id=512)
+
+
+def test_replay_refuses_an_output_index_the_scheduler_did_not_reach(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    ahead = replay_batch(output_ids=[20], params=replay_sampling_params(output_length=1))
+    with pytest.raises(RuntimeError, match="reported output index"):
+        source.validate_step(ahead, observe_schedule_batch(ahead))
+
+
+def test_replay_refuses_an_unjoined_request(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    batch = replay_batch()
+    batch.reqs[0].rid = "request-golden-deadbeef"
+    with pytest.raises(RuntimeError, match="missing from the joined replay run"):
+        source.validate_step(batch, observe_schedule_batch(batch))
+    assert source.snapshot().served_token_ids == (("request-golden", ()),)
+
+
+@pytest.mark.parametrize(
+    ("params", "req_fields", "message"),
+    [
+        (
+            replay_sampling_params(stop_strs=["stop"]),
+            {},
+            "stop strings",
+        ),
+        (
+            replay_sampling_params(stop_regex_strs=["st.p"]),
+            {},
+            "stop strings",
+        ),
+        (
+            replay_sampling_params(min_new_tokens=4),
+            {},
+            "beyond its oracle length",
+        ),
+        (
+            replay_sampling_params(),
+            {"grammar": object()},
+            "structured output",
+        ),
+        (
+            replay_sampling_params(),
+            {"vocab_size": 8},
+            "outside the",
+        ),
+        (
+            None,
+            {"sampling_params": None},
+            "not a plain generation request",
+        ),
+    ],
+)
+def test_replay_refusal_boundaries(tmp_path, params, req_fields, message):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    batch = replay_batch(params=params)
+    for name, value in req_fields.items():
+        setattr(batch.reqs[0], name, value)
+    with pytest.raises((RuntimeError, NotImplementedError), match=message):
+        source.validate_step(batch, observe_schedule_batch(batch))
+
+
+def test_replay_refuses_an_early_stop_token_but_not_a_final_one(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    final_stop = replay_batch()
+    final_stop.reqs[0].eos_token_ids = {20}
+    # The single oracle token is also the last one, so SGLang stops exactly at
+    # the oracle length and the run is still exact.
+    source.validate_step(final_stop, observe_schedule_batch(final_stop))
+
+    two_token = SglReplayTokenSource.from_path(
+        joined_two_token_replay_path(tmp_path), max_context_len=4096
+    )
+    batch = replay_batch(params=replay_sampling_params(output_length=2))
+    batch.reqs[0].eos_token_ids = {20}
+    with pytest.raises(RuntimeError, match="stop token before its oracle length"):
+        two_token.validate_step(batch, observe_schedule_batch(batch))
+
+    ignored = replay_batch(
+        params=replay_sampling_params(output_length=2, ignore_eos=True)
+    )
+    ignored.reqs[0].eos_token_ids = {20}
+    two_token.validate_step(ignored, observe_schedule_batch(ignored))
+
+
+def test_replay_serves_a_multi_token_oracle_in_scheduler_order(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_two_token_replay_path(tmp_path), max_context_len=4096
+    )
+    params = replay_sampling_params(output_length=2)
+    prefill = replay_batch(params=params)
+    assert source.sample(prefill, observe_schedule_batch(prefill), fallback_token_id=512) == [20]
+
+    decode_req = FakeReq(
+        "request-golden",
+        origin_input_ids=[10],
+        output_ids=[20],
+        sampling_params=params,
+        vocab_size=1024,
+    )
+    decode = FakeScheduleBatch(
+        reqs=[decode_req],
+        forward_mode=FakeForwardMode("decode"),
+        seq_lens_cpu=[2],
+    )
+    assert source.sample(decode, observe_schedule_batch(decode), fallback_token_id=512) == [21]
+    snapshot = source.snapshot()
+    assert snapshot.served_token_ids == (("request-golden", (20, 21)),)
+    assert snapshot.completed_request_ids == ("request-golden",)
+
+
+def test_replay_refuses_speculative_and_logprob_batches(tmp_path):
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    logprob = replay_batch()
+    logprob.return_logprob = True
+    with pytest.raises(NotImplementedError, match="logprob"):
+        source.validate_step(logprob, observe_schedule_batch(logprob))
+
+    speculative = replay_batch()
+    speculative.spec_algorithm = FakeSpecAlgorithm(none=False)
+    with pytest.raises(NotImplementedError, match="speculative"):
+        source.validate_step(speculative, observe_schedule_batch(speculative))
+
+
+def test_replay_refuses_a_trace_that_does_not_fit_the_context(tmp_path):
+    with pytest.raises(ValueError, match="beyond max_context_len"):
+        SglReplayTokenSource.from_path(joined_replay_path(tmp_path), max_context_len=1)
+
+
+def test_absent_replay_serves_the_fabricated_token_for_every_row(tmp_path):
+    batch = replay_batch()
+    rows = observe_schedule_batch(batch)
+    assert sample_adapter_tokens(None, batch, rows, 512) == [512]
+
+    source = SglReplayTokenSource.from_path(
+        joined_replay_path(tmp_path), max_context_len=4096
+    )
+    assert sample_adapter_tokens(source, batch, rows, 512) == [20]
+
