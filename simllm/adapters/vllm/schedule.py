@@ -209,10 +209,10 @@ def _represented_compute(
     kernel = step_kernel(dims, record, num_sampled=num_sampled)
     fused = provider.estimate(kernel, gpu)
     represented = host_model.represented_estimate(fused, gpu)
-    provider_ps = represented.duration_ps
+    provider_ps = represented.provider_duration_ps
     estimates = provider.estimate_layers(kernel, gpu, dims.num_layers)
     if estimates is None:
-        per_layer_ns = provider_ps // (dims.num_layers * 1000)
+        per_layer_ns = represented.duration_ps // (dims.num_layers * 1000)
         represented_ps = per_layer_ns * dims.num_layers * 1000
     else:
         if len(estimates) != dims.num_layers:
@@ -224,6 +224,8 @@ def _represented_compute(
             raise ValueError("provider layer breakdown does not conserve fused duration")
         durations[0] += represented.exposed_ps
         represented_ps = (sum(durations) // 1000) * 1000
+    if host_model.is_calibrated:
+        represented_ps = ((represented.duration_ps + 999) // 1000) * 1000
     return (
         represented_ps,
         provider_ps,

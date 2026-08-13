@@ -6,6 +6,10 @@ from dataclasses import dataclass
 
 import pytest
 
+from simllm.adapters.vllm import (
+    VllmBatchSlice,
+    build_granite_execution_observations,
+)
 from simllm.adapters.vllm.executor import SimExecutorConfig, _SimStepRuntime
 from simllm.backends import (
     DeviceRuntimeStepSink,
@@ -32,6 +36,19 @@ DIMS = ModelDims(
     head_size=16,
     vocab_size=256,
 )
+DIMS_24 = ModelDims(
+    num_layers=24,
+    hidden_size=64,
+    intermediate_size=128,
+    num_heads=4,
+    num_kv_heads=4,
+    head_size=16,
+    vocab_size=256,
+    num_experts=8,
+    top_k=1,
+    moe_intermediate_size=128,
+    local_num_experts=1,
+)
 RECORD = StepRecord(
     0,
     0,
@@ -42,15 +59,35 @@ RECORD = StepRecord(
 
 
 class FixedProvider(ComputeProvider):
-    def __init__(self, duration_ps: int, uncertainty: float = 0.0) -> None:
+    def __init__(
+        self,
+        duration_ps: int,
+        uncertainty: float = 0.0,
+        *,
+        layer_breakdown: bool = False,
+    ) -> None:
         self.duration_ps = duration_ps
         self.uncertainty = uncertainty
+        self.layer_breakdown = layer_breakdown
 
     def estimate(self, kernel, gpu):
         return DurationEstimate(
             duration_ps=self.duration_ps,
             bound="compute",
             uncertainty=self.uncertainty,
+        )
+
+    def estimate_layers(self, kernel, gpu, num_layers):
+        if not self.layer_breakdown:
+            return None
+        quotient, remainder = divmod(self.duration_ps, num_layers)
+        return tuple(
+            DurationEstimate(
+                quotient + (index < remainder),
+                "compute",
+                self.uncertainty,
+            )
+            for index in range(num_layers)
         )
 
 
@@ -173,8 +210,105 @@ def test_lowerer_and_device_sink_apply_one_shared_host_term():
     sink.bind_clock(clock)
     result = sink(RECORD, None)
     assert sink.host_model is model
-    assert result.step_latency_ps == 356_094_000
+    assert result.step_latency_ps == 356_095_000
+    assert result.step_latency_ps >= timing.host_launch_floor_ps
     assert result.step_latency_ps < 99_024_000 + 356_094_640
+
+
+@pytest.mark.parametrize("layer_breakdown", [False, True])
+@pytest.mark.parametrize(
+    ("profile", "launch_count", "floor_ps", "represented_ps"),
+    [
+        ("turing-cuda-graph", 440, 356_094_640, 356_095_000),
+        ("turing-cuda-graph", 567, 458_876_502, 458_877_000),
+        ("turing-eager-host", 440, 1_040_272_200, 1_040_273_000),
+        ("turing-eager-host", 567, 1_340_532_585, 1_340_533_000),
+    ],
+)
+def test_calibrated_serial_and_observed_paths_use_the_same_narrow_enclosure(
+    layer_breakdown,
+    profile,
+    launch_count,
+    floor_ps,
+    represented_ps,
+):
+    provider = FixedProvider(99_024_000, layer_breakdown=layer_breakdown)
+    model = (
+        HostInitiationModel.turing_cuda_graph(launch_count)
+        if profile == "turing-cuda-graph"
+        else HostInitiationModel.turing_eager_host(launch_count)
+    )
+    config = SerialStepLowererConfig(
+        DIMS_24,
+        (0,),
+        ep_ranks=tuple(range(8)),
+        provider=provider,
+        gpu=TURING,
+        host_model=model,
+    )
+
+    timing = SerialStepLowerer(config).timing(RECORD)
+    _, observed = build_granite_execution_observations(
+        RECORD,
+        DIMS_24,
+        tuple(range(8)),
+        (VllmBatchSlice(None, ("r0",), 1),),
+        provider,
+        TURING,
+        model,
+    )
+
+    assert timing.provider_compute_ps == observed.provider_compute_ps == 99_024_000
+    assert timing.compute_estimate_ps == floor_ps
+    assert sum(timing.layer_calc_ns) * 1000 == represented_ps
+    assert observed.represented_compute_ps == represented_ps
+    assert floor_ps <= represented_ps < floor_ps + 1000
+    assert represented_ps < 99_024_000 + floor_ps
+
+
+@pytest.mark.parametrize("layer_breakdown", [False, True])
+@pytest.mark.parametrize(
+    ("model", "delay_ps"),
+    [
+        (HostInitiationModel.ideal(), 0),
+        (HostInitiationModel(800, "gin"), 800),
+    ],
+)
+def test_calibrated_enclosure_does_not_change_ideal_or_legacy_quantization(
+    layer_breakdown,
+    model,
+    delay_ps,
+):
+    duration_ps = 99_024_321
+    provider = FixedProvider(duration_ps, layer_breakdown=layer_breakdown)
+    config = SerialStepLowererConfig(
+        DIMS_24,
+        (0,),
+        ep_ranks=tuple(range(8)),
+        provider=provider,
+        gpu=TURING,
+        host_model=model,
+    )
+    expected = (
+        ((duration_ps + delay_ps) // 1000) * 1000
+        if layer_breakdown
+        else ((duration_ps + delay_ps) // (24 * 1000)) * 24 * 1000
+    )
+
+    timing = SerialStepLowerer(config).timing(RECORD)
+    _, observed = build_granite_execution_observations(
+        RECORD,
+        DIMS_24,
+        tuple(range(8)),
+        (VllmBatchSlice(None, ("r0",), 1),),
+        provider,
+        TURING,
+        model,
+    )
+
+    assert sum(timing.layer_calc_ns) * 1000 == expected
+    assert observed.represented_compute_ps == expected
+    assert observed.provider_compute_ps == duration_ps
 
 
 @dataclass

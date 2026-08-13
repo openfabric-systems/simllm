@@ -239,6 +239,23 @@ class SerialStepLowerer(ExecutionLowerer):
                 if all(value == layer_calc_ns[0] for value in layer_calc_ns)
                 else None
             )
+        if cfg.host_model.is_calibrated:
+            target_calc_ns = (compute_estimate_ps + 999) // 1000
+            shortfall_ns = target_calc_ns - sum(layer_calc_ns)
+            if shortfall_ns < 0:
+                raise AssertionError(
+                    "calibrated layer timing exceeds its whole-nanosecond enclosure"
+                )
+            if shortfall_ns:
+                layer_calc_ns = (
+                    layer_calc_ns[0] + shortfall_ns,
+                    *layer_calc_ns[1:],
+                )
+            per_layer_calc_ns = (
+                layer_calc_ns[0]
+                if all(value == layer_calc_ns[0] for value in layer_calc_ns)
+                else None
+            )
         return SerialStepTiming(
             compute_estimate_ps=compute_estimate_ps,
             layer_calc_ns=layer_calc_ns,

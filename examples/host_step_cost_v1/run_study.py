@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 
 EXPECTATIONS = HERE / "expectations.json"
 CALIBRATION = HERE / "calibration.json"
+PRIOR_LIVE_ATTEMPT = HERE / "live_attempt1.json"
 RESULTS = HERE / "results.json"
 
 
@@ -50,6 +51,12 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _whole_nanosecond_enclosure(value_ps: int) -> int:
+    """Return the smallest whole-nanosecond value not below ``value_ps``."""
+
+    return ((value_ps + 999) // 1000) * 1000
+
+
 def _check(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
     values = _load_json(EXPECTATIONS)
     calibration = _load_json(CALIBRATION)
@@ -61,6 +68,8 @@ def _check(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
         raise RuntimeError("live study requires an accepted calibration")
     if calibration["attempt"] != values["calibration_attempt"]:
         raise RuntimeError("calibration attempt disagrees with the freeze")
+    if values["live_attempt"] != 2:
+        raise AssertionError("live attempt identity drifted")
     if calibration["fatal_guard_failures"]:
         raise RuntimeError("accepted calibration unexpectedly has fatal findings")
     if not all(row["passed"] for row in calibration["scored_relations"]):
@@ -72,6 +81,16 @@ def _check(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any]]:
         raise AssertionError("flagship multiplier band drifted")
     if sum(values["scored_live_relations"].values()) != 12:
         raise AssertionError("scored live inventory drifted")
+    prior = _load_json(PRIOR_LIVE_ATTEMPT)
+    prior_freeze = values["prior_live_attempt"]
+    if _sha256(PRIOR_LIVE_ATTEMPT) != prior_freeze["retained_void_sha256"]:
+        raise RuntimeError("retained live attempt-one identity drifted")
+    if (
+        prior["run_status"] != "void"
+        or prior["behavioral_score_interpretable"] is not False
+        or prior["fatal_guard_failures"] != [prior_freeze["failed_fatal_guard"]]
+    ):
+        raise RuntimeError("retained live attempt one is not the frozen void run")
     fixture = values["live_fixture"]
     if fixture["network_profile"] != "rnic-nn-fluid":
         raise AssertionError("live network profile drifted")
@@ -262,7 +281,12 @@ def _run_row(
     *,
     cell_name: str,
 ) -> dict[str, Any]:
-    from simllm.adapters.vllm import SimExecutorConfig, TranslatedStep
+    from simllm.adapters.vllm import (
+        SimExecutorConfig,
+        TranslatedStep,
+        VllmBatchSlice,
+        build_granite_execution_observations,
+    )
     from simllm.adapters.vllm.executor import _SimStepRuntime
     from simllm.backends import (
         HtsimRequestMetricReducer,
@@ -300,16 +324,19 @@ def _run_row(
         tuple(record.step_index for record in source_records),
     )
     workdir = args.out / "cells" / cell_name
+    dims = _dims()
+    ep_ranks = tuple(range(8))
+    gpu = GPU_ENVELOPES["gtx1660-ti-sm75"]
     sink = HtsimStepSink(
         HtsimStepSinkConfig(
             profile=fixture["network_profile"],
             tp_ranks=(0,),
-            dims=_dims(),
+            dims=dims,
             workdir=workdir,
-            ep_ranks=tuple(range(8)),
+            ep_ranks=ep_ranks,
             linkspeed_bps=fixture["linkspeed_bps"],
             provider=provider,
-            gpu=GPU_ENVELOPES["gtx1660-ti-sm75"],
+            gpu=gpu,
             host_model=host_model,
             routed_moe_supply=supply,
             num_goal_ranks=8,
@@ -328,7 +355,7 @@ def _run_row(
         step_sink=sink,
         fallback_latency=fallback,
         host_model=host_model,
-        gpu=GPU_ENVELOPES["gtx1660-ti-sm75"],
+        gpu=gpu,
     )
     reducer = HtsimRequestMetricReducer({"r00": fixture["arrival_ps"]})
     step_rows = []
@@ -359,19 +386,49 @@ def _run_row(
             != result.step_latency_ps
         ):
             raise AssertionError("step locality partition does not conserve")
+        _, observed_timing = build_granite_execution_observations(
+            record,
+            dims,
+            ep_ranks,
+            (
+                VllmBatchSlice(
+                    None,
+                    tuple(request.request_id for request in record.scheduled),
+                    record.total_new_tokens,
+                ),
+            ),
+            provider,
+            gpu,
+            host_model,
+        )
+        outcome = sink.outcomes[-1]
         step_rows.append(
             {
                 "step_index": record.step_index,
                 "released_at_ps": record.virtual_time_ps,
                 "step_latency_ps": result.step_latency_ps,
                 "completed_at_ps": result.completed_at_ps,
-                "compute_estimate_ps": sink.outcomes[-1].compute_estimate_ps,
+                "compute_estimate_ps": outcome.compute_estimate_ps,
                 "compute_service_ps": locality.compute_service_ps,
+                "provider_compute_ps": outcome.provider_compute_ps,
+                "host_launch_floor_ps": outcome.host_launch_floor_ps,
+                "host_launch_floor_lower_ps": outcome.host_launch_floor_lower_ps,
+                "host_launch_floor_upper_ps": outcome.host_launch_floor_upper_ps,
+                "observed_schedule_provider_compute_ps": (
+                    observed_timing.provider_compute_ps
+                ),
+                "observed_schedule_represented_compute_ps": (
+                    observed_timing.represented_compute_ps
+                ),
                 "network_service_ps": (
                     result.step_latency_ps - locality.compute_service_ps
                 ),
                 "total_directed_bytes": locality.total_directed_bytes,
-                "num_flows": sink.outcomes[-1].num_flows,
+                "num_flows": outcome.num_flows,
+                "artifact_operation_ids": [
+                    list(operation_ids)
+                    for operation_ids in locality.artifact_operation_ids
+                ],
             }
         )
     totals = reducer.totals()
@@ -521,10 +578,236 @@ def _physical_checks(
                     "floor_ps": lower,
                     "observed_ps": observed,
                     "ceiling_ps": upper,
-                    "passed": lower - 24_000 <= observed <= upper,
+                    "passed": lower <= observed <= upper,
                 }
             )
     return {"passed": all(row["passed"] for row in result), "rows": result}
+
+
+def _conservation_checks(
+    rows: list[dict[str, Any]], values: dict[str, Any]
+) -> dict[str, Any]:
+    """Check exact component, sequential-clock, and request partitions."""
+
+    fixture = values["live_fixture"]
+    ideal = next(row for row in rows if row["profile"] == "ideal")
+    details = []
+    for row in rows:
+        expected_release = fixture["arrival_ps"]
+        step_checks = []
+        for index, step in enumerate(row["steps"]):
+            ideal_step = ideal["steps"][index]
+            checks = {
+                "release_is_sequential": step["released_at_ps"] == expected_release,
+                "completion_conserves": step["completed_at_ps"]
+                == step["released_at_ps"] + step["step_latency_ps"],
+                "components_conserve": step["step_latency_ps"]
+                == step["compute_service_ps"] + step["network_service_ps"],
+                "provider_is_frozen_input": step["provider_compute_ps"]
+                == fixture["fixed_compute_ps"][index],
+                "network_is_host_invariant": step["network_service_ps"]
+                == ideal_step["network_service_ps"],
+                "bytes_are_host_invariant": step["total_directed_bytes"]
+                == ideal_step["total_directed_bytes"],
+                "flows_are_host_invariant": step["num_flows"]
+                == ideal_step["num_flows"],
+                "operation_order_is_host_invariant": step[
+                    "artifact_operation_ids"
+                ]
+                == ideal_step["artifact_operation_ids"],
+            }
+            step_checks.append(
+                {
+                    "step_index": step["step_index"],
+                    "checks": checks,
+                    "passed": all(checks.values()),
+                }
+            )
+            expected_release = step["completed_at_ps"]
+        tpot = Fraction(row["tpot_numerator"], row["tpot_denominator"])
+        request_checks = {
+            "ttft_is_prefill_completion": row["ttft_ps"]
+            == row["steps"][0]["completed_at_ps"] - fixture["arrival_ps"],
+            "tpot_is_decode_mean": tpot
+            == Fraction(
+                row["steps"][1]["step_latency_ps"]
+                + row["steps"][2]["step_latency_ps"],
+                2,
+            ),
+            "runtime_has_three_steps": row["runtime_step_count"] == 3,
+            "fallback_is_unused": row["fallback_calls"] == 0,
+        }
+        details.append(
+            {
+                "profile": row["profile"],
+                "launch_count": row["launch_count"],
+                "step_checks": step_checks,
+                "request_checks": request_checks,
+                "passed": all(item["passed"] for item in step_checks)
+                and all(request_checks.values()),
+            }
+        )
+    return {"passed": all(row["passed"] for row in details), "rows": details}
+
+
+def _attempt_two_checks(
+    rows: list[dict[str, Any]],
+    values: dict[str, Any],
+    prior: dict[str, Any],
+) -> dict[str, Any]:
+    """Check the exact live attempt-two repair rows frozen after attempt one."""
+
+    current_by_key = {
+        (row["profile"], row["launch_count"]): row for row in rows
+    }
+    prior_by_key = {
+        (row["profile"], row["launch_count"]): row for row in prior["rows"]
+    }
+    details = []
+    for expected in values["live_attempt_two"]["expected_rows"]:
+        key = (expected["profile"], expected["launch_count"])
+        current = current_by_key[key]
+        previous = prior_by_key[key]
+        expected_tpot = Fraction(expected["tpot_ps"], 1)
+        checks = {
+            "service_ps": all(
+                step["compute_service_ps"] == expected["service_ps"]
+                for step in current["steps"]
+            ),
+            "step_latency_ps": [
+                step["step_latency_ps"] for step in current["steps"]
+            ]
+            == expected["step_latency_ps"],
+            "completion_ps": [
+                step["completed_at_ps"] for step in current["steps"]
+            ]
+            == expected["completion_ps"],
+            "release_ps": [step["released_at_ps"] for step in current["steps"]]
+            == [0, *expected["completion_ps"][:-1]],
+            "ttft_ps": current["ttft_ps"] == expected["ttft_ps"],
+            "tpot_ps": Fraction(
+                current["tpot_numerator"], current["tpot_denominator"]
+            )
+            == expected_tpot,
+            "service_delta_ps": all(
+                step["compute_service_ps"] - old_step["compute_service_ps"]
+                == expected["step_delta_ps"]
+                for step, old_step in zip(
+                    current["steps"], previous["steps"], strict=True
+                )
+            ),
+            "latency_delta_ps": all(
+                step["step_latency_ps"] - old_step["step_latency_ps"]
+                == expected["step_delta_ps"]
+                for step, old_step in zip(
+                    current["steps"], previous["steps"], strict=True
+                )
+            ),
+            "completion_delta_ps": all(
+                step["completed_at_ps"] - old_step["completed_at_ps"]
+                == (index + 1) * expected["step_delta_ps"]
+                for index, (step, old_step) in enumerate(
+                    zip(current["steps"], previous["steps"], strict=True)
+                )
+            ),
+            "network_unchanged": all(
+                step["network_service_ps"] == old_step["network_service_ps"]
+                for step, old_step in zip(
+                    current["steps"], previous["steps"], strict=True
+                )
+            ),
+            "bytes_unchanged": all(
+                step["total_directed_bytes"] == old_step["total_directed_bytes"]
+                for step, old_step in zip(
+                    current["steps"], previous["steps"], strict=True
+                )
+            ),
+            "flow_count_unchanged": all(
+                step["num_flows"] == old_step["num_flows"]
+                for step, old_step in zip(
+                    current["steps"], previous["steps"], strict=True
+                )
+            ),
+        }
+        details.append(
+            {
+                "profile": expected["profile"],
+                "launch_count": expected["launch_count"],
+                "checks": checks,
+                "passed": all(checks.values()),
+            }
+        )
+    return {"passed": all(row["passed"] for row in details), "rows": details}
+
+
+def _quantized_compute_checks(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Check that every calibrated GOAL service is the exact enclosure Q."""
+
+    details = []
+    for row in rows:
+        if row["profile"] == "ideal":
+            continue
+        for step in row["steps"]:
+            floor_ps = max(
+                step["provider_compute_ps"], step["host_launch_floor_ps"]
+            )
+            represented_ps = _whole_nanosecond_enclosure(floor_ps)
+            checks = {
+                "estimate_equals_floor": step["compute_estimate_ps"] == floor_ps,
+                "service_equals_enclosure": step["compute_service_ps"]
+                == represented_ps,
+                "encloses_floor": floor_ps <= step["compute_service_ps"],
+                "is_narrow": step["compute_service_ps"] < floor_ps + 1000,
+                "does_not_double_charge": step["compute_service_ps"]
+                < step["provider_compute_ps"] + step["host_launch_floor_ps"],
+            }
+            details.append(
+                {
+                    "profile": row["profile"],
+                    "launch_count": row["launch_count"],
+                    "step_index": step["step_index"],
+                    "floor_ps": floor_ps,
+                    "represented_ps": represented_ps,
+                    "checks": checks,
+                    "passed": all(checks.values()),
+                }
+            )
+    return {"passed": all(row["passed"] for row in details), "rows": details}
+
+
+def _observed_schedule_checks(
+    rows: list[dict[str, Any]], values: dict[str, Any]
+) -> dict[str, Any]:
+    """Keep observed-schedule provider attribution separate from service Q."""
+
+    provider_inputs = values["live_attempt_two"]["raw_provider_ps"]
+    details = []
+    for row in rows:
+        if row["profile"] == "ideal":
+            continue
+        for index, step in enumerate(row["steps"]):
+            checks = {
+                "provider_is_raw": step["observed_schedule_provider_compute_ps"]
+                == provider_inputs[index],
+                "represented_matches_serial": step[
+                    "observed_schedule_represented_compute_ps"
+                ]
+                == step["compute_service_ps"],
+                "represented_is_enclosure": step[
+                    "observed_schedule_represented_compute_ps"
+                ]
+                == _whole_nanosecond_enclosure(step["compute_estimate_ps"]),
+            }
+            details.append(
+                {
+                    "profile": row["profile"],
+                    "launch_count": row["launch_count"],
+                    "step_index": step["step_index"],
+                    "checks": checks,
+                    "passed": all(checks.values()),
+                }
+            )
+    return {"passed": all(row["passed"] for row in details), "rows": details}
 
 
 def _score_rows(
@@ -599,32 +882,103 @@ def _score_rows(
 
 def _budget(rows: list[dict[str, Any]], values: dict[str, Any]) -> dict[str, Any]:
     budget = values["mission_budget"]
-    endpoints = []
+    point_endpoints = []
+    empirical_endpoints = []
     for row in rows:
         if row["profile"] == "ideal":
             continue
-        launch_floor = (
+        point_floor = (
             row["launch_count"]
             * row["host_model"]["point_ps_per_launch"]
         )
+        point_represented = _whole_nanosecond_enclosure(point_floor)
         for real_network in budget["plausible_collective_network_ps"]:
-            endpoints.append(
+            point_endpoints.append(
                 {
                     "profile": row["profile"],
                     "launch_count": row["launch_count"],
+                    "per_launch_ps": row["host_model"]["point_ps_per_launch"],
+                    "represented_launch_ps": point_represented,
                     "plausible_network_ps": real_network,
-                    "ratio": (launch_floor + real_network)
-                    / (launch_floor + budget["modeled_network_ps"]),
+                    "ratio": (point_represented + real_network)
+                    / (point_represented + budget["modeled_network_ps"]),
                 }
             )
-    observed = [row["ratio"] for row in endpoints]
+        for endpoint_name in (
+            "empirical_min_ps_per_launch",
+            "empirical_max_ps_per_launch",
+        ):
+            per_launch = row["host_model"][endpoint_name]
+            represented = _whole_nanosecond_enclosure(
+                row["launch_count"] * per_launch
+            )
+            for real_network in budget["plausible_collective_network_ps"]:
+                empirical_endpoints.append(
+                    {
+                        "profile": row["profile"],
+                        "launch_count": row["launch_count"],
+                        "empirical_endpoint": endpoint_name,
+                        "per_launch_ps": per_launch,
+                        "represented_launch_ps": represented,
+                        "plausible_network_ps": real_network,
+                        "ratio": (represented + real_network)
+                        / (represented + budget["modeled_network_ps"]),
+                    }
+                )
+    point_observed = [row["ratio"] for row in point_endpoints]
+    empirical_observed = [row["ratio"] for row in empirical_endpoints]
+    point_range = (min(point_observed), max(point_observed))
+    empirical_range = (min(empirical_observed), max(empirical_observed))
+    frozen_point = tuple(values["live_attempt_two"]["point_budget_expected"])
+    frozen_empirical = tuple(
+        values["live_attempt_two"]["empirical_budget_expected"]
+    )
     acceptance = budget["acceptance_conditional_turing_residual_optimism"]
+    point_matches = all(
+        abs(observed - expected) <= 1e-12
+        for observed, expected in zip(point_range, frozen_point, strict=True)
+    )
+    empirical_matches = all(
+        abs(observed - expected) <= 1e-12
+        for observed, expected in zip(
+            empirical_range, frozen_empirical, strict=True
+        )
+    )
+    point_passed = (
+        acceptance[0] <= point_range[0] <= point_range[1] <= acceptance[1]
+        and point_matches
+    )
+    empirical_passed = (
+        acceptance[0]
+        <= empirical_range[0]
+        <= empirical_range[1]
+        <= acceptance[1]
+        and empirical_matches
+    )
     return {
-        "minimum": min(observed),
-        "maximum": max(observed),
+        "minimum": point_range[0],
+        "maximum": point_range[1],
+        "empirical_minimum": empirical_range[0],
+        "empirical_maximum": empirical_range[1],
         "acceptance": acceptance,
-        "passed": acceptance[0] <= min(observed) <= max(observed) <= acceptance[1],
-        "endpoints": endpoints,
+        "passed": point_passed and empirical_passed,
+        "endpoints": point_endpoints,
+        "point": {
+            "minimum": point_range[0],
+            "maximum": point_range[1],
+            "frozen_expected": list(frozen_point),
+            "matches_frozen": point_matches,
+            "passed": point_passed,
+            "endpoints": point_endpoints,
+        },
+        "empirical": {
+            "minimum": empirical_range[0],
+            "maximum": empirical_range[1],
+            "frozen_expected": list(frozen_empirical),
+            "matches_frozen": empirical_matches,
+            "passed": empirical_passed,
+            "endpoints": empirical_endpoints,
+        },
         "residual_scheduler_sampler_python_cost": "unknown and omitted",
         "b100_host_step_cost": budget["b100_host_step_cost"],
     }
@@ -656,6 +1010,11 @@ def _production(
     mismatch = _mismatch_checks(args)
     provenance = _profile_guard(rows, calibration)
     physical = _physical_checks(rows, values, calibration)
+    conservation = _conservation_checks(rows, values)
+    prior = _load_json(PRIOR_LIVE_ATTEMPT)
+    attempt_two = _attempt_two_checks(rows, values, prior)
+    quantized_compute = _quantized_compute_checks(rows)
+    observed_schedule = _observed_schedule_checks(rows, values)
     scores, derived = _score_rows(rows, values)
     budget = _budget(rows, values)
     fixture = values["live_fixture"]
@@ -669,6 +1028,13 @@ def _production(
         and ideal["ttft_ps"] == fixture["ideal_step_ps"]["prefill"]
         and Fraction(ideal["tpot_numerator"], ideal["tpot_denominator"])
         == fixture["ideal_step_ps"]["tpot"]
+        and [step["compute_estimate_ps"] for step in ideal["steps"]]
+        == fixture["fixed_compute_ps"]
+        and [step["compute_service_ps"] for step in ideal["steps"]]
+        == fixture["fixed_compute_ps"]
+        and [step["provider_compute_ps"] for step in ideal["steps"]]
+        == fixture["fixed_compute_ps"]
+        and all(step["host_launch_floor_ps"] == 0 for step in ideal["steps"])
         and ideal["fallback_calls"] == 0
         and all(row["fallback_calls"] == 0 for row in rows)
     )
@@ -692,13 +1058,33 @@ def _production(
         },
         {
             "id": "LIVE-G3_step_and_metric_conservation",
-            "passed": ideal_exact and physical["passed"],
-            "detail": {"ideal_exact": ideal_exact, "physical": physical},
+            "passed": (
+                ideal_exact
+                and physical["passed"]
+                and conservation["passed"]
+                and attempt_two["passed"]
+            ),
+            "detail": {
+                "ideal_exact": ideal_exact,
+                "physical": physical,
+                "conservation": conservation,
+                "attempt_two": attempt_two,
+            },
         },
         {
             "id": "LIVE-G4_budget_arithmetic",
             "passed": budget["passed"],
             "detail": budget,
+        },
+        {
+            "id": "LIVE-G5_GOAL_quantized_compute_encloses_host_floor",
+            "passed": quantized_compute["passed"],
+            "detail": quantized_compute,
+        },
+        {
+            "id": "LIVE-G6_observed_schedule_attribution",
+            "passed": observed_schedule["passed"],
+            "detail": observed_schedule,
         },
     ]
     fatal_failures = [row["id"] for row in guards if not row["passed"]]
@@ -708,11 +1094,12 @@ def _production(
     elif passed != len(scores):
         status = "not_accepted"
     else:
-        status = "accepted"
+        status = "accepted_pending_offpath"
     result = {
         "schema": "simllm-host-step-cost-v1-results-v1",
         "study": "host_step_cost_v1",
         "task": "COMP-2",
+        "live_attempt": values["live_attempt"],
         "expectation_commit": _expectation_commit(),
         "observed_commit": observed_head,
         "calibration_sha256": _sha256(CALIBRATION),
@@ -724,7 +1111,10 @@ def _production(
         "derived_unscored_checks": [derived],
         "rows": rows,
         "conditional_turing_budget": budget,
-        "exact_ideal_offpath": "pending separate five-cell mission rerun",
+        "exact_ideal_offpath": {
+            "guard": "OFF-G1_ideal_named_study_exact_identity",
+            "status": "pending separate five-cell mission rerun",
+        },
     }
     payload = json.dumps(result, indent=2, sort_keys=True) + "\n"
     (args.out / "results.json").write_text(payload, encoding="utf-8", newline="\n")
@@ -740,7 +1130,7 @@ def _production(
     if passed != len(scores):
         print("registered live acceptance was not met")
         return 1
-    print("live host-step study accepted pending the separate ideal compatibility guard")
+    print("live host-step study passed pending the separate ideal compatibility guard")
     return 0
 
 
