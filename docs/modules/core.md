@@ -245,16 +245,39 @@ class labels are permuted. A non-identity policy may reorder only legal ready
 requests. For example, it cannot violate SQ ordering or PCIe forward-progress
 rules.
 
-The coarse runtime calls this seam only to select among simultaneously legal
-ready graph operations. Framework-launch FIFO, logical-queue FIFO, dependency
-release, NCCL round order and WQ protocol order are mandatory rather than
-optional arbitration. A co-runnable compute set is dispatched as one set, so
-there is no losing candidate to prioritize within that call. Compatible copy
-engines use deterministic earliest-availability routing after the operation
-has won the ready seam; native RNIC arbitration remains owned by its sole
-session. These policy-free points do not inspect class labels. Any object
-conforming to `ArbitrationPolicy` may replace identity at the ready seam, while
-CORE-10 owns the first supported non-identity behavior.
+The coarse runtime calls this seam at two points, and both grant one operation
+at a time. It selects among simultaneously legal ready graph operations, and
+once the winner is compute work it then orders the co-runnable set by repeated
+grants, offering the members not yet granted in the deterministic baseline
+order. Membership of that set is computed before arbitration and is never
+changed by it: the policy decides only the order in which the members reach
+`SmSchedulerModel.estimate_concurrent`, which replays them in the order it
+receives and therefore charges the submission-order issue term registered by
+COMP-12 to whichever task the policy submitted second. Under identity every
+grant is the smallest remaining baseline sequence, so the ordered tuple is the
+`ExecutionGraph` tuple order the seam produced before the policy reached it.
+
+Framework-launch FIFO, logical-queue FIFO, dependency release, NCCL round order
+and WQ protocol order are mandatory rather than optional arbitration.
+Compatible copy engines use deterministic earliest-availability routing after
+the operation has won the ready seam; native RNIC arbitration remains owned by
+its sole session. These policy-free points do not inspect class labels.
+
+Three policies ship. `IdentityArbitrationPolicy` is the feature-off path.
+`StrictPriorityArbitrationPolicy` grants the smallest class label and falls
+back to baseline order, so it is stateless and a total order over any candidate
+set. `WeightedRoundRobinArbitrationPolicy` gives each class label its weight of
+grants per round and carries the credits between grants, so a favored class
+wins more often without starving the others; a new round begins when every
+class present has spent its credits. Both carry an explicit `class_aware=False`
+identity setting that reproduces the identity policy grant for grant, which is
+what keeps a class-label permutation a no-op on the accepted baseline. Any
+other object conforming to `ArbitrationPolicy` may replace them.
+[The arbitrated-order study](../../examples/arbitrated_order_v1/RESULTS.md)
+closed CORE-49 and CORE-10 on this seam: it passes 8 genuine-risk instances
+across two families with all 44 fatal guards holding, moves a live step JCT,
+TTFT and TPOT by exactly the one registered issue cycle under a reordering
+policy, and pins the identity ordered tuples as literal values.
 
 The pre-implementation queue conformance expectations were first frozen in
 [examples/queue_contract_v1](../../examples/queue_contract_v1/expectations.md)
@@ -697,7 +720,8 @@ does not claim to produce these resource-contention measurements.
    negative, and graph completion must equal the latest required completion
    event. Sweep synchronous versus asynchronous control delivery and two
    control-class labels under identity. Class labels must move nothing; only
-   dependency-reachable work may move. CORE-10 owns priority-caused movement.
+   dependency-reachable work may move. Priority-caused movement belongs to the
+   class-aware policies, never to identity.
 4. **Identity arbitration is the exact off path.** Run each shared resource
    with omitted class arbitration and with the explicit identity policy, then
    permute class labels without changing arrivals or service demand. Event
@@ -709,20 +733,6 @@ does not claim to produce these resource-contention measurements.
 
 ### Precision
 
-- CORE-49 (Precision; P1; S): pass the arbitrated order, not the graph order,
-  to the concurrent compute service. `_select_ready_operation` consults the
-  arbitration policy, but `_compute_group` then rebuilds the co-runnable group
-  as `sorted(candidates, key=operation_index)`, i.e. `ExecutionGraph` tuple
-  order, and never consults the policy. Under the identity policy the two
-  orders coincide, which is why COMP-12 could register the measured
-  submission-order issue delay against the graph order and observe it live. A
-  CORE-10 class-aware policy would reorder its selection while the compute
-  service still received graph order, so the registered issue-order term would
-  follow an order the runtime no longer chose. Derive the group order from the
-  same policy decision that selected the first operation, and use the
-  concurrent makespan and per-task admission cycles as the identifying
-  observables. Identity arbitration and class-label permutation must preserve
-  every accepted timestamp, wait, byte count and completion order exactly.
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
   nothing at the receiver, so an all-remote many-to-one combine completes at
@@ -860,12 +870,6 @@ does not claim to produce these resource-contention measurements.
   explicit aliases only. Acceptance covers send, RQ receive, SRQ receive,
   one-sided no-receive and unsignaled no-CQE records plus v1 round-trip
   compatibility.
-- CORE-10 (Completeness; P2; M): add non-identity arbitration policies only
-  after CORE-8 establishes the policy seam and exact identity baseline. Start
-  with strict priority and weighted round robin over legal ready candidates;
-  keep per-SQ ordering and protocol forward-progress rules outside the policy.
-  Every policy has an explicit identity setting whose class-label permutation
-  leaves the accepted baseline byte-identical.
 - CORE-14 (Completeness; P2; L): generalize `CoarseDeviceProfile` beyond the
   fixed eight GPUs, eight affine RNICs and arithmetic rank mapping. Consume the
   repository placement and fabric manifests through the existing schemas,
