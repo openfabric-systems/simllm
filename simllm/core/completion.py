@@ -6,6 +6,7 @@ from dataclasses import dataclass, field, replace
 from fractions import Fraction
 from itertools import pairwise
 
+from simllm.core.authority import check_completion_event_projection
 from simllm.core.bookkeeping import (
     BookkeepingLedger,
     framework_request_arrivals,
@@ -402,6 +403,14 @@ class CompletionReducer:
             if result.quiesced_at_ps is not None and event.timestamp_ps > result.quiesced_at_ps:
                 raise ValueError("completion event occurs after physical quiescence")
             last_timestamp = event.timestamp_ps
+
+        # CORE-8: the completion stream is a read-only projection of the queue
+        # visits, WQE lifecycles and operation completions the report owns, so
+        # it is joined by the stable (operation, subject object, phase,
+        # resource) identity and checked for loss, duplication and timestamp
+        # disagreement rather than trusted. Ordering above is a property of the
+        # stream itself; this is the cross-layer join.
+        check_completion_event_projection(graph, result, report)
 
         required_ids = graph.completion_operation_ids or operation_ids
         boundary = max(
