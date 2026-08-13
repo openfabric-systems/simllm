@@ -166,6 +166,16 @@ unsigned int blocksFor(std::size_t items) {
 
 void printDeviceIdentity(const cudaDeviceProp& properties) {
     std::printf("device_name,%s\n", properties.name);
+    const unsigned char* uuidBytes =
+        reinterpret_cast<const unsigned char*>(properties.uuid.bytes);
+    std::printf("device_uuid,GPU-");
+    for (int index = 0; index < 16; ++index) {
+        std::printf("%02x", static_cast<unsigned int>(uuidBytes[index]));
+        if (index == 3 || index == 5 || index == 7 || index == 9) {
+            std::printf("-");
+        }
+    }
+    std::printf("\n");
     std::printf("compute_capability,%d.%d\n", properties.major, properties.minor);
     std::printf("multiprocessor_count,%d\n", properties.multiProcessorCount);
     std::printf("nominal_clock_khz,%d\n", properties.clockRate);
