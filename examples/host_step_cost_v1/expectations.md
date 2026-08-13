@@ -42,6 +42,21 @@ repair and must remain byte-identical. A first five-cell ideal replay at
 step-record digests; the same check is repeated after the repair against the
 final implementation.
 
+Live attempt two subsequently completed nonvoid and reproduced every exact
+repair row. A later entailment audit found that those exact rows were also
+required by fatal LIVE-G3, LIVE-G5 and LIVE-G6. They therefore determine every
+LIVE-1, LIVE-2 and LIVE-3 numerator before it is scored. Attempt two remains a
+valuable nonvoid repair regression, but its 12 band observations are entailed,
+unscored findings and its genuine-risk denominator is zero.
+
+This expectations-only amendment freezes live holdout attempt three after that
+audit. It changes no modeled behavior and does not reinterpret attempt two as
+void. The holdout uses the previously unused accepted mission cell
+`a-ep8-200g`; it freezes broad magnitude relations without freezing calibrated
+timestamps or the exact represented service that would determine them. The
+holdout is explicitly post-specified. Its purpose is to carry the magnitude
+risk that attempt two cannot honestly carry.
+
 ## Chronology and prior observations
 
 The following values were known before this freeze and therefore are not new
@@ -84,9 +99,19 @@ predictions:
   and 20,502 ps. Its eager rows represented 1,040,256,000 and 1,340,520,000
   ps, below their floors by 16,200 and 12,585 ps. The retained void artifact
   is `live_attempt1.json`. All 12 behavioral observations are findings only.
+- Live attempt two ran at clean commit `12d337e`, held every fatal guard and
+  reproduced the frozen quantization repair. Its result was committed by
+  `a484f38`. The result originally labeled 12 magnitude rows as scored, but
+  fatal guards exact-checked their service, timestamps, TTFT and TPOT. Those
+  fatal oracles entail all 12 relations, so this freeze reclassifies them as
+  unscored findings. The run itself remains nonvoid.
+- The final five-cell ideal replay was evaluated before this holdout freeze.
+  OFF-G1 held: the mission was nonvoid, all 13 of its separate exact-oracle
+  relations passed, and the aggregate plus all five step-stream identities
+  matched. That fatal compatibility guard is unscored.
 
-Attempt three is therefore a disclosed replication after a calibration-band
-miss. Its genuinely risky facts are whether
+Calibration attempt three is therefore a disclosed replication after a
+calibration-band miss. Its genuinely risky facts are whether
 the device still lands in the predeclared ranges and whether the new model
 composes to the predeclared end-to-end bands without changing the identity
 path.
@@ -293,8 +318,10 @@ counts, operation order and completion order must not change.
 | Eager host | 567 | 1,340,520,000 | 1,340,532,585 | 1,340,533,000 | 13,000 |
 
 The resulting fixed-schedule metrics are frozen below. These exact rows check
-the disclosed defect repair and stay fatal and unscored; LIVE-1 through
-LIVE-3 retain their existing bands and remain the genuinely risky evidence.
+the disclosed defect repair and stay fatal and unscored. The later entailment
+audit established that they also determine LIVE-1 through LIVE-3. The 12
+attempt-two band rows are therefore retained as unscored findings, not
+genuine-risk evidence.
 
 | Profile | Launches | TTFT (ps) | Decode step 1 (ps) | TPOT (ps) | Final completion (ps) |
 |---|---:|---:|---:|---:|---:|
@@ -376,14 +403,16 @@ high = (105,502,734 + max(99,024,000, 567 * 2,544,074)) / 204,526,734
      = 7.5686569757
 ```
 
-The acceptance band is `[1.80, 7.75]`. It encloses the four prior empirical
-captures, including the disclosed attempt-two measurement, and deliberately
-leaves the attempt-three result at risk; the wider
-CAL bands do not guarantee LIVE acceptance. The study sweeps two independent
-parameters: launch class (graph and eager) and launch count (440 and 567).
+The attempt-two acceptance band was `[1.80, 7.75]`. It encloses the four prior
+empirical captures, including the disclosed calibration attempt-two
+measurement. The live repair run swept two independent parameters: launch
+class (graph and eager) and launch count (440 and 567). Its exact repair
+oracles later made every observation in this band entailed, so this band is
+historical regression context rather than holdout acceptance.
 
-The live fixture is the accepted mission cell `a-ep8-400g`, request `r00`, with
-its exact captured routing. It replays source prefill step 0 and one-token
+The attempt-two live fixture is the accepted mission cell `a-ep8-400g`,
+request `r00`, with its exact captured routing. It replays source prefill step
+0 and one-token
 decode steps 1 and 2 under new sequential virtual timestamps, so scheduling is
 fixed and host cost cannot alter batching. The model
 is the source 24-layer, top-8, 32-expert, EP-8 geometry; the packet sink uses
@@ -394,28 +423,27 @@ step services 99,024,000, 99,024,000 and 99,048,000 ps, and a Turing-named
 the `SIMLLM_MISSION_BASELINE` input. This is a fixed-service Turing host
 sensitivity, not a transfer of Turing time onto a B100 compute envelope.
 
-The ideal replay must reproduce prefill 372,217,008 ps, decode steps
-204,526,734 and 204,386,898 ps, and TPOT 204,456,816 ps exactly. The scored
-rows are evaluated from raw calibrated timestamps before that exact baseline
-guard. Request arrival is 0 ps, TTFT is the prefill completion, and TPOT is the
-exact mean of the two distinct following decode intervals.
+The attempt-two ideal replay must reproduce prefill 372,217,008 ps, decode
+steps 204,526,734 and 204,386,898 ps, and TPOT 204,456,816 ps exactly. Request
+arrival is 0 ps, TTFT is the prefill completion, and TPOT is the exact mean of
+the two distinct following decode intervals.
 
-- **LIVE-1**, four instances: every end-to-end decode-step multiplier is
-  inside `[1.80, 7.75]`.
-- **LIVE-2**, four instances: TPOT rises by a multiplier inside the same band.
-  The raw per-request TPOT is checked before component conservation guards.
-- **LIVE-3**, four instances: TTFT increases strictly, but its relative
-  increase is strictly smaller than TPOT's because the same exposed step cost
-  is amortized by the 372,217,008 ps first-prefill path.
+- **LIVE-1**, four entailed findings: every end-to-end decode-step multiplier
+  is inside `[1.80, 7.75]`.
+- **LIVE-2**, four entailed findings: TPOT rises by a multiplier inside the same
+  band.
+- **LIVE-3**, four entailed findings: TTFT increases strictly, but its relative
+  increase is strictly smaller than TPOT's.
 
-The exact step and request partitions are fatal and unscored. They do not pin
-the raw multiplier bands before LIVE-1 through LIVE-3 are evaluated, so the 12
-live instances are genuine risk rather than entailed restatements. At fixed
-launch class, 567 launches costing more than 440, and at fixed count, eager
-costing more than graph, are both derived by construction from positive
-`N * g`. They remain checked as LIVE-D1 but are unscored.
+The exact step and request partitions are fatal and unscored. Contrary to the
+first classification, the exact attempt-two service, timestamp, TTFT and TPOT
+oracles do pin the raw multiplier relations. All 12 attempt-two LIVE rows are
+entailed restatements and unscored. At fixed launch class, 567 launches costing
+more than 440, and at fixed count, eager costing more than graph, are both
+derived by construction from positive `N * g`. They remain checked as LIVE-D1
+but are unscored.
 
-The implementation run has six additional fatal, unscored preconditions:
+Attempt two had six additional fatal, unscored preconditions:
 
 - **LIVE-G1** each selected constant and empirical interval exactly matches the
   accepted calibration artifact and carries its declared provenance;
@@ -432,6 +460,110 @@ The implementation run has six additional fatal, unscored preconditions:
   enclosure `Q` and never undercuts `F`; and
 - **LIVE-G6** observed-schedule attribution keeps raw provider service separate
   from the same represented service `Q`.
+
+## Live attempt-three held-out magnitude
+
+Attempt two cannot close the flagship relation because its fatal exact-row
+oracles entail the reported multipliers. Live attempt three is post-specified
+after that audit and uses the accepted mission cell `a-ep8-200g`, request
+`r00`, steps 0 through 2. This cell has not been run with a calibrated host
+profile. The accepted source observations are known before the holdout:
+
+| Quantity | Step 0 | Step 1 | Step 2 |
+|---|---:|---:|---:|
+| fixed provider service (ps) | 99,024,000 | 99,024,000 | 99,048,000 |
+| ideal step service (ps) | 549,409,968 | 214,029,454 | 213,725,778 |
+| inferred network service (ps) | 450,385,968 | 115,005,454 | 114,677,778 |
+
+The two-step micro-fixture TPOT is 213,877,616 ps. These are accepted-source
+inputs, not new results. The source step stream and routing identities are
+frozen in `expectations.json`. The holdout changes only the link rate from the
+attempt-two cell's 400 Gbit/s to this cell's accepted 200 Gbit/s configuration.
+It retains the same two launch classes and the 440 and 567 launch counts.
+
+Before any calibrated holdout value is read, the physical network floor is
+`48 * 2,000,000 = 96,000,000` ps per step. Serialization of the accepted byte
+counts at 200 Gbit/s, with one picosecond of integer enclosure per collective,
+gives ceilings of 450,385,968, 115,005,488 and 114,677,808 ps. The calibrated
+compute carrier remains `Q = ceil(max(C, N * g) / 1,000) * 1,000`, so the
+point values already identified by calibration and native conformance are
+356,095,000, 458,877,000, 1,040,273,000 and 1,340,533,000 ps for graph 440,
+graph 567, eager 440 and eager 567.
+
+Adding the independent network floor to each `Q` gives whole-step floors of
+452,095,000, 554,877,000, 1,136,273,000 and 1,436,533,000 ps. Adding the
+per-step serialization ceilings gives these tighter physical ceilings:
+
+| Profile and count | Step 0 ceiling (ps) | Step 1 ceiling (ps) | Step 2 ceiling (ps) |
+|---|---:|---:|---:|
+| CUDA graph, 440 | 806,480,968 | 471,100,488 | 470,772,808 |
+| CUDA graph, 567 | 909,262,968 | 573,882,488 | 573,554,808 |
+| Eager host, 440 | 1,490,658,968 | 1,155,278,488 | 1,154,950,808 |
+| Eager host, 567 | 1,790,918,968 | 1,455,538,488 | 1,455,210,808 |
+
+The separate loose causal ceiling remains
+`network_source + C + N * 5,396,816` ps, using the accepted serialized
+launch-plus-synchronize enclosure. For 440 launches its three values are
+2,924,009,008, 2,588,628,494 and 2,588,324,818 ps; for 567 they are
+3,609,404,640, 3,274,024,126 and 3,273,720,450 ps. Every measured step must
+sit inside both applicable enclosures before its multiplier is considered.
+The selected point host range, 0.356095 to 1.340533 ms, overlaps the
+independent plausible 0.72 to 1.44 ms 48-collective network range and remains
+below its upper endpoint. This is a Turing sensitivity and supplies no B100
+host constant.
+
+Point composition with the prior accepted network observations predicts the
+following bands. Each band is rounded outward beyond the point projection;
+neither a fatal guard nor a by-construction relation requires it to hold.
+
+| Profile | Launches | Decode projection | TPOT projection | Frozen band for each |
+|---|---:|---:|---:|---:|
+| CUDA graph | 440 | 2.2011010410 | 2.2018976310 | `[2.17, 2.23]` |
+| CUDA graph | 567 | 2.6813246648 | 2.6824621797 | `[2.65, 2.71]` |
+| Eager host | 440 | 5.3977545259 | 5.4008205141 | `[5.34, 5.46]` |
+| Eager host | 567 | 6.8006455504 | 6.8047074922 | `[6.73, 6.88]` |
+
+- **LIVE-1**, four genuine-risk instances: decode step 1 is inside its
+  profile-and-count band.
+- **LIVE-2**, four genuine-risk instances: the micro-fixture TPOT is inside the
+  same profile-and-count band.
+- **LIVE-3**, four genuine-risk instances: `1 < TTFT multiplier < TPOT
+  multiplier`, and `(TTFT multiplier - 1) / (TPOT multiplier - 1)` is inside
+  `[0.38, 0.40]`. The point composition predicts 0.3892860131.
+
+The three relation families stay separate. LIVE-D1 checks launch-count and
+launch-class directions but is unscored by construction.
+
+The holdout fatal guards are conditions, never a score:
+
+- **LIVE-G1** requires accepted profile provenance, a clean stable revision
+  and stable harness source.
+- **LIVE-G2** requires B100 and H100 mismatch rejection before output.
+- **LIVE-G3** requires exact source input identities and the exact ideal source
+  row. Fixing the denominator does not fix a calibrated numerator.
+- **LIVE-G4** requires structural component conservation, sequential release
+  and completion, exact request reductions, raw provider attribution, bytes,
+  flow counts and operation order. It does not require calibrated network
+  service to equal the ideal network service.
+- **LIVE-G5** requires every whole step to stay inside the physical bounds and
+  retains exact `Q` as a component conformance invariant. Since calibrated
+  network service remains free anywhere inside its physical interval, this
+  does not determine a scored timestamp.
+- **LIVE-G6** requires the already frozen conditional mission-budget
+  arithmetic to remain exact. It does not use the 200 Gbit/s holdout
+  timestamps.
+
+Calibrated network service matching the ideal row is reported afterward as
+LIVE-D2, a survivable unscored diagnostic. If it fails while the physical and
+conservation guards hold, the raw multiplier observations remain
+interpretable. Native exact-`Q` tests remain a separate conformance class.
+
+The non-entailment check uses fatal-valid countermodels. Setting calibrated
+network service to its 96,000,000 ps floor misses every LIVE-1 and LIVE-2
+lower band while all fatal ranges can still hold. Setting prefill network
+service to its floor and decode network service to its ceiling moves the
+LIVE-3 increment ratio outside `[0.38, 0.40]`. Thus no earlier fatal oracle
+pins any scored relation.
 
 ## Exact ideal off path
 
@@ -479,20 +611,21 @@ Turing result.
 
 ## Registered commands and dry-run contract
 
-The first two check-only commands validate the enumerated registry structure,
-derived arithmetic, runtime identities or inputs, and output containment
-without running a CUDA workload or htsim and without creating output. The
+The calibration and attempt-two check-only commands validate their historical
+registry structure, arithmetic, runtime inputs and output containment without
+running CUDA or htsim. The holdout check-only command validates the newly
+frozen cell identity, point projections, score bands, physical bounds,
+countermodels, tools and output containment without invoking htsim. The
 unchanged mission check-only command validates its pinned model, tool and
-frozen mission inputs without running vLLM or creating output. Result-producing
-runs evaluate the content digests and fatal identity guards that need produced
-artifacts; check-only does not claim to pre-evaluate those outcomes. In this
-amendment the live check-only still validates the original relation inventory,
-input identities, broad budget enclosure, tools and output containment. The
-result run evaluates the newly frozen exact attempt-two rows and LIVE-G5/G6.
+frozen mission inputs without running vLLM. Result-producing runs evaluate the
+content digests and guards that require produced artifacts; check-only does not
+claim to pre-evaluate those outcomes.
 `${SIMLLM_WAVE12_RUN_ROOT}` is the branch-local
 bulk-output root. `${SIMLLM_MISSION_BASELINE}` names the externally retained
 accepted `a-ep8-400g` cell; its two required content digests are frozen above,
 so its site location is not part of the tracked contract.
+`${SIMLLM_MISSION_HOLDOUT}` names the corresponding accepted `a-ep8-200g`
+cell and is checked by content identity rather than site location.
 
 ```bash
 .venv/bin/python examples/host_step_cost_v1/run_calibration.py \
@@ -506,6 +639,12 @@ so its site location is not part of the tracked contract.
   --out "${SIMLLM_WAVE12_RUN_ROOT}/host-step-cost-v1-attempt2" \
   --check-only
 
+.venv/bin/python examples/host_step_cost_v1/run_study.py \
+  --htsim-rnic "${SIMLLM_HTSIM_RNIC}" \
+  --baseline-cell "${SIMLLM_MISSION_HOLDOUT}" \
+  --out "${SIMLLM_WAVE12_RUN_ROOT}/host-step-cost-v1-attempt3" \
+  --check-only
+
 SIMLLM_TXT2BIN="${SIMLLM_TXT2BIN}" \
 PYTHONPATH=. "${SIMLLM_VLLM_PYTHON}" \
   examples/end_to_end_replay_v1/run_study.py \
@@ -515,9 +654,9 @@ PYTHONPATH=. "${SIMLLM_VLLM_PYTHON}" \
   --check-only
 ```
 
-The result-producing forms are the same commands without `--check-only`, in
-this order: calibration first, implementation study second, ideal compatibility
-run third. No output directory may already exist.
+Calibration, attempt-two regression and the final ideal replay are retained
+prior evidence. After this expectations-only commit, only the holdout command
+is run in result-producing form. No output directory may already exist.
 
 ## Closure scope fixed before the run
 
@@ -543,14 +682,15 @@ COMP-28 must consume that evidence instead of duplicating its hardware
 campaign; it owns only the scalar compatibility projection while the
 structural path is disabled.
 
-COMP-2 closes only if every following clause is demonstrated: the attempt-three
-capture is nonvoid; each constant carries device and launch-class provenance
-plus sample-limited uncertainty and refuses a mismatched device; the host model,
-serial lowerer, packet sink and coordinator dispatch apply one shared term
-exactly once; both profiles pass the decode-multiplier, TPOT and TTFT relations;
+COMP-2 closes only if every following clause is demonstrated: calibration
+attempt three is nonvoid and accepted; each constant carries device and
+launch-class provenance plus sample-limited uncertainty and refuses a
+mismatched device; the host model, serial lowerer, packet sink and coordinator
+dispatch apply one shared term exactly once; live holdout attempt three is
+nonvoid and both profiles pass its decode-multiplier, TPOT and TTFT relations;
 the named accepted study matches exactly on the ideal path; the mission budget
-is recomputed; and the owning registry tag, bucket and ledger reconcile. A miss
-on any fatal guard keeps COMP-2 open and does not register COMP-28. No ID is
-registered for unknown B100 calibration, because the task explicitly permits
-that result and no registered clause promises a B100 value. COMP-29 and COMP-30
-remain unused.
+is recomputed; and the owning registry tag, bucket and ledger reconcile. A
+miss on any fatal guard keeps COMP-2 open and does not register COMP-28. No ID
+is registered for unknown B100 calibration, because the task explicitly
+permits that result and no registered clause promises a B100 value. COMP-29
+and COMP-30 remain unused.
