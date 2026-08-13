@@ -1,0 +1,153 @@
+{
+  "schema": "simllm-compute-fidelity-v1-expectations-v1",
+  "study": "compute_fidelity_v1",
+  "tasks": ["COMP-1", "COMP-5"],
+  "source_artifact": "examples/compute_calibration_v1/calibration.json",
+  "prior_observations": {
+    "published_failing_cells": [
+      {
+        "family": "attn_gemm",
+        "dtype": "fp32",
+        "shape": 8,
+        "minimum_us": 99.585,
+        "median_us": 99.809,
+        "maximum_us": 115.392,
+        "coefficient_of_variation_percent": 2.395
+      },
+      {
+        "family": "lm_head",
+        "dtype": "fp32",
+        "shape": 4,
+        "minimum_us": 50.784,
+        "median_us": 50.912,
+        "maximum_us": 58.657,
+        "coefficient_of_variation_percent": 2.343
+      },
+      {
+        "family": "attn_score",
+        "dtype": "fp64",
+        "shape": 1,
+        "minimum_us": 26.657,
+        "median_us": 27.073,
+        "maximum_us": 31.168,
+        "coefficient_of_variation_percent": 2.432
+      }
+    ],
+    "unobserved_cell_count": 47,
+    "total_cell_count": 50,
+    "total_sample_count": 2050
+  },
+  "envelope": {
+    "default_envelope_key": "b100",
+    "active_weight_bytes": 556449792,
+    "roofline_derate": 0.7,
+    "modeled_decode_compute_us": 99.36603428571428,
+    "floors_us": {
+      "b100": 69.556224,
+      "h100": 166.10441552238808,
+      "a100": 272.9032820009808
+    },
+    "modeled_over_b100_floor": 1.4285714285714286,
+    "h100_floor_over_modeled": 1.6716417910447763,
+    "relative_tolerance": 1e-09
+  },
+  "variation": {
+    "excursion_ratio_threshold": 1.05,
+    "trimmed_cv_ceiling_percent": 2.0,
+    "maximum_excursion_ratio_ceiling": 1.35,
+    "aggregate_excursion_fraction_ceiling": 0.05,
+    "refreeze_excursion_fraction_ceiling": 0.10,
+    "all_sample_cv_ceiling_percent": 2.0,
+    "expected_all_sample_cv_failures": 3
+  },
+  "probe": {
+    "stability_launches": 4000,
+    "stability_family": "attn_gemm",
+    "stability_dtype": "fp32",
+    "stability_shape": 8,
+    "stability_work_items": 2097152,
+    "stability_threads_per_block": 256,
+    "stability_blocks": 8192,
+    "flush_bytes": 33554432,
+    "warmup_launches": 100,
+    "tracked_cell_median_us": 99.809,
+    "median_cross_check_relative_tolerance": 0.25,
+    "attribution_cycle_ratio_tolerance": 0.05,
+    "attribution_minimum_fraction": 0.8,
+    "excursion_fraction_ceiling": 0.05,
+    "launch_iterations": 20000,
+    "graph_nodes": 512,
+    "graph_replays": 200,
+    "long_kernel_work_items": 262144,
+    "long_isolated_iterations": 200,
+    "long_backtoback_iterations": 400,
+    "device_model": "NVIDIA GeForce GTX 1660 Ti",
+    "compute_capability": "7.5"
+  },
+  "launch_count": {
+    "framework": "vllm",
+    "framework_version": "0.26.0",
+    "mode": "eager",
+    "num_layers": 24,
+    "num_experts": 32,
+    "top_k": 8,
+    "per_layer": {
+      "input_rms_norm": [1, 1],
+      "qkv_projection_gemm": [1, 1],
+      "rotary_embedding": [1, 1],
+      "kv_cache_write": [1, 1],
+      "attention": [1, 2],
+      "output_projection_gemm": [1, 1],
+      "attention_residual_scale_and_add": [2, 2],
+      "post_attention_rms_norm": [1, 1],
+      "router_gate_gemm": [1, 1],
+      "topk_softmax_routing": [1, 1],
+      "routing_renormalization": [0, 2],
+      "expert_assignment_and_block_alignment": [1, 2],
+      "intermediate_buffer_zeroing": [0, 1],
+      "fused_moe_first_gemm": [1, 1],
+      "silu_and_multiply": [1, 1],
+      "fused_moe_second_gemm": [1, 1],
+      "moe_topk_reduction": [1, 1],
+      "moe_residual_scale_and_add": [2, 2]
+    },
+    "per_layer_total": [18, 23],
+    "per_step": {
+      "input_and_position_host_to_device_copies": [2, 5],
+      "token_embedding": [1, 1],
+      "embedding_multiplier": [1, 1],
+      "final_rms_norm": [1, 1],
+      "lm_head_gemm": [1, 1],
+      "greedy_sampling_and_logits_bookkeeping": [2, 6]
+    },
+    "per_step_total": [8, 15],
+    "launches_per_step": [440, 567]
+  },
+  "fixed_cost": {
+    "cpu_enqueue_band_ns": [300, 20000],
+    "modeled_decode_compute_us": 99.36603428571428,
+    "published_prefill_step0_makespan_ps": 974838253,
+    "published_decode_step_makespan_ps": 224000000
+  },
+  "scored_relations": {
+    "VAR-S1_trimmed_cv_below_ceiling": 47,
+    "VAR-S3_maximum_excursion_ratio_bounded": 47,
+    "VAR-S2_aggregate_excursion_fraction": 1,
+    "PROBE_reproduction_attribution_sparsity": 3,
+    "FIX_launch_cost_bracket_and_bound": 4
+  },
+  "fatal_unscored_guards": [
+    "G1_artifact_inventory",
+    "G2_published_cv_reproduction",
+    "G3_all_sample_cv_failure_count",
+    "G4_genuine_risk_denominator",
+    "G5_probe_device_identity",
+    "G6_probe_median_cross_check",
+    "G7_probe_positive_samples",
+    "XFER-G1_table_gpu_identity",
+    "XFER-G2_table_fails_closed_on_b100",
+    "XFER-G3_host_model_defaults",
+    "XFER-G4_roofline_has_no_additive_term",
+    "XFER-G5_envelope_arithmetic"
+  ]
+}
