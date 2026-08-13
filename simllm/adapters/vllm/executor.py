@@ -137,6 +137,7 @@ __all__ = [
     "PS_PER_SECOND",
     "ExpertGroupStepSink",
     "ExpertParallelGeometry",
+    "HostModelStepSink",
     "ModelDims",
     "ObservationStepSink",
     "ReplayTokenSource",
@@ -200,6 +201,16 @@ class ExpertGroupStepSink(Protocol):
 
     def bind_expert_group(self, ep_ranks: Sequence[int]) -> None:
         """Bind the adapter-derived expert-parallel group before any step."""
+        ...
+
+
+@runtime_checkable
+class HostModelStepSink(Protocol):
+    """A sink that exposes the host model owned by its timing authority."""
+
+    @property
+    def host_model(self) -> HostInitiationModel:
+        """Return the exact host model that the sink applies."""
         ...
 
 
@@ -1116,12 +1127,17 @@ class _SimStepRuntime:
         fallback_latency: Callable[[TranslatedStep], int],
         clock: VirtualClock | None = None,
         is_authority: bool = True,
+        host_model: HostInitiationModel | None = None,
+        gpu: GpuSpec | None = None,
     ) -> None:
         self.config = config
         self.step_sink = step_sink if is_authority else None
         self.fallback_latency = fallback_latency
-        self.clock = VirtualClock() if clock is None else clock
         self.is_authority = is_authority
+        self.host_model = host_model
+        self.gpu = gpu
+        self._validate_host_model_selection()
+        self.clock = VirtualClock() if clock is None else clock
         if isinstance(self.step_sink, ObservationStepSink):
             self.step_sink.bind_clock(self.clock)
         self.translator = StepTranslator()
@@ -1133,6 +1149,37 @@ class _SimStepRuntime:
             if is_authority and config.step_records_path
             else None
         )
+
+    def _validate_host_model_selection(self) -> None:
+        """Validate one shared model without adding its duration here."""
+
+        model = self.host_model
+        sink = self.step_sink
+        if model is None:
+            sink_model = getattr(sink, "host_model", None)
+            if sink_model is None:
+                return
+            if not isinstance(sink_model, HostInitiationModel):
+                raise TypeError("step sink host_model must be a HostInitiationModel")
+            self.host_model = sink_model
+            model = sink_model
+        if not isinstance(model, HostInitiationModel):
+            raise TypeError("host_model must be a HostInitiationModel")
+        if self.gpu is not None:
+            model.validate_device(self.gpu)
+        if sink is None:
+            return
+        sink_model = getattr(sink, "host_model", None)
+        if sink_model is not None:
+            if sink_model != model:
+                raise RuntimeError(
+                    "adapter and step sink must select the same host model"
+                )
+            return
+        if not model.is_ideal:
+            raise RuntimeError(
+                "a nonideal adapter host model requires a host-model-aware step sink"
+            )
 
     def translate(self, scheduler_output: Any) -> TranslatedStep:
         translated = translate_scheduler_output(
@@ -1150,6 +1197,7 @@ class _SimStepRuntime:
         observations: ExecutionObservations | None = None,
     ) -> StepResult:
         """Apply the accepted sink, fallback, append, advance, pace order."""
+        self._validate_host_model_selection()
         record = translated.record
         if isinstance(self.step_sink, ObservationStepSink):
             result = self.step_sink(record, observations)
@@ -1185,6 +1233,7 @@ class _SimStepRuntime:
 
     def drain(self, scheduler_output: Any) -> bool:
         """Record an empty completion-bearing step with zero elapsed time."""
+        self._validate_host_model_selection()
         finished = getattr(scheduler_output, "finished_req_ids", ()) or ()
         preempted = getattr(scheduler_output, "preempted_req_ids", None) or ()
         if not (finished or preempted):
@@ -1257,7 +1306,13 @@ class SimExecutor(_ExecutorBase):
         self.host_model = (
             host_model
             or _HOOKS.host_model
-            or HostInitiationModel(initiation_delay_ps=self.config.host_initiation_ps)
+            or (
+                HostInitiationModel(
+                    initiation_delay_ps=self.config.host_initiation_ps
+                )
+                if self.config.host_initiation_ps
+                else HostInitiationModel.ideal()
+            )
         )
         self.step_sink: StepSink | None = step_sink or _HOOKS.step_sink
         self.replay = (
@@ -1272,6 +1327,8 @@ class SimExecutor(_ExecutorBase):
             config=self.config,
             step_sink=self.step_sink,
             fallback_latency=self._estimate_latency,
+            host_model=self.host_model,
+            gpu=self.gpu,
         )
         #: every translated step, in order; the offline mode renders these
         self.step_records = self._runtime.step_records

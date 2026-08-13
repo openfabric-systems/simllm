@@ -1,0 +1,58 @@
+{
+  "aggregate_cell_identity": {
+    "actual_sha256": "5b51c31c1d83422cecfcbd975bf67690c6cccfd8ca4437ffef3e54985ee615fe",
+    "canonicalization": "remove wall_seconds from each cell.json, serialize all cells by name with sorted keys and compact separators, append LF",
+    "expected_sha256": "5b51c31c1d83422cecfcbd975bf67690c6cccfd8ca4437ffef3e54985ee615fe",
+    "matched": true
+  },
+  "evidence": {
+    "class": "fatal_unscored_guard",
+    "findings": [],
+    "guard": "OFF-G1_ideal_named_study_exact_identity",
+    "held": true
+  },
+  "input_summary": {
+    "artifact": "summary.json",
+    "sha256": "55fb19c4d476ce8a1559bb75c711cdeba136203bb36cc06aec9363ab1cdbfe86"
+  },
+  "mission_preconditions": {
+    "all_exact_oracles_passed": true,
+    "exact_oracle_relations_expected": 13,
+    "exact_oracle_relations_observed": 13,
+    "nonvoid": true,
+    "violated_fatal_guards": []
+  },
+  "named_study": "end_to_end_replay_v1",
+  "observed_git_head": "a484f38e78df177a37f45b2878ad80aa9329c69f",
+  "run_status": "nonvoid",
+  "schema": "simllm-host-step-ideal-compatibility-v1",
+  "step_record_identity": {
+    "a-ep4-400g": {
+      "actual_sha256": "fba28840dacc858e67e2202c24b82012a114ee2cf4512b9c72a7c9a2718365cc",
+      "expected_sha256": "fba28840dacc858e67e2202c24b82012a114ee2cf4512b9c72a7c9a2718365cc",
+      "matched": true
+    },
+    "a-ep8-100g": {
+      "actual_sha256": "893fd939460556a6e0639572ef41db58b478c72850f3a43b62de626bbade5706",
+      "expected_sha256": "893fd939460556a6e0639572ef41db58b478c72850f3a43b62de626bbade5706",
+      "matched": true
+    },
+    "a-ep8-200g": {
+      "actual_sha256": "4aebcbdaf27aa6db599101b65e61546de8419283e9b9092237031d9f5796bb08",
+      "expected_sha256": "4aebcbdaf27aa6db599101b65e61546de8419283e9b9092237031d9f5796bb08",
+      "matched": true
+    },
+    "a-ep8-400g": {
+      "actual_sha256": "f7c3b85866ce0fdb6d87c1f706ad6fd21153210c79d3c21d874b7642267eb11a",
+      "expected_sha256": "f7c3b85866ce0fdb6d87c1f706ad6fd21153210c79d3c21d874b7642267eb11a",
+      "matched": true
+    },
+    "b-ep8-400g": {
+      "actual_sha256": "997028d3806ed86c43ff558afcb92358bdb78ad4e076e11a75e2622072cc65ea",
+      "expected_sha256": "997028d3806ed86c43ff558afcb92358bdb78ad4e076e11a75e2622072cc65ea",
+      "matched": true
+    }
+  },
+  "study": "host_step_cost_v1",
+  "task": "COMP-2"
+}

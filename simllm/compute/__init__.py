@@ -97,7 +97,7 @@ from simllm.compute.gpu_model_io import (
     load_gpu_model_artifact,
     save_gpu_model_artifact,
 )
-from simllm.compute.host import HostInitiationModel
+from simllm.compute.host import HostInitiationModel, HostStepEstimate
 from simllm.compute.nccl import (
     NCCL_RING_EGRESS_IMPLEMENTATION,
     nccl_ring_allreduce_launch,
@@ -191,6 +191,7 @@ __all__ = [
     "GpuTaskEstimate",
     "GpuTaskKind",
     "HostInitiationModel",
+    "HostStepEstimate",
     "KernelCaptureCell",
     "KernelLaunch",
     "KernelLaunchMetadata",

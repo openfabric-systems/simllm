@@ -44,6 +44,7 @@ from simllm.adapters.vllm import (
     vllm_batch_slices,
     write_step_records,
 )
+from simllm.adapters.vllm.worker import _skeleton_fallback_latency
 from simllm.compute import GpuSpec, HostInitiationModel, RooflineProvider
 from simllm.core import (
     CollectiveWork,
@@ -289,6 +290,23 @@ def make_sim_worker(
         _simllm_clock=clock,
         _simllm_config=simllm_config,
     )
+
+
+def test_skeleton_worker_nonideal_host_cost_requires_timing_sink(monkeypatch):
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    model = HostInitiationModel.turing_cuda_graph(440)
+    gpu = GpuSpec("gtx1660-ti-sm75", peak_flops=1.0, mem_bandwidth=1.0)
+    reset_configuration()
+    try:
+        configure(host_model=model, gpu=gpu)
+        with pytest.raises(RuntimeError, match="requires a host-model-aware"):
+            make_sim_worker()
+    finally:
+        reset_configuration()
+
+    assert _skeleton_fallback_latency(HostInitiationModel.ideal()) == 0
+    with pytest.raises(RuntimeError, match="requires a timing sink result"):
+        _skeleton_fallback_latency(model)
 
 
 def joined_replay_path(tmp_path: Path, *, trace_path: Path | None = None) -> Path:

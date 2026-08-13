@@ -133,6 +133,29 @@ __all__ = [
 StepSink = Callable[[StepRecord], "StepResult | None"]
 
 
+def _validate_host_model_selection(
+    host_model: HostInitiationModel,
+    gpu: GpuSpec,
+    step_sink: StepSink | None,
+) -> None:
+    """Require one device-compatible host model across adapter and sink."""
+
+    if not isinstance(host_model, HostInitiationModel):
+        raise TypeError("host_model must be a HostInitiationModel")
+    host_model.validate_device(gpu)
+    if step_sink is None:
+        return
+    sink_model = getattr(step_sink, "host_model", None)
+    if sink_model is None:
+        if not host_model.is_ideal:
+            raise RuntimeError(
+                "a nonideal adapter host model requires a host-model-aware step sink"
+            )
+        return
+    if sink_model != host_model:
+        raise RuntimeError("adapter and step sink must select the same host model")
+
+
 def _missing_sglang_error() -> ImportError:
     detail = f" ({_SGLANG_IMPORT_ERROR})" if _SGLANG_IMPORT_ERROR is not None else ""
     return ImportError(
@@ -1145,10 +1168,19 @@ class SimTpModelWorker(_TpWorkerBase):
         self.compute_provider: ComputeProvider = (
             _HOOKS.compute_provider or RooflineProvider(efficiency=self.sim_config.efficiency)
         )
-        self.host_model = _HOOKS.host_model or HostInitiationModel(
-            initiation_delay_ps=self.sim_config.host_initiation_ps
+        self.host_model = _HOOKS.host_model or (
+            HostInitiationModel(
+                initiation_delay_ps=self.sim_config.host_initiation_ps
+            )
+            if self.sim_config.host_initiation_ps
+            else HostInitiationModel.ideal()
         )
         self.step_sink: StepSink | None = _HOOKS.step_sink
+        _validate_host_model_selection(
+            self.host_model,
+            self.sim_gpu,
+            self.step_sink,
+        )
         self.step_records: list[StepRecord] = []
         self.step_results: list[StepResult] = []
         self._record_stream = (
@@ -1317,6 +1349,11 @@ class SimTpModelWorker(_TpWorkerBase):
 
     def _settle(self, record: StepRecord, num_sampled: int) -> StepResult:
         """Record the step, ask the sink or the provider for its duration."""
+        _validate_host_model_selection(
+            self.host_model,
+            self.sim_gpu,
+            self.step_sink,
+        )
         result = self.step_sink(record) if self.step_sink is not None else None
         if result is None:
             latency_ps = estimate_step_latency_ps(

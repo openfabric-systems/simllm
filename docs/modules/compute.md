@@ -67,13 +67,47 @@ per serving step.
   streams them). This is the COMP-1 groundwork: offline SASS runs
   populate per-family profile tables, and the step loop sums per-family
   estimates instead of pricing one opaque blob.
-- `HostInitiationModel`: constant per-operation delay between "ready" and
-  "on the wire" (default 0, profile-labeled). The doorbell packet itself is
-  modeled in-band on the fabric; host/PCIe/RNIC launch effects default to
-  zero delay and zero jitter so network attribution stays clean.
+- `HostInitiationModel`: the exact-zero `ideal` profile, legacy additive
+  constants, and two device-bound fixed-step launch-throughput profiles.
+  `turing_cuda_graph(N)` and `turing_eager_host(N)` compose provider service
+  `C` as `max(C, N * g)`, because host launch demand can overlap device
+  service. Each calibrated estimate retains its raw provider duration, launch
+  floor, empirical bounds and exposed host contribution. The named Turing
+  profiles accept only `GpuSpec.name="gtx1660-ti-sm75"`; a B100 or H100
+  selection fails during configuration instead of borrowing the constant.
 
 Every estimate carries an honest uncertainty so results can report error
 bounds.
+
+## Fixed per-step host profiles
+
+The fixed-step calibration is scoped to an NVIDIA GeForce GTX 1660 Ti
+(`gtx1660-ti-sm75`, compute capability 7.5) on an AMD Ryzen 9 3950X host with
+driver 550.90.07 and CUDA 12.4.99. It installs two explicit launch classes:
+
+| Profile | Launch class | Point (ps/launch) | Sample-limited empirical range (ps/launch) |
+|---|---|---:|---:|
+| `turing-cuda-graph` | `cuda-graph-node` | 809,306 | 624,665 to 809,306 |
+| `turing-eager-host` | `eager-host-bound` | 2,364,255 | 2,327,730 to 2,544,074 |
+
+The empirical range is the minimum and maximum of five observations, not a
+confidence interval. GPU UUID, host CPU, driver, CUDA version, launch class,
+source study and uncertainty kind travel with each profile. The profile point
+is a sensitivity constant for this measured Turing device and host only. It
+is not a H100 or B100 calibration. Scheduler, sampler and Python-side costs
+outside the measured launch classes remain unknown.
+
+The serial step lowerer is the one timing authority. For provider service
+`C`, launch count `N` and per-launch point `g`, it computes
+`F = max(C, N * g)`. Since GOAL represents whole nanoseconds, calibrated
+service is the smallest enclosure `Q = ceil(F / 1,000) * 1,000` ps. The
+packet-level sink selects and exposes that same model, while coordinator
+dispatch validates that the adapter and sink share it and does not add the
+term again. A nonideal profile is rejected on a fallback that has no
+host-model-aware timing sink. The default in `SerialStepLowererConfig` and
+`HtsimStepSinkConfig` remains `HostInitiationModel.ideal()`, which contributes
+exactly zero. Legacy explicit scalar constants retain their historical
+additive behavior.
 
 ## Trace-driven GPU service boundary
 
@@ -532,6 +566,49 @@ whose omitted excess is 1.79 to 12.31 times the whole modeled decode compute of
 a 24-layer top-8 MoE step. It registers no new task ID: COMP-1 and COMP-5 both
 stay open and keep every clause they registered.
 
+The [fixed host-step study](../../examples/host_step_cost_v1/RESULTS.md)
+re-established that measurement under a corrected freeze before installing
+anything. Corrected calibration attempt three was nonvoid and accepted: all
+3 genuinely risky relations plus 1 post-specified replication passed (CAL-1,
+whose band was widened after the attempt-two miss at 809,068 ps), and all six
+fatal guards held. It measured 809,306 ps per CUDA-graph node and 2,364,255 ps
+per host-bound eager launch on the declared Turing device, with the empirical
+ranges and provenance recorded above. The live `a-ep8-200g` holdout is a
+nonvoid end-to-end conformance and reach demonstration with a genuine-risk
+denominator of zero and 12 retained entailed rows. Across graph versus eager
+launch and 440 versus 567 launches, decode multipliers were 2.2011, 2.6813,
+5.3978 and 6.8006; TPOT multipliers were 2.2019, 2.6825, 5.4008 and 6.8047.
+Those values show that the installed cost reaches TTFT and TPOT, not that its
+magnitude was independently predicted.
+
+The ideal compatibility guard is separate, fatal and unscored. A fresh
+five-cell `end_to_end_replay_v1` replay was nonvoid, retained all 13 of that
+study's exact-oracle relations, and reproduced its aggregate canonical digest
+plus every `steps.jsonl` byte stream. The first calibrated live attempt was
+void because repeated per-layer integer floors underrepresented
+`max(C, N * g)` by 6,640 to 20,502 ps. The corrected second attempt verifies
+the exact whole-nanosecond enclosure, but its magnitude rows are unscored
+because fatal exact-row oracles entail them. The held-out third attempt, not
+that regression, supplies live conformance and reach evidence but no magnitude
+score.
+
+For the mission error budget, item 1 moves from zero to a measured launch
+floor only in the device-bound Turing sensitivity. Correlating that launch
+term in the simulated and plausible-real expressions leaves a point residual
+optimism range of 1.424953 to 3.891039 times; propagating the sample-limited
+empirical endpoints gives 1.396964 to 4.508550 times. These ranges assume all
+unmeasured scheduler, sampler and Python costs are zero and sit beside, rather
+than replace, the mission's generic 5 to 22 times budget. The reference B100
+host cost is unknown, so no absolute B100 composed optimism range is supported.
+The fixed 99,024,000 ps input is B100-derived. Its 554,631,168 bytes need
+1,925,802,667 ps on the Turing device's 288 GB/s roof and 2,751,146,667 ps at
+the 0.7 derate, above all four launch floors, so the hybrid rows are not a
+device-consistent Turing step prediction. The reported rows use
+`network + max(C, N * g)`. With the same-wave TRAF-11 collective floor now
+landed, `max(C + network, N * g)` instead gives 1.650672 ms for all four
+profiles; whether overlap or additive composition is correct remains
+unresolved, and no combined magnitude is claimed.
+
 The M5 first slice landed the COMP-1 groundwork: `step_kernels`, the
 `simllm-profile-table-v1` artifact with provenance, and 1D log-linear
 interpolation (closing COMP-3; the multi-axis extension is COMP-4). The
@@ -639,13 +716,13 @@ and an explicit reason:
   and the flat 0.7 roofline surrogate only after capturing exact production
   framework kernels on the target architecture, collecting the full activity,
   counter and dynamic-SASS ledger, calibrating pinned Accel-Sim replay, and
-  validating immutable held-out kernels. Second, the step model has no fixed
-  per-step cost at all, and the fidelity study measures an omitted excess of
-  1.79 to 12.31 times the whole modeled decode compute of a 24-layer top-8 MoE
-  step, so the compute-only step error clause is unreachable until launch
-  overhead, host delay and queueing are measured on the target architecture and
-  given a seam.
-  Do not add an uncalibrated launch constant in the meantime. Acceptance remains
+  validating immutable held-out kernels. Second, the fixed-step seam now has
+  calibrated Turing CUDA-graph and eager-host profiles, but no H100 or B100
+  constant. The fidelity study's omitted excess of 1.79 to 12.31 times the
+  modeled decode compute therefore remains unbounded on the production target,
+  so the compute-only step error clause is unreachable until launch overhead,
+  host delay and queueing are measured on that exact architecture. Do not
+  transfer the Turing launch constants in the meantime. Acceptance remains
   the environment-scoped stability bar with the controlled form required for the
   production capture, held-out kernel median error below 10 percent and p95
   below 20 percent, per-phase median below 5 percent and p95 below 10 percent,
@@ -775,6 +852,14 @@ and an explicit reason:
   the before-versus-after TTFT and TPOT change on one accepted study. The
   explicit scalar off path must keep every accepted baseline timestamp
   exactly.
+- COMP-28 (Precision; P2; L): After COMP-21 supplies device-bound structural
+  captures for CPU-proxy and GPU-initiated network submission, fit and
+  validate their scalar host-initiation projections for the analytical
+  fallback used only while structural submission is disabled. Carry GPU,
+  host, RNIC and submission-class provenance plus predeclared capture
+  uncertainty; held-out ready-to-RNIC-visible latency must remain within that
+  uncertainty. The ideal zero-cost profile remains the exact compatibility
+  path.
 
 ### Completeness
 
@@ -823,8 +908,6 @@ and an explicit reason:
 
 ### Uncategorized
 
-- COMP-2: calibrated host-initiation profiles (GPU-initiated vs CPU-proxy
-  constants) for launch-path sensitivity studies.
 - COMP-4: multi-axis interpolation in `ProfileTableProvider`. The landed
   rule interpolates along one config axis with every other axis pinned to
   covered values; a query differing on two or more axes raises `KeyError`

@@ -166,7 +166,7 @@ class HtsimStepSinkConfig:
     topology: Path | None = None
     provider: ComputeProvider = field(default_factory=lambda: RooflineProvider(efficiency=0.7))
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
-    host_model: HostInitiationModel = field(default_factory=HostInitiationModel)
+    host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
     #: first GOAL tag; each allreduce takes a disjoint 2(W-1)-tag block
     base_tag: int = 1000
     #: explicit GOAL rank count for topology padding; None keeps inferred sizing
@@ -207,6 +207,9 @@ class HtsimStepSinkConfig:
     def __post_init__(self) -> None:
         if self.profile not in RNIC_PROFILES:
             raise ValueError(f"profile must be one of {RNIC_PROFILES}")
+        if not isinstance(self.host_model, HostInitiationModel):
+            raise TypeError("host_model must be a HostInitiationModel")
+        self.host_model.validate_device(self.gpu)
         if self.routed_moe_supply is not None and not isinstance(
             self.routed_moe_supply, RoutedMoeSupply
         ):
@@ -302,6 +305,24 @@ class StepNetworkOutcome:
     routing_mode: str = "uniform"
     #: selected expert placement epoch, present only for captured traffic
     placement_epoch: int | None = None
+    #: host profile selected by the serial timing authority
+    host_profile: str = "ideal"
+    #: measured launch class, or ``none`` on the identity path
+    host_launch_class: str = "none"
+    #: launches represented by the calibrated fixed step cost
+    host_launch_count: int = 0
+    #: provider service before host composition
+    provider_compute_ps: int = 0
+    #: point launch-throughput floor before overlap composition
+    host_launch_floor_ps: int = 0
+    #: empirical launch-floor endpoints from the accepted capture series
+    host_launch_floor_lower_ps: int = 0
+    host_launch_floor_upper_ps: int = 0
+    #: represented-service endpoints after provider composition
+    host_empirical_lower_ps: int = 0
+    host_empirical_upper_ps: int = 0
+    #: point launch demand exposed above provider service
+    exposed_host_ps: int = 0
 
     def network_share_for(self, num_layers: int) -> float:
         """One minus represented calc time over makespan."""
@@ -543,6 +564,16 @@ class _PlannedStep:
     compute_in_artifacts: bool
     compute_service_ps: int
     compute_estimate_ps: int
+    host_profile: str
+    host_launch_class: str
+    host_launch_count: int
+    provider_compute_ps: int
+    host_launch_floor_ps: int
+    host_launch_floor_lower_ps: int
+    host_launch_floor_upper_ps: int
+    host_empirical_lower_ps: int
+    host_empirical_upper_ps: int
+    exposed_host_ps: int
     num_sampled: int
     sample_count_exact: bool
     per_layer_calc_ns: int | None
@@ -606,6 +637,12 @@ class HtsimStepSink:
         self.collective_timing_outcomes: list[StepCollectiveTimingOutcome] = []
         #: explicitly selected independent dependency comparisons, in call order
         self.dependency_cross_check_reports: list[DependencyCrossCheckReport] = []
+
+    @property
+    def host_model(self) -> HostInitiationModel:
+        """The one host model applied by this sink's serial lowerer."""
+
+        return self.config.host_model
 
     @staticmethod
     def _num_sampled(record: StepRecord) -> int:
@@ -994,6 +1031,16 @@ class HtsimStepSink:
                 sum(max(calc_ns, 1) for calc_ns in timing.layer_calc_ns) * 1000
             ),
             compute_estimate_ps=timing.compute_estimate_ps,
+            host_profile=timing.host_profile,
+            host_launch_class=timing.host_launch_class,
+            host_launch_count=timing.host_launch_count,
+            provider_compute_ps=timing.provider_compute_ps,
+            host_launch_floor_ps=timing.host_launch_floor_ps,
+            host_launch_floor_lower_ps=timing.host_launch_floor_lower_ps,
+            host_launch_floor_upper_ps=timing.host_launch_floor_upper_ps,
+            host_empirical_lower_ps=timing.host_empirical_lower_ps,
+            host_empirical_upper_ps=timing.host_empirical_upper_ps,
+            exposed_host_ps=timing.exposed_host_ps,
             num_sampled=timing.num_sampled,
             sample_count_exact=timing.sample_count_exact,
             per_layer_calc_ns=timing.per_layer_calc_ns,
@@ -1160,6 +1207,16 @@ class HtsimStepSink:
             quiescent=quiescent,
             routing_mode=plan.routing_mode,
             placement_epoch=plan.placement_epoch,
+            host_profile=plan.host_profile,
+            host_launch_class=plan.host_launch_class,
+            host_launch_count=plan.host_launch_count,
+            provider_compute_ps=plan.provider_compute_ps,
+            host_launch_floor_ps=plan.host_launch_floor_ps,
+            host_launch_floor_lower_ps=plan.host_launch_floor_lower_ps,
+            host_launch_floor_upper_ps=plan.host_launch_floor_upper_ps,
+            host_empirical_lower_ps=plan.host_empirical_lower_ps,
+            host_empirical_upper_ps=plan.host_empirical_upper_ps,
+            exposed_host_ps=plan.exposed_host_ps,
         )
         locality = plan.locality
         locality_outcome = StepLocalityOutcome(
