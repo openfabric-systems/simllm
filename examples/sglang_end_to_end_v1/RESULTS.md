@@ -76,10 +76,24 @@ construction and are not added to any total.
 | **G6** declared output length | all 20 request-cell rows finished with reason `length` after exactly 12 tokens, and the reducer counted exactly 12 |
 | **G7** expert-parallel byte monotonicity | 20,668,416 bytes at width 4 against 35,696,640 at width 8, ratio 0.5790 |
 | **S1** first prefill routed bytes | 3,756,032 in `[786,432, 5,505,024]` |
-| **S2** serialization floor | first prefill fabric service 171.12 us, above the 15.73 us serialization floor |
+| **S2** serialization floor | first prefill fabric service 171.12 us, above the 15.73 us serialization floor; see the disclosure below |
 | **S3** compute service | 98.93 to 99.26 us, inside `[60, 200]` us |
 | **S4** prefill makespan | 268.9 to 271.8 us, inside `[80, 2000]` us |
 | **S5** decode makespan | 203.96 to 224.11 us, inside `[100, 600]` us |
+
+**Disclosure on S2.** The freeze states an S2 floor of 15.73 us and a ceiling of
+110.10 us, and both bound the **serialization component** of the first prefill
+step, since both are derived as bytes over link rate. The harness compares only
+the floor, and against the artifact **service** rather than against the
+serialization component, with the reason recorded in the code before the run:
+the ideal-network model adds a per-artifact propagation term on top of
+serialization, so a service compared against a serialization ceiling would fail
+for a reason the bound does not describe. The frozen band nevertheless holds on
+the quantity it names. The measured fabric service of that step is 171.121 us,
+the propagation term is measured independently at 2.000 us per artifact over
+720 artifacts (below), and 171.121 - 48 x 2.000 = **75.12 us** of
+serialization, inside `[15.73, 110.10]`. Reported both ways because the weaker
+implemented check is the one that ran.
 
 ## Scored exact relations: 5 of 5
 
