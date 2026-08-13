@@ -176,3 +176,36 @@ The dry run registered with this freeze is the same command with
 `--check-only`, which validates the frozen registry including the comparator
 literals above, imports nothing under study, reads neither path and writes no
 artifact.
+
+## Amendment after a void run
+
+The first execution of this rerun, retained at `routing_lifetime-dev1`, is
+**void**: its `completion_identity_multiset` fatal guard was violated. Under
+the validation discipline a violated fatal guard voids the run rather than
+costing a point, so nothing was closed on it and its evidence is kept. Two
+defects in the section above caused it, both of them defects in this freeze
+rather than properties of the system, and both demonstrable without reading a
+result.
+
+**1. The cross-arm ordering clause contradicts this freeze's own expectation.**
+Fatal guard 2 required the two arms to emit their completion identities "in the
+same order". LIFE-C4 simultaneously registers that 1,305 and 2,553 completion
+timestamps move. A completion stream ordered by time cannot both carry moved
+timestamps and preserve its emission order, so the two registered statements
+cannot both hold, and the ordering clause is the one that is wrong: reordering
+is the observable consequence of the movement this task exists to record, not a
+precondition for it. The corrected guard requires the identity multiset to be
+equal, duplicate free, and of equal length in both arms, and requires each arm
+to be internally deterministic. It says nothing about the cross-arm order.
+
+**2. The registered boundary literals name the wrong surface.** CORE-35's
+`step_completed_at_ps` field is written inside its decision-step branch, so
+154,568,365 ps and 234,886,380 ps are the boundaries of **step 0**, not of the
+last step. LIFE-C3 registered them as the final boundary. The corrected
+registration keeps both literals and attaches them to the step-0 boundary,
+which is the surface CORE-35 actually published. The substantive half of
+LIFE-C3, that the full per-step boundary vector is identical between the two
+arms, is unchanged.
+
+Nothing else is amended. The LIFE-C4 and LIFE-C5 literals, their direction and
+their causal rule stay exactly as registered before the void run.
