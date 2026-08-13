@@ -66,6 +66,7 @@
     "PLAY-13",
     "SGL-1",
     "SGL-2",
+    "SGL-16",
     "TRAF-1",
     "TRAF-2",
     "TRAF-7",
@@ -83,8 +84,7 @@
     "VLLM-15",
     "VLLM-16",
     "VLLM-24",
-    "WORK-3",
-    "SGL-16"
+    "WORK-3"
   ],
   "retired_never_landed": [
     "HTSIM-19"
