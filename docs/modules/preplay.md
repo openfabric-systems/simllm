@@ -91,7 +91,8 @@ The surface other code uses, all exported from `simllm.preplay`:
   aggregate physical pair table. Direct and execution-graph GOAL renderers
   fail closed unless every request, layer, phase and directed pair agrees with
   that routed authority under the selected placement. Joining the observed v2
-  request and KV records is PLAY-8. SGLang replay is PLAY-7.
+  request and KV records is PLAY-8. The SGLang adapter serves joined replay
+  tokens; its live in-process smoke is PLAY-16.
 - **Honesty rule.** A CPU run is one realization, not the deployment's
   exact token stream: CPU and GPU numerics differ, so sampled ids can
   diverge between the oracle and silicon. Greedy or fixed-seed sampling is
@@ -212,7 +213,21 @@ strict v1/v2 evidence are in
 The independent `VllmCpuRunner` and fallback `SglangCpuRunner` are opt-in.
 Missing packages and unsupported worker, model, device, dispatch and KV seams
 are rejected before the canonical v2 writer runs. The Transformers runner and
-v1 fixture remain byte-identical. SGLang replay remains PLAY-7.
+v1 fixture remain byte-identical.
+
+PLAY-7 is complete as a mechanism. `simllm.adapters.sglang.replay` serves each
+request's predefined token IDs at the output index SGLang itself reports,
+verifies the joined trace against its recorded digest, pins scheduler-visible
+completion by requiring `max_new_tokens` to equal the oracle length, and keeps
+the refusal boundaries that apply at this seam: stop strings and regexes, an
+oracle token matching a stop or EOS id before the last position, structured
+output, speculative batches and logprob batches. A mid-prompt chunked-prefill
+row, whose token SGLang discards, keeps the fabricated token and does not move
+the oracle index. With no replay run selected the fabricated-token path is
+unchanged, which a pytest enforces alongside the adapter's
+`reset_configuration()`. No live in-process SGLang scheduler has driven it and
+it has not reached a reported metric, so the live smoke and the
+live-reachability claim are PLAY-16.
 
 The v2 routing projection has a direct strict reader for traffic replay.
 `project_framework_routing` copies request, phase-local token, layer and
@@ -311,12 +326,15 @@ Tags follow the legend in [backends.md](backends.md#open-tasks).
 
 ### Completeness
 
-- PLAY-7 (Completeness; P2; M): consume joined replay runs in the SGLang
-  adapter. Serve each request's predefined token IDs, pin scheduler-visible
-  completion to the oracle length, retain the speculative and structured
-  refusal boundaries that apply there, and prove an identity off mode against
-  the accepted fabricated-token baseline. Add an in-process live smoke before
-  claiming the path is live-reachable.
+- PLAY-16 (Completeness; P2; M): drive the landed SGLang replay token source
+  from a live in-process SGLang scheduler before any live-reachability claim.
+  PLAY-7 landed the mechanism, its refusal boundaries and its exact
+  fabricated-token off path, all against stub batches. The identifying
+  observation is a real `Scheduler` iteration consuming the served tokens, so
+  acceptance requires an in-process smoke that reaches the oracle length under
+  the scheduler's own admission and completion decisions, exact agreement
+  between served and oracle token IDs, and a byte-identical record stream when
+  no replay run is selected.
 - PLAY-8 (Completeness; P1; L): join `simllm-preplay-trace-v2` into the live
   replay path. Bind its observed per-request outputs and expert routing to the
   existing replay identities, retain the framework scheduler as the sole KV
