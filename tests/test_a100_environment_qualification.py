@@ -512,6 +512,33 @@ def test_supported_clock_policy_is_scoped_and_nonempty(monkeypatch):
     assert "--id=3" in calls[0]
 
 
+def test_supported_clock_evidence_requires_stable_before_and_after_policy():
+    runner = _runner_module()
+    before = [
+        {"memory_mhz": 1215, "graphics_mhz": 1410},
+        {"memory_mhz": 1215, "graphics_mhz": 1395},
+    ]
+
+    assert runner._supported_clock_evidence_blockers(
+        before, None, list(reversed(before)), None
+    ) == []
+    assert runner._supported_clock_evidence_blockers(
+        before,
+        "query denied",
+        before,
+        "query unavailable",
+    ) == [
+        "before profiling: query denied",
+        "after profiling: query unavailable",
+    ]
+    assert runner._supported_clock_evidence_blockers(
+        before,
+        None,
+        [{"memory_mhz": 1215, "graphics_mhz": 1410}],
+        None,
+    ) == ["supported clock policy changed during profiler probes"]
+
+
 def test_tool_versions_require_frozen_cuda_and_nsight_identity():
     runner = _runner_module()
     versions = {

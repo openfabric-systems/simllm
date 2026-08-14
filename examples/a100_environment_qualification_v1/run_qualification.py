@@ -495,6 +495,30 @@ def _supported_clock_policy(
     return clocks, None
 
 
+def _supported_clock_evidence_blockers(
+    before: Sequence[Mapping[str, int]],
+    before_blocker: str | None,
+    after: Sequence[Mapping[str, int]],
+    after_blocker: str | None,
+) -> list[str]:
+    blockers = []
+    if before_blocker is not None:
+        blockers.append(f"before profiling: {before_blocker}")
+    if after_blocker is not None:
+        blockers.append(f"after profiling: {after_blocker}")
+    if blockers:
+        return blockers
+    before_pairs = {
+        (int(row["memory_mhz"]), int(row["graphics_mhz"])) for row in before
+    }
+    after_pairs = {
+        (int(row["memory_mhz"]), int(row["graphics_mhz"])) for row in after
+    }
+    if before_pairs != after_pairs:
+        blockers.append("supported clock policy changed during profiler probes")
+    return blockers
+
+
 def _foreign_processes(
     nvidia_smi: Path, gpu_selector: str, gpu_uuid: str
 ) -> list[dict[str, str]]:
@@ -852,17 +876,17 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
 
     before = _gpu_snapshot(nvidia_smi, job_visible_gpu_selector)
     gpu_uuid = before["uuid"]
-    mig = _mig_state(nvidia_smi, gpu_uuid)
-    supported_clocks, supported_clock_blocker = _supported_clock_policy(
+    mig_before = _mig_state(nvidia_smi, gpu_uuid)
+    supported_clocks_before, supported_clock_blocker_before = _supported_clock_policy(
         nvidia_smi, gpu_uuid
     )
     processes_before = _foreign_processes(nvidia_smi, gpu_uuid, gpu_uuid)
     context.update(
         {
             "gpu_before": before,
-            "mig": mig,
-            "supported_clocks": supported_clocks,
-            "supported_clock_blocker": supported_clock_blocker,
+            "mig_before": mig_before,
+            "supported_clocks_before": supported_clocks_before,
+            "supported_clock_blocker_before": supported_clock_blocker_before,
             "processes_before": processes_before,
         }
     )
@@ -1005,10 +1029,17 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         counter_blocker = "Nsight Compute returned no numeric target-kernel metric"
 
     after = _gpu_snapshot(nvidia_smi, gpu_uuid)
+    mig_after = _mig_state(nvidia_smi, gpu_uuid)
+    supported_clocks_after, supported_clock_blocker_after = _supported_clock_policy(
+        nvidia_smi, gpu_uuid
+    )
     processes_after = _foreign_processes(nvidia_smi, gpu_uuid, gpu_uuid)
     context.update(
         {
             "gpu_after": after,
+            "mig_after": mig_after,
+            "supported_clocks_after": supported_clocks_after,
+            "supported_clock_blocker_after": supported_clock_blocker_after,
             "processes_after": processes_after,
             "counter_blocker": counter_blocker,
         }
@@ -1022,9 +1053,13 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     capability_blockers = [
         *_telemetry_blockers(before),
         *_telemetry_blockers(after),
+        *_supported_clock_evidence_blockers(
+            supported_clocks_before,
+            supported_clock_blocker_before,
+            supported_clocks_after,
+            supported_clock_blocker_after,
+        ),
     ]
-    if supported_clock_blocker is not None:
-        capability_blockers.append(supported_clock_blocker)
     if counter_blocker is not None:
         capability_blockers.append(counter_blocker)
     context.update(
@@ -1051,8 +1086,10 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         "job_visible_gpu_selector": job_visible_gpu_selector,
         "gpu_before": before,
         "gpu_after": after,
-        "mig": mig,
-        "supported_clocks": supported_clocks,
+        "mig_before": mig_before,
+        "mig_after": mig_after,
+        "supported_clocks_before": supported_clocks_before,
+        "supported_clocks_after": supported_clocks_after,
         "processes_before": processes_before,
         "processes_after": processes_after,
         "child_environment": context["child_environment"],
