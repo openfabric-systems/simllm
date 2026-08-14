@@ -19,10 +19,24 @@ the flow-level work the GOAL emitter renders.
   chunked send/recv chains.
 - `step_comm` (M4): one `StepRecord` plus a per-rank `ModelDims` plus a
   tensor-parallel group of GOAL ranks maps to the step's TP collective
-  work. `step_tp_allreduces` lists two ring allreduces per transformer
-  layer (attention output, MLP output), each of payload
+  work. `step_tp_allreduces` lists, per transformer layer, the ring allreduces
+  `layer_tp_allreduce_sites` reports for the model, each of payload
   `total_new_tokens * hidden_size * dtype_bytes`; a TP world of size 1 or
   a zero-token drain record produces no ops.
+- `layer_tp_allreduce_sites` is that site rule and reads `ModelDims` fields
+  only. A dense layer reduces at both row-parallel outputs, the attention
+  output projection and the MLP down projection. A routed layer whose experts
+  are expert-parallel (`num_experts > 0` and `resident_experts < num_experts`)
+  reduces only after attention: with `moe_tp` equal to 1 each expert's down
+  projection is computed whole on its owner rank, the combine all-to-all
+  returns finished expert vectors, and the token's home rank forms the layer
+  output by a local weighted sum, so no partial sum spans the TP group. A
+  routed layer with every expert resident keeps both sites, because its
+  experts are tensor-sharded over the TP group instead and that reduction is
+  real. The rule never reads a TP or EP group width, so a step's site
+  inventory cannot change with how the groups are declared. TRAF-34 owns
+  mixed dense and routed layer schedules and TRAF-35 owns `moe_tp` above 1;
+  neither is expressible in `ModelDims` and neither is guessed.
 - `step_moe_alltoalls`: the same record plus MoE
   `ModelDims` plus an expert-parallel group of W GOAL ranks maps to the
   step's MoE traffic: per MoE layer, a dispatch pairwise all-to-allv then
@@ -556,6 +570,30 @@ larger case would be rejected at planning time.
 
 ### Completeness
 
+- TRAF-34 (Completeness; P2; M): render mixed dense and routed layer
+  schedules. `ModelDims` carries one whole-model mixture geometry, so
+  `num_experts > 0` means every layer is routed and both the allreduce-site
+  rule and the MoE all-to-all inventory apply uniformly over
+  `range(num_layers)`. A model with a dense prefix or a periodic dense layer
+  (`first_k_dense_replace`, `num_dense_layers`) cannot be expressed, and the
+  SGLang reader currently refuses those sentinel fields outright rather than
+  pricing them as routed; SGL-18 owns the reader half. Acceptance needs a
+  per-layer routed schedule carried on or beside the dims, a rendered
+  inventory giving each dense layer two allreduce sites and no all-to-all,
+  and byte-identical whole-model dense and whole-model routed renders as the
+  explicit off path.
+- TRAF-35 (Completeness; P2; M): represent an expert-parallel group that
+  still tensor-shards the expert weights, i.e. `moe_tp` above 1. `ModelDims`
+  has no field for that width, so the site rule reads expert parallelism as
+  `resident_experts < num_experts` and treats it as `moe_tp` equal to 1,
+  which is the only shape either adapter produces today: the vLLM geometry
+  sets `moe_tp_size` to 1 whenever expert parallelism is in use, and the
+  SGLang reader refuses anything but TP = EP = MoE-DP = 1. A `moe_tp` above 1
+  needs a third reduction site, an allreduce of the expert output over the
+  `moe_tp` subgroup sitting between dispatch and combine, which no current
+  path renders. Acceptance requires the subgroup membership on the dims or
+  the group inputs, that rendered subgroup allreduce, and byte-identical
+  `moe_tp` equal to 1 and dense renders as the off path.
 - TRAF-26 (Completeness; P2; L): extend the isolated one-engine routed-step
   projection to a full DP times EP group population. Each peer engine must
   carry an explicit captured workload or a reproducible independently sampled

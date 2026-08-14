@@ -83,6 +83,7 @@ from simllm.traffic.routed_moe import (
     validate_routed_moe_supply,
 )
 from simllm.traffic.step_comm import (
+    EXPERT_PARALLEL_TP_ALLREDUCE_SITES,
     MOE_A2A_PHASES,
     OBSERVED_ABSENT_BYTE_EVIDENCE,
     OBSERVED_MIXED_BYTE_EVIDENCE,
@@ -95,6 +96,7 @@ from simllm.traffic.step_comm import (
     RoutedMoeMessage,
     TpAllReduce,
     compare_request_moe_fidelity,
+    layer_tp_allreduce_sites,
     lower_step_observations,
     observed_routed_byte_evidence,
     plan_execution_graph_locality,
@@ -119,6 +121,7 @@ __all__ = [
     "CONSERVATION_RULES",
     "DEFAULT_COLLECTIVE_PLAN_BASE_TAG",
     "DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND",
+    "EXPERT_PARALLEL_TP_ALLREDUCE_SITES",
     "LEGACY_COLLECTIVE_LATENCY_PROFILE",
     "MOE_A2A_PHASES",
     "OBSERVED_ABSENT_BYTE_EVIDENCE",
@@ -156,6 +159,7 @@ __all__ = [
     "compare_request_moe_fidelity",
     "critical_collective_endpoint_bytes",
     "gather",
+    "layer_tp_allreduce_sites",
     "lower_step_observations",
     "observed_routed_byte_evidence",
     "ordered_pairwise_messages",

@@ -4,9 +4,12 @@ Maps one :class:`~simllm.core.StepRecord` plus a per-rank
 :class:`~simllm.compute.ModelDims` plus GOAL rank groups to the collective
 traffic of that engine step.
 
-Tensor parallel (:func:`step_tp_allreduces`): per transformer layer, two
-ring allreduces (the attention output projection and the MLP output
-projection), each moving
+Tensor parallel (:func:`step_tp_allreduces`): per transformer layer, the ring
+allreduces :func:`layer_tp_allreduce_sites` reports for this model. A dense
+layer has two (the attention output projection and the MLP output
+projection); a routed layer whose experts are expert-parallel has only the
+attention one, because its combine all-to-all already returns finished expert
+vectors and no partial sum spans the TP group. Each allreduce moves
 
     payload_bytes = record.total_new_tokens * dims.hidden_size * dims.dtype_bytes
 
@@ -101,8 +104,46 @@ from simllm.traffic.routed_moe import RoutedMoeSupply
 #: the two allreduce sites of one transformer layer, in execution order
 TP_ALLREDUCE_SITES = ("attention", "mlp")
 
+#: the sites a layer executes when its routed experts are expert-parallel
+EXPERT_PARALLEL_TP_ALLREDUCE_SITES = ("attention",)
+
 #: the two all-to-allv phases of one MoE layer, in execution order
 MOE_A2A_PHASES = ("dispatch", "combine")
+
+
+def layer_tp_allreduce_sites(dims: ModelDims) -> tuple[str, ...]:
+    """The tensor-parallel allreduce sites one layer of ``dims`` executes.
+
+    A dense layer reduces twice, after the attention output projection and
+    after the MLP down projection, because both are row-parallel and every
+    rank holds a partial sum. A routed layer whose experts are expert-parallel
+    reduces once. Under expert parallelism the expert weights are not
+    tensor-sharded (``moe_tp`` is 1), so each expert's down projection is
+    computed whole on its owner rank, the combine all-to-all returns finished
+    expert vectors, and the token's home rank forms the layer output by a
+    local weighted sum. No partial sum spans the tensor-parallel group, so
+    there is no mlp-site allreduce to render.
+
+    A routed layer whose experts are all resident keeps both sites: with no
+    expert parallelism the experts are tensor-sharded over the whole
+    tensor-parallel group instead, and the reduction after the expert down
+    projection is real. That configuration also renders no all-to-all, so
+    dropping the site would lose the layer's only MLP collective.
+
+    ``ModelDims`` carries one whole-model mixture geometry. ``num_experts > 0``
+    means every layer's MLP is routed, and ``resident_experts < num_experts``
+    means this rank holds a strict subset, which is what expert parallelism
+    is. Those two fields are the whole input: this rule never reads a
+    tensor-parallel or expert-parallel group width. Mixed dense and routed
+    layer schedules are not expressible (TRAF-34), and an expert-parallel
+    group that leaves ``moe_tp`` above 1 is not expressible either (TRAF-35).
+    """
+
+    if not isinstance(dims, ModelDims):
+        raise TypeError("dims must be ModelDims")
+    if dims.num_experts > 0 and dims.resident_experts < dims.num_experts:
+        return EXPERT_PARALLEL_TP_ALLREDUCE_SITES
+    return TP_ALLREDUCE_SITES
 
 
 def _planned_collective_work(
@@ -617,6 +658,10 @@ def step_tp_allreduces(
 ) -> list[TpAllReduce]:
     """The step's TP collectives, empty when the step produces no traffic.
 
+    Each layer contributes the sites :func:`layer_tp_allreduce_sites` reports
+    for this model, in execution order, so a routed layer whose experts are
+    expert-parallel contributes the attention site only.
+
     Empty means either a TP world of size 1 (nothing to reduce across) or a
     record with zero new tokens (a drain record carrying only completions).
     """
@@ -626,10 +671,11 @@ def step_tp_allreduces(
     payload = record.total_new_tokens * dims.hidden_size * dims.dtype_bytes
     if payload <= 0:
         return []
+    sites = layer_tp_allreduce_sites(dims)
     return [
         TpAllReduce(layer=layer, site=site, ranks=ranks, payload_bytes=payload)
         for layer in range(dims.num_layers)
-        for site in TP_ALLREDUCE_SITES
+        for site in sites
     ]
 
 
@@ -1404,6 +1450,9 @@ def render_step_goal(
                 participants.append(rank)
     tag_stride = 2 * (len(ranks) - 1) if tp_ops else 0
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
+    tp_by_key = {
+        (op.layer, op.site): (index, op) for index, op in enumerate(tp_ops)
+    }
     moe_by_key = {(op.layer, op.phase): op for op in moe_ops}
     moe_tag_by_key = {
         (op.layer, op.phase): moe_base_tag + index
@@ -1431,9 +1480,11 @@ def render_step_goal(
             calc_done[rank] = calc
         previous = {**previous, **calc_done}
         if tp_ops:
-            for site_index in range(len(TP_ALLREDUCE_SITES)):
-                op_index = layer * len(TP_ALLREDUCE_SITES) + site_index
-                op = tp_ops[op_index]
+            for site in TP_ALLREDUCE_SITES:
+                entry = tp_by_key.get((layer, site))
+                if entry is None:
+                    continue
+                op_index, op = entry
                 done = ring_allreduce(
                     trace,
                     ranks=list(op.ranks),
@@ -1536,6 +1587,10 @@ def render_sequenced_step_goal(
                 participants.append(rank)
     tag_stride = 2 * (len(ranks) - 1) if tp_ops else 0
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
+    tp_by_key = {
+        (operation.layer, operation.site): (index, operation)
+        for index, operation in enumerate(tp_ops)
+    }
     moe_by_key = {
         (sequence.layer, sequence.phase): sequence
         for sequence in moe_sequences
@@ -1563,9 +1618,11 @@ def render_sequenced_step_goal(
             calc_done[rank] = calc
         previous = {**previous, **calc_done}
         if tp_ops:
-            for site_index in range(len(TP_ALLREDUCE_SITES)):
-                op_index = layer * len(TP_ALLREDUCE_SITES) + site_index
-                operation = tp_ops[op_index]
+            for site in TP_ALLREDUCE_SITES:
+                entry = tp_by_key.get((layer, site))
+                if entry is None:
+                    continue
+                op_index, operation = entry
                 done = ring_allreduce(
                     trace,
                     ranks=list(operation.ranks),
@@ -1735,7 +1792,10 @@ def step_communication_phases(
         ep_ranks if ep_ranks is not None else (),
         routed_supply=routed_supply,
     )
-    tp_by_key = {(operation.layer, operation.site): operation for operation in tp_ops}
+    tp_by_key = {
+        (operation.layer, operation.site): (index, operation)
+        for index, operation in enumerate(tp_ops)
+    }
     moe_by_key = {(operation.layer, operation.phase): operation for operation in moe_ops}
     tp_ranks_tuple = tuple(tp_ranks)
     tag_stride = 2 * (len(tp_ranks_tuple) - 1) if tp_ops else 0
@@ -1747,11 +1807,11 @@ def step_communication_phases(
 
     phases = []
     for layer in range(dims.num_layers):
-        for site_index, site in enumerate(TP_ALLREDUCE_SITES):
-            operation = tp_by_key.get((layer, site))
-            if operation is None:
+        for site in TP_ALLREDUCE_SITES:
+            entry = tp_by_key.get((layer, site))
+            if entry is None:
                 continue
-            operation_index = layer * len(TP_ALLREDUCE_SITES) + site_index
+            operation_index, operation = entry
             phases.extend(
                 _ring_communication_phases(
                     operation,
