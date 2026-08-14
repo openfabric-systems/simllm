@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import importlib.util
 import io
+import os
 import subprocess
 from pathlib import Path
 
@@ -154,7 +155,11 @@ def test_child_environment_is_confined_to_result_root(tmp_path):
     assert record["TMP"] == record["TMPDIR"]
     assert record["TEMP"] == record["TMPDIR"]
     assert all((out / relative).is_dir() for relative in record.values())
-    assert all((out / relative).stat().st_mode & 0o777 == 0o700 for relative in record.values())
+    if os.name == "posix":
+        assert all(
+            (out / relative).stat().st_mode & 0o777 == 0o700
+            for relative in record.values()
+        )
 
 
 def test_run_propagates_configured_child_environment(monkeypatch):
@@ -235,6 +240,13 @@ def test_nsys_output_paths_require_exactly_one_expected_report(tmp_path):
     with pytest.raises(RuntimeError, match="exactly one final report"):
         runner._validate_nsys_output_paths(
             f"Generating '{temporary}'\n", out, expected
+        )
+
+    with pytest.raises(RuntimeError, match="nonabsolute final report"):
+        runner._validate_nsys_output_paths(
+            f"Generating '{temporary}'\nGenerated:\n\trelative.nsys-rep\n",
+            out,
+            expected,
         )
 
 

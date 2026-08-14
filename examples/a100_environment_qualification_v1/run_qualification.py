@@ -723,7 +723,7 @@ def _validate_nsys_output_paths(
         r"(?m)^Generating '([^'\r\n]+\.qdstrm)'[ \t]*$", output
     )
     report_paths = re.findall(
-        r"(?m)^Generated:[ \t]*\r?\n[ \t]+(/[^\r\n]+\.nsys-rep)[ \t]*$",
+        r"(?m)^Generated:[ \t]*\r?\n[ \t]+([^\r\n]+?\.nsys-rep)[ \t]*$",
         output,
     )
     if len(temporary_paths) != 1:
@@ -751,6 +751,10 @@ def _validate_nsys_output_paths(
             f"root: {temporary}"
         ) from error
     report = Path(report_paths[0])
+    if not report.is_absolute():
+        raise RuntimeError(
+            f"Nsight Systems reported a nonabsolute final report path: {report}"
+        )
     if report.resolve() != expected_report.resolve():
         raise RuntimeError(
             f"Nsight Systems reported an unexpected final report path: {report}"
