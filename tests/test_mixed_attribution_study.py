@@ -49,6 +49,14 @@ def test_frozen_constants_stay_self_consistent():
         "mixed-450",
         "mixed-225",
     }
+    assert study.GUARD_IDS == ("G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8")
+    assert study.ORACLE_IDS == ("E1",)
+    assert study.BEHAVIORAL_IDS == ("F1", "F2", "F3", "F4")
+    #: the run refuses to publish a summary whose reported rows are not
+    #: exactly these identifiers, so a dropped relation cannot pass silently
+    assert (
+        len(study.GUARD_IDS) + len(study.ORACLE_IDS) + len(study.BEHAVIORAL_IDS) == 13
+    )
     study._check_frozen_registry()
 
 

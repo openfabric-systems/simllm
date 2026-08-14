@@ -83,7 +83,6 @@ CELLS: dict[str, tuple[str, str, int]] = {
 FATAL_GUARD = "fatal-guard"
 EXACT_ORACLE = "exact-oracle"
 GENUINE_RISK = "behavioral-relation"
-RAW_OBSERVATION = "raw-observation"
 
 GUARD_IDS = ("G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8")
 ORACLE_IDS = ("E1",)
@@ -1116,6 +1115,13 @@ def run(args: argparse.Namespace) -> int:
     guards = _guard_rows(cells)
     oracles = _oracle_rows(cells)
     behavioral = _behavioral_rows(cells)
+    reported = (
+        tuple(row["id"] for row in guards),
+        tuple(row["id"] for row in oracles),
+        tuple(row["id"] for row in behavioral),
+    )
+    if reported != (GUARD_IDS, ORACLE_IDS, BEHAVIORAL_IDS):
+        raise AssertionError("the reported evidence set is not the frozen one")
     void = [row["id"] for row in guards if not row["held"]]
     summary = {
         "study": "mixed_attribution_v1",
