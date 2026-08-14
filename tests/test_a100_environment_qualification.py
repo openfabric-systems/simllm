@@ -133,6 +133,70 @@ def test_job_visible_gpu_selector_refuses_unparseable_device(visible):
         )
 
 
+def test_mig_state_uses_portable_full_query(monkeypatch):
+    runner = _runner_module()
+    calls = []
+
+    def fake_run(command, **_kwargs):
+        normalized = tuple(str(item) for item in command)
+        calls.append(normalized)
+        return subprocess.CompletedProcess(
+            normalized,
+            0,
+            stdout=(
+                "GPU 00000000:00:00.0\n"
+                "    Unrelated Mode\n"
+                "        Current                  : Enabled\n"
+                "    MIG Mode\n"
+                "        Current                  : Disabled\n"
+                "        Pending                  : Disabled\n"
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr(runner, "_run", fake_run)
+
+    assert runner._mig_state(Path("nvidia-smi"), "GPU-acde") == {
+        "current": "Disabled",
+        "pending": "Disabled",
+    }
+    assert calls == [("nvidia-smi", "--id=GPU-acde", "-q")]
+
+
+def test_mig_state_refuses_missing_mode_section(monkeypatch):
+    runner = _runner_module()
+
+    monkeypatch.setattr(
+        runner,
+        "_run",
+        lambda command, **_kwargs: subprocess.CompletedProcess(
+            command, 0, stdout="GPU query without MIG state\n", stderr=""
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="no MIG mode section"):
+        runner._mig_state(Path("nvidia-smi"), "GPU-acde")
+
+
+@pytest.mark.parametrize("current", ["Enabled", "N/A"])
+def test_mig_state_requires_disabled_current_mode(monkeypatch, current):
+    runner = _runner_module()
+
+    monkeypatch.setattr(
+        runner,
+        "_run",
+        lambda command, **_kwargs: subprocess.CompletedProcess(
+            command,
+            0,
+            stdout=f"    MIG Mode\n        Current : {current}\n",
+            stderr="",
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="MIG is not disabled"):
+        runner._mig_state(Path("nvidia-smi"), "GPU-acde")
+
+
 def test_scheduler_record_keeps_requested_and_allocated_tres():
     runner = _runner_module()
     output = (

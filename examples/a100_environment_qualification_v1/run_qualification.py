@@ -393,16 +393,18 @@ def _gpu_snapshot(nvidia_smi: Path, gpu_selector: str) -> dict[str, str]:
 
 
 def _mig_state(nvidia_smi: Path, gpu_selector: str) -> dict[str, str]:
-    completed = _run(
-        (nvidia_smi, f"--id={gpu_selector}", "-q", "-d", "MIG"), timeout=60
+    completed = _run((nvidia_smi, f"--id={gpu_selector}", "-q"), timeout=60)
+    mig_mode = re.search(
+        r"(?m)^[ \t]*MIG Mode[ \t]*\r?\n"
+        r"[ \t]*Current[ \t]*:[ \t]*([^\r\n]+)"
+        r"(?:\r?\n[ \t]*Pending[ \t]*:[ \t]*([^\r\n]+))?",
+        completed.stdout,
     )
-    current = re.search(r"Current\s*:\s*([^\n]+)", completed.stdout)
-    pending = re.search(r"Pending\s*:\s*([^\n]+)", completed.stdout)
-    if current is None:
-        raise RuntimeError("nvidia-smi MIG query has no current state")
+    if mig_mode is None:
+        raise RuntimeError("nvidia-smi full query has no MIG mode section")
     state = {
-        "current": current.group(1).strip(),
-        "pending": pending.group(1).strip() if pending else "unknown",
+        "current": mig_mode.group(1).strip(),
+        "pending": mig_mode.group(2).strip() if mig_mode.group(2) else "unknown",
     }
     if state["current"].lower() != "disabled":
         raise RuntimeError(f"MIG is not disabled: {state}")
