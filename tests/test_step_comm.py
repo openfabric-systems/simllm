@@ -89,31 +89,51 @@ def test_step_tp_allreduces_empty_cases():
 
 # ---- which allreduce sites a layer has (TRAF-33) ----
 
-def test_layer_tp_allreduce_sites_keys_on_the_dims_alone():
-    # dense and expert-tensor-sharded layers both reduce twice
+def test_layer_tp_allreduce_sites_follow_the_declared_all_to_all():
+    """A layer reduces its MLP output once, in exactly one mechanism."""
+    # dense: no combine exists, so both row-parallel sites reduce
     assert layer_tp_allreduce_sites(TINY_DIMS) == TP_ALLREDUCE_SITES
-    assert layer_tp_allreduce_sites(TINY_SHARDED_MOE_DIMS) == TP_ALLREDUCE_SITES
-    # an expert-parallel routed layer reduces only after attention
     assert (
-        layer_tp_allreduce_sites(TINY_MOE_DIMS)
+        layer_tp_allreduce_sites(TINY_DIMS, ep_ranks=[0, 1, 2, 3])
+        == TP_ALLREDUCE_SITES
+    )
+    # routed with a declared all-to-all group: the combine returns the output
+    assert (
+        layer_tp_allreduce_sites(TINY_MOE_DIMS, ep_ranks=[0, 1])
         == EXPERT_PARALLEL_TP_ALLREDUCE_SITES
         == ("attention",)
     )
-    # the rule reads resident experts, not a declared expert count
-    assert layer_tp_allreduce_sites(
-        replace(TINY_MOE_DIMS, local_num_experts=8)
-    ) == TP_ALLREDUCE_SITES
+    # routed with no declared group is naive expert parallelism: vLLM
+    # 0.26.0 config.py:1052-1055 needs dp, pcp or sequence parallelism for
+    # all-to-all kernels, and runner/moe_runner.py:436-465 then all-reduces
+    # the unreduced fused output over the TP group
+    assert layer_tp_allreduce_sites(TINY_MOE_DIMS) == TP_ALLREDUCE_SITES
+    # a one-rank group renders no combine either, so both sites survive
+    assert layer_tp_allreduce_sites(TINY_MOE_DIMS, ep_ranks=[0]) == TP_ALLREDUCE_SITES
+    # expert-tensor-sharded dims behave the same way
+    assert layer_tp_allreduce_sites(TINY_SHARDED_MOE_DIMS) == TP_ALLREDUCE_SITES
 
 
-def test_step_tp_allreduces_suppression_ignores_group_widths():
-    """The emitted site set never depends on a TP or EP group."""
+def test_step_tp_allreduces_naive_expert_parallelism_keeps_both_sites():
+    """Undeclared expert parallelism renders 2 allreduces and no all-to-all."""
     record = decode_record()
-    for ranks in ([0, 1], [0, 1, 2, 3], [8, 9, 10, 11], list(range(8))):
-        sharded = step_tp_allreduces(record, TINY_SHARDED_MOE_DIMS, ranks)
-        routed = step_tp_allreduces(record, TINY_MOE_DIMS, ranks)
-        assert [op.site for op in sharded] == ["attention", "mlp"] * 2
-        assert [op.site for op in routed] == ["attention"] * 2
-        assert {op.payload_bytes for op in sharded + routed} == {24}
+    operations = step_tp_allreduces(record, TINY_MOE_DIMS, [0, 1, 2, 3])
+    assert [op.site for op in operations] == ["attention", "mlp"] * 2
+    assert step_moe_alltoalls(record, TINY_MOE_DIMS, ()) == []
+
+
+def test_step_tp_allreduces_sites_do_not_depend_on_group_widths():
+    """The site tuple is fixed by the declaration, not by any width."""
+    record = decode_record()
+    for tp_ranks in ([0, 1], [0, 1, 2, 3], [8, 9, 10, 11], list(range(8))):
+        undeclared = step_tp_allreduces(record, TINY_MOE_DIMS, tp_ranks)
+        assert [op.site for op in undeclared] == ["attention", "mlp"] * 2
+        for ep_ranks in ([0, 1], [0, 1, 2, 3], [16, 17], list(range(8))):
+            declared = step_tp_allreduces(
+                record, TINY_MOE_DIMS, tp_ranks, ep_ranks=ep_ranks
+            )
+            assert [op.site for op in declared] == ["attention"] * 2
+            assert {op.payload_bytes for op in declared + undeclared} == {24}
 
 
 def test_expert_parallel_moe_renders_one_allreduce_and_two_a2avs_per_layer():
@@ -124,7 +144,7 @@ def test_expert_parallel_moe_renders_one_allreduce_and_two_a2avs_per_layer():
     tp_ranks = tuple(range(8))
     ep_ranks = tuple(range(8))
 
-    tp_ops = step_tp_allreduces(record, dims, tp_ranks)
+    tp_ops = step_tp_allreduces(record, dims, tp_ranks, ep_ranks=ep_ranks)
     moe_ops = step_moe_alltoalls(record, dims, ep_ranks)
     assert len(tp_ops) == 24
     assert {op.site for op in tp_ops} == {"attention"}

@@ -330,7 +330,9 @@ class SerialStepLowerer(ExecutionLowerer):
         timing: SerialStepTiming,
     ) -> ExecutionGraph:
         cfg = self.config
-        tp_ops = step_tp_allreduces(record, cfg.dims, cfg.tp_ranks)
+        tp_ops = step_tp_allreduces(
+            record, cfg.dims, cfg.tp_ranks, ep_ranks=cfg.ep_ranks
+        )
         moe_ops = step_moe_alltoalls(
             record,
             cfg.dims,

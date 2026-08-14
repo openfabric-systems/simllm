@@ -20,23 +20,40 @@ the flow-level work the GOAL emitter renders.
 - `step_comm` (M4): one `StepRecord` plus a per-rank `ModelDims` plus a
   tensor-parallel group of GOAL ranks maps to the step's TP collective
   work. `step_tp_allreduces` lists, per transformer layer, the ring allreduces
-  `layer_tp_allreduce_sites` reports for the model, each of payload
+  `layer_tp_allreduce_sites` reports for the model and its expert-parallel
+  declaration, each of payload
   `total_new_tokens * hidden_size * dtype_bytes`; a TP world of size 1 or
   a zero-token drain record produces no ops.
-- `layer_tp_allreduce_sites` is that site rule and reads `ModelDims` fields
-  only. A dense layer reduces at both row-parallel outputs, the attention
-  output projection and the MLP down projection. A routed layer whose experts
-  are expert-parallel (`num_experts > 0` and `resident_experts < num_experts`)
-  reduces only after attention: with `moe_tp` equal to 1 each expert's down
-  projection is computed whole on its owner rank, the combine all-to-all
-  returns finished expert vectors, and the token's home rank forms the layer
-  output by a local weighted sum, so no partial sum spans the TP group. A
-  routed layer with every expert resident keeps both sites, because its
-  experts are tensor-sharded over the TP group instead and that reduction is
-  real. The rule never reads a TP or EP group width, so a step's site
-  inventory cannot change with how the groups are declared. TRAF-34 owns
-  mixed dense and routed layer schedules and TRAF-35 owns `moe_tp` above 1;
-  neither is expressible in `ModelDims` and neither is guessed.
+- `layer_tp_allreduce_sites` is that site rule. Every layer reduces its MLP
+  output exactly once and the rule names which mechanism does it. A dense
+  layer reduces at both row-parallel outputs, the attention output projection
+  and the MLP down projection. A routed layer whose output arrives through a
+  combine all-to-all reduces only after attention, because that combine
+  returns finished expert vectors and the token's home rank forms the layer
+  output by a local weighted sum, so no partial sum spans the TP group. The
+  condition is exactly the condition under which `step_moe_alltoalls` renders
+  the combine, i.e. routed dims plus a declared expert-parallel group of at
+  least two ranks, so the two inventories agree by construction and the rule
+  reads no width beyond that declaration.
+- Declaring the expert-parallel group to a renderer therefore asserts
+  all-to-all-kernel expert parallelism, and that is a real distinction rather
+  than a naming choice. In the pinned vLLM 0.26.0,
+  `model_executor/layers/fused_moe/config.py:1052-1055` makes
+  `use_all2all_kernels` require expert parallelism AND one of `dp_size > 1`,
+  `pcp_size > 1` or sequence parallelism, so a `tp=8, ep=8, dp=1` deployment
+  runs naive expert parallelism with no all-to-all at all, and
+  `model_executor/layers/fused_moe/runner/moe_runner.py:436-465` then
+  all-reduces the fused output over the TP group because the combine never
+  reduced it. That shape is rendered by not declaring the group: two allreduce
+  sites and no all-to-all, which is what the framework executes. TRAF-40 owns
+  turning it into a first-class declared mode instead of the absence of one.
+  Shared experts are the documented exception, all-reduced over the TP group
+  even on the all-to-all path
+  (`model_executor/layers/fused_moe/runner/moe_runner.py:416-433`); both
+  frontend readers refuse shared-expert geometries rather than dropping that
+  reduction, and VLLM-25 and SGL-18 own supporting them. TRAF-34 owns mixed
+  dense and routed layer schedules and TRAF-35 owns `moe_tp` above 1; neither
+  is expressible in `ModelDims` and neither is guessed.
 - `step_moe_alltoalls`: the same record plus MoE
   `ModelDims` plus an expert-parallel group of W GOAL ranks maps to the
   step's MoE traffic: per MoE layer, a dispatch pairwise all-to-allv then
@@ -605,16 +622,44 @@ expert-parallel group with a tensor-parallel world of one.
   explicit off path.
 - TRAF-35 (Completeness; P2; M): represent an expert-parallel group that
   still tensor-shards the expert weights, i.e. `moe_tp` above 1. `ModelDims`
-  has no field for that width, so the site rule reads expert parallelism as
-  `resident_experts < num_experts` and treats it as `moe_tp` equal to 1,
-  which is the only shape either adapter produces today: the vLLM geometry
-  sets `moe_tp_size` to 1 whenever expert parallelism is in use, and the
-  SGLang reader refuses anything but TP = EP = MoE-DP = 1. A `moe_tp` above 1
-  needs a third reduction site, an allreduce of the expert output over the
-  `moe_tp` subgroup sitting between dispatch and combine, which no current
-  path renders. Acceptance requires the subgroup membership on the dims or
-  the group inputs, that rendered subgroup allreduce, and byte-identical
-  `moe_tp` equal to 1 and dense renders as the off path.
+  has no field for that width, so a declared expert-parallel group is taken to
+  mean `moe_tp` equal to 1, which is the only shape either adapter produces
+  today: the vLLM geometry sets `moe_tp_size` to 1 whenever expert
+  parallelism is in use, and the SGLang reader refuses anything but
+  TP = EP = MoE-DP = 1. A `moe_tp` above 1 needs a third reduction site, an
+  allreduce of the expert output over the `moe_tp` subgroup sitting between
+  dispatch and combine, which no current path renders. Acceptance requires the
+  subgroup membership on the dims or the group inputs, that rendered subgroup
+  allreduce, and byte-identical `moe_tp` equal to 1 and dense renders as the
+  off path.
+- TRAF-40 (Completeness; P1; M): make naive expert parallelism a declared
+  mode rather than the absence of one. In the pinned vLLM 0.26.0,
+  `model_executor/layers/fused_moe/config.py:1052-1055` enables all-to-all
+  kernels only when expert parallelism is combined with `dp_size > 1`,
+  `pcp_size > 1` or sequence parallelism, and
+  `model_executor/layers/fused_moe/runner/moe_runner.py:436-465` all-reduces
+  the fused output over the tensor-parallel group whenever the combine did not
+  reduce it, so a `tp=8, ep=8, dp=1` deployment executes two allreduces and no
+  all-to-all per routed layer. Today that shape is rendered by omitting the
+  expert-parallel group, which is correct in bytes and collectives but leaves
+  the mode implicit and leaves expert ownership unrepresented, so a naive-EP
+  run cannot also carry a resident-expert geometry to the renderers. Neither
+  `ModelDims` nor the group inputs carry `dp_size`, so nothing can currently
+  detect a caller that declares the group for a `dp=1` deployment. Acceptance
+  needs an explicit all-to-all-mode indicator on the render inputs, a refusal
+  when a declared group contradicts it, and byte-identical renders for both
+  modes against today's declared and omitted-group paths.
+- TRAF-41 (Completeness; P1; M): requalify the two published surfaces that
+  the TRAF-33 inventory correction made stale. The Granite live cells of
+  the collective plan default study declare one 8-rank group as both the
+  tensor-parallel and the expert-parallel group, so their 709,803,840 ps TTFT,
+  132,794,880 ps TPOT and transport rows were measured with 48 rather than 24
+  allreduces per step. The composed step budget study publishes a
+  `48 * 30,128,029 = 1,446,145,392` ps collective-floor addition and a 74.73
+  to 75.45 percent share for the mission `a-ep8` dims, which are
+  expert-parallel, so the corrected inventory halves the count and the band.
+  Acceptance reruns both studies under the corrected rule, restates the bands,
+  and keeps the dense cells of both byte-identical.
 - TRAF-26 (Completeness; P2; L): extend the isolated one-engine routed-step
   projection to a full DP times EP group population. Each peer engine must
   carry an explicit captured workload or a reproducible independently sampled
