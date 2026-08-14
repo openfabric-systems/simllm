@@ -213,12 +213,15 @@ def _structural_inventory(ep_world: int) -> dict[str, Any]:
         )
         rows[phase] = {
             "collective_count": len(collectives),
-            "kinds": sorted(
-                {
-                    (operation.work.collective, operation.work.algorithm_hint)
-                    for operation in collectives
-                }
-            ),
+            "kinds": [
+                list(kind)
+                for kind in sorted(
+                    {
+                        (operation.work.collective, operation.work.algorithm_hint)
+                        for operation in collectives
+                    }
+                )
+            ],
             "participant_counts": sorted(
                 {len(operation.work.ranks) for operation in collectives}
             ),
@@ -881,6 +884,49 @@ def check_only(args: argparse.Namespace) -> None:
     sys.stdout.write("\n")
 
 
+def results_summary(results: dict[str, Any]) -> dict[str, Any]:
+    """Return the trackable projection of a result document.
+
+    The per-cell artifact manifests and outcome records are bulk run output and
+    stay outside the repository; everything a reader needs to check the verdict
+    stays here, including the measured step latencies themselves.
+    """
+
+    summary = {
+        key: value
+        for key, value in results.items()
+        if key not in ("cells", "guard_cells")
+    }
+    summary["measured_step_latency_ps"] = {
+        _cell_name(cell["ep_world"], phase, cell["linkspeed_bps"], cell["arm"]): (
+            cell["step_latency_ps"][index]
+        )
+        for cell in results["cells"].values()
+        for index, phase in enumerate(PHASES)
+    }
+    summary["measured_fabric_service_ps"] = {
+        f"{cell['name']}-{phase}": sorted(
+            {
+                service_ps
+                for service_ps in cell["locality_outcomes"][index][
+                    "fabric_phase_service_ps"
+                ]
+                if service_ps
+            }
+        )
+        for cell in results["cells"].values()
+        for index, phase in enumerate(PHASES)
+    }
+    summary["measured_compute_service_ps"] = {
+        f"{cell['name']}-{phase}": cell["locality_outcomes"][index][
+            "compute_service_ps"
+        ]
+        for cell in results["cells"].values()
+        for index, phase in enumerate(PHASES)
+    }
+    return summary
+
+
 def _resolve_run_dir(value: str | None) -> Path:
     resolved = value or os.environ.get(RUN_ROOT_ENV)
     if not resolved:
@@ -896,6 +942,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--run-dir", default=None)
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--results", default=None)
+    parser.add_argument("--summary", default=None)
     return parser.parse_args(argv)
 
 
@@ -913,6 +960,15 @@ def main() -> int:
     )
     destination.write_text(
         json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    summary_destination = (
+        Path(args.summary).expanduser().resolve()
+        if args.summary
+        else args.run_dir / "results-summary.json"
+    )
+    summary_destination.write_text(
+        json.dumps(results_summary(results), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     verdict = results["verdict"]
     sys.stdout.write(
