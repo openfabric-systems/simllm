@@ -977,6 +977,23 @@ is difficult.
   change an end-to-end metric in the registered direction and must never
   advance CQE lifecycle state independently of the native RNIC authority.
 
+- BACK-43 (Completeness; P1; M): give per-request TTFT and TPOT attribution a
+  per-artifact resource owner so an NVLink-bearing step can reach the reported
+  metric chain. `attribute_step` refuses every step whose locality projection
+  carries NVLink bytes or NVLink service, because a mixed artifact composes as
+  a maximum over two resources and the step-level projection publishes no
+  evidence of which one realized it. Any placement that co-locates two ranks
+  therefore takes the reducer offline. Publish the per-artifact local service,
+  semantic base latency and owning medium, charge each artifact's realized
+  service to the resource whose own service equals the composed maximum, and
+  keep the NVLink and fabric components separately named so no additive TTFT
+  or TPOT decomposition mixes them. The masked service of the losing medium is
+  a work sum reported under its own name and never added to a latency total.
+  Acceptance: the all-remote path stays byte-identical under a pytest
+  regression lock, an NVLink-bearing step reaches per-request TTFT and TPOT
+  with both components positive, a deliberately swapped medium label is caught,
+  and the frozen study in `examples/mixed_attribution_v1` measures the
+  registered component shifts.
 - BACK-39 (Completeness; P2; L): join ABI-v2 packet attempts to request
   identity only if a future study needs packet-level request attribution. The
   current request dispatch lifetime intentionally stops at collective flow
