@@ -13,9 +13,13 @@ under three collective arms and two host arms. All eleven fatal guards held, so
 the run is not void. Both scored exact relations passed, and five of the six
 scored behavioral relations passed; the sixth failed on exactly the half the
 freeze had already named as its risky half. The headline is a bracket, not a
-number: under the enabled collective arms **70.6 to 95.3 percent of every
-simulated step is one per-collective constant that was never measured on this
-chain**, and under the off arms that same term is exactly zero. Moving from
+number: in the ten cells whose arm charges a nonzero surcharge, **70.6 to 95.3
+percent of the median step is one per-collective constant that was never
+measured on this chain**, and per individual step that share runs from 57.6 to
+95.3 percent. The other eight cells charge nothing for it, and two of those
+eight are enabled arms rather than off arms: the intra-node `lower` arm
+selects a profile whose surcharge is zero, so it moves the NVLink endpoint
+rate and nothing else. Moving from
 the `off` arm to the `upper` arm multiplies summed TTFT by 4.95x to 37.1x
 depending on the cell, and nothing in this repository narrows that bracket.
 The second finding is an ordering that flips. Under arm-name
@@ -53,7 +57,7 @@ independent child processes rather than one at a time. Each owns its work
 directory, its own scheduler and a deterministic backend, so only the `wall`
 column is affected by that concurrency and no simulated quantity is.
 
-| cell | steps | max batch | median step, us | htsim runs | routed bytes | wall, s |
+| cell | steps | max batch | upper median step, us | htsim runs | routed bytes | wall, s |
 |---|---|---|---|---|---|---|
 | `intra-off-ideal` | 48 | 1 | 76.686 | 0 | 87,994,368 | 110 |
 | `intra-lower-ideal` | 46 | 2 | 83.382 | 0 | 87,994,368 | 107 |
@@ -88,7 +92,7 @@ was violated.
 | **G5** locality | intra-node cells: 0 fabric bytes, 0 backend runs, positive NVLink bytes. Cross-node cells: 0 NVLink bytes, positive fabric bytes, `captured` routing, epoch 0, quiescent. 9,312 backend runs, all cross-node |
 | **G6** completion | every request in every cell finished for reason `length` with exactly 12 output tokens and 12 reduced intervals |
 | **G7** inventory | intra-node: site set `("attention",)` alone, 24 allreduces, 48 all-to-alls, 408 artifacts, on every step. Cross-node: 0 allreduces, 48 all-to-alls, 72 artifacts, on every step |
-| **G8** envelope admissibility | every summed base equals its collective count times its arm constant exactly, and every nonzero per-artifact base equals that constant. Largest observed step: 24 new tokens |
+| **G8** envelope admissibility | what the guard evaluates: every summed base equals its collective count times its arm constant exactly, and every nonzero per-artifact base equals that constant. The payload-envelope half is enforced upstream instead, by `validate_endpoint_bytes` aborting a cell, so it can void a run but never appears here as a checked clause. Largest observed step: 24 new tokens |
 | **G9** host agreement | worker and sink selected the same host model in all 18 cells; every `ideal` cell reports launch count 0 and zero exposed host time; every `turing` cell reports 440 launches, a 356,094,640 ps floor, device key `gtx1660-ti-sm75`, compute pinned to `b100`, `356,095,000` ps of compute service on every step, and carries the transfer disclosure verbatim |
 | **G10** BACK-44 control | executed, not recalled. `tp_ranks=(0, 1)` with `ep_ranks=(0, 1, 2, 3)` was refused with `graph cannot be represented by ordered GOAL artifacts: 'step-0:layer-0:tp-attention' does not depend on 'step-0:layer-0:rank-2:compute'` |
 | **G11** byte conservation | 87,994,368 bytes in every one of the six intra-node cells and 35,696,640 in every one of the twelve cross-node cells, both equal to the values predicted in the freeze |
@@ -158,11 +162,11 @@ same constant that inflates the step also changes what the framework batches.
 > `turing` cell takes no more steps than the `ideal` cell, strictly fewer in at
 > least one.
 
-**Passes**, strictly in four of the nine families: `intra-off` 21 against 48,
+**Passes**, strictly in five of the nine families: `intra-off` 21 against 48,
 `intra-lower` 20 against 46, `cross400-off` 19 against 26, `cross100-off` 17
-against 21. The five families where it is equal are the ones where the step was
-already far longer than the arrival spacing, so the extra 257 us of host cost
-had nothing left to change.
+against 21, and `cross100-upper` 13 against 14. The four families where it is
+equal are the ones where the step was already far longer than the arrival
+spacing, so the extra 257 us of host cost had nothing left to change.
 
 > **B4.** For the cross-node cell at each arm, summed TTFT at 100 Gbit/s over
 > summed TTFT at 400 Gbit/s exceeds one, the three-arm envelope does not
@@ -189,8 +193,12 @@ it is worth stating precisely rather than absorbing. **Root cause:** the two
 link rates do not produce the same step sequence, and the realized TTFT ratio
 is therefore taken over different batchings. At the `turing` off arm the
 100 Gbit/s cell runs 17 steps against the 400 Gbit/s cell's 19, so the slower
-fabric batches more and pays less queueing, and that saving more than cancels
-the per-step penalty. **Effect:** the live ratio drops to 1.0322 while the
+fabric batches more and pays less queueing, and that saving cancels most of
+the per-step penalty without reversing it. In summed TTFT the fabric-owned
+term grows by 905.4 us, from 685.8 to 1591.2, while the queue term falls by
+793.8 us, from 1356.2 to 562.4, and the kernel term is identical at 1424.4
+because the launch floor binds at both rates; the net is plus 111.6 us on a
+3466.4 us base. **Effect:** the live ratio drops to 1.0322 while the
 per-step median ratio, which the closed form governs, is 1.2313 and is
 non-increasing in the arm constant under both hosts (1.4413, 1.0672, 1.0432 and
 1.2313, 1.0583, 1.0393). **Reading:** the closed-form prediction is correct
@@ -224,7 +232,18 @@ makes it pay 72 surcharges per step, 24 allreduces plus 48 all-to-alls, against
 the cross-node deployment's 48. **The ordering of the two deployments is
 undetermined by the evidence that exists**: it flips inside the range of
 per-collective constants this repository can defend, and nothing here fixes
-that constant for a pairwise ALL-TO-ALLV. TRAF-36 hardware, a real cross-node
+that constant for a pairwise ALL-TO-ALLV.
+
+One confound in the constant-matched pairing has to be disclosed rather than
+left implicit. Its zero-constant point runs the intra-node cell at the
+declared 450 GB/s NVLink rate while its 30,128,029 ps point runs it at the
+profile's fitted 70.027 GB/s, so the rate moves with the constant. The rate
+effect is small beside the constant it travels with: it adds 53,694,000 ps to
+the intra-node step, 2.48 percent of the 2,169,218,088 ps surcharge. Repeating
+the pairing bandwidth-matched, using `intra-lower` at 70.027 GB/s for the zero
+constant, gives 0.4213 on the ideal host and 0.6502 on turing against the same
+1.3187 and 1.2511, so both brackets still contain one and the conclusion is
+robust to the confound. TRAF-36 hardware, a real cross-node
 per-collective fixed-cost capture at widths 2, 4 and 8 for both ring
 ALL-REDUCE and pairwise ALL-TO-ALLV, is what would settle it.
 
@@ -245,10 +264,14 @@ Three independent framings, per the physical-sanity rule.
 **Compute and memory physics.** Weight bytes over memory bandwidth is a floor
 no decode step can beat. The cross-node deployment's per-rank resident bytes
 are 554,047,488, which is 69.256 us at the b100 envelope's 8.0e12 B/s and
-98.937 us after the provider's 0.7 derate; measured 98.928 us. The intra-node
-deployment's width-eight shard leaves 421,582,848 bytes, so 52.698 us and
-75.283 us; measured 75.264 us. The difference between the two, 132,464,640
-bytes, is exactly the 132,120,576 bytes of tensor-parallel attention weight the
+98.937 us after the provider's 0.7 derate; measured 98.928 us, which is 9,051 ps
+**below** the derated estimate rather than equal to it, for the reason set out
+in the deviation paragraph below. The intra-node deployment's width-eight shard
+leaves 421,582,848 bytes, so 52.698 us and 75.283 us; measured 75.264 us, again
+low by 18,651 ps. Neither shortfall touches the floor being checked, since both
+measured values still exceed the peak-bandwidth floors of 69.256 and 52.698 us.
+The difference between the two, 132,464,640 bytes, is exactly the
+132,120,576 bytes of tensor-parallel attention weight the
 shard removes plus the 344,064 bytes of KV a narrower head count removes, with
 no residual, and the measured compute ratio 98,928,000 over 75,264,000 is
 1.31442 against the byte ratio 1.31421, agreeing to 0.02 percent. Nothing in
@@ -267,11 +290,40 @@ move: measured 396,482,608 ps, whose serialization part 300,482,608 ps is
 96,000,000 ps. On NVLink the same step's local service is 10,052,000 ps at the
 declared 450 GB/s and 63,746,000 ps at the profile's 70.027 GB/s, a factor of
 6.342 against a rate ratio of 6.426, the gap being the whole-nanosecond
-enclosure of 384 phase services. Every composed step reproduces its closed form
-to the picosecond: `intra-upper-ideal` step zero is
+enclosure of 384 phase services. Every composed step reproduces the additive
+form `compute + local + fabric + surcharge` to the picosecond once its compute
+term is taken as measured: `intra-upper-ideal` step zero is
 `75,264,000 + 63,746,000 + 2,169,218,088 = 2,308,228,088` and
 `cross400-upper-turing` step zero is
-`356,095,000 + 171,120,688 + 2,375,413,872 = 2,902,629,560`, both exact.
+`356,095,000 + 171,120,688 + 2,375,413,872 = 2,902,629,560`, both exact. Only
+the second of those two derives its compute term from the frozen closed form;
+the first substitutes the measured value, and why is the subject of the next
+paragraph.
+
+**Post-specified deviation: the frozen host closed form is falsified on the
+ideal cells.** The freeze wrote the represented compute term as
+`C = 1000 * ceil(max(C_provider, N * g) / 1000)` picoseconds
+(`expectations.md`, "Host term"). That holds exactly on the six calibrated
+cells and is falsified on the twelve ideal ones. The whole-nanosecond top-up
+that the form describes lives inside the `if cfg.host_model.is_calibrated:`
+branch at `simllm/backends/step_lowerer.py:247-262`; with an ideal host model
+that branch never runs, so the represented term is instead the sum of 24
+per-layer cumulative-boundary floors from `_to_goal_layer_calc_ns`, which
+truncates rather than rounds up. Every ideal cell therefore lands **below** its
+own provider estimate: 98,928,000 ps against 98,937,051 ps cross-node, short by
+9,051 ps, and 75,264,000 ps against 75,282,651 ps intra-node, short by
+18,651 ps. Both shortfalls sit inside the 23,976 ps that 24 whole-nanosecond
+truncations can lose, which is what identifies the mechanism. The frozen form
+would have predicted 98,938,000 and 75,283,000 instead. The calibrated identity
+is untouched and is the demonstration that the form is right where it applies:
+`cross400-upper-turing` step zero composes as
+`1000 * ceil(356,094,640 / 1000) + 171,120,688 + 2,375,413,872 = 2,902,629,560`,
+exact. This is a post-specified finding, not a pre-registered one, and it is
+recorded as a falsification of the freeze rather than corrected in it. The
+behavior is inherited from `main` and not introduced here: the accepted
+`sglang_end_to_end_v1` run reports the same 98.9 us for the same geometry under
+the same ideal host, so no number in that study or this one moves, and what was
+wrong was the freeze's description of the mechanism rather than the mechanism.
 
 **End-to-end plausibility against a real serve.** A real deployment of a
 400M-active-parameter MoE on one accelerator decodes a single request at
@@ -356,10 +408,10 @@ NVLink service, so the two media never tie above zero in this matrix.
 | per-step host cost, `turing` arm | transferred, three-source hybrid | 356,094,640 ps: a GTX 1660 Ti launch point, a vLLM 0.26.0 launch count, and b100 compute. SGL-24 owns the SGLang count |
 | arrivals | declared | this study's own one-millisecond spacing |
 
-The surcharge share of the median step, which is the number the headline rests
-on:
+The surcharge share of the upper median step, which is the number the headline
+rests on:
 
-| cell | surcharge per step, ps | share of median step | published evidence class |
+| cell | surcharge per step, ps | share of upper median step | published evidence class |
 |---|---|---|---|
 | `intra-upper-ideal` | 2,169,218,088 | 95.29 percent | transferred-at-use |
 | `cross400-upper-ideal` | 2,375,413,872 | 91.07 percent | provisional-transferred |
@@ -371,7 +423,19 @@ on:
 | `cross100-upper-turing` | 2,375,413,872 | 79.78 percent | provisional-transferred |
 | `cross400-lower-turing` | 1,446,145,392 | 74.70 percent | transferred-at-use |
 | `cross100-lower-turing` | 1,446,145,392 | 70.59 percent | transferred-at-use |
-| every `off` cell | 0 | 0 percent | none |
+| `intra-lower-ideal` | 0 | 0 percent | structural-floor |
+| `intra-lower-turing` | 0 | 0 percent | structural-floor |
+| the six `off` cells | 0 | 0 percent | none |
+
+All 18 cells are in that table. Two of them, the intra-node `lower` cells, are
+**enabled arms that charge nothing**: the arm resolves to
+`collective-fixed-cost-floor-v1`, whose surcharge is zero at every width, so
+selecting it moves the NVLink endpoint rate and leaves the fixed cost alone.
+That is why the headline is stated over the ten nonzero-surcharge cells rather
+than over the twelve enabled ones. The share column is taken on the upper
+median step of each cell; per individual step the same ten cells run from 57.64
+percent, at `cross100-lower-turing`'s cheapest step, to 95.31 percent, at
+`intra-upper-ideal`'s most expensive.
 
 One row of that table is finer than the class it publishes.
 `intra-upper-ideal` is 95.29 percent surcharge, and one third of that surcharge,
@@ -442,8 +506,10 @@ Counts from different classes are never summed.
 - **Scored behavioral relations:** **5 of 6**. B1, B2, B3, B5, B6 pass; B4
   fails.
 - **Reported, not scored:** the band table, the scale table, the surcharge
-  shares, the per-step B4 diagnostic, `p0`'s B6 multipliers, the decode-rate
-  comparison, and the six relations the freeze removed as entailed.
+  shares, the per-step B4 diagnostic, the bandwidth-matched B5 pairing, `p0`'s
+  B6 multipliers, the decode-rate comparison, the post-specified falsification
+  of the frozen host closed form on the ideal cells, and the six relations the
+  freeze removed as entailed.
 
 ### Genuine-risk analysis
 
@@ -539,12 +605,25 @@ python examples/sglang_composed_deployment_v1/run_study.py \
     --cache-dir <hugging-face-cache-root> \
     --sglang-python <interpreter-that-owns-sglang-and-torch> \
     --sglang-source <sglang-source-checkout-at-the-pinned-commit> \
-    --routing-trace <strict-v2-sglang-framework-trace> \
     --htsim-rnic <path-to-htsim_rnic> \
     --run-dir <writable-output-directory> \
     --jobs <concurrent-child-stages>
 ```
 
+The routing authority is tracked beside this script at
+`examples/sglang_composed_deployment_v1/fixtures/routing-trace.jsonl` and is the
+default for `--routing-trace`, so the study no longer depends on a run
+directory from another wave surviving a disk cleanup. It is a byte copy of the
+SGL-16 framework capture, 369,843 bytes, SHA-256
+`da0096b696564f365003d11565f4cbc5bed33ab47f7236c52b3ca7c989fd4982`, which is the
+digest the freeze already pins. `.gitattributes` marks that path `text eol=lf`
+so a Windows checkout cannot rewrite the bytes, the driver refuses a tracked
+fixture whose digest has moved, and `tests/test_sglang_composed_deployment_study.py`
+asserts it. The flag still accepts any qualifying capture, whose digest is
+reported in guard G1 rather than required.
+
 `--check-only` validates every frozen input and writes nothing. Backends are
 deterministic and the scheduler is seeded, so every number above reproduces
-exactly. `--jobs` affects the reported wall column and nothing else.
+exactly. `--jobs` affects the reported wall column and nothing else. The run
+reported here used `--jobs 6` on a 32-core host and took about 17 minutes of
+wall clock for 4,120 seconds of summed process time.

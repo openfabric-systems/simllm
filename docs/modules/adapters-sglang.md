@@ -510,10 +510,12 @@ were genuine risk. The `cross400-off-ideal` cell reproduced the accepted
 SGL-8 `ep8-400g` artifact to every published digit despite a declared
 placement manifest, the w14d selection seam and a different driver, which is
 what makes the other 17 cells readable as changes from a known baseline. The
-headline is a bracket: under the enabled collective arms 70.6 to 95.3 percent
-of the median step is one per-collective constant never measured on this
-chain, and moving from `off` to `upper` multiplies summed TTFT by 4.95x to
-37.1x. B4 failed on its declared-risky half, the clause that the live TTFT
+headline is a bracket: in the ten cells whose arm charges a nonzero surcharge,
+70.6 to 95.3 percent of the upper median step is one per-collective constant
+never measured on this chain, 57.6 to 95.3 percent per individual step, and
+moving from `off` to `upper` multiplies summed TTFT by 4.95x to 37.1x. Two of
+the twelve enabled cells charge nothing for it, because the intra-node `lower`
+arm resolves to a zero surcharge and moves only the NVLink endpoint rate. B4 failed on its declared-risky half, the clause that the live TTFT
 sensitivity to link rate falls as the arm constant grows: it holds on the
 per-step quantity the closed form governs under both hosts and breaks on the
 live one under `turing`, because at the `off` arm the 100 Gbit/s cell runs 17
