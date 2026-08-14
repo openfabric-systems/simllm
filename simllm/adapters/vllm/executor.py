@@ -747,6 +747,30 @@ class ExpertParallelGeometry:
     rank's ExternalDP index and pipeline stage, ordered by ``(dp, pcp, tp)``
     (``distributed/parallel_state.py:1893-1919``). ``ep_rank`` is this rank's
     index inside it, which equals vLLM's flattened TP rank.
+
+    ``renders_expert_combine`` answers a narrower question than ``use_ep``:
+    does this configuration execute an all-to-all whose combine returns an
+    already reduced layer output? Two conditions must both hold.
+    ``use_all2all_kernels`` needs expert parallelism AND one of ``dp_size > 1``,
+    ``pcp_size > 1`` or sequence parallelism
+    (``fused_moe/config.py:1052-1055``), so a ``tp=8, ep=8, dp=1`` shape runs
+    naive expert parallelism with no all-to-all. And the selected backend must
+    reduce: ``config/parallel.py:186`` defaults ``all2all_backend`` to
+    ``allgather_reducescatter``, whose prepare-finalize returns
+    ``output_is_reduced()`` False
+    (``fused_moe/prepare_finalize/naive_dp_ep.py:109`` and ``:242``), while the
+    deepep, mori, nixl and flashinfer families return True. When either fails,
+    ``fused_moe/runner/moe_runner.py:436-465`` all-reduces the fused output
+    over the tensor-parallel group, which is the two-allreduce dense-shaped
+    inventory rather than the one-allreduce routed one.
+
+    Sequence parallelism is deliberately not read. Its ``sp_size`` is a
+    per-layer ``FusedMoE`` constructor argument in the pinned release
+    (``fused_moe/layer.py:58-66``) with no ``VllmConfig`` field, and under it
+    the framework skips the tensor-parallel reduction entirely while the model
+    performs its own allgather, which this repository does not render at all.
+    TRAF-6 owns sequence parallelism, so the ``dp_size``/``pcp_size``
+    condition is exact for every configuration this repository can represent.
     """
 
     flatten_tp_size: int
@@ -755,6 +779,60 @@ class ExpertParallelGeometry:
     moe_tp_size: int
     ep_ranks: tuple[int, ...]
     ep_rank: int
+    all2all_backend: str = "allgather_reducescatter"
+    use_all2all_kernels: bool = False
+    combine_is_reducing: bool = False
+
+    @property
+    def renders_expert_combine(self) -> bool:
+        """Whether the combine returns an already reduced layer output."""
+
+        return self.use_all2all_kernels and self.combine_is_reducing
+
+
+#: pinned vLLM 0.26.0 backends whose prepare-finalize reduces the fused output
+REDUCING_ALL2ALL_BACKENDS = frozenset(
+    {
+        "deepep_high_throughput",
+        "deepep_low_latency",
+        "deepep_v2",
+        "mori_high_throughput",
+        "mori_low_latency",
+        "nixl_ep",
+        "flashinfer_all2allv",
+        "flashinfer_nvlink_two_sided",
+        "flashinfer_nvlink_one_sided",
+    }
+)
+
+#: pinned backends whose combine leaves the fused output unreduced
+NON_REDUCING_ALL2ALL_BACKENDS = frozenset({"allgather_reducescatter"})
+
+
+def _combine_is_reducing(backend: str) -> bool:
+    """Classify one all2all backend, refusing any name we cannot place.
+
+    True names are the deepep, mori, nixl and flashinfer prepare-finalize
+    classes whose ``output_is_reduced()`` returns True
+    (``fused_moe/prepare_finalize/deepep_ht.py:83``, ``deepep_ll.py:142``,
+    ``deepep_v2.py:86``, ``mori.py:37``, ``nixl_ep.py:134``,
+    ``flashinfer_nvlink_two_sided.py:52``,
+    ``flashinfer_nvlink_one_sided.py:69``). The one False name is
+    ``allgather_reducescatter`` (``naive_dp_ep.py:109`` and ``:242``). The
+    remaining literals of ``config/parallel.py:40-53``, ``naive`` and ``pplx``,
+    ship no prepare-finalize class in this release, so they are refused rather
+    than assumed either way.
+    """
+
+    if backend in REDUCING_ALL2ALL_BACKENDS:
+        return True
+    if backend in NON_REDUCING_ALL2ALL_BACKENDS:
+        return False
+    raise NotImplementedError(
+        f"vLLM all2all_backend {backend!r} cannot be classified as reducing or "
+        "non-reducing, so the layer's allreduce inventory would be a guess; "
+        "tracked by TRAF-40"
+    )
 
 
 def _parallel_size(parallel_config: Any, name: str) -> int:
@@ -768,50 +846,105 @@ def _num_redundant_experts(parallel_config: Any) -> int:
     return max(int(getattr(eplb_config, "num_redundant_experts", 0) or 0), 0)
 
 
-#: MoE mechanism fields whose collective inventory ``ModelDims`` cannot carry
-UNSUPPORTED_VLLM_MOE_FIELDS = (
+#: fields whose positive value declares a mechanism ``ModelDims`` cannot carry
+UNSUPPORTED_POSITIVE_MOE_FIELDS = (
     "n_shared_experts",
+    "num_shared_experts",
     "shared_expert_intermediate_size",
     "moe_shared_expert_intermediate_size",
+    "shared_intermediate_size",
     "first_k_dense_replace",
     "num_dense_layers",
 )
+
+#: routed-layer strides whose only fully routed value is 1
+UNSUPPORTED_STRIDE_MOE_FIELDS = ("moe_layer_freq", "decoder_sparse_step")
+
+#: per-layer exception lists whose non-empty value declares a mixed schedule
+UNSUPPORTED_LAYER_LIST_MOE_FIELDS = ("mlp_only_layers",)
+
+#: every field the reader refuses, in one tuple for tests and documentation
+UNSUPPORTED_VLLM_MOE_FIELDS = (
+    UNSUPPORTED_POSITIVE_MOE_FIELDS
+    + UNSUPPORTED_STRIDE_MOE_FIELDS
+    + UNSUPPORTED_LAYER_LIST_MOE_FIELDS
+)
+
+
+def _moe_field_values(*configs: Any, name: str) -> list[Any]:
+    return [
+        value
+        for config in configs
+        if config is not None
+        for value in (getattr(config, name, None),)
+        if value is not None
+    ]
+
+
+def _require_integer_moe_field(name: str, value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise TypeError(
+            f"vLLM MoE mechanism field {name} must be an integer, got {value!r}"
+        )
+    return int(value)
 
 
 def _reject_unsupported_moe_mechanisms(*configs: Any) -> None:
     """Refuse MoE geometries whose reduction inventory would be wrong.
 
+    This mirrors the SGLang reader field for field
+    (``simllm/adapters/sglang/worker.py:775-834``) with the same per-field
+    predicates, because both readers feed the same whole-model ``ModelDims``
+    and the same allreduce site rule.
+
     A shared expert's output is all-reduced over the tensor-parallel group even
     when the combine kernel already reduced the routed output
     (``model_executor/layers/fused_moe/runner/moe_runner.py:416-433``), so a
-    shared-expert layer keeps an mlp-site all-reduce that
-    ``simllm.traffic.layer_tp_allreduce_sites`` drops for every routed layer of
-    an all-to-all model. A dense prefix or a periodic dense layer likewise
-    leaves some layers with two allreduce sites and no all-to-all, which one
-    whole-model ``ModelDims`` cannot express.
+    shared-expert layer keeps an mlp-site allreduce that
+    ``simllm.traffic.layer_tp_allreduce_sites`` drops for a routed all-to-all
+    layer. The shared MLP itself rides a row-parallel projection with
+    ``reduce_results=True`` (``model_executor/models/granitemoeshared.py:48``
+    and ``:108``), which is the shared sibling of the family this repository
+    drives live, and other families spell the same thing
+    ``num_shared_experts`` (``model_executor/models/cohere2_moe.py:286-289``,
+    ``exaone_moe.py:116-117``).
 
-    Both are refused rather than priced as fully routed, mirroring the SGLang
-    reader. VLLM-25 owns supporting them here and TRAF-34 owns the traffic-side
-    per-layer schedule.
+    A mixed dense and routed schedule leaves some layers with two allreduce
+    sites and no all-to-all, which one whole-model ``ModelDims`` cannot
+    express. It is spelled as a dense prefix (``first_k_dense_replace``,
+    ``num_dense_layers``), as a routed stride whose fully routed value is 1
+    (``moe_layer_freq``, and ``decoder_sparse_step`` at
+    ``model_executor/models/qwen2_moe.py:310-316`` and
+    ``qwen3_moe.py:385-391``), or as an explicit per-layer exception list
+    (``mlp_only_layers`` in the same two models).
+
+    All are refused rather than priced as fully routed. VLLM-25 owns
+    supporting them here and TRAF-34 owns the traffic-side per-layer schedule.
     """
 
-    for config in configs:
-        if config is None:
-            continue
-        for name in UNSUPPORTED_VLLM_MOE_FIELDS:
-            value = getattr(config, name, None)
-            if value is None:
-                continue
-            if isinstance(value, bool) or not isinstance(value, Integral):
-                raise TypeError(
-                    f"vLLM MoE mechanism field {name} must be an integer, "
-                    f"got {value!r}"
-                )
-            if int(value) > 0:
+    for name in UNSUPPORTED_POSITIVE_MOE_FIELDS:
+        for value in _moe_field_values(*configs, name=name):
+            if _require_integer_moe_field(name, value) > 0:
                 raise NotImplementedError(
                     f"vLLM MoE field {name}={int(value)} needs shared-expert or "
                     "mixed dense and routed geometry that ModelDims cannot "
                     "represent; tracked by VLLM-25"
+                )
+    for name in UNSUPPORTED_STRIDE_MOE_FIELDS:
+        for value in _moe_field_values(*configs, name=name):
+            if _require_integer_moe_field(name, value) != 1:
+                raise NotImplementedError(
+                    f"vLLM MoE field {name}={int(value)} declares a mixed dense "
+                    "and routed layer schedule that ModelDims cannot represent; "
+                    "tracked by VLLM-25"
+                )
+    for name in UNSUPPORTED_LAYER_LIST_MOE_FIELDS:
+        for value in _moe_field_values(*configs, name=name):
+            if value:
+                raise NotImplementedError(
+                    f"vLLM MoE field {name}={value!r} declares a mixed dense and "
+                    "routed layer schedule that ModelDims cannot represent; "
+                    "tracked by VLLM-25"
                 )
 
 
@@ -843,6 +976,10 @@ def expert_parallel_geometry(vllm_config: VllmConfig) -> ExpertParallelGeometry:
         for context in range(context_parallel)
         for tensor in range(tensor_parallel)
     )
+    backend = str(
+        getattr(parallel_config, "all2all_backend", "") or "allgather_reducescatter"
+    )
+    use_all2all_kernels = use_ep and (data_parallel > 1 or context_parallel > 1)
     return ExpertParallelGeometry(
         flatten_tp_size=flatten_tp_size,
         use_ep=use_ep,
@@ -850,6 +987,11 @@ def expert_parallel_geometry(vllm_config: VllmConfig) -> ExpertParallelGeometry:
         moe_tp_size=1 if use_ep else flatten_tp_size,
         ep_ranks=ep_ranks,
         ep_rank=ep_ranks.index(rank),
+        all2all_backend=backend,
+        use_all2all_kernels=use_all2all_kernels,
+        combine_is_reducing=(
+            _combine_is_reducing(backend) if use_all2all_kernels else False
+        ),
     )
 
 
@@ -1672,12 +1814,31 @@ class SimExecutor(_ExecutorBase):
         """Hand the derived expert group to a sink that accepts one.
 
         Binding happens exactly once, before any step, and only when the active
-        parallel configuration actually uses expert parallelism. Every other
-        configuration performs no binding at all, so a sink keeps whatever
-        ``ep_ranks`` its own configuration declared.
+        parallel configuration executes an all-to-all whose combine returns an
+        already reduced layer output, which is what declaring the group to the
+        traffic renderers asserts. Expert parallelism alone is not enough: a
+        naive expert-parallel configuration, or one whose backend does not
+        reduce, executes two tensor-parallel allreduces per layer and no
+        all-to-all, and that is exactly what the renderers produce when no
+        group is bound. Every other configuration performs no binding at all,
+        so a sink keeps whatever ``ep_ranks`` its own configuration declared.
         """
 
-        if not self.expert_parallel.use_ep or self.ep_ranks is None:
+        geometry = self.expert_parallel
+        if (
+            geometry.use_all2all_kernels
+            and not geometry.combine_is_reducing
+            and self.ep_ranks is not None
+        ):
+            raise NotImplementedError(
+                "vLLM all2all_backend "
+                f"{geometry.all2all_backend!r} moves expert activations through "
+                "an allgather and reduce-scatter that this repository renders "
+                "no traffic for, and it still all-reduces the fused output, so "
+                "neither declaring nor omitting the expert group is correct; "
+                "tracked by TRAF-40"
+            )
+        if not geometry.renders_expert_combine or self.ep_ranks is None:
             return
         sink = self.step_sink
         if not isinstance(sink, ExpertGroupStepSink):
