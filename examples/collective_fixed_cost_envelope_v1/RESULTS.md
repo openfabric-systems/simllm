@@ -8,8 +8,8 @@ genuine rather than reconstructed.
 
 ## Verdict
 
-**Attempt 1 is void. Attempt 2 passed 3 of 3 scored families with all nine
-fatal guards held.**
+**Attempt 1 is void. Attempts 2 and 3 each passed 3 of 3 scored families with
+all nine fatal guards held. Attempt 3 is the run of record.**
 
 - **Attempt 1** (`93978d1`, run root `envelope-v1-final`): void. Fatal guard G4
   was violated. Every scored family passed and every other guard held, but a
@@ -17,6 +17,14 @@ fatal guards held.**
   numbers are reported as findings only.
 - **Attempt 2** (`22490db`): all nine fatal guards held, all four exact-oracle
   rows held, and 3 of 3 scored families passed.
+- **Attempt 3** (`8ca5d2f`, run root `envelope-v1-attempt3`) re-ran the
+  identical frozen matrix after a round of provenance and label corrections
+  that changed no modeled behavior. It is the run of record because the
+  provenance strings its record carries are the ones that were installed while
+  it ran, rather than text swapped into a document after the fact. It
+  reproduced attempt 2 to the picosecond in all 40 simulated steps and byte for
+  byte in every GOAL artifact digest, with the same nine guards held, the same
+  four exact rows held and the same 3 of 3 scored families passed.
 
 The scored fraction is **3 of 3 genuine-risk families**. The fatal guards are
 reported as held or violated and never as a fraction. The 32 frozen simulated
@@ -71,6 +79,12 @@ attempts. That is the check that the harness repair changed nothing measurable.
   machine-specific string, touches no measurement, no oracle and no tolerance,
   and the tracked summary was regenerated from attempt 2's unchanged raw
   document.
+- `8ca5d2f` corrects the provenance text, the two envelope claim strings and
+  the published evidence class, all described in the next section. Because
+  those strings are baked into the run record by the G6 guard inventory, the
+  study was re-run rather than regenerated from an older document, so no
+  recorded string describes metadata that was not installed at run time. The
+  frozen expectations files were not touched by any of these commits.
 - The attempt-2 run record reports `git_status_clean: false`. The two dirty
   paths at the moment the environment was captured were `docs/modules/traffic.md`
   and this results document, both being drafted while the cells executed.
@@ -83,6 +97,85 @@ attempts. That is the check that the harness repair changed nothing measurable.
   209,198,811 ps napkin. It is not one of the frozen cells. The S1 tolerance was
   chosen after seeing that 0.002 percent deviation, and the expectations
   document says so.
+
+## Label and claim corrections carried by attempt 3
+
+Review of the first recorded run found four text-level defects. None of them
+moves a number; all of them would have let a reader take more from the record
+than the evidence supports. They are listed here because a provenance record
+whose locator cannot reproduce its own constants is worse than no locator.
+
+1. **The locator could not reproduce the constants it attributed.** It named
+   Kalia's about 2 us round trip for the 3,000,000 ps point estimate and UCCL's
+   2 to 3 us p50 ACK turnaround for the 5,000,000 ps upper edge, but neither
+   anchor equals the constant on its own: each fabric step is the 2,000,000 ps
+   propagation reference **plus** an initiation term, and Kalia's anchor enters
+   **halved**. The composition existed only in the freeze. The locator now
+   carries it in full, including the halving and the restriction described
+   below.
+2. **`calibrated` travelled with a doubly transferred constant.**
+   `b200-nccl-2.27-local-v1` is calibrated at its source, but its own transfer
+   field declares that it prices ALL-TO-ALLV with an ALL-REDUCE capture, and as
+   the lower arm of the cross-node envelope it prices a fabric collective with
+   an intra-node capture. A new evidence class, `transferred-at-use`, means
+   calibrated at source and transferred in operation shape or topology at the
+   point of use, and both envelopes now publish that class for their
+   applications of this profile. The class is machine readable on
+   `StepCollectiveTimingOutcome`, and the run record confirms it: the `local`
+   arm published `transferred-at-use`, the `cross` arm
+   `provisional-transferred`, and the `floor` arm `structural-floor`. Only a
+   `calibrated` profile can be downgraded, every downgrade carries its reason,
+   and the bare profile spelling still publishes `calibrated`, which is correct
+   when a caller applies the profile to the operation it was captured on.
+3. **A claim string asserted a ceiling its own band contradicts.** The
+   cross-node envelope said the fixed cost is "at most" the provisional
+   estimate, while that profile's declared band reaches 77,487,789 ps at width
+   8, 57 percent above the 49,487,789 ps the arm charges. Both claims now say
+   the bracket is over the arms a study can select, not over the physical
+   value, and name the upper arm as the pessimistic selectable edge.
+4. **The UCCL extraction was a Light-columns subset presented as the whole
+   table.** `docs/papers/msg-size-vs-bandwidth.md` now shows the full shape,
+   with the p50 ACK turnaround spanning 2.0 to 7.0 us across the Light and
+   Heavy columns and the p50 CC decision delay spanning 1.7 to 2.9 us, and it
+   states that any quotation of "2 to 3 us" is Light-only. The 3,000,000 ps
+   constant is kept, because the Light columns are the right ones for this
+   workload's 12 to 114 KiB collectives, and the restriction is now stated in
+   the profile locator too.
+
+Two smaller attributions were also corrected. The capture record names no
+algorithm, so "ring" is now attributed to this repository's own expansion model
+rather than to the capture, and the sensitivity is stated: NCCL 2.27 on an
+eight-GPU NVSwitch node ordinarily selects NVLS or a tree for a small
+ALL-REDUCE, and a `2 log2(W)` tree at the same per-step delta would move the
+width-8 point estimate from 49.49 to 38.43 us, so the algorithm assumption is a
+first-order term. TRAF-36 now owns that question along with the measurement.
+
+### Value-equality proof for the regenerated summary
+
+The tracked summary was regenerated through the runner's own `--summary` path
+on attempt 3, not hand-edited. Walking the old and new documents to their
+leaves and comparing:
+
+| comparison | count |
+|---|---:|
+| leaves compared | 947 |
+| non-string leaves compared | 734 |
+| non-string leaves changed | 1 |
+| string leaves changed | 7 |
+| leaves added, all strings | 8 |
+| leaves removed | 0 |
+| leaves whose type flipped | 0 |
+
+The single changed non-string leaf is `environment.git_status_clean`, false to
+true, because attempt 2 ran while this document was being drafted and attempt 3
+ran from a clean tree. Excluding the `environment` block, which is run metadata
+rather than measurement, **940 leaves were compared, 732 of them non-string,
+and zero changed**. The seven changed strings are the corrected locator,
+transfer, source and claim texts plus `git_head`; the eight added strings are
+the per-arm `applied_evidence_class` and `applied_evidence_note` fields. No
+measured latency, tolerance, guard verdict, scored row or bracket edge moved,
+and the raw attempt-2 and attempt-3 documents agree on every step latency and
+every artifact digest.
 
 ## Napkin bounds against the measurement, three independent angles
 
@@ -303,10 +396,17 @@ default is the only arm that does not say so out loud.
 | cross-node-fixed-cost-provisional-v1 | 8 | 30,128,029 | 49,487,789 | [35,487,789, 77,487,789] |
 
 The cross-node upper arm is labeled **provisional-transferred** and never
-calibrated. It carries no cross-node measurement. Its construction, its three
-anchors and the three ways it is weakest are stated in
-[expectations.md](expectations.md) and reproduced by
-`run_study.py --check-only`.
+calibrated. It carries no cross-node measurement. The cross-node lower arm and
+the intra-node upper arm are the same calibrated capture published as
+**transferred-at-use**, because both envelopes charge it outside the operation
+shape it was captured on and the cross-node envelope also charges it outside
+its topology. Its construction, its three anchors and the ways it is weakest
+are stated in [expectations.md](expectations.md) and in the profile's own
+provenance record, and both are reproduced by `run_study.py --check-only`.
+
+Neither envelope claims a ceiling on the physical value. The upper arm of each
+is the pessimistic edge a study can select, and in the cross-node case that
+arm's own declared band reaches 57 percent above the value it charges.
 
 ## Limits, stated plainly
 

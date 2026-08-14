@@ -22,8 +22,8 @@
   "environment": {
     "expectations_commit": "9c568b5",
     "expectations_sha256": "6ce9482e0c2f67e9343067b83f0d40cee7648a31726bc62f231f36458aa270ed",
-    "git_head": "22490db1999184f6bc18a6fc14705a073db23785",
-    "git_status_clean": false,
+    "git_head": "8ca5d2f63ed1a98aa91fd18ab7f4574948253e98",
+    "git_status_clean": true,
     "htsim_rnic_configured": true,
     "platform": "Linux-5.14.21-150400.22-default-x86_64-with-glibc2.31",
     "python": "3.12.12"
@@ -474,6 +474,8 @@
         "cross-node-fixed-cost-provisional-v1": {
           "arms": {
             "lower": {
+              "applied_evidence_class": "transferred-at-use",
+              "applied_evidence_note": "the source capture is an ALL-REDUCE and this envelope charges its intercept for whatever collective the workload emits, including pairwise ALL-TO-ALLV, so the number is calibrated and its application here is not, and this envelope additionally charges an intra-node capture for a collective whose steps cross the fabric",
               "bandwidth_bytes_per_second": 70027079100,
               "evidence_class": "calibrated",
               "locator": "the fitted intercepts of examples/collective_latency_floor_v1, held out at 4 KiB with errors of 0.261, 0.347 and 0.080 us at widths 2, 4 and 8",
@@ -509,7 +511,7 @@
                 ]
               ],
               "profile_id": "b200-nccl-2.27-local-v1",
-              "source": "nccl-tests issue 333 capture of a DGX B200 intra-node NVLink ring ALL-REDUCE under NCCL 2.27",
+              "source": "nccl-tests issue 333 capture of a DGX B200 intra-node NVLink ALL-REDUCE under NCCL 2.27; the capture records completion times and does not name the algorithm NCCL selected",
               "source_payload_bytes": [
                 8,
                 262144
@@ -517,9 +519,11 @@
               "transfer": "the intra-node ALL-REDUCE intercept is charged unchanged as the per-collective surcharge of any supported collective, including pairwise ALL-TO-ALLV"
             },
             "upper": {
+              "applied_evidence_class": "provisional-transferred",
+              "applied_evidence_note": "",
               "bandwidth_bytes_per_second": 70027079100,
               "evidence_class": "provisional-transferred",
-              "locator": "Kalia et al. ATC'16 commodity RDMA round-trip anchor of about 2 us for the point estimate, UCCL Table 2 ACK turnaround of 2 to 3 us p50 for the upper edge, and this repository's measured 2.000 us fluid propagation for the lower edge",
+              "locator": "every fabric step is this repository's measured 2,000,000 ps fluid propagation reference plus a per-step initiation term. The lower edge adds nothing, so it is that 2,000,000 ps alone. The point estimate adds 1,000,000 ps, one half of the about 2 us commodity RDMA round-trip anchor of Kalia et al. ATC'16, giving 3,000,000 ps. The upper edge adds 3,000,000 ps, the top of the p50 ACK turnaround in UCCL Table 2, giving 5,000,000 ps. The UCCL figures are restricted to that table's Light columns, whose message sizes match this workload's 12 to 114 KiB collectives; the Heavy columns reach 7.0 us of p50 ACK turnaround and would put the upper edge higher",
               "participant_latency_band_ps": [
                 [
                   2,
@@ -557,7 +561,7 @@
                 8,
                 262144
               ],
-              "transfer": "each of the source ring's 2(W-1) NVLink steps, worth 1,617,160 ps by the two-point slope of the source table, is replaced by one fabric step worth 3,000,000 ps at the point estimate, 2,000,000 ps at the lower edge and 5,000,000 ps at the upper edge; no cross-node measurement was taken, so this profile is provisional-transferred and never calibrated"
+              "transfer": "the 2(W-1) ring-step decomposition is this repository's own collective expansion model rather than an attribute of the capture, which names no algorithm. Each such step, worth 1,617,160 ps by the two-point slope of the source table, is replaced by one fabric step worth 3,000,000 ps at the point estimate, 2,000,000 ps at the lower edge and 5,000,000 ps at the upper edge. NCCL 2.27 on an eight-GPU NVSwitch node ordinarily selects NVLS or a tree for a small ALL-REDUCE, and a 2 log2(W) tree decomposition at the same per-step delta would move the width-8 point estimate from 49.49 to 38.43 us, so the algorithm assumption is a first-order term rather than a detail. No cross-node measurement was taken, so this profile is provisional-transferred and never calibrated"
             }
           },
           "bracket_ps": {
@@ -574,7 +578,7 @@
               49487789
             ]
           },
-          "claim": "for a collective whose ring steps cross the fabric, the per-collective fixed cost is at least the captured intra-node intercept, because a fabric hop cannot be cheaper than the NVLink hop it replaces, and at most the provisional-transferred cross-node estimate",
+          "claim": "for a collective whose steps cross the fabric, the selectable arms run from the captured intra-node intercept, which is a floor because a fabric hop cannot be cheaper than the NVLink hop it replaces, to the provisional-transferred cross-node estimate. The upper arm is the pessimistic selectable edge and not a ceiling on the physical value: its own declared band reaches 77,487,789 ps at width 8, 57 percent above the 49,487,789 ps it charges, and no evidence here establishes any ceiling at all",
           "isolates_fixed_cost": true,
           "realized_bracket_ps": {
             "2": [
@@ -595,6 +599,8 @@
         "intra-node-fixed-cost-v1": {
           "arms": {
             "lower": {
+              "applied_evidence_class": "structural-floor",
+              "applied_evidence_note": "",
               "bandwidth_bytes_per_second": 70027079100,
               "evidence_class": "structural-floor",
               "locator": "31 matched decode compositions where 2 * fabric(400G) - fabric(200G) returned 96,000,006 to 96,000,048 ps across 48 collectives, recorded in the traffic module status section",
@@ -638,6 +644,8 @@
               "transfer": "no surcharge is added, so the claimed per-collective fixed cost is exactly the 2.000 us propagation the backend already charges; this is a lower bound because no collective can complete faster than one propagation delay"
             },
             "upper": {
+              "applied_evidence_class": "transferred-at-use",
+              "applied_evidence_note": "the source capture is an ALL-REDUCE and this envelope charges its intercept for whatever collective the workload emits, including pairwise ALL-TO-ALLV, so the number is calibrated and its application here is not",
               "bandwidth_bytes_per_second": 70027079100,
               "evidence_class": "calibrated",
               "locator": "the fitted intercepts of examples/collective_latency_floor_v1, held out at 4 KiB with errors of 0.261, 0.347 and 0.080 us at widths 2, 4 and 8",
@@ -673,7 +681,7 @@
                 ]
               ],
               "profile_id": "b200-nccl-2.27-local-v1",
-              "source": "nccl-tests issue 333 capture of a DGX B200 intra-node NVLink ring ALL-REDUCE under NCCL 2.27",
+              "source": "nccl-tests issue 333 capture of a DGX B200 intra-node NVLink ALL-REDUCE under NCCL 2.27; the capture records completion times and does not name the algorithm NCCL selected",
               "source_payload_bytes": [
                 8,
                 262144
@@ -695,7 +703,7 @@
               30128029
             ]
           },
-          "claim": "for a collective whose ring steps stay on NVLink, the per-collective fixed cost is at least the modeled propagation delay and at most the captured DGX B200 intra-node NCCL intercept",
+          "claim": "for a collective whose steps stay on NVLink, the selectable arms run from the modeled propagation delay, which is a floor no collective can beat, to the captured DGX B200 intra-node NCCL intercept transferred to whichever collective is being priced. The upper arm is the pessimistic selectable edge, not a ceiling on the physical value",
           "isolates_fixed_cost": true,
           "realized_bracket_ps": {
             "2": [
