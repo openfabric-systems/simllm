@@ -2,7 +2,10 @@
 
 Frozen by expectations-only commit `79b03da`, which landed before the
 selector, the harness and the tests existed. The measuring run happened on
-2026-08-14 against the seam commit `d803d71`.
+2026-08-14 against the seam commit `d803d71`, and was rerun the same day after
+integrator review added the `represented_bound` column that R2's frozen
+conjunction needs. The rerun reproduced every timing value and every artifact
+rollup of the first run exactly; the chronology is recorded below.
 
 **Verdict: the run is not void, and all three scored relations pass.** No
 fatal guard was violated. In two evidence classes that are never summed:
@@ -33,7 +36,7 @@ existed.
 |---|---|---:|---|
 | R0, provider service equals the frozen roofline | exact-oracle | 9 | 9 pass |
 | R1, step latency delta equals the enclosed compute delta | exact-oracle | 54 | 54 pass |
-| R2, the regime flips one launch wide | behavioral | 18 | 18 pass |
+| R2, the regime flips one launch wide, both halves of the conjunction | behavioral | 18 | 18 pass |
 
 The 63 exact-oracle rows and the 18 behavioral instances are separate
 evidence classes and are not added.
@@ -54,13 +57,29 @@ relative to the `ideal` arm of the same record:
 | 8 | 1 | 208.739 | 109.763 | 5,000 | 569,000 | 257,119,000 | 5,000 | 323,000 | 1,241,557,000 |
 
 R2 is the relation that mattered most and it held at full resolution. At 122
-CUDA-graph launches every record reported zero exposed host time and kept the
-provider's own `memory` bound; at 123 every record reported
-`host-initiation` with a positive exposure, 563,701 ps on step 1. The eager
-class flipped between 41 and 42 launches the same way. A selector that had
-built the profile outside its named factory would have taken the legacy
-additive branch and moved the masked cells by their whole launch floor,
-roughly 98.7 us instead of 5 ns. It did not.
+CUDA-graph launches every record recorded `exposed_host_ps == 0` and a
+`represented_bound` equal to the `memory` bound its own provider reported in
+the `ideal` arm; at 123 every record recorded
+`represented_bound == "host-initiation"` with a positive exposure, 563,701 ps
+on step 1. The eager class flipped between 41 and 42 launches the same way. A
+selector that had built the profile outside its named factory would have taken
+the legacy additive branch and moved the masked cells by their whole launch
+floor, roughly 98.7 us instead of 5 ns. It did not.
+
+**Chronology of R2's execution, post-specified.** The freeze registered R2 as a
+conjunction: zero exposure and the provider's own bound on the masked side,
+against positive exposure and `host-initiation` on the bound side. The first
+run scored only the exposure half. `HostStepEstimate.bound` was computed in
+`simllm/compute/host.py` and then dropped by `SerialStepTiming` and
+`StepNetworkOutcome`, so no bound string ever reached the recorded rows, and
+the first version of this report nonetheless described the bound as a run
+observation. That was an overclaim, caught in integrator review. The fix round
+carried the value through both dataclasses as `represented_bound`, scored the
+full conjunction, and reran every cell. Both halves are now recorded and both
+pass on all 18 instances. The rerun moved no timing value: every per-step field
+and every per-cell artifact rollup is identical to the first run, which is what
+makes the two runs one measurement with one column added rather than two
+measurements.
 
 ## The pre-registered warning that mattered
 
@@ -151,21 +170,36 @@ and never as a fraction.
 | G6 | no SGLang import | held |
 | G7 | no record carries an exact sampled count, because the stream predates SGL-12 | held |
 
-## Three qualifications a harsh reader should raise, raised here
+## Four qualifications a harsh reader should raise, raised here
 
 **R1 was less risky than the freeze implied.** The freeze said R1 tested that
 the layer computes and the 48 collectives "serialize without the host term
 perturbing the fabric schedule". They do serialize, but by construction rather
-than by simulation: each rendered artifact is one collective, and
-`HtsimStepSink._execute_plan` composes the step as
-`represented_compute_ps + sum(collective services)`
-(`simllm/backends/step_sink.py`, lines 1151 to 1159). htsim executes the
-collectives; it never sees the compute. So of R1's three sub-claims, that the
-selected host term reaches the sink's step-latency authority unchanged and
-that the enclosure is the lowerer's own were genuinely at risk, while the
-additive composition was not. The fabric invariance was still measured rather
-than assumed: the fabric residual is bit-identical in all seven cells and in
-the reference arm.
+than by simulation. `_plan_step` splits a step into artifacts and hands the
+layer computes to analytic artifacts that carry no GOAL program, so
+`compute_in_artifacts` is true and `represented_compute_ps` is zero on every
+step of this study. `_execute_plan` then composes the makespan as
+`sum over artifacts of (collective_base_latency_ps + max(local_service_ps,
+fabric_service_ps))`, where a compute artifact contributes its layer duration
+through `local_service_ps` with no fabric service, and a collective artifact
+contributes the executed htsim job completion time
+(`simllm/backends/step_sink.py`, lines 916 to 1000 and 1150 to 1160). htsim
+executes the collectives; it never sees the compute. The conclusion is
+unchanged and so is every number: the composition is a sum over serialized
+terms. So of R1's three sub-claims, that the selected host term reaches the
+sink's step-latency authority unchanged and that the enclosure is the lowerer's
+own were genuinely at risk, while the additive composition was not. The fabric
+invariance was still measured rather than assumed: the fabric residual is
+bit-identical in all seven cells and in the reference arm.
+
+**R2's residual risk was narrower than the freeze's framing, post-specified.**
+The freeze argued R2 could fail because a selector built outside the named
+factory would compose additively. That is true, but given R0 and R1 both
+passing, the only way R2 could still have failed is a defect in the projection
+wiring itself, i.e. `exposed_host_ps` or `represented_bound` being carried
+wrongly from `HostStepEstimate` into the recorded rows. R2 remains scored, and
+this note records that its genuine-risk surface after R0 and R1 is that wiring
+and not the composition rule.
 
 **G2's artifact half is uninformative in this lowering.** Every cell rendered
 byte-identical artifacts, all 1,296 rendered files, i.e. 432 GOAL programs
@@ -174,6 +208,9 @@ because the GOAL input is a function of the record and the geometry only. That
 is a real property worth recording, but it means artifact identity cannot
 distinguish the ideal arm from a calibrated one. The informative half of G2 is
 the per-step value equality against the hand-built pre-seam sink, which held.
+The guard compares per-cell rollups rather than per-file lists, which is the
+same comparison: the rollup hashes the ordered `name digest` lines, so two
+cells agree on it if and only if every file agrees.
 
 **Nothing here was measured on SGLang, and no live scheduler was in the
 loop.** The per-launch point is a GTX 1660 Ti capture with an AMD Ryzen 9
@@ -197,6 +234,13 @@ python examples/sglang_host_step_v1/run_study.py --run-dir <writable directory>
 The first command re-derives every frozen literal in `expectations.json` from
 the frozen constants and imports no simllm code. The second needs
 `SIMLLM_HTSIM_RNIC` and `SIMLLM_TXT2BIN`, writes one workdir per cell and one
-`results.json`, and prints the scored summary. The tracked `results.json` is
-that file with the per-artifact digest list replaced by a per-cell rollup, so
-the repository carries no bulk run output.
+`results.json`, and prints the scored summary.
+
+The `results.json` the runner writes is exactly the tracked file, with no
+post-processing step in between. `artifact_digest_summary` is produced inside
+the run by `artifact_digest_summary()`, which reduces each cell's per-file
+digest list to a count, a GOAL-file count and a SHA-256 over the ordered
+`name digest` lines. The per-file list itself is bulk run output and stays out
+of the repository; the rollup is exactly as discriminating, and it is what G2
+compares. A rerun on the same inputs reproduces the tracked file byte for byte,
+which is how the fix-round rerun was checked against the first run.

@@ -91,19 +91,28 @@ cell's sink, device or replay configuration into the next.
 Per-step host cost is chosen through `select_sglang_host_model`
 (`simllm/adapters/sglang/host.py`). It resolves a profile name (`ideal`,
 `turing-cuda-graph`, `turing-eager-host`) and a launch count into the three
-objects that must travel together, and returns them under the keyword names
-both `configure` and `HtsimStepSinkConfig` use: the `HostInitiationModel`, the
+objects that must travel together: the `HostInitiationModel`, the
 `gtx1660-ti-sm75` device key its calibrated constants demand, and a provider
 pinned to the accepted `b100` compute envelope so the device key can move
-without the compute moving with it. `ideal` is the default and returns exactly
+without the compute moving with it. The two consumers spell the provider
+differently, so there are two accessors and not one: `worker_overrides()`
+carries `configure`'s `compute_provider` and `sink_overrides()` carries
+`HtsimStepSinkConfig`'s `provider`. Splatting either one into the other's
+consumer raises `TypeError`, and a test pins both spellings against the real
+signatures. `ideal` is the default and returns exactly
 what a study built by hand before this seam existed, which is what keeps every
 accepted artifact identical. A calibrated selection carries
 `SGLANG_HOST_TRANSFER_DISCLOSURE`, because none of its constants was measured
 on SGLang: the per-launch point is a GTX 1660 Ti capture from
-`examples/host_step_cost_v1`, the launch count defaults to the vLLM 0.26.0
-static enumeration (`SGLANG_TRANSFERRED_LAUNCH_COUNTS`, a surrogate for the
-unmeasured SGLang demand that SGL-24 owns), and compute stays on `b100`. Every
-enabled row is a disclosed three-source device hybrid and never a calibration.
+`examples/host_step_cost_v1`, and compute stays on `b100`. The launch count
+defaults to `SGLANG_TRANSFERRED_LAUNCH_COUNTS`, which is a study convention
+rather than a per-class measurement: `examples/compute_fidelity_v1` enumerated
+one eager decode step from vLLM 0.26.0 sources and froze its minimum and
+maximum as the bracket `[440, 567]`, both endpoints apply to both launch
+classes, and pairing 440 with CUDA graphs and 567 with eager launching only
+reproduces the composed vLLM study's two headline cells. SGL-24 owns the
+SGLang-side count that would replace the borrowed bracket. Every enabled row is
+a disclosed three-source device hybrid and never a calibration.
 
 Token serving has two paths. The default fabricates one mid-vocabulary token
 for every row. `SIMLLM_SGLANG_REPLAY_RUN` instead names a joined pre-play
@@ -158,10 +167,16 @@ made every record carry `num_sampled` and `sampled_request_ids`, so a
 mid-prompt extend row is excluded from the sampled set, while
 `SIMLLM_SGLANG_SAMPLE_IDENTITY=0` restores the pre-SGL-12 stream in which every
 scheduled row is read as having produced a token and a mid-prompt chunk would
-be scored as a generated token. The gate reads the value the next worker will
-use through `active_sample_identity`. The sampled-row rule behind it is source
-transcription plus stub batches; the gate claims no live-scheduler agreement,
-which stays SGL-22. The module imports without SGLang and without torch, and
+be scored as a generated token. The gate reads that state through
+`active_sample_identity`, whose authority is the constructed worker: the
+scheduler builds the worker before the gate runs and the worker latches
+`sample_identity` into its translator, so a later `configure` call or
+environment change never reaches it, and the hook-or-environment derivation is
+the fallback used only when no worker exists yet. Admitting chunked prefill is
+not a safety certificate: the sampled-row rule behind it is source
+transcription plus stub batches, the gate claims no live-scheduler agreement,
+which stays SGL-22, and hazards outside that rule are outside what it
+inspects. The module imports without SGLang and without torch, and
 its ordering contract is tested against a stub scheduler.
 
 RadixCache prefix matching, eviction and the token/request pool accounting
@@ -297,8 +312,12 @@ plus 432 more for a hand-built pre-seam reference sink. All 7 fatal guards
 held, so the run is not void; 63 of 63 scored exact-oracle rows and 18 of 18
 scored behavioral instances passed, in two classes that are never summed. The
 regime flip is one launch wide exactly where the closed form puts it: at 122
-CUDA-graph launches every record keeps the provider's own memory bound with
-zero exposed host time, and at 123 every record reports `host-initiation`. The
+CUDA-graph launches every record records zero exposed host time and a
+`represented_bound` equal to the `memory` bound its own provider reported, and
+at 123 every record records `represented_bound == "host-initiation"` with a
+positive exposure. That bound half was carried into the recorded rows only in
+the fix round, after the first run scored the exposure half alone; the study
+report states that chronology and the rerun changed no timing value. The
 pre-registered warning that a fully masked calibrated cell is still not
 identical to the ideal arm was confirmed: it runs 5 to 24 ns longer per step
 because the two arms quantize the whole-nanosecond enclosure differently, so
@@ -630,7 +649,14 @@ closed id.
   `StepResult` values carry the launch floor. Acceptance requires the live
   run to reproduce the replay study's per-step composition for the same
   records and the ideal arm of the same run to stay byte-identical to the
-  accepted live artifacts.
+  accepted live artifacts. One divergence the seam newly makes reachable must
+  be settled by that run rather than discovered in it: when a step carries no
+  collective, `HtsimStepSink._plan_step` returns `None`, the worker's `_settle`
+  falls back to `estimate_step_latency_ps`, and that path charges
+  `max(C, N * g)` in raw picoseconds with no whole-nanosecond enclosure, so it
+  disagrees with the sink's enclosed value by up to one nanosecond per step. A
+  single-rank run takes the fallback on every step. Acceptance must state which
+  of the two is authoritative and make the other agree or refuse.
 
 ### Uncategorized
 
