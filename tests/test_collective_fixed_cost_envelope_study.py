@@ -163,6 +163,20 @@ def test_the_recorded_run_reproduces_the_closed_form_to_the_picosecond():
         ), key
 
 
+def test_the_tracked_summary_carries_no_machine_specific_path():
+    import json
+
+    summary = _recorded_summary()
+    text = json.dumps(summary)
+
+    assert summary["environment"]["htsim_rnic_configured"] is True
+    assert "htsim_rnic" not in summary["environment"]
+    separator = "/"
+    for root in ("home", "data", "Users", "scratch", "mnt", "~"):
+        segment = root + separator if root == "~" else separator + root
+        assert segment not in text, segment
+
+
 def test_the_run_directory_has_no_personal_default():
     study = _study_module()
 

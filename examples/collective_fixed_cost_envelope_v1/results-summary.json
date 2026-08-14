@@ -24,7 +24,7 @@
     "expectations_sha256": "6ce9482e0c2f67e9343067b83f0d40cee7648a31726bc62f231f36458aa270ed",
     "git_head": "22490db1999184f6bc18a6fc14705a073db23785",
     "git_status_clean": false,
-    "htsim_rnic": "/data3/yifeng/simllm-dev/wave3-runs/htsim9-final/build/datacenter/htsim_rnic",
+    "htsim_rnic_configured": true,
     "platform": "Linux-5.14.21-150400.22-default-x86_64-with-glibc2.31",
     "python": "3.12.12"
   },

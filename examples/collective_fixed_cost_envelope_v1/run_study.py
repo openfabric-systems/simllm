@@ -889,7 +889,9 @@ def results_summary(results: dict[str, Any]) -> dict[str, Any]:
 
     The per-cell artifact manifests and outcome records are bulk run output and
     stay outside the repository; everything a reader needs to check the verdict
-    stays here, including the measured step latencies themselves.
+    stays here, including the measured step latencies themselves. The backend
+    binary's location is replaced by a boolean, because a trackable document
+    must not carry a machine-specific filesystem path.
     """
 
     summary = {
@@ -897,6 +899,9 @@ def results_summary(results: dict[str, Any]) -> dict[str, Any]:
         for key, value in results.items()
         if key not in ("cells", "guard_cells")
     }
+    environment = dict(summary["environment"])
+    environment["htsim_rnic_configured"] = bool(environment.pop("htsim_rnic", ""))
+    summary["environment"] = environment
     summary["measured_step_latency_ps"] = {
         _cell_name(cell["ep_world"], phase, cell["linkspeed_bps"], cell["arm"]): (
             cell["step_latency_ps"][index]
