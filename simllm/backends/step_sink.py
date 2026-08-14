@@ -323,6 +323,10 @@ class StepNetworkOutcome:
     host_empirical_upper_ps: int = 0
     #: point launch demand exposed above provider service
     exposed_host_ps: int = 0
+    #: which term set the represented duration: the provider's own bound name
+    #: when it survived, or ``host-initiation`` when the launch floor replaced
+    #: it. Empty on legacy construction that predates the field.
+    represented_bound: str = ""
 
     def network_share_for(self, num_layers: int) -> float:
         """One minus represented calc time over makespan."""
@@ -574,6 +578,7 @@ class _PlannedStep:
     host_empirical_lower_ps: int
     host_empirical_upper_ps: int
     exposed_host_ps: int
+    represented_bound: str
     num_sampled: int
     sample_count_exact: bool
     per_layer_calc_ns: int | None
@@ -1041,6 +1046,7 @@ class HtsimStepSink:
             host_empirical_lower_ps=timing.host_empirical_lower_ps,
             host_empirical_upper_ps=timing.host_empirical_upper_ps,
             exposed_host_ps=timing.exposed_host_ps,
+            represented_bound=timing.represented_bound,
             num_sampled=timing.num_sampled,
             sample_count_exact=timing.sample_count_exact,
             per_layer_calc_ns=timing.per_layer_calc_ns,
@@ -1217,6 +1223,7 @@ class HtsimStepSink:
             host_empirical_lower_ps=plan.host_empirical_lower_ps,
             host_empirical_upper_ps=plan.host_empirical_upper_ps,
             exposed_host_ps=plan.exposed_host_ps,
+            represented_bound=plan.represented_bound,
         )
         locality = plan.locality
         locality_outcome = StepLocalityOutcome(
