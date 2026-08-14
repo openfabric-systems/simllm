@@ -88,6 +88,23 @@ hook and is the boundary between independent in-process runs, with the same
 semantics as the vLLM adapter's: without it a multi-cell driver leaks one
 cell's sink, device or replay configuration into the next.
 
+Per-step host cost is chosen through `select_sglang_host_model`
+(`simllm/adapters/sglang/host.py`). It resolves a profile name (`ideal`,
+`turing-cuda-graph`, `turing-eager-host`) and a launch count into the three
+objects that must travel together, and returns them under the keyword names
+both `configure` and `HtsimStepSinkConfig` use: the `HostInitiationModel`, the
+`gtx1660-ti-sm75` device key its calibrated constants demand, and a provider
+pinned to the accepted `b100` compute envelope so the device key can move
+without the compute moving with it. `ideal` is the default and returns exactly
+what a study built by hand before this seam existed, which is what keeps every
+accepted artifact identical. A calibrated selection carries
+`SGLANG_HOST_TRANSFER_DISCLOSURE`, because none of its constants was measured
+on SGLang: the per-launch point is a GTX 1660 Ti capture from
+`examples/host_step_cost_v1`, the launch count defaults to the vLLM 0.26.0
+static enumeration (`SGLANG_TRANSFERRED_LAUNCH_COUNTS`, a surrogate for the
+unmeasured SGLang demand that SGL-24 owns), and compute stays on `b100`. Every
+enabled row is a disclosed three-source device hybrid and never a calibration.
+
 Token serving has two paths. The default fabricates one mid-vocabulary token
 for every row. `SIMLLM_SGLANG_REPLAY_RUN` instead names a joined pre-play
 replay run, and `SglReplayTokenSource` then verifies the trace against its
@@ -270,6 +287,29 @@ sink-free control took 16. This is the first SGLang run in this repository to
 drive `htsim_rnic` at all, and the first routed study driven by an SGLang trace
 rather than a vLLM one.
 
+SGL-23 is closed. The chain now owns its per-step host cost instead of leaving
+every study to build the zero model by hand, and the seam is frozen by
+expectations-only commit `79b03da` and reported in
+[examples/sglang_host_step_v1/RESULTS.md](../../examples/sglang_host_step_v1/RESULTS.md).
+On 2026-08-14 the tracked nine-record SGLang smoke capture replayed through
+`HtsimStepSink` in seven selector states, for 9,072 `htsim_rnic` invocations
+plus 1,296 more for a hand-built pre-seam reference sink. All 7 fatal guards
+held, so the run is not void; 63 of 63 scored exact-oracle rows and 18 of 18
+scored behavioral instances passed, in two classes that are never summed. The
+regime flip is one launch wide exactly where the closed form puts it: at 122
+CUDA-graph launches every record keeps the provider's own memory bound with
+zero exposed host time, and at 123 every record reports `host-initiation`. The
+pre-registered warning that a fully masked calibrated cell is still not
+identical to the ideal arm was confirmed: it runs 5 to 24 ns longer per step
+because the two arms quantize the whole-nanosecond enclosure differently, so
+`ideal` is the only exact off path. At the transferred vLLM bracket the
+composed decode step is 76.44 percent (CUDA graph, 440) or 92.43 percent
+(eager, 567) one transferred constant and the modeled B100 compute contributes
+exactly zero, because the launch floor masks it. The fabric term is entirely
+simulated packets and reproduces a hand closed form to 1 ps per collective.
+Nothing in the run was measured on SGLang and no live scheduler was in the
+loop: SGL-24 owns the launch count and SGL-26 owns live selection.
+
 The SGL-11 zero-time communicator slice is frozen by expectations-only commit
 `b0c5b73` and reported in
 `examples/sgl_communicator_v1/RESULTS.md`. On 2026-08-10 the import-free study
@@ -440,7 +480,11 @@ Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
 worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin
 framework (`sglang.srt.plugins` entry points plus `HookRegistry` `REPLACE`
 hooks, run before scheduler construction) is a supported non-fork selection
-seam, so no upstream flag is needed.
+seam, so no upstream flag is needed. SGL-23 (the owned per-step host cost
+selector) closed 2026-08-14 with `select_sglang_host_model` and the frozen
+replay study; its residuals are registered as SGL-24 (SGLang's own launch
+count) and SGL-26 (live in-process selection) rather than kept open under the
+closed id.
 
 ### Precision
 - SGL-4 (Precision; P1; L) (remaining half): a paced-mode run checked against
@@ -575,19 +619,6 @@ seam, so no upstream flag is needed.
   as dense. Acceptance requires exact per-rank active FLOPs and resident
   bytes, a supported end-to-end TTFT/TPOT change, and byte-identical dense and
   single-GPU baselines.
-- SGL-23 (Completeness; P1; M): give the SGLang chain an owned, selectable
-  per-step host cost. No SGL task owns choosing a `HostInitiationModel` on
-  this chain today, so every SGLang study builds
-  `HostInitiationModel.ideal()` by hand
-  (`examples/sglang_end_to_end_v1/run_study.py`, line 650) and the per-step
-  host term is exactly zero, while the vLLM chain already selects the
-  calibrated profiles through a study-local resolver
-  (`examples/end_to_end_replay_v1/run_study.py`, `_composition_selection`).
-  The unavailable path is a documented adapter-side selector that resolves a
-  profile name and a launch count into the host model, the device key the
-  calibrated constants demand and a provider that keeps the accepted compute
-  envelope. `ideal` stays the default and its off path must preserve every
-  accepted SGLang artifact exactly.
 - SGL-26 (Completeness; P1; M): select a nonideal host profile in a live
   in-process SGLang run and carry it to TTFT and TPOT. `configure` already
   accepts a host model and `_validate_host_model_selection` already requires
