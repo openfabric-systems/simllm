@@ -37,6 +37,11 @@ frozen literal was edited.
 | implementation and tests | `1571f84156755eb8c5a1ef5681f9cebe6e21d2cd` |
 | study harness | `dbeb5fd7e385c1e5b003c2a8af156c87b3d7409d` |
 
+One harness change landed after the run: an assertion that the rows the runner
+publishes carry exactly the frozen guard, exact-oracle and behavioral
+identifiers. It reads no measurement and changes no published quantity, and it
+is recorded here rather than folded silently into the pre-run state.
+
 | provenance field | value |
 |---|---|
 | SimLLM revision observed by the run | `dbeb5fd7e385c1e5b003c2a8af156c87b3d7409d` |
