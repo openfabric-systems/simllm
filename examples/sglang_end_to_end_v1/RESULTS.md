@@ -436,3 +436,16 @@ python examples/sglang_end_to_end_v1/run_study.py \
 `--check-only` validates every frozen input and writes nothing. The parent
 interpreter never imports SGLang or torch. Backends are deterministic, so every
 number above reproduces exactly.
+
+## Post-specified wording correction, 2026-08-14
+
+Two sentences in this report (the summary above and the closed-loop section
+below) describe each scheduler step as driving a "packet-level" `htsim_rnic`
+run. The study's registered profile is `rnic-nn-fluid`, a continuous fluid
+manifold that reproduces bytes over rate to within one picosecond and models
+no packets, switch queues or RNIC hardware. The runs were real `htsim_rnic`
+executions and every number in this report stands unchanged; only the word
+"packet-level" overstated the network model in force. Packet-level profiles
+(`rnic-nn`, `rnic-cn`) remain selectable but were not what this study ran.
+This correction was added at integration, after the study was accepted, and
+changes no measured value.
