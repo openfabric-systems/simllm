@@ -133,6 +133,134 @@ def test_job_visible_gpu_selector_refuses_unparseable_device(visible):
         )
 
 
+def test_child_environment_is_confined_to_result_root(tmp_path):
+    runner = _runner_module()
+    out = tmp_path / "result"
+    out.mkdir()
+
+    environment = runner._configure_child_environment(out)
+    record = runner._child_environment_record(out, environment)
+
+    assert set(environment) == {
+        "HOME",
+        "TMPDIR",
+        "TMP",
+        "TEMP",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "CUDA_CACHE_PATH",
+    }
+    assert record["TMPDIR"] == "tool-state/tmp"
+    assert record["TMP"] == record["TMPDIR"]
+    assert record["TEMP"] == record["TMPDIR"]
+    assert all((out / relative).is_dir() for relative in record.values())
+    assert all((out / relative).stat().st_mode & 0o777 == 0o700 for relative in record.values())
+
+
+def test_run_propagates_configured_child_environment(monkeypatch):
+    runner = _runner_module()
+    observed = {}
+
+    def fake_run(command, **kwargs):
+        observed.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    runner._QUALIFICATION_ENVIRONMENT = {
+        "HOME": "/qualified/home",
+        "TMPDIR": "/qualified/tmp",
+    }
+
+    runner._run(("qualification-tool", "--version"))
+
+    assert observed["env"]["HOME"] == "/qualified/home"
+    assert observed["env"]["TMPDIR"] == "/qualified/tmp"
+    assert observed["env"]["PATH"]
+
+
+def test_nsys_output_paths_must_match_configured_roots(tmp_path):
+    runner = _runner_module()
+    out = tmp_path / "result"
+    out.mkdir()
+    temporary = out / "tool-state/tmp/nsys-report-abcd.qdstrm"
+    report = out / "capture/a100_environment_probe.nsys-rep"
+    output = f"Generating '{temporary}'\nGenerated:\n\t{report}\n"
+
+    assert runner._validate_nsys_output_paths(output, out, report) == {
+        "intermediate": "tool-state/tmp/nsys-report-abcd.qdstrm",
+        "report": "capture/a100_environment_probe.nsys-rep",
+    }
+
+    escaped = (
+        "Generating '/tmp/nsys-report-b336.qdstrm'\n"
+        f"Generated:\n\t{report}\n"
+    )
+    with pytest.raises(RuntimeError, match="escaped the configured temporary root"):
+        runner._validate_nsys_output_paths(
+            escaped, out, report
+        )
+
+
+@pytest.mark.parametrize(
+    "temporary",
+    ["relative.qdstrm", "/tmp/nsys-report.qdstrm", "{sibling}/nsys-report.qdstrm"],
+)
+def test_nsys_output_paths_refuse_unscoped_temporary_path(temporary, tmp_path):
+    runner = _runner_module()
+    out = tmp_path / "result"
+    out.mkdir()
+    report = out / "capture/a100_environment_probe.nsys-rep"
+    rendered = temporary.format(sibling=f"{out}-sibling")
+    output = f"Generating '{rendered}'\nGenerated:\n\t{report}\n"
+
+    with pytest.raises(RuntimeError, match="temporary"):
+        runner._validate_nsys_output_paths(output, out, report)
+
+
+def test_nsys_output_paths_require_exactly_one_expected_report(tmp_path):
+    runner = _runner_module()
+    out = tmp_path / "result"
+    out.mkdir()
+    temporary = out / "tool-state/tmp/nsys-report-abcd.qdstrm"
+    expected = out / "capture/a100_environment_probe.nsys-rep"
+    unexpected = out / "capture/unexpected.nsys-rep"
+
+    with pytest.raises(RuntimeError, match="unexpected final report"):
+        runner._validate_nsys_output_paths(
+            f"Generating '{temporary}'\nGenerated:\n\t{unexpected}\n",
+            out,
+            expected,
+        )
+
+    with pytest.raises(RuntimeError, match="exactly one final report"):
+        runner._validate_nsys_output_paths(
+            f"Generating '{temporary}'\n", out, expected
+        )
+
+
+def test_scratch_budget_and_manifest_include_tool_temporary_files(
+    monkeypatch, tmp_path
+):
+    runner = _runner_module()
+    scratch = tmp_path / "scratch"
+    out = scratch / "result"
+    temporary = out / "tool-state/tmp/retained.qdstrm"
+    source = scratch / "source/source.bin"
+    temporary.parent.mkdir(parents=True)
+    source.parent.mkdir(parents=True)
+    temporary.write_bytes(b"temp")
+    source.write_bytes(b"source")
+
+    assert runner._assert_scratch_budget(scratch) >= 10
+    assert "tool-state/tmp/retained.qdstrm" in {
+        row["path"] for row in runner._artifact_manifest(out)
+    }
+
+    monkeypatch.setattr(runner, "MAX_SCRATCH_BYTES", 5)
+    with pytest.raises(RuntimeError, match="scratch exceeds"):
+        runner._assert_scratch_budget(scratch)
+
+
 def test_mig_state_uses_portable_full_query(monkeypatch):
     runner = _runner_module()
     calls = []

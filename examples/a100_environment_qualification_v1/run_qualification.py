@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -40,13 +40,16 @@ EXPECTED_MEASURED = 1
 PROFILER_TIMEOUT_SECONDS = 180
 GLOBAL_DEADLINE_SECONDS = 17 * 60
 MAX_OUTPUT_BYTES = 10 * 1024**3
+MAX_SCRATCH_BYTES = 10 * 1024**3
 _QUALIFICATION_DEADLINE: float | None = None
+_QUALIFICATION_ENVIRONMENT: dict[str, str] | None = None
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cuda-root", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--scratch-root", type=Path, required=True)
     parser.add_argument("--expected-head", required=True)
     parser.add_argument("--check-only", action="store_true")
     return parser.parse_args()
@@ -65,6 +68,10 @@ def _run(
             raise TimeoutError("A100 qualification reached its 17-minute deadline")
         effective_timeout = min(effective_timeout, remaining)
     normalized = [str(item) for item in command]
+    environment = None
+    if _QUALIFICATION_ENVIRONMENT is not None:
+        environment = os.environ.copy()
+        environment.update(_QUALIFICATION_ENVIRONMENT)
     try:
         completed = subprocess.run(
             normalized,
@@ -73,6 +80,7 @@ def _run(
             capture_output=True,
             text=True,
             timeout=effective_timeout,
+            env=environment,
         )
     except subprocess.TimeoutExpired as error:
         stdout = error.stdout or ""
@@ -120,6 +128,48 @@ def _assert_output_budget(path: Path) -> int:
     if size > MAX_OUTPUT_BYTES:
         raise RuntimeError(f"qualification output exceeds 10 GiB: {size} bytes")
     return size
+
+
+def _assert_scratch_budget(path: Path) -> int:
+    size = _tree_size(path)
+    if size > MAX_SCRATCH_BYTES:
+        raise RuntimeError(f"qualification scratch exceeds 10 GiB: {size} bytes")
+    return size
+
+
+def _configure_child_environment(out: Path) -> dict[str, str]:
+    tool_state = out / "tool-state"
+    temporary = tool_state / "tmp"
+    environment = {
+        "HOME": tool_state / "home",
+        "TMPDIR": temporary,
+        "TMP": temporary,
+        "TEMP": temporary,
+        "XDG_CACHE_HOME": tool_state / "cache",
+        "XDG_CONFIG_HOME": tool_state / "config",
+        "CUDA_CACHE_PATH": tool_state / "cuda-cache",
+    }
+    for directory in set(environment.values()):
+        directory.mkdir(parents=True)
+        directory.chmod(0o700)
+    return {name: str(path.resolve()) for name, path in environment.items()}
+
+
+def _child_environment_record(
+    out: Path, environment: Mapping[str, str]
+) -> dict[str, str]:
+    root = out.resolve()
+    record = {}
+    for name, raw_path in environment.items():
+        path = Path(raw_path).resolve()
+        try:
+            relative = path.relative_to(root)
+        except ValueError as error:
+            raise RuntimeError(
+                f"child environment {name} escapes the result root: {path}"
+            ) from error
+        record[name] = relative.as_posix()
+    return record
 
 
 def _version(tool: Path, *arguments: str) -> str:
@@ -666,6 +716,51 @@ def _validate_nsys_trace(output: str) -> list[dict[str, Any]]:
     return target_rows
 
 
+def _validate_nsys_output_paths(
+    output: str, out: Path, expected_report: Path
+) -> dict[str, str]:
+    temporary_paths = re.findall(
+        r"(?m)^Generating '([^'\r\n]+\.qdstrm)'[ \t]*$", output
+    )
+    report_paths = re.findall(
+        r"(?m)^Generated:[ \t]*\r?\n[ \t]+(/[^\r\n]+\.nsys-rep)[ \t]*$",
+        output,
+    )
+    if len(temporary_paths) != 1:
+        raise RuntimeError(
+            "Nsight Systems did not report exactly one temporary stream path: "
+            f"{temporary_paths}"
+        )
+    if len(report_paths) != 1:
+        raise RuntimeError(
+            "Nsight Systems did not report exactly one final report path: "
+            f"{report_paths}"
+        )
+    root = out.resolve()
+    temporary_root = (out / "tool-state" / "tmp").resolve()
+    temporary = Path(temporary_paths[0])
+    if not temporary.is_absolute():
+        raise RuntimeError(
+            f"Nsight Systems reported a nonabsolute temporary path: {temporary}"
+        )
+    try:
+        temporary_relative = temporary.resolve().relative_to(temporary_root)
+    except ValueError as error:
+        raise RuntimeError(
+            "Nsight Systems temporary output escaped the configured temporary "
+            f"root: {temporary}"
+        ) from error
+    report = Path(report_paths[0])
+    if report.resolve() != expected_report.resolve():
+        raise RuntimeError(
+            f"Nsight Systems reported an unexpected final report path: {report}"
+        )
+    return {
+        "intermediate": (Path("tool-state/tmp") / temporary_relative).as_posix(),
+        "report": report.resolve().relative_to(root).as_posix(),
+    }
+
+
 def _telemetry_blockers(snapshot: dict[str, str]) -> list[str]:
     required_numeric = (
         "clocks.current.sm",
@@ -692,11 +787,16 @@ def _telemetry_blockers(snapshot: dict[str, str]) -> list[str]:
 
 def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     revision = _check_repository(args.expected_head)
+    if _QUALIFICATION_ENVIRONMENT is None:
+        raise RuntimeError("qualification child environment is not configured")
     context: dict[str, Any] = {
         "revision": revision,
         "expectations_sha256": _sha256(EXPECTATIONS_PATH),
         "probe_source_sha256": _sha256(PROBE_SOURCE),
         "global_deadline_seconds": GLOBAL_DEADLINE_SECONDS,
+        "child_environment": _child_environment_record(
+            args.out, _QUALIFICATION_ENVIRONMENT
+        ),
     }
     _write_partial_context(args.out, context)
     slurm = _check_slurm()
@@ -824,6 +924,9 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     )
     _write_log(capture_dir / "nsys_profile.log", nsys_run)
     report = nsys_prefix.with_suffix(".nsys-rep")
+    nsys_output_paths = _validate_nsys_output_paths(
+        nsys_run.stdout + "\n" + nsys_run.stderr, args.out, report
+    )
     if not report.is_file() or report.stat().st_size == 0:
         raise RuntimeError("Nsight Systems produced no report")
     nsys_stats = _run(
@@ -844,16 +947,26 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     trace_csv = capture_dir / "cuda_gpu_trace.csv"
     trace_csv.write_text(nsys_stats.stdout, encoding="utf-8")
     nsys_target_rows = _validate_nsys_trace(nsys_stats.stdout)
-    nsys_bytes = _assert_output_budget(args.out)
     context.update(
         {
             "nsys_trace_sha256": _sha256(trace_csv),
             "nsys_report_sha256": _sha256(report),
             "nsys_target_rows": nsys_target_rows,
-            "output_bytes_after_nsys": nsys_bytes,
+            "nsys_output_paths": nsys_output_paths,
         }
     )
     _write_partial_context(args.out, context)
+    output_bytes_after_nsys = _assert_output_budget(args.out)
+    scratch_bytes_after_nsys = _assert_scratch_budget(args.scratch_root)
+    context.update(
+        {
+            "output_bytes_after_nsys": output_bytes_after_nsys,
+            "scratch_bytes_after_nsys": scratch_bytes_after_nsys,
+        }
+    )
+    _write_partial_context(args.out, context)
+    _assert_output_budget(args.out)
+    _assert_scratch_budget(args.scratch_root)
 
     ncu_run = _run(
         (
@@ -899,7 +1012,8 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     _write_partial_context(args.out, context)
     if processes_after:
         raise RuntimeError(f"allocated GPU retains foreign compute processes: {processes_after}")
-    total_bytes = _assert_output_budget(args.out)
+    output_bytes_after_ncu = _assert_output_budget(args.out)
+    scratch_bytes_after_ncu = _assert_scratch_budget(args.scratch_root)
 
     capability_blockers = [
         *_telemetry_blockers(before),
@@ -912,10 +1026,13 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     context.update(
         {
             "capability_blockers": capability_blockers,
-            "output_bytes_final": total_bytes,
+            "output_bytes_after_ncu": output_bytes_after_ncu,
+            "scratch_bytes_after_ncu": scratch_bytes_after_ncu,
         }
     )
     _write_partial_context(args.out, context)
+    _assert_output_budget(args.out)
+    _assert_scratch_budget(args.scratch_root)
     state = "BLOCKED" if capability_blockers else "QUALIFIED"
     result = {
         "schema": "simllm-a100-environment-qualification-v1",
@@ -934,13 +1051,17 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         "supported_clocks": supported_clocks,
         "processes_before": processes_before,
         "processes_after": processes_after,
+        "child_environment": context["child_environment"],
         "tool_versions": tool_versions,
         "probe": probe_values,
         "nsys_trace_sha256": _sha256(trace_csv),
         "nsys_report_sha256": _sha256(report),
         "nsys_target_rows": nsys_target_rows,
-        "output_bytes_after_nsys": nsys_bytes,
-        "output_bytes_final": total_bytes,
+        "nsys_output_paths": nsys_output_paths,
+        "output_bytes_after_nsys": output_bytes_after_nsys,
+        "output_bytes_after_ncu": output_bytes_after_ncu,
+        "scratch_bytes_after_nsys": scratch_bytes_after_nsys,
+        "scratch_bytes_after_ncu": scratch_bytes_after_ncu,
         "counter_status": "available" if counter_blocker is None else "blocked",
         "counter_blocker": counter_blocker,
         "capability_blockers": capability_blockers,
@@ -960,8 +1081,15 @@ def check_only(args: argparse.Namespace) -> None:
         raise SystemExit("--expected-head must be a full lowercase git SHA")
     if not args.out.is_absolute():
         raise SystemExit("--out must be an explicit absolute path")
+    if not args.scratch_root.is_absolute():
+        raise SystemExit("--scratch-root must be an explicit absolute path")
     if args.out.resolve() == REPOSITORY_ROOT or REPOSITORY_ROOT in args.out.resolve().parents:
         raise SystemExit("--out must be outside the repository")
+    if (
+        args.scratch_root.resolve() == REPOSITORY_ROOT
+        or REPOSITORY_ROOT in args.scratch_root.resolve().parents
+    ):
+        raise SystemExit("--scratch-root must be outside the repository")
     if EXPECTED_ELEMENTS != 16_777_216 or EXPECTED_THREADS != 256:
         raise AssertionError("frozen probe geometry changed")
     if EXPECTED_WARMUPS != 5 or EXPECTED_MEASURED != 1:
@@ -970,6 +1098,7 @@ def check_only(args: argparse.Namespace) -> None:
         PROFILER_TIMEOUT_SECONDS != 180
         or GLOBAL_DEADLINE_SECONDS != 17 * 60
         or MAX_OUTPUT_BYTES != 10 * 1024**3
+        or MAX_SCRATCH_BYTES != 10 * 1024**3
     ):
         raise AssertionError("frozen qualification safety bounds changed")
     if not EXPECTATIONS_PATH.is_file() or not PROBE_SOURCE.is_file():
@@ -979,13 +1108,16 @@ def check_only(args: argparse.Namespace) -> None:
 
 
 def main() -> int:
-    global _QUALIFICATION_DEADLINE
+    global _QUALIFICATION_DEADLINE, _QUALIFICATION_ENVIRONMENT
 
     args = parse_args()
     if not args.out.is_absolute():
         raise SystemExit("--out must be an explicit absolute path")
+    if not args.scratch_root.is_absolute():
+        raise SystemExit("--scratch-root must be an explicit absolute path")
     args.cuda_root = args.cuda_root.resolve()
     args.out = args.out.resolve()
+    args.scratch_root = args.scratch_root.resolve()
     if args.check_only:
         check_only(args)
         return 0
@@ -993,7 +1125,12 @@ def main() -> int:
         raise SystemExit(f"refusing to overwrite qualification output: {args.out}")
     if args.out == REPOSITORY_ROOT or REPOSITORY_ROOT in args.out.parents:
         raise SystemExit("qualification output must be outside the repository")
+    if not args.scratch_root.is_dir():
+        raise SystemExit(f"qualification scratch root is unavailable: {args.scratch_root}")
+    if args.scratch_root not in args.out.parents:
+        raise SystemExit("qualification output must be inside the scratch root")
     args.out.mkdir(parents=True)
+    _QUALIFICATION_ENVIRONMENT = _configure_child_environment(args.out)
     _QUALIFICATION_DEADLINE = time.monotonic() + GLOBAL_DEADLINE_SECONDS
 
     result_path = args.out / "qualification.json"
@@ -1019,6 +1156,7 @@ def main() -> int:
             ),
             "partial_context": partial_context,
             "output_bytes": _tree_size(args.out),
+            "scratch_bytes": _tree_size(args.scratch_root),
             "artifacts": _artifact_manifest(args.out),
         }
         result_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
