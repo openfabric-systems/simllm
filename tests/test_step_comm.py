@@ -12,6 +12,7 @@ from simllm.traffic import (
     TP_ALLREDUCE_SITES,
     layer_tp_allreduce_sites,
     render_step_goal,
+    renders_expert_combine,
     step_communication_phases,
     step_moe_alltoalls,
     step_tp_allreduces,
@@ -91,15 +92,16 @@ def test_step_tp_allreduces_empty_cases():
 
 def test_layer_tp_allreduce_sites_follow_the_declared_all_to_all():
     """A layer reduces its MLP output once, in exactly one mechanism."""
+    record = decode_record()
     # dense: no combine exists, so both row-parallel sites reduce
-    assert layer_tp_allreduce_sites(TINY_DIMS) == TP_ALLREDUCE_SITES
+    assert layer_tp_allreduce_sites(record, TINY_DIMS) == TP_ALLREDUCE_SITES
     assert (
-        layer_tp_allreduce_sites(TINY_DIMS, ep_ranks=[0, 1, 2, 3])
+        layer_tp_allreduce_sites(record, TINY_DIMS, ep_ranks=[0, 1, 2, 3])
         == TP_ALLREDUCE_SITES
     )
-    # routed with a declared all-to-all group: the combine returns the output
+    # routed with a declared reducing all-to-all group: the combine returns it
     assert (
-        layer_tp_allreduce_sites(TINY_MOE_DIMS, ep_ranks=[0, 1])
+        layer_tp_allreduce_sites(record, TINY_MOE_DIMS, ep_ranks=[0, 1])
         == EXPERT_PARALLEL_TP_ALLREDUCE_SITES
         == ("attention",)
     )
@@ -107,11 +109,65 @@ def test_layer_tp_allreduce_sites_follow_the_declared_all_to_all():
     # 0.26.0 config.py:1052-1055 needs dp, pcp or sequence parallelism for
     # all-to-all kernels, and runner/moe_runner.py:436-465 then all-reduces
     # the unreduced fused output over the TP group
-    assert layer_tp_allreduce_sites(TINY_MOE_DIMS) == TP_ALLREDUCE_SITES
+    assert layer_tp_allreduce_sites(record, TINY_MOE_DIMS) == TP_ALLREDUCE_SITES
     # a one-rank group renders no combine either, so both sites survive
-    assert layer_tp_allreduce_sites(TINY_MOE_DIMS, ep_ranks=[0]) == TP_ALLREDUCE_SITES
+    assert (
+        layer_tp_allreduce_sites(record, TINY_MOE_DIMS, ep_ranks=[0])
+        == TP_ALLREDUCE_SITES
+    )
     # expert-tensor-sharded dims behave the same way
-    assert layer_tp_allreduce_sites(TINY_SHARDED_MOE_DIMS) == TP_ALLREDUCE_SITES
+    assert (
+        layer_tp_allreduce_sites(record, TINY_SHARDED_MOE_DIMS) == TP_ALLREDUCE_SITES
+    )
+
+
+def test_every_layer_reduces_its_mlp_output_exactly_once():
+    """The degenerate uniform share must not delete the only reduction.
+
+    With a per-pair share that floors to zero bytes, step_moe_alltoalls
+    renders no combine at all, so suppressing the mlp site would leave that
+    layer's MLP output reduced zero times.
+    """
+    degenerate = ModelDims(
+        num_layers=2,
+        hidden_size=4,
+        intermediate_size=8,
+        num_heads=2,
+        num_kv_heads=2,
+        head_size=2,
+        vocab_size=16,
+        dtype_bytes=1,
+        num_experts=8,
+        top_k=1,
+        moe_intermediate_size=4,
+        local_num_experts=1,
+    )
+    record = decode_record(num_new_tokens=1)
+    ep_ranks = tuple(range(8))
+    # one token times top_k 1 times 4 activation bytes over 8 ranks floors to 0
+    assert step_moe_alltoalls(record, degenerate, ep_ranks) == []
+    assert not renders_expert_combine(record, degenerate, ep_ranks)
+    operations = step_tp_allreduces(record, degenerate, [0, 1], ep_ranks=ep_ranks)
+    assert [op.site for op in operations] == ["attention", "mlp"] * 2
+
+    # and the invariant holds across every representable shape nearby
+    for tokens in (0, 1, 3, 12):
+        for ep_width in (0, 1, 2, 8):
+            for dims in (TINY_DIMS, TINY_MOE_DIMS, degenerate):
+                group = tuple(range(ep_width))
+                step = decode_record(num_new_tokens=tokens)
+                combines = step_moe_alltoalls(step, dims, group)
+                sites = step_tp_allreduces(step, dims, [0, 1], ep_ranks=group)
+                for layer in range(dims.num_layers):
+                    reductions = sum(
+                        1
+                        for op in combines
+                        if op.layer == layer and op.phase == "combine"
+                    ) + sum(
+                        1 for op in sites if op.layer == layer and op.site == "mlp"
+                    )
+                    # zero only when the step renders no traffic at all
+                    assert reductions == (0 if not sites and not combines else 1)
 
 
 def test_step_tp_allreduces_naive_expert_parallelism_keeps_both_sites():

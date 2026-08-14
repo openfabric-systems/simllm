@@ -5,11 +5,13 @@ Maps one :class:`~simllm.core.StepRecord` plus a per-rank
 traffic of that engine step.
 
 Tensor parallel (:func:`step_tp_allreduces`): per transformer layer, the ring
-allreduces :func:`layer_tp_allreduce_sites` reports for this model. A dense
+allreduces :func:`layer_tp_allreduce_sites` reports for this step. A dense
 layer has two (the attention output projection and the MLP output
-projection); a routed layer whose experts are expert-parallel has only the
-attention one, because its combine all-to-all already returns finished expert
-vectors and no partial sum spans the TP group. Each allreduce moves
+projection); a layer whose rendered combine all-to-all returns its output has
+only the attention one, because that combine already returns finished expert
+vectors and no partial sum spans the TP group. Every layer reduces its MLP
+output exactly once, in exactly one of those two mechanisms. Each allreduce
+moves
 
     payload_bytes = record.total_new_tokens * dims.hidden_size * dims.dtype_bytes
 
@@ -111,46 +113,102 @@ EXPERT_PARALLEL_TP_ALLREDUCE_SITES = ("attention",)
 MOE_A2A_PHASES = ("dispatch", "combine")
 
 
+def renders_expert_combine(
+    record: StepRecord,
+    dims: ModelDims,
+    ep_ranks: Sequence[int] | None,
+    *,
+    routed_supply: RoutedMoeSupply | None = None,
+) -> bool:
+    """Whether this step renders a combine that returns a layer's MLP output.
+
+    This is the single authority for the question, and
+    :func:`step_moe_alltoalls` takes its own early exits from it, so the
+    combine inventory and the allreduce site inventory cannot disagree about
+    whether a layer's output arrives over the fabric.
+
+    False for dense dims, for an expert-parallel group below two ranks, for a
+    zero-new-token drain record, and for the one degenerate case of the uniform
+    approximation: when ``total_new_tokens * top_k * hidden_size *
+    dtype_bytes`` floors to zero bytes per ordered pair, that approximation
+    renders no all-to-all at all, so nothing returns the layer output and the
+    reduction stays on the tensor-parallel allreduce. A captured
+    ``RoutedMoeSupply`` has no such floor: its messages carry one whole hidden
+    vector each, so a routed step with tokens always renders its combine, even
+    when every destination is local and the pair table is empty.
+    """
+
+    if not isinstance(record, StepRecord):
+        raise TypeError("record must be a StepRecord")
+    if not isinstance(dims, ModelDims):
+        raise TypeError("dims must be ModelDims")
+    ranks = () if ep_ranks is None else tuple(ep_ranks)
+    if dims.num_experts <= 0 or len(ranks) < 2:
+        return False
+    if record.total_new_tokens <= 0:
+        return False
+    if routed_supply is not None:
+        return True
+    per_pair = (
+        record.total_new_tokens * dims.top_k * dims.hidden_size * dims.dtype_bytes
+    ) // len(ranks)
+    return per_pair > 0
+
+
 def layer_tp_allreduce_sites(
-    dims: ModelDims, *, ep_ranks: Sequence[int] | None = None
+    record: StepRecord,
+    dims: ModelDims,
+    *,
+    ep_ranks: Sequence[int] | None = None,
+    routed_supply: RoutedMoeSupply | None = None,
 ) -> tuple[str, ...]:
-    """The tensor-parallel allreduce sites one layer of ``dims`` executes.
+    """The tensor-parallel allreduce sites one layer of this step executes.
 
     Every layer reduces its MLP output exactly once, and the site rule names
     which mechanism does it. A dense layer reduces twice overall, after the
     attention output projection and after the MLP down projection, because
-    both are row-parallel and every rank holds a partial sum. A routed layer
-    whose output arrives through a combine all-to-all reduces once, after
+    both are row-parallel and every rank holds a partial sum. A layer whose
+    output arrives through a rendered combine all-to-all reduces once, after
     attention: that combine returns finished expert vectors and the token's
     home rank forms the layer output by a local weighted sum, so no partial
     sum spans the tensor-parallel group and an mlp-site allreduce would be a
     double count.
 
-    The condition is therefore exactly the condition under which
-    :func:`step_moe_alltoalls` renders a combine for the layer, i.e. routed
-    dims and a declared expert-parallel group of at least two ranks. Declaring
-    that group to a renderer asserts all-to-all-kernel expert parallelism.
-    This matters because expert parallelism alone does not imply an
-    all-to-all. In the pinned vLLM 0.26.0,
-    ``model_executor/layers/fused_moe/config.py:1052-1055`` makes
+    The condition is exactly :func:`renders_expert_combine`, so the invariant
+    holds for every representable input including the degenerate uniform case
+    where the per-pair share floors to zero bytes and no all-to-all is
+    rendered at all.
+
+    Declaring the expert-parallel group to a renderer asserts all-to-all
+    expert parallelism with a reducing combine, which is a narrower claim than
+    expert parallelism. In the pinned vLLM 0.26.0 two conditions must both
+    hold. ``model_executor/layers/fused_moe/config.py:1052-1055`` makes
     ``use_all2all_kernels`` require ``use_ep`` AND one of ``dp_size > 1``,
     ``pcp_size > 1`` or sequence parallelism, so a ``tp=8, ep=8, dp=1`` shape
-    runs naive expert parallelism with no all-to-all at all, and
-    ``model_executor/layers/fused_moe/runner/moe_runner.py:436-465`` then
-    all-reduces the fused output over the tensor-parallel group because the
-    combine never reduced it. That naive configuration is rendered by NOT
-    declaring the expert-parallel group: two allreduce sites and no
-    all-to-all, which is what the framework executes. TRAF-40 owns making
-    naive expert parallelism a first-class declared mode rather than the
-    absence of one.
+    runs naive expert parallelism with no all-to-all at all. And the selected
+    backend must actually reduce: ``config/parallel.py:186`` defaults
+    ``all2all_backend`` to ``allgather_reducescatter``, whose prepare-finalize
+    returns ``output_is_reduced()`` False
+    (``model_executor/layers/fused_moe/prepare_finalize/naive_dp_ep.py:109``
+    and ``:242``), while the deepep, mori, nixl and flashinfer families return
+    True. In either non-reducing case
+    ``model_executor/layers/fused_moe/runner/moe_runner.py:436-465``
+    all-reduces the fused output over the tensor-parallel group, and that
+    shape is rendered by NOT declaring the group: two allreduce sites and no
+    all-to-all. The vLLM producer classifies both conditions before binding a
+    group, and TRAF-40 owns making the mode an explicit declaration rather
+    than the presence or absence of the group.
 
-    One documented exception is refused rather than mis-rendered. A shared
-    expert is all-reduced over the tensor-parallel group even on the
+    Two documented exceptions are refused rather than mis-rendered. A shared
+    expert is all-reduced over the tensor-parallel group even on the reducing
     all-to-all path
     (``model_executor/layers/fused_moe/runner/moe_runner.py:416-433``), so a
-    shared-expert model keeps an mlp-site reduction this rule would drop.
-    Both frontend readers refuse shared-expert geometries; VLLM-25 and SGL-18
-    own supporting them.
+    shared-expert model keeps an mlp-site reduction this rule would drop; both
+    frontend readers refuse those geometries, and VLLM-25 and SGL-18 own
+    supporting them. Under sequence parallelism the framework skips the
+    tensor-parallel reduction entirely and the model performs its own
+    allgather, which this repository does not render at all; TRAF-6 owns
+    sequence parallelism.
 
     ``ModelDims`` carries one whole-model mixture geometry, so mixed dense and
     routed layer schedules are not expressible (TRAF-34), and an
@@ -158,10 +216,9 @@ def layer_tp_allreduce_sites(
     either (TRAF-35). Neither is guessed here.
     """
 
-    if not isinstance(dims, ModelDims):
-        raise TypeError("dims must be ModelDims")
-    ranks = () if ep_ranks is None else tuple(ep_ranks)
-    if dims.num_experts > 0 and len(ranks) >= 2:
+    if renders_expert_combine(
+        record, dims, ep_ranks, routed_supply=routed_supply
+    ):
         return EXPERT_PARALLEL_TP_ALLREDUCE_SITES
     return TP_ALLREDUCE_SITES
 
@@ -176,7 +233,9 @@ def _planned_collective_work(
     """Return traffic-owned collective work indexed by semantic call site."""
 
     planned: dict[tuple[str, int, str], tuple[CollectiveWork, int]] = {}
-    for operation in step_tp_allreduces(record, dims, tp_ranks, ep_ranks=ep_ranks):
+    for operation in step_tp_allreduces(
+        record, dims, tp_ranks, ep_ranks=ep_ranks, routed_supply=routed_supply
+    ):
         key = ("tp", operation.layer, operation.site)
         planned[key] = (
             CollectiveWork(
@@ -679,15 +738,17 @@ def step_tp_allreduces(
     tp_ranks: Sequence[int],
     *,
     ep_ranks: Sequence[int] | None = None,
+    routed_supply: RoutedMoeSupply | None = None,
 ) -> list[TpAllReduce]:
     """The step's TP collectives, empty when the step produces no traffic.
 
     Each layer contributes the sites :func:`layer_tp_allreduce_sites` reports
-    for this model and this expert-parallel declaration, in execution order,
-    so a layer whose combine all-to-all returns its output contributes the
-    attention site only. Omitting ``ep_ranks`` declares no all-to-all expert
-    parallelism and keeps both sites, which is also the correct rendering of
-    naive expert parallelism.
+    for this step, in execution order, so a layer whose rendered combine
+    all-to-all returns its output contributes the attention site only.
+    Omitting ``ep_ranks`` declares no reducing all-to-all and keeps both
+    sites, which is also the correct rendering of naive expert parallelism.
+    Pass the same ``routed_supply`` the MoE renderer receives, so both
+    inventories answer :func:`renders_expert_combine` identically.
 
     Empty means either a TP world of size 1 (nothing to reduce across) or a
     record with zero new tokens (a drain record carrying only completions).
@@ -698,7 +759,9 @@ def step_tp_allreduces(
     payload = record.total_new_tokens * dims.hidden_size * dims.dtype_bytes
     if payload <= 0:
         return []
-    sites = layer_tp_allreduce_sites(dims, ep_ranks=ep_ranks)
+    sites = layer_tp_allreduce_sites(
+        record, dims, ep_ranks=ep_ranks, routed_supply=routed_supply
+    )
     return [
         TpAllReduce(layer=layer, site=site, ranks=ranks, payload_bytes=payload)
         for layer in range(dims.num_layers)
@@ -1175,17 +1238,13 @@ def step_moe_alltoalls(
     empty when its per-pair share rounds to zero bytes.
     """
     ranks = tuple(ep_ranks)
-    if dims.num_experts <= 0 or len(ranks) < 2:
-        return []
-    if record.total_new_tokens <= 0:
+    if not renders_expert_combine(record, dims, ranks, routed_supply=routed_supply):
         return []
     if routed_supply is not None:
         return _routed_moe_alltoalls(record, dims, ranks, routed_supply)
     per_pair = (record.total_new_tokens * dims.top_k * dims.hidden_size * dims.dtype_bytes) // len(
         ranks
     )
-    if per_pair <= 0:
-        return []
     source = ranks[0]
     dispatch = tuple(
         (source, destination, per_pair)
@@ -1450,7 +1509,9 @@ def render_step_goal(
     closed-loop sink returns None so the frontend's own compute estimate
     stands).
     """
-    tp_ops = step_tp_allreduces(record, dims, tp_ranks, ep_ranks=ep_ranks)
+    tp_ops = step_tp_allreduces(
+        record, dims, tp_ranks, ep_ranks=ep_ranks, routed_supply=routed_supply
+    )
     moe_ops = step_moe_alltoalls(
         record,
         dims,
@@ -1584,7 +1645,9 @@ def render_sequenced_step_goal(
     remains the default and has no message-granularity selector.
     """
 
-    tp_ops = step_tp_allreduces(record, dims, tp_ranks, ep_ranks=ep_ranks)
+    tp_ops = step_tp_allreduces(
+        record, dims, tp_ranks, ep_ranks=ep_ranks, routed_supply=routed_supply
+    )
     moe_sequences = step_moe_message_sequences(
         record,
         dims,
@@ -1815,7 +1878,9 @@ def step_communication_phases(
 ) -> tuple[CollectiveCommunicationPhase, ...]:
     """Expand a step into serial phases of positive directed transfers."""
 
-    tp_ops = step_tp_allreduces(record, dims, tp_ranks, ep_ranks=ep_ranks)
+    tp_ops = step_tp_allreduces(
+        record, dims, tp_ranks, ep_ranks=ep_ranks, routed_supply=routed_supply
+    )
     moe_ops = step_moe_alltoalls(
         record,
         dims,

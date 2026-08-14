@@ -331,7 +331,11 @@ class SerialStepLowerer(ExecutionLowerer):
     ) -> ExecutionGraph:
         cfg = self.config
         tp_ops = step_tp_allreduces(
-            record, cfg.dims, cfg.tp_ranks, ep_ranks=cfg.ep_ranks
+            record,
+            cfg.dims,
+            cfg.tp_ranks,
+            ep_ranks=cfg.ep_ranks,
+            routed_supply=cfg.routed_moe_supply,
         )
         moe_ops = step_moe_alltoalls(
             record,
