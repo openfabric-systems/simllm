@@ -524,6 +524,28 @@ this repository reports, and the width-8 endpoint envelope's 458,752-byte
 ceiling was reached to within 17 percent by a 34-token prefill step, so a
 larger case would be rejected at planning time.
 
+The [fixed-cost envelope study](../../examples/collective_fixed_cost_envelope_v1/RESULTS.md)
+then replaced the silent choice of that intercept with a bracket. Sixteen cells
+over four named arms, two link rates and two expert-parallel widths, replayed
+through the fluid backend on an all-remote placement, put the per-collective
+surcharge at width 8 between 0 and 49,487,789 ps and the realized fixed cost,
+propagation included, between 2,000,000 and 51,487,789 ps, a factor of 25.7.
+Across the fixture's 48 collectives that is 46.0 to 95.6 percent of a decode
+step, so the fixed cost dominates every arm including the default, and the
+default is the only arm that does not say so. The arm envelope of the
+ep4-to-ep8 decode ratio is 0.547454 to 1.248990 at 400 Gbit/s and 0.549095 to
+1.224748 at 200 Gbit/s: both brackets contain 1, so the sign of the
+expert-parallel width ordering is not determined by the available evidence. The
+compression is equally large, moving the 200 to 400 Gbit/s ep8 decode ratio
+from 1.065947 under the default to 1.005326 under the provisional cross-node
+arm. Every one of the 40 simulated steps is reproduced to the picosecond by
+`compute_service_ps + 48 * fabric_service_ps + 48 * surcharge`, with the fluid
+backend returning exactly one picosecond above the closed-form fabric service
+at all eight width, phase and rate points. Attempt one is retained as void
+because the structural fatal guard compared a list of tuples against a list of
+lists and could not hold for any data; attempt two repaired only that
+comparison and reproduced every raw measurement exactly.
+
 ## Open tasks
 
 ### Precision

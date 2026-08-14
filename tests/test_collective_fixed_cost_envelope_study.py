@@ -108,6 +108,61 @@ def test_the_frozen_bandwidth_ratios_compress_toward_unity():
     assert values["ep4-prefill"]["off"] > values["ep4-decode"]["off"]
 
 
+def _recorded_summary():
+    import json
+
+    path = REPOSITORY / "examples/collective_fixed_cost_envelope_v1/results-summary.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def test_the_recorded_run_is_not_void_and_every_fatal_guard_held():
+    summary = _recorded_summary()
+
+    assert summary["verdict"] == {
+        "void": False,
+        "scored_families": 3,
+        "scored_families_passed": 3,
+    }
+    assert all(guard["held"] for guard in summary["fatal_guards"].values())
+    assert all(row["held"] for row in summary["exact_unscored_rows"].values())
+    assert summary["run_configurations"] == {
+        "frozen_cells": 16,
+        "frozen_simulated_steps": 32,
+        "guard_cells": 4,
+        "guard_simulated_steps": 8,
+    }
+
+
+def test_the_recorded_latencies_still_satisfy_the_frozen_tolerances():
+    study = _study_module()
+    summary = _recorded_summary()
+    predicted = study.load_expectations()["predicted_step_latency_ps"]
+    tolerance = study.load_expectations()["scored"]["S1"]["relative_tolerance"]
+
+    measured = summary["measured_step_latency_ps"]
+
+    assert set(measured) == set(predicted)
+    for key, value in measured.items():
+        assert abs(value - predicted[key]) / predicted[key] <= tolerance, key
+
+
+def test_the_recorded_run_reproduces_the_closed_form_to_the_picosecond():
+    study = _study_module()
+    summary = _recorded_summary()
+    surcharge = summary["derived"]["surcharge_ps"]
+    collectives = study.load_expectations()["constants_ps"]["collectives_per_step"]
+
+    for key, measured in summary["measured_step_latency_ps"].items():
+        width, phase, link, arm = key.split("-")
+        cell = f"{width}-{link}-{arm}-{phase}"
+        fabric = summary["measured_fabric_service_ps"][cell]
+        compute = summary["measured_compute_service_ps"][cell]
+        assert len(fabric) == 1, key
+        assert measured == compute + collectives * (
+            fabric[0] + surcharge[arm][width.removeprefix("ep")]
+        ), key
+
+
 def test_the_run_directory_has_no_personal_default():
     study = _study_module()
 

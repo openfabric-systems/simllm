@@ -1,0 +1,1705 @@
+{
+  "derived": {
+    "surcharge_ps": {
+      "cross": {
+        "4": 24042207,
+        "8": 49487789
+      },
+      "floor": {
+        "4": 0,
+        "8": 0
+      },
+      "local": {
+        "4": 15745167,
+        "8": 30128029
+      },
+      "off": {
+        "4": 0,
+        "8": 0
+      }
+    }
+  },
+  "environment": {
+    "expectations_commit": "9c568b5",
+    "expectations_sha256": "6ce9482e0c2f67e9343067b83f0d40cee7648a31726bc62f231f36458aa270ed",
+    "git_head": "22490db1999184f6bc18a6fc14705a073db23785",
+    "git_status_clean": false,
+    "htsim_rnic": "/data3/yifeng/simllm-dev/wave3-runs/htsim9-final/build/datacenter/htsim_rnic",
+    "platform": "Linux-5.14.21-150400.22-default-x86_64-with-glibc2.31",
+    "python": "3.12.12"
+  },
+  "exact_unscored_rows": {
+    "E1": {
+      "held": true,
+      "rows": [
+        {
+          "expected_delta_ps": 0,
+          "held": true,
+          "observed_delta_ps": [
+            0,
+            0
+          ],
+          "row": "ep4-400g-off"
+        },
+        {
+          "expected_delta_ps": 0,
+          "held": true,
+          "observed_delta_ps": [
+            0,
+            0
+          ],
+          "row": "ep4-400g-floor"
+        },
+        {
+          "expected_delta_ps": 755768016,
+          "held": true,
+          "observed_delta_ps": [
+            755768016,
+            755768016
+          ],
+          "row": "ep4-400g-local"
+        },
+        {
+          "expected_delta_ps": 1154025936,
+          "held": true,
+          "observed_delta_ps": [
+            1154025936,
+            1154025936
+          ],
+          "row": "ep4-400g-cross"
+        },
+        {
+          "expected_delta_ps": 0,
+          "held": true,
+          "observed_delta_ps": [
+            0,
+            0
+          ],
+          "row": "ep8-400g-off"
+        },
+        {
+          "expected_delta_ps": 0,
+          "held": true,
+          "observed_delta_ps": [
+            0,
+            0
+          ],
+          "row": "ep8-400g-floor"
+        },
+        {
+          "expected_delta_ps": 1446145392,
+          "held": true,
+          "observed_delta_ps": [
+            1446145392,
+            1446145392
+          ],
+          "row": "ep8-400g-local"
+        },
+        {
+          "expected_delta_ps": 2375413872,
+          "held": true,
+          "observed_delta_ps": [
+            2375413872,
+            2375413872
+          ],
+          "row": "ep8-400g-cross"
+        },
+        {
+          "expected_delta_ps": 0,
+          "held": true,
+          "observed_delta_ps": [
+            0,
+            0
+          ],
+          "row": "ep4-200g-off"
+        },
+        {
+          "expected_delta_ps": 0,
+          "held": true,
+          "observed_delta_ps": [
+            0,
+            0
+          ],
+          "row": "ep4-200g-floor"
+        },
+        {
+          "expected_delta_ps": 755768016,
+          "held": true,
+          "observed_delta_ps": [
+            755768016,
+            755768016
+          ],
+          "row": "ep4-200g-local"
+        },
+        {
+          "expected_delta_ps": 1154025936,
+          "held": true,
+          "observed_delta_ps": [
+            1154025936,
+            1154025936
+          ],
+          "row": "ep4-200g-cross"
+        },
+        {
+          "expected_delta_ps": 0,
+          "held": true,
+          "observed_delta_ps": [
+            0,
+            0
+          ],
+          "row": "ep8-200g-off"
+        },
+        {
+          "expected_delta_ps": 0,
+          "held": true,
+          "observed_delta_ps": [
+            0,
+            0
+          ],
+          "row": "ep8-200g-floor"
+        },
+        {
+          "expected_delta_ps": 1446145392,
+          "held": true,
+          "observed_delta_ps": [
+            1446145392,
+            1446145392
+          ],
+          "row": "ep8-200g-local"
+        },
+        {
+          "expected_delta_ps": 2375413872,
+          "held": true,
+          "observed_delta_ps": [
+            2375413872,
+            2375413872
+          ],
+          "row": "ep8-200g-cross"
+        }
+      ]
+    },
+    "E2": {
+      "held": true,
+      "rows": [
+        {
+          "held": true,
+          "row": "ep4-400g"
+        },
+        {
+          "held": true,
+          "row": "ep8-400g"
+        },
+        {
+          "held": true,
+          "row": "ep4-200g"
+        },
+        {
+          "held": true,
+          "row": "ep8-200g"
+        }
+      ]
+    },
+    "E3": {
+      "held": true,
+      "rows": [
+        {
+          "held": true,
+          "ratios": [
+            1.2749538813699195,
+            1.2749538813699195,
+            1.0858709660850565,
+            1.063029954231728
+          ],
+          "row": "ep4-prefill"
+        },
+        {
+          "held": true,
+          "ratios": [
+            1.0452574931481193,
+            1.0452574931481193,
+            1.0116059047307095,
+            1.0083386298018884
+          ],
+          "row": "ep4-decode"
+        },
+        {
+          "held": true,
+          "ratios": [
+            1.3609514189440013,
+            1.3609514189440013,
+            1.0628723844859453,
+            1.041075488135839
+          ],
+          "row": "ep8-prefill"
+        },
+        {
+          "held": true,
+          "ratios": [
+            1.0659471939436775,
+            1.0659471939436775,
+            1.0083165703429222,
+            1.0053258527689253
+          ],
+          "row": "ep8-decode"
+        }
+      ]
+    },
+    "E4": {
+      "held": true,
+      "rows": [
+        {
+          "held": true,
+          "premise_held": true,
+          "ratios": {
+            "cross": 0.5474540503099162,
+            "floor": 1.2489902180935712,
+            "local": 0.6142122506399426,
+            "off": 1.2489902180935712
+          },
+          "row": "400g"
+        },
+        {
+          "held": true,
+          "premise_held": true,
+          "ratios": {
+            "cross": 0.5490946696024905,
+            "floor": 1.2247477095943178,
+            "local": 0.6162159363244326,
+            "off": 1.2247477095943178
+          },
+          "row": "200g"
+        }
+      ]
+    }
+  },
+  "fatal_guards": {
+    "G1": {
+      "held": true,
+      "rows": [
+        {
+          "held": true,
+          "row": "ep4-400g"
+        },
+        {
+          "held": true,
+          "row": "ep8-400g"
+        },
+        {
+          "held": true,
+          "row": "ep4-200g"
+        },
+        {
+          "held": true,
+          "row": "ep8-200g"
+        }
+      ]
+    },
+    "G2": {
+      "held": true,
+      "rows": [
+        {
+          "held": true,
+          "row": "ep4-400g"
+        },
+        {
+          "held": true,
+          "row": "ep8-400g"
+        },
+        {
+          "held": true,
+          "row": "ep4-200g"
+        },
+        {
+          "held": true,
+          "row": "ep8-200g"
+        }
+      ]
+    },
+    "G3": {
+      "held": true
+    },
+    "G4": {
+      "held": true,
+      "rows": [
+        {
+          "held": true,
+          "observed": {
+            "collective_count": 48,
+            "endpoint_bytes": [
+              98304
+            ],
+            "kinds": [
+              [
+                "all-to-allv",
+                "pairwise"
+              ]
+            ],
+            "participant_counts": [
+              4
+            ],
+            "provider_compute_ps": 152862720
+          },
+          "row": "ep4-prefill"
+        },
+        {
+          "held": true,
+          "observed": {
+            "collective_count": 48,
+            "endpoint_bytes": [
+              12288
+            ],
+            "kinds": [
+              [
+                "all-to-allv",
+                "pairwise"
+              ]
+            ],
+            "participant_counts": [
+              4
+            ],
+            "provider_compute_ps": 152871497
+          },
+          "row": "ep4-decode"
+        },
+        {
+          "held": true,
+          "observed": {
+            "collective_count": 48,
+            "endpoint_bytes": [
+              114688
+            ],
+            "kinds": [
+              [
+                "all-to-allv",
+                "pairwise"
+              ]
+            ],
+            "participant_counts": [
+              8
+            ],
+            "provider_compute_ps": 98935954
+          },
+          "row": "ep8-prefill"
+        },
+        {
+          "held": true,
+          "observed": {
+            "collective_count": 48,
+            "endpoint_bytes": [
+              14336
+            ],
+            "kinds": [
+              [
+                "all-to-allv",
+                "pairwise"
+              ]
+            ],
+            "participant_counts": [
+              8
+            ],
+            "provider_compute_ps": 98944731
+          },
+          "row": "ep8-decode"
+        }
+      ]
+    },
+    "G5": {
+      "held": true,
+      "rows": [
+        {
+          "expected_total_ps": 0,
+          "held": true,
+          "row": "ep4-400g-floor"
+        },
+        {
+          "expected_total_ps": 0,
+          "held": true,
+          "row": "ep8-400g-floor"
+        },
+        {
+          "expected_total_ps": 0,
+          "held": true,
+          "row": "ep4-200g-floor"
+        },
+        {
+          "expected_total_ps": 0,
+          "held": true,
+          "row": "ep8-200g-floor"
+        },
+        {
+          "expected_total_ps": 755768016,
+          "held": true,
+          "row": "ep4-400g-local"
+        },
+        {
+          "expected_total_ps": 1446145392,
+          "held": true,
+          "row": "ep8-400g-local"
+        },
+        {
+          "expected_total_ps": 755768016,
+          "held": true,
+          "row": "ep4-200g-local"
+        },
+        {
+          "expected_total_ps": 1446145392,
+          "held": true,
+          "row": "ep8-200g-local"
+        },
+        {
+          "expected_total_ps": 1154025936,
+          "held": true,
+          "row": "ep4-400g-cross"
+        },
+        {
+          "expected_total_ps": 2375413872,
+          "held": true,
+          "row": "ep8-400g-cross"
+        },
+        {
+          "expected_total_ps": 1154025936,
+          "held": true,
+          "row": "ep4-200g-cross"
+        },
+        {
+          "expected_total_ps": 2375413872,
+          "held": true,
+          "row": "ep8-200g-cross"
+        }
+      ]
+    },
+    "G6": {
+      "held": true,
+      "inventory": {
+        "cross-node-fixed-cost-provisional-v1": {
+          "arms": {
+            "lower": {
+              "bandwidth_bytes_per_second": 70027079100,
+              "evidence_class": "calibrated",
+              "locator": "the fitted intercepts of examples/collective_latency_floor_v1, held out at 4 KiB with errors of 0.261, 0.347 and 0.080 us at widths 2, 4 and 8",
+              "participant_latency_band_ps": [
+                [
+                  2,
+                  10461112,
+                  10983112
+                ],
+                [
+                  4,
+                  15398167,
+                  16092167
+                ],
+                [
+                  8,
+                  30048029,
+                  30208029
+                ]
+              ],
+              "participant_latency_ps": [
+                [
+                  2,
+                  10722112
+                ],
+                [
+                  4,
+                  15745167
+                ],
+                [
+                  8,
+                  30128029
+                ]
+              ],
+              "profile_id": "b200-nccl-2.27-local-v1",
+              "source": "nccl-tests issue 333 capture of a DGX B200 intra-node NVLink ring ALL-REDUCE under NCCL 2.27",
+              "source_payload_bytes": [
+                8,
+                262144
+              ],
+              "transfer": "the intra-node ALL-REDUCE intercept is charged unchanged as the per-collective surcharge of any supported collective, including pairwise ALL-TO-ALLV"
+            },
+            "upper": {
+              "bandwidth_bytes_per_second": 70027079100,
+              "evidence_class": "provisional-transferred",
+              "locator": "Kalia et al. ATC'16 commodity RDMA round-trip anchor of about 2 us for the point estimate, UCCL Table 2 ACK turnaround of 2 to 3 us p50 for the upper edge, and this repository's measured 2.000 us fluid propagation for the lower edge",
+              "participant_latency_band_ps": [
+                [
+                  2,
+                  11487792,
+                  17487792
+                ],
+                [
+                  4,
+                  18042207,
+                  36042207
+                ],
+                [
+                  8,
+                  35487789,
+                  77487789
+                ]
+              ],
+              "participant_latency_ps": [
+                [
+                  2,
+                  13487792
+                ],
+                [
+                  4,
+                  24042207
+                ],
+                [
+                  8,
+                  49487789
+                ]
+              ],
+              "profile_id": "b200-nccl-2.27-cross-node-provisional-v1",
+              "source": "b200-nccl-2.27-local-v1 combined with the RDMA fixed-cost anchors recorded in docs/papers/msg-size-vs-bandwidth.md",
+              "source_payload_bytes": [
+                8,
+                262144
+              ],
+              "transfer": "each of the source ring's 2(W-1) NVLink steps, worth 1,617,160 ps by the two-point slope of the source table, is replaced by one fabric step worth 3,000,000 ps at the point estimate, 2,000,000 ps at the lower edge and 5,000,000 ps at the upper edge; no cross-node measurement was taken, so this profile is provisional-transferred and never calibrated"
+            }
+          },
+          "bracket_ps": {
+            "2": [
+              10722112,
+              13487792
+            ],
+            "4": [
+              15745167,
+              24042207
+            ],
+            "8": [
+              30128029,
+              49487789
+            ]
+          },
+          "claim": "for a collective whose ring steps cross the fabric, the per-collective fixed cost is at least the captured intra-node intercept, because a fabric hop cannot be cheaper than the NVLink hop it replaces, and at most the provisional-transferred cross-node estimate",
+          "isolates_fixed_cost": true,
+          "realized_bracket_ps": {
+            "2": [
+              12722112,
+              15487792
+            ],
+            "4": [
+              17745167,
+              26042207
+            ],
+            "8": [
+              32128029,
+              51487789
+            ]
+          },
+          "strictly_brackets": true
+        },
+        "intra-node-fixed-cost-v1": {
+          "arms": {
+            "lower": {
+              "bandwidth_bytes_per_second": 70027079100,
+              "evidence_class": "structural-floor",
+              "locator": "31 matched decode compositions where 2 * fabric(400G) - fabric(200G) returned 96,000,006 to 96,000,048 ps across 48 collectives, recorded in the traffic module status section",
+              "participant_latency_band_ps": [
+                [
+                  2,
+                  0,
+                  0
+                ],
+                [
+                  4,
+                  0,
+                  0
+                ],
+                [
+                  8,
+                  0,
+                  0
+                ]
+              ],
+              "participant_latency_ps": [
+                [
+                  2,
+                  0
+                ],
+                [
+                  4,
+                  0
+                ],
+                [
+                  8,
+                  0
+                ]
+              ],
+              "profile_id": "collective-fixed-cost-floor-v1",
+              "source": "the rnic-nn-fluid backend's own measured per-collective propagation",
+              "source_payload_bytes": [
+                8,
+                262144
+              ],
+              "transfer": "no surcharge is added, so the claimed per-collective fixed cost is exactly the 2.000 us propagation the backend already charges; this is a lower bound because no collective can complete faster than one propagation delay"
+            },
+            "upper": {
+              "bandwidth_bytes_per_second": 70027079100,
+              "evidence_class": "calibrated",
+              "locator": "the fitted intercepts of examples/collective_latency_floor_v1, held out at 4 KiB with errors of 0.261, 0.347 and 0.080 us at widths 2, 4 and 8",
+              "participant_latency_band_ps": [
+                [
+                  2,
+                  10461112,
+                  10983112
+                ],
+                [
+                  4,
+                  15398167,
+                  16092167
+                ],
+                [
+                  8,
+                  30048029,
+                  30208029
+                ]
+              ],
+              "participant_latency_ps": [
+                [
+                  2,
+                  10722112
+                ],
+                [
+                  4,
+                  15745167
+                ],
+                [
+                  8,
+                  30128029
+                ]
+              ],
+              "profile_id": "b200-nccl-2.27-local-v1",
+              "source": "nccl-tests issue 333 capture of a DGX B200 intra-node NVLink ring ALL-REDUCE under NCCL 2.27",
+              "source_payload_bytes": [
+                8,
+                262144
+              ],
+              "transfer": "the intra-node ALL-REDUCE intercept is charged unchanged as the per-collective surcharge of any supported collective, including pairwise ALL-TO-ALLV"
+            }
+          },
+          "bracket_ps": {
+            "2": [
+              0,
+              10722112
+            ],
+            "4": [
+              0,
+              15745167
+            ],
+            "8": [
+              0,
+              30128029
+            ]
+          },
+          "claim": "for a collective whose ring steps stay on NVLink, the per-collective fixed cost is at least the modeled propagation delay and at most the captured DGX B200 intra-node NCCL intercept",
+          "isolates_fixed_cost": true,
+          "realized_bracket_ps": {
+            "2": [
+              2000000,
+              12722112
+            ],
+            "4": [
+              2000000,
+              17745167
+            ],
+            "8": [
+              2000000,
+              32128029
+            ]
+          },
+          "strictly_brackets": true
+        }
+      }
+    },
+    "G7": {
+      "held": true,
+      "probe": {
+        "completion_artifacts": 0,
+        "goal_artifacts": 0,
+        "participant_count": 16,
+        "published_outcomes": 0,
+        "raised": "profile 'b200-nccl-2.27-cross-node-provisional-v1' does not support participant count 16; supported counts are 2, 4, 8"
+      }
+    },
+    "G8": {
+      "held": true
+    },
+    "G9": {
+      "held": true,
+      "rows": [
+        {
+          "bounds": [
+            12,
+            393216
+          ],
+          "endpoint_bytes": 98304,
+          "held": true,
+          "row": "collective-fixed-cost-floor-v1-ep4-prefill"
+        },
+        {
+          "bounds": [
+            12,
+            393216
+          ],
+          "endpoint_bytes": 12288,
+          "held": true,
+          "row": "collective-fixed-cost-floor-v1-ep4-decode"
+        },
+        {
+          "bounds": [
+            14,
+            458752
+          ],
+          "endpoint_bytes": 114688,
+          "held": true,
+          "row": "collective-fixed-cost-floor-v1-ep8-prefill"
+        },
+        {
+          "bounds": [
+            14,
+            458752
+          ],
+          "endpoint_bytes": 14336,
+          "held": true,
+          "row": "collective-fixed-cost-floor-v1-ep8-decode"
+        },
+        {
+          "bounds": [
+            12,
+            393216
+          ],
+          "endpoint_bytes": 98304,
+          "held": true,
+          "row": "b200-nccl-2.27-local-v1-ep4-prefill"
+        },
+        {
+          "bounds": [
+            12,
+            393216
+          ],
+          "endpoint_bytes": 12288,
+          "held": true,
+          "row": "b200-nccl-2.27-local-v1-ep4-decode"
+        },
+        {
+          "bounds": [
+            14,
+            458752
+          ],
+          "endpoint_bytes": 114688,
+          "held": true,
+          "row": "b200-nccl-2.27-local-v1-ep8-prefill"
+        },
+        {
+          "bounds": [
+            14,
+            458752
+          ],
+          "endpoint_bytes": 14336,
+          "held": true,
+          "row": "b200-nccl-2.27-local-v1-ep8-decode"
+        },
+        {
+          "bounds": [
+            12,
+            393216
+          ],
+          "endpoint_bytes": 98304,
+          "held": true,
+          "row": "b200-nccl-2.27-local-v1-ep4-prefill"
+        },
+        {
+          "bounds": [
+            12,
+            393216
+          ],
+          "endpoint_bytes": 12288,
+          "held": true,
+          "row": "b200-nccl-2.27-local-v1-ep4-decode"
+        },
+        {
+          "bounds": [
+            14,
+            458752
+          ],
+          "endpoint_bytes": 114688,
+          "held": true,
+          "row": "b200-nccl-2.27-local-v1-ep8-prefill"
+        },
+        {
+          "bounds": [
+            14,
+            458752
+          ],
+          "endpoint_bytes": 14336,
+          "held": true,
+          "row": "b200-nccl-2.27-local-v1-ep8-decode"
+        },
+        {
+          "bounds": [
+            12,
+            393216
+          ],
+          "endpoint_bytes": 98304,
+          "held": true,
+          "row": "b200-nccl-2.27-cross-node-provisional-v1-ep4-prefill"
+        },
+        {
+          "bounds": [
+            12,
+            393216
+          ],
+          "endpoint_bytes": 12288,
+          "held": true,
+          "row": "b200-nccl-2.27-cross-node-provisional-v1-ep4-decode"
+        },
+        {
+          "bounds": [
+            14,
+            458752
+          ],
+          "endpoint_bytes": 114688,
+          "held": true,
+          "row": "b200-nccl-2.27-cross-node-provisional-v1-ep8-prefill"
+        },
+        {
+          "bounds": [
+            14,
+            458752
+          ],
+          "endpoint_bytes": 14336,
+          "held": true,
+          "row": "b200-nccl-2.27-cross-node-provisional-v1-ep8-decode"
+        }
+      ]
+    }
+  },
+  "measured_compute_service_ps": {
+    "ep4-200g-cross-decode": 152856000,
+    "ep4-200g-cross-prefill": 152856000,
+    "ep4-200g-floor-decode": 152856000,
+    "ep4-200g-floor-prefill": 152856000,
+    "ep4-200g-local-decode": 152856000,
+    "ep4-200g-local-prefill": 152856000,
+    "ep4-200g-off-decode": 152856000,
+    "ep4-200g-off-prefill": 152856000,
+    "ep4-400g-cross-decode": 152856000,
+    "ep4-400g-cross-prefill": 152856000,
+    "ep4-400g-floor-decode": 152856000,
+    "ep4-400g-floor-prefill": 152856000,
+    "ep4-400g-local-decode": 152856000,
+    "ep4-400g-local-prefill": 152856000,
+    "ep4-400g-off-decode": 152856000,
+    "ep4-400g-off-prefill": 152856000,
+    "ep8-200g-cross-decode": 98928000,
+    "ep8-200g-cross-prefill": 98928000,
+    "ep8-200g-floor-decode": 98928000,
+    "ep8-200g-floor-prefill": 98928000,
+    "ep8-200g-local-decode": 98928000,
+    "ep8-200g-local-prefill": 98928000,
+    "ep8-200g-off-decode": 98928000,
+    "ep8-200g-off-prefill": 98928000,
+    "ep8-400g-cross-decode": 98928000,
+    "ep8-400g-cross-prefill": 98928000,
+    "ep8-400g-floor-decode": 98928000,
+    "ep8-400g-floor-prefill": 98928000,
+    "ep8-400g-local-decode": 98928000,
+    "ep8-400g-local-prefill": 98928000,
+    "ep8-400g-off-decode": 98928000,
+    "ep8-400g-off-prefill": 98928000
+  },
+  "measured_fabric_service_ps": {
+    "ep4-200g-cross-decode": [
+      2491521
+    ],
+    "ep4-200g-cross-prefill": [
+      5932161
+    ],
+    "ep4-200g-floor-decode": [
+      2491521
+    ],
+    "ep4-200g-floor-prefill": [
+      5932161
+    ],
+    "ep4-200g-local-decode": [
+      2491521
+    ],
+    "ep4-200g-local-prefill": [
+      5932161
+    ],
+    "ep4-200g-off-decode": [
+      2491521
+    ],
+    "ep4-200g-off-prefill": [
+      5932161
+    ],
+    "ep4-400g-cross-decode": [
+      2245761
+    ],
+    "ep4-400g-cross-prefill": [
+      3966081
+    ],
+    "ep4-400g-floor-decode": [
+      2245761
+    ],
+    "ep4-400g-floor-prefill": [
+      3966081
+    ],
+    "ep4-400g-local-decode": [
+      2245761
+    ],
+    "ep4-400g-local-prefill": [
+      3966081
+    ],
+    "ep4-400g-off-decode": [
+      2245761
+    ],
+    "ep4-400g-off-prefill": [
+      3966081
+    ],
+    "ep8-200g-cross-decode": [
+      2573441
+    ],
+    "ep8-200g-cross-prefill": [
+      6587521
+    ],
+    "ep8-200g-floor-decode": [
+      2573441
+    ],
+    "ep8-200g-floor-prefill": [
+      6587521
+    ],
+    "ep8-200g-local-decode": [
+      2573441
+    ],
+    "ep8-200g-local-prefill": [
+      6587521
+    ],
+    "ep8-200g-off-decode": [
+      2573441
+    ],
+    "ep8-200g-off-prefill": [
+      6587521
+    ],
+    "ep8-400g-cross-decode": [
+      2286721
+    ],
+    "ep8-400g-cross-prefill": [
+      4293761
+    ],
+    "ep8-400g-floor-decode": [
+      2286721
+    ],
+    "ep8-400g-floor-prefill": [
+      4293761
+    ],
+    "ep8-400g-local-decode": [
+      2286721
+    ],
+    "ep8-400g-local-prefill": [
+      4293761
+    ],
+    "ep8-400g-off-decode": [
+      2286721
+    ],
+    "ep8-400g-off-prefill": [
+      4293761
+    ]
+  },
+  "measured_step_latency_ps": {
+    "ep4-decode-200g-cross": 1426474944,
+    "ep4-decode-200g-floor": 272449008,
+    "ep4-decode-200g-local": 1028217024,
+    "ep4-decode-200g-off": 272449008,
+    "ep4-decode-400g-cross": 1414678464,
+    "ep4-decode-400g-floor": 260652528,
+    "ep4-decode-400g-local": 1016420544,
+    "ep4-decode-400g-off": 260652528,
+    "ep4-prefill-200g-cross": 1591625664,
+    "ep4-prefill-200g-floor": 437599728,
+    "ep4-prefill-200g-local": 1193367744,
+    "ep4-prefill-200g-off": 437599728,
+    "ep4-prefill-400g-cross": 1497253824,
+    "ep4-prefill-400g-floor": 343227888,
+    "ep4-prefill-400g-local": 1098995904,
+    "ep4-prefill-400g-off": 343227888,
+    "ep8-decode-200g-cross": 2597867040,
+    "ep8-decode-200g-floor": 222453168,
+    "ep8-decode-200g-local": 1668598560,
+    "ep8-decode-200g-off": 222453168,
+    "ep8-decode-400g-cross": 2584104480,
+    "ep8-decode-400g-floor": 208690608,
+    "ep8-decode-400g-local": 1654836000,
+    "ep8-decode-400g-off": 208690608,
+    "ep8-prefill-200g-cross": 2790542880,
+    "ep8-prefill-200g-floor": 415129008,
+    "ep8-prefill-200g-local": 1861274400,
+    "ep8-prefill-200g-off": 415129008,
+    "ep8-prefill-400g-cross": 2680442400,
+    "ep8-prefill-400g-floor": 305028528,
+    "ep8-prefill-400g-local": 1751173920,
+    "ep8-prefill-400g-off": 305028528
+  },
+  "run_configurations": {
+    "frozen_cells": 16,
+    "frozen_simulated_steps": 32,
+    "guard_cells": 4,
+    "guard_simulated_steps": 8
+  },
+  "schema": "simllm-collective-fixed-cost-envelope-results-v1",
+  "scored": {
+    "S1": {
+      "name": "S1",
+      "passed": true,
+      "rows": [
+        {
+          "measured_ps": 343227888,
+          "passed": true,
+          "predicted_ps": 343234560,
+          "relative_error": 1.9438601986932785e-05,
+          "row": "ep4-prefill-400g-off"
+        },
+        {
+          "measured_ps": 260652528,
+          "passed": true,
+          "predicted_ps": 260667977,
+          "relative_error": 5.926696550071434e-05,
+          "row": "ep4-decode-400g-off"
+        },
+        {
+          "measured_ps": 305028528,
+          "passed": true,
+          "predicted_ps": 305036434,
+          "relative_error": 2.5918215395869728e-05,
+          "row": "ep8-prefill-400g-off"
+        },
+        {
+          "measured_ps": 208690608,
+          "passed": true,
+          "predicted_ps": 208707291,
+          "relative_error": 7.993491707963379e-05,
+          "row": "ep8-decode-400g-off"
+        },
+        {
+          "measured_ps": 437599728,
+          "passed": true,
+          "predicted_ps": 437606400,
+          "relative_error": 1.5246577746577746e-05,
+          "row": "ep4-prefill-200g-off"
+        },
+        {
+          "measured_ps": 272449008,
+          "passed": true,
+          "predicted_ps": 272464457,
+          "relative_error": 5.670097366130952e-05,
+          "row": "ep4-decode-200g-off"
+        },
+        {
+          "measured_ps": 415129008,
+          "passed": true,
+          "predicted_ps": 415136914,
+          "relative_error": 1.9044319436261936e-05,
+          "row": "ep8-prefill-200g-off"
+        },
+        {
+          "measured_ps": 222453168,
+          "passed": true,
+          "predicted_ps": 222469851,
+          "relative_error": 7.49899365015532e-05,
+          "row": "ep8-decode-200g-off"
+        },
+        {
+          "measured_ps": 343227888,
+          "passed": true,
+          "predicted_ps": 343234560,
+          "relative_error": 1.9438601986932785e-05,
+          "row": "ep4-prefill-400g-floor"
+        },
+        {
+          "measured_ps": 260652528,
+          "passed": true,
+          "predicted_ps": 260667977,
+          "relative_error": 5.926696550071434e-05,
+          "row": "ep4-decode-400g-floor"
+        },
+        {
+          "measured_ps": 305028528,
+          "passed": true,
+          "predicted_ps": 305036434,
+          "relative_error": 2.5918215395869728e-05,
+          "row": "ep8-prefill-400g-floor"
+        },
+        {
+          "measured_ps": 208690608,
+          "passed": true,
+          "predicted_ps": 208707291,
+          "relative_error": 7.993491707963379e-05,
+          "row": "ep8-decode-400g-floor"
+        },
+        {
+          "measured_ps": 437599728,
+          "passed": true,
+          "predicted_ps": 437606400,
+          "relative_error": 1.5246577746577746e-05,
+          "row": "ep4-prefill-200g-floor"
+        },
+        {
+          "measured_ps": 272449008,
+          "passed": true,
+          "predicted_ps": 272464457,
+          "relative_error": 5.670097366130952e-05,
+          "row": "ep4-decode-200g-floor"
+        },
+        {
+          "measured_ps": 415129008,
+          "passed": true,
+          "predicted_ps": 415136914,
+          "relative_error": 1.9044319436261936e-05,
+          "row": "ep8-prefill-200g-floor"
+        },
+        {
+          "measured_ps": 222453168,
+          "passed": true,
+          "predicted_ps": 222469851,
+          "relative_error": 7.49899365015532e-05,
+          "row": "ep8-decode-200g-floor"
+        },
+        {
+          "measured_ps": 1098995904,
+          "passed": true,
+          "predicted_ps": 1099002576,
+          "relative_error": 6.070959382355442e-06,
+          "row": "ep4-prefill-400g-local"
+        },
+        {
+          "measured_ps": 1016420544,
+          "passed": true,
+          "predicted_ps": 1016435993,
+          "relative_error": 1.5199186280684965e-05,
+          "row": "ep4-decode-400g-local"
+        },
+        {
+          "measured_ps": 1751173920,
+          "passed": true,
+          "predicted_ps": 1751181826,
+          "relative_error": 4.514665400599012e-06,
+          "row": "ep8-prefill-400g-local"
+        },
+        {
+          "measured_ps": 1654836000,
+          "passed": true,
+          "predicted_ps": 1654852683,
+          "relative_error": 1.0081259903906504e-05,
+          "row": "ep8-decode-400g-local"
+        },
+        {
+          "measured_ps": 1193367744,
+          "passed": true,
+          "predicted_ps": 1193374416,
+          "relative_error": 5.590868976698425e-06,
+          "row": "ep4-prefill-200g-local"
+        },
+        {
+          "measured_ps": 1028217024,
+          "passed": true,
+          "predicted_ps": 1028232473,
+          "relative_error": 1.5024812389872848e-05,
+          "row": "ep4-decode-200g-local"
+        },
+        {
+          "measured_ps": 1861274400,
+          "passed": true,
+          "predicted_ps": 1861282306,
+          "relative_error": 4.247609282328825e-06,
+          "row": "ep8-prefill-200g-local"
+        },
+        {
+          "measured_ps": 1668598560,
+          "passed": true,
+          "predicted_ps": 1668615243,
+          "relative_error": 9.998110750807759e-06,
+          "row": "ep8-decode-200g-local"
+        },
+        {
+          "measured_ps": 1497253824,
+          "passed": true,
+          "predicted_ps": 1497260496,
+          "relative_error": 4.456138405991846e-06,
+          "row": "ep4-prefill-400g-cross"
+        },
+        {
+          "measured_ps": 1414678464,
+          "passed": true,
+          "predicted_ps": 1414693913,
+          "relative_error": 1.0920383454000202e-05,
+          "row": "ep4-decode-400g-cross"
+        },
+        {
+          "measured_ps": 2680442400,
+          "passed": true,
+          "predicted_ps": 2680450306,
+          "relative_error": 2.9495044106219665e-06,
+          "row": "ep8-prefill-400g-cross"
+        },
+        {
+          "measured_ps": 2584104480,
+          "passed": true,
+          "predicted_ps": 2584121163,
+          "relative_error": 6.455966631468665e-06,
+          "row": "ep8-decode-400g-cross"
+        },
+        {
+          "measured_ps": 1591625664,
+          "passed": true,
+          "predicted_ps": 1591632336,
+          "relative_error": 4.191922876339451e-06,
+          "row": "ep4-prefill-200g-cross"
+        },
+        {
+          "measured_ps": 1426474944,
+          "passed": true,
+          "predicted_ps": 1426490393,
+          "relative_error": 1.0830076442021996e-05,
+          "row": "ep4-decode-200g-cross"
+        },
+        {
+          "measured_ps": 2790542880,
+          "passed": true,
+          "predicted_ps": 2790550786,
+          "relative_error": 2.833132455307337e-06,
+          "row": "ep8-prefill-200g-cross"
+        },
+        {
+          "measured_ps": 2597867040,
+          "passed": true,
+          "predicted_ps": 2597883723,
+          "relative_error": 6.421765474836073e-06,
+          "row": "ep8-decode-200g-cross"
+        }
+      ],
+      "tolerance": 0.0005
+    },
+    "S2": {
+      "arm_ratio_envelopes": {
+        "200g": {
+          "arm_ratios": [
+            [
+              "off",
+              1.2247477095943178
+            ],
+            [
+              "floor",
+              1.2247477095943178
+            ],
+            [
+              "local",
+              0.6162159363244326
+            ],
+            [
+              "cross",
+              0.5490946696024905
+            ]
+          ],
+          "brackets_unity": true,
+          "denominator": "ep8-decode",
+          "label": "ep4 over ep8 decode at 200g",
+          "maximum": 1.2247477095943178,
+          "minimum": 0.5490946696024905,
+          "numerator": "ep4-decode"
+        },
+        "400g": {
+          "arm_ratios": [
+            [
+              "off",
+              1.2489902180935712
+            ],
+            [
+              "floor",
+              1.2489902180935712
+            ],
+            [
+              "local",
+              0.6142122506399426
+            ],
+            [
+              "cross",
+              0.5474540503099162
+            ]
+          ],
+          "brackets_unity": true,
+          "denominator": "ep8-decode",
+          "label": "ep4 over ep8 decode at 400g",
+          "maximum": 1.2489902180935712,
+          "minimum": 0.5474540503099162,
+          "numerator": "ep4-decode"
+        }
+      },
+      "name": "S2",
+      "passed": true,
+      "rows": [
+        {
+          "measured": 1.2489902180935712,
+          "passed": true,
+          "predicted": 1.248964,
+          "relative_error": 2.099187292130448e-05,
+          "row": "400g-off"
+        },
+        {
+          "measured": 1.2489902180935712,
+          "passed": true,
+          "predicted": 1.248964,
+          "relative_error": 2.099187292130448e-05,
+          "row": "400g-floor"
+        },
+        {
+          "measured": 0.6142122506399426,
+          "passed": true,
+          "predicted": 0.614215,
+          "relative_error": 4.476217704544661e-06,
+          "row": "400g-local"
+        },
+        {
+          "measured": 0.5474540503099162,
+          "passed": true,
+          "predicted": 0.547456,
+          "relative_error": 3.5613639887488798e-06,
+          "row": "400g-cross"
+        },
+        {
+          "measured": 1.2247477095943178,
+          "passed": true,
+          "predicted": 1.224725,
+          "relative_error": 1.8542606967046312e-05,
+          "row": "200g-off"
+        },
+        {
+          "measured": 1.2247477095943178,
+          "passed": true,
+          "predicted": 1.224725,
+          "relative_error": 1.8542606967046312e-05,
+          "row": "200g-floor"
+        },
+        {
+          "measured": 0.6162159363244326,
+          "passed": true,
+          "predicted": 0.616219,
+          "relative_error": 4.9717317501564465e-06,
+          "row": "200g-local"
+        },
+        {
+          "measured": 0.5490946696024905,
+          "passed": true,
+          "predicted": 0.549097,
+          "relative_error": 4.244054346334273e-06,
+          "row": "200g-cross"
+        }
+      ],
+      "tolerance": 0.0002
+    },
+    "S3": {
+      "arm_ratio_envelopes": {
+        "ep4-decode": {
+          "arm_ratios": [
+            [
+              "off",
+              1.0452574931481193
+            ],
+            [
+              "floor",
+              1.0452574931481193
+            ],
+            [
+              "local",
+              1.0116059047307095
+            ],
+            [
+              "cross",
+              1.0083386298018884
+            ]
+          ],
+          "brackets_unity": false,
+          "denominator": "ep4-decode-400g",
+          "label": "200G over 400G for ep4-decode",
+          "maximum": 1.0452574931481193,
+          "minimum": 1.0083386298018884,
+          "numerator": "ep4-decode-200g"
+        },
+        "ep4-prefill": {
+          "arm_ratios": [
+            [
+              "off",
+              1.2749538813699195
+            ],
+            [
+              "floor",
+              1.2749538813699195
+            ],
+            [
+              "local",
+              1.0858709660850565
+            ],
+            [
+              "cross",
+              1.063029954231728
+            ]
+          ],
+          "brackets_unity": false,
+          "denominator": "ep4-prefill-400g",
+          "label": "200G over 400G for ep4-prefill",
+          "maximum": 1.2749538813699195,
+          "minimum": 1.063029954231728,
+          "numerator": "ep4-prefill-200g"
+        },
+        "ep8-decode": {
+          "arm_ratios": [
+            [
+              "off",
+              1.0659471939436775
+            ],
+            [
+              "floor",
+              1.0659471939436775
+            ],
+            [
+              "local",
+              1.0083165703429222
+            ],
+            [
+              "cross",
+              1.0053258527689253
+            ]
+          ],
+          "brackets_unity": false,
+          "denominator": "ep8-decode-400g",
+          "label": "200G over 400G for ep8-decode",
+          "maximum": 1.0659471939436775,
+          "minimum": 1.0053258527689253,
+          "numerator": "ep8-decode-200g"
+        },
+        "ep8-prefill": {
+          "arm_ratios": [
+            [
+              "off",
+              1.3609514189440013
+            ],
+            [
+              "floor",
+              1.3609514189440013
+            ],
+            [
+              "local",
+              1.0628723844859453
+            ],
+            [
+              "cross",
+              1.041075488135839
+            ]
+          ],
+          "brackets_unity": false,
+          "denominator": "ep8-prefill-400g",
+          "label": "200G over 400G for ep8-prefill",
+          "maximum": 1.3609514189440013,
+          "minimum": 1.041075488135839,
+          "numerator": "ep8-prefill-200g"
+        }
+      },
+      "name": "S3",
+      "passed": true,
+      "rows": [
+        {
+          "measured": 1.2749538813699195,
+          "passed": true,
+          "predicted": 1.274949,
+          "relative_error": 3.82867857411162e-06,
+          "row": "ep4-prefill-off"
+        },
+        {
+          "measured": 1.2749538813699195,
+          "passed": true,
+          "predicted": 1.274949,
+          "relative_error": 3.82867857411162e-06,
+          "row": "ep4-prefill-floor"
+        },
+        {
+          "measured": 1.0858709660850565,
+          "passed": true,
+          "predicted": 1.08587,
+          "relative_error": 8.896875837987493e-07,
+          "row": "ep4-prefill-local"
+        },
+        {
+          "measured": 1.063029954231728,
+          "passed": true,
+          "predicted": 1.06303,
+          "relative_error": 4.3054543934892115e-08,
+          "row": "ep4-prefill-cross"
+        },
+        {
+          "measured": 1.0452574931481193,
+          "passed": true,
+          "predicted": 1.045255,
+          "relative_error": 2.3852056381331963e-06,
+          "row": "ep4-decode-off"
+        },
+        {
+          "measured": 1.0452574931481193,
+          "passed": true,
+          "predicted": 1.045255,
+          "relative_error": 2.3852056381331963e-06,
+          "row": "ep4-decode-floor"
+        },
+        {
+          "measured": 1.0116059047307095,
+          "passed": true,
+          "predicted": 1.011606,
+          "relative_error": 9.417628054455651e-08,
+          "row": "ep4-decode-local"
+        },
+        {
+          "measured": 1.0083386298018884,
+          "passed": true,
+          "predicted": 1.008339,
+          "relative_error": 3.6713655994760647e-07,
+          "row": "ep4-decode-cross"
+        },
+        {
+          "measured": 1.3609514189440013,
+          "passed": true,
+          "predicted": 1.360942,
+          "relative_error": 6.920900377234156e-06,
+          "row": "ep8-prefill-off"
+        },
+        {
+          "measured": 1.3609514189440013,
+          "passed": true,
+          "predicted": 1.360942,
+          "relative_error": 6.920900377234156e-06,
+          "row": "ep8-prefill-floor"
+        },
+        {
+          "measured": 1.0628723844859453,
+          "passed": true,
+          "predicted": 1.062872,
+          "relative_error": 3.61742472568603e-07,
+          "row": "ep8-prefill-local"
+        },
+        {
+          "measured": 1.041075488135839,
+          "passed": true,
+          "predicted": 1.041075,
+          "relative_error": 4.688767275008188e-07,
+          "row": "ep8-prefill-cross"
+        },
+        {
+          "measured": 1.0659471939436775,
+          "passed": true,
+          "predicted": 1.065942,
+          "relative_error": 4.87263254247882e-06,
+          "row": "ep8-decode-off"
+        },
+        {
+          "measured": 1.0659471939436775,
+          "passed": true,
+          "predicted": 1.065942,
+          "relative_error": 4.87263254247882e-06,
+          "row": "ep8-decode-floor"
+        },
+        {
+          "measured": 1.0083165703429222,
+          "passed": true,
+          "predicted": 1.008316,
+          "relative_error": 5.656390677363919e-07,
+          "row": "ep8-decode-local"
+        },
+        {
+          "measured": 1.0053258527689253,
+          "passed": true,
+          "predicted": 1.005326,
+          "relative_error": 1.4645107623328095e-07,
+          "row": "ep8-decode-cross"
+        }
+      ],
+      "tolerance": 0.0002
+    }
+  },
+  "structural_inventory": {
+    "4": {
+      "decode": {
+        "collective_count": 48,
+        "endpoint_bytes": [
+          12288
+        ],
+        "kinds": [
+          [
+            "all-to-allv",
+            "pairwise"
+          ]
+        ],
+        "participant_counts": [
+          4
+        ],
+        "provider_compute_ps": 152871497
+      },
+      "prefill": {
+        "collective_count": 48,
+        "endpoint_bytes": [
+          98304
+        ],
+        "kinds": [
+          [
+            "all-to-allv",
+            "pairwise"
+          ]
+        ],
+        "participant_counts": [
+          4
+        ],
+        "provider_compute_ps": 152862720
+      }
+    },
+    "8": {
+      "decode": {
+        "collective_count": 48,
+        "endpoint_bytes": [
+          14336
+        ],
+        "kinds": [
+          [
+            "all-to-allv",
+            "pairwise"
+          ]
+        ],
+        "participant_counts": [
+          8
+        ],
+        "provider_compute_ps": 98944731
+      },
+      "prefill": {
+        "collective_count": 48,
+        "endpoint_bytes": [
+          114688
+        ],
+        "kinds": [
+          [
+            "all-to-allv",
+            "pairwise"
+          ]
+        ],
+        "participant_counts": [
+          8
+        ],
+        "provider_compute_ps": 98935954
+      }
+    }
+  },
+  "study": "collective_fixed_cost_envelope_v1",
+  "verdict": {
+    "scored_families": 3,
+    "scored_families_passed": 3,
+    "void": false
+  }
+}
