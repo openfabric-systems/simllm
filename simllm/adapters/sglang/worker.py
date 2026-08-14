@@ -134,6 +134,7 @@ __all__ = [
     "SimTpModelWorker",
     "SimWorkerConfig",
     "SimWorkerHooks",
+    "active_sample_identity",
     "configure",
     "latest_worker",
     "model_dims_from_sglang",
@@ -392,6 +393,32 @@ def reset_configuration() -> SimWorkerHooks:
 def latest_worker() -> SimTpModelWorker | None:
     """The most recently constructed worker in this process, if any."""
     return _LATEST[-1] if _LATEST else None
+
+
+def active_sample_identity() -> bool:
+    """Whether the emitted records carry the sampled count and identity.
+
+    The constructed worker is the authority. It resolves the hooks and the
+    environment once, in its own constructor, and latches the result into its
+    :class:`SglStepTranslator`, so re-deriving from the hooks or the
+    environment afterwards can disagree with what the translator actually
+    does: a later `configure` call or environment change never reaches a
+    worker that already exists. This therefore reads the built worker's own
+    :class:`SimWorkerConfig` when one exists in this process, and falls back to
+    the hook-or-environment derivation, which is what the next worker would
+    latch, only when none does.
+
+    The in-process pump reads it to decide whether chunked prefill is safe:
+    with the identity emitted a mid-prompt extend row carries a sampled count
+    that excludes it, while on the compatibility path both fields stay absent
+    and every scheduled row is read as having produced a token.
+    """
+
+    worker = latest_worker()
+    if worker is not None:
+        return bool(worker.sim_config.sample_identity)
+    config = _HOOKS.config or SimWorkerConfig.from_env()
+    return bool(config.sample_identity)
 
 
 # Batch translation (pure: no SGLang types cross this boundary)
