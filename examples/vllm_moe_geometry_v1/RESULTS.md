@@ -93,8 +93,45 @@ the flag set but a device set of one, it performed no binding at all, so the
 sink keeps whatever group its own configuration declared. This is component
 evidence: the binding method was exercised with the exact attributes
 `_init_executor` sets, because `SimExecutor` itself is only constructible
-inside a real vLLM process (VLLM-5 still tracks that CI harness, and no test in
-this repository constructs the class either).
+inside a real vLLM process (VLLM-5 still tracks that CI harness).
+
+### Post-specified chronology note, 2026-08-14
+
+Binding gained a precondition after this study was published, and the study was
+rerun rather than left stale. TRAF-33 made a declared expert group assert an
+all-to-all whose combine returns an already reduced output, so
+`_bind_expert_group` now binds only when the pinned configuration implies one:
+all-to-all kernels enabled (`fused_moe/config.py:1052-1055`) and a backend
+whose prepare-finalize reduces. The cells here declared no
+`all2all_backend` at all, so the reader applied vLLM's own
+`allgather_reducescatter` default (`config/parallel.py:186`), whose combine
+does not reduce (`fused_moe/prepare_finalize/naive_dp_ep.py:109` and `:242`),
+and the binding arm raised instead of binding.
+
+Exactly one field changed: `_vllm_config` now sets
+`all2all_backend = "deepep_high_throughput"` on every cell's parallel config,
+as the module constant `CELL_ALL2ALL_BACKEND`. A real `ParallelConfig` always
+carries a backend, and the cells' intent is expert-group derivation and
+binding, not backend selection, so declaring a reducing one preserves what F4
+was written to test rather than reinterpreting it. No expected value, no cell
+input tuple and no closed form was touched.
+
+The rerun reproduces this study exactly. Both F4 rows pass with the same
+observed groups, `(0, ..., 7)` and none, and the scored total is again 22/22
+against the frozen denominator of 22 with no fatal guard violated. Every other
+row is byte-identical to the pre-change run: all 2 fatal-guard rows, 3
+schedule-identity rows, 12 F1 geometry rows, 5 F2 layout rows and 3 F3
+direction rows compare equal field for field, which is expected because
+`moe_intermediate_size`, `local_num_experts` and `ep_ranks` are functions of
+`dp`, `pcp`, `tp`, `enable_expert_parallel`, `rank` and the expert count alone
+and read no backend. The pinned-source arm is likewise unaffected, because its
+probe receives the raw cell tuples rather than this fixture; it reran with the
+same three refusals named below.
+
+The gap that let this reach a published study is closed too:
+`tests/test_adapters_vllm.py` now executes these binding cells directly, so a
+future change to the binding semantics fails the suite instead of only the
+study.
 
 ## Physical sanity, checked before the digits
 

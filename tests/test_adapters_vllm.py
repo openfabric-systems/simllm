@@ -1634,6 +1634,204 @@ def test_config_rejects_bad_values():
         )
 
 
+def _granite_config_with_moe_field(name, value):
+    config = fake_granite_vllm_config()
+    config.model_config = FakeGraniteModelConfig()
+    config.model_config.hf_text_config = SimpleNamespace(
+        **{**vars(FakeGraniteModelConfig.hf_text_config), name: value}
+    )
+    return config
+
+
+def test_shared_expert_and_mixed_schedule_moe_configs_are_refused():
+    """Geometries whose reduction inventory ModelDims cannot carry fail closed.
+
+    A shared expert is all-reduced over the tensor-parallel group even when the
+    combine kernel already reduced the routed output (pinned vLLM 0.26.0,
+    model_executor/layers/fused_moe/runner/moe_runner.py:416-433), and a dense
+    prefix leaves some layers with two allreduce sites and no all-to-all, so
+    both are refused rather than priced as fully routed (VLLM-25).
+    """
+    from simllm.adapters.vllm.executor import (
+        UNSUPPORTED_LAYER_LIST_MOE_FIELDS,
+        UNSUPPORTED_POSITIVE_MOE_FIELDS,
+        UNSUPPORTED_STRIDE_MOE_FIELDS,
+        model_dims_from_vllm_config,
+    )
+
+    # every field the SGLang reader refuses is refused here too
+    assert set(UNSUPPORTED_POSITIVE_MOE_FIELDS) >= {
+        "n_shared_experts",
+        "num_shared_experts",
+        "shared_expert_intermediate_size",
+        "moe_shared_expert_intermediate_size",
+        "shared_intermediate_size",
+        "first_k_dense_replace",
+        "num_dense_layers",
+    }
+    assert set(UNSUPPORTED_STRIDE_MOE_FIELDS) == {
+        "moe_layer_freq",
+        "decoder_sparse_step",
+    }
+    assert set(UNSUPPORTED_LAYER_LIST_MOE_FIELDS) == {"mlp_only_layers"}
+
+    # a positive count or size declares an unsupported mechanism, zero does not
+    for name in UNSUPPORTED_POSITIVE_MOE_FIELDS:
+        with pytest.raises(NotImplementedError, match="VLLM-25"):
+            model_dims_from_vllm_config(_granite_config_with_moe_field(name, 1))
+        zeroed = _granite_config_with_moe_field(name, 0)
+        assert model_dims_from_vllm_config(zeroed).num_experts == 32
+
+    # a routed stride is fully routed at exactly 1 and mixed at anything else
+    for name in UNSUPPORTED_STRIDE_MOE_FIELDS:
+        fully_routed = _granite_config_with_moe_field(name, 1)
+        assert model_dims_from_vllm_config(fully_routed).num_experts == 32
+        for value in (0, 2, 4):
+            with pytest.raises(NotImplementedError, match="VLLM-25"):
+                model_dims_from_vllm_config(
+                    _granite_config_with_moe_field(name, value)
+                )
+
+    # a per-layer exception list is mixed exactly when it is non-empty
+    for name in UNSUPPORTED_LAYER_LIST_MOE_FIELDS:
+        empty = _granite_config_with_moe_field(name, [])
+        assert model_dims_from_vllm_config(empty).num_experts == 32
+        with pytest.raises(NotImplementedError, match="VLLM-25"):
+            model_dims_from_vllm_config(_granite_config_with_moe_field(name, [3]))
+
+    # a non-integer count is a reader defect rather than an unsupported model
+    with pytest.raises(TypeError, match="must be an integer"):
+        model_dims_from_vllm_config(
+            _granite_config_with_moe_field("n_shared_experts", "1")
+        )
+
+
+def test_expert_group_binds_only_for_a_reducing_combine():
+    """Naive expert parallelism must not declare an all-to-all group.
+
+    Pinned vLLM 0.26.0 enables all-to-all kernels only with dp, pcp or
+    sequence parallelism (fused_moe/config.py:1052-1055), and only some
+    backends reduce in the combine (config/parallel.py:186 defaults to
+    allgather_reducescatter, whose prepare-finalize returns False at
+    fused_moe/prepare_finalize/naive_dp_ep.py:109 and :242).
+    """
+    from simllm.adapters.vllm.executor import expert_parallel_geometry
+
+    # the live Granite shape: dp 8, deepep high throughput, reducing combine
+    granite = expert_parallel_geometry(fake_granite_vllm_config())
+    assert granite.use_ep and granite.use_all2all_kernels
+    assert granite.combine_is_reducing and granite.renders_expert_combine
+
+    # tp=8, ep=8, dp=1 is naive expert parallelism: no all-to-all at all
+    naive = fake_granite_vllm_config()
+    naive.parallel_config.data_parallel_size = 1
+    naive.parallel_config.tensor_parallel_size = 8
+    geometry = expert_parallel_geometry(naive)
+    assert geometry.use_ep
+    assert not geometry.use_all2all_kernels
+    assert not geometry.renders_expert_combine
+
+    # an all-to-all that does not reduce leaves the mlp-site allreduce in place
+    unreduced = fake_granite_vllm_config()
+    unreduced.parallel_config.all2all_backend = "allgather_reducescatter"
+    geometry = expert_parallel_geometry(unreduced)
+    assert geometry.use_all2all_kernels
+    assert not geometry.combine_is_reducing
+    assert not geometry.renders_expert_combine
+
+    # a backend we cannot place is refused rather than assumed either way
+    unknown = fake_granite_vllm_config()
+    unknown.parallel_config.all2all_backend = "pplx"
+    with pytest.raises(NotImplementedError, match="TRAF-40"):
+        expert_parallel_geometry(unknown)
+
+
+def test_non_reducing_all_to_all_binding_fails_closed():
+    """An unrendered allgather and reduce-scatter path is refused, not guessed.
+
+    With that backend the framework both moves expert activations and
+    all-reduces the fused output, so neither declaring nor omitting the group
+    describes it, and binding must raise rather than silently drop traffic.
+    """
+    from simllm.adapters.vllm.executor import (
+        SimExecutor,
+        expert_parallel_geometry,
+    )
+
+    class _Sink:
+        def __init__(self):
+            self.bound = None
+
+        def bind_expert_group(self, ep_ranks):
+            self.bound = tuple(ep_ranks)
+
+    executor = SimExecutor.__new__(SimExecutor)
+    executor.step_sink = _Sink()
+    executor.ep_ranks = tuple(range(8))
+
+    config = fake_granite_vllm_config()
+    config.parallel_config.all2all_backend = "allgather_reducescatter"
+    executor.expert_parallel = expert_parallel_geometry(config)
+    with pytest.raises(NotImplementedError, match="allgather and a reduce-scatter"):
+        executor._bind_expert_group()
+    with pytest.raises(NotImplementedError, match="TRAF-40"):
+        executor._bind_expert_group()
+    assert executor.step_sink.bound is None
+
+    # naive expert parallelism binds nothing and raises nothing
+    naive = fake_granite_vllm_config()
+    naive.parallel_config.data_parallel_size = 1
+    naive.parallel_config.tensor_parallel_size = 8
+    executor.expert_parallel = expert_parallel_geometry(naive)
+    executor._bind_expert_group()
+    assert executor.step_sink.bound is None
+
+    # the live reducing shape, dp 8 with deepep, binds the group
+    executor.expert_parallel = expert_parallel_geometry(fake_granite_vllm_config())
+    executor._bind_expert_group()
+    assert executor.step_sink.bound == tuple(range(8))
+
+
+def test_geometry_study_binding_cells_match_the_binding_semantics():
+    """The published geometry study's binding cells must not silently diverge.
+
+    That study calls _bind_expert_group directly, so a change to the binding
+    precondition can break a doc-linked published result while the suite stays
+    green. This executes exactly its binding cells, nothing else in it.
+    """
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    from simllm.adapters.vllm.executor import REDUCING_ALL2ALL_BACKENDS
+
+    study_path = (
+        Path(__file__).resolve().parents[1]
+        / "examples"
+        / "vllm_moe_geometry_v1"
+        / "run_study.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "vllm_moe_geometry_study", study_path
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    # every cell declares a backend the binding decision can classify
+    assert module.CELL_ALL2ALL_BACKEND in REDUCING_ALL2ALL_BACKENDS
+    for cell in module.GEOMETRY_INPUTS:
+        config = module._vllm_config(module.GEOMETRY_INPUTS[cell])
+        assert getattr(config.parallel_config, "all2all_backend", None) is not None
+
+    rows = module._score_binding()
+    assert [row["cell"] for row in rows] == ["g-ep-dp8", "g-ep-flag-world1"]
+    assert all(row["passed"] for row in rows)
+    assert rows[0]["observed"] == [list(range(8))]
+    assert rows[1]["observed"] == []
+
+
 def test_granite_model_dims_include_enabled_ep_geometry():
     from simllm.adapters.vllm.executor import model_dims_from_vllm_config
 

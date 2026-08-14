@@ -315,6 +315,18 @@ def _model_config(num_local_experts: int | None, layers: int = 24):
     return _ModelConfig()
 
 
+#: every cell declares a backend whose combine reduces across ranks, so the
+#: expert group these cells derive is one the renderers may be given. A real
+#: ParallelConfig always carries a backend (`config/parallel.py:186`), and the
+#: geometry arms below read none of it: `moe_intermediate_size`,
+#: `local_num_experts` and `ep_ranks` are functions of `dp`, `pcp`, `tp`,
+#: `enable_expert_parallel`, `rank` and the expert count alone. Only F4's
+#: binding decision consults it, which is why it is declared here rather than
+#: left to the reader's `allgather_reducescatter` default. Added 2026-08-14,
+#: post-specified; see the chronology note in RESULTS.md.
+CELL_ALL2ALL_BACKEND = "deepep_high_throughput"
+
+
 def _vllm_config(inputs: tuple):
     dp, pcp, tp, enable_ep, rank, experts, redundant, pp = inputs
     return SimpleNamespace(
@@ -327,6 +339,7 @@ def _vllm_config(inputs: tuple):
             pipeline_parallel_size=pp,
             rank=rank,
             enable_expert_parallel=enable_ep,
+            all2all_backend=CELL_ALL2ALL_BACKEND,
             eplb_config=SimpleNamespace(num_redundant_experts=redundant),
         ),
         quant_config=None,
