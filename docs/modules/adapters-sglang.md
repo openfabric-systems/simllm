@@ -292,8 +292,8 @@ every study to build the zero model by hand, and the seam is frozen by
 expectations-only commit `79b03da` and reported in
 [examples/sglang_host_step_v1/RESULTS.md](../../examples/sglang_host_step_v1/RESULTS.md).
 On 2026-08-14 the tracked nine-record SGLang smoke capture replayed through
-`HtsimStepSink` in seven selector states, for 9,072 `htsim_rnic` invocations
-plus 1,296 more for a hand-built pre-seam reference sink. All 7 fatal guards
+`HtsimStepSink` in seven selector states, for 3,024 `htsim_rnic` invocations
+plus 432 more for a hand-built pre-seam reference sink. All 7 fatal guards
 held, so the run is not void; 63 of 63 scored exact-oracle rows and 18 of 18
 scored behavioral instances passed, in two classes that are never summed. The
 regime flip is one launch wide exactly where the closed form puts it: at 122

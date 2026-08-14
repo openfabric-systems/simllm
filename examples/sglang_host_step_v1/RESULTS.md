@@ -7,9 +7,9 @@ selector, the harness and the tests existed. The measuring run happened on
 **Verdict: the run is not void, and all three scored relations pass.** No
 fatal guard was violated. In two evidence classes that are never summed:
 63 of 63 exact-oracle rows and 18 of 18 behavioral instances agreed with the
-freeze, to the picosecond. Sixty-three replayed steps drove 9,072
-`htsim_rnic` invocations across seven cells, plus 1,296 more for the pre-seam
-reference sink.
+freeze, to the picosecond. Sixty-three replayed steps drove 3,024
+`htsim_rnic` invocations across seven cells, one per collective, plus 432
+more for the pre-seam reference sink.
 
 ## What ran
 
@@ -168,7 +168,8 @@ than assumed: the fabric residual is bit-identical in all seven cells and in
 the reference arm.
 
 **G2's artifact half is uninformative in this lowering.** Every cell rendered
-byte-identical artifacts, all 1,296 files rolling up to the same SHA-256,
+byte-identical artifacts, all 1,296 rendered files, i.e. 432 GOAL programs
+with their binaries and completion CSVs, rolling up to the same SHA-256,
 because the GOAL input is a function of the record and the geometry only. That
 is a real property worth recording, but it means artifact identity cannot
 distinguish the ideal arm from a calibrated one. The informative half of G2 is
