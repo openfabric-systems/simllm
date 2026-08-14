@@ -197,9 +197,9 @@ def test_nsys_output_paths_must_match_configured_roots(tmp_path):
         "report": "capture/a100_environment_probe.nsys-rep",
     }
 
+    escaped_temporary = tmp_path.parent / "outside/nsys-report-b336.qdstrm"
     escaped = (
-        "Generating '/tmp/nsys-report-b336.qdstrm'\n"
-        f"Generated:\n\t{report}\n"
+        f"Generating '{escaped_temporary}'\n" f"Generated:\n\t{report}\n"
     )
     with pytest.raises(RuntimeError, match="escaped the configured temporary root"):
         runner._validate_nsys_output_paths(
