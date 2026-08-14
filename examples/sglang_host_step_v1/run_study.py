@@ -16,6 +16,11 @@ Every cell replays the same nine records, so the only thing that moves between
 cells is the per-step host cost. Run it with an explicit ``--run-dir``; nothing
 is written anywhere else. The backend binaries come from ``SIMLLM_HTSIM_RNIC``
 and ``SIMLLM_TXT2BIN`` as usual.
+
+The ``results.json`` this writes is exactly the file the study tracks: the
+per-file artifact digests are reduced to a per-cell rollup here, inside the
+run, so the tracked artifact needs no post-processing step and reproduces
+byte for byte from a rerun.
 """
 
 from __future__ import annotations
@@ -304,6 +309,23 @@ def artifact_digests(workdir: Path) -> list[tuple[str, str]]:
     return rows
 
 
+def artifact_digest_summary(rows: list[tuple[str, str]]) -> dict[str, Any]:
+    """Reduce one cell's per-file digests to the form the study records.
+
+    The per-file list is thousands of rows per cell and is bulk run output, so
+    only this reduction is written. ``rollup_sha256`` hashes the ordered
+    ``name digest`` lines, which makes it exactly as discriminating as the list
+    it replaces: two cells agree here if and only if every file agrees.
+    """
+
+    payload = "\n".join(f"{name} {digest}" for name, digest in rows)
+    return {
+        "artifact_count": len(rows),
+        "goal_files": sum(1 for name, _ in rows if name.endswith(".goal")),
+        "rollup_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+    }
+
+
 def replay_cell(document: dict[str, Any], sink: Any, records: list[Any]) -> list[dict]:
     rows = []
     for record in records:
@@ -327,6 +349,7 @@ def replay_cell(document: dict[str, Any], sink: Any, records: list[Any]) -> list
                 "host_launch_count": outcome.host_launch_count,
                 "host_launch_floor_ps": outcome.host_launch_floor_ps,
                 "exposed_host_ps": outcome.exposed_host_ps,
+                "represented_bound": outcome.represented_bound,
                 "num_sampled": outcome.num_sampled,
                 "sample_count_exact": outcome.sample_count_exact,
             }
@@ -389,8 +412,8 @@ def run(document: dict[str, Any], run_dir: Path) -> dict[str, Any]:
         "linkspeed_bps": LINKSPEED_BPS,
         "cells": cells,
         "reference_preseam_steps": reference_steps,
-        "artifact_digests": {
-            name: [list(row) for row in rows] for name, rows in digests.items()
+        "artifact_digest_summary": {
+            name: artifact_digest_summary(rows) for name, rows in digests.items()
         },
     }
 
@@ -430,11 +453,25 @@ def score(document: dict[str, Any], results: dict[str, Any]) -> dict[str, Any]:
                 }
             )
 
+    # R2 is the frozen conjunction in full: zero exposure AND the provider's
+    # own bound on the masked side, positive exposure AND host-initiation on
+    # the bound side. The provider's own bound is read from the ideal arm of
+    # the same record rather than hardcoded, so the comparison cannot drift
+    # from what the provider actually reported.
     r2 = []
     for masked, bound in (("graph122", "graph123"), ("eager41", "eager42")):
         for index in range(len(ideal)):
             masked_row = cells[masked]["steps"][index]
             bound_row = cells[bound]["steps"][index]
+            provider_bound = ideal[index]["represented_bound"]
+            exposure_half = (
+                masked_row["exposed_host_ps"] == 0
+                and bound_row["exposed_host_ps"] > 0
+            )
+            bound_half = (
+                masked_row["represented_bound"] == provider_bound
+                and bound_row["represented_bound"] == "host-initiation"
+            )
             r2.append(
                 {
                     "masked_cell": masked,
@@ -442,21 +479,25 @@ def score(document: dict[str, Any], results: dict[str, Any]) -> dict[str, Any]:
                     "step_index": masked_row["step_index"],
                     "masked_exposed_ps": masked_row["exposed_host_ps"],
                     "bound_exposed_ps": bound_row["exposed_host_ps"],
-                    "pass": masked_row["exposed_host_ps"] == 0
-                    and bound_row["exposed_host_ps"] > 0,
+                    "provider_bound": provider_bound,
+                    "masked_bound": masked_row["represented_bound"],
+                    "bound_cell_bound": bound_row["represented_bound"],
+                    "exposure_half": exposure_half,
+                    "bound_half": bound_half,
+                    "pass": exposure_half and bound_half,
                 }
             )
 
     guards = {}
     guards["G1"] = results["records_sha256"] == document["input"]["sha256"]
+    # The rollup hashes the ordered per-file digest list, so comparing rollups
+    # is exactly the per-file comparison. Note that every cell renders the same
+    # artifacts here, so the informative half of G2 is the per-step value
+    # equality against the hand-built pre-seam sink.
     guards["G2"] = (
-        results["artifact_digests"]["ideal"]
-        == results["artifact_digests"]["reference-preseam"]
-        and [
-            {key: value for key, value in row.items()}
-            for row in cells["ideal"]["steps"]
-        ]
-        == results["reference_preseam_steps"]
+        results["artifact_digest_summary"]["ideal"]
+        == results["artifact_digest_summary"]["reference-preseam"]
+        and list(cells["ideal"]["steps"]) == results["reference_preseam_steps"]
     )
     guards["G3"] = all(
         cell["device_key"] == document["calibrated_device_key"]

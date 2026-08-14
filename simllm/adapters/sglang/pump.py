@@ -70,23 +70,23 @@ def chunked_prefill_refusal(
     *,
     sample_identity: bool,
 ) -> str | None:
-    """Why chunked prefill is unsafe for this configuration, or ``None``.
+    """Why chunked prefill is refused for this configuration, or ``None``.
 
-    Chunked prefill is safe exactly when the record stream says which rows
-    produced a token. SGL-12 landed that: every record carries ``num_sampled``
-    and ``sampled_request_ids``, transcribed from the pinned
+    The refusal covers the one state in which a mid-prompt row is known to be
+    mis-scored: ``SIMLLM_SGLANG_SAMPLE_IDENTITY=0`` selects the pre-SGL-12
+    compatibility stream, where ``num_sampled`` and ``sampled_request_ids``
+    stay absent and every consumer reads the whole scheduled batch as sampled,
+    so a mid-prompt chunk is counted as a generated token. That state, not
+    chunked prefill itself, is the refusal condition.
+
+    ``None`` is not a safety certificate. On the default path every record does
+    carry the sampled count and identity, transcribed from the pinned
     ``process_batch_result_prefill`` rule, so a mid-prompt extend row is
-    excluded from the sampled set and a request's TTFT lands on the step that
-    actually generated its first token. ``SIMLLM_SGLANG_SAMPLE_IDENTITY=0``
-    selects the pre-SGL-12 compatibility stream instead: both fields stay
-    absent and every consumer reads the whole scheduled batch as sampled, which
-    is exactly the state in which a mid-prompt chunk is scored as a generated
-    token. That state, not chunked prefill itself, is the refusal condition.
-
-    The rule this relies on is source transcription plus stub batches carrying
-    the pinned attribute names. No running scheduler has been observed agreeing
-    with it, and this gate does not claim one has; SGL-22 owns that
-    confirmation.
+    excluded from the sampled set. That rule is source transcription checked
+    against stub batches carrying the pinned attribute names; no running
+    scheduler has been observed agreeing with it and this gate does not claim
+    one has, which is SGL-22. Chunked-prefill hazards outside the sampled-row
+    rule are outside what this gate inspects at all.
     """
 
     if chunked_prefill_size is None:

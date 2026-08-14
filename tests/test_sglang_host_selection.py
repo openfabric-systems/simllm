@@ -10,11 +10,15 @@ every enabled selection.
 
 from __future__ import annotations
 
+import inspect
+from pathlib import Path
+
 import pytest
 
 from simllm.adapters.sglang.host import (
     SGLANG_HOST_PROFILES,
     SGLANG_HOST_TRANSFER_DISCLOSURE,
+    SGLANG_TRANSFERRED_LAUNCH_BRACKET,
     SGLANG_TRANSFERRED_LAUNCH_COUNTS,
     select_sglang_host_model,
 )
@@ -70,10 +74,15 @@ def test_the_default_selection_is_the_exact_pre_seam_configuration():
     assert selection.launch_count == 0
     assert selection.launch_floor_ps == 0
     assert selection.transfer_disclosure is None
-    assert selection.overrides() == {
+    assert selection.sink_overrides() == {
         "host_model": selection.host_model,
         "gpu": selection.gpu,
         "provider": selection.provider,
+    }
+    assert selection.worker_overrides() == {
+        "host_model": selection.host_model,
+        "gpu": selection.gpu,
+        "compute_provider": selection.provider,
     }
 
 
@@ -127,13 +136,29 @@ def test_the_disclosure_names_all_three_transferred_sources():
         assert fragment in SGLANG_HOST_TRANSFER_DISCLOSURE
 
 
-def test_an_absent_launch_count_takes_the_transferred_vllm_bracket():
+def test_an_absent_launch_count_takes_this_profile_s_bracket_endpoint():
     assert SGLANG_TRANSFERRED_LAUNCH_COUNTS == {
         "turing-cuda-graph": 440,
         "turing-eager-host": 567,
     }
     assert select_sglang_host_model("turing-cuda-graph").launch_count == 440
     assert select_sglang_host_model("turing-eager-host").launch_count == 567
+
+
+def test_either_bracket_endpoint_is_selectable_with_either_launch_class():
+    """The bracket is one eager enumeration's min and max, not a per-class pair.
+
+    The defaults above are a study convention that reproduces the composed
+    vLLM study's two headline cells. Nothing may refuse the other endpoint.
+    """
+
+    assert SGLANG_TRANSFERRED_LAUNCH_BRACKET == (440, 567)
+    for profile in ("turing-cuda-graph", "turing-eager-host"):
+        for endpoint in SGLANG_TRANSFERRED_LAUNCH_BRACKET:
+            selection = select_sglang_host_model(profile, launch_count=endpoint)
+            assert selection.launch_count == endpoint
+    crossed = select_sglang_host_model("turing-cuda-graph", launch_count=567)
+    assert crossed.launch_floor_ps == 567 * GRAPH_POINT_PS
 
 
 @pytest.mark.parametrize("launch_count", [0, -1])
@@ -229,6 +254,79 @@ def test_an_unknown_envelope_is_refused():
 def test_an_out_of_range_efficiency_is_refused(efficiency):
     with pytest.raises(ValueError, match=r"efficiency must be in \(0, 1\]"):
         select_sglang_host_model("ideal", efficiency=efficiency)
+
+
+def test_worker_overrides_splat_into_configure_s_exact_signature():
+    """The keyword spellings differ between the two consumers, so both are pinned.
+
+    ``configure`` takes ``compute_provider`` and ``HtsimStepSinkConfig`` takes
+    ``provider``. A single accessor cannot serve both, and splatting the wrong
+    one raises ``TypeError``. The stub below is asserted to carry configure's
+    exact keyword set first, so it cannot drift away from the real function and
+    keep passing.
+    """
+
+    from simllm.adapters.sglang.worker import configure
+
+    def stub_configure(
+        *,
+        step_sink=None,
+        compute_provider=None,
+        gpu=None,
+        host_model=None,
+        config=None,
+    ):
+        return {
+            "step_sink": step_sink,
+            "compute_provider": compute_provider,
+            "gpu": gpu,
+            "host_model": host_model,
+            "config": config,
+        }
+
+    real = inspect.signature(configure).parameters
+    stub = inspect.signature(stub_configure).parameters
+    assert set(real) == set(stub)
+    assert all(real[name].kind is inspect.Parameter.KEYWORD_ONLY for name in real)
+
+    selection = select_sglang_host_model("turing-cuda-graph", launch_count=440)
+    applied = stub_configure(**selection.worker_overrides())
+
+    assert applied["compute_provider"] is selection.provider
+    assert applied["gpu"] is selection.gpu
+    assert applied["host_model"] is selection.host_model
+    # Binding against the real function is what makes this a contract rather
+    # than a restatement of the stub.
+    inspect.signature(configure).bind_partial(**selection.worker_overrides())
+
+    with pytest.raises(TypeError):
+        stub_configure(**selection.sink_overrides())
+
+
+def test_sink_overrides_splat_into_the_step_sink_configuration():
+    from simllm.backends import HtsimStepSinkConfig
+
+    selection = select_sglang_host_model("turing-eager-host", launch_count=567)
+    config = HtsimStepSinkConfig(
+        profile="rnic-nn-fluid",
+        tp_ranks=(0, 1),
+        dims=DIMS,
+        workdir=Path("unused-by-construction"),
+        **selection.sink_overrides(),
+    )
+
+    assert config.provider is selection.provider
+    assert config.gpu is selection.gpu
+    assert config.host_model is selection.host_model
+
+    with pytest.raises(TypeError):
+        HtsimStepSinkConfig(
+            profile="rnic-nn-fluid",
+            tp_ranks=(0, 1),
+            dims=DIMS,
+            workdir=Path("unused-by-construction"),
+            **selection.worker_overrides(),
+        )
 
 
 def test_the_module_imports_without_sglang():

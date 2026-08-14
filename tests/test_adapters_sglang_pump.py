@@ -341,26 +341,65 @@ def test_the_gate_is_inert_when_chunked_prefill_is_disabled():
     assert chunked_prefill_refusal(None, sample_identity=False) is None
 
 
-def test_the_gate_reads_the_configuration_the_next_worker_will_use(monkeypatch):
-    from simllm.adapters.sglang.worker import (
-        SimWorkerConfig,
-        active_sample_identity,
-        configure,
-        reset_configuration,
-    )
+def test_the_gate_falls_back_to_the_next_worker_s_value_when_none_exists(
+    monkeypatch,
+):
+    from simllm.adapters.sglang import worker as worker_module
 
     monkeypatch.delenv("SIMLLM_SGLANG_SAMPLE_IDENTITY", raising=False)
-    reset_configuration()
+    monkeypatch.setattr(worker_module, "_LATEST", [])
+    worker_module.reset_configuration()
     try:
-        assert active_sample_identity() is True
+        assert worker_module.active_sample_identity() is True
 
         monkeypatch.setenv("SIMLLM_SGLANG_SAMPLE_IDENTITY", "0")
-        assert active_sample_identity() is False
+        assert worker_module.active_sample_identity() is False
 
-        configure(config=SimWorkerConfig(sample_identity=True))
-        assert active_sample_identity() is True
+        worker_module.configure(
+            config=worker_module.SimWorkerConfig(sample_identity=True)
+        )
+        assert worker_module.active_sample_identity() is True
     finally:
-        reset_configuration()
+        worker_module.reset_configuration()
+
+
+def test_the_constructed_worker_outranks_the_hooks_and_the_environment(
+    monkeypatch,
+):
+    """One authority: the worker latched the value, so the worker answers.
+
+    ``Scheduler`` construction builds the worker through the plugin hook, and
+    the worker's constructor latches ``sample_identity`` into its translator.
+    A ``configure`` call or an environment change after that point never
+    reaches the worker that already exists, so re-deriving from the hooks
+    would report a value the emitted records do not have.
+    """
+
+    from simllm.adapters.sglang import worker as worker_module
+
+    class _BuiltWorker:
+        def __init__(self, sample_identity: bool) -> None:
+            self.sim_config = worker_module.SimWorkerConfig(
+                sample_identity=sample_identity
+            )
+
+    monkeypatch.delenv("SIMLLM_SGLANG_SAMPLE_IDENTITY", raising=False)
+    worker_module.reset_configuration()
+    monkeypatch.setattr(worker_module, "_LATEST", [_BuiltWorker(False)])
+    try:
+        # The hooks and the environment both say the identity is emitted; the
+        # worker that exists latched the opposite, and it wins.
+        worker_module.configure(
+            config=worker_module.SimWorkerConfig(sample_identity=True)
+        )
+        monkeypatch.setenv("SIMLLM_SGLANG_SAMPLE_IDENTITY", "1")
+        assert worker_module.active_sample_identity() is False
+        assert worker_module.latest_worker().sim_config.sample_identity is False
+
+        monkeypatch.setattr(worker_module, "_LATEST", [_BuiltWorker(True)])
+        assert worker_module.active_sample_identity() is True
+    finally:
+        worker_module.reset_configuration()
 
 
 # Mid-prompt chunk rows through the seam replay path
@@ -459,14 +498,19 @@ def _chunked_stream():
 
 
 def test_mid_prompt_chunk_rows_score_correctly_through_the_seam_replay_path(tmp_path):
-    """The gate's premise, checked end to end on the timing authority.
+    """The gate's premise, checked as far as the sink's compute estimate.
 
     The refusal was rewritten to admit chunked prefill whenever the sampled
     identity is emitted. This is the evidence for that: the same three batches
-    are translated on both record paths and driven through the sink's own
-    serial lowerer. The identity path charges the LM head for one token on the
-    mid-prompt step; the compatibility path charges two and lands the chunked
-    request's first token one step early.
+    are translated on both record paths and priced by the sink's own serial
+    lowerer through ``compute_estimate_ps``. The identity path charges the LM
+    head for one token on the mid-prompt step and the compatibility path
+    charges two, and on the identity path the chunked request's first sampled
+    step is the one that drains its last chunk.
+
+    This stops at the compute estimate. It runs no backend, computes no
+    makespan and drives no scheduler, so it is component evidence for the
+    gate's premise and not an end-to-end metric claim.
     """
 
     from simllm.adapters.sglang.worker import SglStepTranslator, observe_schedule_batch

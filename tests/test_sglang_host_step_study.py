@@ -101,6 +101,54 @@ def test_the_tracked_results_agree_with_the_freeze():
         assert measured == deltas
 
 
+def test_r2_records_both_halves_of_its_frozen_conjunction():
+    """The freeze registered exposure AND the bound name; both must be recorded.
+
+    The first run scored the exposure half only, because the bound string was
+    dropped between ``HostStepEstimate`` and the recorded rows. This pins the
+    conjunction so the same gap cannot reopen.
+    """
+
+    results = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
+    rows = results["scoring"]["R2"]["rows"]
+
+    assert rows
+    for row in rows:
+        assert row["exposure_half"] is True
+        assert row["bound_half"] is True
+        assert row["masked_bound"] == row["provider_bound"] == "memory"
+        assert row["bound_cell_bound"] == "host-initiation"
+
+    masked = {"graph122", "eager41"}
+    for name, cell in results["cells"].items():
+        recorded = {step["represented_bound"] for step in cell["steps"]}
+        if name == "ideal" or name in masked:
+            assert recorded == {"memory"}
+        else:
+            assert recorded == {"host-initiation"}
+
+
+def test_the_tracked_results_carry_the_reducible_digest_summary():
+    """The runner emits the tracked form; no untracked post-processing step."""
+
+    module = _study_module()
+    results = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
+
+    assert "artifact_digests" not in results
+    summary = results["artifact_digest_summary"]
+    assert set(summary) == set(results["cells"]) | {"reference-preseam"}
+    for cell in summary.values():
+        assert set(cell) == {"artifact_count", "goal_files", "rollup_sha256"}
+        assert cell["artifact_count"] == 1296
+        assert cell["goal_files"] == 432
+
+    rows = [("a.goal", "0" * 64), ("b.bin", "1" * 64)]
+    derived = module.artifact_digest_summary(rows)
+    assert derived["artifact_count"] == 2
+    assert derived["goal_files"] == 1
+    assert len(derived["rollup_sha256"]) == 64
+
+
 def test_the_recorded_fabric_term_matches_the_hand_closed_form():
     """48 collectives of seven 2,048-byte pairs per token, plus propagation."""
 

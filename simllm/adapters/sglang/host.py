@@ -50,6 +50,7 @@ from simllm.compute import (
 __all__ = [
     "SGLANG_HOST_PROFILES",
     "SGLANG_HOST_TRANSFER_DISCLOSURE",
+    "SGLANG_TRANSFERRED_LAUNCH_BRACKET",
     "SGLANG_TRANSFERRED_LAUNCH_COUNTS",
     "SglangHostSelection",
     "select_sglang_host_model",
@@ -63,9 +64,21 @@ SGLANG_HOST_PROFILES: tuple[str, ...] = (
     "turing-eager-host",
 )
 
-#: Launch counts transferred from the vLLM 0.26.0 static enumeration. They are
-#: a surrogate for SGLang's own unmeasured launch demand (SGL-24), offered as a
-#: convenience so a caller cannot invent a bracket endpoint by accident.
+#: The frozen vLLM 0.26.0 enumeration bracket, low and high. Both endpoints
+#: apply to either launch class.
+SGLANG_TRANSFERRED_LAUNCH_BRACKET: tuple[int, int] = (440, 567)
+
+#: Default launch count per profile. This is a study convention, not a
+#: per-class measurement. The evidence underneath is one bracket, not two
+#: numbers: ``examples/compute_fidelity_v1`` enumerated a single **eager**
+#: decode step of the pinned Granite MoE geometry from vLLM 0.26.0 sources and
+#: froze its minimum and maximum as ``N_min = 24 * 18 + 8 = 440`` and
+#: ``N_max = 24 * 23 + 15 = 567``. Nothing in that enumeration assigns 440 to
+#: CUDA graphs and 567 to eager launching, and ``examples/host_step_cost_v1``
+#: priced all four combinations of endpoint and class. Pairing them this way
+#: only reproduces the two headline cells of the composed vLLM study, so a
+#: caller who wants the other endpoint passes it explicitly. SGL-24 owns the
+#: SGLang-side count that would replace the borrowed bracket entirely.
 SGLANG_TRANSFERRED_LAUNCH_COUNTS: dict[str, int] = {
     "turing-cuda-graph": 440,
     "turing-eager-host": 567,
@@ -135,8 +148,11 @@ class SglangHostSelection:
     adapter's own check (`_validate_host_model_selection` in
     :mod:`simllm.adapters.sglang.worker`) requires the worker and the step sink
     to select the same host model, and the calibrated profiles reject any GPU
-    key but their own. :meth:`overrides` returns the three under the keyword
-    names both `configure` and ``HtsimStepSinkConfig`` use.
+    key but their own. The two consumers spell the provider differently, so
+    there are two accessors rather than one: :meth:`worker_overrides` uses
+    `configure`'s ``compute_provider`` and :meth:`sink_overrides` uses
+    ``HtsimStepSinkConfig``'s ``provider``. Splatting the wrong one raises
+    ``TypeError``, which is why neither is named ``overrides``.
 
     ``is_default`` is what keeps every accepted SGLang artifact byte identical:
     the ideal selection resolves to the same three objects a pre-SGL-23 study
@@ -155,8 +171,17 @@ class SglangHostSelection:
     is_default: bool
     transfer_disclosure: str | None
 
-    def overrides(self) -> dict[str, Any]:
-        """The three objects a study hands to the worker and to the sink."""
+    def worker_overrides(self) -> dict[str, Any]:
+        """Keywords for :func:`simllm.adapters.sglang.worker.configure`."""
+
+        return {
+            "host_model": self.host_model,
+            "gpu": self.gpu,
+            "compute_provider": self.provider,
+        }
+
+    def sink_overrides(self) -> dict[str, Any]:
+        """Keywords for :class:`simllm.backends.HtsimStepSinkConfig`."""
 
         return {
             "host_model": self.host_model,
@@ -193,9 +218,11 @@ def select_sglang_host_model(
     nothing.
 
     A calibrated profile requires a positive ``launch_count``. Passing ``None``
-    takes the transferred vLLM bracket endpoint for that profile, which is a
-    surrogate for SGLang's own unmeasured launch demand (SGL-24), not a
-    measurement of it. The returned selection carries
+    takes this profile's conventional endpoint of the transferred vLLM bracket
+    (see :data:`SGLANG_TRANSFERRED_LAUNCH_COUNTS`, which is a convention, not a
+    per-class measurement), a surrogate for SGLang's own unmeasured launch
+    demand (SGL-24) rather than a measurement of it. The returned selection
+    carries
     :data:`SGLANG_HOST_TRANSFER_DISCLOSURE` so a caller cannot report an
     enabled cell without saying where its constants came from.
     """
