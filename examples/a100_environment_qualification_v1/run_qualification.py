@@ -604,17 +604,47 @@ def _write_partial_context(out: Path, context: dict[str, Any]) -> None:
 
 
 def _has_numeric_ncu_metric(output: str) -> bool:
-    for row in csv.reader(output.splitlines()):
-        if TARGET_KERNEL not in " ".join(row) or not row:
+    lines = output.splitlines()
+    required_columns = ("id", "kernelname", "metricname", "metricvalue")
+    column_indices = None
+    header_index = None
+    for index, line in enumerate(lines):
+        header = next(csv.reader([line]))
+        normalized = [_normalized_header(field) for field in header]
+        if not all(normalized.count(column) == 1 for column in required_columns):
             continue
-        candidate = row[-1].strip().replace(",", "")
+        column_indices = {
+            column: normalized.index(column) for column in required_columns
+        }
+        header_index = index
+        break
+    if column_indices is None or header_index is None:
+        return False
+
+    target_launch_ids = set()
+    has_numeric_metric = False
+    maximum_index = max(column_indices.values())
+    for row in csv.reader(lines[header_index + 1 :]):
+        if len(row) <= maximum_index:
+            continue
+        kernel_name = row[column_indices["kernelname"]].strip()
+        if kernel_name != TARGET_KERNEL:
+            continue
+        launch_id = row[column_indices["id"]].strip()
+        if not launch_id:
+            return False
+        target_launch_ids.add(launch_id)
+        metric_name = row[column_indices["metricname"]].strip()
+        if not metric_name:
+            continue
+        candidate = row[column_indices["metricvalue"]].strip().replace(",", "")
         try:
             value = float(candidate)
         except ValueError:
             continue
         if math.isfinite(value):
-            return True
-    return False
+            has_numeric_metric = True
+    return has_numeric_metric and len(target_launch_ids) == 1
 
 
 def _ncu_capability_blocker(output: str) -> str | None:

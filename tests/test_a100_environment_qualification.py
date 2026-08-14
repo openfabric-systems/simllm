@@ -418,17 +418,37 @@ def test_probe_output_requires_frozen_kernel_and_geometry():
 
 def test_ncu_metric_requires_target_and_finite_value():
     runner = _runner_module()
-    header = '"Kernel Name","Metric Name","Metric Value"\n'
+    header = (
+        '"ID","Kernel Name","Metric Name","Metric Value",'
+        '"Estimated Speedup"\n'
+    )
 
     assert runner._has_numeric_ncu_metric(
-        header + f'"{runner.TARGET_KERNEL}","metric","12.5"\n'
+        header + f'"0","{runner.TARGET_KERNEL}","metric","12.5","99"\n'
     )
-    assert not runner._has_numeric_ncu_metric(
-        header + f'"{runner.TARGET_KERNEL}","metric","nan"\n'
+    rejected_rows = [
+        f'"0","{runner.TARGET_KERNEL}","metric","","99"\n',
+        f'"0","{runner.TARGET_KERNEL}","metric","nan","99"\n',
+        f'"0","{runner.TARGET_KERNEL}","metric","inf","99"\n',
+        f'"0","prefix_{runner.TARGET_KERNEL}","metric","12.5","99"\n',
+        '"0","unrelated_kernel","metric","12.5","99"\n',
+        f'"0","{runner.TARGET_KERNEL}","","12.5","99"\n',
+    ]
+    for row in rejected_rows:
+        assert not runner._has_numeric_ncu_metric(header + row)
+
+
+def test_ncu_metric_requires_exactly_one_target_launch():
+    runner = _runner_module()
+    header = '"ID","Kernel Name","Metric Name","Metric Value"\n'
+    output = header + "".join(
+        [
+            f'"0","{runner.TARGET_KERNEL}","duration","12.5"\n',
+            f'"1","{runner.TARGET_KERNEL}","duration","12.7"\n',
+        ]
     )
-    assert not runner._has_numeric_ncu_metric(
-        header + '"unrelated_kernel","metric","12.5"\n'
-    )
+
+    assert not runner._has_numeric_ncu_metric(output)
 
 
 def test_ncu_blocker_distinguishes_site_policy_from_tool_failure():
