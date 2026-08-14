@@ -1,14 +1,53 @@
-"""Calibrated fixed-latency and endpoint-serialization collective model."""
+"""Calibrated fixed-latency and endpoint-serialization collective model.
+
+A profile's ``participant_latency_ps`` table is a *surcharge* added on top of
+whatever transport the backend prices, not a complete service time. The step
+sink composes one artifact as ``base_latency + max(local_service,
+fabric_transport)``, so a profile that charges nothing still leaves the
+backend's own per-collective fixed cost in place, which for the fluid null
+network is one propagation delay named by ``propagation_reference_ps``.
+
+:class:`CollectiveFixedCostEnvelope` turns the choice of that surcharge from a
+silent default into a named bracket with three arms: ``off`` charges no
+surcharge at all, ``lower`` charges the envelope's lower-bound profile and
+``upper`` charges its upper-bound profile. A study runs the arms it wants and
+publishes the bracket instead of a single unattributed number.
+
+Every profile that participates in an envelope carries a
+:class:`CollectiveLatencyProvenance` record naming its source, its locator
+inside that source, the transfer being made, and an uncertainty band per
+participant width. Widths that no band anchors fail closed.
+"""
 
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
+from fractions import Fraction
 
 from simllm.core.execution import CollectiveWork
 
 PICOSECONDS_PER_SECOND = 1_000_000_000_000
 LEGACY_COLLECTIVE_LATENCY_PROFILE = "legacy"
+
+#: how far a profile's intercept table may be trusted
+#:
+#: ``calibrated`` is fitted to a capture of the very thing it prices.
+#: ``transferred-at-use`` is calibrated at its source but applied outside the
+#: operation shape or topology that source captured, so the number is exact and
+#: the application of it is not. ``provisional-transferred`` is derived from
+#: other evidence and never measured. ``structural-floor`` holds by
+#: construction rather than by measurement.
+COLLECTIVE_EVIDENCE_CLASSES = (
+    "calibrated",
+    "transferred-at-use",
+    "provisional-transferred",
+    "structural-floor",
+)
+
+#: the three states a fixed-cost envelope can be selected in
+COLLECTIVE_FIXED_COST_ARMS = ("off", "lower", "upper")
 
 
 def _require_int(
@@ -38,6 +77,95 @@ def _ring_endpoint_bytes(source_payload_bytes: int, participant_count: int) -> i
 
 
 @dataclass(frozen=True)
+class CollectiveLatencyProvenance:
+    """Where one profile's intercept table came from and how far it is trusted.
+
+    ``evidence_class`` separates a direct capture from a stated transfer and
+    from a bound that holds by construction. ``source`` and ``locator``
+    together identify the exact evidence, and ``transfer`` states in one
+    sentence what was done to it to reach this profile's table. Every
+    participant width the profile supports must appear in
+    ``participant_latency_band_ps`` as an inclusive ``(width, low, high)``
+    triple bracketing the profile's own point value, so a consumer cannot read
+    a transferred constant without its uncertainty attached.
+    """
+
+    evidence_class: str
+    source: str
+    locator: str
+    transfer: str
+    participant_latency_band_ps: tuple[tuple[int, int, int], ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "participant_latency_band_ps",
+            tuple(tuple(entry) for entry in self.participant_latency_band_ps),
+        )
+        if self.evidence_class not in COLLECTIVE_EVIDENCE_CLASSES:
+            raise ValueError(
+                "evidence_class must be one of "
+                f"{COLLECTIVE_EVIDENCE_CLASSES}, got {self.evidence_class!r}"
+            )
+        for name in ("source", "locator", "transfer"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a nonblank string")
+        if not self.participant_latency_band_ps:
+            raise ValueError("participant_latency_band_ps must not be empty")
+        widths: list[int] = []
+        for index, entry in enumerate(self.participant_latency_band_ps):
+            if len(entry) != 3:
+                raise ValueError(
+                    f"participant_latency_band_ps[{index}] must be a triple"
+                )
+            width = _require_int(
+                f"participant_latency_band_ps[{index}][0]",
+                entry[0],
+                minimum=2,
+            )
+            low = _require_int(
+                f"participant_latency_band_ps[{index}][1]",
+                entry[1],
+                minimum=0,
+            )
+            high = _require_int(
+                f"participant_latency_band_ps[{index}][2]",
+                entry[2],
+                minimum=0,
+            )
+            if high < low:
+                raise ValueError(
+                    f"participant_latency_band_ps[{index}] upper edge is below "
+                    "its lower edge"
+                )
+            widths.append(width)
+        if widths != sorted(set(widths)):
+            raise ValueError(
+                "participant_latency_band_ps widths must be unique and increasing"
+            )
+
+    @property
+    def banded_participant_counts(self) -> tuple[int, ...]:
+        """Return the widths this provenance record anchors."""
+
+        return tuple(width for width, _, _ in self.participant_latency_band_ps)
+
+    def band_ps(self, participant_count: int) -> tuple[int, int]:
+        """Return the inclusive uncertainty band for one participant width."""
+
+        _require_int("participant_count", participant_count, minimum=2)
+        for width, low, high in self.participant_latency_band_ps:
+            if width == participant_count:
+                return (low, high)
+        anchored = ", ".join(str(width) for width in self.banded_participant_counts)
+        raise ValueError(
+            f"no uncertainty band anchors participant count {participant_count}; "
+            f"anchored counts are {anchored}"
+        )
+
+
+@dataclass(frozen=True)
 class CollectiveLatencyProfile:
     """One immutable calibration for semantic collective service.
 
@@ -45,6 +173,12 @@ class CollectiveLatencyProfile:
     identifies participant widths 2, 4 and 8, but does not identify an
     interpolation law. Endpoint-byte validity is bounded by the endpoint
     loads produced by the source all-reduce payload interval.
+
+    The table is a surcharge added to the backend's transport, so the fixed
+    cost a run actually realizes is ``realized_fixed_cost_ps``, which adds the
+    named propagation reference the backend already charges. ``provenance`` is
+    optional so ad-hoc profiles stay constructible, but every profile that
+    joins a :class:`CollectiveFixedCostEnvelope` must carry one.
     """
 
     profile_id: str
@@ -53,6 +187,7 @@ class CollectiveLatencyProfile:
     source_payload_bytes_min: int
     source_payload_bytes_max: int
     propagation_reference_ps: int
+    provenance: CollectiveLatencyProvenance | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -110,12 +245,63 @@ class CollectiveLatencyProfile:
             raise ValueError(
                 "participant_latency_ps widths must be unique and increasing"
             )
+        if self.provenance is not None:
+            if not isinstance(self.provenance, CollectiveLatencyProvenance):
+                raise TypeError(
+                    "provenance must be a CollectiveLatencyProvenance or None"
+                )
+            if self.provenance.banded_participant_counts != tuple(widths):
+                raise ValueError(
+                    f"profile {self.profile_id!r} provenance anchors widths "
+                    f"{self.provenance.banded_participant_counts} but the table "
+                    f"supports {tuple(widths)}"
+                )
+            for width, latency_ps in self.participant_latency_ps:
+                low, high = self.provenance.band_ps(width)
+                if not low <= latency_ps <= high:
+                    raise ValueError(
+                        f"profile {self.profile_id!r} charges {latency_ps} ps at "
+                        f"participant count {width}, outside its own declared "
+                        f"band [{low}, {high}]"
+                    )
 
     @property
     def supported_participant_counts(self) -> tuple[int, ...]:
         """Return the directly calibrated participant widths."""
 
         return tuple(width for width, _ in self.participant_latency_ps)
+
+    @property
+    def evidence_class(self) -> str:
+        """Return the declared evidence class, or ``'unattributed'``."""
+
+        return "unattributed" if self.provenance is None else self.provenance.evidence_class
+
+    def require_provenance(self) -> CollectiveLatencyProvenance:
+        """Return the provenance record, refusing an unattributed profile."""
+
+        if self.provenance is None:
+            raise ValueError(
+                f"profile {self.profile_id!r} carries no provenance record"
+            )
+        return self.provenance
+
+    def base_latency_band_ps(self, participant_count: int) -> tuple[int, int]:
+        """Return the declared uncertainty band around one surcharge."""
+
+        self.base_latency_ps(participant_count)
+        return self.require_provenance().band_ps(participant_count)
+
+    def realized_fixed_cost_ps(self, participant_count: int) -> int:
+        """Return the per-collective fixed cost a run actually charges.
+
+        The surcharge sits on top of a transport that already contains one
+        propagation delay, so the realized fixed cost is the sum of the two.
+        For a profile whose source capture was itself a complete fixed cost,
+        that sum over-counts by at most ``propagation_reference_ps``.
+        """
+
+        return self.base_latency_ps(participant_count) + self.propagation_reference_ps
 
     def base_latency_ps(self, participant_count: int) -> int:
         """Return the non-serialization floor for ``participant_count``."""
@@ -180,6 +366,24 @@ class CollectiveLatencyProfile:
         ) + self.endpoint_serialization_ps(participant_count, endpoint_bytes)
 
 
+#: fluid one-way propagation the backend already charges per collective, ps
+COLLECTIVE_PROPAGATION_REFERENCE_PS = 2_000_000
+
+#: NVLink ring-step cost implied by the source table's two extreme widths, ps
+NVLINK_RING_STEP_PS = 1_617_160
+
+#: fabric ring-step anchors used by the cross-node transfer, ps
+FABRIC_RING_STEP_LOW_PS = 2_000_000
+FABRIC_RING_STEP_POINT_PS = 3_000_000
+FABRIC_RING_STEP_HIGH_PS = 5_000_000
+
+
+def _ring_steps(participant_count: int) -> int:
+    """Return the ring-step count of a ``participant_count``-wide collective."""
+
+    return 2 * (participant_count - 1)
+
+
 B200_NCCL_2_27_LOCAL_PROFILE = CollectiveLatencyProfile(
     profile_id="b200-nccl-2.27-local-v1",
     bandwidth_bytes_per_second=70_027_079_100,
@@ -190,7 +394,340 @@ B200_NCCL_2_27_LOCAL_PROFILE = CollectiveLatencyProfile(
     ),
     source_payload_bytes_min=8,
     source_payload_bytes_max=262_144,
-    propagation_reference_ps=2_000_000,
+    propagation_reference_ps=COLLECTIVE_PROPAGATION_REFERENCE_PS,
+    provenance=CollectiveLatencyProvenance(
+        evidence_class="calibrated",
+        source=(
+            "nccl-tests issue 333 capture of a DGX B200 intra-node NVLink "
+            "ALL-REDUCE under NCCL 2.27; the capture records completion times "
+            "and does not name the algorithm NCCL selected"
+        ),
+        locator=(
+            "the fitted intercepts of examples/collective_latency_floor_v1, "
+            "held out at 4 KiB with errors of 0.261, 0.347 and 0.080 us at "
+            "widths 2, 4 and 8"
+        ),
+        transfer=(
+            "the intra-node ALL-REDUCE intercept is charged unchanged as the "
+            "per-collective surcharge of any supported collective, including "
+            "pairwise ALL-TO-ALLV"
+        ),
+        participant_latency_band_ps=(
+            (2, 10_461_112, 10_983_112),
+            (4, 15_398_167, 16_092_167),
+            (8, 30_048_029, 30_208_029),
+        ),
+    ),
+)
+
+COLLECTIVE_FIXED_COST_FLOOR_PROFILE = CollectiveLatencyProfile(
+    profile_id="collective-fixed-cost-floor-v1",
+    bandwidth_bytes_per_second=B200_NCCL_2_27_LOCAL_PROFILE.bandwidth_bytes_per_second,
+    participant_latency_ps=((2, 0), (4, 0), (8, 0)),
+    source_payload_bytes_min=B200_NCCL_2_27_LOCAL_PROFILE.source_payload_bytes_min,
+    source_payload_bytes_max=B200_NCCL_2_27_LOCAL_PROFILE.source_payload_bytes_max,
+    propagation_reference_ps=COLLECTIVE_PROPAGATION_REFERENCE_PS,
+    provenance=CollectiveLatencyProvenance(
+        evidence_class="structural-floor",
+        source="the rnic-nn-fluid backend's own measured per-collective propagation",
+        locator=(
+            "31 matched decode compositions where 2 * fabric(400G) - fabric(200G) "
+            "returned 96,000,006 to 96,000,048 ps across 48 collectives, recorded "
+            "in the traffic module status section"
+        ),
+        transfer=(
+            "no surcharge is added, so the claimed per-collective fixed cost is "
+            "exactly the 2.000 us propagation the backend already charges; this "
+            "is a lower bound because no collective can complete faster than one "
+            "propagation delay"
+        ),
+        participant_latency_band_ps=((2, 0, 0), (4, 0, 0), (8, 0, 0)),
+    ),
+)
+
+B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE = CollectiveLatencyProfile(
+    profile_id="b200-nccl-2.27-cross-node-provisional-v1",
+    bandwidth_bytes_per_second=B200_NCCL_2_27_LOCAL_PROFILE.bandwidth_bytes_per_second,
+    participant_latency_ps=tuple(
+        (
+            width,
+            latency_ps
+            + _ring_steps(width) * (FABRIC_RING_STEP_POINT_PS - NVLINK_RING_STEP_PS),
+        )
+        for width, latency_ps in B200_NCCL_2_27_LOCAL_PROFILE.participant_latency_ps
+    ),
+    source_payload_bytes_min=B200_NCCL_2_27_LOCAL_PROFILE.source_payload_bytes_min,
+    source_payload_bytes_max=B200_NCCL_2_27_LOCAL_PROFILE.source_payload_bytes_max,
+    propagation_reference_ps=COLLECTIVE_PROPAGATION_REFERENCE_PS,
+    provenance=CollectiveLatencyProvenance(
+        evidence_class="provisional-transferred",
+        source=(
+            "b200-nccl-2.27-local-v1 combined with the RDMA fixed-cost anchors "
+            "recorded in docs/papers/msg-size-vs-bandwidth.md"
+        ),
+        locator=(
+            "every fabric step is this repository's measured 2,000,000 ps fluid "
+            "propagation reference plus a per-step initiation term. The lower "
+            "edge adds nothing, so it is that 2,000,000 ps alone. The point "
+            "estimate adds 1,000,000 ps, one half of the about 2 us commodity "
+            "RDMA round-trip anchor of Kalia et al. ATC'16, giving 3,000,000 ps. "
+            "The upper edge adds 3,000,000 ps, the top of the p50 ACK turnaround "
+            "in UCCL Table 2, giving 5,000,000 ps. The UCCL figures are "
+            "restricted to that table's Light columns, whose message sizes match "
+            "this workload's 12 to 114 KiB collectives; the Heavy columns reach "
+            "7.0 us of p50 ACK turnaround and would put the upper edge higher"
+        ),
+        transfer=(
+            "the 2(W-1) ring-step decomposition is this repository's own "
+            "collective expansion model rather than an attribute of the capture, "
+            "which names no algorithm. Each such step, worth 1,617,160 ps by the "
+            "two-point slope of the source table, is replaced by one fabric step "
+            "worth 3,000,000 ps at the point estimate, 2,000,000 ps at the lower "
+            "edge and 5,000,000 ps at the upper edge. NCCL 2.27 on an eight-GPU "
+            "NVSwitch node ordinarily selects NVLS or a tree for a small "
+            "ALL-REDUCE, and a 2 log2(W) tree decomposition at the same per-step "
+            "delta would move the width-8 point estimate from 49.49 to 38.43 us, "
+            "so the algorithm assumption is a first-order term rather than a "
+            "detail. No cross-node measurement was taken, so this profile is "
+            "provisional-transferred and never calibrated"
+        ),
+        participant_latency_band_ps=tuple(
+            (
+                width,
+                latency_ps
+                + _ring_steps(width) * (FABRIC_RING_STEP_LOW_PS - NVLINK_RING_STEP_PS),
+                latency_ps
+                + _ring_steps(width) * (FABRIC_RING_STEP_HIGH_PS - NVLINK_RING_STEP_PS),
+            )
+            for width, latency_ps in B200_NCCL_2_27_LOCAL_PROFILE.participant_latency_ps
+        ),
+    ),
+)
+
+
+@dataclass(frozen=True)
+class CollectiveFixedCostEnvelope:
+    """A named bracket on the per-collective fixed cost, with three arms.
+
+    ``off`` charges no surcharge and is the repository default. ``lower`` and
+    ``upper`` charge the two named profiles. The two arms must share the
+    endpoint bandwidth and the source payload interval so that switching arms
+    changes the fixed cost and nothing else, and the lower arm must be strictly
+    cheaper at every supported width so the bracket is a bracket.
+
+    The bracket is over the arms a study can select, not over the physical
+    value. An arm's profile may declare an uncertainty band that reaches past
+    the arm above it, and the ``claim`` string is required to say what the
+    bracket does and does not assert.
+
+    ``applied_evidence_class`` downgrades an arm's reported evidence class at
+    the point of use. A profile calibrated on one operation shape or topology
+    is not calibrated when an envelope charges it for a different one, and the
+    class the run record publishes has to say so. Only a ``calibrated`` profile
+    can be downgraded, and every downgrade carries its reason.
+    """
+
+    envelope_id: str
+    claim: str
+    lower_profile: CollectiveLatencyProfile
+    upper_profile: CollectiveLatencyProfile
+    #: per-arm point-of-use downgrades, as ``(arm, evidence_class, reason)``
+    applied_evidence_class: tuple[tuple[str, str, str], ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "applied_evidence_class",
+            tuple(tuple(entry) for entry in self.applied_evidence_class),
+        )
+        if not isinstance(self.envelope_id, str) or not self.envelope_id.strip():
+            raise ValueError("envelope_id must be a nonblank string")
+        if not isinstance(self.claim, str) or not self.claim.strip():
+            raise ValueError("claim must be a nonblank string")
+        for name in ("lower_profile", "upper_profile"):
+            if not isinstance(getattr(self, name), CollectiveLatencyProfile):
+                raise TypeError(f"{name} must be a CollectiveLatencyProfile")
+        lower = self.lower_profile
+        upper = self.upper_profile
+        lower.require_provenance()
+        upper.require_provenance()
+        if lower.profile_id == upper.profile_id:
+            raise ValueError("envelope arms must name two different profiles")
+        if lower.bandwidth_bytes_per_second != upper.bandwidth_bytes_per_second:
+            raise ValueError(
+                "envelope arms must share bandwidth_bytes_per_second so the "
+                "bracket isolates the fixed cost"
+            )
+        if (
+            lower.source_payload_bytes_min != upper.source_payload_bytes_min
+            or lower.source_payload_bytes_max != upper.source_payload_bytes_max
+        ):
+            raise ValueError(
+                "envelope arms must share the source payload interval so both "
+                "arms accept and reject exactly the same workloads"
+            )
+        if lower.propagation_reference_ps != upper.propagation_reference_ps:
+            raise ValueError("envelope arms must share propagation_reference_ps")
+        if lower.supported_participant_counts != upper.supported_participant_counts:
+            raise ValueError("envelope arms must support the same participant counts")
+        for width in lower.supported_participant_counts:
+            if lower.base_latency_ps(width) >= upper.base_latency_ps(width):
+                raise ValueError(
+                    f"envelope {self.envelope_id!r} does not bracket participant "
+                    f"count {width}: the lower arm is not strictly cheaper"
+                )
+        seen: list[str] = []
+        for index, entry in enumerate(self.applied_evidence_class):
+            if len(entry) != 3:
+                raise ValueError(
+                    f"applied_evidence_class[{index}] must be an "
+                    "(arm, evidence_class, reason) triple"
+                )
+            arm, evidence_class, reason = entry
+            if arm not in ("lower", "upper"):
+                raise ValueError(
+                    f"applied_evidence_class[{index}] arm must be 'lower' or 'upper'"
+                )
+            if arm in seen:
+                raise ValueError("applied_evidence_class arms must be unique")
+            seen.append(arm)
+            if evidence_class not in COLLECTIVE_EVIDENCE_CLASSES:
+                raise ValueError(
+                    f"applied_evidence_class[{index}] class must be one of "
+                    f"{COLLECTIVE_EVIDENCE_CLASSES}"
+                )
+            if evidence_class == "calibrated":
+                raise ValueError(
+                    "a point-of-use declaration may only downgrade, never "
+                    "restore, the 'calibrated' class"
+                )
+            if not isinstance(reason, str) or not reason.strip():
+                raise ValueError(
+                    f"applied_evidence_class[{index}] reason must be a nonblank string"
+                )
+            declared = (lower if arm == "lower" else upper).evidence_class
+            if declared != "calibrated":
+                raise ValueError(
+                    f"envelope {self.envelope_id!r} cannot downgrade the {arm} arm: "
+                    f"its profile already declares {declared!r}, not 'calibrated'"
+                )
+
+    def arm_evidence_class(self, arm: str) -> str | None:
+        """Return the evidence class this envelope publishes for one arm."""
+
+        profile = self.arm_profile(arm)
+        if profile is None:
+            return None
+        for declared_arm, evidence_class, _ in self.applied_evidence_class:
+            if declared_arm == arm:
+                return evidence_class
+        return profile.evidence_class
+
+    def arm_evidence_note(self, arm: str) -> str:
+        """Return why one arm's evidence class was downgraded, or an empty string."""
+
+        self.arm_profile(arm)
+        for declared_arm, _, reason in self.applied_evidence_class:
+            if declared_arm == arm:
+                return reason
+        return ""
+
+    @property
+    def supported_participant_counts(self) -> tuple[int, ...]:
+        """Return the widths both arms support."""
+
+        return self.lower_profile.supported_participant_counts
+
+    @property
+    def arm_names(self) -> tuple[str, ...]:
+        """Return the three selectable arm names."""
+
+        return COLLECTIVE_FIXED_COST_ARMS
+
+    def arm_profile(self, arm: str) -> CollectiveLatencyProfile | None:
+        """Return the profile one arm selects; ``off`` selects none."""
+
+        if arm == "off":
+            return None
+        if arm == "lower":
+            return self.lower_profile
+        if arm == "upper":
+            return self.upper_profile
+        raise ValueError(
+            f"arm must be one of {COLLECTIVE_FIXED_COST_ARMS}, got {arm!r}"
+        )
+
+    def bracket_ps(self, participant_count: int) -> tuple[int, int]:
+        """Return the surcharge bracket at one participant width."""
+
+        return (
+            self.lower_profile.base_latency_ps(participant_count),
+            self.upper_profile.base_latency_ps(participant_count),
+        )
+
+    def realized_bracket_ps(self, participant_count: int) -> tuple[int, int]:
+        """Return the realized fixed-cost bracket, propagation included."""
+
+        return (
+            self.lower_profile.realized_fixed_cost_ps(participant_count),
+            self.upper_profile.realized_fixed_cost_ps(participant_count),
+        )
+
+
+_OPERATION_SHAPE_DOWNGRADE = (
+    "the source capture is an ALL-REDUCE and this envelope charges its "
+    "intercept for whatever collective the workload emits, including pairwise "
+    "ALL-TO-ALLV, so the number is calibrated and its application here is not"
+)
+
+INTRA_NODE_COLLECTIVE_FIXED_COST_ENVELOPE = CollectiveFixedCostEnvelope(
+    envelope_id="intra-node-fixed-cost-v1",
+    claim=(
+        "for a collective whose steps stay on NVLink, the selectable arms run "
+        "from the modeled propagation delay, which is a floor no collective can "
+        "beat, to the captured DGX B200 intra-node NCCL intercept transferred "
+        "to whichever collective is being priced. The upper arm is the "
+        "pessimistic selectable edge, not a ceiling on the physical value"
+    ),
+    lower_profile=COLLECTIVE_FIXED_COST_FLOOR_PROFILE,
+    upper_profile=B200_NCCL_2_27_LOCAL_PROFILE,
+    applied_evidence_class=(("upper", "transferred-at-use", _OPERATION_SHAPE_DOWNGRADE),),
+)
+
+CROSS_NODE_COLLECTIVE_FIXED_COST_ENVELOPE = CollectiveFixedCostEnvelope(
+    envelope_id="cross-node-fixed-cost-provisional-v1",
+    claim=(
+        "for a collective whose steps cross the fabric, the selectable arms run "
+        "from the captured intra-node intercept, which is a floor because a "
+        "fabric hop cannot be cheaper than the NVLink hop it replaces, to the "
+        "provisional-transferred cross-node estimate. The upper arm is the "
+        "pessimistic selectable edge and not a ceiling on the physical value: "
+        "its own declared band reaches 77,487,789 ps at width 8, 57 percent "
+        "above the 49,487,789 ps it charges, and no evidence here establishes "
+        "any ceiling at all"
+    ),
+    lower_profile=B200_NCCL_2_27_LOCAL_PROFILE,
+    upper_profile=B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE,
+    applied_evidence_class=(
+        (
+            "lower",
+            "transferred-at-use",
+            _OPERATION_SHAPE_DOWNGRADE
+            + ", and this envelope additionally charges an intra-node capture "
+            "for a collective whose steps cross the fabric",
+        ),
+    ),
+)
+
+_NAMED_COLLECTIVE_LATENCY_PROFILES = (
+    B200_NCCL_2_27_LOCAL_PROFILE,
+    COLLECTIVE_FIXED_COST_FLOOR_PROFILE,
+    B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE,
+)
+
+_NAMED_COLLECTIVE_FIXED_COST_ENVELOPES = (
+    INTRA_NODE_COLLECTIVE_FIXED_COST_ENVELOPE,
+    CROSS_NODE_COLLECTIVE_FIXED_COST_ENVELOPE,
 )
 
 
@@ -286,8 +823,9 @@ def resolve_collective_latency_profile(
     if isinstance(selector, str):
         if selector == LEGACY_COLLECTIVE_LATENCY_PROFILE:
             return None
-        if selector == B200_NCCL_2_27_LOCAL_PROFILE.profile_id:
-            return B200_NCCL_2_27_LOCAL_PROFILE
+        for profile in _NAMED_COLLECTIVE_LATENCY_PROFILES:
+            if selector == profile.profile_id:
+                return profile
         raise ValueError(f"unknown collective latency profile {selector!r}")
     raise TypeError(
         "collective latency profile must be None, a selector string, or a "
@@ -295,10 +833,129 @@ def resolve_collective_latency_profile(
     )
 
 
+def resolve_collective_fixed_cost_envelope(
+    selector: str | CollectiveFixedCostEnvelope | None,
+) -> CollectiveFixedCostEnvelope | None:
+    """Resolve a named fixed-cost envelope, or ``None`` for no envelope."""
+
+    if selector is None:
+        return None
+    if isinstance(selector, CollectiveFixedCostEnvelope):
+        return selector
+    if isinstance(selector, str):
+        for envelope in _NAMED_COLLECTIVE_FIXED_COST_ENVELOPES:
+            if selector == envelope.envelope_id:
+                return envelope
+        raise ValueError(f"unknown collective fixed cost envelope {selector!r}")
+    raise TypeError(
+        "collective fixed cost envelope must be None, a selector string, or a "
+        "CollectiveFixedCostEnvelope"
+    )
+
+
+@dataclass(frozen=True)
+class ArmRatioEnvelope:
+    """One reported ratio bracketed across the named fixed-cost arms.
+
+    This is the publishable form of an envelope study: instead of one ratio
+    computed under one silently chosen fixed cost, the same ratio is reported
+    once per arm together with the interval they span. ``brackets_unity`` says
+    whether the evidence determines the sign of the comparison at all.
+    """
+
+    label: str
+    numerator: str
+    denominator: str
+    arm_ratios: tuple[tuple[str, float], ...]
+    minimum: float
+    maximum: float
+    brackets_unity: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "arm_ratios",
+            tuple((arm, float(ratio)) for arm, ratio in self.arm_ratios),
+        )
+        for name in ("label", "numerator", "denominator"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a nonblank string")
+        if len(self.arm_ratios) < 2:
+            raise ValueError("an arm ratio envelope needs at least two arms")
+        arms = [arm for arm, _ in self.arm_ratios]
+        if len(set(arms)) != len(arms):
+            raise ValueError("arm names must be unique")
+        ratios = [ratio for _, ratio in self.arm_ratios]
+        if self.minimum != min(ratios) or self.maximum != max(ratios):
+            raise ValueError("envelope edges disagree with the reported arm ratios")
+        if self.brackets_unity != (self.minimum <= 1.0 <= self.maximum):
+            raise ValueError("brackets_unity disagrees with the reported edges")
+
+    @property
+    def width(self) -> float:
+        """Return the multiplicative width of the bracket."""
+
+        return self.maximum / self.minimum
+
+
+def arm_ratio_envelope(
+    label: str,
+    numerator: str,
+    denominator: str,
+    arm_values: Sequence[tuple[str, int, int]],
+) -> ArmRatioEnvelope:
+    """Bracket one ratio across arms given ``(arm, numerator, denominator)`` rows.
+
+    Each row carries the two picosecond values measured under that arm. The
+    quotient is taken exactly and only then converted to a float, so a large
+    fixed cost cannot lose the low-order digits of the ratio.
+    """
+
+    rows: list[tuple[str, float]] = []
+    for index, entry in enumerate(arm_values):
+        if not isinstance(entry, tuple) or len(entry) != 3:
+            raise TypeError(f"arm_values[{index}] must be a triple")
+        arm, numerator_ps, denominator_ps = entry
+        if not isinstance(arm, str) or not arm.strip():
+            raise ValueError(f"arm_values[{index}][0] must be a nonblank string")
+        _require_int(f"arm_values[{index}][1]", numerator_ps, minimum=1)
+        _require_int(f"arm_values[{index}][2]", denominator_ps, minimum=1)
+        rows.append((arm, float(Fraction(numerator_ps, denominator_ps))))
+    if len(rows) < 2:
+        raise ValueError("an arm ratio envelope needs at least two arms")
+    ratios = [ratio for _, ratio in rows]
+    return ArmRatioEnvelope(
+        label=label,
+        numerator=numerator,
+        denominator=denominator,
+        arm_ratios=tuple(rows),
+        minimum=min(ratios),
+        maximum=max(ratios),
+        brackets_unity=min(ratios) <= 1.0 <= max(ratios),
+    )
+
+
 __all__ = [
+    "B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE",
     "B200_NCCL_2_27_LOCAL_PROFILE",
+    "COLLECTIVE_EVIDENCE_CLASSES",
+    "COLLECTIVE_FIXED_COST_ARMS",
+    "COLLECTIVE_FIXED_COST_FLOOR_PROFILE",
+    "COLLECTIVE_PROPAGATION_REFERENCE_PS",
+    "CROSS_NODE_COLLECTIVE_FIXED_COST_ENVELOPE",
+    "FABRIC_RING_STEP_HIGH_PS",
+    "FABRIC_RING_STEP_LOW_PS",
+    "FABRIC_RING_STEP_POINT_PS",
+    "INTRA_NODE_COLLECTIVE_FIXED_COST_ENVELOPE",
     "LEGACY_COLLECTIVE_LATENCY_PROFILE",
+    "NVLINK_RING_STEP_PS",
+    "ArmRatioEnvelope",
+    "CollectiveFixedCostEnvelope",
     "CollectiveLatencyProfile",
+    "CollectiveLatencyProvenance",
+    "arm_ratio_envelope",
     "critical_collective_endpoint_bytes",
+    "resolve_collective_fixed_cost_envelope",
     "resolve_collective_latency_profile",
 ]

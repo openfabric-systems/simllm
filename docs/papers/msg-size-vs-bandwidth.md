@@ -30,8 +30,17 @@ plan is [rnic-hardware-calibration.md](rnic-hardware-calibration.md).
   30 to 35 GB/s (60 to 70 percent of line rate), 16 KB at about 45,
   32 KB saturates. Stated conclusion: saturating 400G needs at least
   16 KB (4 MTU) per posted unit.
-- Table 2 (host control path): CC decision delay 1.7 us p50 / 3.6 to
-  10.8 us p99; ACK turnaround 2 to 3 us p50 / 3 to 36 us p99.
+- Table 2 (host control path) reports each delay under a Light and a Heavy
+  load column, so a single range hides which column it came from. Across both
+  columns the CC decision delay spans 1.7 to 2.9 us at p50, with p99 starting
+  at 3.4 us and reaching 10.8 us; the ACK turnaround spans 2.0 to 7.0 us at
+  p50, with p99 reaching 36 us. The Light columns alone give CC decision
+  1.7 us p50 and ACK turnaround 2.0 to 3.0 us p50.
+- Anywhere this repository quotes "2 to 3 us p50 ACK turnaround" it is using
+  the Light columns only. That restriction is the right one for the 12 to
+  114 KiB collective messages the current expert-parallel workload emits, and
+  it has to be stated wherever the number is transferred, because the Heavy
+  columns are more than twice as large and would move any bound built on it.
 - Production context (section 1): Meta disabled NIC CC and schedules at
   the application layer; DeepSeek disabled CC for large-scale all-to-all
   serving. CNP-driven recovery is considered too slow at 400G.
