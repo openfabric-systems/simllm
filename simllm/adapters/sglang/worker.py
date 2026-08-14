@@ -134,6 +134,7 @@ __all__ = [
     "SimTpModelWorker",
     "SimWorkerConfig",
     "SimWorkerHooks",
+    "active_sample_identity",
     "configure",
     "latest_worker",
     "model_dims_from_sglang",
@@ -387,6 +388,22 @@ def reset_configuration() -> SimWorkerHooks:
     _HOOKS.host_model = None
     _HOOKS.config = None
     return _HOOKS
+
+
+def active_sample_identity() -> bool:
+    """Whether the next worker in this process emits the sampled identity.
+
+    Reads the configured :class:`SimWorkerConfig` when a driver set one and
+    otherwise falls back to the environment, exactly as the worker's own
+    constructor does, so a caller sees the value the next worker will use. The
+    in-process pump reads it to decide whether chunked prefill is safe: with
+    the identity emitted a mid-prompt extend row carries a sampled count that
+    excludes it, while on the compatibility path both fields stay absent and
+    every scheduled row is read as having produced a token.
+    """
+
+    config = _HOOKS.config or SimWorkerConfig.from_env()
+    return bool(config.sample_identity)
 
 
 def latest_worker() -> SimTpModelWorker | None:

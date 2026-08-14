@@ -135,11 +135,17 @@ configuration; the pump replaces that one object with
 their token counts, their radix hit and their retraction count out of the
 payloads. That is the completion signal the worker seam cannot report.
 `attach_output_collector=False` is the exact off path and mutates nothing.
-The pump refuses to run with chunked prefill enabled, because
-`StepRecord.num_sampled` is unpopulated at this seam (SGL-12) and a
-mid-prompt extend row would otherwise be counted as a generated token. The
-module imports without SGLang and without torch, and its ordering contract is
-tested against a stub scheduler.
+The pump admits chunked prefill on the default record path and refuses it only
+on the compatibility stream. `chunked_prefill_refusal` is that gate: SGL-12
+made every record carry `num_sampled` and `sampled_request_ids`, so a
+mid-prompt extend row is excluded from the sampled set, while
+`SIMLLM_SGLANG_SAMPLE_IDENTITY=0` restores the pre-SGL-12 stream in which every
+scheduled row is read as having produced a token and a mid-prompt chunk would
+be scored as a generated token. The gate reads the value the next worker will
+use through `active_sample_identity`. The sampled-row rule behind it is source
+transcription plus stub batches; the gate claims no live-scheduler agreement,
+which stays SGL-22. The module imports without SGLang and without torch, and
+its ordering contract is tested against a stub scheduler.
 
 RadixCache prefix matching, eviction and the token/request pool accounting
 are scheduler-side index bookkeeping and stay real, so radix hit rates and
