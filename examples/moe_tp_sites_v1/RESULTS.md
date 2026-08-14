@@ -10,10 +10,16 @@ result.
 
 All 120 pre-registered scored instances in 4 families passed, no fatal guard
 was violated, and a post-specified 36 further instances covering naive expert
-parallelism also passed. The reference cell, 24 layers with an 8-rank
-tensor-parallel group and a declared 8-rank all-to-all expert-parallel group,
-renders 24 all-reduces plus 48 all-to-alls, that is 72 collectives rather than
-96, and 8,257,536 rather than 16,515,072 tensor-parallel bytes.
+parallelism also passed. The reference cell is 24 layers with an 8-rank
+tensor-parallel group and an 8-rank expert-parallel group that the study
+declares to the renderers, which asserts an all-to-all whose combine returns
+an already reduced output. It renders 24 all-reduces plus 48 all-to-alls, that
+is 72 collectives rather than 96, and 8,257,536 rather than 16,515,072
+tensor-parallel bytes. The same dims without that declaration, which is what a
+`dp=1` deployment or a non-reducing backend really executes, render 48
+all-reduces and no all-to-all; the study carries both arms and the vLLM
+producer now decides between them from the pinned configuration rather than
+binding a group unconditionally.
 
 ## Chronology, and what was corrected after the review
 
@@ -37,15 +43,12 @@ carries no pre-registration credit.
   `pcp_size > 1` or sequence parallelism, and
   `model_executor/layers/fused_moe/runner/moe_runner.py:436-465` all-reduces
   the fused output over the tensor-parallel group whenever the combine did not
-  reduce it. A `tp=8, ep=8, dp=1` deployment, which is exactly what the
-  reference cell and the collective plan default study declare, therefore runs
-  naive expert parallelism with two all-reduces and no all-to-all per layer,
-  and the merged rule rendered one and two. The rule now keys on the
-  declaration that separates them: the mlp site is suppressed exactly when the
-  layer renders a combine, i.e. routed dims plus a declared expert-parallel
-  group of at least two ranks, which is the same gate `step_moe_alltoalls`
-  uses. Naive expert parallelism is rendered by not declaring the group.
-  TRAF-40 owns making that mode explicit instead of implicit.
+  reduce it. A `tp=8, ep=8, dp=1` deployment therefore runs naive expert
+  parallelism with two all-reduces and no all-to-all per layer, and the merged
+  rule rendered one and two. The rule now keys on the declaration that
+  separates them: the mlp site is suppressed exactly when the layer renders a
+  combine, which is the same gate `step_moe_alltoalls` uses. Naive expert
+  parallelism is rendered by not declaring the group.
 - **A shared-expert hole was closed.** The runner all-reduces the shared-expert
   output over the tensor-parallel group even on the all-to-all path
   (`model_executor/layers/fused_moe/runner/moe_runner.py:416-433`), so a
@@ -57,6 +60,35 @@ carries no pre-registration credit.
   section, and TRAF-41 now owns requalifying both.
 - **Two registered fatal clauses were executed late** and one was strengthened,
   see the fatal guards section.
+
+A second re-review on the same day found three more defects one level out from
+the rule, all now fixed and all post-specified.
+
+- **The producer fed the corrected rule the wrong group.** It derived expert
+  parallelism from the flag and the flattened device count alone and bound the
+  group unconditionally, so a `tp=8, ep=8, dp=1` configuration still declared
+  an all-to-all group. Worse, a declared all-to-all is not sufficient either:
+  `config/parallel.py:186` defaults `all2all_backend` to
+  `allgather_reducescatter`, whose prepare-finalize returns
+  `output_is_reduced()` False
+  (`model_executor/layers/fused_moe/prepare_finalize/naive_dp_ep.py:109` and
+  `:242`), so the runner still all-reduces; only the deepep, mori, nixl and
+  flashinfer families reduce in the combine. The producer now classifies both
+  conditions before binding, and refuses outright when a non-reducing
+  all-to-all backend would move expert activations this repository renders
+  nothing for. The live path was safe only because the observed-schedule
+  producer pins `deepep_high_throughput`.
+- **The refusal list was a strict subset of its claimed mirror.** It now covers
+  `shared_intermediate_size`, `num_shared_experts`, `moe_layer_freq`,
+  `decoder_sparse_step` and `mlp_only_layers` as well, with per-field
+  predicates: positive for counts and sizes, not equal to one for routed
+  strides, and non-empty for the per-layer exception list.
+- **The one-reduction invariant had a representable counterexample.** The
+  uniform approximation returns no all-to-all when its per-pair share floors to
+  zero bytes, and the site rule still suppressed the mlp site, so such a layer
+  was reduced zero times. Both inventories now take their exits from one shared
+  predicate, `renders_expert_combine`, and a new fatal guard measures the
+  invariant on every cell.
 
 Every frozen number in this report was reproduced exactly by the rerun after
 those changes. The frozen body of `expectations.md` was not edited.
@@ -75,7 +107,7 @@ Every cell passes through three independent consumers of `step_tp_allreduces`:
 the GOAL renderer `render_step_goal`, the phase planner
 `step_communication_phases`, and the graph path `SerialStepLowerer` with its
 attached `CollectivePlan`. No backend binary, no network model and no timing is
-involved. Raw rows land outside Git under the run root, 123,439 bytes of JSON.
+involved. Raw rows land outside Git under the run root, 126,985 bytes of JSON.
 
 ```bash
 python examples/moe_tp_sites_v1/run_study.py --out <run directory>
@@ -91,9 +123,15 @@ python examples/moe_tp_sites_v1/run_study.py --out <run directory>
 | F3 routed all-to-all inventory untouched, operations and bytes | 72 | held |
 | F4 every arm that renders no all-to-all keeps one GOAL identity | 12 | held |
 | F5 a step with no collective at all is still refused | 18 | held |
+| F6 every layer reduces its MLP output exactly once | 72 | held |
 
-Three of these are stronger than the first run's, and the strengthening is
+Four of these are stronger than the first run's, and the strengthening is
 post-specified.
+
+F6 is entirely new, added after the second re-review found a representable
+zero-reduction case. It counts, per cell, the rendered mlp sites plus the
+rendered combine phases and requires exactly one per layer, or zero when the
+step renders no traffic at all. It held on all 72 cells.
 
 F2's registered clauses are now executed rather than approximated. The freeze
 registered invariance under tensor-parallel width, under a disjoint rank
@@ -269,15 +307,20 @@ TRAF-41 owns requalifying both, and neither is rerun here.
   That study's dense coverage, perturbation and bypass cells, including the
   196,608-byte and 4,730,040 ps rank-order row, use dense dims and are
   unaffected.
-- [The composed step budget study](../composed_step_budget_v1/RESULTS.md)
-  publishes `48 * 30,128,029 = 1,446,145,392` ps as the tensor-parallel
-  collective-floor addition for the mission `a-ep8` dims and a 74.73 to 75.45
-  percent share of the composed step at the graph profile. Those dims are
+- [The composed step budget study](../composed_step_budget_v1/RESULTS.md) has
+  one stale paragraph, and it is a projection rather than a measurement. Its
+  measured 1,446,145,392 ps collective floor is 48 MoE all-to-alls at
+  `tp_ranks=(0,)`, a configuration with no all-reduce at all, which this change
+  does not touch and a rerun reproduces exactly. What is stale is its
+  counterfactual: it reasons that adding a 24-layer model's tensor-parallel
+  all-reduces would add another `48 * 30,128,029 = 1,446,145,392` ps and be
+  74.73 to 75.45 percent of the composed step. The mission `a-ep8` dims are
   expert-parallel (`examples/end_to_end_replay_v1/run_study.py:415` sets
-  `local_num_experts` to 4 of 32), so under a declared all-to-all group the
-  corrected addition is `24 * 30,128,029 = 723,072,696` ps and the band roughly
-  halves. Under naive expert parallelism the 48 figure stands, which is
-  precisely why TRAF-40 wants the mode declared rather than inferred.
+  `local_num_experts` to 4 of 32), so under a declared reducing all-to-all
+  group that counterfactual addition is `24 * 30,128,029 = 723,072,696` ps.
+  The paragraph needs amending, not rerunning, and the measured floor must
+  never be halved. Under naive expert parallelism the 48-allreduce
+  counterfactual stands as written.
 - The MoE studies that render an expert-parallel group with a tensor-parallel
   world of one are unaffected, because they emit no all-reduce either way.
 
@@ -309,5 +352,5 @@ TRAF-41 owns requalifying both, and neither is rerun here.
 ## Storage
 
 Raw rows live outside Git under the configured external run root, in
-`moe_tp_sites_v1/cells.json`, 123,439 bytes. Nothing in this study writes a
+`moe_tp_sites_v1/cells.json`, 126,985 bytes. Nothing in this study writes a
 large artifact.

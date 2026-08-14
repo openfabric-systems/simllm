@@ -309,6 +309,8 @@ def measure(cell: Cell) -> dict:
         record, dims, cell.ep_ranks if cell.ep_ranks is not None else ()
     )
     row["moe_operations"] = len(moe)
+    row["combine_operations"] = sum(1 for op in moe if op.phase == "combine")
+    row["mlp_sites"] = sum(1 for op in planned if op.site == "mlp")
     row["moe_pair_bytes"] = sum(
         size for op in moe for _, _, size in op.pair_payload_bytes
     )
@@ -407,12 +409,31 @@ def evaluate(rows: list[dict], ledger: Ledger) -> None:
             if cell.sites_per_layer == 1
             else TP_ALLREDUCE_SITES
         )
-        observed_sites = layer_tp_allreduce_sites(cell.dims, ep_ranks=cell.ep_ranks)
+        observed_sites = layer_tp_allreduce_sites(
+            cell.record, cell.dims, ep_ranks=cell.ep_ranks
+        )
         ledger.guard(
             "F1 site rule",
             label,
             observed_sites == expected_sites,
             f"sites={observed_sites}",
+        )
+
+        # F6: every layer reduces its MLP output exactly once, or the step
+        # renders no traffic at all. Post-specified after the 2026-08-14
+        # re-review found a representable zero-reduction counterexample.
+        reductions = row["mlp_sites"] + row["combine_operations"]
+        expected_reductions = (
+            0
+            if row["planned_operations"] == 0 and row["moe_operations"] == 0
+            else cell.num_layers
+        )
+        ledger.guard(
+            "F6 one reduction per layer",
+            label,
+            reductions == expected_reductions,
+            f"mlp_sites={row['mlp_sites']} combines={row['combine_operations']} "
+            f"expected={expected_reductions}",
         )
 
         # F3: the routed all-to-all inventory is untouched, in operations AND
