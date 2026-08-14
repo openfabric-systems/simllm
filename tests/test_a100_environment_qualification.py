@@ -101,26 +101,36 @@ def test_nsys_trace_refuses_geometry_drift():
 @pytest.mark.parametrize(
     ("job_gpus", "visible", "expected"),
     [
-        ("2", "0", "2"),
-        ("gpu:3", "0", "3"),
+        ("1", "0", "0"),
+        ("gpu:3", "2", "2"),
         (
             "GPU-acde0000-1111-2222-3333-444444444444",
-            "0",
-            "GPU-acde0000-1111-2222-3333-444444444444",
+            "GPU-acde9999-1111-2222-3333-444444444444",
+            "GPU-acde9999-1111-2222-3333-444444444444",
         ),
     ],
 )
-def test_allocated_gpu_selector_preserves_physical_identity(
+def test_job_visible_gpu_selector_honors_device_remapping(
     job_gpus, visible, expected
 ):
     runner = _runner_module()
 
     assert (
-        runner._allocated_gpu_selector(
+        runner._job_visible_gpu_selector(
             {"job_gpus": job_gpus, "cuda_visible_devices": visible}
         )
         == expected
     )
+
+
+@pytest.mark.parametrize("visible", ["unparseable", "0,1", ""])
+def test_job_visible_gpu_selector_refuses_unparseable_device(visible):
+    runner = _runner_module()
+
+    with pytest.raises(RuntimeError, match="job-local GPU selector"):
+        runner._job_visible_gpu_selector(
+            {"job_gpus": "gpu:3", "cuda_visible_devices": visible}
+        )
 
 
 def test_scheduler_record_keeps_requested_and_allocated_tres():

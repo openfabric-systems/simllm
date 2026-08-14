@@ -331,23 +331,16 @@ def _scheduler_snapshot(job_id: str) -> dict[str, str]:
     return record
 
 
-def _allocated_gpu_selector(slurm: dict[str, str]) -> str:
-    token = slurm["job_gpus"].strip()
-    if token.isdigit():
-        return token
-    match = re.fullmatch(r"(?:gpu:)?([0-9]+)", token)
-    if match is not None:
-        return match.group(1)
-    if re.fullmatch(r"GPU-[0-9A-Fa-f-]+", token) is not None:
-        return token
+def _job_visible_gpu_selector(slurm: dict[str, str]) -> str:
     visible = slurm["cuda_visible_devices"].strip()
     if visible.isdigit():
         return visible
     if re.fullmatch(r"GPU-[0-9A-Fa-f-]+", visible) is not None:
         return visible
     raise RuntimeError(
-        "cannot resolve the allocated physical GPU selector from SLURM_JOB_GPUS "
-        f"or CUDA_VISIBLE_DEVICES: {token!r}, {visible!r}"
+        "cannot resolve the job-local GPU selector from CUDA_VISIBLE_DEVICES: "
+        f"{visible!r}; SLURM_JOB_GPUS is allocation provenance only: "
+        f"{slurm['job_gpus']!r}"
     )
 
 
@@ -706,11 +699,11 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     _write_partial_context(args.out, context)
     slurm = _check_slurm()
     scheduler = _scheduler_snapshot(slurm["job_id"])
-    gpu_selector = _allocated_gpu_selector(slurm)
+    job_visible_gpu_selector = _job_visible_gpu_selector(slurm)
     context.update(
         {
             "slurm": {"environment": slurm, "scheduler": scheduler},
-            "gpu_selector": gpu_selector,
+            "job_visible_gpu_selector": job_visible_gpu_selector,
         }
     )
     _write_partial_context(args.out, context)
@@ -751,14 +744,13 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     build_dir.mkdir()
     capture_dir.mkdir()
 
-    before = _gpu_snapshot(nvidia_smi, gpu_selector)
-    mig = _mig_state(nvidia_smi, gpu_selector)
+    before = _gpu_snapshot(nvidia_smi, job_visible_gpu_selector)
+    gpu_uuid = before["uuid"]
+    mig = _mig_state(nvidia_smi, gpu_uuid)
     supported_clocks, supported_clock_blocker = _supported_clock_policy(
-        nvidia_smi, gpu_selector
+        nvidia_smi, gpu_uuid
     )
-    processes_before = _foreign_processes(
-        nvidia_smi, gpu_selector, before["uuid"]
-    )
+    processes_before = _foreign_processes(nvidia_smi, gpu_uuid, gpu_uuid)
     context.update(
         {
             "gpu_before": before,
@@ -893,10 +885,8 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     if ncu_run.returncode == 0 and not _has_numeric_ncu_metric(ncu_output):
         counter_blocker = "Nsight Compute returned no numeric target-kernel metric"
 
-    after = _gpu_snapshot(nvidia_smi, gpu_selector)
-    processes_after = _foreign_processes(
-        nvidia_smi, gpu_selector, before["uuid"]
-    )
+    after = _gpu_snapshot(nvidia_smi, gpu_uuid)
+    processes_after = _foreign_processes(nvidia_smi, gpu_uuid, gpu_uuid)
     context.update(
         {
             "gpu_after": after,
@@ -935,7 +925,7 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         "probe_binary_sha256": _sha256(binary),
         "static_sass_sha256": _sha256(sass_path),
         "slurm": {"environment": slurm, "scheduler": scheduler},
-        "gpu_selector": gpu_selector,
+        "job_visible_gpu_selector": job_visible_gpu_selector,
         "gpu_before": before,
         "gpu_after": after,
         "mig": mig,
