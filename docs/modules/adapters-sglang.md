@@ -496,6 +496,34 @@ seam, so no upstream flag is needed.
   MIXED batch and a decode retraction, exact per-step agreement between the
   emitted sampled identity and the requests whose `output_ids` grew, and an
   unchanged compatibility stream.
+- SGL-24 (Precision; P1; M): measure the per-step device-visible launch demand
+  of SGLang's own model step, so the SGLang chain stops borrowing vLLM's. The
+  current surrogate is the `[440, 567]` bracket enumerated statically from
+  vLLM 0.26.0 sources for the pinned Granite MoE geometry in
+  [examples/compute_fidelity_v1](../../examples/compute_fidelity_v1/expectations.md);
+  SGLang's own model runner, its fused MoE path and the pump's unrolled
+  `event_loop_normal` issue their own launches and nobody has counted them.
+  The identifying observable is the count of device-visible kernel launches
+  per model step at the pinned commit for one fixed geometry, enumerated from
+  SGLang sources and confirmed against a CUPTI or Nsight Systems capture of a
+  real decode step. Acceptance requires an SGLang-specific bracket, the signed
+  error of the transferred vLLM bracket against it, and an unchanged ideal
+  path.
+- SGL-25 (Precision; P1; S): price the end-to-end study's sink-free control
+  cell on the same model its sink cells price. The sink cells declare the
+  2-byte, 4-resident-expert per-rank geometry
+  (`examples/sglang_end_to_end_v1/run_study.py`, `_dims`), while the control
+  cell falls back to the worker's own reader, which sees the run's
+  `dtype="float32"` and, because expert parallelism is refused under SGL-18,
+  all 32 experts resident (`simllm/adapters/sglang/worker.py`,
+  `model_dims_from_sglang`). The identifying observables are the two
+  `ModelDims` the two arms actually use and their resident weight bytes:
+  553,654,272 bytes against 5,335,166,976 bytes, a 9.6x step-compute gap that
+  makes the control's scheduler-step count incomparable with the sink cells'.
+  A `dims` override hook on `configure` is the smallest candidate fix and it
+  is a new seam; the expert-residency half belongs to SGL-18. Acceptance
+  requires both arms to report identical per-rank geometry and resident bytes,
+  with the accepted sink-cell artifacts unchanged.
 
 ### Completeness
 
@@ -541,6 +569,31 @@ seam, so no upstream flag is needed.
   as dense. Acceptance requires exact per-rank active FLOPs and resident
   bytes, a supported end-to-end TTFT/TPOT change, and byte-identical dense and
   single-GPU baselines.
+- SGL-23 (Completeness; P1; M): give the SGLang chain an owned, selectable
+  per-step host cost. No SGL task owns choosing a `HostInitiationModel` on
+  this chain today, so every SGLang study builds
+  `HostInitiationModel.ideal()` by hand
+  (`examples/sglang_end_to_end_v1/run_study.py`, line 650) and the per-step
+  host term is exactly zero, while the vLLM chain already selects the
+  calibrated profiles through a study-local resolver
+  (`examples/end_to_end_replay_v1/run_study.py`, `_composition_selection`).
+  The unavailable path is a documented adapter-side selector that resolves a
+  profile name and a launch count into the host model, the device key the
+  calibrated constants demand and a provider that keeps the accepted compute
+  envelope. `ideal` stays the default and its off path must preserve every
+  accepted SGLang artifact exactly.
+- SGL-26 (Completeness; P1; M): select a nonideal host profile in a live
+  in-process SGLang run and carry it to TTFT and TPOT. `configure` already
+  accepts a host model and `_validate_host_model_selection` already requires
+  the adapter and the sink to agree
+  (`simllm/adapters/sglang/worker.py`), but no live scheduler run has ever
+  selected anything but `ideal`, so the nonideal branch of that agreement
+  check is exercised only by fixture replay and unit tests. The identifying
+  observation is one live pump run at the pinned commit whose emitted
+  `StepResult` values carry the launch floor. Acceptance requires the live
+  run to reproduce the replay study's per-step composition for the same
+  records and the ideal arm of the same run to stay byte-identical to the
+  accepted live artifacts.
 
 ### Uncategorized
 
