@@ -134,6 +134,64 @@ the flow-level work the GOAL emitter renders.
   endpoint rate and adds one width-indexed semantic-collective base latency
   outside the phase-local maximum. TRAF-31 owns the missing same-generation
   point-to-point capture.
+- `CollectiveFixedCostEnvelope` is that same selection expressed as a named
+  bracket rather than one silently chosen constant. An envelope names a
+  `lower` and an `upper` profile beside the `off` arm that charges nothing,
+  and it refuses a pair that does not isolate the fixed cost: both arms must
+  share the endpoint rate, the source payload interval, the propagation
+  reference and the supported widths, both must carry provenance, and the
+  lower arm must be strictly cheaper at every width. The bracket is over the
+  arms a study can select, not over the physical value: an arm's own declared
+  band may reach past the arm above it, and the envelope's `claim` string has
+  to say what the bracket does and does not assert. Two envelopes ship.
+  `intra-node-fixed-cost-v1` runs from `collective-fixed-cost-floor-v1`, which
+  adds no surcharge so the claimed fixed cost is exactly the propagation the
+  backend already charges, to `b200-nccl-2.27-local-v1`.
+  `cross-node-fixed-cost-provisional-v1` runs from `b200-nccl-2.27-local-v1`,
+  a floor because a fabric hop cannot be cheaper than the NVLink hop it
+  replaces, to `b200-nccl-2.27-cross-node-provisional-v1`, which is the
+  pessimistic selectable edge rather than a ceiling: its own band reaches
+  77,487,789 ps at width 8, 57 percent above the 49,487,789 ps it charges, and
+  no evidence here establishes a ceiling at all. `HtsimStepSinkConfig` takes
+  the envelope and the arm as one selection, mutually exclusive with the bare
+  profile spelling; the `off` arm resolves to no profile and is exactly the
+  default path.
+- Every profile that joins an envelope carries a
+  `CollectiveLatencyProvenance` record: an evidence class of `calibrated`,
+  `transferred-at-use`, `provisional-transferred` or `structural-floor`, the
+  source, the locator inside that source, the transfer performed, and an
+  inclusive uncertainty band per participant width. A profile whose point
+  value falls outside its own declared band is refused at construction, and a
+  width no band anchors fails closed. An envelope additionally declares a
+  point-of-use class per arm, because a number calibrated on one operation
+  shape or topology is not calibrated when an envelope charges it for another:
+  `b200-nccl-2.27-local-v1` is `calibrated` as an object and both envelopes
+  publish it as `transferred-at-use`, which is the class the run record
+  carries. Only a `calibrated` profile may be downgraded and every downgrade
+  states its reason.
+- `b200-nccl-2.27-cross-node-provisional-v1` is provisional-transferred and
+  never calibrated. Every fabric step is the measured 2,000,000 ps propagation
+  reference plus a per-step initiation term: nothing at the lower edge,
+  1,000,000 ps at the point estimate (one half of the about 2 us commodity
+  RDMA round-trip anchor of Kalia et al. ATC'16), and 3,000,000 ps at the
+  upper edge (the top of the p50 ACK turnaround in UCCL Table 2, restricted to
+  that table's Light columns, whose message sizes match this workload). Each
+  such step replaces one 1,617,160 ps NVLink step from the two-point slope of
+  the source table. The `2(W-1)` decomposition is this repository's own
+  expansion model rather than an attribute of the capture, which names no
+  algorithm; a `2 log2(W)` tree at the same per-step delta would move the
+  width-8 point estimate from 49.49 to 38.43 us. TRAF-36 owns the missing
+  cross-node measurement and the algorithm question with it.
+- Because the table is a surcharge on a transport that already contains one
+  propagation delay, `realized_fixed_cost_ps` is what a run actually charges,
+  and it exceeds a source capture that was itself a complete fixed cost by up
+  to `propagation_reference_ps`. TRAF-37 owns that over-count.
+- `arm_ratio_envelope` is the reporting helper an envelope study publishes
+  with. Given one `(arm, numerator_ps, denominator_ps)` row per arm it returns
+  the per-arm ratios, the interval they span, and whether that interval
+  brackets 1, i.e. whether the evidence determines the sign of the comparison
+  at all. Quotients are exact before conversion to float, so a large fixed
+  cost cannot swallow the low-order digits of a ratio.
 - `lower_step_observations` joins that traffic plan to framework-neutral
   `ExecutionObservations`. The adapter tuple order, logical queues, dependency
   edges, gates, priorities, correlations and completion frontier pass through
@@ -529,6 +587,28 @@ this repository reports, and the width-8 endpoint envelope's 458,752-byte
 ceiling was reached to within 17 percent by a 34-token prefill step, so a
 larger case would be rejected at planning time.
 
+The [fixed-cost envelope study](../../examples/collective_fixed_cost_envelope_v1/RESULTS.md)
+then replaced the silent choice of that intercept with a bracket. Sixteen cells
+over four named arms, two link rates and two expert-parallel widths, replayed
+through the fluid backend on an all-remote placement, put the per-collective
+surcharge at width 8 between 0 and 49,487,789 ps and the realized fixed cost,
+propagation included, between 2,000,000 and 51,487,789 ps, a factor of 25.7.
+Across the fixture's 48 collectives that is 46.0 to 95.6 percent of a decode
+step, so the fixed cost dominates every arm including the default, and the
+default is the only arm that does not say so. The arm envelope of the
+ep4-to-ep8 decode ratio is 0.547454 to 1.248990 at 400 Gbit/s and 0.549095 to
+1.224748 at 200 Gbit/s: both brackets contain 1, so the sign of the
+expert-parallel width ordering is not determined by the available evidence. The
+compression is equally large, moving the 200 to 400 Gbit/s ep8 decode ratio
+from 1.065947 under the default to 1.005326 under the provisional cross-node
+arm. Every one of the 40 simulated steps is reproduced to the picosecond by
+`compute_service_ps + 48 * fabric_service_ps + 48 * surcharge`, with the fluid
+backend returning exactly one picosecond above the closed-form fabric service
+at all eight width, phase and rate points. Attempt one is retained as void
+because the structural fatal guard compared a list of tuples against a list of
+lists and could not hold for any data; attempt two repaired only that
+comparison and reproduced every raw measurement exactly.
+
 The 2026-08-14 TRAF-33 qualification corrected the tensor-parallel allreduce
 site inventory and closes the task. A layer's sites come from
 `layer_tp_allreduce_sites`, so a layer whose output arrives through a combine
@@ -563,8 +643,9 @@ so it still declared an all-to-all for a `dp=1` deployment and for the default
 non-reducing backend; it now classifies both pinned conditions and refuses the
 backend whose allgather and reduce-scatter traffic this repository renders
 nothing for. The reader's refusal list was a strict subset of the SGLang list
-it claimed to mirror and now matches it field for field with per-field
-predicates. And the one-reduction invariant had a representable
+it claimed to mirror and now reaches parity with it on the shared-expert and mixed-schedule
+families with per-field predicates, the MLA, speculative and
+quantization refusals staying outside this guard's scope. And the one-reduction invariant had a representable
 counterexample, a uniform per-pair share flooring to zero bytes, which left a
 layer reduced zero times; both inventories now take their exits from one shared
 predicate and a new fatal guard measures the invariant on all 72 cells. The
@@ -603,6 +684,76 @@ tensor-parallel world of one.
 
 ### Precision
 
+- TRAF-32 (Precision; P1; M): widen or refit the endpoint-byte envelope the
+  calibrated profiles accept, which is currently too narrow for the mission
+  workload. Registered late and by a different change from the one that
+  declared it: the composed-step-budget freeze reserved this ID in advance for
+  a collective floor defect and its study then reported the ID unused, so it
+  was never entered in any module registry. The declared trigger, that freeze's
+  G8 endpoint-envelope guard firing, never fired; this registration rests
+  instead on fresh evidence from the fixed-cost envelope study, which found the
+  width-8 ceiling reached exactly by a 32-token prefill on the reference
+  geometry. Of the two clauses that freeze declared, only the envelope-width
+  clause is live. The double-charge clause is closed by construction, because
+  `StepCollectiveTimingOutcome` already raises when a semantic collective
+  receives more than one base latency, with both the pass branch and the raise
+  branch driven by tests. The live clause: the width-8 envelope
+  ceiling of 458,752 bytes is reached by a 34-token prefill step and reached
+  exactly by a 32-token prefill on the eight-wide expert-parallel reference
+  geometry, and the width-4 ceiling of 393,216 bytes is lower still, so a
+  realistic prefill is rejected at planning time rather than priced. Capture or
+  derive collective completion across the endpoint loads a mission prefill
+  actually produces, extend the profile's validity interval to cover them with
+  stated held-out error, and keep the explicit rejection for loads outside the
+  extended interval. Acceptance must show a mission-scale prefill step
+  completing under an active arm and must preserve every accepted decode-step
+  timestamp exactly.
+- TRAF-36 (Precision; P1; L): measure the real cross-node per-collective fixed
+  cost and replace `b200-nccl-2.27-cross-node-provisional-v1`, which is
+  transferred from an intra-node capture and carries no cross-node
+  measurement. Identifying observable: the completion time of a small-payload
+  collective, at participant widths 2, 4 and 8 with one rank per node, over a
+  400 Gbit/s fabric, as a function of payload across the profile's 8-byte to
+  256-KiB interval, so the width-indexed intercept separates from the endpoint
+  serializer by the same regression the intra-node profile used. Capture both
+  ring ALL-REDUCE and pairwise ALL-TO-ALLV, reserve at least one payload and
+  one width as holdout, and require held-out completion error no larger than
+  10 percent or 2 microseconds, whichever is larger. The same capture has to
+  settle the algorithm question the current transfer papers over: neither the
+  intra-node source nor this profile records which algorithm NCCL selected, the
+  `2(W-1)` decomposition is this repository's own expansion model, and NCCL on
+  an eight-GPU NVSwitch node ordinarily selects NVLS or a tree for a small
+  ALL-REDUCE, which at the same per-step delta would move the width-8 point
+  estimate from 49.49 to 38.43 us. Record the selected algorithm per width,
+  either from `NCCL_DEBUG=INFO` topology output or by pinning `NCCL_ALGO`, and
+  refit the step count to match it. Report the provisional-transferred
+  profile's before error at every measured width, relabel the refitted profile
+  `calibrated` only if the holdouts pass, and preserve the `off` arm and the
+  existing intra-node arm exactly.
+- TRAF-37 (Precision; P1; M): stop charging one propagation delay twice under
+  an active arm. The intercept is added outside `max(local_service,
+  fabric_service)` while the fabric service already contains one propagation
+  delay, so the realized per-collective fixed cost is `intercept +
+  propagation_reference_ps`, which over-counts a source capture that was
+  itself a complete fixed cost by up to 2.000 us per collective: 6.6 percent
+  at width 8, 12.7 percent at width 4 and 18.7 percent at width 2 of the
+  intra-node arm. Identify how much of each source intercept is transport that
+  the backend already prices, subtract only that part, and require the
+  corrected arm to reproduce the source capture's held-out completions at least
+  as well as the current one. The uncorrected charge stays available as the
+  explicit accepted baseline so the composed-step-budget and collective-floor
+  results remain reproducible byte for byte.
+- TRAF-39 (Precision; P1; M): identify the per-collective fixed cost of a
+  pairwise ALL-TO-ALLV separately from the ring ALL-REDUCE the profiles are
+  fitted on. Every shipped profile applies an ALL-REDUCE intercept unchanged to
+  the MoE dispatch and combine all-to-alls, which are the only collectives the
+  expert-parallel reference geometry emits, so the operation-shape transfer is
+  a first-class contributor to the width of the published bracket rather than a
+  secondary caveat. Capture both operations at the same widths, payloads and
+  stack, report the ratio between their intercepts per width, and either add a
+  per-operation table or state with evidence that one table serves both.
+  Acceptance must move the published envelope width and must preserve the
+  existing arms as explicit selections.
 - TRAF-31 (Precision; P1; L): obtain the same-generation point-to-point
   payload capture absent from the `b200-nccl-2.27-local-v1` calibration. The
   selectable profile currently identifies its 70,027,079,100 bytes/s endpoint
@@ -679,6 +830,18 @@ tensor-parallel world of one.
   subgroup membership on the dims or the group inputs, that rendered subgroup
   allreduce, and byte-identical `moe_tp` equal to 1 and dense renders as the
   off path.
+- TRAF-38 (Completeness; P2; M): make the fixed-cost arms selectable outside
+  the all-remote fluid path. An arm currently also selects its profile's
+  endpoint bandwidth, and the sink refuses any network profile other than
+  `rnic-nn-fluid`, so switching arms isolates the fixed cost only when the
+  placement produces no NVLink-local bytes. In a mixed or all-local placement
+  the `lower` and `upper` arms of `intra-node-fixed-cost-v1` differ from the
+  `off` arm by the endpoint rate as well as by the surcharge, and the published
+  bracket therefore stops being a bracket on the fixed cost alone. Separate the
+  endpoint-rate selection from the arm selection, keep the current coupled
+  behavior as the explicit off path so accepted local and mixed-placement
+  timestamps are preserved exactly, and demonstrate an arm sweep on a mixed
+  placement whose non-arm terms are byte-identical across arms.
 - TRAF-40 (Completeness; P2; M): make the all-to-all mode an explicit
   declaration and render the path that is currently refused. The correctness
   half is closed: the vLLM producer now classifies both pinned conditions
@@ -708,7 +871,6 @@ tensor-parallel world of one.
   allgather and reduce-scatter rendering with its own byte oracle, and
   byte-identical renders for the declared and omitted-group paths that exist
   today.
-
 - TRAF-41 (Completeness; P1; M): requalify the one rendered surface and amend
   the one prose projection that the TRAF-33 inventory correction made stale.
   The rendered surface is the Granite live cells of the collective plan

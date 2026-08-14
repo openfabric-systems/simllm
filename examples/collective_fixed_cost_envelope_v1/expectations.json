@@ -1,0 +1,239 @@
+{
+  "arms": {
+    "cross": {
+      "arm": "upper",
+      "envelope": "cross-node-fixed-cost-provisional-v1"
+    },
+    "floor": {
+      "arm": "lower",
+      "envelope": "intra-node-fixed-cost-v1"
+    },
+    "local": {
+      "arm": "lower",
+      "envelope": "cross-node-fixed-cost-provisional-v1"
+    },
+    "off": {
+      "arm": "off",
+      "envelope": "intra-node-fixed-cost-v1"
+    }
+  },
+  "constants_ps": {
+    "collectives_per_step": 48,
+    "cross_node_intercept_ps": {
+      "2": {
+        "high": 17487792,
+        "low": 11487792,
+        "point": 13487792
+      },
+      "4": {
+        "high": 36042207,
+        "low": 18042207,
+        "point": 24042207
+      },
+      "8": {
+        "high": 77487789,
+        "low": 35487789,
+        "point": 49487789
+      }
+    },
+    "fabric_ring_step_ps": {
+      "high": 5000000,
+      "low": 2000000,
+      "point": 3000000
+    },
+    "intra_node_intercept_ps": {
+      "2": 10722112,
+      "4": 15745167,
+      "8": 30128029
+    },
+    "nvlink_ring_step_least_squares_ps": 1642973.75,
+    "nvlink_ring_step_ps": 1617160,
+    "propagation_reference_ps": 2000000
+  },
+  "disclosed_pre_freeze_probe": {
+    "cell": "ep8-decode-400g-off with context_length 65, not a frozen cell",
+    "measured_compute_ps": 99436251,
+    "measured_step_latency_ps": 209194608,
+    "napkin_prediction_ps": 209198811,
+    "relative_deviation": -2.008e-05
+  },
+  "exact_unscored_rows": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+  ],
+  "expected_cells": 16,
+  "expected_scored_families": 3,
+  "expected_simulated_steps": 32,
+  "fatal_guards": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5",
+    "G6",
+    "G7",
+    "G8",
+    "G9"
+  ],
+  "fixture": {
+    "dtype_bytes": 2,
+    "head_size": 64,
+    "hidden_size": 1024,
+    "intermediate_size": 512,
+    "moe_intermediate_size": 512,
+    "num_experts": 32,
+    "num_heads": 16,
+    "num_kv_heads": 8,
+    "num_layers": 24,
+    "steps": [
+      {
+        "context_length": 8,
+        "num_new_tokens": 8,
+        "phase": "prefill",
+        "step_index": 0
+      },
+      {
+        "context_length": 9,
+        "num_new_tokens": 1,
+        "phase": "decode",
+        "step_index": 1
+      }
+    ],
+    "top_k": 8,
+    "vocab_size": 49152
+  },
+  "freeze_base_commit": "e18b9b0102808e9b8e0f276c2b82c51ed8c5b51d",
+  "predicted_fabric_service_ps": {
+    "ep4-decode-200g": 2491520,
+    "ep4-decode-400g": 2245760,
+    "ep4-prefill-200g": 5932160,
+    "ep4-prefill-400g": 3966080,
+    "ep8-decode-200g": 2573440,
+    "ep8-decode-400g": 2286720,
+    "ep8-prefill-200g": 6587520,
+    "ep8-prefill-400g": 4293760
+  },
+  "predicted_step_latency_ps": {
+    "ep4-decode-200g-cross": 1426490393,
+    "ep4-decode-200g-floor": 272464457,
+    "ep4-decode-200g-local": 1028232473,
+    "ep4-decode-200g-off": 272464457,
+    "ep4-decode-400g-cross": 1414693913,
+    "ep4-decode-400g-floor": 260667977,
+    "ep4-decode-400g-local": 1016435993,
+    "ep4-decode-400g-off": 260667977,
+    "ep4-prefill-200g-cross": 1591632336,
+    "ep4-prefill-200g-floor": 437606400,
+    "ep4-prefill-200g-local": 1193374416,
+    "ep4-prefill-200g-off": 437606400,
+    "ep4-prefill-400g-cross": 1497260496,
+    "ep4-prefill-400g-floor": 343234560,
+    "ep4-prefill-400g-local": 1099002576,
+    "ep4-prefill-400g-off": 343234560,
+    "ep8-decode-200g-cross": 2597883723,
+    "ep8-decode-200g-floor": 222469851,
+    "ep8-decode-200g-local": 1668615243,
+    "ep8-decode-200g-off": 222469851,
+    "ep8-decode-400g-cross": 2584121163,
+    "ep8-decode-400g-floor": 208707291,
+    "ep8-decode-400g-local": 1654852683,
+    "ep8-decode-400g-off": 208707291,
+    "ep8-prefill-200g-cross": 2790550786,
+    "ep8-prefill-200g-floor": 415136914,
+    "ep8-prefill-200g-local": 1861282306,
+    "ep8-prefill-200g-off": 415136914,
+    "ep8-prefill-400g-cross": 2680450306,
+    "ep8-prefill-400g-floor": 305036434,
+    "ep8-prefill-400g-local": 1751181826,
+    "ep8-prefill-400g-off": 305036434
+  },
+  "residual_ids": {
+    "arm_selection_outside_all_remote": "TRAF-38",
+    "cross_node_measurement": "TRAF-36",
+    "late_registration": "TRAF-32",
+    "operation_shape_transfer": "TRAF-39",
+    "propagation_over_count": "TRAF-37"
+  },
+  "schema": "simllm-collective-fixed-cost-envelope-expectations-v1",
+  "scored": {
+    "S1": {
+      "kind": "napkin_bound",
+      "relative_tolerance": 0.0005,
+      "target": "predicted_step_latency_ps"
+    },
+    "S2": {
+      "denominator": "ep8-decode",
+      "kind": "width_ratio",
+      "numerator": "ep4-decode",
+      "relative_tolerance": 0.0002,
+      "values": {
+        "200g": {
+          "cross": 0.549097,
+          "floor": 1.224725,
+          "local": 0.616219,
+          "off": 1.224725
+        },
+        "400g": {
+          "cross": 0.547456,
+          "floor": 1.248964,
+          "local": 0.614215,
+          "off": 1.248964
+        }
+      }
+    },
+    "S3": {
+      "denominator_link_gbps": 400,
+      "kind": "bandwidth_ratio",
+      "numerator_link_gbps": 200,
+      "relative_tolerance": 0.0002,
+      "values": {
+        "ep4-decode": {
+          "cross": 1.008339,
+          "floor": 1.045255,
+          "local": 1.011606,
+          "off": 1.045255
+        },
+        "ep4-prefill": {
+          "cross": 1.06303,
+          "floor": 1.274949,
+          "local": 1.08587,
+          "off": 1.274949
+        },
+        "ep8-decode": {
+          "cross": 1.005326,
+          "floor": 1.065942,
+          "local": 1.008316,
+          "off": 1.065942
+        },
+        "ep8-prefill": {
+          "cross": 1.041075,
+          "floor": 1.360942,
+          "local": 1.062872,
+          "off": 1.360942
+        }
+      }
+    }
+  },
+  "source_profile": "b200-nccl-2.27-local-v1",
+  "structural_inputs": {
+    "ep4-decode": {
+      "endpoint_bytes": 12288,
+      "provider_compute_ps": 152871497
+    },
+    "ep4-prefill": {
+      "endpoint_bytes": 98304,
+      "provider_compute_ps": 152862720
+    },
+    "ep8-decode": {
+      "endpoint_bytes": 14336,
+      "provider_compute_ps": 98944731
+    },
+    "ep8-prefill": {
+      "endpoint_bytes": 114688,
+      "provider_compute_ps": 98935954
+    }
+  },
+  "study": "collective_fixed_cost_envelope_v1"
+}
