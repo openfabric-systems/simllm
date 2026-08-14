@@ -48,6 +48,12 @@ artifact and timestamp. The backend remains authoritative for propagation,
 wire serialization and contention; the calibrated run record exposes its raw
 transport beside the added base and a separately named propagation reference.
 
+``collective_fixed_cost_envelope`` with ``collective_fixed_cost_arm`` is the
+same selection expressed as one arm of a named bracket, so a study can run the
+``off``, ``lower`` and ``upper`` arms and publish the interval instead of one
+silently chosen constant. The two spellings are mutually exclusive, and the
+``off`` arm resolves to no profile at all, which is exactly the default path.
+
 The provider object, profile string and placement-manifest presence remain the
 operational selectors. ``HtsimStepSinkConfig`` reports the levels they select
 in ``selected_precision_levels``, and an explicit ``precision`` surface that
@@ -111,7 +117,9 @@ from simllm.core import (
 from simllm.goal import to_binary
 from simllm.placement import PlacementManifest, RankMapper
 from simllm.traffic import (
+    COLLECTIVE_FIXED_COST_ARMS,
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
+    CollectiveFixedCostEnvelope,
     CollectiveLatencyProfile,
     RoutedMoeSupply,
     StepLocalityPlan,
@@ -120,6 +128,7 @@ from simllm.traffic import (
     project_execution_graph_goal,
     render_fabric_phase_goal,
     render_step_goal,
+    resolve_collective_fixed_cost_envelope,
     resolve_collective_latency_profile,
     validate_execution_graph_locality_projection,
 )
@@ -189,6 +198,17 @@ class HtsimStepSinkConfig:
     precision: PrecisionConfig | None = None
     #: calibrated base-latency model; None and ``legacy`` select the exact off path
     collective_latency_profile: str | CollectiveLatencyProfile | None = None
+    #: named per-collective fixed-cost bracket; None keeps the unbracketed surface
+    collective_fixed_cost_envelope: str | CollectiveFixedCostEnvelope | None = None
+    #: which arm of that bracket to charge; ``off`` is the exact default path
+    collective_fixed_cost_arm: str = "off"
+    #: immutable envelope resolved during validation, never set by a caller
+    resolved_collective_fixed_cost_envelope: CollectiveFixedCostEnvelope | None = field(
+        init=False,
+        repr=False,
+        compare=False,
+        default=None,
+    )
     #: immutable profile resolved during validation, never set by a caller
     resolved_collective_latency_profile: CollectiveLatencyProfile | None = field(
         init=False,
@@ -228,9 +248,40 @@ class HtsimStepSinkConfig:
             raise ValueError(
                 "nvlink_bandwidth_bytes_per_second must be a positive integer"
             )
-        self.resolved_collective_latency_profile = (
-            resolve_collective_latency_profile(self.collective_latency_profile)
+        self.resolved_collective_fixed_cost_envelope = (
+            resolve_collective_fixed_cost_envelope(self.collective_fixed_cost_envelope)
         )
+        if self.collective_fixed_cost_arm not in COLLECTIVE_FIXED_COST_ARMS:
+            raise ValueError(
+                "collective_fixed_cost_arm must be one of "
+                f"{COLLECTIVE_FIXED_COST_ARMS}"
+            )
+        if (
+            self.resolved_collective_fixed_cost_envelope is None
+            and self.collective_fixed_cost_arm != "off"
+        ):
+            raise ValueError(
+                "collective_fixed_cost_arm selects an arm of a named envelope; "
+                "set collective_fixed_cost_envelope or keep the arm 'off'"
+            )
+        if (
+            self.resolved_collective_fixed_cost_envelope is not None
+            and self.collective_latency_profile is not None
+        ):
+            raise ValueError(
+                "collective_fixed_cost_envelope and collective_latency_profile "
+                "are two spellings of the same selection; use exactly one"
+            )
+        if self.resolved_collective_fixed_cost_envelope is not None:
+            self.resolved_collective_latency_profile = (
+                self.resolved_collective_fixed_cost_envelope.arm_profile(
+                    self.collective_fixed_cost_arm
+                )
+            )
+        else:
+            self.resolved_collective_latency_profile = (
+                resolve_collective_latency_profile(self.collective_latency_profile)
+            )
         if (
             self.resolved_collective_latency_profile is not None
             and self.nvlink_bandwidth_bytes_per_second
@@ -449,6 +500,12 @@ class StepCollectiveTimingOutcome:
     participant_latency_ps: tuple[tuple[int, int], ...]
     propagation_reference_ps: int
     artifacts: tuple[CollectiveArtifactTiming, ...]
+    #: named bracket the profile was selected from, or None for a bare profile
+    envelope_id: str | None = None
+    #: which arm of that bracket is charged; set together with ``envelope_id``
+    arm: str | None = None
+    #: declared evidence class of the charged profile
+    evidence_class: str = "unattributed"
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -460,6 +517,15 @@ class StepCollectiveTimingOutcome:
         _require_nonnegative_timing("step_index", self.step_index)
         if not isinstance(self.profile_id, str) or not self.profile_id.strip():
             raise ValueError("profile_id must be a nonblank string")
+        if (self.envelope_id is None) != (self.arm is None):
+            raise ValueError("envelope_id and arm are reported together or not at all")
+        if self.envelope_id is not None:
+            if not isinstance(self.envelope_id, str) or not self.envelope_id.strip():
+                raise ValueError("envelope_id must be a nonblank string")
+            if self.arm not in COLLECTIVE_FIXED_COST_ARMS:
+                raise ValueError(f"arm must be one of {COLLECTIVE_FIXED_COST_ARMS}")
+        if not isinstance(self.evidence_class, str) or not self.evidence_class.strip():
+            raise ValueError("evidence_class must be a nonblank string")
         if (
             type(self.bandwidth_bytes_per_second) is not int
             or self.bandwidth_bytes_per_second <= 0
@@ -590,6 +656,8 @@ class _PlannedStep:
     graph_artifact_count: int
     dependency_cross_check: _PlannedDependencyCrossCheck | None
     collective_latency_profile: CollectiveLatencyProfile | None
+    collective_fixed_cost_envelope_id: str | None
+    collective_fixed_cost_arm: str | None
 
 
 @dataclass(frozen=True)
@@ -1063,6 +1131,16 @@ class HtsimStepSink:
             graph_artifact_count=len(projection.artifacts),
             dependency_cross_check=planned_cross_check,
             collective_latency_profile=collective_profile,
+            collective_fixed_cost_envelope_id=(
+                None
+                if cfg.resolved_collective_fixed_cost_envelope is None
+                else cfg.resolved_collective_fixed_cost_envelope.envelope_id
+            ),
+            collective_fixed_cost_arm=(
+                None
+                if cfg.resolved_collective_fixed_cost_envelope is None
+                else cfg.collective_fixed_cost_arm
+            ),
         )
 
     @staticmethod
@@ -1259,6 +1337,9 @@ class HtsimStepSink:
                 bandwidth_bytes_per_second=profile.bandwidth_bytes_per_second,
                 participant_latency_ps=profile.participant_latency_ps,
                 propagation_reference_ps=profile.propagation_reference_ps,
+                envelope_id=plan.collective_fixed_cost_envelope_id,
+                arm=plan.collective_fixed_cost_arm,
+                evidence_class=profile.evidence_class,
                 artifacts=tuple(
                     CollectiveArtifactTiming(
                         artifact_id=artifact.artifact_id,
