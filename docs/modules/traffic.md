@@ -55,7 +55,8 @@ the flow-level work the GOAL emitter renders.
   declaring the group: two allreduce sites and no all-to-all, which is what
   the framework executes. The vLLM producer classifies both conditions before
   it binds a group, and refuses outright when an all-to-all path exists whose
-  allgather and reduce-scatter traffic this repository renders nothing for.
+  allgather and reduce-scatter traffic this repository renders nothing for,
+  rather than pricing it as a pairwise all-to-allv.
   TRAF-40 owns turning the mode into an explicit declaration and rendering
   that refused path. Sequence parallelism is out of scope here and owned by
   TRAF-6: under it the framework skips the TP reduction entirely and the model
@@ -693,13 +694,20 @@ tensor-parallel world of one.
   run cannot express per-rank expert ownership to the placement layer at all.
   And a non-reducing all-to-all backend such as the default
   `allgather_reducescatter` under data parallelism moves expert activations
-  through an allgather and a reduce-scatter that this repository renders
-  nothing for while still all-reducing the fused output, so binding refuses it
-  outright rather than under-counting; that refusal is the off path acceptance
-  must preserve. Acceptance needs the explicit indicator on the render inputs,
-  a refusal when a declared group contradicts it, the allgather and
-  reduce-scatter rendering with its own byte oracle, and byte-identical
-  renders for the declared and omitted-group paths that exist today.
+  through an allgather and a reduce-scatter, a traffic shape this repository
+  renders nothing for, so binding refuses it outright rather than pricing a
+  pairwise all-to-allv the deployment never executes; that refusal is the off
+  path acceptance must preserve. The refusal protects the traffic shape and
+  not the allreduce count, which is correctly empty under this backend either
+  way: combined with data parallelism and `tp > 1` it makes the expert input
+  sequence parallel (`config/parallel.py:653-668`) and
+  `model_executor/layers/fused_moe/runner/moe_runner.py:459` then skips the
+  final all-reduce entirely, while at `tp == 1` that all-reduce is a one-rank
+  no-op the site rule renders as none. Acceptance needs the explicit indicator
+  on the render inputs, a refusal when a declared group contradicts it, the
+  allgather and reduce-scatter rendering with its own byte oracle, and
+  byte-identical renders for the declared and omitted-group paths that exist
+  today.
 
 - TRAF-41 (Completeness; P1; M): requalify the one rendered surface and amend
   the one prose projection that the TRAF-33 inventory correction made stale.

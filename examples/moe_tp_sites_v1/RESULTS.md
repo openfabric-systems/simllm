@@ -72,11 +72,17 @@ the rule, all now fixed and all post-specified.
   `allgather_reducescatter`, whose prepare-finalize returns
   `output_is_reduced()` False
   (`model_executor/layers/fused_moe/prepare_finalize/naive_dp_ep.py:109` and
-  `:242`), so the runner still all-reduces; only the deepep, mori, nixl and
-  flashinfer families reduce in the combine. The producer now classifies both
-  conditions before binding, and refuses outright when a non-reducing
-  all-to-all backend would move expert activations this repository renders
-  nothing for. The live path was safe only because the observed-schedule
+  `:242`); only the deepep, mori, nixl and flashinfer families reduce in the
+  combine. The producer now classifies both conditions before binding, and
+  refuses outright when a non-reducing all-to-all backend would move expert
+  activations through an allgather and a reduce-scatter this repository
+  renders nothing for, rather than pricing that as a pairwise all-to-allv. The
+  refusal protects the traffic shape and not the allreduce count: under that
+  backend with data parallelism the expert input is made sequence parallel
+  (`config/parallel.py:653-668`) and
+  `model_executor/layers/fused_moe/runner/moe_runner.py:459` skips the final
+  all-reduce entirely, while at `tp == 1` it is a one-rank no-op the site rule
+  renders as none. The live path was safe only because the observed-schedule
   producer pins `deepep_high_throughput`.
 - **The refusal list was a strict subset of its claimed mirror.** It now covers
   `shared_intermediate_size`, `num_shared_experts`, `moe_layer_freq`,

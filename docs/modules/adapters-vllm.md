@@ -643,8 +643,14 @@ and zero changed all-to-all bytes. The detailed evidence is in
 - VLLM-25 (Completeness; P2; M): support shared-expert and mixed dense and
   routed MoE geometries in the config reader. `model_dims_from_vllm_config`
   refuses them instead of pricing them as one whole-model routed geometry,
-  mirroring the SGLang reader field for field with the same per-field
-  predicates: a positive `n_shared_experts`, `num_shared_experts`,
+  reaching parity with the SGLang reader on the shared-expert and mixed
+  dense-and-routed families with the same per-field predicates, though the two
+  lists are not identical in either direction: this one adds
+  `num_shared_experts` and `shared_intermediate_size`, which the vLLM model
+  definitions spell, while the SGLang reader also refuses MLA, speculative and
+  quantization fields that are compute and sampling concerns outside this
+  guard's reduction-inventory scope. The refused values are a positive
+  `n_shared_experts`, `num_shared_experts`,
   `shared_expert_intermediate_size`, `moe_shared_expert_intermediate_size`,
   `shared_intermediate_size`, `first_k_dense_replace` or `num_dense_layers`; a
   `moe_layer_freq` or `decoder_sparse_step` other than 1, since 1 is the only

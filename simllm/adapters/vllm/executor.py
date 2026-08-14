@@ -764,13 +764,14 @@ class ExpertParallelGeometry:
     over the tensor-parallel group, which is the two-allreduce dense-shaped
     inventory rather than the one-allreduce routed one.
 
-    Sequence parallelism is deliberately not read. Its ``sp_size`` is a
-    per-layer ``FusedMoE`` constructor argument in the pinned release
-    (``fused_moe/layer.py:58-66``) with no ``VllmConfig`` field, and under it
-    the framework skips the tensor-parallel reduction entirely while the model
-    performs its own allgather, which this repository does not render at all.
-    TRAF-6 owns sequence parallelism, so the ``dp_size``/``pcp_size``
-    condition is exact for every configuration this repository can represent.
+    Sequence parallelism is not read, and the omission is exact rather than
+    merely scoped. ``ParallelConfig.use_sequence_parallel_moe`` is a real
+    config property (``config/parallel.py:653-668``, read by the model
+    definitions), and it itself requires ``data_parallel_size > 1``. The
+    ``is_sequence_parallel`` clause of ``use_all2all_kernels`` can therefore
+    never fire in a case the ``dp_size > 1`` clause does not already cover, so
+    reading it would change no answer. Rendering sequence parallelism at all
+    remains TRAF-6.
     """
 
     flatten_tp_size: int
@@ -820,8 +821,11 @@ def _combine_is_reducing(backend: str) -> bool:
     ``flashinfer_nvlink_one_sided.py:69``). The one False name is
     ``allgather_reducescatter`` (``naive_dp_ep.py:109`` and ``:242``). The
     remaining literals of ``config/parallel.py:40-53``, ``naive`` and ``pplx``,
-    ship no prepare-finalize class in this release, so they are refused rather
-    than assumed either way.
+    are removed backends that ``config/parallel.py:448-454`` rewrites to
+    ``allgather_reducescatter`` during validation, so a real ``ParallelConfig``
+    never carries them and this refusal is reachable only from a hand-built
+    config. It is kept so such a config fails loudly instead of silently
+    inheriting whichever answer the rewrite would have produced.
     """
 
     if backend in REDUCING_ALL2ALL_BACKENDS:
@@ -892,10 +896,17 @@ def _require_integer_moe_field(name: str, value: Any) -> int:
 def _reject_unsupported_moe_mechanisms(*configs: Any) -> None:
     """Refuse MoE geometries whose reduction inventory would be wrong.
 
-    This mirrors the SGLang reader field for field
-    (``simllm/adapters/sglang/worker.py:775-834``) with the same per-field
-    predicates, because both readers feed the same whole-model ``ModelDims``
-    and the same allreduce site rule.
+    This reaches parity with the SGLang reader
+    (``simllm/adapters/sglang/worker.py:775-834``) on the shared-expert and
+    mixed dense-and-routed families, with the same per-field predicates,
+    because both readers feed the same whole-model ``ModelDims`` and the same
+    allreduce site rule. The two lists are not identical in either direction.
+    This one adds ``num_shared_experts`` and ``shared_intermediate_size``,
+    which the vLLM model definitions spell and the SGLang reader does not
+    carry. The SGLang reader additionally refuses MLA (``kv_lora_rank``,
+    ``q_lora_rank``, ``qk_nope_head_dim``, ``qk_rope_head_dim``), speculative
+    (``num_nextn_predict_layers``) and quantization fields, which are compute
+    and sampling concerns outside this guard's reduction-inventory scope.
 
     A shared expert's output is all-reduced over the tensor-parallel group even
     when the combine kernel already reduced the routed output
@@ -1833,10 +1844,10 @@ class SimExecutor(_ExecutorBase):
             raise NotImplementedError(
                 "vLLM all2all_backend "
                 f"{geometry.all2all_backend!r} moves expert activations through "
-                "an allgather and reduce-scatter that this repository renders "
-                "no traffic for, and it still all-reduces the fused output, so "
-                "neither declaring nor omitting the expert group is correct; "
-                "tracked by TRAF-40"
+                "an allgather and a reduce-scatter, a traffic shape this "
+                "repository renders nothing for, so declaring the expert group "
+                "would price a pairwise all-to-allv this deployment never "
+                "executes; tracked by TRAF-40"
             )
         if not geometry.renders_expert_combine or self.ep_ranks is None:
             return

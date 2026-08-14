@@ -1772,6 +1772,8 @@ def test_non_reducing_all_to_all_binding_fails_closed():
     config = fake_granite_vllm_config()
     config.parallel_config.all2all_backend = "allgather_reducescatter"
     executor.expert_parallel = expert_parallel_geometry(config)
+    with pytest.raises(NotImplementedError, match="allgather and a reduce-scatter"):
+        executor._bind_expert_group()
     with pytest.raises(NotImplementedError, match="TRAF-40"):
         executor._bind_expert_group()
     assert executor.step_sink.bound is None
@@ -1784,10 +1786,50 @@ def test_non_reducing_all_to_all_binding_fails_closed():
     executor._bind_expert_group()
     assert executor.step_sink.bound is None
 
-    # the live reducing shape binds the group
+    # the live reducing shape, dp 8 with deepep, binds the group
     executor.expert_parallel = expert_parallel_geometry(fake_granite_vllm_config())
     executor._bind_expert_group()
     assert executor.step_sink.bound == tuple(range(8))
+
+
+def test_geometry_study_binding_cells_match_the_binding_semantics():
+    """The published geometry study's binding cells must not silently diverge.
+
+    That study calls _bind_expert_group directly, so a change to the binding
+    precondition can break a doc-linked published result while the suite stays
+    green. This executes exactly its binding cells, nothing else in it.
+    """
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    from simllm.adapters.vllm.executor import REDUCING_ALL2ALL_BACKENDS
+
+    study_path = (
+        Path(__file__).resolve().parents[1]
+        / "examples"
+        / "vllm_moe_geometry_v1"
+        / "run_study.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "vllm_moe_geometry_study", study_path
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    # every cell declares a backend the binding decision can classify
+    assert module.CELL_ALL2ALL_BACKEND in REDUCING_ALL2ALL_BACKENDS
+    for cell in module.GEOMETRY_INPUTS:
+        config = module._vllm_config(module.GEOMETRY_INPUTS[cell])
+        assert getattr(config.parallel_config, "all2all_backend", None) is not None
+
+    rows = module._score_binding()
+    assert [row["cell"] for row in rows] == ["g-ep-dp8", "g-ep-flag-world1"]
+    assert all(row["passed"] for row in rows)
+    assert rows[0]["observed"] == [list(range(8))]
+    assert rows[1]["observed"] == []
 
 
 def test_granite_model_dims_include_enabled_ep_geometry():
