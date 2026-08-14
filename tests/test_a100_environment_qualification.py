@@ -174,7 +174,7 @@ def test_mig_state_refuses_missing_mode_section(monkeypatch):
         ),
     )
 
-    with pytest.raises(RuntimeError, match="no MIG mode section"):
+    with pytest.raises(RuntimeError, match="no complete MIG mode section"):
         runner._mig_state(Path("nvidia-smi"), "GPU-acde")
 
 
@@ -188,12 +188,40 @@ def test_mig_state_requires_disabled_current_mode(monkeypatch, current):
         lambda command, **_kwargs: subprocess.CompletedProcess(
             command,
             0,
-            stdout=f"    MIG Mode\n        Current : {current}\n",
+            stdout=(
+                f"    MIG Mode\n        Current : {current}\n"
+                "        Pending : Disabled\n"
+            ),
             stderr="",
         ),
     )
 
-    with pytest.raises(RuntimeError, match="MIG is not disabled"):
+    with pytest.raises(RuntimeError, match="MIG is not stably disabled"):
+        runner._mig_state(Path("nvidia-smi"), "GPU-acde")
+
+
+@pytest.mark.parametrize("pending", [None, "Enabled", "N/A"])
+def test_mig_state_requires_disabled_pending_mode(monkeypatch, pending):
+    runner = _runner_module()
+    pending_line = "" if pending is None else f"        Pending : {pending}\n"
+
+    monkeypatch.setattr(
+        runner,
+        "_run",
+        lambda command, **_kwargs: subprocess.CompletedProcess(
+            command,
+            0,
+            stdout=f"    MIG Mode\n        Current : Disabled\n{pending_line}",
+            stderr="",
+        ),
+    )
+
+    expected = (
+        "no complete MIG mode section"
+        if pending is None
+        else "MIG is not stably disabled"
+    )
+    with pytest.raises(RuntimeError, match=expected):
         runner._mig_state(Path("nvidia-smi"), "GPU-acde")
 
 

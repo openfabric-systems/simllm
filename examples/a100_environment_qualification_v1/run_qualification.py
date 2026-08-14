@@ -397,17 +397,17 @@ def _mig_state(nvidia_smi: Path, gpu_selector: str) -> dict[str, str]:
     mig_mode = re.search(
         r"(?m)^[ \t]*MIG Mode[ \t]*\r?\n"
         r"[ \t]*Current[ \t]*:[ \t]*([^\r\n]+)"
-        r"(?:\r?\n[ \t]*Pending[ \t]*:[ \t]*([^\r\n]+))?",
+        r"\r?\n[ \t]*Pending[ \t]*:[ \t]*([^\r\n]+)",
         completed.stdout,
     )
     if mig_mode is None:
-        raise RuntimeError("nvidia-smi full query has no MIG mode section")
+        raise RuntimeError("nvidia-smi full query has no complete MIG mode section")
     state = {
         "current": mig_mode.group(1).strip(),
-        "pending": mig_mode.group(2).strip() if mig_mode.group(2) else "unknown",
+        "pending": mig_mode.group(2).strip(),
     }
-    if state["current"].lower() != "disabled":
-        raise RuntimeError(f"MIG is not disabled: {state}")
+    if any(value.lower() != "disabled" for value in state.values()):
+        raise RuntimeError(f"MIG is not stably disabled: {state}")
     return state
 
 
