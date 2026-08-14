@@ -493,6 +493,46 @@ remains the live comparison, SGL-13 remains the missing metric-chain link
 (SGL-12 has since closed), WORK-4 remains virtual server ingress, and SGL-18
 owns unsupported MoE geometry and mechanisms.
 
+The composed realistic-deployment study is frozen by expectations-only commit
+`dd026c0` and reported in
+[examples/sglang_composed_deployment_v1/RESULTS.md](../../examples/sglang_composed_deployment_v1/RESULTS.md).
+On 2026-08-14 the live in-process chain ran the same four arrival-gated
+requests through 18 cells: two declared deployments, one whose eight ranks
+share a host and whose 24 attention allreduces and 48 MoE all-to-alls stay on
+NVLink, and one whose eight ranks are eight hosts at 400 and 100 Gbit/s, each
+under the `off`, `lower` and `upper` arms of a named fixed-cost envelope and
+under the `ideal` and `turing-cuda-graph` host arms. 357 scheduler steps, 864
+reduced intervals and 9,312 `htsim_rnic` runs, all of them cross-node because
+an all-intra-node step invokes no backend. All 11 fatal guards held, so the run
+is not void; 2 of 2 scored exact relations and 5 of 6 scored behavioral
+relations passed, in classes that are never summed, and all 8 scored relations
+were genuine risk. The `cross400-off-ideal` cell reproduced the accepted
+SGL-8 `ep8-400g` artifact to every published digit despite a declared
+placement manifest, the w14d selection seam and a different driver, which is
+what makes the other 17 cells readable as changes from a known baseline. The
+headline is a bracket: in the ten cells whose arm charges a nonzero surcharge,
+70.6 to 95.3 percent of the upper median step is one per-collective constant
+never measured on this chain, 57.6 to 95.3 percent per individual step, and
+moving from `off` to `upper` multiplies summed TTFT by 4.95x to 37.1x. Two of
+the twelve enabled cells charge nothing for it, because the intra-node `lower`
+arm resolves to a zero surcharge and moves only the NVLink endpoint rate. B4 failed on its declared-risky half, the clause that the live TTFT
+sensitivity to link rate falls as the arm constant grows: it holds on the
+per-step quantity the closed form governs under both hosts and breaks on the
+live one under `turing`, because at the `off` arm the 100 Gbit/s cell runs 17
+steps against the 400 Gbit/s cell's 19 and the extra batching removes more
+queueing than the slower link adds. The intra-node against cross-node ordering
+is undetermined: matched by arm name the intra-node deployment looks cheaper
+everywhere, but the two envelopes do not share arms, and matched on the
+per-collective constant the ratio brackets one and inverts at 30,128,029 ps
+because the corrected inventory makes the intra-node cell pay 72 surcharges
+per step against 48. Nothing was calibrated and nothing was closed. SGL-27
+registers the declared tensor-parallel shard against the width SGLang actually
+executed, and TRAF-42 registers the fixed-cost surface's fabric-shaped
+self-description. SGL-26 stays open: this is the first live in-process run to
+select a nonideal host profile and carry it to TTFT and TPOT, but the matrix
+makes SGL-26's second clause, the fallback path a collective-free step would
+take, unreachable rather than settled.
+
 ## Open tasks
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
@@ -593,6 +633,25 @@ closed id.
   is a new seam; the expert-residency half belongs to SGL-18. Acceptance
   requires both arms to report identical per-rank geometry and resident bytes,
   with the accepted sink-cell artifacts unchanged.
+- SGL-27 (Precision; P1; M): make a composed SGLang study's declared
+  tensor-parallel shard equal the width the framework actually executed. The
+  intra-node cell of
+  [examples/sglang_composed_deployment_v1](../../examples/sglang_composed_deployment_v1/RESULTS.md)
+  declares `tp_ranks=(0..7)` with the matching per-rank geometry, 2 attention
+  heads, 1 KV head and dense intermediate 64, while SGLang itself ran
+  `tp_size=1`, so every batching decision, every radix-cache outcome and the
+  whole captured routing come from a width-one engine and only the pricing is
+  width eight. This is the tensor-parallel analogue of SGL-25's
+  expert-residency gap, and it is why that study reports its two topologies as
+  two deployments rather than as one controlled locality experiment. The
+  identifying observables are SGLang's own `tp_size` and the per-rank resident
+  weight bytes the sink prices, 421,582,848 at the declared width against
+  554,047,488 at the executed one, a difference that is exactly the
+  132,120,576 bytes of tensor-parallel attention weight plus the 344,064 bytes
+  of KV the narrower head count removes. Acceptance requires one live run
+  whose declared shard equals the framework's own parallel configuration, with
+  the accepted single-rank artifacts byte-identical when the declaration
+  matches.
 
 ### Completeness
 
