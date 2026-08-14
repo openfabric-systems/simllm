@@ -508,7 +508,12 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   does not have, so the controlled-environment form of the stability bar cannot
   be met here at all. Production closure needs counter permission, a non-display
   device with lockable clocks, and allocation on the exact target architecture
-  with a compatible dynamic SASS and Accel-Sim path.
+  with a compatible dynamic SASS and Accel-Sim path. The
+  [A100 environment qualification](../../examples/a100_environment_qualification_v1/RESULTS.md)
+  now proves that one Merlin A100 allocation supports CUDA activity, basic
+  performance counters, static SASS and exact environment provenance. It does
+  not yet prove controlled-cell stability, dynamic tracing, Accel-Sim replay
+  or a production kernel.
 
 ## Status
 
@@ -536,6 +541,17 @@ by graph order. The built-in
 A100/H100 profiles are unvalidated bootstrap seeds and do not establish
 production accuracy: their pipeline initiation intervals are derived from
 published per-SM unit counts, not measured.
+
+The
+[A100 environment qualification](../../examples/a100_environment_qualification_v1/RESULTS.md)
+is `QUALIFIED` at SimLLM commit
+`3c829c660ec6d48a627447632ee99bd40f001784`. One nonexclusive Merlin
+allocation exposed exactly one A100 SXM4 80 GB, stable disabled MIG state, no
+foreign process, a nonempty Nsight Systems CUDA trace, numeric Nsight Compute
+basic counters and static `sm_80` SASS. This establishes the capability gate
+for an A100 production study. It populates no profile table, transfers no
+duration to H100 or B100, and leaves dynamic NVBit capture, Accel-Sim
+compatibility and registered-cell stability unproven.
 
 The [Turing calibration study](../../examples/compute_calibration_v1/RESULTS.md)
 lands the first real activity-timing pipeline and populated table. On the
@@ -749,28 +765,26 @@ and an explicit reason:
   and compute-only step error below 5 percent. The roofline and calibration-off
   paths must retain accepted artifacts and timestamps byte for byte.
 - COMP-5 (Precision; P1; L): provide the production capture
-  environment required by COMP-1. On 2026-08-12 the local GTX 1660 Ti with
-  driver 550.90.07 successfully produced CUPTI activity timing through Nsight
-  Systems. Nsight Compute attached but returned `ERR_NVGPUCTRPERM`, profiled
-  no kernels and reported that this user lacks performance-counter permission;
-  the loaded driver exposes `RmProfilingAdminOnly: 1`. The local requirement
-  is an administrator disabling that restriction or granting the documented
-  profiling capability, followed by a successful counter probe. The display
-  GPU also produced isolated samples above the 2 percent per-cell variation
-  ceiling in two consecutive post-fix captures, and the fidelity study measured
-  the two mechanisms behind them: 93.4 percent of a fresh 4,000-launch excursion
-  population is blocks staying resident longer at an unchanged 1,869 MHz
-  effective SM clock, i.e. the desktop sharing the SM, and the rest is the
-  effective clock dropping to 76.9 percent of that value. Locking clocks and
-  freeing the device from the display are both administrator actions, so the
-  controlled-environment stability form cannot be met on this host at all, no
-  matter how the capture is disciplined. Production closure therefore
-  needs a stable non-display or exclusive capture environment, controlled
-  clocks, and allocation on the exact A100, H100 or B100 target with compatible
-  dynamic NVBit tracing and Accel-Sim support. Acceptance is a nonempty
-  activity trace, successful required-counter probe, exact tool and GPU
-  provenance, and every registered cell below the controlled-environment
-  stability ceiling.
+  environment required by COMP-1. The local GTX 1660 Ti still cannot qualify:
+  Nsight Compute returns `ERR_NVGPUCTRPERM`, and display sharing produces the
+  residency and clock-state excursions measured by the fidelity study. The
+  [A100 environment qualification](../../examples/a100_environment_qualification_v1/RESULTS.md)
+  removes the corresponding basic-capability uncertainty for one Merlin A100.
+  Job `195283` produced a nonempty activity trace, numeric basic counters,
+  exact tool and GPU provenance, matching disabled MIG and allowed-clock policy
+  immediately before and after profiling, no foreign process and static
+  `sm_80` SASS. All three probe executions agreed on device identity and
+  checksum. This evidence is A100-scoped and must reject H100 or B100 use.
+  The task remains open because the qualification intentionally omitted
+  production SGLang kernels, dynamic NVBit tracing, Accel-Sim compatibility,
+  controlled-clock evidence and the registered-cell stability sweep. The next
+  expectations-only production study must exercise those mechanisms, retain
+  the exact calibration-off path, and keep every registered cell below the
+  controlled-environment stability ceiling before COMP-1 may consume an A100
+  profile. Nsight Systems warned that device-side CUDA-event completion tracing
+  can add overhead or false cross-stream dependencies. The production freeze
+  must explicitly set `--cuda-event-trace=false`, or defend a frozen
+  alternative, before interpreting multi-stream dependency evidence.
 - COMP-7 (Precision; P1; M): MoE compute assumes perfectly balanced routing:
   every rank computes `top_k` experts' flops for its own tokens and streams all
   resident experts once. Consume the landed `simllm-routed-experts-v1`
