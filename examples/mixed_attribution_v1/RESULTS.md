@@ -6,9 +6,12 @@ behavior, before the harness and before any run. Nothing in
 [expectations.md](expectations.md) was edited after the run.
 
 **Verdict: the run is not void. All 8 fatal guards held. The scored exact
-relation passed, 1 of 1. The scored behavioral relations passed, 4 of 4. The
-two scored classes are kept separate from each other and from the guards, and
-no count is added across them.**
+relation passed, 1 of 1. The scored behavioral relations passed 3 of 4 as
+written: F1's three 225 GB/s instances sit outside the single absolute
+interval its frozen sentence names for both all-local cells, for the reason
+given in full below, while every other clause of F1 and all of F2, F3 and F4
+hold. The two scored classes are kept separate from each other and from the
+guards, and no count is added across them.**
 
 ## Outcome in one paragraph
 
@@ -178,20 +181,54 @@ construction and are not added to any total.
 
 **Passes.** 20 comparisons, 0 mismatches: 15 step tables of 72 artifacts each
 plus 5 per-request rows. As the freeze states, this shares the per-artifact
-inputs with the reducer, so it tests owner selection, masking, the
-pending-interval carry, the queue-gap charge and the accumulation into TTFT
-and decode partitions, and does not test the sink's composition.
+inputs with the reducer, so it tests owner selection, masking, and the
+accumulation into TTFT and decode partitions, and does not test the sink's
+composition.
 
-## Scored behavioral relations: 4 of 4
+**Retraction, post-specified.** The freeze also claims E1 exercises the
+pending-interval carry across a step that samples no token and the queue-gap
+charge, and this fixture exercises neither: every step schedules the one
+request with `num_sampled=1`, so no pending attribution is ever carried, and
+every step is released at the previous step's completion, so the queue gap is
+identically zero in all 15 intervals. Both mechanisms are covered only by the
+unit cases in `tests/test_step_attribution.py`, which build a non-sampling
+co-scheduled step and a nonzero scheduler gap directly, and neither is covered
+by this scored oracle. The claim is withdrawn here rather than left standing;
+the frozen text is not edited.
+
+## Scored behavioral relations: 3 of 4 as written
 
 > **F1** In both all-local cells, for every step, the fabric component is
 > exactly zero, the kernel component is exactly 24,000 ps, the NVLink
-> component lies in its frozen interval, and the step latency equals kernel
-> plus NVLink exactly.
+> component lies in `[240,000, 672,000]` ps, and the step latency equals
+> kernel plus NVLink exactly.
 
-**Passes.** 6 instances, 0 failures. 632,000 ps inside `[240,000, 672,000]` at
-450 GB/s and 1,254,000 ps inside `[480,000, 1,344,000]` at 225 GB/s, with
-`24,000 + 632,000 = 656,000` and `24,000 + 1,254,000 = 1,278,000` exact.
+**Fails as written, on the interval clause of its three 225 GB/s instances.**
+Three of the four clauses hold in all 6 instances: the fabric component is
+exactly 0, the kernel component is exactly 24,000 ps, and
+`24,000 + 632,000 = 656,000` and `24,000 + 1,254,000 = 1,278,000` reproduce
+the two step latencies exactly. The interval clause holds for the three
+450 GB/s instances, where 632,000 ps sits inside `[240,000, 672,000]` ps, and
+fails for the three 225 GB/s instances, where 1,254,000 ps sits outside that
+same written interval.
+
+**Why, and what was scored instead.** F1's sentence attaches one absolute
+interval to both all-local cells, while the derivation that produced the
+interval states its rate explicitly: expectations.md derives it "At 450 GB/s"
+from `ceil(peak_bytes * 1e9 / rate)`. A bound built by dividing bytes by a rate
+cannot hold unchanged when the rate is halved, so the written sentence is
+internally inconsistent with its own derivation and no measurement could have
+satisfied it in the 225 GB/s cell. The harness, which landed before the run,
+read F1 as the rate-scaled bound and judged the 225 GB/s instances against
+`[480,000, 1,344,000]` ps, which 1,254,000 ps meets; that is why
+`summary.json` records F1 as passing 6 of 6 while this document reports the
+literal reading. Both readings are stated here because re-reading a frozen
+sentence after seeing the number is exactly what would turn a mis-registration
+into a pass, and the mis-registration is in the freeze, not in the code, the
+harness or the measurement. The physical content of the 225 GB/s instances is
+not left unscored either: F3's bracket `[2 n450 - 48,000, 2 n450]` ps was
+frozen as a relative bound precisely so it survives a rate change, it evaluates
+to `[1,216,000, 1,264,000]` ps here, and 1,254,000 ps meets it.
 
 > **F2** For `mixed-450`, in the TTFT interval, the NVLink component is exactly
 > 120,000 ps, the fabric component is strictly positive, the kernel component
@@ -217,6 +254,17 @@ mixed NVLink delta is 120,000 ps, the fabric component is 49,884,160 ps in
 both cells, and the owner table is identical artifact for artifact. The
 masked NVLink service doubled too, 110,000 to 220,000 ps, and did not enter
 any total, which is exactly what this relation was registered to catch.
+
+**Overlap with F2, disclosed.** F2 and F3 share the 120,000 ps quantity: once
+F2 pins the NVLink-owned component at 24 phases of 5,000 ps and the owner set
+does not change, the 120,000 ps delta of the halved cell follows from the
+ceiling arithmetic, so F3's headline delta is close to entailed given F2 and
+is not four independent facts. The independently falsifiable content of F3 is
+the rest of it: that the fabric component is identical to the picosecond
+across the two rates, that no artifact changes owner, and that the doubled
+masked service stays outside every total. Those three are what a
+masked-service leak, a rate-dependent fabric term or an ownership flip would
+break, and none of them follows from F2.
 
 > **F4** Across the three 450 GB/s cells the TTFT order is all-local, mixed,
 > all-remote; the fabric component is strictly increasing in that order with

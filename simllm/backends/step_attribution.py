@@ -310,6 +310,14 @@ def _legacy_medium_projection(
             base.append(composed_ps - fabric_ps)
             medium.append(NVLINK_MEDIUM)
         else:
+            #: The one corner where this fallback would disagree with the
+            #: sink's own projection is a collective artifact with zero fabric
+            #: service and a nonzero base latency: it lands in kernel here and
+            #: in collective there. It is unreachable today, because a base
+            #: latency requires an explicitly selected collective profile and
+            #: no accepted reducer path carries one, and it stays unreachable
+            #: as long as an outcome that publishes base latencies also
+            #: publishes the medium projection above.
             local.append(composed_ps)
             base.append(0)
             medium.append(GPU_COMPUTE_MEDIUM)

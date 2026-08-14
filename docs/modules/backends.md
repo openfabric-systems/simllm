@@ -430,8 +430,12 @@ resource whose own service equals the composed maximum, keeping the NVLink and
 fabric components under separate names and reporting the losing medium's
 masked service as a work sum outside every total. Its
 [frozen study](../../examples/mixed_attribution_v1/RESULTS.md) held all 8
-fatal guards, passed its scored exact relation 1 of 1 and its scored
-behavioral relations 4 of 4. A single two-node step reached per-request TTFT
+fatal guards, passed its scored exact relation 1 of 1 and passed its scored
+behavioral relations 3 of 4 as written. The one miss is a mis-registration in
+the freeze rather than a measurement: F1 attaches a single absolute NVLink
+interval to both all-local cells while deriving it at the full rate, so the
+half-rate cell cannot meet it, and F3's frozen relative bracket covers that
+cell instead. A single two-node step reached per-request TTFT
 with 24 NVLink-owned and 24 fabric-owned artifacts whose components total the
 TTFT exactly, halving the NVLink rate moved that TTFT by exactly the 120,000
 ps doubling of the NVLink-owned service while the fabric component stayed
