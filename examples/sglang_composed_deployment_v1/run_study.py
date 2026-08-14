@@ -20,6 +20,7 @@ frozen in ``expectations.md``, committed before any of this code existed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -80,6 +81,15 @@ TORCH_NUM_THREADS = 8
 REQUEST_IDS = ("p0", "p1", "p2", "p3")
 PROMPT_TOKENS = 8
 MAX_NEW_TOKENS = 12
+
+#: The routing authority, tracked beside this script so the study reproduces
+#: without a run directory from another wave. It is a byte copy of the SGL-16
+#: framework capture, and `.gitattributes` pins it to LF so a checkout on any
+#: platform keeps the digest below.
+DEFAULT_ROUTING_TRACE = Path(__file__).resolve().parent / "fixtures" / "routing-trace.jsonl"
+ROUTING_TRACE_SHA256 = (
+    "da0096b696564f365003d11565f4cbc5bed33ab47f7236c52b3ca7c989fd4982"
+)
 
 INTRA_ENVELOPE = "intra-node-fixed-cost-v1"
 CROSS_ENVELOPE = "cross-node-fixed-cost-provisional-v1"
@@ -241,6 +251,35 @@ def _trace_header(path: Path) -> dict[str, object]:
     raise SystemExit(f"{path}: trace is empty")
 
 
+def trace_digest(path: Path) -> str:
+    """Return the SHA-256 of a routing trace, read in fixed-size blocks."""
+
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def check_trace_digest(path: Path) -> str:
+    """Return the trace digest, refusing a rewritten tracked fixture.
+
+    A caller may point the study at any qualifying capture, so the digest is
+    reported rather than required in general. The tracked fixture is the one
+    exception: its bytes are what the frozen expectations pin, so a checkout
+    that changed them, for example by rewriting line endings, has to fail here
+    rather than silently produce different numbers.
+    """
+
+    observed = trace_digest(path)
+    if path.resolve() == DEFAULT_ROUTING_TRACE and observed != ROUTING_TRACE_SHA256:
+        raise SystemExit(
+            f"tracked routing fixture digest is {observed}, expected "
+            f"{ROUTING_TRACE_SHA256}"
+        )
+    return observed
+
+
 def check_trace_provenance(path: Path) -> dict[str, object]:
     """Fatal guard G1, also run as part of ``--check-only``."""
 
@@ -304,6 +343,8 @@ def _check_frozen_registry() -> None:
         raise AssertionError("the fatal guard roster changed")
     if MAX_NEW_TOKENS - 1 > 19:
         raise AssertionError("output length exceeds the captured decode extent")
+    if len(ROUTING_TRACE_SHA256) != 64:
+        raise AssertionError("the pinned routing-trace digest is malformed")
     if SGLANG_CHUNKED_PREFILL_SIZE > 0:
         raise AssertionError("chunked prefill must stay disabled, see G3")
 
@@ -340,6 +381,7 @@ def check_only(args: argparse.Namespace) -> None:
     if not args.routing_trace.is_file():
         raise SystemExit(f"routing trace is missing: {args.routing_trace}")
     check_trace_provenance(args.routing_trace)
+    digest = check_trace_digest(args.routing_trace)
     print(
         json.dumps(
             {
@@ -350,6 +392,7 @@ def check_only(args: argparse.Namespace) -> None:
                 "exact_total": EXPECTED_EXACT_RELATIONS,
                 "behavioral_total": EXPECTED_BEHAVIORAL_RELATIONS,
                 "fatal_guards": EXPECTED_FATAL_GUARDS,
+                "routing_trace_sha256": digest,
                 "run_dir": str(args.run_dir),
             },
             sort_keys=True,
@@ -1514,6 +1557,7 @@ def _summarize(args: argparse.Namespace) -> dict[str, Any]:
         "G1",
         _git_head(args.sglang_source) == SGLANG_PINNED_COMMIT,
         {
+            "routing_trace_sha256": check_trace_digest(args.routing_trace),
             "framework": provenance.get("framework"),
             "routing_source": provenance.get("routing_source"),
             "model_revision": provenance.get("model_revision"),
@@ -1897,7 +1941,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cache-dir", type=Path, required=True)
     parser.add_argument("--sglang-python", type=Path, required=True)
     parser.add_argument("--sglang-source", type=Path, required=True)
-    parser.add_argument("--routing-trace", type=Path, required=True)
+    parser.add_argument(
+        "--routing-trace",
+        type=Path,
+        default=DEFAULT_ROUTING_TRACE,
+        help=(
+            "strict v2 SGLang framework trace; defaults to the tracked fixture "
+            "beside this script, whose digest is checked before any cell runs"
+        ),
+    )
     parser.add_argument("--htsim-rnic", type=Path, required=True)
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument(
@@ -1921,7 +1973,7 @@ def main() -> int:
     #: the analysis stage imports simllm too, and an interpreter that already
     #: has another simllm on its path would silently analyse with the wrong
     #: library, so the repository this script lives in always wins.
-    if sys.path and sys.path[0] != str(REPOSITORY_ROOT):
+    if not sys.path or sys.path[0] != str(REPOSITORY_ROOT):
         sys.path.insert(0, str(REPOSITORY_ROOT))
     args = parse_args()
     if args.check_only:

@@ -27,3 +27,4 @@ examples/collective_latency_floor_v1/expectations.md text eol=lf
 examples/sglang_worker_seam_v1/*.json text eol=lf
 tests/fixtures/preplay/*.json text eol=lf
 tests/fixtures/preplay/*.jsonl text eol=lf
+examples/sglang_composed_deployment_v1/fixtures/*.jsonl text eol=lf

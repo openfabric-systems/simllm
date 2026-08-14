@@ -225,3 +225,46 @@ def test_provenance_guard_accepts_the_pinned_capture(study, tmp_path: Path) -> N
 def test_the_largest_representable_step_sits_on_the_profile_boundary(study) -> None:
     assert study.MAX_CRITICAL_ENDPOINT_BYTES == study.PROFILE_ENDPOINT_MAX_BYTES
     assert study.MAX_CRITICAL_ENDPOINT_BYTES == 458_752
+
+
+def test_the_tracked_routing_fixture_keeps_its_pinned_bytes(study) -> None:
+    """The reproduction depends on these exact bytes, so they are asserted here.
+
+    `.gitattributes` pins the fixture to LF, which is what keeps this digest
+    stable on a Windows checkout.
+    """
+
+    fixture = study.DEFAULT_ROUTING_TRACE
+    assert fixture.is_file()
+    assert fixture.stat().st_size == 369_843
+    assert study.trace_digest(fixture) == study.ROUTING_TRACE_SHA256
+    assert study.check_trace_digest(fixture) == study.ROUTING_TRACE_SHA256
+
+
+def test_the_tracked_fixture_is_the_documented_default(study) -> None:
+    args = study.parse_args(
+        [
+            "--cache-dir", "/nonexistent/cache",
+            "--sglang-python", "/nonexistent/python",
+            "--sglang-source", "/nonexistent/source",
+            "--htsim-rnic", "/nonexistent/htsim",
+            "--run-dir", "/nonexistent/run",
+        ]
+    )
+    assert args.routing_trace == study.DEFAULT_ROUTING_TRACE
+
+
+def test_the_tracked_fixture_carries_the_pinned_provenance(study) -> None:
+    provenance = study.check_trace_provenance(study.DEFAULT_ROUTING_TRACE)
+    assert provenance["framework"] == "sglang"
+    assert provenance["routing_source"] == "observed-dispatch"
+    assert provenance["observed_source"] == study.SGLANG_PINNED_COMMIT
+
+
+def test_a_caller_supplied_trace_reports_its_digest_without_requiring_one(
+    study, tmp_path: Path
+) -> None:
+    path = tmp_path / "other.jsonl"
+    path.write_text("{}\n", encoding="utf-8")
+    assert study.check_trace_digest(path) == study.trace_digest(path)
+    assert study.check_trace_digest(path) != study.ROUTING_TRACE_SHA256
