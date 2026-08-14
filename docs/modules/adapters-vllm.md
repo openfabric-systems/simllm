@@ -640,6 +640,24 @@ and zero changed all-to-all bytes. The detailed evidence is in
 
 ### Completeness
 
+- VLLM-25 (Completeness; P2; M): support shared-expert and mixed dense and
+  routed MoE geometries in the config reader. `model_dims_from_vllm_config`
+  now refuses `n_shared_experts`, `shared_expert_intermediate_size`,
+  `moe_shared_expert_intermediate_size`, `first_k_dense_replace` and
+  `num_dense_layers` rather than pricing them as a fully routed model. The
+  refusal exists because the collective inventory would be wrong, not only the
+  FLOP count: a shared expert's output is all-reduced over the tensor-parallel
+  group even when the combine kernel already reduced the routed output
+  (pinned vLLM 0.26.0,
+  `model_executor/layers/fused_moe/runner/moe_runner.py:416-433`), so the
+  layer keeps an mlp-site allreduce that `layer_tp_allreduce_sites` drops for
+  a routed all-to-all layer, and a dense prefix leaves some layers with two
+  allreduce sites and no all-to-all at all. Acceptance needs shared-expert
+  weight bytes and active FLOPs in `ModelDims`, the retained mlp-site
+  allreduce for those layers, a per-layer routed schedule shared with TRAF-34,
+  and a byte-identical fully routed baseline plus the preserved refusal for
+  every geometry still unsupported.
+
 - VLLM-13 (Completeness; P1; L) (remaining GPU-present half after the flagged
   skeleton): the skeleton DP coordination half has landed through
   `SimGroupCoordinator`, including consumption of its local padded-token

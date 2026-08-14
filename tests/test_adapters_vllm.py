@@ -1634,6 +1634,44 @@ def test_config_rejects_bad_values():
         )
 
 
+def _granite_config_with_moe_field(name, value):
+    config = fake_granite_vllm_config()
+    config.model_config = FakeGraniteModelConfig()
+    config.model_config.hf_text_config = SimpleNamespace(
+        **{**vars(FakeGraniteModelConfig.hf_text_config), name: value}
+    )
+    return config
+
+
+def test_shared_expert_and_mixed_schedule_moe_configs_are_refused():
+    """Geometries whose reduction inventory ModelDims cannot carry fail closed.
+
+    A shared expert is all-reduced over the tensor-parallel group even when the
+    combine kernel already reduced the routed output (pinned vLLM 0.26.0,
+    model_executor/layers/fused_moe/runner/moe_runner.py:416-433), and a dense
+    prefix leaves some layers with two allreduce sites and no all-to-all, so
+    both are refused rather than priced as fully routed (VLLM-25).
+    """
+    from simllm.adapters.vllm.executor import (
+        UNSUPPORTED_VLLM_MOE_FIELDS,
+        model_dims_from_vllm_config,
+    )
+
+    for name in UNSUPPORTED_VLLM_MOE_FIELDS:
+        with pytest.raises(NotImplementedError, match="VLLM-25"):
+            model_dims_from_vllm_config(_granite_config_with_moe_field(name, 1))
+
+    # a declared but zero field is the ordinary absence of that mechanism
+    zeroed = _granite_config_with_moe_field("n_shared_experts", 0)
+    assert model_dims_from_vllm_config(zeroed).num_experts == 32
+
+    # a non-integer value is a reader defect rather than an unsupported model
+    with pytest.raises(TypeError, match="must be an integer"):
+        model_dims_from_vllm_config(
+            _granite_config_with_moe_field("n_shared_experts", "1")
+        )
+
+
 def test_granite_model_dims_include_enabled_ep_geometry():
     from simllm.adapters.vllm.executor import model_dims_from_vllm_config
 

@@ -90,6 +90,7 @@ import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import Future
 from dataclasses import dataclass
+from numbers import Integral
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, runtime_checkable
 
@@ -767,6 +768,53 @@ def _num_redundant_experts(parallel_config: Any) -> int:
     return max(int(getattr(eplb_config, "num_redundant_experts", 0) or 0), 0)
 
 
+#: MoE mechanism fields whose collective inventory ``ModelDims`` cannot carry
+UNSUPPORTED_VLLM_MOE_FIELDS = (
+    "n_shared_experts",
+    "shared_expert_intermediate_size",
+    "moe_shared_expert_intermediate_size",
+    "first_k_dense_replace",
+    "num_dense_layers",
+)
+
+
+def _reject_unsupported_moe_mechanisms(*configs: Any) -> None:
+    """Refuse MoE geometries whose reduction inventory would be wrong.
+
+    A shared expert's output is all-reduced over the tensor-parallel group even
+    when the combine kernel already reduced the routed output
+    (``model_executor/layers/fused_moe/runner/moe_runner.py:416-433``), so a
+    shared-expert layer keeps an mlp-site all-reduce that
+    ``simllm.traffic.layer_tp_allreduce_sites`` drops for every routed layer of
+    an all-to-all model. A dense prefix or a periodic dense layer likewise
+    leaves some layers with two allreduce sites and no all-to-all, which one
+    whole-model ``ModelDims`` cannot express.
+
+    Both are refused rather than priced as fully routed, mirroring the SGLang
+    reader. VLLM-25 owns supporting them here and TRAF-34 owns the traffic-side
+    per-layer schedule.
+    """
+
+    for config in configs:
+        if config is None:
+            continue
+        for name in UNSUPPORTED_VLLM_MOE_FIELDS:
+            value = getattr(config, name, None)
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, Integral):
+                raise TypeError(
+                    f"vLLM MoE mechanism field {name} must be an integer, "
+                    f"got {value!r}"
+                )
+            if int(value) > 0:
+                raise NotImplementedError(
+                    f"vLLM MoE field {name}={int(value)} needs shared-expert or "
+                    "mixed dense and routed geometry that ModelDims cannot "
+                    "represent; tracked by VLLM-25"
+                )
+
+
 def expert_parallel_geometry(vllm_config: VllmConfig) -> ExpertParallelGeometry:
     """Resolve the MoE parallel shape of the config's own global rank."""
 
@@ -889,6 +937,10 @@ def model_dims_from_vllm_config(vllm_config: VllmConfig) -> ModelDims:
         if num_experts > 0
         else 0
     )
+    if num_experts > 0:
+        _reject_unsupported_moe_mechanisms(
+            text_config, _safe(lambda: model_config.hf_config)
+        )
     geometry = expert_parallel_geometry(vllm_config)
     if num_experts > 0 and geometry.ep_size > num_experts:
         raise ValueError(
