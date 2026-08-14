@@ -516,41 +516,59 @@ ceiling was reached to within 17 percent by a 34-token prefill step, so a
 larger case would be rejected at planning time.
 
 The 2026-08-14 TRAF-33 qualification corrected the tensor-parallel allreduce
-site inventory and closes the task. A layer's sites now come from
-`layer_tp_allreduce_sites`, so a routed layer whose experts are
-expert-parallel reduces once, after attention, instead of twice. Over 54 cells
-crossing model kind, tensor-parallel width, layer count and token count, the
-GOAL renderer, the communication-phase planner and the graph lowerer with its
-collective plan each reproduced one frozen closed form exactly, and the
+site inventory and closes the task. A layer's sites come from
+`layer_tp_allreduce_sites`, so a layer whose output arrives through a combine
+all-to-all reduces once, after attention, instead of twice. Over 54 frozen
+cells crossing model kind, tensor-parallel width, layer count and token count,
+the GOAL renderer, the communication-phase planner and the graph lowerer with
+its collective plan each reproduced one frozen closed form exactly, and the
 all-to-all tag base moved down with the shortened ring list without sharing a
-tag with any ring block. All 120 scored instances in four families passed and
-no fatal guard was violated. The reference 24-layer cell with an 8-rank
-tensor-parallel group and an 8-rank expert-parallel group renders 24
-allreduces plus 48 all-to-alls, that is 72 collectives and 8,257,536
-tensor-parallel bytes, against 96 collectives and 16,515,072 bytes before. Per
-site the rendered 344,064 bytes sit exactly on the `2(W-1)P` bandwidth-optimal
-floor at width 8 and a factor of four below the naive all-gather ceiling.
-Dense and expert-tensor-sharded renders are byte-identical to the pre-change
-renderer, digest pinned in the tests, because a routed model with no expert
-parallelism tensor-shards its experts and its mlp-site reduction is real. The
-end-to-end weight is the per-collective base latency rather than the bytes:
-removing 24 phantom collectives removes `24 * 30,128,029` ps, that is 0.723 ms
-of additive base latency against the 1.916754 ms measured composed decode
-step, roughly 35 times the 20.64 microsecond per-rank byte-serialization term.
-The freeze's own napkin line charged that aggregate byte count to a single
-link and overstated the serialization surplus eightfold; it is retracted in
-the results. See
-[the allreduce site results](../../examples/moe_tp_sites_v1/RESULTS.md).
+tag with any ring block. All 120 pre-registered scored instances in four
+families passed and no fatal guard was violated, though only 48 of the 120
+exercise a layer the change alters; the other 72 are dense and
+expert-tensor-sharded regression arms whose value is that they did not move.
+The reference 24-layer cell with an 8-rank tensor-parallel group and a declared
+8-rank all-to-all expert-parallel group renders 24 allreduces plus 48
+all-to-alls, that is 72 collectives and 8,257,536 tensor-parallel bytes,
+against 96 collectives and 16,515,072 bytes before. Per site the rendered
+344,064 bytes sit exactly on the `2(W-1)P` bandwidth-optimal floor at width 8
+and a factor of four below the naive all-gather ceiling. Every arm that renders
+no all-to-all, dense, expert-tensor-sharded and naive expert-parallel alike, is
+byte-identical to the pre-change renderer with its digest pinned in the tests.
+See [the allreduce site results](../../examples/moe_tp_sites_v1/RESULTS.md).
 
-One published surface is non-portable across TRAF-33. The Granite live cells
-of the collective plan default study declare one 8-rank group as both the
-tensor-parallel and the expert-parallel group over expert-parallel dims, so
-their 709,803,840 ps TTFT, 132,794,880 ps TPOT and transport rows were
-measured with 48 rather than 24 allreduces per step and would be smaller under
-the corrected inventory. That study's dense coverage, perturbation and bypass
-cells, including the 196,608-byte and 4,730,040 ps rank-order row, use dense
-dims and are unaffected, as are the MoE studies that render an
-expert-parallel group with a tensor-parallel world of one.
+An integrator review then corrected the merged rule and two of that report's
+statements; all of the following is post-specified. The first rule keyed on the
+dims alone and was wrong for naive expert parallelism, so it now keys on the
+declared group as described in the interface above, and a further 18
+post-specified cells covering that shape passed 36 of 36 in the same three path
+families. Those instances are a separate evidence class and are not summed with
+the 120. The freeze's registered invariance clauses for rank relabeling and
+expert-parallel group width, unexecuted in the first run, now run at every cell
+along with a sweep of the resident-expert count the corrected rule no longer
+reads, and the routed byte totals are asserted against a closed form confirmed
+identical to the merge base over all 72 cells. The end-to-end weight is the
+per-collective base latency rather than the bytes: removing 24 phantom
+collectives removes `24 * 30,128,029` ps, that is 0.723073 ms of additive base
+latency, which is 21.50 percent of the 3.362899 ms defective step and 27.39
+percent of the 2.639827 ms corrected step once a tensor-parallel group is
+declared. The earlier 38 percent figure divided by a 1.916754 ms step measured
+at `tp_ranks=(0,)`, a configuration with no allreduce at all, and is retracted,
+as is the freeze's napkin line that charged an aggregate byte count to a single
+link and overstated the serialization surplus eightfold.
+
+Two published surfaces are non-portable across TRAF-33, and TRAF-41 owns
+requalifying both. The Granite live cells of the collective plan default study
+declare one 8-rank group as both the tensor-parallel and the expert-parallel
+group over expert-parallel dims, so their 709,803,840 ps TTFT, 132,794,880 ps
+TPOT and transport rows were measured with 48 rather than 24 allreduces per
+step. The composed step budget study publishes a
+`48 * 30,128,029 = 1,446,145,392` ps collective-floor addition and a 74.73 to
+75.45 percent share for the mission `a-ep8` dims, which are expert-parallel, so
+under a declared all-to-all group the corrected addition is 723,072,696 ps and
+the band roughly halves. Both studies' dense cells, including the 196,608-byte
+and 4,730,040 ps rank-order row, are unaffected, as are the MoE studies that
+render an expert-parallel group with a tensor-parallel world of one.
 
 ## Open tasks
 
