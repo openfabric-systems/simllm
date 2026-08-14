@@ -113,8 +113,8 @@ the flow-level work the GOAL emitter renders.
   `ExecutionLowerer` contract. Omitting observations delegates directly to
   `SerialStepLowerer` as the exact compatibility off path.
 - `render_step_goal` renders the serial per-rank chain (per layer: `calc`,
-  the two TP allreduces when the TP world produces them, then for MoE dims
-  with `ep_ranks` given the dispatch and combine all-to-allvs) through the
+  the layer's TP allreduce sites when the TP world produces them, then for MoE
+  dims with `ep_ranks` given the dispatch and combine all-to-allvs) through the
   existing `ring_allreduce` and `pairwise_all_to_allv` patterns; tags are
   disjoint per collective. The calc input may be one compatibility scalar or
   an ordered value per layer, and `num_goal_ranks` idle-fills a larger GOAL
@@ -498,26 +498,47 @@ this repository reports, and the width-8 endpoint envelope's 458,752-byte
 ceiling was reached to within 17 percent by a 34-token prefill step, so a
 larger case would be rejected at planning time.
 
+The 2026-08-14 TRAF-33 qualification corrected the tensor-parallel allreduce
+site inventory and closes the task. A layer's sites now come from
+`layer_tp_allreduce_sites`, so a routed layer whose experts are
+expert-parallel reduces once, after attention, instead of twice. Over 54 cells
+crossing model kind, tensor-parallel width, layer count and token count, the
+GOAL renderer, the communication-phase planner and the graph lowerer with its
+collective plan each reproduced one frozen closed form exactly, and the
+all-to-all tag base moved down with the shortened ring list without sharing a
+tag with any ring block. All 120 scored instances in four families passed and
+no fatal guard was violated. The reference 24-layer cell with an 8-rank
+tensor-parallel group and an 8-rank expert-parallel group renders 24
+allreduces plus 48 all-to-alls, that is 72 collectives and 8,257,536
+tensor-parallel bytes, against 96 collectives and 16,515,072 bytes before. Per
+site the rendered 344,064 bytes sit exactly on the `2(W-1)P` bandwidth-optimal
+floor at width 8 and a factor of four below the naive all-gather ceiling.
+Dense and expert-tensor-sharded renders are byte-identical to the pre-change
+renderer, digest pinned in the tests, because a routed model with no expert
+parallelism tensor-shards its experts and its mlp-site reduction is real. The
+end-to-end weight is the per-collective base latency rather than the bytes:
+removing 24 phantom collectives removes `24 * 30,128,029` ps, that is 0.723 ms
+of additive base latency against the 1.916754 ms measured composed decode
+step, roughly 35 times the 20.64 microsecond per-rank byte-serialization term.
+The freeze's own napkin line charged that aggregate byte count to a single
+link and overstated the serialization surplus eightfold; it is retracted in
+the results. See
+[the allreduce site results](../../examples/moe_tp_sites_v1/RESULTS.md).
+
+One published surface is non-portable across TRAF-33. The Granite live cells
+of the collective plan default study declare one 8-rank group as both the
+tensor-parallel and the expert-parallel group over expert-parallel dims, so
+their 709,803,840 ps TTFT, 132,794,880 ps TPOT and transport rows were
+measured with 48 rather than 24 allreduces per step and would be smaller under
+the corrected inventory. That study's dense coverage, perturbation and bypass
+cells, including the 196,608-byte and 4,730,040 ps rank-order row, use dense
+dims and are unaffected, as are the MoE studies that render an
+expert-parallel group with a tensor-parallel world of one.
+
 ## Open tasks
 
 ### Precision
 
-- TRAF-33 (Precision; P0; M): `step_tp_allreduces` emits both the attention
-  and the mlp all-reduce site for every layer of every model, so declaring a
-  real tensor-parallel group over a routed-MoE model whose experts are
-  expert-parallel renders one all-reduce per layer that the deployment never
-  executes. With `moe_tp = 1` each expert's down projection is computed whole
-  on its owner rank, the combine all-to-all returns finished expert vectors,
-  and the token's home rank forms the layer output by a local weighted sum, so
-  no partial sum spans the tensor-parallel group. The dims express that
-  condition as `num_experts > 0 and resident_experts < num_experts` and express
-  nothing else about mixtures, so the fix keys on those fields alone and never
-  on a group width. A routed model whose experts are tensor-sharded instead
-  (all experts resident, no expert-parallel group) keeps both sites, because
-  its expert down projection really is a partial sum over the tensor-parallel
-  group. Acceptance renders the corrected inventory through the GOAL renderer,
-  the communication-phase planner and the graph lowerer against one frozen
-  closed form, keeps the dense stream byte-identical, and moves no expert byte.
 - TRAF-31 (Precision; P1; L): obtain the same-generation point-to-point
   payload capture absent from the `b200-nccl-2.27-local-v1` calibration. The
   selectable profile currently identifies its 70,027,079,100 bytes/s endpoint

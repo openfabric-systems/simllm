@@ -1396,8 +1396,8 @@ def render_step_goal(
 
     Every participating rank executes the serial chain over layers: ``calc``
     of the corresponding ``per_layer_calc_ns`` GOAL units (ns), then the
-    layer's attention allreduce, then its MLP allreduce (both only when the TP
-    world produces collectives), then, for MoE dims with ``ep_ranks`` given,
+    layer's allreduce sites in execution order (only when the TP world
+    produces collectives), then, for MoE dims with ``ep_ranks`` given,
     the dispatch and combine all-to-allvs over the EP group; the next layer's
     calc waits for the previous layer's last collective. This is the serial
     compatibility off path; observation-aware execution uses
@@ -1408,12 +1408,15 @@ def render_step_goal(
     exist, the EP ranks; other ranks below ``num_goal_ranks`` get one
     zero-cost calc so every rank block is populated.
 
-    Tags: allreduce k (layer * 2 + site index) takes the disjoint block
-    ``base_tag + k * 2(W-1)`` onward, one tag per round, exactly as before;
-    MoE all-to-allvs take one tag each, ``base_tag + tp_tag_slots + j`` for
-    all-to-all j (layer * 2 + phase index), starting right after the
-    allreduce blocks. A step without MoE work renders byte-identically to
-    the pre-MoE emitter (golden-tested).
+    Tags: allreduce k, counted over the emitted sites in layer-major order,
+    takes the disjoint block ``base_tag + k * 2(W-1)`` onward, one tag per
+    round; MoE all-to-allvs take one tag each, ``base_tag + tp_tag_slots + j``
+    for all-to-all j (layer * 2 + phase index), starting right after the
+    allreduce blocks. A layer that emits one site therefore consumes one
+    block, so the all-to-all base moves down with the shortened list instead
+    of leaving a hole. A model with two sites per layer keeps the historical
+    ``layer * 2 + site index`` allocation exactly, and a step without MoE work
+    renders byte-identically to the pre-MoE emitter (golden-tested).
 
     Raises ``ValueError`` when the step has neither TP collectives nor MoE
     all-to-alls (callers decide what "no network work" means; the
