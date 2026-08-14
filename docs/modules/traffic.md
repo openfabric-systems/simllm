@@ -488,6 +488,22 @@ larger case would be rejected at planning time.
 
 ### Precision
 
+- TRAF-33 (Precision; P0; M): `step_tp_allreduces` emits both the attention
+  and the mlp all-reduce site for every layer of every model, so declaring a
+  real tensor-parallel group over a routed-MoE model whose experts are
+  expert-parallel renders one all-reduce per layer that the deployment never
+  executes. With `moe_tp = 1` each expert's down projection is computed whole
+  on its owner rank, the combine all-to-all returns finished expert vectors,
+  and the token's home rank forms the layer output by a local weighted sum, so
+  no partial sum spans the tensor-parallel group. The dims express that
+  condition as `num_experts > 0 and resident_experts < num_experts` and express
+  nothing else about mixtures, so the fix keys on those fields alone and never
+  on a group width. A routed model whose experts are tensor-sharded instead
+  (all experts resident, no expert-parallel group) keeps both sites, because
+  its expert down projection really is a partial sum over the tensor-parallel
+  group. Acceptance renders the corrected inventory through the GOAL renderer,
+  the communication-phase planner and the graph lowerer against one frozen
+  closed form, keeps the dense stream byte-identical, and moves no expert byte.
 - TRAF-31 (Precision; P1; L): obtain the same-generation point-to-point
   payload capture absent from the `b200-nccl-2.27-local-v1` calibration. The
   selectable profile currently identifies its 70,027,079,100 bytes/s endpoint
