@@ -1,0 +1,285 @@
+"""Regression checks for the A100 profiler-environment qualification."""
+
+from __future__ import annotations
+
+import csv
+import importlib.util
+import io
+import subprocess
+from pathlib import Path
+
+import pytest
+
+REPOSITORY = Path(__file__).resolve().parents[1]
+RUNNER_PATH = (
+    REPOSITORY / "examples/a100_environment_qualification_v1/run_qualification.py"
+)
+
+
+def _runner_module():
+    spec = importlib.util.spec_from_file_location(
+        "a100_environment_qualification_v1", RUNNER_PATH
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _nsys_csv(kernel_name: str) -> str:
+    stream = io.StringIO()
+    stream.write("Processing report with cuda_gpu_trace.py...\n")
+    fieldnames = [
+        "Start (ns)",
+        "Duration (ns)",
+        "GrdX",
+        "GrdY",
+        "GrdZ",
+        "BlkX",
+        "BlkY",
+        "BlkZ",
+        "Device",
+        "Ctx",
+        "Strm",
+        "Name",
+    ]
+    writer = csv.DictWriter(stream, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerow(
+        {
+            "Start (ns)": "100",
+            "Duration (ns)": "25.5",
+            "GrdX": "65536",
+            "GrdY": "1",
+            "GrdZ": "1",
+            "BlkX": "256",
+            "BlkY": "1",
+            "BlkZ": "1",
+            "Device": "NVIDIA A100-SXM4-80GB (0)",
+            "Ctx": "1",
+            "Strm": "7",
+            "Name": kernel_name,
+        }
+    )
+    return stream.getvalue()
+
+
+def test_nsys_trace_accepts_public_cuda_gpu_trace_columns():
+    runner = _runner_module()
+
+    rows = runner._validate_nsys_trace(_nsys_csv(runner.TARGET_KERNEL))
+
+    assert rows == [
+        {
+            "name": runner.TARGET_KERNEL,
+            "start_ns": 100.0,
+            "duration_ns": 25.5,
+            "device": "NVIDIA A100-SXM4-80GB (0)",
+            "context_id": 1,
+            "stream_id": 7,
+            "grid": [65536, 1, 1],
+            "block": [256, 1, 1],
+        }
+    ]
+
+
+def test_nsys_trace_refuses_missing_target_kernel():
+    runner = _runner_module()
+
+    with pytest.raises(RuntimeError, match="no target-kernel row"):
+        runner._validate_nsys_trace(_nsys_csv("unrelated_kernel"))
+
+
+def test_nsys_trace_refuses_geometry_drift():
+    runner = _runner_module()
+    trace = _nsys_csv(runner.TARGET_KERNEL).replace("65536,1,1", "65535,1,1")
+
+    with pytest.raises(RuntimeError, match="target grid drifted"):
+        runner._validate_nsys_trace(trace)
+
+
+@pytest.mark.parametrize(
+    ("job_gpus", "visible", "expected"),
+    [
+        ("2", "0", "2"),
+        ("gpu:3", "0", "3"),
+        (
+            "GPU-acde0000-1111-2222-3333-444444444444",
+            "0",
+            "GPU-acde0000-1111-2222-3333-444444444444",
+        ),
+    ],
+)
+def test_allocated_gpu_selector_preserves_physical_identity(
+    job_gpus, visible, expected
+):
+    runner = _runner_module()
+
+    assert (
+        runner._allocated_gpu_selector(
+            {"job_gpus": job_gpus, "cuda_visible_devices": visible}
+        )
+        == expected
+    )
+
+
+def test_scheduler_record_keeps_requested_and_allocated_tres():
+    runner = _runner_module()
+    output = (
+        "JobId=24680 Account=merlin QOS=gpu_general JobState=RUNNING "
+        "TimeLimit=00:20:00 Partition=a100-hourly NodeList=gpu101 "
+        "NumNodes=1 NumCPUs=16 "
+        "NumTasks=1 CPUs/Task=4 "
+        "ReqTRES=cpu=4,mem=32G,node=1,billing=4,gres/gpu=1 "
+        "AllocTRES=cpu=16,mem=32G,node=1,billing=16,gres/gpu=1,"
+        "gres/gpu:nvidia_a100-sxm4-80gb=1 OverSubscribe=OK "
+        "TresPerNode=gres/gpu:nvidia_a100-sxm4-80gb:1 TresPerTask=cpu=4\n"
+    )
+
+    record = runner._parse_scheduler_record(output, "24680")
+
+    assert record["ReqTRES"].startswith("cpu=4,mem=32G")
+    assert "gres/gpu:nvidia_a100-sxm4-80gb=1" in record["AllocTRES"]
+    assert record["NumCPUs"] == "16"
+
+
+@pytest.mark.parametrize(
+    ("spelling", "seconds"),
+    [("20:00", 1200), ("00:20:00", 1200), ("1-00:00:00", 86_400)],
+)
+def test_slurm_duration_normalization(spelling, seconds):
+    runner = _runner_module()
+
+    assert runner._slurm_duration_seconds(spelling) == seconds
+
+
+def test_probe_output_requires_frozen_kernel_and_geometry():
+    runner = _runner_module()
+    output = "\n".join(
+        [
+            "probe=simllm-a100-environment-qualification-v1",
+            f"target_kernel={runner.TARGET_KERNEL}",
+            "device_name=NVIDIA A100-SXM4-80GB",
+            "compute_capability=8.0",
+            "element_count=16777216",
+            "threads_per_block=256",
+            "warmup_launches=5",
+            "measured_launches=1",
+            "output_checksum=0x1234",
+            "correctness=PASS",
+            "status=PASS",
+        ]
+    )
+
+    assert runner._validate_probe_output(output)["output_checksum"] == "0x1234"
+
+
+def test_ncu_metric_requires_target_and_finite_value():
+    runner = _runner_module()
+    header = '"Kernel Name","Metric Name","Metric Value"\n'
+
+    assert runner._has_numeric_ncu_metric(
+        header + f'"{runner.TARGET_KERNEL}","metric","12.5"\n'
+    )
+    assert not runner._has_numeric_ncu_metric(
+        header + f'"{runner.TARGET_KERNEL}","metric","nan"\n'
+    )
+    assert not runner._has_numeric_ncu_metric(
+        header + '"unrelated_kernel","metric","12.5"\n'
+    )
+
+
+def test_ncu_blocker_distinguishes_site_policy_from_tool_failure():
+    runner = _runner_module()
+
+    assert runner._ncu_capability_blocker(
+        "==ERROR== ERR_NVGPUCTRPERM: permission denied"
+    ) == "==ERROR== ERR_NVGPUCTRPERM: permission denied"
+    assert runner._ncu_capability_blocker("==ERROR== unknown option") is None
+
+
+def test_process_inventory_is_limited_to_allocated_gpu(monkeypatch):
+    runner = _runner_module()
+    calls = []
+
+    def fake_run(command, **_kwargs):
+        normalized = tuple(str(item) for item in command)
+        calls.append(normalized)
+        return subprocess.CompletedProcess(
+            normalized,
+            0,
+            stdout="GPU-acde, 123, worker, 10\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(runner, "_run", fake_run)
+
+    assert runner._foreign_processes(Path("nvidia-smi"), "2", "GPU-acde") == [
+        {
+            "gpu_uuid": "GPU-acde",
+            "pid": "123",
+            "process_name": "worker",
+            "used_gpu_memory": "10",
+        }
+    ]
+    assert "--id=2" in calls[0]
+
+
+def test_missing_clock_policy_becomes_capability_blocker():
+    runner = _runner_module()
+    snapshot = {
+        "clocks.current.sm": "N/A",
+        "clocks.current.memory": "1215",
+        "clocks.max.sm": "1410",
+        "clocks.max.memory": "1215",
+        "power.limit": "400",
+        "power.draw": "75",
+        "temperature.gpu": "31",
+        "persistence_mode": "Enabled",
+        "compute_mode": "Default",
+    }
+
+    assert runner._telemetry_blockers(snapshot) == [
+        "nvidia-smi did not expose a positive numeric clocks.current.sm"
+    ]
+
+
+def test_supported_clock_policy_is_scoped_and_nonempty(monkeypatch):
+    runner = _runner_module()
+    calls = []
+
+    def fake_run(command, **_kwargs):
+        normalized = tuple(str(item) for item in command)
+        calls.append(normalized)
+        return subprocess.CompletedProcess(
+            normalized,
+            0,
+            stdout="1215, 1410\n1215, 1395\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(runner, "_run", fake_run)
+
+    clocks, blocker = runner._supported_clock_policy(Path("nvidia-smi"), "3")
+
+    assert clocks == [
+        {"memory_mhz": 1215, "graphics_mhz": 1410},
+        {"memory_mhz": 1215, "graphics_mhz": 1395},
+    ]
+    assert blocker is None
+    assert "--id=3" in calls[0]
+
+
+def test_tool_versions_require_frozen_cuda_and_nsight_identity():
+    runner = _runner_module()
+    versions = {
+        "nvcc": "Cuda compilation tools, release 12.9, V12.9.86",
+        "cuobjdump": "Cuda compilation tools, release 12.9, V12.9.86",
+        "nsys": "NVIDIA Nsight Systems version 2025.1.3.120",
+        "ncu": "NVIDIA Nsight Compute Version 2025.2.1.0",
+    }
+
+    runner._validate_tool_versions(versions)
+    versions["ncu"] = "NVIDIA Nsight Compute Version 2025.1.0"
+    with pytest.raises(RuntimeError, match="ncu identity"):
+        runner._validate_tool_versions(versions)
