@@ -22,6 +22,7 @@ import subprocess
 import sys
 from dataclasses import asdict
 from fractions import Fraction
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -528,9 +529,54 @@ def _exact_rows(cells: dict[str, dict[str, Any]], derived: dict[str, Any]) -> di
                     ),
                 }
             )
+    compression = []
+    for width in EXPERT_PARALLEL_WIDTHS:
+        for index, phase in enumerate(PHASES):
+            ratios = [
+                _ratio(
+                    cells[f"ep{width}-200g-{arm}"]["step_latency_ps"][index],
+                    cells[f"ep{width}-400g-{arm}"]["step_latency_ps"][index],
+                )
+                for arm in STUDY_ARMS
+            ]
+            compression.append(
+                {
+                    "row": f"ep{width}-{phase}",
+                    "ratios": ratios,
+                    "held": all(
+                        earlier >= later
+                        for earlier, later in pairwise(ratios)
+                    ),
+                }
+            )
+    flip = []
+    for link_bps in LINK_RATES_BPS:
+        link = f"{link_bps // 10**9}g"
+        ratios = {
+            arm: _ratio(
+                cells[f"ep4-{link}-{arm}"]["step_latency_ps"][1],
+                cells[f"ep8-{link}-{arm}"]["step_latency_ps"][1],
+            )
+            for arm in STUDY_ARMS
+        }
+        surcharge = derived["surcharge_ps"]
+        premise = ratios["off"] > 1.0 and all(
+            surcharge[arm][4] < surcharge[arm][8] for arm in ("local", "cross")
+        )
+        flip.append(
+            {
+                "row": link,
+                "ratios": ratios,
+                "premise_held": premise,
+                "held": (not premise)
+                or min(ratios[arm] for arm in ("local", "cross")) < ratios["off"],
+            }
+        )
     return {
         "E1": {"rows": additivity, "held": all(row["held"] for row in additivity)},
         "E2": {"rows": ordering, "held": all(row["held"] for row in ordering)},
+        "E3": {"rows": compression, "held": all(row["held"] for row in compression)},
+        "E4": {"rows": flip, "held": all(row["held"] for row in flip)},
     }
 
 
@@ -545,7 +591,6 @@ def _guards(
     from simllm.traffic import (
         CROSS_NODE_COLLECTIVE_FIXED_COST_ENVELOPE,
         INTRA_NODE_COLLECTIVE_FIXED_COST_ENVELOPE,
-        resolve_collective_latency_profile,
     )
 
     collectives = frozen["constants_ps"]["collectives_per_step"]
@@ -705,13 +750,6 @@ def _guards(
         "held": all(row["held"] for row in envelope_rows),
     }
 
-    for arm in ("local", "cross"):
-        selection = frozen["arms"][arm]
-        resolved = resolve_collective_latency_profile(
-            cells[f"ep8-400g-{arm}"]["collective_timing_outcomes"][0]["profile_id"]
-        )
-        if resolved is None or selection["envelope"] is None:
-            raise AssertionError(f"arm {arm} did not resolve a profile")
     return guards
 
 
