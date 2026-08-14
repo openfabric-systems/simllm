@@ -680,6 +680,32 @@ dense cells, including the 196,608-byte and 4,730,040 ps rank-order row, are
 unaffected, as are the MoE studies that render an expert-parallel group with a
 tensor-parallel world of one.
 
+The corrected inventory and the fixed-cost envelope were exercised together on
+a live chain for the first time by
+[examples/sglang_composed_deployment_v1](../../examples/sglang_composed_deployment_v1/RESULTS.md).
+Its intra-node cell declares one 8-rank group as both the tensor-parallel and
+the expert-parallel group over expert-parallel dims, which is the shape TRAF-41
+has to requalify elsewhere, and it reported the corrected 24 attention
+allreduces plus 48 MoE all-to-alls on every one of its steps, 408 executed
+artifacts, with the summed base equal to the collective count times the arm
+constant exactly, which is the check that a ring is charged once rather than
+once per round. Two limits of the fixed-cost surface became measurable there
+and are registered as TRAF-42. The realized bracket the envelope publishes,
+`[2,000,000, 32,128,029]` ps at width 8, adds a propagation reference that an
+all-intra-node step never charges, so the local path realizes
+`[0, 30,128,029]` and its `off` arm has no physical floor; the cell measures
+885 ns per collective on its first prefill step, all of it endpoint
+serialization. And the applied evidence class is per arm, so the same cell has
+to publish `transferred-at-use` for a surcharge that is 723,072,696 ps at the
+capture's own operation and interconnect and 1,446,145,392 ps by transfer. The
+study also confirms that a resolved profile replaces the declared NVLink
+endpoint rate as well as adding a surcharge: the same step's local service is
+10,052,000 ps at 450,000,000,000 bytes/s and 63,746,000 ps at the profile's
+70,027,079,100 bytes/s, so on a locality-bearing cell the `lower` arm is a
+bandwidth arm rather than a null arm. That coupling is intended, since the
+intercept and the slope were fitted together, and it is recorded here so a
+study reports all three arms rather than treating `lower` as `off`.
+
 ## Open tasks
 
 ### Precision
@@ -887,6 +913,37 @@ tensor-parallel world of one.
   floor is 48 MoE all-to-alls at `tp_ranks=(0,)`, which this change does not
   touch and a rerun reproduces exactly, so acceptance must never halve the
   measured floor. Keep both studies' dense cells byte-identical.
+
+- TRAF-42 (Completeness; P1; M): stop the collective fixed-cost surface from
+  describing itself as if every collective crossed the fabric. One root cause
+  with two observable consequences, both first exposed by the intra-node cell
+  of
+  [examples/sglang_composed_deployment_v1](../../examples/sglang_composed_deployment_v1/RESULTS.md).
+  First, `CollectiveLatencyProfile.realized_fixed_cost_ps` adds
+  `propagation_reference_ps` unconditionally, so
+  `intra-node-fixed-cost-v1` publishes `realized_bracket_ps` of
+  `[2,000,000, 32,128,029]` ps at width 8 while an all-intra-node step invokes
+  no fabric backend and therefore realizes `[0, 30,128,029]`. That cell
+  measures 885 ns per collective on its first prefill step, all of it endpoint
+  serialization, so the `off` arm on the local path carries no physical floor
+  at all, and the envelope's own claim string, the floor profile's transfer
+  text and the interface paragraph of this document each overstate the lower
+  edge by exactly one propagation reference. Second, the applied evidence
+  class is per arm rather than per operation shape, so a cell that charges the
+  same profile at its captured operation and interconnect for some collectives
+  and by transfer for others has to publish the conservative single class for
+  all of them: that cell charges the intra-node NVLink ALL-REDUCE intercept to
+  24 ALL-REDUCEs per step at their captured shape, worth 723,072,696 ps, and
+  to 48 pairwise ALL-TO-ALLVs by transfer, worth 1,446,145,392 ps, and the
+  split had to be derived by hand from the inventory. Identifying observables:
+  the realized fixed cost a locality-bearing cell actually charges, and the
+  evidence class attached to each executed collective in the run record.
+  Acceptance requires the realized bracket to match what the selected path
+  charges, one evidence class per executed collective, and every accepted
+  all-remote run record to stay byte-identical. This is the record surface,
+  not the measurement: TRAF-39 owns capturing an ALL-TO-ALLV intercept of its
+  own, and this task is what lets a record say which collectives a single
+  table was and was not fitted on, whether or not that capture ever lands.
 
 - TRAF-26 (Completeness; P2; L): extend the isolated one-engine routed-step
   projection to a full DP times EP group population. Each peer engine must

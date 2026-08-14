@@ -1916,15 +1916,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main() -> int:
+    import sys
+
+    #: the analysis stage imports simllm too, and an interpreter that already
+    #: has another simllm on its path would silently analyse with the wrong
+    #: library, so the repository this script lives in always wins.
+    if sys.path and sys.path[0] != str(REPOSITORY_ROOT):
+        sys.path.insert(0, str(REPOSITORY_ROOT))
     args = parse_args()
     if args.check_only:
         check_only(args)
         return 0
     if args.internal:
-        import sys
-
-        if str(REPOSITORY_ROOT) not in sys.path:
-            sys.path.insert(0, str(REPOSITORY_ROOT))
         if args.internal == BACK44_STAGE:
             _back44(args)
             return 0
