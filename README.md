@@ -12,6 +12,10 @@ Network-faithful simulation of LLM serving and training deployments
 | <a href="#about"><b>About</b></a> | <a href="#architecture"><b>Architecture</b></a> | <a href="#getting-started"><b>Getting Started</b></a> | <a href="#demo"><b>Demo</b></a> | <a href="#models"><b>Models</b></a> | <a href="#modules"><b>Modules</b></a> | <a href="#development"><b>Development</b></a> | <a href="#contributing"><b>Contributing</b></a> | <a href="docs/README_PRO.md"><b>Pro Guide</b></a> |
 </p>
 
+<p align="center">
+<img src="resources/figures/simllm-overview.png" width="58%" alt="SimLLM pipeline: a workload model feeds the real vLLM or SGLang scheduler, which drives a simulated GPU executor and a packet-level htsim network, producing TTFT, TPOT and goodput on a virtual clock, with step completions closing the loop back to the scheduler">
+</p>
+
 ## About
 
 SimLLM predicts the serving performance (TTFT, TPOT, goodput, SLO

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="860" viewBox="0 0 820 860">
+  <defs>
+    <marker id="ab" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1,1 L11,6 L1,11 z" fill="#000000"/>
+    </marker>
+    <marker id="au" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1,1 L11,6 L1,11 z" fill="#6c8ebf"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="820" height="860" fill="#ffffff"/>
+
+  <!-- stacked shadow box, then main box -->
+  <rect x="58" y="58" width="720" height="760" rx="12" fill="#ffffff" stroke="#000000" stroke-width="2.5"/>
+  <rect x="40" y="40" width="720" height="760" rx="12" fill="#ffffff" stroke="#000000" stroke-width="2.5"/>
+
+  <!-- pipeline boxes -->
+  <rect x="260" y="120" width="440" height="76" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <rect x="260" y="260" width="440" height="76" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+  <rect x="260" y="400" width="440" height="76" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/>
+  <rect x="260" y="540" width="440" height="76" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+  <rect x="260" y="680" width="440" height="76" fill="#f5f5f5" stroke="#666666" stroke-width="2"/>
+
+  <!-- black pipeline arrows -->
+  <path d="M480,196 V256" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M480,336 V396" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M480,476 V536" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M480,616 V676" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+
+  <!-- blue closed-loop arrow -->
+  <path d="M260,578 H150 V298 H254" fill="none" stroke="#6c8ebf" stroke-width="2.5" marker-end="url(#au)"/>
+
+  <!-- labels -->
+  <g font-family="'Times New Roman','Nimbus Roman','Liberation Serif','DejaVu Serif',serif" fill="#000000">
+    <text x="58" y="78" font-size="28">simllm</text>
+
+    <text x="480" y="144" font-size="24" text-anchor="middle" dominant-baseline="central">workload model</text>
+    <text x="480" y="174" font-size="15" text-anchor="middle" dominant-baseline="central">arrivals, prompt/output lengths, shared prefixes</text>
+
+    <text x="480" y="284" font-size="24" text-anchor="middle" dominant-baseline="central">real framework scheduler</text>
+    <text x="480" y="314" font-size="15" text-anchor="middle" dominant-baseline="central">vLLM / SGLang, unmodified</text>
+
+    <text x="480" y="424" font-size="24" text-anchor="middle" dominant-baseline="central">simulated GPU executor</text>
+    <text x="480" y="454" font-size="15" text-anchor="middle" dominant-baseline="central">roofline, profile tables, or trace-driven service</text>
+
+    <text x="480" y="564" font-size="24" text-anchor="middle" dominant-baseline="central">packet-level network simulator</text>
+    <text x="480" y="594" font-size="15" text-anchor="middle" dominant-baseline="central">htsim RNIC models on a Clos fabric</text>
+
+    <text x="480" y="704" font-size="24" text-anchor="middle" dominant-baseline="central">TTFT / TPOT / goodput</text>
+    <text x="480" y="734" font-size="15" text-anchor="middle" dominant-baseline="central">on a virtual clock</text>
+
+    <rect x="290" y="356" width="380" height="20" fill="#ffffff"/>
+    <text x="480" y="366" font-size="15" text-anchor="middle" dominant-baseline="central">scheduler step: which requests, which tokens, cache hits</text>
+
+    <rect x="295" y="496" width="370" height="20" fill="#ffffff"/>
+    <text x="480" y="506" font-size="15" text-anchor="middle" dominant-baseline="central">per-step collectives: TP allreduce, MoE all-to-all, PP</text>
+
+    <rect x="52" y="402" width="196" height="76" fill="#ffffff"/>
+    <text x="150" y="416" font-size="15" text-anchor="middle" dominant-baseline="central">closed loop:</text>
+    <text x="150" y="440" font-size="15" text-anchor="middle" dominant-baseline="central">step completions advance</text>
+    <text x="150" y="464" font-size="15" text-anchor="middle" dominant-baseline="central">the scheduler's virtual clock</text>
+  </g>
+</svg>
