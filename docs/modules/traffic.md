@@ -95,30 +95,48 @@ the flow-level work the GOAL emitter renders.
   and it refuses a pair that does not isolate the fixed cost: both arms must
   share the endpoint rate, the source payload interval, the propagation
   reference and the supported widths, both must carry provenance, and the
-  lower arm must be strictly cheaper at every width. Two envelopes ship.
-  `intra-node-fixed-cost-v1` brackets a collective whose ring steps stay on
-  NVLink, between `collective-fixed-cost-floor-v1`, which adds no surcharge so
-  the claimed fixed cost is exactly the propagation the backend already
-  charges, and `b200-nccl-2.27-local-v1`.
-  `cross-node-fixed-cost-provisional-v1` brackets a collective whose ring
-  steps cross the fabric, between `b200-nccl-2.27-local-v1`, a floor because a
-  fabric hop cannot be cheaper than the NVLink hop it replaces, and
-  `b200-nccl-2.27-cross-node-provisional-v1`. `HtsimStepSinkConfig` takes the
-  envelope and the arm as one selection, mutually exclusive with the bare
+  lower arm must be strictly cheaper at every width. The bracket is over the
+  arms a study can select, not over the physical value: an arm's own declared
+  band may reach past the arm above it, and the envelope's `claim` string has
+  to say what the bracket does and does not assert. Two envelopes ship.
+  `intra-node-fixed-cost-v1` runs from `collective-fixed-cost-floor-v1`, which
+  adds no surcharge so the claimed fixed cost is exactly the propagation the
+  backend already charges, to `b200-nccl-2.27-local-v1`.
+  `cross-node-fixed-cost-provisional-v1` runs from `b200-nccl-2.27-local-v1`,
+  a floor because a fabric hop cannot be cheaper than the NVLink hop it
+  replaces, to `b200-nccl-2.27-cross-node-provisional-v1`, which is the
+  pessimistic selectable edge rather than a ceiling: its own band reaches
+  77,487,789 ps at width 8, 57 percent above the 49,487,789 ps it charges, and
+  no evidence here establishes a ceiling at all. `HtsimStepSinkConfig` takes
+  the envelope and the arm as one selection, mutually exclusive with the bare
   profile spelling; the `off` arm resolves to no profile and is exactly the
   default path.
 - Every profile that joins an envelope carries a
   `CollectiveLatencyProvenance` record: an evidence class of `calibrated`,
-  `provisional-transferred` or `structural-floor`, the source, the locator
-  inside that source, the transfer performed, and an inclusive uncertainty
-  band per participant width. A profile whose point value falls outside its
-  own declared band is refused at construction, and a width no band anchors
-  fails closed. `b200-nccl-2.27-cross-node-provisional-v1` is
-  provisional-transferred and never calibrated: it replaces each of the source
-  ring's `2(W-1)` NVLink steps, worth 1,617,160 ps by the two-point slope of
-  the source table, with a fabric step worth 3,000,000 ps at the point
-  estimate, 2,000,000 ps at the lower band edge and 5,000,000 ps at the upper
-  edge. TRAF-36 owns the missing cross-node measurement.
+  `transferred-at-use`, `provisional-transferred` or `structural-floor`, the
+  source, the locator inside that source, the transfer performed, and an
+  inclusive uncertainty band per participant width. A profile whose point
+  value falls outside its own declared band is refused at construction, and a
+  width no band anchors fails closed. An envelope additionally declares a
+  point-of-use class per arm, because a number calibrated on one operation
+  shape or topology is not calibrated when an envelope charges it for another:
+  `b200-nccl-2.27-local-v1` is `calibrated` as an object and both envelopes
+  publish it as `transferred-at-use`, which is the class the run record
+  carries. Only a `calibrated` profile may be downgraded and every downgrade
+  states its reason.
+- `b200-nccl-2.27-cross-node-provisional-v1` is provisional-transferred and
+  never calibrated. Every fabric step is the measured 2,000,000 ps propagation
+  reference plus a per-step initiation term: nothing at the lower edge,
+  1,000,000 ps at the point estimate (one half of the about 2 us commodity
+  RDMA round-trip anchor of Kalia et al. ATC'16), and 3,000,000 ps at the
+  upper edge (the top of the p50 ACK turnaround in UCCL Table 2, restricted to
+  that table's Light columns, whose message sizes match this workload). Each
+  such step replaces one 1,617,160 ps NVLink step from the two-point slope of
+  the source table. The `2(W-1)` decomposition is this repository's own
+  expansion model rather than an attribute of the capture, which names no
+  algorithm; a `2 log2(W)` tree at the same per-step delta would move the
+  width-8 point estimate from 49.49 to 38.43 us. TRAF-36 owns the missing
+  cross-node measurement and the algorithm question with it.
 - Because the table is a surcharge on a transport that already contains one
   propagation delay, `realized_fixed_cost_ps` is what a run actually charges,
   and it exceeds a source capture that was itself a complete fixed cost by up
@@ -555,11 +573,15 @@ comparison and reproduced every raw measurement exactly.
   workload. Registered late and by a different change from the one that
   declared it: the composed-step-budget freeze reserved this ID in advance for
   a collective floor defect and its study then reported the ID unused, so it
-  was never entered in any module registry. Of the two clauses that freeze
-  declared, only the envelope-width clause is live. The double-charge clause is
-  closed by construction, because `StepCollectiveTimingOutcome` already raises
-  when a semantic collective receives more than one base latency, and that
-  guard is exercised by the sink tests. The live clause: the width-8 envelope
+  was never entered in any module registry. The declared trigger, that freeze's
+  G8 endpoint-envelope guard firing, never fired; this registration rests
+  instead on fresh evidence from the fixed-cost envelope study, which found the
+  width-8 ceiling reached exactly by a 32-token prefill on the reference
+  geometry. Of the two clauses that freeze declared, only the envelope-width
+  clause is live. The double-charge clause is closed by construction, because
+  `StepCollectiveTimingOutcome` already raises when a semantic collective
+  receives more than one base latency, with both the pass branch and the raise
+  branch driven by tests. The live clause: the width-8 envelope
   ceiling of 458,752 bytes is reached by a 34-token prefill step and reached
   exactly by a 32-token prefill on the eight-wide expert-parallel reference
   geometry, and the width-4 ceiling of 393,216 bytes is lower still, so a
@@ -580,10 +602,18 @@ comparison and reproduced every raw measurement exactly.
   serializer by the same regression the intra-node profile used. Capture both
   ring ALL-REDUCE and pairwise ALL-TO-ALLV, reserve at least one payload and
   one width as holdout, and require held-out completion error no larger than
-  10 percent or 2 microseconds, whichever is larger. Report the
-  provisional-transferred profile's before error at every measured width,
-  relabel the refitted profile `calibrated` only if the holdouts pass, and
-  preserve the `off` arm and the existing intra-node arm exactly.
+  10 percent or 2 microseconds, whichever is larger. The same capture has to
+  settle the algorithm question the current transfer papers over: neither the
+  intra-node source nor this profile records which algorithm NCCL selected, the
+  `2(W-1)` decomposition is this repository's own expansion model, and NCCL on
+  an eight-GPU NVSwitch node ordinarily selects NVLS or a tree for a small
+  ALL-REDUCE, which at the same per-step delta would move the width-8 point
+  estimate from 49.49 to 38.43 us. Record the selected algorithm per width,
+  either from `NCCL_DEBUG=INFO` topology output or by pinning `NCCL_ALGO`, and
+  refit the step count to match it. Report the provisional-transferred
+  profile's before error at every measured width, relabel the refitted profile
+  `calibrated` only if the holdouts pass, and preserve the `off` arm and the
+  existing intra-node arm exactly.
 - TRAF-37 (Precision; P1; M): stop charging one propagation delay twice under
   an active arm. The intercept is added outside `max(local_service,
   fabric_service)` while the fabric service already contains one propagation

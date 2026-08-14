@@ -553,3 +553,161 @@ def test_an_unsupported_width_still_fails_closed_under_every_named_arm(tmp_path)
             with pytest.raises(ValueError, match="does not support participant count"):
                 profile.base_latency_band_ps(3)
     assert not (tmp_path / "unused").exists()
+
+
+def test_every_envelope_application_of_the_capture_is_downgraded_at_the_point_of_use():
+    intra = INTRA_NODE_COLLECTIVE_FIXED_COST_ENVELOPE
+    cross = CROSS_NODE_COLLECTIVE_FIXED_COST_ENVELOPE
+
+    assert B200_NCCL_2_27_LOCAL_PROFILE.evidence_class == "calibrated"
+    assert intra.arm_evidence_class("upper") == "transferred-at-use"
+    assert cross.arm_evidence_class("lower") == "transferred-at-use"
+    assert "ALL-TO-ALLV" in intra.arm_evidence_note("upper")
+    assert "cross the fabric" in cross.arm_evidence_note("lower")
+
+    assert intra.arm_evidence_class("lower") == "structural-floor"
+    assert cross.arm_evidence_class("upper") == "provisional-transferred"
+    assert intra.arm_evidence_note("lower") == ""
+    assert cross.arm_evidence_note("upper") == ""
+    assert intra.arm_evidence_class("off") is None
+    assert cross.arm_evidence_class("off") is None
+
+    for envelope in NAMED_ENVELOPES:
+        for arm in ("lower", "upper"):
+            assert envelope.arm_evidence_class(arm) != "calibrated", (
+                envelope.envelope_id,
+                arm,
+            )
+
+
+@pytest.mark.parametrize(
+    ("declaration", "expected"),
+    (
+        ((("middle", "transferred-at-use", "why"),), "arm must be 'lower' or 'upper'"),
+        ((("upper", "measured", "why"),), "class must be one of"),
+        ((("upper", "calibrated", "why"),), "may only downgrade"),
+        ((("upper", "transferred-at-use", " "),), "reason must be a nonblank string"),
+        ((("upper", "transferred-at-use"),), "must be an"),
+        (
+            (
+                ("upper", "transferred-at-use", "a"),
+                ("upper", "provisional-transferred", "b"),
+            ),
+            "arms must be unique",
+        ),
+        ((("lower", "transferred-at-use", "why"),), "its profile already declares"),
+    ),
+)
+def test_envelope_rejects_an_unusable_point_of_use_declaration(declaration, expected):
+    with pytest.raises(ValueError, match=expected):
+        CollectiveFixedCostEnvelope(
+            envelope_id="unit-envelope",
+            claim="a claim",
+            lower_profile=COLLECTIVE_FIXED_COST_FLOOR_PROFILE,
+            upper_profile=B200_NCCL_2_27_LOCAL_PROFILE,
+            applied_evidence_class=declaration,
+        )
+
+
+def test_the_sink_publishes_the_downgraded_class_and_the_bare_spelling_does_not(
+    tmp_path,
+    monkeypatch,
+):
+    _stub_backend(monkeypatch)
+    record = _record()
+    through_envelope = HtsimStepSink(
+        _config(
+            tmp_path / "through-envelope",
+            collective_fixed_cost_envelope=(
+                CROSS_NODE_COLLECTIVE_FIXED_COST_ENVELOPE.envelope_id
+            ),
+            collective_fixed_cost_arm="lower",
+        )
+    )
+    bare = HtsimStepSink(
+        _config(
+            tmp_path / "bare",
+            collective_latency_profile=B200_NCCL_2_27_LOCAL_PROFILE,
+        )
+    )
+
+    envelope_result = through_envelope(record)
+    bare_result = bare(record)
+
+    assert envelope_result == bare_result
+    assert through_envelope.collective_timing_outcomes[0].profile_id == (
+        bare.collective_timing_outcomes[0].profile_id
+    )
+    assert through_envelope.collective_timing_outcomes[0].evidence_class == (
+        "transferred-at-use"
+    )
+    assert bare.collective_timing_outcomes[0].evidence_class == "calibrated"
+
+
+def test_the_one_base_per_collective_guard_raises_when_a_second_charge_appears():
+    from simllm.backends.step_sink import (
+        CollectiveArtifactTiming,
+        StepCollectiveTimingOutcome,
+    )
+
+    def artifact(artifact_id: str, base_latency_ps: int) -> CollectiveArtifactTiming:
+        return CollectiveArtifactTiming(
+            artifact_id=artifact_id,
+            operation_ids=("collective-0",),
+            collective_operation_id="collective-0",
+            participant_count=2,
+            critical_endpoint_bytes=64,
+            local_service_ps=0,
+            fabric_transport_ps=1_000,
+            collective_base_latency_ps=base_latency_ps,
+            composed_service_ps=base_latency_ps + 1_000,
+        )
+
+    def outcome(*artifacts: CollectiveArtifactTiming) -> StepCollectiveTimingOutcome:
+        return StepCollectiveTimingOutcome(
+            step_index=0,
+            profile_id="unit",
+            bandwidth_bytes_per_second=1,
+            participant_latency_ps=((2, 10),),
+            propagation_reference_ps=0,
+            artifacts=artifacts,
+        )
+
+    assert outcome(artifact("a", 10), artifact("b", 0)).artifacts[0].artifact_id == "a"
+    with pytest.raises(ValueError, match="did not receive exactly one base latency"):
+        outcome(artifact("a", 5), artifact("b", 5))
+    with pytest.raises(ValueError, match="did not receive exactly one base latency"):
+        outcome(artifact("a", 10), artifact("b", 10))
+
+
+def test_the_legacy_spelling_still_collides_with_an_envelope_selection(tmp_path):
+    from simllm.traffic import LEGACY_COLLECTIVE_LATENCY_PROFILE
+
+    with pytest.raises(ValueError, match="use exactly one"):
+        _config(
+            tmp_path / "legacy-and-envelope",
+            collective_latency_profile=LEGACY_COLLECTIVE_LATENCY_PROFILE,
+            collective_fixed_cost_envelope=(
+                INTRA_NODE_COLLECTIVE_FIXED_COST_ENVELOPE.envelope_id
+            ),
+            collective_fixed_cost_arm="upper",
+        )
+    assert not (tmp_path / "legacy-and-envelope").exists()
+
+
+def test_the_off_arm_is_accepted_on_a_network_profile_the_active_arms_refuse(tmp_path):
+    config = HtsimStepSinkConfig(
+        profile="rnic-nn",
+        tp_ranks=(0, 1),
+        dims=SINK_DIMS,
+        workdir=tmp_path / "off-arm-on-rnic-nn",
+        collective_fixed_cost_envelope=(
+            CROSS_NODE_COLLECTIVE_FIXED_COST_ENVELOPE.envelope_id
+        ),
+        collective_fixed_cost_arm="off",
+    )
+
+    assert config.resolved_collective_latency_profile is None
+    assert config.resolved_collective_evidence_class is None
+    assert config.resolved_collective_fixed_cost_envelope is not None
+    assert config.collective_fixed_cost_arm == "off"

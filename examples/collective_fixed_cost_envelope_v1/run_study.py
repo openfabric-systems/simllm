@@ -324,6 +324,8 @@ def _envelope_inventory() -> dict[str, Any]:
             arms[arm] = {
                 "profile_id": profile.profile_id,
                 "evidence_class": provenance.evidence_class,
+                "applied_evidence_class": envelope.arm_evidence_class(arm),
+                "applied_evidence_note": envelope.arm_evidence_note(arm),
                 "source": provenance.source,
                 "locator": provenance.locator,
                 "transfer": provenance.transfer,

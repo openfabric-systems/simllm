@@ -32,8 +32,16 @@ PICOSECONDS_PER_SECOND = 1_000_000_000_000
 LEGACY_COLLECTIVE_LATENCY_PROFILE = "legacy"
 
 #: how far a profile's intercept table may be trusted
+#:
+#: ``calibrated`` is fitted to a capture of the very thing it prices.
+#: ``transferred-at-use`` is calibrated at its source but applied outside the
+#: operation shape or topology that source captured, so the number is exact and
+#: the application of it is not. ``provisional-transferred`` is derived from
+#: other evidence and never measured. ``structural-floor`` holds by
+#: construction rather than by measurement.
 COLLECTIVE_EVIDENCE_CLASSES = (
     "calibrated",
+    "transferred-at-use",
     "provisional-transferred",
     "structural-floor",
 )
@@ -390,8 +398,9 @@ B200_NCCL_2_27_LOCAL_PROFILE = CollectiveLatencyProfile(
     provenance=CollectiveLatencyProvenance(
         evidence_class="calibrated",
         source=(
-            "nccl-tests issue 333 capture of a DGX B200 intra-node NVLink ring "
-            "ALL-REDUCE under NCCL 2.27"
+            "nccl-tests issue 333 capture of a DGX B200 intra-node NVLink "
+            "ALL-REDUCE under NCCL 2.27; the capture records completion times "
+            "and does not name the algorithm NCCL selected"
         ),
         locator=(
             "the fitted intercepts of examples/collective_latency_floor_v1, "
@@ -457,18 +466,30 @@ B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE = CollectiveLatencyProfile(
             "recorded in docs/papers/msg-size-vs-bandwidth.md"
         ),
         locator=(
-            "Kalia et al. ATC'16 commodity RDMA round-trip anchor of about 2 us "
-            "for the point estimate, UCCL Table 2 ACK turnaround of 2 to 3 us "
-            "p50 for the upper edge, and this repository's measured 2.000 us "
-            "fluid propagation for the lower edge"
+            "every fabric step is this repository's measured 2,000,000 ps fluid "
+            "propagation reference plus a per-step initiation term. The lower "
+            "edge adds nothing, so it is that 2,000,000 ps alone. The point "
+            "estimate adds 1,000,000 ps, one half of the about 2 us commodity "
+            "RDMA round-trip anchor of Kalia et al. ATC'16, giving 3,000,000 ps. "
+            "The upper edge adds 3,000,000 ps, the top of the p50 ACK turnaround "
+            "in UCCL Table 2, giving 5,000,000 ps. The UCCL figures are "
+            "restricted to that table's Light columns, whose message sizes match "
+            "this workload's 12 to 114 KiB collectives; the Heavy columns reach "
+            "7.0 us of p50 ACK turnaround and would put the upper edge higher"
         ),
         transfer=(
-            "each of the source ring's 2(W-1) NVLink steps, worth 1,617,160 ps "
-            "by the two-point slope of the source table, is replaced by one "
-            "fabric step worth 3,000,000 ps at the point estimate, 2,000,000 ps "
-            "at the lower edge and 5,000,000 ps at the upper edge; no cross-node "
-            "measurement was taken, so this profile is provisional-transferred "
-            "and never calibrated"
+            "the 2(W-1) ring-step decomposition is this repository's own "
+            "collective expansion model rather than an attribute of the capture, "
+            "which names no algorithm. Each such step, worth 1,617,160 ps by the "
+            "two-point slope of the source table, is replaced by one fabric step "
+            "worth 3,000,000 ps at the point estimate, 2,000,000 ps at the lower "
+            "edge and 5,000,000 ps at the upper edge. NCCL 2.27 on an eight-GPU "
+            "NVSwitch node ordinarily selects NVLS or a tree for a small "
+            "ALL-REDUCE, and a 2 log2(W) tree decomposition at the same per-step "
+            "delta would move the width-8 point estimate from 49.49 to 38.43 us, "
+            "so the algorithm assumption is a first-order term rather than a "
+            "detail. No cross-node measurement was taken, so this profile is "
+            "provisional-transferred and never calibrated"
         ),
         participant_latency_band_ps=tuple(
             (
@@ -493,14 +514,32 @@ class CollectiveFixedCostEnvelope:
     endpoint bandwidth and the source payload interval so that switching arms
     changes the fixed cost and nothing else, and the lower arm must be strictly
     cheaper at every supported width so the bracket is a bracket.
+
+    The bracket is over the arms a study can select, not over the physical
+    value. An arm's profile may declare an uncertainty band that reaches past
+    the arm above it, and the ``claim`` string is required to say what the
+    bracket does and does not assert.
+
+    ``applied_evidence_class`` downgrades an arm's reported evidence class at
+    the point of use. A profile calibrated on one operation shape or topology
+    is not calibrated when an envelope charges it for a different one, and the
+    class the run record publishes has to say so. Only a ``calibrated`` profile
+    can be downgraded, and every downgrade carries its reason.
     """
 
     envelope_id: str
     claim: str
     lower_profile: CollectiveLatencyProfile
     upper_profile: CollectiveLatencyProfile
+    #: per-arm point-of-use downgrades, as ``(arm, evidence_class, reason)``
+    applied_evidence_class: tuple[tuple[str, str, str], ...] = ()
 
     def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "applied_evidence_class",
+            tuple(tuple(entry) for entry in self.applied_evidence_class),
+        )
         if not isinstance(self.envelope_id, str) or not self.envelope_id.strip():
             raise ValueError("envelope_id must be a nonblank string")
         if not isinstance(self.claim, str) or not self.claim.strip():
@@ -537,6 +576,61 @@ class CollectiveFixedCostEnvelope:
                     f"envelope {self.envelope_id!r} does not bracket participant "
                     f"count {width}: the lower arm is not strictly cheaper"
                 )
+        seen: list[str] = []
+        for index, entry in enumerate(self.applied_evidence_class):
+            if len(entry) != 3:
+                raise ValueError(
+                    f"applied_evidence_class[{index}] must be an "
+                    "(arm, evidence_class, reason) triple"
+                )
+            arm, evidence_class, reason = entry
+            if arm not in ("lower", "upper"):
+                raise ValueError(
+                    f"applied_evidence_class[{index}] arm must be 'lower' or 'upper'"
+                )
+            if arm in seen:
+                raise ValueError("applied_evidence_class arms must be unique")
+            seen.append(arm)
+            if evidence_class not in COLLECTIVE_EVIDENCE_CLASSES:
+                raise ValueError(
+                    f"applied_evidence_class[{index}] class must be one of "
+                    f"{COLLECTIVE_EVIDENCE_CLASSES}"
+                )
+            if evidence_class == "calibrated":
+                raise ValueError(
+                    "a point-of-use declaration may only downgrade, never "
+                    "restore, the 'calibrated' class"
+                )
+            if not isinstance(reason, str) or not reason.strip():
+                raise ValueError(
+                    f"applied_evidence_class[{index}] reason must be a nonblank string"
+                )
+            declared = (lower if arm == "lower" else upper).evidence_class
+            if declared != "calibrated":
+                raise ValueError(
+                    f"envelope {self.envelope_id!r} cannot downgrade the {arm} arm: "
+                    f"its profile already declares {declared!r}, not 'calibrated'"
+                )
+
+    def arm_evidence_class(self, arm: str) -> str | None:
+        """Return the evidence class this envelope publishes for one arm."""
+
+        profile = self.arm_profile(arm)
+        if profile is None:
+            return None
+        for declared_arm, evidence_class, _ in self.applied_evidence_class:
+            if declared_arm == arm:
+                return evidence_class
+        return profile.evidence_class
+
+    def arm_evidence_note(self, arm: str) -> str:
+        """Return why one arm's evidence class was downgraded, or an empty string."""
+
+        self.arm_profile(arm)
+        for declared_arm, _, reason in self.applied_evidence_class:
+            if declared_arm == arm:
+                return reason
+        return ""
 
     @property
     def supported_participant_counts(self) -> tuple[int, ...]:
@@ -580,27 +674,49 @@ class CollectiveFixedCostEnvelope:
         )
 
 
+_OPERATION_SHAPE_DOWNGRADE = (
+    "the source capture is an ALL-REDUCE and this envelope charges its "
+    "intercept for whatever collective the workload emits, including pairwise "
+    "ALL-TO-ALLV, so the number is calibrated and its application here is not"
+)
+
 INTRA_NODE_COLLECTIVE_FIXED_COST_ENVELOPE = CollectiveFixedCostEnvelope(
     envelope_id="intra-node-fixed-cost-v1",
     claim=(
-        "for a collective whose ring steps stay on NVLink, the per-collective "
-        "fixed cost is at least the modeled propagation delay and at most the "
-        "captured DGX B200 intra-node NCCL intercept"
+        "for a collective whose steps stay on NVLink, the selectable arms run "
+        "from the modeled propagation delay, which is a floor no collective can "
+        "beat, to the captured DGX B200 intra-node NCCL intercept transferred "
+        "to whichever collective is being priced. The upper arm is the "
+        "pessimistic selectable edge, not a ceiling on the physical value"
     ),
     lower_profile=COLLECTIVE_FIXED_COST_FLOOR_PROFILE,
     upper_profile=B200_NCCL_2_27_LOCAL_PROFILE,
+    applied_evidence_class=(("upper", "transferred-at-use", _OPERATION_SHAPE_DOWNGRADE),),
 )
 
 CROSS_NODE_COLLECTIVE_FIXED_COST_ENVELOPE = CollectiveFixedCostEnvelope(
     envelope_id="cross-node-fixed-cost-provisional-v1",
     claim=(
-        "for a collective whose ring steps cross the fabric, the per-collective "
-        "fixed cost is at least the captured intra-node intercept, because a "
-        "fabric hop cannot be cheaper than the NVLink hop it replaces, and at "
-        "most the provisional-transferred cross-node estimate"
+        "for a collective whose steps cross the fabric, the selectable arms run "
+        "from the captured intra-node intercept, which is a floor because a "
+        "fabric hop cannot be cheaper than the NVLink hop it replaces, to the "
+        "provisional-transferred cross-node estimate. The upper arm is the "
+        "pessimistic selectable edge and not a ceiling on the physical value: "
+        "its own declared band reaches 77,487,789 ps at width 8, 57 percent "
+        "above the 49,487,789 ps it charges, and no evidence here establishes "
+        "any ceiling at all"
     ),
     lower_profile=B200_NCCL_2_27_LOCAL_PROFILE,
     upper_profile=B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE,
+    applied_evidence_class=(
+        (
+            "lower",
+            "transferred-at-use",
+            _OPERATION_SHAPE_DOWNGRADE
+            + ", and this envelope additionally charges an intra-node capture "
+            "for a collective whose steps cross the fabric",
+        ),
+    ),
 )
 
 _NAMED_COLLECTIVE_LATENCY_PROFILES = (

@@ -216,6 +216,13 @@ class HtsimStepSinkConfig:
         compare=False,
         default=None,
     )
+    #: evidence class published for this selection, downgraded at the point of use
+    resolved_collective_evidence_class: str | None = field(
+        init=False,
+        repr=False,
+        compare=False,
+        default=None,
+    )
     #: the seams this configuration selects; set by validation, never by a caller
     selected_precision_levels: dict[str, object] = field(
         init=False,
@@ -273,14 +280,21 @@ class HtsimStepSinkConfig:
                 "are two spellings of the same selection; use exactly one"
             )
         if self.resolved_collective_fixed_cost_envelope is not None:
-            self.resolved_collective_latency_profile = (
-                self.resolved_collective_fixed_cost_envelope.arm_profile(
-                    self.collective_fixed_cost_arm
-                )
+            envelope = self.resolved_collective_fixed_cost_envelope
+            self.resolved_collective_latency_profile = envelope.arm_profile(
+                self.collective_fixed_cost_arm
+            )
+            self.resolved_collective_evidence_class = envelope.arm_evidence_class(
+                self.collective_fixed_cost_arm
             )
         else:
             self.resolved_collective_latency_profile = (
                 resolve_collective_latency_profile(self.collective_latency_profile)
+            )
+            self.resolved_collective_evidence_class = (
+                None
+                if self.resolved_collective_latency_profile is None
+                else self.resolved_collective_latency_profile.evidence_class
             )
         if (
             self.resolved_collective_latency_profile is not None
@@ -658,6 +672,7 @@ class _PlannedStep:
     collective_latency_profile: CollectiveLatencyProfile | None
     collective_fixed_cost_envelope_id: str | None
     collective_fixed_cost_arm: str | None
+    collective_evidence_class: str | None
 
 
 @dataclass(frozen=True)
@@ -1141,6 +1156,7 @@ class HtsimStepSink:
                 if cfg.resolved_collective_fixed_cost_envelope is None
                 else cfg.collective_fixed_cost_arm
             ),
+            collective_evidence_class=cfg.resolved_collective_evidence_class,
         )
 
     @staticmethod
@@ -1339,7 +1355,9 @@ class HtsimStepSink:
                 propagation_reference_ps=profile.propagation_reference_ps,
                 envelope_id=plan.collective_fixed_cost_envelope_id,
                 arm=plan.collective_fixed_cost_arm,
-                evidence_class=profile.evidence_class,
+                evidence_class=(
+                    plan.collective_evidence_class or profile.evidence_class
+                ),
                 artifacts=tuple(
                     CollectiveArtifactTiming(
                         artifact_id=artifact.artifact_id,
