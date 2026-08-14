@@ -47,8 +47,9 @@ modeled behavior, a cell, a prediction, a tolerance or any other oracle:
    manifests.
 
 Every raw measurement was preserved. Attempt 2 reproduced all 32 frozen step
-latencies and all 8 guard step latencies from attempt 1 to the picosecond,
-which is the check that the harness repair changed nothing measurable.
+latencies and all 8 guard step latencies from attempt 1 to the picosecond, and
+every GOAL artifact digest in all 20 cells is byte-identical between the two
+attempts. That is the check that the harness repair changed nothing measurable.
 
 ## Chronology, disclosed in full
 
@@ -64,6 +65,12 @@ which is the check that the harness repair changed nothing measurable.
 - `22490db` repairs the G4 comparison after attempt 1 measured it as violated.
   This is a post-observation harness change and is labeled as one. It changes
   no modeled behavior and no prediction.
+- `2d9f730` removes the backend binary's filesystem location from the trackable
+  results projection, after the attempt-2 run had already been recorded. It is
+  a second post-observation change to the reporting layer only: it drops one
+  machine-specific string, touches no measurement, no oracle and no tolerance,
+  and the tracked summary was regenerated from attempt 2's unchanged raw
+  document.
 - The attempt-2 run record reports `git_status_clean: false`. The two dirty
   paths at the moment the environment was captured were `docs/modules/traffic.md`
   and this results document, both being drafted while the cells executed.
