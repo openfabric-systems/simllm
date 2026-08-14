@@ -1,11 +1,19 @@
 """Tests for the per-step collective mapping (simllm.traffic.step_comm)."""
 
+import hashlib
+from dataclasses import replace
+
 import pytest
 
 from simllm.compute import ModelDims
 from simllm.core import RequestPhase, ScheduledRequest, StepRecord
 from simllm.traffic import (
+    EXPERT_PARALLEL_TP_ALLREDUCE_SITES,
+    TP_ALLREDUCE_SITES,
+    layer_tp_allreduce_sites,
     render_step_goal,
+    renders_expert_combine,
+    step_communication_phases,
     step_moe_alltoalls,
     step_tp_allreduces,
 )
@@ -35,6 +43,10 @@ TINY_MOE_DIMS = ModelDims(
     moe_intermediate_size=4,
     local_num_experts=2,
 )
+
+#: the same mixture with no expert parallelism, i.e. every expert resident and
+#: tensor-sharded across the TP group, which keeps both allreduce sites
+TINY_SHARDED_MOE_DIMS = replace(TINY_MOE_DIMS, local_num_experts=8)
 
 
 def decode_record(num_new_tokens: int = 3) -> StepRecord:
@@ -74,6 +86,183 @@ def test_step_tp_allreduces_empty_cases():
     # drain record: zero new tokens
     drain = StepRecord(step_index=9, virtual_time_ps=100, finished_request_ids=["a"])
     assert step_tp_allreduces(drain, TINY_DIMS, [0, 1]) == []
+
+
+# ---- which allreduce sites a layer has (TRAF-33) ----
+
+def test_layer_tp_allreduce_sites_follow_the_declared_all_to_all():
+    """A layer reduces its MLP output once, in exactly one mechanism."""
+    record = decode_record()
+    # dense: no combine exists, so both row-parallel sites reduce
+    assert layer_tp_allreduce_sites(record, TINY_DIMS) == TP_ALLREDUCE_SITES
+    assert (
+        layer_tp_allreduce_sites(record, TINY_DIMS, ep_ranks=[0, 1, 2, 3])
+        == TP_ALLREDUCE_SITES
+    )
+    # routed with a declared reducing all-to-all group: the combine returns it
+    assert (
+        layer_tp_allreduce_sites(record, TINY_MOE_DIMS, ep_ranks=[0, 1])
+        == EXPERT_PARALLEL_TP_ALLREDUCE_SITES
+        == ("attention",)
+    )
+    # routed with no declared group is naive expert parallelism: vLLM
+    # 0.26.0 config.py:1052-1055 needs dp, pcp or sequence parallelism for
+    # all-to-all kernels, and runner/moe_runner.py:436-465 then all-reduces
+    # the unreduced fused output over the TP group
+    assert layer_tp_allreduce_sites(record, TINY_MOE_DIMS) == TP_ALLREDUCE_SITES
+    # a one-rank group renders no combine either, so both sites survive
+    assert (
+        layer_tp_allreduce_sites(record, TINY_MOE_DIMS, ep_ranks=[0])
+        == TP_ALLREDUCE_SITES
+    )
+    # expert-tensor-sharded dims behave the same way
+    assert (
+        layer_tp_allreduce_sites(record, TINY_SHARDED_MOE_DIMS) == TP_ALLREDUCE_SITES
+    )
+
+
+def test_every_layer_reduces_its_mlp_output_exactly_once():
+    """The degenerate uniform share must not delete the only reduction.
+
+    With a per-pair share that floors to zero bytes, step_moe_alltoalls
+    renders no combine at all, so suppressing the mlp site would leave that
+    layer's MLP output reduced zero times.
+    """
+    degenerate = ModelDims(
+        num_layers=2,
+        hidden_size=4,
+        intermediate_size=8,
+        num_heads=2,
+        num_kv_heads=2,
+        head_size=2,
+        vocab_size=16,
+        dtype_bytes=1,
+        num_experts=8,
+        top_k=1,
+        moe_intermediate_size=4,
+        local_num_experts=1,
+    )
+    record = decode_record(num_new_tokens=1)
+    ep_ranks = tuple(range(8))
+    # one token times top_k 1 times 4 activation bytes over 8 ranks floors to 0
+    assert step_moe_alltoalls(record, degenerate, ep_ranks) == []
+    assert not renders_expert_combine(record, degenerate, ep_ranks)
+    operations = step_tp_allreduces(record, degenerate, [0, 1], ep_ranks=ep_ranks)
+    assert [op.site for op in operations] == ["attention", "mlp"] * 2
+
+    # and the invariant holds across every representable shape nearby
+    for tokens in (0, 1, 3, 12):
+        for ep_width in (0, 1, 2, 8):
+            for dims in (TINY_DIMS, TINY_MOE_DIMS, degenerate):
+                group = tuple(range(ep_width))
+                step = decode_record(num_new_tokens=tokens)
+                combines = step_moe_alltoalls(step, dims, group)
+                sites = step_tp_allreduces(step, dims, [0, 1], ep_ranks=group)
+                for layer in range(dims.num_layers):
+                    reductions = sum(
+                        1
+                        for op in combines
+                        if op.layer == layer and op.phase == "combine"
+                    ) + sum(
+                        1 for op in sites if op.layer == layer and op.site == "mlp"
+                    )
+                    # zero only when the step renders no traffic at all
+                    assert reductions == (0 if not sites and not combines else 1)
+
+
+def test_step_tp_allreduces_naive_expert_parallelism_keeps_both_sites():
+    """Undeclared expert parallelism renders 2 allreduces and no all-to-all."""
+    record = decode_record()
+    operations = step_tp_allreduces(record, TINY_MOE_DIMS, [0, 1, 2, 3])
+    assert [op.site for op in operations] == ["attention", "mlp"] * 2
+    assert step_moe_alltoalls(record, TINY_MOE_DIMS, ()) == []
+
+
+def test_step_tp_allreduces_sites_do_not_depend_on_group_widths():
+    """The site tuple is fixed by the declaration, not by any width."""
+    record = decode_record()
+    for tp_ranks in ([0, 1], [0, 1, 2, 3], [8, 9, 10, 11], list(range(8))):
+        undeclared = step_tp_allreduces(record, TINY_MOE_DIMS, tp_ranks)
+        assert [op.site for op in undeclared] == ["attention", "mlp"] * 2
+        for ep_ranks in ([0, 1], [0, 1, 2, 3], [16, 17], list(range(8))):
+            declared = step_tp_allreduces(
+                record, TINY_MOE_DIMS, tp_ranks, ep_ranks=ep_ranks
+            )
+            assert [op.site for op in declared] == ["attention"] * 2
+            assert {op.payload_bytes for op in declared + undeclared} == {24}
+
+
+def test_expert_parallel_moe_renders_one_allreduce_and_two_a2avs_per_layer():
+    """24 layers, TP 8 and EP 8: 24 + 48 = 72 collectives, not 96."""
+    dims = replace(TINY_MOE_DIMS, num_layers=24, num_experts=32,
+                   local_num_experts=4)
+    record = decode_record()
+    tp_ranks = tuple(range(8))
+    ep_ranks = tuple(range(8))
+
+    tp_ops = step_tp_allreduces(record, dims, tp_ranks, ep_ranks=ep_ranks)
+    moe_ops = step_moe_alltoalls(record, dims, ep_ranks)
+    assert len(tp_ops) == 24
+    assert {op.site for op in tp_ops} == {"attention"}
+    assert len(moe_ops) == 48
+    assert len(tp_ops) + len(moe_ops) == 72
+
+    trace = render_step_goal(record, dims, tp_ranks, per_layer_calc_ns=5,
+                             ep_ranks=ep_ranks)
+    operation_ids = {message.operation_id for message in trace.messages}
+    assert len(operation_ids) == 72
+    assert sum(1 for name in operation_ids if ":tp-" in name) == 24
+    assert sum(1 for name in operation_ids if ":ep-" in name) == 48
+    # every ring round of every site owns a tag no other operation uses
+    tags_by_operation: dict[str, set[int]] = {}
+    for message in trace.messages:
+        tags_by_operation.setdefault(message.operation_id, set()).add(message.tag)
+    seen: set[int] = set()
+    for tags in tags_by_operation.values():
+        assert not (tags & seen)
+        seen |= tags
+    # the all-to-all block starts right after the 24 shortened ring blocks
+    moe_tags = {
+        tag
+        for name, tags in tags_by_operation.items()
+        if ":ep-" in name
+        for tag in tags
+    }
+    assert min(moe_tags) == 1000 + 24 * 2 * (len(tp_ranks) - 1)
+
+
+def test_dense_and_expert_sharded_goal_text_is_unchanged():
+    """Neither arm's rendered GOAL moved a byte across TRAF-33.
+
+    The digest was taken from the renderer at the pre-change revision
+    e18b9b0102808e9b8e0f276c2b82c51ed8c5b51d.
+    """
+    for dims in (TINY_DIMS, TINY_SHARDED_MOE_DIMS):
+        text = render_step_goal(
+            decode_record(), dims, [0, 1, 2, 3], per_layer_calc_ns=(7, 11)
+        ).render()
+        assert hashlib.sha256(text.encode()).hexdigest() == (
+            "c53782b27c241a85b37f9d81342ed8618e4402a8d2c6c3c5dbe4e59a1a587301"
+        )
+
+
+def test_expert_parallel_moe_communication_phases_match_the_renderer():
+    """The phase planner emits the same shortened ring inventory."""
+    record = decode_record()
+    phases = step_communication_phases(
+        record, TINY_MOE_DIMS, [0, 1], ep_ranks=[0, 1, 2, 3]
+    )
+    ring_phases = [phase for phase in phases if ":tp-" in phase.phase_id]
+    assert {phase.phase_id.split(":")[1] for phase in ring_phases} == {
+        "tp-attention"
+    }
+    # 2 layers x 1 site x 2(W-1) rounds, each round W directed segments
+    assert len(ring_phases) == 2 * 1 * 2
+    assert sum(
+        segment.payload_bytes
+        for phase in ring_phases
+        for segment in phase.segments
+    ) == 2 * 1 * 2 * 2 * 12
 
 
 def test_render_step_goal_refuses_empty_step():
@@ -287,17 +476,22 @@ def test_render_step_goal_moe_only_structure():
 
 
 def test_render_step_goal_moe_with_tp_structure():
-    """TP=2 inside EP=[0..3]: allreduces then a2avs, disjoint tag spaces."""
+    """TP=2 inside EP=[0..3]: allreduces then a2avs, disjoint tag spaces.
+
+    The experts are expert-parallel here (2 of 8 resident), so each layer
+    reduces once, after attention, and the a2av tag base moves down with the
+    shortened allreduce list instead of leaving a hole (TRAF-33).
+    """
     trace = render_step_goal(decode_record(), TINY_MOE_DIMS, [0, 1],
                              per_layer_calc_ns=5, ep_ranks=[0, 1, 2, 3])
     text = trace.render()
     # TP payload = 24 B over W=2: chunk 12 B, 2 rounds per allreduce, 2
-    # sends per round; 4 allreduces total; MoE uses one three-peer star.
-    assert text.count("send 12b") == 4 * 2 * 2 + 2 * 2 * 3
-    # allreduce tag blocks 1000..1007 (stride 2), then a2avs at 1008..1011
-    for tag in (1000, 1002, 1004, 1006, 1008, 1009, 1010, 1011):
+    # sends per round; 2 allreduces total; MoE uses one three-peer star.
+    assert text.count("send 12b") == 2 * 2 * 2 + 2 * 2 * 3
+    # allreduce tag blocks 1000..1003 (stride 2), then a2avs at 1004..1007
+    for tag in (1000, 1002, 1004, 1005, 1006, 1007):
         assert f"tag {tag}" in text
-    assert "tag 1012" not in text
+    assert "tag 1008" not in text
     # every participant calcs every layer
     assert text.count("calc 5") == 2 * 4
 

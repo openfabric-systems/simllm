@@ -640,6 +640,37 @@ and zero changed all-to-all bytes. The detailed evidence is in
 
 ### Completeness
 
+- VLLM-25 (Completeness; P2; M): support shared-expert and mixed dense and
+  routed MoE geometries in the config reader. `model_dims_from_vllm_config`
+  refuses them instead of pricing them as one whole-model routed geometry,
+  reaching parity with the SGLang reader on the shared-expert and mixed
+  dense-and-routed families with the same per-field predicates, though the two
+  lists are not identical in either direction: this one adds
+  `num_shared_experts` and `shared_intermediate_size`, which the vLLM model
+  definitions spell, while the SGLang reader also refuses MLA, speculative and
+  quantization fields that are compute and sampling concerns outside this
+  guard's reduction-inventory scope. The refused values are a positive
+  `n_shared_experts`, `num_shared_experts`,
+  `shared_expert_intermediate_size`, `moe_shared_expert_intermediate_size`,
+  `shared_intermediate_size`, `first_k_dense_replace` or `num_dense_layers`; a
+  `moe_layer_freq` or `decoder_sparse_step` other than 1, since 1 is the only
+  fully routed stride; and a non-empty `mlp_only_layers`. The refusal exists
+  because the collective inventory would be wrong, not only the FLOP count. A
+  shared expert's output is all-reduced over the tensor-parallel group even
+  when the combine kernel already reduced the routed output (pinned vLLM
+  0.26.0, `model_executor/layers/fused_moe/runner/moe_runner.py:416-433`), and
+  the shared MLP itself rides a row-parallel projection with
+  `reduce_results=True` (`model_executor/models/granitemoeshared.py:48` and
+  `:108`), so the layer keeps an mlp-site allreduce that
+  `layer_tp_allreduce_sites` drops for a routed all-to-all layer. A mixed
+  schedule leaves some layers with two allreduce sites and no all-to-all at
+  all (`model_executor/models/qwen2_moe.py:310-316`,
+  `qwen3_moe.py:385-391`). Acceptance needs shared-expert weight bytes and
+  active FLOPs in `ModelDims`, the retained mlp-site allreduce for those
+  layers, a per-layer routed schedule shared with TRAF-34, and a
+  byte-identical fully routed baseline plus the preserved refusal for every
+  geometry still unsupported.
+
 - VLLM-13 (Completeness; P1; L) (remaining GPU-present half after the flagged
   skeleton): the skeleton DP coordination half has landed through
   `SimGroupCoordinator`, including consumption of its local padded-token

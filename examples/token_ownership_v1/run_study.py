@@ -337,7 +337,13 @@ def _renderer_observation(record: Any, dims: Any, supply: Any, world: int) -> di
             if operation.phase == "dispatch":
                 dispatch_sources.add(source)
         layer_hops[operation.layer] += sum(size for _, _, size in rows) // VECTOR_BYTES
-    tp_operations = step_tp_allreduces(record, dims, (0, 1))
+    # The same layer declares its expert-parallel group to both inventories,
+    # so the combine and the mlp-site allreduce cannot both claim the
+    # layer output (TRAF-33). Only the payload set is reported below, and
+    # every site carries the same payload, so no published value moves.
+    tp_operations = step_tp_allreduces(
+        record, dims, (0, 1), ep_ranks=tuple(range(world)), routed_supply=supply
+    )
     uniform_operations = step_moe_alltoalls(record, dims, tuple(range(world)))
     uniform_total = sum(
         size

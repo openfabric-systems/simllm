@@ -88,6 +88,32 @@ hook and is the boundary between independent in-process runs, with the same
 semantics as the vLLM adapter's: without it a multi-cell driver leaks one
 cell's sink, device or replay configuration into the next.
 
+Per-step host cost is chosen through `select_sglang_host_model`
+(`simllm/adapters/sglang/host.py`). It resolves a profile name (`ideal`,
+`turing-cuda-graph`, `turing-eager-host`) and a launch count into the three
+objects that must travel together: the `HostInitiationModel`, the
+`gtx1660-ti-sm75` device key its calibrated constants demand, and a provider
+pinned to the accepted `b100` compute envelope so the device key can move
+without the compute moving with it. The two consumers spell the provider
+differently, so there are two accessors and not one: `worker_overrides()`
+carries `configure`'s `compute_provider` and `sink_overrides()` carries
+`HtsimStepSinkConfig`'s `provider`. Splatting either one into the other's
+consumer raises `TypeError`, and a test pins both spellings against the real
+signatures. `ideal` is the default and returns exactly
+what a study built by hand before this seam existed, which is what keeps every
+accepted artifact identical. A calibrated selection carries
+`SGLANG_HOST_TRANSFER_DISCLOSURE`, because none of its constants was measured
+on SGLang: the per-launch point is a GTX 1660 Ti capture from
+`examples/host_step_cost_v1`, and compute stays on `b100`. The launch count
+defaults to `SGLANG_TRANSFERRED_LAUNCH_COUNTS`, which is a study convention
+rather than a per-class measurement: `examples/compute_fidelity_v1` enumerated
+one eager decode step from vLLM 0.26.0 sources and froze its minimum and
+maximum as the bracket `[440, 567]`, both endpoints apply to both launch
+classes, and pairing 440 with CUDA graphs and 567 with eager launching only
+reproduces the composed vLLM study's two headline cells. SGL-24 owns the
+SGLang-side count that would replace the borrowed bracket. Every enabled row is
+a disclosed three-source device hybrid and never a calibration.
+
 Token serving has two paths. The default fabricates one mid-vocabulary token
 for every row. `SIMLLM_SGLANG_REPLAY_RUN` instead names a joined pre-play
 replay run, and `SglReplayTokenSource` then verifies the trace against its
@@ -135,11 +161,23 @@ configuration; the pump replaces that one object with
 their token counts, their radix hit and their retraction count out of the
 payloads. That is the completion signal the worker seam cannot report.
 `attach_output_collector=False` is the exact off path and mutates nothing.
-The pump refuses to run with chunked prefill enabled, because
-`StepRecord.num_sampled` is unpopulated at this seam (SGL-12) and a
-mid-prompt extend row would otherwise be counted as a generated token. The
-module imports without SGLang and without torch, and its ordering contract is
-tested against a stub scheduler.
+The pump admits chunked prefill on the default record path and refuses it only
+on the compatibility stream. `chunked_prefill_refusal` is that gate: SGL-12
+made every record carry `num_sampled` and `sampled_request_ids`, so a
+mid-prompt extend row is excluded from the sampled set, while
+`SIMLLM_SGLANG_SAMPLE_IDENTITY=0` restores the pre-SGL-12 stream in which every
+scheduled row is read as having produced a token and a mid-prompt chunk would
+be scored as a generated token. The gate reads that state through
+`active_sample_identity`, whose authority is the constructed worker: the
+scheduler builds the worker before the gate runs and the worker latches
+`sample_identity` into its translator, so a later `configure` call or
+environment change never reaches it, and the hook-or-environment derivation is
+the fallback used only when no worker exists yet. Admitting chunked prefill is
+not a safety certificate: the sampled-row rule behind it is source
+transcription plus stub batches, the gate claims no live-scheduler agreement,
+which stays SGL-22, and hazards outside that rule are outside what it
+inspects. The module imports without SGLang and without torch, and
+its ordering contract is tested against a stub scheduler.
 
 RadixCache prefix matching, eviction and the token/request pool accounting
 are scheduler-side index bookkeeping and stay real, so radix hit rates and
@@ -263,6 +301,33 @@ steps at 400, 200 and 100 Gbit/s for the identical workload, while the
 sink-free control took 16. This is the first SGLang run in this repository to
 drive `htsim_rnic` at all, and the first routed study driven by an SGLang trace
 rather than a vLLM one.
+
+SGL-23 is closed. The chain now owns its per-step host cost instead of leaving
+every study to build the zero model by hand, and the seam is frozen by
+expectations-only commit `79b03da` and reported in
+[examples/sglang_host_step_v1/RESULTS.md](../../examples/sglang_host_step_v1/RESULTS.md).
+On 2026-08-14 the tracked nine-record SGLang smoke capture replayed through
+`HtsimStepSink` in seven selector states, for 3,024 `htsim_rnic` invocations
+plus 432 more for a hand-built pre-seam reference sink. All 7 fatal guards
+held, so the run is not void; 63 of 63 scored exact-oracle rows and 18 of 18
+scored behavioral instances passed, in two classes that are never summed. The
+regime flip is one launch wide exactly where the closed form puts it: at 122
+CUDA-graph launches every record records zero exposed host time and a
+`represented_bound` equal to the `memory` bound its own provider reported, and
+at 123 every record records `represented_bound == "host-initiation"` with a
+positive exposure. That bound half was carried into the recorded rows only in
+the fix round, after the first run scored the exposure half alone; the study
+report states that chronology and the rerun changed no timing value. The
+pre-registered warning that a fully masked calibrated cell is still not
+identical to the ideal arm was confirmed: it runs 5 to 24 ns longer per step
+because the two arms quantize the whole-nanosecond enclosure differently, so
+`ideal` is the only exact off path. At the transferred vLLM bracket the
+composed decode step is 76.44 percent (CUDA graph, 440) or 92.43 percent
+(eager, 567) one transferred constant and the modeled B100 compute contributes
+exactly zero, because the launch floor masks it. The fabric term is entirely
+simulated packets and reproduces a hand closed form to 1 ps per collective.
+Nothing in the run was measured on SGLang and no live scheduler was in the
+loop: SGL-24 owns the launch count and SGL-26 owns live selection.
 
 The SGL-11 zero-time communicator slice is frozen by expectations-only commit
 `b0c5b73` and reported in
@@ -434,7 +499,11 @@ Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
 worker-class selection flag) closed as moot 2026-08-04: SGLang's plugin
 framework (`sglang.srt.plugins` entry points plus `HookRegistry` `REPLACE`
 hooks, run before scheduler construction) is a supported non-fork selection
-seam, so no upstream flag is needed.
+seam, so no upstream flag is needed. SGL-23 (the owned per-step host cost
+selector) closed 2026-08-14 with `select_sglang_host_model` and the frozen
+replay study; its residuals are registered as SGL-24 (SGLang's own launch
+count) and SGL-26 (live in-process selection) rather than kept open under the
+closed id.
 
 ### Precision
 - SGL-4 (Precision; P1; L) (remaining half): a paced-mode run checked against
@@ -496,6 +565,34 @@ seam, so no upstream flag is needed.
   MIXED batch and a decode retraction, exact per-step agreement between the
   emitted sampled identity and the requests whose `output_ids` grew, and an
   unchanged compatibility stream.
+- SGL-24 (Precision; P1; M): measure the per-step device-visible launch demand
+  of SGLang's own model step, so the SGLang chain stops borrowing vLLM's. The
+  current surrogate is the `[440, 567]` bracket enumerated statically from
+  vLLM 0.26.0 sources for the pinned Granite MoE geometry in
+  [examples/compute_fidelity_v1](../../examples/compute_fidelity_v1/expectations.md);
+  SGLang's own model runner, its fused MoE path and the pump's unrolled
+  `event_loop_normal` issue their own launches and nobody has counted them.
+  The identifying observable is the count of device-visible kernel launches
+  per model step at the pinned commit for one fixed geometry, enumerated from
+  SGLang sources and confirmed against a CUPTI or Nsight Systems capture of a
+  real decode step. Acceptance requires an SGLang-specific bracket, the signed
+  error of the transferred vLLM bracket against it, and an unchanged ideal
+  path.
+- SGL-25 (Precision; P1; S): price the end-to-end study's sink-free control
+  cell on the same model its sink cells price. The sink cells declare the
+  2-byte, 4-resident-expert per-rank geometry
+  (`examples/sglang_end_to_end_v1/run_study.py`, `_dims`), while the control
+  cell falls back to the worker's own reader, which sees the run's
+  `dtype="float32"` and, because expert parallelism is refused under SGL-18,
+  all 32 experts resident (`simllm/adapters/sglang/worker.py`,
+  `model_dims_from_sglang`). The identifying observables are the two
+  `ModelDims` the two arms actually use and their resident weight bytes:
+  553,654,272 bytes against 5,335,166,976 bytes, a 9.6x step-compute gap that
+  makes the control's scheduler-step count incomparable with the sink cells'.
+  A `dims` override hook on `configure` is the smallest candidate fix and it
+  is a new seam; the expert-residency half belongs to SGL-18. Acceptance
+  requires both arms to report identical per-rank geometry and resident bytes,
+  with the accepted sink-cell artifacts unchanged.
 
 ### Completeness
 
@@ -541,6 +638,25 @@ seam, so no upstream flag is needed.
   as dense. Acceptance requires exact per-rank active FLOPs and resident
   bytes, a supported end-to-end TTFT/TPOT change, and byte-identical dense and
   single-GPU baselines.
+- SGL-26 (Completeness; P1; M): select a nonideal host profile in a live
+  in-process SGLang run and carry it to TTFT and TPOT. `configure` already
+  accepts a host model and `_validate_host_model_selection` already requires
+  the adapter and the sink to agree
+  (`simllm/adapters/sglang/worker.py`), but no live scheduler run has ever
+  selected anything but `ideal`, so the nonideal branch of that agreement
+  check is exercised only by fixture replay and unit tests. The identifying
+  observation is one live pump run at the pinned commit whose emitted
+  `StepResult` values carry the launch floor. Acceptance requires the live
+  run to reproduce the replay study's per-step composition for the same
+  records and the ideal arm of the same run to stay byte-identical to the
+  accepted live artifacts. One divergence the seam newly makes reachable must
+  be settled by that run rather than discovered in it: when a step carries no
+  collective, `HtsimStepSink._plan_step` returns `None`, the worker's `_settle`
+  falls back to `estimate_step_latency_ps`, and that path charges
+  `max(C, N * g)` in raw picoseconds with no whole-nanosecond enclosure, so it
+  disagrees with the sink's enclosed value by up to one nanosecond per step. A
+  single-rank run takes the fallback on every step. Acceptance must state which
+  of the two is authoritative and make the other agree or refuse.
 
 ### Uncategorized
 

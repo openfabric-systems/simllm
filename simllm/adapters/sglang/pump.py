@@ -59,9 +59,50 @@ __all__ = [
     "SchedulerOutputCollector",
     "SglangSchedulerPump",
     "build_in_process_scheduler",
+    "chunked_prefill_refusal",
     "read_output_batch",
     "tokenized_generate_request",
 ]
+
+
+def chunked_prefill_refusal(
+    chunked_prefill_size: Any,
+    *,
+    sample_identity: bool,
+) -> str | None:
+    """Why chunked prefill is refused for this configuration, or ``None``.
+
+    The refusal covers the one state in which a mid-prompt row is known to be
+    mis-scored: ``SIMLLM_SGLANG_SAMPLE_IDENTITY=0`` selects the pre-SGL-12
+    compatibility stream, where ``num_sampled`` and ``sampled_request_ids``
+    stay absent and every consumer reads the whole scheduled batch as sampled,
+    so a mid-prompt chunk is counted as a generated token. That state, not
+    chunked prefill itself, is the refusal condition.
+
+    ``None`` is not a safety certificate. On the default path every record does
+    carry the sampled count and identity, transcribed from the pinned
+    ``process_batch_result_prefill`` rule, so a mid-prompt extend row is
+    excluded from the sampled set. That rule is source transcription checked
+    against stub batches carrying the pinned attribute names; no running
+    scheduler has been observed agreeing with it and this gate does not claim
+    one has, which is SGL-22. Chunked-prefill hazards outside the sampled-row
+    rule are outside what this gate inspects at all.
+    """
+
+    if chunked_prefill_size is None:
+        return None
+    if sample_identity:
+        return None
+    return (
+        "chunked prefill is enabled while SIMLLM_SGLANG_SAMPLE_IDENTITY=0 "
+        "selects the compatibility record stream, in which "
+        "StepRecord.num_sampled and sampled_request_ids stay absent and every "
+        "scheduled row is read as having produced a token, so a mid-prompt "
+        "extend row would silently be scored as a generated token. Keep the "
+        "sampled-identity path, or disable chunked prefill. The sampled-row "
+        "rule itself is source transcription and its live-scheduler "
+        "confirmation is SGL-22."
+    )
 
 
 @dataclass(frozen=True)
@@ -429,10 +470,12 @@ def build_in_process_scheduler(
             moe_dp_rank=0,
             dp_rank=None,
         )
-    if getattr(scheduler, "chunked_prefill_size", None) is not None:
-        raise RuntimeError(
-            "chunked prefill is enabled; the SGLang worker seam does not "
-            "populate StepRecord.num_sampled (SGL-12), so a mid-prompt extend "
-            "row would silently be scored as a generated token"
-        )
+    from simllm.adapters.sglang.worker import active_sample_identity
+
+    refusal = chunked_prefill_refusal(
+        getattr(scheduler, "chunked_prefill_size", None),
+        sample_identity=active_sample_identity(),
+    )
+    if refusal is not None:
+        raise RuntimeError(refusal)
     return scheduler

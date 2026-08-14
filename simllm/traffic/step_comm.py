@@ -4,9 +4,14 @@ Maps one :class:`~simllm.core.StepRecord` plus a per-rank
 :class:`~simllm.compute.ModelDims` plus GOAL rank groups to the collective
 traffic of that engine step.
 
-Tensor parallel (:func:`step_tp_allreduces`): per transformer layer, two
-ring allreduces (the attention output projection and the MLP output
-projection), each moving
+Tensor parallel (:func:`step_tp_allreduces`): per transformer layer, the ring
+allreduces :func:`layer_tp_allreduce_sites` reports for this step. A dense
+layer has two (the attention output projection and the MLP output
+projection); a layer whose rendered combine all-to-all returns its output has
+only the attention one, because that combine already returns finished expert
+vectors and no partial sum spans the TP group. Every layer reduces its MLP
+output exactly once, in exactly one of those two mechanisms. Each allreduce
+moves
 
     payload_bytes = record.total_new_tokens * dims.hidden_size * dims.dtype_bytes
 
@@ -101,8 +106,121 @@ from simllm.traffic.routed_moe import RoutedMoeSupply
 #: the two allreduce sites of one transformer layer, in execution order
 TP_ALLREDUCE_SITES = ("attention", "mlp")
 
+#: the sites a layer executes when its combine all-to-all returns the output
+EXPERT_PARALLEL_TP_ALLREDUCE_SITES = ("attention",)
+
 #: the two all-to-allv phases of one MoE layer, in execution order
 MOE_A2A_PHASES = ("dispatch", "combine")
+
+
+def renders_expert_combine(
+    record: StepRecord,
+    dims: ModelDims,
+    ep_ranks: Sequence[int] | None,
+    *,
+    routed_supply: RoutedMoeSupply | None = None,
+) -> bool:
+    """Whether this step renders a combine that returns a layer's MLP output.
+
+    This is the single authority for the question, and
+    :func:`step_moe_alltoalls` takes its own early exits from it, so the
+    combine inventory and the allreduce site inventory cannot disagree about
+    whether a layer's output arrives over the fabric.
+
+    False for dense dims, for an expert-parallel group below two ranks, for a
+    zero-new-token drain record, and for the one degenerate case of the uniform
+    approximation: when ``total_new_tokens * top_k * hidden_size *
+    dtype_bytes`` floors to zero bytes per ordered pair, that approximation
+    renders no all-to-all at all, so nothing returns the layer output and the
+    reduction stays on the tensor-parallel allreduce. A captured
+    ``RoutedMoeSupply`` has no such floor: its messages carry one whole hidden
+    vector each, so a routed step with tokens always renders its combine, even
+    when every destination is local and the pair table is empty.
+    """
+
+    if not isinstance(record, StepRecord):
+        raise TypeError("record must be a StepRecord")
+    if not isinstance(dims, ModelDims):
+        raise TypeError("dims must be ModelDims")
+    ranks = () if ep_ranks is None else tuple(ep_ranks)
+    if dims.num_experts <= 0 or len(ranks) < 2:
+        return False
+    if record.total_new_tokens <= 0:
+        return False
+    if routed_supply is not None:
+        return True
+    per_pair = (
+        record.total_new_tokens * dims.top_k * dims.hidden_size * dims.dtype_bytes
+    ) // len(ranks)
+    return per_pair > 0
+
+
+def layer_tp_allreduce_sites(
+    record: StepRecord,
+    dims: ModelDims,
+    *,
+    ep_ranks: Sequence[int] | None = None,
+    routed_supply: RoutedMoeSupply | None = None,
+) -> tuple[str, ...]:
+    """The tensor-parallel allreduce sites one layer of this step executes.
+
+    Every layer reduces its MLP output exactly once, and the site rule names
+    which mechanism does it. A dense layer reduces twice overall, after the
+    attention output projection and after the MLP down projection, because
+    both are row-parallel and every rank holds a partial sum. A layer whose
+    output arrives through a rendered combine all-to-all reduces once, after
+    attention: that combine returns finished expert vectors and the token's
+    home rank forms the layer output by a local weighted sum, so no partial
+    sum spans the tensor-parallel group and an mlp-site allreduce would be a
+    double count.
+
+    The condition is exactly :func:`renders_expert_combine`, so the invariant
+    holds for every representable input including the degenerate uniform case
+    where the per-pair share floors to zero bytes and no all-to-all is
+    rendered at all.
+
+    Declaring the expert-parallel group to a renderer asserts all-to-all
+    expert parallelism with a reducing combine, which is a narrower claim than
+    expert parallelism. In the pinned vLLM 0.26.0 two conditions must both
+    hold. ``model_executor/layers/fused_moe/config.py:1052-1055`` makes
+    ``use_all2all_kernels`` require ``use_ep`` AND one of ``dp_size > 1``,
+    ``pcp_size > 1`` or sequence parallelism, so a ``tp=8, ep=8, dp=1`` shape
+    runs naive expert parallelism with no all-to-all at all. And the selected
+    backend must actually reduce: ``config/parallel.py:186`` defaults
+    ``all2all_backend`` to ``allgather_reducescatter``, whose prepare-finalize
+    returns ``output_is_reduced()`` False
+    (``model_executor/layers/fused_moe/prepare_finalize/naive_dp_ep.py:109``
+    and ``:242``), while the deepep, mori, nixl and flashinfer families return
+    True. In either non-reducing case
+    ``model_executor/layers/fused_moe/runner/moe_runner.py:436-465``
+    all-reduces the fused output over the tensor-parallel group, and that
+    shape is rendered by NOT declaring the group: two allreduce sites and no
+    all-to-all. The vLLM producer classifies both conditions before binding a
+    group, and TRAF-40 owns making the mode an explicit declaration rather
+    than the presence or absence of the group.
+
+    Two documented exceptions are refused rather than mis-rendered. A shared
+    expert is all-reduced over the tensor-parallel group even on the reducing
+    all-to-all path
+    (``model_executor/layers/fused_moe/runner/moe_runner.py:416-433``), so a
+    shared-expert model keeps an mlp-site reduction this rule would drop; both
+    frontend readers refuse those geometries, and VLLM-25 and SGL-18 own
+    supporting them. Under sequence parallelism the framework skips the
+    tensor-parallel reduction entirely and the model performs its own
+    allgather, which this repository does not render at all; TRAF-6 owns
+    sequence parallelism.
+
+    ``ModelDims`` carries one whole-model mixture geometry, so mixed dense and
+    routed layer schedules are not expressible (TRAF-34), and an
+    expert-parallel group that leaves ``moe_tp`` above 1 is not expressible
+    either (TRAF-35). Neither is guessed here.
+    """
+
+    if renders_expert_combine(
+        record, dims, ep_ranks, routed_supply=routed_supply
+    ):
+        return EXPERT_PARALLEL_TP_ALLREDUCE_SITES
+    return TP_ALLREDUCE_SITES
 
 
 def _planned_collective_work(
@@ -115,7 +233,9 @@ def _planned_collective_work(
     """Return traffic-owned collective work indexed by semantic call site."""
 
     planned: dict[tuple[str, int, str], tuple[CollectiveWork, int]] = {}
-    for operation in step_tp_allreduces(record, dims, tp_ranks):
+    for operation in step_tp_allreduces(
+        record, dims, tp_ranks, ep_ranks=ep_ranks, routed_supply=routed_supply
+    ):
         key = ("tp", operation.layer, operation.site)
         planned[key] = (
             CollectiveWork(
@@ -613,9 +733,22 @@ class TpAllReduce:
 
 
 def step_tp_allreduces(
-    record: StepRecord, dims: ModelDims, tp_ranks: Sequence[int]
+    record: StepRecord,
+    dims: ModelDims,
+    tp_ranks: Sequence[int],
+    *,
+    ep_ranks: Sequence[int] | None = None,
+    routed_supply: RoutedMoeSupply | None = None,
 ) -> list[TpAllReduce]:
     """The step's TP collectives, empty when the step produces no traffic.
+
+    Each layer contributes the sites :func:`layer_tp_allreduce_sites` reports
+    for this step, in execution order, so a layer whose rendered combine
+    all-to-all returns its output contributes the attention site only.
+    Omitting ``ep_ranks`` declares no reducing all-to-all and keeps both
+    sites, which is also the correct rendering of naive expert parallelism.
+    Pass the same ``routed_supply`` the MoE renderer receives, so both
+    inventories answer :func:`renders_expert_combine` identically.
 
     Empty means either a TP world of size 1 (nothing to reduce across) or a
     record with zero new tokens (a drain record carrying only completions).
@@ -626,10 +759,13 @@ def step_tp_allreduces(
     payload = record.total_new_tokens * dims.hidden_size * dims.dtype_bytes
     if payload <= 0:
         return []
+    sites = layer_tp_allreduce_sites(
+        record, dims, ep_ranks=ep_ranks, routed_supply=routed_supply
+    )
     return [
         TpAllReduce(layer=layer, site=site, ranks=ranks, payload_bytes=payload)
         for layer in range(dims.num_layers)
-        for site in TP_ALLREDUCE_SITES
+        for site in sites
     ]
 
 
@@ -1102,17 +1238,13 @@ def step_moe_alltoalls(
     empty when its per-pair share rounds to zero bytes.
     """
     ranks = tuple(ep_ranks)
-    if dims.num_experts <= 0 or len(ranks) < 2:
-        return []
-    if record.total_new_tokens <= 0:
+    if not renders_expert_combine(record, dims, ranks, routed_supply=routed_supply):
         return []
     if routed_supply is not None:
         return _routed_moe_alltoalls(record, dims, ranks, routed_supply)
     per_pair = (record.total_new_tokens * dims.top_k * dims.hidden_size * dims.dtype_bytes) // len(
         ranks
     )
-    if per_pair <= 0:
-        return []
     source = ranks[0]
     dispatch = tuple(
         (source, destination, per_pair)
@@ -1350,8 +1482,8 @@ def render_step_goal(
 
     Every participating rank executes the serial chain over layers: ``calc``
     of the corresponding ``per_layer_calc_ns`` GOAL units (ns), then the
-    layer's attention allreduce, then its MLP allreduce (both only when the TP
-    world produces collectives), then, for MoE dims with ``ep_ranks`` given,
+    layer's allreduce sites in execution order (only when the TP world
+    produces collectives), then, for MoE dims with ``ep_ranks`` given,
     the dispatch and combine all-to-allvs over the EP group; the next layer's
     calc waits for the previous layer's last collective. This is the serial
     compatibility off path; observation-aware execution uses
@@ -1362,19 +1494,24 @@ def render_step_goal(
     exist, the EP ranks; other ranks below ``num_goal_ranks`` get one
     zero-cost calc so every rank block is populated.
 
-    Tags: allreduce k (layer * 2 + site index) takes the disjoint block
-    ``base_tag + k * 2(W-1)`` onward, one tag per round, exactly as before;
-    MoE all-to-allvs take one tag each, ``base_tag + tp_tag_slots + j`` for
-    all-to-all j (layer * 2 + phase index), starting right after the
-    allreduce blocks. A step without MoE work renders byte-identically to
-    the pre-MoE emitter (golden-tested).
+    Tags: allreduce k, counted over the emitted sites in layer-major order,
+    takes the disjoint block ``base_tag + k * 2(W-1)`` onward, one tag per
+    round; MoE all-to-allvs take one tag each, ``base_tag + tp_tag_slots + j``
+    for all-to-all j (layer * 2 + phase index), starting right after the
+    allreduce blocks. A layer that emits one site therefore consumes one
+    block, so the all-to-all base moves down with the shortened list instead
+    of leaving a hole. A model with two sites per layer keeps the historical
+    ``layer * 2 + site index`` allocation exactly, and a step without MoE work
+    renders byte-identically to the pre-MoE emitter (golden-tested).
 
     Raises ``ValueError`` when the step has neither TP collectives nor MoE
     all-to-alls (callers decide what "no network work" means; the
     closed-loop sink returns None so the frontend's own compute estimate
     stands).
     """
-    tp_ops = step_tp_allreduces(record, dims, tp_ranks)
+    tp_ops = step_tp_allreduces(
+        record, dims, tp_ranks, ep_ranks=ep_ranks, routed_supply=routed_supply
+    )
     moe_ops = step_moe_alltoalls(
         record,
         dims,
@@ -1404,6 +1541,9 @@ def render_step_goal(
                 participants.append(rank)
     tag_stride = 2 * (len(ranks) - 1) if tp_ops else 0
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
+    tp_by_key = {
+        (op.layer, op.site): (index, op) for index, op in enumerate(tp_ops)
+    }
     moe_by_key = {(op.layer, op.phase): op for op in moe_ops}
     moe_tag_by_key = {
         (op.layer, op.phase): moe_base_tag + index
@@ -1431,9 +1571,11 @@ def render_step_goal(
             calc_done[rank] = calc
         previous = {**previous, **calc_done}
         if tp_ops:
-            for site_index in range(len(TP_ALLREDUCE_SITES)):
-                op_index = layer * len(TP_ALLREDUCE_SITES) + site_index
-                op = tp_ops[op_index]
+            for site in TP_ALLREDUCE_SITES:
+                entry = tp_by_key.get((layer, site))
+                if entry is None:
+                    continue
+                op_index, op = entry
                 done = ring_allreduce(
                     trace,
                     ranks=list(op.ranks),
@@ -1503,7 +1645,9 @@ def render_sequenced_step_goal(
     remains the default and has no message-granularity selector.
     """
 
-    tp_ops = step_tp_allreduces(record, dims, tp_ranks)
+    tp_ops = step_tp_allreduces(
+        record, dims, tp_ranks, ep_ranks=ep_ranks, routed_supply=routed_supply
+    )
     moe_sequences = step_moe_message_sequences(
         record,
         dims,
@@ -1536,6 +1680,10 @@ def render_sequenced_step_goal(
                 participants.append(rank)
     tag_stride = 2 * (len(ranks) - 1) if tp_ops else 0
     moe_base_tag = base_tag + len(tp_ops) * tag_stride
+    tp_by_key = {
+        (operation.layer, operation.site): (index, operation)
+        for index, operation in enumerate(tp_ops)
+    }
     moe_by_key = {
         (sequence.layer, sequence.phase): sequence
         for sequence in moe_sequences
@@ -1563,9 +1711,11 @@ def render_sequenced_step_goal(
             calc_done[rank] = calc
         previous = {**previous, **calc_done}
         if tp_ops:
-            for site_index in range(len(TP_ALLREDUCE_SITES)):
-                op_index = layer * len(TP_ALLREDUCE_SITES) + site_index
-                operation = tp_ops[op_index]
+            for site in TP_ALLREDUCE_SITES:
+                entry = tp_by_key.get((layer, site))
+                if entry is None:
+                    continue
+                op_index, operation = entry
                 done = ring_allreduce(
                     trace,
                     ranks=list(operation.ranks),
@@ -1728,14 +1878,19 @@ def step_communication_phases(
 ) -> tuple[CollectiveCommunicationPhase, ...]:
     """Expand a step into serial phases of positive directed transfers."""
 
-    tp_ops = step_tp_allreduces(record, dims, tp_ranks)
+    tp_ops = step_tp_allreduces(
+        record, dims, tp_ranks, ep_ranks=ep_ranks, routed_supply=routed_supply
+    )
     moe_ops = step_moe_alltoalls(
         record,
         dims,
         ep_ranks if ep_ranks is not None else (),
         routed_supply=routed_supply,
     )
-    tp_by_key = {(operation.layer, operation.site): operation for operation in tp_ops}
+    tp_by_key = {
+        (operation.layer, operation.site): (index, operation)
+        for index, operation in enumerate(tp_ops)
+    }
     moe_by_key = {(operation.layer, operation.phase): operation for operation in moe_ops}
     tp_ranks_tuple = tuple(tp_ranks)
     tag_stride = 2 * (len(tp_ranks_tuple) - 1) if tp_ops else 0
@@ -1747,11 +1902,11 @@ def step_communication_phases(
 
     phases = []
     for layer in range(dims.num_layers):
-        for site_index, site in enumerate(TP_ALLREDUCE_SITES):
-            operation = tp_by_key.get((layer, site))
-            if operation is None:
+        for site in TP_ALLREDUCE_SITES:
+            entry = tp_by_key.get((layer, site))
+            if entry is None:
                 continue
-            operation_index = layer * len(TP_ALLREDUCE_SITES) + site_index
+            operation_index, operation = entry
             phases.extend(
                 _ring_communication_phases(
                     operation,

@@ -125,6 +125,11 @@ class SerialStepTiming:
     host_empirical_lower_ps: int = 0
     host_empirical_upper_ps: int = 0
     exposed_host_ps: int = 0
+    #: which term set the represented duration: the provider's own bound name
+    #: when it survived, or ``host-initiation`` when the launch floor replaced
+    #: it. ``HostInitiationModel`` decides this and nothing downstream can
+    #: recompute it, so it is carried rather than inferred.
+    represented_bound: str = ""
 
 
 def _execution_id(record: StepRecord) -> str:
@@ -273,6 +278,7 @@ class SerialStepLowerer(ExecutionLowerer):
             host_empirical_lower_ps=represented.empirical_lower_ps,
             host_empirical_upper_ps=represented.empirical_upper_ps,
             exposed_host_ps=represented.exposed_ps,
+            represented_bound=represented.bound,
         )
 
     def lower(
@@ -330,7 +336,13 @@ class SerialStepLowerer(ExecutionLowerer):
         timing: SerialStepTiming,
     ) -> ExecutionGraph:
         cfg = self.config
-        tp_ops = step_tp_allreduces(record, cfg.dims, cfg.tp_ranks)
+        tp_ops = step_tp_allreduces(
+            record,
+            cfg.dims,
+            cfg.tp_ranks,
+            ep_ranks=cfg.ep_ranks,
+            routed_supply=cfg.routed_moe_supply,
+        )
         moe_ops = step_moe_alltoalls(
             record,
             cfg.dims,

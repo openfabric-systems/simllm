@@ -19,10 +19,55 @@ the flow-level work the GOAL emitter renders.
   chunked send/recv chains.
 - `step_comm` (M4): one `StepRecord` plus a per-rank `ModelDims` plus a
   tensor-parallel group of GOAL ranks maps to the step's TP collective
-  work. `step_tp_allreduces` lists two ring allreduces per transformer
-  layer (attention output, MLP output), each of payload
+  work. `step_tp_allreduces` lists, per transformer layer, the ring allreduces
+  `layer_tp_allreduce_sites` reports for the model and its expert-parallel
+  declaration, each of payload
   `total_new_tokens * hidden_size * dtype_bytes`; a TP world of size 1 or
   a zero-token drain record produces no ops.
+- `layer_tp_allreduce_sites` is that site rule. Every layer reduces its MLP
+  output exactly once and the rule names which mechanism does it. A dense
+  layer reduces at both row-parallel outputs, the attention output projection
+  and the MLP down projection. A routed layer whose output arrives through a
+  combine all-to-all reduces only after attention, because that combine
+  returns finished expert vectors and the token's home rank forms the layer
+  output by a local weighted sum, so no partial sum spans the TP group. The
+  condition is exactly `renders_expert_combine`, the shared predicate
+  `step_moe_alltoalls` takes its own early exits from, so the two inventories
+  cannot disagree. That includes the degenerate uniform case: when the
+  per-pair share floors to zero bytes no all-to-all is rendered at all, so the
+  layer keeps both sites and its output is still reduced once.
+- Declaring the expert-parallel group to a renderer therefore asserts an
+  all-to-all whose combine returns an already reduced output, which is a
+  narrower claim than expert parallelism, and two pinned vLLM 0.26.0
+  conditions must both hold for it. First,
+  `model_executor/layers/fused_moe/config.py:1052-1055` makes
+  `use_all2all_kernels` require expert parallelism AND one of `dp_size > 1`,
+  `pcp_size > 1` or sequence parallelism, so a `tp=8, ep=8, dp=1` deployment
+  runs naive expert parallelism with no all-to-all at all. Second, the
+  selected backend must reduce: `config/parallel.py:186` defaults
+  `all2all_backend` to `allgather_reducescatter`, whose prepare-finalize
+  returns `output_is_reduced()` False
+  (`model_executor/layers/fused_moe/prepare_finalize/naive_dp_ep.py:109` and
+  `:242`), while the deepep, mori, nixl and flashinfer families return True.
+  When either fails,
+  `model_executor/layers/fused_moe/runner/moe_runner.py:436-465` all-reduces
+  the fused output over the TP group. The naive shape is rendered by not
+  declaring the group: two allreduce sites and no all-to-all, which is what
+  the framework executes. The vLLM producer classifies both conditions before
+  it binds a group, and refuses outright when an all-to-all path exists whose
+  allgather and reduce-scatter traffic this repository renders nothing for,
+  rather than pricing it as a pairwise all-to-allv.
+  TRAF-40 owns turning the mode into an explicit declaration and rendering
+  that refused path. Sequence parallelism is out of scope here and owned by
+  TRAF-6: under it the framework skips the TP reduction entirely and the model
+  performs its own allgather.
+- Shared experts are the documented exception, all-reduced over the TP group
+  even on the reducing all-to-all path
+  (`model_executor/layers/fused_moe/runner/moe_runner.py:416-433`); both
+  frontend readers refuse shared-expert geometries rather than dropping that
+  reduction, and VLLM-25 and SGL-18 own supporting them. TRAF-34 owns mixed
+  dense and routed layer schedules and TRAF-35 owns `moe_tp` above 1; neither
+  is expressible in `ModelDims` and neither is guessed.
 - `step_moe_alltoalls`: the same record plus MoE
   `ModelDims` plus an expert-parallel group of W GOAL ranks maps to the
   step's MoE traffic: per MoE layer, a dispatch pairwise all-to-allv then
@@ -89,6 +134,64 @@ the flow-level work the GOAL emitter renders.
   endpoint rate and adds one width-indexed semantic-collective base latency
   outside the phase-local maximum. TRAF-31 owns the missing same-generation
   point-to-point capture.
+- `CollectiveFixedCostEnvelope` is that same selection expressed as a named
+  bracket rather than one silently chosen constant. An envelope names a
+  `lower` and an `upper` profile beside the `off` arm that charges nothing,
+  and it refuses a pair that does not isolate the fixed cost: both arms must
+  share the endpoint rate, the source payload interval, the propagation
+  reference and the supported widths, both must carry provenance, and the
+  lower arm must be strictly cheaper at every width. The bracket is over the
+  arms a study can select, not over the physical value: an arm's own declared
+  band may reach past the arm above it, and the envelope's `claim` string has
+  to say what the bracket does and does not assert. Two envelopes ship.
+  `intra-node-fixed-cost-v1` runs from `collective-fixed-cost-floor-v1`, which
+  adds no surcharge so the claimed fixed cost is exactly the propagation the
+  backend already charges, to `b200-nccl-2.27-local-v1`.
+  `cross-node-fixed-cost-provisional-v1` runs from `b200-nccl-2.27-local-v1`,
+  a floor because a fabric hop cannot be cheaper than the NVLink hop it
+  replaces, to `b200-nccl-2.27-cross-node-provisional-v1`, which is the
+  pessimistic selectable edge rather than a ceiling: its own band reaches
+  77,487,789 ps at width 8, 57 percent above the 49,487,789 ps it charges, and
+  no evidence here establishes a ceiling at all. `HtsimStepSinkConfig` takes
+  the envelope and the arm as one selection, mutually exclusive with the bare
+  profile spelling; the `off` arm resolves to no profile and is exactly the
+  default path.
+- Every profile that joins an envelope carries a
+  `CollectiveLatencyProvenance` record: an evidence class of `calibrated`,
+  `transferred-at-use`, `provisional-transferred` or `structural-floor`, the
+  source, the locator inside that source, the transfer performed, and an
+  inclusive uncertainty band per participant width. A profile whose point
+  value falls outside its own declared band is refused at construction, and a
+  width no band anchors fails closed. An envelope additionally declares a
+  point-of-use class per arm, because a number calibrated on one operation
+  shape or topology is not calibrated when an envelope charges it for another:
+  `b200-nccl-2.27-local-v1` is `calibrated` as an object and both envelopes
+  publish it as `transferred-at-use`, which is the class the run record
+  carries. Only a `calibrated` profile may be downgraded and every downgrade
+  states its reason.
+- `b200-nccl-2.27-cross-node-provisional-v1` is provisional-transferred and
+  never calibrated. Every fabric step is the measured 2,000,000 ps propagation
+  reference plus a per-step initiation term: nothing at the lower edge,
+  1,000,000 ps at the point estimate (one half of the about 2 us commodity
+  RDMA round-trip anchor of Kalia et al. ATC'16), and 3,000,000 ps at the
+  upper edge (the top of the p50 ACK turnaround in UCCL Table 2, restricted to
+  that table's Light columns, whose message sizes match this workload). Each
+  such step replaces one 1,617,160 ps NVLink step from the two-point slope of
+  the source table. The `2(W-1)` decomposition is this repository's own
+  expansion model rather than an attribute of the capture, which names no
+  algorithm; a `2 log2(W)` tree at the same per-step delta would move the
+  width-8 point estimate from 49.49 to 38.43 us. TRAF-36 owns the missing
+  cross-node measurement and the algorithm question with it.
+- Because the table is a surcharge on a transport that already contains one
+  propagation delay, `realized_fixed_cost_ps` is what a run actually charges,
+  and it exceeds a source capture that was itself a complete fixed cost by up
+  to `propagation_reference_ps`. TRAF-37 owns that over-count.
+- `arm_ratio_envelope` is the reporting helper an envelope study publishes
+  with. Given one `(arm, numerator_ps, denominator_ps)` row per arm it returns
+  the per-arm ratios, the interval they span, and whether that interval
+  brackets 1, i.e. whether the evidence determines the sign of the comparison
+  at all. Quotients are exact before conversion to float, so a large fixed
+  cost cannot swallow the low-order digits of a ratio.
 - `lower_step_observations` joins that traffic plan to framework-neutral
   `ExecutionObservations`. The adapter tuple order, logical queues, dependency
   edges, gates, priorities, correlations and completion frontier pass through
@@ -99,8 +202,8 @@ the flow-level work the GOAL emitter renders.
   `ExecutionLowerer` contract. Omitting observations delegates directly to
   `SerialStepLowerer` as the exact compatibility off path.
 - `render_step_goal` renders the serial per-rank chain (per layer: `calc`,
-  the two TP allreduces when the TP world produces them, then for MoE dims
-  with `ep_ranks` given the dispatch and combine all-to-allvs) through the
+  the layer's TP allreduce sites when the TP world produces them, then for MoE
+  dims with `ep_ranks` given the dispatch and combine all-to-allvs) through the
   existing `ring_allreduce` and `pairwise_all_to_allv` patterns; tags are
   disjoint per collective. The calc input may be one compatibility scalar or
   an ordered value per layer, and `num_goal_ranks` idle-fills a larger GOAL
@@ -484,10 +587,173 @@ this repository reports, and the width-8 endpoint envelope's 458,752-byte
 ceiling was reached to within 17 percent by a 34-token prefill step, so a
 larger case would be rejected at planning time.
 
+The [fixed-cost envelope study](../../examples/collective_fixed_cost_envelope_v1/RESULTS.md)
+then replaced the silent choice of that intercept with a bracket. Sixteen cells
+over four named arms, two link rates and two expert-parallel widths, replayed
+through the fluid backend on an all-remote placement, put the per-collective
+surcharge at width 8 between 0 and 49,487,789 ps and the realized fixed cost,
+propagation included, between 2,000,000 and 51,487,789 ps, a factor of 25.7.
+Across the fixture's 48 collectives that is 46.0 to 95.6 percent of a decode
+step, so the fixed cost dominates every arm including the default, and the
+default is the only arm that does not say so. The arm envelope of the
+ep4-to-ep8 decode ratio is 0.547454 to 1.248990 at 400 Gbit/s and 0.549095 to
+1.224748 at 200 Gbit/s: both brackets contain 1, so the sign of the
+expert-parallel width ordering is not determined by the available evidence. The
+compression is equally large, moving the 200 to 400 Gbit/s ep8 decode ratio
+from 1.065947 under the default to 1.005326 under the provisional cross-node
+arm. Every one of the 40 simulated steps is reproduced to the picosecond by
+`compute_service_ps + 48 * fabric_service_ps + 48 * surcharge`, with the fluid
+backend returning exactly one picosecond above the closed-form fabric service
+at all eight width, phase and rate points. Attempt one is retained as void
+because the structural fatal guard compared a list of tuples against a list of
+lists and could not hold for any data; attempt two repaired only that
+comparison and reproduced every raw measurement exactly.
+
+The 2026-08-14 TRAF-33 qualification corrected the tensor-parallel allreduce
+site inventory and closes the task. A layer's sites come from
+`layer_tp_allreduce_sites`, so a layer whose output arrives through a combine
+all-to-all reduces once, after attention, instead of twice. Over 54 frozen
+cells crossing model kind, tensor-parallel width, layer count and token count,
+the GOAL renderer, the communication-phase planner and the graph lowerer with
+its collective plan each reproduced one frozen closed form exactly, and the
+all-to-all tag base moved down with the shortened ring list without sharing a
+tag with any ring block. All 120 pre-registered scored instances in four
+families passed and no fatal guard was violated, though only 48 of the 120
+exercise a layer the change alters; the other 72 are dense and
+expert-tensor-sharded regression arms whose value is that they did not move.
+The reference 24-layer cell with an 8-rank tensor-parallel group and a declared
+8-rank all-to-all expert-parallel group renders 24 allreduces plus 48
+all-to-alls, that is 72 collectives and 8,257,536 tensor-parallel bytes,
+against 96 collectives and 16,515,072 bytes before. Per site the rendered
+344,064 bytes sit exactly on the `2(W-1)P` bandwidth-optimal floor at width 8
+and a factor of four below the naive all-gather ceiling. Every arm that renders
+no all-to-all, dense, expert-tensor-sharded and naive expert-parallel alike, is
+byte-identical to the pre-change renderer with its digest pinned in the tests.
+See [the allreduce site results](../../examples/moe_tp_sites_v1/RESULTS.md).
+
+Two integrator reviews then corrected the merged rule, the producer feeding it
+and two of that report's statements; all of the following is post-specified.
+The first rule keyed on the dims alone and was wrong for naive expert
+parallelism, so it now keys on the declared group as described in the interface
+above, and a further 18 post-specified cells covering that shape passed 36 of
+36 in the same three path families. Those instances are a separate evidence
+class and are not summed with the 120. The second review found three defects
+one level out from the rule. The vLLM producer bound the group unconditionally,
+so it still declared an all-to-all for a `dp=1` deployment and for the default
+non-reducing backend; it now classifies both pinned conditions and refuses the
+backend whose allgather and reduce-scatter traffic this repository renders
+nothing for. The reader's refusal list was a strict subset of the SGLang list
+it claimed to mirror and now reaches parity with it on the shared-expert and mixed-schedule
+families with per-field predicates, the MLA, speculative and
+quantization refusals staying outside this guard's scope. And the one-reduction invariant had a representable
+counterexample, a uniform per-pair share flooring to zero bytes, which left a
+layer reduced zero times; both inventories now take their exits from one shared
+predicate and a new fatal guard measures the invariant on all 72 cells. The
+freeze's registered invariance clauses for rank relabeling and expert-parallel
+group width, unexecuted in the first run, now run at every cell along with a
+sweep of the resident-expert count the corrected rule no longer reads, and the
+routed byte totals are asserted against a closed form confirmed identical to
+the merge base over all 72 cells. The end-to-end weight is the per-collective
+base latency rather than the bytes: removing 24 phantom collectives removes
+`24 * 30,128,029` ps, that is 0.723073 ms of additive base latency, which is
+21.50 percent of the 3.362899 ms defective step and 27.39 percent of the
+2.639827 ms corrected step once a tensor-parallel group is declared. The
+earlier 38 percent figure divided by a 1.916754 ms step measured at
+`tp_ranks=(0,)`, a configuration with no allreduce at all, and is retracted, as
+is the freeze's napkin line that charged an aggregate byte count to a single
+link and overstated the serialization surplus eightfold.
+
+One rendered surface and one prose projection are stale across TRAF-33, and
+TRAF-41 owns both. The Granite live cells of the collective plan default study
+declare one 8-rank group as both the tensor-parallel and the expert-parallel
+group over expert-parallel dims, so their 709,803,840 ps TTFT, 132,794,880 ps
+TPOT and transport rows were measured with 48 rather than 24 allreduces per
+step and must be rerun. The composed step budget study's measured
+1,446,145,392 ps collective floor is 48 MoE all-to-alls at `tp_ranks=(0,)`,
+which this change does not touch and a rerun reproduces exactly; what is stale
+there is its counterfactual paragraph projecting that a 24-layer model's
+tensor-parallel allreduces would add another 1,446,145,392 ps and be 74.73 to
+75.45 percent of the composed step, since under a declared reducing all-to-all
+group the projected addition is 723,072,696 ps. That paragraph needs amending
+rather than rerunning, and the measured floor is never halved. Both studies'
+dense cells, including the 196,608-byte and 4,730,040 ps rank-order row, are
+unaffected, as are the MoE studies that render an expert-parallel group with a
+tensor-parallel world of one.
+
 ## Open tasks
 
 ### Precision
 
+- TRAF-32 (Precision; P1; M): widen or refit the endpoint-byte envelope the
+  calibrated profiles accept, which is currently too narrow for the mission
+  workload. Registered late and by a different change from the one that
+  declared it: the composed-step-budget freeze reserved this ID in advance for
+  a collective floor defect and its study then reported the ID unused, so it
+  was never entered in any module registry. The declared trigger, that freeze's
+  G8 endpoint-envelope guard firing, never fired; this registration rests
+  instead on fresh evidence from the fixed-cost envelope study, which found the
+  width-8 ceiling reached exactly by a 32-token prefill on the reference
+  geometry. Of the two clauses that freeze declared, only the envelope-width
+  clause is live. The double-charge clause is closed by construction, because
+  `StepCollectiveTimingOutcome` already raises when a semantic collective
+  receives more than one base latency, with both the pass branch and the raise
+  branch driven by tests. The live clause: the width-8 envelope
+  ceiling of 458,752 bytes is reached by a 34-token prefill step and reached
+  exactly by a 32-token prefill on the eight-wide expert-parallel reference
+  geometry, and the width-4 ceiling of 393,216 bytes is lower still, so a
+  realistic prefill is rejected at planning time rather than priced. Capture or
+  derive collective completion across the endpoint loads a mission prefill
+  actually produces, extend the profile's validity interval to cover them with
+  stated held-out error, and keep the explicit rejection for loads outside the
+  extended interval. Acceptance must show a mission-scale prefill step
+  completing under an active arm and must preserve every accepted decode-step
+  timestamp exactly.
+- TRAF-36 (Precision; P1; L): measure the real cross-node per-collective fixed
+  cost and replace `b200-nccl-2.27-cross-node-provisional-v1`, which is
+  transferred from an intra-node capture and carries no cross-node
+  measurement. Identifying observable: the completion time of a small-payload
+  collective, at participant widths 2, 4 and 8 with one rank per node, over a
+  400 Gbit/s fabric, as a function of payload across the profile's 8-byte to
+  256-KiB interval, so the width-indexed intercept separates from the endpoint
+  serializer by the same regression the intra-node profile used. Capture both
+  ring ALL-REDUCE and pairwise ALL-TO-ALLV, reserve at least one payload and
+  one width as holdout, and require held-out completion error no larger than
+  10 percent or 2 microseconds, whichever is larger. The same capture has to
+  settle the algorithm question the current transfer papers over: neither the
+  intra-node source nor this profile records which algorithm NCCL selected, the
+  `2(W-1)` decomposition is this repository's own expansion model, and NCCL on
+  an eight-GPU NVSwitch node ordinarily selects NVLS or a tree for a small
+  ALL-REDUCE, which at the same per-step delta would move the width-8 point
+  estimate from 49.49 to 38.43 us. Record the selected algorithm per width,
+  either from `NCCL_DEBUG=INFO` topology output or by pinning `NCCL_ALGO`, and
+  refit the step count to match it. Report the provisional-transferred
+  profile's before error at every measured width, relabel the refitted profile
+  `calibrated` only if the holdouts pass, and preserve the `off` arm and the
+  existing intra-node arm exactly.
+- TRAF-37 (Precision; P1; M): stop charging one propagation delay twice under
+  an active arm. The intercept is added outside `max(local_service,
+  fabric_service)` while the fabric service already contains one propagation
+  delay, so the realized per-collective fixed cost is `intercept +
+  propagation_reference_ps`, which over-counts a source capture that was
+  itself a complete fixed cost by up to 2.000 us per collective: 6.6 percent
+  at width 8, 12.7 percent at width 4 and 18.7 percent at width 2 of the
+  intra-node arm. Identify how much of each source intercept is transport that
+  the backend already prices, subtract only that part, and require the
+  corrected arm to reproduce the source capture's held-out completions at least
+  as well as the current one. The uncorrected charge stays available as the
+  explicit accepted baseline so the composed-step-budget and collective-floor
+  results remain reproducible byte for byte.
+- TRAF-39 (Precision; P1; M): identify the per-collective fixed cost of a
+  pairwise ALL-TO-ALLV separately from the ring ALL-REDUCE the profiles are
+  fitted on. Every shipped profile applies an ALL-REDUCE intercept unchanged to
+  the MoE dispatch and combine all-to-alls, which are the only collectives the
+  expert-parallel reference geometry emits, so the operation-shape transfer is
+  a first-class contributor to the width of the published bracket rather than a
+  secondary caveat. Capture both operations at the same widths, payloads and
+  stack, report the ratio between their intercepts per width, and either add a
+  per-operation table or state with evidence that one table serves both.
+  Acceptance must move the published envelope width and must preserve the
+  existing arms as explicit selections.
 - TRAF-31 (Precision; P1; L): obtain the same-generation point-to-point
   payload capture absent from the `b200-nccl-2.27-local-v1` calibration. The
   selectable profile currently identifies its 70,027,079,100 bytes/s endpoint
@@ -539,6 +805,88 @@ larger case would be rejected at planning time.
   whose questions it cannot answer rather than returning a number.
 
 ### Completeness
+
+- TRAF-34 (Completeness; P2; M): render mixed dense and routed layer
+  schedules. `ModelDims` carries one whole-model mixture geometry, so
+  `num_experts > 0` means every layer is routed and both the allreduce-site
+  rule and the MoE all-to-all inventory apply uniformly over
+  `range(num_layers)`. A model with a dense prefix or a periodic dense layer
+  (`first_k_dense_replace`, `num_dense_layers`) cannot be expressed, and the
+  SGLang reader currently refuses those sentinel fields outright rather than
+  pricing them as routed; SGL-18 owns the reader half. Acceptance needs a
+  per-layer routed schedule carried on or beside the dims, a rendered
+  inventory giving each dense layer two allreduce sites and no all-to-all,
+  and byte-identical whole-model dense and whole-model routed renders as the
+  explicit off path.
+- TRAF-35 (Completeness; P2; M): represent an expert-parallel group that
+  still tensor-shards the expert weights, i.e. `moe_tp` above 1. `ModelDims`
+  has no field for that width, so a declared expert-parallel group is taken to
+  mean `moe_tp` equal to 1, which is the only shape either adapter produces
+  today: the vLLM geometry sets `moe_tp_size` to 1 whenever expert
+  parallelism is in use, and the SGLang reader refuses anything but
+  TP = EP = MoE-DP = 1. A `moe_tp` above 1 needs a third reduction site, an
+  allreduce of the expert output over the `moe_tp` subgroup sitting between
+  dispatch and combine, which no current path renders. Acceptance requires the
+  subgroup membership on the dims or the group inputs, that rendered subgroup
+  allreduce, and byte-identical `moe_tp` equal to 1 and dense renders as the
+  off path.
+- TRAF-38 (Completeness; P2; M): make the fixed-cost arms selectable outside
+  the all-remote fluid path. An arm currently also selects its profile's
+  endpoint bandwidth, and the sink refuses any network profile other than
+  `rnic-nn-fluid`, so switching arms isolates the fixed cost only when the
+  placement produces no NVLink-local bytes. In a mixed or all-local placement
+  the `lower` and `upper` arms of `intra-node-fixed-cost-v1` differ from the
+  `off` arm by the endpoint rate as well as by the surcharge, and the published
+  bracket therefore stops being a bracket on the fixed cost alone. Separate the
+  endpoint-rate selection from the arm selection, keep the current coupled
+  behavior as the explicit off path so accepted local and mixed-placement
+  timestamps are preserved exactly, and demonstrate an arm sweep on a mixed
+  placement whose non-arm terms are byte-identical across arms.
+- TRAF-40 (Completeness; P2; M): make the all-to-all mode an explicit
+  declaration and render the path that is currently refused. The correctness
+  half is closed: the vLLM producer now classifies both pinned conditions
+  before binding an expert group, `use_all2all_kernels` from
+  `model_executor/layers/fused_moe/config.py:1052-1055` and the backend's own
+  `output_is_reduced()`, so a `tp=8, ep=8, dp=1` deployment binds no group and
+  renders the two allreduces and no all-to-all that
+  `model_executor/layers/fused_moe/runner/moe_runner.py:436-465` executes.
+  Three residuals remain. The renderers still infer the mode from the presence
+  of the group rather than from a declared indicator, so a hand-written caller
+  can still assert a reducing combine that its configuration does not have.
+  Naive expert parallelism carries no rendered expert traffic, so a naive-EP
+  run cannot express per-rank expert ownership to the placement layer at all.
+  And a non-reducing all-to-all backend such as the default
+  `allgather_reducescatter` under data parallelism moves expert activations
+  through an allgather and a reduce-scatter, a traffic shape this repository
+  renders nothing for, so binding refuses it outright rather than pricing a
+  pairwise all-to-allv the deployment never executes; that refusal is the off
+  path acceptance must preserve. The refusal protects the traffic shape and
+  not the allreduce count, which is correctly empty under this backend either
+  way: combined with data parallelism and `tp > 1` it makes the expert input
+  sequence parallel (`config/parallel.py:653-668`) and
+  `model_executor/layers/fused_moe/runner/moe_runner.py:459` then skips the
+  final all-reduce entirely, while at `tp == 1` that all-reduce is a one-rank
+  no-op the site rule renders as none. Acceptance needs the explicit indicator
+  on the render inputs, a refusal when a declared group contradicts it, the
+  allgather and reduce-scatter rendering with its own byte oracle, and
+  byte-identical renders for the declared and omitted-group paths that exist
+  today.
+- TRAF-41 (Completeness; P1; M): requalify the one rendered surface and amend
+  the one prose projection that the TRAF-33 inventory correction made stale.
+  The rendered surface is the Granite live cells of the collective plan
+  default study, which declare one 8-rank group as both the tensor-parallel
+  and the expert-parallel group, so their 709,803,840 ps TTFT, 132,794,880 ps
+  TPOT and transport rows were measured with 48 rather than 24 allreduces per
+  step; those cells must be rerun. The prose projection is the composed step
+  budget study's counterfactual paragraph, which reasons that adding a
+  24-layer model's tensor-parallel allreduces would add
+  `48 * 30,128,029 = 1,446,145,392` ps and be 74.73 to 75.45 percent of the
+  composed step; under a declared reducing all-to-all group the counterfactual
+  addition is `24 * 30,128,029 = 723,072,696` ps and that paragraph must be
+  amended rather than rerun. That study's measured 1,446,145,392 ps collective
+  floor is 48 MoE all-to-alls at `tp_ranks=(0,)`, which this change does not
+  touch and a rerun reproduces exactly, so acceptance must never halve the
+  measured floor. Keep both studies' dense cells byte-identical.
 
 - TRAF-26 (Completeness; P2; L): extend the isolated one-engine routed-step
   projection to a full DP times EP group population. Each peer engine must

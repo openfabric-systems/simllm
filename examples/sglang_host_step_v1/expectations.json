@@ -1,0 +1,369 @@
+{
+  "schema": "simllm-sglang-host-step-expectations-v1",
+  "study": "examples/sglang_host_step_v1",
+  "task": "SGL-23",
+  "note": "Frozen before the selector, the harness and every cell existed. No value here was measured.",
+  "input": {
+    "records_path": "examples/m4/fixtures/sglang-m3-steps.jsonl",
+    "sha256": "656772148cd8fbda71a25af08215d806f38f3886abb068f72c9e0ddc8cb7c26f",
+    "record_count": 9,
+    "sampled_count_is_exact": false,
+    "shapes": [
+      {
+        "step_index": 0,
+        "new_tokens": 12,
+        "kv_tokens": 12,
+        "attention_pairs": 72,
+        "sampled": 1
+      },
+      {
+        "step_index": 1,
+        "new_tokens": 1,
+        "kv_tokens": 13,
+        "attention_pairs": 12,
+        "sampled": 1
+      },
+      {
+        "step_index": 2,
+        "new_tokens": 7,
+        "kv_tokens": 26,
+        "attention_pairs": 67,
+        "sampled": 2
+      },
+      {
+        "step_index": 3,
+        "new_tokens": 2,
+        "kv_tokens": 28,
+        "attention_pairs": 26,
+        "sampled": 2
+      },
+      {
+        "step_index": 4,
+        "new_tokens": 1,
+        "kv_tokens": 14,
+        "attention_pairs": 13,
+        "sampled": 1
+      },
+      {
+        "step_index": 5,
+        "new_tokens": 11,
+        "kv_tokens": 25,
+        "attention_pairs": 64,
+        "sampled": 2
+      },
+      {
+        "step_index": 6,
+        "new_tokens": 2,
+        "kv_tokens": 27,
+        "attention_pairs": 25,
+        "sampled": 2
+      },
+      {
+        "step_index": 7,
+        "new_tokens": 1,
+        "kv_tokens": 12,
+        "attention_pairs": 11,
+        "sampled": 1
+      },
+      {
+        "step_index": 8,
+        "new_tokens": 1,
+        "kv_tokens": 13,
+        "attention_pairs": 12,
+        "sampled": 1
+      }
+    ]
+  },
+  "dims": {
+    "num_layers": 24,
+    "hidden_size": 1024,
+    "intermediate_size": 512,
+    "num_heads": 16,
+    "num_kv_heads": 8,
+    "head_size": 64,
+    "vocab_size": 49155,
+    "dtype_bytes": 2,
+    "num_experts": 32,
+    "top_k": 8,
+    "moe_intermediate_size": 512,
+    "local_num_experts": 4
+  },
+  "envelope": {
+    "name": "b100",
+    "peak_flops": 1800000000000000.0,
+    "mem_bandwidth": 8000000000000.0,
+    "efficiency": 0.7
+  },
+  "calibrated_device_key": "gtx1660-ti-sm75",
+  "geometry": {
+    "attention_params": 75497472,
+    "mlp_resident_params": 150994944,
+    "mlp_active_params": 301989888,
+    "weight_bytes": 452984832,
+    "lm_head_bytes": 100669440,
+    "resident_bytes": 553654272,
+    "kv_bytes_per_token": 49152
+  },
+  "points_ps_per_launch": {
+    "turing-cuda-graph": 809306,
+    "turing-eager-host": 2364255
+  },
+  "cells": [
+    {
+      "name": "ideal",
+      "profile": "ideal",
+      "launch_count": 0,
+      "launch_floor_ps": 0
+    },
+    {
+      "name": "graph122",
+      "profile": "turing-cuda-graph",
+      "launch_count": 122,
+      "launch_floor_ps": 98735332
+    },
+    {
+      "name": "graph123",
+      "profile": "turing-cuda-graph",
+      "launch_count": 123,
+      "launch_floor_ps": 99544638
+    },
+    {
+      "name": "graph440",
+      "profile": "turing-cuda-graph",
+      "launch_count": 440,
+      "launch_floor_ps": 356094640
+    },
+    {
+      "name": "eager41",
+      "profile": "turing-eager-host",
+      "launch_count": 41,
+      "launch_floor_ps": 96934455
+    },
+    {
+      "name": "eager42",
+      "profile": "turing-eager-host",
+      "launch_count": 42,
+      "launch_floor_ps": 99298710
+    },
+    {
+      "name": "eager567",
+      "profile": "turing-eager-host",
+      "launch_count": 567,
+      "launch_floor_ps": 1340532585
+    }
+  ],
+  "provider_service_ps": [
+    98972160,
+    98980937,
+    99095040,
+    99112594,
+    98989714,
+    99086262,
+    99103817,
+    98972160,
+    98980937
+  ],
+  "enclosed_calc_ns": {
+    "ideal": [
+      98952,
+      98976,
+      99072,
+      99096,
+      98976,
+      99072,
+      99096,
+      98952,
+      98976
+    ],
+    "graph122": [
+      98973,
+      98981,
+      99096,
+      99113,
+      98990,
+      99087,
+      99104,
+      98973,
+      98981
+    ],
+    "graph123": [
+      99545,
+      99545,
+      99545,
+      99545,
+      99545,
+      99545,
+      99545,
+      99545,
+      99545
+    ],
+    "graph440": [
+      356095,
+      356095,
+      356095,
+      356095,
+      356095,
+      356095,
+      356095,
+      356095,
+      356095
+    ],
+    "eager41": [
+      98973,
+      98981,
+      99096,
+      99113,
+      98990,
+      99087,
+      99104,
+      98973,
+      98981
+    ],
+    "eager42": [
+      99299,
+      99299,
+      99299,
+      99299,
+      99299,
+      99299,
+      99299,
+      99299,
+      99299
+    ],
+    "eager567": [
+      1340533,
+      1340533,
+      1340533,
+      1340533,
+      1340533,
+      1340533,
+      1340533,
+      1340533,
+      1340533
+    ]
+  },
+  "step_latency_delta_ps": {
+    "graph122": [
+      21000,
+      5000,
+      24000,
+      17000,
+      14000,
+      15000,
+      8000,
+      21000,
+      5000
+    ],
+    "graph123": [
+      593000,
+      569000,
+      473000,
+      449000,
+      569000,
+      473000,
+      449000,
+      593000,
+      569000
+    ],
+    "graph440": [
+      257143000,
+      257119000,
+      257023000,
+      256999000,
+      257119000,
+      257023000,
+      256999000,
+      257143000,
+      257119000
+    ],
+    "eager41": [
+      21000,
+      5000,
+      24000,
+      17000,
+      14000,
+      15000,
+      8000,
+      21000,
+      5000
+    ],
+    "eager42": [
+      347000,
+      323000,
+      227000,
+      203000,
+      323000,
+      227000,
+      203000,
+      347000,
+      323000
+    ],
+    "eager567": [
+      1241581000,
+      1241557000,
+      1241461000,
+      1241437000,
+      1241557000,
+      1241461000,
+      1241437000,
+      1241581000,
+      1241557000
+    ]
+  },
+  "masked_cells": [
+    "graph122",
+    "eager41"
+  ],
+  "host_bound_cells": [
+    "graph123",
+    "graph440",
+    "eager42",
+    "eager567"
+  ],
+  "covariates": {
+    "graph440_minus_graph123_ps": 256550000,
+    "eager567_minus_eager42_ps": 1241234000,
+    "eager_over_graph_point": 2.921336305427119
+  },
+  "napkin_bounds_ps": {
+    "compute_floor_no_derate": 69206784,
+    "compute_floor_derated": 98866834,
+    "network_propagation_floor": 96000000,
+    "ideal_step_lower_ps": 195000000,
+    "ideal_step_upper_ps": 1780000000,
+    "eager567_step_lower_ps": 1437000000,
+    "eager567_step_upper_ps": 3020000000
+  },
+  "scored": {
+    "R0": {
+      "class": "exact-oracle",
+      "rows": 9,
+      "claim": "reported provider service equals provider_service_ps"
+    },
+    "R1": {
+      "class": "exact-oracle",
+      "rows": 54,
+      "claim": "simulated step latency minus the ideal arm equals step_latency_delta_ps"
+    },
+    "R2": {
+      "class": "behavioral",
+      "instances": 18,
+      "claim": "the bound flips between 122 and 123 graph launches and between 41 and 42 eager launches, for every record"
+    }
+  },
+  "reported_not_scored": [
+    "slope in launch count",
+    "cross-class point ratio",
+    "transferred share of the composed step"
+  ],
+  "fatal_guards": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5",
+    "G6",
+    "G7"
+  ],
+  "survivable_fatal_guards": []
+}
