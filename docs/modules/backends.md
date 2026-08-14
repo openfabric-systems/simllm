@@ -131,6 +131,22 @@ backend submodules.
   operations. Explicit framework observations bypass the fallback schedule and
   are enveloped without reconstructing framework policy. JSON-round-tripped
   graphs replay through `render_serial_execution_graph_goal`.
+- `attribute_step_detail` + `HtsimRequestMetricReducer`: the read-only
+  projection from executed steps to per-request TTFT and TPOT. Artifacts run
+  serially and each composes as base plus the maximum of its local and fabric
+  service, so the step's realized interval is one disjoint subinterval per
+  artifact and the resource whose own service equals that maximum owns it.
+  `MediumAttribution` names `kernel_ps`, `nvlink_ps`, `fabric_ps`,
+  `co_critical_ps` and `collective_base_ps` separately, alongside `queue_ps`
+  and `control_ps`, and totals the same picoseconds as the coarse
+  `LatencyAttribution` it rolls up into. `MaskedMediumService` reports what the
+  losing medium ran concurrently; it is a work sum, has no total, and never
+  enters a latency partition. `attribute_step` returns the coarse partition
+  alone. The evidence comes from `StepLocalityOutcome`'s per-artifact
+  `local_phase_service_ps`, `base_phase_latency_ps` and `local_phase_medium`;
+  an outcome that carries NVLink work without them is refused rather than
+  approximated, and an all-remote outcome without them keeps its exact
+  historical partition.
 
 ## Pinned submodules
 
@@ -404,6 +420,33 @@ The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 [the RNIC hardware calibration plan](../papers/rnic-hardware-calibration.md).
 
 ## Status
+
+On 2026-08-14 BACK-43 closed. Per-request attribution used to refuse every
+step whose locality projection carried NVLink bytes or NVLink service, so any
+placement that co-located two ranks took the reducer offline. The sink now
+publishes each artifact's local service, semantic base latency and owning
+medium, and attribution charges the artifact's realized service to the
+resource whose own service equals the composed maximum, keeping the NVLink and
+fabric components under separate names and reporting the losing medium's
+masked service as a work sum outside every total. Its
+[frozen study](../../examples/mixed_attribution_v1/RESULTS.md) held all 8
+fatal guards, passed its scored exact relation 1 of 1 and passed its scored
+behavioral relations 3 of 4 as written. The one miss is a mis-registration in
+the freeze rather than a measurement: F1 attaches a single absolute NVLink
+interval to both all-local cells while deriving it at the full rate, so the
+half-rate cell cannot meet it, and F3's frozen relative bracket covers that
+cell instead. A single two-node step reached per-request TTFT
+with 24 NVLink-owned and 24 fabric-owned artifacts whose components total the
+TTFT exactly, halving the NVLink rate moved that TTFT by exactly the 120,000
+ps doubling of the NVLink-owned service while the fabric component stayed
+identical to the picosecond, and the all-remote path stayed byte-identical
+against both a pytest regression lock and an in-run replay of the pre-BACK-43
+input shape. Measured fabric and NVLink services reproduce their closed forms
+to the picosecond. Every artifact carrying a fabric segment was fabric owned,
+because the model's 2.000 us per-phase propagation term is 150x to 400x above
+the local serialization at these payloads, so BACK-45 owns qualification near
+the ownership crossing point and BACK-44 owns the tensor-parallel plus
+expert-parallel graph the study could not plan.
 
 `htsim_rnic` invocation, completion parsing and FCT normalization landed
 with M1 (BACK-1, BACK-3 closed). The end-to-end test runs them for real
@@ -874,6 +917,20 @@ is difficult.
   BACK-38 is blocked behind HTSIM-28 because the delivered session cannot
   reuse a completion time it has just exposed as the dependent injection
   boundary; see [the protocol audit](../../examples/congestion_chain_v1/RESULTS.md).
+- BACK-45 (Precision; P1; M): qualify per-artifact ownership near the crossing
+  point where the NVLink and fabric services of one artifact are comparable.
+  Every artifact `examples/mixed_attribution_v1` measured sat 150x to 400x away
+  from that boundary, so the argmax rule is evidenced only in its extremes and
+  the `co_critical_ps` component has unit evidence alone. The comparison is
+  also biased: the local term charges the maximum of endpoint egress and
+  ingress since CORE-41, while the cross-node term still has no
+  destination-ingress serializer (CORE-48), so a converging combine is
+  under-charged and a near-boundary artifact can be assigned to NVLink that a
+  fully modeled fabric would own. Acceptance: a cell whose two media sit within
+  a small factor, run with the ingress-aware fabric term, shows ownership
+  flipping in the registered direction and reports the flip through the
+  per-request components, while the far-from-crossing cells keep their measured
+  values exactly.
 
 ### Completeness
 
@@ -977,6 +1034,20 @@ is difficult.
   change an end-to-end metric in the registered direction and must never
   advance CQE lifecycle state independently of the native RNIC authority.
 
+- BACK-44 (Completeness; P1; L): let one step carry tensor-parallel
+  collectives inside a node and expert-parallel collectives across nodes. The
+  graph projection refuses `tp_ranks=(0, 1)` together with
+  `ep_ranks=(0, 1, 2, 3)` with "graph cannot be represented by ordered GOAL
+  artifacts", because the tensor-parallel collective of a layer does not
+  depend on the per-rank compute of the expert-parallel ranks, so no ordered
+  artifact sequence represents the graph. That is the canonical realistic
+  composition, and until it plans, an intra-node collective can only be
+  produced from fully intra-node MoE phases under a declared expert layout, as
+  `examples/mixed_attribution_v1` had to do. Acceptance: the mixed
+  configuration plans, executes and reaches per-request TTFT with the
+  tensor-parallel artifacts NVLink owned and the expert-parallel artifacts
+  fabric owned, while every currently accepted single-parallelism graph keeps
+  its artifacts, ordering and timestamps exactly.
 - BACK-39 (Completeness; P2; L): join ABI-v2 packet attempts to request
   identity only if a future study needs packet-level request attribution. The
   current request dispatch lifetime intentionally stops at collective flow

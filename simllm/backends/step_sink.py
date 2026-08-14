@@ -41,6 +41,13 @@ artifact boundaries because the pinned GOAL compiler resolves dependency
 labels inside one rank block. Dependency cross-check selection stays a
 diagnostic switch and never names a fidelity level.
 
+``StepLocalityOutcome`` publishes, for every executed artifact, its analytic
+local service, its semantic collective base latency and the medium that owns
+the local term. An artifact composes as base plus the maximum of its local and
+fabric service, so that triple is the evidence a downstream reducer needs to
+charge the artifact to the resource that actually decided its finish time,
+rather than refusing every step that carries NVLink work.
+
 An explicit ``collective_latency_profile`` adds one calibrated base latency at
 the semantic collective boundary and selects that profile's local endpoint
 rate. The default and explicit ``legacy`` selectors retain every historical
@@ -408,6 +415,17 @@ class StepNetworkOutcome:
         return 1.0 - calc_ps / self.makespan_ps
 
 
+#: resource that owns an executed artifact's analytic local service term.
+#: ``gpu-compute`` is kernel service on the artifact's own device;
+#: ``nvlink`` is the analytic per-endpoint NVLink serializer of a collective
+#: phase. The label is required evidence rather than a convenience: the two
+#: services share the ``local_service_ps`` field and cannot be told apart from
+#: their value.
+GPU_COMPUTE_MEDIUM = "gpu-compute"
+NVLINK_MEDIUM = "nvlink"
+LOCAL_SERVICE_MEDIA = (GPU_COMPUTE_MEDIUM, NVLINK_MEDIUM)
+
+
 @dataclass(frozen=True)
 class StepLocalityOutcome:
     """Locality and graph-projection accounting for one simulated step."""
@@ -429,6 +447,12 @@ class StepLocalityOutcome:
     fabric_phase_service_ps: tuple[int, ...] = ()
     #: max of local and fabric service for each executed artifact
     composed_phase_service_ps: tuple[int, ...] = ()
+    #: analytic local service by executed artifact, owned by the medium below
+    local_phase_service_ps: tuple[int, ...] = ()
+    #: semantic collective fixed cost by executed artifact, owned by no resource
+    base_phase_latency_ps: tuple[int, ...] = ()
+    #: ``LOCAL_SERVICE_MEDIA`` owner of each artifact's local service term
+    local_phase_medium: tuple[str, ...] = ()
     #: semantic ordering owner for every active path
     ordering_authority: str = "execution-graph"
     #: graph identity whose checked projection was executed
@@ -1338,6 +1362,18 @@ class HtsimStepSink:
             ),
             fabric_phase_service_ps=fabric_phase_service_ps,
             composed_phase_service_ps=composed_phase_service_ps,
+            local_phase_service_ps=tuple(
+                artifact.local_service_ps for artifact in plan.artifacts
+            ),
+            base_phase_latency_ps=tuple(
+                artifact.collective_base_latency_ps for artifact in plan.artifacts
+            ),
+            local_phase_medium=tuple(
+                NVLINK_MEDIUM
+                if artifact.collective_operation_id is not None
+                else GPU_COMPUTE_MEDIUM
+                for artifact in plan.artifacts
+            ),
             ordering_authority="execution-graph",
             graph_execution_id=locality.graph_execution_id,
             effective_dependency_edge_count=(

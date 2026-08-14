@@ -68,9 +68,18 @@ from simllm.backends.rnic_records import (
     rnic_session_result_from_json,
 )
 from simllm.backends.step_attribution import (
+    CO_CRITICAL_OWNER,
+    FABRIC_OWNER,
+    KERNEL_OWNER,
+    NVLINK_OWNER,
+    UNSERVICED_OWNER,
     HtsimRequestMetricReducer,
+    MaskedMediumService,
+    MediumAttribution,
     RequestLatencyTotals,
+    StepAttribution,
     attribute_step,
+    attribute_step_detail,
 )
 from simllm.backends.step_lowerer import (
     ObservedStepLowerer,
@@ -80,6 +89,9 @@ from simllm.backends.step_lowerer import (
 )
 from simllm.backends.step_sink import (
     DEPENDENCY_CROSS_CHECK_MODES,
+    GPU_COMPUTE_MEDIUM,
+    LOCAL_SERVICE_MEDIA,
+    NVLINK_MEDIUM,
     CollectiveArtifactTiming,
     HtsimPersistentStepSink,
     HtsimStepSink,
@@ -90,10 +102,18 @@ from simllm.backends.step_sink import (
 )
 
 __all__ = [
+    "CO_CRITICAL_OWNER",
     "DEPENDENCY_CROSS_CHECK_MODES",
+    "FABRIC_OWNER",
+    "GPU_COMPUTE_MEDIUM",
+    "KERNEL_OWNER",
+    "LOCAL_SERVICE_MEDIA",
     "LOGGOPSIM_NETWORK_TYPES",
     "NATIVE_AUTHORITY",
+    "NVLINK_MEDIUM",
+    "NVLINK_OWNER",
     "RNIC_PROFILES",
+    "UNSERVICED_OWNER",
     "BypassArtifactComparison",
     "BypassArtifactPaths",
     "BypassArtifacts",
@@ -119,6 +139,8 @@ __all__ = [
     "HtsimUecConfig",
     "LogGopsimConfig",
     "LogGopsimRunResult",
+    "MaskedMediumService",
+    "MediumAttribution",
     "NormalizedFct",
     "ObservedStepLowerer",
     "RequestLatencyTotals",
@@ -136,11 +158,13 @@ __all__ = [
     "SerialStepLowerer",
     "SerialStepLowererConfig",
     "SerialStepTiming",
+    "StepAttribution",
     "StepCollectiveTimingOutcome",
     "StepLocalityOutcome",
     "StepNetworkOutcome",
     "assert_bypass_artifact_identity",
     "attribute_step",
+    "attribute_step_detail",
     "build_htsim_dcqcn_command",
     "build_htsim_rnic_command",
     "build_htsim_uec_command",
