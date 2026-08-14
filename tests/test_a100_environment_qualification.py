@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import importlib.util
+import inspect
 import io
 import os
 import subprocess
@@ -449,6 +450,29 @@ def test_ncu_metric_requires_exactly_one_target_launch():
     )
 
     assert not runner._has_numeric_ncu_metric(output)
+
+
+def test_profiler_state_observations_bracket_profiler_commands():
+    runner = _runner_module()
+    source = inspect.getsource(runner._run_qualification)
+    ordered_markers = (
+        "unprofiled = _run(",
+        "sass_run = _run(",
+        "before = _gpu_snapshot(",
+        "mig_before = _mig_state(",
+        "supported_clocks_before, supported_clock_blocker_before = ",
+        "processes_before = _foreign_processes(",
+        "nsys_run = _run(",
+        "ncu_run = _run(",
+        "after = _gpu_snapshot(",
+        "mig_after = _mig_state(",
+        "supported_clocks_after, supported_clock_blocker_after = ",
+        "processes_after = _foreign_processes(",
+    )
+
+    locations = [source.index(marker) for marker in ordered_markers]
+
+    assert locations == sorted(locations)
 
 
 def test_ncu_blocker_distinguishes_site_policy_from_tool_failure():

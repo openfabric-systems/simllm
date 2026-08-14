@@ -904,25 +904,23 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     build_dir.mkdir()
     capture_dir.mkdir()
 
-    before = _gpu_snapshot(nvidia_smi, job_visible_gpu_selector)
-    gpu_uuid = before["uuid"]
-    mig_before = _mig_state(nvidia_smi, gpu_uuid)
-    supported_clocks_before, supported_clock_blocker_before = _supported_clock_policy(
-        nvidia_smi, gpu_uuid
-    )
-    processes_before = _foreign_processes(nvidia_smi, gpu_uuid, gpu_uuid)
+    initial_gpu = _gpu_snapshot(nvidia_smi, job_visible_gpu_selector)
+    gpu_uuid = initial_gpu["uuid"]
+    initial_mig = _mig_state(nvidia_smi, gpu_uuid)
+    initial_processes = _foreign_processes(nvidia_smi, gpu_uuid, gpu_uuid)
     context.update(
         {
-            "gpu_before": before,
-            "mig_before": mig_before,
-            "supported_clocks_before": supported_clocks_before,
-            "supported_clock_blocker_before": supported_clock_blocker_before,
-            "processes_before": processes_before,
+            "gpu_initial": initial_gpu,
+            "mig_initial": initial_mig,
+            "processes_initial": initial_processes,
         }
     )
     _write_partial_context(args.out, context)
-    if processes_before:
-        raise RuntimeError(f"allocated GPU has foreign compute processes: {processes_before}")
+    if initial_processes:
+        raise RuntimeError(
+            "allocated GPU has foreign compute processes before qualification: "
+            f"{initial_processes}"
+        )
 
     binary = build_dir / "a100_environment_probe"
     compile_run = _run(
@@ -946,10 +944,10 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     _write_log(capture_dir / "unprofiled.log", unprofiled)
     probe_values = _validate_probe_output(unprofiled.stdout)
     probe_uuid = probe_values.get("device_uuid", "")
-    if probe_uuid.lower() != before["uuid"].lower():
+    if probe_uuid.lower() != initial_gpu["uuid"].lower():
         raise RuntimeError(
             "CUDA and nvidia-smi GPU UUIDs disagree: "
-            f"{probe_uuid!r} != {before['uuid']!r}"
+            f"{probe_uuid!r} != {initial_gpu['uuid']!r}"
         )
 
     sass_run = _run((tools["cuobjdump"], "--dump-sass", binary), timeout=120)
@@ -964,6 +962,28 @@ def _run_qualification(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         }
     )
     _write_partial_context(args.out, context)
+
+    before = _gpu_snapshot(nvidia_smi, gpu_uuid)
+    mig_before = _mig_state(nvidia_smi, gpu_uuid)
+    supported_clocks_before, supported_clock_blocker_before = _supported_clock_policy(
+        nvidia_smi, gpu_uuid
+    )
+    processes_before = _foreign_processes(nvidia_smi, gpu_uuid, gpu_uuid)
+    context.update(
+        {
+            "gpu_before": before,
+            "mig_before": mig_before,
+            "supported_clocks_before": supported_clocks_before,
+            "supported_clock_blocker_before": supported_clock_blocker_before,
+            "processes_before": processes_before,
+        }
+    )
+    _write_partial_context(args.out, context)
+    if processes_before:
+        raise RuntimeError(
+            "allocated GPU has foreign compute processes before profiler probes: "
+            f"{processes_before}"
+        )
 
     nsys_prefix = capture_dir / "a100_environment_probe"
     nsys_run = _run(
