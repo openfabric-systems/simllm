@@ -219,6 +219,9 @@ def _runtime_manifest(runner) -> dict[str, object]:
             "optional_nvidia_file_mounts": sorted(
                 runner.OPTIONAL_NVIDIA_FILE_MOUNT_POINTS
             ),
+            "optional_nvidia_ipc_mounts": sorted(
+                runner.OPTIONAL_NVIDIA_IPC_MOUNT_POINTS
+            ),
         },
         "mount_contract": [
             {
@@ -967,6 +970,7 @@ def test_runtime_manifest_residual_environment_structure_is_closed(mutator, patt
         ("no_home", False),
         ("nv", False),
         ("optional_nvidia_file_mounts", ["/usr/share/nvidia/unexpected.bin"]),
+        ("optional_nvidia_ipc_mounts", ["/run/nvidia-persistenced/unexpected"]),
     ],
 )
 def test_runtime_manifest_rejects_mount_policy_drift(key, value):
@@ -1240,12 +1244,12 @@ def test_effective_mount_inventory_enforces_read_only_and_read_write_roles(monke
     )
 
 
-def test_effective_mount_inventory_accepts_exact_read_only_nvidia_files(monkeypatch):
+def test_effective_mount_inventory_accepts_exact_read_only_nvidia_binds(monkeypatch):
     runner = _runner_module()
     mountinfo = _mountinfo(
         additional=tuple(
             (mount_point, "ro")
-            for mount_point in sorted(runner.OPTIONAL_NVIDIA_FILE_MOUNT_POINTS)
+            for mount_point in sorted(runner.OPTIONAL_NVIDIA_MOUNT_POINTS)
         )
     )
 
@@ -1264,7 +1268,7 @@ def test_effective_mount_inventory_accepts_exact_read_only_nvidia_files(monkeypa
     rows = runner._effective_mount_inventory()
 
     observed = {row["mount_point"] for row in rows}
-    assert runner.OPTIONAL_NVIDIA_FILE_MOUNT_POINTS <= observed
+    assert runner.OPTIONAL_NVIDIA_MOUNT_POINTS <= observed
 
 
 @pytest.mark.parametrize(
@@ -1276,6 +1280,8 @@ def test_effective_mount_inventory_accepts_exact_read_only_nvidia_files(monkeypa
         "/usr/share/nvidia/nvoptix.bin/child",
         "/usr/bin/nvidia-backdoor",
         "/run/nvidiarogue",
+        "/run/nvidia-persistenced/socket.backup",
+        "/run/nvidia-persistenced/unexpected",
         "/var/run/nvidia-malicious",
     ],
 )
@@ -1300,12 +1306,18 @@ def test_effective_mount_inventory_rejects_home_and_nvidia_neighbors(
         runner._effective_mount_inventory()
 
 
+@pytest.mark.parametrize(
+    "mount_point",
+    [
+        "/usr/share/nvidia/nvoptix.bin",
+        "/run/nvidia-persistenced/socket",
+    ],
+)
 @pytest.mark.parametrize("mode", ["rw", "ro"])
-def test_effective_mount_inventory_rejects_writable_or_duplicate_nvidia_file(
-    monkeypatch, mode
+def test_effective_mount_inventory_rejects_writable_or_duplicate_nvidia_bind(
+    monkeypatch, mount_point, mode
 ):
     runner = _runner_module()
-    mount_point = "/usr/share/nvidia/nvoptix.bin"
     additional = ((mount_point, mode),)
     pattern = "writable"
     if mode == "ro":
