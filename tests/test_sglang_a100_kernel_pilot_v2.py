@@ -800,6 +800,46 @@ def test_safe_git_archive_rejects_symlinks_that_escape_root(tmp_path, name, targ
         runner._safe_extract_git_archive(archive, destination)
 
 
+def test_oci_archive_names_only_layout_children_and_omits_root_member(
+    monkeypatch, tmp_path
+):
+    runner = _runner_module()
+    layout = tmp_path / "oci"
+    layout.mkdir()
+    archive = tmp_path / "runtime.oci.tar"
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((tuple(str(item) for item in command), kwargs))
+        archive.write_bytes(b"archive")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(runner, "_required_tool", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(runner, "_run", fake_run)
+    monkeypatch.setattr(runner, "EXPECTED_OCI_LAYER_BYTES", 1)
+
+    runner._create_oci_archive(layout, archive)
+
+    assert calls == [
+        (
+            (
+                "/usr/bin/tar",
+                "--format=posix",
+                "-cf",
+                str(archive),
+                "-C",
+                str(layout),
+                "oci-layout",
+                "index.json",
+                "blobs",
+            ),
+            {"timeout": 600},
+        )
+    ]
+    assert "." not in calls[0][0]
+    assert "./" not in calls[0][0]
+
+
 @pytest.mark.parametrize(
     ("mutator", "pattern"),
     [
