@@ -265,6 +265,14 @@ OPTIONAL_NVIDIA_FILE_MOUNT_POINTS = frozenset(
         "/usr/share/vulkan/implicit_layer.d/nvidia_layers.json",
     }
 )
+OPTIONAL_NVIDIA_IPC_MOUNT_POINTS = frozenset(
+    {
+        "/run/nvidia-persistenced/socket",
+    }
+)
+OPTIONAL_NVIDIA_MOUNT_POINTS = (
+    OPTIONAL_NVIDIA_FILE_MOUNT_POINTS | OPTIONAL_NVIDIA_IPC_MOUNT_POINTS
+)
 STAT_IDENTITY_FIELDS = ("device", "inode", "mtime_ns", "ctime_ns")
 MOUNT_CONTRACT_OPTIONS = {"ro", "rw", "nosuid", "nodev", "noexec"}
 FORBIDDEN_CUDA13_SONAMES = (
@@ -749,6 +757,11 @@ def _validate_runtime_environment_manifest(manifest: Mapping[str, Any]) -> None:
         mount_policy.get("optional_nvidia_file_mounts"),
         sorted(OPTIONAL_NVIDIA_FILE_MOUNT_POINTS),
         "manifest optional NVIDIA file mounts",
+    )
+    _expect(
+        mount_policy.get("optional_nvidia_ipc_mounts"),
+        sorted(OPTIONAL_NVIDIA_IPC_MOUNT_POINTS),
+        "manifest optional NVIDIA IPC mounts",
     )
     mount_contract = manifest["mount_contract"]
     if not isinstance(mount_contract, list) or not mount_contract:
@@ -3000,6 +3013,7 @@ def _prepare_runtime(
         "nv": True,
         "disabled_default_mounts": ["bind-paths", "cwd", "hostfs"],
         "optional_nvidia_file_mounts": sorted(OPTIONAL_NVIDIA_FILE_MOUNT_POINTS),
+        "optional_nvidia_ipc_mounts": sorted(OPTIONAL_NVIDIA_IPC_MOUNT_POINTS),
         "binds": [
             {key: row[key] for key in ("role", "destination", "mode")} for row in binds
         ],
@@ -4311,7 +4325,7 @@ def _mount_point_is_allowed(mount_point: str) -> bool:
     return (
         mount_point in REQUIRED_CONTAINER_MOUNT_MODES
         or mount_point in ALLOWED_SYSTEM_MOUNT_POINTS
-        or mount_point in OPTIONAL_NVIDIA_FILE_MOUNT_POINTS
+        or mount_point in OPTIONAL_NVIDIA_MOUNT_POINTS
         or mount_point == "/.singularity.d/libs"
         or any(mount_point.startswith(prefix) for prefix in ALLOWED_SYSTEM_MOUNT_PREFIXES)
     )
@@ -4386,15 +4400,15 @@ def _effective_mount_inventory() -> list[dict[str, Any]]:
             if expected_mode == "rw":
                 raise RuntimeError("job result/cache bind is not writable")
             raise RuntimeError(f"read-only bind is writable in effective mount inventory: {mount}")
-    for mount in OPTIONAL_NVIDIA_FILE_MOUNT_POINTS:
+    for mount in OPTIONAL_NVIDIA_MOUNT_POINTS:
         matches = [row for row in rows if row["mount_point"] == mount]
         if len(matches) > 1:
-            raise RuntimeError(f"optional NVIDIA file bind is duplicated: {mount}")
+            raise RuntimeError(f"optional NVIDIA bind is duplicated: {mount}")
         if not matches:
             continue
         options = set(matches[0]["mount_options"])
         if "ro" not in options or "rw" in options:
-            raise RuntimeError(f"optional NVIDIA file bind is writable: {mount}")
+            raise RuntimeError(f"optional NVIDIA bind is writable: {mount}")
     policy = _load_authority_seed()["mount_policy"]
     serialized = json.dumps(
         [{"root": row["root"], "source": row["source"]} for row in rows], sort_keys=True
