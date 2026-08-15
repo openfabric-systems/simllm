@@ -1,0 +1,126 @@
+{
+  "allocation": {
+    "account": "merlin",
+    "cluster": "gmerlin7",
+    "cpus_per_task": 8,
+    "expected_runtime_minutes": [15, 30],
+    "gpu_count": 1,
+    "gpu_type": "nvidia_a100-sxm4-80gb",
+    "internal_deadline_seconds": 2400,
+    "memory_mib": 65536,
+    "nodes": 1,
+    "partition": "a100-hourly",
+    "retained_bytes_max": 4294967296,
+    "scratch_bytes_max": 21474836480,
+    "tasks": 1,
+    "time_limit": "00:45:00"
+  },
+  "compatibility": {
+    "ideal_artifact": "examples/sglang_host_step_v1/results.json",
+    "ideal_sha256": "c021c55274e691fe609720045eec4441a8bb4828d248ca02b8561b63e2fddaff",
+    "simllm_oracle_capture": "0",
+    "simllm_sglang_enable": "0"
+  },
+  "identity": {
+    "attention_backend": "triton",
+    "compute_capability": "8.0",
+    "config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "cuda_module": "cuda/12.9.1",
+    "driver": "565.57.01",
+    "dtype": "bfloat16",
+    "gpu_name": "NVIDIA A100-SXM4-80GB",
+    "model": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "model_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "moe_a2a_backend": "none",
+    "moe_runner_backend": "triton",
+    "ncu": "2025.2.1",
+    "nsys": "2025.1.3",
+    "parallelism": {"dp": 1, "ep": 1, "pp": 1, "tp": 1},
+    "python": "3.12.9",
+    "pytorch": "2.11.0+cu130",
+    "pytorch_cuda": "13.0",
+    "sampling_backend": "pytorch",
+    "sglang": "0.0.0.dev1+g8f2a3ad6d",
+    "sglang_commit": "8f2a3ad6d7d68c58ae65b61a75bb2115449addca",
+    "sglang_kernel": "0.4.5",
+    "sglang_tree": "5be26db1f559064c0f9e724e78c1a8f619754867",
+    "simllm_base": "64b35512156bd589427c0f9bc2713df7d6088bdc",
+    "transformers": "5.12.1",
+    "triton": "3.6.0",
+    "weight_bytes": 2669283096,
+    "weight_sha256": "f7ae1cee56a9ea6c5360437b1c0407f8d84816b2cc75470f4e7e5236fa2a07dc"
+  },
+  "measurement": {
+    "capture_repetitions": 5,
+    "ncu_set": "basic",
+    "profiler_timeout_seconds": 300,
+    "retained_timing_repetitions": 41,
+    "step_timeout_seconds": 120,
+    "warmups": 10
+  },
+  "model_geometry": {
+    "experts": 32,
+    "expert_width": 512,
+    "head_dim": 64,
+    "hidden_size": 1024,
+    "kv_heads": 8,
+    "layers": 24,
+    "num_heads": 16,
+    "page_size": 1,
+    "top_k": 8,
+    "vocab_size": 49155
+  },
+  "physical": {
+    "a100_hbm_bytes_per_second": 2039000000000.0,
+    "a100_peak_bf16_flops_per_second": 312000000000000.0,
+    "decode_kv_bytes": 402653184,
+    "decode_projection_moe_flops_min": 3019898880,
+    "full_resident_weight_lm_head_bytes": 2667583488,
+    "prefill_projection_moe_flops_min": 386547056640,
+    "selected_weight_lm_head_bytes_min": 855644160
+  },
+  "schema": "simllm-sglang-a100-kernel-pilot-expectations-v1",
+  "source_invocations": {
+    "decoder_layer": 24,
+    "embedding": 1,
+    "embedding_scale": 1,
+    "final_rmsnorm": 1,
+    "fused_moe": 24,
+    "layer_rmsnorm": 48,
+    "logits_processor": 1,
+    "lm_head": 1,
+    "output_projection": 24,
+    "qkv_projection": 24,
+    "radix_attention": 24,
+    "rotary_embedding": 24,
+    "router_projection": 24,
+    "sampling": 1,
+    "scaled_residual": 48,
+    "split_view_no_launch_contract": 72,
+    "topk": 24
+  },
+  "token_formula": {
+    "modulus": 49154,
+    "position_multiplier": 31,
+    "request_multiplier": 257,
+    "seed": 173,
+    "shift": 1
+  },
+  "transferred_vllm_bracket": [440, 567],
+  "workloads": {
+    "decode-b4-c2048": {
+      "batch": 4,
+      "capture": "one_decode_after_uncaptured_extend",
+      "input_tokens_per_request": 2047,
+      "max_new_tokens": 2,
+      "required_seq_lens": [2048, 2048, 2048, 2048]
+    },
+    "prefill-t512-r4": {
+      "capture": "one_extend",
+      "input_tokens_per_request": 128,
+      "max_new_tokens": 1,
+      "requests": 4,
+      "required_extend_tokens": 512
+    }
+  }
+}
