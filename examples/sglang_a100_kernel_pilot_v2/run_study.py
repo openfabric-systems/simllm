@@ -27,7 +27,7 @@ import threading
 import time
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -403,6 +403,19 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _git_file_sha256(commit: str, path: Path) -> str:
+    relative = path.resolve().relative_to(REPOSITORY_ROOT.resolve()).as_posix()
+    completed = subprocess.run(
+        ("git", "-C", str(REPOSITORY_ROOT), "show", f"{commit}:{relative}"),
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        diagnostic = completed.stderr.decode("utf-8", errors="replace")[-4000:]
+        raise RuntimeError(f"cannot read tracked Git blob {commit}:{relative}: {diagnostic}")
+    return hashlib.sha256(completed.stdout).hexdigest()
+
+
 def _tree_size(path: Path) -> int:
     if not path.exists():
         return 0
@@ -446,9 +459,10 @@ def _container_environment(paths: Mapping[str, str | Path], visible_gpu: str) ->
         missing = sorted(set(PATH_ENVIRONMENT_ROLES) - set(paths))
         extra = sorted(set(paths) - set(PATH_ENVIRONMENT_ROLES))
         raise RuntimeError(f"container path roles drifted: missing={missing}, extra={extra}")
-    normalized = {name: str(Path(paths[name])) for name in PATH_ENVIRONMENT_ROLES}
+    normalized = {name: str(PurePosixPath(str(paths[name]))) for name in PATH_ENVIRONMENT_ROLES}
     for name, value in normalized.items():
-        if not Path(value).is_absolute() or ".." in Path(value).parts:
+        path = PurePosixPath(value)
+        if not path.is_absolute() or ".." in path.parts:
             raise RuntimeError(f"container path for {name} is not absolute and normalized")
     return {
         **FIXED_CHILD_ENVIRONMENT,
@@ -471,11 +485,11 @@ def _validate_bind_rows(binds: Sequence[Mapping[str, Any]]) -> None:
     roles = [str(row.get("role", "")) for row in binds]
     if set(roles) != set(expected_modes) or len(roles) != len(set(roles)):
         raise RuntimeError(f"container bind roles drifted: {roles}")
-    destinations: list[Path] = []
+    destinations: list[PurePosixPath] = []
     for row in binds:
         role = str(row["role"])
-        source = Path(str(row.get("source", "")))
-        destination = Path(str(row.get("destination", "")))
+        source = PurePosixPath(str(row.get("source", "")))
+        destination = PurePosixPath(str(row.get("destination", "")))
         mode = str(row.get("mode", ""))
         if not source.is_absolute() or not destination.is_absolute():
             raise RuntimeError(f"container bind {role} must use absolute paths")
@@ -494,18 +508,21 @@ def _validate_bind_rows(binds: Sequence[Mapping[str, Any]]) -> None:
 
 
 def _container_command(
-    apptainer: Path,
-    sandbox: Path,
-    cwd: Path,
+    apptainer: Path | PurePosixPath,
+    sandbox: Path | PurePosixPath,
+    cwd: Path | PurePosixPath,
     binds: Sequence[Mapping[str, Any]],
     environment: Mapping[str, str],
     child_argv: Sequence[str | Path],
 ) -> tuple[str, ...]:
     """Build a fail-closed contained invocation without consulting host state."""
     _validate_bind_rows(binds)
-    if not apptainer.is_absolute() or not sandbox.is_absolute() or not cwd.is_absolute():
+    apptainer_path = PurePosixPath(str(apptainer))
+    sandbox_path = PurePosixPath(str(sandbox))
+    cwd_path = PurePosixPath(str(cwd))
+    if not apptainer_path.is_absolute() or not sandbox_path.is_absolute() or not cwd_path.is_absolute():
         raise RuntimeError("Apptainer, sandbox and container cwd paths must be absolute")
-    if not child_argv or not Path(str(child_argv[0])).is_absolute():
+    if not child_argv or not PurePosixPath(str(child_argv[0])).is_absolute():
         raise RuntimeError("contained child executable must be absolute")
     if "HOME" in environment:
         raise RuntimeError("HOME must not be overridden")
@@ -515,14 +532,20 @@ def _container_command(
     if set(environment) != expected_environment:
         raise RuntimeError("contained environment does not match the frozen allowlist")
     result_destination = next(
-        Path(str(row["destination"]))
+        PurePosixPath(str(row["destination"]))
         for row in binds
         if row["role"] == "result_and_cache_roots"
     )
     source_destination = next(
-        Path(str(row["destination"])) for row in binds if row["role"] == "source_projection"
+        PurePosixPath(str(row["destination"]))
+        for row in binds
+        if row["role"] == "source_projection"
     )
-    if cwd != result_destination / "work" or cwd == source_destination or cwd in source_destination.parents:
+    if (
+        cwd_path != result_destination / "work"
+        or cwd_path == source_destination
+        or cwd_path in source_destination.parents
+    ):
         raise RuntimeError("contained working directory is outside the frozen job role")
     command: list[str] = [
         str(apptainer),
@@ -591,7 +614,8 @@ def _validate_loaded_object_ledger(rows: Sequence[Mapping[str, Any]]) -> None:
         path = str(row.get("path", ""))
         digest = str(row.get("sha256", ""))
         authority = str(row.get("authority", ""))
-        if not path or path.endswith(" (deleted)") or not Path(path).is_absolute():
+        logical_path = PurePosixPath(path)
+        if not path or path.endswith(" (deleted)") or not logical_path.is_absolute():
             raise RuntimeError("loaded object path is not absolute")
         if re.fullmatch(r"[0-9a-f]{64}", digest) is None:
             raise RuntimeError("loaded object has no exact SHA-256")
@@ -602,7 +626,7 @@ def _validate_loaded_object_ledger(rows: Sequence[Mapping[str, Any]]) -> None:
                 "loaded object ledger contains duplicate or conflicting path authority"
             )
         seen[path] = (digest, authority)
-        basename = Path(path).name
+        basename = logical_path.name
         if any(
             basename == soname or basename.startswith(soname + ".")
             for soname in FORBIDDEN_CUDA13_SONAMES
@@ -707,7 +731,7 @@ def _validate_source_projection(
 ) -> None:
     _expect(manifest.get("commit"), EXPECTED_SGLANG_COMMIT, "source projection commit")
     _expect(manifest.get("tree"), EXPECTED_SGLANG_TREE, "source projection tree")
-    root = Path(str(manifest.get("root", "")))
+    root = PurePosixPath(str(manifest.get("root", "")))
     if not root.is_absolute():
         raise RuntimeError("source projection root is not absolute")
     files = manifest.get("files")
@@ -717,7 +741,7 @@ def _validate_source_projection(
     for row in files:
         path = str(row.get("path", ""))
         digest = str(row.get("sha256", ""))
-        if not path or path.startswith("/") or ".." in Path(path).parts:
+        if not path or path.startswith("/") or ".." in PurePosixPath(path).parts:
             raise RuntimeError("source projection manifest path is unsafe")
         if re.fullmatch(r"[0-9a-f]{64}", digest) is None or path in expected_files:
             raise RuntimeError("source projection file inventory is malformed")
@@ -733,12 +757,14 @@ def _validate_source_projection(
         raise RuntimeError("sglang.__path__ is not the sole clean projection")
     for row in imported_modules:
         name = str(row.get("name", ""))
-        path = Path(str(row.get("path", "")))
+        path = PurePosixPath(str(row.get("path", "")))
         digest = str(row.get("sha256", ""))
         if not name.startswith("sglang"):
             continue
         try:
-            relative = path.resolve().relative_to(root.resolve()).as_posix()
+            if not path.is_absolute() or ".." in path.parts:
+                raise ValueError("module path is not an absolute normalized POSIX path")
+            relative = path.relative_to(root).as_posix()
         except ValueError as error:
             raise RuntimeError(f"imported SGLang module escaped projection: {name}") from error
         if expected_files.get(relative) != digest:
@@ -1557,7 +1583,7 @@ def _tracked_source_entries(checkout: Path) -> list[dict[str, str]]:
             continue
         metadata, path = raw.split("\t", 1)
         mode, kind, blob = metadata.split(" ", 2)
-        if kind != "blob" or path.startswith("/") or ".." in Path(path).parts:
+        if kind != "blob" or path.startswith("/") or ".." in PurePosixPath(path).parts:
             raise RuntimeError(f"unsupported tracked source entry: {raw!r}")
         entries.append({"path": path, "mode": mode, "git_blob": blob})
     if not entries:
@@ -1569,17 +1595,17 @@ def _safe_extract_git_archive(archive: Path, destination: Path) -> None:
     with tarfile.open(archive, "r:") as handle:
         members = handle.getmembers()
         for member in members:
-            path = Path(member.name)
+            path = PurePosixPath(member.name)
             if member.name.startswith("/") or ".." in path.parts:
                 raise RuntimeError(f"Git archive member is unsafe: {member.name!r}")
             if member.ischr() or member.isblk() or member.isfifo() or member.isdev():
                 raise RuntimeError(f"Git archive member is special: {member.name!r}")
             if member.issym() or member.islnk():
-                target = Path(member.linkname)
+                target = PurePosixPath(member.linkname)
                 if target.is_absolute():
                     raise RuntimeError(f"Git archive link is unsafe: {member.name!r}")
-                anchor = path.parent if member.issym() else Path()
-                normalized_target = Path(
+                anchor = path.parent if member.issym() else PurePosixPath()
+                normalized_target = PurePosixPath(
                     posixpath.normpath((anchor / target).as_posix())
                 )
                 if normalized_target.is_absolute() or (
@@ -1590,7 +1616,7 @@ def _safe_extract_git_archive(archive: Path, destination: Path) -> None:
 
 
 def _source_projection_manifest(
-    checkout: Path, projection: Path, *, manifest_root: Path
+    checkout: Path, projection: Path, *, manifest_root: PurePosixPath
 ) -> dict[str, Any]:
     tracked = _tracked_source_entries(checkout)
     files = []
@@ -1688,7 +1714,7 @@ def _project_clean_source(checkout: Path, projection: Path) -> dict[str, Any]:
     shutil.copyfile(generated, destination)
     destination.chmod(0o644)
     return _source_projection_manifest(
-        checkout, projection, manifest_root=Path("/opt/simllm/source")
+        checkout, projection, manifest_root=PurePosixPath("/opt/simllm/source")
     )
 
 
@@ -2642,12 +2668,12 @@ def _capture_summary(
 
 
 def _validate_static_contract(frozen: Mapping[str, Any], scratch: Path, out: Path) -> None:
-    if _sha256(EXPECTATIONS_PATH) != EXPECTED_EXPECTATIONS_SHA256:
+    if _git_file_sha256("HEAD", EXPECTATIONS_PATH) != EXPECTED_EXPECTATIONS_SHA256:
         raise RuntimeError("frozen expectations file hash drifted")
     expectations_markdown = EXPECTATIONS_PATH.with_suffix(".md")
-    if _sha256(expectations_markdown) != EXPECTED_EXPECTATIONS_MARKDOWN_SHA256:
+    if _git_file_sha256("HEAD", expectations_markdown) != EXPECTED_EXPECTATIONS_MARKDOWN_SHA256:
         raise RuntimeError("frozen expectations Markdown hash drifted")
-    if _sha256(IDEAL_ARTIFACT) != EXPECTED_IDEAL_SHA256:
+    if _git_file_sha256("HEAD", IDEAL_ARTIFACT) != EXPECTED_IDEAL_SHA256:
         raise RuntimeError("ideal compatibility artifact drifted")
     try:
         out.relative_to(scratch)
@@ -2784,7 +2810,7 @@ def _copy_model_projection(source: Path, destination: Path) -> dict[str, Any]:
 
 
 def _container_paths() -> dict[str, str]:
-    job = Path("/opt/simllm/job")
+    job = PurePosixPath("/opt/simllm/job")
     cache = job / "cache"
     return {
         "CUDA_CACHE_PATH": str(cache / "cuda"),
@@ -3021,7 +3047,7 @@ def _validate_profiler_authority_before_launch(
     role = "nsys_install" if authority == "nsys" else "ncu_install"
     bind = next(row for row in runtime["binds"] if row["role"] == role)
     host_root = Path(str(bind["source"]))
-    container_root = Path(str(bind["destination"]))
+    container_root = PurePosixPath(str(bind["destination"]))
     _revalidate_file_ledger(
         manifest["profilers"][authority],
         manifest_root=container_root,
@@ -3029,7 +3055,7 @@ def _validate_profiler_authority_before_launch(
     )
     candidates = []
     for row in manifest["profilers"][authority]:
-        path = Path(str(row["path"]))
+        path = PurePosixPath(str(row["path"]))
         if row.get("kind") == "launcher" or (
             row.get("kind") == "file" and path.name == authority
         ):
@@ -3038,10 +3064,10 @@ def _validate_profiler_authority_before_launch(
         raise RuntimeError(f"{authority} profiler executable authority is incomplete")
     for row in candidates:
         try:
-            relative = Path(str(row["path"])).relative_to(container_root)
+            relative = PurePosixPath(str(row["path"])).relative_to(container_root)
         except ValueError as error:
             raise RuntimeError(f"{authority} profiler path escaped its bind role") from error
-        host_path = host_root / relative
+        host_path = host_root.joinpath(*relative.parts)
         if not host_path.is_file() or host_path.is_symlink() or _sha256(host_path) != row["sha256"]:
             raise RuntimeError(f"{authority} profiler executable changed before launch")
 
@@ -3096,7 +3122,7 @@ def _run_parent(args: argparse.Namespace) -> int:
         "state": "RUNNING",
         "repository": repository,
         "expectations_commit": EXPECTED_EXPECTATIONS_COMMIT,
-        "expectations_sha256": _sha256(EXPECTATIONS_PATH),
+        "expectations_sha256": EXPECTED_EXPECTATIONS_SHA256,
         "started_at_unix_ns": time.time_ns(),
         "lanes": {"shared": {}, "timing": {}, "nsys": {}, "ncu": {}},
     }
@@ -3708,7 +3734,7 @@ def _file_ledger(root: Path, authority: str) -> list[dict[str, Any]]:
 def _revalidate_file_ledger(
     rows: Sequence[Mapping[str, Any]],
     *,
-    manifest_root: Path | None = None,
+    manifest_root: PurePosixPath | None = None,
     actual_root: Path | None = None,
     hash_content: bool = True,
 ) -> None:
@@ -3716,10 +3742,15 @@ def _revalidate_file_ledger(
         raise ValueError("manifest and actual roots must be supplied together")
     seen: set[str] = set()
     for row in rows:
-        manifest_path = Path(str(row.get("path", "")))
-        if not manifest_path.is_absolute() or str(manifest_path) in seen:
+        raw_manifest_path = str(row.get("path", ""))
+        manifest_path = (
+            Path(raw_manifest_path)
+            if manifest_root is None
+            else PurePosixPath(raw_manifest_path)
+        )
+        if not manifest_path.is_absolute() or raw_manifest_path in seen:
             raise RuntimeError("immutable file ledger path is malformed or duplicated")
-        seen.add(str(manifest_path))
+        seen.add(raw_manifest_path)
         if manifest_root is None:
             actual_path = manifest_path
         else:
@@ -3727,7 +3758,7 @@ def _revalidate_file_ledger(
                 relative = manifest_path.relative_to(manifest_root)
             except ValueError as error:
                 raise RuntimeError("immutable file ledger escaped its manifest root") from error
-            actual_path = actual_root / relative
+            actual_path = actual_root.joinpath(*relative.parts)
         kind = str(row.get("kind", "file"))
         if kind == "symlink":
             if not actual_path.is_symlink():
@@ -4017,7 +4048,7 @@ def _validate_loaded_objects_against_manifest(
             if row.get("kind") == "symlink":
                 continue
             authorized[str(row["path"])] = (str(row["sha256"]), authority)
-    source_root = Path(str(manifest["source_projection"]["root"]))
+    source_root = PurePosixPath(str(manifest["source_projection"]["root"]))
     for row in manifest["source_projection"]["files"]:
         authorized[str(source_root / str(row["path"]))] = (str(row["sha256"]), "source")
     runner_path = Path(__file__).resolve()
@@ -4161,7 +4192,8 @@ def _validate_child_environment_contract(mode: str) -> None:
             raise RuntimeError(f"contained {name} must be absent")
     for name in PATH_ENVIRONMENT_ROLES:
         raw = os.environ.get(name, "")
-        if not raw or not Path(raw).is_absolute() or ".." in Path(raw).parts:
+        logical_path = PurePosixPath(raw)
+        if not raw or not logical_path.is_absolute() or ".." in logical_path.parts:
             raise RuntimeError(f"contained path role {name} drifted")
     permitted_sglang = {
         "SGLANG_BUILD_COMMIT",

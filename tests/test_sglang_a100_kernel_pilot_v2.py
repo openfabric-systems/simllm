@@ -12,7 +12,7 @@ import re
 import subprocess
 import sys
 import tarfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -51,15 +51,17 @@ def _git_show(commit: str, path: str) -> bytes:
 
 
 def _path_environment(tmp_path: Path) -> dict[str, str]:
+    del tmp_path
     runner = _runner_module()
     values = {}
     for name in runner.PATH_ENVIRONMENT_ROLES:
-        values[name] = str((tmp_path / name.lower()).resolve())
-    values["PYTHONPATH"] = str((tmp_path / "source/python").resolve())
+        values[name] = f"/opt/simllm/test-roles/{name.lower()}"
+    values["PYTHONPATH"] = "/opt/simllm/test-source/python"
     return values
 
 
 def _bind_rows(tmp_path: Path) -> list[dict[str, str]]:
+    del tmp_path
     values = []
     modes = {
         "runner_projection": "ro",
@@ -73,7 +75,7 @@ def _bind_rows(tmp_path: Path) -> list[dict[str, str]]:
         values.append(
             {
                 "role": role,
-                "source": str((tmp_path / f"host-{index}").resolve()),
+                "source": f"/opt/simllm-host/{index}",
                 "destination": f"/simllm/{role}",
                 "mode": mode,
             }
@@ -243,7 +245,7 @@ def _mountinfo(*, writable_role: str | None = None, unexpected: str | None = Non
         ("model", "/host/model", "ro"),
         ("nsys", "/host/nsys", "ro"),
         ("ncu", "/host/ncu", "ro"),
-        ("job", "/scratch/job", "rw"),
+        ("job", "/host/job", "rw"),
     )
     lines = []
     for index, (role, source, expected_mode) in enumerate(mounts, start=30):
@@ -455,10 +457,10 @@ def test_freeze_commit_has_exact_parent_paths_and_raw_hashes():
 
 
 def test_current_expectations_still_match_frozen_raw_files():
-    assert hashlib.sha256((STUDY_DIR / "expectations.json").read_bytes()).hexdigest() == (
+    assert hashlib.sha256(_git_show("HEAD", V2_EXPECTATIONS_PATH)).hexdigest() == (
         EXPECTATIONS_JSON_SHA256
     )
-    assert hashlib.sha256((STUDY_DIR / "expectations.md").read_bytes()).hexdigest() == (
+    assert hashlib.sha256(_git_show("HEAD", V2_EXPECTATIONS_MARKDOWN_PATH)).hexdigest() == (
         EXPECTATIONS_MARKDOWN_SHA256
     )
 
@@ -646,12 +648,12 @@ def test_child_environment_rejects_unforwarded_scheduler_variables(monkeypatch, 
 
 def test_container_command_has_exact_isolation_bind_and_environment_contract(tmp_path):
     runner = _runner_module()
-    apptainer = (tmp_path / "bin/apptainer").resolve()
-    sandbox = (tmp_path / "sandbox").resolve()
+    apptainer = PurePosixPath("/host/bin/apptainer")
+    sandbox = PurePosixPath("/host/sandbox")
     child_python = "/usr/bin/python3.12"
     binds = _bind_rows(tmp_path)
     result_destination = next(
-        Path(row["destination"])
+        PurePosixPath(row["destination"])
         for row in binds
         if row["role"] == "result_and_cache_roots"
     )
@@ -737,9 +739,9 @@ def test_container_command_rejects_hostile_bind_rows(tmp_path, mutation, pattern
 
     with pytest.raises((RuntimeError, ValueError), match=pattern):
         runner._container_command(
-            (tmp_path / "apptainer").resolve(),
-            (tmp_path / "sandbox").resolve(),
-            Path("/simllm/result_and_cache_roots/work"),
+            PurePosixPath("/host/apptainer"),
+            PurePosixPath("/host/sandbox"),
+            PurePosixPath("/simllm/result_and_cache_roots/work"),
             binds,
             runner._container_environment(_path_environment(tmp_path), "0"),
             ("/usr/bin/python3.12", "/simllm/runner/run_study.py"),
@@ -1055,12 +1057,12 @@ def test_immutable_file_ledger_rehashes_direct_and_mapped_files(tmp_path):
     }
 
     runner._revalidate_file_ledger(
-        [row], manifest_root=Path("/opt/simllm/nsys"), actual_root=actual_root
+        [row], manifest_root=PurePosixPath("/opt/simllm/nsys"), actual_root=actual_root
     )
     actual.write_bytes(b"changed profiler bytes")
     with pytest.raises(RuntimeError, match="immutable file (identity|content) changed"):
         runner._revalidate_file_ledger(
-            [row], manifest_root=Path("/opt/simllm/nsys"), actual_root=actual_root
+            [row], manifest_root=PurePosixPath("/opt/simllm/nsys"), actual_root=actual_root
         )
 
 
@@ -1172,8 +1174,8 @@ def test_effective_mount_inventory_enforces_read_only_and_read_write_roles(monke
         (_mountinfo(unexpected="/mnt/rogue"), "unexpected user binds"),
         (
             _mountinfo().replace(
-                "/opt/simllm/job rw,relatime - ext4 /scratch/job rw,relatime",
-                "/opt/simllm/job ro,relatime - ext4 /scratch/job rw,relatime",
+                "/opt/simllm/job rw,relatime - ext4 /host/job rw,relatime",
+                "/opt/simllm/job ro,relatime - ext4 /host/job rw,relatime",
             ),
             "job result/cache bind is not writable",
         ),
