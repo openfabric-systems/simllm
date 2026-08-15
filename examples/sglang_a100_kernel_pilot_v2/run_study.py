@@ -64,6 +64,20 @@ EXPECTED_RUNTIME_VERSIONS = {
     "transformers": "5.12.1",
     "triton": "3.6.0",
 }
+EXPECTED_DISTRIBUTION_VERSIONS = {
+    "torch": EXPECTED_RUNTIME_VERSIONS["torch"],
+    "sglang": EXPECTED_RUNTIME_VERSIONS["sglang_substrate"],
+    "sglang-kernel": EXPECTED_RUNTIME_VERSIONS["sglang_kernel"],
+    "transformers": EXPECTED_RUNTIME_VERSIONS["transformers"],
+    "triton": EXPECTED_RUNTIME_VERSIONS["triton"],
+}
+DISTRIBUTION_INVENTORY_FIELDS = {
+    "name",
+    "normalized_name",
+    "version",
+    "metadata_path",
+    "direct_url",
+}
 
 EXPECTED_OCI_MANIFEST_DIGEST = (
     "sha256:bbe1ec8694ab6b0e6ea0a567c2d492ed7c9bed13cb33ffe356ade0aaa8343c9f"
@@ -679,28 +693,7 @@ def _validate_runtime_environment_manifest(manifest: Mapping[str, Any]) -> None:
     _expect(oci.get("manifest_digest"), EXPECTED_OCI_MANIFEST_DIGEST, "manifest OCI digest")
     _expect(oci.get("config_digest"), EXPECTED_OCI_CONFIG_DIGEST, "manifest OCI config")
     distributions = manifest["distributions"]
-    if not isinstance(distributions, list) or not distributions:
-        raise RuntimeError("distribution inventory is empty")
-    normalized_names: set[str] = set()
-    substrate_seen = False
-    for row in distributions:
-        name = re.sub(r"[-_.]+", "-", str(row.get("name", "")).lower())
-        version = str(row.get("version", ""))
-        direct_url = str(row.get("direct_url", ""))
-        if not name or not version or name in normalized_names:
-            raise RuntimeError("distribution inventory is malformed or duplicated")
-        normalized_names.add(name)
-        identity = f"{name}=={version} {direct_url}".lower()
-        if name.endswith("-cu13") or "cu13" in direct_url.lower() or "+cu13" in identity:
-            raise RuntimeError(f"CUDA 13 distribution marker is forbidden: {identity}")
-        if name == "cuda-python":
-            major_text = re.match(r"(\d+)", version)
-            if major_text is not None and int(major_text.group(1)) >= 13:
-                raise RuntimeError("cuda-python 13 or newer is forbidden")
-        if name == "sglang" and version == EXPECTED_RUNTIME_VERSIONS["sglang_substrate"]:
-            substrate_seen = True
-    if not substrate_seen:
-        raise RuntimeError("frozen substrate SGLang distribution is absent")
+    _validate_distribution_inventory(distributions)
     _validate_loaded_object_ledger(manifest["critical_files"])
     for row in manifest["critical_files"]:
         if any(not isinstance(row.get(field), int) for field in STAT_IDENTITY_FIELDS):
@@ -3710,38 +3703,194 @@ def _time_cuda_target(
 
 
 def _distribution_inventory() -> list[dict[str, Any]]:
-    rows = []
+    rows_by_metadata_path: dict[str, dict[str, Any]] = {}
     for distribution in importlib.metadata.distributions():
-        name = str(distribution.metadata.get("Name", "")).strip()
-        version = str(distribution.version).strip()
+        raw_name = distribution.metadata.get("Name")
+        raw_version = distribution.version
+        if not isinstance(raw_name, str) or not isinstance(raw_version, str):
+            raise TypeError("installed distribution lacks textual name or version")
+        name = raw_name.strip()
+        version = raw_version.strip()
         if not name or not version:
             raise RuntimeError("installed distribution lacks name or version")
-        direct_url = distribution.read_text("direct_url.json") or ""
-        if direct_url:
-            try:
-                direct_url = json.dumps(json.loads(direct_url), sort_keys=True, separators=(",", ":"))
-            except ValueError as error:
-                raise RuntimeError(f"distribution {name} has malformed direct_url.json") from error
-        metadata_path = Path(str(getattr(distribution, "_path", ""))).resolve()
-        rows.append(
-            {
-                "name": name,
-                "normalized_name": re.sub(r"[-_.]+", "-", name.lower()),
-                "version": version,
-                "metadata_path": str(metadata_path),
-                "direct_url": direct_url,
-            }
-        )
+        raw_direct_url = distribution.read_text("direct_url.json")
+        if raw_direct_url is not None and not isinstance(raw_direct_url, str):
+            raise RuntimeError(f"distribution {name} direct_url.json is not text")
+        direct_url = _canonical_distribution_direct_url(raw_direct_url or "", name)
+        raw_metadata_path = getattr(distribution, "_path", None)
+        try:
+            metadata_path_text = os.fspath(raw_metadata_path)
+        except TypeError as error:
+            raise RuntimeError(f"distribution {name} has no metadata authority path") from error
+        if not isinstance(metadata_path_text, str) or not metadata_path_text:
+            raise RuntimeError(f"distribution {name} has no metadata authority path")
+        try:
+            metadata_path = Path(metadata_path_text).resolve(strict=True)
+        except OSError as error:
+            raise RuntimeError(
+                f"distribution {name} metadata authority does not exist: {metadata_path_text!r}"
+            ) from error
+        if not metadata_path.is_file() and not metadata_path.is_dir():
+            raise RuntimeError(
+                f"distribution {name} metadata authority is not a file or directory: "
+                f"{metadata_path}"
+            )
+        row = {
+            "name": name,
+            "normalized_name": re.sub(r"[-_.]+", "-", name.lower()),
+            "version": version,
+            "metadata_path": str(metadata_path),
+            "direct_url": direct_url,
+        }
+        existing = rows_by_metadata_path.get(str(metadata_path))
+        if existing is not None and existing != row:
+            raise RuntimeError(
+                "distribution metadata authority changed across discovery: "
+                f"path={metadata_path}, first={existing!r}, repeated={row!r}"
+            )
+        rows_by_metadata_path[str(metadata_path)] = row
+    rows = list(rows_by_metadata_path.values())
     rows.sort(key=lambda row: (row["normalized_name"], row["version"], row["metadata_path"]))
     return rows
 
 
+def _canonical_distribution_direct_url(value: str, name: str) -> str:
+    if not value:
+        return ""
+    try:
+        parsed = json.loads(
+            value,
+            object_pairs_hook=_strict_json_object,
+            parse_constant=_reject_json_constant,
+        )
+    except (TypeError, ValueError) as error:
+        raise RuntimeError(f"distribution {name} has malformed direct URL authority") from error
+    if not isinstance(parsed, dict):
+        raise TypeError(f"distribution {name} direct URL authority is not a JSON object")
+    url = parsed.get("url")
+    if not isinstance(url, str):
+        raise TypeError(f"distribution {name} direct URL authority has no textual URL")
+    if not url or url != url.strip():
+        raise RuntimeError(f"distribution {name} direct URL authority has an empty URL")
+    if _contains_nonfinite_json_number(parsed):
+        raise RuntimeError(f"distribution {name} direct URL authority has a nonfinite number")
+    return json.dumps(parsed, sort_keys=True, separators=(",", ":"))
+
+
+def _strict_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate JSON object key: {key!r}")
+        value[key] = item
+    return value
+
+
+def _reject_json_constant(value: str) -> Any:
+    raise ValueError(f"nonstandard JSON constant: {value}")
+
+
+def _contains_nonfinite_json_number(value: Any) -> bool:
+    if isinstance(value, float):
+        return not math.isfinite(value)
+    if isinstance(value, dict):
+        return any(_contains_nonfinite_json_number(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_nonfinite_json_number(item) for item in value)
+    return False
+
+
+def _validate_distribution_inventory(rows: Any) -> None:
+    if not isinstance(rows, list) or not rows:
+        raise RuntimeError("distribution inventory is empty")
+    by_name: dict[str, list[Mapping[str, Any]]] = {}
+    metadata_paths: set[str] = set()
+    for row in rows:
+        if not isinstance(row, Mapping) or set(row) != DISTRIBUTION_INVENTORY_FIELDS:
+            raise RuntimeError("distribution inventory row shape drifted")
+        non_text_fields = sorted(
+            field
+            for field in DISTRIBUTION_INVENTORY_FIELDS
+            if not isinstance(row[field], str)
+        )
+        if non_text_fields:
+            raise RuntimeError(
+                f"distribution inventory fields are not text: {non_text_fields}"
+            )
+        name = row["name"]
+        normalized_name = re.sub(r"[-_.]+", "-", name.lower())
+        version = row["version"]
+        direct_url = row["direct_url"]
+        metadata_path = row["metadata_path"]
+        if (
+            not name
+            or name != name.strip()
+            or not version
+            or version != version.strip()
+            or row["normalized_name"] != normalized_name
+        ):
+            raise RuntimeError("distribution inventory row is malformed")
+        path = PurePosixPath(metadata_path)
+        if (
+            not path.is_absolute()
+            or metadata_path.startswith("//")
+            or ".." in path.parts
+            or str(path) != metadata_path
+        ):
+            raise RuntimeError(f"distribution metadata path is not absolute and normalized: {path}")
+        if metadata_path in metadata_paths:
+            raise RuntimeError(f"distribution metadata authority is duplicated: {metadata_path}")
+        metadata_paths.add(metadata_path)
+        if direct_url:
+            canonical_direct_url = _canonical_distribution_direct_url(
+                direct_url, normalized_name
+            )
+            if direct_url != canonical_direct_url:
+                raise RuntimeError(
+                    f"distribution {normalized_name} direct URL authority is not canonical"
+                )
+        identity = f"{normalized_name}=={version} {direct_url}".lower()
+        if (
+            normalized_name.endswith("-cu13")
+            or "cu13" in direct_url.lower()
+            or "+cu13" in identity
+        ):
+            raise RuntimeError(f"CUDA 13 distribution marker is forbidden: {identity}")
+        if normalized_name == "cuda-python":
+            major_text = re.match(r"(\d+)", version)
+            if major_text is not None and int(major_text.group(1)) >= 13:
+                raise RuntimeError("cuda-python 13 or newer is forbidden")
+        by_name.setdefault(normalized_name, []).append(row)
+    for normalized_name, matches in by_name.items():
+        authorities = {(row["version"], row["direct_url"]) for row in matches}
+        if len(authorities) > 1:
+            details = sorted(
+                (row["version"], row["direct_url"], row["metadata_path"])
+                for row in matches
+            )
+            raise RuntimeError(
+                f"conflicting duplicate distribution {normalized_name}: {details}"
+            )
+    for name, expected_version in EXPECTED_DISTRIBUTION_VERSIONS.items():
+        _expect(
+            _distribution_version(rows, name),
+            expected_version,
+            f"manifest {name} distribution",
+        )
+
+
 def _distribution_version(rows: Sequence[Mapping[str, Any]], name: str) -> str:
     normalized = re.sub(r"[-_.]+", "-", name.lower())
-    matches = [str(row["version"]) for row in rows if row["normalized_name"] == normalized]
+    matches = [
+        (str(row["version"]), str(row["metadata_path"]))
+        for row in rows
+        if row["normalized_name"] == normalized
+    ]
     if len(matches) != 1:
-        raise RuntimeError(f"expected one installed {name} distribution, observed {matches}")
-    return matches[0]
+        raise RuntimeError(
+            f"expected one installed {name} distribution authority, observed {matches}"
+        )
+    return matches[0][0]
 
 
 def _stat_identity(path: Path, *, follow_symlinks: bool = True) -> dict[str, int]:
@@ -3923,14 +4072,7 @@ def _build_runtime_environment_manifest(seed: Mapping[str, Any]) -> dict[str, An
     python_version = ".".join(str(value) for value in sys.version_info[:3])
     if ".".join(str(value) for value in sys.version_info[:2]) != "3.12":
         raise RuntimeError(f"container Python ABI drifted: {python_version}")
-    expected = {
-        "torch": EXPECTED_RUNTIME_VERSIONS["torch"],
-        "sglang": EXPECTED_RUNTIME_VERSIONS["sglang_substrate"],
-        "sglang-kernel": EXPECTED_RUNTIME_VERSIONS["sglang_kernel"],
-        "transformers": EXPECTED_RUNTIME_VERSIONS["transformers"],
-        "triton": EXPECTED_RUNTIME_VERSIONS["triton"],
-    }
-    for name, version in expected.items():
+    for name, version in EXPECTED_DISTRIBUTION_VERSIONS.items():
         _expect(_distribution_version(distributions, name), version, f"{name} distribution")
     mount_contract = _normalized_mount_contract(_effective_mount_inventory())
     nsys_root = Path(os.environ["SIMLLM_NSYS_INSTALL"]) / "nsight-systems-2025.1.3"

@@ -27,6 +27,26 @@ FREEZE_COMMIT = "dee129923883d6b8cc394933b4944a4ff50193e5"
 FREEZE_PARENT = "43064d6ae88d6380c86bd400d336a07aa504ccbd"
 EXPECTATIONS_JSON_SHA256 = "f22ddd9a6a7223f3c2a7a836c0fd29d5a0ee66282212413c6ea5ddac22308894"
 EXPECTATIONS_MARKDOWN_SHA256 = "6175ee55323a89ac027fdf4d81acb26dc4b49f8c2ae7569dbc95cc9410b563ed"
+MISSING_DISTRIBUTION_PATH = object()
+
+
+class DistributionFixture:
+    def __init__(
+        self,
+        name,
+        version,
+        metadata_path=MISSING_DISTRIBUTION_PATH,
+        direct_url=None,
+    ):
+        self.metadata = {"Name": name}
+        self.version = version
+        self._direct_url = direct_url
+        if metadata_path is not MISSING_DISTRIBUTION_PATH:
+            self._path = metadata_path
+
+    def read_text(self, name):
+        assert name == "direct_url.json"
+        return self._direct_url
 
 
 def _runner_module():
@@ -132,6 +152,24 @@ def _source_fixture() -> tuple[dict[str, object], list[dict[str, object]], dict[
     return manifest, modules, entry_points
 
 
+def _distribution_record(
+    name: str,
+    version: str,
+    *,
+    direct_url: str = "",
+    metadata_path: str | None = None,
+) -> dict[str, str]:
+    normalized_name = re.sub(r"[-_.]+", "-", name.lower())
+    return {
+        "name": name,
+        "normalized_name": normalized_name,
+        "version": version,
+        "metadata_path": metadata_path
+        or f"/usr/local/lib/python3.12/site-packages/{normalized_name}-{version}.dist-info",
+        "direct_url": direct_url,
+    }
+
+
 def _runtime_manifest(runner) -> dict[str, object]:
     layers = [
         {"digest": f"sha256:{index:064x}", "size": 1}
@@ -155,11 +193,11 @@ def _runtime_manifest(runner) -> dict[str, object]:
         },
         "python": {"abi": "3.12", "executable": "/usr/bin/python3.12"},
         "distributions": [
-            {"name": "torch", "version": "2.11.0+cu129", "direct_url": ""},
-            {"name": "sglang", "version": "0.5.17", "direct_url": ""},
-            {"name": "sglang-kernel", "version": "0.4.5+cu129", "direct_url": ""},
-            {"name": "transformers", "version": "5.12.1", "direct_url": ""},
-            {"name": "triton", "version": "3.6.0", "direct_url": ""},
+            _distribution_record("torch", "2.11.0+cu129"),
+            _distribution_record("sglang", "0.5.17"),
+            _distribution_record("sglang-kernel", "0.4.5+cu129"),
+            _distribution_record("transformers", "5.12.1"),
+            _distribution_record("triton", "3.6.0"),
         ],
         "critical_files": [
             {
@@ -1014,25 +1052,35 @@ def test_runtime_manifest_requires_one_hashed_profiler_launcher(authority, mutat
         ),
         (
             lambda value: value["distributions"].append(
-                {"name": "cuda-python", "version": "13.0.0", "direct_url": ""}
+                _distribution_record("cuda-python", "13.0.0")
             ),
             "CUDA 13|cuda.python|cu13",
         ),
         (
             lambda value: value["distributions"].append(
-                {
-                    "name": "addon",
-                    "version": "1.0",
-                    "direct_url": "file:///wheelhouse/cu13/addon.whl",
-                }
+                _distribution_record(
+                    "addon",
+                    "1.0",
+                    direct_url=json.dumps(
+                        {"url": "file:///wheelhouse/cu13/addon.whl"},
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                )
             ),
             "CUDA 13|cu13|provenance",
         ),
         (
             lambda value: value["distributions"].append(
-                {"name": "Torch", "version": "2.11.0+cu129", "direct_url": ""}
+                {
+                    **value["distributions"][0],
+                    "name": "Torch",
+                    "metadata_path": (
+                        "/usr/local/lib/python3.12/site-packages/torch-copy.dist-info"
+                    ),
+                }
             ),
-            "duplicate|distribution|torch",
+            "expected one installed torch|manifest torch distribution",
         ),
     ],
 )
@@ -1043,6 +1091,299 @@ def test_runtime_manifest_rejects_oci_cuda13_or_distribution_drift(mutator, patt
 
     with pytest.raises((RuntimeError, ValueError), match=pattern):
         runner._validate_runtime_environment_manifest(manifest)
+
+
+def test_runtime_manifest_accepts_identical_noncritical_distribution_authorities():
+    runner = _runner_module()
+    manifest = _runtime_manifest(runner)
+    first = _distribution_record(
+        "auxiliary-package",
+        "1.2.3",
+        metadata_path="/usr/local/lib/python3.12/site-packages/auxiliary-a.dist-info",
+    )
+    second = _distribution_record(
+        "auxiliary-package",
+        "1.2.3",
+        metadata_path="/usr/local/lib/python3.12/site-packages/auxiliary-b.dist-info",
+    )
+    manifest["distributions"].extend((first, second))
+
+    assert runner._validate_runtime_environment_manifest(manifest) is None
+
+
+@pytest.mark.parametrize(
+    ("mutation", "pattern"),
+    [
+        (lambda row: row.update({"version": "2.0.0"}), "conflicting duplicate"),
+        (
+            lambda row: row.update(
+                {
+                    "direct_url": json.dumps(
+                        {"url": "https://example.invalid/auxiliary.whl"},
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                }
+            ),
+            "conflicting duplicate",
+        ),
+        (
+            lambda row: row.update(
+                {
+                    "metadata_path": (
+                        "/usr/local/lib/python3.12/site-packages/auxiliary-a.dist-info"
+                    )
+                }
+            ),
+            "metadata authority is duplicated",
+        ),
+        (lambda row: row.update({"normalized_name": "wrong"}), "row is malformed"),
+    ],
+)
+def test_runtime_manifest_rejects_conflicting_or_malformed_duplicate_authority(
+    mutation, pattern
+):
+    runner = _runner_module()
+    manifest = _runtime_manifest(runner)
+    first = _distribution_record(
+        "auxiliary-package",
+        "1.2.3",
+        metadata_path="/usr/local/lib/python3.12/site-packages/auxiliary-a.dist-info",
+    )
+    second = _distribution_record(
+        "auxiliary-package",
+        "1.2.3",
+        metadata_path="/usr/local/lib/python3.12/site-packages/auxiliary-b.dist-info",
+    )
+    mutation(second)
+    manifest["distributions"].extend((first, second))
+
+    with pytest.raises(RuntimeError, match=pattern):
+        runner._validate_runtime_environment_manifest(manifest)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "pattern"),
+    [
+        (lambda row: row.pop("direct_url"), "row shape drifted"),
+        (lambda row: row.update({"unexpected": "field"}), "row shape drifted"),
+        (lambda row: row.update({"version": 1}), "fields are not text"),
+        (
+            lambda row: row.update({"metadata_path": "relative/package.dist-info"}),
+            "not absolute and normalized",
+        ),
+        (
+            lambda row: row.update({"metadata_path": "/usr/local/../package.dist-info"}),
+            "not absolute and normalized",
+        ),
+        (lambda row: row.update({"direct_url": "{"}), "malformed direct URL"),
+        (lambda row: row.update({"direct_url": "[]"}), "not a JSON object"),
+        (lambda row: row.update({"direct_url": "{}"}), "no textual URL"),
+        (lambda row: row.update({"direct_url": '{"url":null}'}), "no textual URL"),
+        (lambda row: row.update({"direct_url": '{"url":7}'}), "no textual URL"),
+        (lambda row: row.update({"direct_url": '{"url":""}'}), "empty URL"),
+        (
+            lambda row: row.update(
+                {"direct_url": '{"url":"first","url":"second"}'}
+            ),
+            "malformed direct URL",
+        ),
+        (
+            lambda row: row.update(
+                {"direct_url": '{"weight":1e999,"url":"https://example.invalid"}'}
+            ),
+            "nonfinite number",
+        ),
+        (
+            lambda row: row.update(
+                {"direct_url": '{"url": "https://example.invalid/package.whl"}'}
+            ),
+            "not canonical",
+        ),
+    ],
+)
+def test_runtime_manifest_rejects_distribution_row_contract_drift(mutation, pattern):
+    runner = _runner_module()
+    manifest = _runtime_manifest(runner)
+    mutation(manifest["distributions"][0])
+
+    with pytest.raises((RuntimeError, TypeError), match=pattern):
+        runner._validate_runtime_environment_manifest(manifest)
+
+
+@pytest.mark.parametrize(
+    ("name", "version"),
+    [
+        ("torch", "2.11.0+cu129"),
+        ("sglang", "0.5.17"),
+        ("sglang-kernel", "0.4.5+cu129"),
+        ("transformers", "5.12.1"),
+        ("triton", "3.6.0"),
+    ],
+)
+def test_runtime_manifest_rejects_duplicate_critical_distribution(name, version):
+    runner = _runner_module()
+    manifest = _runtime_manifest(runner)
+    manifest["distributions"].append(
+        _distribution_record(
+            name,
+            version,
+            metadata_path=f"/usr/local/lib/python3.12/site-packages/{name}-copy.dist-info",
+        )
+    )
+
+    with pytest.raises(RuntimeError, match=f"expected one installed {re.escape(name)}"):
+        runner._validate_runtime_environment_manifest(manifest)
+
+
+@pytest.mark.parametrize(
+    "name", ["torch", "sglang", "sglang-kernel", "transformers", "triton"]
+)
+def test_runtime_manifest_rejects_critical_distribution_version_drift(name):
+    runner = _runner_module()
+    manifest = _runtime_manifest(runner)
+    row = next(item for item in manifest["distributions"] if item["normalized_name"] == name)
+    row["version"] = "0.invalid"
+
+    with pytest.raises(RuntimeError, match=f"manifest {re.escape(name)} distribution"):
+        runner._validate_runtime_environment_manifest(manifest)
+
+
+def test_runtime_manifest_scans_later_duplicate_for_cuda13_marker():
+    runner = _runner_module()
+    manifest = _runtime_manifest(runner)
+    first = _distribution_record(
+        "auxiliary-package",
+        "1.2.3",
+        metadata_path="/usr/local/lib/python3.12/site-packages/auxiliary-a.dist-info",
+    )
+    second = _distribution_record(
+        "auxiliary-package",
+        "1.2.3",
+        metadata_path="/usr/local/lib/python3.12/site-packages/auxiliary-b.dist-info",
+        direct_url=json.dumps(
+            {"url": "file:///wheelhouse/cu13/auxiliary.whl"},
+            sort_keys=True,
+            separators=(",", ":"),
+        ),
+    )
+    manifest["distributions"].extend((first, second))
+
+    with pytest.raises(RuntimeError, match="CUDA 13 distribution marker"):
+        runner._validate_runtime_environment_manifest(manifest)
+
+
+def test_distribution_inventory_deduplicates_repeated_metadata_path(monkeypatch, tmp_path):
+    runner = _runner_module()
+    metadata_path = tmp_path / "auxiliary-package.dist-info"
+    metadata_path.mkdir()
+    distribution = DistributionFixture("auxiliary-package", "1.2.3", metadata_path)
+    monkeypatch.setattr(
+        runner.importlib.metadata,
+        "distributions",
+        lambda: (distribution, distribution),
+    )
+
+    rows = runner._distribution_inventory()
+
+    assert len(rows) == 1
+    assert rows[0]["normalized_name"] == "auxiliary-package"
+
+
+def test_distribution_inventory_rejects_conflicting_repeated_metadata_path(
+    monkeypatch, tmp_path
+):
+    runner = _runner_module()
+    metadata_path = tmp_path / "auxiliary-package.dist-info"
+    metadata_path.mkdir()
+    distributions = (
+        DistributionFixture("auxiliary-package", "1.2.3", metadata_path),
+        DistributionFixture("auxiliary-package", "2.0.0", metadata_path),
+    )
+    monkeypatch.setattr(runner.importlib.metadata, "distributions", lambda: distributions)
+
+    with pytest.raises(RuntimeError, match="authority changed across discovery.*first=.*repeated="):
+        runner._distribution_inventory()
+
+
+@pytest.mark.parametrize("authority", [MISSING_DISTRIBUTION_PATH, "missing.dist-info"])
+def test_distribution_inventory_requires_existing_metadata_authority(
+    monkeypatch, tmp_path, authority
+):
+    runner = _runner_module()
+    metadata_path = (
+        authority if authority is MISSING_DISTRIBUTION_PATH else tmp_path / authority
+    )
+    distribution = DistributionFixture("auxiliary-package", "1.2.3", metadata_path)
+    monkeypatch.setattr(
+        runner.importlib.metadata, "distributions", lambda: (distribution,)
+    )
+
+    with pytest.raises(RuntimeError, match="metadata authority"):
+        runner._distribution_inventory()
+
+
+@pytest.mark.parametrize(
+    ("name", "version"),
+    [(None, "1.2.3"), (7, "1.2.3"), ("auxiliary-package", None), ("auxiliary-package", 7)],
+)
+def test_distribution_inventory_requires_textual_name_and_version(
+    monkeypatch, tmp_path, name, version
+):
+    runner = _runner_module()
+    metadata_path = tmp_path / "auxiliary-package.dist-info"
+    metadata_path.mkdir()
+    distribution = DistributionFixture(name, version, metadata_path)
+    monkeypatch.setattr(
+        runner.importlib.metadata, "distributions", lambda: (distribution,)
+    )
+
+    with pytest.raises(TypeError, match="lacks textual name or version"):
+        runner._distribution_inventory()
+
+
+def test_distribution_inventory_canonicalizes_direct_url_and_discovery_order(
+    monkeypatch, tmp_path
+):
+    runner = _runner_module()
+    first_path = tmp_path / "first.dist-info"
+    second_path = tmp_path / "second.dist-info"
+    first_path.mkdir()
+    second_path.mkdir()
+    first = DistributionFixture(
+        "z-package",
+        "1.0",
+        first_path,
+        '{"url": "https://example.invalid/z.whl", "archive_info": {}}',
+    )
+    second = DistributionFixture("a-package", "2.0", second_path)
+    monkeypatch.setattr(
+        runner.importlib.metadata, "distributions", lambda: (first, second)
+    )
+    forward = runner._distribution_inventory()
+    monkeypatch.setattr(
+        runner.importlib.metadata, "distributions", lambda: (second, first)
+    )
+
+    assert runner._distribution_inventory() == forward
+    assert forward[1]["direct_url"] == (
+        '{"archive_info":{},"url":"https://example.invalid/z.whl"}'
+    )
+
+
+def test_distribution_inventory_rejects_nonobject_direct_url(monkeypatch, tmp_path):
+    runner = _runner_module()
+    metadata_path = tmp_path / "auxiliary-package.dist-info"
+    metadata_path.mkdir()
+    distribution = DistributionFixture(
+        "auxiliary-package", "1.2.3", metadata_path, "[]"
+    )
+    monkeypatch.setattr(
+        runner.importlib.metadata, "distributions", lambda: (distribution,)
+    )
+
+    with pytest.raises(TypeError, match="not a JSON object"):
+        runner._distribution_inventory()
 
 
 def test_loaded_object_ledger_accepts_authorized_cuda12_driver_and_profiler_objects():
