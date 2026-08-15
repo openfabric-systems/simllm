@@ -622,12 +622,14 @@ closed id.
   is `0/0, blocked before behavioral execution`: its exact PyTorch CUDA 13.0
   runtime could not initialize against Merlin driver 565.57.01, which exposes
   driver API level 12.7. The retained child journal stopped at runtime import,
-  every shared guard held and no launch count was observed. SGL-24 therefore
-  remains open. Its next attempt must use a separate expectations-only v2
-  freeze and a new versioned CUDA 12.9 runtime while retaining the exact
-  SGLang source, model, workload, backends, profiler settings, ideal control
-  and launch-count acceptance. The v1 runtime remains immutable evidence and
-  must never be changed in place.
+  after its static source preflight. Parent-observable guards held, but the
+  run-local package, imported-source, backend and CUDA identities were not
+  reached, and no launch count was observed. SGL-24 therefore remains open.
+  Its next attempt must use a separate expectations-only v2 freeze and a new
+  versioned CUDA 12.9 runtime while retaining the exact SGLang source, model,
+  workload, backends, profiler settings, ideal control and launch-count
+  acceptance. The v1 runtime remains immutable evidence and must never be
+  changed in place.
 - SGL-25 (Precision; P1; S): price the end-to-end study's sink-free control
   cell on the same model its sink cells price. The sink cells declare the
   2-byte, 4-resident-expert per-rank geometry

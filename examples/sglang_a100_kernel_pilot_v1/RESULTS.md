@@ -1,11 +1,13 @@
 # SGLang A100 kernel pilot v1 results
 
-The reviewed study state is `BLOCKED`. Slurm job `195365` held every shared
-identity, allocation, confinement and postcondition guard, then stopped before
-the first timing observation because the frozen PyTorch CUDA 13.0 runtime is
-incompatible with Merlin driver 565.57.01. The behavioral result is therefore
-`0/0, blocked before behavioral execution`, not a failed score and not a void
-run.
+The reviewed study state is `BLOCKED`. Slurm job `195365` held the reached
+parent-observable allocation, source, model, ideal-artifact, confinement,
+GPU-state and postcondition guards, then stopped before the first timing
+observation because the frozen PyTorch CUDA 13.0 runtime is incompatible with
+Merlin driver 565.57.01. The child did not reach its imported-source, runtime
+package, backend or CUDA identity checks; those identities are unobserved, not
+passed. The behavioral result is therefore `0/0, blocked before behavioral
+execution`, not a failed score and not a void run.
 
 No device duration, Nsight Systems range, Nsight Compute counter, SGLang
 launch bracket or transferred-vLLM signed error was measured. SGL-24 remains
