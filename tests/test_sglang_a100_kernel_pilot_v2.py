@@ -213,7 +213,12 @@ def _runtime_manifest(runner) -> dict[str, object]:
         "mount_policy": {
             "cleanenv": True,
             "contain": True,
+            "no_home": True,
+            "nv": True,
             "disabled_default_mounts": ["bind-paths", "cwd", "hostfs"],
+            "optional_nvidia_file_mounts": sorted(
+                runner.OPTIONAL_NVIDIA_FILE_MOUNT_POINTS
+            ),
         },
         "mount_contract": [
             {
@@ -238,7 +243,12 @@ def _valid_lanes() -> dict[str, dict[str, str]]:
     }
 
 
-def _mountinfo(*, writable_role: str | None = None, unexpected: str | None = None) -> str:
+def _mountinfo(
+    *,
+    writable_role: str | None = None,
+    unexpected: str | None = None,
+    additional: tuple[tuple[str, str], ...] = (),
+) -> str:
     mounts = (
         ("runner", "/host/runner", "ro"),
         ("source", "/host/source", "ro"),
@@ -257,6 +267,11 @@ def _mountinfo(*, writable_role: str | None = None, unexpected: str | None = Non
     if unexpected is not None:
         lines.append(
             f"99 20 0:99 / {unexpected} ro,relatime - ext4 /host/unexpected ro,relatime"
+        )
+    for index, (mount_point, mode) in enumerate(additional, start=100):
+        lines.append(
+            f"{index} 20 0:{index} / {mount_point} {mode},nosuid,nodev,relatime "
+            f"- ext4 /host/nvidia/{index} rw,relatime"
         )
     return "\n".join(lines) + "\n"
 
@@ -673,6 +688,7 @@ def test_container_command_has_exact_isolation_bind_and_environment_contract(tmp
     assert command[0] == str(apptainer)
     assert command.count("--cleanenv") == 1
     assert command.count("--contain") == 1
+    assert command.count("--no-home") == 1
     assert command.count("--nv") == 1
     assert command[command.index("--no-mount") + 1] == "bind-paths,cwd,hostfs"
     assert command[command.index("--pwd") + 1] == str(cwd)
@@ -945,6 +961,23 @@ def test_runtime_manifest_residual_environment_structure_is_closed(mutator, patt
         runner._validate_runtime_environment_manifest(manifest)
 
 
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("no_home", False),
+        ("nv", False),
+        ("optional_nvidia_file_mounts", ["/usr/share/nvidia/unexpected.bin"]),
+    ],
+)
+def test_runtime_manifest_rejects_mount_policy_drift(key, value):
+    runner = _runner_module()
+    manifest = _runtime_manifest(runner)
+    manifest["mount_policy"][key] = value
+
+    with pytest.raises(RuntimeError, match="manifest.*policy|optional NVIDIA"):
+        runner._validate_runtime_environment_manifest(manifest)
+
+
 @pytest.mark.parametrize("authority", ["nsys", "ncu"])
 @pytest.mark.parametrize("mutation", ["missing", "duplicate", "wrong-kind", "bad-hash"])
 def test_runtime_manifest_requires_one_hashed_profiler_launcher(authority, mutation):
@@ -1205,6 +1238,94 @@ def test_effective_mount_inventory_enforces_read_only_and_read_write_roles(monke
         "ro" in modes[f"/opt/simllm/{role}"]
         for role in ("runner", "source", "model", "nsys", "ncu")
     )
+
+
+def test_effective_mount_inventory_accepts_exact_read_only_nvidia_files(monkeypatch):
+    runner = _runner_module()
+    mountinfo = _mountinfo(
+        additional=tuple(
+            (mount_point, "ro")
+            for mount_point in sorted(runner.OPTIONAL_NVIDIA_FILE_MOUNT_POINTS)
+        )
+    )
+
+    class MountInfo:
+        def read_text(self, *, encoding):
+            assert encoding == "utf-8"
+            return mountinfo
+
+    monkeypatch.setattr(runner, "Path", lambda value: MountInfo())
+    monkeypatch.setattr(
+        runner,
+        "_load_authority_seed",
+        lambda: {"mount_policy": {"forbidden_host_paths": []}},
+    )
+
+    rows = runner._effective_mount_inventory()
+
+    observed = {row["mount_point"] for row in rows}
+    assert runner.OPTIONAL_NVIDIA_FILE_MOUNT_POINTS <= observed
+
+
+@pytest.mark.parametrize(
+    "unexpected",
+    [
+        str(PurePosixPath("/", "home", "synthetic-user")),
+        str(PurePosixPath("/", "data", "user", "synthetic-user")),
+        "/usr/share/nvidia/nvoptix.bin.bak",
+        "/usr/share/nvidia/nvoptix.bin/child",
+        "/usr/bin/nvidia-backdoor",
+        "/run/nvidiarogue",
+        "/var/run/nvidia-malicious",
+    ],
+)
+def test_effective_mount_inventory_rejects_home_and_nvidia_neighbors(
+    monkeypatch, unexpected
+):
+    runner = _runner_module()
+
+    class MountInfo:
+        def read_text(self, *, encoding):
+            assert encoding == "utf-8"
+            return _mountinfo(unexpected=unexpected)
+
+    monkeypatch.setattr(runner, "Path", lambda value: MountInfo())
+    monkeypatch.setattr(
+        runner,
+        "_load_authority_seed",
+        lambda: {"mount_policy": {"forbidden_host_paths": []}},
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected user binds"):
+        runner._effective_mount_inventory()
+
+
+@pytest.mark.parametrize("mode", ["rw", "ro"])
+def test_effective_mount_inventory_rejects_writable_or_duplicate_nvidia_file(
+    monkeypatch, mode
+):
+    runner = _runner_module()
+    mount_point = "/usr/share/nvidia/nvoptix.bin"
+    additional = ((mount_point, mode),)
+    pattern = "writable"
+    if mode == "ro":
+        additional *= 2
+        pattern = "duplicated"
+
+    class MountInfo:
+        def read_text(self, *, encoding):
+            assert encoding == "utf-8"
+            return _mountinfo(additional=additional)
+
+    monkeypatch.setattr(runner, "Path", lambda value: MountInfo())
+    monkeypatch.setattr(
+        runner,
+        "_load_authority_seed",
+        lambda: {"mount_policy": {"forbidden_host_paths": []}},
+    )
+
+    with pytest.raises(RuntimeError, match=pattern):
+        runner._effective_mount_inventory()
 
 
 @pytest.mark.parametrize(
