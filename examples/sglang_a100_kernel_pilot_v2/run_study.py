@@ -237,7 +237,6 @@ ALLOWED_SYSTEM_MOUNT_POINTS = {
     "/etc/localtime",
     "/etc/passwd",
     "/etc/resolv.conf",
-    "/home",
     "/proc",
     "/run",
     "/sys",
@@ -247,12 +246,24 @@ ALLOWED_SYSTEM_MOUNT_POINTS = {
 ALLOWED_SYSTEM_MOUNT_PREFIXES = (
     "/.singularity.d/libs/",
     "/dev/",
-    "/home/",
     "/proc/",
-    "/run/nvidia",
     "/sys/",
-    "/usr/bin/nvidia-",
-    "/var/run/nvidia",
+)
+OPTIONAL_NVIDIA_FILE_MOUNT_POINTS = frozenset(
+    {
+        "/usr/bin/nvidia-cuda-mps-control",
+        "/usr/bin/nvidia-cuda-mps-server",
+        "/usr/bin/nvidia-debugdump",
+        "/usr/bin/nvidia-persistenced",
+        "/usr/bin/nvidia-smi",
+        "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json",
+        "/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json",
+        "/usr/share/glvnd/egl_vendor.d/10_nvidia.json",
+        "/usr/share/nvidia/nvoptix.bin",
+        "/usr/share/vulkan/icd.d/nvidia_icd.json",
+        "/usr/share/vulkan/icd.d/nvidia_layers.json",
+        "/usr/share/vulkan/implicit_layer.d/nvidia_layers.json",
+    }
 )
 STAT_IDENTITY_FIELDS = ("device", "inode", "mtime_ns", "ctime_ns")
 MOUNT_CONTRACT_OPTIONS = {"ro", "rw", "nosuid", "nodev", "noexec"}
@@ -557,6 +568,7 @@ def _container_command(
         "exec",
         "--cleanenv",
         "--contain",
+        "--no-home",
         "--nv",
         "--no-mount",
         "bind-paths,cwd,hostfs",
@@ -721,6 +733,23 @@ def _validate_runtime_environment_manifest(manifest: Mapping[str, Any]) -> None:
         raise TypeError("manifest OCI config environment is malformed")
     if not isinstance(environment["observed_residual"], dict):
         raise TypeError("manifest residual environment is malformed")
+    mount_policy = manifest["mount_policy"]
+    if not isinstance(mount_policy, dict):
+        raise TypeError("manifest mount policy is malformed")
+    _expect(mount_policy.get("cleanenv"), True, "manifest cleanenv policy")
+    _expect(mount_policy.get("contain"), True, "manifest contain policy")
+    _expect(mount_policy.get("no_home"), True, "manifest no-home policy")
+    _expect(mount_policy.get("nv"), True, "manifest NVIDIA injection policy")
+    _expect(
+        mount_policy.get("disabled_default_mounts"),
+        ["bind-paths", "cwd", "hostfs"],
+        "manifest disabled default mounts",
+    )
+    _expect(
+        mount_policy.get("optional_nvidia_file_mounts"),
+        sorted(OPTIONAL_NVIDIA_FILE_MOUNT_POINTS),
+        "manifest optional NVIDIA file mounts",
+    )
     mount_contract = manifest["mount_contract"]
     if not isinstance(mount_contract, list) or not mount_contract:
         raise RuntimeError("manifest mount contract is absent")
@@ -2967,8 +2996,10 @@ def _prepare_runtime(
     mount_policy = {
         "cleanenv": True,
         "contain": True,
+        "no_home": True,
         "nv": True,
         "disabled_default_mounts": ["bind-paths", "cwd", "hostfs"],
+        "optional_nvidia_file_mounts": sorted(OPTIONAL_NVIDIA_FILE_MOUNT_POINTS),
         "binds": [
             {key: row[key] for key in ("role", "destination", "mode")} for row in binds
         ],
@@ -4280,6 +4311,7 @@ def _mount_point_is_allowed(mount_point: str) -> bool:
     return (
         mount_point in REQUIRED_CONTAINER_MOUNT_MODES
         or mount_point in ALLOWED_SYSTEM_MOUNT_POINTS
+        or mount_point in OPTIONAL_NVIDIA_FILE_MOUNT_POINTS
         or mount_point == "/.singularity.d/libs"
         or any(mount_point.startswith(prefix) for prefix in ALLOWED_SYSTEM_MOUNT_PREFIXES)
     )
@@ -4354,6 +4386,15 @@ def _effective_mount_inventory() -> list[dict[str, Any]]:
             if expected_mode == "rw":
                 raise RuntimeError("job result/cache bind is not writable")
             raise RuntimeError(f"read-only bind is writable in effective mount inventory: {mount}")
+    for mount in OPTIONAL_NVIDIA_FILE_MOUNT_POINTS:
+        matches = [row for row in rows if row["mount_point"] == mount]
+        if len(matches) > 1:
+            raise RuntimeError(f"optional NVIDIA file bind is duplicated: {mount}")
+        if not matches:
+            continue
+        options = set(matches[0]["mount_options"])
+        if "ro" not in options or "rw" in options:
+            raise RuntimeError(f"optional NVIDIA file bind is writable: {mount}")
     policy = _load_authority_seed()["mount_policy"]
     serialized = json.dumps(
         [{"root": row["root"], "source": row["source"]} for row in rows], sort_keys=True
