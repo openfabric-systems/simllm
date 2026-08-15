@@ -157,7 +157,7 @@ def _runtime_manifest(runner) -> dict[str, object]:
         "distributions": [
             {"name": "torch", "version": "2.11.0+cu129", "direct_url": ""},
             {"name": "sglang", "version": "0.5.17", "direct_url": ""},
-            {"name": "sglang-kernel", "version": "0.4.5", "direct_url": ""},
+            {"name": "sglang-kernel", "version": "0.4.5+cu129", "direct_url": ""},
             {"name": "transformers", "version": "5.12.1", "direct_url": ""},
             {"name": "triton", "version": "3.6.0", "direct_url": ""},
         ],
@@ -536,6 +536,7 @@ def test_frozen_v2_identity_allocation_and_measurement_are_exact():
     assert frozen["runtime"]["python_abi"] == "3.12"
     assert frozen["runtime"]["pytorch"] == "2.11.0+cu129"
     assert frozen["runtime"]["sglang_kernel_variant"] == "cu129"
+    assert runner.EXPECTED_RUNTIME_VERSIONS["sglang_kernel"] == "0.4.5+cu129"
     assert frozen["measurement"]["required_lanes"] == [
         "timing:prefill-t512-r4",
         "timing:decode-b4-c2048",

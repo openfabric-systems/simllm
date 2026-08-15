@@ -60,7 +60,7 @@ EXPECTED_RUNTIME_VERSIONS = {
     "torch_cuda": "12.9",
     "sglang_source": "0.0.0.dev1+g8f2a3ad6d",
     "sglang_substrate": "0.5.17",
-    "sglang_kernel": "0.4.5",
+    "sglang_kernel": "0.4.5+cu129",
     "transformers": "5.12.1",
     "triton": "3.6.0",
 }
@@ -364,6 +364,11 @@ def _validate_expectations(value: Mapping[str, Any]) -> None:
     )
     runtime = value["runtime"]
     _expect(runtime["pytorch_cuda"], "12.9", "PyTorch CUDA build")
+    _expect(
+        EXPECTED_RUNTIME_VERSIONS["sglang_kernel"],
+        f"{runtime['sglang_kernel_release']}+{runtime['sglang_kernel_variant']}",
+        "SGLang kernel distribution version",
+    )
     _expect(runtime["oci_manifest_digest"], EXPECTED_OCI_MANIFEST_DIGEST, "OCI manifest")
     _expect(runtime["oci_config_digest"], EXPECTED_OCI_CONFIG_DIGEST, "OCI config")
     _expect(runtime["index_sha256"], EXPECTED_OCI_INDEX_SHA256, "OCI index hash")
