@@ -233,6 +233,23 @@ def test_model_revision_is_explicit_runtime_provenance():
         runner._validated_model_revision({})
 
 
+def test_child_audits_cache_config_state_and_data_roots():
+    runner = _runner_module()
+
+    assert {
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_STATE_HOME",
+        "XDG_DATA_HOME",
+        "TRITON_CACHE_DIR",
+        "TORCHINDUCTOR_CACHE_DIR",
+        "TORCH_EXTENSIONS_DIR",
+        "CUDA_CACHE_PATH",
+        "HF_HOME",
+        "TORCH_HOME",
+    } == set(runner.AUDITED_CHILD_ROOTS)
+
+
 def test_scheduler_records_site_qos_without_inventing_a_resource_constraint(monkeypatch):
     runner = _runner_module()
     record = (
@@ -673,18 +690,7 @@ def test_child_result_requires_exact_identity_determinism_and_pool_reset():
         "cuda_device_name": runner.EXPECTED_GPU_NAME,
         "cuda_device_uuid": "GPU-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
         "measurements": [{**measurement, "repetition": index} for index in range(41)],
-        "cache_inventory": {
-            name: []
-            for name in (
-                "TRITON_CACHE_DIR",
-                "TORCHINDUCTOR_CACHE_DIR",
-                "TORCH_EXTENSIONS_DIR",
-                "CUDA_CACHE_PATH",
-                "XDG_CACHE_HOME",
-                "HF_HOME",
-                "TORCH_HOME",
-            )
-        },
+        "cache_inventory": {name: [] for name in runner.AUDITED_CHILD_ROOTS},
     }
 
     runner._validate_child_result(

@@ -121,6 +121,18 @@ GPU_QUERY_FIELDS = (
     "power.draw",
     "temperature.gpu",
 )
+AUDITED_CHILD_ROOTS = (
+    "TRITON_CACHE_DIR",
+    "TORCHINDUCTOR_CACHE_DIR",
+    "TORCH_EXTENSIONS_DIR",
+    "CUDA_CACHE_PATH",
+    "XDG_CACHE_HOME",
+    "XDG_CONFIG_HOME",
+    "XDG_STATE_HOME",
+    "XDG_DATA_HOME",
+    "HF_HOME",
+    "TORCH_HOME",
+)
 _DEADLINE: float | None = None
 
 
@@ -1259,18 +1271,7 @@ def _validate_job_environment(
     if Path(run_root_raw).resolve() != out:
         raise RuntimeError("SIMLLM_RUN_ROOT does not match --out")
     confined = {}
-    for name in (
-        "TMPDIR",
-        "TMP",
-        "TEMP",
-        "XDG_CACHE_HOME",
-        "TRITON_CACHE_DIR",
-        "TORCHINDUCTOR_CACHE_DIR",
-        "TORCH_EXTENSIONS_DIR",
-        "CUDA_CACHE_PATH",
-        "HF_HOME",
-        "TORCH_HOME",
-    ):
+    for name in ("TMPDIR", "TMP", "TEMP", *AUDITED_CHILD_ROOTS):
         raw = environment.get(name, "")
         if not raw or not Path(raw).is_absolute():
             raise RuntimeError(f"{name} must be a nonempty absolute path")
@@ -1658,15 +1659,7 @@ def _validate_child_result(
     if len(set(pool_observations)) != 1:
         raise RuntimeError("request-pool slot allocation changed across repetitions")
     cache_inventory = value.get("cache_inventory")
-    expected_cache_roots = {
-        "TRITON_CACHE_DIR",
-        "TORCHINDUCTOR_CACHE_DIR",
-        "TORCH_EXTENSIONS_DIR",
-        "CUDA_CACHE_PATH",
-        "XDG_CACHE_HOME",
-        "HF_HOME",
-        "TORCH_HOME",
-    }
+    expected_cache_roots = set(AUDITED_CHILD_ROOTS)
     if not isinstance(cache_inventory, dict) or set(cache_inventory) != expected_cache_roots:
         raise RuntimeError("child cache inventory is incomplete")
     return dict(value)
@@ -2290,18 +2283,7 @@ def _run_child(args: argparse.Namespace) -> int:
     source_path = _resolve_required_path(os.environ, "SIMLLM_SGLANG_SOURCE")
     scratch_root = _resolve_required_path(os.environ, "SIMLLM_SCRATCH_ROOT")
     temporary_root = _resolve_required_path(os.environ, "TMPDIR")
-    cache_roots = {
-        name: _resolve_required_path(os.environ, name)
-        for name in (
-            "TRITON_CACHE_DIR",
-            "TORCHINDUCTOR_CACHE_DIR",
-            "TORCH_EXTENSIONS_DIR",
-            "CUDA_CACHE_PATH",
-            "XDG_CACHE_HOME",
-            "HF_HOME",
-            "TORCH_HOME",
-        )
-    }
+    cache_roots = {name: _resolve_required_path(os.environ, name) for name in AUDITED_CHILD_ROOTS}
     for name, path in (*cache_roots.items(), ("TMPDIR", temporary_root)):
         if not Path(os.environ[name]).is_absolute():
             raise RuntimeError(f"{name} must be absolute")
