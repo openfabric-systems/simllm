@@ -1788,7 +1788,21 @@ def _create_oci_archive(layout: Path, archive: Path) -> None:
     if archive.exists():
         raise RuntimeError(f"OCI archive already exists: {archive}")
     tar = _required_tool("tar")
-    _run((tar, "--format=posix", "-cf", archive, "-C", layout, "."), timeout=600)
+    # Apptainer rejects a tar root member as an illegal extraction path.
+    _run(
+        (
+            tar,
+            "--format=posix",
+            "-cf",
+            archive,
+            "-C",
+            layout,
+            "oci-layout",
+            "index.json",
+            "blobs",
+        ),
+        timeout=600,
+    )
     if not archive.is_file() or archive.stat().st_size < EXPECTED_OCI_LAYER_BYTES:
         raise RuntimeError("OCI archive construction was incomplete")
 
