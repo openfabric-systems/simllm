@@ -979,14 +979,21 @@ def _run(
             except ProcessLookupError:
                 pass
             try:
-                process.communicate(timeout=5)
+                stdout, stderr = process.communicate(timeout=5)
             except subprocess.TimeoutExpired:
                 try:
                     os.killpg(process.pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
-                process.communicate()
-            raise CapabilityBlocked(f"command timed out: {' '.join(normalized)}") from error
+                stdout, stderr = process.communicate()
+            diagnostic = ""
+            if stdout:
+                diagnostic += f"\npartial stdout:\n{stdout[-4000:]}"
+            if stderr:
+                diagnostic += f"\npartial stderr:\n{stderr[-4000:]}"
+            raise CapabilityBlocked(
+                f"command timed out: {' '.join(normalized)}{diagnostic}"
+            ) from error
     except subprocess.TimeoutExpired as error:
         raise CapabilityBlocked(
             f"command group could not be terminated: {' '.join(normalized)}"
@@ -1564,6 +1571,63 @@ def _write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _child_progress_path(child_output: Path) -> Path:
+    return child_output.with_suffix(".progress.json")
+
+
+def _append_child_progress(
+    child_output: Path, *, mode: str, phase: str, stage: str, **details: Any
+) -> dict[str, Any]:
+    path = _child_progress_path(child_output)
+    if path.is_file():
+        value = json.loads(path.read_text(encoding="utf-8"))
+        _expect(
+            value.get("schema"), "simllm-sglang-a100-kernel-pilot-progress-v1", "progress schema"
+        )
+        _expect(value.get("mode"), mode, "progress mode")
+        _expect(value.get("phase"), phase, "progress phase")
+        history = value.get("history")
+        if not isinstance(history, list):
+            raise RuntimeError("child progress history is malformed")
+    else:
+        value = {
+            "schema": "simllm-sglang-a100-kernel-pilot-progress-v1",
+            "mode": mode,
+            "phase": phase,
+            "history": [],
+        }
+        history = value["history"]
+    history.append({"stage": stage, "at_unix_ns": time.time_ns(), **details})
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+    return value
+
+
+def _optional_child_progress(child_output: Path) -> dict[str, Any] | None:
+    path = _child_progress_path(child_output)
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise TypeError("child progress is not an object")
+        return value
+    except (OSError, TypeError, ValueError) as error:
+        return {
+            "schema": "simllm-sglang-a100-kernel-pilot-progress-unreadable-v1",
+            "error": str(error),
+        }
+
+
+def _lane_failure(error: BaseException, child_output: Path) -> dict[str, Any]:
+    value = {"state": _classify_failure(error), "error": str(error)}
+    progress = _optional_child_progress(child_output)
+    if progress is not None:
+        value["progress"] = progress
+    return value
+
+
 def _read_json(path: Path) -> Any:
     if not path.is_file():
         raise RuntimeError(f"child produced no JSON result: {path}")
@@ -1928,10 +1992,7 @@ def _run_parent(args: argparse.Namespace) -> int:
                 context["timing"] = timing
                 _write_json(out / "partial_context.json", context)
             except BaseException as error:
-                context["lanes"]["timing"][phase] = {
-                    "state": _classify_failure(error),
-                    "error": str(error),
-                }
+                context["lanes"]["timing"][phase] = _lane_failure(error, timing_path)
                 raise
 
         _validate_compatibility_control(out, environment, IDEAL_ARTIFACT, EXPECTED_IDEAL_SHA256)
@@ -2042,10 +2103,7 @@ def _run_parent(args: argparse.Namespace) -> int:
                 _assert_output_budget(out)
                 _assert_scratch_budget(scratch)
             except BaseException as error:
-                context["lanes"]["nsys"][phase] = {
-                    "state": _classify_failure(error),
-                    "error": str(error),
-                }
+                context["lanes"]["nsys"][phase] = _lane_failure(error, capture_child_path)
                 raise
 
         decode_bracket = [
@@ -2069,6 +2127,7 @@ def _run_parent(args: argparse.Namespace) -> int:
             lane_evidence: dict[str, Any] = {}
             context["lanes"]["ncu"][phase] = {"state": "RUNNING"}
             _write_json(out / "partial_context.json", context)
+            ncu_child_path = child_dir / f"{phase}.ncu.json"
             try:
                 first_range = f"simllm-pilot:{phase}:step:00"
                 target_rows = [
@@ -2077,7 +2136,6 @@ def _run_parent(args: argparse.Namespace) -> int:
                     if row.get("activity") == "kernel" and row.get("phase_range") == first_range
                 ]
                 target = _ncu_target(target_rows)
-                ncu_child_path = child_dir / f"{phase}.ncu.json"
                 command = _ncu_command(
                     ncu,
                     target,
@@ -2126,10 +2184,7 @@ def _run_parent(args: argparse.Namespace) -> int:
                 _assert_scratch_budget(scratch)
             except BaseException as error:
                 lane_state = _classify_failure(error)
-                context["lanes"]["ncu"][phase] = {
-                    "state": lane_state,
-                    "error": str(error),
-                }
+                context["lanes"]["ncu"][phase] = _lane_failure(error, ncu_child_path)
                 ncu_results[phase] = {
                     "state": lane_state,
                     "error_type": type(error).__name__,
@@ -2273,8 +2328,15 @@ def _time_cuda_target(
 def _run_child(args: argparse.Namespace) -> int:
     if args.phase is None or args.child_out is None or args.child is None:
         raise ValueError("child mode requires --phase and --child-out")
-    if args.child_out.exists():
-        raise RuntimeError(f"child output already exists: {args.child_out}")
+
+    def record_progress(stage: str, **details: Any) -> None:
+        _append_child_progress(
+            args.child_out,
+            mode=args.child,
+            phase=args.phase,
+            stage=stage,
+            **details,
+        )
 
     if os.environ.get("SIMLLM_SGLANG_ENABLE") != "0":
         raise RuntimeError("SIMLLM_SGLANG_ENABLE must be 0")
@@ -2295,8 +2357,21 @@ def _run_child(args: argparse.Namespace) -> int:
         args.child_out.resolve().relative_to(scratch_root)
     except ValueError as error:
         raise RuntimeError("child output escapes the job scratch root") from error
-    _validate_sglang_source_unchanged(source_path)
+    progress_path = _child_progress_path(args.child_out)
+    try:
+        progress_path.resolve().relative_to(scratch_root)
+    except ValueError as error:
+        raise RuntimeError("child progress escapes the job scratch root") from error
+    if args.child_out.exists():
+        raise RuntimeError(f"child output already exists: {args.child_out}")
+    if progress_path.exists():
+        raise RuntimeError(f"child progress already exists: {progress_path}")
 
+    record_progress("entered")
+    _validate_sglang_source_unchanged(source_path)
+    record_progress("preflight_validated")
+
+    record_progress("runtime_import_started")
     import sglang
     import sglang.benchmark.one_batch as one_batch_module
     import torch
@@ -2311,6 +2386,8 @@ def _run_child(args: argparse.Namespace) -> int:
     from sglang.srt.layers.moe import get_moe_a2a_backend, get_moe_runner_backend
     from sglang.srt.runtime_context import get_exec
     from sglang.srt.server_args import PortArgs, ServerArgs
+
+    record_progress("runtime_import_completed")
 
     versions = {
         "python": ".".join(str(item) for item in sys.version_info[:3]),
@@ -2335,6 +2412,7 @@ def _run_child(args: argparse.Namespace) -> int:
         except ValueError as error:
             raise RuntimeError(f"imported SGLang {name} is outside the pinned checkout") from error
         source_files[name] = relative.as_posix()
+    record_progress("runtime_identity_validated", versions=versions, source=source_files)
     model_path = _resolve_required_path(os.environ, "SIMLLM_MODEL_SNAPSHOT")
     if not torch.cuda.is_available() or torch.cuda.device_count() != 1:
         raise CapabilityBlocked("the child does not see exactly one CUDA GPU")
@@ -2343,6 +2421,11 @@ def _run_child(args: argparse.Namespace) -> int:
     capability = ".".join(str(item) for item in torch.cuda.get_device_capability(0))
     if capability != EXPECTED_COMPUTE_CAPABILITY:
         raise RuntimeError(f"CUDA compute capability drifted: {capability}")
+    record_progress(
+        "cuda_identity_validated",
+        cuda_device_name=torch.cuda.get_device_name(0),
+        compute_capability=capability,
+    )
 
     server_args = ServerArgs(
         model_path=str(model_path),
@@ -2373,12 +2456,15 @@ def _run_child(args: argparse.Namespace) -> int:
     initialize_moe_config(server_args)
     initialize_fp8_gemm_config(server_args)
     initialize_fp4_gemm_config(server_args)
+    record_progress("backend_configuration_initialized")
     if get_moe_runner_backend().value != "triton":
         raise RuntimeError("runtime MoE runner backend is not Triton")
     if get_moe_a2a_backend().value != "none":
         raise RuntimeError("runtime MoE A2A backend is not none")
     port_args = PortArgs.init_new(server_args)
+    record_progress("model_load_started")
     model_runner, _tokenizer = load_model(server_args, port_args, 0, 0)
+    record_progress("model_load_completed")
     torch_runner = getattr(model_runner, "torch_runner", None)
     if torch_runner is None:
         raise RuntimeError("one-batch helper did not return the stock Torch runner")
@@ -2401,6 +2487,7 @@ def _run_child(args: argparse.Namespace) -> int:
         "moe_runner": get_moe_runner_backend().value,
         "sampling": get_exec().kernel.sampling_backend,
     }
+    record_progress("runtime_backend_validated", backends=backends)
 
     layer0 = torch_runner.model.model.layers[0]
     active_phase = args.phase
@@ -2480,6 +2567,7 @@ def _run_child(args: argparse.Namespace) -> int:
             "seq_lens": seq_lens,
         }
 
+    record_progress("warmups_started", count=WARMUPS)
     for warmup in range(WARMUPS):
         watchdog = _start_step_watchdog(f"{active_phase}:warmup:{warmup:02d}")
         try:
@@ -2487,6 +2575,7 @@ def _run_child(args: argparse.Namespace) -> int:
             torch.cuda.synchronize()
         finally:
             _cancel_step_watchdog(watchdog)
+    record_progress("warmups_completed", count=WARMUPS)
 
     cache_before = {name: _cache_inventory(root) for name, root in cache_roots.items()}
     measurements = []
@@ -2495,6 +2584,7 @@ def _run_child(args: argparse.Namespace) -> int:
         if args.child == "timing"
         else (CAPTURE_REPETITIONS if args.child == "capture" else 1)
     )
+    record_progress("retained_measurement_started", repetitions=repetitions)
     for repetition in range(repetitions):
         watchdog = _start_step_watchdog(f"{active_phase}:{args.child}:{repetition:02d}")
         try:
@@ -2523,6 +2613,7 @@ def _run_child(args: argparse.Namespace) -> int:
                 **workload,
             }
         )
+    record_progress("retained_measurement_completed", repetitions=repetitions)
     cache_after = {name: _cache_inventory(root) for name, root in cache_roots.items()}
     if cache_before != cache_after:
         raise RuntimeError("Triton cache changed during retained measurements")
@@ -2552,6 +2643,7 @@ def _run_child(args: argparse.Namespace) -> int:
         "cache_inventory": cache_after,
     }
     _write_json(args.child_out, result)
+    record_progress("child_result_written")
     print(f"CHILD_MODE={args.child}")
     print(f"CHILD_PHASE={args.phase}")
     print("CHILD_STATE=PASS")

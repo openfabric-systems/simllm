@@ -315,6 +315,70 @@ def test_phase_step_watchdog_uses_frozen_two_minute_ceiling(monkeypatch):
     assert created[0].cancelled
 
 
+def test_child_progress_is_atomic_and_attached_to_blocked_lane(tmp_path):
+    runner = _runner_module()
+    child_output = tmp_path / "prefill.timing.json"
+
+    runner._append_child_progress(
+        child_output,
+        mode="timing",
+        phase="prefill-t512-r4",
+        stage="model_load_started",
+    )
+    progress = runner._append_child_progress(
+        child_output,
+        mode="timing",
+        phase="prefill-t512-r4",
+        stage="warmups_started",
+        count=10,
+    )
+
+    assert progress["schema"] == "simllm-sglang-a100-kernel-pilot-progress-v1"
+    assert [row["stage"] for row in progress["history"]] == [
+        "model_load_started",
+        "warmups_started",
+    ]
+    assert progress["history"][-1]["count"] == 10
+    progress_path = runner._child_progress_path(child_output)
+    assert progress_path.is_file()
+    assert not progress_path.with_name(progress_path.name + ".tmp").exists()
+
+    lane = runner._lane_failure(runner.CapabilityBlocked("command timed out"), child_output)
+    assert lane["state"] == "BLOCKED"
+    assert lane["progress"] == progress
+
+
+def test_child_rejects_escaping_output_before_writing_progress(tmp_path, monkeypatch):
+    runner = _runner_module()
+    scratch = tmp_path / "scratch"
+    source = scratch / "source"
+    temporary = scratch / "tmp"
+    source.mkdir(parents=True)
+    temporary.mkdir()
+    monkeypatch.setenv("SIMLLM_SGLANG_ENABLE", "0")
+    monkeypatch.setenv("SIMLLM_SGLANG_ORACLE_CAPTURE", "0")
+    monkeypatch.setenv("SIMLLM_SGLANG_SOURCE", str(source))
+    monkeypatch.setenv("SIMLLM_SCRATCH_ROOT", str(scratch))
+    monkeypatch.setenv("TMPDIR", str(temporary))
+    for index, name in enumerate(runner.AUDITED_CHILD_ROOTS):
+        root = scratch / f"audited-{index}"
+        root.mkdir()
+        monkeypatch.setenv(name, str(root))
+
+    child_output = tmp_path / "escape.json"
+    args = runner.argparse.Namespace(
+        child="timing",
+        phase="prefill-t512-r4",
+        child_out=child_output,
+    )
+
+    with pytest.raises(RuntimeError, match="child output escapes"):
+        runner._run_child(args)
+
+    assert not child_output.exists()
+    assert not runner._child_progress_path(child_output).exists()
+
+
 @pytest.mark.parametrize(("name", "expected"), [("EXTEND", "extend"), ("DECODE", "decode")])
 def test_forward_mode_is_derived_from_live_batch(name, expected):
     runner = _runner_module()
