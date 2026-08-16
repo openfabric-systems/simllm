@@ -57,12 +57,12 @@ workloads for the AGI era) and welcomes community contributions.
 SimLLM's architecture, its models and its ongoing maintenance are
 developed with the support of ETH Zurich, the Swiss National
 Supercomputing Centre (CSCS), the Scalable Parallel Computing
-Laboratory (SPCL) at ETH Zurich, SLAC National Accelerator Laboratory
-at Stanford and the National Energy Research Scientific Computing
-Center (NERSC) at Lawrence Berkeley National Laboratory.
+Laboratory (SPCL) at ETH Zurich, SLAC National Accelerator Laboratory,
+Stanford University and the National Energy Research Scientific
+Computing Center (NERSC) at Lawrence Berkeley National Laboratory.
 
 <p align="center">
-<img src="resources/figures/supporters.png" width="94%" alt="Logos of ETH Zurich, CSCS, SPCL, SLAC National Accelerator Laboratory and NERSC">
+<img src="resources/figures/supporters.png" width="94%" alt="Logos of ETH Zurich, CSCS, SPCL, SLAC National Accelerator Laboratory, Stanford University and NERSC">
 </p>
 
 ## Architecture
