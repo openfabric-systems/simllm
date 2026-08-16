@@ -831,6 +831,25 @@ study reports all three arms rather than treating `lower` as `off`.
   R-squared of 0.99968. A defect that survives a change of link generation,
   link count, channel count and host architecture is a property of the model
   form, so this task needs no further hardware evidence to justify it.
+  The first candidate replacement is landed and refuted. The
+  [collective regime curve](../../examples/collective_regime_curve_v1/RESULTS.md)
+  added `CollectiveBandwidthCurve`, a payload-indexed serialization bandwidth
+  with geometric interpolation between measured anchors, and scored `16 of 20`
+  against a frozen five-anchor rule and a 16-payload held-out split. It clears
+  the bar at width 4 on both machines, at -11.86 and -9.95 percent, and misses
+  it at width 2 on both, at -27.76 and -27.35 percent, in both cases at exactly
+  1 MiB. The cause is identified and is itself a finding: measured
+  serialization bandwidth is **not monotone in payload**. It dips 26 percent on
+  the A100 and 22 percent on the GH200 at 1 MiB at width 2, and about 7 percent
+  at 2 MiB at width 4, so any interpolation between anchors that straddle the
+  dip predicts a faster collective than the hardware delivers. The dip has the
+  shape of a protocol transition but this study did not instrument NCCL's
+  selection, so that mechanism is a hypothesis. The next candidate must anchor
+  at the transition rather than on a log-spaced grid, keep a held-out payload
+  inside the dip so the check still measures generalization, and be frozen
+  before its error is computed. The mechanism stays landed and inert: no
+  shipped profile carries a curve, an uncurved width charges exactly the flat
+  slope it always did, and no reported TTFT or TPOT moves.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide
