@@ -61,9 +61,7 @@ Laboratory (SPCL) at ETH Zurich, SLAC National Accelerator Laboratory,
 Stanford University and the National Energy Research Scientific
 Computing Center (NERSC) at Lawrence Berkeley National Laboratory.
 
-<p align="center">
-<img src="resources/figures/supporters.png" width="94%" alt="Logos of ETH Zurich, CSCS, SPCL, SLAC National Accelerator Laboratory, Stanford University and NERSC">
-</p>
+<p align="center"><a href="https://ethz.ch"><img src="resources/figures/supporters/tile-ethz.png" height="64" alt="ETH Zurich"></a><a href="https://www.cscs.ch"><img src="resources/figures/supporters/tile-cscs.png" height="64" alt="Swiss National Supercomputing Centre (CSCS)"></a><a href="https://spcl.inf.ethz.ch"><img src="resources/figures/supporters/tile-spcl.png" height="64" alt="Scalable Parallel Computing Laboratory (SPCL)"></a><a href="https://www6.slac.stanford.edu"><img src="resources/figures/supporters/tile-slac.png" height="64" alt="SLAC National Accelerator Laboratory"></a><a href="https://www.stanford.edu"><img src="resources/figures/supporters/tile-stanford.png" height="64" alt="Stanford University"></a><a href="https://www.nersc.gov"><img src="resources/figures/supporters/tile-nersc.png" height="64" alt="NERSC"></a></p>
 
 ## Architecture
 
