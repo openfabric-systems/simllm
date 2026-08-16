@@ -776,9 +776,19 @@ and an explicit reason:
   2,039.04 GB/s memory-clock-derived peak, and the memory-to-compute crossover
   for `N` = `K` = 8192 measures at `M` = 256 against an ideal 158.9. A single
   0.7 efficiency constant cannot span 0.47 percent of peak at `M` = 1 and 96.9
-  percent at 16384 cubed. This is microbenchmark evidence only: no production
-  framework kernel, no dynamic SASS, no Accel-Sim calibration and no held-out
-  kernel matrix, so COMP-1 stays open on its first blocker.
+  percent at 16384 cubed. The
+  [GH200 hardware envelope](../../examples/gh200_hardware_envelope_v1/RESULTS.md)
+  adds the Hopper constants from the identical sweep: 1.304 us pipelined, 6.126
+  us synchronized roundtrip and 0.589 us per CUDA-graph replay node, with the
+  roofline crossover at `M` = 512 against an ideal 284.6 and 918.66 TFLOP/s at
+  16384 cubed. Two architecture pairs now bound the transfer question the task
+  asks. The host-issue constants move with the host, not the GPU: the aarch64
+  Grace launches 28 percent faster than the x86 EPYC while the synchronized
+  roundtrip is unchanged within one percent, so a launch constant may not be
+  carried across hosts even at fixed GPU generation. Both are microbenchmark
+  evidence only: no production framework kernel, no dynamic SASS, no Accel-Sim
+  calibration and no held-out kernel matrix, so COMP-1 stays open on its first
+  blocker.
 - COMP-5 (Precision; P1; L): provide the production capture
   environment required by COMP-1. The local GTX 1660 Ti still cannot qualify:
   Nsight Compute returns `ERR_NVGPUCTRPERM`, and display sharing produces the

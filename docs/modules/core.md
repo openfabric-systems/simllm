@@ -903,8 +903,20 @@ configuration, and that qualification is now discharged; see
   the measured per-GPU egress. Under a concurrent BF16 GEMM the collective
   grows 1.481 times and the GEMM 1.161 times, with a makespan 0.839 of the
   serial sum, which is the competing-kernel evidence the acceptance requires.
-  The task stays open because no runtime composition landed and no graph JCT
-  moved.
+  A second architecture now separates what transfers from what does not. The
+  [GH200 hardware envelope](../../examples/gh200_hardware_envelope_v1/RESULTS.md)
+  measured a 4-GPU GH200 `NV6` mesh with the identical sweep. Ring efficiency
+  against a GPU's own link ceiling is 70.5 percent there against 71.0 percent
+  on the A100, and the width-2 to width-4 bus bandwidth scaling is 2.926
+  against 2.925, so both are properties of the NCCL ring rather than of the
+  link. The rates are not: per-pair copy-engine efficiency falls from 94.0
+  percent on NVLink3 to 83.6 percent on NVLink4, and per-GPU egress rises from
+  281.65 to 398.71 GB/s. The 450 GB/s flat surrogate is 1.598 times the A100
+  measurement and 1.129 times the GH200 one, which identifies it as a
+  Hopper-class constant rather than a portable intra-node rate. A calibrated
+  service should therefore carry a per-architecture link ceiling and a shared
+  ring efficiency, not one bandwidth. The task stays open because no runtime
+  composition landed and no graph JCT moved.
 - CORE-26 (Precision; P1; L): replace the cross-node collective path's current
   independent GPU-versus-RNIC surrogate with one runtime composition of the
   GPU-resident NCCL task and the existing WQE/NIC authority. Consume the

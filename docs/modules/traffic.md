@@ -820,7 +820,17 @@ study reports all three arms rather than treating `lower` as `off`.
   at a fixed width. Acceptance requires a form whose worst signed error over
   the measured sweep is at most 15 percent at both widths, an unchanged result
   at the two anchors, and a bypass that preserves the accepted single-slope
-  artifacts exactly.
+  artifacts exactly. This is now confirmed on two architectures. The
+  [GH200 hardware envelope](../../examples/gh200_hardware_envelope_v1/RESULTS.md)
+  froze the reproduction as a pre-run prediction with an explicit falsifier and
+  both held: on a 4-GPU GH200 `NV6` mesh the same two-anchor model is
+  optimistic at every payload between its anchors, worst at -48.1 percent at
+  1 MiB and width 2 against the A100's -50.8 percent at the same point, and the
+  same wide-window fit places a 56.44 microsecond intercept where the measured
+  floor is 6.22 microseconds, a factor 9.07 against the A100's 9.59, at an
+  R-squared of 0.99968. A defect that survives a change of link generation,
+  link count, channel count and host architecture is a property of the model
+  form, so this task needs no further hardware evidence to justify it.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide
@@ -993,6 +1003,18 @@ study reports all three arms rather than treating `lower` as `off`.
   single-slope profile would propagate the mid-range error that task exists to
   remove. Acceptance requires the new arm to be an explicit selection whose
   absence preserves every accepted artifact byte for byte.
+
+  A second first-party profile is now also available and belongs in the same
+  change. The
+  [GH200 hardware envelope](../../examples/gh200_hardware_envelope_v1/RESULTS.md)
+  measured latency floors of 6,220,800 ps at width 2 and 8,457,600 ps at width
+  4, with asymptotic all-reduce algorithm bandwidths of 115,151,100,868 and
+  224,623,611,127 bytes/s, on a 4-GPU GH200 120GB `NV6` mesh. Landing both
+  profiles together is what makes the selection meaningful, because the pair
+  demonstrates what a single profile cannot: ring efficiency against a GPU's
+  own link ceiling is 71.0 percent on Ampere and 70.5 percent on Hopper, a
+  half-point difference, while the ceiling itself moves by 1.594 times. The
+  transferable quantity is the efficiency, not the bandwidth.
 
 - TRAF-26 (Completeness; P2; L): extend the isolated one-engine routed-step
   projection to a full DP times EP group population. Each peer engine must
