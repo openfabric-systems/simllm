@@ -791,7 +791,36 @@ study reports all three arms rather than treating `lower` as `off`.
   the serializer and require held-out completion error no larger than
   10 percent or 1 microsecond, whichever is larger. Report the current-profile
   before error, rerun the collective holdouts after any refit, and preserve the
-  exact `legacy` and all-remote identity paths.
+  exact `legacy` and all-remote identity paths. The
+  [A100 hardware envelope](../../examples/a100_hardware_envelope_v1/RESULTS.md)
+  supplies the analogous A100 capture and a warning that applies to the B200
+  fit as much as to its own: fitting `t = alpha + S / beta` over an 8-byte to
+  256-KiB window on a 4-GPU A100 `NV4` mesh returns 68.10 GB/s, within 3
+  percent of the B200 profile's 70,027,079,100 bytes/s, while that window's
+  own achieved algorithm bandwidth at 256 KiB is only 14.46 GB/s and the
+  asymptotic value at 1 GiB is 141.93 GB/s. A slope fitted inside the
+  latency-dominated regime is not a fabric bandwidth, so the B200 refit must
+  extend past the payload where bus bandwidth flattens rather than only adding
+  point-to-point samples inside the existing window.
+- TRAF-43 (Precision; P1; M): replace the single-slope collective serializer
+  with a regime-aware form. The shipped model charges one
+  `bandwidth_bytes_per_second` at every payload, and the
+  [A100 hardware envelope](../../examples/a100_hardware_envelope_v1/RESULTS.md)
+  measured how wrong that is on real intra-node NVLink. Anchoring the intercept
+  at the measured 8-byte floor and the slope at the 1-GiB algorithm bandwidth
+  reproduces both anchors exactly and is optimistic everywhere between them, by
+  50.8 percent at width 2 and 1 MiB and by 45.8 percent at width 4 and 2 MiB.
+  The cause is identified: bus bandwidth is still climbing across that window,
+  passing half its asymptote only at 2.45 MiB at width 2 and 8.24 MiB at width
+  4, and reaching 90 percent of it only at 128 MiB. A high fit R-squared does
+  not detect this, because the largest payloads dominate an ordinary least
+  squares fit; the A100 fit scored 0.9997 while placing an 87.36 microsecond
+  intercept where the measured floor is 9.11 microseconds. The identifying
+  observable is measured completion time across the full payload decade range
+  at a fixed width. Acceptance requires a form whose worst signed error over
+  the measured sweep is at most 15 percent at both widths, an unchanged result
+  at the two anchors, and a bypass that preserves the accepted single-slope
+  artifacts exactly.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide
@@ -944,6 +973,26 @@ study reports all three arms rather than treating `lower` as `off`.
   not the measurement: TRAF-39 owns capturing an ALL-TO-ALLV intercept of its
   own, and this task is what lets a record say which collectives a single
   table was and was not fitted on, whether or not that capture ever lands.
+
+- TRAF-44 (Completeness; P2; M): add a selectable A100-scoped intra-node
+  collective profile so an A100 study stops borrowing B200 numbers. The only
+  calibrated local profile today is `b200-nccl-2.27-local-v1`, fitted from a
+  published third-party capture of hardware this project cannot reach. The
+  [A100 hardware envelope](../../examples/a100_hardware_envelope_v1/RESULTS.md)
+  measured the equivalent first-party numbers on a 4-GPU A100-SXM4-80GB `NV4`
+  mesh under NCCL 2.31.2: per-collective latency floors of 9,113,600 ps at
+  width 2 and 12,953,600 ps at width 4, and an asymptotic all-reduce algorithm
+  bandwidth of 72,774,312,725 and 141,927,693,992 bytes/s. The width-4
+  intercept sits close to the B200 profile's 15,745,167 ps, so intercepts
+  transfer between NVLink generations far better than slopes do. The new
+  profile must carry its own provenance record, declare a validity window that
+  states where its bandwidth term holds rather than implying one slope
+  everywhere, and refuse widths it did not measure, which here excludes width
+  8. This is P2 while no study selects it and becomes P1 when an A100-scoped
+  study opts in. Land it after or together with TRAF-43, since adding a second
+  single-slope profile would propagate the mid-range error that task exists to
+  remove. Acceptance requires the new arm to be an explicit selection whose
+  absence preserves every accepted artifact byte for byte.
 
 - TRAF-26 (Completeness; P2; L): extend the isolated one-engine routed-step
   projection to a full DP times EP group population. Each peer engine must

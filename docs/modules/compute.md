@@ -763,7 +763,22 @@ and an explicit reason:
   production capture, held-out kernel median error below 10 percent and p95
   below 20 percent, per-phase median below 5 percent and p95 below 10 percent,
   and compute-only step error below 5 percent. The roofline and calibration-off
-  paths must retain accepted artifacts and timestamps byte for byte.
+  paths must retain accepted artifacts and timestamps byte for byte. The
+  [A100 hardware envelope](../../examples/a100_hardware_envelope_v1/RESULTS.md)
+  narrows the second blocker without removing it. On one A100-SXM4-80GB with
+  clocks observed at 1410 MHz through every timed block, the launch constants
+  are 1.806 us for a pipelined eager launch, 6.069 us for a synchronized
+  roundtrip and 0.791 us for a CUDA-graph replay node, so the graph path costs
+  0.44 of the eager path on the target architecture rather than on Turing.
+  The same lane bounds the flat 0.7 roofline surrogate directly: BF16 GEMM
+  reaches 302.22 TFLOP/s at 16384 cubed, which is 96.9 percent of the 311.87
+  TFLOP/s clock-derived peak, while HBM read reaches 86.8 percent of the
+  2,039.04 GB/s memory-clock-derived peak, and the memory-to-compute crossover
+  for `N` = `K` = 8192 measures at `M` = 256 against an ideal 158.9. A single
+  0.7 efficiency constant cannot span 0.47 percent of peak at `M` = 1 and 96.9
+  percent at 16384 cubed. This is microbenchmark evidence only: no production
+  framework kernel, no dynamic SASS, no Accel-Sim calibration and no held-out
+  kernel matrix, so COMP-1 stays open on its first blocker.
 - COMP-5 (Precision; P1; L): provide the production capture
   environment required by COMP-1. The local GTX 1660 Ti still cannot qualify:
   Nsight Compute returns `ERR_NVGPUCTRPERM`, and display sharing produces the
@@ -784,7 +799,17 @@ and an explicit reason:
   profile. Nsight Systems warned that device-side CUDA-event completion tracing
   can add overhead or false cross-stream dependencies. The production freeze
   must explicitly set `--cuda-event-trace=false`, or defend a frozen
-  alternative, before interpreting multi-stream dependency evidence.
+  alternative, before interpreting multi-stream dependency evidence. The
+  [A100 hardware envelope](../../examples/a100_hardware_envelope_v1/RESULTS.md)
+  adds one measured constraint the production freeze must respect: every
+  event-bracketed kernel in that study carried about 6 microseconds of fixed
+  cost, matching its own 6.069 microsecond launch roundtrip, which silently
+  destroyed the L2-residency signature it had predicted at an 8 MiB working
+  set. Any registered cell whose kernel is shorter than roughly 60 microseconds
+  measures the launch path as much as the kernel, so the production capture
+  must amortize inside the timed region or declare a minimum kernel duration.
+  Clocks were not locked there either, so the controlled-clock requirement is
+  untouched.
 - COMP-7 (Precision; P1; M): MoE compute assumes perfectly balanced routing:
   every rank computes `top_k` experts' flops for its own tokens and streams all
   resident experts once. Consume the landed `simllm-routed-experts-v1`

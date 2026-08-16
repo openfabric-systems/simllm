@@ -544,7 +544,9 @@ def score_lane_b(lane_b: dict) -> tuple[list[Outcome], list[Outcome]]:
     )
 
     for row in lane_b["collectives"]:
-        if row.get("status") != "measured":
+        # The contention cell is a timing comparison, not a bandwidth point, so
+        # it carries no bus bandwidth to check against a ceiling.
+        if row.get("status") != "measured" or "busbw_gbps" not in row:
             continue
         ceiling = NVLINK_PAIR_GBPS if row["width"] == 2 else NVLINK_EGRESS_GBPS
         if row["busbw_gbps"] > ceiling:
