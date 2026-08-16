@@ -1012,9 +1012,13 @@ study reports all three arms rather than treating `lower` as `off`.
   224,623,611,127 bytes/s, on a 4-GPU GH200 120GB `NV6` mesh. Landing both
   profiles together is what makes the selection meaningful, because the pair
   demonstrates what a single profile cannot: ring efficiency against a GPU's
-  own link ceiling is 71.0 percent on Ampere and 70.5 percent on Hopper, a
-  half-point difference, while the ceiling itself moves by 1.594 times. The
-  transferable quantity is the efficiency, not the bandwidth.
+  own link ceiling is 71.0 percent on Ampere and 74.9 percent on Hopper, 3.9
+  percentage points apart, while the ceiling itself moves by exactly 1.5 times,
+  from 300 to 450 GB/s. The transferable quantity is much closer to the
+  efficiency than to the bandwidth. Use the payload rate of 25 GB/s per NVLink
+  link per direction on both generations: `nvidia-smi nvlink -s` reports 25 for
+  NVLink3 but the 26.5625 GB/s raw signalling rate for NVLink4, and taking that
+  report at face value overstates a Hopper ceiling by 6.25 percent.
 
 - TRAF-26 (Completeness; P2; L): extend the isolated one-engine routed-step
   projection to a full DP times EP group population. Each peer engine must

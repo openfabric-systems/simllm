@@ -37,7 +37,46 @@ Inventory job `195463` recorded the node before the freeze and timed nothing.
 | `lane_a_result.json` | `91d84ae54135e0b41afdc1861d0b5abb77f03750f85fb79cebf37ced80d9aebc` |
 | `lane_b_result.json` | `0423192907d7abd532f16d202d6459953da6b2d8672ea73ee9c791918f5a97e7` |
 
-No post-run repair of any kind was needed. Both lanes ran once and scored.
+No post-run repair of the harness or of any measurement was needed. Both lanes
+ran once and scored. One frozen nameplate constant was wrong and is corrected
+in the next section.
+
+## Post-run correction to the NVLink4 ceiling
+
+The freeze tabulated the NVLink4 per-link rate as 26.5625 GB/s, taken from
+`nvidia-smi nvlink -s`, giving a 159.375 GB/s per-pair and 478.125 GB/s
+per-GPU ceiling. That is the raw signalling rate, not the payload rate.
+
+An NVLink4 link is two lanes at 106.25 Gbps PAM4, so 212.5 Gbps or 26.5625 GB/s
+on the wire, and 200 Gbps or 25.0 GB/s of payload after the 17/16 encoding
+overhead. NVIDIA's published figure is unambiguous and agrees: an H100 SXM
+carries 18 NVLink4 links totalling 900 GB/s bidirectional, which is 450 GB/s
+per direction, which is 25.0 GB/s per link per direction. The A100 numbers were
+never affected: `nvidia-smi` reported 25 GB/s for NVLink3 and NVIDIA's
+effective spec is also 25 GB/s, so the two agree there and only the NVLink4
+report is a raw rate.
+
+| Ceiling | Frozen value | Corrected value |
+|---|---:|---:|
+| per ordered pair, one direction | 159.375 GB/s | 150 GB/s |
+| bidirectional pair sum | 318.75 GB/s | 300 GB/s |
+| per-GPU egress, one direction | 478.125 GB/s | 450 GB/s |
+
+Re-scoring every expectation and every fatal guard against the corrected
+ceilings returns `42 of 42` with zero violations, identical to the frozen
+scoring. No measured value changed, no band was crossed and no guard flipped,
+because every measurement sat comfortably inside both the wrong ceiling and the
+right one. The study is not void and is not rescored; what changes is the
+derived efficiency percentages, which are stated corrected throughout this
+document, and the strength of one comparison, E-C-3, discussed where it
+appears.
+
+The correction sharpens one result rather than weakening it. The repository's
+`DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND` is 450 GB/s, which is not merely
+Hopper-class: it is exactly the H100 and GH200 per-GPU NVLink4 payload egress
+nameplate. The constant is a Hopper nameplate that was never a portable
+intra-node rate, and on the A100 it overstates the real ceiling by exactly
+1.5 times.
 
 ## Runs
 
@@ -143,16 +182,16 @@ reads results out.
 
 | Pattern | Measured | Ceiling | Efficiency |
 |---|---:|---:|---:|
-| single ordered pair, all twelve | 133.24 to 133.27 GB/s | 159.375 | 83.6 percent |
-| pair 0 and 1, both directions | 264.80 GB/s | 318.75 | 83.1 percent |
-| device 0 fan-out to 1, 2 and 3 | 398.71 GB/s | 478.125 | 83.4 percent |
+| single ordered pair, all twelve | 133.24 to 133.27 GB/s | 150 | 88.8 percent |
+| pair 0 and 1, both directions | 264.80 GB/s | 300 | 88.3 percent |
+| device 0 fan-out to 1, 2 and 3 | 398.71 GB/s | 450 | 88.6 percent |
 
 The twelve ordered pairs agree within 0.02 percent of their median and the
 fan-out is 2.992 times one pair, so the six-link groups compose as cleanly as
 the A100's four-link groups did.
 
-The efficiency is not the same, though. NVLink4 delivers 83.6 percent of wire
-rate to a copy engine where NVLink3 delivered 94.0, and the 10-point loss is
+The efficiency is not the same, though. NVLink4 delivers 88.8 percent of wire
+rate to a copy engine where NVLink3 delivered 94.0, and the 5-point loss is
 uniform across all three patterns, so it is a property of the link generation
 rather than of one measurement.
 
@@ -162,7 +201,7 @@ rather than of one measurement.
 |---|---:|---:|
 | asymptotic all-reduce bus bandwidth at 1 GiB | 115.15 GB/s | 336.94 GB/s |
 | asymptotic all-reduce algorithm bandwidth | 115.15 GB/s | 224.62 GB/s |
-| efficiency against its own link ceiling | 72.3 percent | 70.5 percent |
+| efficiency against its own link ceiling | 76.8 percent | 74.9 percent |
 | 8 B all-reduce time | 6.22 us | 8.46 us |
 | mean time over 8 B to 8 KiB | 6.36 us | 9.45 us |
 | half-bandwidth payload | 4 MiB | 8 MiB |
@@ -223,16 +262,14 @@ not need a third machine.
 ## Physical sanity review
 
 **Network and serialization physics.** Every rate sits under its ceiling. The
-copy-engine efficiency of 83.6 percent is uniform across twelve ordered pairs,
+copy-engine efficiency of 88.8 percent is uniform across twelve ordered pairs,
 the bidirectional pair and the three-way fan-out, and the fan-out composes at
 2.992 times a single pair against a structural bound of exactly 3. Ring
-all-reduce reaches 70.5 percent of per-GPU egress at width 4 against the A100's
-71.0 percent, a difference of half a percentage point across a link generation.
-Two framings of that agreement are both worth keeping: measured against the
-wire, the NCCL ring is a near-constant fraction of egress on both machines;
-measured against what a copy engine actually achieves on the same fabric, the
-ring gets 84.3 percent here and 75.6 percent on the A100, so the Hopper ring
-recovers more of what its link can really deliver.
+all-reduce reaches 74.9 percent of per-GPU egress at width 4 against the A100's
+71.0 percent, 3.9 percentage points apart across a link generation. Measured
+instead against what a copy engine actually achieves on the same fabric, the
+ring gets 84.5 percent here and 75.6 percent on the A100, so the Hopper ring
+recovers noticeably more of what its link can really deliver.
 
 **Compute and memory physics.** HBM read reaches 93.4 percent of a nameplate
 derived from the reported 2619 MHz memory clock and 6144-bit bus, and the
@@ -251,11 +288,12 @@ BF16 activation all-reduce at hidden size 8192 is 16 KiB, measured at 10.48
 microseconds at width 4, so 80 layers with two collectives each is 1.68
 milliseconds per token, 15 percent of the step against 13 percent on the A100.
 At that payload the bus bandwidth is 2.35 GB/s, half of one percent of the
-478 GB/s egress ceiling. Tensor-parallel decode is a latency problem on this
-fabric too, and a 1.59 times faster link bought only a 1.53 times faster small
-collective, while the 1.38 times faster kernel launch tracks it closely. That
-is the direct evidence that the small-message floor is launch-bound rather than
-wire-bound.
+450 GB/s egress ceiling. Tensor-parallel decode is a latency problem on this
+fabric too. An 8-byte all-reduce carries no meaningful serialization at any
+wire rate, so its 1.53 times improvement over the A100 cannot come from the
+link; the largest identified contributor is the 1.38 times faster kernel
+launch, which is the direct evidence that the small-message floor is
+launch-bound rather than wire-bound.
 
 ## Calibration this study delivers
 
@@ -272,9 +310,11 @@ For a GH200 120GB 4-GPU `NV6` mesh under NCCL 2.31.2, ring family, no NVLS:
 
 Against the surrogate: `DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND` of 450 GB/s
 is 1.129 times the measured per-GPU egress here and 1.598 times the A100's.
-The constant is close to correct on Hopper and wrong by 60 percent on Ampere,
-which settles what it is: a Hopper-class machine identity rather than a
-portable intra-node rate.
+With the ceiling correction above it is more specific than that. The constant
+equals the H100 and GH200 per-GPU NVLink4 payload egress nameplate exactly, and
+it is exactly 1.5 times the A100's 300 GB/s nameplate. It is a Hopper nameplate
+that a study on any other generation should not be charging, and a model that
+wants one number for both must carry the ceiling per architecture.
 
 ## What stays open
 

@@ -906,14 +906,15 @@ configuration, and that qualification is now discharged; see
   A second architecture now separates what transfers from what does not. The
   [GH200 hardware envelope](../../examples/gh200_hardware_envelope_v1/RESULTS.md)
   measured a 4-GPU GH200 `NV6` mesh with the identical sweep. Ring efficiency
-  against a GPU's own link ceiling is 70.5 percent there against 71.0 percent
+  against a GPU's own link ceiling is 74.9 percent there against 71.0 percent
   on the A100, and the width-2 to width-4 bus bandwidth scaling is 2.926
-  against 2.925, so both are properties of the NCCL ring rather than of the
-  link. The rates are not: per-pair copy-engine efficiency falls from 94.0
-  percent on NVLink3 to 83.6 percent on NVLink4, and per-GPU egress rises from
-  281.65 to 398.71 GB/s. The 450 GB/s flat surrogate is 1.598 times the A100
-  measurement and 1.129 times the GH200 one, which identifies it as a
-  Hopper-class constant rather than a portable intra-node rate. A calibrated
+  against 2.925, so both are far more stable across a link generation than any
+  rate is. The rates are not: per-pair copy-engine efficiency falls from 94.0
+  percent on NVLink3 to 88.8 percent on NVLink4, and per-GPU egress rises from
+  281.65 to 398.71 GB/s against nameplates of 300 and 450 GB/s. The 450 GB/s
+  flat surrogate is exactly the Hopper per-GPU NVLink4 payload nameplate and
+  exactly 1.5 times the Ampere one, so it is a machine identity rather than a
+  portable intra-node rate. A calibrated
   service should therefore carry a per-architecture link ceiling and a shared
   ring efficiency, not one bandwidth. The task stays open because no runtime
   composition landed and no graph JCT moved.
