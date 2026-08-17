@@ -1056,6 +1056,27 @@ study reports all three arms rather than treating `lower` as `off`.
   inventing order between independent operations and retain every supported
   projection byte and timestamp exactly.
 
+- TRAF-45 (Completeness; P2; L): add a packetized intra-node leg behind the
+  analytic locality path. `classify_step_locality` charges local segments from a
+  per-endpoint byte ledger at one declared flat rate, which is exact arithmetic
+  over a surrogate port: there is no packet, no attempt identity, no
+  destination-side arrival and no per-link routing, so an NVLink or xGMI segment
+  cannot be observed the way a wire segment can. Land the packet path over the
+  COMP-34 GPU ports using the BACK-48 port-kind-independent vocabulary, and keep
+  the analytic split as a byte-identical off path. The packetized leg must
+  charge destination ingress explicitly at the receiving port instead of
+  inheriting the analytic `max(egress_bytes, ingress_bytes)` endpoint-load
+  surrogate that CORE-41 installed; CORE-48 keeps the cross-node
+  destination-ingress serializer and COMP-31 keeps the local mechanism detail,
+  and neither is closed here. Acceptance: the off path reproduces every accepted
+  `nvlink_locality_v1` and `mixed_attribution_v1` byte, timestamp and component
+  attribution exactly; the enabled path conserves bytes against the same
+  endpoint ledger, emits one terminal per extent with no double charge against
+  the semantic collective, and moves per-request TTFT and TPOT in the registered
+  direction; and a converging combine, where the analytic surrogate is weakest,
+  is the registered cell rather than a symmetric exchange. The design statement
+  is [the packet-device model](../design/packet-device-model.md).
+
 ### Uncategorized
 
 - TRAF-3: KV-transfer records for PD-disaggregation and cache-miss
