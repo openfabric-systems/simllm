@@ -23,6 +23,7 @@ patterns rather than abstract ops.
 COLLECTIVE_TRACE_SCHEMA = "simllm-collective-trace-v1"
 
 from simllm.traffic.collective_latency import (
+    A100_NCCL_2_31_CROSS_NODE_SOCKET_PROFILE,
     B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE,
     B200_NCCL_2_27_LOCAL_PROFILE,
     COLLECTIVE_EVIDENCE_CLASSES,
@@ -132,6 +133,7 @@ from simllm.traffic.step_comm import (
 )
 
 __all__ = [
+    "A100_NCCL_2_31_CROSS_NODE_SOCKET_PROFILE",
     "ALWAYS_APPLIED_RULES",
     "B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE",
     "B200_NCCL_2_27_LOCAL_PROFILE",

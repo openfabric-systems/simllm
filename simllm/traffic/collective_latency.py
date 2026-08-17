@@ -643,6 +643,75 @@ B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE = CollectiveLatencyProfile(
 )
 
 
+#: one Cray Cassini 1 Slingshot 200Gb port, one direction, decimal bytes/s
+CASSINI_SLINGSHOT_PORT_BYTES_PER_SECOND = 25_000_000_000
+
+#: payload at which NCCL 2.31.2 switched this collective from LL to SIMPLE
+#:
+#: Measured, not assumed: the debug log names the protocol per call, and the
+#: switch lands between 786,432 and 1,048,576 bytes. LL carries a 4-byte flag
+#: for every 4 bytes of payload, so it puts twice the bytes on the wire, which
+#: is nearly free on NVLink and is the dominant cost on a bandwidth-starved
+#: kernel socket transport.
+CROSS_NODE_SOCKET_LL_TO_SIMPLE_BYTES = 1_048_576
+
+A100_NCCL_2_31_CROSS_NODE_SOCKET_PROFILE = CollectiveLatencyProfile(
+    profile_id="a100-nccl-2.31-cross-node-socket-v1",
+    # Never consulted: the one supported width carries a curve, so
+    # endpoint_serialization_ps always takes the curve branch. It records the
+    # asymptotic serialization bandwidth at the largest measured payload, which
+    # is what a single-slope form would have charged everywhere.
+    bandwidth_bytes_per_second=1_610_316_109,
+    participant_latency_ps=((2, 40_140_799),),
+    source_payload_bytes_min=8,
+    source_payload_bytes_max=134_217_728,
+    propagation_reference_ps=COLLECTIVE_PROPAGATION_REFERENCE_PS,
+    provenance=CollectiveLatencyProvenance(
+        evidence_class="calibrated",
+        source=(
+            "first-party measurement of two Merlin A100-SXM4-80GB nodes under "
+            "NCCL 2.31.2, Slurm job 195648, where the inter-node path is four "
+            "Cray Cassini 1 Slingshot 200Gb ports per node carrying NCCL's "
+            "kernel socket transport with GPUDirect RDMA disabled, because no "
+            "NCCL network plugin is installed and the nodes expose no "
+            "InfiniBand device. This is not the 400 Gbit/s RDMA fabric the "
+            "shipped cross-node envelope targets, and the transport is a "
+            "first-order term rather than a caveat"
+        ),
+        locator=(
+            "examples/crossnode_collective_envelope_v1, the 8-byte ring "
+            "ALL-REDUCE back-to-back floor of the default interface arm, and "
+            "that arm's measured serialization bandwidth at the four anchor "
+            "payloads its freeze named"
+        ),
+        transfer=(
+            "none for the intercept, which is measured at the width, on the "
+            "interconnect, for the operation and inside the payload envelope it "
+            "prices. The band is the back-to-back to isolated bracket: the "
+            "charged value is the back-to-back reading, comparable to the "
+            "intra-node lanes and to nccl-tests, and the upper edge is the "
+            "isolated reading, which additionally pays the 6.07 us launch and "
+            "synchronize roundtrip this node type measures"
+        ),
+        participant_latency_band_ps=((2, 40_140_799, 55_808_000),),
+    ),
+    bandwidth_curves=(
+        (
+            2,
+            CollectiveBandwidthCurve(
+                curve_id="a100-nccl-2.31-cross-node-socket-w2-v1",
+                points=(
+                    (64, 138_888_729),
+                    (786_432, 555_254_304),
+                    (1_048_576, 1_339_700_466),
+                    (134_217_728, 1_610_316_109),
+                ),
+            ),
+        ),
+    ),
+)
+
+
 @dataclass(frozen=True)
 class CollectiveFixedCostEnvelope:
     """A named bracket on the per-collective fixed cost, with three arms.
@@ -866,6 +935,7 @@ _NAMED_COLLECTIVE_LATENCY_PROFILES = (
     B200_NCCL_2_27_LOCAL_PROFILE,
     COLLECTIVE_FIXED_COST_FLOOR_PROFILE,
     B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE,
+    A100_NCCL_2_31_CROSS_NODE_SOCKET_PROFILE,
 )
 
 _NAMED_COLLECTIVE_FIXED_COST_ENVELOPES = (
@@ -1080,8 +1150,10 @@ def arm_ratio_envelope(
 
 
 __all__ = [
+    "A100_NCCL_2_31_CROSS_NODE_SOCKET_PROFILE",
     "B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE",
     "B200_NCCL_2_27_LOCAL_PROFILE",
+    "CASSINI_SLINGSHOT_PORT_BYTES_PER_SECOND",
     "COLLECTIVE_EVIDENCE_CLASSES",
     "COLLECTIVE_FIXED_COST_ARMS",
     "COLLECTIVE_FIXED_COST_FLOOR_PROFILE",
