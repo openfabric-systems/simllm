@@ -325,8 +325,10 @@ def evaluate_relations(cells):
         vals = bins[10:int(st["window_s"])]
         return sum(vals) / len(vals) / GB if vals else float("nan")
 
-    # E-T-1 over every captured cell.
-    captured = [c for c in cells.values() if c is not None]
+    # E-T-1 over every captured FROZEN cell; the post-specified j2x cell is
+    # reported in stats but enters no scored relation.
+    captured = [c for name, c in cells.items()
+                if c is not None and name != "j2x-join"]
     if captured:
         ok = all(c["tracer_criterion_ok"] for c in captured)
         rel.append(relation(

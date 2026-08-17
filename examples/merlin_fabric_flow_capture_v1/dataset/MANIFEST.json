@@ -1,0 +1,178 @@
+{
+ "bulk/i2-incast/i2-incast_flow0_src.csv.gz": {
+  "bytes": 658253,
+  "sha256": "0cecc491d8ba4e2c065a974b9a2f458762b2225f54e5d6bd57b980dc6b9c85a1"
+ },
+ "bulk/i2-incast/i2-incast_flow1_src.csv.gz": {
+  "bytes": 880242,
+  "sha256": "5d5032ae9511eba6f7fa8a2f78a152fd44658a45c68b9d25a6debb4fc3c96d66"
+ },
+ "bulk/j2x-join/j2x-join_flow0_src.csv.gz": {
+  "bytes": 724887,
+  "sha256": "9f8b38ab9e15c71a3036781c7555c699503ea9ef400b6592b3ac8698b3aa31d2"
+ },
+ "bulk/j2x-join/j2x-join_flow1_src.csv.gz": {
+  "bytes": 575093,
+  "sha256": "0594579f7617ddb0a26c87b3a4a2a761d5150561eebc4fb9ca468bd777e80faa"
+ },
+ "bulk/mx-a2gh/mx-a2gh_flow0_src.csv.gz": {
+  "bytes": 203432,
+  "sha256": "5a5ec01dcaec395ca19098f4364c11d98816520eb7c18c6265b4c47ffac2f1ac"
+ },
+ "bulk/mx-gh2a/mx-gh2a_flow0_src.csv.gz": {
+  "bytes": 72272,
+  "sha256": "b9f386bf3e36b78e173ba45e50c2e97075ca55c091143d18e1a03ce00c43d883"
+ },
+ "bulk/s1-stream/s1-stream_flow0_src.csv.gz": {
+  "bytes": 1533573,
+  "sha256": "d0b5beb94f87b9b2f6c4260983bedef45b6de89de62f749d935e59647db1d17a"
+ },
+ "i2-incast/i2-incast_flow0_dest.csv.gz": {
+  "bytes": 663633,
+  "sha256": "ef33704272f80b9a6bb1fdf6b591105d3e54285173ee86d3586f6c2a753a0aca"
+ },
+ "i2-incast/i2-incast_flow1_dest.csv.gz": {
+  "bytes": 887156,
+  "sha256": "7296df18365761c5e70a10ee46b4eb3f7c17a62bb167ec288e8f7fd5b5aec38f"
+ },
+ "i2-incast/i2-incast_rank0.json": {
+  "bytes": 449,
+  "sha256": "073d1752fdbfe88b43ea4daba2a57a116a0c37c9f22e53e05b296f5b2a593ea2"
+ },
+ "i2-incast/i2-incast_rank1.json": {
+  "bytes": 451,
+  "sha256": "eccec9e13115d92815fbeb0bf840f62c77b3945d4319f12584c67f4e09a14991"
+ },
+ "i2-incast/i2-incast_rank2.json": {
+  "bytes": 451,
+  "sha256": "e8978740362a542d8db67390ad72074d254e6152494ffcc7b95b643d0eb5c432"
+ },
+ "i2-incast/i2-incast_summary.json": {
+  "bytes": 444,
+  "sha256": "b81fda69667efd13ed25769c9cea92f4b8e2c29c716f290c71182f5c7f5e3fe9"
+ },
+ "i2-incast/job_id.txt": {
+  "bytes": 7,
+  "sha256": "d65edeb6a0490c71b448ee0f6dfbf118d2e490d2ba8625eba99f1aea5419f77e"
+ },
+ "j2x-join/j2x-join_flow0_dest.csv.gz": {
+  "bytes": 729276,
+  "sha256": "7652524546685e20b839bb7a86168d0cb490184e77ef00e0c4dadd12ff084686"
+ },
+ "j2x-join/j2x-join_flow1_dest.csv.gz": {
+  "bytes": 578484,
+  "sha256": "73746f012e2b4a2b716dc50eba3de883dda744c0a248d514e18dbb9086b70d13"
+ },
+ "j2x-join/j2x-join_rank0.json": {
+  "bytes": 450,
+  "sha256": "32c1c506f90f4d063874d474836f4dcff37b4b174e60d187de4ec780b86a1337"
+ },
+ "j2x-join/j2x-join_rank1.json": {
+  "bytes": 452,
+  "sha256": "b797fd364a4079df29c109d319b4dfe4b7cf21c2d0bbe49b3ec9ba6cce2905f1"
+ },
+ "j2x-join/j2x-join_rank2.json": {
+  "bytes": 450,
+  "sha256": "b7040e463600e7269ad42b4e2df37da784ac5d8015e8eac0c74e72fc0e2abfc5"
+ },
+ "j2x-join/j2x-join_summary.json": {
+  "bytes": 442,
+  "sha256": "c88a7d90b5e5dc67a8e551faf31c0c6d6a1e361d10da87269633ad927f43d157"
+ },
+ "j2x-join/job_id.txt": {
+  "bytes": 7,
+  "sha256": "dfbbd742ee110b8d608ecfeceb39b6a2524a64dba715a6f05cc7b78cbb2ae316"
+ },
+ "mx-a2gh/job_id.txt": {
+  "bytes": 7,
+  "sha256": "915cee0c3818c4fef96f3087b54891595b6cd7ca31a49a0560e89724da408343"
+ },
+ "mx-a2gh/mx-a2gh_flow0_dest.csv.gz": {
+  "bytes": 193823,
+  "sha256": "25d9977cd212bc5d23d8fe6b391721c8d7900f031afea8a0b0a223941fd0e73f"
+ },
+ "mx-a2gh/mx-a2gh_rank0.json": {
+  "bytes": 432,
+  "sha256": "678d915937ffe9fa238df813987ef233ff1856f8c0f6b5f50e562048bdc1086a"
+ },
+ "mx-a2gh/mx-a2gh_rank1.json": {
+  "bytes": 436,
+  "sha256": "7a1cd7a2ac34ec0a78f7c8de88d009ede693c0321b2f53fa381ee9d715febb08"
+ },
+ "mx-a2gh/mx-a2gh_summary.json": {
+  "bytes": 265,
+  "sha256": "0834a25e06bf015bee06d6fa9f63ff4edc3726d29e0f665b1f4ef4cd31b91a1c"
+ },
+ "mx-a2gh/mx_matrix.json": {
+  "bytes": 614,
+  "sha256": "8f6dda1f081d58a3503093072b68734c97d3bd6a214f3408814e5bc6fde3f08b"
+ },
+ "mx-gh2a/job_id.txt": {
+  "bytes": 7,
+  "sha256": "915cee0c3818c4fef96f3087b54891595b6cd7ca31a49a0560e89724da408343"
+ },
+ "mx-gh2a/mx-gh2a_flow0_dest.csv.gz": {
+  "bytes": 76162,
+  "sha256": "06c3ea560ee7082797943b3b79a9d7d54be15af5fa6c904d7e66c4852f2785dd"
+ },
+ "mx-gh2a/mx-gh2a_rank0.json": {
+  "bytes": 435,
+  "sha256": "8e79156dcf846e37ead5723006a034ea7e5d2c4e3c5a185c290590717c3c146e"
+ },
+ "mx-gh2a/mx-gh2a_rank1.json": {
+  "bytes": 433,
+  "sha256": "0c15ca2ea36189645b7512755858d3db9e4f8789c5b22eb13d03264d9e528aab"
+ },
+ "mx-gh2a/mx-gh2a_summary.json": {
+  "bytes": 263,
+  "sha256": "abacf921316dfb57cc1c1db45969dacc4eff062519587e06bfa436b03aa0468b"
+ },
+ "mx-gh2a/mx_matrix.json": {
+  "bytes": 614,
+  "sha256": "8f6dda1f081d58a3503093072b68734c97d3bd6a214f3408814e5bc6fde3f08b"
+ },
+ "s1-stream/job_id.txt": {
+  "bytes": 7,
+  "sha256": "7e705322b91cf3fe810e5a3a096ab9ffc4c802707d9d16eb15569fb85b56e54f"
+ },
+ "s1-stream/s1-stream_flow0_dest.csv.gz": {
+  "bytes": 1533803,
+  "sha256": "495c0baf71ea84d2369a43541e2eaccb24382bcb7e2da79efb87714889bffa5c"
+ },
+ "s1-stream/s1-stream_rank0.json": {
+  "bytes": 445,
+  "sha256": "c3556afd162de18fefb8c681847d82bb520189638f2d6c3ce46bc65a662e36ee"
+ },
+ "s1-stream/s1-stream_rank1.json": {
+  "bytes": 447,
+  "sha256": "0adba490b06410ee4eaf2d25741587f1ec2a03641195746f4f40d979cc5bd63c"
+ },
+ "s1-stream/s1-stream_summary.json": {
+  "bytes": 271,
+  "sha256": "cb854b910e28f62e38424695bee4701ed56659b574c5f5d309adb5c06bfd7669"
+ },
+ "stats/i2-incast_stats.json": {
+  "bytes": 8843,
+  "sha256": "59c49bf6e4e677b9a546729a9b23689fa9dee5b3b508b2cb90ceeec995db1f6c"
+ },
+ "stats/j2x-join_stats.json": {
+  "bytes": 8774,
+  "sha256": "373813d2c598153690f7bb89a78a837626c1b9c33a894f06c0dd11f57d36e96c"
+ },
+ "stats/mx-a2gh_stats.json": {
+  "bytes": 2895,
+  "sha256": "a20b18c3cacfaee82dccc0ffa7e071f03b7c220dc7448d3c1f9b8a4b79d8aa68"
+ },
+ "stats/mx-gh2a_stats.json": {
+  "bytes": 2882,
+  "sha256": "1a2df3da0333aca7e8d4b6e47e9e284bccbfeca94624532c25de6b5044115d8f"
+ },
+ "stats/relations.json": {
+  "bytes": 2023,
+  "sha256": "e5bbb923f1a75d69792ad1b078bdb7992e2c9e11f6d4295669d0df574b3df80a"
+ },
+ "stats/s1-stream_stats.json": {
+  "bytes": 8881,
+  "sha256": "17006592e733df86a9f88c42f52a09e57780a418ca345f25a9da393ce19f61df"
+ }
+}

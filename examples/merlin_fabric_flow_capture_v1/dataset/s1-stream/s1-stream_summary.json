@@ -1,0 +1,1 @@
+{"cell":"s1-stream","world":2,"dest_rank":0,"chunk_bytes":8388608,"window_s":300.000,"flows":[{"flow":0,"source_rank":1,"offset_s":0.000,"dest_chunks":178411,"source_chunks":178411,"mismatches":0,"final_probe_mismatches":0,"sentinel_seen":1,"sentinel_ns":300004631794}]}

@@ -61,6 +61,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--capture-root", required=True)
     ap.add_argument("--dataset-dir", required=True)
+    ap.add_argument(
+        "--bulk-dir",
+        default=None,
+        help="where source-side series go; when given, only destination-side"
+        " series and metadata land under --dataset-dir (the repo-tracked"
+        " set) while *_src series are written here and still listed in the"
+        " manifest under bulk/",
+    )
     args = ap.parse_args()
 
     manifest = {}
@@ -74,9 +82,15 @@ def main():
         job_id = os.path.basename(job_dir)
         with open(os.path.join(out_dir, "job_id.txt"), "w") as f:
             f.write(job_id + "\n")
+        bulk_out = None
+        if args.bulk_dir is not None:
+            bulk_out = os.path.join(args.bulk_dir, cell)
+            os.makedirs(bulk_out, exist_ok=True)
         for src in sorted(glob.glob(os.path.join(job_dir, f"{cell}_*"))):
             name = os.path.basename(src)
-            if name.endswith(".csv"):
+            if name.endswith("_src.csv") and bulk_out is not None:
+                gzip_deterministic(src, os.path.join(bulk_out, name + ".gz"))
+            elif name.endswith(".csv"):
                 dst = os.path.join(out_dir, name + ".gz")
                 gzip_deterministic(src, dst)
             elif name.endswith(".json"):
@@ -99,6 +113,14 @@ def main():
                 "sha256": sha256_of(path),
                 "bytes": os.path.getsize(path),
             }
+    if args.bulk_dir is not None:
+        for path in sorted(glob.glob(os.path.join(args.bulk_dir, "**", "*"), recursive=True)):
+            if os.path.isfile(path):
+                rel = os.path.join("bulk", os.path.relpath(path, args.bulk_dir))
+                manifest[rel] = {
+                    "sha256": sha256_of(path),
+                    "bytes": os.path.getsize(path),
+                }
     with open(os.path.join(args.dataset_dir, "MANIFEST.json"), "w") as f:
         json.dump(manifest, f, indent=1, sort_keys=True)
     total = sum(m["bytes"] for m in manifest.values())
