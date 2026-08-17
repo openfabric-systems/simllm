@@ -21,6 +21,7 @@ participant width. Widths that no band anchors fail closed.
 
 from __future__ import annotations
 
+import math
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -74,6 +75,92 @@ def _ring_endpoint_bytes(source_payload_bytes: int, participant_count: int) -> i
         return 0
     chunk_bytes = max(1, source_payload_bytes // participant_count)
     return 2 * (participant_count - 1) * chunk_bytes
+
+
+@dataclass(frozen=True)
+class CollectiveBandwidthCurve:
+    """A payload-indexed serialization bandwidth for one participant width.
+
+    The single-slope serializer charges one ``bytes_per_second`` at every
+    payload. Two first-party captures, on an A100 `NV4` mesh and a GH200 `NV6`
+    mesh, measured what that costs: anchored at the small-message floor and the
+    asymptotic bandwidth, one slope is optimistic at every payload between
+    those anchors, by up to 50.8 percent, because bus bandwidth is still
+    climbing across that window. A curve replaces the constant with measured
+    anchors and a declared interpolation law.
+
+    ``points`` are ``(endpoint_bytes, bytes_per_second)`` pairs with strictly
+    increasing endpoint bytes. The bandwidth is a *serialization* bandwidth:
+    endpoint bytes over the measured time with the width's base latency already
+    removed. Storing total algorithm bandwidth would double-count that floor
+    once the caller adds ``base_latency_ps`` back on.
+
+    Between anchors the logarithm of bandwidth is linear in the logarithm of
+    endpoint bytes. Below the first anchor the first anchor's bandwidth holds,
+    above the last the last one does. The quantity spans more than three
+    decades, so a geometric law is the natural one; a linear one would be
+    dominated by the largest anchor.
+
+    The law is declared rather than derived. NCCL selects protocols and channel
+    counts in discrete steps, so no smooth closed form describes the ramp. What
+    this class defends is its held-out interpolation error, recorded in
+    examples/collective_regime_curve_v1, not a claim about mechanism.
+    """
+
+    curve_id: str
+    points: tuple[tuple[int, int], ...]
+    provenance: CollectiveLatencyProvenance | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "points", tuple(tuple(point) for point in self.points))
+        if not isinstance(self.curve_id, str) or not self.curve_id.strip():
+            raise ValueError("curve_id must be a nonblank string")
+        if len(self.points) < 2:
+            raise ValueError("a bandwidth curve needs at least two anchors")
+        previous_bytes: int | None = None
+        for index, point in enumerate(self.points):
+            if len(point) != 2:
+                raise ValueError(f"points[{index}] must be a two-item tuple")
+            endpoint_bytes = _require_int(f"points[{index}][0]", point[0], minimum=1)
+            _require_int(f"points[{index}][1]", point[1], minimum=1)
+            if previous_bytes is not None and endpoint_bytes <= previous_bytes:
+                raise ValueError(
+                    "points must have strictly increasing endpoint bytes; "
+                    f"points[{index}][0] is {endpoint_bytes} after {previous_bytes}"
+                )
+            previous_bytes = endpoint_bytes
+
+    @property
+    def anchored_endpoint_bytes(self) -> tuple[int, ...]:
+        """Return the endpoint byte counts this curve was calibrated at."""
+
+        return tuple(endpoint_bytes for endpoint_bytes, _ in self.points)
+
+    def bandwidth_bytes_per_second(self, endpoint_bytes: int) -> Fraction:
+        """Return the interpolated serialization bandwidth as an exact ratio.
+
+        A :class:`~fractions.Fraction` is returned rather than a float so the
+        caller's picosecond arithmetic stays exact and reproducible.
+        """
+
+        endpoint_bytes = _require_int("endpoint_bytes", endpoint_bytes, minimum=0)
+        if endpoint_bytes <= self.points[0][0]:
+            return Fraction(self.points[0][1])
+        if endpoint_bytes >= self.points[-1][0]:
+            return Fraction(self.points[-1][1])
+        for (low_bytes, low_rate), (high_bytes, high_rate) in zip(
+            self.points, self.points[1:]
+        ):
+            if low_bytes <= endpoint_bytes <= high_bytes:
+                # Geometric interpolation: log(rate) is linear in log(bytes).
+                # The exponent is computed in floating point and the result is
+                # re-rationalized, so the returned bandwidth is an exact ratio
+                # and every downstream picosecond stays integral.
+                span = math.log(high_bytes / low_bytes)
+                position = math.log(endpoint_bytes / low_bytes) / span
+                rate = low_rate * (high_rate / low_rate) ** position
+                return Fraction(rate).limit_denominator(1_000_000)
+        raise AssertionError("unreachable: endpoint bytes fell outside every span")
 
 
 @dataclass(frozen=True)
@@ -188,12 +275,18 @@ class CollectiveLatencyProfile:
     source_payload_bytes_max: int
     propagation_reference_ps: int
     provenance: CollectiveLatencyProvenance | None = None
+    bandwidth_curves: tuple[tuple[int, CollectiveBandwidthCurve], ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(
             self,
             "participant_latency_ps",
             tuple(tuple(entry) for entry in self.participant_latency_ps),
+        )
+        object.__setattr__(
+            self,
+            "bandwidth_curves",
+            tuple(tuple(entry) for entry in self.bandwidth_curves),
         )
         if not isinstance(self.profile_id, str) or not self.profile_id.strip():
             raise ValueError("profile_id must be a nonblank string")
@@ -244,6 +337,28 @@ class CollectiveLatencyProfile:
         if widths != sorted(set(widths)):
             raise ValueError(
                 "participant_latency_ps widths must be unique and increasing"
+            )
+        curve_widths: list[int] = []
+        for index, entry in enumerate(self.bandwidth_curves):
+            if len(entry) != 2:
+                raise ValueError(f"bandwidth_curves[{index}] must be a two-item tuple")
+            curve_width = _require_int(
+                f"bandwidth_curves[{index}][0]", entry[0], minimum=2
+            )
+            if not isinstance(entry[1], CollectiveBandwidthCurve):
+                raise TypeError(
+                    f"bandwidth_curves[{index}][1] must be a CollectiveBandwidthCurve"
+                )
+            if curve_width not in widths:
+                raise ValueError(
+                    f"profile {self.profile_id!r} carries a bandwidth curve for "
+                    f"participant count {curve_width}, which its latency table "
+                    f"does not support"
+                )
+            curve_widths.append(curve_width)
+        if curve_widths != sorted(set(curve_widths)):
+            raise ValueError(
+                "bandwidth_curves widths must be unique and increasing"
             )
         if self.provenance is not None:
             if not isinstance(self.provenance, CollectiveLatencyProvenance):
@@ -342,20 +457,43 @@ class CollectiveLatencyProfile:
             )
         return endpoint_bytes
 
+    def bandwidth_curve(self, participant_count: int) -> CollectiveBandwidthCurve | None:
+        """Return this width's regime curve, or ``None`` for the flat slope."""
+
+        for width, curve in self.bandwidth_curves:
+            if width == participant_count:
+                return curve
+        return None
+
     def endpoint_serialization_ps(
         self,
         participant_count: int,
         endpoint_bytes: int,
     ) -> int:
-        """Return exact upward-rounded endpoint serialization picoseconds."""
+        """Return exact upward-rounded endpoint serialization picoseconds.
+
+        A width with no calibrated curve keeps the flat slope this profile has
+        always charged, so a profile carrying no curve is bit-for-bit what it
+        was. A width that has one charges its interpolated serialization
+        bandwidth instead, which is the whole point of TRAF-43: one slope is
+        optimistic by up to 50.8 percent across the payload decade where bus
+        bandwidth is still climbing.
+        """
 
         endpoint_bytes = self.validate_endpoint_bytes(
             participant_count,
             endpoint_bytes,
         )
+        curve = self.bandwidth_curve(participant_count)
+        if curve is None:
+            return _ceil_div(
+                endpoint_bytes * PICOSECONDS_PER_SECOND,
+                self.bandwidth_bytes_per_second,
+            )
+        rate = curve.bandwidth_bytes_per_second(endpoint_bytes)
         return _ceil_div(
-            endpoint_bytes * PICOSECONDS_PER_SECOND,
-            self.bandwidth_bytes_per_second,
+            endpoint_bytes * PICOSECONDS_PER_SECOND * rate.denominator,
+            rate.numerator,
         )
 
     def total_service_ps(self, participant_count: int, endpoint_bytes: int) -> int:
@@ -557,6 +695,11 @@ class CollectiveFixedCostEnvelope:
             raise ValueError(
                 "envelope arms must share bandwidth_bytes_per_second so the "
                 "bracket isolates the fixed cost"
+            )
+        if lower.bandwidth_curves != upper.bandwidth_curves:
+            raise ValueError(
+                "envelope arms must share their bandwidth curves so the bracket "
+                "isolates the fixed cost"
             )
         if (
             lower.source_payload_bytes_min != upper.source_payload_bytes_min
@@ -951,6 +1094,7 @@ __all__ = [
     "LEGACY_COLLECTIVE_LATENCY_PROFILE",
     "NVLINK_RING_STEP_PS",
     "ArmRatioEnvelope",
+    "CollectiveBandwidthCurve",
     "CollectiveFixedCostEnvelope",
     "CollectiveLatencyProfile",
     "CollectiveLatencyProvenance",

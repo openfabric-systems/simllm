@@ -1,0 +1,368 @@
+{
+  "expectations": [
+    {
+      "detail": "4 GiB read 3757.811 GB/s in [2800.0, 4022.78]",
+      "id": "E-A1-1",
+      "observed": {
+        "read_gbps": 3757.810666
+      },
+      "passed": true
+    },
+    {
+      "detail": "4 GiB write 3747.319 GB/s in [2000.0, 4022.78]",
+      "id": "E-A1-2",
+      "observed": {
+        "write_gbps": 3747.319183
+      },
+      "passed": true
+    },
+    {
+      "detail": "4 GiB copy 3451.148 GB/s in [2400.0, 4022.78]",
+      "id": "E-A1-3",
+      "observed": {
+        "copy_gbps": 3451.147748
+      },
+      "passed": true
+    },
+    {
+      "detail": "copy flatness over 1/2/4 GiB is 1.01 percent, limit 5",
+      "id": "E-A1-4",
+      "observed": {
+        "spread": 0.010111635442559398,
+        "values_gbps": [
+          3409.656836,
+          3416.600331,
+          3451.147748
+        ]
+      },
+      "passed": true
+    },
+    {
+      "detail": "1 MiB and 2 MiB reads take 3.90 and 3.87 us, a ratio of 1.008 against a factor two in payload, and sit at 0.64 and 0.63 times the 6.13 us launch roundtrip",
+      "id": "E-A1-5",
+      "observed": {
+        "floor_multiples": [
+          0.6372590945517692,
+          0.6320356574546216
+        ],
+        "ratio": 1.0082644658343864
+      },
+      "passed": true
+    },
+    {
+      "detail": "the M=1 point achieves 3.017 TFLOP/s, limit 5",
+      "id": "E-A2-1",
+      "observed": {
+        "tflops": 3.017484913
+      },
+      "passed": true
+    },
+    {
+      "detail": "plateau max/min over M<=64 is 1.282, limit 1.8",
+      "id": "E-A2-2",
+      "observed": {
+        "ratio": 1.2816546872147696
+      },
+      "passed": true
+    },
+    {
+      "detail": "every M<=64 time is between 1.0x and 3.0x its memory floor; worst is 1.707x",
+      "id": "E-A2-3",
+      "observed": {
+        "worst_multiple": 1.7069811614366817
+      },
+      "passed": true
+    },
+    {
+      "detail": "measured crossover M=512 in [256, 2048], ideal 284.6",
+      "id": "E-A2-4",
+      "observed": {
+        "crossover_m": 512,
+        "plateau_median_ms": 0.04572799988
+      },
+      "passed": true
+    },
+    {
+      "detail": "worst M>=2048 rate is 867.85 TFLOP/s, floor 450",
+      "id": "E-A2-5",
+      "observed": {
+        "min_tflops": 867.8454892
+      },
+      "passed": true
+    },
+    {
+      "detail": "time ratio M=8192 over M=4096 is 2.020 in [1.7, 2.3]",
+      "id": "E-A2-6",
+      "observed": {
+        "ratio": 2.0201115467222825
+      },
+      "passed": true
+    },
+    {
+      "detail": "square 8192 reaches 908.93 TFLOP/s, 84.90 percent of the 1070.53 TFLOP/s peak at the 1980 MHz observed there, band [75, 100] percent",
+      "id": "E-A2-7",
+      "observed": {
+        "efficiency": 0.8490441016461968,
+        "observed_sm_mhz": 1980,
+        "peak_at_clock_tflops": 1070.53056,
+        "tflops": 908.9276576
+      },
+      "passed": true
+    },
+    {
+      "detail": "pipelined launch period 1.304 us in [0.5, 10]",
+      "id": "E-A3-1",
+      "observed": {
+        "us": 1.304124965
+      },
+      "passed": true
+    },
+    {
+      "detail": "launch roundtrip 6.126 us in [3, 40]",
+      "id": "E-A3-2",
+      "observed": {
+        "us": 6.1262365
+      },
+      "passed": true
+    },
+    {
+      "detail": "roundtrip 6.126 us exceeds pipelined 1.304 us",
+      "id": "E-A3-3",
+      "observed": {},
+      "passed": true
+    },
+    {
+      "detail": "graph replay period 0.589 us is below pipelined 1.304 us",
+      "id": "E-A3-4",
+      "observed": {
+        "graph_us": 0.58897785
+      },
+      "passed": true
+    },
+    {
+      "detail": "pipelined launch is 0.722x the A100's 1.806 us, band [0.4, 2.5]",
+      "id": "E-A3-5",
+      "observed": {
+        "ratio": 0.7221068466223698
+      },
+      "passed": true
+    },
+    {
+      "detail": "host to device 419.93 GB/s in [150, 450.0]",
+      "id": "E-A4-1",
+      "observed": {
+        "gbps": 419.9343344
+      },
+      "passed": true
+    },
+    {
+      "detail": "device to host 169.96 GB/s in [150, 450.0]",
+      "id": "E-A4-2",
+      "observed": {
+        "gbps": 169.9647102
+      },
+      "passed": true
+    },
+    {
+      "detail": "the host link beats the A100 PCIe link by 15.68x inbound and 6.49x outbound, floor 5x each",
+      "id": "E-A4-3",
+      "observed": {
+        "d2h_gain": 6.489927458093093,
+        "h2d_gain": 15.68323627128772
+      },
+      "passed": true
+    },
+    {
+      "detail": "12 ordered pairs span [133.24, 133.27] GB/s, band [120, 159.375]",
+      "id": "E-B1-1",
+      "observed": {
+        "count": 12,
+        "max": 133.272291,
+        "min": 133.2410709
+      },
+      "passed": true
+    },
+    {
+      "detail": "pair symmetry spread 0.02 percent, limit 10",
+      "id": "E-B1-2",
+      "observed": {
+        "median": 133.2617065,
+        "spread": 0.0001548501857132636
+      },
+      "passed": true
+    },
+    {
+      "detail": "bidirectional pair sum 264.80 GB/s in [200, 318.75]",
+      "id": "E-B1-3",
+      "observed": {
+        "gbps": 264.8018444
+      },
+      "passed": true
+    },
+    {
+      "detail": "fan-out egress 398.71 GB/s in [330, 478.125]",
+      "id": "E-B1-4",
+      "observed": {
+        "gbps": 398.7067815
+      },
+      "passed": true
+    },
+    {
+      "detail": "fan-out is 2.992x one pair, floor 2.4",
+      "id": "E-B1-5",
+      "observed": {
+        "ratio": 2.9919081180308913
+      },
+      "passed": true
+    },
+    {
+      "detail": "width 2 all-reduce busbw at 1 GiB 115.15 GB/s in [90, 159.375]",
+      "id": "E-B2-1",
+      "observed": {
+        "busbw": 115.1511009
+      },
+      "passed": true
+    },
+    {
+      "detail": "width 4 all-reduce busbw at 1 GiB 336.94 GB/s in [200, 478.125]",
+      "id": "E-B2-2",
+      "observed": {
+        "busbw": 336.9354167
+      },
+      "passed": true
+    },
+    {
+      "detail": "width 4 over width 2 busbw is 2.926x, floor 1.4",
+      "id": "E-B2-3",
+      "observed": {
+        "ratio": 2.926028618628691
+      },
+      "passed": true
+    },
+    {
+      "detail": "collective busbw agreement at 1 GiB: width 2 deviation 11.85 percent, width 4 deviation 4.96 percent, limit 30",
+      "id": "E-B2-4",
+      "observed": {},
+      "passed": true
+    },
+    {
+      "detail": "8 B all-reduce is 6.221 us at width 2 and 8.458 us at width 4",
+      "id": "E-B2-5",
+      "observed": {
+        "w2_us": 6.220799871,
+        "w4_us": 8.457600139
+      },
+      "passed": true
+    },
+    {
+      "detail": "1 GiB over 512 MiB: width 2 ratio 1.948, width 4 ratio 1.976, band [1.8, 2.2]",
+      "id": "E-B2-6",
+      "observed": {},
+      "passed": true
+    },
+    {
+      "detail": "all-reduce over reduce-scatter plus all-gather is 0.905 in [0.7, 1.3]",
+      "id": "E-B2-7",
+      "observed": {
+        "allreduce_us": 1230.211139,
+        "composition_us": 1359.1679335
+      },
+      "passed": true
+    },
+    {
+      "detail": "two-anchor model worst signed error is width 2 -48.1 percent at 1048576 B, width 4 -32.7 percent at 2097152 B; required more negative than -20 percent inside [256 KiB, 32 MiB]",
+      "id": "E-B2-8",
+      "observed": {
+        "2": [
+          -0.48063633034491654,
+          1048576
+        ],
+        "4": [
+          -0.327348384690276,
+          2097152
+        ]
+      },
+      "passed": true
+    },
+    {
+      "detail": "half-bandwidth payload is width 2 at 4.00 MiB, width 4 at 8.00 MiB; required inside [1, 32] MiB and larger at width 4",
+      "id": "E-B2-9",
+      "observed": {
+        "2": 4194304,
+        "4": 8388608
+      },
+      "passed": true
+    },
+    {
+      "detail": "the wide-window fit puts alpha at 56.44 us against a measured 6.22 us floor at width 2, a factor 9.07, with R squared 0.99968",
+      "id": "E-B2-10",
+      "observed": {
+        "alpha2_us": 56.44384819513499,
+        "alpha4_us": 28.88593736423352,
+        "r2_w2": 0.9996828379330807
+      },
+      "passed": true
+    },
+    {
+      "detail": "under contention the collective grows 1.106x and the GEMM grows 1.206x, floor 1.02 each",
+      "id": "E-B3-1",
+      "observed": {
+        "comm_ratio": 1.1062486087283856,
+        "gemm_ratio": 1.2060247846485324
+      },
+      "passed": true
+    },
+    {
+      "detail": "contention growth stays under the 3.0x collective and 2.0x GEMM ceilings at 1.106x and 1.206x",
+      "id": "E-B3-2",
+      "observed": {},
+      "passed": true
+    },
+    {
+      "detail": "makespan 27269.2 us sits between max alone 24650.1 us and 0.95 of the serial sum 33133.8 us",
+      "id": "E-B3-3",
+      "observed": {
+        "makespan_us": 27269.15169
+      },
+      "passed": true
+    },
+    {
+      "detail": "the 450.0 GB/s flat surrogate is 1.129x the measured 398.71 GB/s egress here, against 1.598x on the A100; band [0.667, 1.5]",
+      "id": "E-C-1",
+      "observed": {
+        "surrogate_over_measured": 1.128648974334037
+      },
+      "passed": true
+    },
+    {
+      "detail": "width 4 busbw is 1.583x the A100's 212.89 GB/s, floor 1.3x",
+      "id": "E-C-2",
+      "observed": {
+        "gain": 1.582673759688102
+      },
+      "passed": true
+    },
+    {
+      "detail": "ring efficiency against per-GPU egress is 70.47 percent here against 71.0 percent on the A100, limit 15 percentage points",
+      "id": "E-C-3",
+      "observed": {
+        "efficiency": 0.704701525124183
+      },
+      "passed": true
+    },
+    {
+      "detail": "the 8 B width-4 floor is 0.653x the A100's 12.954 us, band [0.5, 2.0]",
+      "id": "E-C-4",
+      "observed": {
+        "ratio": 0.6528948694611703
+      },
+      "passed": true
+    }
+  ],
+  "fatal": [],
+  "fatal_violations": 0,
+  "scored_passed": 42,
+  "scored_total": 42,
+  "study": "gh200_hardware_envelope_v1",
+  "void": false
+}

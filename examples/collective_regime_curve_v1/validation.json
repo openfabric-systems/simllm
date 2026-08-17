@@ -1,0 +1,930 @@
+{
+  "checks": [
+    {
+      "curve": "a100 width 2",
+      "detail": "worst held-out error -27.76 percent at 1048576 B, bar 15",
+      "id": "E-1",
+      "passed": false
+    },
+    {
+      "curve": "a100 width 2",
+      "detail": "worst anchor error 6.87e-10 percent",
+      "id": "E-2",
+      "passed": true
+    },
+    {
+      "curve": "a100 width 2",
+      "detail": "held-out errors carry both signs",
+      "id": "E-3",
+      "passed": true
+    },
+    {
+      "curve": "a100 width 2",
+      "detail": "modeled time is strictly increasing",
+      "id": "E-4",
+      "passed": true
+    },
+    {
+      "curve": "a100 width 2",
+      "detail": "beats the single slope by 1.83x (-50.8 percent worst), floor 3",
+      "id": "E-5",
+      "passed": false
+    },
+    {
+      "curve": "a100 width 4",
+      "detail": "worst held-out error -11.86 percent at 1024 B, bar 15",
+      "id": "E-1",
+      "passed": true
+    },
+    {
+      "curve": "a100 width 4",
+      "detail": "worst anchor error 5.88e-10 percent",
+      "id": "E-2",
+      "passed": true
+    },
+    {
+      "curve": "a100 width 4",
+      "detail": "held-out errors carry both signs",
+      "id": "E-3",
+      "passed": true
+    },
+    {
+      "curve": "a100 width 4",
+      "detail": "modeled time is strictly increasing",
+      "id": "E-4",
+      "passed": true
+    },
+    {
+      "curve": "a100 width 4",
+      "detail": "beats the single slope by 3.86x (-45.8 percent worst), floor 3",
+      "id": "E-5",
+      "passed": true
+    },
+    {
+      "curve": "gh200 width 2",
+      "detail": "worst held-out error -27.35 percent at 1048576 B, bar 15",
+      "id": "E-1",
+      "passed": false
+    },
+    {
+      "curve": "gh200 width 2",
+      "detail": "worst anchor error 4.35e-10 percent",
+      "id": "E-2",
+      "passed": true
+    },
+    {
+      "curve": "gh200 width 2",
+      "detail": "held-out errors carry both signs",
+      "id": "E-3",
+      "passed": true
+    },
+    {
+      "curve": "gh200 width 2",
+      "detail": "modeled time is strictly increasing",
+      "id": "E-4",
+      "passed": true
+    },
+    {
+      "curve": "gh200 width 2",
+      "detail": "beats the single slope by 1.76x (-48.1 percent worst), floor 3",
+      "id": "E-5",
+      "passed": false
+    },
+    {
+      "curve": "gh200 width 4",
+      "detail": "worst held-out error -9.95 percent at 1024 B, bar 15",
+      "id": "E-1",
+      "passed": true
+    },
+    {
+      "curve": "gh200 width 4",
+      "detail": "worst anchor error 6.42e-10 percent",
+      "id": "E-2",
+      "passed": true
+    },
+    {
+      "curve": "gh200 width 4",
+      "detail": "held-out errors carry both signs",
+      "id": "E-3",
+      "passed": true
+    },
+    {
+      "curve": "gh200 width 4",
+      "detail": "modeled time is strictly increasing",
+      "id": "E-4",
+      "passed": true
+    },
+    {
+      "curve": "gh200 width 4",
+      "detail": "beats the single slope by 3.29x (-32.7 percent worst), floor 3",
+      "id": "E-5",
+      "passed": true
+    }
+  ],
+  "chronology": "post-specified regression check; measurements predate the model",
+  "curves": [
+    {
+      "anchor_checks": [
+        {
+          "curve_error": 6.745326512158678e-12,
+          "curve_us": 10.342399590069762,
+          "measured_us": 10.34239959,
+          "payload_bytes": 8192
+        },
+        {
+          "curve_error": -1.1861501494807334e-12,
+          "curve_us": 16.84479973998002,
+          "measured_us": 16.84479974,
+          "payload_bytes": 262144
+        },
+        {
+          "curve_error": 5.669980144980619e-12,
+          "curve_us": 92.77439862052603,
+          "measured_us": 92.77439862,
+          "payload_bytes": 4194304
+        },
+        {
+          "curve_error": -6.873692635030133e-12,
+          "curve_us": 1035.9295609928793,
+          "measured_us": 1035.929561,
+          "payload_bytes": 67108864
+        },
+        {
+          "curve_error": 5.3262594406017e-12,
+          "curve_us": 14754.406930078585,
+          "measured_us": 14754.40693,
+          "payload_bytes": 1073741824
+        }
+      ],
+      "anchors": [
+        [
+          8192,
+          6666671484
+        ],
+        [
+          262144,
+          33907288005
+        ],
+        [
+          4194304,
+          50134640036
+        ],
+        [
+          67108864,
+          65356272770
+        ],
+        [
+          1073741824,
+          72819292231
+        ]
+      ],
+      "asymptotic_rate_bytes_per_second": 72819292231.3881,
+      "curve_id": "a100-nccl-2.31-allreduce-w2",
+      "floor_us": 9.113600478,
+      "has_both_signs": true,
+      "held_out": [
+        {
+          "curve_error": -0.032085549550567104,
+          "curve_us": 9.267200367008721,
+          "measured_us": 9.574400261,
+          "payload_bytes": 1024,
+          "single_slope_error": -0.046659588411347416,
+          "single_slope_us": 9.127662685536242
+        },
+        {
+          "curve_error": -0.005405323879637072,
+          "curve_us": 9.42080025601744,
+          "measured_us": 9.471999481,
+          "payload_bytes": 2048,
+          "single_slope_error": -0.03486851837249544,
+          "single_slope_us": 9.141724893072483
+        },
+        {
+          "curve_error": 0.04972378493239536,
+          "curve_us": 9.728000034034881,
+          "measured_us": 9.267199785,
+          "payload_bytes": 4096,
+          "single_slope_error": -0.010504842791088502,
+          "single_slope_us": 9.169849308144967
+        },
+        {
+          "curve_error": -0.06312409786760532,
+          "curve_us": 10.888746503681062,
+          "measured_us": 11.62240002,
+          "payload_bytes": 16384,
+          "single_slope_error": -0.1965002252108111,
+          "single_slope_us": 9.338595798579865
+        },
+        {
+          "curve_error": -0.029420789120235158,
+          "curve_us": 11.678009405008055,
+          "measured_us": 12.03200035,
+          "payload_bytes": 32768,
+          "single_slope_error": -0.20515368675502663,
+          "single_slope_us": 9.56359111915973
+        },
+        {
+          "curve_error": -0.03337703780990882,
+          "curve_us": 12.818193255033961,
+          "measured_us": 13.26079946,
+          "payload_bytes": 65536,
+          "single_slope_error": -0.24487344895573454,
+          "single_slope_us": 10.013581760319457
+        },
+        {
+          "curve_error": 0.139217192269146,
+          "curve_us": 14.465324026889785,
+          "measured_us": 12.69759983,
+          "payload_bytes": 131072,
+          "single_slope_error": -0.14050189100667881,
+          "single_slope_us": 10.913563042638916
+        },
+        {
+          "curve_error": -0.08156351379161818,
+          "curve_us": 23.135784133738028,
+          "measured_us": 25.19040182,
+          "payload_bytes": 524288,
+          "single_slope_error": -0.35239418358132163,
+          "single_slope_us": 16.313450736555662
+        },
+        {
+          "curve_error": -0.27759822643292315,
+          "curve_us": 34.545830047114784,
+          "measured_us": 47.82079905,
+          "payload_bytes": 1048576,
+          "single_slope_error": -0.5083038873832594,
+          "single_slope_us": 23.513300995111322
+        },
+        {
+          "curve_error": -0.13893543240866565,
+          "curve_us": 55.24038905357823,
+          "measured_us": 64.15359676,
+          "payload_bytes": 2097152,
+          "single_slope_error": -0.4090276550813509,
+          "single_slope_us": 37.91300151222265
+        },
+        {
+          "curve_error": 0.06706323156121954,
+          "curve_us": 165.7038280592843,
+          "measured_us": 155.2896053,
+          "payload_bytes": 8388608,
+          "single_slope_error": -0.19948792210053623,
+          "single_slope_us": 124.31120461489058
+        },
+        {
+          "curve_error": 0.058364213814247536,
+          "curve_us": 302.2078563107599,
+          "measured_us": 285.5423987,
+          "payload_bytes": 16777216,
+          "single_slope_error": -0.16121455222691175,
+          "single_slope_us": 239.50880875178117
+        },
+        {
+          "curve_error": 0.03661019139056799,
+          "curve_us": 557.7062178401999,
+          "measured_us": 538.009584,
+          "payload_bytes": 33554432,
+          "single_slope_error": -0.1265880181317321,
+          "single_slope_us": 469.9040170255624
+        },
+        {
+          "curve_error": -0.0037526272598606704,
+          "curve_us": 2007.9756017710936,
+          "measured_us": 2015.539169,
+          "payload_bytes": 134217728,
+          "single_slope_error": -0.08100259466193008,
+          "single_slope_us": 1852.2752666682495
+        },
+        {
+          "curve_error": -0.0037643846842656836,
+          "curve_us": 3900.2191674483265,
+          "measured_us": 3914.95657,
+          "payload_bytes": 268435456,
+          "single_slope_error": -0.056072049131697235,
+          "single_slope_us": 3695.436932858499
+        },
+        {
+          "curve_error": 0.003431912523558388,
+          "curve_us": 7583.7748444822,
+          "measured_us": 7557.837009,
+          "payload_bytes": 536870912,
+          "single_slope_error": -0.023297240143089468,
+          "single_slope_us": 7381.760265238998
+        }
+      ],
+      "held_out_count": 16,
+      "improvement_factor": 1.8310775753680195,
+      "machine": "a100",
+      "monotone": true,
+      "width": 2,
+      "worst_anchor_error": 6.873692635030133e-12,
+      "worst_curve_error": -0.27759822643292315,
+      "worst_curve_payload": 1048576,
+      "worst_single_slope_error": -0.5083038873832594,
+      "worst_single_slope_payload": 1048576
+    },
+    {
+      "anchor_checks": [
+        {
+          "curve_error": -5.8805359919097835e-12,
+          "curve_us": 15.10400045991118,
+          "measured_us": 15.10400046,
+          "payload_bytes": 8192
+        },
+        {
+          "curve_error": 7.399526617827733e-13,
+          "curve_us": 18.124800180013413,
+          "measured_us": 18.12480018,
+          "payload_bytes": 262144
+        },
+        {
+          "curve_error": 2.697162576504705e-13,
+          "curve_us": 76.13439858002053,
+          "measured_us": 76.13439858,
+          "payload_bytes": 4194304
+        },
+        {
+          "curve_error": -5.983879768628543e-13,
+          "curve_us": 562.1759891996636,
+          "measured_us": 562.1759892,
+          "payload_bytes": 67108864
+        },
+        {
+          "curve_error": -1.4655707249575406e-12,
+          "curve_us": 7565.414428988913,
+          "measured_us": 7565.414429,
+          "payload_bytes": 1073741824
+        }
+      ],
+      "anchors": [
+        [
+          12288,
+          5714284253
+        ],
+        [
+          393216,
+          76039599990
+        ],
+        [
+          6291456,
+          99578608255
+        ],
+        [
+          100663296,
+          183283307387
+        ],
+        [
+          1610612736,
+          213256681822
+        ]
+      ],
+      "asymptotic_rate_bytes_per_second": 213256681821.68692,
+      "curve_id": "a100-nccl-2.31-allreduce-w4",
+      "floor_us": 12.95359991,
+      "has_both_signs": true,
+      "held_out": [
+        {
+          "curve_error": -0.11860066520993198,
+          "curve_us": 13.222399978738897,
+          "measured_us": 15.00159968,
+          "payload_bytes": 1024,
+          "single_slope_error": -0.13603863758625725,
+          "single_slope_us": 12.960802497918367
+        },
+        {
+          "curve_error": -0.07543855205299231,
+          "curve_us": 13.491200047477795,
+          "measured_us": 14.59199935,
+          "payload_bytes": 2048,
+          "single_slope_error": -0.11129347152576903,
+          "single_slope_us": 12.968005085836735
+        },
+        {
+          "curve_error": -0.05190304081641303,
+          "curve_us": 14.028800184955589,
+          "measured_us": 14.79679905,
+          "payload_bytes": 4096,
+          "single_slope_error": -0.12262035742970585,
+          "single_slope_us": 12.982410261673468
+        },
+        {
+          "curve_error": -0.04997851279064828,
+          "curve_us": 15.516512304823626,
+          "measured_us": 16.33280143,
+          "payload_bytes": 16384,
+          "single_slope_error": -0.1998408005690254,
+          "single_slope_us": 13.068841316693877
+        },
+        {
+          "curve_error": -0.09896450513333081,
+          "curve_us": 16.0081563942847,
+          "measured_us": 17.76639931,
+          "payload_bytes": 32768,
+          "single_slope_error": -0.25792038705518916,
+          "single_slope_us": 13.184082723387755
+        },
+        {
+          "curve_error": -0.09214638809543711,
+          "curve_us": 16.594112685438738,
+          "measured_us": 18.27840135,
+          "payload_bytes": 65536,
+          "single_slope_error": -0.2660974403663856,
+          "single_slope_us": 13.414565536775513
+        },
+        {
+          "curve_error": -0.023862323630569324,
+          "curve_us": 17.292473110191047,
+          "measured_us": 17.71519892,
+          "payload_bytes": 131072,
+          "single_slope_error": -0.21674426427772642,
+          "single_slope_us": 13.875531163551026
+        },
+        {
+          "curve_error": -0.020333746071712087,
+          "curve_us": 22.62167012766191,
+          "measured_us": 23.09120074,
+          "payload_bytes": 524288,
+          "single_slope_error": -0.2793218026390038,
+          "single_slope_us": 16.641324924204103
+        },
+        {
+          "curve_error": -0.03034327266152182,
+          "curve_us": 31.029013131889933,
+          "measured_us": 31.99999779,
+          "payload_bytes": 1048576,
+          "single_slope_error": -0.3647171455505215,
+          "single_slope_us": 20.329049938408204
+        },
+        {
+          "curve_error": -0.08513568813820296,
+          "curve_us": 46.747372171315476,
+          "measured_us": 51.09760165,
+          "payload_bytes": 2097152,
+          "single_slope_error": -0.45781212674946736,
+          "single_slope_us": 27.704499966816407
+        },
+        {
+          "curve_error": 0.017536636903062838,
+          "curve_us": 121.44014830828989,
+          "measured_us": 119.3471998,
+          "payload_bytes": 8388608,
+          "single_slope_error": -0.3970767621037588,
+          "single_slope_us": 71.95720013726563
+        },
+        {
+          "curve_error": 0.024831408468153727,
+          "curve_us": 199.23378995386346,
+          "measured_us": 194.4064051,
+          "payload_bytes": 16777216,
+          "single_slope_error": -0.32635552672677215,
+          "single_slope_us": 130.96080036453125
+        },
+        {
+          "curve_error": 0.09192508402869178,
+          "curve_us": 332.81177325128465,
+          "measured_us": 304.7935963,
+          "payload_bytes": 33554432,
+          "single_slope_error": -0.18315868889184228,
+          "single_slope_us": 248.96800081906252
+        },
+        {
+          "curve_error": 0.04205184216853423,
+          "curve_us": 1070.5824650774712,
+          "measured_us": 1027.379274,
+          "payload_bytes": 134217728,
+          "single_slope_error": -0.06849278765355925,
+          "single_slope_us": 957.01120354625
+        },
+        {
+          "curve_error": 0.03323095579464632,
+          "curve_us": 2049.6127715838747,
+          "measured_us": 1983.692765,
+          "payload_bytes": 268435456,
+          "single_slope_error": -0.04165159004222097,
+          "single_slope_us": 1901.0688071825002
+        },
+        {
+          "curve_error": 0.020770674592365503,
+          "curve_us": 3934.9159424435493,
+          "measured_us": 3854.848146,
+          "payload_bytes": 536870912,
+          "single_slope_error": -0.017034168158643646,
+          "single_slope_us": 3789.184014455
+        }
+      ],
+      "held_out_count": 16,
+      "improvement_factor": 3.8601143251524426,
+      "machine": "a100",
+      "monotone": true,
+      "width": 4,
+      "worst_anchor_error": 5.8805359919097835e-12,
+      "worst_curve_error": -0.11860066520993198,
+      "worst_curve_payload": 1024,
+      "worst_single_slope_error": -0.45781212674946736,
+      "worst_single_slope_payload": 2097152
+    },
+    {
+      "anchor_checks": [
+        {
+          "curve_error": -9.378414478951795e-14,
+          "curve_us": 6.667199544999375,
+          "measured_us": 6.667199545,
+          "payload_bytes": 8192
+        },
+        {
+          "curve_error": 8.612379593444524e-14,
+          "curve_us": 10.787200180000928,
+          "measured_us": 10.78720018,
+          "payload_bytes": 262144
+        },
+        {
+          "curve_error": -4.354707472315202e-12,
+          "curve_us": 56.886397299752275,
+          "measured_us": 56.8863973,
+          "payload_bytes": 4194304
+        },
+        {
+          "curve_error": 3.653299526503551e-12,
+          "curve_us": 658.5391760024058,
+          "measured_us": 658.539176,
+          "payload_bytes": 67108864
+        },
+        {
+          "curve_error": 7.325011903716724e-13,
+          "curve_us": 9324.63359800683,
+          "measured_us": 9324.633598,
+          "payload_bytes": 1073741824
+        }
+      ],
+      "anchors": [
+        [
+          8192,
+          18351267882
+        ],
+        [
+          262144,
+          57407143978
+        ],
+        [
+          4194304,
+          82784062813
+        ],
+        [
+          67108864,
+          102877469738
+        ],
+        [
+          1073741824,
+          115227973611
+        ]
+      ],
+      "asymptotic_rate_bytes_per_second": 115227973611.08444,
+      "curve_id": "gh200-nccl-2.31-allreduce-w2",
+      "floor_us": 6.220799871,
+      "has_both_signs": true,
+      "held_out": [
+        {
+          "curve_error": -0.004093709641349674,
+          "curve_us": 6.276599830249921,
+          "measured_us": 6.302400026,
+          "payload_bytes": 1024,
+          "single_slope_error": -0.011537418085932418,
+          "single_slope_us": 6.229686601955247
+        },
+        {
+          "curve_error": -0.006838122467451472,
+          "curve_us": 6.332399789499844,
+          "measured_us": 6.375999656,
+          "payload_bytes": 2048,
+          "single_slope_error": -0.021553690480548348,
+          "single_slope_us": 6.2385733329104935
+        },
+        {
+          "curve_error": 0.03189848390295435,
+          "curve_us": 6.443999707999687,
+          "measured_us": 6.244800054,
+          "payload_bytes": 4096,
+          "single_slope_error": 0.0018490168974412008,
+          "single_slope_us": 6.256346794820987
+        },
+        {
+          "curve_error": -0.010010211518744445,
+          "curve_us": 6.931512268402779,
+          "measured_us": 7.001599763,
+          "payload_bytes": 16384,
+          "single_slope_error": -0.09120946902603592,
+          "single_slope_us": 6.362987566283951
+        },
+        {
+          "curve_error": 0.026402258766152705,
+          "curve_us": 7.352324245327193,
+          "measured_us": 7.163199596,
+          "payload_bytes": 32768,
+          "single_slope_error": -0.09186178963930396,
+          "single_slope_us": 6.505175261567901
+        },
+        {
+          "curve_error": 0.07456848231135701,
+          "curve_us": 8.022298500228132,
+          "measured_us": 7.465600036,
+          "payload_bytes": 65536,
+          "single_slope_error": -0.09055526422580996,
+          "single_slope_us": 6.789550652135803
+        },
+        {
+          "curve_error": 0.05941854528357721,
+          "curve_us": 9.088963725658951,
+          "measured_us": 8.579200134,
+          "payload_bytes": 131072,
+          "single_slope_error": -0.14230915256189014,
+          "single_slope_us": 7.358301433271606
+        },
+        {
+          "curve_error": -0.09771738540093806,
+          "curve_us": 14.554901222392125,
+          "measured_us": 16.1311999,
+          "payload_bytes": 524288,
+          "single_slope_error": -0.33229975532778394,
+          "single_slope_us": 10.770806120086426
+        },
+        {
+          "curve_error": -0.27349543833956586,
+          "curve_us": 21.431302813190012,
+          "measured_us": 29.49919924,
+          "payload_bytes": 1048576,
+          "single_slope_error": -0.48063633034491643,
+          "single_slope_us": 15.320812369172852
+        },
+        {
+          "curve_error": -0.09712379157158327,
+          "curve_us": 33.981369367281076,
+          "measured_us": 37.63679788,
+          "payload_bytes": 2097152,
+          "single_slope_error": -0.3511449899322386,
+          "single_slope_us": 24.420824867345704
+        },
+        {
+          "curve_error": 0.054676728372150464,
+          "curve_us": 102.19395649383,
+          "measured_us": 96.89600021,
+          "payload_bytes": 8388608,
+          "single_slope_error": -0.18447717464990276,
+          "single_slope_us": 79.02089985638281
+        },
+        {
+          "curve_error": 0.04965561434442971,
+          "curve_us": 188.01766519175084,
+          "measured_us": 179.123193,
+          "payload_bytes": 16777216,
+          "single_slope_error": -0.15242131798216862,
+          "single_slope_us": 151.82099984176563
+        },
+        {
+          "curve_error": 0.03220295403340357,
+          "curve_us": 350.5889690908221,
+          "measured_us": 339.6511972,
+          "payload_bytes": 33554432,
+          "single_slope_error": -0.12433342716175404,
+          "single_slope_us": 297.42119981253126
+        },
+        {
+          "curve_error": -0.0036362076162605663,
+          "curve_us": 1274.3987449756378,
+          "measured_us": 1279.049635,
+          "payload_bytes": 134217728,
+          "single_slope_error": -0.08445898611501107,
+          "single_slope_us": 1171.022399637125
+        },
+        {
+          "curve_error": -0.005997853207272357,
+          "curve_us": 2471.696799470686,
+          "measured_us": 2486.611128,
+          "payload_bytes": 268435456,
+          "single_slope_error": -0.06063960982834863,
+          "single_slope_us": 2335.82399940325
+        },
+        {
+          "curve_error": 0.002602177679346662,
+          "curve_us": 4799.374574596618,
+          "measured_us": 4786.918163,
+          "payload_bytes": 536870912,
+          "single_slope_error": -0.02537978714646768,
+          "single_slope_us": 4665.4271989355
+        }
+      ],
+      "held_out_count": 16,
+      "improvement_factor": 1.7573833525814389,
+      "machine": "gh200",
+      "monotone": true,
+      "width": 2,
+      "worst_anchor_error": 4.354707472315202e-12,
+      "worst_curve_error": -0.27349543833956586,
+      "worst_curve_payload": 1048576,
+      "worst_single_slope_error": -0.48063633034491643,
+      "worst_single_slope_payload": 1048576
+    },
+    {
+      "anchor_checks": [
+        {
+          "curve_error": 6.416887042814122e-12,
+          "curve_us": 10.020799930064303,
+          "measured_us": 10.02079993,
+          "payload_bytes": 8192
+        },
+        {
+          "curve_error": 1.2502648775453728e-13,
+          "curve_us": 11.593600740001449,
+          "measured_us": 11.59360074,
+          "payload_bytes": 262144
+        },
+        {
+          "curve_error": 1.1140182807290202e-12,
+          "curve_us": 40.25279731004484,
+          "measured_us": 40.25279731,
+          "payload_bytes": 4194304
+        },
+        {
+          "curve_error": 1.281314345240527e-12,
+          "curve_us": 339.6015763004351,
+          "measured_us": 339.6015763,
+          "payload_bytes": 67108864
+        },
+        {
+          "curve_error": -4.3950891451271884e-13,
+          "curve_us": 4780.182361997899,
+          "measured_us": 4780.182362,
+          "payload_bytes": 1073741824
+        }
+      ],
+      "anchors": [
+        [
+          12288,
+          7860799413
+        ],
+        [
+          393216,
+          125387731072
+        ],
+        [
+          6291456,
+          197874413741
+        ],
+        [
+          100663296,
+          303986493026
+        ],
+        [
+          1610612736,
+          337532614805
+        ]
+      ],
+      "asymptotic_rate_bytes_per_second": 337532614804.8514,
+      "curve_id": "gh200-nccl-2.31-allreduce-w4",
+      "floor_us": 8.457600139,
+      "has_both_signs": true,
+      "held_out": [
+        {
+          "curve_error": -0.0995463248685643,
+          "curve_us": 8.653000112883038,
+          "measured_us": 9.609600529,
+          "payload_bytes": 1024,
+          "single_slope_error": -0.11940659918035741,
+          "single_slope_us": 8.462150810350346
+        },
+        {
+          "curve_error": -0.05125237349777137,
+          "curve_us": 8.848400086766077,
+          "measured_us": 9.326400235,
+          "payload_bytes": 2048,
+          "single_slope_error": -0.09217905425858078,
+          "single_slope_us": 8.466701481700694
+        },
+        {
+          "curve_error": -0.0595277124052384,
+          "curve_us": 9.239200034532152,
+          "measured_us": 9.824000299,
+          "payload_bytes": 4096,
+          "single_slope_error": -0.1372350807782293,
+          "single_slope_us": 8.475802824401386
+        },
+        {
+          "curve_error": -0.021382368862848937,
+          "curve_us": 10.254346682736058,
+          "measured_us": 10.47839969,
+          "payload_bytes": 16384,
+          "single_slope_error": -0.18590518275930112,
+          "single_slope_us": 8.530410880605546
+        },
+        {
+          "curve_error": -0.023932741898276304,
+          "curve_us": 10.522786023031806,
+          "measured_us": 10.78080013,
+          "payload_bytes": 32768,
+          "single_slope_error": -0.20198672468932122,
+          "single_slope_us": 8.603221622211091
+        },
+        {
+          "curve_error": 0.0026039236298569515,
+          "curve_us": 10.831331008539248,
+          "measured_us": 10.8032003,
+          "payload_bytes": 65536,
+          "single_slope_error": -0.19016190920553608,
+          "single_slope_us": 8.74884310542218
+        },
+        {
+          "curve_error": 0.006802067824454129,
+          "curve_us": 11.185973543336505,
+          "measured_us": 11.11039985,
+          "payload_bytes": 131072,
+          "single_slope_error": -0.18634016832037237,
+          "single_slope_us": 9.04008607184436
+        },
+        {
+          "curve_error": 0.001306221464606874,
+          "curve_us": 14.05353284919962,
+          "measured_us": 14.03519977,
+          "payload_bytes": 524288,
+          "single_slope_error": -0.23139363549098663,
+          "single_slope_us": 10.78754387037744
+        },
+        {
+          "curve_error": 0.0932211169301704,
+          "curve_us": 18.44307746546548,
+          "measured_us": 16.87039994,
+          "payload_bytes": 1048576,
+          "single_slope_error": -0.22245544572698006,
+          "single_slope_us": 13.117487601754881
+        },
+        {
+          "curve_error": -0.005787046042976684,
+          "curve_us": 26.275855397076413,
+          "measured_us": 26.42880008,
+          "payload_bytes": 2097152,
+          "single_slope_error": -0.327348384690276,
+          "single_slope_us": 17.777375064509762
+        },
+        {
+          "curve_error": 0.08122584961663183,
+          "curve_us": 65.57591112618935,
+          "measured_us": 60.64959615,
+          "payload_bytes": 8388608,
+          "single_slope_error": -0.24588616010035783,
+          "single_slope_us": 45.736699841039055
+        },
+        {
+          "curve_error": 0.09095048013625591,
+          "curve_us": 111.0674827724803,
+          "measured_us": 101.8079966,
+          "payload_bytes": 16777216,
+          "single_slope_error": -0.18458468572715123,
+          "single_slope_us": 83.01579954307812
+        },
+        {
+          "curve_error": 0.0701360224269088,
+          "curve_us": 192.7905720368915,
+          "measured_us": 180.1552027,
+          "payload_bytes": 33554432,
+          "single_slope_error": -0.125343056511372,
+          "single_slope_us": 157.5739989471562
+        },
+        {
+          "curve_error": 0.019912802487933944,
+          "curve_us": 653.638483326918,
+          "measured_us": 640.8768296,
+          "payload_bytes": 134217728,
+          "single_slope_error": -0.056100692937854205,
+          "single_slope_us": 604.9231953716248
+        },
+        {
+          "curve_error": 0.02867625578153433,
+          "curve_us": 1265.4889882872567,
+          "measured_us": 1230.211139,
+          "payload_bytes": 268435456,
+          "single_slope_error": -0.023428781842423366,
+          "single_slope_us": 1201.3887906042498
+        },
+        {
+          "curve_error": 0.01564777978329313,
+          "curve_us": 2457.5814845639798,
+          "measured_us": 2419.718266,
+          "payload_bytes": 536870912,
+          "single_slope_error": -0.01049638104046129,
+          "single_slope_us": 2394.3199810694996
+        }
+      ],
+      "held_out_count": 16,
+      "improvement_factor": 3.2884025113181172,
+      "machine": "gh200",
+      "monotone": true,
+      "width": 4,
+      "worst_anchor_error": 6.416887042814122e-12,
+      "worst_curve_error": -0.0995463248685643,
+      "worst_curve_payload": 1024,
+      "worst_single_slope_error": -0.327348384690276,
+      "worst_single_slope_payload": 2097152
+    }
+  ],
+  "scored_passed": 16,
+  "scored_total": 20,
+  "study": "collective_regime_curve_v1"
+}
