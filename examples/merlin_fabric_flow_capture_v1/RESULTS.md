@@ -17,15 +17,29 @@ TRAF-52 the families still queued.
 
 The expectations-only commit `cc276c2` froze the cells, guards, bands, the
 8 MiB chunk (from the measured jitter bound), and the convergence and
-steady-window definitions. The harness commit `d4a2e8f` followed it, and
-every scored submission followed the harness commit. The wave-16
-bookkeeping gap (harness committed after submission) does not recur here.
+steady-window definitions, at 15:55:28 on the workstation clock. The
+harness commit `d4a2e8f` carries 16:04:24 on the same clock; Slurm's
+accounting records every scored submission at 16:05:04 to 16:05:05 on the
+cluster clock (chrony, stratum 3), with the first run starting 16:05:10.
+Read across those clocks the submissions follow the harness commit by
+about forty seconds, but the two timestamps live on different machines, so
+the ordering claim is only as strong as their agreement, and an earlier
+draft of the working ledger wrote "~16:02" for the submissions from
+memory, which the accounting record corrects. The claim that depends on no
+clock is byte identity: `fabric_flow_lane.cu` has SHA-256
+`145b3e9a0b3b8d34d8df1e0f5636ac8512e5580cf60b27b6a2b00f22c7f603da` in the
+`d4a2e8f` tree, in the Merlin stage, and in every captured job's in-run
+`source.sha256`, now packaged per cell in the dataset, so the bytes that
+ran are the committed bytes for every captured cell regardless of clock
+skew. That byte identity, not the timestamp ordering, is the guarantee
+this record stands on, and it is the same guarantee the wave-16 record
+relied on for its own submission-before-commit disclosure.
 
 | Step | Identity | Note |
 |---|---|---|
 | discovery jobs | 195692, 195693/195699, 195696, 195704, 195710 | unscored; probe `disco_lane.cu` staged, run, and committed post-freeze byte-identical (SHA-256 `7fc49ddd...` in every job's `source.sha256`) |
 | freeze 1 | commit `cc276c2` | expectations only |
-| harness | commit `d4a2e8f` | lane, job bodies, sbatch files, analyzer |
+| harness | commit `d4a2e8f` | lane, job bodies, sbatch files, analyzer; `fabric_flow_lane.cu` SHA-256 `145b3e9a...` matches every captured job's in-run `source.sha256` |
 | analyzer het fix and packager | commit `77becdb` | analysis tooling |
 | G6 distinct-GPU enforcement | commit `9dcdffa` | staged before any A100 cell ran |
 | scored submissions | jobs 195728 to 195735 | 2026-08-17 ~16:02 |
@@ -95,6 +109,10 @@ isolated one-way recv-side median; 16 MiB one-way):
 | gpu104 to gpu003 (A100-GH200, 195710) | 72.46 us | 18.98 us | 3922.11 us |
 | gpu104 to gpu003 (mx capture matrix, 195732) | 71.75 us | 24.26 us | 4232.74 us |
 
+The last row is not discovery: it is phase 1 of the frozen mx-pair cell,
+and its 8-byte one-way value is the one scored under E-M-3; it appears in
+this table once, for comparability with the discovery pairs above it.
+
 The all-pair matrix jobs (195694 pinned, 195737 unpinned, four nodes each)
 never scheduled inside the window and remain queued; the pairs above are
 what the discovery reached. Pairs never allocated are reported as never
@@ -131,11 +149,25 @@ ladder (job 195700, queued; schedulable no earlier than 2026-08-19 08:00).
 ## Fatal guards
 
 Every guard held in every captured cell; guards are never a fraction.
+Enforcement differed by cell family and is stated exactly rather than
+summarized. In the homogeneous cells (s1, i2, j2x) the job body enforced
+G1 (Cassini port count, InfiniBand absence, Socket transport, GDR state),
+G4 and G6 before the window and failed the job on any violation, and the
+lane enforced G3 in its exit code. In the heterogeneous mx job the in-job
+enforcement covered the transport half of G1 (Socket selected, GDR 0,
+asserted before exit) and G3; the port-inventory, foreign-process and
+placement evidence was recorded per side but not asserted in-job. The
+analyzer re-derives all seven verdicts (G1 in both halves, G2, G3, G4, G5,
+G6) for every cell from the packaged evidence alone, and all hold for all
+five captured cells; the mx cell's G4 and G6 therefore rest on
+recorded-then-rechecked evidence rather than in-job assertion, which is
+worth stating because four of the ten passing relations read that cell.
 
 - **G1 fabric identity.** Four Cassini ports and zero InfiniBand devices
   per node; `Using network Socket` and GDR 0 in every communicator log;
-  enforced in-job (the run fails on any other value) and re-checked by the
-  analyzer.
+  enforced in-job for the homogeneous cells, transport half enforced
+  in-job for mx, both halves re-derived for every cell by the analyzer
+  from the packaged evidence.
 - **G2 clock and timer sanity.** Every one of the 542,760 recorded
   completion timestamps is finite, positive, and strictly increasing per
   flow.
@@ -175,17 +207,33 @@ Every guard held in every captured cell; guards are never a fraction.
 | E-M-4 signed: a100-to-gh at least 1.3 x gh-to-a100 | at least 1.3 | 2.775 | pass |
 
 The freeze's independence disclosure stands: the 18 relations read about
-13 independent quantities, and the 10 evaluated ones read about 8.
+13 independent quantities, and the 10 evaluated ones read about 8. Three
+qualifications on the passing set. E-T-1 and E-I-5 are quantified over
+"every cell that runs", so their passes are provisional: E-T-1 currently
+covers four frozen cells and E-I-5 one incast cell, and both are
+re-evaluated if any queued cell lands. E-M-3's band [8, 200] us was wide
+enough that failure was implausible short of a harness defect: its lower
+edge is 1.6 times this study's own stated floor and its upper edge 8
+times the largest observation in hand at freeze time, so its pass carries
+little evidential weight and is counted with that caveat. E-I-2 divides
+an aggregate defined on the final-20-second stage window by the s1 steady
+defined on the whole window excluding the first 10 seconds, as the freeze
+wrote them; with both sides on the final-20-second definition the ratio
+is 1.7157 against the published 1.7129, and the verdict is unchanged
+under either reading.
 
 **A warning the post-specified cell raises about E-J-2.** In j2x (unscored)
 the established flow's post-join steady was 1.054 times its solo steady,
 just past the 1.05 edge E-J-2 freezes for j3. The relation's reasoning ("a
 saturating flow cannot gain from a competitor") assumed a shared
-bottleneck; the measured system is source-stack-bound, where the
-established flow need not lose anything and small drifts go either way. If
-j3 lands and E-J-2 misses by a similar hair, that is a specification error
-in the freeze's premise, not a fabric anomaly, and the band will not be
-widened after the fact. Recorded before j3 has run.
+bottleneck, and the post-specified observation is source-stack-bound
+behavior in which the established flow need not lose anything. If j3 lands
+and E-J-2 misses, the freeze's failure policy applies as written: the miss
+is reported as refuted with a statement of whether it is a specification
+error of the freeze or a fact about the machine, weighing this evidence,
+and the classification is made then, not pre-committed from a
+post-specified measurement now. Either way the band is not widened.
+Recorded before j3 has run so the option is not invented after a miss.
 
 ## Descriptive statistics (the dataset)
 
@@ -199,12 +247,21 @@ mean 1681.5, sd 309.8, p5 1475.8, p50 1598.4, p95 2112.6, p99 2860.0, max
 port; destination ACK egress split across two ports matching NCCL's two
 channels.
 
-The long-running rate sits 28 to 34 percent above the discovery ladder's
-200-repetition bursts (3.72 to 3.89 GB/s) and 51 percent above wave-16's
-single 128 MiB transfer (3.30 GB/s): sustained streams on this stack run
-materially faster than burst measurements. An anchor taken from short
-bursts underestimates a long flow, which is exactly the class of error the
-maintainer's long-running design constraint exists to avoid.
+This pair's 300-second rate sits 28 to 34 percent above the discovery
+ladder's 200-repetition bursts (3.72 to 3.89 GB/s) and 51 percent above
+wave-16's single 128 MiB transfer (3.30 GB/s), but those burst anchors
+were measured on other node pairs, and this campaign's own controls
+refuse the obvious generalization: the per-source spread measured in i2
+(33.9 percent between gpu105 at 4.893 and gpu103 at 3.655 GB/s) is the
+same size as the claimed gain and s1 used the fast source; the
+gpu103-sourced 60-second solo stage of the post-specified j2x cell lands
+at 3.819 GB/s, inside the burst range; and the same-pair mixed cells
+moved the opposite way, 16 to 24 percent below their burst anchors
+(1.202 against 1.43 to 1.54, and 3.336 against 4.16 to 4.36 GB/s). So no
+sustained-versus-burst direction is established; what stands is that
+burst and sustained rates on this stack differ by tens of percent with
+pair-dependent sign, and a calibration consumer must anchor per
+source-destination pair and per duration rather than transfer a scalar.
 
 ### i2-incast (job 195729, gpu103 and gpu105 into gpu102, 180 s)
 
@@ -279,32 +336,62 @@ path, and adding a second source-side stack (i2) nearly doubles the
 aggregate while a single stack cannot, which is the same conclusion
 wave-16 reached from its four-port arm by an independent route.
 
-**End-to-end plausibility.** The solo long-stream rate sits between
-wave-16's one-shot reading and the port rate, in the direction TCP ramp
-amortization predicts. The i2 aggregate (8.55 GB/s) sits below twice the
-best single source (2 x 4.99) and above what the weaker source's solo rate
-alone would give, matching per-source stacks with mild interference. The
-mixed asymmetry's slow leg is the Grace sender stack, not the fabric: the
-same two endpoints carry 2.8 times more the other way.
+**End-to-end plausibility.** Every solo and shared rate sits between the
+socket-stack readings wave-16 anchored and the port rate, and the i2
+aggregate (8.55 GB/s) sits below twice the best single source (2 x 4.99)
+and above what the weaker source's solo rate alone would give, matching
+per-source stacks with mild interference. Sustained-versus-burst
+differences are real but pair-dependent in sign (above the cross-pair
+anchors for s1, below the same-pair anchors for both mixed directions), so
+they are reported as observations, not as a law. The mixed asymmetry's
+slow leg is the Grace sender stack, not the fabric: the same two endpoints
+carry 2.8 times more the other way.
 
 ## The calibration reference and its byte locks
 
 The wave-19 calibration comparison consumes exactly the files under
 `dataset/`, whose per-file SHA-256 and byte sizes are pinned in
 [dataset/MANIFEST.json](dataset/MANIFEST.json), itself locked at SHA-256
-`dd45890ca00c7e70404fe4181d849b2eab93ea7fd93ed38c93c4468ae981c2ce`.
+`a6b7e61e294d87d76ce69ee7042e15c2eade99bbc8789e296377615d2bd4af88` and
+enforced in CI by `tests/test_merlin_fabric_flow_dataset.py`, which
+verifies every tracked file's hash and size, rejects unmanifested files,
+and carries a mutation-sensitive negative control.
 
-- **Repo-tracked reference (37 files, 4.70 MB):** per-cell
-  destination-side per-chunk series (`*_dest.csv.gz`, deterministic gzip),
-  cell summaries, per-rank metadata (hosts, roles, T0 clocks, tracer
-  floors), the mixed-pair matrix probe, the analyzer's per-cell statistics
-  and relation verdicts (`stats/`), and the manifest.
+One disclosed re-packaging: the dataset first published at manifest
+SHA-256 `dd45890c...` (commit `ab8776d`); the review fix round regenerated
+it at `a6b7e61e...`. Exactly five files changed, all under `stats/` (the
+analyzer now writes a two-component relative job identity instead of a
+machine-local absolute path, a `hosts` field naming both het components,
+and seven re-derived guard keys), 41 evidence files were added, nothing
+was removed, and **every series and metadata byte of the first publication
+is unchanged**, verifiable by comparing the two manifests across the two
+commits.
+
+- **Repo-tracked reference (78 manifest-listed files, 4.74 MB, plus the
+  manifest itself):** per-cell destination-side per-chunk series
+  (`*_dest.csv.gz`, deterministic gzip), cell summaries, per-rank metadata
+  (hosts, roles, T0 clocks, tracer floors), the mixed-pair matrix probe,
+  the analyzer's statistics and relation verdicts (`stats/`), and the
+  guard-evidence set the verdicts re-derive from: per-rank
+  `guards_before/after` files, per-side `side.txt` for the mx cells,
+  `transport_summary.txt`, NCCL interface-selection lines, per-port
+  sender-side tx deltas, established-socket samples for the homogeneous
+  cells (the mx job ran no 1 Hz sampler, a disclosed gap), and each job's
+  in-run `source.sha256`. Running
+  `analyze_capture.py --dataset-root dataset/` re-derives all seven guard
+  verdicts and all 18 relation rows from the tracked tree alone.
 - **Bulk-side mirror (7 files, 4.65 MB, hashed in the manifest under
-  `bulk/`):** source-side series (`*_src.csv.gz`), auxiliary diagnostics
-  whose destination-side counterparts are the authoritative series. They
-  live on the site storage root (see `docs/architecture.md`) and, as raw
-  CSVs, in the Merlin capture tree under the per-job directories named in
-  this record.
+  `bulk/`):** the seven source-side series (`*_src.csv.gz`), one per flow;
+  nothing else is hashed under `bulk/`. They live on the site storage root
+  (see `docs/architecture.md`) and, as raw CSVs, in the Merlin capture
+  tree under the per-job directories named in this record.
+- The evidence files are verbatim run captures and keep the site paths
+  they were recorded with, byte-identical to the raw tree for integrity;
+  the generated `stats/` files carry no absolute path. The per-rank
+  metadata records each het component's own `SLURM_JOB_NODELIST` (gpu104
+  on the A100 side, gpu003 on the GH side), which is that component's
+  truth under Slurm's het-job semantics; the stats `hosts` field carries
+  the full pair.
 - The series schema is one row per chunk:
   `cell,flow,side,chunk_idx,chunk_bytes,t_ns_since_t0`, with T0 defined as
   the world-barrier exit on the recording rank and both `CLOCK_REALTIME`

@@ -215,7 +215,7 @@ the flow-level work the GOAL emitter renders.
   incast whose aggregate reaches 1.71 times the solo rate because each
   flow rides its own source stack and destination port, a mixed
   A100-plus-GH200 pair with a 2.77x direction asymmetry (the Grace-sourced
-  leg is the slow one), and a post-specified two-flow join in which the
+  leg is the slow one), and a post-specified, unscored two-flow join in which the
   established flow loses nothing at the join. It changes no profile, no
   envelope and no reported metric; TRAF-51 owns the htsim comparison
   against it and TRAF-52 the families still queued behind cluster
@@ -764,9 +764,11 @@ study reports all three arms rather than treating `lower` as `off`.
   calibrated instance must reproduce on the incast and join families are
   of the sharing kind: aggregate goodput rising 1.71 times when a second
   source joins (per-source stacks, distinct destination ports, not a
-  shared bottleneck), Jain fairness 0.98 to 0.99, a 119-second convergence
+  shared bottleneck), Jain fairness 0.9795 in the scored incast cell (and
+  0.991 in the post-specified join cell), a 119-second convergence
   transient under simultaneous starts against near-instant settling for a
-  staggered join on pre-established connections, and the mixed pair's
+  staggered join on pre-established connections (the staggered-join
+  observation is from the post-specified cell), and the mixed pair's
   2.77x direction asymmetry either modeled as an endpoint-stack term or
   declared out of scope. Acceptance: simulated per-stage steady aggregates
   and convergence behavior within tolerances stated in that study's freeze
@@ -783,9 +785,10 @@ study reports all three arms rather than treating `lower` as `off`.
   still queued at publication behind the floating FLEX reservation; when
   any lands, its outputs drop into the study's capture tree and
   `analyze_capture.py` scores it against the unchanged frozen bands, with
-  the study's RESULTS recording in advance that a hair-width E-J-2 miss
-  would be a specification error of the freeze's shared-bottleneck
-  premise. Acceptance: the missing cells captured or their impossibility
+  the study's RESULTS recording, before j3 has run, that a post-specified
+  observation strains E-J-2's shared-bottleneck premise; if that relation
+  misses, its classification (specification error or machine fact) is made
+  at scoring time under the freeze's failure policy, not pre-committed. Acceptance: the missing cells captured or their impossibility
   documented with scheduler evidence, scored against the existing freezes
   with no band moved, and folded into the published dataset through a
   packaging commit that preserves every existing byte lock.
