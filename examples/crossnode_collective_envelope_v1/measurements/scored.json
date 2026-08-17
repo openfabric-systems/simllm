@@ -1,0 +1,795 @@
+{
+  "curves": {
+    "w2-default": {
+      "allreduce": {
+        "anchor_endpoint_bytes": [
+          64,
+          786432,
+          1048576,
+          134217728
+        ],
+        "anchor_payloads": [
+          64,
+          786432,
+          1048576,
+          134217728
+        ],
+        "anchor_rates_gbps": [
+          0.1388887291427377,
+          0.555254304026184,
+          1.339700466453831,
+          1.6103161094348888
+        ],
+        "available": true,
+        "clears_bar": false,
+        "flat_slope_gbps": 1.6103161094348888,
+        "flat_worst_payload_bytes": 524288,
+        "flat_worst_signed_error_percent": -62.4270168693896,
+        "held_out": [
+          {
+            "measured_us": 57.54879713,
+            "modeled_us": 42.855365330477994,
+            "payload_bytes": 512,
+            "signed_error_percent": -25.53212670341352
+          },
+          {
+            "measured_us": 59.49440002,
+            "modeled_us": 56.13225609044176,
+            "payload_bytes": 4096,
+            "signed_error_percent": -5.651193941661744
+          },
+          {
+            "measured_us": 104.8063993,
+            "modeled_us": 92.30185816274927,
+            "payload_bytes": 16384,
+            "signed_error_percent": -11.931085526044521
+          },
+          {
+            "measured_us": 167.9872036,
+            "modeled_us": 210.280146042076,
+            "payload_bytes": 65536,
+            "signed_error_percent": 25.17628815512709
+          },
+          {
+            "measured_us": 301.7215967,
+            "modeled_us": 347.42054938107196,
+            "payload_bytes": 131072,
+            "signed_error_percent": 15.146066168577962
+          },
+          {
+            "measured_us": 404.2751789,
+            "modeled_us": 474.36186000391154,
+            "payload_bytes": 196608,
+            "signed_error_percent": 17.336379961444013
+          },
+          {
+            "measured_us": 496.1791992,
+            "modeled_us": 595.1026382307302,
+            "payload_bytes": 262144,
+            "signed_error_percent": 19.937038713075136
+          },
+          {
+            "measured_us": 730.5727959,
+            "modeled_us": 824.3646807132749,
+            "payload_bytes": 393216,
+            "signed_error_percent": 12.838129935803558
+          },
+          {
+            "measured_us": 973.3632088,
+            "modeled_us": 1042.4282668807232,
+            "payload_bytes": 524288,
+            "signed_error_percent": 7.095507355971387
+          },
+          {
+            "measured_us": 1172.684765,
+            "modeled_us": 1196.2696737053734,
+            "payload_bytes": 1572864,
+            "signed_error_percent": 2.0111891455649156
+          },
+          {
+            "measured_us": 1491.967964,
+            "modeled_us": 1564.9216340954904,
+            "payload_bytes": 2097152,
+            "signed_error_percent": 4.889761164837616
+          },
+          {
+            "measured_us": 2148.659134,
+            "modeled_us": 2292.416068066494,
+            "payload_bytes": 3145728,
+            "signed_error_percent": 6.690541640212257
+          },
+          {
+            "measured_us": 2800.230408,
+            "modeled_us": 3010.59352331151,
+            "payload_bytes": 4194304,
+            "signed_error_percent": 7.512350223414553
+          },
+          {
+            "measured_us": 5401.446533,
+            "modeled_us": 5826.932699746958,
+            "payload_bytes": 8388608,
+            "signed_error_percent": 7.877263324693871
+          },
+          {
+            "measured_us": 10585.70251,
+            "modeled_us": 11313.493250513733,
+            "payload_bytes": 16777216,
+            "signed_error_percent": 6.875223820301124
+          },
+          {
+            "measured_us": 20930.25208,
+            "modeled_us": 22001.959657223262,
+            "payload_bytes": 33554432,
+            "signed_error_percent": 5.120375870901904
+          },
+          {
+            "measured_us": 42039.60266,
+            "modeled_us": 42824.35158569507,
+            "payload_bytes": 67108864,
+            "signed_error_percent": 1.8666896831585615
+          }
+        ],
+        "worst_payload_bytes": 512,
+        "worst_signed_error_percent": -25.53212670341352
+      },
+      "alltoallv": {
+        "anchor_endpoint_bytes": [
+          512,
+          4096,
+          196608,
+          134217728
+        ],
+        "anchor_payloads": [
+          512,
+          4096,
+          196608,
+          134217728
+        ],
+        "anchor_rates_gbps": [
+          0.21739129880966446,
+          1.1594202636000843,
+          1.113689019046993,
+          1.3953344345639087
+        ],
+        "available": true,
+        "clears_bar": false,
+        "flat_slope_gbps": 1.3953344345639087,
+        "flat_worst_payload_bytes": 8388608,
+        "flat_worst_signed_error_percent": 15.699630575000493,
+        "held_out": [
+          {
+            "measured_us": 56.01279736,
+            "modeled_us": 55.39871775911885,
+            "payload_bytes": 16384,
+            "signed_error_percent": -1.096320180073127
+          },
+          {
+            "measured_us": 99.0719974,
+            "modeled_us": 99.2400519396999,
+            "payload_bytes": 65536,
+            "signed_error_percent": 0.16962869843168737
+          },
+          {
+            "measured_us": 145.5615997,
+            "modeled_us": 158.259124104179,
+            "payload_bytes": 131072,
+            "signed_error_percent": 8.72312782378621
+          },
+          {
+            "measured_us": 265.8303976,
+            "modeled_us": 274.1180750711452,
+            "payload_bytes": 262144,
+            "signed_error_percent": 3.117656049108348
+          },
+          {
+            "measured_us": 379.2896032,
+            "modeled_us": 385.78317479769976,
+            "payload_bytes": 393216,
+            "signed_error_percent": 1.712035221349239
+          },
+          {
+            "measured_us": 469.6063995,
+            "modeled_us": 496.14464592130145,
+            "payload_bytes": 524288,
+            "signed_error_percent": 5.651167967378059
+          },
+          {
+            "measured_us": 622.3872185,
+            "modeled_us": 714.1904168788835,
+            "payload_bytes": 786432,
+            "signed_error_percent": 14.750174111887471
+          },
+          {
+            "measured_us": 843.3664322,
+            "modeled_us": 929.6906234258371,
+            "payload_bytes": 1048576,
+            "signed_error_percent": 10.235668379716326
+          },
+          {
+            "measured_us": 1140.78722,
+            "modeled_us": 1355.4633881384634,
+            "payload_bytes": 1572864,
+            "signed_error_percent": 18.818247993562156
+          },
+          {
+            "measured_us": 1402.060795,
+            "modeled_us": 1776.2654900764464,
+            "payload_bytes": 2097152,
+            "signed_error_percent": 26.689619766198962
+          },
+          {
+            "measured_us": 2081.126404,
+            "modeled_us": 2607.661789921674,
+            "payload_bytes": 3145728,
+            "signed_error_percent": 25.300500003731337
+          },
+          {
+            "measured_us": 2688.665581,
+            "modeled_us": 3429.3519953871773,
+            "payload_bytes": 4194304,
+            "signed_error_percent": 27.548476821416084
+          },
+          {
+            "measured_us": 5231.615829,
+            "modeled_us": 6657.2944983959005,
+            "payload_bytes": 8388608,
+            "signed_error_percent": 27.251211021517463
+          },
+          {
+            "measured_us": 10716.67175,
+            "modeled_us": 12960.420662245171,
+            "payload_bytes": 16777216,
+            "signed_error_percent": 20.936993915533257
+          },
+          {
+            "measured_us": 22513.97095,
+            "modeled_us": 25268.384450438414,
+            "payload_bytes": 33554432,
+            "signed_error_percent": 12.234241158769974
+          },
+          {
+            "measured_us": 46069.04297,
+            "modeled_us": 49301.8511261181,
+            "payload_bytes": 67108864,
+            "signed_error_percent": 7.01731129562055
+          }
+        ],
+        "worst_payload_bytes": 4194304,
+        "worst_signed_error_percent": 27.548476821416084
+      }
+    },
+    "w2-fournic": {
+      "allreduce": {
+        "anchor_endpoint_bytes": [
+          64,
+          196608,
+          1048576,
+          134217728
+        ],
+        "anchor_payloads": [
+          64,
+          196608,
+          1048576,
+          134217728
+        ],
+        "anchor_rates_gbps": [
+          0.07352935516467418,
+          0.785597414710214,
+          3.9324117500017715,
+          6.4783056803346755
+        ],
+        "available": true,
+        "clears_bar": false,
+        "flat_slope_gbps": 6.4783056803346755,
+        "flat_worst_payload_bytes": 786432,
+        "flat_worst_signed_error_percent": -81.02134441353812,
+        "held_out": [
+          {
+            "measured_us": 66.56000018,
+            "modeled_us": 44.884201294376574,
+            "payload_bytes": 512,
+            "signed_error_percent": -32.56580352614931
+          },
+          {
+            "measured_us": 66.25279784,
+            "modeled_us": 57.44795467593346,
+            "payload_bytes": 4096,
+            "signed_error_percent": -13.289768056784816
+          },
+          {
+            "measured_us": 91.13600254,
+            "modeled_us": 84.52091267142659,
+            "payload_bytes": 16384,
+            "signed_error_percent": -7.2584814828476025
+          },
+          {
+            "measured_us": 120.3199983,
+            "modeled_us": 156.46525218154505,
+            "payload_bytes": 65536,
+            "signed_error_percent": 30.04093616376411
+          },
+          {
+            "measured_us": 172.6976037,
+            "modeled_us": 229.15534785884955,
+            "payload_bytes": 131072,
+            "signed_error_percent": 32.69167779358686
+          },
+          {
+            "measured_us": 317.4400091,
+            "modeled_us": 294.1214547991968,
+            "payload_bytes": 262144,
+            "signed_error_percent": -7.345814526314923
+          },
+          {
+            "measured_us": 475.5455971,
+            "modeled_us": 298.03755691405087,
+            "payload_bytes": 393216,
+            "signed_error_percent": -37.327238706117576
+          },
+          {
+            "measured_us": 562.7391815,
+            "modeled_us": 300.85278074484125,
+            "payload_bytes": 524288,
+            "signed_error_percent": -46.5377939487156
+          },
+          {
+            "measured_us": 856.2687874,
+            "modeled_us": 304.87307156089594,
+            "payload_bytes": 786432,
+            "signed_error_percent": -64.39516702615991
+          },
+          {
+            "measured_us": 376.3200045,
+            "modeled_us": 424.74562852628594,
+            "payload_bytes": 1572864,
+            "signed_error_percent": 12.868203509570792
+          },
+          {
+            "measured_us": 490.8544064,
+            "modeled_us": 537.7049440279429,
+            "payload_bytes": 2097152,
+            "signed_error_percent": 9.544691260195014
+          },
+          {
+            "measured_us": 640.8192158,
+            "modeled_us": 755.5656308427571,
+            "payload_bytes": 3145728,
+            "signed_error_percent": 17.90620696345807
+          },
+          {
+            "measured_us": 813.2608414,
+            "modeled_us": 965.9339170503828,
+            "payload_bytes": 4194304,
+            "signed_error_percent": 18.772953015610764
+          },
+          {
+            "measured_us": 1445.222378,
+            "modeled_us": 1763.4404773469594,
+            "payload_bytes": 8388608,
+            "signed_error_percent": 22.01862524349588
+          },
+          {
+            "measured_us": 2657.382393,
+            "modeled_us": 3248.6662649135305,
+            "payload_bytes": 16777216,
+            "signed_error_percent": 22.250612989348976
+          },
+          {
+            "measured_us": 5305.241776,
+            "modeled_us": 6014.656853420306,
+            "payload_bytes": 33554432,
+            "signed_error_percent": 13.37196507479787
+          },
+          {
+            "measured_us": 10609.35669,
+            "modeled_us": 11165.862818032021,
+            "payload_bytes": 67108864,
+            "signed_error_percent": 5.24542763800715
+          }
+        ],
+        "worst_payload_bytes": 786432,
+        "worst_signed_error_percent": -64.39516702615991
+      },
+      "alltoallv": {
+        "anchor_endpoint_bytes": [
+          512,
+          524288,
+          1048576,
+          134217728
+        ],
+        "anchor_payloads": [
+          512,
+          524288,
+          1048576,
+          134217728
+        ],
+        "anchor_rates_gbps": [
+          0.052356021156560954,
+          3.1181483993555417,
+          4.3957928973646005,
+          5.8273259217660645
+        ],
+        "available": true,
+        "clears_bar": false,
+        "flat_slope_gbps": 5.8273259217660645,
+        "flat_worst_payload_bytes": 131072,
+        "flat_worst_signed_error_percent": -46.83744759645096,
+        "held_out": [
+          {
+            "measured_us": 49.10080135,
+            "modeled_us": 61.40815502057606,
+            "payload_bytes": 4096,
+            "signed_error_percent": 25.06548433465855
+          },
+          {
+            "measured_us": 55.09120226,
+            "modeled_us": 79.0009554671516,
+            "payload_bytes": 16384,
+            "signed_error_percent": 43.40031116821663
+          },
+          {
+            "measured_us": 83.81440043,
+            "modeled_us": 110.07579815246011,
+            "payload_bytes": 65536,
+            "signed_error_percent": 31.332799122500504
+          },
+          {
+            "measured_us": 114.6368027,
+            "modeled_us": 133.64292094635752,
+            "payload_bytes": 131072,
+            "signed_error_percent": 16.579421092278523
+          },
+          {
+            "measured_us": 123.545599,
+            "modeled_us": 150.87640270163018,
+            "payload_bytes": 196608,
+            "signed_error_percent": 22.12203746863552
+          },
+          {
+            "measured_us": 137.7792001,
+            "modeled_us": 164.96449258454152,
+            "payload_bytes": 262144,
+            "signed_error_percent": 19.73105698451614
+          },
+          {
+            "measured_us": 177.561605,
+            "modeled_us": 187.8684226948767,
+            "payload_bytes": 393216,
+            "signed_error_percent": 5.804643236287887
+          },
+          {
+            "measured_us": 275.3535986,
+            "modeled_us": 244.7624125638739,
+            "payload_bytes": 786432,
+            "signed_error_percent": -11.109782545666025
+          },
+          {
+            "measured_us": 370.4319954,
+            "modeled_us": 387.93156597161214,
+            "payload_bytes": 1572864,
+            "signed_error_percent": 4.724098023097532
+          },
+          {
+            "measured_us": 454.2975903,
+            "modeled_us": 496.7011103687572,
+            "payload_bytes": 2097152,
+            "signed_error_percent": 9.33386418377337
+          },
+          {
+            "measured_us": 650.3935814,
+            "modeled_us": 709.822047265901,
+            "payload_bytes": 3145728,
+            "signed_error_percent": 9.137308172380587
+          },
+          {
+            "measured_us": 826.2656212,
+            "modeled_us": 918.7742756629053,
+            "payload_bytes": 4194304,
+            "signed_error_percent": 11.195994615938798
+          },
+          {
+            "measured_us": 1618.53447,
+            "modeled_us": 1729.599851182225,
+            "payload_bytes": 8388608,
+            "signed_error_percent": 6.862095509292729
+          },
+          {
+            "measured_us": 3028.07045,
+            "modeled_us": 3287.2400140152695,
+            "payload_bytes": 16777216,
+            "signed_error_percent": 8.558901395945702
+          },
+          {
+            "measured_us": 6550.937653,
+            "modeled_us": 6279.551739402802,
+            "payload_bytes": 33554432,
+            "signed_error_percent": -4.1427033498466725
+          },
+          {
+            "measured_us": 11564.44168,
+            "modeled_us": 12027.94580084396,
+            "payload_bytes": 67108864,
+            "signed_error_percent": 4.008011226737924
+          }
+        ],
+        "worst_payload_bytes": 16384,
+        "worst_signed_error_percent": 43.40031116821663
+      }
+    }
+  },
+  "fatal": [],
+  "fatal_violations": 0,
+  "frozen_relation_total": 18,
+  "relations": [
+    {
+      "detail": "8 B cross-node send and receive completion is 18.790 us, band [10, 200]",
+      "evaluated": true,
+      "id": "E-P-1",
+      "observed": {
+        "value_us": 18.79040003
+      },
+      "passed": true
+    },
+    {
+      "detail": "point-to-point algorithm bandwidth at 128 MiB is 3.301 GB/s, band [1.0, 15.0], which is 13.2 percent of the 25.0 GB/s port rate",
+      "evaluated": true,
+      "id": "E-P-2",
+      "observed": {
+        "port_fraction_percent": 13.202455428,
+        "value_gbps": 3.300613857
+      },
+      "passed": true
+    },
+    {
+      "detail": "point-to-point completion is strictly increasing from 64 KiB to 128 MiB",
+      "evaluated": true,
+      "id": "E-P-3",
+      "observed": {
+        "payloads": [
+          65536,
+          131072,
+          196608,
+          262144,
+          393216,
+          524288,
+          786432,
+          1048576,
+          1572864,
+          2097152,
+          3145728,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          67108864,
+          134217728
+        ],
+        "times_us": [
+          38.75840008,
+          60.10879874,
+          68.81279945,
+          87.14240193,
+          130.3040028,
+          172.1343994,
+          252.9279947,
+          301.4143944,
+          444.0576077,
+          591.8208122,
+          918.6816216,
+          1217.792034,
+          2391.859245,
+          5092.351913,
+          10102.1698,
+          19865.60059,
+          40664.47449
+        ]
+      },
+      "passed": true
+    },
+    {
+      "detail": "width-2 cross-node 8 B all-reduce floor is 40.141 us, band [15, 150], and 4.404 times the intra-node 9.114 us floor, required at least 1.5",
+      "evaluated": true,
+      "id": "E-A-1",
+      "observed": {
+        "ratio_over_intra": 4.4044942382812495,
+        "value_us": 40.14079869
+      },
+      "passed": true
+    },
+    {
+      "detail": "width-8 cell absent, relation unevaluated",
+      "evaluated": false,
+      "id": "E-A-2",
+      "observed": {},
+      "passed": false
+    },
+    {
+      "detail": "width-8 cell absent, relation unevaluated",
+      "evaluated": false,
+      "id": "E-A-3",
+      "observed": {},
+      "passed": false
+    },
+    {
+      "detail": "width-2 measured floor 40.141 us over the shipped cross-node provisional 13.488 us is 2.976, band [1.2, 12], signed prediction was underestimate",
+      "evaluated": true,
+      "id": "E-A-4",
+      "observed": {
+        "measured_us": 40.14079869,
+        "ratio": 2.9760837570745453,
+        "shipped_us": 13.487792
+      },
+      "passed": true
+    },
+    {
+      "detail": "width-2 asymptotic all-reduce bus bandwidth is 1.610 GB/s, band [0.5, 15.0], and 2.2 percent of the intra-node 72.774 GB/s, required at most 25",
+      "evaluated": true,
+      "id": "E-A-5",
+      "observed": {
+        "intra_fraction_percent": 2.211688290457847,
+        "value_gbps": 1.609540953
+      },
+      "passed": true
+    },
+    {
+      "detail": "width-8 cell absent, relation unevaluated",
+      "evaluated": false,
+      "id": "E-A-6",
+      "observed": {},
+      "passed": false
+    },
+    {
+      "detail": "width-8 cell absent, relation unevaluated",
+      "evaluated": false,
+      "id": "E-A-7",
+      "observed": {},
+      "passed": false
+    },
+    {
+      "detail": "width-2 all-to-allv floor 41.062 us over all-reduce floor 40.141 us is 1.023, band [0.5, 2.0]",
+      "evaluated": true,
+      "id": "E-T-1",
+      "observed": {
+        "a2a_us": 41.06239974,
+        "ar_us": 40.14079869,
+        "ratio": 1.0229592105806702
+      },
+      "passed": true
+    },
+    {
+      "detail": "width-8 cell absent, relation unevaluated",
+      "evaluated": false,
+      "id": "E-T-2",
+      "observed": {},
+      "passed": false
+    },
+    {
+      "detail": "width-8 cell absent, relation unevaluated",
+      "evaluated": false,
+      "id": "E-T-3",
+      "observed": {},
+      "passed": false
+    },
+    {
+      "detail": "four-port point-to-point bandwidth 7.908 GB/s over single-port 3.301 GB/s is 2.396, band [1.2, 4.0]",
+      "evaluated": true,
+      "id": "E-N-1",
+      "observed": {
+        "default_gbps": 3.300613857,
+        "four_gbps": 7.907908384,
+        "gain": 2.395890196979198
+      },
+      "passed": true
+    },
+    {
+      "detail": "8 B point-to-point floor moves from 18.790 to 17.818 us across the arms, 5.2 percent, allowed 25",
+      "evaluated": true,
+      "id": "E-N-2",
+      "observed": {
+        "default_us": 18.79040003,
+        "drift_percent": 5.177111495481023,
+        "fournic_us": 17.81760007
+      },
+      "passed": true
+    },
+    {
+      "detail": "width-2 serialization bandwidth is monotone within 5 percent from 256 KiB to 4 MiB, so the cross-node socket path does not reproduce the intra-node dip",
+      "evaluated": true,
+      "id": "E-C-1",
+      "observed": {
+        "breaks": [],
+        "window": [
+          {
+            "gbps": 0.5748287857049698,
+            "payload_bytes": 262144
+          },
+          {
+            "gbps": 0.5695216930689272,
+            "payload_bytes": 393216
+          },
+          {
+            "gbps": 0.5618039111793313,
+            "payload_bytes": 524288
+          },
+          {
+            "gbps": 0.555254304026184,
+            "payload_bytes": 786432
+          },
+          {
+            "gbps": 1.339700466453831,
+            "payload_bytes": 1048576
+          },
+          {
+            "gbps": 1.3887884680756628,
+            "payload_bytes": 1572864
+          },
+          {
+            "gbps": 1.4444915001657292,
+            "payload_bytes": 2097152
+          },
+          {
+            "gbps": 1.4919139887571842,
+            "payload_bytes": 3145728
+          },
+          {
+            "gbps": 1.5196260244059765,
+            "payload_bytes": 4194304
+          }
+        ]
+      },
+      "passed": true
+    },
+    {
+      "detail": "width-8 cell absent, relation unevaluated",
+      "evaluated": false,
+      "id": "E-M-1",
+      "observed": {},
+      "passed": false
+    },
+    {
+      "detail": "width-2 measured floor 40.141 us over the shipped local width-2 intercept 10.722 us is 3.744, band [1.5, 12.0], signed prediction was underestimate",
+      "evaluated": true,
+      "id": "E-M-2",
+      "observed": {
+        "measured_us": 40.14079869,
+        "ratio": 3.7437399170984222
+      },
+      "passed": true
+    }
+  ],
+  "reported_not_scored": [
+    {
+      "detail": "the four-port point-to-point ramp is NOT strictly increasing; it falls at [1048576], which is the same LL to SIMPLE boundary the all-reduce falls at",
+      "id": "REPORTED-fournic-p2p-monotonicity",
+      "observed": {
+        "breaks": [
+          1048576
+        ]
+      }
+    },
+    {
+      "detail": "four ports over one, at 128 MiB: p2p 2.396x, allreduce 4.017x, alltoallv 4.171x, so the gain from adding ports is a property of the operation and not one efficiency scalar per stack",
+      "id": "REPORTED-port-gain-by-operation",
+      "observed": {
+        "gains": {
+          "allreduce": 4.016968532517979,
+          "alltoallv": 4.171112756814431,
+          "p2p": 2.395890196979198
+        }
+      }
+    }
+  ],
+  "scored_evaluated": 11,
+  "scored_passed": 11,
+  "study": "crossnode_collective_envelope_v1",
+  "unevaluated": [
+    "E-A-2",
+    "E-A-3",
+    "E-A-6",
+    "E-A-7",
+    "E-T-2",
+    "E-T-3",
+    "E-M-1"
+  ],
+  "void": false
+}

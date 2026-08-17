@@ -182,6 +182,31 @@ the flow-level work the GOAL emitter renders.
   algorithm; a `2 log2(W)` tree at the same per-step delta would move the
   width-8 point estimate from 49.49 to 38.43 us. TRAF-36 owns the missing
   cross-node measurement and the algorithm question with it.
+- `a100-nccl-2.31-cross-node-socket-v1` is the first `calibrated` cross-node
+  profile, measured on two A100 nodes whose only inter-node path is NCCL's
+  kernel socket transport over Cray Cassini Slingshot 200Gb ports with
+  GPUDirect RDMA disabled. It charges a 40,140,799 ps width-2 floor, banded to
+  the 55,808,000 ps isolated reading, and carries a four-anchor
+  `CollectiveBandwidthCurve`. It supports width 2 and fails closed at every
+  other width, so it cannot be an envelope arm beside the B200 profiles, which
+  is registered as TRAF-49. The measured floor is 3.744 times the
+  `b200-nccl-2.27-local-v1` width-2 intercept the cross-node envelope charges on
+  its `lower` arm, and the measured 20.070 us fabric ring step is 4.0 times the
+  5.000 us upper edge this module prices a fabric step at. That is one transport
+  on one machine and not the 400 Gbit/s RDMA path the reference configuration
+  assumes; TRAF-48 owns that capture. Nothing selects the profile, no envelope
+  contains it, and no reported TTFT or TPOT moves.
+- The regime break that
+  [collective regime curve](../../examples/collective_regime_curve_v1/RESULTS.md)
+  could only hypothesize is now a measured mechanism. NCCL logs its algorithm
+  and protocol per call, and on the cross-node socket path it switches from `LL`
+  to `SIMPLE` between 786,432 and 1,048,576 bytes, exactly where the measured
+  completion time *falls* from 1456.49 to 822.84 us while the payload grows.
+  `LL` carries a 4-byte flag for every 4 bytes of payload, so it puts twice the
+  bytes on the wire: nearly free on NVLink, dominant on a bandwidth-starved
+  socket transport. The intra-node dip and this cross-node step are the same
+  mechanism with opposite signs, and the boundary is observable at communicator
+  init without any fitting.
 - Because the table is a surcharge on a transport that already contains one
   propagation delay, `realized_fixed_cost_ps` is what a run actually charges,
   and it exceeds a source capture that was itself a complete fixed cost by up
@@ -710,6 +735,25 @@ study reports all three arms rather than treating `lower` as `off`.
 
 ### Precision
 
+- TRAF-48 (Precision; P1; L): capture a cross-node collective on an RDMA fabric
+  with GPUDirect RDMA active, which is the fabric the shipped cross-node
+  envelope actually targets. The
+  [cross-node collective envelope](../../examples/crossnode_collective_envelope_v1/RESULTS.md)
+  supplies the repository's first measured cross-node numbers, but the only
+  inter-node path this project can reach is four Cray Cassini Slingshot 200Gb
+  ports per node carrying NCCL's kernel socket transport with GDR disabled,
+  because no NCCL network plugin is installed and the nodes expose no
+  InfiniBand device. That measurement anchors a port ceiling and a stack
+  efficiency on a named machine; it does not anchor the 400 Gbit/s RDMA path
+  the deployment reference configuration assumes, and the transport is a
+  first-order term rather than a detail. The identifying observable is the
+  completion time of a small-payload ALL-REDUCE and pairwise ALL-TO-ALLV over
+  an RDMA fabric with the GDR status recorded from `NCCL_DEBUG=INFO`, at the
+  widths a cluster can express with one rank per node. Report the socket
+  profile's before error at every width the RDMA capture reaches, and preserve
+  the socket profile as an explicitly transport-labeled selection rather than
+  replacing it, since a kernel-socket deployment is a real configuration and
+  not only a limitation.
 - TRAF-32 (Precision; P1; M): widen or refit the endpoint-byte envelope the
   calibrated profiles accept, which is currently too narrow for the mission
   workload. Registered late and by a different change from the one that
@@ -756,6 +800,36 @@ study reports all three arms rather than treating `lower` as `off`.
   profile's before error at every measured width, relabel the refitted profile
   `calibrated` only if the holdouts pass, and preserve the `off` arm and the
   existing intra-node arm exactly.
+
+  Partial evidence now exists and the task stays open. The
+  [cross-node collective envelope](../../examples/crossnode_collective_envelope_v1/RESULTS.md)
+  measured the width-2 one-rank-per-node cell on two A100 nodes and found the
+  transferred profile a factor 2.976 too small there, with the measurement above
+  even that profile's own declared upper band edge of 17.488 us. It also settles
+  the algorithm question at that width: NCCL's log names `RING`, and twice the
+  measured one-way point-to-point time reproduces the measured all-reduce floor
+  to 6.8 percent, so the `2(W-1)` decomposition is confirmed at width 2 on the
+  algorithm NCCL actually chose. Three clauses remain unsatisfiable on the
+  hardware this project can reach and the reason is recorded so the dead end is
+  not re-attempted: the only inter-node path is NCCL's kernel socket transport
+  over Cray Cassini Slingshot ports with GPUDirect RDMA disabled rather than a
+  400 Gbit/s RDMA fabric, no width above 2 was schedulable, and width 8 at one
+  rank per node needs eight nodes on a five-node cluster. TRAF-48 owns the RDMA
+  capture and TRAF-50 the missing width.
+- TRAF-50 (Precision; P2; M): measure the mixed NVLink and fabric ring above
+  width 2 on the cluster this project can reach. The
+  [cross-node collective envelope](../../examples/crossnode_collective_envelope_v1/RESULTS.md)
+  measured width 2 only, so the first-party cross-node profile supports one
+  width and fails closed everywhere else, and every relation its freeze wrote
+  about width scaling went unevaluated. A ring with some NVLink hops and some
+  fabric hops is the shape a real two-node tensor-parallel deployment has, and
+  it is the shape the composed SGLang deployment study prices with a transferred
+  constant, so it is the width that matters most. The identifying observable is
+  the 8-byte ALL-REDUCE and ALL-TO-ALLV floor and the asymptotic bus bandwidth
+  at four ranks per node on two nodes, with the per-call protocol read from
+  `NCCL_DEBUG=INFO` as that study did. Acceptance adds the measured widths to
+  `a100-nccl-2.31-cross-node-socket-v1` behind a fresh freeze and preserves the
+  width-2 row exactly.
 - TRAF-37 (Precision; P1; M): stop charging one propagation delay twice under
   an active arm. The intercept is added outside `max(local_service,
   fabric_service)` while the fabric service already contains one propagation
@@ -890,6 +964,19 @@ study reports all three arms rather than treating `lower` as `off`.
 
 ### Completeness
 
+- TRAF-49 (Completeness; P2; M): let a profile that supports only the widths it
+  measured join a fixed-cost envelope. `CollectiveFixedCostEnvelope` requires
+  both arms to support identical participant counts, and every shipped arm
+  supports 2, 4 and 8 because it is derived from one capture that covers all
+  three. `a100-nccl-2.31-cross-node-socket-v1` supports only the widths its
+  study realized and fails closed elsewhere, which is the correct behavior for a
+  measurement and makes it ineligible as an arm, so the first measured
+  cross-node profile cannot be bracketed against the transferred one it exists
+  to check. Acceptance needs an envelope that brackets on the intersection of
+  its arms' supported widths and refuses a width only one arm anchors, with the
+  refusal driven by a test, and it must preserve both existing envelopes'
+  `bracket_ps` and `realized_bracket_ps` at every width exactly. The off path is
+  the current refusal to construct such an envelope at all.
 - TRAF-34 (Completeness; P2; M): render mixed dense and routed layer
   schedules. `ModelDims` carries one whole-model mixture geometry, so
   `num_experts > 0` means every layer is routed and both the allreduce-site

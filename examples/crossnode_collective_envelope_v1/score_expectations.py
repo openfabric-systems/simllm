@@ -51,12 +51,20 @@ CURVE_HELD_OUT_BAR_PERCENT = 15.0
 
 @dataclass
 class Outcome:
-    """One evaluated relation or fatal guard."""
+    """One relation or fatal guard.
+
+    ``evaluated`` is False when the cell the relation needs never ran. An
+    absent measurement is an absence of evidence, not a refuted prediction, so
+    it is reported separately and never counted in the scored denominator. The
+    freeze did not anticipate an unschedulable cell; treating one as a failure
+    would understate the model and treating it as a pass would be worse.
+    """
 
     ident: str
     passed: bool
     detail: str
     observed: dict[str, Any] = field(default_factory=dict)
+    evaluated: bool = True
 
 
 def band(value: float, low: float, high: float) -> bool:
@@ -230,8 +238,29 @@ def held_out_error(lane: Lane, op: str) -> dict[str, Any]:
             worst_signed = signed
             worst_payload = payload
 
+    # What the shipped single-slope form would have done on the same held-out
+    # split, anchored the way the A100 and GH200 studies anchored it: the
+    # asymptotic serialization bandwidth at the largest measured payload. This
+    # is the comparison that says whether the curve earns its complexity.
+    flat_rate = rows[-1][1]
+    flat_worst = 0.0
+    flat_worst_payload = 0
+    for payload, _ in rows:
+        if payload in anchor_payloads:
+            continue
+        load = endpoint_bytes(op, payload, lane.width)
+        modeled_us = floor_us + load / flat_rate / 1e9 * 1e6
+        measured_us = lane.time_us(op, payload)
+        signed = (modeled_us - measured_us) / measured_us * 100.0
+        if abs(signed) > abs(flat_worst):
+            flat_worst = signed
+            flat_worst_payload = payload
+
     return {
         "available": True,
+        "flat_slope_gbps": flat_rate,
+        "flat_worst_signed_error_percent": flat_worst,
+        "flat_worst_payload_bytes": flat_worst_payload,
         "anchor_payloads": anchor_payloads,
         "anchor_endpoint_bytes": [entry[0] for entry in anchors],
         "anchor_rates_gbps": [entry[1] for entry in anchors],
@@ -402,8 +431,8 @@ def score(
             )
         )
     else:
-        out.append(Outcome("E-A-2", False, "width-8 cell absent", {}))
-        out.append(Outcome("E-A-3", False, "width-8 cell absent", {}))
+        out.append(Outcome("E-A-2", False, "width-8 cell absent, relation unevaluated", {}, evaluated=False))
+        out.append(Outcome("E-A-3", False, "width-8 cell absent, relation unevaluated", {}, evaluated=False))
 
     ratio_cross_w2 = ar2 / B200_CROSS_W2_US
     out.append(
@@ -457,8 +486,8 @@ def score(
             )
         )
     else:
-        out.append(Outcome("E-A-6", False, "width-8 cell absent", {}))
-        out.append(Outcome("E-A-7", False, "width-8 cell absent", {}))
+        out.append(Outcome("E-A-6", False, "width-8 cell absent, relation unevaluated", {}, evaluated=False))
+        out.append(Outcome("E-A-7", False, "width-8 cell absent, relation unevaluated", {}, evaluated=False))
 
     # ---------------------------------------------------------------- block T
     a2a2 = w2.floor_us("alltoallv")
@@ -500,8 +529,8 @@ def score(
             )
         )
     else:
-        out.append(Outcome("E-T-2", False, "width-8 cell absent", {}))
-        out.append(Outcome("E-T-3", False, "width-8 cell absent", {}))
+        out.append(Outcome("E-T-2", False, "width-8 cell absent, relation unevaluated", {}, evaluated=False))
+        out.append(Outcome("E-T-3", False, "width-8 cell absent, relation unevaluated", {}, evaluated=False))
 
     # ---------------------------------------------------------------- block N
     if w2_four is not None:
@@ -530,8 +559,8 @@ def score(
             )
         )
     else:
-        out.append(Outcome("E-N-1", False, "four-port arm absent", {}))
-        out.append(Outcome("E-N-2", False, "four-port arm absent", {}))
+        out.append(Outcome("E-N-1", False, "four-port arm absent, relation unevaluated", {}, evaluated=False))
+        out.append(Outcome("E-N-2", False, "four-port arm absent, relation unevaluated", {}, evaluated=False))
 
     # ---------------------------------------------------------------- block C
     rows = serialization_bandwidth(w2, "allreduce")
@@ -581,7 +610,7 @@ def score(
             )
         )
     else:
-        out.append(Outcome("E-M-1", False, "width-8 cell absent", {}))
+        out.append(Outcome("E-M-1", False, "width-8 cell absent, relation unevaluated", {}, evaluated=False))
 
     ratio_local2 = ar2 / B200_LOCAL_W2_US
     out.append(
@@ -595,6 +624,51 @@ def score(
             {"ratio": ratio_local2, "measured_us": ar2},
         )
     )
+
+    # Reported, not scored. The freeze's Block P header says "point-to-point ramp
+    # at width 2" and gives the four-port arm its own block, so E-P-3 is scored
+    # on the default arm. The same statement is false on the four-port arm, at
+    # exactly the protocol boundary, and that belongs in the record rather than
+    # only in the prose.
+    if w2_four is not None:
+        four_ramp = [payload for payload in w2_four.payloads("p2p") if payload >= 65536]
+        four_times = [w2_four.time_us("p2p", payload) for payload in four_ramp]
+        four_breaks = [
+            four_ramp[index + 1]
+            for index in range(len(four_times) - 1)
+            if four_times[index + 1] <= four_times[index]
+        ]
+        out.append(
+            Outcome(
+                "REPORTED-fournic-p2p-monotonicity",
+                not four_breaks,
+                "the four-port point-to-point ramp is strictly increasing"
+                if not four_breaks
+                else "the four-port point-to-point ramp is NOT strictly "
+                f"increasing; it falls at {four_breaks}, which is the same "
+                "LL to SIMPLE boundary the all-reduce falls at",
+                {"breaks": four_breaks},
+            )
+        )
+        # Port gain is not one number per stack: it depends on the operation.
+        gains = {}
+        for op, key in (
+            ("p2p", "algbw_gbps"),
+            ("allreduce", "busbw_gbps"),
+            ("alltoallv", "per_rank_egress_gbps"),
+        ):
+            gains[op] = w2_four.field(op, 134217728, key) / w2.field(op, 134217728, key)
+        out.append(
+            Outcome(
+                "REPORTED-port-gain-by-operation",
+                True,
+                "four ports over one, at 128 MiB: "
+                + ", ".join(f"{op} {fmt(gain)}x" for op, gain in gains.items())
+                + ", so the gain from adding ports is a property of the "
+                "operation and not one efficiency scalar per stack",
+                {"gains": gains},
+            )
+        )
 
     if w4 is not None:
         out.append(
@@ -644,17 +718,27 @@ def main() -> int:
         for lane in lanes
     }
 
-    passed = sum(1 for entry in scored if entry.passed)
+    evaluated = [entry for entry in scored if entry.evaluated]
+    unevaluated = [entry for entry in scored if not entry.evaluated]
+    passed = sum(1 for entry in evaluated if entry.passed)
     print("Fatal guards")
     if not fatal:
         print("  every fatal guard held")
     for entry in fatal:
         print(f"  VIOLATED {entry.ident}: {entry.detail}")
     print()
-    print(f"Scored relations {passed} of {len(scored)}")
-    for entry in scored:
+    print(f"Scored relations {passed} of {len(evaluated)} evaluated")
+    for entry in evaluated:
         mark = "pass" if entry.passed else "FAIL"
         print(f"  {mark} {entry.ident}: {entry.detail}")
+    if unevaluated:
+        print()
+        print(
+            f"Unevaluated for want of a measurement: {len(unevaluated)} of the "
+            f"{len(scored)} frozen relations"
+        )
+        for entry in unevaluated:
+            print(f"  none {entry.ident}: {entry.detail}")
     if extras:
         print()
         print("Reported, not scored")
@@ -671,19 +755,24 @@ def main() -> int:
                 f"held-out {fmt(info['worst_signed_error_percent'], 2)} percent "
                 f"at {info['worst_payload_bytes']} B, "
                 f"{'clears' if info['clears_bar'] else 'misses'} the "
-                f"{CURVE_HELD_OUT_BAR_PERCENT:.0f} percent bar"
+                f"{CURVE_HELD_OUT_BAR_PERCENT:.0f} percent bar; the single "
+                f"slope would be {fmt(info['flat_worst_signed_error_percent'], 2)} "
+                f"percent at {info['flat_worst_payload_bytes']} B"
             )
 
     report = {
         "study": "crossnode_collective_envelope_v1",
-        "scored_total": len(scored),
+        "frozen_relation_total": len(scored),
+        "scored_evaluated": len(evaluated),
         "scored_passed": passed,
+        "unevaluated": [entry.ident for entry in unevaluated],
         "fatal_violations": len(fatal),
         "void": bool(fatal),
         "relations": [
             {
                 "id": entry.ident,
                 "passed": entry.passed,
+                "evaluated": entry.evaluated,
                 "detail": entry.detail,
                 "observed": entry.observed,
             }
