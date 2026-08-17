@@ -378,8 +378,17 @@ Cannot anchor:
   fixed-cost envelope at all: both arms must support identical widths, so the
   first measured cross-node profile cannot be bracketed against the transferred
   one it exists to check.
-- **TRAF-50** is registered for the missing width-8 cell, with job `195649`
-  still queued at the time of writing.
+- **TRAF-50** is registered for the missing width-8 cell. Jobs `195649`
+  (width 8, two nodes by four GPUs) and `195654` (the post-specified width-4
+  mixed ring, two nodes by two GPUs) were still queued when this record was
+  written, with every A100 on the cluster allocated to other users. Both were
+  submitted from the harness committed here, so if either lands its result JSON
+  drops into `measurements/` and `score_expectations.py` scores it against the
+  same freeze with no code change: pass the new file as `--w8-default`, or read
+  the width-4 file as post-specified evidence that no relation is scored
+  against. Neither may be folded into the profile without a fresh freeze, the
+  width-4 cell because it is post-specified and the width-8 cell because its
+  relations were frozen and must be scored rather than fitted.
 - TRAF-43 stays open and is untouched. This study reports against its bar for
   comparability and claims nothing about it, because that task is about the
   intra-node NVLink serializer and this is a different transport. What this
