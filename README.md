@@ -31,8 +31,16 @@ framework with a simulated GPU executor and a discrete-event,
 packet-level network backend (ATLAHS + htsim), so scheduling,
 KV/prefix-cache management and the fabric feed back on each other.
 
-Three ideas carry the design:
+Four ideas carry the design:
 
+- **GPUs and NICs are the same kind of thing: boxes with ports.** A port is
+  one link. PCIe connects boxes inside a machine, NVLink connects NVIDIA GPUs
+  to each other (xGMI on AMD ones), and Ethernet goes out to the rest of the
+  cluster. The software on top turns each step's shared work into packets, and
+  every packet rides one of those ports. SimLLM already models the NIC this
+  way; the [packet-device model](docs/design/packet-device-model.md) is the
+  plan for modeling the GPU the same way, and it is explicit about what is not
+  built yet.
 - **Frontends are real, GPUs are simulated.** The framework's own
   scheduler, batching policy and KV/prefix-cache accounting run
   unmodified (they are CPU-side bookkeeping); only model execution is
@@ -203,6 +211,15 @@ campaign are in
 
 What SimLLM models today and what is planned next. Each task ID links to
 the module doc that owns it.
+
+The tables are grouped by box. The NIC is a box with PCIe ports and a 400G
+wire port. The GPU is a box with PCIe ports and NVLink or xGMI ports. A link
+joins two ports and carries packets, and the collective library on top (NCCL
+on NVIDIA, RCCL on AMD) decides which bytes cross which port. The NIC is built
+that way today. The GPU is not yet: its link to the other GPUs in the node is
+still one flat speed number rather than a port. The
+[packet-device model](docs/design/packet-device-model.md) states the target and
+names the tasks that close the difference.
 
 ### Network and NIC
 
