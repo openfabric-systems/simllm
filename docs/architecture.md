@@ -360,10 +360,10 @@ and JCT evidence. Tier B consumed immutable native observations through
 `ExecutionGraph`, `CoarseDeviceRuntime`, `CompletionEvent`,
 `ExecutionResult` and `StepResult`, so native doorbell and link-rate changes
 reached TTFT and TPOT by the frozen relations. BACK-8 and the demonstrated
-CORE-15 live-seam clauses closed on that evidence. CORE-21 retains the
+CORE-15 live-seam clauses closed on that evidence. The CORE-21
 same-contended-graph bypass-versus-composed comparison with its signed JCT,
-TTFT and TPOT change, and BACK-31 retains the executable-level unlinked-native
-negative control; Tier B ran neither.
+TTFT and TPOT change, and the BACK-31 executable-level unlinked-native
+negative control, landed after Tier B, which ran neither.
 
 The ABI-v1 descriptor carries GOAL flow and tag identity plus a separate
 policy-context token, while completion uses a network-owned token. It does not
@@ -372,11 +372,12 @@ BACK-25 and BACK-26 closed on 2026-08-11 at the versioned vocabulary and relay
 boundary, so NetworkPort ABI v2 now carries session-unique packet-attempt
 identity, explicit TX start and finish, RX arrival, attempt terminals, typed
 drop evidence, ECN/CNP, effective rate updates, PFC and link-state forms, with
-ABI v1 kept as the exact default compatibility path. HTSIM-9 closes only when
-one composed run of the Tier B class carries that ABI-v2 packet-issue evidence
-through `ExecutionGraph` to `CompletionEvent`, `StepResult`, TTFT and TPOT,
-while HTSIM-15, HTSIM-16 and BACK-34 retain the dynamic-link producer, the
-physical control producers and the partial-final-packet cell. The standalone
+ABI v1 kept as the exact default compatibility path. HTSIM-9 closed on
+2026-08-11, when a composed run of the Tier B class carried that ABI-v2
+packet-issue evidence through `ExecutionGraph` to `CompletionEvent`,
+`StepResult`, TTFT and TPOT; the dynamic-link producer, the physical control
+producers and the partial-final-packet cell landed under HTSIM-15, HTSIM-16
+and BACK-34. The standalone
 slice is validated in
 [examples/rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md), the live gate in
 [examples/rnic_live_v1](../examples/rnic_live_v1/RESULTS.md), and the ABI-v2
@@ -396,8 +397,8 @@ The terminal completion is consumed once. Python must never compute
 `native delay + htsim FCT`, and the composed binary must never retain the
 timing-neutral ledger beside the native WorkQueue. Bypass mode uses the old
 authority alone and preserves its accepted completion artifacts. General
-same-graph authority comparison is CORE-21, and packet-level completion detail
-is the HTSIM-9 remainder.
+same-graph authority comparison landed under CORE-21, and packet-level
+completion detail closed with the HTSIM-9 Tier C run.
 The composition expectations were first frozen before implementation in
 [examples/rnic_live_v1](../examples/rnic_live_v1/expectations.md) at commit
 `65b5609`; commit `facb26d` clarified retry identity, and commit `947399c`
@@ -649,4 +650,4 @@ COMP-5, COMP-6 and advanced instruction/cache semantics in COMP-10 remain
 open. The inter-operation `DeviceRuntime` in CORE-4 is complete for the
 coordinated first coarse bypass profile and the frozen Tier B structural
 fixture, with its residual approximations registered as CORE-11 through
-CORE-14, CORE-16 and CORE-21.
+CORE-14, CORE-16 and CORE-21; CORE-21 has since closed.

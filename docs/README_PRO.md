@@ -209,14 +209,14 @@ linked task IDs own the detail.
    CORE-9 corrects the structural WQE projection. BACK-8 and the ABI-v1 part
    of HTSIM-9 now compose native RNIC timing with htsim; CORE-4 invokes the
    frozen path from the graph and CORE-5 reduces its completion into
-   `ExecutionResult`, `StepResult` and TTFT/TPOT. CORE-21 retains the
-   same-contended-graph authority comparison. BACK-9, BACK-11 and BACK-12
-   complete the remaining RNIC mechanisms behind that path (BACK-10 is closed,
-   and BACK-18 has landed the modular entry point), and HTSIM-9 now
-   closes only on one composed Tier B-class run whose ABI-v2 packet-issue
-   evidence populates the native timeline through the live metric chain;
-   BACK-25 and BACK-26 landed that vocabulary, leaving HTSIM-15, HTSIM-16 and
-   BACK-34 as its producer-side residuals.
+   `ExecutionResult`, `StepResult` and TTFT/TPOT. The CORE-21
+   same-contended-graph authority comparison has since landed. BACK-9, BACK-11
+   and BACK-12 complete the remaining RNIC mechanisms behind that path
+   (BACK-10 is closed, and BACK-18 has landed the modular entry point);
+   HTSIM-9 closed on the composed Tier C run whose ABI-v2 packet-issue
+   evidence populates the native timeline through the live metric chain, on
+   the BACK-25 and BACK-26 vocabulary, with the HTSIM-15, HTSIM-16 and
+   BACK-34 producer-side residuals landed as well.
 5. **Dependency-driven overlap.** Replace the serial step chain only
    after KV and resource queues exist; framework lowering declares
    dependencies, runtime arbitration determines realized overlap:
@@ -517,7 +517,7 @@ the sizes are kept as the original planning estimates for provenance.
 | NCCL model: communicator setup, logical channels, traffic planner | [COMP-15](modules/compute.md#open-tasks) | empty calls over the ring builder | ~800 lines |
 | GPU buffers and signals (data FIFO, flags, head/tail counters) | [COMP-15](modules/compute.md#open-tasks) | counters as events, no data contents | ~500 lines |
 | Proxy, `ncclNet`-shaped and ibverbs-shaped seams | [COMP-15](modules/compute.md#open-tasks) | isend/irecv/test plus post/poll stubs | ~700 lines |
-| Observability and centralized timestamps in the core | core (CORE-4 and CORE-5 landed; residuals [CORE-17](modules/core.md#open-tasks), [CORE-21](modules/core.md#open-tasks)) | reuse the completion-event schema | ~300 lines |
+| Observability and centralized timestamps in the core | core (CORE-4 and CORE-5 landed; residual [CORE-17](modules/core.md#open-tasks)) | reuse the completion-event schema | ~300 lines |
 
 ### Function inventory
 
@@ -548,7 +548,7 @@ One line per module; the linked doc is the source of truth.
 
 | Module | Status | Open |
 |---|---|---|
-| [core](modules/core.md) | Implemented: virtual clock, step records, execution contracts, incremental append validation, the coarse DeviceRuntime, the completion reduction to StepResult and per-request TTFT/TPOT with seven-component critical-path attribution, and the structural RNIC network seam consuming composed native observations; the cross-layer projection is enforced rather than assumed, so a runtime object and its `CompletionEvent` or `RequestBookkeeper` projection can no longer disagree about a quantity one of them owns; the endpoint service model is cross-checked phase by phase against the fluid fabric serializer on the same graph; the KV cache lifecycle is accounted before contention, with allocation, prefix reuse, capacity pressure, eviction and preemption reaching TTFT and TPOT through the HBM queue and both off paths preserved exactly; the demonstrated CORE-15 live-seam clauses closed on Tier B, with the same-graph comparison retained as CORE-21; BRIDGE-1 closed for the pinned-binary prepared-replay scope with the online stateful session moved to BRIDGE-2, CORE-24 and HTSIM-18 | [18 open](modules/core.md#open-tasks) |
+| [core](modules/core.md) | Implemented: virtual clock, step records, execution contracts, incremental append validation, the coarse DeviceRuntime, the completion reduction to StepResult and per-request TTFT/TPOT with seven-component critical-path attribution, and the structural RNIC network seam consuming composed native observations; the cross-layer projection is enforced rather than assumed, so a runtime object and its `CompletionEvent` or `RequestBookkeeper` projection can no longer disagree about a quantity one of them owns; the endpoint service model is cross-checked phase by phase against the fluid fabric serializer on the same graph; the KV cache lifecycle is accounted before contention, with allocation, prefix reuse, capacity pressure, eviction and preemption reaching TTFT and TPOT through the HBM queue and both off paths preserved exactly; the demonstrated CORE-15 live-seam clauses closed on Tier B, with the CORE-21 same-graph comparison landed afterwards; BRIDGE-1 closed for the pinned-binary prepared-replay scope with the online stateful session moved to BRIDGE-2, CORE-24 and HTSIM-18 | [18 open](modules/core.md#open-tasks) |
 | [workload](modules/workload.md) | Partial: Poisson/trace arrivals, fixed/lognormal/trace lengths, plus deterministic generation requests and exact client-observed TTFT/TPOT reduction | [3 open](modules/workload.md#open-tasks) |
 | [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven GPU service primitive with concurrent compute/memory/NCCL scheduling and A100/H100 bootstrap profiles, the audited zero-time NCCL stack skeleton with real-source-verified names, plus the optional GPU-side RNIC producer task coupling that makes submission cadence compete for SM residency and issue budget with the surrounding kernels. The fixed per-step host cost is now installed rather than omitted, calibrated on real silicon with provenance and empirical uncertainty, with an exact ideal-zero off path and with calibrated B100 and H100 requests failing closed because no measurement for those devices exists | [21 open](modules/compute.md#open-tasks) |
 | [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | [3 open](modules/placement.md#open-tasks) |
@@ -663,10 +663,10 @@ Reproduce with
   the composed native RNIC and htsim session (Tier A and Tier B PASSED
   against the composed binary with the first TTFT/TPOT claim through the
   composed native RNIC chain; BACK-8 and the demonstrated CORE-15 clauses
-  closed, CORE-21 retains the same-graph comparison and BACK-31 the
-  unlinked-native executable negative control, and HTSIM-9 stays open for one
-  composed Tier B-class run carrying ABI-v2 packet-issue evidence through the
-  live metric chain now that BACK-25 and BACK-26 have landed that vocabulary;
+  closed, the CORE-21 same-graph comparison and the BACK-31 unlinked-native
+  executable negative control landed after it, and HTSIM-9 closed on the
+  composed Tier C run carrying ABI-v2 packet-issue evidence through the live
+  metric chain on the BACK-25 and BACK-26 vocabulary;
   the frozen expectations live in
   [examples/rnic_live_v1](../examples/rnic_live_v1/expectations.md)),
   the online stateful co-simulator session (BRIDGE-2 and HTSIM-18, with

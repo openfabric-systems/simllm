@@ -235,14 +235,14 @@ through the execution graph, runtime and `StepResult` into the first TTFT and
 TPOT numbers in this repository that the native RNIC chain affects. That claim
 stays inside the frozen fixture: one request, single-WQE 4 KiB and 1 MiB
 payloads, a two-WQE FIFO, 200 and 400 Gbit/s, and native doorbell service of 0
-and 1,000 ps. It says nothing yet about congestion, packet issue timing,
-multi-request contention or arbitrary graphs. BACK-8 and the demonstrated
-CORE-15 live-seam clauses closed on that evidence. CORE-21 retains the
-same-contended-graph bypass-versus-composed comparison and BACK-31 retains the
-executable-level unlinked-native negative control. BACK-25 and BACK-26 closed
-with the ABI v2 packet-attempt and transport-control vocabulary and an htsim
-relay that emits committed TX and RX boundaries, so HTSIM-9 now needs only one
-composed run that carries packet-issue evidence through the live metric chain.
+and 1,000 ps. It says nothing about congestion, multi-request contention or
+arbitrary graphs; packet issue timing landed afterwards with the Tier C run.
+BACK-8 and the demonstrated CORE-15 live-seam clauses closed on that evidence,
+and the CORE-21 same-contended-graph comparison and BACK-31 unlinked-native
+negative control landed after it. BACK-25 and BACK-26 closed with the ABI v2
+packet-attempt and transport-control vocabulary and an htsim relay that emits
+committed TX and RX boundaries, and HTSIM-9 closed on the composed Tier C run
+that carries packet-issue evidence through the live metric chain.
 The RNIC device itself is now built from modules behind one construction
 entry point: the work-queue core plus optional DMA (PCIe), QPC (connection
 and context) and network transport modules
@@ -265,10 +265,10 @@ point serves everything from a bare work queue to the full device.
 
 | Model | Status | What it is |
 |---|---|---|
-| `rnic-nn` | available through the composed flow adapter at the default ABI v1 flow form; a composed run carrying the landed ABI v2 packet-issue events through the metric chain is still open ([HTSIM-9](docs/modules/backends.md)) | Packetized no-CC policy and the reference for normalized FCT; full-RNIC runs use the same hardware path as physical policies |
+| `rnic-nn` | available through the composed flow adapter at the default ABI v1 flow form; the Tier C run carries the ABI v2 packet-issue events through the metric chain ([backends](docs/modules/backends.md)) | Packetized no-CC policy and the reference for normalized FCT; full-RNIC runs use the same hardware path as physical policies |
 | `rnic-nn-fluid` | available | Continuous fluid policy with deterministic closed forms and the explicit hardware-bypass 0 ps anchor |
-| `rnic-cn` | available through the composed flow adapter at the default ABI v1 flow form; a composed run carrying the landed ABI v2 packet-issue events through the metric chain is still open ([HTSIM-6/9](docs/modules/backends.md)) | Explicit-rate policy with deterministic reservations, packet spraying and resequencing, lossless without PFC |
-| DCQCN | available through the composed flow adapter at the default ABI v1 flow form; a composed run carrying the landed ABI v2 packet-issue events through the metric chain is still open ([HTSIM-5/9](docs/modules/backends.md)) | RoCEv2 comparator with per-QP CNP state, rate reduction/recovery and ECN plus optional PFC; DCQCN calibration lands before programmable CC |
+| `rnic-cn` | available through the composed flow adapter at the default ABI v1 flow form; the ABI v2 packet-issue chain landed with the Tier C run, and short-flow control-cost reuse remains open ([HTSIM-6](docs/modules/backends.md)) | Explicit-rate policy with deterministic reservations, packet spraying and resequencing, lossless without PFC |
+| DCQCN | available through the composed flow adapter at the default ABI v1 flow form; the ABI v2 packet-issue chain landed with the Tier C run, and persistent post-CNP DCQCN state remains open ([HTSIM-5](docs/modules/backends.md)) | RoCEv2 comparator with per-QP CNP state, rate reduction/recovery and ECN plus optional PFC; DCQCN calibration lands before programmable CC |
 | LogGOPSim flow level | planned ([BACK-2](docs/modules/backends.md)) | Fast flow-level sweeps before packet-level runs |
 
 Fabrics are two-tier Clos topologies with detailed switch models (VoQ
