@@ -276,9 +276,12 @@ traffic manager, request/grant input-buffered). The default reference
 configuration is 8 nodes x 8 B100 GPUs, one 400G NIC per GPU; intra-node
 traffic rides an NVLink-class path and stays off the fabric.
 A Slingshot-class dragonfly fabric (Rosetta-style switches, progressive
-adaptive routing) is hosted in the htsim backend and calibrated against
-Merlin capture data for steady-state flow families on a single-switch
-instance; multi-switch adaptive-routing behavior is not yet calibrated
+adaptive routing) is hosted in the htsim backend; its single-switch
+Merlin instance passes exact serialization oracles, and a validated
+composition rule over measured endpoint floors reproduces the captured
+Merlin steady-state flow families. The captured loads do not
+discriminate between fabric models, and multi-switch adaptive routing
+is unvalidated
 (see [docs/modules/traffic.md](docs/modules/traffic.md), TRAF-51).
 
 ### GPU compute

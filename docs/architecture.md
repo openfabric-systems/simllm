@@ -418,8 +418,10 @@ The GOAL trace is executed by a discrete-event simulator:
   dragonfly `-topo` files at its own seam). The
   GOAL-driven `htsim_dcqcn_atlahs` comparator is also available, and the
   pinned backend carries the Slingshot-class ss-dragonfly fabric with its
-  `htsim_ss_dragonfly` harness, calibrated for steady-state flow families
-  against the Merlin captures
+  `htsim_ss_dragonfly` harness, validated against the Merlin captures for
+  steady-state flow families through exact serialization oracles and a
+  composition rule over measured endpoint floors; the captured loads do
+  not discriminate between fabric models
   (examples/merlin_ss_fabric_calibration_v1, TRAF-51 partial).
 - **LogGOPSim** (flow-level, fast): same GOAL input, LogGOP cost model;
   useful for quick sweeps before packet-level runs.

@@ -2,22 +2,29 @@
 
 The reviewed state is **PARTIAL as pre-declared, clean by evidence: no
 fatal guard fired, all 11 simulation rows pass (3 exact oracles to the
-bin, 7 behavioral, 1 structural), and all 10 conditional composed rows
-confirm the frozen composition rule against the byte-locked capture
-dataset**. The hosted ss-dragonfly fabric is now calibrated for
-steady-state solo, two-source incast and staggered-join behavior at the
-captured distinct-port mappings and captured loads, on the declared
-single-switch Merlin instance, with the endpoint host-stack floor an
-explicit separate measured term. The calibration is partial for exactly
-the reason the freeze declared before any run: the frozen composition
-rule (fabric plus a static endpoint floor) is structurally incapable of
-reproducing the captured 119-second simultaneous-start convergence
-transient, so TRAF-51's registered clause is not fully met, TRAF-51
-stays open narrowed, and the endpoint-dynamics remainder is registered
-as TRAF-53. No mixed-architecture quantity is scored (out-of-scope
-branch of TRAF-51's mixed clause, reason frozen), and the rnic-ss
-endpoint claim does not move: every cell here drives the
-`htsim_ss_dragonfly` fabric harness, not the rnic-ss endpoint.
+bin, 7 behavioral, 1 structural), and all 10 conditional consistency
+rows confirm the frozen composition rule against the byte-locked
+capture dataset**. What that establishes, stated precisely: the
+declared single-switch Merlin instance's per-packet serialization
+arithmetic is verified by exact oracles over its declared parameters,
+and the frozen composition rule, with the measured per-pair endpoint
+host-stack floor as an explicit separate term, reproduces every
+captured steady quantity within 7.3 percent from solo anchors alone,
+given a fabric that is not the binding stage. The captured loads run
+each stack at under a fifth of a port, so they cannot discriminate
+between fabric models; the discrimination statement below fixes what
+the word "calibrated" is allowed to mean here, and the post-specified
+corrections section records what the adversarial evidence review
+tightened. The calibration is partial for exactly the reason the freeze
+declared before any run: the frozen composition rule (fabric plus a
+static endpoint floor) is structurally incapable of reproducing the
+captured 119-second simultaneous-start convergence transient, so
+TRAF-51's registered clause is not fully met, TRAF-51 stays open
+narrowed, and the endpoint-dynamics remainder is registered as TRAF-53.
+No mixed-architecture quantity is scored (out-of-scope branch of
+TRAF-51's mixed clause, reason frozen), and the rnic-ss endpoint claim
+does not move: every cell here drives the `htsim_ss_dragonfly` fabric
+harness, not the rnic-ss endpoint.
 
 ## Freeze integrity and chronology
 
@@ -33,18 +40,22 @@ Chronology disclosures, exactly as the freeze stated them: the measured
 side of every comparison was published and byte-locked before this study
 began, so nothing measured was blind; the freeze computed and disclosed
 the composed-versus-measured arithmetic in advance, and the conditional
-rows below are calibration consistency confirmations under a frozen
-rule, never blind predictions. The genuinely blind quantities were the
+rows below are calibration consistency checks under a frozen rule,
+never blind predictions. The genuinely blind quantities were the
 simulation outputs, and the freeze hand-derived their exact oracles
 before the first run. One pre-freeze harness feasibility probe of the
-9038-byte framing ran on the backend study topology only (disclosed in
-the freeze); no Merlin-instance invocation preceded the freeze commit.
+9038-byte framing ran on the backend study topology only (10 ms window,
+1 us bins; disclosed in the freeze; its read discipline is completed in
+correction 7 below); no Merlin-instance invocation preceded the freeze
+commit.
 
 ## Fatal guards, all held
 
 - FG-1 binary and pin identity: `htsim_ss_dragonfly` SHA-256
   `5075021a...` (frozen value), submodule HEAD `89b7a5a8...`, topology
-  file hashes recorded in the locked run manifest.
+  file hashes recorded in the locked run manifest and, since the review
+  round, machine-tied to the tracked `.topo` files by the lock test
+  (correction 4).
 - FG-2 backend sanity determinism: the four rerun sanity arms
   byte-identical between repeats on this build, and additionally
   byte-identical to the archived wave-18 scored CSVs
@@ -79,31 +90,41 @@ the freeze); no Merlin-instance invocation preceded the freeze commit.
 | BE-7 | behavioral | 100G steady rate over C_p/2 | [0.99, 1.0005] | 1.000000 |
 | ST-1 | structural | port symmetry | identical delivered series | identical |
 
-The three exact oracles verify the fabric's store-and-forward
-arithmetic in three independent directions: absolute (EX-1), rate
-scaling with propagation and pipeline held fixed (EX-2, serialization
-terms exactly doubled), and framing scaling (EX-3, per-packet count
-changed 938 to 2048). BE-6's ratio matches the pure framing-efficiency
-prediction to 3 parts in a million. The echo rows are positive
-controls, not calibration: they demonstrate on the Merlin instance the
-same deterministic admission-phase capture the backend sanity studies
-analyzed on the multi-hop study fabric (junior flows starve, the
-aggregate holds at exactly C_p, drops accumulate), confirming that
-regime is a property of synchronized open-loop overload at a shared
-egress, which no captured cell is in.
+The three exact oracles pin the per-packet serialization arithmetic
+under three parameterizations of the same sum: absolute (EX-1),
+rate-halved (EX-2, serialization terms exactly doubled while
+propagation and pipeline stay fixed), and framing-changed (EX-3, packet
+count 938 against 2048). Their discrimination is asymmetric, and the
+freeze's "can fail" wording overstated it (correction 6): errors that
+scale with the packet count are caught at 937x to 2047x amplification,
+and an extra fixed per-hop charge above about 96 ns breaks EX-3's upper
+margin, but a missing fixed per-hop constant (one 300 ns propagation,
+the 350 ns pipeline, or the single store-and-forward tail
+serialization) stays inside every EX bin, so the declared per-hop
+constants are consistency-checked in the additive direction only.
+BE-6's ratio matches the pure framing-efficiency prediction to 3 parts
+in a million. The echo rows are positive controls, not calibration:
+they demonstrate on the Merlin instance the same deterministic
+admission-phase capture the backend sanity studies analyzed on the
+multi-hop study fabric (junior flows starve, the aggregate holds at
+exactly C_p, drops accumulate), confirming that regime is a property of
+synchronized open-loop overload at a shared egress, which no captured
+cell is in.
 
 ## The calibration table: measured, simulated, composed, residual, verdict
 
 Fabric terms entering the composition, simulated on the declared
-instance: R_fab = 24.7511 GB/s per flow (line-rate delivery, no
-cross-flow term at the captured distinct-port mappings), T_fab_lat =
-340.417 us per 8 MiB chunk (EX-1-confirmed hand value), T_fab_rate =
-338.919 us. Validity condition confirmed: the endpoint stack is the
-binding stage for every scored pair (its floor is 3.69x to 5.46x the
-fabric term). Endpoint floors, the explicit separated term:
-H_time(gpu105 to gpu102) = 1596.855 - 340.417 = 1256.438 us per chunk
-(78.7 percent of chunk life), H_time(gpu103 to gpu102) = 2198.644 -
-340.417 = 1858.227 us (84.5 percent).
+instance: R_fab = 24.7511 GB/s per flow (from the solo cells; no
+multi-flow distinct-port cell exists to exercise the
+no-cross-flow-interference premise, correction 3), T_fab_lat = 340.417
+us per 8 MiB chunk (EX-1-confirmed hand value; it cancels identically
+in the p50 rows, correction 1), T_fab_rate = 338.919 us. Validity
+condition confirmed: the endpoint stack is the binding stage for every
+scored pair (its floor is 3.69x to 5.46x the fabric term). Endpoint
+floors, the explicit separated term: H_time(gpu105 to gpu102) =
+1596.855 - 340.417 = 1256.438 us per chunk (78.7 percent of chunk
+life), H_time(gpu103 to gpu102) = 2198.644 - 340.417 = 1858.227 us
+(84.5 percent).
 
 Anchors (calibration inputs, unscorable by construction, listed for
 the record):
@@ -115,21 +136,26 @@ the record):
 | j2x stage-0 steady rate (gpu103 to gpu102) | 3.8193 GB/s | H_rate anchor, post-specified cell, disclosed |
 | j2x stage-0 steady-window p50 | 2198.644 us | H_time anchor |
 
-Scored conditional rows (bands frozen; composed values disclosed at
-freeze; every verdict landed as the freeze computed):
+Conditional consistency rows (the freeze's own label; bands frozen,
+composed values disclosed at freeze, every verdict landed as the freeze
+computed). The last column states each row's actual coupling to the
+simulation, the subject of correction 1: six of the ten rows are
+invariant to every simulation outcome, and the freeze's pre-computed
+ratios match the delivered ratios to four decimal places on all eight
+numeric rows, so the simulator added nothing to these verdicts.
 
-| Row | Quantity | Measured | Simulated fabric term | Composed | Residual (composed over measured) | Verdict |
-|---|---|---:|---:|---:|---:|---|
-| CO-1 | i2 flow 0 steady rate | 3.6553 GB/s | R_fab 24.7511 GB/s, not binding | 3.8193 GB/s | +4.49 percent | pass |
-| CO-2 | i2 flow 1 steady rate | 4.8931 GB/s | same | 4.9824 GB/s | +1.83 percent | pass |
-| CO-3 | j2x stage-1 flow 0 steady rate | 4.0249 GB/s | same | 3.8193 GB/s | -5.11 percent | pass |
-| CO-4 | j2x stage-1 flow 1 steady rate | 4.8486 GB/s | same | 4.9824 GB/s | +2.76 percent | pass |
-| CO-5 | join-unharmed, flow 0 stage 1 over stage 0 | 1.0538 | no cross-flow fabric term | 1.0000 | measured 5.38 percent above composed, inside [0.90, 1.10] | pass |
-| CO-6 | i2 flow 0 p50 | 2239.049 us | T_fab_lat 340.417 us | 2198.644 us | -1.80 percent | pass |
-| CO-7 | i2 flow 1 p50 | 1600.271 us | same | 1596.855 us | -0.21 percent | pass |
-| CO-8 | j2x stage-1 flow 0 p50 | 2135.626 us | same | 2198.644 us | +2.95 percent | pass |
-| CO-9 | j2x stage-1 flow 1 p50 | 1722.941 us | same | 1596.855 us | -7.32 percent | pass |
-| CO-10 | staggered-join settling | 0.0 s | fabric settles within one 100-us bin (BE-3) | no term above one bin | both effectively zero | pass |
+| Row | Quantity | Measured | Composed | Residual (composed over measured) | Verdict | Simulation coupling |
+|---|---|---:|---:|---:|---|---|
+| CO-1 | i2 flow 0 steady rate | 3.6553 GB/s | 3.8193 GB/s | +4.49 percent | pass | min() with 6.48x headroom; flips only under a fabric collapse BE-1 forbids |
+| CO-2 | i2 flow 1 steady rate | 4.8931 GB/s | 4.9824 GB/s | +1.83 percent | pass | min() with 4.97x headroom; same |
+| CO-3 | j2x stage-1 flow 0 steady rate | 4.0249 GB/s | 3.8193 GB/s | -5.11 percent | pass | min() with 6.48x headroom; same |
+| CO-4 | j2x stage-1 flow 1 steady rate | 4.8486 GB/s | 4.9824 GB/s | +2.76 percent | pass | min() with 4.97x headroom; same |
+| CO-5 | join-unharmed, flow 0 stage 1 over stage 0 | 1.0538 | 1.0000 | measured 5.38 percent above composed, inside [0.90, 1.10] | pass | none; composed is identically 1.0 |
+| CO-6 | i2 flow 0 p50 | 2239.049 us | 2198.644 us | -1.80 percent | pass | none; T_fab_lat cancels, composed equals the anchor p50 for every fabric term |
+| CO-7 | i2 flow 1 p50 | 1600.271 us | 1596.855 us | -0.21 percent | pass | none; same cancellation |
+| CO-8 | j2x stage-1 flow 0 p50 | 2135.626 us | 2198.644 us | +2.95 percent | pass | none; same cancellation |
+| CO-9 | j2x stage-1 flow 1 p50 | 1722.941 us | 1596.855 us | -7.32 percent | pass | none; same cancellation |
+| CO-10 | staggered-join settling | 0.0 s | no term above one 100-us bin | both effectively zero | pass | restates BE-3's verdict |
 
 Derived quantities (functions of scored rows, reported and never
 scored, per the freeze's entailment analysis):
@@ -164,14 +190,112 @@ handed to TRAF-53 as its mixed-pair starting numbers. The 2.775x
 asymmetry itself was scored by the capture study (E-M-4) and gains no
 new evidence here.
 
+## Post-specified corrections (adversarial evidence review)
+
+Recorded after the review of the published record; the frozen files
+(`expectations.md`, both `.topo` instances, the locked `results/`
+bytes) are byte-identical to their commits, and no band, verdict or
+number changed. These notes correct prose claims about what the
+evidence shows.
+
+1. **Conditional-row invariance.** The freeze's residual-risk sentence
+   ("They can change after this freeze only through the simulation
+   side...") is arithmetically false for six of the ten rows. CO-6
+   through CO-9 compute composed p50 = (anchor p50 - T_fab_lat) +
+   T_fab_lat, identically the anchor p50 for every value of the fabric
+   term, so no simulation outcome could flip them; a violated validity
+   condition would have withdrawn them as unavailable, never failed
+   them. CO-5's composed value is the constant 1.0 with no simulation
+   input. CO-10 restates BE-3's own boolean. CO-1 through CO-4 couple
+   to the simulation only through min(H_rate, R_fab) with R_fab at
+   24.75 GB/s against anchors below 5 GB/s (4.97x and 6.48x headroom),
+   so their verdicts move only if the fabric collapses by more than
+   that factor, which BE-1's registered band separately forbids. The
+   freeze pre-resolved and disclosed the cancellation for the p50 rows;
+   this correction extends the disclosure to every conditional row,
+   annotates the table's coupling column accordingly, and withdraws the
+   false residual-risk restatement an earlier version of this file
+   repeated.
+2. **The discrimination class.** Stated in full in the
+   calibrated-for-what section below and summarized here: no row in
+   this study compares a simulated number against a measured number in
+   a way that could fail within the registered bands, so the evidence
+   validates the composition rule and the instance's exact arithmetic,
+   not the fabric model against alternatives.
+3. **The incast disclosure asymmetry.** The freeze's R_fab(f; F)
+   definition reads "measured from the `htsim_ss_dragonfly` cell that
+   mirrors that mapping, driven open loop at line rate", but no such
+   multi-flow distinct-port cell exists for the incast family: every
+   runnable multi-flow cell shares one egress and is barred from
+   comparison as the analyzed artifact regime. The incast family's
+   fabric term therefore came from solo cells by the same superposition
+   argument the freeze spelled out explicitly only for the join family.
+   The fact is derivable from the freeze (the T_fab_lat(f; F) =
+   T_fab_lat(solo) rule and the multi-receiver harness gap are both
+   stated there), but the composition-over-solo-cells statement for the
+   incast family first appeared in the HTSIM-29 and HTSIM-30
+   registrations, and that asymmetry is disclosed here. Consequence,
+   stated plainly: the no-cross-flow-interference premise for
+   distinct-port flows through one switch was never exercised by any
+   cell of this study; exercising it is exactly HTSIM-30's acceptance
+   criterion.
+4. **FG-1 enforcement.** The topology-hash clause was recorded in the
+   locked run manifest but not machine-enforced: the analyzer never
+   re-reads the manifest's topology hashes, and the lock test covered
+   only the `results/*.json` bytes. The review verified the recorded
+   hashes match the freeze-committed topo blobs, and the lock test now
+   asserts that tie directly
+   (`test_run_manifest_topology_hashes_match_the_tracked_instances`).
+5. **Conditional independence count.** The freeze's "10 rows over
+   about 9 independent measured quantities" overstates. CO-5's ratio is
+   the exact reciprocal of CO-3's (both 0.948937: the same two measured
+   numbers compared against each other), and CO-10 is BE-3 restated, so
+   the honest count is at most 8 comparisons, 4 rate and 4 p50, drawn
+   from 2 anchors.
+6. **EX-row failure coverage.** The freeze's per-row "can fail"
+   wording claimed sensitivity to "any extra or missing per-packet or
+   per-hop charge". The missing-fixed-term half is wrong: a missing
+   300,000 ps propagation leaves EX-1 at 340,117,280 ps, still inside
+   bin 340, and the same holds for a missing pipeline constant or the
+   single tail serialization in all three EX rows (lower bin margins
+   417,280 to 903,600 ps). Extra fixed charges above 96,400 ps are
+   caught by EX-3's upper margin, and per-packet errors are caught at
+   937x to 2047x amplification. The "three independent directions"
+   framing is corrected above accordingly.
+7. **The pre-freeze probe's read discipline.** The disclosed
+   feasibility probe ran `-pattern incast -receiver 0 -degree 1
+   -duration_ps 10000000000 -bin_ps 1000000` with the 9038/90 framing
+   on the backend `p2a2h1g3_200g.topo`. Its pair (host 1 to host 0) is
+   same-router, so its per-packet path constants equal the Merlin
+   instance's, its 1 us bins match the scored solo cells, and its 10 ms
+   window contains the first-chunk crossing: EX-1's exact value was
+   derivable from bytes that existed before the freeze. What was
+   actually read, reconstructed from the session record and the
+   retained probe artifacts: the stdout manifest lines (injected,
+   delivered, payload total, drop count), the CSV header plus its first
+   two rows (the bins ending at 2 and 3 us), and an aggregate row count
+   with total payload sum. No chunk-boundary crossing was computed and
+   no bin beyond the third was read. EX-1's blindness therefore rests
+   on that read discipline, not on the value being unobtainable.
+8. **Registry accounting.** TRAF-51's narrowed entry now states how
+   the registered 1.71x aggregate, Jain and mixed-pair clauses were
+   addressed (explicitly-unscored derived rows under the freeze's
+   entailment reason; the frozen out-of-scope branch handing the
+   mixed-pair floors to TRAF-53).
+9. **Numeric and label nits.** The payload-ceiling prose figure below
+   was low by 443.5 bytes/s in the first publication (exact value
+   24,751,051,117.50 bytes/s; conclusion unchanged), and the
+   conditional table's header now carries the freeze's own
+   "consistency checks" label.
+
 ## Physical sanity review
 
 Three independent framings, per the local rules.
 
 **Network and serialization physics.** The simulated solo steady rate
 sits exactly on the arithmetic payload ceiling (24,751,062,800 against
-24,751,050,674 bytes/s, a 5e-7 quantization surplus inside the frozen
-packet bound), the first-chunk time is the hand-derived
+exactly 24,751,051,117.50 bytes/s, a 4.7e-7 quantization surplus inside
+the frozen packet bound), the first-chunk time is the hand-derived
 serialization-plus-pipeline sum to the bin, and halving the link rate
 moved exactly the serialization terms (EX-2). No bin anywhere exceeded
 the packet quantization bound.
@@ -199,28 +323,49 @@ deliberately holds static.
 
 ## What the fabric is now calibrated for, exactly
 
+**The discrimination statement.** No row in this study compares a
+simulated number against a measured number in a way that could fail
+within the registered bands: the EX rows compare the simulation against
+hand arithmetic over declared parameters (950,000 ps of the first-chunk
+time is declared propagation and pipeline, not measured), the BE rows
+compare it against derived ceilings and a known artifact signature, and
+the conditional rows are insensitive to the simulation per
+correction 1. The operative claim is therefore: measured solo anchors
+predict the measured multi-flow steady state within 7.3 percent, given
+a fabric that is not the bottleneck; any fabric model above roughly 5
+GB/s per port yields identical verdicts, so what is validated at the
+captured loads is the composition rule and the instance's exact
+arithmetic, not fabric-model discrimination. Discriminating between
+fabric models would need loads near the port rate or fabric-side
+measurements the capture does not contain.
+
 On the declared single-switch Merlin instance
 (`merlin_a100_singleswitch_v1.topo`, every parameter carrying measured,
 derived or declared-with-reason provenance), driving
 `htsim_ss_dragonfly` at the pinned merge:
 
-- Calibrated: steady-state per-flow and aggregate goodput, per-chunk
-  completion p50, join-unharmed behavior and near-instant staggered-join
-  settling for the captured solo, two-source-incast and two-flow-join
-  families at their captured port mappings (pairwise distinct source
-  and destination ports) and captured loads (each stack at most a
-  fifth of a port), under the frozen composition rule with the
-  measured per-pair endpoint floor as a separate term.
-- Not calibrated, stated plainly: endpoint-stack dynamics (the 119 s
-  simultaneous-start transient, source-identity rate asymmetry,
-  burst-versus-sustained variability, the mixed-pair direction
-  asymmetry); shared-port and higher-degree incast families (i3, j3,
-  i4, x4 are uncaptured, TRAF-52, and the open-loop harness cannot
-  express host-stack-bound offered load or multiple receivers,
-  HTSIM-29 and HTSIM-30); multi-switch dragonfly routing behavior
-  (structurally unreachable at the single-switch shape that five-node
-  discovery determines); and the rnic-ss endpoint, which no cell here
-  exercised.
+- Validated, in the sense the discrimination statement fixes:
+  steady-state per-flow and aggregate goodput, per-chunk completion
+  p50, join-unharmed behavior and near-instant staggered-join settling
+  for the captured solo, two-source-incast and two-flow-join families
+  at their captured port mappings (pairwise distinct source and
+  destination ports) and captured loads (each stack at most a fifth of
+  a port), under the frozen composition rule with the measured per-pair
+  endpoint floor as a separate term; plus the instance's exact
+  serialization arithmetic under three parameterizations.
+- Not established, stated plainly: fabric-model discrimination at the
+  captured loads (any non-bottleneck fabric passes the same conditional
+  rows); the no-cross-flow-interference premise for distinct-port
+  multi-flow traffic through one switch (never exercised, HTSIM-30);
+  endpoint-stack dynamics (the 119 s simultaneous-start transient,
+  source-identity rate asymmetry, burst-versus-sustained variability,
+  the mixed-pair direction asymmetry); shared-port and higher-degree
+  incast families (i3, j3, i4, x4 are uncaptured, TRAF-52, and the
+  open-loop harness cannot express host-stack-bound offered load or
+  multiple receivers, HTSIM-29 and HTSIM-30); multi-switch dragonfly
+  routing behavior (structurally unreachable at the single-switch shape
+  that five-node discovery determines); and the rnic-ss endpoint, which
+  no cell here exercised.
 
 ## Residual registrations
 
@@ -249,4 +394,5 @@ python examples/merlin_ss_fabric_calibration_v1/analyze_calibration.py \
 Determinism makes the reproduction exact: identical binaries produce
 byte-identical CSVs, and the tracked `results/` summaries are locked by
 `tests/test_merlin_ss_fabric_calibration_results.py` against the frozen
-binary hash, submodule pin and dataset manifest hash.
+binary hash, submodule pin, dataset manifest hash and the tracked
+topology instances.

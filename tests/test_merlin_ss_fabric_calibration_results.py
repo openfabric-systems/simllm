@@ -75,6 +75,23 @@ def test_locked_run_identity_matches_the_freeze():
     assert summary["fatal_failures"] == []
 
 
+def test_run_manifest_topology_hashes_match_the_tracked_instances():
+    """FG-1's topology clause, machine-enforced (review correction 4).
+
+    The locked run manifest records the SHA-256 of every topology file the
+    runs consumed; the two Merlin instances are tracked in the study
+    directory, so the recorded hashes must equal the tracked bytes' hashes.
+    """
+    run = json.loads((RESULTS / "run_manifest.json").read_text())
+    study = RESULTS.parent
+    for name in (
+        "merlin_a100_singleswitch_v1.topo",
+        "merlin_a100_singleswitch_v1_100g.topo",
+    ):
+        tracked = hashlib.sha256((study / name).read_bytes()).hexdigest()
+        assert run["topologies"][name] == tracked
+
+
 def test_mutation_is_detected():
     """Negative control: a corrupted manifest entry must fail the check."""
     manifest = json.loads(MANIFEST.read_text())

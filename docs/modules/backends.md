@@ -172,13 +172,15 @@ submodule) labels the wave "hosted, calibration pending"; the rnic driver
 rejects dragonfly `-topo` files at its own seam until a calibration ruling.
 The wave-19 TRAF-51 comparison
 ([merlin_ss_fabric_calibration_v1](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md))
-has since calibrated the fabric for steady-state solo, two-source incast
-and staggered-join behavior at the captured distinct-port mappings and
-loads on a declared single-switch Merlin instance, with the measured
-endpoint host-stack floor an explicit separate term; endpoint dynamics,
-shared-port families and multi-switch routing remain uncalibrated
-(TRAF-53 in [traffic.md](traffic.md), HTSIM-29 to HTSIM-31 below), and
-the backend note's own wording update is HTSIM-31. A pin to an
+has since validated the declared single-switch Merlin instance's exact
+serialization arithmetic and a frozen composition rule over measured
+endpoint host-stack floors for the captured steady-state families; the
+captured loads (each stack under a fifth of a port) do not discriminate
+between fabric models, which the study states as its own limit, and
+endpoint dynamics, shared-port families, multi-switch routing and
+fabric-model discrimination remain open (TRAF-53 in
+[traffic.md](traffic.md), HTSIM-29 to HTSIM-31 below), with the backend
+note's own wording update as HTSIM-31. A pin to an
 append-only `<date>/simllm-addon` branch
 remains an intentional supported state while backend work is in review, but
 it is an intermediate state rather than the steady one. The same HTSIM
