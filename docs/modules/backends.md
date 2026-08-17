@@ -851,6 +851,12 @@ cross-layer work, hardware evidence or a multi-repository campaign. Difficulty
 does not override priority, and correctness is never deferred because a fix
 is difficult.
 
+ID note: the BACK-34 partial-final-packet record reserved BACK-46, BACK-47 and
+BACK-48 for residuals it then reported as not created, so no registry ever
+carried them. The packet-device model change is their first registration and
+gives them the meanings below; the earlier record's "no residual entry is
+created" statement stands and refers to different, never-registered work.
+
 ### Precision
 
 - BACK-13 (Precision; P1; L): build a versioned CX-7 observable-state model
@@ -1057,6 +1063,65 @@ is difficult.
   its operation, WQE, byte range and terminal delivery or drop. The disabled
   path keeps packet identities backend-private and must preserve every
   accepted routing-lifetime, GOAL, completion and metric byte exactly.
+- BACK-46 (Completeness; P2; L): attach a separately modeled GPU to the shared
+  PCIe fabric, so NIC, GPU and host are endpoints of one fabric with their own
+  identities. The GPUDirect placement itself is not the gap: `GpuMemory` is a
+  legal endpoint for any allocation kind including `DataRegion`, the accepted
+  BACK-20 artifact already carries `data_endpoint` as `gpu_memory` under both
+  the CPU-proxy and the GPU-initiated shape, the payload read really is issued
+  against that allocation as a `PayloadRead` non-posted read, and every path
+  configuration carries a `gpu_direct` analytical delay component. What is
+  missing is the second device. The GPU-memory label is a property of an
+  allocation the posting RNIC device owns, since a WQE data descriptor must
+  resolve to a `DataRegion` whose `device_owner_id` equals that device's, so no
+  modeled GPU owns the region, claims it on the fabric, or has its transactions
+  accounted apart from the NIC's. Land that device: ownership and claim rules
+  for its regions, cross-device claim rejection, and per-endpoint accounting
+  that keeps the two devices' transactions distinguishable. Acceptance: a
+  payload read whose completer is a region owned by the modeled GPU is charged
+  on the shared fabric under that device's endpoint identity; the default
+  fabric configuration (`defaultPcieFabricConfig`, host stores and host-pinned
+  paths) stays the selected baseline and every accepted BACK-10, BACK-19 and
+  BACK-20 artifact stays byte-identical, including the rows whose data regions
+  are already labeled GPU memory; a foreign-device region claim is rejected
+  transactionally with unchanged state; and the enabled two-device leg changes
+  an end-to-end metric in the registered direction. Timing, occurrence and
+  calibration defects of the enabled leg become BACK-16 precision scope. The
+  design statement is
+  [the packet-device model](../design/packet-device-model.md).
+- BACK-47 (Completeness; P2; M): name the mirrored NCCL stack boundary as the
+  ncclNet-shaped plugin ABI seam and register its packet-emission half.
+  `simllm.compute.nccl_stack` already mirrors `ncclNet.isend` and `ncclNet.test`
+  under audited names, and NVIDIA documents the contract those names sit in: a
+  dynamically loaded `libnccl-net.so` exporting `isend`, `irecv` and `test`,
+  with `regMr` registering buffers so RDMA NICs can prepare them, and device
+  offload requested through a valid `*sendDevComm` or `*recvDevComm`. AMD's RCCL
+  documents the same ABI under `librccl-net.so`, so one seam serves both stacks.
+  What is missing is the declaration that this boundary is where a producer
+  hands packets to a device, plus the emission contract on both sides of it:
+  toward the NIC, the descriptor, doorbell and payload DMA the call causes;
+  toward the GPU, the peer stores an intra-node transport issues instead.
+  Acceptance: every emission at the seam carries the extent and attempt identity
+  of the device port it targets, a call that would emit onto an absent or
+  disabled port is rejected rather than silently dropped, and the current
+  zero-time skeleton stays the exact off path with its frozen call sequences and
+  event streams byte-identical. COMP-15 keeps the stack's own calibrated
+  service, its receive leg and its metric projection; this task owns only the
+  device-facing emission contract at the plugin boundary.
+- BACK-48 (Completeness; P2; M): make the ABI v2 packet vocabulary usable by
+  non-wire ports. The vocabulary is reachable only through `NetworkPort`, so a
+  GPU peer port cannot emit `PacketTxStarted`, `PacketTxFinished`,
+  `PacketRxArrived` or an attempt terminal in the same language, and a consumer
+  would have to learn a second event grammar per port kind. Make scope, event
+  kind, packet identity and terminal semantics port-kind independent, with
+  capability gating deciding which kinds a port may emit: a peer port that
+  cannot mark ECN or transport PFC advertises that and rejects a request for it
+  explicitly, exactly as a v2 consumer paired with a v1-only producer already
+  rejects before any handler installation. Acceptance: one consumer reads wire
+  and peer attempts through the same vocabulary without a port-kind switch, an
+  unsupported capability request is rejected before any state mutation, and both
+  ABI v1 and the accepted ABI v2 wire artifacts stay byte-identical.
+
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
 ### Precision

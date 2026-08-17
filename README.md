@@ -31,8 +31,16 @@ framework with a simulated GPU executor and a discrete-event,
 packet-level network backend (ATLAHS + htsim), so scheduling,
 KV/prefix-cache management and the fabric feed back on each other.
 
-Three ideas carry the design:
+Four ideas carry the design:
 
+- **GPUs and NICs are the same kind of thing: boxes with ports.** A port is
+  one link. PCIe connects boxes inside a machine, NVLink connects NVIDIA GPUs
+  to each other (xGMI on AMD ones), and Ethernet goes out to the rest of the
+  cluster. The software on top turns each step's shared work into packets, and
+  every packet rides one of those ports. SimLLM already models the NIC this
+  way; the [packet-device model](docs/design/packet-device-model.md) is the
+  plan for modeling the GPU the same way, and it is explicit about what is not
+  built yet.
 - **Frontends are real, GPUs are simulated.** The framework's own
   scheduler, batching policy and KV/prefix-cache accounting run
   unmodified (they are CPU-side bookkeeping); only model execution is
@@ -204,6 +212,15 @@ campaign are in
 What SimLLM models today and what is planned next. Each task ID links to
 the module doc that owns it.
 
+The tables are grouped by box. The NIC is a box with PCIe ports and a 400G
+wire port. The GPU is a box with PCIe ports and NVLink or xGMI ports. A link
+joins two ports and carries packets, and the collective library on top (NCCL
+on NVIDIA, RCCL on AMD) decides which bytes cross which port. The NIC is built
+that way today. The GPU is not yet: its link to the other GPUs in the node is
+still one flat speed number rather than a port. The
+[packet-device model](docs/design/packet-device-model.md) states the target and
+names the tasks that close the difference.
+
 ### Network and NIC
 
 RNIC hardware and congestion control are separate model axes. A full-RNIC
@@ -218,14 +235,14 @@ through the execution graph, runtime and `StepResult` into the first TTFT and
 TPOT numbers in this repository that the native RNIC chain affects. That claim
 stays inside the frozen fixture: one request, single-WQE 4 KiB and 1 MiB
 payloads, a two-WQE FIFO, 200 and 400 Gbit/s, and native doorbell service of 0
-and 1,000 ps. It says nothing yet about congestion, packet issue timing,
-multi-request contention or arbitrary graphs. BACK-8 and the demonstrated
-CORE-15 live-seam clauses closed on that evidence. CORE-21 retains the
-same-contended-graph bypass-versus-composed comparison and BACK-31 retains the
-executable-level unlinked-native negative control. BACK-25 and BACK-26 closed
-with the ABI v2 packet-attempt and transport-control vocabulary and an htsim
-relay that emits committed TX and RX boundaries, so HTSIM-9 now needs only one
-composed run that carries packet-issue evidence through the live metric chain.
+and 1,000 ps. It says nothing about congestion, multi-request contention or
+arbitrary graphs; packet issue timing landed afterwards with the Tier C run.
+BACK-8 and the demonstrated CORE-15 live-seam clauses closed on that evidence,
+and the CORE-21 same-contended-graph comparison and BACK-31 unlinked-native
+negative control landed after it. BACK-25 and BACK-26 closed with the ABI v2
+packet-attempt and transport-control vocabulary and an htsim relay that emits
+committed TX and RX boundaries, and HTSIM-9 closed on the composed Tier C run
+that carries packet-issue evidence through the live metric chain.
 The RNIC device itself is now built from modules behind one construction
 entry point: the work-queue core plus optional DMA (PCIe), QPC (connection
 and context) and network transport modules
@@ -248,10 +265,10 @@ point serves everything from a bare work queue to the full device.
 
 | Model | Status | What it is |
 |---|---|---|
-| `rnic-nn` | available through the composed flow adapter at the default ABI v1 flow form; a composed run carrying the landed ABI v2 packet-issue events through the metric chain is still open ([HTSIM-9](docs/modules/backends.md)) | Packetized no-CC policy and the reference for normalized FCT; full-RNIC runs use the same hardware path as physical policies |
+| `rnic-nn` | available through the composed flow adapter at the default ABI v1 flow form; the Tier C run carries the ABI v2 packet-issue events through the metric chain ([backends](docs/modules/backends.md)) | Packetized no-CC policy and the reference for normalized FCT; full-RNIC runs use the same hardware path as physical policies |
 | `rnic-nn-fluid` | available | Continuous fluid policy with deterministic closed forms and the explicit hardware-bypass 0 ps anchor |
-| `rnic-cn` | available through the composed flow adapter at the default ABI v1 flow form; a composed run carrying the landed ABI v2 packet-issue events through the metric chain is still open ([HTSIM-6/9](docs/modules/backends.md)) | Explicit-rate policy with deterministic reservations, packet spraying and resequencing, lossless without PFC |
-| DCQCN | available through the composed flow adapter at the default ABI v1 flow form; a composed run carrying the landed ABI v2 packet-issue events through the metric chain is still open ([HTSIM-5/9](docs/modules/backends.md)) | RoCEv2 comparator with per-QP CNP state, rate reduction/recovery and ECN plus optional PFC; DCQCN calibration lands before programmable CC |
+| `rnic-cn` | available through the composed flow adapter at the default ABI v1 flow form; the ABI v2 packet-issue chain landed with the Tier C run, and short-flow control-cost reuse remains open ([HTSIM-6](docs/modules/backends.md)) | Explicit-rate policy with deterministic reservations, packet spraying and resequencing, lossless without PFC |
+| DCQCN | available through the composed flow adapter at the default ABI v1 flow form; the ABI v2 packet-issue chain landed with the Tier C run, and persistent post-CNP DCQCN state remains open ([HTSIM-5](docs/modules/backends.md)) | RoCEv2 comparator with per-QP CNP state, rate reduction/recovery and ECN plus optional PFC; DCQCN calibration lands before programmable CC |
 | LogGOPSim flow level | planned ([BACK-2](docs/modules/backends.md)) | Fast flow-level sweeps before packet-level runs |
 
 Fabrics are two-tier Clos topologies with detailed switch models (VoQ

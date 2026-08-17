@@ -968,12 +968,57 @@ and an explicit reason:
   Intra-node collectives must compose with the NVLink-class egress model and
   stay off the fabric. Inter-node transfer and receive completion must project
   through CORE-4 and CORE-5 to `CompletionEvent`, `StepResult`, TTFT and TPOT.
+  Boundary against BACK-47: this task owns the stack's own calibrated service,
+  its receive leg and its metric projection, while BACK-47 owns the
+  device-facing packet-emission contract at the plugin ABI seam. Neither may
+  claim the other's half.
   Add the BACK-20 GPU-initiated leg behind the same upper interface while
   preserving the CPU-host proxy path as the default identity baseline. The
   VLLM-14 and SGL-11 simulated communicators remain the adapter callers that
   must connect to this stack. Function and event identities must remain stable
   so later captures, timing calibration and adapter traces align with this
   first slice.
+- COMP-34 (Completeness; P2; L): give the GPU a device composition entry point
+  with typed ports, mirroring the BACK-18 `RnicDevice` composition. The link
+  mechanisms already exist and are separately selectable: `NvlinkProfile` is one
+  flat per-GPU egress cursor for SM stores and is individually disable-able, and
+  `CopyEngineProfile` carries per-direction `CopyDirectionProfile` entries for
+  host to device, device to host, device to device and peer transfers, each with
+  its own setup cost and bandwidth, while `CopyEngineServiceModel.estimate`
+  rejects a direction the engine does not declare and the runtime resolves a
+  peer direction from endpoint kind and rank. What is missing is the port object
+  over them: no protocol identity, no declared capabilities, no ceiling
+  provenance field and no shared packet vocabulary, so a port cannot be named,
+  negotiated or reported as a port. Land first-class PCIe and
+  NVLink or xGMI port objects on the GPU service model, each carrying protocol
+  identity, direction, ceiling, declared capabilities and the provenance of that
+  ceiling, behind one versioned configuration. A disabled port keeps the
+  interface with its parameters inert or explicitly rejected, never silently
+  rescoped, exactly as a disabled RNIC module does. The design statement is
+  [the packet-device model](../design/packet-device-model.md). Acceptance: the
+  composed GPU reproduces every accepted `gpu_service_model`, `gpu_task_mix` and
+  `mixed_makespan_v1` timestamp, counter and random draw byte for byte while its
+  ports carry the current effective parameters; a disabled port and a port asked
+  for a capability it does not advertise both reject at configuration time
+  rather than at first use; and enabling a port changes an end-to-end metric in
+  the registered direction. This is P2 while no study selects the port objects,
+  and becomes P1 when TRAF-45 or a vendor study opts into one. COMP-31 keeps the
+  local mechanism detail (peer topology, per-link routing, ingress service and
+  reduction lanes) and is not closed by this entry point.
+- COMP-35 (Completeness; P2; M): instantiate vendor ports, so an AMD ROCm GPU
+  can be expressed at all. Once COMP-34 lands port objects, a vendor
+  instantiation names the peer port xGMI rather than NVLink and the collective
+  producer RCCL rather than NCCL, and supplies the envelope slots those names
+  need. No first-party AMD measurement exists in this repository and the only
+  figures available are vendor nameplate, so the instantiation must fail closed
+  exactly as a calibrated B100 or H100 host-cost request already does, rejecting
+  during configuration instead of borrowing an NVLink ceiling or an NVLink
+  efficiency. Acceptance: a declared xGMI profile carrying its own provenance
+  and validity window is required before any AMD cell runs; an undeclared or
+  unmeasured request is rejected with a diagnostic naming the missing profile
+  and the port it belongs to; and every accepted NVIDIA cell stays
+  byte-identical. This is P2 while no AMD study exists and becomes P1 when one
+  opts in.
 
 ### Uncategorized
 
