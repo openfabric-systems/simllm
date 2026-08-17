@@ -835,6 +835,24 @@ void testCrossDeviceRejection(TestRunner& test) {
         },
         "a half-named endpoint pair is rejected");
     test.expectThrowAs<std::invalid_argument>(
+        [&nic]() {
+            PcieTransactionRequest request;
+            request.client_id = kRnicRequester;
+            request.service_class = PcieServiceClass::PayloadRead;
+            request.operation = PcieOperation::NonPostedRead;
+            request.request_direction = PcieDirection::DeviceToHost;
+            request.ordering = PcieOrdering::Independent;
+            request.path_id = kHostPathId;
+            request.ordering_domain =
+                nic.pcieBinding()->pcie_submission_ordering_domain;
+            request.useful_bytes = 64;
+            request.transfer_bytes = 64;
+            (void)nic.submitPcie(
+                request,
+                PcieEndpointAttribution{kNicEndpoint, kGpuEndpoint + 999});
+        },
+        "a transaction naming an unattached completer endpoint is rejected");
+    test.expectThrowAs<std::invalid_argument>(
         [&nic_attachments]() {
             RnicDeviceConfig duplicate =
                 nicConfig(16, kHostEndpoint, kNicEndpoint + 1);

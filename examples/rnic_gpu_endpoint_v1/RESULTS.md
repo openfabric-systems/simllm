@@ -10,10 +10,18 @@ artifact of the mechanism existed. This is a local pre-run freeze, not a claim
 of public pre-registration.
 
 Implementation landed next, then the study command registry and its pytest
-locks, then the single result-producing run. The frozen sweep, row schema,
-relation families, entailment answers, artifact digests, staging literals and
-the decision not to close BACK-46 were all written before the run and are
-unchanged. No attempt was stopped and no outcome-dependent edit was made.
+locks, then the result-producing run. The frozen sweep, row schema, relation
+families, entailment answers, artifact digests, staging literals and the
+decision not to close BACK-46 were all written before the run and are
+unchanged. No attempt was stopped and no scored value, band or relation was
+edited after a measurement.
+
+One disclosed post-run edit: reviewing the frozen guard list against the native
+test showed that G8's case for a transaction naming an unattached endpoint
+identity was covered only indirectly, so that rejection was added to the native
+test and the study was re-run. The re-run reproduced `results.csv` byte for
+byte and scored 16 of 16 again. The edit adds a rejection assertion and changes
+no modeled behavior.
 
 The registered command is:
 
@@ -171,17 +179,20 @@ of these is reported as a fraction.
   transactions, with the two host stores correctly left unattributed. Naming a
   fabric host endpoint with no attributed device changes nothing at all.
   HOLDS.
-- **G8** cross-device rejection is transactional. Nine rejections were
-  exercised: an ungranted peer region, a WQE naming its own device as peer, a
-  named peer disagreeing with the region owner, a GPU transfer into an
-  ungranted peer region, a GPU transfer naming its own owner as peer, a device
-  charging another device's requester endpoint, an attributed host store, a
-  half-named endpoint pair, and a duplicate host-memory owner claim. After all
-  nine the fabric generation, per-class accounting, registry generation, live
-  allocation count, SQ occupancy and work-queue counters were unchanged and the
-  endpoint ledger was still empty. Endpoint and ordering-domain collisions and
-  a GPU attempting to register a queue object are rejected the same way.
-  HOLDS.
+- **G8** cross-device rejection is transactional. Ten rejections were exercised
+  on one shared fabric and registry: an ungranted peer region, a WQE naming its
+  own device as peer, a named peer disagreeing with the region owner, a GPU
+  transfer into an ungranted peer region, a GPU transfer naming its own owner as
+  peer, a device charging another device's requester endpoint, an attributed
+  host store, a half-named endpoint pair, a transaction naming an unattached
+  completer endpoint, and a duplicate host-memory owner claim. After all ten the
+  fabric generation, per-class accounting, registry generation, live allocation
+  count, SQ occupancy and work-queue counters were unchanged and the endpoint
+  ledger was still empty. Endpoint and ordering-domain collisions, a device
+  claiming the fabric host identity, an attached GPU on a fabric that names no
+  host endpoint, a GPU attempting to register a queue object, and four malformed
+  transfer shapes are rejected the same way in the neighbouring cases. Every
+  frozen G8 case is covered. HOLDS.
 - **G9** `validateInvariants()` passes on the fabric, registry, RNIC device and
   GPU device in every cell, and the endpoint ledger conserves: requester and
   completer charge counts are equal, and equal to the attributed transaction
