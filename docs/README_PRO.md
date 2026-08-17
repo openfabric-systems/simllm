@@ -17,7 +17,7 @@ status and open tasks; nothing here overrides them.
 | Full design | [architecture.md](architecture.md) | Components, vLLM/SGLang integration seams, manifest schemas, execution/resource boundary, GOAL trace format, coupling modes, metrics |
 | Design notes | [design/](design/) | Cross-cutting statements that outlive one change: the [packet-device model](design/packet-device-model.md) (devices with typed ports, software stacks as packet producers, port taxonomy, calibration doctrine) and the [HTSIM-9 wrapper package](design/htsim9-atlahs-flow-runtime-wrapper.md) |
 | Module truth | [modules/*.md](modules/) | Per-module design, current status, numbered open tasks |
-| Calibration sources | [papers/](papers/) | Literature anchors and evidence plans, including [message-size parameters](papers/msg-size-vs-bandwidth.md) and the [RNIC hardware/CX-7 boundary campaign](papers/rnic-hardware-calibration.md) |
+| Calibration sources | [papers/](papers/) | Literature anchors and evidence plans, including [message-size parameters](papers/msg-size-vs-bandwidth.md), the [RNIC hardware/CX-7 boundary campaign](papers/rnic-hardware-calibration.md) and the [AMD GPU fabric dossier](papers/amd-gpu-fabric.md) |
 | Studies | [../examples/](../examples/) | Expectation provenance, run scripts, audited results, plots |
 
 ## Development process

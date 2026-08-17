@@ -214,8 +214,11 @@ structure: the intra-node peer port becomes xGMI instead of NVLink, and the
 inter-node producer keeps the same plugin-shaped boundary under a different
 library name. This document deliberately claims nothing further about RCCL
 internals, protocol selection, or how its intra-node transports map onto xGMI
-link groups. No first-party AMD measurement exists in this repository, so
-COMP-35 is registered to fail closed rather than to guess.
+link groups; the sourced evidence dossier for the AMD side, RCCL's lineage
+and transports, the xGMI nameplate tables and the ROCm RDMA path, is
+[amd-gpu-fabric.md](../papers/amd-gpu-fabric.md). No first-party AMD
+measurement exists in this repository, so COMP-35 is registered to fail
+closed rather than to guess.
 
 ## Everything is packets
 
