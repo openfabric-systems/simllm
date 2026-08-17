@@ -1065,14 +1065,19 @@ created" statement stands and refers to different, never-registered work.
   accepted routing-lifetime, GOAL, completion and metric byte exactly.
 - BACK-46 (Completeness; P2; L): let the modeled PCIe fabric carry NIC, GPU and
   host as endpoints of one fabric, including the GPUDirect peer-to-peer leg
-  where the NIC reads GPU memory without a host bounce. `PcieEndpointKind`
-  already admits `GpuMemory`, but a fabric is attached to one device and every
-  modeled payload read resolves to host pinned memory, so the placement this
-  repository already describes in prose, a per-channel data FIFO in GPU memory
-  read directly by the NIC's payload DMA while counters and flags stay host
-  visible, cannot be represented. The model needs the second attached device,
-  ownership and claim rules for its regions, and per-endpoint accounting that
-  keeps the two devices' transactions distinguishable. Acceptance: a payload
+  where the NIC reads GPU memory without a host bounce. Part of the vocabulary
+  exists: `PcieEndpointKind` admits `GpuMemory`, the GPU-initiated submission
+  shape labels its SQ, CQ and doorbell-record allocations with it, and every
+  path configuration carries a `gpu_direct` analytical delay component. What is
+  missing is the device on the other end. Tracked allocations are owned by the
+  posting RNIC device and a WQE data descriptor must resolve to a `DataRegion`
+  that same device owns, so a payload read cannot name memory belonging to a
+  separately modeled GPU, and the placement this repository already describes
+  in prose, a per-channel data FIFO in GPU memory read directly by the NIC's
+  payload DMA while counters and flags stay host visible, cannot be
+  represented. The model needs the second attached device, ownership and claim
+  rules for its regions, and per-endpoint accounting that keeps the two
+  devices' transactions distinguishable. Acceptance: a payload
   read whose completer is a GPU-owned region is charged on the shared fabric
   under its own endpoint identity; the current host-memory-only configuration
   preserves every accepted BACK-10, BACK-19 and BACK-20 row, timestamp, counter

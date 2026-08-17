@@ -123,9 +123,10 @@ done using the functions `isend`, `irecv` and `test`", and prior to calling
 `isend` or `irecv` NCCL calls `regMr` on all buffers "to allow RDMA NICs to
 prepare buffers". The README is written against `ncclNet_v11` and states that
 plugins are encouraged to export several versioned symbols so one plugin spans
-a range of NCCL versions. The audited NCCL release pinned by this repository
-carries the same member names at `src/include/plugin/net/net_v12.h`, and
-SimLLM mirrors `ncclNet.isend` and `ncclNet.test` at that boundary today.
+a range of NCCL versions. The NCCL release this repository audited its mirrored
+names against carries the same member names at
+`src/include/plugin/net/net_v12.h`, and SimLLM mirrors `ncclNet.isend` and
+`ncclNet.test` at that boundary today.
 
 This ABI is the exact seam where a packet producer meets a device. The buffer
 that `regMr` prepares is what makes the next rule possible.
@@ -139,10 +140,19 @@ completer is GPU memory, with no host bounce buffer in between. The repository
 already describes this placement in prose: the per-channel data FIFO lives in
 GPU memory and the NIC's payload DMA reads it directly over PCIe, while
 counters and flags stay host visible (see the full call loop in
-[README_PRO.md](../README_PRO.md#full-call-loop-default-setup)). The modeled
-PCIe fabric does not yet contain it: `PcieEndpointKind` already admits
-`GpuMemory`, but only one device attaches to a fabric, so every modeled payload
-read still resolves to host pinned memory. BACK-46 owns closing that gap.
+[README_PRO.md](../README_PRO.md#full-call-loop-default-setup)). Part of the
+vocabulary is already there too. `PcieEndpointKind` admits `GpuMemory`, the
+GPU-initiated submission shape labels its SQ, CQ and doorbell-record
+allocations with it, and every PCIe path configuration carries a `gpu_direct`
+analytical delay component.
+
+What is missing is the device on the other end. Tracked allocations are owned
+by the posting RNIC device, and a WQE data descriptor must resolve to a
+`DataRegion` that same device owns, so a payload read cannot name memory
+belonging to a separately modeled GPU. The GPU-direct term is also an
+analytical penalty whose occurrence is not yet mechanism-driven, which is
+BACK-16 precision scope. BACK-46 owns the composition half: a GPU attached to
+the same fabric as an endpoint with its own regions and its own claims.
 
 ### NCCL P2P and SHM intra-node transports
 
@@ -213,11 +223,11 @@ event kinds are `PacketTxStarted`, `PacketTxFinished`, `PacketRxArrived`,
 retransmission and control packets and typed drop location, reason and evidence
 provenance
 (`simllm/backends/rnic/include/simllm/rnic/network_port.h`). An NVLink or xGMI
-peer transfer needs the first six of those kinds and needs the same attempt and
-extent identity. It does not need ECN or PFC, and the correct way to express
-that is a capability-gated port that rejects an unsupported request explicitly,
-exactly as the ABI already rejects a v2 consumer paired with a v1-only
-producer.
+peer transfer needs `PacketTxStarted`, `PacketTxFinished`, `PacketRxArrived`,
+`Delivered` and `Dropped`, and it needs the same extent and attempt identity.
+It does not need ECN, CNP or PFC, and the correct way to express that is a
+capability-gated port that rejects an unsupported request explicitly, exactly
+as the ABI already rejects a v2 consumer paired with a v1-only producer.
 
 **The PCIe transaction model** (BACK-10, closed; BACK-16 and BACK-17 open)
 already carries the endpoint and class vocabulary a shared fabric needs:
@@ -227,9 +237,9 @@ already carries the endpoint and class vocabulary a shared fabric needs:
 including `UarDoorbell`, `DoorbellRecord`, `WqeRead`, `QpcIcm`, `PayloadRead`,
 `PayloadWrite` and `CqeWrite`
 (`simllm/backends/rnic/include/simllm/rnic/pcie_fabric.h`). The type system
-therefore already admits the GPUDirect leg. What is missing is composition: a
-fabric is attached to one device, so a NIC payload read cannot resolve to a
-GPU-owned region belonging to a second modeled device.
+therefore already admits the GPUDirect leg. What is missing is composition:
+several RNIC devices may share one fabric, but a GPU cannot attach to it and
+own regions on it, so a NIC payload read has no GPU-owned completer to name.
 
 Four rules make the generalization concrete.
 
@@ -292,7 +302,7 @@ factors cleanly.
   1.53 times improvement from A100 to GH200 tracks the 1.38 times faster kernel
   launch rather than the link.
 
-The second half of the doctrine is that stack efficiency is a curve, not a
+The second part of the doctrine is that stack efficiency is a curve, not a
 scalar, and that the repository has already refuted its own first two attempts
 at compressing it.
 
@@ -312,7 +322,7 @@ at compressing it.
   `CollectiveBandwidthCurve` landed as the substrate and is inert: no shipped
   profile carries a curve, so no reported TTFT or TPOT moved.
 
-The third half, which is really the safety rule, is that a port with no
+The third part, which is really the safety rule, is that a port with no
 measured or declared profile fails closed. The repository already enforces this
 shape elsewhere: calibrated B100 and H100 host-cost requests are rejected during
 configuration rather than borrowing the measured Turing constant. A modeled
@@ -336,7 +346,7 @@ Registered by this document:
 |---|---|
 | COMP-34 | The GPU has no device composition entry point and no port objects; its intra-node link is a flat scalar cursor with no peer identity and no ingress term. |
 | COMP-35 | No vendor port instantiation exists, so an AMD ROCm GPU cannot be expressed at all and an xGMI ceiling has no first-party or declared profile to fail closed against. |
-| BACK-46 | One PCIe fabric serves one device, so the GPUDirect peer-to-peer leg, where the NIC reads GPU memory without a host bounce, cannot be represented even though `PcieEndpointKind::GpuMemory` exists. |
+| BACK-46 | A GPU cannot attach to the modeled PCIe fabric and own regions on it, so the GPUDirect peer-to-peer leg, where the NIC reads GPU memory without a host bounce, has no completer to name even though `PcieEndpointKind::GpuMemory` exists. |
 | BACK-47 | The mirrored NCCL stack boundary is not named as the plugin ABI seam, and its packet-emission half toward the GPU is unregistered while the half toward the NIC stops at zero-time events. |
 | BACK-48 | The ABI v2 packet vocabulary is reachable only through a wire port, so a non-wire port cannot emit an attempt, a TX boundary or an arrival in the same language. |
 | TRAF-45 | The intra-node leg has no packetized path behind the analytic locality off path, and the ingress term of a converging combine is still owned elsewhere (CORE-48 cross-node, COMP-31 local mechanism). |
@@ -355,13 +365,13 @@ then have one home instead of being duplicated between
 is also the natural place for the capability negotiation that lets one packet
 vocabulary serve ports with different control features.
 
-The case against: AGENTS.md prefers deep implementation behind a narrow
-existing interface over a new parallel surface, and the repository already has
-working seams (`ComputeProvider`, the placement and fabric manifests,
+The case against: this repository's module rule is deep implementation behind a
+narrow existing interface rather than a new parallel surface, and the working
+seams already exist (`ComputeProvider`, the placement and fabric manifests,
 `NetworkPort`, `PcieFabric`). A new top-level module is a wide shallow surface
-until at least two ports of different kinds actually need it, and the framework
-independence rule (nothing in the core imports vLLM or SGLang) constrains where
-the types may live.
+until at least two ports of different kinds actually need it, and the
+framework-independence ground rule in
+[CONTRIBUTING.md](../../CONTRIBUTING.md) constrains where the types may live.
 
 What decides it: whether COMP-34's port objects can be expressed inside the
 existing compute and backend surfaces without either duplicating the packet
