@@ -263,11 +263,15 @@ def analyze_cell(cell, job_dir):
             continue
         if b / GB > agg_ceiling:
             g5_ok = False
+    # Homogeneous jobs write transport_summary.txt at the job root; the
+    # heterogeneous mx job records its transport section inside each side's
+    # side.txt (and additionally enforces G1 in-job before exiting zero).
     transport = ""
-    tp = os.path.join(job_dir, "transport_summary.txt")
-    if os.path.exists(tp):
-        with open(tp) as f:
-            transport = f.read()
+    for tp in [os.path.join(job_dir, "transport_summary.txt"),
+               *sorted(glob.glob(os.path.join(job_dir, "*", "side.txt")))]:
+        if os.path.exists(tp):
+            with open(tp) as f:
+                transport += f.read()
     g1_ok = ("Using network Socket" in transport) and ("GDR 1" not in transport)
     out["guards"] = {
         "G1_socket_transport": g1_ok,
