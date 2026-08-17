@@ -178,6 +178,14 @@ rank_dirs=$(ls -d "${OUT}"/rank_*/ 2>/dev/null | grep -c .)
 if [ "${rank_dirs}" != "${SLURM_NTASKS}" ]; then
   fail "G6 violated: ${rank_dirs} rank directories for ${SLURM_NTASKS} tasks"
 fi
+# The ranks must occupy as many distinct physical GPUs as there are tasks,
+# or every completion time would be measuring the wrong machine.
+distinct_gpus=$(grep -h '^gpu_uuid=' "${OUT}"/rank_*/guards_before.txt \
+  | sort -u | grep -c .)
+echo "distinct_gpu_uuids=${distinct_gpus} ntasks=${SLURM_NTASKS}"
+if [ "${distinct_gpus}" -lt "${SLURM_NTASKS}" ]; then
+  fail "G6 violated: only ${distinct_gpus} distinct GPUs across ${SLURM_NTASKS} ranks"
+fi
 log "G1, G4 and G6 evidence collected"
 
 srun --ntasks-per-node=1 "${OUT}/counters.sh" "${OUT}" before
