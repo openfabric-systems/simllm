@@ -116,7 +116,8 @@ class NvlinkProfile:
     from any SM shares one bandwidth cursor, mirroring the HBM cursor. The
     intra-node path stays inside this model rather than reaching the fabric
     backend, which is the split TRAF-10 owns. Peer topology, per-link
-    routing and ingress service are deferred under COMP-11.
+    routing and ingress service are deferred under COMP-31, which retains
+    those clauses from the closed COMP-11.
     """
 
     latency_cycles: int

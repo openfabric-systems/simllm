@@ -360,10 +360,10 @@ and JCT evidence. Tier B consumed immutable native observations through
 `ExecutionGraph`, `CoarseDeviceRuntime`, `CompletionEvent`,
 `ExecutionResult` and `StepResult`, so native doorbell and link-rate changes
 reached TTFT and TPOT by the frozen relations. BACK-8 and the demonstrated
-CORE-15 live-seam clauses closed on that evidence. CORE-21 retains the
+CORE-15 live-seam clauses closed on that evidence. The CORE-21
 same-contended-graph bypass-versus-composed comparison with its signed JCT,
-TTFT and TPOT change, and BACK-31 retains the executable-level unlinked-native
-negative control; Tier B ran neither.
+TTFT and TPOT change, and the BACK-31 executable-level unlinked-native
+negative control, landed after Tier B, which ran neither.
 
 The ABI-v1 descriptor carries GOAL flow and tag identity plus a separate
 policy-context token, while completion uses a network-owned token. It does not
@@ -372,11 +372,12 @@ BACK-25 and BACK-26 closed on 2026-08-11 at the versioned vocabulary and relay
 boundary, so NetworkPort ABI v2 now carries session-unique packet-attempt
 identity, explicit TX start and finish, RX arrival, attempt terminals, typed
 drop evidence, ECN/CNP, effective rate updates, PFC and link-state forms, with
-ABI v1 kept as the exact default compatibility path. HTSIM-9 closes only when
-one composed run of the Tier B class carries that ABI-v2 packet-issue evidence
-through `ExecutionGraph` to `CompletionEvent`, `StepResult`, TTFT and TPOT,
-while HTSIM-15, HTSIM-16 and BACK-34 retain the dynamic-link producer, the
-physical control producers and the partial-final-packet cell. The standalone
+ABI v1 kept as the exact default compatibility path. HTSIM-9 closed on
+2026-08-11, when a composed run of the Tier B class carried that ABI-v2
+packet-issue evidence through `ExecutionGraph` to `CompletionEvent`,
+`StepResult`, TTFT and TPOT; the dynamic-link producer, the physical control
+producers and the partial-final-packet cell landed under HTSIM-15, HTSIM-16
+and BACK-34. The standalone
 slice is validated in
 [examples/rnic_wq_v1](../examples/rnic_wq_v1/RESULTS.md), the live gate in
 [examples/rnic_live_v1](../examples/rnic_live_v1/RESULTS.md), and the ABI-v2
@@ -396,8 +397,8 @@ The terminal completion is consumed once. Python must never compute
 `native delay + htsim FCT`, and the composed binary must never retain the
 timing-neutral ledger beside the native WorkQueue. Bypass mode uses the old
 authority alone and preserves its accepted completion artifacts. General
-same-graph authority comparison is CORE-21, and packet-level completion detail
-is the HTSIM-9 remainder.
+same-graph authority comparison landed under CORE-21, and packet-level
+completion detail closed with the HTSIM-9 Tier C run.
 The composition expectations were first frozen before implementation in
 [examples/rnic_live_v1](../examples/rnic_live_v1/expectations.md) at commit
 `65b5609`; commit `facb26d` clarified retry identity, and commit `947399c`
@@ -472,6 +473,50 @@ abstract collective op.
    online stateful co-simulator session remains BRIDGE-2, CORE-24 and
    HTSIM-18, and child-process lifetime binding remains BRIDGE-3.
 
+
+## Devices, ports and packets
+
+Coupling mode and precision level are per-run selections. This section is the
+modeling principle underneath both: what a device is, and what moves between
+devices. The full statement, with the port taxonomy and its measured ceilings,
+the producer taxonomy and its sources, the mapping from landed assets to model
+roles, the calibration doctrine and the tasks that close the remaining gaps, is
+[design/packet-device-model.md](design/packet-device-model.md).
+
+1. **A device is typed ports plus a service model.** A port carries protocol
+   identity, direction, ceiling and the provenance of that ceiling; the service
+   model decides when a packet leaves and when it lands. An NVIDIA GPU has PCIe
+   ports and NVLink ports, an AMD ROCm GPU has PCIe ports and xGMI ports, a
+   Grace Hopper superchip replaces the GPU's host-side PCIe port with
+   NVLink-C2C, and an RNIC has PCIe ports and wire ports. These are one object
+   with different parameters, not four modeling techniques. A disabled port
+   keeps its interface with parameters inert or explicitly rejected, exactly as
+   a disabled RNIC module does.
+2. **Software stacks are the packet producers.** NCCL and RCCL decide how many
+   bytes cross which port in what order: a collective becomes ring steps, ring
+   steps become chunks, and a chunk becomes either a peer store on a GPU link
+   or a descriptor, doorbell, DMA and wire packets through the NIC. The
+   dynamically loaded net-plugin ABI those stacks share (`isend`, `irecv`,
+   `test`) is the seam where a producer meets a device.
+3. **A ceiling belongs to a port on an architecture; stack efficiency largely
+   transfers.** Per-GPU NVLink egress moves by exactly 1.5 times from the A100
+   `NV4` mesh to the GH200 `NV6` mesh, while ring all-reduce efficiency against
+   that ceiling moves from 71.0 to 74.9 percent, 3.9 percentage points across a
+   link generation. Calibration therefore carries the ceiling per architecture
+   and reuses the efficiency, and a port with no measured or declared profile
+   fails closed rather than borrowing another architecture's number.
+4. **Packetizing a leg is a precision level, so it keeps a byte-identical off
+   path.** The analytic closed forms this repository validated, the fluid
+   fabric serializer and the flat intra-node rate among them, stay selectable
+   and stay exact, and the contract in the next section applies to every
+   packetized leg added beside them.
+
+Today the NIC is modeled this way and the GPU is not: `RnicDevice` composes a
+work-queue core with an optional PCIe fabric, an optional host-memory registry
+and either an injected `NetworkPort` or an owned inert one, while the GPU's
+intra-node link is one flat per-GPU egress cursor with no port object, no peer
+identity and no packet. COMP-34, COMP-35, BACK-46, BACK-47, BACK-48 and TRAF-45
+own that difference.
 
 ## Precision levels and their contract
 
@@ -605,4 +650,4 @@ COMP-5, COMP-6 and advanced instruction/cache semantics in COMP-10 remain
 open. The inter-operation `DeviceRuntime` in CORE-4 is complete for the
 coordinated first coarse bypass profile and the frozen Tier B structural
 fixture, with its residual approximations registered as CORE-11 through
-CORE-14, CORE-16 and CORE-21.
+CORE-14, CORE-16 and CORE-21; CORE-21 has since closed.
