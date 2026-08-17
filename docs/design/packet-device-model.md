@@ -338,6 +338,17 @@ at compressing it.
   exactly the payload band where tensor-parallel activation exchanges live.
   `CollectiveBandwidthCurve` landed as the substrate and is inert: no shipped
   profile carries a curve, so no reported TTFT or TPOT moved.
+- The first cross-node measurement,
+  [crossnode_collective_envelope_v1](../../examples/crossnode_collective_envelope_v1/RESULTS.md),
+  sharpened the efficiency factor further: on that cluster's socket transport
+  with GPUDirect disabled, efficiency was not one scalar per stack. Four ports
+  bought 2.396 times on a point-to-point pair but over 4 times on the two
+  collectives, and adding ports lowered efficiency against the port ceiling,
+  so the doctrine's efficiency factor is per stack, collective and port count
+  (TRAF-49 owns the representation). The same run turned the dip into a
+  measured mechanism: NCCL's per-call log shows the LL to SIMPLE protocol
+  switch at the frozen payload boundary, across which completion time falls
+  as the payload grows. The intra-node NVLink evidence above is unchanged.
 
 The third part, which is really the safety rule, is that a port with no
 measured or declared profile fails closed. The repository already enforces this
