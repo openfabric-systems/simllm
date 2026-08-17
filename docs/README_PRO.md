@@ -169,10 +169,6 @@ Counted from the open-task sections of the module docs plus the closed list in [
 
 <!-- end task-progress -->
 
-<!-- end task-progress -->
-
-<!-- end task-progress -->
-
 ## Execution-fidelity order
 
 The implementation order is architectural, not just a feature ranking:

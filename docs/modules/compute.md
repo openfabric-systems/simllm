@@ -605,8 +605,8 @@ published per-SM unit counts, not measured.
 
 The GPU device composition entry point with typed PCIe and NVLink ports is
 landed and closes COMP-34. The
-[device-port study](../../examples/gpu_device_ports_v1/RESULTS.md) passes 15 of
-15 scored instances across four families with all 47 fatal guards holding: a
+[device-port study](../../examples/gpu_device_ports_v1/RESULTS.md) passes 11 of
+11 scored instances across four families with all 54 fatal guards holding: a
 declared host-link ceiling moves the job completion time of a `DmaWork`
 descriptor through the live CORE-4 chain by the exact registered amount, a
 declared peer-link ceiling moves the NVLink egress term of the accepted task-mix
@@ -614,13 +614,18 @@ cells onto values that study already published, the override never leaves the
 direction its port carries, and every accepted `gpu_task_mix`,
 `gpu_service_model` and `mixed_makespan_v1` artifact reproduces byte for byte
 through the composed device with default ports, locked by
-`tests/test_gpu_device_ports.py` with a mutation-sensitive negative control. Its
+`tests/test_gpu_device_ports.py` with a mutation control per artifact. Four
+further identity-path cells are retained as an unscored baseline register, which
+is the correction the study's own correction section records against its first
+publication of 15 of 15. Its
 residuals are COMP-40 (the ports declare capabilities but emit no packet event)
 and COMP-41 (no shipped profile carries a measured per-port ceiling). Finding F1
 of that study is a constraint on later registrations: halving the egress ceiling
 of the accepted ring cell added the full serialization delta with nothing hidden
 by overlap, because at eight warps per channel the kernel is already within 101
-cycles of its own egress bound.
+cycles of its own egress bound. Finding F3 is a constraint on how a freeze is
+written: entailment has to be checked per parameterized instance, because a
+relation can be unlosable in some of its cells and genuinely at risk in others.
 
 The
 [A100 environment qualification](../../examples/a100_environment_qualification_v1/RESULTS.md)
