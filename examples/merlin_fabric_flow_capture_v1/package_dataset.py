@@ -25,6 +25,7 @@ CELL_DIRS = {
     "i2-incast": "i2-incast",
     "i3-incast": "i3-incast",
     "j3-join": "j3-join",
+    "j2x-join": "j2x-join",
     "i4-incast": "i4-incast",
     "x4-incast": "x4-incast",
     "mx-gh2a": "mx-pair",

@@ -43,6 +43,9 @@ CELLS = {
     "i2-incast": (2, 180.0, [0.0, 0.0], 26.78),
     "i3-incast": (3, 180.0, [0.0, 0.0, 0.0], 26.78),
     "j3-join": (3, 240.0, [0.0, 60.0, 120.0], 26.78),
+    # Post-specified cell, added after freeze 1: descriptive statistics
+    # only, no scored relation reads it.
+    "j2x-join": (2, 180.0, [0.0, 60.0], 26.78),
     "i4-incast": (4, 180.0, [0.0, 0.0, 0.0, 0.0], 26.78),
     "x4-incast": (4, 180.0, [0.0, 0.0, 0.0, 0.0], 26.78),
     "mx-gh2a": (1, 60.0, [0.0], 26.78),
