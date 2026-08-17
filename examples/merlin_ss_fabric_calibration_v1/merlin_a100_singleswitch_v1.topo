@@ -1,0 +1,67 @@
+# Declared Merlin-shaped instance for the TRAF-51 calibration comparison.
+# Refined from the shipped UNVERIFIED placeholder
+# (third_party/htsim: htsim/sim/datacenter/topologies/ss_dragonfly/
+# merlin_a100_5node_4x200g.topo at the pinned fabric merge) using the
+# byte-locked capture dataset's discovery evidence
+# (examples/merlin_fabric_flow_capture_v1/dataset, manifest SHA-256
+# a6b7e61e294d87d76ce69ee7042e15c2eade99bbc8789e296377615d2bd4af88).
+#
+# Shape: the single-switch degenerate dragonfly p = 20, a = 1, h = 0,
+# g = 1. Five-node socket-level discovery determines the per-port rate,
+# the port count per node, and coarse pair latency; it cannot see beyond
+# one switch, so the smallest consistent shape is all twenty 200G ports
+# of the five A100 nodes (gpu101 to gpu105) on one Rosetta-class switch.
+# Endpoint numbering: host = node * 4 + port, node 0..4 in hostname
+# order gpu101..gpu105, port 0..3 in hsn order. Every parameter below
+# carries its provenance tag: measured (from the dataset's evidence
+# bytes), derived (arithmetic on measured values plus a stated public
+# framing model), declared (chosen with a stated reason, not Merlin
+# evidence).
+#
+# per-parameter provenance:
+#   hosts_per_router 20, routers_per_group 1, global_links_per_router 0,
+#     groups 1: declared-with-reason (smallest shape consistent with the
+#     five-node discovery; the progressive adaptive routing machinery is
+#     structurally unreachable at this shape and every delivery is
+#     same-router).
+#   host_link_gbps 200: measured (4 x Cray Cassini 1 SS11 200Gb 2P per
+#     node in every guards_before/after port inventory of the dataset).
+#   host_link_latency_ps 300000: declared-with-reason (physical
+#     propagation plus NIC serdes order for machine-room copper; the
+#     socket-level 8-byte one-way measurements, 18.98 to 25.60 us, are
+#     host-stack-dominated and only bound this term from above; at 8 MiB
+#     chunks the term is 0.09 percent of the fabric chunk time, so the
+#     calibration is insensitive to it; kept at the fixture default).
+#   switch_pipeline_ps 350000: declared-from-published-measurement (the
+#     350 ns mean Rosetta latency of De Sensi et al., SC'20, II-A; not
+#     measured on Merlin).
+#   rosetta_buffer_bytes 4194304: declared (Rosetta buffer sizing is
+#     unpublished; fixture default; solo-cell occupancy stays at the
+#     in-service packet scale, so the scored cells are insensitive).
+#   max_wire_packet_bytes 9038: derived (measured MTU 9000 on every hsn
+#     interface; TCP MSS 8948 at IPv4 plus TCP timestamps; Ethernet
+#     framing plus FCS, preamble and IFG give 9038 wire bytes per
+#     packet; the dataset's sender-side tx counter overhead of 0.64
+#     percent over payload is consistent with this framing family to
+#     within 0.2 percent). The harness overrides this knob per
+#     invocation; every scored invocation passes -wire_bytes 9038
+#     -header_bytes 90 so payload per packet is 8948 bytes.
+#   routing_seed 383530136519245852: declared (determinism identity,
+#     fixture default; routing is degenerate at this shape).
+#   congestion quantizers and advertisement cadence: left at the fabric
+#     header defaults; structurally unreachable at a single switch (no
+#     inter-switch links exist to advertise over).
+#
+# Status: declared instance for the calibration study; not a claim about
+# the site-wide Merlin dragonfly shape beyond what five nodes determine.
+topology dragonfly
+hosts_per_router 20
+routers_per_group 1
+global_links_per_router 0
+groups 1
+host_link_gbps 200
+host_link_latency_ps 300000
+switch_pipeline_ps 350000
+rosetta_buffer_bytes 4194304
+max_wire_packet_bytes 9038
+routing_seed 383530136519245852

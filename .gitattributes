@@ -38,3 +38,5 @@ examples/gpu_service_model/results.csv text eol=lf
 examples/rnic_gpu_endpoint_v1/results.csv text eol=lf
 examples/rnic_pcie_v1/results.csv text eol=lf
 examples/rnic_wq_v1/results.csv text eol=lf
+examples/merlin_ss_fabric_calibration_v1/*.md text eol=lf
+examples/merlin_ss_fabric_calibration_v1/*.topo text eol=lf
