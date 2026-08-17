@@ -56,10 +56,17 @@ already a device with typed ports: `RnicDevice` is composed from a work-queue
 core, an optional PCIe fabric, an optional host-memory registry and either an
 injected `NetworkPort` or an owned inert one, and a disabled module keeps its
 interface with parameters inert or rejected
-(`simllm/backends/rnic/include/simllm/rnic/rnic_device.h`). The GPU is not.
-It is a calibration profile whose intra-node link is one flat egress cursor
-(`NvlinkProfile` in `simllm/compute/gpu_model.py`), with no port object, no
-peer identity, no ingress term and no packet.
+(`simllm/backends/rnic/include/simllm/rnic/rnic_device.h`). The GPU is not. It
+is a calibration profile carrying two separate link mechanisms: one flat
+per-GPU egress cursor for SM stores (`NvlinkProfile`, whose egress opcode set
+is `ST` and `STG` only) and a set of per-direction copy-engine profiles that
+already price host-to-device, device-to-host, device-to-device and peer
+transfers with their own setup cost and bandwidth
+(`CopyDirectionProfile` and `CopyEngineProfile`, both in
+`simllm/compute/gpu_model.py`). Both are real service models with measured
+cells behind them. What neither has is a port object: no protocol identity, no
+declared capabilities, no ceiling provenance field, and no shared packet
+vocabulary.
 
 ## Port taxonomy
 
@@ -71,7 +78,7 @@ and
 
 | Port | Protocol | Where it appears | Ceiling and measurement | Provenance |
 |---|---|---|---|---|
-| Host link, PCIe | PCIe generation 4 by 16 | x86 host to A100, and the same fabric the RNIC sits on | 31.5 GB/s per direction nameplate; measured 26.78 GB/s host to device and 26.19 GB/s device to host on pinned 256 MiB transfers, i.e. 85.0 and 83.1 percent | first-party measured, A100 envelope |
+| Host link, PCIe | PCIe generation 4 by 16 on the measured node | x86 host to A100, over the same kind of fabric the RNIC sits on, though the modeled RNIC fabric defaults to generation 5 by 16, so this ceiling is the measured node's and not the modeled fabric's | 31.5 GB/s per direction nameplate; measured 26.78 GB/s host to device and 26.19 GB/s device to host on pinned 256 MiB transfers, i.e. 85.0 and 83.1 percent | first-party measured, A100 envelope |
 | Host link, C2C | NVLink-C2C | Grace host to Hopper GPU, replacing the PCIe host port | 450 GB/s per direction specification; measured 419.93 GB/s inbound (93.3 percent) and 169.96 GB/s outbound (37.8 percent), asymmetric by a factor 2.47 | first-party measured, GH200 envelope |
 | Peer link, NVLink3 | NVLink3, `NV4` mesh, 4 bonded links per ordered pair | A100 GPU to GPU inside a node | 100 GB/s per ordered pair and 300 GB/s per-GPU egress; measured 94.00 to 94.07 GB/s per pair (copy-engine wire efficiency 94.0 percent) and 281.65 GB/s on the three-way fan-out (93.9 percent) | first-party measured, A100 envelope |
 | Peer link, NVLink4 | NVLink4, `NV6` mesh, 6 bonded links per ordered pair | GH200 GPU to GPU inside a node | 150 GB/s per ordered pair and 450 GB/s per-GPU egress; measured 133.24 to 133.27 GB/s per pair (copy-engine wire efficiency 88.8 percent) and 398.71 GB/s on the fan-out (88.6 percent) | first-party measured, GH200 envelope |
@@ -140,19 +147,24 @@ completer is GPU memory, with no host bounce buffer in between. The repository
 already describes this placement in prose: the per-channel data FIFO lives in
 GPU memory and the NIC's payload DMA reads it directly over PCIe, while
 counters and flags stay host visible (see the full call loop in
-[README_PRO.md](../README_PRO.md#full-call-loop-default-setup)). Part of the
-vocabulary is already there too. `PcieEndpointKind` admits `GpuMemory`, the
-GPU-initiated submission shape labels its SQ, CQ and doorbell-record
-allocations with it, and every PCIe path configuration carries a `gpu_direct`
-analytical delay component.
+[README_PRO.md](../README_PRO.md#full-call-loop-default-setup)). That placement
+is not only prose: the accepted BACK-20 artifact
+(`examples/rnic_submission_v1/results.csv`) carries `data_endpoint` as
+`gpu_memory` under both the CPU-proxy and the GPU-initiated shape, with the
+proxy shape keeping SQ, CQ and doorbell records in host pinned memory, which is
+exactly the GPUDirect placement. The data region is the endpoint that matters
+for a NIC payload read, and the payload read really is issued against it, as a
+`PayloadRead` non-posted read on the shared fabric. Every PCIe path
+configuration also carries a `gpu_direct` analytical delay component.
 
-What is missing is the device on the other end. Tracked allocations are owned
-by the posting RNIC device, and a WQE data descriptor must resolve to a
-`DataRegion` that same device owns, so a payload read cannot name memory
-belonging to a separately modeled GPU. The GPU-direct term is also an
-analytical penalty whose occurrence is not yet mechanism-driven, which is
-BACK-16 precision scope. BACK-46 owns the composition half: a GPU attached to
-the same fabric as an endpoint with its own regions and its own claims.
+What is missing is the second device. The GPU-memory label today is a property
+of an allocation the posting RNIC device owns, and a WQE data descriptor must
+resolve to a `DataRegion` whose `device_owner_id` equals that device's, so
+there is no separately modeled GPU that owns the region, claims it on the
+fabric, or has its transactions accounted apart from the NIC's. The GPU-direct
+term is also an analytical penalty whose occurrence is not yet mechanism-driven,
+which is BACK-16 precision scope. BACK-46 owns the composition half: a GPU
+attached to the same fabric as an endpoint in its own right.
 
 ### NCCL P2P and SHM intra-node transports
 
@@ -236,10 +248,11 @@ already carries the endpoint and class vocabulary a shared fabric needs:
 `DeviceMemory`; and twelve service classes name what the transaction is for,
 including `UarDoorbell`, `DoorbellRecord`, `WqeRead`, `QpcIcm`, `PayloadRead`,
 `PayloadWrite` and `CqeWrite`
-(`simllm/backends/rnic/include/simllm/rnic/pcie_fabric.h`). The type system
-therefore already admits the GPUDirect leg. What is missing is composition:
-several RNIC devices may share one fabric, but a GPU cannot attach to it and
-own regions on it, so a NIC payload read has no GPU-owned completer to name.
+(`simllm/backends/rnic/include/simllm/rnic/pcie_fabric.h`). The vocabulary
+therefore already expresses the GPUDirect leg, and an accepted study already
+exercises it. What is missing is composition: several RNIC devices may share one
+fabric, but a GPU cannot attach to one, so the GPU-memory region a payload read
+names is owned by the reading NIC rather than by a modeled GPU.
 
 Four rules make the generalization concrete.
 
@@ -267,7 +280,8 @@ Four rules make the generalization concrete.
 | PCIe fabric | Shared transaction model with twelve service classes, finite credits, tags and buffers, analytical path penalties | `simllm/backends/rnic/include/simllm/rnic/pcie_fabric.h` | BACK-10 closed; BACK-16 and BACK-17 open; BACK-46 makes it multi-device |
 | Virtual host memory | Tracked QPC, ring, doorbell-record and data allocations with the QPC translation asymmetry | `simllm/backends/rnic/include/simllm/rnic/host_memory.h` | BACK-19 closed |
 | Submission shapes | Host CPU, CPU proxy from a GPU-written descriptor queue, and GPU-initiated rings with a GPU-owned CQ; producer work as timed GPU tasks | `simllm/backends/rnic/include/simllm/rnic/submission.h` | BACK-20 and BACK-27 closed; BACK-37 open for the GPU CQ consumer |
-| GPU service model and NVLink egress cursor | One flat per-GPU egress serializer shared by every NVLINK store, plus the ring-collective egress kernel | `NvlinkProfile` in `simllm/compute/gpu_model.py` | COMP-11 closed; COMP-31 open for peer topology, ingress and reduction lanes; COMP-34 adds the port objects |
+| GPU service model and NVLink egress cursor | One flat per-GPU egress serializer shared by every NVLINK store (opcodes `ST` and `STG`), plus the ring-collective egress kernel | `NvlinkProfile` in `simllm/compute/gpu_model.py`, launcher `nccl_ring_allreduce_launch` in `simllm/compute/nccl.py` | COMP-11 closed; COMP-31 open for peer topology, ingress and reduction lanes; COMP-34 adds the port objects |
+| GPU copy-engine service | Per-direction profiles with their own setup cost and bandwidth for host to device, device to host, device to device and peer transfers, and an estimate that rejects a direction the engine does not declare; this is the mechanism the measured copy-engine peer efficiencies calibrate | `CopyEngineProfile`, `CopyDirectionProfile` and `CopyEngineServiceModel` in `simllm/compute/gpu_model.py` | COMP-34 adds typed ports over these directions rather than replacing them |
 | NCCL stack skeleton | Name-mirrored communicator, planner, GPU FIFO, proxy, `ncclNet.isend` and `test`, verbs and doorbell, on one virtual clock | `simllm/compute/nccl_stack.py` | COMP-15 open; BACK-47 names the plugin seam as the producer boundary |
 | Host initiation | `HostInitiationModel` with the exact-zero ideal profile and calibrated launch-throughput profiles | `simllm/compute/host.py` | COMP-2 closed; COMP-28 open for the analytical submission fallback |
 | Analytic intra-node locality | Placement-driven local versus remote split, per-endpoint byte ledger, `max(egress, ingress)` endpoint load | `classify_step_locality` in `simllm/traffic/locality.py` | TRAF-10 and CORE-41 closed; CORE-48 open for cross-node ingress; TRAF-45 adds the packetized leg |
@@ -334,8 +348,11 @@ today are vendor nameplate.
 Landed and usable now: the modular RNIC device with typed ports (BACK-18), the
 shared PCIe transaction model (BACK-10), tracked virtual host memory (BACK-19),
 three submission shapes with GPU producer coupling (BACK-20, BACK-27), the ABI
-v2 packet and transport-control vocabulary (BACK-25, BACK-26), the flat NVLink
-egress cursor and ring egress kernel (COMP-11), the analytic locality split
+v2 packet and transport-control vocabulary (BACK-25, BACK-26), the GPUDirect
+data-region placement exercised by the accepted BACK-20 artifact, the flat
+NVLink egress cursor and ring egress kernel (COMP-11), the per-direction
+copy-engine service that the measured peer efficiencies calibrate, the analytic
+locality split
 (TRAF-10) with `max(egress, ingress)` endpoint load (CORE-41), and the
 name-mirrored NCCL stack skeleton on one virtual clock (first slice of
 COMP-15).
@@ -344,9 +361,9 @@ Registered by this document:
 
 | Task | Gap it owns |
 |---|---|
-| COMP-34 | The GPU has no device composition entry point and no port objects; its intra-node link is a flat scalar cursor with no peer identity and no ingress term. |
+| COMP-34 | The GPU has no device composition entry point and no typed port objects over its existing link mechanisms, so no protocol identity, declared capabilities, ceiling provenance or shared packet vocabulary. Peer topology, ingress service and reduction lanes stay with COMP-31. |
 | COMP-35 | No vendor port instantiation exists, so an AMD ROCm GPU cannot be expressed at all and an xGMI ceiling has no first-party or declared profile to fail closed against. |
-| BACK-46 | A GPU cannot attach to the modeled PCIe fabric and own regions on it, so the GPUDirect peer-to-peer leg, where the NIC reads GPU memory without a host bounce, has no completer to name even though `PcieEndpointKind::GpuMemory` exists. |
+| BACK-46 | The GPUDirect leg is already expressible and already exercised, with `data_endpoint` as `gpu_memory` in the accepted BACK-20 artifact, but the region is owned by the reading NIC: no separately modeled GPU attaches to the shared fabric, claims its own regions, or has its transactions accounted apart from the NIC's. |
 | BACK-47 | The mirrored NCCL stack boundary is not named as the plugin ABI seam, and its packet-emission half toward the GPU is unregistered while the half toward the NIC stops at zero-time events. |
 | BACK-48 | The ABI v2 packet vocabulary is reachable only through a wire port, so a non-wire port cannot emit an attempt, a TX boundary or an arrival in the same language. |
 | TRAF-45 | The intra-node leg has no packetized path behind the analytic locality off path, and the ingress term of a converging combine is still owned elsewhere (CORE-48 cross-node, COMP-31 local mechanism). |
@@ -388,7 +405,7 @@ claims cite the study or header inline above instead.
 | Claim | Source |
 |---|---|
 | NCCL loads `libnccl-net.so`; communication uses `isend`, `irecv` and `test`; `regMr` is called on all buffers "to allow RDMA NICs to prepare buffers"; the README is written against `ncclNet_v11`; device offload is requested through a valid `*sendDevComm` or `*recvDevComm` | NVIDIA, NCCL net plugin README, https://github.com/NVIDIA/nccl/blob/master/plugins/net/README.md |
-| The pinned NCCL release carries the same plugin member names at `src/include/plugin/net/net_v12.h` | NCCL release `v2.30.7-1`, commit `73cf112295c33aee2b895f329f592f2a9b4b0f97`, audited in [compute.md](../modules/compute.md#nccl-stack-name-audit) |
+| The audited NCCL release checkout carries the same plugin member names at `src/include/plugin/net/net_v12.h`; NCCL is not a submodule of this repository | NCCL release `v2.30.7-1`, commit `73cf112295c33aee2b895f329f592f2a9b4b0f97`, audited in [compute.md](../modules/compute.md#nccl-stack-name-audit) |
 | `NCCL_P2P_DISABLE` disables "the peer to peer (P2P) transport, which uses CUDA direct access between GPUs, using NVLink or PCI"; `NCCL_SHM_DISABLE` disables the shared-memory transport, which "is used between devices when peer-to-peer cannot happen, therefore, host memory is used" | NVIDIA, NCCL environment variables, https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html |
 | NCCL "supports a variety of interconnect technologies including PCIe, NVLINK, InfiniBand Verbs, and IP sockets" | NVIDIA, NCCL overview, https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/overview.html |
 | GPUDirect RDMA "enables a direct path for data exchange between the GPU and a third-party peer device using standard features of PCI Express" | NVIDIA, GPUDirect RDMA documentation, https://docs.nvidia.com/cuda/gpudirect-rdma/ |

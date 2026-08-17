@@ -1063,27 +1063,29 @@ created" statement stands and refers to different, never-registered work.
   its operation, WQE, byte range and terminal delivery or drop. The disabled
   path keeps packet identities backend-private and must preserve every
   accepted routing-lifetime, GOAL, completion and metric byte exactly.
-- BACK-46 (Completeness; P2; L): let the modeled PCIe fabric carry NIC, GPU and
-  host as endpoints of one fabric, including the GPUDirect peer-to-peer leg
-  where the NIC reads GPU memory without a host bounce. Part of the vocabulary
-  exists: `PcieEndpointKind` admits `GpuMemory`, the GPU-initiated submission
-  shape labels its SQ, CQ and doorbell-record allocations with it, and every
-  path configuration carries a `gpu_direct` analytical delay component. What is
-  missing is the device on the other end. Tracked allocations are owned by the
-  posting RNIC device and a WQE data descriptor must resolve to a `DataRegion`
-  that same device owns, so a payload read cannot name memory belonging to a
-  separately modeled GPU, and the placement this repository already describes
-  in prose, a per-channel data FIFO in GPU memory read directly by the NIC's
-  payload DMA while counters and flags stay host visible, cannot be
-  represented. The model needs the second attached device, ownership and claim
-  rules for its regions, and per-endpoint accounting that keeps the two
-  devices' transactions distinguishable. Acceptance: a payload
-  read whose completer is a GPU-owned region is charged on the shared fabric
-  under its own endpoint identity; the current host-memory-only configuration
-  preserves every accepted BACK-10, BACK-19 and BACK-20 row, timestamp, counter
-  and random draw exactly; a foreign-device region claim is rejected
-  transactionally with unchanged state; and the enabled leg changes an
-  end-to-end metric in the registered direction. Timing, occurrence and
+- BACK-46 (Completeness; P2; L): attach a separately modeled GPU to the shared
+  PCIe fabric, so NIC, GPU and host are endpoints of one fabric with their own
+  identities. The GPUDirect placement itself is not the gap: `GpuMemory` is a
+  legal endpoint for any allocation kind including `DataRegion`, the accepted
+  BACK-20 artifact already carries `data_endpoint` as `gpu_memory` under both
+  the CPU-proxy and the GPU-initiated shape, the payload read really is issued
+  against that allocation as a `PayloadRead` non-posted read, and every path
+  configuration carries a `gpu_direct` analytical delay component. What is
+  missing is the second device. The GPU-memory label is a property of an
+  allocation the posting RNIC device owns, since a WQE data descriptor must
+  resolve to a `DataRegion` whose `device_owner_id` equals that device's, so no
+  modeled GPU owns the region, claims it on the fabric, or has its transactions
+  accounted apart from the NIC's. Land that device: ownership and claim rules
+  for its regions, cross-device claim rejection, and per-endpoint accounting
+  that keeps the two devices' transactions distinguishable. Acceptance: a
+  payload read whose completer is a region owned by the modeled GPU is charged
+  on the shared fabric under that device's endpoint identity; the default
+  fabric configuration (`defaultPcieFabricConfig`, host stores and host-pinned
+  paths) stays the selected baseline and every accepted BACK-10, BACK-19 and
+  BACK-20 artifact stays byte-identical, including the rows whose data regions
+  are already labeled GPU memory; a foreign-device region claim is rejected
+  transactionally with unchanged state; and the enabled two-device leg changes
+  an end-to-end metric in the registered direction. Timing, occurrence and
   calibration defects of the enabled leg become BACK-16 precision scope. The
   design statement is
   [the packet-device model](../design/packet-device-model.md).

@@ -968,6 +968,10 @@ and an explicit reason:
   Intra-node collectives must compose with the NVLink-class egress model and
   stay off the fabric. Inter-node transfer and receive completion must project
   through CORE-4 and CORE-5 to `CompletionEvent`, `StepResult`, TTFT and TPOT.
+  Boundary against BACK-47: this task owns the stack's own calibrated service,
+  its receive leg and its metric projection, while BACK-47 owns the
+  device-facing packet-emission contract at the plugin ABI seam. Neither may
+  claim the other's half.
   Add the BACK-20 GPU-initiated leg behind the same upper interface while
   preserving the CPU-host proxy path as the default identity baseline. The
   VLLM-14 and SGL-11 simulated communicators remain the adapter callers that
@@ -975,11 +979,17 @@ and an explicit reason:
   so later captures, timing calibration and adapter traces align with this
   first slice.
 - COMP-34 (Completeness; P2; L): give the GPU a device composition entry point
-  with typed ports, mirroring the BACK-18 `RnicDevice` composition. Today the
-  GPU's intra-node link is `NvlinkProfile`, one flat per-GPU egress cursor with
-  no port object, no peer identity, no ingress term and no packet, and the GPU
-  has no PCIe port at all, so the host link and the peer link cannot be
-  configured, disabled or measured separately. Land first-class PCIe and
+  with typed ports, mirroring the BACK-18 `RnicDevice` composition. The link
+  mechanisms already exist and are separately selectable: `NvlinkProfile` is one
+  flat per-GPU egress cursor for SM stores and is individually disable-able, and
+  `CopyEngineProfile` carries per-direction `CopyDirectionProfile` entries for
+  host to device, device to host, device to device and peer transfers, each with
+  its own setup cost and bandwidth, while `CopyEngineServiceModel.estimate`
+  rejects a direction the engine does not declare and the runtime resolves a
+  peer direction from endpoint kind and rank. What is missing is the port object
+  over them: no protocol identity, no declared capabilities, no ceiling
+  provenance field and no shared packet vocabulary, so a port cannot be named,
+  negotiated or reported as a port. Land first-class PCIe and
   NVLink or xGMI port objects on the GPU service model, each carrying protocol
   identity, direction, ceiling, declared capabilities and the provenance of that
   ceiling, behind one versioned configuration. A disabled port keeps the
