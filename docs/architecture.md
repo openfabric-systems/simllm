@@ -473,6 +473,50 @@ abstract collective op.
    HTSIM-18, and child-process lifetime binding remains BRIDGE-3.
 
 
+## Devices, ports and packets
+
+Coupling mode and precision level are per-run selections. This section is the
+modeling principle underneath both: what a device is, and what moves between
+devices. The full statement, with the port taxonomy and its measured ceilings,
+the producer taxonomy and its sources, the mapping from landed assets to model
+roles, the calibration doctrine and the tasks that close the remaining gaps, is
+[design/packet-device-model.md](design/packet-device-model.md).
+
+1. **A device is typed ports plus a service model.** A port carries protocol
+   identity, direction, ceiling and the provenance of that ceiling; the service
+   model decides when a packet leaves and when it lands. An NVIDIA GPU has PCIe
+   ports and NVLink ports, an AMD ROCm GPU has PCIe ports and xGMI ports, a
+   Grace Hopper superchip replaces the GPU's host-side PCIe port with
+   NVLink-C2C, and an RNIC has PCIe ports and wire ports. These are one object
+   with different parameters, not four modeling techniques. A disabled port
+   keeps its interface with parameters inert or explicitly rejected, exactly as
+   a disabled RNIC module does.
+2. **Software stacks are the packet producers.** NCCL and RCCL decide how many
+   bytes cross which port in what order: a collective becomes ring steps, ring
+   steps become chunks, and a chunk becomes either a peer store on a GPU link
+   or a descriptor, doorbell, DMA and wire packets through the NIC. The
+   dynamically loaded net-plugin ABI those stacks share (`isend`, `irecv`,
+   `test`) is the seam where a producer meets a device.
+3. **A ceiling belongs to a port on an architecture; stack efficiency largely
+   transfers.** Per-GPU NVLink egress moves by exactly 1.5 times from the A100
+   `NV4` mesh to the GH200 `NV6` mesh, while ring all-reduce efficiency against
+   that ceiling moves from 71.0 to 74.9 percent, 3.9 percentage points across a
+   link generation. Calibration therefore carries the ceiling per architecture
+   and reuses the efficiency, and a port with no measured or declared profile
+   fails closed rather than borrowing another architecture's number.
+4. **Packetizing a leg is a precision level, so it keeps a byte-identical off
+   path.** The analytic closed forms this repository validated, the fluid
+   fabric serializer and the flat intra-node rate among them, stay selectable
+   and stay exact, and the contract in the next section applies to every
+   packetized leg added beside them.
+
+Today the NIC is modeled this way and the GPU is not: `RnicDevice` composes a
+work-queue core with an optional PCIe fabric, an optional host-memory registry
+and either an injected `NetworkPort` or an owned inert one, while the GPU's
+intra-node link is one flat per-GPU egress cursor with no port object, no peer
+identity and no packet. COMP-34, COMP-35, BACK-46, BACK-47, BACK-48 and TRAF-45
+own that difference.
+
 ## Precision levels and their contract
 
 Coupling mode says how much of the loop is closed. Precision level says

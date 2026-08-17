@@ -15,6 +15,7 @@ status and open tasks; nothing here overrides them.
 | Beginner map | [../README.md](../README.md) | About, quick start, demo studies, model inventory, milestones |
 | Developer map | this file | Process, fidelity order, simulated communication stack, module status, study index |
 | Full design | [architecture.md](architecture.md) | Components, vLLM/SGLang integration seams, manifest schemas, execution/resource boundary, GOAL trace format, coupling modes, metrics |
+| Design notes | [design/](design/) | Cross-cutting statements that outlive one change: the [packet-device model](design/packet-device-model.md) (devices with typed ports, software stacks as packet producers, port taxonomy, calibration doctrine) and the [HTSIM-9 wrapper package](design/htsim9-atlahs-flow-runtime-wrapper.md) |
 | Module truth | [modules/*.md](modules/) | Per-module design, current status, numbered open tasks |
 | Calibration sources | [papers/](papers/) | Literature anchors and evidence plans, including [message-size parameters](papers/msg-size-vs-bandwidth.md) and the [RNIC hardware/CX-7 boundary campaign](papers/rnic-hardware-calibration.md) |
 | Studies | [../examples/](../examples/) | Expectation provenance, run scripts, audited results, plots |
@@ -368,6 +369,20 @@ The pre-registered
 the refusal, the exact stamp round trip and the byte-identity evidence.
 
 ## Simulated communication stack
+
+Read this section through the device and port frame. Every box below is a
+device with typed ports, every downward arrow is a packet flow between two
+ports, and the stack in the middle is the producer that decides which bytes
+cross which port: PCIe between host, GPU and NIC, NVLink or xGMI between GPUs
+inside a node, and the wire port out to the fabric. The frame itself, its port
+taxonomy with measured ceilings, its calibration doctrine and the tasks that
+close its gaps are in
+[design/packet-device-model.md](design/packet-device-model.md). The call-loop
+graph below is one instantiation of that model, the NVIDIA one: NCCL as the
+producer, an NVLink peer port inside the node, and an RNIC reached over PCIe
+that drives a 400G wire port. An AMD instantiation substitutes RCCL and xGMI at
+those two places and is registered as
+[COMP-35](modules/compute.md#open-tasks), not built.
 
 The coupling modes reproduce the frameworks' real communication stack with
 the same functional names and interfaces, trimmed to the main path: the
