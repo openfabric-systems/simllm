@@ -67,6 +67,14 @@ per serving step.
   streams them). This is the COMP-1 groundwork: offline SASS runs
   populate per-family profile tables, and the step loop sums per-family
   estimates instead of pricing one opaque blob.
+- `GpuDeviceConfig` and `GpuDevice`: the versioned GPU composition entry point.
+  A device is an architecture profile plus typed `GpuPortConfig` ports, each
+  carrying protocol, role, direction, declared capabilities, an optional
+  declared ceiling and the provenance of the ceiling it ends up with.
+  `default_gpu_device_config` derives the port set an architecture's own
+  mechanisms already imply. With no declared ceiling, `GpuDevice.architecture`
+  is the input object itself, so `sm_scheduler_model()` and
+  `copy_engine_service()` reproduce every accepted artifact exactly.
 - `HostInitiationModel`: the exact-zero `ideal` profile, legacy additive
   constants, and two device-bound fixed-step launch-throughput profiles.
   `turing_cuda_graph(N)` and `turing_eager_host(N)` compose provider service
@@ -515,6 +523,59 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   not yet prove controlled-cell stability, dynamic tracing, Accel-Sim replay
   or a production kernel.
 
+## GPU device composition and typed ports
+
+The NIC has been a device with typed ports since BACK-18. The GPU now is too:
+`GpuDeviceConfig` composes an architecture profile with typed ports over the
+two link mechanisms that already exist, and adds nothing to their timing. The
+design statement is
+[the packet-device model](../design/packet-device-model.md); the validated slice
+is [gpu_device_ports_v1](../../examples/gpu_device_ports_v1/RESULTS.md).
+
+A port carries protocol (`pcie`, `nvlink_c2c`, `nvlink`, `xgmi`), role (host
+link or peer link), direction (ingress, egress or bidirectional, relative to the
+GPU), declared capabilities, and a ceiling with the provenance of that ceiling.
+The mechanism behind a capability stays authoritative: `copy_engine_transfer`
+names the per-direction `CopyDirectionProfile` entries of one `CopyEngineProfile`
+and `peer_store_egress` names the flat `NvlinkProfile` egress cursor.
+
+Four rules make the port layer safe to add under a byte-identical off path.
+
+1. **Reading a ceiling is not declaring one.** A port with no declared ceiling
+   reads its ceiling out of the mechanism and reports
+   `calibration_derived` provenance. A device whose ports declare no ceiling
+   returns the input architecture object itself, so every accepted timestamp,
+   counter and byte count is reproduced by object identity rather than by
+   equality. A declared ceiling replaces the mechanism parameter for the
+   directions that one port carries, and only those; the derived architecture is
+   renamed (`<profile>+<port>@<value>bpc`) so no artifact can claim the base
+   profile identity while carrying a rescoped parameter.
+2. **A disabled port is a declaration that is absent, not a mechanism that is
+   off.** Disabling a port never rescopes the copy engine or the egress cursor.
+   The port keeps its interface and is still reported with `not_applicable`
+   applicability, its own parameters are inert, and every request made of it is
+   rejected with a diagnostic naming it. A disabled port carrying a declared
+   ceiling is itself a configuration error.
+3. **One mechanism has one port authority.** Two enabled ports may not claim the
+   same copy direction of the same engine, and two may not claim the one
+   per-GPU egress cursor.
+4. **Anything without a mechanism fails closed at configuration time.** A
+   peer-store port on a calibration with no `nvlink` profile, a copy direction
+   the engine does not declare, an unknown engine, a `device_to_device` copy
+   (which stays inside one GPU and crosses no port), an xGMI port (COMP-35 owns
+   vendor instantiation), a transport-control capability such as ECN marking
+   (BACK-48 owns making the ABI v2 packet vocabulary reachable from a non-wire
+   port), and a single bidirectional port over two disagreeing mechanism
+   ceilings are all rejected during configuration rather than at first use. The
+   last of those is why the measured Grace C2C asymmetry, 419.93 GB/s inbound
+   against 169.96 GB/s outbound, has to be declared as two ports instead of one
+   averaged rate.
+
+The ports declare and negotiate; they do not emit packets. Carrying an extent
+and attempt identity in the ABI v2 vocabulary across a non-wire port is BACK-48
+with COMP-40 as its compute-side half, and attaching measured per-port ceilings
+to a shipped profile is COMP-41.
+
 ## Status
 
 Both providers, the transformer step model (fused and family-decomposed),
@@ -541,6 +602,30 @@ by graph order. The built-in
 A100/H100 profiles are unvalidated bootstrap seeds and do not establish
 production accuracy: their pipeline initiation intervals are derived from
 published per-SM unit counts, not measured.
+
+The GPU device composition entry point with typed PCIe and NVLink ports is
+landed and closes COMP-34. The
+[device-port study](../../examples/gpu_device_ports_v1/RESULTS.md) passes 11 of
+11 scored instances across four families with all 54 fatal guards holding: a
+declared host-link ceiling moves the job completion time of a `DmaWork`
+descriptor through the live CORE-4 chain by the exact registered amount, a
+declared peer-link ceiling moves the NVLink egress term of the accepted task-mix
+cells onto values that study already published, the override never leaves the
+direction its port carries, and every accepted `gpu_task_mix`,
+`gpu_service_model` and `mixed_makespan_v1` artifact reproduces byte for byte
+through the composed device with default ports, locked by
+`tests/test_gpu_device_ports.py` with a mutation control per artifact. Four
+further identity-path cells are retained as an unscored baseline register, which
+is the correction the study's own correction section records against its first
+publication of 15 of 15. Its
+residuals are COMP-40 (the ports declare capabilities but emit no packet event)
+and COMP-41 (no shipped profile carries a measured per-port ceiling). Finding F1
+of that study is a constraint on later registrations: halving the egress ceiling
+of the accepted ring cell added the full serialization delta with nothing hidden
+by overlap, because at eight warps per channel the kernel is already within 101
+cycles of its own egress bound. Finding F3 is a constraint on how a freeze is
+written: entailment has to be checked per parameterized instance, because a
+relation can be unlosable in some of its cells and genuinely at risk in others.
 
 The
 [A100 environment qualification](../../examples/a100_environment_qualification_v1/RESULTS.md)
@@ -929,6 +1014,29 @@ and an explicit reason:
   uncertainty; held-out ready-to-RNIC-visible latency must remain within that
   uncertainty. The ideal zero-cost profile remains the exact compatibility
   path.
+- COMP-41 (Precision; P2; M): attach measured per-port ceilings to a shipped
+  architecture profile. COMP-34 landed ports that carry a ceiling with its
+  provenance, but every ceiling reachable today is either read out of a
+  synthetic study calibration (`calibration_derived`) or declared by a study
+  (`model_configuration`); no shipped profile carries a `first_party_measured`
+  port ceiling, and the A100 and GH200 seed profiles declare no copy engine and
+  no NVLink profile at all, so they compose to a device with no ports. The
+  surrogate being replaced is the absence of a port ceiling on any shipped
+  profile. The identifying observables are the measured cells already published
+  by
+  [a100_hardware_envelope_v1](../../examples/a100_hardware_envelope_v1/RESULTS.md)
+  and
+  [gh200_hardware_envelope_v1](../../examples/gh200_hardware_envelope_v1/RESULTS.md):
+  26.78 GB/s host to device and 26.19 GB/s device to host on PCIe generation 4
+  by 16, 419.93 GB/s inbound against 169.96 GB/s outbound on Grace C2C, 94.00 to
+  94.07 GB/s per NVLink3 ordered pair with 281.65 GB/s of per-GPU egress, and
+  133.24 to 133.27 GB/s per NVLink4 pair with 398.71 GB/s of egress.
+  Acceptance: each shipped ceiling carries its envelope study as provenance and
+  its own validity window, the asymmetric host link is expressed as two ports
+  rather than one averaged rate, a request for an architecture with no measured
+  ceiling is rejected rather than borrowing another architecture's number, and
+  every accepted artifact stays byte-identical. This is P2 while no study
+  selects a measured port ceiling and becomes P1 when one does.
 
 ### Completeness
 
@@ -978,33 +1086,6 @@ and an explicit reason:
   must connect to this stack. Function and event identities must remain stable
   so later captures, timing calibration and adapter traces align with this
   first slice.
-- COMP-34 (Completeness; P2; L): give the GPU a device composition entry point
-  with typed ports, mirroring the BACK-18 `RnicDevice` composition. The link
-  mechanisms already exist and are separately selectable: `NvlinkProfile` is one
-  flat per-GPU egress cursor for SM stores and is individually disable-able, and
-  `CopyEngineProfile` carries per-direction `CopyDirectionProfile` entries for
-  host to device, device to host, device to device and peer transfers, each with
-  its own setup cost and bandwidth, while `CopyEngineServiceModel.estimate`
-  rejects a direction the engine does not declare and the runtime resolves a
-  peer direction from endpoint kind and rank. What is missing is the port object
-  over them: no protocol identity, no declared capabilities, no ceiling
-  provenance field and no shared packet vocabulary, so a port cannot be named,
-  negotiated or reported as a port. Land first-class PCIe and
-  NVLink or xGMI port objects on the GPU service model, each carrying protocol
-  identity, direction, ceiling, declared capabilities and the provenance of that
-  ceiling, behind one versioned configuration. A disabled port keeps the
-  interface with its parameters inert or explicitly rejected, never silently
-  rescoped, exactly as a disabled RNIC module does. The design statement is
-  [the packet-device model](../design/packet-device-model.md). Acceptance: the
-  composed GPU reproduces every accepted `gpu_service_model`, `gpu_task_mix` and
-  `mixed_makespan_v1` timestamp, counter and random draw byte for byte while its
-  ports carry the current effective parameters; a disabled port and a port asked
-  for a capability it does not advertise both reject at configuration time
-  rather than at first use; and enabling a port changes an end-to-end metric in
-  the registered direction. This is P2 while no study selects the port objects,
-  and becomes P1 when TRAF-45 or a vendor study opts into one. COMP-31 keeps the
-  local mechanism detail (peer topology, per-link routing, ingress service and
-  reduction lanes) and is not closed by this entry point.
 - COMP-35 (Completeness; P2; M): instantiate vendor ports, so an AMD ROCm GPU
   can be expressed at all. Once COMP-34 lands port objects, a vendor
   instantiation names the peer port xGMI rather than NVLink and the collective
@@ -1018,7 +1099,24 @@ and an explicit reason:
   unmeasured request is rejected with a diagnostic naming the missing profile
   and the port it belongs to; and every accepted NVIDIA cell stays
   byte-identical. This is P2 while no AMD study exists and becomes P1 when one
-  opts in.
+  opts in. COMP-34 landed the port objects and made the xGMI protocol nameable,
+  and it rejects an xGMI port at configuration time with a diagnostic naming
+  this task, so what remains is a declared xGMI ceiling with its own provenance
+  and validity window plus the RCCL producer naming.
+- COMP-40 (Completeness; P2; M): the landed GPU ports declare capabilities but
+  emit no packet event, so an intra-node leg still cannot report an extent, an
+  attempt, a TX boundary or an arrival in the same language a wire port uses.
+  The three transport-control capabilities (ECN marking, priority flow control,
+  congestion notification) exist today only to be rejected by name, and the
+  rejection diagnostic points at BACK-48. Boundary against BACK-48: that task
+  owns making the ABI v2 vocabulary reachable from a non-wire port at all, while
+  this one owns binding the GPU host and peer ports to it, including which
+  capabilities a GPU port may then honestly advertise. Acceptance: an intra-node
+  transfer emits session-unique extent and attempt identity through a GPU port,
+  loss, duplication and double-charged bytes are detectable from those events,
+  and the no-emission path preserves every accepted timestamp, counter and
+  artifact byte exactly. This is P2 while no study consumes port events and
+  becomes P1 when TRAF-45 packetizes the intra-node leg.
 
 ### Uncategorized
 
