@@ -79,10 +79,14 @@ def test_default_ports_reproduce_the_task_mix_artifacts_byte_for_byte(tmp_path):
 def test_the_byte_lock_sees_a_changed_port_ceiling(tmp_path):
     """The mutation-sensitive negative control for the lock above."""
 
-    study._run_task_mix(tmp_path, ceilings={"nvlink-peer-store": 8.0})
+    exit_code, _ = study._run_task_mix(tmp_path, ceilings={"nvlink-peer-store": 8.0})
 
     accepted = (TASK_MIX_DIR / "results.csv").read_bytes()
     assert (tmp_path / "results.csv").read_bytes() != accepted
+    # The mutated run must also fail its own accepted rows. Changed bytes alone
+    # could mean the harness stopped checking rather than that the mutation
+    # reached the mechanism.
+    assert exit_code != 0
 
 
 def test_default_ports_reproduce_the_service_model_artifact_byte_for_byte(tmp_path):
@@ -91,11 +95,32 @@ def test_default_ports_reproduce_the_service_model_artifact_byte_for_byte(tmp_pa
     assert (tmp_path / "results.csv").read_bytes() == SERVICE_MODEL_CSV.read_bytes()
 
 
+def test_the_service_model_lock_sees_a_changed_port_ceiling(tmp_path):
+    """That artifact's own negative control, added after the freeze."""
+
+    with pytest.raises(AssertionError):
+        study._run_service_model(
+            tmp_path / "results.csv", ceilings={"pcie-host-ingress-ce0": 32.0}
+        )
+    assert not (tmp_path / "results.csv").exists()
+
+
 def test_default_ports_reproduce_the_mixed_makespan_record_byte_for_byte():
     bare = study._mixed_makespan_record(composed=False)
     composed = study._mixed_makespan_record(composed=True)
 
     assert composed == bare
+
+
+def test_the_mixed_makespan_record_sees_a_changed_port_ceiling():
+    """That record's own negative control, added after the freeze."""
+
+    bare = study._mixed_makespan_record(composed=False)
+    mutated = study._mixed_makespan_record(
+        composed=True, ceilings={"nvlink-peer-store": 8.0}
+    )
+
+    assert mutated != bare
 
 
 @pytest.mark.parametrize(
@@ -129,7 +154,7 @@ def test_a_declared_ceiling_renames_the_derived_architecture():
     device = study._device(architecture, ceilings={"nvlink-peer-store": 8.0})
 
     assert device.architecture is not architecture
-    assert device.architecture.profile_id.endswith("+nvlink-peer-store@8bpc")
+    assert device.architecture.profile_id.endswith("+nvlink-peer-store@8.0bpc")
     assert (
         device.architecture.calibration.target_architecture_profile_id
         == device.architecture.profile_id
@@ -142,6 +167,120 @@ def test_a_declared_ceiling_renames_the_derived_architecture():
     assert "rescoped by simllm-gpu-device-v1" in (
         device.architecture.calibration.provenance.source
     )
+
+
+def test_a_rescope_carries_live_provenance_and_an_honest_uncertainty():
+    """A declared ceiling may not inherit a confidence or a date it did not earn."""
+
+    base = study.TASK_MIX.architecture()
+    measured = replace(
+        base,
+        calibration=replace(
+            base.calibration,
+            relative_uncertainty=0.02,
+            provenance=replace(
+                base.calibration.provenance,
+                created="2020-01-01",
+                references=("base-reference",),
+            ),
+        ),
+    )
+    config = GpuDeviceConfig(
+        device_id="rescoped",
+        ports=(
+            _peer_store_port(
+                capabilities=(
+                    GpuPortCapability.PEER_STORE_EGRESS,
+                    GpuPortCapability.CEILING_OVERRIDE,
+                ),
+                declared_ceiling=GpuPortCeiling(
+                    bytes_per_cycle=8.0,
+                    clock_hz=base.calibration.core_clock_hz,
+                    provenance=GpuPortCeilingProvenance.VENDOR_NAMEPLATE,
+                    source="vendor nameplate under test",
+                    reference="declared-reference",
+                    relative_uncertainty=0.30,
+                    created="2026-08-17",
+                ),
+            ),
+        ),
+    )
+
+    derived = GpuDevice(config, measured).architecture.calibration
+
+    assert derived.relative_uncertainty == 0.30
+    assert derived.provenance.created == "2026-08-17"
+    assert derived.provenance.references == ("base-reference", "declared-reference")
+    # the base calibration is untouched
+    assert measured.calibration.relative_uncertainty == 0.02
+    assert measured.calibration.provenance.created == "2020-01-01"
+
+
+def test_an_unmeasured_rescope_may_not_keep_a_measured_uncertainty():
+    base = study.TASK_MIX.architecture()
+    measured = replace(
+        base,
+        calibration=replace(base.calibration, relative_uncertainty=0.02),
+    )
+    config = GpuDeviceConfig(
+        device_id="inherited-confidence",
+        ports=(
+            _peer_store_port(
+                capabilities=(
+                    GpuPortCapability.PEER_STORE_EGRESS,
+                    GpuPortCapability.CEILING_OVERRIDE,
+                ),
+                declared_ceiling=GpuPortCeiling(
+                    bytes_per_cycle=8.0,
+                    clock_hz=base.calibration.core_clock_hz,
+                    provenance=GpuPortCeilingProvenance.MODEL_CONFIGURATION,
+                    source="declared under test",
+                    relative_uncertainty=0.01,
+                    created="2026-08-17",
+                ),
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="strictly wider uncertainty"):
+        GpuDevice(config, measured)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("relative_uncertainty", None, "without a relative"),
+        ("created", "", "without a created"),
+    ],
+)
+def test_a_declared_ceiling_must_state_its_confidence_and_date(field, value, match):
+    ceiling = GpuPortCeiling(
+        bytes_per_cycle=8.0,
+        clock_hz=1_000_000_000,
+        provenance=GpuPortCeilingProvenance.MODEL_CONFIGURATION,
+        source="test",
+        relative_uncertainty=0.0,
+        created="2026-08-17",
+    )
+
+    with pytest.raises(ValueError, match=match):
+        _peer_store_port(
+            capabilities=(
+                GpuPortCapability.PEER_STORE_EGRESS,
+                GpuPortCapability.CEILING_OVERRIDE,
+            ),
+            declared_ceiling=replace(ceiling, **{field: value}),
+        )
+
+
+def test_a_ceiling_read_from_the_mechanism_inherits_its_confidence_and_date():
+    architecture = study.TASK_MIX.architecture()
+    device = GpuDevice(default_gpu_device_config(architecture), architecture)
+    ceiling = device.port("nvlink-peer-store").ceiling
+
+    assert ceiling is not None
+    assert ceiling.relative_uncertainty == architecture.calibration.relative_uncertainty
+    assert ceiling.created == architecture.calibration.provenance.created
 
 
 def test_the_composed_services_are_the_real_service_classes():
@@ -181,6 +320,8 @@ def test_a_disabled_port_may_not_carry_a_declared_ceiling():
                 clock_hz=study.HOST_CLOCK_HZ,
                 provenance=GpuPortCeilingProvenance.MODEL_CONFIGURATION,
                 source="test",
+                relative_uncertainty=0.0,
+                created="2026-08-17",
             ),
         )
 
@@ -198,6 +339,8 @@ def test_a_declared_ceiling_requires_the_override_capability():
                 clock_hz=1_000_000_000,
                 provenance=GpuPortCeilingProvenance.MODEL_CONFIGURATION,
                 source="test",
+                relative_uncertainty=0.0,
+                created="2026-08-17",
             ),
         )
 
@@ -214,6 +357,8 @@ def test_a_declared_ceiling_may_not_claim_calibration_provenance():
                 clock_hz=1_000_000_000,
                 provenance=GpuPortCeilingProvenance.CALIBRATION_DERIVED,
                 source="test",
+                relative_uncertainty=0.0,
+                created="2026-08-17",
             ),
         )
 
@@ -233,6 +378,8 @@ def test_a_declared_ceiling_must_match_the_mechanism_clock():
                     clock_hz=500_000_000,
                     provenance=GpuPortCeilingProvenance.MODEL_CONFIGURATION,
                     source="test",
+                    relative_uncertainty=0.0,
+                    created="2026-08-17",
                 ),
             ),
         ),
@@ -352,6 +499,74 @@ def test_one_mechanism_has_one_port_authority():
                 _peer_store_port(port_id="b"),
             ),
         )
+
+
+def test_one_port_may_not_read_two_disagreeing_mechanism_ceilings():
+    """The rejection the docs cite for the measured Grace C2C asymmetry."""
+
+    architecture = study.host_architecture()
+    asymmetric = replace(
+        architecture,
+        calibration=replace(
+            architecture.calibration,
+            copy_engines=(
+                replace(
+                    architecture.copy_engines[0],
+                    direction_profiles=(
+                        replace(
+                            architecture.copy_engines[0].direction_profiles[0],
+                            bandwidth_bytes_per_cycle=64.0,
+                        ),
+                        replace(
+                            architecture.copy_engines[0].direction_profiles[1],
+                            bandwidth_bytes_per_cycle=26.0,
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+    config = GpuDeviceConfig(
+        device_id="asymmetric-host",
+        ports=(
+            GpuPortConfig(
+                port_id="pcie-host",
+                protocol=GpuPortProtocol.PCIE,
+                role=GpuPortRole.HOST_LINK,
+                direction=GpuPortDirection.BIDIRECTIONAL,
+                capabilities=(GpuPortCapability.COPY_ENGINE_TRANSFER,),
+                copy_engine_id="ce0",
+                copy_directions=(
+                    CopyDirection.HOST_TO_DEVICE,
+                    CopyDirection.DEVICE_TO_HOST,
+                ),
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="ceilings disagree"):
+        GpuDevice(config, asymmetric)
+
+
+def test_a_bidirectional_port_must_name_every_direction_of_its_link():
+    architecture = study.host_architecture()
+    config = GpuDeviceConfig(
+        device_id="half-bidirectional",
+        ports=(
+            GpuPortConfig(
+                port_id="pcie-host",
+                protocol=GpuPortProtocol.PCIE,
+                role=GpuPortRole.HOST_LINK,
+                direction=GpuPortDirection.BIDIRECTIONAL,
+                capabilities=(GpuPortCapability.COPY_ENGINE_TRANSFER,),
+                copy_engine_id="ce0",
+                copy_directions=(CopyDirection.HOST_TO_DEVICE,),
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="does not name every copy direction"):
+        GpuDevice(config, architecture)
 
 
 def test_a_direction_and_its_copy_direction_must_agree():

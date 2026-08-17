@@ -38,11 +38,24 @@ Two semantics are load bearing and are easy to get wrong:
    those, and the derived architecture is renamed so no artifact can claim the
    base profile identity while carrying a rescoped parameter.
 
+A declared ceiling also carries the confidence its rescoped estimates may claim
+and the date it was declared, because a rescoped calibration must not keep the
+uncertainty the base calibration earned by measurement. See
+:func:`_rescoped_uncertainty` for the rule and
+:meth:`GpuDevice._effective_architecture` for the derived provenance, which
+folds the declared ceiling's reference into the emitted reference list.
+
 Everything a port cannot do fails closed at configuration time rather than at
 first use: a capability with no mechanism behind it, an xGMI port (COMP-35 owns
 vendor instantiation), a peer-store port on a calibration with no NVLink
-profile, a copy direction the engine does not declare, or two ports claiming
-one mechanism.
+profile, a copy direction the engine does not declare, a bidirectional port that
+names only part of its own link, or two ports claiming one mechanism.
+
+Error taxonomy, following `gpu_model`: a pure type mistake (a field that is not
+the required record, enum or string type) raises ``TypeError``, every
+configuration violation raises ``ValueError``, and ``KeyError`` is reserved for
+looking up an identifier that was never declared. The combined text helpers
+reject a non-string with ``TypeError`` and an empty string with ``ValueError``.
 
 Scope boundary. Peer topology, per-link routing, ingress service and reduction
 lanes stay with COMP-31. Making the ABI v2 packet vocabulary reachable from a
@@ -187,12 +200,20 @@ _COPY_DIRECTION_DIRECTIONS: dict[CopyDirection, tuple[GpuPortDirection, ...]] = 
 
 @dataclass(frozen=True, kw_only=True)
 class GpuPortCeiling:
-    """One port ceiling with the provenance of its value.
+    """One port ceiling with the provenance and the confidence of its value.
 
     The ceiling is carried in the mechanism's own unit, bytes per cycle of the
     mechanism's clock, so that a port that reads a mechanism parameter carries
     exactly that parameter and no rounded conversion of it.
     :attr:`bytes_per_second` is the derived physical reading.
+    ``bytes_per_cycle`` is normalized to ``float`` so one artifact column never
+    mixes integer and floating-point renderings across rows.
+
+    ``relative_uncertainty`` and ``created`` are what keep a declared ceiling
+    honest downstream. A declared ceiling must state both: the confidence its
+    rescoped estimates are allowed to claim, and the date the declaration was
+    made (this library never reads the clock). A ceiling read out of the
+    mechanism inherits the calibration's own values instead.
     """
 
     bytes_per_cycle: float
@@ -200,15 +221,19 @@ class GpuPortCeiling:
     provenance: GpuPortCeilingProvenance
     source: str
     reference: str = ""
+    relative_uncertainty: float | None = None
+    created: str = ""
 
     def __post_init__(self) -> None:
         _require_positive_number("bytes_per_cycle", self.bytes_per_cycle)
+        object.__setattr__(self, "bytes_per_cycle", float(self.bytes_per_cycle))
         _require_positive_int("clock_hz", self.clock_hz)
-        if not isinstance(self.provenance, GpuPortCeilingProvenance):
-            raise TypeError("provenance must be a GpuPortCeilingProvenance")
+        _require_enum("provenance", self.provenance, GpuPortCeilingProvenance)
         _require_text("source", self.source)
-        if not isinstance(self.reference, str):
-            raise TypeError("reference must be a string")
+        _require_optional_text("reference", self.reference)
+        _require_optional_text("created", self.created)
+        if self.relative_uncertainty is not None:
+            _require_nonnegative_number("relative_uncertainty", self.relative_uncertainty)
 
     @property
     def bytes_per_second(self) -> float:
@@ -363,6 +388,19 @@ class GpuPortConfig:
                 "calibration-derived provenance, which is reserved for a value "
                 "read out of the mechanism the port wraps"
             )
+        if self.declared_ceiling.relative_uncertainty is None:
+            raise ValueError(
+                f"port {self.port_id!r} declares a ceiling without a relative "
+                "uncertainty; a declared ceiling must state the confidence its "
+                "rescoped estimates may claim rather than inherit the "
+                "calibration's"
+            )
+        if not self.declared_ceiling.created:
+            raise ValueError(
+                f"port {self.port_id!r} declares a ceiling without a created "
+                "date; the derived provenance must carry the date the "
+                "declaration was made, and this library never reads the clock"
+            )
 
     def advertises(self, capability: GpuPortCapability) -> bool:
         _require_enum("capability", capability, GpuPortCapability)
@@ -512,6 +550,10 @@ class GpuPortReport:
     ceiling_clock_hz: int | None
     ceiling_provenance: str
     ceiling_source: str
+    ceiling_reference: str
+    ceiling_relative_uncertainty: float | None
+    ceiling_created: str
+    architecture_relative_uncertainty: float
 
 
 class GpuDevice:
@@ -608,6 +650,16 @@ class GpuDevice:
                     "" if port.ceiling is None else port.ceiling.provenance.value
                 ),
                 ceiling_source=("" if port.ceiling is None else port.ceiling.source),
+                ceiling_reference=(
+                    "" if port.ceiling is None else port.ceiling.reference
+                ),
+                ceiling_relative_uncertainty=(
+                    None if port.ceiling is None else port.ceiling.relative_uncertainty
+                ),
+                ceiling_created=("" if port.ceiling is None else port.ceiling.created),
+                architecture_relative_uncertainty=(
+                    self.architecture.calibration.relative_uncertainty
+                ),
             )
             for port in self._ports
         )
@@ -672,6 +724,7 @@ class GpuDevice:
             )
         if config.advertises(GpuPortCapability.COPY_ENGINE_TRANSFER):
             engine = self._copy_engine(config)
+            self._require_complete_bidirectional(config, engine)
             for direction in config.copy_directions:
                 if direction not in engine.directions:
                     declared = ", ".join(item.value for item in engine.directions)
@@ -710,7 +763,46 @@ class GpuDevice:
             source=(
                 f"{self.base_architecture.profile_id}/{calibration.calibration_id}"
             ),
+            # a ceiling read out of the mechanism inherits the mechanism's own
+            # confidence and date; it makes no claim of its own
+            relative_uncertainty=calibration.relative_uncertainty,
+            created=calibration.provenance.created,
         )
+
+    def _require_complete_bidirectional(
+        self,
+        config: GpuPortConfig,
+        engine: CopyEngineProfile,
+    ) -> None:
+        """Reject a bidirectional port that carries only part of its own link.
+
+        A bidirectional declaration says both directions cross this port, so its
+        single published ceiling governs both. A port that advertises both
+        directions and names one leaves the other governed by a ceiling nobody
+        published, which is the silent rescoping the disabled-port rule already
+        forbids. Declare one port per direction instead.
+        """
+
+        if config.direction is not GpuPortDirection.BIDIRECTIONAL:
+            return
+        expected = tuple(
+            direction
+            for direction in engine.directions
+            if _COPY_DIRECTION_ROLE.get(direction) is config.role
+        )
+        missing = tuple(
+            direction for direction in expected if direction not in config.copy_directions
+        )
+        if missing:
+            missing_text = ", ".join(item.value for item in missing)
+            expected_text = ", ".join(item.value for item in expected)
+            raise ValueError(
+                f"bidirectional port {config.port_id!r} does not name every copy "
+                f"direction its engine carries on role {config.role.value!r}; it "
+                f"omits {missing_text} out of {expected_text}. A bidirectional "
+                "port publishes one ceiling for both directions, so either name "
+                "them all or declare one port per direction"
+            )
 
     def _copy_engine(self, config: GpuPortConfig) -> CopyEngineProfile:
         assert config.copy_engine_id is not None
@@ -747,10 +839,21 @@ class GpuDevice:
         nvlink = calibration.nvlink
         engines = {engine.engine_id: engine for engine in calibration.copy_engines}
         suffix_parts: list[str] = []
+        uncertainty = calibration.relative_uncertainty
+        created = calibration.provenance.created
+        references = list(calibration.provenance.references)
         for port in overrides:
             ceiling = port.ceiling
             assert ceiling is not None
-            suffix_parts.append(f"{port.port_id}@{ceiling.bytes_per_cycle:g}bpc")
+            # repr, not format spec 'g': repr round-trips every float, so two
+            # rescopes that differ in the seventh significant digit cannot
+            # collide on one derived profile identity.
+            suffix_parts.append(f"{port.port_id}@{ceiling.bytes_per_cycle!r}bpc")
+            uncertainty = _rescoped_uncertainty(port, uncertainty)
+            assert ceiling.created
+            created = max(created, ceiling.created)
+            if ceiling.reference and ceiling.reference not in references:
+                references.append(ceiling.reference)
             if port.advertises(GpuPortCapability.PEER_STORE_EGRESS):
                 assert nvlink is not None
                 nvlink = replace(
@@ -779,6 +882,8 @@ class GpuDevice:
                 f"{calibration.provenance.source} (rescoped by "
                 f"{GPU_DEVICE_IMPLEMENTATION} port ceiling declaration)"
             ),
+            created=created,
+            references=tuple(references),
         )
         profile_id = f"{architecture.profile_id}{suffix}"
         derived_calibration = replace(
@@ -786,6 +891,7 @@ class GpuDevice:
             calibration_id=f"{calibration.calibration_id}{suffix}",
             target_architecture_profile_id=profile_id,
             provenance=provenance,
+            relative_uncertainty=uncertainty,
             nvlink=nvlink,
             copy_engines=tuple(
                 engines[engine.engine_id] for engine in calibration.copy_engines
@@ -874,9 +980,44 @@ def default_gpu_device_config(
     )
 
 
+def _rescoped_uncertainty(port: GpuPort, current: float) -> float:
+    """Return the uncertainty a rescoped calibration is allowed to claim.
+
+    The rule has one job: an estimate built on a declared ceiling must never
+    claim the confidence the calibration earned by measurement. A measured port
+    ceiling widens the calibration's uncertainty to the looser of the two. An
+    unmeasured one (a vendor nameplate or a study's own configuration) must
+    widen it strictly whenever the calibration claims any confidence at all, and
+    may match it only on a calibration that already claims none, which is what a
+    synthetic mechanism fixture declares.
+    """
+
+    ceiling = port.ceiling
+    assert ceiling is not None
+    assert ceiling.relative_uncertainty is not None
+    declared = ceiling.relative_uncertainty
+    if (
+        ceiling.provenance is not GpuPortCeilingProvenance.FIRST_PARTY_MEASURED
+        and current > 0.0
+        and declared <= current
+    ):
+        raise ValueError(
+            f"port {port.port_id!r} declares an unmeasured ceiling with relative "
+            f"uncertainty {declared!r} on a calibration claiming {current!r}; an "
+            f"unmeasured rescope must publish a strictly wider uncertainty than "
+            "the calibration it replaces a parameter of"
+        )
+    return max(current, declared)
+
+
 def _require_text(name: str, value: object) -> None:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
+
+
+def _require_optional_text(name: str, value: object) -> None:
+    if not isinstance(value, str):
+        raise TypeError(f"{name} must be a string")
 
 
 def _require_enum(name: str, value: object, enum_type: type[Enum]) -> None:
@@ -897,6 +1038,16 @@ def _require_positive_number(name: str, value: object) -> None:
         or value <= 0
     ):
         raise ValueError(f"{name} must be a positive finite number")
+
+
+def _require_nonnegative_number(name: str, value: object) -> None:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not math.isfinite(value)
+        or value < 0
+    ):
+        raise ValueError(f"{name} must be a non-negative finite number")
 
 
 __all__ = [

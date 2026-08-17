@@ -120,6 +120,12 @@ FROZEN_PHYSICAL_INTERVALS: dict[str, tuple[int, int, int]] = {
     "peer link 32 stores of 64 bytes at 16 bytes per cycle, cycles": (328, 328, 328),
 }
 
+#: A study-declared ceiling on a synthetic mechanism fixture claims no
+#: confidence, exactly as the fixture calibrations claim none. The device layer
+#: rejects a zero here on any calibration that does claim confidence.
+DECLARED_CEILING_UNCERTAINTY = 0.0
+DECLARED_CEILING_CREATED = "2026-08-17"
+
 #: the accepted artifacts the composed device must reproduce byte for byte
 TASK_MIX_ARTIFACTS = ("results.csv", "nccl_convergence.csv", "diagnostics.csv")
 
@@ -138,6 +144,13 @@ TASK_MIX_ACCEPTED_SUMMARY = (
 # Evidence classes. Only GENUINE_RISK rows enter a behavioral fraction.
 GENUINE_RISK = "behavioral-relation"
 FATAL_GUARD = "fatal-guard"
+#: A cell that runs the identity path, so it declares no ceiling and the device
+#: hands back the input architecture object. It reproduces a value the freeze
+#: registered, it is checked and it affects the exit status, but it cannot
+#: discriminate any registered failure mode of its family, so it is never
+#: scored. Post-run correction to the a3f9baf publication, which scored these
+#: four rows.
+BASELINE_REGISTER = "baseline-register"
 RAW_OBSERVATION = "raw-observation"
 RUN_CONFIGURATION = "run-configuration"
 
@@ -146,6 +159,7 @@ FAMILY_S2 = "S2 the override stays inside the direction its port carries"
 FAMILY_S3 = "S3 peer-link ceiling override moves the egress term"
 FAMILY_S4 = "S4 the ring cell under a halved peer ceiling"
 SCORED_FAMILIES = (FAMILY_S1, FAMILY_S2, FAMILY_S3, FAMILY_S4)
+FAMILY_BASELINE = "B1 identity-path baseline register, entailed and unscored"
 
 GUARD_BYTE_IDENTITY = "byte identity of the accepted artifacts"
 GUARD_MUTATION = "mutation sensitivity of the byte lock"
@@ -165,7 +179,7 @@ class Row:
 
     @property
     def is_predicate(self) -> bool:
-        return self.evidence_class in (GENUINE_RISK, FATAL_GUARD)
+        return self.evidence_class in (GENUINE_RISK, FATAL_GUARD, BASELINE_REGISTER)
 
     @property
     def passed(self) -> bool:
@@ -265,6 +279,8 @@ def _declared(
         provenance=GpuPortCeilingProvenance.MODEL_CONFIGURATION,
         source="gpu_device_ports_v1 study fixture, no silicon claim",
         reference="examples/gpu_device_ports_v1/expectations.md",
+        relative_uncertainty=DECLARED_CEILING_UNCERTAINTY,
+        created=DECLARED_CEILING_CREATED,
     )
 
 
@@ -290,14 +306,18 @@ def _scheduler_class(
     return ComposedSmSchedulerModel
 
 
-def _copy_class() -> type[CopyEngineServiceModel]:
+def _copy_class(
+    ceilings: dict[str, float] | None = None,
+) -> type[CopyEngineServiceModel]:
     """Return a real ``CopyEngineServiceModel`` subclass composed through a device."""
 
     class ComposedCopyEngineServiceModel(CopyEngineServiceModel):
+        port_ceilings = ceilings
+
         def __init__(
             self, architecture: GpuArchitectureProfile, engine_id: str
         ) -> None:
-            device = _device(architecture)
+            device = _device(architecture, ceilings=type(self).port_ceilings)
             super().__init__(device.architecture, engine_id)
             self.device = device
 
@@ -418,6 +438,8 @@ def host_device(*, ingress_ceiling: float | None = None) -> GpuDevice:
             provenance=GpuPortCeilingProvenance.MODEL_CONFIGURATION,
             source="gpu_device_ports_v1 study fixture, no silicon claim",
             reference="examples/gpu_device_ports_v1/expectations.md",
+            relative_uncertainty=DECLARED_CEILING_UNCERTAINTY,
+            created=DECLARED_CEILING_CREATED,
         )
     )
     config = GpuDeviceConfig(
@@ -483,7 +505,15 @@ def family_s1(rows: list[Row], raw: dict[str, Any]) -> None:
         measured = dma_jct_ps(device, byte_count=byte_count, to_device=True)
         case = f"bytes={byte_count},ceiling={ceiling:g}"
         observed[case] = measured
-        rows.append(Row(FAMILY_S1, GENUINE_RISK, case, expected, measured))
+        # A cell that declares no ceiling runs the identity path, which a fatal
+        # guard already pins, so it cannot discriminate this family's registered
+        # failure modes and is registered rather than scored.
+        if override is None:
+            rows.append(
+                Row(FAMILY_BASELINE, BASELINE_REGISTER, f"S1 {case}", expected, measured)
+            )
+        else:
+            rows.append(Row(FAMILY_S1, GENUINE_RISK, case, expected, measured))
     raw["s1_host_to_device_jct_ps"] = observed
 
 
@@ -522,7 +552,14 @@ def family_s3(rows: list[Row], raw: dict[str, Any]) -> None:
         measured = peer_egress_cycles(chunk_bytes=chunk, ceiling=override)
         case = f"chunk={chunk},ceiling={ceiling:g}"
         observed[case] = measured
-        rows.append(Row(FAMILY_S3, GENUINE_RISK, case, expected, measured))
+        # Same identity-path reasoning as S1. The chunk-64 cell is additionally
+        # byte-identical to the degenerate (328, 328, 328) physical-bounds guard.
+        if override is None:
+            rows.append(
+                Row(FAMILY_BASELINE, BASELINE_REGISTER, f"S3 {case}", expected, measured)
+            )
+        else:
+            rows.append(Row(FAMILY_S3, GENUINE_RISK, case, expected, measured))
     raw["s3_peer_egress_cycles"] = observed
 
 
@@ -713,8 +750,17 @@ def _run_task_mix(out: Path, *, ceilings: dict[str, float] | None) -> tuple[int,
     return exit_code, transcript
 
 
-def _run_service_model(out: Path) -> str:
-    """Run the accepted service-model harness through the composed device."""
+def _run_service_model(
+    out: Path,
+    *,
+    ceilings: dict[str, float] | None = None,
+) -> str:
+    """Run the accepted service-model harness through the composed device.
+
+    That harness raises on its own mismatch rather than returning an exit code,
+    so a mutated run is expected to raise; the caller decides what to do with
+    the exception.
+    """
 
     argv = [
         str(REPO_ROOT / "examples/gpu_service_model/run_gpu_service_model.py"),
@@ -725,8 +771,8 @@ def _run_service_model(out: Path) -> str:
     with (
         _rebound(
             (
-                (SERVICE_MODEL, "SmSchedulerModel", _scheduler_class()),
-                (SERVICE_MODEL, "CopyEngineServiceModel", _copy_class()),
+                (SERVICE_MODEL, "SmSchedulerModel", _scheduler_class(ceilings)),
+                (SERVICE_MODEL, "CopyEngineServiceModel", _copy_class(ceilings)),
                 (sys, "argv", argv),
             )
         ),
@@ -738,14 +784,20 @@ def _run_service_model(out: Path) -> str:
     return transcript
 
 
-def _mixed_makespan_record(*, composed: bool) -> bytes:
+def _mixed_makespan_record(
+    *,
+    composed: bool,
+    ceilings: dict[str, float] | None = None,
+) -> bytes:
     """Return the study's raw observation record, serialized exactly as it writes it."""
 
     import simllm.compute as compute_package
 
     bindings: tuple[tuple[Any, str, Any], ...] = ()
     if composed:
-        bindings = ((compute_package, "SmSchedulerModel", _scheduler_class()),)
+        bindings = (
+            (compute_package, "SmSchedulerModel", _scheduler_class(ceilings)),
+        )
     with _rebound(bindings):
         payload = {
             "component": MIXED_MAKESPAN.component_observations(),
@@ -757,11 +809,17 @@ def _mixed_makespan_record(*, composed: bool) -> bytes:
 def guard_mutation(rows: list[Row], raw: dict[str, Any], out: Path) -> None:
     """A byte lock that cannot see a mechanism change is not a lock."""
 
+    observations: dict[str, Any] = {}
+
     mutated = out / "mutation_control" / "gpu_task_mix"
     mutated.mkdir(parents=True, exist_ok=True)
-    _run_task_mix(mutated, ceilings={"nvlink-peer-store": 8.0})
+    exit_code, _ = _run_task_mix(mutated, ceilings={"nvlink-peer-store": 8.0})
     accepted = (REPO_ROOT / "examples" / "gpu_task_mix" / "results.csv").read_bytes()
     observed = (mutated / "results.csv").read_bytes()
+    observations["gpu_task_mix"] = {
+        "bytes_differ": observed != accepted,
+        "exit_code": exit_code,
+    }
     rows.append(
         Row(
             GUARD_MUTATION,
@@ -771,7 +829,65 @@ def guard_mutation(rows: list[Row], raw: dict[str, Any], out: Path) -> None:
             observed != accepted,
         )
     )
-    raw["mutation_control_bytes_differ"] = observed != accepted
+    # The mutated run must also fail its own accepted rows. A run that both
+    # changed the bytes and still reported success would mean the harness stopped
+    # checking, not that the mutation reached the mechanism.
+    rows.append(
+        Row(
+            GUARD_MUTATION,
+            FATAL_GUARD,
+            "the mutated gpu_task_mix run fails its own accepted rows",
+            True,
+            exit_code != 0,
+        )
+    )
+
+    # Post-freeze addition: the other two locks get their own control, so no
+    # byte-identity clause rests on an untested lock.
+    service_mutated = out / "mutation_control" / "gpu_service_model"
+    service_mutated.mkdir(parents=True, exist_ok=True)
+    service_raised = _raised(
+        lambda: _run_service_model(
+            service_mutated / "results.csv",
+            ceilings={"pcie-host-ingress-ce0": 32.0},
+        )
+    )
+    service_accepted = (
+        REPO_ROOT / "examples" / "gpu_service_model" / "results.csv"
+    ).read_bytes()
+    service_path = service_mutated / "results.csv"
+    service_differs = (
+        not service_path.exists() or service_path.read_bytes() != service_accepted
+    )
+    observations["gpu_service_model"] = {
+        "bytes_differ_or_absent": service_differs,
+        "raised": service_raised,
+    }
+    rows.append(
+        Row(
+            GUARD_MUTATION,
+            FATAL_GUARD,
+            "a halved host ceiling breaks gpu_service_model's own accepted rows",
+            ("AssertionError", True),
+            (service_raised, service_differs),
+        )
+    )
+
+    mixed_bare = _mixed_makespan_record(composed=False)
+    mixed_mutated = _mixed_makespan_record(
+        composed=True, ceilings={"nvlink-peer-store": 8.0}
+    )
+    observations["mixed_makespan_v1"] = {"record_differs": mixed_mutated != mixed_bare}
+    rows.append(
+        Row(
+            GUARD_MUTATION,
+            FATAL_GUARD,
+            "a halved peer ceiling changes the mixed_makespan_v1 record",
+            True,
+            mixed_mutated != mixed_bare,
+        )
+    )
+    raw["mutation_controls"] = observations
 
 
 def _rejects(rows: list[Row], case: str, action: Callable[[], object]) -> None:
@@ -797,6 +913,8 @@ def guard_rejection(rows: list[Row]) -> None:
         clock_hz=HOST_CLOCK_HZ,
         provenance=GpuPortCeilingProvenance.MODEL_CONFIGURATION,
         source="rejection fixture",
+        relative_uncertainty=DECLARED_CEILING_UNCERTAINTY,
+        created=DECLARED_CEILING_CREATED,
     )
 
     _rejects(
@@ -1146,6 +1264,72 @@ def guard_rejection(rows: list[Row]) -> None:
             copy_directions=(CopyDirection.DEVICE_TO_DEVICE,),
         ),
     )
+    # Post-freeze additions from the fix round: a bidirectional port that names
+    # only part of its own link, and the three clauses that keep a declared
+    # ceiling from inheriting a confidence or a date it did not earn.
+    _rejects(
+        rows,
+        "a bidirectional port naming only one direction of its own link",
+        lambda: GpuDevice(
+            GpuDeviceConfig(
+                device_id="half-bidirectional",
+                ports=(
+                    GpuPortConfig(
+                        port_id="pcie-host",
+                        protocol=GpuPortProtocol.PCIE,
+                        role=GpuPortRole.HOST_LINK,
+                        direction=GpuPortDirection.BIDIRECTIONAL,
+                        capabilities=(GpuPortCapability.COPY_ENGINE_TRANSFER,),
+                        copy_engine_id=HOST_ENGINE_ID,
+                        copy_directions=(CopyDirection.HOST_TO_DEVICE,),
+                    ),
+                ),
+            ),
+            architecture,
+        ),
+    )
+    _rejects(
+        rows,
+        "a declared ceiling with no relative uncertainty",
+        lambda: host_port(
+            port_id=HOST_INGRESS_PORT,
+            direction=GpuPortDirection.INGRESS,
+            copy_direction=CopyDirection.HOST_TO_DEVICE,
+            ceiling=replace(ceiling, relative_uncertainty=None),
+        ),
+    )
+    _rejects(
+        rows,
+        "a declared ceiling with no created date",
+        lambda: host_port(
+            port_id=HOST_INGRESS_PORT,
+            direction=GpuPortDirection.INGRESS,
+            copy_direction=CopyDirection.HOST_TO_DEVICE,
+            ceiling=replace(ceiling, created=""),
+        ),
+    )
+    measured_calibration = replace(
+        architecture,
+        calibration=replace(architecture.calibration, relative_uncertainty=0.02),
+    )
+    _rejects(
+        rows,
+        "an unmeasured rescope that does not widen a measured calibration",
+        lambda: GpuDevice(
+            GpuDeviceConfig(
+                device_id="uncertainty-inheritance",
+                ports=(
+                    host_port(
+                        port_id=HOST_INGRESS_PORT,
+                        direction=GpuPortDirection.INGRESS,
+                        copy_direction=CopyDirection.HOST_TO_DEVICE,
+                        ceiling=replace(ceiling, relative_uncertainty=0.01),
+                    ),
+                ),
+            ),
+            measured_calibration,
+        ),
+    )
     # The mechanism's own first-use rejection is untouched by the port layer.
     peer_device = _device(peer_architecture)
     rows.append(
@@ -1303,7 +1487,7 @@ def report_run_configurations(rows: list[Row], raw: dict[str, Any]) -> None:
         Row(
             "run configurations",
             RUN_CONFIGURATION,
-            "distinct device configurations executed by the scored families",
+            "distinct device configurations executed by the scored and register cells",
             configurations,
             configurations,
         )
@@ -1372,13 +1556,28 @@ def run_study(out: Path) -> int:
     guards = [row for row in rows if row.evidence_class == FATAL_GUARD]
     failed_guards = [row for row in guards if not row.passed]
     scored = [row for row in rows if row.evidence_class == GENUINE_RISK]
+    baseline = [row for row in rows if row.evidence_class == BASELINE_REGISTER]
+    failed_baseline = [row for row in baseline if not row.passed]
     void = bool(failed_guards)
+    guard_families = (
+        GUARD_BYTE_IDENTITY,
+        GUARD_MUTATION,
+        GUARD_REJECTION,
+        GUARD_APPLICABILITY,
+        "physical bounds",
+    )
 
     summary: dict[str, Any] = {
         "expectations_commit": EXPECTATIONS_COMMIT,
         "void": void,
         "fatal_guards_evaluated": len(guards),
+        "fatal_guards_by_family": {
+            family: sum(1 for row in guards if row.family == family)
+            for family in guard_families
+        },
         "fatal_guards_failed": [row.case for row in failed_guards],
+        "baseline_register_instances": len(baseline),
+        "baseline_register_failed": [row.case for row in failed_baseline],
         "scored_instances": None if void else len(scored),
         "scored_passed": None if void else sum(1 for row in scored if row.passed),
         "scored_families": None
@@ -1407,12 +1606,22 @@ def run_study(out: Path) -> int:
             print(f"  fatal fail: {row.family} / {row.case}")
         return 1
     print(f"fatal guards: {len(guards)} evaluated, none violated")
+    for family, count in summary["fatal_guards_by_family"].items():
+        print(f"  {count:3} {family}")
     print(
         f"scored {summary['scored_passed']} of {summary['scored_instances']} "
         f"genuine-risk instances across {len(SCORED_FAMILIES)} families"
     )
     for row in scored:
         print(f"  {row.status:4} {row.family[:2]} {row.case:52} {row.measured}")
+    print(
+        f"unscored baseline register: {len(baseline)} identity-path instances, "
+        f"{len(failed_baseline)} missed"
+    )
+    for row in baseline:
+        print(f"  {row.status:4} {row.case:52} {row.measured}")
+    if failed_baseline:
+        return 1
     return 0 if summary["scored_passed"] == summary["scored_instances"] else 1
 
 
