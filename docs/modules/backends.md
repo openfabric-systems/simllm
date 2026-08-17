@@ -435,7 +435,7 @@ relation instances with no fatal guard violated: the payload read of a
 GPU-owned region is charged to the GPU endpoint, the host-bounce arm completes
 later by exactly the staged serialization in all four cells, the staged
 transfers hit their closed form to the picosecond with zero credit and
-link-queue wait, nine cross-device rejections leave fabric and registry state
+link-queue wait, ten cross-device rejections leave fabric and registry state
 unchanged, and every accepted BACK-10, BACK-19 and BACK-20 artifact reproduces
 byte for byte from a rebuilt library. Every new field is inert at zero, so no
 version constant moved and `defaultPcieFabricConfig()` is unchanged. BACK-46
@@ -1097,7 +1097,7 @@ created" statement stands and refers to different, never-registered work.
   relation instances with no fatal guard violated: a payload read whose
   completer is a GPU-owned region is charged under endpoint identity 4002 while
   the host-bounce arm charges the host endpoint, the host-bounce arm's WQE
-  completes later by exactly the staged serialization in all four cells, nine
+  completes later by exactly the staged serialization in all four cells, ten
   cross-device rejections leave the fabric and registry state unchanged, and
   every accepted BACK-10, BACK-19 and BACK-20 artifact reproduces byte for byte
   from a rebuilt library, including the rows whose data regions are labeled GPU
