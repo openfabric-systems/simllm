@@ -18,6 +18,7 @@ import gzip
 import hashlib
 import json
 import os
+import re
 import shutil
 
 CELL_DIRS = {
@@ -46,6 +47,121 @@ def gzip_deterministic(src, dst):
         data = f.read()
     with open(dst, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as gz:
         gz.write(data)
+
+
+def parse_counters(path):
+    """tag -> {iface: (rx, tx)} from a byte_counters.txt."""
+    with open(path) as f:
+        text = f.read()
+    snaps = {}
+    for m in re.finditer(
+            r"epoch_ns=\d+ tag=(\S+)\n"
+            r"((?:iface=\S+ rx_bytes=\d+ tx_bytes=\d+\n)+)", text):
+        snaps[m.group(1)] = {
+            i: (int(rx), int(tx))
+            for i, rx, tx in re.findall(
+                r"iface=(\S+) rx_bytes=(\d+) tx_bytes=(\d+)", m.group(2))
+        }
+    return snaps
+
+
+def port_tx_deltas_homogeneous(job_dir):
+    """Per-node per-iface before-to-after deltas for a homogeneous cell."""
+    out = {}
+    for cf in sorted(glob.glob(os.path.join(job_dir, "node_*",
+                                            "byte_counters.txt"))):
+        node = os.path.basename(os.path.dirname(cf))
+        snaps = parse_counters(cf)
+        if "before" in snaps and "after" in snaps:
+            b, a = snaps["before"], snaps["after"]
+            out[node] = {
+                i: {"tx_delta_bytes": a[i][1] - b[i][1],
+                    "rx_delta_bytes": a[i][0] - b[i][0]}
+                for i in sorted(b) if i in a
+            }
+    return out
+
+
+def port_tx_deltas_mx(job_dir, phase):
+    """Per-side per-iface deltas around one mx phase from side.txt files."""
+    out = {}
+    for sf in sorted(glob.glob(os.path.join(job_dir, "*", "side.txt"))):
+        side = os.path.basename(os.path.dirname(sf))
+        with open(sf) as f:
+            text = f.read()
+        snaps = {}
+        for m in re.finditer(
+                r"counters tag=(\S+) epoch_ns=\d+\n"
+                r"((?:iface=\S+ rx_bytes=\d+ tx_bytes=\d+\n)+)", text):
+            snaps[m.group(1)] = {
+                i: (int(rx), int(tx))
+                for i, rx, tx in re.findall(
+                    r"iface=(\S+) rx_bytes=(\d+) tx_bytes=(\d+)",
+                    m.group(2))
+            }
+        b, a = snaps.get(f"before_{phase}"), snaps.get(f"after_{phase}")
+        if b and a:
+            out[side] = {
+                i: {"tx_delta_bytes": a[i][1] - b[i][1],
+                    "rx_delta_bytes": a[i][0] - b[i][0]}
+                for i in sorted(b) if i in a
+            }
+    return out
+
+
+def copy_guard_evidence(job_dir, out_dir, cell):
+    """Copy the files the analyzer re-derives every guard verdict from."""
+    # Homogeneous layout: transport summary, per-rank guards, samplers.
+    tp = os.path.join(job_dir, "transport_summary.txt")
+    if os.path.exists(tp):
+        shutil.copyfile(tp, os.path.join(out_dir, "transport_summary.txt"))
+    for gf in sorted(glob.glob(os.path.join(job_dir, "rank_*",
+                                            "guards_*.txt"))):
+        rank_dir = os.path.basename(os.path.dirname(gf))
+        dst_dir = os.path.join(out_dir, "guards", rank_dir)
+        os.makedirs(dst_dir, exist_ok=True)
+        shutil.copyfile(gf, os.path.join(dst_dir, os.path.basename(gf)))
+    # Heterogeneous layout: each side's side.txt carries the guard
+    # evidence, the counters snapshots and the transport section.
+    for sf in sorted(glob.glob(os.path.join(job_dir, "*", "side.txt"))):
+        side_dir = os.path.basename(os.path.dirname(sf))
+        dst_dir = os.path.join(out_dir, side_dir)
+        os.makedirs(dst_dir, exist_ok=True)
+        shutil.copyfile(sf, os.path.join(dst_dir, "side.txt"))
+    # Source pinning: the in-run hash record of the harness that produced
+    # the series.
+    sp = os.path.join(job_dir, "source.sha256")
+    if os.path.exists(sp):
+        shutil.copyfile(sp, os.path.join(out_dir, "source.sha256"))
+    # NCCL interface-selection lines from the debug logs (homogeneous) or
+    # the per-side logs (mx), a frozen deliverable of the study.
+    lines = set()
+    for lg in (glob.glob(os.path.join(job_dir, "nccl_debug*.log"))
+               + glob.glob(os.path.join(job_dir, "*", "nccl_debug*.log"))):
+        with open(lg, errors="replace") as f:
+            for line in f:
+                if ("NET/Socket : Using" in line
+                        or "Using network" in line
+                        or "via NET/" in line):
+                    lines.add(line.split("NCCL INFO ")[-1].strip())
+    if lines:
+        with open(os.path.join(out_dir, "nccl_interfaces.txt"), "w") as f:
+            for line in sorted(lines):
+                f.write(line + "\n")
+    # Established-socket samples (homogeneous cells carry a 1 Hz sampler).
+    counts = []
+    for smp in sorted(glob.glob(os.path.join(job_dir, "node_*",
+                                             "sampler_run.txt"))):
+        node = os.path.basename(os.path.dirname(smp))
+        with open(smp) as f:
+            vals = [int(x) for x in
+                    re.findall(r"tcp_established=(\d+)", f.read())]
+        if vals:
+            counts.append({"node": node, "samples": len(vals),
+                           "min": min(vals), "max": max(vals)})
+    if counts:
+        with open(os.path.join(out_dir, "socket_counts.json"), "w") as f:
+            json.dump(counts, f, indent=1, sort_keys=True)
 
 
 def newest_complete_job(base, cell):
@@ -103,6 +219,15 @@ def main():
             mp = os.path.join(job_dir, "mx_matrix.json")
             if os.path.exists(mp):
                 shutil.copyfile(mp, os.path.join(out_dir, "mx_matrix.json"))
+        copy_guard_evidence(job_dir, out_dir, cell)
+        if cell.startswith("mx-"):
+            deltas = port_tx_deltas_mx(job_dir, cell.split("-", 1)[1])
+        else:
+            deltas = port_tx_deltas_homogeneous(job_dir)
+        if deltas:
+            with open(os.path.join(out_dir, "port_tx_deltas.json"),
+                      "w") as f:
+                json.dump(deltas, f, indent=1, sort_keys=True)
 
     for path in sorted(glob.glob(os.path.join(args.dataset_dir, "**", "*"), recursive=True)):
         if os.path.isfile(path):

@@ -224,12 +224,20 @@
   }
  },
  "guards": {
+  "G1_port_inventory": true,
   "G1_socket_transport": true,
   "G2_timer_sanity": true,
   "G3_conservation": true,
-  "G5_ceilings": true
+  "G4_exclusive": true,
+  "G5_ceilings": true,
+  "G6_placement": true
  },
- "job_dir": "/data3/yifeng/simllm-dev/wave18-runs/w18b/results/capture/i2-incast/195729",
+ "hosts": [
+  "gpu102",
+  "gpu103",
+  "gpu105"
+ ],
+ "job_dir": "i2-incast/195729",
  "offsets_s": [
   0.0,
   0.0

@@ -1,0 +1,62 @@
+role=a100 host=gpu104 arch=x86_64 date=2026-08-17T16:05:11+02:00
+=== guard evidence before ===
+GPU 0: NVIDIA A100-SXM4-80GB (UUID: GPU-63febda5-47fa-a0f0-eaba-585d10d1f258)
+gpu=GPU-63febda5-47fa-a0f0-eaba-585d10d1f258, 210 MHz, 1593 MHz
+pid, process_name
+cassini_port_count=4
+ib_device_count=0
+0
+builds ok
+2f48011eae06b2868bbc2ae1369ba5ef274418b2822066b58226ad6f753915c6  /data/user/ext-wang_y1/simllm-data/wave18-capture/capture/mx-pair/195732/a100_gpu104/fabric_flow_lane
+d80b4c6c812103436dfd0b0bb3758e129eebf8a72391861e9d87c1b1a3db90cd  /data/user/ext-wang_y1/simllm-data/wave18-capture/capture/mx-pair/195732/a100_gpu104/disco_lane
+counters tag=before_matrix epoch_ns=1786975518203369796
+iface=hsn0 rx_bytes=45026012182761 tx_bytes=7913032172389
+iface=hsn1 rx_bytes=37904712187585 tx_bytes=8442178941474
+iface=hsn2 rx_bytes=55403521251283 tx_bytes=8499064960843
+iface=hsn3 rx_bytes=54642579261143 tx_bytes=7702759073869
+[disco] rank 0 of 2 on gpu104 device 0 (NVIDIA A100-SXM4-80GB) nccl 23102 mode matrix
+[disco] wrote /data/user/ext-wang_y1/simllm-data/wave18-capture/capture/mx-pair/195732/mx_matrix.json
+[disco] rank 0 clean
+counters tag=after_matrix epoch_ns=1786975524363651132
+iface=hsn0 rx_bytes=45026184860451 tx_bytes=7913033763203
+iface=hsn1 rx_bytes=37904712191525 tx_bytes=8442178945312
+iface=hsn2 rx_bytes=55404177267430 tx_bytes=8501186324035
+iface=hsn3 rx_bytes=54642579270327 tx_bytes=7702759082979
+phase matrix rc=0
+counters tag=before_gh2a epoch_ns=1786975524385553874
+iface=hsn0 rx_bytes=45026184860451 tx_bytes=7913033763203
+iface=hsn1 rx_bytes=37904712191525 tx_bytes=8442178945312
+iface=hsn2 rx_bytes=55404178072966 tx_bytes=8501186348451
+iface=hsn3 rx_bytes=54642579270327 tx_bytes=7702759082979
+[lane] cell mx-gh2a rank 0 of 2 on gpu104 device 0 (NVIDIA A100-SXM4-80GB, 0000:C1:00.0) role dest nccl 23102
+[lane] rank 0 tracer floor p50 13.911 us p95 24.437 us
+[lane] rank 0 T0 raw 5464215410444672 realtime 1786975525608004259
+[lane] rank 0 clean
+counters tag=after_gh2a epoch_ns=1786975586639224830
+iface=hsn0 rx_bytes=45032823112509 tx_bytes=7913080689175
+iface=hsn1 rx_bytes=37904712252869 tx_bytes=8442179002068
+iface=hsn2 rx_bytes=55411775505680 tx_bytes=8501736219699
+iface=hsn3 rx_bytes=54642579330281 tx_bytes=7702759138725
+phase gh2a rc=0
+counters tag=before_a2gh epoch_ns=1786975586661140516
+iface=hsn0 rx_bytes=45032823112509 tx_bytes=7913080689175
+iface=hsn1 rx_bytes=37904712252869 tx_bytes=8442179002068
+iface=hsn2 rx_bytes=55411775505680 tx_bytes=8501736219699
+iface=hsn3 rx_bytes=54642579330281 tx_bytes=7702759138725
+[lane] cell mx-a2gh rank 1 of 2 on gpu104 device 0 (NVIDIA A100-SXM4-80GB, 0000:C1:00.0) role source nccl 23102
+[lane] rank 1 tracer floor p50 13.716 us p95 15.170 us
+[lane] rank 1 T0 raw 5464277548043842 realtime 1786975587748883718
+[lane] rank 1 clean
+counters tag=after_a2gh epoch_ns=1786975648767795616
+iface=hsn0 rx_bytes=45032823209197 tx_bytes=7913082746795
+iface=hsn1 rx_bytes=37904712305441 tx_bytes=8442179177530
+iface=hsn2 rx_bytes=55424019585705 tx_bytes=8703090503284
+iface=hsn3 rx_bytes=54642579383037 tx_bytes=7702759186373
+phase a2gh rc=0
+=== guard evidence after ===
+gpu=GPU-63febda5-47fa-a0f0-eaba-585d10d1f258, 1410 MHz, 1593 MHz
+=== transport summary ===
+      3 GDR 0
+      5 Using network Socket
+     12 via NET/Socket/0
+     12 via NET/Socket/0/Shared

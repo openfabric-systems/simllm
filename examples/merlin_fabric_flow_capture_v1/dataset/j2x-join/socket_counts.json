@@ -1,0 +1,20 @@
+[
+ {
+  "max": 660,
+  "min": 645,
+  "node": "node_gpu102",
+  "samples": 177
+ },
+ {
+  "max": 633,
+  "min": 618,
+  "node": "node_gpu103",
+  "samples": 176
+ },
+ {
+  "max": 628,
+  "min": 618,
+  "node": "node_gpu105",
+  "samples": 176
+ }
+]

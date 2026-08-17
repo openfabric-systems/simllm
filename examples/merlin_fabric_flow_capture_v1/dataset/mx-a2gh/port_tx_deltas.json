@@ -1,0 +1,38 @@
+{
+ "a100_gpu104": {
+  "hsn0": {
+   "rx_delta_bytes": 96688,
+   "tx_delta_bytes": 2057620
+  },
+  "hsn1": {
+   "rx_delta_bytes": 52572,
+   "tx_delta_bytes": 175462
+  },
+  "hsn2": {
+   "rx_delta_bytes": 12244080025,
+   "tx_delta_bytes": 201354283585
+  },
+  "hsn3": {
+   "rx_delta_bytes": 52756,
+   "tx_delta_bytes": 47648
+  }
+ },
+ "gh200_gpu003": {
+  "hsn0": {
+   "rx_delta_bytes": 20197190812,
+   "tx_delta_bytes": 100882542
+  },
+  "hsn1": {
+   "rx_delta_bytes": 173756,
+   "tx_delta_bytes": 176500
+  },
+  "hsn2": {
+   "rx_delta_bytes": 251259974,
+   "tx_delta_bytes": 7762934
+  },
+  "hsn3": {
+   "rx_delta_bytes": 58686,
+   "tx_delta_bytes": 58638
+  }
+ }
+}

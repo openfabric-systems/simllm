@@ -31,6 +31,7 @@ import itertools
 import json
 import math
 import os
+import re
 import statistics
 import sys
 
@@ -153,7 +154,12 @@ def analyze_cell(cell, job_dir):
 
     out = {
         "cell": cell,
-        "job_dir": job_dir,
+        # Two path components only, so the stats carry no machine-local
+        # absolute path (portability rule).
+        "job_dir": os.path.join(
+            os.path.basename(os.path.dirname(job_dir)),
+            os.path.basename(job_dir)),
+        "hosts": sorted({m.get("host") for m in rank_meta if m.get("host")}),
         "window_s": window,
         "offsets_s": offsets,
         "flows": {},
@@ -268,7 +274,9 @@ def analyze_cell(cell, job_dir):
             g5_ok = False
     # Homogeneous jobs write transport_summary.txt at the job root; the
     # heterogeneous mx job records its transport section inside each side's
-    # side.txt (and additionally enforces G1 in-job before exiting zero).
+    # side.txt (and additionally enforces the transport half of G1 in-job
+    # before exiting zero). The packager copies both kinds of file into the
+    # dataset, so the tracked dataset alone re-derives this verdict.
     transport = ""
     for tp in [os.path.join(job_dir, "transport_summary.txt"),
                *sorted(glob.glob(os.path.join(job_dir, "*", "side.txt")))]:
@@ -276,11 +284,74 @@ def analyze_cell(cell, job_dir):
             with open(tp) as f:
                 transport += f.read()
     g1_ok = ("Using network Socket" in transport) and ("GDR 1" not in transport)
+
+    # Port-inventory, exclusive-use and placement evidence. Sources: per-rank
+    # guards_before.txt (run tree rank_*/ layout or packaged guards/rank_*/
+    # layout) for homogeneous cells, side.txt per side for the mx cells.
+    guard_files = sorted(
+        glob.glob(os.path.join(job_dir, "rank_*", "guards_before.txt"))
+        + glob.glob(os.path.join(job_dir, "guards", "rank_*",
+                                 "guards_before.txt")))
+    side_files = sorted(glob.glob(os.path.join(job_dir, "*", "side.txt")))
+    port_counts = []
+    ib_counts = []
+    foreign_rows = 0
+    gpu_uuids = set()
+    evidence_units = 0
+    for gf in guard_files:
+        with open(gf) as f:
+            text = f.read()
+        evidence_units += 1
+        port_counts += [int(x) for x in
+                        re.findall(r"^cassini_port_count=(\d+)", text,
+                                   re.MULTILINE)]
+        ib_counts += [int(x) for x in
+                      re.findall(r"^ib_device_count=(\d+)", text,
+                                 re.MULTILINE)]
+        g4_section = text.split("=== G4 foreign processes ===")
+        if len(g4_section) > 1:
+            body = g4_section[1].split("=== G1 host NIC inventory ===")[0]
+            foreign_rows += len(re.findall(r"^\d+,", body, re.MULTILINE))
+        gpu_uuids |= set(re.findall(r"^gpu_uuid=(\S+)", text, re.MULTILINE))
+    for sf in side_files:
+        with open(sf) as f:
+            text = f.read()
+        evidence_units += 1
+        before = text.split("=== guard evidence before ===")
+        # The guard-before block of a side.txt ends where the build starts.
+        scope = before[1].split("builds ok")[0] if len(before) > 1 else text
+        port_counts += [int(x) for x in
+                        re.findall(r"cassini_port_count=(\d+)", scope)]
+        ib_counts += [int(x) for x in
+                      re.findall(r"ib_device_count=(\d+)", scope)]
+        # Foreign compute processes would appear as CSV data rows under the
+        # "pid, process_name" header inside this block.
+        apps = scope.split("pid, process_name")
+        if len(apps) > 1:
+            foreign_rows += len(re.findall(
+                r"^\d+,", apps[1].split("cassini_port_count")[0],
+                re.MULTILINE))
+        gpu_uuids |= set(re.findall(r"GPU-[0-9a-f-]+", scope))
+    ranks_expected = len([m for m in rank_meta
+                          if m.get("role") in ("dest", "source")])
+    g1_ports_ok = (evidence_units > 0
+                   and all(c == 4 for c in port_counts)
+                   and len(port_counts) >= evidence_units
+                   and all(c == 0 for c in ib_counts))
+    g4_ok = evidence_units > 0 and foreign_rows == 0
+    g6_ok = (evidence_units > 0
+             and len(gpu_uuids) >= max(ranks_expected, 1)
+             and len({m.get("host") for m in rank_meta
+                      if m.get("role") in ("dest", "source")})
+             >= min(ranks_expected, len(rank_meta)))
     out["guards"] = {
         "G1_socket_transport": g1_ok,
+        "G1_port_inventory": g1_ports_ok,
         "G2_timer_sanity": g2_ok,
         "G3_conservation": g3_ok,
+        "G4_exclusive": g4_ok,
         "G5_ceilings": g5_ok,
+        "G6_placement": g6_ok,
     }
 
     # E-T-1 inputs.
@@ -465,23 +536,35 @@ def evaluate_relations(cells):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--capture-root", required=True,
+    ap.add_argument("--capture-root", default=None,
                     help="directory holding capture/<cell>/<jobid>/ trees")
+    ap.add_argument("--dataset-root", default=None,
+                    help="analyze the packaged dataset directory instead of"
+                    " the raw capture tree; proves the tracked dataset alone"
+                    " re-derives every published verdict")
     ap.add_argument("--out", required=True, help="stats output directory")
     ap.add_argument("--mx-matrix", default=None,
                     help="mx_matrix.json for E-M-3, if the mixed cell ran")
     args = ap.parse_args()
 
+    if (args.capture_root is None) == (args.dataset_root is None):
+        ap.error("give exactly one of --capture-root or --dataset-root")
     os.makedirs(args.out, exist_ok=True)
     cells = {}
     for cell in CELLS:
-        base = os.path.join(args.capture_root, "capture",
-                            "mx-pair" if cell.startswith("mx-") else cell)
         stats = None
-        for job_dir in sorted(glob.glob(os.path.join(base, "*"))):
-            got = analyze_cell(cell, job_dir)
-            if got is not None:
-                stats = got  # latest complete run wins, deterministically
+        if args.dataset_root is not None:
+            job_dir = os.path.join(args.dataset_root, cell)
+            if os.path.isdir(job_dir):
+                stats = analyze_cell(cell, job_dir)
+        else:
+            base = os.path.join(args.capture_root, "capture",
+                                "mx-pair" if cell.startswith("mx-")
+                                else cell)
+            for job_dir in sorted(glob.glob(os.path.join(base, "*"))):
+                got = analyze_cell(cell, job_dir)
+                if got is not None:
+                    stats = got  # latest complete run wins
         cells[cell] = stats
         if stats is not None:
             with open(os.path.join(args.out, f"{cell}_stats.json"),
