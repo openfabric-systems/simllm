@@ -4,10 +4,12 @@
 #include <iterator>
 #include <limits>
 #include <map>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace simllm::rnic {
 namespace {
@@ -257,6 +259,52 @@ void validateAccessShape(
     }
 }
 
+bool deviceLocalEndpoint(PcieEndpointKind endpoint) noexcept {
+    return endpoint == PcieEndpointKind::GpuMemory
+        || endpoint == PcieEndpointKind::DeviceMemory;
+}
+
+struct AccessAttribution {
+    PcieEndpointAttribution access;
+    PcieEndpointAttribution metadata;
+};
+
+// The completer of an access is the identity that owns the memory it lands in:
+// the fabric's host endpoint for host-pinned memory and for every translation
+// read, the owning device's endpoint for device-local memory. An attributed
+// access whose completer does not resolve is rejected rather than silently
+// losing its charge. A host store crosses no link and carries no pair.
+AccessAttribution resolveAttribution(
+    const HostMemoryAccessRequest& request,
+    const HostMemoryAllocation& target,
+    PcieEndpointId host_endpoint_id,
+    std::optional<PcieEndpointId> owner_endpoint_id) {
+    if (request.requester_endpoint_id == 0
+        || request.operation == PcieOperation::HostStore) {
+        return AccessAttribution{};
+    }
+    if (host_endpoint_id == 0) {
+        throw std::invalid_argument(
+            "RNIC host-memory attribution requires a fabric host endpoint "
+            "identity");
+    }
+    const bool device_local = deviceLocalEndpoint(target.endpoint);
+    const PcieEndpointId completer = device_local
+        ? owner_endpoint_id.value_or(0)
+        : host_endpoint_id;
+    if (completer == 0) {
+        throw std::invalid_argument(
+            "RNIC host-memory device-local completer has no fabric endpoint "
+            "identity");
+    }
+    AccessAttribution attribution;
+    attribution.access = PcieEndpointAttribution{
+        request.requester_endpoint_id, completer};
+    attribution.metadata = PcieEndpointAttribution{
+        request.requester_endpoint_id, host_endpoint_id};
+    return attribution;
+}
+
 PcieTransactionRequest metadataRequest(
     const VirtualHostMemoryConfig& config,
     const HostMemoryAccessRequest& access,
@@ -299,23 +347,46 @@ public:
 class VirtualHostMemory::DeviceOwnerClaims {
 public:
     void claim(
-        const RnicDevice* owner,
-        HostMemoryDeviceOwnerId device_owner_id) {
+        PcieEndpointOwnerToken owner,
+        HostMemoryDeviceOwnerId device_owner_id,
+        PcieEndpointId endpoint_id,
+        PcieDeviceKind device_kind,
+        const std::vector<HostMemoryDeviceOwnerId>& peer_read_grants) {
         if (owner == nullptr || device_owner_id == 0) {
             throw std::invalid_argument(
                 "RNIC host-memory owner claim requires a device and identity");
         }
-        if (!claims_.emplace(device_owner_id, owner).second) {
+        if (device_kind != PcieDeviceKind::Rnic
+            && device_kind != PcieDeviceKind::Gpu) {
+            throw std::invalid_argument(
+                "only an RNIC or GPU device may claim a host-memory owner");
+        }
+        Claim claim;
+        claim.owner = owner;
+        claim.endpoint_id = endpoint_id;
+        claim.device_kind = device_kind;
+        for (const HostMemoryDeviceOwnerId peer : peer_read_grants) {
+            if (peer == 0 || peer == device_owner_id) {
+                throw std::invalid_argument(
+                    "RNIC host-memory peer grant must name another nonzero "
+                    "device owner");
+            }
+            if (!claim.peer_read_grants.insert(peer).second) {
+                throw std::invalid_argument(
+                    "duplicate RNIC host-memory peer grant");
+            }
+        }
+        if (!claims_.emplace(device_owner_id, std::move(claim)).second) {
             throw std::invalid_argument(
                 "RNIC host-memory device owner is already claimed");
         }
     }
 
     void release(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         HostMemoryDeviceOwnerId device_owner_id) noexcept {
         const auto found = claims_.find(device_owner_id);
-        if (found != claims_.end() && found->second == owner) {
+        if (found != claims_.end() && found->second.owner == owner) {
             claims_.erase(found);
         }
     }
@@ -325,30 +396,75 @@ public:
     }
 
     bool claimedBy(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         HostMemoryDeviceOwnerId device_owner_id) const noexcept {
         const auto found = claims_.find(device_owner_id);
-        return found != claims_.end() && found->second == owner;
+        return found != claims_.end() && found->second.owner == owner;
+    }
+
+    std::optional<PcieEndpointId> endpointId(
+        HostMemoryDeviceOwnerId device_owner_id) const noexcept {
+        const auto found = claims_.find(device_owner_id);
+        if (found == claims_.end() || found->second.endpoint_id == 0) {
+            return std::nullopt;
+        }
+        return found->second.endpoint_id;
+    }
+
+    std::optional<PcieDeviceKind> deviceKind(
+        HostMemoryDeviceOwnerId device_owner_id) const noexcept {
+        const auto found = claims_.find(device_owner_id);
+        if (found == claims_.end()) {
+            return std::nullopt;
+        }
+        return found->second.device_kind;
+    }
+
+    bool peerReadGranted(
+        HostMemoryDeviceOwnerId device_owner_id,
+        HostMemoryDeviceOwnerId peer_device_owner_id) const noexcept {
+        const auto found = claims_.find(device_owner_id);
+        return found != claims_.end()
+            && found->second.peer_read_grants.count(peer_device_owner_id) != 0;
     }
 
     void validateInvariants() const {
+        std::set<PcieEndpointId> endpoints;
         for (const auto& claim : claims_) {
-            if (claim.first == 0 || claim.second == nullptr) {
+            if (claim.first == 0 || claim.second.owner == nullptr
+                || (claim.second.device_kind != PcieDeviceKind::Rnic
+                    && claim.second.device_kind != PcieDeviceKind::Gpu)) {
                 throw std::logic_error(
                     "RNIC host-memory owner claim invariant failed");
+            }
+            if (claim.second.endpoint_id != 0
+                && !endpoints.insert(claim.second.endpoint_id).second) {
+                throw std::logic_error(
+                    "RNIC host-memory owners share a fabric endpoint");
+            }
+            if (claim.second.peer_read_grants.count(claim.first) != 0) {
+                throw std::logic_error(
+                    "RNIC host-memory owner granted itself peer access");
             }
         }
     }
 
 private:
-    std::map<HostMemoryDeviceOwnerId, const RnicDevice*> claims_;
+    struct Claim {
+        PcieEndpointOwnerToken owner{nullptr};
+        PcieEndpointId endpoint_id{0};
+        PcieDeviceKind device_kind{PcieDeviceKind::Rnic};
+        std::set<HostMemoryDeviceOwnerId> peer_read_grants;
+    };
+
+    std::map<HostMemoryDeviceOwnerId, Claim> claims_;
 };
 
 class VirtualHostMemory::RegistrationPlan::Impl {
 public:
     Impl(std::unique_ptr<VirtualHostMemory::Impl> candidate_value,
          std::uint64_t base_generation_value,
-         const RnicDevice* owner_value,
+         PcieEndpointOwnerToken owner_value,
          std::vector<HostMemoryDeviceOwnerId> owner_ids_value)
         : candidate(std::move(candidate_value)),
           base_generation(base_generation_value),
@@ -357,7 +473,7 @@ public:
 
     std::unique_ptr<VirtualHostMemory::Impl> candidate;
     std::uint64_t base_generation{0};
-    const RnicDevice* owner{nullptr};
+    PcieEndpointOwnerToken owner{nullptr};
     std::vector<HostMemoryDeviceOwnerId> owner_ids;
 };
 
@@ -386,7 +502,7 @@ VirtualHostMemory::RegistrationPlan VirtualHostMemory::planRegistrations(
 
 VirtualHostMemory::RegistrationPlan
 VirtualHostMemory::planClaimedRegistrations(
-    const RnicDevice* owner,
+    PcieEndpointOwnerToken owner,
     const std::vector<HostMemoryAllocation>& allocations,
     Picoseconds registered_at_ps) const {
     return planRegistrationsImpl(owner, allocations, registered_at_ps);
@@ -394,7 +510,7 @@ VirtualHostMemory::planClaimedRegistrations(
 
 VirtualHostMemory::RegistrationPlan
 VirtualHostMemory::planRegistrationsImpl(
-    const RnicDevice* owner,
+    PcieEndpointOwnerToken owner,
     const std::vector<HostMemoryAllocation>& allocations,
     Picoseconds registered_at_ps) const {
     if (allocations.empty()) {
@@ -537,8 +653,11 @@ void VirtualHostMemory::commit(RegistrationPlan&& plan) {
 }
 
 void VirtualHostMemory::claimDeviceOwner(
-    const RnicDevice* owner,
-    HostMemoryDeviceOwnerId device_owner_id) {
+    PcieEndpointOwnerToken owner,
+    HostMemoryDeviceOwnerId device_owner_id,
+    PcieEndpointId endpoint_id,
+    PcieDeviceKind device_kind,
+    const std::vector<HostMemoryDeviceOwnerId>& peer_read_grants) {
     if (device_owner_claims_->claimed(device_owner_id)) {
         throw std::invalid_argument(
             "RNIC host-memory device owner is already claimed");
@@ -547,11 +666,12 @@ void VirtualHostMemory::claimDeviceOwner(
         throw std::invalid_argument(
             "RNIC host-memory device owner has unclaimed live allocations");
     }
-    device_owner_claims_->claim(owner, device_owner_id);
+    device_owner_claims_->claim(
+        owner, device_owner_id, endpoint_id, device_kind, peer_read_grants);
 }
 
 void VirtualHostMemory::releaseDeviceOwner(
-    const RnicDevice* owner,
+    PcieEndpointOwnerToken owner,
     HostMemoryDeviceOwnerId device_owner_id) noexcept {
     device_owner_claims_->release(owner, device_owner_id);
 }
@@ -567,7 +687,7 @@ void VirtualHostMemory::teardownOwner(
 }
 
 void VirtualHostMemory::teardownClaimedOwner(
-    const RnicDevice* owner,
+    PcieEndpointOwnerToken owner,
     HostMemoryDeviceOwnerId device_owner_id,
     Picoseconds teardown_at_ps) {
     if (!device_owner_claims_->claimedBy(owner, device_owner_id)) {
@@ -635,9 +755,26 @@ void VirtualHostMemory::teardownOwnerImpl(
 }
 
 bool VirtualHostMemory::deviceOwnerClaimedBy(
-    const RnicDevice* owner,
+    PcieEndpointOwnerToken owner,
     HostMemoryDeviceOwnerId device_owner_id) const noexcept {
     return device_owner_claims_->claimedBy(owner, device_owner_id);
+}
+
+std::optional<PcieEndpointId> VirtualHostMemory::deviceOwnerEndpointId(
+    HostMemoryDeviceOwnerId device_owner_id) const noexcept {
+    return device_owner_claims_->endpointId(device_owner_id);
+}
+
+std::optional<PcieDeviceKind> VirtualHostMemory::deviceOwnerKind(
+    HostMemoryDeviceOwnerId device_owner_id) const noexcept {
+    return device_owner_claims_->deviceKind(device_owner_id);
+}
+
+bool VirtualHostMemory::peerReadGranted(
+    HostMemoryDeviceOwnerId device_owner_id,
+    HostMemoryDeviceOwnerId peer_device_owner_id) const noexcept {
+    return device_owner_claims_->peerReadGranted(
+        device_owner_id, peer_device_owner_id);
 }
 
 HostMemoryAccessResult VirtualHostMemory::scheduleAccess(
@@ -678,6 +815,14 @@ HostMemoryAccessResult VirtualHostMemory::scheduleAccess(
             "RNIC host-memory translation metadata must be host-pinned");
     }
 
+    // Endpoint pairs resolve before any transaction enters the plan, so an
+    // unresolvable attribution rejects the whole access with no partial state.
+    const AccessAttribution attribution = resolveAttribution(
+        request,
+        target,
+        fabric_config.host_endpoint_id,
+        device_owner_claims_->endpointId(target.device_owner_id));
+
     const std::uint64_t absolute_offset = checkedAdd(
         target.virtual_address % target.pages.page_size_bytes,
         request.allocation_offset_bytes,
@@ -692,6 +837,10 @@ HostMemoryAccessResult VirtualHostMemory::scheduleAccess(
     HostMemoryAccessResult result;
     result.record.allocation_id = target.allocation_id;
     result.record.object_kind = target.object_kind;
+    result.record.requester_endpoint_id =
+        attribution.access.requester_endpoint_id;
+    result.record.completer_endpoint_id =
+        attribution.access.completer_endpoint_id;
     result.record.client_id = request.client_id;
     result.record.client_token = request.client_token;
     result.record.page_index = page_index;
@@ -708,7 +857,8 @@ HostMemoryAccessResult VirtualHostMemory::scheduleAccess(
                 request,
                 bytes,
                 first_byte_offset,
-                access_ready_at_ps));
+                access_ready_at_ps),
+            attribution.metadata);
         result.record.translation_stages.push_back(stage);
         result.record.translation_transaction_ids.push_back(
             transaction.transaction_id);
@@ -757,7 +907,8 @@ HostMemoryAccessResult VirtualHostMemory::scheduleAccess(
     access.first_byte_offset = static_cast<std::uint32_t>(
         (target.virtual_address + request.allocation_offset_bytes) % 4096);
     access.submitted_at_ps = access_ready_at_ps;
-    result.access_transaction = fabric.schedule(fabric_plan, access);
+    result.access_transaction = fabric.schedule(
+        fabric_plan, access, attribution.access);
     result.record.access_transaction_id =
         result.access_transaction.transaction_id;
     result.record.completed_at_ps =

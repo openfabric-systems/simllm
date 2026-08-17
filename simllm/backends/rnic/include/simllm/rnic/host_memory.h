@@ -105,6 +105,11 @@ struct HostMemoryAccessRequest {
     HostMemoryAllocationId allocation_id{0};
     std::optional<HostMemoryMkey> mkey;
     std::uint32_t client_id{0};
+    // Fabric endpoint identity of the device issuing the access. Zero leaves
+    // the access unattributed, which is how every accepted BACK-19 and BACK-20
+    // row was produced. A nonzero identity requires the completing endpoint to
+    // resolve, so an attributed access can never lose its completer silently.
+    PcieEndpointId requester_endpoint_id{0};
     std::uint64_t client_token{0};
     PcieServiceClass service_class{PcieServiceClass::Count};
     PcieOperation operation{PcieOperation::PostedWrite};
@@ -121,6 +126,10 @@ struct HostMemoryAccessRecord {
     std::uint32_t version{kHostMemoryAccessRecordVersion};
     HostMemoryAllocationId allocation_id{0};
     HostMemoryObjectKind object_kind{HostMemoryObjectKind::QpcIcm};
+    // Read-only projection of the endpoint pair the access was charged under.
+    // Both zero for an unattributed access.
+    PcieEndpointId requester_endpoint_id{0};
+    PcieEndpointId completer_endpoint_id{0};
     std::uint32_t client_id{0};
     std::uint64_t client_token{0};
     std::uint64_t page_index{0};
@@ -184,38 +193,53 @@ public:
     const HostMemoryAllocation& allocation(
         HostMemoryAllocationId allocation_id) const;
     const std::vector<HostMemoryLifecycleEvent>& lifecycleEvents() const noexcept;
+    // Fabric endpoint identity a claimed device owner attached with, absent
+    // when the owner is unclaimed or attached no endpoint.
+    std::optional<PcieEndpointId> deviceOwnerEndpointId(
+        HostMemoryDeviceOwnerId device_owner_id) const noexcept;
+    std::optional<PcieDeviceKind> deviceOwnerKind(
+        HostMemoryDeviceOwnerId device_owner_id) const noexcept;
+    // True when the region owner granted the peer read access to its data
+    // regions. Grants are one directional and declared by the owner.
+    bool peerReadGranted(
+        HostMemoryDeviceOwnerId device_owner_id,
+        HostMemoryDeviceOwnerId peer_device_owner_id) const noexcept;
     void validateInvariants() const;
 
 private:
     RegistrationPlan planClaimedRegistrations(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         const std::vector<HostMemoryAllocation>& allocations,
         Picoseconds registered_at_ps) const;
     RegistrationPlan planRegistrationsImpl(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         const std::vector<HostMemoryAllocation>& allocations,
         Picoseconds registered_at_ps) const;
     void claimDeviceOwner(
-        const RnicDevice* owner,
-        HostMemoryDeviceOwnerId device_owner_id);
+        PcieEndpointOwnerToken owner,
+        HostMemoryDeviceOwnerId device_owner_id,
+        PcieEndpointId endpoint_id,
+        PcieDeviceKind device_kind,
+        const std::vector<HostMemoryDeviceOwnerId>& peer_read_grants);
     void releaseDeviceOwner(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         HostMemoryDeviceOwnerId device_owner_id) noexcept;
     void teardownClaimedOwner(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         HostMemoryDeviceOwnerId device_owner_id,
         Picoseconds teardown_at_ps);
     void teardownOwnerImpl(
         HostMemoryDeviceOwnerId device_owner_id,
         Picoseconds teardown_at_ps);
     bool deviceOwnerClaimedBy(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         HostMemoryDeviceOwnerId device_owner_id) const noexcept;
 
     class Impl;
     class DeviceOwnerClaims;
     std::unique_ptr<Impl> impl_;
     std::unique_ptr<DeviceOwnerClaims> device_owner_claims_;
+    friend class GpuDevice;
     friend class RnicDevice;
 };
 

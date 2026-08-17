@@ -44,6 +44,12 @@ struct RnicDmaConfig {
     // an explicit pair requires zero. The resolved pair is 2 * namespace
     // plus the submission/completion bit.
     std::uint64_t shared_ordering_domain_namespace{0};
+    // Zero leaves the device unattributed on the fabric: its transactions are
+    // charged only to the service-class ledger, which is the shape every
+    // accepted BACK-10, BACK-19 and BACK-20 artifact was produced with. A
+    // nonzero identity is claimed on the fabric for this device's lifetime and
+    // requires the fabric to name a host endpoint identity.
+    PcieEndpointId fabric_endpoint_id{0};
 };
 
 struct RnicNetworkConfig {
@@ -60,6 +66,9 @@ struct RnicHostMemoryConfig {
     VirtualHostMemoryConfig registry;
     WorkQueueHostMemoryBinding work_queue;
     std::vector<HostMemoryAllocation> allocations;
+    // Device owners this device grants read access to its own data regions.
+    // Empty is the closed default: no other device may name them.
+    std::vector<HostMemoryDeviceOwnerId> peer_read_grants;
 };
 
 struct RnicDeviceConfig {
@@ -158,6 +167,11 @@ public:
     // requests do not advance that clock.
     PcieTransactionResult submitPcie(
         const PcieTransactionRequest& request);
+    // Rejects an attribution whose requester identity this device does not
+    // hold, so a probe cannot charge another device's endpoint.
+    PcieTransactionResult submitPcie(
+        const PcieTransactionRequest& request,
+        const PcieEndpointAttribution& attribution);
 
     std::optional<Picoseconds> nextEventTime() const;
     bool hasPendingPhysicalWork() const noexcept;
@@ -189,8 +203,13 @@ public:
 
 private:
     class InertNetworkPort;
+    // These check and advance the shared fabric clock as well as this device's
+    // own, so devices composed on one fabric must be driven in non-decreasing
+    // time order. See PcieFabric::validateSharedCallerTime for why silent
+    // absorption of a peer's backlog is refused instead.
     void validateCallerTime(Picoseconds now_ps) const;
     void observeCallerTime(Picoseconds now_ps);
+    void advanceCallerTime(Picoseconds now_ps);
     void requireHostMemoryLive() const;
 
     RnicDeviceConfig config_;
@@ -203,6 +222,7 @@ private:
     bool claimed_ordering_domains_{false};
     std::uint64_t claimed_submission_domain_{0};
     std::uint64_t claimed_completion_domain_{0};
+    bool claimed_fabric_endpoint_{false};
     bool claimed_host_memory_owner_{false};
     bool host_memory_registered_{false};
     Picoseconds last_caller_time_ps_{0};

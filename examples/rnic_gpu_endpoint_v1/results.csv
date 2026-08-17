@@ -1,0 +1,9 @@
+arm,payload_bytes,lane_count,data_endpoint,payload_completer_endpoint,payload_completer_kind,gpu_completer_transactions,gpu_completer_useful_bytes,gpu_requester_transactions,gpu_requester_useful_bytes,nic_requester_transactions,nic_requester_useful_bytes,host_completer_transactions,host_completer_useful_bytes,staging_transfers,staging_completed_ps,staging_link_bytes,staging_credit_wait_ps,staging_link_queue_wait_ps,wqe_admitted_ps,wqe_cqe_visible_ps,payload_read_transactions,attributed_requester_transactions,attributed_completer_transactions,invariants_valid
+host_bounce,4096,8,host_pinned_memory,4000,host,0,0,1,4096,8,4568,9,8664,1,142188,4480,0,0,303805,308249,1,9,9,1
+host_bounce,4096,16,host_pinned_memory,4000,host,0,0,1,4096,8,4568,9,8664,1,71094,4480,0,0,151905,154128,1,9,9,1
+host_bounce,16384,8,host_pinned_memory,4000,host,0,0,1,16384,8,16856,9,33240,1,568750,17920,0,0,1150835,1155279,1,9,9,1
+host_bounce,16384,16,host_pinned_memory,4000,host,0,0,1,16384,8,16856,9,33240,1,284375,17920,0,0,575420,577643,1,9,9,1
+gpu_direct,4096,8,gpu_memory,4002,gpu,1,4096,0,0,8,4568,7,472,0,0,0,0,0,161617,166061,1,8,8,1
+gpu_direct,4096,16,gpu_memory,4002,gpu,1,4096,0,0,8,4568,7,472,0,0,0,0,0,80811,83034,1,8,8,1
+gpu_direct,16384,8,gpu_memory,4002,gpu,1,16384,0,0,8,16856,7,472,0,0,0,0,0,582085,586529,1,8,8,1
+gpu_direct,16384,16,gpu_memory,4002,gpu,1,16384,0,0,8,16856,7,472,0,0,0,0,0,291045,293268,1,8,8,1
