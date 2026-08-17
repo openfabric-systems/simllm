@@ -1,0 +1,19 @@
+Channel 00/0 : 0[0] -> 1[0] [receive] via NET/Socket/1
+Channel 00/0 : 0[0] -> 1[0] [send] via NET/Socket/2
+Channel 00/0 : 1[0] -> 0[0] [receive] via NET/Socket/2
+Channel 00/0 : 1[0] -> 0[0] [send] via NET/Socket/1
+Channel 00/1 : 0[0] -> 1[0] [receive] via NET/Socket/1/Shared
+Channel 00/1 : 0[0] -> 1[0] [send] via NET/Socket/2/Shared
+Channel 00/1 : 1[0] -> 0[0] [receive] via NET/Socket/2/Shared
+Channel 00/1 : 1[0] -> 0[0] [send] via NET/Socket/1/Shared
+Channel 01/0 : 0[0] -> 1[0] [receive] via NET/Socket/1
+Channel 01/0 : 0[0] -> 1[0] [send] via NET/Socket/2
+Channel 01/0 : 1[0] -> 0[0] [receive] via NET/Socket/2
+Channel 01/0 : 1[0] -> 0[0] [send] via NET/Socket/1
+Channel 01/1 : 0[0] -> 1[0] [receive] via NET/Socket/1/Shared
+Channel 01/1 : 0[0] -> 1[0] [send] via NET/Socket/2/Shared
+Channel 01/1 : 1[0] -> 0[0] [receive] via NET/Socket/2/Shared
+Channel 01/1 : 1[0] -> 0[0] [send] via NET/Socket/1/Shared
+NET/Socket : Using [0]nmn0:10.100.28.28<0> [1]hsn0:172.30.136.144<0> [2]hsn1:172.30.136.145<0> [3]hsn2:172.30.136.146<0> [4]hsn3:172.30.136.147<0>
+NET/Socket : Using [0]nmn0:10.100.28.32<0> [1]hsn0:172.30.136.140<0> [2]hsn1:172.30.136.141<0> [3]hsn2:172.30.136.142<0> [4]hsn3:172.30.136.143<0>
+Using network Socket

@@ -1,0 +1,61 @@
+role=gh200 host=gpu003 arch=aarch64 date=2026-08-17T16:05:11+02:00
+=== guard evidence before ===
+GPU 0: NVIDIA GH200 120GB (UUID: GPU-9f227d80-aeb5-95ae-81f6-891974cf6685)
+gpu=GPU-9f227d80-aeb5-95ae-81f6-891974cf6685, 345 MHz, 2619 MHz
+pid, process_name
+cassini_port_count=4
+ib_device_count=0
+0
+builds ok
+a487aa057003d16c5d771ae807b3c03b5be4ad8f85b5b035e855c16bce522b80  /data/user/ext-wang_y1/simllm-data/wave18-capture/capture/mx-pair/195732/gh200_gpu003/fabric_flow_lane
+12d0730f945512e2c485f63037cf3f640ac68fded562915e1571f3152262751f  /data/user/ext-wang_y1/simllm-data/wave18-capture/capture/mx-pair/195732/gh200_gpu003/disco_lane
+counters tag=before_matrix epoch_ns=1786975515996546599
+iface=hsn0 rx_bytes=10870073957764 tx_bytes=5232179895803
+iface=hsn1 rx_bytes=9748680559290 tx_bytes=3861207933947
+iface=hsn2 rx_bytes=9464784634889 tx_bytes=4087948905859
+iface=hsn3 rx_bytes=9837306809011 tx_bytes=3942835160317
+[disco] rank 1 of 2 on gpu003 device 0 (NVIDIA GH200 120GB) nccl 23102 mode matrix
+[disco] rank 1 clean
+counters tag=after_matrix epoch_ns=1786975524122157280
+iface=hsn0 rx_bytes=10870296886932 tx_bytes=5232182067409
+iface=hsn1 rx_bytes=9748680564144 tx_bytes=3861207938141
+iface=hsn2 rx_bytes=9464785949504 tx_bytes=4089694300927
+iface=hsn3 rx_bytes=9837306812329 tx_bytes=3942835163143
+phase matrix rc=0
+counters tag=before_gh2a epoch_ns=1786975524135977281
+iface=hsn0 rx_bytes=10870296886932 tx_bytes=5232182067409
+iface=hsn1 rx_bytes=9748680564204 tx_bytes=3861207938195
+iface=hsn2 rx_bytes=9464785949504 tx_bytes=4089694300927
+iface=hsn3 rx_bytes=9837306812449 tx_bytes=3942835163251
+[lane] cell mx-gh2a rank 1 of 2 on gpu003 device 0 (NVIDIA GH200 120GB, 0009:01:00.0) role source nccl 23102
+[lane] rank 1 tracer floor p50 13.504 us p95 14.240 us
+[lane] rank 1 T0 raw 5458492449908672 realtime 1786975525608301654
+[lane] rank 1 clean
+counters tag=after_gh2a epoch_ns=1786975586428620307
+iface=hsn0 rx_bytes=10870297212560 tx_bytes=5232183323545
+iface=hsn1 rx_bytes=9748680807366 tx_bytes=3861208056335
+iface=hsn2 rx_bytes=9464838679626 tx_bytes=4162509994418
+iface=hsn3 rx_bytes=9837306857677 tx_bytes=3942835203569
+phase gh2a rc=0
+counters tag=before_a2gh epoch_ns=1786975586442346612
+iface=hsn0 rx_bytes=10870297212560 tx_bytes=5232183323545
+iface=hsn1 rx_bytes=9748680807366 tx_bytes=3861208056335
+iface=hsn2 rx_bytes=9464838682044 tx_bytes=4162509997386
+iface=hsn3 rx_bytes=9837306857677 tx_bytes=3942835203569
+[lane] cell mx-a2gh rank 0 of 2 on gpu003 device 0 (NVIDIA GH200 120GB, 0009:01:00.0) role dest nccl 23102
+[lane] rank 0 tracer floor p50 13.728 us p95 14.464 us
+[lane] rank 0 T0 raw 5458554592715968 realtime 1786975587748939958
+[lane] rank 0 clean
+counters tag=after_a2gh epoch_ns=1786975648574792334
+iface=hsn0 rx_bytes=10890494403372 tx_bytes=5232284206087
+iface=hsn1 rx_bytes=9748680981122 tx_bytes=3861208232835
+iface=hsn2 rx_bytes=9465089942018 tx_bytes=4162517760320
+iface=hsn3 rx_bytes=9837306916363 tx_bytes=3942835262207
+phase a2gh rc=0
+=== guard evidence after ===
+gpu=GPU-9f227d80-aeb5-95ae-81f6-891974cf6685, 1980 MHz, 2619 MHz
+=== transport summary ===
+      3 GDR 0
+      5 Using network Socket
+     12 via NET/Socket/0
+     12 via NET/Socket/0/Shared

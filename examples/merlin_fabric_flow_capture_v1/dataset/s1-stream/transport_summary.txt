@@ -1,0 +1,6 @@
+      2 GDR 0
+      4 Using network Socket
+      4 via NET/Socket/1
+      4 via NET/Socket/1/Shared
+      4 via NET/Socket/2
+      4 via NET/Socket/2/Shared

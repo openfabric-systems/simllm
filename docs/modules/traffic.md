@@ -207,6 +207,19 @@ the flow-level work the GOAL emitter renders.
   socket transport. The intra-node dip and this cross-node step are the same
   mechanism with opposite signs, and the boundary is observable at communicator
   init without any fitting.
+- The fabric side now has a first-party flow-level reference dataset: the
+  [Merlin fabric flow capture](../../examples/merlin_fabric_flow_capture_v1/RESULTS.md)
+  publishes byte-locked long-running NCCL per-chunk completion series over
+  the Cray Cassini Slingshot fabric (kernel socket transport, GDR
+  disabled): a 300-second solo stream at 4.991 GB/s steady, a degree-2
+  incast whose aggregate reaches 1.71 times the solo rate because each
+  flow rides its own source stack and destination port, a mixed
+  A100-plus-GH200 pair with a 2.77x direction asymmetry (the Grace-sourced
+  leg is the slow one), and a post-specified, unscored two-flow join in which the
+  established flow loses nothing at the join. It changes no profile, no
+  envelope and no reported metric; TRAF-51 owns the htsim comparison
+  against it and TRAF-52 the families still queued behind cluster
+  reservations.
 - Because the table is a surcharge on a transport that already contains one
   propagation delay, `realized_fixed_cost_ps` is what a run actually charges,
   and it exceeds a source capture that was itself a complete fixed cost by up
@@ -735,6 +748,50 @@ study reports all three arms rather than treating `lower` as `off`.
 
 ### Precision
 
+- TRAF-51 (Precision; P1; L): validate an htsim Slingshot-class fabric
+  instance against the wave-18 Merlin flow-capture reference dataset. The
+  [Merlin fabric flow capture](../../examples/merlin_fabric_flow_capture_v1/RESULTS.md)
+  publishes byte-locked long-running NCCL per-chunk completion series on
+  the Cray Cassini Slingshot fabric (kernel socket transport, GDR
+  disabled), with the topology evidence for a Merlin-matched instance:
+  4 x 200 Gb Cassini ports per node, one fabric subnet spanning the A100
+  and GH200 nodes, measured pair latency floors, and sender-side port
+  accounting. The comparison must separate the socket host-stack floor
+  from fabric serialization: the dataset's solo 8 MiB chunk service (p50
+  1598 us) is 4.8 times the 335.5 us wire floor, so most of a chunk's life
+  is endpoint stack service that the fabric instance must charge at the
+  endpoint rather than absorb into link parameters. The behaviors a
+  calibrated instance must reproduce on the incast and join families are
+  of the sharing kind: aggregate goodput rising 1.71 times when a second
+  source joins (per-source stacks, distinct destination ports, not a
+  shared bottleneck), Jain fairness 0.9795 in the scored incast cell (and
+  0.991 in the post-specified join cell), a 119-second convergence
+  transient under simultaneous starts against near-instant settling for a
+  staggered join on pre-established connections (the staggered-join
+  observation is from the post-specified cell), and the mixed pair's
+  2.77x direction asymmetry either modeled as an endpoint-stack term or
+  declared out of scope. Acceptance: simulated per-stage steady aggregates
+  and convergence behavior within tolerances stated in that study's freeze
+  chain, against the byte-locked series in its `dataset/` manifest, with
+  the endpoint floor an explicit separate term.
+- TRAF-52 (Precision; P2; M): complete the flow-capture families the
+  wave-18 window could not run. The GH200-to-GH200 cells were declared but
+  never frozen, because their jitter ladder (job 195700) cannot run before
+  the psicourse02 reservation lifts at 2026-08-19 08:00 and the chunk size
+  is not frozen before the ladder is measured; they arrive only under a
+  freeze-2 expectations-only commit with their own guard list and scored
+  denominator. The A100 cells i3-incast, j3-join, i4-incast and x4-incast
+  (jobs 195730, 195731, 195734, 195735) were frozen and submitted but
+  still queued at publication behind the floating FLEX reservation; when
+  any lands, its outputs drop into the study's capture tree and
+  `analyze_capture.py` scores it against the unchanged frozen bands, with
+  the study's RESULTS recording, before j3 has run, that a post-specified
+  observation strains E-J-2's shared-bottleneck premise; if that relation
+  misses, its classification (specification error or machine fact) is made
+  at scoring time under the freeze's failure policy, not pre-committed. Acceptance: the missing cells captured or their impossibility
+  documented with scheduler evidence, scored against the existing freezes
+  with no band moved, and folded into the published dataset through a
+  packaging commit that preserves every existing byte lock.
 - TRAF-48 (Precision; P1; L): capture a cross-node collective on an RDMA fabric
   with GPUDirect RDMA active, which is the fabric the shipped cross-node
   envelope actually targets. The
