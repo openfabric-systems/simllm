@@ -19,6 +19,7 @@ option(SIMLLM_RNIC_WARNINGS_AS_ERRORS
        OFF)
 
 add_library(simllm_rnic STATIC
+    src/gpu_device.cpp
     src/host_memory.cpp
     src/pcie_fabric.cpp
     src/rnic_device.cpp
@@ -121,6 +122,23 @@ if(SIMLLM_RNIC_BUILD_TESTS)
     endif()
     add_test(NAME simllm_rnic_submission_test
              COMMAND simllm_rnic_submission_test)
+
+    add_executable(simllm_rnic_gpu_device_test
+        tests/gpu_device_test.cpp
+    )
+    target_link_libraries(simllm_rnic_gpu_device_test PRIVATE simllm::rnic)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_gpu_device_test PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_gpu_device_test PRIVATE -Werror)
+        endif()
+    endif()
+    add_test(NAME simllm_rnic_gpu_device_test
+             COMMAND simllm_rnic_gpu_device_test)
 
     add_executable(simllm_rnic_device_test
         tests/rnic_device_test.cpp

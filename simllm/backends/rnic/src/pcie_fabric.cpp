@@ -5,6 +5,7 @@
 #include <deque>
 #include <limits>
 #include <map>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -1325,6 +1326,91 @@ void validateConfig(const PcieFabricConfig& config) {
     }
 }
 
+bool samePcieCreditConfig(
+    const PcieCreditConfig& lhs,
+    const PcieCreditConfig& rhs) {
+    return lhs.posted_header_credits == rhs.posted_header_credits
+        && lhs.posted_data_credits == rhs.posted_data_credits
+        && lhs.nonposted_header_credits == rhs.nonposted_header_credits
+        && lhs.nonposted_data_credits == rhs.nonposted_data_credits
+        && lhs.completion_header_credits == rhs.completion_header_credits
+        && lhs.completion_data_credits == rhs.completion_data_credits;
+}
+
+bool samePcieAnalyticalDelayProfile(
+    const PcieAnalyticalDelayProfile& lhs,
+    const PcieAnalyticalDelayProfile& rhs) {
+    return lhs.version == rhs.version
+        && lhs.kind == rhs.kind
+        && lhs.incidence_probability_ppm == rhs.incidence_probability_ppm
+        && lhs.mean_ps == rhs.mean_ps
+        && lhs.standard_deviation_ps == rhs.standard_deviation_ps
+        && lhs.tail_probability_ppm == rhs.tail_probability_ppm
+        && lhs.tail_mean_ps == rhs.tail_mean_ps
+        && lhs.tail_standard_deviation_ps == rhs.tail_standard_deviation_ps;
+}
+
+bool samePciePathPenaltyProfiles(
+    const PciePathPenaltyProfiles& lhs,
+    const PciePathPenaltyProfiles& rhs) {
+    return samePcieAnalyticalDelayProfile(lhs.numa, rhs.numa)
+        && samePcieAnalyticalDelayProfile(lhs.iommu, rhs.iommu)
+        && samePcieAnalyticalDelayProfile(lhs.acs, rhs.acs)
+        && samePcieAnalyticalDelayProfile(
+            lhs.switch_path, rhs.switch_path)
+        && samePcieAnalyticalDelayProfile(lhs.ddio_miss, rhs.ddio_miss)
+        && samePcieAnalyticalDelayProfile(
+            lhs.gpu_direct, rhs.gpu_direct);
+}
+
+bool samePciePathConfig(
+    const PciePathConfig& lhs,
+    const PciePathConfig& rhs) {
+    return lhs.path_id == rhs.path_id
+        && lhs.endpoint == rhs.endpoint
+        && lhs.enabled == rhs.enabled
+        && lhs.base_latency_ps == rhs.base_latency_ps
+        && samePciePathPenaltyProfiles(
+            lhs.analytical_penalties, rhs.analytical_penalties);
+}
+
+// One attribution after the claim table resolved each identity to its device
+// kind. Both identities zero means the transaction is unattributed and touches
+// no endpoint ledger.
+struct ResolvedEndpointAttribution {
+    PcieEndpointId requester_endpoint_id{0};
+    PcieDeviceKind requester_kind{PcieDeviceKind::Host};
+    PcieEndpointId completer_endpoint_id{0};
+    PcieDeviceKind completer_kind{PcieDeviceKind::Host};
+
+    bool attributed() const noexcept { return requester_endpoint_id != 0; }
+};
+
+void accumulateEndpointRole(
+    PcieEndpointRoleAccounting& destination,
+    const PcieTransactionResult& result) {
+    checkedAccumulate(destination.transactions, 1);
+    checkedAccumulate(destination.useful_bytes, result.useful_bytes);
+    checkedAccumulate(
+        destination.transferred_bytes, result.transferred_bytes);
+    accumulateDirection(destination.host_to_device, result.host_to_device);
+    accumulateDirection(destination.device_to_host, result.device_to_host);
+}
+
+void validateEndpointRole(const PcieEndpointRoleAccounting& role) {
+    validateDirectionAccounting(role.host_to_device);
+    validateDirectionAccounting(role.device_to_host);
+    if (role.transactions == 0
+        && (role.useful_bytes != 0 || role.transferred_bytes != 0)) {
+        throw std::logic_error(
+            "RNIC PCIe endpoint role accounting invariant failed");
+    }
+    if (role.useful_bytes > role.transferred_bytes) {
+        throw std::logic_error(
+            "RNIC PCIe endpoint useful bytes exceed transferred bytes");
+    }
+}
+
 }  // namespace
 
 PcieFabricConfig defaultPcieFabricConfig() {
@@ -1376,8 +1462,22 @@ public:
         return total;
     }
 
+    const std::map<PcieEndpointId, PcieEndpointAccounting>&
+    endpointAccounting() const noexcept {
+        return endpoint_accounting_;
+    }
+
+    std::uint64_t attributedRequesterTransactions() const noexcept {
+        return attributed_requester_transactions_;
+    }
+
+    std::uint64_t attributedCompleterTransactions() const noexcept {
+        return attributed_completer_transactions_;
+    }
+
     PcieTransactionResult scheduleTransaction(
-        const PcieTransactionRequest& request) {
+        const PcieTransactionRequest& request,
+        const ResolvedEndpointAttribution& attribution = {}) {
         const PciePathConfig& path = findPath(request.path_id);
         const TransactionShape shape = buildShape(config_, request);
         if (next_transaction_id_ == std::numeric_limits<std::uint64_t>::max()) {
@@ -1456,6 +1556,7 @@ public:
         validateDirectionAccounting(result.device_to_host);
         validatePathProfiles(result.path_profiles);
         accumulateResult(result);
+        accumulateEndpointResult(result, attribution);
         // The public ledger is the checked sum of every class row. Validate
         // that sum while this Impl is still a private plan candidate so a
         // cross-class overflow cannot become committed shared state.
@@ -1523,6 +1624,28 @@ public:
         if (checkedAdd(transactions, 1) != next_transaction_id_) {
             throw std::logic_error(
                 "RNIC PCIe transaction-ID accounting mismatch");
+        }
+        std::uint64_t requester_transactions = 0;
+        std::uint64_t completer_transactions = 0;
+        for (const auto& item : endpoint_accounting_) {
+            if (item.first == 0 || item.first != item.second.endpoint_id) {
+                throw std::logic_error(
+                    "RNIC PCIe endpoint accounting key invariant failed");
+            }
+            validateEndpointRole(item.second.requester);
+            validateEndpointRole(item.second.completer);
+            requester_transactions = checkedAdd(
+                requester_transactions, item.second.requester.transactions);
+            completer_transactions = checkedAdd(
+                completer_transactions, item.second.completer.transactions);
+        }
+        if (requester_transactions != attributed_requester_transactions_
+            || completer_transactions != attributed_completer_transactions_
+            || attributed_requester_transactions_
+                != attributed_completer_transactions_
+            || attributed_requester_transactions_ > transactions) {
+            throw std::logic_error(
+                "RNIC PCIe endpoint attribution conservation failed");
         }
     }
 
@@ -1899,6 +2022,36 @@ private:
             result.latency_samples_used);
     }
 
+    void accumulateEndpointResult(
+        const PcieTransactionResult& result,
+        const ResolvedEndpointAttribution& attribution) {
+        if (!attribution.attributed()) {
+            return;
+        }
+        PcieEndpointAccounting& requester = endpointRow(
+            attribution.requester_endpoint_id, attribution.requester_kind);
+        accumulateEndpointRole(requester.requester, result);
+        checkedAccumulate(attributed_requester_transactions_, 1);
+        PcieEndpointAccounting& completer = endpointRow(
+            attribution.completer_endpoint_id, attribution.completer_kind);
+        accumulateEndpointRole(completer.completer, result);
+        checkedAccumulate(attributed_completer_transactions_, 1);
+    }
+
+    PcieEndpointAccounting& endpointRow(
+        PcieEndpointId endpoint_id,
+        PcieDeviceKind device_kind) {
+        PcieEndpointAccounting& row = endpoint_accounting_[endpoint_id];
+        if (row.endpoint_id == 0) {
+            row.endpoint_id = endpoint_id;
+            row.device_kind = device_kind;
+        } else if (row.device_kind != device_kind) {
+            throw std::logic_error(
+                "RNIC PCIe endpoint identity changed device kind");
+        }
+        return row;
+    }
+
     PcieFabricConfig config_;
     std::array<DirectionResources, 2> directions_;
     std::array<CapacityPool, 2> outstanding_reads_;
@@ -1911,6 +2064,9 @@ private:
     std::map<std::uint64_t, OrderingDomainCursors> ordering_cursors_;
     std::map<PathDrawKey, std::uint64_t> path_draw_cursors_;
     std::array<PcieClassAccounting, kPcieServiceClassCount> accounting_{};
+    std::map<PcieEndpointId, PcieEndpointAccounting> endpoint_accounting_;
+    std::uint64_t attributed_requester_transactions_{0};
+    std::uint64_t attributed_completer_transactions_{0};
     std::uint64_t generation_{0};
     std::uint64_t next_transaction_id_{1};
     std::uint64_t host_store_latency_cursor_{0};
@@ -1938,7 +2094,7 @@ private:
 class PcieFabric::OrderingDomainClaims {
 public:
     void claim(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         std::uint64_t submission_domain,
         std::uint64_t completion_domain) {
         if (owner == nullptr
@@ -1954,14 +2110,28 @@ public:
             throw std::invalid_argument(
                 "shared RNIC PCIe ordering domain is already claimed");
         }
-        std::map<std::uint64_t, const RnicDevice*> candidate = domains_;
+        std::map<std::uint64_t, PcieEndpointOwnerToken> candidate = domains_;
         candidate.emplace(submission_domain, owner);
         candidate.emplace(completion_domain, owner);
         domains_.swap(candidate);
     }
 
+    void claimOne(
+        PcieEndpointOwnerToken owner,
+        std::uint64_t ordering_domain) {
+        if (owner == nullptr || ordering_domain == 0) {
+            throw std::invalid_argument(
+                "shared RNIC PCIe ordering domain must be nonzero");
+        }
+        if (domains_.count(ordering_domain) != 0) {
+            throw std::invalid_argument(
+                "shared RNIC PCIe ordering domain is already claimed");
+        }
+        domains_.emplace(ordering_domain, owner);
+    }
+
     void release(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         std::uint64_t submission_domain,
         std::uint64_t completion_domain) noexcept {
         releaseOne(owner, submission_domain);
@@ -1969,15 +2139,14 @@ public:
     }
 
     bool claimedByOther(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         std::uint64_t ordering_domain) const noexcept {
         const auto found = domains_.find(ordering_domain);
         return found != domains_.end() && found->second != owner;
     }
 
-private:
     void releaseOne(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         std::uint64_t ordering_domain) noexcept {
         const auto found = domains_.find(ordering_domain);
         if (found != domains_.end() && found->second == owner) {
@@ -1985,7 +2154,139 @@ private:
         }
     }
 
-    std::map<std::uint64_t, const RnicDevice*> domains_;
+private:
+    std::map<std::uint64_t, PcieEndpointOwnerToken> domains_;
+};
+
+// Endpoint identities live outside the transaction state because they belong to
+// device lifetimes, not to a plan. The host identity is seeded from the fabric
+// config and is owned by the fabric itself, so no device can claim or release
+// it.
+class PcieFabric::EndpointClaims {
+public:
+    explicit EndpointClaims(
+        PcieEndpointOwnerToken fabric,
+        PcieEndpointId host_endpoint_id) {
+        if (host_endpoint_id != 0) {
+            claims_.emplace(
+                host_endpoint_id, Claim{fabric, PcieDeviceKind::Host});
+        }
+    }
+
+    void claim(
+        PcieEndpointOwnerToken owner,
+        PcieEndpointId endpoint_id,
+        PcieDeviceKind device_kind) {
+        if (owner == nullptr || endpoint_id == 0) {
+            throw std::invalid_argument(
+                "RNIC PCIe endpoint claim requires a device and identity");
+        }
+        if (device_kind != PcieDeviceKind::Rnic
+            && device_kind != PcieDeviceKind::Gpu) {
+            throw std::invalid_argument(
+                "only an RNIC or GPU device may claim a PCIe endpoint");
+        }
+        if (claims_.count(endpoint_id) != 0) {
+            throw std::invalid_argument(
+                "RNIC PCIe endpoint identity is already claimed");
+        }
+        claims_.emplace(endpoint_id, Claim{owner, device_kind});
+    }
+
+    void release(
+        PcieEndpointOwnerToken owner,
+        PcieEndpointId endpoint_id) noexcept {
+        const auto found = claims_.find(endpoint_id);
+        if (found != claims_.end() && found->second.owner == owner) {
+            claims_.erase(found);
+        }
+    }
+
+    bool claimedBy(
+        PcieEndpointOwnerToken owner,
+        PcieEndpointId endpoint_id) const noexcept {
+        const auto found = claims_.find(endpoint_id);
+        return found != claims_.end() && found->second.owner == owner;
+    }
+
+    std::optional<PcieDeviceKind> kind(
+        PcieEndpointId endpoint_id) const noexcept {
+        const auto found = claims_.find(endpoint_id);
+        if (found == claims_.end()) {
+            return std::nullopt;
+        }
+        return found->second.device_kind;
+    }
+
+    std::vector<PcieEndpointId> attached() const {
+        std::vector<PcieEndpointId> identities;
+        identities.reserve(claims_.size());
+        for (const auto& item : claims_) {
+            identities.push_back(item.first);
+        }
+        return identities;
+    }
+
+    // Resolves before any state is copied or mutated, so a rejected
+    // attribution leaves the fabric exactly as it was.
+    ResolvedEndpointAttribution resolve(
+        const PcieTransactionRequest& request,
+        const PcieEndpointAttribution& attribution) const {
+        const PcieEndpointId requester = attribution.requester_endpoint_id;
+        const PcieEndpointId completer = attribution.completer_endpoint_id;
+        if (requester == 0 && completer == 0) {
+            return ResolvedEndpointAttribution{};
+        }
+        if (request.operation == PcieOperation::HostStore) {
+            throw std::invalid_argument(
+                "RNIC PCIe host store crosses no link and cannot name "
+                "fabric endpoints");
+        }
+        if (requester == 0 || completer == 0) {
+            throw std::invalid_argument(
+                "RNIC PCIe endpoint attribution must name both ends");
+        }
+        const std::optional<PcieDeviceKind> requester_kind = kind(requester);
+        if (!requester_kind.has_value()) {
+            throw std::invalid_argument(
+                "RNIC PCIe transaction names an unattached requester "
+                "endpoint");
+        }
+        const std::optional<PcieDeviceKind> completer_kind = kind(completer);
+        if (!completer_kind.has_value()) {
+            throw std::invalid_argument(
+                "RNIC PCIe transaction names an unattached completer "
+                "endpoint");
+        }
+        return ResolvedEndpointAttribution{
+            requester, *requester_kind, completer, *completer_kind};
+    }
+
+    void validateInvariants(PcieEndpointId host_endpoint_id) const {
+        for (const auto& item : claims_) {
+            if (item.first == 0 || item.second.owner == nullptr) {
+                throw std::logic_error(
+                    "RNIC PCIe endpoint claim invariant failed");
+            }
+            const bool host = item.first == host_endpoint_id;
+            if (host != (item.second.device_kind == PcieDeviceKind::Host)) {
+                throw std::logic_error(
+                    "RNIC PCIe endpoint claim kind invariant failed");
+            }
+        }
+        if (host_endpoint_id != 0 && claims_.count(host_endpoint_id) != 1) {
+            throw std::logic_error(
+                "RNIC PCIe host endpoint identity is not attached");
+        }
+    }
+
+private:
+    struct Claim {
+        PcieEndpointOwnerToken owner{nullptr};
+        PcieDeviceKind device_kind{PcieDeviceKind::Host};
+    };
+
+    std::map<PcieEndpointId, Claim> claims_;
 };
 
 PcieFabric::Plan::Plan(std::unique_ptr<Plan::Impl> impl)
@@ -1997,7 +2298,9 @@ PcieFabric::Plan& PcieFabric::Plan::operator=(Plan&&) noexcept = default;
 
 PcieFabric::PcieFabric(PcieFabricConfig config)
     : impl_(std::make_unique<Impl>(std::move(config))),
-      ordering_domain_claims_(std::make_unique<OrderingDomainClaims>()) {}
+      ordering_domain_claims_(std::make_unique<OrderingDomainClaims>()),
+      endpoint_claims_(std::make_unique<EndpointClaims>(
+          this, impl_->config().host_endpoint_id)) {}
 
 PcieFabric::~PcieFabric() = default;
 
@@ -2011,12 +2314,22 @@ PcieFabric::Plan PcieFabric::beginPlan() const {
 PcieTransactionResult PcieFabric::schedule(
     Plan& plan,
     const PcieTransactionRequest& request) {
+    return schedule(plan, request, PcieEndpointAttribution{});
+}
+
+PcieTransactionResult PcieFabric::schedule(
+    Plan& plan,
+    const PcieTransactionRequest& request,
+    const PcieEndpointAttribution& attribution) {
     if (!plan.impl_ || plan.impl_->owner_ != this || !plan.impl_->state_) {
         throw std::invalid_argument(
             "RNIC PCIe plan does not belong to this fabric");
     }
+    const ResolvedEndpointAttribution resolved =
+        endpoint_claims_->resolve(request, attribution);
     auto candidate = std::make_unique<Impl>(*plan.impl_->state_);
-    PcieTransactionResult result = candidate->scheduleTransaction(request);
+    PcieTransactionResult result = candidate->scheduleTransaction(
+        request, resolved);
     plan.impl_->state_.swap(candidate);
     return result;
 }
@@ -2039,8 +2352,14 @@ void PcieFabric::commit(Plan&& plan) {
 
 PcieTransactionResult PcieFabric::submit(
     const PcieTransactionRequest& request) {
+    return submit(request, PcieEndpointAttribution{});
+}
+
+PcieTransactionResult PcieFabric::submit(
+    const PcieTransactionRequest& request,
+    const PcieEndpointAttribution& attribution) {
     Plan plan = beginPlan();
-    PcieTransactionResult result = schedule(plan, request);
+    PcieTransactionResult result = schedule(plan, request, attribution);
     commit(std::move(plan));
     return result;
 }
@@ -2062,12 +2381,49 @@ PcieClassAccounting PcieFabric::totalAccounting() const {
     return impl_->totalAccounting();
 }
 
+std::vector<PcieEndpointId> PcieFabric::attachedEndpoints() const {
+    return endpoint_claims_->attached();
+}
+
+std::optional<PcieDeviceKind> PcieFabric::attachedEndpointKind(
+    PcieEndpointId endpoint_id) const noexcept {
+    return endpoint_claims_->kind(endpoint_id);
+}
+
+PcieEndpointAccounting PcieFabric::endpointAccounting(
+    PcieEndpointId endpoint_id) const {
+    const std::optional<PcieDeviceKind> device_kind =
+        endpoint_claims_->kind(endpoint_id);
+    if (!device_kind.has_value()) {
+        throw std::invalid_argument(
+            "RNIC PCIe endpoint accounting names an unattached endpoint");
+    }
+    const auto& rows = impl_->endpointAccounting();
+    const auto found = rows.find(endpoint_id);
+    if (found != rows.end()) {
+        return found->second;
+    }
+    PcieEndpointAccounting empty;
+    empty.endpoint_id = endpoint_id;
+    empty.device_kind = *device_kind;
+    return empty;
+}
+
+std::uint64_t PcieFabric::attributedRequesterTransactions() const noexcept {
+    return impl_->attributedRequesterTransactions();
+}
+
+std::uint64_t PcieFabric::attributedCompleterTransactions() const noexcept {
+    return impl_->attributedCompleterTransactions();
+}
+
 void PcieFabric::validateInvariants() const {
     impl_->validateInvariants();
+    endpoint_claims_->validateInvariants(impl_->config().host_endpoint_id);
 }
 
 void PcieFabric::claimOrderingDomains(
-    const RnicDevice* owner,
+    PcieEndpointOwnerToken owner,
     std::uint64_t submission_domain,
     std::uint64_t completion_domain) {
     ordering_domain_claims_->claim(
@@ -2075,17 +2431,95 @@ void PcieFabric::claimOrderingDomains(
 }
 
 void PcieFabric::releaseOrderingDomains(
-    const RnicDevice* owner,
+    PcieEndpointOwnerToken owner,
     std::uint64_t submission_domain,
     std::uint64_t completion_domain) noexcept {
     ordering_domain_claims_->release(
         owner, submission_domain, completion_domain);
 }
 
+void PcieFabric::claimOrderingDomain(
+    PcieEndpointOwnerToken owner,
+    std::uint64_t ordering_domain) {
+    ordering_domain_claims_->claimOne(owner, ordering_domain);
+}
+
+void PcieFabric::releaseOrderingDomain(
+    PcieEndpointOwnerToken owner,
+    std::uint64_t ordering_domain) noexcept {
+    ordering_domain_claims_->releaseOne(owner, ordering_domain);
+}
+
 bool PcieFabric::orderingDomainClaimedByOther(
-    const RnicDevice* owner,
+    PcieEndpointOwnerToken owner,
     std::uint64_t ordering_domain) const noexcept {
     return ordering_domain_claims_->claimedByOther(owner, ordering_domain);
+}
+
+void PcieFabric::claimEndpoint(
+    PcieEndpointOwnerToken owner,
+    PcieEndpointId endpoint_id,
+    PcieDeviceKind device_kind) {
+    endpoint_claims_->claim(owner, endpoint_id, device_kind);
+}
+
+void PcieFabric::releaseEndpoint(
+    PcieEndpointOwnerToken owner,
+    PcieEndpointId endpoint_id) noexcept {
+    endpoint_claims_->release(owner, endpoint_id);
+}
+
+bool PcieFabric::endpointClaimedBy(
+    PcieEndpointOwnerToken owner,
+    PcieEndpointId endpoint_id) const noexcept {
+    return endpoint_claims_->claimedBy(owner, endpoint_id);
+}
+
+bool samePcieFabricConfig(
+    const PcieFabricConfig& lhs,
+    const PcieFabricConfig& rhs) {
+    if (lhs.version != rhs.version
+        || lhs.generation != rhs.generation
+        || lhs.lane_count != rhs.lane_count
+        || lhs.max_payload_size_bytes != rhs.max_payload_size_bytes
+        || lhs.max_read_request_size_bytes
+            != rhs.max_read_request_size_bytes
+        || lhs.read_completion_boundary_bytes
+            != rhs.read_completion_boundary_bytes
+        || lhs.posted_write_overhead_bytes
+            != rhs.posted_write_overhead_bytes
+        || lhs.read_request_overhead_bytes
+            != rhs.read_request_overhead_bytes
+        || lhs.completion_overhead_bytes != rhs.completion_overhead_bytes
+        || lhs.data_credit_unit_bytes != rhs.data_credit_unit_bytes
+        || !samePcieCreditConfig(
+            lhs.host_to_device_credits, rhs.host_to_device_credits)
+        || !samePcieCreditConfig(
+            lhs.device_to_host_credits, rhs.device_to_host_credits)
+        || lhs.max_outstanding_read_requests
+            != rhs.max_outstanding_read_requests
+        || lhs.completion_buffer_bytes != rhs.completion_buffer_bytes
+        || lhs.max_tlps_per_transaction != rhs.max_tlps_per_transaction
+        || lhs.credit_return_latency_ps != rhs.credit_return_latency_ps
+        || lhs.completion_buffer_release_latency_ps
+            != rhs.completion_buffer_release_latency_ps
+        || lhs.analytical_seed != rhs.analytical_seed
+        || lhs.host_endpoint_id != rhs.host_endpoint_id
+        || lhs.host_store_latency_ps.samples_ps
+            != rhs.host_store_latency_ps.samples_ps
+        || lhs.posted_write_visibility_latency_ps.samples_ps
+            != rhs.posted_write_visibility_latency_ps.samples_ps
+        || lhs.read_completion_latency_ps.samples_ps
+            != rhs.read_completion_latency_ps.samples_ps
+        || lhs.paths.size() != rhs.paths.size()) {
+        return false;
+    }
+    for (std::size_t index = 0; index < lhs.paths.size(); ++index) {
+        if (!samePciePathConfig(lhs.paths[index], rhs.paths[index])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 const char* toString(PcieServiceClass service_class) noexcept {
@@ -2155,6 +2589,19 @@ const char* toString(PcieAnalyticalDelayKind kind) noexcept {
         return "gaussian";
     case PcieAnalyticalDelayKind::GaussianTailMixture:
         return "gaussian_tail_mixture";
+    default:
+        return "invalid";
+    }
+}
+
+const char* toString(PcieDeviceKind device_kind) noexcept {
+    switch (device_kind) {
+    case PcieDeviceKind::Host:
+        return "host";
+    case PcieDeviceKind::Rnic:
+        return "rnic";
+    case PcieDeviceKind::Gpu:
+        return "gpu";
     default:
         return "invalid";
     }

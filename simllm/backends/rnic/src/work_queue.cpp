@@ -154,6 +154,7 @@ public:
         VirtualHostMemory* host_memory,
         std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
         HostMemoryDeviceOwnerId host_memory_device_owner_id,
+        PcieEndpointId fabric_endpoint_id,
         std::optional<RnicSubmissionProfile> submission_profile)
         : config_(std::move(config)),
           network_port_(network_port),
@@ -164,6 +165,7 @@ public:
           host_memory_(host_memory),
           host_memory_binding_(std::move(host_memory_binding)),
           host_memory_device_owner_id_(host_memory_device_owner_id),
+          fabric_endpoint_id_(fabric_endpoint_id),
           submission_profile_(std::move(submission_profile)) {
         if (config_.version != kWorkQueueConfigVersion) {
             throw std::invalid_argument("unsupported RNIC work-queue config version");
@@ -333,6 +335,10 @@ public:
             throw std::invalid_argument(
                 "RNIC host-memory binding requires an attached registry");
         }
+        if (fabric_endpoint_id_ != 0 && pcie_fabric_ == nullptr) {
+            throw std::invalid_argument(
+                "RNIC fabric endpoint identity requires PCIe DMA");
+        }
     }
 
     PostResult postSend(const WorkRequest& request, Picoseconds now_ps) {
@@ -442,6 +448,7 @@ public:
                 db_record.allocation_id =
                     host_memory_binding_->doorbell_record_allocation_id;
                 db_record.client_id = submission_profile_->producer.id;
+                db_record.requester_endpoint_id = fabric_endpoint_id_;
                 db_record.client_token = batch_id;
                 db_record.service_class = PcieServiceClass::DoorbellRecord;
                 db_record.operation = PcieOperation::HostStore;
@@ -532,6 +539,7 @@ public:
                         host_memory_binding_->sq_ring_allocation_id;
                     wqe_read.client_id =
                         submission_profile_->rnic_requester_id;
+                    wqe_read.requester_endpoint_id = fabric_endpoint_id_;
                     wqe_read.client_token = wqe_id;
                     wqe_read.service_class = PcieServiceClass::WqeRead;
                     wqe_read.operation = PcieOperation::NonPostedRead;
@@ -595,6 +603,7 @@ public:
                         host_memory_binding_->qpc_icm_allocation_id;
                     qpc_read.client_id =
                         submission_profile_->rnic_requester_id;
+                    qpc_read.requester_endpoint_id = fabric_endpoint_id_;
                     qpc_read.client_token = wqe_id;
                     qpc_read.service_class = PcieServiceClass::QpcIcm;
                     qpc_read.operation = PcieOperation::NonPostedRead;
@@ -627,6 +636,7 @@ public:
                 payload_read.mkey = data.mkey;
                 payload_read.client_id =
                     submission_profile_->rnic_requester_id;
+                payload_read.requester_endpoint_id = fabric_endpoint_id_;
                 payload_read.client_token = wqe_id;
                 payload_read.service_class = PcieServiceClass::PayloadRead;
                 payload_read.operation = PcieOperation::NonPostedRead;
@@ -1719,14 +1729,31 @@ private:
             throw std::invalid_argument(
                 "RNIC host-memory WQE requires a valid data descriptor");
         }
+        const HostMemoryDeviceOwnerId peer =
+            request.data_memory->peer_device_owner_id;
+        if (peer != 0 && peer == host_memory_device_owner_id_) {
+            throw std::invalid_argument(
+                "RNIC WQE peer data descriptor names its own device");
+        }
         const HostMemoryAllocation& allocation = host_memory_->allocation(
             request.data_memory->allocation_id);
+        const HostMemoryDeviceOwnerId expected_owner =
+            peer == 0 ? host_memory_device_owner_id_ : peer;
         if (allocation.object_kind != HostMemoryObjectKind::DataRegion
-            || allocation.device_owner_id != host_memory_device_owner_id_
+            || allocation.device_owner_id != expected_owner
             || allocation.mkey != request.data_memory->mkey) {
             throw std::invalid_argument(
                 "RNIC WQE data descriptor does not match its device "
                 "allocation");
+        }
+        // A peer region needs both halves of the contract: this descriptor
+        // names the owning device, and that device granted this device read
+        // access to its data regions.
+        if (peer != 0
+            && !host_memory_->peerReadGranted(
+                   peer, host_memory_device_owner_id_)) {
+            throw std::invalid_argument(
+                "RNIC WQE data descriptor names an ungranted peer region");
         }
         if (request.data_memory->allocation_offset_bytes
                 > allocation.length_bytes
@@ -1789,6 +1816,7 @@ private:
                     host_memory_binding_->cq_ring_allocation_id;
                 cqe_write.client_id =
                     submission_profile_->rnic_requester_id;
+                cqe_write.requester_endpoint_id = fabric_endpoint_id_;
                 cqe_write.client_token = record.wqe_id;
                 cqe_write.service_class = PcieServiceClass::CqeWrite;
                 cqe_write.operation = PcieOperation::PostedWrite;
@@ -2055,6 +2083,7 @@ private:
     VirtualHostMemory* host_memory_{nullptr};
     std::optional<WorkQueueHostMemoryBinding> host_memory_binding_;
     HostMemoryDeviceOwnerId host_memory_device_owner_id_{0};
+    PcieEndpointId fabric_endpoint_id_{0};
     std::optional<RnicSubmissionProfile> submission_profile_;
     WorkQueueCounters counters_;
     std::vector<WqeRecord> records_;
@@ -2102,6 +2131,7 @@ WorkQueue::WorkQueue(WorkQueueConfig config, NetworkPort& network_port)
           nullptr,
           std::nullopt,
           0,
+          0,
           std::nullopt) {}
 
 WorkQueue::WorkQueue(
@@ -2118,6 +2148,7 @@ WorkQueue::WorkQueue(
           nullptr,
           std::nullopt,
           0,
+          0,
           std::nullopt) {}
 
 WorkQueue::WorkQueue(
@@ -2129,6 +2160,7 @@ WorkQueue::WorkQueue(
     VirtualHostMemory* host_memory,
     std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
     HostMemoryDeviceOwnerId host_memory_device_owner_id,
+    PcieEndpointId fabric_endpoint_id,
     std::optional<RnicSubmissionProfile> submission_profile)
     : impl_(std::make_unique<Impl>(
           std::move(config),
@@ -2139,6 +2171,7 @@ WorkQueue::WorkQueue(
           host_memory,
           std::move(host_memory_binding),
           host_memory_device_owner_id,
+          fabric_endpoint_id,
           std::move(submission_profile))) {}
 
 WorkQueue::~WorkQueue() = default;

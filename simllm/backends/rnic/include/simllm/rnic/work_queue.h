@@ -125,6 +125,10 @@ struct WorkRequestDataMemory {
     HostMemoryAllocationId allocation_id{0};
     HostMemoryMkey mkey{0};
     std::uint64_t allocation_offset_bytes{0};
+    // Zero keeps the original rule: the region must belong to this device.
+    // A nonzero identity names the peer device that owns the region, and the
+    // access is legal only when that peer granted this device read access.
+    HostMemoryDeviceOwnerId peer_device_owner_id{0};
 };
 
 struct WorkRequest {
@@ -309,6 +313,7 @@ private:
         VirtualHostMemory* host_memory,
         std::optional<WorkQueueHostMemoryBinding> host_memory_binding,
         HostMemoryDeviceOwnerId host_memory_device_owner_id,
+        PcieEndpointId fabric_endpoint_id,
         std::optional<RnicSubmissionProfile> submission_profile);
 
     class Impl;

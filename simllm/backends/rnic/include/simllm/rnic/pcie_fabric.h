@@ -12,7 +12,23 @@
 
 namespace simllm::rnic {
 
+class GpuDevice;
 class RnicDevice;
+
+// Identity of one device attached to the fabric. Zero is the unattributed
+// single-device identity every accepted BACK-10 artifact was produced with.
+using PcieEndpointId = std::uint64_t;
+
+// The fabric compares owner addresses and never dereferences them, so devices
+// of different kinds share one claim table without the fabric depending on
+// their headers.
+using PcieEndpointOwnerToken = const void*;
+
+enum class PcieDeviceKind : std::uint8_t {
+    Host,
+    Rnic,
+    Gpu,
+};
 
 inline constexpr std::uint32_t kPcieFabricConfigVersion = 1;
 inline constexpr std::uint32_t kPcieAnalyticalDelayProfileVersion = 1;
@@ -153,6 +169,12 @@ struct PcieFabricConfig {
     // Counter-based analytical streams derive from this seed, path ID,
     // component ID and a transactional component-local draw index.
     std::uint64_t analytical_seed{0};
+    // Identity of the fabric's host endpoint, which completes every access to
+    // host-pinned memory and every translation-metadata read. Zero leaves host
+    // completions unattributed and is the only value the accepted BACK-10,
+    // BACK-19 and BACK-20 artifacts were produced with. A device may only
+    // attach a fabric endpoint identity once this is nonzero.
+    PcieEndpointId host_endpoint_id{0};
     PcieLatencyProfile host_store_latency_ps;
     PcieLatencyProfile posted_write_visibility_latency_ps;
     PcieLatencyProfile read_completion_latency_ps;
@@ -162,6 +184,13 @@ struct PcieFabricConfig {
 // Returns an explicit synthetic baseline, not an asserted ConnectX-7 profile.
 // Path 1 is the MMIO BAR and path 2 is local pinned host memory.
 PcieFabricConfig defaultPcieFabricConfig();
+
+// Field-by-field comparison. Every device attaching to a shared fabric must
+// agree with the fabric's own configuration, so this is the shared check
+// rather than one copy per device kind.
+bool samePcieFabricConfig(
+    const PcieFabricConfig& lhs,
+    const PcieFabricConfig& rhs);
 
 struct PcieTransactionRequest {
     std::uint32_t abi_version{kPcieTransactionAbiVersion};
@@ -180,6 +209,15 @@ struct PcieTransactionRequest {
     // Only low address bits are needed for DWORD, RCB and 4 KiB splitting.
     std::uint32_t first_byte_offset{0};
     Picoseconds submitted_at_ps{0};
+};
+
+// The two ends of one link traversal. Both zero is the unattributed shape and
+// schedules exactly as it always did. A HostStore moves no link bytes in this
+// model, so it carries no endpoint pair and the fabric rejects an attributed
+// host store rather than inventing a traversal.
+struct PcieEndpointAttribution {
+    PcieEndpointId requester_endpoint_id{0};
+    PcieEndpointId completer_endpoint_id{0};
 };
 
 struct PcieDirectionAccounting {
@@ -276,6 +314,23 @@ struct PcieClassAccounting {
     std::uint64_t latency_samples_used{0};
 };
 
+// One endpoint's share of the fabric, split by the role it played. A device
+// that reads memory it owns itself is charged in both roles.
+struct PcieEndpointRoleAccounting {
+    std::uint64_t transactions{0};
+    std::uint64_t useful_bytes{0};
+    std::uint64_t transferred_bytes{0};
+    PcieDirectionAccounting host_to_device;
+    PcieDirectionAccounting device_to_host;
+};
+
+struct PcieEndpointAccounting {
+    PcieEndpointId endpoint_id{0};
+    PcieDeviceKind device_kind{PcieDeviceKind::Host};
+    PcieEndpointRoleAccounting requester;
+    PcieEndpointRoleAccounting completer;
+};
+
 class PcieFabric {
 public:
     class Plan {
@@ -311,32 +366,69 @@ public:
     PcieTransactionResult schedule(
         Plan& plan,
         const PcieTransactionRequest& request);
+    PcieTransactionResult schedule(
+        Plan& plan,
+        const PcieTransactionRequest& request,
+        const PcieEndpointAttribution& attribution);
     void commit(Plan&& plan);
     PcieTransactionResult submit(const PcieTransactionRequest& request);
+    PcieTransactionResult submit(
+        const PcieTransactionRequest& request,
+        const PcieEndpointAttribution& attribution);
 
     PcieFabricConfig config() const;
     std::uint64_t generation() const noexcept;
     PcieClassAccounting accounting(PcieServiceClass service_class) const;
     PcieClassAccounting totalAccounting() const;
+    // Attached identities in ascending order, starting with the configured
+    // host endpoint when it is nonzero.
+    std::vector<PcieEndpointId> attachedEndpoints() const;
+    std::optional<PcieDeviceKind> attachedEndpointKind(
+        PcieEndpointId endpoint_id) const noexcept;
+    // Zero rows for an attached endpoint that has not been charged yet.
+    // Rejects an identity no device attached.
+    PcieEndpointAccounting endpointAccounting(
+        PcieEndpointId endpoint_id) const;
+    std::uint64_t attributedRequesterTransactions() const noexcept;
+    std::uint64_t attributedCompleterTransactions() const noexcept;
     void validateInvariants() const;
 
 private:
     void claimOrderingDomains(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         std::uint64_t submission_domain,
         std::uint64_t completion_domain);
     void releaseOrderingDomains(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         std::uint64_t submission_domain,
         std::uint64_t completion_domain) noexcept;
+    void claimOrderingDomain(
+        PcieEndpointOwnerToken owner,
+        std::uint64_t ordering_domain);
+    void releaseOrderingDomain(
+        PcieEndpointOwnerToken owner,
+        std::uint64_t ordering_domain) noexcept;
     bool orderingDomainClaimedByOther(
-        const RnicDevice* owner,
+        PcieEndpointOwnerToken owner,
         std::uint64_t ordering_domain) const noexcept;
+    void claimEndpoint(
+        PcieEndpointOwnerToken owner,
+        PcieEndpointId endpoint_id,
+        PcieDeviceKind device_kind);
+    void releaseEndpoint(
+        PcieEndpointOwnerToken owner,
+        PcieEndpointId endpoint_id) noexcept;
+    bool endpointClaimedBy(
+        PcieEndpointOwnerToken owner,
+        PcieEndpointId endpoint_id) const noexcept;
 
     class Impl;
     class OrderingDomainClaims;
+    class EndpointClaims;
     std::unique_ptr<Impl> impl_;
     std::unique_ptr<OrderingDomainClaims> ordering_domain_claims_;
+    std::unique_ptr<EndpointClaims> endpoint_claims_;
+    friend class GpuDevice;
     friend class RnicDevice;
 };
 
@@ -344,6 +436,7 @@ const char* toString(PcieServiceClass service_class) noexcept;
 const char* toString(PcieOperation operation) noexcept;
 const char* toString(PcieDirection direction) noexcept;
 const char* toString(PcieAnalyticalDelayKind kind) noexcept;
+const char* toString(PcieDeviceKind device_kind) noexcept;
 
 }  // namespace simllm::rnic
 

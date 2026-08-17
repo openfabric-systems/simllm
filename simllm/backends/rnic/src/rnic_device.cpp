@@ -36,100 +36,6 @@ void validatePcieSubconfigVersions(const PcieFabricConfig& config) {
     }
 }
 
-bool samePcieCreditConfig(
-    const PcieCreditConfig& lhs,
-    const PcieCreditConfig& rhs) {
-    return lhs.posted_header_credits == rhs.posted_header_credits
-        && lhs.posted_data_credits == rhs.posted_data_credits
-        && lhs.nonposted_header_credits == rhs.nonposted_header_credits
-        && lhs.nonposted_data_credits == rhs.nonposted_data_credits
-        && lhs.completion_header_credits == rhs.completion_header_credits
-        && lhs.completion_data_credits == rhs.completion_data_credits;
-}
-
-bool samePcieAnalyticalDelayProfile(
-    const PcieAnalyticalDelayProfile& lhs,
-    const PcieAnalyticalDelayProfile& rhs) {
-    return lhs.version == rhs.version
-        && lhs.kind == rhs.kind
-        && lhs.incidence_probability_ppm == rhs.incidence_probability_ppm
-        && lhs.mean_ps == rhs.mean_ps
-        && lhs.standard_deviation_ps == rhs.standard_deviation_ps
-        && lhs.tail_probability_ppm == rhs.tail_probability_ppm
-        && lhs.tail_mean_ps == rhs.tail_mean_ps
-        && lhs.tail_standard_deviation_ps == rhs.tail_standard_deviation_ps;
-}
-
-bool samePciePathPenaltyProfiles(
-    const PciePathPenaltyProfiles& lhs,
-    const PciePathPenaltyProfiles& rhs) {
-    return samePcieAnalyticalDelayProfile(lhs.numa, rhs.numa)
-        && samePcieAnalyticalDelayProfile(lhs.iommu, rhs.iommu)
-        && samePcieAnalyticalDelayProfile(lhs.acs, rhs.acs)
-        && samePcieAnalyticalDelayProfile(
-            lhs.switch_path, rhs.switch_path)
-        && samePcieAnalyticalDelayProfile(lhs.ddio_miss, rhs.ddio_miss)
-        && samePcieAnalyticalDelayProfile(
-            lhs.gpu_direct, rhs.gpu_direct);
-}
-
-bool samePciePathConfig(
-    const PciePathConfig& lhs,
-    const PciePathConfig& rhs) {
-    return lhs.path_id == rhs.path_id
-        && lhs.endpoint == rhs.endpoint
-        && lhs.enabled == rhs.enabled
-        && lhs.base_latency_ps == rhs.base_latency_ps
-        && samePciePathPenaltyProfiles(
-            lhs.analytical_penalties, rhs.analytical_penalties);
-}
-
-bool samePcieFabricConfig(
-    const PcieFabricConfig& lhs,
-    const PcieFabricConfig& rhs) {
-    if (lhs.version != rhs.version
-        || lhs.generation != rhs.generation
-        || lhs.lane_count != rhs.lane_count
-        || lhs.max_payload_size_bytes != rhs.max_payload_size_bytes
-        || lhs.max_read_request_size_bytes
-            != rhs.max_read_request_size_bytes
-        || lhs.read_completion_boundary_bytes
-            != rhs.read_completion_boundary_bytes
-        || lhs.posted_write_overhead_bytes
-            != rhs.posted_write_overhead_bytes
-        || lhs.read_request_overhead_bytes
-            != rhs.read_request_overhead_bytes
-        || lhs.completion_overhead_bytes != rhs.completion_overhead_bytes
-        || lhs.data_credit_unit_bytes != rhs.data_credit_unit_bytes
-        || !samePcieCreditConfig(
-            lhs.host_to_device_credits, rhs.host_to_device_credits)
-        || !samePcieCreditConfig(
-            lhs.device_to_host_credits, rhs.device_to_host_credits)
-        || lhs.max_outstanding_read_requests
-            != rhs.max_outstanding_read_requests
-        || lhs.completion_buffer_bytes != rhs.completion_buffer_bytes
-        || lhs.max_tlps_per_transaction != rhs.max_tlps_per_transaction
-        || lhs.credit_return_latency_ps != rhs.credit_return_latency_ps
-        || lhs.completion_buffer_release_latency_ps
-            != rhs.completion_buffer_release_latency_ps
-        || lhs.analytical_seed != rhs.analytical_seed
-        || lhs.host_store_latency_ps.samples_ps
-            != rhs.host_store_latency_ps.samples_ps
-        || lhs.posted_write_visibility_latency_ps.samples_ps
-            != rhs.posted_write_visibility_latency_ps.samples_ps
-        || lhs.read_completion_latency_ps.samples_ps
-            != rhs.read_completion_latency_ps.samples_ps
-        || lhs.paths.size() != rhs.paths.size()) {
-        return false;
-    }
-    for (std::size_t index = 0; index < lhs.paths.size(); ++index) {
-        if (!samePciePathConfig(lhs.paths[index], rhs.paths[index])) {
-            return false;
-        }
-    }
-    return true;
-}
-
 std::uint64_t checkedMultiply(
     std::uint64_t lhs,
     std::uint64_t rhs,
@@ -486,6 +392,34 @@ RnicDevice::RnicDevice(
         throw std::invalid_argument(
             "shared RNIC PCIe fabric config must match the device config");
     }
+    if (config_.dma.fabric_endpoint_id != 0) {
+        if (!config_.dma.enabled) {
+            throw std::invalid_argument(
+                "RNIC fabric endpoint identity requires enabled DMA");
+        }
+        if (config_.dma.fabric.host_endpoint_id == 0
+            || config_.dma.fabric_endpoint_id
+                == config_.dma.fabric.host_endpoint_id) {
+            throw std::invalid_argument(
+                "RNIC fabric endpoint identity must be nonzero, distinct from "
+                "the fabric host endpoint, and the host endpoint must be "
+                "named");
+        }
+        // The UAR mapping owner is not yet a fabric endpoint identity, so a
+        // GPU-owned mapping fails closed rather than being charged to the host.
+        if (submission_profile.has_value()
+            && submission_profile->uar_mapping_owner
+                != RnicUarMappingOwner::HostCpu) {
+            throw std::invalid_argument(
+                "RNIC fabric endpoint identity cannot yet attribute a "
+                "GPU-owned UAR mapping");
+        }
+    }
+    if (!config_.host_memory.enabled
+        && !config_.host_memory.peer_read_grants.empty()) {
+        throw std::invalid_argument(
+            "RNIC host-memory-disabled device rejects peer read grants");
+    }
 
     if (config_.qpc.enabled) {
         stage_report_.qpc_lookup = RnicStageApplicability::Applicable;
@@ -571,6 +505,11 @@ RnicDevice::RnicDevice(
     }
 
     try {
+        if (config_.dma.fabric_endpoint_id != 0) {
+            pcie_fabric_->claimEndpoint(
+                this, config_.dma.fabric_endpoint_id, PcieDeviceKind::Rnic);
+            claimed_fabric_endpoint_ = true;
+        }
         std::optional<VirtualHostMemory::RegistrationPlan> memory_plan;
         if (config_.host_memory.enabled) {
             if (attachments.shared_host_memory) {
@@ -587,7 +526,11 @@ RnicDevice::RnicDevice(
                     config_.host_memory.registry);
             }
             host_memory_->claimDeviceOwner(
-                this, config_.host_memory.device_owner_id);
+                this,
+                config_.host_memory.device_owner_id,
+                config_.dma.fabric_endpoint_id,
+                PcieDeviceKind::Rnic,
+                config_.host_memory.peer_read_grants);
             claimed_host_memory_owner_ = true;
             memory_plan.emplace(host_memory_->planClaimedRegistrations(
                 this, config_.host_memory.allocations, 0));
@@ -607,6 +550,7 @@ RnicDevice::RnicDevice(
             config_.host_memory.enabled
                 ? config_.host_memory.device_owner_id
                 : 0,
+            config_.dma.fabric_endpoint_id,
             std::move(submission_profile)));
         if (memory_plan.has_value()) {
             host_memory_->commit(std::move(*memory_plan));
@@ -618,6 +562,11 @@ RnicDevice::RnicDevice(
             host_memory_->releaseDeviceOwner(
                 this, config_.host_memory.device_owner_id);
             claimed_host_memory_owner_ = false;
+        }
+        if (claimed_fabric_endpoint_) {
+            pcie_fabric_->releaseEndpoint(
+                this, config_.dma.fabric_endpoint_id);
+            claimed_fabric_endpoint_ = false;
         }
         if (claimed_ordering_domains_) {
             pcie_fabric_->releaseOrderingDomains(
@@ -647,6 +596,10 @@ RnicDevice::~RnicDevice() {
         host_memory_->releaseDeviceOwner(
             this, config_.host_memory.device_owner_id);
         claimed_host_memory_owner_ = false;
+    }
+    if (claimed_fabric_endpoint_) {
+        pcie_fabric_->releaseEndpoint(this, config_.dma.fabric_endpoint_id);
+        claimed_fabric_endpoint_ = false;
     }
     if (claimed_ordering_domains_) {
         pcie_fabric_->releaseOrderingDomains(
@@ -766,6 +719,12 @@ void RnicDevice::teardownHostMemory(Picoseconds now_ps) {
 
 PcieTransactionResult RnicDevice::submitPcie(
     const PcieTransactionRequest& request) {
+    return submitPcie(request, PcieEndpointAttribution{});
+}
+
+PcieTransactionResult RnicDevice::submitPcie(
+    const PcieTransactionRequest& request,
+    const PcieEndpointAttribution& attribution) {
     requireHostMemoryLive();
     if (!config_.dma.enabled || !pcie_fabric_) {
         throw std::logic_error(
@@ -777,7 +736,13 @@ PcieTransactionResult RnicDevice::submitPcie(
         throw std::invalid_argument(
             "RNIC PCIe ordering domain is claimed by another device");
     }
-    PcieTransactionResult result = pcie_fabric_->submit(request);
+    if (attribution.requester_endpoint_id != 0
+        && !pcie_fabric_->endpointClaimedBy(
+               this, attribution.requester_endpoint_id)) {
+        throw std::invalid_argument(
+            "RNIC PCIe requester endpoint is not claimed by this device");
+    }
+    PcieTransactionResult result = pcie_fabric_->submit(request, attribution);
     last_caller_time_ps_ = request.submitted_at_ps;
     return result;
 }
@@ -922,6 +887,14 @@ void RnicDevice::validateInvariants() const {
             || !submissionProfile().has_value()) {
             throw std::logic_error(
                 "enabled RNIC DMA has no WQ binding or submission profile");
+        }
+        if (claimed_fabric_endpoint_
+                != (config_.dma.fabric_endpoint_id != 0)
+            || (claimed_fabric_endpoint_
+                && !pcie_fabric_->endpointClaimedBy(
+                       this, config_.dma.fabric_endpoint_id))) {
+            throw std::logic_error(
+                "RNIC fabric endpoint claim mismatch");
         }
     } else if (pcie_fabric_ || pcieBinding().has_value()
                || submissionProfile().has_value()
