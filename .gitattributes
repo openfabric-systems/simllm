@@ -31,3 +31,6 @@ examples/sglang_composed_deployment_v1/fixtures/*.jsonl text eol=lf
 examples/sglang_a100_kernel_pilot_v1/expectations.json text eol=lf
 examples/sglang_host_step_v1/results.json text eol=lf
 examples/gpu_service_model/results.csv text eol=lf
+examples/rnic_gpu_endpoint_v1/results.csv text eol=lf
+examples/rnic_pcie_v1/results.csv text eol=lf
+examples/rnic_wq_v1/results.csv text eol=lf

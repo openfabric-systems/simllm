@@ -5,17 +5,20 @@
 This document states the model SimLLM is being built toward: the GPU is modeled
 the same way the NIC already is, as a device with typed ports that carry
 packets, and the software stack above it is a packet producer rather than a
-bandwidth constant. Most of the statement is still architectural direction; the
-first slice of it, the GPU device composition entry point with typed ports, is
-landed under COMP-34 and is described in
+bandwidth constant. The statement was architectural direction when it was
+written; the first implementation wave has since landed two slices of it: the
+GPU device composition entry point with typed ports under COMP-34, described in
 [compute](../modules/compute.md#gpu-device-composition-and-typed-ports) and
 validated by
-[gpu_device_ports_v1](../../examples/gpu_device_ports_v1/RESULTS.md).
+[gpu_device_ports_v1](../../examples/gpu_device_ports_v1/RESULTS.md), and the
+composition half of BACK-46, so a separately modeled GPU now attaches to the
+shared PCIe fabric as an endpoint in its own right.
 
 No default changed. Every artifact, timestamp and reported number in the
-repository is unchanged by this document and by that first slice, whose off path
-is byte-identical by object identity: a port that declares no ceiling of its own
-hands back exactly the architecture it was given. What this document adds is the
+repository is unchanged by this document and by both first slices, each on a
+byte-identical off path: a port that declares no ceiling of its own hands back
+exactly the architecture it was given, and the accepted BACK-10, BACK-19 and
+BACK-20 artifacts still reproduce byte for byte. What this document adds is the
 vocabulary that later implementation waves are held to, and the numbered tasks
 that own the remaining gaps: COMP-35, COMP-40 and COMP-41 in
 [compute](../modules/compute.md), BACK-46, BACK-47 and BACK-48 in
@@ -165,14 +168,19 @@ for a NIC payload read, and the payload read really is issued against it, as a
 `PayloadRead` non-posted read on the shared fabric. Every PCIe path
 configuration also carries a `gpu_direct` analytical delay component.
 
-What is missing is the second device. The GPU-memory label today is a property
-of an allocation the posting RNIC device owns, and a WQE data descriptor must
-resolve to a `DataRegion` whose `device_owner_id` equals that device's, so
-there is no separately modeled GPU that owns the region, claims it on the
-fabric, or has its transactions accounted apart from the NIC's. The GPU-direct
-term is also an analytical penalty whose occurrence is not yet mechanism-driven,
-which is BACK-16 precision scope. BACK-46 owns the composition half: a GPU
-attached to the same fabric as an endpoint in its own right.
+What was missing was the second device, and that half has landed. `GpuDevice`
+attaches to the same `PcieFabric` as the RNIC, claims its own endpoint identity
+and ordering domain, owns its `DataRegion` allocations in a shared registry, and
+grants named peer device owners read access to them; a WQE data descriptor names
+the peer that owns the region it reads, and the access is legal only when that
+peer granted the reader. The fabric charges each link traversal to a requester
+and a completer identity, so the NIC's payload read of a GPU-owned region is
+charged under the GPU's identity, while the same read out of host memory is
+charged to the host
+([study](../../examples/rnic_gpu_endpoint_v1/RESULTS.md)). The GPU-direct term
+is still an analytical penalty whose occurrence is not mechanism-driven, which
+is BACK-16 precision scope, and the leg has no projected TTFT or TPOT yet, which
+is BACK-49; BACK-46 stays open for that last clause.
 
 ### NCCL P2P and SHM intra-node transports
 
@@ -261,9 +269,10 @@ including `UarDoorbell`, `DoorbellRecord`, `WqeRead`, `QpcIcm`, `PayloadRead`,
 `PayloadWrite` and `CqeWrite`
 (`simllm/backends/rnic/include/simllm/rnic/pcie_fabric.h`). The vocabulary
 therefore already expresses the GPUDirect leg, and an accepted study already
-exercises it. What is missing is composition: several RNIC devices may share one
-fabric, but a GPU cannot attach to one, so the GPU-memory region a payload read
-names is owned by the reading NIC rather than by a modeled GPU.
+exercises it. The composition that was missing has since landed: the fabric
+carries endpoint identities alongside its service classes, a GPU attaches to it
+as a device of its own kind, and the GPU-memory region a payload read names is
+owned by that modeled GPU rather than by the reading NIC.
 
 Four rules make the generalization concrete.
 
@@ -288,7 +297,8 @@ Four rules make the generalization concrete.
 | Model role | What exists today | Where | Owning tasks |
 |---|---|---|---|
 | Device composition entry point, NIC | Versioned `RnicDeviceConfig` and `RnicDevice`, modular, disabled modules keep the interface with parameters inert or rejected | `simllm/backends/rnic/include/simllm/rnic/rnic_device.h` | BACK-18 closed; COMP-34 closed, mirroring the pattern for the GPU in `simllm/compute/gpu_device.py` |
-| PCIe fabric | Shared transaction model with twelve service classes, finite credits, tags and buffers, analytical path penalties | `simllm/backends/rnic/include/simllm/rnic/pcie_fabric.h` | BACK-10 closed; BACK-16 and BACK-17 open; BACK-46 makes it multi-device |
+| PCIe fabric | Shared transaction model with twelve service classes, finite credits, tags and buffers, analytical path penalties, and per-endpoint requester and completer accounting over host, RNIC and GPU identities | `simllm/backends/rnic/include/simllm/rnic/pcie_fabric.h` | BACK-10 closed; BACK-16 and BACK-17 open; BACK-46 made it multi-device and stays open for the metric clause |
+| Device composition entry point, GPU-side fabric attachment | `GpuDeviceConfig` and `GpuDevice`, with endpoint identity, ordering-domain and region claims, peer read grants and one fabric transfer primitive; no service model of its own | `simllm/backends/rnic/include/simllm/rnic/gpu_device.h` | BACK-46 landed it and stays open for the metric clause; the typed port objects landed under the closed COMP-34 and the peer service stays with COMP-31 |
 | Virtual host memory | Tracked QPC, ring, doorbell-record and data allocations with the QPC translation asymmetry | `simllm/backends/rnic/include/simllm/rnic/host_memory.h` | BACK-19 closed |
 | Submission shapes | Host CPU, CPU proxy from a GPU-written descriptor queue, and GPU-initiated rings with a GPU-owned CQ; producer work as timed GPU tasks | `simllm/backends/rnic/include/simllm/rnic/submission.h` | BACK-20 and BACK-27 closed; BACK-37 open for the GPU CQ consumer |
 | GPU service model and NVLink egress cursor | One flat per-GPU egress serializer shared by every NVLINK store (opcodes `ST` and `STG`), plus the ring-collective egress kernel | `NvlinkProfile` in `simllm/compute/gpu_model.py`, launcher `nccl_ring_allreduce_launch` in `simllm/compute/nccl.py` | COMP-11 closed; COMP-31 open for peer topology, ingress and reduction lanes; COMP-34 closed, adding the peer-store egress port over this cursor |
@@ -368,7 +378,10 @@ today are vendor nameplate.
 ## What exists today, and what is registered as a gap
 
 Landed and usable now: the modular RNIC device with typed ports (BACK-18), the
-shared PCIe transaction model (BACK-10), tracked virtual host memory (BACK-19),
+shared PCIe transaction model (BACK-10) with per-endpoint accounting over host,
+RNIC and GPU identities and a separately modeled GPU attached to it (the
+composition half of BACK-46), tracked virtual host memory (BACK-19) with
+cross-device region ownership and peer read grants,
 three submission shapes with GPU producer coupling (BACK-20, BACK-27), the ABI
 v2 packet and transport-control vocabulary (BACK-25, BACK-26), the GPUDirect
 data-region placement exercised by the accepted BACK-20 artifact, the flat
@@ -389,10 +402,20 @@ Registered by this document, with the state each task is in now:
 | COMP-35 | No vendor port instantiation exists, so an AMD ROCm GPU cannot be expressed at all and an xGMI ceiling has no first-party or declared profile to fail closed against. The protocol is now nameable and an xGMI port is rejected at configuration time with a diagnostic naming this task. |
 | COMP-40 | The landed GPU ports declare capabilities but emit no packet event, so an intra-node leg cannot report an extent, an attempt, a TX boundary or an arrival in the same language a wire port uses. Paired with BACK-48, which owns exposing that vocabulary to a non-wire port. |
 | COMP-41 | No shipped architecture profile carries a measured per-port ceiling. Every reachable ceiling is read out of a synthetic study calibration or declared by a study, so the measured cells in the port taxonomy above are not yet attached to a profile a run can select. |
-| BACK-46 | The GPUDirect leg is already expressible and already exercised, with `data_endpoint` as `gpu_memory` in the accepted BACK-20 artifact, but the region is owned by the reading NIC: no separately modeled GPU attaches to the shared fabric, claims its own regions, or has its transactions accounted apart from the NIC's. |
+| BACK-46 | Composition landed on 2026-08-17: `GpuDevice` attaches to the shared fabric with its own endpoint identity and ordering domain, owns its regions, grants named peers read access, and has its transactions charged in a per-endpoint ledger, so a NIC payload read whose completer is a GPU-owned region is charged under the GPU's identity, and a foreign claim is refused with unchanged state ([study](../../examples/rnic_gpu_endpoint_v1/RESULTS.md): 10 of 10 published scored instances, no fatal guard violated, every accepted BACK-10, BACK-19 and BACK-20 artifact byte-identical). What remains is the metric clause: the relations are native WQE completion times rather than a projected TTFT or TPOT, so this entry stays open and BACK-49 carries the live chain. |
 | BACK-47 | The mirrored NCCL stack boundary is not named as the plugin ABI seam, and its packet-emission half toward the GPU is unregistered while the half toward the NIC stops at zero-time events. |
 | BACK-48 | The ABI v2 packet vocabulary is reachable only through a wire port, so a non-wire port cannot emit an attempt, a TX boundary or an arrival in the same language. |
 | TRAF-45 | The intra-node leg has no packetized path behind the analytic locality off path, and the ingress term of a converging combine is still owned elsewhere (CORE-48 cross-node, COMP-31 local mechanism). |
+
+Registered by the BACK-46 implementation, which found them rather than assumed
+them:
+
+| Task | Gap it owns |
+|---|---|
+| BACK-49 | The two-device fabric leg is reachable only through native WQE completion timestamps. The composed-observation contract that feeds the structural runtime requires WQE eligibility to equal the scalar doorbell service, which a DMA-mode device cannot satisfy, so no projected TTFT or TPOT exists for the GPU-attached arm yet. |
+| BACK-50 | The effective-hardware snapshot omits the whole second-device composition: the fabric host endpoint, the RNIC endpoint identity, the peer read grants that decide WQE legality, and every field of `GpuDeviceConfig`, so two runs with different fabric compositions, and even one that accepts a peer-region WQE and one that rejects it, share a `hardware_config_sha256`. |
+| BACK-51 | A GPU transfer whose completer is another device's device-local memory is refused rather than charged, because the host-link direction and path do not describe a peer-to-peer route. |
+| BACK-52 | A released PCIe ordering domain can be reclaimed, and its visibility and completion cursors are keyed by domain value, so a later claimant can inherit a horizon it did not earn. |
 
 ## The `simllm.device` decision, answered by COMP-34
 

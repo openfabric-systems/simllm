@@ -311,9 +311,50 @@ Each enabled device claims its nonzero `device_owner_id` in the registry
 before planning any registration. A shared registry rejects a duplicate live
 claim or a claim over pre-existing live allocations. Claimed registrations
 and teardown require the same device identity, and a failed foreign operation
-leaves allocations, lifecycle evidence and generation unchanged. WQE data
-descriptors must resolve to a `DataRegion` owned by the posting device even
-when another device uses the same numeric MKey in its own namespace.
+leaves allocations, lifecycle evidence and generation unchanged. A WQE data
+descriptor resolves to a `DataRegion` owned by the posting device unless it
+names a peer owner explicitly, and a peer region is legal only when that owner
+granted this device read access, so a numeric MKey reused in another device's
+namespace still cannot be reached by accident.
+
+### Second device on one fabric
+
+`GpuDevice` is the second device kind that attaches to a `PcieFabric`. Its
+composition rules mirror the RNIC's and its differences from one are deliberate.
+
+- **Endpoint identity.** `PcieFabricConfig::host_endpoint_id` names the fabric's
+  host endpoint and is owned by the fabric itself. A device claims its own
+  identity for its lifetime; the identity is retired on release and can never be
+  reclaimed, in any device kind, because the per-endpoint ledger is keyed by
+  identity and a reclaimed row would mean two devices. A released row stays
+  readable under a released label so a run record survives teardown, and
+  `knownEndpoints()` enumerates attached plus released identities so the
+  conservation identity stays checkable from outside.
+- **Charging.** An endpoint pair names the two ends of one link traversal. A
+  `HostStore` moves no link bytes and carries no pair; the two identities must
+  differ; and a transfer inside any device's own memory is rejected rather than
+  charged, including a granted GPU-to-GPU device-local transfer, which is the
+  unmodeled peer-to-peer leg BACK-51 registers. An endpoint-attributed RNIC
+  therefore cannot own device-local memory at all: that region belongs to a
+  modeled GPU.
+- **No MKey path for a copy engine.** A `GpuDevice` transfer deliberately
+  bypasses `VirtualHostMemory::scheduleAccess`. A copy engine addresses the
+  region directly, so the transfer emits no MKey, MPT or MTT read and never
+  appears in an RNIC's `memoryAccesses()`. Its records are the device's own
+  `transferRecords()` and the fabric's endpoint ledger. Translation stays a
+  property of the RNIC's registered memory path.
+- **Ordering domains.** A GPU claims one raw domain in the same flat namespace
+  an RNIC claims into, where a shared RNIC derives the pair
+  `(2 * namespace, 2 * namespace + 1)`. A GPU domain must avoid both halves of
+  every RNIC namespace on the same fabric, and because it is one domain rather
+  than a pair its reads and writes share one horizon.
+- **One shared caller clock.** The fabric is a single contended resource whose
+  reservation calendar only moves forward, so every device entry point that can
+  schedule fabric work validates against a fabric-level caller clock and
+  advances it only on success. An operation stamped before a peer device's last
+  operation is rejected instead of silently absorbing that peer's backlog. Reuse
+  of a released ordering domain is the one remaining inheritance of this class
+  and is registered as BACK-52.
 The submission profile selects a host CPU driver, a CPU proxy fed by one
 GPU-written host-visible descriptor queue, or a GPU-initiated producer. It
 names the producer, RNIC requester and sole CQ consumer independently from the
@@ -420,6 +461,33 @@ The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 [the RNIC hardware calibration plan](../papers/rnic-hardware-calibration.md).
 
 ## Status
+
+On 2026-08-17 the second device landed on the shared PCIe fabric. `GpuDevice`
+attaches to the same `PcieFabric` an RNIC uses, claims its own endpoint
+identity and ordering domain, owns data regions in a shared `VirtualHostMemory`,
+grants named peer device owners read access to them, and issues its own payload
+transfers; the fabric now keeps a per-endpoint requester and completer ledger
+beside its per-service-class ledger, and a WQE data descriptor may name a
+peer-owned region only when that peer granted the reading device. An endpoint
+pair names the two ends of one link traversal, so host stores stay
+unattributed by construction, the two identities must differ, and a transfer
+inside any device's own memory is refused rather than charged. Its
+[frozen study](../../examples/rnic_gpu_endpoint_v1/RESULTS.md) publishes 10 of
+10 scored relation instances with no fatal guard violated: the payload read of a
+GPU-owned region is charged to the GPU endpoint, the host-bounce arm completes
+later by exactly the staged serialization in all four cells, the staged
+transfers hit their closed form to the picosecond with zero credit and
+link-queue wait, thirteen cross-device rejections leave fabric and registry state
+unchanged, and every accepted BACK-10, BACK-19 and BACK-20 artifact reproduces
+byte for byte from a rebuilt library. Every new field is inert at zero, so no
+version constant moved and `defaultPcieFabricConfig()` is unchanged. Six defect
+fixes to the enabled paths landed after the study's first publication, all
+disclosed in its record, and the frozen rows reproduce byte for byte through
+every one of them, which is the evidence that the study never exercised the
+paths they close. BACK-46 stays open for its last clause, the end-to-end metric,
+whose schema prerequisite is BACK-49; BACK-50 records that the effective-hardware
+projection describes none of the second-device composition, BACK-51 the unmodeled
+peer-to-peer leg and BACK-52 released ordering-domain reuse.
 
 On 2026-08-14 BACK-43 closed. Per-request attribution used to refuse every
 step whose locality projection carried NVLink bytes or NVLink service, so any
@@ -1063,31 +1131,37 @@ created" statement stands and refers to different, never-registered work.
   its operation, WQE, byte range and terminal delivery or drop. The disabled
   path keeps packet identities backend-private and must preserve every
   accepted routing-lifetime, GOAL, completion and metric byte exactly.
-- BACK-46 (Completeness; P2; L): attach a separately modeled GPU to the shared
-  PCIe fabric, so NIC, GPU and host are endpoints of one fabric with their own
-  identities. The GPUDirect placement itself is not the gap: `GpuMemory` is a
-  legal endpoint for any allocation kind including `DataRegion`, the accepted
-  BACK-20 artifact already carries `data_endpoint` as `gpu_memory` under both
-  the CPU-proxy and the GPU-initiated shape, the payload read really is issued
-  against that allocation as a `PayloadRead` non-posted read, and every path
-  configuration carries a `gpu_direct` analytical delay component. What is
-  missing is the second device. The GPU-memory label is a property of an
-  allocation the posting RNIC device owns, since a WQE data descriptor must
-  resolve to a `DataRegion` whose `device_owner_id` equals that device's, so no
-  modeled GPU owns the region, claims it on the fabric, or has its transactions
-  accounted apart from the NIC's. Land that device: ownership and claim rules
-  for its regions, cross-device claim rejection, and per-endpoint accounting
-  that keeps the two devices' transactions distinguishable. Acceptance: a
-  payload read whose completer is a region owned by the modeled GPU is charged
-  on the shared fabric under that device's endpoint identity; the default
-  fabric configuration (`defaultPcieFabricConfig`, host stores and host-pinned
-  paths) stays the selected baseline and every accepted BACK-10, BACK-19 and
-  BACK-20 artifact stays byte-identical, including the rows whose data regions
-  are already labeled GPU memory; a foreign-device region claim is rejected
-  transactionally with unchanged state; and the enabled two-device leg changes
-  an end-to-end metric in the registered direction. Timing, occurrence and
-  calibration defects of the enabled leg become BACK-16 precision scope. The
-  design statement is
+- BACK-46 (Completeness; P2; M): close the last acceptance clause of the
+  second-device composition, which is the end-to-end metric. The four clauses
+  this entry was registered with are quoted here so the numbering stays
+  recoverable without git: (1) a payload read whose completer is a region owned
+  by the modeled GPU is charged on the shared fabric under that device's
+  endpoint identity; (2) the default fabric configuration stays the selected
+  baseline and every accepted BACK-10, BACK-19 and BACK-20 artifact stays
+  byte-identical, including the rows whose data regions are already labeled GPU
+  memory; (3) a foreign-device region claim is rejected transactionally with
+  unchanged state; (4) the enabled two-device leg changes an end-to-end metric
+  in the registered direction.
+  Clauses 1 to 3 landed: `GpuDevice` attaches to a shared `PcieFabric` with its
+  own endpoint identity and ordering domain, owns its regions in a shared
+  registry, grants named peers read access, and issues its own fabric transfers;
+  the fabric keeps a per-endpoint ledger beside its per-service-class ledger; and
+  a WQE data descriptor may name a peer-owned region only when that peer granted
+  the reader. The
+  [frozen study](../../examples/rnic_gpu_endpoint_v1/RESULTS.md) scored 10 of 10
+  relation instances in its published form with no fatal guard violated: a
+  payload read whose completer is a GPU-owned region is charged under endpoint
+  identity 4002 while the host-bounce arm charges the host endpoint, the
+  host-bounce arm's WQE completes later by exactly the staged serialization in
+  all four cells, ten cross-device rejections leave the fabric and registry state
+  unchanged, and every accepted BACK-10, BACK-19 and BACK-20 artifact reproduces
+  byte for byte from a rebuilt library.
+  Clause 4 is unmet: the relations above are native WQE completion times, not a
+  projected TTFT or TPOT. This entry closes when that projection lands with the
+  registered direction met, which needs the schema prerequisite BACK-49 owns.
+  Timing, occurrence and calibration defects of the enabled leg are BACK-16
+  precision scope; the unmodeled peer-to-peer leg is BACK-51 and released
+  ordering-domain reuse is BACK-52. The design statement is
   [the packet-device model](../design/packet-device-model.md).
 - BACK-47 (Completeness; P2; M): name the mirrored NCCL stack boundary as the
   ncclNet-shaped plugin ABI seam and register its packet-emission half.
@@ -1121,6 +1195,71 @@ created" statement stands and refers to different, never-registered work.
   and peer attempts through the same vocabulary without a port-kind switch, an
   unsupported capability request is rejected before any state mutation, and both
   ABI v1 and the accepted ABI v2 wire artifacts stay byte-identical.
+- BACK-49 (Completeness; P2; L): teach the composed-observation contract a
+  DMA-mode cell family, which is the prerequisite that currently blocks any
+  fabric-attached device from reaching the reported metric chain. The contract
+  that feeds `CoarseDeviceRuntime` in structural mode requires
+  `eligible_at_ps == doorbell_service_ps` for every WQE, where `eligible_at_ps`
+  is the producer's projection of `admitted_at_ps`. That equality holds for the
+  scalar-service fixture and cannot hold for a DMA-mode device, which rejects a
+  nonzero scalar doorbell service and derives admission from PCIe transactions
+  instead: the accepted GPU-endpoint rows admit at 80,811 ps in their smallest
+  cell against a required zero. Land the second cell family, or an equivalent
+  producer, so a `ComposedRnicSession` can ingest a cell whose eligibility comes
+  from fabric transactions. Acceptance: a `ComposedRnicSession` ingests a
+  DMA-mode cell and drives `CoarseDeviceRuntime` in structural mode to a
+  `StepResult`, the scalar family stays selectable, and every accepted Tier A,
+  Tier B and Tier C `rnic_live_v1` artifact stays byte-identical with the new
+  family unselected. The difficulty is L rather than M because the span crosses
+  the native producer, the Python observation contract, the runtime authority
+  and the reducer, and it must hold four accepted artifact families still. This
+  task carries the prerequisite only; BACK-46 clause 4 owns the frozen
+  two-arm projection built on it and closes on the registered direction.
+- BACK-50 (Completeness; P1; M): project the second-device composition into the
+  effective-hardware snapshot, which today omits it entirely on an active path.
+  `renderEffectiveHardwareConfigJson` builds its `dma` and `host_memory` objects
+  from exact key sets that predate endpoint identities, so
+  `PcieFabricConfig::host_endpoint_id`, `RnicDmaConfig::fabric_endpoint_id` and
+  `RnicHostMemoryConfig::peer_read_grants` are all absent, and `GpuDeviceConfig`
+  has no projection at all: its GPU number, PCIe requester identity, endpoint
+  identity, ordering domain, regions and peer grants are invisible, as is the
+  fact that a GPU shares the fabric. Two consequences make this P1 rather than
+  disabled-feature coverage. The hash is the hardware identity of a run, and the
+  landed study drives all of these fields, so two runs with different fabric
+  compositions hash identically. Worse, `peer_read_grants` decides WQE legality,
+  so a config that accepts a peer-region WQE and one that rejects it share one
+  `hardware_config_sha256`. Extend the emitted keys and the matching reader in
+  `simllm.backends`, keeping every new key shape dependent so an unattributed
+  single-device configuration emits exactly today's bytes. Acceptance: two
+  configs differing only in endpoint identity hash differently, two differing
+  only in peer grants hash differently, a shared-fabric GPU composition is
+  described in the snapshot, the reader rejects a malformed block, and every
+  accepted effective-hardware digest and rejection-corpus row stays
+  byte-identical for the unattributed shape.
+- BACK-51 (Completeness; P2; M): model the GPU-to-GPU peer leg over the fabric.
+  A `GpuDevice` transfer whose completer is another device's device-local memory
+  is rejected today, because charging it on the host link would invent a
+  traversal that never reaches the host: the request direction, the two ports it
+  crosses and the switch path between them are all different from a host-pinned
+  staging write. A granted peer region in device-local memory therefore fails
+  closed with an explicit rejection rather than a wrong number. Land the leg with
+  its own direction and path handling, and decide explicitly whether it belongs
+  on the PCIe fabric at all or on the NVLink or xGMI peer port that COMP-34
+  registers. Acceptance: a peer device-local transfer is charged with both
+  endpoints named and a direction that matches the modeled route, the rejection
+  stays the off path for any route not modeled, and every accepted endpoint-ledger
+  row stays byte-identical.
+- BACK-52 (Completeness; P2; S): retire released PCIe ordering domains the way
+  endpoint identities are retired. `OrderingDomainClaims::release` erases the
+  claim, but `PcieFabric` keeps that domain's posted-visibility and
+  non-posted-completion cursors keyed by domain value, so a later device that
+  claims the same value inherits a horizon it did not earn. The shared fabric
+  caller clock bounds the exposure, since a new operation cannot be stamped
+  before the last one, but a completion horizon can still sit ahead of the
+  current caller time, so an inherited wait of up to that gap is reachable.
+  Refuse reuse of a released domain, or retire its cursors with the claim.
+  Acceptance: a reclaimed domain cannot inherit a cursor, the rejection or
+  retirement is tested, and every accepted timestamp stays byte-identical.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
