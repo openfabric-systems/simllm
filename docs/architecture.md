@@ -511,12 +511,15 @@ roles, the calibration doctrine and the tasks that close the remaining gaps, is
    and stay exact, and the contract in the next section applies to every
    packetized leg added beside them.
 
-Today the NIC is modeled this way and the GPU is not: `RnicDevice` composes a
-work-queue core with an optional PCIe fabric, an optional host-memory registry
-and either an injected `NetworkPort` or an owned inert one, while the GPU's
-intra-node link is one flat per-GPU egress cursor with no port object, no peer
-identity and no packet. COMP-34, COMP-35, BACK-46, BACK-47, BACK-48 and TRAF-45
-own that difference.
+Both devices now compose this way: `RnicDevice` composes a work-queue core with
+an optional PCIe fabric, an optional host-memory registry and either an injected
+`NetworkPort` or an owned inert one, and `GpuDevice` composes an architecture
+profile with typed PCIe and NVLink ports over the copy-engine and egress-cursor
+mechanisms (COMP-34, closed). What the GPU ports still lack is the packet half:
+they declare, negotiate and reject, but emit no attempt, TX boundary or arrival,
+and the intra-node link is still one flat per-GPU egress cursor with no peer
+identity. COMP-35, COMP-40, COMP-41, BACK-46, BACK-47, BACK-48 and TRAF-45 own
+what is left.
 
 ## Precision levels and their contract
 

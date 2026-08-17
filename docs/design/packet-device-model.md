@@ -5,13 +5,19 @@
 This document states the model SimLLM is being built toward: the GPU is modeled
 the same way the NIC already is, as a device with typed ports that carry
 packets, and the software stack above it is a packet producer rather than a
-bandwidth constant. The statement is architectural direction, not a landed
-mechanism.
+bandwidth constant. Most of the statement is still architectural direction; the
+first slice of it, the GPU device composition entry point with typed ports, is
+landed under COMP-34 and is described in
+[compute](../modules/compute.md#gpu-device-composition-and-typed-ports) and
+validated by
+[gpu_device_ports_v1](../../examples/gpu_device_ports_v1/RESULTS.md).
 
-Nothing here changes behavior. Every default, artifact, timestamp and reported
-number in the repository at this commit is unchanged by this document. What it
-adds is the vocabulary that later implementation waves are held to, and the
-numbered tasks that own the gaps: COMP-34 and COMP-35 in
+No default changed. Every artifact, timestamp and reported number in the
+repository is unchanged by this document and by that first slice, whose off path
+is byte-identical by object identity: a port that declares no ceiling of its own
+hands back exactly the architecture it was given. What this document adds is the
+vocabulary that later implementation waves are held to, and the numbered tasks
+that own the remaining gaps: COMP-35, COMP-40 and COMP-41 in
 [compute](../modules/compute.md), BACK-46, BACK-47 and BACK-48 in
 [backends](../modules/backends.md), and TRAF-45 in
 [traffic](../modules/traffic.md).
@@ -51,22 +57,24 @@ Four sentences carry the whole model.
    contract in [architecture.md](../architecture.md#precision-levels-and-their-contract)
    applies to it: a level may change a duration, never what happened.
 
-The asymmetry this model removes is visible in the current code. The NIC is
-already a device with typed ports: `RnicDevice` is composed from a work-queue
-core, an optional PCIe fabric, an optional host-memory registry and either an
-injected `NetworkPort` or an owned inert one, and a disabled module keeps its
-interface with parameters inert or rejected
-(`simllm/backends/rnic/include/simllm/rnic/rnic_device.h`). The GPU is not. It
-is a calibration profile carrying two separate link mechanisms: one flat
-per-GPU egress cursor for SM stores (`NvlinkProfile`, whose egress opcode set
-is `ST` and `STG` only) and a set of per-direction copy-engine profiles that
-already price host-to-device, device-to-host, device-to-device and peer
-transfers with their own setup cost and bandwidth
-(`CopyDirectionProfile` and `CopyEngineProfile`, both in
-`simllm/compute/gpu_model.py`). Both are real service models with measured
-cells behind them. What neither has is a port object: no protocol identity, no
-declared capabilities, no ceiling provenance field, and no shared packet
-vocabulary.
+The asymmetry this model removes was visible in the code, and its first half is
+now gone. The NIC is a device with typed ports: `RnicDevice` is composed from a
+work-queue core, an optional PCIe fabric, an optional host-memory registry and
+either an injected `NetworkPort` or an owned inert one, and a disabled module
+keeps its interface with parameters inert or rejected
+(`simllm/backends/rnic/include/simllm/rnic/rnic_device.h`). The GPU now is too.
+Its two link mechanisms are unchanged and still authoritative: one flat per-GPU
+egress cursor for SM stores (`NvlinkProfile`, whose egress opcode set is `ST`
+and `STG` only) and a set of per-direction copy-engine profiles that price
+host-to-device, device-to-host, device-to-device and peer transfers with their
+own setup cost and bandwidth (`CopyDirectionProfile` and `CopyEngineProfile`,
+both in `simllm/compute/gpu_model.py`). Over them, `GpuDeviceConfig` and
+`GpuDevice` in `simllm/compute/gpu_device.py` add what neither mechanism had: a
+port object with protocol identity, role, direction, declared capabilities, a
+ceiling and the provenance of that ceiling, behind one versioned configuration
+that rejects at configuration time. What is still missing on both sides is the
+shared packet vocabulary: a GPU port declares and negotiates, but emits no
+packet event, which is BACK-48 with COMP-40 as its compute-side half.
 
 ## Port taxonomy
 
@@ -279,12 +287,12 @@ Four rules make the generalization concrete.
 
 | Model role | What exists today | Where | Owning tasks |
 |---|---|---|---|
-| Device composition entry point, NIC | Versioned `RnicDeviceConfig` and `RnicDevice`, modular, disabled modules keep the interface with parameters inert or rejected | `simllm/backends/rnic/include/simllm/rnic/rnic_device.h` | BACK-18 closed; COMP-34 mirrors the pattern for the GPU |
+| Device composition entry point, NIC | Versioned `RnicDeviceConfig` and `RnicDevice`, modular, disabled modules keep the interface with parameters inert or rejected | `simllm/backends/rnic/include/simllm/rnic/rnic_device.h` | BACK-18 closed; COMP-34 closed, mirroring the pattern for the GPU in `simllm/compute/gpu_device.py` |
 | PCIe fabric | Shared transaction model with twelve service classes, finite credits, tags and buffers, analytical path penalties | `simllm/backends/rnic/include/simllm/rnic/pcie_fabric.h` | BACK-10 closed; BACK-16 and BACK-17 open; BACK-46 makes it multi-device |
 | Virtual host memory | Tracked QPC, ring, doorbell-record and data allocations with the QPC translation asymmetry | `simllm/backends/rnic/include/simllm/rnic/host_memory.h` | BACK-19 closed |
 | Submission shapes | Host CPU, CPU proxy from a GPU-written descriptor queue, and GPU-initiated rings with a GPU-owned CQ; producer work as timed GPU tasks | `simllm/backends/rnic/include/simllm/rnic/submission.h` | BACK-20 and BACK-27 closed; BACK-37 open for the GPU CQ consumer |
-| GPU service model and NVLink egress cursor | One flat per-GPU egress serializer shared by every NVLINK store (opcodes `ST` and `STG`), plus the ring-collective egress kernel | `NvlinkProfile` in `simllm/compute/gpu_model.py`, launcher `nccl_ring_allreduce_launch` in `simllm/compute/nccl.py` | COMP-11 closed; COMP-31 open for peer topology, ingress and reduction lanes; COMP-34 adds the port objects |
-| GPU copy-engine service | Per-direction profiles with their own setup cost and bandwidth for host to device, device to host, device to device and peer transfers, and an estimate that rejects a direction the engine does not declare; this is the mechanism the measured copy-engine peer efficiencies calibrate | `CopyEngineProfile`, `CopyDirectionProfile` and `CopyEngineServiceModel` in `simllm/compute/gpu_model.py` | COMP-34 adds typed ports over these directions rather than replacing them |
+| GPU service model and NVLink egress cursor | One flat per-GPU egress serializer shared by every NVLINK store (opcodes `ST` and `STG`), plus the ring-collective egress kernel | `NvlinkProfile` in `simllm/compute/gpu_model.py`, launcher `nccl_ring_allreduce_launch` in `simllm/compute/nccl.py` | COMP-11 closed; COMP-31 open for peer topology, ingress and reduction lanes; COMP-34 closed, adding the peer-store egress port over this cursor |
+| GPU copy-engine service | Per-direction profiles with their own setup cost and bandwidth for host to device, device to host, device to device and peer transfers, and an estimate that rejects a direction the engine does not declare; this is the mechanism the measured copy-engine peer efficiencies calibrate | `CopyEngineProfile`, `CopyDirectionProfile` and `CopyEngineServiceModel` in `simllm/compute/gpu_model.py` | COMP-34 closed, adding typed ports over these directions rather than replacing them; COMP-41 open for measured per-port ceilings on a shipped profile |
 | NCCL stack skeleton | Name-mirrored communicator, planner, GPU FIFO, proxy, `ncclNet.isend` and `test`, verbs and doorbell, on one virtual clock | `simllm/compute/nccl_stack.py` | COMP-15 open; BACK-47 names the plugin seam as the producer boundary |
 | Host initiation | `HostInitiationModel` with the exact-zero ideal profile and calibrated launch-throughput profiles | `simllm/compute/host.py` | COMP-2 closed; COMP-28 open for the analytical submission fallback |
 | Analytic intra-node locality | Placement-driven local versus remote split, per-endpoint byte ledger, `max(egress, ingress)` endpoint load | `classify_step_locality` in `simllm/traffic/locality.py` | TRAF-10 and CORE-41 closed; CORE-48 open for cross-node ingress; TRAF-45 adds the packetized leg |
@@ -354,51 +362,71 @@ three submission shapes with GPU producer coupling (BACK-20, BACK-27), the ABI
 v2 packet and transport-control vocabulary (BACK-25, BACK-26), the GPUDirect
 data-region placement exercised by the accepted BACK-20 artifact, the flat
 NVLink egress cursor and ring egress kernel (COMP-11), the per-direction
-copy-engine service that the measured peer efficiencies calibrate, the analytic
+copy-engine service that the measured peer efficiencies calibrate, the GPU
+device composition entry point with typed PCIe and NVLink ports over both of
+those mechanisms (COMP-34), the analytic
 locality split
 (TRAF-10) with `max(egress, ingress)` endpoint load (CORE-41), and the
 name-mirrored NCCL stack skeleton on one virtual clock (first slice of
 COMP-15).
 
-Registered by this document:
+Registered by this document, with the state each task is in now:
 
 | Task | Gap it owns |
 |---|---|
-| COMP-34 | The GPU has no device composition entry point and no typed port objects over its existing link mechanisms, so no protocol identity, declared capabilities, ceiling provenance or shared packet vocabulary. Peer topology, ingress service and reduction lanes stay with COMP-31. |
-| COMP-35 | No vendor port instantiation exists, so an AMD ROCm GPU cannot be expressed at all and an xGMI ceiling has no first-party or declared profile to fail closed against. |
+| COMP-34, closed | Landed the GPU device composition entry point with typed PCIe and NVLink ports over the existing copy-engine and NVLink-cursor mechanisms: protocol identity, role, direction, declared capabilities, ceiling and ceiling provenance behind one versioned configuration, with configuration-time rejection and a byte-identical off path. Validated by [gpu_device_ports_v1](../../examples/gpu_device_ports_v1/RESULTS.md). Residuals are COMP-40 and COMP-41. Peer topology, ingress service and reduction lanes stayed with COMP-31. |
+| COMP-35 | No vendor port instantiation exists, so an AMD ROCm GPU cannot be expressed at all and an xGMI ceiling has no first-party or declared profile to fail closed against. The protocol is now nameable and an xGMI port is rejected at configuration time with a diagnostic naming this task. |
+| COMP-40 | The landed GPU ports declare capabilities but emit no packet event, so an intra-node leg cannot report an extent, an attempt, a TX boundary or an arrival in the same language a wire port uses. Paired with BACK-48, which owns exposing that vocabulary to a non-wire port. |
+| COMP-41 | No shipped architecture profile carries a measured per-port ceiling. Every reachable ceiling is read out of a synthetic study calibration or declared by a study, so the measured cells in the port taxonomy above are not yet attached to a profile a run can select. |
 | BACK-46 | The GPUDirect leg is already expressible and already exercised, with `data_endpoint` as `gpu_memory` in the accepted BACK-20 artifact, but the region is owned by the reading NIC: no separately modeled GPU attaches to the shared fabric, claims its own regions, or has its transactions accounted apart from the NIC's. |
 | BACK-47 | The mirrored NCCL stack boundary is not named as the plugin ABI seam, and its packet-emission half toward the GPU is unregistered while the half toward the NIC stops at zero-time events. |
 | BACK-48 | The ABI v2 packet vocabulary is reachable only through a wire port, so a non-wire port cannot emit an attempt, a TX boundary or an arrival in the same language. |
 | TRAF-45 | The intra-node leg has no packetized path behind the analytic locality off path, and the ingress term of a converging combine is still owned elsewhere (CORE-48 cross-node, COMP-31 local mechanism). |
 
-## Open decision point, deliberately not decided here
+## The `simllm.device` decision, answered by COMP-34
 
-**Does a dedicated `simllm.device` module get carved out when this lands?**
+**Does a dedicated `simllm.device` module get carved out?**
 
-This document does not decide it, and the decision must be made explicitly in
-the change that implements COMP-34 rather than by accident.
+**No.** The GPU port objects live in `simllm/compute/gpu_device.py`, inside the
+package that owns the mechanisms they wrap, and no new top-level module was
+created. The change that implements COMP-34 is the change that decides this, and
+this section records the answer with its reasoning, as the earlier form of this
+section required.
 
-The case for carving it out: port, packet and device-composition types would
-then have one home instead of being duplicated between
-`simllm/backends/rnic/` (C++, NIC-side, already device shaped) and
-`simllm/compute/` (Python, GPU-side, currently profile shaped). A shared home
-is also the natural place for the capability negotiation that lets one packet
-vocabulary serve ports with different control features.
+The criterion this document set was whether the port objects could be expressed
+inside the existing compute and backend surfaces without either duplicating the
+packet vocabulary or importing across the Python and C++ boundary in a new
+direction. Both halves came back clean, and the reason is that the first port
+implementation turned out to need less than the open question assumed.
 
-The case against: this repository's module rule is deep implementation behind a
-narrow existing interface rather than a new parallel surface, and the working
-seams already exist (`ComputeProvider`, the placement and fabric manifests,
-`NetworkPort`, `PcieFabric`). A new top-level module is a wide shallow surface
-until at least two ports of different kinds actually need it, and the
-framework-independence ground rule in
-[CONTRIBUTING.md](../../CONTRIBUTING.md) constrains where the types may live.
+- **No packet vocabulary was duplicated, because the port objects emit no
+  packets.** What a port needed in order to be named, negotiated and reported is
+  identity (protocol, role, direction), a declared capability set, a ceiling, and
+  the provenance of that ceiling. None of that is `NetworkEventScope`,
+  `NetworkPacketKind`, a drop reason or an attempt token. The capability set is
+  the negotiation surface: a GPU port rejects a request for ECN marking,
+  priority flow control or congestion notification by name, and the diagnostic
+  points at BACK-48, which owns making the ABI v2 vocabulary reachable from a
+  non-wire port at all. When BACK-48 lands, the shared vocabulary will be
+  reachable from one place rather than copied into two.
+- **No new import direction appeared.** `simllm/compute/gpu_device.py` imports
+  from `simllm/compute/gpu_model.py` and from nothing else in the repository. It
+  does not import `simllm.backends`, and it does not reach across the Python and
+  C++ boundary in either direction. `RnicDevice` remains the C++ NIC-side
+  composer and was not touched.
+- **The module rule pointed the same way.** Deep implementation behind a narrow
+  existing interface beats a new parallel surface. A `simllm.device` package
+  would today hold one dataclass family with exactly one consumer, which is the
+  wide shallow surface the rule exists to prevent. Framework independence binds
+  either way and is satisfied: the module imports no vLLM and no SGLang.
 
-What decides it: whether COMP-34's port objects can be expressed inside the
-existing compute and backend surfaces without either duplicating the packet
-vocabulary or importing across the Python and C++ boundary in a new direction.
-That question is answerable only with the first port implementation in hand, so
-the implementing change records the answer with its reasoning, and this section
-is updated to state which way it went.
+The decision is revisitable, and the condition is now concrete rather than
+speculative. Carve out a shared home when either of these becomes true: the same
+port, capability or provenance types would otherwise be written a second time
+for a device that is not the GPU, or the packet vocabulary that BACK-48 exposes
+would otherwise have to be duplicated on the Python side instead of consumed
+from one place. Until then, a second device kind reuses
+`simllm/compute/gpu_device.py` or states why it cannot.
 
 ## Sources for external claims
 
