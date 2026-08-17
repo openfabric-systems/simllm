@@ -414,6 +414,20 @@ RnicDevice::RnicDevice(
                 "RNIC fabric endpoint identity cannot yet attribute a "
                 "GPU-owned UAR mapping");
         }
+        // Once endpoint identities are on, device-local memory belongs to a
+        // modeled GPU. A region this device owns in GPU or device memory would
+        // make it both requester and completer of its own access, which crosses
+        // no link, so the configuration fails closed here rather than producing
+        // a self-charged traversal at access time.
+        for (const HostMemoryAllocation& allocation
+             : config_.host_memory.allocations) {
+            if (allocation.endpoint == PcieEndpointKind::GpuMemory
+                || allocation.endpoint == PcieEndpointKind::DeviceMemory) {
+                throw std::invalid_argument(
+                    "an endpoint-attributed RNIC cannot own device-local "
+                    "memory; that region belongs to a modeled GPU device");
+            }
+        }
     }
     if (!config_.host_memory.enabled
         && !config_.host_memory.peer_read_grants.empty()) {
@@ -615,7 +629,7 @@ PostResult RnicDevice::postSend(
     requireHostMemoryLive();
     validateCallerTime(now_ps);
     PostResult result = work_queue_->postSend(request, now_ps);
-    last_caller_time_ps_ = now_ps;
+    advanceCallerTime(now_ps);
     return result;
 }
 
@@ -625,7 +639,7 @@ PostBatchResult RnicDevice::postSendBatch(
     requireHostMemoryLive();
     validateCallerTime(now_ps);
     PostBatchResult result = work_queue_->postSendBatch(requests, now_ps);
-    last_caller_time_ps_ = now_ps;
+    advanceCallerTime(now_ps);
     return result;
 }
 
@@ -633,7 +647,7 @@ DoorbellBatch RnicDevice::ringDoorbell(Picoseconds now_ps) {
     requireHostMemoryLive();
     validateCallerTime(now_ps);
     DoorbellBatch result = work_queue_->ringDoorbell(now_ps);
-    last_caller_time_ps_ = now_ps;
+    advanceCallerTime(now_ps);
     return result;
 }
 
@@ -644,7 +658,7 @@ DoorbellBatch RnicDevice::ringDoorbell(
     validateCallerTime(now_ps);
     DoorbellBatch result = work_queue_->ringDoorbell(
         now_ps, producer_task);
-    last_caller_time_ps_ = now_ps;
+    advanceCallerTime(now_ps);
     return result;
 }
 
@@ -656,7 +670,7 @@ void RnicDevice::onNetworkEvent(const NetworkEvent& event) {
     }
     validateCallerTime(event.event_time_ps);
     work_queue_->onNetworkEvent(event);
-    last_caller_time_ps_ = event.event_time_ps;
+    advanceCallerTime(event.event_time_ps);
 }
 
 std::size_t RnicDevice::progress(Picoseconds now_ps) {
@@ -691,7 +705,7 @@ std::vector<CompletionEntry> RnicDevice::pollCompletionQueue(
     validateCallerTime(now_ps);
     std::vector<CompletionEntry> result =
         work_queue_->pollCompletionQueue(max_entries, now_ps);
-    last_caller_time_ps_ = now_ps;
+    advanceCallerTime(now_ps);
     return result;
 }
 
@@ -714,7 +728,7 @@ void RnicDevice::teardownHostMemory(Picoseconds now_ps) {
     host_memory_->releaseDeviceOwner(
         this, config_.host_memory.device_owner_id);
     claimed_host_memory_owner_ = false;
-    last_caller_time_ps_ = now_ps;
+    advanceCallerTime(now_ps);
 }
 
 PcieTransactionResult RnicDevice::submitPcie(
@@ -743,7 +757,7 @@ PcieTransactionResult RnicDevice::submitPcie(
             "RNIC PCIe requester endpoint is not claimed by this device");
     }
     PcieTransactionResult result = pcie_fabric_->submit(request, attribution);
-    last_caller_time_ps_ = request.submitted_at_ps;
+    advanceCallerTime(request.submitted_at_ps);
     return result;
 }
 
@@ -909,11 +923,24 @@ void RnicDevice::validateCallerTime(Picoseconds now_ps) const {
     if (now_ps < last_caller_time_ps_) {
         throw std::logic_error("RNIC device caller time regressed");
     }
+    // Devices sharing a fabric share its caller clock, so an operation stamped
+    // before a peer device's last operation is rejected instead of silently
+    // absorbing the backlog that peer left on the link.
+    if (pcie_fabric_) {
+        pcie_fabric_->validateSharedCallerTime(now_ps);
+    }
 }
 
 void RnicDevice::observeCallerTime(Picoseconds now_ps) {
     validateCallerTime(now_ps);
+    advanceCallerTime(now_ps);
+}
+
+void RnicDevice::advanceCallerTime(Picoseconds now_ps) {
     last_caller_time_ps_ = now_ps;
+    if (pcie_fabric_) {
+        pcie_fabric_->observeSharedCallerTime(now_ps);
+    }
 }
 
 void RnicDevice::requireHostMemoryLive() const {

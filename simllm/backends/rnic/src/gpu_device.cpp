@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <exception>
 #include <limits>
-#include <map>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -275,6 +274,7 @@ GpuFabricTransferRecord GpuDevice::transfer(
     if (request.submitted_at_ps < last_transfer_time_ps_) {
         throw std::logic_error("GPU device caller time regressed");
     }
+    pcie_fabric_->validateSharedCallerTime(request.submitted_at_ps);
 
     // Ownership first: a region this device neither owns nor was granted is
     // refused before the fabric is touched at all.
@@ -308,25 +308,36 @@ GpuFabricTransferRecord GpuDevice::transfer(
         throw std::invalid_argument(
             "GPU region endpoint disagrees with its PCIe path");
     }
-    const std::optional<PcieEndpointId> owner_endpoint =
-        memory_->deviceOwnerEndpointId(target.device_owner_id);
-    const PcieEndpointId completer = deviceLocalEndpoint(target.endpoint)
-        ? owner_endpoint.value_or(0)
-        : fabric_config.host_endpoint_id;
-    if (completer == 0) {
+    // A transfer must actually reach the link. Device-local memory does not:
+    // this device's own GPU memory is behind its own port, and another device's
+    // device-local memory is a peer-to-peer leg this model does not carry
+    // (BACK-51). Both fail closed rather than charging a host-link traversal
+    // that never happened.
+    if (deviceLocalEndpoint(target.endpoint)) {
+        if (peer == 0) {
+            throw std::invalid_argument(
+                "GPU fabric transfer into this device's own device-local "
+                "memory crosses no fabric link");
+        }
         throw std::invalid_argument(
-            "GPU fabric transfer completer has no fabric endpoint identity");
+            "GPU peer-to-peer device-local transfer is not modeled");
     }
-    if (pcie_fabric_->orderingDomainClaimedByOther(
-            this, config_.fabric.ordering_domain)) {
+    const PcieEndpointId completer = fabric_config.host_endpoint_id;
+    if (completer == 0 || completer == config_.fabric.endpoint_id) {
         throw std::invalid_argument(
-            "GPU PCIe ordering domain is claimed by another device");
+            "GPU fabric transfer completer has no distinct fabric endpoint "
+            "identity");
     }
+    // The record is assembled and every sum computed before any member moves,
+    // so a throwing add cannot leave a half-appended ledger behind.
     if (transfer_records_.size() == transfer_records_.max_size()
         || next_transfer_sequence_
             == std::numeric_limits<std::uint64_t>::max()) {
         throw std::overflow_error("GPU fabric transfer capacity overflow");
     }
+    const std::uint64_t next_transferred_bytes = checkedAdd(
+        transferred_bytes_, request.transfer_bytes);
+    transfer_records_.reserve(transfer_records_.size() + 1);
 
     // The GPU copy engine addresses the region directly, so no MKey, MPT or
     // MTT read is emitted here. Translation belongs to the RNIC's registered
@@ -343,7 +354,8 @@ GpuFabricTransferRecord GpuDevice::transfer(
     access.useful_bytes = request.transfer_bytes;
     access.transfer_bytes = request.transfer_bytes;
     access.first_byte_offset = static_cast<std::uint32_t>(
-        (target.virtual_address + request.allocation_offset_bytes) % 4096);
+        checkedAdd(target.virtual_address, request.allocation_offset_bytes)
+        % 4096);
     access.submitted_at_ps = request.submitted_at_ps;
     const PcieEndpointAttribution attribution{
         config_.fabric.endpoint_id, completer};
@@ -370,9 +382,9 @@ GpuFabricTransferRecord GpuDevice::transfer(
     record.completed_at_ps = result.completed_at_ps;
     transfer_records_.push_back(record);
     ++next_transfer_sequence_;
-    transferred_bytes_ = checkedAdd(
-        transferred_bytes_, request.transfer_bytes);
+    transferred_bytes_ = next_transferred_bytes;
     last_transfer_time_ps_ = request.submitted_at_ps;
+    pcie_fabric_->observeSharedCallerTime(request.submitted_at_ps);
     return record;
 }
 
@@ -383,12 +395,18 @@ void GpuDevice::teardownMemory(Picoseconds now_ps) {
     if (now_ps < last_transfer_time_ps_) {
         throw std::logic_error("GPU device caller time regressed");
     }
+    if (pcie_fabric_) {
+        pcie_fabric_->validateSharedCallerTime(now_ps);
+    }
     memory_->teardownClaimedOwner(
         this, config_.memory.device_owner_id, now_ps);
     memory_registered_ = false;
     memory_->releaseDeviceOwner(this, config_.memory.device_owner_id);
     claimed_memory_owner_ = false;
     last_transfer_time_ps_ = now_ps;
+    if (pcie_fabric_) {
+        pcie_fabric_->observeSharedCallerTime(now_ps);
+    }
 }
 
 const GpuDeviceConfig& GpuDevice::config() const noexcept {

@@ -1,15 +1,19 @@
 """Byte-identity and closed-form locks for the BACK-46 GPU fabric endpoint.
 
-The second device on the shared PCIe fabric must leave every accepted BACK-10,
-BACK-19 and BACK-20 artifact exactly as it was. Two independent locks carry
-that, and neither is claimed to do the other's job:
+The locked artifact set is every accepted artifact the second device could have
+perturbed plus this study's own measured rows: the BACK-10 PCIe matrix, the
+BACK-19 host-memory rows, the BACK-20 submission rows, the BACK-18 device rows
+and captured native-test counts, the BACK-8 session record, the RNIC work-queue
+rows, and `examples/rnic_gpu_endpoint_v1/results.csv`. Two independent locks
+carry that, and neither is claimed to do the other's job:
 
-- this module locks the tracked artifact bytes, and proves the lock is
+- this module locks the tracked bytes of all of them, and proves the lock is
   mutation sensitive by flipping one byte of a copied tree and requiring the
   same guard to reject it;
-- the study command registry rebuilds the native library and re-derives the
-  accepted rows from source, so a C++ change that perturbs the off path fails
-  there, and the full native CTest suite carries the compiled-in assertions.
+- the study command registry rebuilds the native library and re-derives both
+  the accepted rows and this study's rows from source, with a --check mode that
+  compares without writing, so a C++ change that perturbs either fails there,
+  and the full native CTest suite carries the compiled-in assertions.
 
 The module also locks the study's frozen staging literals against an
 independently derived rational closed form, with a negative control that
@@ -34,8 +38,20 @@ study = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(study)
 
 
+#: The study's own rows are locked by their own constant, so the guarded set is
+#: the accepted artifacts plus that one file.
+STUDY_RESULTS = "examples/rnic_gpu_endpoint_v1/results.csv"
+LOCKED_ARTIFACTS = (*study.FROZEN_ARTIFACT_DIGESTS, STUDY_RESULTS)
+
+
+def _expected_digest(relative: str) -> str:
+    if relative == STUDY_RESULTS:
+        return study.STUDY_RESULTS_DIGEST
+    return study.FROZEN_ARTIFACT_DIGESTS[relative]
+
+
 def _mirror_artifacts(root: Path) -> None:
-    for relative in study.FROZEN_ARTIFACT_DIGESTS:
+    for relative in LOCKED_ARTIFACTS:
         destination = root / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes((REPO_ROOT / relative).read_bytes())
@@ -47,11 +63,11 @@ def _configure_run_root(monkeypatch, root: Path) -> Path:
     return out
 
 
-@pytest.mark.parametrize("relative", tuple(study.FROZEN_ARTIFACT_DIGESTS))
-def test_accepted_artifacts_keep_their_frozen_bytes(relative: str):
+@pytest.mark.parametrize("relative", LOCKED_ARTIFACTS)
+def test_locked_artifacts_keep_their_frozen_bytes(relative: str):
     digest = hashlib.sha256((REPO_ROOT / relative).read_bytes()).hexdigest()
 
-    assert digest == study.FROZEN_ARTIFACT_DIGESTS[relative]
+    assert digest == _expected_digest(relative)
 
 
 def test_artifact_guard_accepts_the_tracked_tree(monkeypatch, tmp_path: Path):
@@ -62,7 +78,7 @@ def test_artifact_guard_accepts_the_tracked_tree(monkeypatch, tmp_path: Path):
     study._validate_registry(out)
 
 
-@pytest.mark.parametrize("relative", tuple(study.FROZEN_ARTIFACT_DIGESTS))
+@pytest.mark.parametrize("relative", LOCKED_ARTIFACTS)
 def test_artifact_guard_rejects_a_single_flipped_byte(
     monkeypatch,
     tmp_path: Path,
@@ -145,3 +161,13 @@ def test_regenerated_off_path_inventory_covers_the_native_row_artifacts():
         "examples/rnic_hostmem_v1/results.csv",
         "examples/rnic_submission_v1/results.csv",
     }
+
+
+def test_published_scored_form_excludes_the_entailed_family():
+    assert study.SCORED_FAMILIES == (
+        "bounce_penalty_equals_staging",
+        "staging_closed_form",
+        "gpu_completer_charge",
+    )
+    assert study.RETAINED_ENTAILED_FAMILIES == ("arm_ordering",)
+    assert "arm_ordering" not in study.SCORED_FAMILIES

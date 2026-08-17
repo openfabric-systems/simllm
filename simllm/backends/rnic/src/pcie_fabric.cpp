@@ -1475,6 +1475,14 @@ public:
         return attributed_completer_transactions_;
     }
 
+    std::uint64_t attributedUsefulBytes() const noexcept {
+        return attributed_useful_bytes_;
+    }
+
+    std::uint64_t attributedTransferredBytes() const noexcept {
+        return attributed_transferred_bytes_;
+    }
+
     PcieTransactionResult scheduleTransaction(
         const PcieTransactionRequest& request,
         const ResolvedEndpointAttribution& attribution = {}) {
@@ -1627,6 +1635,10 @@ public:
         }
         std::uint64_t requester_transactions = 0;
         std::uint64_t completer_transactions = 0;
+        std::uint64_t requester_useful_bytes = 0;
+        std::uint64_t completer_useful_bytes = 0;
+        std::uint64_t requester_transferred_bytes = 0;
+        std::uint64_t completer_transferred_bytes = 0;
         for (const auto& item : endpoint_accounting_) {
             if (item.first == 0 || item.first != item.second.endpoint_id) {
                 throw std::logic_error(
@@ -1638,6 +1650,16 @@ public:
                 requester_transactions, item.second.requester.transactions);
             completer_transactions = checkedAdd(
                 completer_transactions, item.second.completer.transactions);
+            requester_useful_bytes = checkedAdd(
+                requester_useful_bytes, item.second.requester.useful_bytes);
+            completer_useful_bytes = checkedAdd(
+                completer_useful_bytes, item.second.completer.useful_bytes);
+            requester_transferred_bytes = checkedAdd(
+                requester_transferred_bytes,
+                item.second.requester.transferred_bytes);
+            completer_transferred_bytes = checkedAdd(
+                completer_transferred_bytes,
+                item.second.completer.transferred_bytes);
         }
         if (requester_transactions != attributed_requester_transactions_
             || completer_transactions != attributed_completer_transactions_
@@ -1646,6 +1668,19 @@ public:
             || attributed_requester_transactions_ > transactions) {
             throw std::logic_error(
                 "RNIC PCIe endpoint attribution conservation failed");
+        }
+        // Bytes reconcile in both roles and against the class ledger, so a
+        // charge cannot appear on one side of the pair, in one role only, or
+        // above what the fabric actually carried.
+        if (requester_useful_bytes != attributed_useful_bytes_
+            || completer_useful_bytes != attributed_useful_bytes_
+            || requester_transferred_bytes != attributed_transferred_bytes_
+            || completer_transferred_bytes != attributed_transferred_bytes_
+            || attributed_useful_bytes_ > total.useful_bytes
+            || attributed_transferred_bytes_ > total.transferred_bytes
+            || attributed_useful_bytes_ > attributed_transferred_bytes_) {
+            throw std::logic_error(
+                "RNIC PCIe endpoint byte conservation failed");
         }
     }
 
@@ -2036,6 +2071,9 @@ private:
             attribution.completer_endpoint_id, attribution.completer_kind);
         accumulateEndpointRole(completer.completer, result);
         checkedAccumulate(attributed_completer_transactions_, 1);
+        checkedAccumulate(attributed_useful_bytes_, result.useful_bytes);
+        checkedAccumulate(
+            attributed_transferred_bytes_, result.transferred_bytes);
     }
 
     PcieEndpointAccounting& endpointRow(
@@ -2067,6 +2105,8 @@ private:
     std::map<PcieEndpointId, PcieEndpointAccounting> endpoint_accounting_;
     std::uint64_t attributed_requester_transactions_{0};
     std::uint64_t attributed_completer_transactions_{0};
+    std::uint64_t attributed_useful_bytes_{0};
+    std::uint64_t attributed_transferred_bytes_{0};
     std::uint64_t generation_{0};
     std::uint64_t next_transaction_id_{1};
     std::uint64_t host_store_latency_cursor_{0};
@@ -2190,6 +2230,15 @@ public:
             throw std::invalid_argument(
                 "RNIC PCIe endpoint identity is already claimed");
         }
+        // The per-endpoint ledger is monotone and keyed by identity, so a
+        // released identity keeps its charges. Handing it to a second device
+        // would make one row mean two devices, whatever its kind, so reuse is
+        // refused as a configuration error rather than inherited.
+        if (released_.count(endpoint_id) != 0) {
+            throw std::invalid_argument(
+                "RNIC PCIe endpoint identity was released by an earlier device "
+                "and cannot be reused");
+        }
         claims_.emplace(endpoint_id, Claim{owner, device_kind});
     }
 
@@ -2197,9 +2246,16 @@ public:
         PcieEndpointOwnerToken owner,
         PcieEndpointId endpoint_id) noexcept {
         const auto found = claims_.find(endpoint_id);
-        if (found != claims_.end() && found->second.owner == owner) {
-            claims_.erase(found);
+        if (found == claims_.end() || found->second.owner != owner) {
+            return;
         }
+        // Retire rather than forget: the identity stays reportable and stays
+        // unavailable. Record the retirement before dropping the claim so a
+        // failed insert cannot lose the identity entirely.
+        if (!released_.emplace(endpoint_id, found->second.device_kind).second) {
+            return;
+        }
+        claims_.erase(found);
     }
 
     bool claimedBy(
@@ -2218,12 +2274,49 @@ public:
         return found->second.device_kind;
     }
 
+    std::optional<PcieDeviceKind> knownKind(
+        PcieEndpointId endpoint_id) const noexcept {
+        const std::optional<PcieDeviceKind> attached_kind = kind(endpoint_id);
+        if (attached_kind.has_value()) {
+            return attached_kind;
+        }
+        const auto found = released_.find(endpoint_id);
+        if (found == released_.end()) {
+            return std::nullopt;
+        }
+        return found->second;
+    }
+
+    std::optional<PcieEndpointLifecycle> lifecycle(
+        PcieEndpointId endpoint_id) const noexcept {
+        if (claims_.count(endpoint_id) != 0) {
+            return PcieEndpointLifecycle::Attached;
+        }
+        if (released_.count(endpoint_id) != 0) {
+            return PcieEndpointLifecycle::Released;
+        }
+        return std::nullopt;
+    }
+
     std::vector<PcieEndpointId> attached() const {
         std::vector<PcieEndpointId> identities;
         identities.reserve(claims_.size());
         for (const auto& item : claims_) {
             identities.push_back(item.first);
         }
+        return identities;
+    }
+
+    std::vector<PcieEndpointId> known() const {
+        std::vector<PcieEndpointId> identities;
+        identities.reserve(claims_.size() + released_.size());
+        for (const auto& item : claims_) {
+            identities.push_back(item.first);
+        }
+        for (const auto& item : released_) {
+            identities.push_back(item.first);
+        }
+        std::sort(identities.begin(), identities.end());
         return identities;
     }
 
@@ -2245,6 +2338,11 @@ public:
         if (requester == 0 || completer == 0) {
             throw std::invalid_argument(
                 "RNIC PCIe endpoint attribution must name both ends");
+        }
+        if (requester == completer) {
+            throw std::invalid_argument(
+                "RNIC PCIe endpoint attribution names one identity as both "
+                "ends, which crosses no link");
         }
         const std::optional<PcieDeviceKind> requester_kind = kind(requester);
         if (!requester_kind.has_value()) {
@@ -2273,11 +2371,28 @@ public:
                 throw std::logic_error(
                     "RNIC PCIe endpoint claim kind invariant failed");
             }
+            if (released_.count(item.first) != 0) {
+                throw std::logic_error(
+                    "RNIC PCIe endpoint identity is attached and released");
+            }
         }
         if (host_endpoint_id != 0 && claims_.count(host_endpoint_id) != 1) {
             throw std::logic_error(
                 "RNIC PCIe host endpoint identity is not attached");
         }
+        for (const auto& item : released_) {
+            if (item.first == 0 || item.first == host_endpoint_id
+                || (item.second != PcieDeviceKind::Rnic
+                    && item.second != PcieDeviceKind::Gpu)) {
+                throw std::logic_error(
+                    "RNIC PCIe released endpoint invariant failed");
+            }
+        }
+    }
+
+    bool isKnown(PcieEndpointId endpoint_id) const noexcept {
+        return claims_.count(endpoint_id) != 0
+            || released_.count(endpoint_id) != 0;
     }
 
 private:
@@ -2287,6 +2402,7 @@ private:
     };
 
     std::map<PcieEndpointId, Claim> claims_;
+    std::map<PcieEndpointId, PcieDeviceKind> released_;
 };
 
 PcieFabric::Plan::Plan(std::unique_ptr<Plan::Impl> impl)
@@ -2385,27 +2501,41 @@ std::vector<PcieEndpointId> PcieFabric::attachedEndpoints() const {
     return endpoint_claims_->attached();
 }
 
+std::vector<PcieEndpointId> PcieFabric::knownEndpoints() const {
+    return endpoint_claims_->known();
+}
+
 std::optional<PcieDeviceKind> PcieFabric::attachedEndpointKind(
     PcieEndpointId endpoint_id) const noexcept {
     return endpoint_claims_->kind(endpoint_id);
 }
 
+std::optional<PcieEndpointLifecycle> PcieFabric::endpointLifecycle(
+    PcieEndpointId endpoint_id) const noexcept {
+    return endpoint_claims_->lifecycle(endpoint_id);
+}
+
 PcieEndpointAccounting PcieFabric::endpointAccounting(
     PcieEndpointId endpoint_id) const {
     const std::optional<PcieDeviceKind> device_kind =
-        endpoint_claims_->kind(endpoint_id);
-    if (!device_kind.has_value()) {
+        endpoint_claims_->knownKind(endpoint_id);
+    const std::optional<PcieEndpointLifecycle> lifecycle =
+        endpoint_claims_->lifecycle(endpoint_id);
+    if (!device_kind.has_value() || !lifecycle.has_value()) {
         throw std::invalid_argument(
-            "RNIC PCIe endpoint accounting names an unattached endpoint");
+            "RNIC PCIe endpoint accounting names an unknown endpoint");
     }
     const auto& rows = impl_->endpointAccounting();
     const auto found = rows.find(endpoint_id);
     if (found != rows.end()) {
-        return found->second;
+        PcieEndpointAccounting row = found->second;
+        row.lifecycle = *lifecycle;
+        return row;
     }
     PcieEndpointAccounting empty;
     empty.endpoint_id = endpoint_id;
     empty.device_kind = *device_kind;
+    empty.lifecycle = *lifecycle;
     return empty;
 }
 
@@ -2417,9 +2547,36 @@ std::uint64_t PcieFabric::attributedCompleterTransactions() const noexcept {
     return impl_->attributedCompleterTransactions();
 }
 
+std::uint64_t PcieFabric::attributedUsefulBytes() const noexcept {
+    return impl_->attributedUsefulBytes();
+}
+
+std::uint64_t PcieFabric::attributedTransferredBytes() const noexcept {
+    return impl_->attributedTransferredBytes();
+}
+
 void PcieFabric::validateInvariants() const {
     impl_->validateInvariants();
     endpoint_claims_->validateInvariants(impl_->config().host_endpoint_id);
+    // Every charged identity must still be one this fabric handed out, so a
+    // row can never outlive the record of which device owned it.
+    for (const auto& item : impl_->endpointAccounting()) {
+        if (!endpoint_claims_->isKnown(item.first)) {
+            throw std::logic_error(
+                "RNIC PCIe endpoint charge names an unknown identity");
+        }
+    }
+}
+
+void PcieFabric::validateSharedCallerTime(Picoseconds now_ps) const {
+    if (now_ps < shared_caller_time_ps_) {
+        throw std::logic_error("RNIC PCIe shared fabric caller time regressed");
+    }
+}
+
+void PcieFabric::observeSharedCallerTime(Picoseconds now_ps) {
+    validateSharedCallerTime(now_ps);
+    shared_caller_time_ps_ = now_ps;
 }
 
 void PcieFabric::claimOrderingDomains(
@@ -2589,6 +2746,17 @@ const char* toString(PcieAnalyticalDelayKind kind) noexcept {
         return "gaussian";
     case PcieAnalyticalDelayKind::GaussianTailMixture:
         return "gaussian_tail_mixture";
+    default:
+        return "invalid";
+    }
+}
+
+const char* toString(PcieEndpointLifecycle lifecycle) noexcept {
+    switch (lifecycle) {
+    case PcieEndpointLifecycle::Attached:
+        return "attached";
+    case PcieEndpointLifecycle::Released:
+        return "released";
     default:
         return "invalid";
     }

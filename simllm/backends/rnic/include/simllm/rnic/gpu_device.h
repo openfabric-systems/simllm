@@ -34,7 +34,13 @@ struct GpuFabricConfig {
     // endpoint, and requires the fabric to name that host endpoint. There is
     // no unattributed GPU shape to preserve, so identity fails closed.
     PcieEndpointId endpoint_id{0};
-    // The dependency domain this device claims for its own transfers.
+    // The dependency domain this device claims for its own transfers. It is a
+    // raw value in the same flat namespace an RNIC claims into, where a shared
+    // RNIC derives the pair (2 * namespace, 2 * namespace + 1) from
+    // RnicDmaConfig::shared_ordering_domain_namespace, so a GPU domain has to
+    // avoid both halves of every RNIC namespace on the same fabric. This device
+    // claims one domain rather than a pair, so its reads and its writes share
+    // one posted-visibility and non-posted-completion horizon.
     std::uint64_t ordering_domain{0};
 };
 
@@ -71,11 +77,18 @@ struct GpuDeviceAttachments {
 };
 
 // One payload movement this device drives across the fabric: staging a chunk
-// into a host bounce buffer is a posted write, reading a peer's region is a
-// non-posted read. Traffic inside the GPU's own memory never appears here,
-// because it does not cross the fabric. This device has no service model of
-// its own; the fabric charges the transfer and the GPU's internal copy engine
-// and peer ports stay with the compute-side tasks that own them.
+// into a host bounce buffer is a posted write, reading a host-pinned region is
+// a non-posted read. Traffic inside any device's own memory never appears here
+// and is rejected, because it does not cross the fabric: this device's own GPU
+// memory sits behind its own port, and a peer's device-local memory is the
+// unmodeled peer-to-peer leg. This device has no service model of its own; the
+// fabric charges the transfer and the GPU's internal copy engine and peer ports
+// stay with the compute-side tasks that own them.
+//
+// A transfer bypasses VirtualHostMemory::scheduleAccess on purpose: a copy
+// engine addresses the region directly, so no MKey, MPT or MTT read is emitted
+// and the transfer never appears in an RNIC's memoryAccesses(). Its only
+// records are transferRecords() here and the fabric's endpoint ledger.
 struct GpuFabricTransfer {
     std::uint32_t version{kGpuFabricTransferVersion};
     HostMemoryAllocationId allocation_id{0};

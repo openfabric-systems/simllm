@@ -32,6 +32,7 @@ using simllm::rnic::PcieDirectionAccounting;
 using simllm::rnic::PcieEndpointAccounting;
 using simllm::rnic::PcieEndpointAttribution;
 using simllm::rnic::PcieEndpointId;
+using simllm::rnic::PcieEndpointLifecycle;
 using simllm::rnic::PcieEndpointKind;
 using simllm::rnic::PcieFabric;
 using simllm::rnic::PcieFabricConfig;
@@ -74,6 +75,9 @@ constexpr std::uint64_t kCqAllocation = 24;
 constexpr std::uint64_t kDoorbellAllocation = 25;
 constexpr std::uint64_t kNicDataAllocation = 26;
 constexpr std::uint64_t kPeerAllocation = 40;
+constexpr PcieEndpointId kPeerGpuEndpoint = 4003;
+constexpr std::uint64_t kPeerGpuOwner = 940;
+constexpr std::uint64_t kPeerGpuAllocation = 41;
 constexpr std::uint32_t kRnicRequester = 9100;
 constexpr std::uint32_t kGpuRequester = 9200;
 constexpr std::uint64_t kPeerRegionBytes = 65536;
@@ -676,6 +680,37 @@ void testFabricEndpointClaims(TestRunner& test) {
         },
         "endpoint accounting rejects an unattached identity");
 
+    // Reached through the public fabric surface so both resolve branches are
+    // covered: a device call would stop at its own requester-ownership check
+    // before the fabric ever resolved the pair.
+    PcieTransactionRequest direct;
+    direct.client_id = kGpuRequester;
+    direct.service_class = PcieServiceClass::PayloadWrite;
+    direct.operation = PcieOperation::PostedWrite;
+    direct.request_direction = PcieDirection::DeviceToHost;
+    direct.ordering = PcieOrdering::Independent;
+    direct.path_id = kHostPathId;
+    direct.ordering_domain = kGpuOrderingDomain;
+    direct.useful_bytes = 64;
+    direct.transfer_bytes = 64;
+    const std::uint64_t generation_before = fabric->generation();
+    test.expectThrowAs<std::invalid_argument>(
+        [&fabric, &direct]() {
+            (void)fabric->submit(
+                direct, PcieEndpointAttribution{kNicEndpoint, kHostEndpoint});
+        },
+        "the fabric rejects an unattached requester endpoint");
+    test.expectThrowAs<std::invalid_argument>(
+        [&fabric, &direct]() {
+            (void)fabric->submit(
+                direct, PcieEndpointAttribution{kGpuEndpoint, kGpuEndpoint});
+        },
+        "the fabric rejects one identity named as both ends");
+    test.check(
+        fabric->generation() == generation_before
+            && fabric->attributedRequesterTransactions() == 0,
+        "a rejected attribution charges nothing at the fabric surface");
+
     test.expectThrowAs<std::invalid_argument>(
         [&gpu_attachments]() {
             GpuDeviceConfig collision = gpuConfig(16, Arm::GpuDirect, true);
@@ -860,6 +895,30 @@ void testCrossDeviceRejection(TestRunner& test) {
             (void)second;
         },
         "a second device cannot claim a claimed host-memory owner");
+    test.expectThrowAs<std::invalid_argument>(
+        [&gpu_attachments]() {
+            GpuDeviceConfig collision = gpuConfig(16, Arm::HostBounce, false);
+            collision.memory.device_owner_id = kGpuOwner + 1;
+            collision.memory.allocations.front().device_owner_id =
+                kGpuOwner + 1;
+            collision.memory.allocations.front().allocation_id =
+                kPeerAllocation + 1;
+            collision.fabric.ordering_domain = kGpuOrderingDomain + 1;
+            GpuDevice second(collision, gpu_attachments);
+            (void)second;
+        },
+        "a second device cannot claim a claimed endpoint identity");
+    test.expectThrowAs<std::invalid_argument>(
+        [&nic_attachments]() {
+            RnicDeviceConfig device_local =
+                nicConfig(16, kHostEndpoint, kNicEndpoint);
+            device_local.host_memory.allocations.back().endpoint =
+                PcieEndpointKind::GpuMemory;
+            device_local.host_memory.allocations.back().path_id = kGpuPathId;
+            RnicDevice second(device_local, nic_attachments);
+            (void)second;
+        },
+        "an endpoint-attributed RNIC cannot own device-local memory");
 
     test.check(
         sameLedger(before, readLedger(*fabric))
@@ -869,11 +928,197 @@ void testCrossDeviceRejection(TestRunner& test) {
             && nic.occupiedSqEntries() == occupied
             && nic.counters().posted_wqes == posted
             && fabric->attributedRequesterTransactions() == 0
-            && fabric->attributedCompleterTransactions() == 0,
+            && fabric->attributedCompleterTransactions() == 0
+            && fabric->attributedUsefulBytes() == 0
+            && fabric->attributedTransferredBytes() == 0
+            && gpu.transferRecords().empty(),
         "every rejected cross-device claim left the fabric and registry "
         "unchanged");
     nic.validateInvariants();
     gpu.validateInvariants();
+    fabric->validateInvariants();
+    registry->validateInvariants();
+
+    // The shared caller clock is the last cross-device guard: one device may not
+    // schedule fabric work behind another device's clock and silently inherit
+    // the backlog that peer left on the link.
+    nic.postSend(ownWorkRequest(4096), 2'000'000);
+    const FabricLedger after_post = readLedger(*fabric);
+    test.expectThrowAs<std::logic_error>(
+        [&gpu]() {
+            (void)gpu.transfer(stagingTransfer(4096));
+        },
+        "a GPU transfer behind the shared fabric clock is rejected");
+    test.expectThrowAs<std::logic_error>(
+        [&nic]() {
+            (void)nic.postSend(ownWorkRequest(4096), 1'000'000);
+        },
+        "an RNIC post behind the shared fabric clock is rejected");
+    test.check(
+        sameLedger(after_post, readLedger(*fabric))
+            && gpu.transferRecords().empty(),
+        "a rejected shared-clock operation charges nothing");
+    nic.validateInvariants();
+    gpu.validateInvariants();
+    fabric->validateInvariants();
+}
+
+// A transfer must actually reach the link. Device-local memory does not: this
+// device's own GPU memory sits behind its own port, and a peer's device-local
+// memory is the peer-to-peer leg BACK-51 registers. Charging either on the host
+// link would invent a traversal, exactly what the host-store guard refuses.
+void testDeviceLocalTransfersFailClosed(TestRunner& test) {
+    auto fabric = std::make_shared<PcieFabric>(fabricConfig(16, kHostEndpoint));
+    auto registry = std::make_shared<VirtualHostMemory>(
+        VirtualHostMemoryConfig{});
+    GpuDeviceAttachments attachments;
+    attachments.shared_pcie_fabric = fabric;
+    attachments.shared_memory = registry;
+    GpuDeviceConfig owner_config = gpuConfig(16, Arm::GpuDirect, false);
+    owner_config.memory.peer_read_grants = {kPeerGpuOwner};
+    GpuDevice owner(owner_config, attachments);
+
+    GpuDeviceConfig peer_config = gpuConfig(16, Arm::GpuDirect, false);
+    peer_config.identity.gpu_id = 2;
+    peer_config.identity.requester_id = kGpuRequester + 1;
+    peer_config.fabric.endpoint_id = kPeerGpuEndpoint;
+    peer_config.fabric.ordering_domain = kGpuOrderingDomain + 2;
+    peer_config.memory.device_owner_id = kPeerGpuOwner;
+    peer_config.memory.allocations = {
+        makeAllocation(
+            kPeerGpuAllocation,
+            kPeerGpuOwner,
+            HostMemoryObjectKind::DataRegion,
+            HostMemoryOwnerKind::MemoryRegion,
+            kPeerMkey,
+            PcieEndpointKind::HostPinnedMemory,
+            kHostPathId,
+            UINT64_C(0x700000000),
+            UINT64_C(0x800000000),
+            1,
+            16,
+            kPeerRegionBytes,
+            kPeerMkey),
+    };
+    GpuDevice peer(peer_config, attachments);
+
+    const FabricLedger before = readLedger(*fabric);
+    test.expectThrowAs<std::invalid_argument>(
+        [&owner]() {
+            (void)owner.transfer(stagingTransfer(4096));
+        },
+        "a GPU transfer into its own device-local memory is rejected");
+    test.expectThrowAs<std::invalid_argument>(
+        [&peer]() {
+            GpuFabricTransfer peer_to_peer = stagingTransfer(4096);
+            peer_to_peer.allocation_id = kPeerAllocation;
+            peer_to_peer.peer_device_owner_id = kGpuOwner;
+            (void)peer.transfer(peer_to_peer);
+        },
+        "a granted GPU-to-GPU device-local transfer is rejected as unmodeled");
+    test.check(
+        sameLedger(before, readLedger(*fabric))
+            && fabric->generation() == before.generation
+            && fabric->attributedRequesterTransactions() == 0
+            && owner.transferRecords().empty()
+            && peer.transferRecords().empty(),
+        "a rejected device-local transfer charges no link bytes");
+
+    // The peer's own host-pinned region still transfers, so the rejection is
+    // about the traversal and not about peer ownership.
+    GpuFabricTransfer host_staged = stagingTransfer(4096);
+    host_staged.allocation_id = kPeerGpuAllocation;
+    const GpuFabricTransferRecord record = peer.transfer(host_staged);
+    test.check(
+        record.completer_endpoint_id == kHostEndpoint
+            && record.completer_kind == PcieDeviceKind::Host
+            && record.requester_endpoint_id == kPeerGpuEndpoint,
+        "a host-pinned staging transfer still crosses to the host endpoint");
+    owner.validateInvariants();
+    peer.validateInvariants();
+    fabric->validateInvariants();
+    registry->validateInvariants();
+}
+
+// A released identity keeps its charges and can never be handed to a second
+// device, so one row means one device for the fabric's whole lifetime, and the
+// conservation identity stays checkable through the public surface after
+// teardown.
+void testEndpointIdentityLifecycle(TestRunner& test) {
+    auto fabric = std::make_shared<PcieFabric>(fabricConfig(16, kHostEndpoint));
+    auto registry = std::make_shared<VirtualHostMemory>(
+        VirtualHostMemoryConfig{});
+    GpuDeviceAttachments gpu_attachments;
+    gpu_attachments.shared_pcie_fabric = fabric;
+    gpu_attachments.shared_memory = registry;
+    {
+        GpuDevice gpu(gpuConfig(16, Arm::HostBounce, true), gpu_attachments);
+        const GpuFabricTransferRecord staged =
+            gpu.transfer(stagingTransfer(4096));
+        test.check(
+            staged.transfer_bytes == 4096
+                && fabric->endpointLifecycle(kGpuEndpoint)
+                    == PcieEndpointLifecycle::Attached,
+            "an attached GPU endpoint reports itself attached");
+        gpu.validateInvariants();
+    }
+
+    const PcieEndpointAccounting released =
+        fabric->endpointAccounting(kGpuEndpoint);
+    test.check(
+        released.lifecycle == PcieEndpointLifecycle::Released
+            && released.device_kind == PcieDeviceKind::Gpu
+            && released.requester.transactions == 1
+            && released.requester.useful_bytes == 4096,
+        "a released endpoint keeps its charges under a released label");
+    test.check(
+        fabric->attachedEndpoints()
+                == std::vector<PcieEndpointId>{kHostEndpoint}
+            && fabric->knownEndpoints()
+                == std::vector<PcieEndpointId>{kHostEndpoint, kGpuEndpoint}
+            && !fabric->attachedEndpointKind(kGpuEndpoint).has_value(),
+        "a released endpoint leaves the attached set but stays known");
+
+    std::uint64_t requester_transactions = 0;
+    std::uint64_t completer_transactions = 0;
+    std::uint64_t requester_useful_bytes = 0;
+    for (const PcieEndpointId endpoint_id : fabric->knownEndpoints()) {
+        const PcieEndpointAccounting row =
+            fabric->endpointAccounting(endpoint_id);
+        requester_transactions += row.requester.transactions;
+        completer_transactions += row.completer.transactions;
+        requester_useful_bytes += row.requester.useful_bytes;
+    }
+    test.check(
+        requester_transactions == fabric->attributedRequesterTransactions()
+            && completer_transactions
+                == fabric->attributedCompleterTransactions()
+            && requester_useful_bytes == fabric->attributedUsefulBytes(),
+        "the conservation identity is reproducible after teardown");
+
+    test.expectThrowAs<std::invalid_argument>(
+        [&gpu_attachments]() {
+            GpuDevice reused(
+                gpuConfig(16, Arm::HostBounce, true), gpu_attachments);
+            (void)reused;
+        },
+        "a released endpoint identity cannot be reclaimed by its own kind");
+    RnicDeviceAttachments nic_attachments;
+    nic_attachments.shared_pcie_fabric = fabric;
+    nic_attachments.shared_host_memory = registry;
+    test.expectThrowAs<std::invalid_argument>(
+        [&nic_attachments]() {
+            RnicDevice cross_kind(
+                nicConfig(16, kHostEndpoint, kGpuEndpoint), nic_attachments);
+            (void)cross_kind;
+        },
+        "a released endpoint identity is refused across device kinds too");
+    test.expectThrowAs<std::invalid_argument>(
+        [&fabric]() {
+            (void)fabric->endpointAccounting(kGpuEndpoint + 500);
+        },
+        "endpoint accounting rejects an identity never handed out");
+    fabric->validateInvariants();
 }
 
 void testGpuAttachedLeg(TestRunner& test) {
@@ -1092,6 +1337,8 @@ int main(int argc, char** argv) {
         testOffPathEquivalence(test);
         testFabricEndpointClaims(test);
         testCrossDeviceRejection(test);
+        testDeviceLocalTransfersFailClosed(test);
+        testEndpointIdentityLifecycle(test);
         testGpuTransferRejectsBadShapes(test);
         testGpuAttachedLeg(test);
         testStagingSerialization(test);

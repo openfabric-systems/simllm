@@ -203,8 +203,13 @@ public:
 
 private:
     class InertNetworkPort;
+    // These check and advance the shared fabric clock as well as this device's
+    // own, so devices composed on one fabric must be driven in non-decreasing
+    // time order. See PcieFabric::validateSharedCallerTime for why silent
+    // absorption of a peer's backlog is refused instead.
     void validateCallerTime(Picoseconds now_ps) const;
     void observeCallerTime(Picoseconds now_ps);
+    void advanceCallerTime(Picoseconds now_ps);
     void requireHostMemoryLive() const;
 
     RnicDeviceConfig config_;

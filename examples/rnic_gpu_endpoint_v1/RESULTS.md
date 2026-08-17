@@ -16,12 +16,67 @@ decision not to close BACK-46 were all written before the run and are
 unchanged. No attempt was stopped and no scored value, band or relation was
 edited after a measurement.
 
-One disclosed post-run edit: reviewing the frozen guard list against the native
-test showed that G8's case for a transaction naming an unattached endpoint
-identity was covered only indirectly, so that rejection was added to the native
-test and the study was re-run. The re-run reproduced `results.csv` byte for
-byte and scored 16 of 16 again. The edit adds a rejection assertion and changes
-no modeled behavior.
+### Disclosed post-freeze additions and corrections
+
+Everything below happened after the first result-producing run. The freeze is
+byte-identical throughout, no history was rewritten, and every item was re-run:
+`results.csv` reproduced byte for byte after each one, which is what shows the
+frozen study never exercised the paths these guards close.
+
+1. **Unattached-endpoint rejection** (guard coverage). G8's case for a
+   transaction naming an unattached endpoint identity was covered only
+   indirectly, so the rejection was added to the native test.
+2. **Endpoint identity lifecycle** (defect fix, P1). Releasing an identity
+   erased its claim but left its charges keyed by identity, so a reused identity
+   inherited the dead device's bytes, and reuse under a different device kind
+   raised `std::logic_error` from an otherwise legal submit. Identities are now
+   retired on release and can never be reclaimed in any kind, the rejection is a
+   configuration error, released rows stay readable under a released label, and
+   `knownEndpoints()` makes the conservation identity reproducible after
+   teardown.
+3. **Self-traversal and peer-to-peer guards** (defect fix, P2 and P7). A GPU
+   transfer whose completer was its own device-local memory was accepted and
+   charged a full host-link traversal. Device-local completers are now rejected:
+   the device's own memory as crossing no link, another device's as the
+   unmodeled peer-to-peer leg now registered as BACK-51. The fabric also refuses
+   any pair that names one identity as both ends, and an endpoint-attributed
+   RNIC can no longer own device-local memory at all.
+4. **Shared fabric caller clock** (defect fix, P3). Each device guarded only its
+   own monotone clock, so a device operation stamped before a peer's last
+   operation silently absorbed the backlog that peer had left on the link. The
+   fabric now carries the shared clock and every device entry point that can
+   schedule fabric work validates against it and advances it only on success.
+   The contract is stated in `pcie_fabric.h`, `rnic_device.h` and the module
+   doc's composition notes. The alternative, a per-transaction monotonicity
+   guard, was rejected on evidence: within one doorbell batch the accepted work
+   queue legitimately submits a later WQE's fetch before an earlier WQE's
+   payload read, so such a guard would reject the accepted path.
+5. **Byte conservation** (P4). The endpoint ledger reconciled transaction counts
+   only; bytes were reconciled by hand in this record. `attributedUsefulBytes`
+   and `attributedTransferredBytes` now exist and `validateInvariants` checks
+   both roles against them and against the class ledger.
+6. **Mutation ordering in `GpuDevice::transfer`** (P5). The record append and
+   sequence increment preceded a throwing add. Every sum is now computed into a
+   local and the vector reserved before any member moves.
+7. **Study `--check` mode and self digest** (V5). The runner overwrote its own
+   `results.csv` unconditionally. It now carries the measured digest as a frozen
+   constant, refuses to write under `--check`, and the pytest locks that file
+   with the same mutation-sensitive negative control as the accepted artifacts.
+8. **Published scored form** (V1 to V3). Corrected from 16 of 16 to 10 of 10 as
+   described under the scored families, with arm ordering retained as entailed
+   and unscored and the endpoint byte charge deduplicated across lanes.
+9. **Registry rescope** (V6, V7). BACK-49 now owns the concrete
+   composed-observation schema prerequisite rather than restating BACK-46's
+   clause 4, BACK-46 quotes its four original clauses so the numbering is
+   recoverable, and BACK-50 is retagged P1 with the full projection gap stated,
+   including that `GpuDeviceConfig` has no effective-hardware projection at all
+   and that `peer_read_grants` decides WQE legality.
+
+Two smaller corrections to this record's own wording are folded in below rather
+than listed as separate items: the claim that "the two arms share one fabric
+object" (each cell builds its own fabric, and the load-bearing sharing is
+between the GPU and the NIC inside a cell), and a truncated residual in the
+second-angle arithmetic.
 
 The registered command is:
 
@@ -95,26 +150,33 @@ with zero credit wait and zero link-queue wait, so no fabric resource stalled
 and nothing was absorbed silently.
 
 **Second angle, end-to-end plausibility.** The 4096-byte GPU-direct cell
-completes in 83,034 ps at 16 lanes. Of that, 70,078 ps is the payload read's
-completion stream (4096 payload bytes plus sixteen 20-byte completion headers),
-leaving 12,956 ps for the WQE fetch, the 256-byte QPC read, the MPT and MTT
-reads and the CQE write. Those are the right magnitudes for 64-, 256- and
-8-byte transfers on this link, so no term is unexplained. These are
-serialization-only figures: every path base latency, service latency and
-analytical penalty in this configuration is zero, so the numbers are not a
-calibrated ConnectX-7 device latency and must not be read as one.
+completes in 83,034 ps at 16 lanes. Of that, 70,078.125 ps is the payload read's
+completion stream (4096 payload bytes plus sixteen 20-byte completion headers,
+4416 bytes at 15.869140625 ps each), leaving 12,955.875 ps for the WQE fetch,
+the 256-byte QPC read, the MPT and MTT reads and the CQE write. Those are the
+right magnitudes for 64-, 256- and 8-byte transfers on this link, so no term is
+unexplained. These are serialization-only figures: every path base latency,
+service latency and analytical penalty in this configuration is zero, so the
+numbers are not a calibrated ConnectX-7 device latency and must not be read as
+one.
 
 **Third angle, the value that should scale with it.** The payload-dependent
 part of a completion is the read's completion stream, so growing the payload
 from 4096 to 16384 bytes must add exactly
 `((16384 + 20*64) - (4096 + 20*16))` bytes of h2d serialization. That is
-210,234.375 ps at 16 lanes and 420,468.75 ps at 8 lanes. Measured increments
-are 210,234 and 420,468 ps, agreeing to within the sub-picosecond reporting
-ceiling. Halving the width doubles the completion: twice the 16-lane
-GPU-direct 4096 cell is 166,068 ps against a measured 166,061 ps at 8 lanes,
-7 ps apart because each of the roughly ten transactions reports its own
-ceiling. Nothing double-charges the payload and nothing is width independent
-that should not be.
+210,234.375 ps at 16 lanes and 420,468.75 ps at 8 lanes. The measured increments
+are 210,234 and 420,468 ps, and the accounting is exact rather than approximate:
+the link keeps a rational cursor and reports each completion as its ceiling, so
+a difference of two reported values is
+`ceil(a + d) - ceil(a)`, which for a fractional `d` lands on either
+`floor(d)` or `ceil(d)`. Both measured increments are the floor of their exact
+value, so the agreement is the one the two-ceilings mechanism predicts, not a
+rounding coincidence. The same mechanism explains the width relation: twice the
+16-lane GPU-direct 4096 cell is 166,068 ps against a measured 166,061 ps at 8
+lanes, because doubling a value that was already rounded up is not the same as
+rounding up the doubled value, and roughly ten separately ceiled transactions
+compose the total. Nothing double-charges the payload and nothing is width
+independent that should not be.
 
 **Ledger conservation by hand.** The NIC is charged 4568 useful bytes as
 requester in the 4096-byte cells: 64 WQE plus 8 queue-page-list plus 256 QPC
@@ -126,35 +188,63 @@ every column. Every figure reproduces by hand.
 
 ## Scored relation families
 
-Sixteen scored instances, 16 of 16 pass. Families are reported separately and
-are never summed with any other evidence class.
+**Published form: ten scored instances, 10 of 10 pass.** This supersedes the
+16-of-16 form this record carried on first publication. The correction is
+post-specified and the reasoning is below; the freeze is unchanged and the
+measured rows are unchanged, so no number moved, only which of them are counted
+as independent scored evidence.
 
-| Family | Instances | Result |
+| Family | Scored instances | Result |
 |---|---|---|
-| Arm ordering: the host bounce completes later | 4 | 4/4 |
 | The bounce penalty equals the staged serialization, exact | 4 | 4/4 |
 | The staged transfer matches the closed form, exact | 4 | 4/4 |
-| The GPU endpoint is charged as the direct read's completer, exact | 4 | 4/4 |
+| The GPU endpoint is charged as the direct read's completer, exact | 2 | 2/2 |
+
+Two corrections produced that form, both applying the freeze's own entailment
+rule more strictly than the first publication did:
+
+- **Arm ordering is retained but unscored.** The freeze registered it as a
+  scored direction family, but it is entailed by the two exact families it sits
+  beside: if the difference equals the staged completion and the staged
+  completion equals a closed form that is strictly above its own physical floor,
+  then the bounce arm is later by construction. It cannot fail unless one of
+  those already failed. The freeze excluded a lane-scaling candidate for exactly
+  this reason, so the same test applies here. All four instances hold and a
+  violation would void the run rather than cost a point.
+- **The endpoint byte charge scores two instances, not four.** Its readings have
+  no lane dependence: `gpu_completer_useful_bytes` is the payload in both lane
+  cells of a payload, so the two lane variants are byte-identical readings of one
+  fact. The study now asserts that identity explicitly and scores one instance
+  per payload.
 
 The exact-difference family is the substantive one. In every cell,
 `wqe_cqe_visible_ps(host_bounce) - wqe_cqe_visible_ps(gpu_direct)` equals the
 staged completion to the picosecond: 142,188, 71,094, 568,750 and 284,375 ps.
-The two arms share one fabric object, so this could have failed through a
-link-queue wait at the post time, a credit wait, an ordering horizon leaking
-out of the GPU's domain, or a parameter difference between the host and GPU
-paths. None occurred.
+Within a cell the GPU and the NIC share one fabric object (each cell builds its
+own fabric, so the sharing that matters is between the two devices, not between
+the arms), so this could have failed through a link-queue wait at the post time,
+a credit wait, or an ordering horizon leaking out of the GPU's domain. One of
+the four failure modes the freeze registered for it is foreclosed rather than
+tested: a parameter difference between the host and GPU paths cannot arise,
+because both paths carry the default zero base latency and disabled profiles by
+construction. The other three are live and none occurred.
 
-The GPU-completer family is the acceptance measurement: the direct arm charges
-the GPU endpoint one completing transaction of exactly `payload_bytes`, and the
-bounce arm charges it none, so the difference equals the payload in all four
-cells. Inverse lane scaling of the staged transfer was deliberately left
-unscored in the freeze because it follows arithmetically from the closed-form
-family and is therefore unlosable.
+The GPU-completer family measures acceptance clause 1, but its genuinely losable
+content is narrower than "the acceptance measurement" claimed on first
+publication. Three of the failure modes the freeze named for it are pre-empted
+by fatal structural checks that void the run before scoring: the completer
+identity label, the completer device kind and the per-arm transaction counts are
+all asserted as structure. What the scored instances add is the byte fidelity of
+the verified transaction, that the charge carried to the GPU endpoint is exactly
+`payload_bytes` and not a truncated, doubled or misdirected quantity.
 
 ## Fatal guards: void, not scored
 
-No guard was violated, so the scored numbers above mean what they claim. None
-of these is reported as a fraction.
+No guard was violated, so the scored numbers above mean what they claim. No
+guard is reported as a fraction of guards. Where a count appears inside a guard
+below, it is the component evidence that guard consumed (regenerated rows,
+relation families of another study, CTest entries), not a fraction of this
+study's guards, and it is never added to the scored total.
 
 - **G1** `examples/rnic_pcie_v1/results.csv` regenerated by
   `run_rnic_pcie_v1.py --check`: 35 of 35 exact-oracle rows, 10 of 10 relation
@@ -179,24 +269,32 @@ of these is reported as a fraction.
   transactions, with the two host stores correctly left unattributed. Naming a
   fabric host endpoint with no attributed device changes nothing at all.
   HOLDS.
-- **G8** cross-device rejection is transactional. Ten rejections were exercised
-  on one shared fabric and registry: an ungranted peer region, a WQE naming its
-  own device as peer, a named peer disagreeing with the region owner, a GPU
-  transfer into an ungranted peer region, a GPU transfer naming its own owner as
-  peer, a device charging another device's requester endpoint, an attributed
-  host store, a half-named endpoint pair, a transaction naming an unattached
-  completer endpoint, and a duplicate host-memory owner claim. After all ten the
-  fabric generation, per-class accounting, registry generation, live allocation
-  count, SQ occupancy and work-queue counters were unchanged and the endpoint
-  ledger was still empty. Endpoint and ordering-domain collisions, a device
-  claiming the fabric host identity, an attached GPU on a fabric that names no
-  host endpoint, a GPU attempting to register a queue object, and four malformed
-  transfer shapes are rejected the same way in the neighbouring cases. Every
-  frozen G8 case is covered. HOLDS.
+- **G8** cross-device rejection is transactional. Thirteen rejections are
+  exercised inside one shared fabric and registry under the six-quantity
+  snapshot: an ungranted peer region, a WQE naming its own device as peer, a
+  named peer disagreeing with the region owner, a GPU transfer into an ungranted
+  peer region, a GPU transfer naming its own owner as peer, a device charging
+  another device's requester endpoint, an attributed host store, a half-named
+  endpoint pair, a transaction naming an unattached completer endpoint, a
+  duplicate host-memory owner claim, a duplicate endpoint identity claim, an
+  endpoint-attributed RNIC owning device-local memory, and two operations stamped
+  behind the shared fabric clock. After all of them the fabric generation,
+  per-class accounting, registry generation, live allocation count, SQ occupancy
+  and work-queue counters were unchanged, the endpoint ledger was empty in both
+  transactions and bytes, and the fabric and registry invariants held. Separate
+  fixtures cover the device-local traversal guards, the released-identity
+  refusals in both device kinds, the fabric-surface resolve branches, an
+  ordering-domain collision, a device claiming the fabric host identity, an
+  attached GPU on a fabric that names no host endpoint, a GPU registering a queue
+  object, and four malformed transfer shapes. Every frozen G8 case is exercised
+  directly, the already-claimed identity case now inside the snapshot. HOLDS.
 - **G9** `validateInvariants()` passes on the fabric, registry, RNIC device and
-  GPU device in every cell, and the endpoint ledger conserves: requester and
-  completer charge counts are equal, and equal to the attributed transaction
-  count, in all eight rows. HOLDS.
+  GPU device in every cell, and the endpoint ledger conserves in both directions
+  and both quantities: requester and completer charge counts are equal and equal
+  to the attributed transaction count in all eight rows, and requester and
+  completer bytes are equal to the attributed byte counters and bounded by the
+  per-service-class ledger. The identity is also reproducible from the public
+  surface after a device is torn down, over `knownEndpoints()`. HOLDS.
 - **G10** the four Python gates pass. HOLDS.
 - **G11** no version constant moved and `defaultPcieFabricConfig()` keeps its
   fields. HOLDS.
@@ -280,6 +378,9 @@ claim.
 - `ctest`: 7 of 7 passed, including the new `simllm_rnic_gpu_device_test`.
 - `examples/rnic_wq_v1/run_rnic_wq_v1.py --check`: passed, tracked results
   match 11 measured rows and 11 of 11 checks.
+- `examples/rnic_gpu_endpoint_v1/run_study.py --check`: passed, the freshly
+  derived matrix equals the tracked rows and their frozen digest, and the run
+  wrote nothing.
 - `examples/rnic_pcie_v1/run_rnic_pcie_v1.py --check`: passed, tracked results
   match 35 measured rows.
 - `.venv/bin/ruff check .`, `.venv/bin/python -m pytest -q`,
@@ -287,14 +388,15 @@ claim.
 
 ## Genuine-risk fraction and boundary
 
-The scored fraction is 16 of 16 across four families, all of them losable given
-the registered guards: the ordering and difference families fail if the second
-device's transfer is not really charged on the shared fabric or if the two arms
-couple through it, the closed-form family fails if the new caller adds or drops
-serialization, and the completer family fails if the completer identity resolves
-to the wrong end. Byte identity, invariant validation, rejection atomicity,
-ledger conservation and the by-construction zeros are fatal and unscored, and
-their counts are never added to the scored total.
+The published scored fraction is 10 of 10 across three families, all of them
+losable given the registered guards: the difference family fails if the second
+device's transfer is not really charged on the shared fabric or if the two
+devices couple through it, the closed-form family fails if the new caller adds
+or drops serialization, and the completer family fails if the byte charge to the
+GPU endpoint is not the payload exactly. Arm ordering is retained as entailed and
+unscored. Byte identity, invariant validation, rejection atomicity, ledger
+conservation, the completer identity labels and the by-construction zeros are
+fatal and unscored, and their counts are never added to the scored total.
 
 The boundary this study does not cross: occurrence, timing and calibration of
 the enabled leg (BACK-16), the GPU's own port objects and service model

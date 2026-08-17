@@ -42,6 +42,13 @@ FROZEN_STAGING_PS = {
     (16384, 8): 568_750,
 }
 
+#: This study's own measured rows, so a rerun proves reproduction rather than
+#: overwriting the record. The digest is checked before and after every run and
+#: is what --check compares a freshly derived matrix against.
+STUDY_RESULTS_DIGEST = (
+    "fdd37c933d079aa945b9b626d21545af4acb0852ca2c203b921cc0c780a8eb9e"
+)
+
 #: Accepted artifacts whose bytes this change must not move.
 FROZEN_ARTIFACT_DIGESTS = {
     "examples/rnic_wq_v1/results.csv": (
@@ -100,6 +107,18 @@ ROW_FIELDS = (
     "attributed_completer_transactions",
     "invariants_valid",
 )
+
+#: The published scored set. Arm ordering is retained but unscored: it is
+#: entailed by the difference and closed-form families, because a positive
+#: staging time plus an exact difference already forces the bounce arm later.
+#: The endpoint byte charge scores one instance per payload, since its lane
+#: variants are byte-identical readings rather than independent instances.
+SCORED_FAMILIES = (
+    "bounce_penalty_equals_staging",
+    "staging_closed_form",
+    "gpu_completer_charge",
+)
+RETAINED_ENTAILED_FAMILIES = ("arm_ordering",)
 
 INTEGER_FIELDS = tuple(
     field
@@ -184,6 +203,14 @@ def _validate_registry(out: Path) -> None:
         if actual != expected:
             raise AssertionError(
                 f"frozen artifact digest drifted for {relative}: {actual}"
+            )
+    tracked_results = REPO_ROOT / "examples/rnic_gpu_endpoint_v1/results.csv"
+    if tracked_results.is_file():
+        actual = _digest(tracked_results)
+        if actual != STUDY_RESULTS_DIGEST:
+            raise AssertionError(
+                f"frozen artifact digest drifted for {tracked_results.name}: "
+                f"{actual}"
             )
     try:
         out.resolve().relative_to(_run_root())
@@ -377,6 +404,9 @@ def _validate_rows(rows: list[dict[str, str]]) -> dict[str, Any]:
         "staging_closed_form": [],
         "gpu_completer_charge": [],
     }
+    charge_by_payload: dict[int, set[int]] = {
+        payload: set() for payload in PAYLOAD_SIZES
+    }
     for payload in PAYLOAD_SIZES:
         for lanes in LANE_COUNTS:
             bounce = indexed[("host_bounce", payload, lanes)]
@@ -423,6 +453,7 @@ def _validate_rows(rows: list[dict[str, str]]) -> dict[str, Any]:
                 direct["gpu_completer_useful_bytes"]
                 - bounce["gpu_completer_useful_bytes"]
             )
+            charge_by_payload[payload].add(charge)
             families["gpu_completer_charge"].append(
                 {
                     "cell": cell,
@@ -431,22 +462,59 @@ def _validate_rows(rows: list[dict[str, str]]) -> dict[str, Any]:
                     "passed": charge == payload,
                 }
             )
-    scored_passed = sum(
-        1
-        for instances in families.values()
-        for instance in instances
-        if instance["passed"]
-    )
-    scored_total = sum(len(instances) for instances in families.values())
+
+    # The endpoint byte charge has no lane dependence, so the two lane cells of
+    # one payload are byte-identical readings rather than independent instances.
+    # Verify that, then score one instance per payload.
+    for payload, charges in charge_by_payload.items():
+        if len(charges) != 1:
+            raise AssertionError(
+                "BACK-46 endpoint byte charge varied with lane count at "
+                f"payload {payload}: {sorted(charges)}"
+            )
+    scored: dict[str, dict[str, int]] = {}
+    for name in SCORED_FAMILIES:
+        if name == "gpu_completer_charge":
+            scored[name] = {
+                "passed": sum(
+                    1
+                    for payload in PAYLOAD_SIZES
+                    if charge_by_payload[payload] == {payload}
+                ),
+                "total": len(PAYLOAD_SIZES),
+            }
+            continue
+        instances = families[name]
+        scored[name] = {
+            "passed": sum(1 for item in instances if item["passed"]),
+            "total": len(instances),
+        }
+    retained: dict[str, dict[str, int]] = {
+        name: {
+            "passed": sum(1 for item in families[name] if item["passed"]),
+            "total": len(families[name]),
+        }
+        for name in RETAINED_ENTAILED_FAMILIES
+    }
+    # A retained-entailed family cannot fail unless one of the relations that
+    # entails it already failed, so a violation here voids rather than scores.
+    for name, counts in retained.items():
+        if counts["passed"] != counts["total"]:
+            raise AssertionError(
+                f"BACK-46 retained-entailed family {name} failed, which means "
+                "an entailing scored relation is broken"
+            )
     return {
         "rows": list(indexed.values()),
         "families": families,
-        "scored_passed": scored_passed,
-        "scored_total": scored_total,
+        "scored": scored,
+        "retained_entailed": retained,
+        "scored_passed": sum(item["passed"] for item in scored.values()),
+        "scored_total": sum(item["total"] for item in scored.values()),
     }
 
 
-def _run(out: Path) -> dict[str, Any]:
+def _run(out: Path, *, check_only_rows: bool) -> dict[str, Any]:
     before = {
         relative: _digest(REPO_ROOT / relative)
         for relative in FROZEN_ARTIFACT_DIGESTS
@@ -462,7 +530,21 @@ def _run(out: Path) -> dict[str, Any]:
     checked = _validate_rows(list(reader))
     regenerated = _regenerate_off_path(build_dir, out)
     (out / "raw_results.csv").write_bytes(raw_csv.encode("utf-8"))
-    RESULTS.write_bytes(raw_csv.encode("utf-8"))
+    rendered = raw_csv.encode("utf-8")
+    measured_digest = hashlib.sha256(rendered).hexdigest()
+    if check_only_rows:
+        # --check must never write the record it is verifying.
+        if not RESULTS.is_file() or RESULTS.read_bytes() != rendered:
+            raise AssertionError(
+                f"measured BACK-46 rows differ from tracked {RESULTS}"
+            )
+    else:
+        RESULTS.write_bytes(rendered)
+    if measured_digest != STUDY_RESULTS_DIGEST:
+        raise AssertionError(
+            "BACK-46 measured rows drifted from the frozen study digest: "
+            f"{measured_digest}"
+        )
     after = {
         relative: _digest(REPO_ROOT / relative)
         for relative in FROZEN_ARTIFACT_DIGESTS
@@ -483,6 +565,7 @@ def _run(out: Path) -> dict[str, Any]:
         "artifact_identity": identity,
         "artifact_identity_total": len(identity),
         "regenerated_identity": regenerated,
+        "study_results_digest": measured_digest,
         "ctest": ctest,
     }
 
@@ -495,6 +578,11 @@ def main() -> None:
         action="store_true",
         help="validate the frozen registry without creating outputs",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="rebuild and compare against the tracked rows without writing them",
+    )
     arguments = parser.parse_args()
     _validate_registry(arguments.out)
     if arguments.check_only:
@@ -503,16 +591,20 @@ def main() -> None:
             "no artifacts were produced"
         )
         return
-    summary = _run(arguments.out.resolve())
+    summary = _run(arguments.out.resolve(), check_only_rows=arguments.check)
     print(
         "BACK-46 scored "
         f"{summary['scored_passed']}/{summary['scored_total']} relation "
         f"instances; native CTest {summary['ctest']['passed']}/"
         f"{summary['ctest']['total']} passed"
     )
-    for name, instances in summary["families"].items():
-        passed = sum(1 for instance in instances if instance["passed"])
-        print(f"  {name}: {passed}/{len(instances)}")
+    for name, counts in summary["scored"].items():
+        print(f"  scored {name}: {counts['passed']}/{counts['total']}")
+    for name, counts in summary["retained_entailed"].items():
+        print(
+            f"  retained entailed, unscored {name}: "
+            f"{counts['passed']}/{counts['total']}"
+        )
 
 
 if __name__ == "__main__":
