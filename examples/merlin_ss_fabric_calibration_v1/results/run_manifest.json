@@ -1,0 +1,203 @@
+{
+ "binary_sha256": "5075021a6af762e914d782a1c69c1633d9b084f767ac82d9b6931bd33f69f787",
+ "binary_sha256_expected": "5075021a6af762e914d782a1c69c1633d9b084f767ac82d9b6931bd33f69f787",
+ "cells": {
+  "cal-echo-2": {
+   "args": [
+    "-pattern",
+    "incast",
+    "-receiver",
+    "5",
+    "-degree",
+    "2",
+    "-duration_ps",
+    "100000000000",
+    "-bin_ps",
+    "100000000",
+    "-routing",
+    "adaptive",
+    "-wire_bytes",
+    "9038",
+    "-header_bytes",
+    "90"
+   ],
+   "csv_sha256": "517c8c394d98dfd2559728d29d7aaff649368cb6ebe08eaefaf9311f901a9c41",
+   "exit_a": 0,
+   "exit_b": 0,
+   "repeat_identical": true,
+   "topo": "merlin_a100_singleswitch_v1.topo",
+   "topo_sha256": "c0a0050b074385b7daa8b9fa83619dfd49ec1bcbf21fd82447b6029d6cff8f18"
+  },
+  "cal-echo-4": {
+   "args": [
+    "-pattern",
+    "incast",
+    "-receiver",
+    "5",
+    "-degree",
+    "4",
+    "-duration_ps",
+    "100000000000",
+    "-bin_ps",
+    "100000000",
+    "-routing",
+    "adaptive",
+    "-wire_bytes",
+    "9038",
+    "-header_bytes",
+    "90"
+   ],
+   "csv_sha256": "77cff0ef7c9a83cac7cf7a3799519615fd1fc1a5aa5866a7a09fe02fbc22e07c",
+   "exit_a": 0,
+   "exit_b": 0,
+   "repeat_identical": true,
+   "topo": "merlin_a100_singleswitch_v1.topo",
+   "topo_sha256": "c0a0050b074385b7daa8b9fa83619dfd49ec1bcbf21fd82447b6029d6cff8f18"
+  },
+  "cal-solo-100g": {
+   "args": [
+    "-pattern",
+    "incast",
+    "-receiver",
+    "5",
+    "-degree",
+    "1",
+    "-duration_ps",
+    "200000000000",
+    "-bin_ps",
+    "1000000",
+    "-routing",
+    "adaptive",
+    "-wire_bytes",
+    "9038",
+    "-header_bytes",
+    "90"
+   ],
+   "csv_sha256": "1afb0620470bae199936dfbcb7516be7084a42201d2f18b204a26074cf55f4cf",
+   "exit_a": 0,
+   "exit_b": 0,
+   "repeat_identical": true,
+   "topo": "merlin_a100_singleswitch_v1_100g.topo",
+   "topo_sha256": "61b7baf5fb20e0c445b23fd513e2739a5cd66d6586e14615bbbfdac6ce69e934"
+  },
+  "cal-solo-4160": {
+   "args": [
+    "-pattern",
+    "incast",
+    "-receiver",
+    "5",
+    "-degree",
+    "1",
+    "-duration_ps",
+    "200000000000",
+    "-bin_ps",
+    "1000000",
+    "-routing",
+    "adaptive",
+    "-wire_bytes",
+    "4160",
+    "-header_bytes",
+    "64"
+   ],
+   "csv_sha256": "31e85810be6504d24eedaa8db2084e60464694f7364db179f918e833fbd609e7",
+   "exit_a": 0,
+   "exit_b": 0,
+   "repeat_identical": true,
+   "topo": "merlin_a100_singleswitch_v1.topo",
+   "topo_sha256": "c0a0050b074385b7daa8b9fa83619dfd49ec1bcbf21fd82447b6029d6cff8f18"
+  },
+  "cal-solo-a": {
+   "args": [
+    "-pattern",
+    "incast",
+    "-receiver",
+    "5",
+    "-degree",
+    "1",
+    "-duration_ps",
+    "200000000000",
+    "-bin_ps",
+    "1000000",
+    "-routing",
+    "adaptive",
+    "-wire_bytes",
+    "9038",
+    "-header_bytes",
+    "90"
+   ],
+   "csv_sha256": "11d462caed89d788fc25c430f5e7c359115fda50d9f114e01578f90686031a8a",
+   "exit_a": 0,
+   "exit_b": 0,
+   "repeat_identical": true,
+   "topo": "merlin_a100_singleswitch_v1.topo",
+   "topo_sha256": "c0a0050b074385b7daa8b9fa83619dfd49ec1bcbf21fd82447b6029d6cff8f18"
+  },
+  "cal-solo-b": {
+   "args": [
+    "-pattern",
+    "incast",
+    "-receiver",
+    "17",
+    "-degree",
+    "1",
+    "-duration_ps",
+    "200000000000",
+    "-bin_ps",
+    "1000000",
+    "-routing",
+    "adaptive",
+    "-wire_bytes",
+    "9038",
+    "-header_bytes",
+    "90"
+   ],
+   "csv_sha256": "4b2ac2ca0593b4569f8c648f78d9ac0f12a9d0f2a7cacad81d90255b1661a104",
+   "exit_a": 0,
+   "exit_b": 0,
+   "repeat_identical": true,
+   "topo": "merlin_a100_singleswitch_v1.topo",
+   "topo_sha256": "c0a0050b074385b7daa8b9fa83619dfd49ec1bcbf21fd82447b6029d6cff8f18"
+  }
+ },
+ "finished_utc": "2026-08-17T22:18:51.328773+00:00",
+ "guard_failures": [],
+ "sanity_arms": {
+  "incast_1_minimal": {
+   "csv_sha256": "d63c4c3bc3e5f84bd557270de9d9b009992dc200d3fa7275bf08e308b32ac9e8",
+   "exit_a": 0,
+   "exit_b": 0,
+   "matches_reference": true,
+   "repeat_identical": true
+  },
+  "incast_2_adaptive": {
+   "csv_sha256": "866ad91986000b5a192513116ed5cbb3ac687c734830ccd57bd749a418982004",
+   "exit_a": 0,
+   "exit_b": 0,
+   "matches_reference": true,
+   "repeat_identical": true
+  },
+  "incast_8_adaptive": {
+   "csv_sha256": "f55f0671d9222494c5a100dd92fd09e2ca25a0ebf0fd375d002e42369b6b25ea",
+   "exit_a": 0,
+   "exit_b": 0,
+   "matches_reference": true,
+   "repeat_identical": true
+  },
+  "join_adaptive": {
+   "csv_sha256": "fd957e70c4a56f5a8abb4840a0e3eb76a52ad479eedee74f4129bbf550c8d539",
+   "exit_a": 0,
+   "exit_b": 0,
+   "matches_reference": true,
+   "repeat_identical": true
+  }
+ },
+ "started_utc": "2026-08-17T22:18:39.078442+00:00",
+ "study": "merlin_ss_fabric_calibration_v1",
+ "submodule_head": "89b7a5a8caa16185c257899a4200935de0cc69c4",
+ "submodule_head_expected": "89b7a5a8caa16185c257899a4200935de0cc69c4",
+ "topologies": {
+  "merlin_a100_singleswitch_v1.topo": "c0a0050b074385b7daa8b9fa83619dfd49ec1bcbf21fd82447b6029d6cff8f18",
+  "merlin_a100_singleswitch_v1_100g.topo": "61b7baf5fb20e0c445b23fd513e2739a5cd66d6586e14615bbbfdac6ce69e934",
+  "p2a2h1g3_200g.topo": "8f562f1ce3871ecc30b516f54596b0b9450e51110531231302356bc7c45b02f7"
+ }
+}

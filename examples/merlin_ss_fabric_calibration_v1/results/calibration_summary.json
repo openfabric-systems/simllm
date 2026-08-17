@@ -1,0 +1,452 @@
+{
+ "binary_sha256": "5075021a6af762e914d782a1c69c1633d9b084f767ac82d9b6931bd33f69f787",
+ "composition_validity": {
+  "binding_stage_is_stack": true,
+  "ex1_confirmed_t_fab_lat": true,
+  "t_fab_lat_us": 340.417,
+  "t_fab_rate_us": 338.919
+ },
+ "conditional_rows": [
+  {
+   "band": [
+    0.85,
+    1.15
+   ],
+   "composed": 3.819333,
+   "composed_over_measured": 1.044865,
+   "measured": 3.655336,
+   "quantity": "i2 flow 0 steady rate",
+   "row": "CO-1",
+   "unit": "GB/s",
+   "verdict": "pass"
+  },
+  {
+   "band": [
+    0.85,
+    1.15
+   ],
+   "composed": 4.982414,
+   "composed_over_measured": 1.018258,
+   "measured": 4.893075,
+   "quantity": "i2 flow 1 steady rate",
+   "row": "CO-2",
+   "unit": "GB/s",
+   "verdict": "pass"
+  },
+  {
+   "band": [
+    0.85,
+    1.15
+   ],
+   "composed": 3.819333,
+   "composed_over_measured": 0.948937,
+   "measured": 4.024854,
+   "quantity": "j2x stage-1 flow 0 steady rate",
+   "row": "CO-3",
+   "unit": "GB/s",
+   "verdict": "pass"
+  },
+  {
+   "band": [
+    0.85,
+    1.15
+   ],
+   "composed": 4.982414,
+   "composed_over_measured": 1.027595,
+   "measured": 4.848615,
+   "quantity": "j2x stage-1 flow 1 steady rate",
+   "row": "CO-4",
+   "unit": "GB/s",
+   "verdict": "pass"
+  },
+  {
+   "band": [
+    0.9,
+    1.1
+   ],
+   "composed": 1.0,
+   "composed_over_measured": 0.948937,
+   "measured": 1.053811,
+   "quantity": "join-unharmed flow 0 stage1/stage0",
+   "row": "CO-5",
+   "unit": "ratio",
+   "verdict": "pass"
+  },
+  {
+   "band": [
+    0.8333333333333334,
+    1.2
+   ],
+   "composed": 2198.643,
+   "composed_over_measured": 0.981954,
+   "measured": 2239.049,
+   "quantity": "i2 flow 0 steady-window p50",
+   "row": "CO-6",
+   "unit": "us",
+   "verdict": "pass"
+  },
+  {
+   "band": [
+    0.8333333333333334,
+    1.2
+   ],
+   "composed": 1596.855,
+   "composed_over_measured": 0.997865,
+   "measured": 1600.2715,
+   "quantity": "i2 flow 1 steady-window p50",
+   "row": "CO-7",
+   "unit": "us",
+   "verdict": "pass"
+  },
+  {
+   "band": [
+    0.8333333333333334,
+    1.2
+   ],
+   "composed": 2198.643,
+   "composed_over_measured": 1.029508,
+   "measured": 2135.6255,
+   "quantity": "j2x stage-1 flow 0 steady-window p50",
+   "row": "CO-8",
+   "unit": "us",
+   "verdict": "pass"
+  },
+  {
+   "band": [
+    0.8333333333333334,
+    1.2
+   ],
+   "composed": 1596.855,
+   "composed_over_measured": 0.926819,
+   "measured": 1722.9415,
+   "quantity": "j2x stage-1 flow 1 steady-window p50",
+   "row": "CO-9",
+   "unit": "us",
+   "verdict": "pass"
+  },
+  {
+   "band": [
+    "<= 1 s"
+   ],
+   "composed": "fabric settling, one 100-us bin",
+   "measured": 0.0,
+   "quantity": "staggered-join composed settling",
+   "row": "CO-10",
+   "unit": "s",
+   "verdict": "pass"
+  }
+ ],
+ "dataset_files_verified": {
+  "i2-incast/i2-incast_flow0_dest.csv.gz": true,
+  "i2-incast/i2-incast_flow1_dest.csv.gz": true,
+  "j2x-join/j2x-join_flow0_dest.csv.gz": true,
+  "j2x-join/j2x-join_flow1_dest.csv.gz": true,
+  "s1-stream/s1-stream_flow0_dest.csv.gz": true,
+  "stats/i2-incast_stats.json": true,
+  "stats/j2x-join_stats.json": true,
+  "stats/mx-a2gh_stats.json": true,
+  "stats/mx-gh2a_stats.json": true,
+  "stats/s1-stream_stats.json": true
+ },
+ "dataset_manifest_sha256": "a6b7e61e294d87d76ce69ee7042e15c2eade99bbc8789e296377615d2bd4af88",
+ "derived_unscored": {
+  "endpoint_share": {
+   "gpu103-gpu102": 0.8452,
+   "gpu105-gpu102": 0.7868
+  },
+  "h_rate_gbps": {
+   "gpu103-gpu102": 3.819333,
+   "gpu105-gpu102": 4.982414
+  },
+  "h_time_us": {
+   "gpu103-gpu102": 1858.226,
+   "gpu105-gpu102": 1256.438
+  },
+  "i2_aggregate_composed_gbps": 8.801747,
+  "i2_aggregate_measured_gbps": 8.548411,
+  "i2_convergence_composed": "not producible by the frozen rule",
+  "i2_convergence_measured_s": 119.0,
+  "i2_jain_composed": 0.982838,
+  "i2_jain_measured": 0.979466,
+  "i2_over_solo_composed": 1.766563,
+  "i2_over_solo_measured_stage_def": 1.715717,
+  "j2x_st1_aggregate_composed_gbps": 8.801747,
+  "j2x_st1_aggregate_measured_gbps": 8.873469,
+  "j2x_st1_jain_composed": 0.982838,
+  "j2x_st1_jain_measured": 0.991455,
+  "mx_excluded": {
+   "a2gh_endpoint_floor_us": 2164.479,
+   "a2gh_p50_us": 2504.896,
+   "gh2a_endpoint_floor_us": 6515.01,
+   "gh2a_p50_us": 6855.427,
+   "reason": "endpoint-stack-owned asymmetry, no independent sustained solo anchor, GH nodes outside the declared instance (expectations.md)"
+  }
+ },
+ "fatal_failures": [],
+ "fatal_guards": {
+  "FG-1_binary": {
+   "expected": "5075021a6af762e914d782a1c69c1633d9b084f767ac82d9b6931bd33f69f787",
+   "ok": true,
+   "sha256": "5075021a6af762e914d782a1c69c1633d9b084f767ac82d9b6931bd33f69f787",
+   "submodule_head": "89b7a5a8caa16185c257899a4200935de0cc69c4",
+   "submodule_ok": true
+  },
+  "FG-2_sanity_determinism": {
+   "arms": {
+    "incast_1_minimal": true,
+    "incast_2_adaptive": true,
+    "incast_8_adaptive": true,
+    "join_adaptive": true
+   },
+   "ok": true
+  },
+  "FG-3_FG-5_cells": {
+   "cells": {
+    "cal-echo-2": true,
+    "cal-echo-4": true,
+    "cal-solo-100g": true,
+    "cal-solo-4160": true,
+    "cal-solo-a": true,
+    "cal-solo-b": true
+   },
+   "ok": true
+  },
+  "FG-4_conservation": {
+   "ok": true
+  },
+  "FG-6_dataset_manifest": {
+   "expected": "a6b7e61e294d87d76ce69ee7042e15c2eade99bbc8789e296377615d2bd4af88",
+   "ok": true,
+   "sha256": "a6b7e61e294d87d76ce69ee7042e15c2eade99bbc8789e296377615d2bd4af88"
+  }
+ },
+ "measured": {
+  "anchor_j2x_st0_p50_us": 2198.6435,
+  "anchor_j2x_st0_rate_gbps": 3.819333,
+  "anchor_s1_p50_us": 1596.855,
+  "anchor_s1_rate_gbps": 4.982414,
+  "i2_convergence_s": 119.0,
+  "i2_f0_p50_us": 2239.049,
+  "i2_f0_rate_gbps": 3.655336,
+  "i2_f1_p50_us": 1600.2715,
+  "i2_f1_rate_gbps": 4.893075,
+  "j2x_st1_convergence_s": 0.0,
+  "j2x_st1_f0_p50_us": 2135.6255,
+  "j2x_st1_f0_rate_gbps": 4.024854,
+  "j2x_st1_f1_p50_us": 1722.9415,
+  "j2x_st1_f1_rate_gbps": 4.848615
+ },
+ "simulation_cells": {
+  "cal-echo-2": {
+   "bin_bound_bytes": 2487544,
+   "delivered": 277074,
+   "delivered_payload_bytes": 2479258152,
+   "dropped": 276146,
+   "final50_aggregate_over_cp": 1.000037,
+   "final50_flow_over_cp": {
+    "0": 1.000037,
+    "1": 0.0
+   },
+   "injected": 553220,
+   "max_100us_bin_bytes": 2478596,
+   "starved_flows": [
+    1
+   ]
+  },
+  "cal-echo-4": {
+   "bin_bound_bytes": 2487544,
+   "delivered": 277074,
+   "delivered_payload_bytes": 2479258152,
+   "dropped": 829366,
+   "final50_aggregate_over_cp": 1.000037,
+   "final50_flow_over_cp": {
+    "0": 1.000037,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0
+   },
+   "injected": 1106440,
+   "max_100us_bin_bytes": 2478596,
+   "starved_flows": [
+    1,
+    2,
+    3
+   ]
+  },
+  "cal-solo-100g": {
+   "bin_bound_bytes": 1252720,
+   "chunk_count": 295,
+   "chunk_delta_p50_us": 678.0,
+   "delivered": 276610,
+   "delivered_payload_bytes": 2475106280,
+   "dropped": 0,
+   "first_crossing_bin_end_ps": 680000000,
+   "injected": 276610,
+   "max_100us_bin_bytes": 1243772,
+   "settle_ok": true,
+   "settle_violating_bins": [],
+   "steady_over_cp": 1.0,
+   "steady_rate_bytes_per_s": 12375531400
+  },
+  "cal-solo-4160": {
+   "bin_bound_bytes": 2465792,
+   "chunk_count": 586,
+   "chunk_delta_p50_us": 341.0,
+   "delivered": 1201924,
+   "delivered_payload_bytes": 4923080704,
+   "dropped": 0,
+   "first_crossing_bin_end_ps": 342000000,
+   "injected": 1201924,
+   "max_100us_bin_bytes": 2461696,
+   "settle_ok": true,
+   "settle_violating_bins": [],
+   "steady_over_cp": 0.999999,
+   "steady_rate_bytes_per_s": 24615362560
+  },
+  "cal-solo-a": {
+   "bin_bound_bytes": 2487544,
+   "chunk_count": 590,
+   "chunk_delta_p50_us": 339.0,
+   "delivered": 553220,
+   "delivered_payload_bytes": 4950212560,
+   "dropped": 0,
+   "first_crossing_bin_end_ps": 341000000,
+   "injected": 553220,
+   "max_100us_bin_bytes": 2478596,
+   "settle_ok": true,
+   "settle_violating_bins": [],
+   "steady_over_cp": 1.0,
+   "steady_rate_bytes_per_s": 24751062800
+  },
+  "cal-solo-b": {
+   "bin_bound_bytes": 2487544,
+   "chunk_count": 590,
+   "chunk_delta_p50_us": 339.0,
+   "delivered": 553220,
+   "delivered_payload_bytes": 4950212560,
+   "dropped": 0,
+   "first_crossing_bin_end_ps": 341000000,
+   "injected": 553220,
+   "max_100us_bin_bytes": 2478596,
+   "settle_ok": true,
+   "settle_violating_bins": [],
+   "steady_over_cp": 1.0,
+   "steady_rate_bytes_per_s": 24751062800
+  }
+ },
+ "simulation_rows": [
+  {
+   "class": "exact",
+   "expected": "== 341000000 ps",
+   "observed": 341000000,
+   "quantity": "cal-solo-a first-chunk crossing bin end",
+   "row": "EX-1",
+   "verdict": "pass"
+  },
+  {
+   "class": "exact",
+   "expected": "== 680000000 ps",
+   "observed": 680000000,
+   "quantity": "cal-solo-100g first-chunk crossing bin end",
+   "row": "EX-2",
+   "verdict": "pass"
+  },
+  {
+   "class": "exact",
+   "expected": "== 342000000 ps",
+   "observed": 342000000,
+   "quantity": "cal-solo-4160 first-chunk crossing bin end",
+   "row": "EX-3",
+   "verdict": "pass"
+  },
+  {
+   "class": "behavioral",
+   "expected": "[0.99, 1.0005]",
+   "observed": 1.0,
+   "quantity": "cal-solo-a steady rate over C_p",
+   "row": "BE-1",
+   "verdict": "pass"
+  },
+  {
+   "class": "behavioral",
+   "expected": "[335, 345]",
+   "observed": 339.0,
+   "quantity": "cal-solo-a chunk delta p50 us",
+   "row": "BE-2",
+   "verdict": "pass"
+  },
+  {
+   "class": "behavioral",
+   "expected": "bins 1..1999 within 1 percent of C_p",
+   "observed": true,
+   "quantity": "solo cells settle within one 100-us bin",
+   "row": "BE-3",
+   "verdict": "pass"
+  },
+  {
+   "class": "behavioral",
+   "expected": "aggregate in [0.90, 1.005] C_p, exactly one starved flow, drops > 0",
+   "observed": {
+    "aggregate_over_cp": 1.000037,
+    "dropped": 276146,
+    "starved_flows": [
+     1
+    ]
+   },
+   "quantity": "cal-echo-2 admission-capture signature",
+   "row": "BE-4",
+   "verdict": "pass"
+  },
+  {
+   "class": "behavioral",
+   "expected": "aggregate in band, >= 1 starved flow, top flow >= 0.5 C_p, drops > 0",
+   "observed": {
+    "aggregate_over_cp": 1.000037,
+    "dropped": 829366,
+    "starved_flows": [
+     1,
+     2,
+     3
+    ],
+    "top_flow_over_cp": 1.000037
+   },
+   "quantity": "cal-echo-4 admission-capture signature",
+   "row": "BE-5",
+   "verdict": "pass"
+  },
+  {
+   "class": "behavioral",
+   "expected": "[0.9935, 0.9955]",
+   "observed": 0.994517,
+   "quantity": "framing-shift steady-rate ratio",
+   "row": "BE-6",
+   "verdict": "pass"
+  },
+  {
+   "class": "behavioral",
+   "expected": "[0.99, 1.0005]",
+   "observed": 1.0,
+   "quantity": "cal-solo-100g steady rate over C_p(100G)",
+   "row": "BE-7",
+   "verdict": "pass"
+  },
+  {
+   "class": "structural",
+   "expected": "identical (bin, payload) sequences",
+   "observed": true,
+   "quantity": "port symmetry of the delivered series",
+   "row": "ST-1",
+   "verdict": "pass"
+  }
+ ],
+ "stats_agreement": {
+  "anchor_j2x_st0_rate_gbps": true,
+  "anchor_s1_rate_gbps": true,
+  "i2_f0_rate_gbps": true,
+  "i2_f1_rate_gbps": true,
+  "j2x_st1_f0_rate_gbps": true,
+  "j2x_st1_f1_rate_gbps": true
+ },
+ "study": "merlin_ss_fabric_calibration_v1",
+ "void": false
+}

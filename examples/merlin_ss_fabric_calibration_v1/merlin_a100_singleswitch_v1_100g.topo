@@ -1,0 +1,17 @@
+# Sensitivity variant of merlin_a100_singleswitch_v1.topo with the host
+# link rate halved to 100 Gbit/s. NOT a Merlin claim: this file exists
+# only for the frozen link-rate scaling relation (a serialization-bound
+# fabric term must move by exactly the rate ratio while propagation and
+# pipeline stay fixed). Every other parameter is identical to the
+# declared instance, provenance as documented there.
+topology dragonfly
+hosts_per_router 20
+routers_per_group 1
+global_links_per_router 0
+groups 1
+host_link_gbps 100
+host_link_latency_ps 300000
+switch_pipeline_ps 350000
+rosetta_buffer_bytes 4194304
+max_wire_packet_bytes 9038
+routing_seed 383530136519245852

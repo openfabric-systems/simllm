@@ -220,6 +220,27 @@ the flow-level work the GOAL emitter renders.
   envelope and no reported metric; TRAF-51 owns the htsim comparison
   against it and TRAF-52 the families still queued behind cluster
   reservations.
+- The TRAF-51 comparison ran in wave 19:
+  [merlin ss fabric calibration](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md)
+  pinned the htsim ss-dragonfly fabric merge, declared a single-switch
+  Merlin instance with per-parameter provenance, and validated the
+  instance's exact serialization arithmetic and a frozen composition
+  rule separating the measured endpoint host-stack floor (78.7 to 84.5
+  percent of an 8 MiB chunk's life) from fabric serialization for the
+  captured steady-state families. The fabric side passed 11 of 11 rows,
+  three of them hand-derived exact oracles confirmed to the bin, and
+  every composed steady quantity landed within 7.3 percent of its
+  measured counterpart from solo anchors alone. The study states its
+  own limit as its discrimination statement: the captured loads run
+  each stack at under a fifth of a port, so any non-bottleneck fabric
+  model yields identical composed verdicts, and what is validated is
+  the composition rule and instance arithmetic, not fabric-model
+  discrimination. The 119-second simultaneous-start transient is
+  registered as un-modeled endpoint dynamics (TRAF-53) rather than
+  fitted, the mixed pair stays out of the fabric's scored scope by the
+  frozen exclusion, and the open-loop shared-egress artifact regime is
+  echoed only as a positive control. It changes no profile, no envelope
+  and no reported metric.
 - Because the table is a surcharge on a transport that already contains one
   propagation delay, `realized_fixed_cost_ps` is what a run actually charges,
   and it exceeds a source capture that was itself a complete fixed cost by up
@@ -748,32 +769,59 @@ study reports all three arms rather than treating `lower` as `off`.
 
 ### Precision
 
-- TRAF-51 (Precision; P1; L): validate an htsim Slingshot-class fabric
-  instance against the wave-18 Merlin flow-capture reference dataset. The
-  [Merlin fabric flow capture](../../examples/merlin_fabric_flow_capture_v1/RESULTS.md)
-  publishes byte-locked long-running NCCL per-chunk completion series on
-  the Cray Cassini Slingshot fabric (kernel socket transport, GDR
-  disabled), with the topology evidence for a Merlin-matched instance:
-  4 x 200 Gb Cassini ports per node, one fabric subnet spanning the A100
-  and GH200 nodes, measured pair latency floors, and sender-side port
-  accounting. The comparison must separate the socket host-stack floor
-  from fabric serialization: the dataset's solo 8 MiB chunk service (p50
-  1598 us) is 4.8 times the 335.5 us wire floor, so most of a chunk's life
-  is endpoint stack service that the fabric instance must charge at the
-  endpoint rather than absorb into link parameters. The behaviors a
-  calibrated instance must reproduce on the incast and join families are
-  of the sharing kind: aggregate goodput rising 1.71 times when a second
-  source joins (per-source stacks, distinct destination ports, not a
-  shared bottleneck), Jain fairness 0.9795 in the scored incast cell (and
-  0.991 in the post-specified join cell), a 119-second convergence
-  transient under simultaneous starts against near-instant settling for a
-  staggered join on pre-established connections (the staggered-join
-  observation is from the post-specified cell), and the mixed pair's
-  2.77x direction asymmetry either modeled as an endpoint-stack term or
-  declared out of scope. Acceptance: simulated per-stage steady aggregates
-  and convergence behavior within tolerances stated in that study's freeze
-  chain, against the byte-locked series in its `dataset/` manifest, with
-  the endpoint floor an explicit separate term.
+- TRAF-51 (Precision; P1; L): complete the Slingshot fabric calibration
+  beyond the steady-state partial. The wave-19 comparison
+  ([merlin ss fabric calibration](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md),
+  freeze `7f7550e`) validated, on a declared single-switch Merlin
+  instance with per-parameter provenance, the instance's exact
+  per-packet serialization arithmetic (three hand-derived oracles) and
+  a frozen composition rule that separates the measured endpoint
+  host-stack floor (1256.4 and 1858.2 us per 8 MiB chunk on the two
+  A100 pairs, 78.7 to 84.5 percent of chunk life) from the 340.4 us
+  fabric term: all 11 simulation rows passed and all 10 conditional
+  consistency rows confirmed, with every captured steady quantity
+  within 7.3 percent of its solo-anchor prediction. The operative claim
+  is composition-rule validity given a non-bottleneck fabric: the
+  captured loads (each stack under a fifth of a port) cannot
+  discriminate between fabric models, and the conditional rows are
+  simulation-insensitive by the disclosed cancellation, so no
+  fabric-model discrimination is claimed. Addressed without scoring,
+  under the freeze's entailment rule: the registered 1.71x aggregate
+  and 0.9795/0.991 Jain clauses are arithmetic functions of the scored
+  per-flow rows and were reported as explicitly-unscored derived rows
+  (composed 1.77 and 0.983 against measured 1.72, 0.979 and 0.991); the
+  mixed pair's 2.77x clause took the frozen out-of-scope branch with
+  its endpoint floors handed to TRAF-53. What remains before the
+  registered clause is fully met: reproducing the 119-second
+  simultaneous-start convergence transient (impossible under a static
+  endpoint floor; needs the TRAF-53 endpoint-dynamics term), the
+  shared-port and higher-degree families (their captures are TRAF-52;
+  simulating them needs the backend harness gaps HTSIM-29 and
+  HTSIM-30 closed), any multi-switch adaptive-routing claim
+  (structurally unreachable at the single-switch shape that five-node
+  discovery determines), and fabric-model discrimination itself, which
+  needs loads near the port rate or fabric-side measurements the
+  capture does not contain. Acceptance: the remaining behaviors within
+  tolerances stated in a freeze chain against byte-locked captures,
+  with the endpoint floor an explicit separate term and no validated
+  steady quantity regressing outside its accepted residual.
+- TRAF-53 (Precision; P2; L): model the endpoint host-stack dynamics
+  the TRAF-51 composition holds static. The calibration study separated
+  a per-pair static endpoint floor (1256.4 and 1858.2 us per chunk on
+  the A100 pairs; 2164.5 and 6515.0 us on the mixed pairs, derived and
+  unscored there) and showed that floor plus the calibrated fabric
+  reproduces every captured steady quantity within 7.3 percent; what no
+  static floor can produce is the measured dynamics: the 119-second
+  simultaneous-start incast convergence against 0-second staggered-join
+  settling on the same pairs, the source-identity rate asymmetry
+  (gpu105 sustains 4.89 to 4.99 GB/s where gpu103 sustains 3.66 to
+  4.02), burst-versus-sustained differences of tens of percent with
+  pair-dependent sign, and the mixed pair's 2.775x direction asymmetry.
+  The identifying observables are in the byte-locked capture dataset;
+  the surrogate being replaced is the static floor. Acceptance: an
+  endpoint-process model that reproduces the i2 convergence transient
+  and the staggered-join contrast within a frozen band while every
+  calibrated steady quantity stays inside its accepted residual.
 - TRAF-52 (Precision; P2; M): complete the flow-capture families the
   wave-18 window could not run. The GH200-to-GH200 cells were declared but
   never frozen, because their jitter ladder (job 195700) cannot run before

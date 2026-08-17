@@ -153,16 +153,35 @@ backend submodules.
 | Submodule | Repo | Ref | Provides |
 |---|---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, and the persistent flow session |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, the persistent flow session, and the Slingshot-class ss-dragonfly fabric wave (dragonfly geometry over ns-rosetta switches, progressive adaptive routing, the `htsim_ss_dragonfly` harness, and the `rnic-ss` endpoint hosted on the controlled Clos) |
 
 As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 (mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
 metrics) and the full rnic-cn algorithm-book implementation
 (deterministic reservation ledger, windowed feedforward snapshots,
 fractional nflow, sender egress composition, BJP-derived resequencing
-window) are merged. The SimLLM pin for HTSim is on backend main, which now
-carries the WQE bookkeeping commit, the composed SimLLM RNIC wrapper and the
-ABI-v2 event relay. A pin to an append-only `<date>/simllm-addon` branch
+window) are merged. The SimLLM pin for HTSim is on backend main at the
+ss-dragonfly fabric merge (`89b7a5a`), which carries the WQE bookkeeping
+commit, the composed SimLLM RNIC wrapper, the ABI-v2 event relay, and the
+Slingshot-class dragonfly fabric wave: the physical ss-dragonfly fabric with
+Rosetta-style switches and progressive adaptive routing, its deterministic
+fixtures and sanity studies, the `htsim_ss_dragonfly` open-loop harness, and
+the `rnic-ss` endpoint hosted on the controlled two-tier ns-rosetta Clos.
+The backend design note (`docs/ss-dragonfly-fabric/README.md` in the
+submodule) labels the wave "hosted, calibration pending"; the rnic driver
+rejects dragonfly `-topo` files at its own seam until a calibration ruling.
+The wave-19 TRAF-51 comparison
+([merlin_ss_fabric_calibration_v1](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md))
+has since validated the declared single-switch Merlin instance's exact
+serialization arithmetic and a frozen composition rule over measured
+endpoint host-stack floors for the captured steady-state families; the
+captured loads (each stack under a fifth of a port) do not discriminate
+between fabric models, which the study states as its own limit, and
+endpoint dynamics, shared-port families, multi-switch routing and
+fabric-model discrimination remain open (TRAF-53 in
+[traffic.md](traffic.md), HTSIM-29 to HTSIM-31 below), with the backend
+note's own wording update as HTSIM-31. A pin to an
+append-only `<date>/simllm-addon` branch
 remains an intentional supported state while backend work is in review, but
 it is an intermediate state rather than the steady one. The same HTSIM
 sources build on Linux with
@@ -1313,13 +1332,43 @@ created" statement stands and refers to different, never-registered work.
   event-loop scaling needs its own look.
 ### Completeness
 
-- HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile wiring;
-  the runtime factory
-  rejects it with a clear error until the slingshot runtime lands. Its CLI
-  options are already parsed so the flag ABI is stable. Out of simllm's
-  scope by maintainer decision; tracked here for the backend repo only.
+- HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile
+  exercise from simllm. At the current pin the backend factory accepts
+  `rnic-ss` and hosts it on the controlled two-tier ns-rosetta Clos
+  (hosted, calibration pending per the backend design note); the earlier
+  out-of-scope ruling was reversed by the maintainer on 2026-08-17. What
+  remains open here: no simllm study has driven `rnic-ss` through the
+  supported metric chain, and its validity claim stays exactly the backend
+  label until one does. The TRAF-51 calibration study exercises the
+  `htsim_ss_dragonfly` fabric harness, not this endpoint.
 - HTSIM-4 (Completeness; P2; M): GOAL parser hardening and the checked-in
   `txt2bin` build target.
+- HTSIM-29 (Completeness; P2; M): rate-controlled or closed-loop greedy
+  sources for `htsim_ss_dragonfly`. The harness's open-loop sources
+  inject at exactly the host link rate, so host-stack-bound offered
+  load (the Merlin captures run each stack at about a fifth of a port)
+  is inexpressible, and any shared-egress multi-flow cell lands in the
+  analyzed admission-capture artifact regime. The TRAF-51 calibration
+  therefore drove multi-flow families as compositions over solo cells;
+  shared-port families (the queued x4 capture above all) need a source
+  that offers at a configured rate or closes the loop per chunk.
+  Backend-repo work, registered here.
+- HTSIM-30 (Completeness; P2; S): multi-receiver patterns for
+  `htsim_ss_dragonfly`. Both shipped patterns send every flow to one
+  receiver host, and the join pattern rejects single-switch instances
+  outright (degree must be below the router count), so a
+  distinct-destination-port multi-flow cell, which is the shape every
+  captured Merlin incast and join family actually has, cannot couple
+  through one switch in one invocation. Backend-repo work, registered
+  here.
+- HTSIM-31 (Completeness; P2; S): update the backend design note's
+  status section (`docs/ss-dragonfly-fabric/README.md`) from "hosted,
+  calibration pending" to the calibrated-for-what wording the TRAF-51
+  study established: steady-state solo, incast and staggered-join
+  behavior at the captured distinct-port mappings and loads on the
+  declared single-switch Merlin instance, endpoint floor separate,
+  endpoint dynamics and multi-switch routing uncalibrated. Backend-repo
+  work, registered here; the simllm-side wording landed with the study.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit. Audited on

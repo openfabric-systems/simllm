@@ -408,15 +408,21 @@ The GOAL trace is executed by a discrete-event simulator:
 
 - **htsim** (packet-level): `htsim_uec -goal <bin> -topo <topo>` executes the
   GOAL schedule over a Clos topology with full transport behavior, and
-  `htsim_rnic`, pinned on backend main (`4885c64`) with the WQE bookkeeping
+  `htsim_rnic`, pinned on backend main (`89b7a5a`) with the WQE bookkeeping
   and the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`,
   runs the RNIC policy profiles: the packetized
-  no-CC baseline `rnic-nn`, explicit-hardware bypass baseline `rnic-nn-fluid`
-  and explicit-rate endpoint `rnic-cn`. The
-  GOAL-driven `htsim_dcqcn_atlahs` comparator is also available. Only the
-  Slingshot-like profile `rnic-ss` remains a profile-wiring follow-up
-  (HTSIM-1 in [modules/backends.md](modules/backends.md)); the factory rejects
-  it with an explicit error.
+  no-CC baseline `rnic-nn`, explicit-hardware bypass baseline `rnic-nn-fluid`,
+  explicit-rate endpoint `rnic-cn`, and the Slingshot-like `rnic-ss` hosted
+  on a controlled ns-rosetta Clos (no simllm study drives it yet, HTSIM-1
+  in [modules/backends.md](modules/backends.md); the rnic driver rejects
+  dragonfly `-topo` files at its own seam). The
+  GOAL-driven `htsim_dcqcn_atlahs` comparator is also available, and the
+  pinned backend carries the Slingshot-class ss-dragonfly fabric with its
+  `htsim_ss_dragonfly` harness, validated against the Merlin captures for
+  steady-state flow families through exact serialization oracles and a
+  composition rule over measured endpoint floors; the captured loads do
+  not discriminate between fabric models
+  (examples/merlin_ss_fabric_calibration_v1, TRAF-51 partial).
 - **LogGOPSim** (flow-level, fast): same GOAL input, LogGOP cost model;
   useful for quick sweeps before packet-level runs.
 
