@@ -279,6 +279,51 @@ def test_the_two_adapters_price_one_step_to_the_same_picoseconds():
     assert vllm_ps == sglang_ps == study.ROOFLINE_PREDICTIONS["A1"][0]
 
 
+def test_the_vllm_executors_own_pricing_method_returns_the_same_constant():
+    """Drive the adapter's real method, not just the function underneath it.
+
+    `SimExecutor._estimate_latency` reads exactly four attributes off itself,
+    so a stand-in carrying them exercises the adapter's own pricing path without
+    an installed vLLM. The SGLang worker is not importable without SGLang, so
+    its half is covered by driving its own geometry reader into the same
+    `estimate_step_latency_ps` call its `_settle` makes.
+    """
+
+    from types import SimpleNamespace
+
+    from simllm.adapters.vllm.executor import SimExecutor
+
+    vllm_dims, _ = study.adapter_dims()
+    executor = SimpleNamespace(
+        dims=vllm_dims,
+        compute_provider=study.roofline(),
+        gpu=study.gpu_spec(),
+        host_model=HostInitiationModel.ideal(),
+    )
+    translated = SimpleNamespace(record=study.decode_record(2), num_sampled=2)
+
+    latency_ps = SimExecutor._estimate_latency(executor, translated)
+
+    assert latency_ps == study.ROOFLINE_PREDICTIONS["A1"][0]
+    assert latency_ps == study._price(vllm_dims, translated.record, 2)
+
+
+def test_the_executor_pricing_method_reads_no_rank_or_worker_state():
+    """The stand-in above is only honest if those four attributes are all it uses."""
+
+    import inspect
+
+    from simllm.adapters.vllm.executor import SimExecutor
+
+    source = inspect.getsource(SimExecutor._estimate_latency)
+    attributes = {
+        name.split(".", 1)[1] for name in source.split() if name.startswith("self.")
+    }
+    attributes = {name.rstrip(",)") for name in attributes}
+
+    assert attributes == {"dims", "compute_provider", "gpu", "host_model"}
+
+
 def test_the_adapter_agreement_lock_sees_a_changed_geometry():
     """The negative control: a real geometry change must move the price."""
 

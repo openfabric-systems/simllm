@@ -160,6 +160,17 @@ freeze said so before the run: once the geometry agrees, both adapters call the
 same `estimate_step_latency_ps` on equal inputs, so equal output is entailed by
 the function being a function. The genuine risk was in the two readers agreeing.
 
+How far each adapter's own path is actually driven, stated plainly because the
+two halves are not symmetric. On the vLLM side
+`tests/test_kernel_determinism.py` calls `SimExecutor._estimate_latency` itself,
+with a stand-in carrying the four attributes that method reads, and a second
+test asserts by source inspection that those four are all it reads, so the
+stand-in cannot be hiding a fifth. On the SGLang side the worker is not
+importable without SGLang installed, so its `_settle` call is reproduced rather
+than invoked: the study drives SGLang's own `model_dims_from_sglang` into the
+same `estimate_step_latency_ps` call `_settle` makes. That is weaker evidence
+for the SGLang half and is labeled as such.
+
 ## Derived rows, reported and not counted
 
 | Row | Relation | Value |
