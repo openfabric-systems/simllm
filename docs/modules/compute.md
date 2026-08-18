@@ -1007,6 +1007,21 @@ and an explicit reason:
   evidence only: no production framework kernel, no dynamic SASS, no Accel-Sim
   calibration and no held-out kernel matrix, so COMP-1 stays open on its first
   blocker.
+  The [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+  is reviewed `VOID` and therefore closes nothing, but its retained evidence
+  narrows the surrogate question further. Its measured HBM roof is 1818.21 GB/s,
+  89.17 percent of nameplate, and it publishes clock-conditioned constants
+  because application clock control is denied on that allocation. Three of its
+  findings bear directly on this task. The flat 0.7 roofline derate is wrong in
+  opposite directions for different shapes: measured roofline efficiency spans
+  0.315 to 0.763 on the granite QKV family and 0.820 to 0.951 on an
+  8192-squared synthetic family, so no single constant covers both. Captured
+  MoE expert GEMMs at the granite population's expert loads run 7 to 11 times
+  their own memory roof, because at those loads the kernel is bound by a fixed
+  per-kernel cost rather than by bandwidth or arithmetic; COMP-43 owns that
+  term. And the operand layout, not the shape, produced a factor 2.9 swing
+  between neighbouring token counts in the study's first run, which is why any
+  future table must record the layout its constants were measured under.
 - COMP-5 (Precision; P1; L): provide the production capture
   environment required by COMP-1. The local GTX 1660 Ti still cannot qualify:
   Nsight Compute returns `ERR_NVGPUCTRPERM`, and display sharing produces the
@@ -1037,7 +1052,22 @@ and an explicit reason:
   measures the launch path as much as the kernel, so the production capture
   must amortize inside the timed region or declare a minimum kernel duration.
   Clocks were not locked there either, so the controlled-clock requirement is
-  untouched.
+  untouched. The
+  [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+  establishes why: on that allocation `nvidia-smi --lock-gpu-clocks` and
+  `nvidia-smi -ac` are both refused with "The current user does not have
+  permission to change clocks", so the controlled-environment form of the
+  stability bar cannot be met on the Merlin A100 partition at all without an
+  administrator action this project does not have. The study substituted a
+  clock-conditioned form, publishing constants per SM clock state over
+  clock-stationary batches, and that substitute itself failed on 16 of 97
+  scored cells, which is evidence about the environment rather than about the
+  kernels. It also measured two facts a production capture must respect: the
+  SM clock under load is bimodal at 1275 and 1410 MHz with a 283 to 432
+  millisecond transition, so a cell that spans the boost boundary mixes two
+  constants; and one `cudaEventRecord` placed between two consecutive launches
+  costs 2.34 microseconds of device time, so per-kernel event instrumentation
+  is not a free observation of a short kernel.
 - COMP-7 (Precision; P1; M): MoE compute assumes perfectly balanced routing:
   every rank computes `top_k` experts' flops for its own tokens and streams all
   resident experts once. Consume the landed `simllm-routed-experts-v1`
@@ -1204,6 +1234,42 @@ and an explicit reason:
   ceiling is rejected rather than borrowing another architecture's number, and
   every accepted artifact stays byte-identical. This is P2 while no study
   selects a measured port ceiling and becomes P1 when one does.
+- COMP-43 (Precision; P1; M): price the fixed per-kernel cost that neither
+  compute provider carries. The surrogate being replaced is the absence of any
+  floor: `RooflineProvider` returns `max(flops/peak, bytes/bandwidth)` and
+  `ProfileTableProvider` returns a table entry, so a kernel whose work is
+  smaller than the device's own per-kernel cost is priced below what the device
+  can do. The identifying observables are first-party and already measured on
+  the target architecture by the
+  [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md):
+  the uninstrumented back-to-back period of an empty kernel is 1.904
+  microseconds, and the captured granite MoE expert GEMMs at their captured
+  expert loads measure 4.725 to 9.227 microseconds against memory roofs of
+  0.578 to 1.275 microseconds, a factor of 7 to 11. Acceptance: a per-kernel
+  floor whose value is measured on the architecture it is applied to and
+  refuses an architecture it was not measured on, an explicit off path that
+  reproduces every accepted artifact and timestamp byte for byte, and a
+  reported before and after on the decode step of the granite fixture with the
+  omitted excess bounded rather than estimated. The evidence this task consumes
+  comes from a void run, so a non-void measurement (COMP-45) is a prerequisite
+  for the calibrated value even though the mechanism can land first.
+- COMP-45 (Precision; P1; M): produce a non-void A100 kernel-constant run. The
+  [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+  is void twice on its stability preconditions, so its constants close nothing
+  and its profile table is deliberately withheld. Two causes are identified and
+  neither is a kernel property. Application clock control is denied on the
+  Merlin A100 partition, so a cell that spans the 1275 to 1410 MHz boost
+  boundary mixes two constants; and one `cudaEventRecord` between two
+  consecutive launches costs 2.34 microseconds of device time, so a
+  per-repetition chain does not measure a short kernel. The surrogate being
+  replaced is the flat 0.7 roofline derate on `a100`. Acceptance: a protocol
+  whose stability precondition is achievable without clock control, stated and
+  frozen before the run; every scored cell inside its own frozen dispersion
+  ceiling; and a `simllm-profile-table-v1` artifact loadable by
+  `ProfileTableProvider` whose held-out interpolation error meets COMP-1's
+  registered median 10 percent and p95 20 percent bars. The void run already
+  reaches 0.70 percent median and 18.53 percent p95 on its held-out shapes, so
+  the bars are reachable; what is missing is a run whose guards hold.
 
 ### Completeness
 
@@ -1308,6 +1374,20 @@ and an explicit reason:
   and the no-emission path preserves every accepted timestamp, counter and
   artifact byte exactly. This is P2 while no study consumes port events and
   becomes P1 when TRAF-45 packetizes the intra-node leg.
+- COMP-46 (Completeness; P2; M): supply a production-grade decode attention
+  microbenchmark. The decode lane of the
+  [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+  reached 5.5 to 13.3 percent of the measured HBM roof even after its warps
+  carried four independent online-softmax accumulators, and its time grew by
+  3.02 between batch 64 and batch 256 where the KV bytes grew by 4, so it is
+  still gaining efficiency with occupancy rather than sitting on the roof. Its
+  constants therefore describe that microbenchmark and not a paged or flash
+  decoding kernel, and the study says so. The surrogate being replaced is that
+  lane's own kernel. Acceptance: a decode kernel whose achieved KV bandwidth
+  reaches a frozen fraction of the measured roof over the whole batch and
+  cache-length grid, with the fraction stated before the run, and a published
+  comparison against the current kernel on the identical grid. This is P2 while
+  no study consumes a decode attention constant and becomes P1 when one does.
 
 ### Uncategorized
 
