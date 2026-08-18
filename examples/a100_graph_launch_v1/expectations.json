@@ -1,0 +1,95 @@
+{
+  "schema": "simllm-study-freeze-v1",
+  "study": "a100_graph_launch_v1",
+  "stage": 2,
+  "task": "COMP-1",
+  "scored_denominator": 15,
+  "substrate": {
+    "cluster": "gmerlin7",
+    "partition": "a100-hourly",
+    "account": "merlin",
+    "device": "NVIDIA A100-SXM4-80GB",
+    "cuda_module": "cuda/12.2.2",
+    "arch": "sm_80",
+    "chain_lengths": [1, 2, 4, 8, 16, 32, 64, 128, 256],
+    "graph_replays_per_cell": 64,
+    "blocks_per_cell": 12,
+    "min_stationary_blocks": 8,
+    "reference_chain_length": 64,
+    "memory_clock_mhz": 1593,
+    "peak_flops_1410": 311869440000000,
+    "peak_flops_1275": 282009600000000,
+    "hbm_roof_bytes_per_second": 1818210000000
+  },
+  "stage1_inputs": {
+    "status": "void",
+    "study": "examples/a100_kernel_constants_v1",
+    "role": "band widths and an external cross-check, never an anchor",
+    "eager_nop_period_us": 1.904,
+    "event_boundary_cost_us": 2.336,
+    "g1_period_us": 9.072,
+    "g2_period_us": 18.816,
+    "g4_period_us": 89.648,
+    "worst_batch_cv": 0.03315,
+    "hbm_roof_bytes_per_second": 1818210000000
+  },
+  "comparison_points": {
+    "a100_hardware_envelope_pipelined_launch_us": 1.806,
+    "a100_hardware_envelope_graph_node_us": 0.791,
+    "turing_cuda_graph_node_ps": 809306,
+    "turing_eager_host_ps": 2364255
+  },
+  "kernels": [
+    {"tag": "nop", "kind": "empty", "role": "per-kernel gap probe"},
+    {"tag": "g1", "kind": "gemm", "n": 2048, "k": 1024, "m": 64, "role": "granite QKV at a small token count"},
+    {"tag": "g2", "kind": "gemm", "n": 1024, "k": 1024, "m": 1024, "role": "granite output projection at a large token count"},
+    {"tag": "g4", "kind": "gemm", "n": 8192, "k": 8192, "m": 1, "role": "weight-streaming decode GEMM"},
+    {"tag": "mix", "kind": "cycle", "cycle": ["g1", "g2", "nop", "g4"], "role": "mixed chain"}
+  ],
+  "definitions": {
+    "back_to_back_period": "device time per kernel of a long chain with CUDA events around the whole chain and no events between kernels; the kernel's service time plus that mode's per-kernel device-side gap",
+    "host_submission_cost": "host wall time of the launch loop alone, taken with a monotonic clock immediately around the loop, before any synchronization and containing none",
+    "differenced_service_time": "S_mode(k) = P_mode(k) - P_mode(nop), which removes that mode's per-kernel gap and leaves the kernel's marginal cost",
+    "clock_stationary_block": "NVML SM clock equal immediately before and after the block, memory clock exactly 1593 MHz on both sides, throttle word zero on both sides"
+  },
+  "scored_expectations": [
+    {"id": "F1", "group": "falsifier", "risk": "genuine", "claim": "For each of g1, g2 and g4 at K = 256, S_graph(k) divided by S_eager(k) lies in [0.95, 1.05]."},
+    {"id": "F2", "group": "falsifier", "risk": "genuine", "claim": "For g4 the raw ratio P_graph(g4) divided by P_eager(g4) lies in [0.97, 1.03]."},
+    {"id": "F3", "group": "falsifier", "risk": "genuine", "claim": "P_eager(nop) divided by P_graph(nop) is at least 1.5."},
+    {"id": "H1", "group": "host", "risk": "genuine", "claim": "An ordinary least squares fit of eager host loop time against K over K in [8, 256] returns R-squared of at least 0.99."},
+    {"id": "H2", "group": "host", "risk": "informed", "claim": "The fitted eager per-launch host slope lies in [0.8, 4.0] microseconds."},
+    {"id": "H3", "group": "host", "risk": "genuine", "claim": "Graph replay host submission cost per replay at K = 256 divided by its value at K = 1 lies in [0.5, 2.0]."},
+    {"id": "H4", "group": "host", "risk": "genuine", "claim": "The fitted graph per-node host slope is at most 0.10 times the eager per-launch slope."},
+    {"id": "H5", "group": "host", "risk": "genuine", "claim": "At K = 256 the graph host submission cost per enqueued kernel is at least 20 times smaller than the eager per-launch host cost."},
+    {"id": "H6", "group": "host", "risk": "genuine", "claim": "The measured eager per-launch host cost differs from the Turing eager-host-bound point of 2,364,255 ps by more than 10 percent and is the smaller of the two."},
+    {"id": "D1", "group": "device-gap", "risk": "informed", "claim": "P_graph(nop) lies in [0.3, 1.5] microseconds."},
+    {"id": "D2", "group": "device-gap", "risk": "genuine", "claim": "P_graph(nop) at K = 256 divided by its value at K = 16 lies in [0.8, 1.25]."},
+    {"id": "D3", "group": "device-gap", "risk": "informed", "claim": "P_eager(nop) lies in [1.5, 3.0] microseconds."},
+    {"id": "D4", "group": "device-gap", "risk": "genuine", "claim": "P_graph(nop) is at most 0.6 times the fitted eager per-launch host slope."},
+    {"id": "M1", "group": "mixed", "risk": "genuine", "claim": "The graph makespan of one mix cycle equals the sum of its four members' graph makespans at the same K within 5 percent."},
+    {"id": "M2", "group": "mixed", "risk": "genuine", "claim": "The eager makespan of one mix cycle equals the sum of its four members' eager makespans at the same K within 8 percent."}
+  ],
+  "fatal_guards": [
+    {"id": "GG1", "claim": "The job sees exactly one NVIDIA A100-SXM4-80GB, MIG disabled, ECC enabled, with no foreign compute process at the start or the end, and both the harness and nvidia-smi report the same GPU UUID."},
+    {"id": "GG2", "claim": "Every reported number comes from clock-stationary blocks of a single clock state, with at least 8 such blocks, and no reported number averages across clock states."},
+    {"id": "GG3", "claim": "Every CUDA graph instantiates successfully and reports exactly the node count its chain length implies, read back from the graph object rather than assumed."},
+    {"id": "GG4", "claim": "Every device makespan is measured by CUDA events recorded inside the measured stream, and every host submission cost is measured by a host clock pair that contains no synchronization call and no event record."},
+    {"id": "GG5", "claim": "No measured period is negative, and no GEMM period falls below its own two-sided roofline floor at the stage-1 HBM roof and the block's own clock-derived FLOP peak."},
+    {"id": "GG6", "claim": "Every GEMM in the set returns the arithmetically correct result on a fixed element sample, checked once per kernel outside every timed region."},
+    {"id": "GG7", "claim": "The batch-mean coefficient of variation of every reported period is at most 4 percent."},
+    {"id": "GG8", "claim": "The eager and graph arms of a given kernel and chain length observe the same clock state."}
+  ],
+  "output_profiles": [
+    {"name": "a100-epyc-eager-host", "launch_class": "eager-host-bound", "point": "fitted eager per-launch host slope", "range": "minimum and maximum per-launch host cost over K in [8, 256]"},
+    {"name": "a100-epyc-cuda-graph", "launch_class": "cuda-graph-node", "point": "graph host submission cost per enqueued kernel at K_ref = 64", "range": "minimum and maximum of that quantity over K in [8, 256]"}
+  ],
+  "unscored_records": [
+    "the full K sweep of every quantity",
+    "per-kernel in-graph times measured with inner event pairs and their instrumentation correction",
+    "graph instantiation cost",
+    "clock telemetry per block",
+    "stage 2 standalone periods compared against stage 1 retained values"
+  ],
+  "closes": [],
+  "does_not_close": ["COMP-1", "COMP-2"]
+}
