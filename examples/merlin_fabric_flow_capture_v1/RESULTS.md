@@ -1,14 +1,15 @@
 # Merlin fabric flow capture v1 results
 
-The reviewed state is **PARTIAL by queue, clean by evidence: 10 of 18
-frozen relations evaluated, all 10 pass, every fatal guard held in every
-captured cell, and 8 relations unevaluated because the psicourse
-reservations pin the A100 allocations their cells need until 2026-08-19
+The reviewed state is **PARTIAL by queue, clean by evidence: 11 of 18
+frozen relations evaluated, all 11 pass, every fatal guard held in every
+captured cell, and 7 relations unevaluated because the psicourse
+reservations pin the four-and-five-node A100 allocations until 2026-08-19
 08:00**. The study publishes the byte-locked reference dataset the wave-19
-Slingshot calibration comparison will consume: 390,228 verified 8 MiB
-chunks across the scored cells (542,760 including the post-specified join
+Slingshot calibration comparison will consume: 630,293 verified 8 MiB
+chunks across the scored cells (782,825 including the post-specified join
 cell), each with a destination-clock completion timestamp, over one solo
-stream, one incast cell, one mixed-architecture pair in both directions,
+stream, two incast cells (three-node degree 2 and the two-node
+four-GPU-source shape), one mixed-architecture pair in both directions,
 and one post-specified two-flow join. This study makes no fabric-model
 claims and closes no fabric task; TRAF-51 registers the comparison and
 TRAF-52 the families still queued.
@@ -129,7 +130,7 @@ allocated, not interpolated.
 | `i3-incast` | 195730 | 4 x 1 | | **queued, never ran** (estimated 2026-08-19 09:10) |
 | `j3-join` | 195731 | 4 x 1 | | **queued, never ran** (estimated 2026-08-19 09:40) |
 | `i4-incast` best effort | 195734 | 5 x 1 | | **queued, never ran** (estimated 2026-08-19 08:00) |
-| `x4-incast` best effort | 195735 | 2 x 4 | | **queued, never ran** (needs two drained nodes) |
+| `x4-incast` best effort | 195735 | 2 x 4 (gpu102 sources, gpu105 dest) | 00:03:17 | complete, rc 0; landed overnight after the first publication and was folded in by the disclosed follow-up packaging |
 
 The blocking mechanism is structural, not luck: the two psicourse
 reservations hold two A100 nodes and two GH200 nodes until 2026-08-19
@@ -181,22 +182,29 @@ worth stating because four of the ten passing relations read that cell.
   destination aggregate bin above 26.78 GB/s (A100 sink) or 100.0 GB/s
   (GH200 sink).
 - **G6 declared placement.** Rank directories equal tasks; distinct GPU
-  UUIDs at least the task count; realized hosts recorded per rank.
+  UUIDs at least the task count; realized hosts recorded per rank. One
+  analyzer defect disclosed: the first dataset-mode re-derivation formula
+  required as many hosts as active ranks, which mis-generalizes to the
+  eight-rank two-node x4 shape and false-flagged it when that cell landed;
+  the formula now checks hosts against the cell's declared node count. The
+  in-job enforcement had already held (8 rank directories, 8 distinct GPU
+  UUIDs), no previously published cell's verdict or stats bytes changed,
+  and the corrected formula still fails on any genuinely wrong placement.
 
 ## Scored relations, 10 of 18 evaluated
 
 | Relation | Band | Measured | Verdict |
 |---|---|---|---|
-| E-T-1 tracer discipline, every frozen captured cell | floor p50 under 1.0 percent and spread under 0.3 percent of median chunk service | s1 0.90/0.06, i2 0.64/0.09, mx-gh2a 0.20/0.03, mx-a2gh 0.55/0.02 percent | pass |
+| E-T-1 tracer discipline, every frozen captured cell | floor p50 under 1.0 percent and spread under 0.3 percent of median chunk service | s1 0.90/0.06, i2 0.64/0.09, x4 0.63/0.09 (worst rank), mx-gh2a 0.20/0.03, mx-a2gh 0.55/0.02 percent | pass |
 | E-S-1 s1 steady goodput | [2.0, 5.5] GB/s | 4.991 GB/s | pass |
 | E-S-2 s1 per-chunk p95 over p50 | at most 1.5 | 1.322 | pass |
 | E-I-1 i2 aggregate steady | [1.8, 9.0] GB/s | 8.548 GB/s | pass, 95 percent of the upper edge |
 | E-I-2 i2 aggregate over s1 steady | [0.9, 2.2] | 1.713 | pass |
 | E-I-3 i3 aggregate steady | [1.8, 12.0] GB/s | | unevaluated |
 | E-I-4 i3 aggregate over s1 | [0.9, 3.2] | | unevaluated |
-| E-I-5 Jain in every incast cell that runs | at least 0.6 | i2: 0.9795 | pass |
+| E-I-5 Jain in every incast cell that runs | at least 0.6 | i2: 0.9795, x4: 0.9496 | pass |
 | E-I-6 i4 aggregate steady | [1.8, 14.0] GB/s | | unevaluated |
-| E-I-7 x4 aggregate steady | [1.8, 12.0] GB/s | | unevaluated |
+| E-I-7 x4 aggregate steady | [1.8, 12.0] GB/s | 11.095 GB/s | pass, 92 percent of the upper edge |
 | E-J-1 j3 flow-0 stage-0 over s1 | [0.7, 1.3] | | unevaluated |
 | E-J-2 j3 flow-0 stage-1 over stage-0 | at most 1.05 | | unevaluated |
 | E-J-3 j3 flow-0 stage-2 over stage-1 | at most 1.05 | | unevaluated |
@@ -207,11 +215,12 @@ worth stating because four of the ten passing relations read that cell.
 | E-M-4 signed: a100-to-gh at least 1.3 x gh-to-a100 | at least 1.3 | 2.775 | pass |
 
 The freeze's independence disclosure stands: the 18 relations read about
-13 independent quantities, and the 10 evaluated ones read about 8. Three
+13 independent quantities, and the 11 evaluated ones read about 9. Three
 qualifications on the passing set. E-T-1 and E-I-5 are quantified over
 "every cell that runs", so their passes are provisional: E-T-1 currently
-covers four frozen cells and E-I-5 one incast cell, and both are
-re-evaluated if any queued cell lands. E-M-3's band [8, 200] us was wide
+covers five frozen cells and E-I-5 two incast cells (both re-evaluated
+when x4 landed, both still passing), and they are re-evaluated again if
+any still-queued cell lands. E-M-3's band [8, 200] us was wide
 enough that failure was implausible short of a harness defect: its lower
 edge is 1.6 times this study's own stated floor and its upper edge 8
 times the largest observation in hand at freeze time, so its pass carries
@@ -283,6 +292,31 @@ asymmetry (gpu105 sustains 4.89 GB/s where gpu103 sustains 3.66) reappears
 identically in the post-specified join cell, so source identity, not flow
 count alone, shapes per-flow rates on this stack.
 
+### x4-incast (job 195735, four gpu102 GPUs into one gpu105 GPU, 180 s)
+
+| Flow | Source GPU | Chunks | delta p50 us | delta p95 us | steady GB/s |
+|---|---|---:|---:|---:|---:|
+| 0 | gpu102 device 0 | 32,363 | 5139 | 8973 | 1.684 |
+| 1 | gpu102 device 1 | 69,793 | 2124 | 4949 | 3.231 |
+| 2 | gpu102 device 2 | 70,364 | 2176 | 4973 | 3.222 |
+| 3 | gpu102 device 3 | 67,545 | 2135 | 3785 | 2.958 |
+
+Aggregate steady 11.095 GB/s, the largest of the campaign, from four
+same-node source stacks whose combined traffic left over **one** hsn port
+(2014.25 GB tx on gpu102's hsn2 against 2013.6 GB of payload; the port ran
+at 44 percent of its 25.0 GB/s rate). Four stacks on one shared port
+out-push two stacks on two ports (i2 at 8.55) and one stack (s1 at 4.99),
+so aggregate goodput scales with the number of host stacks, not with port
+count, which is the sharpest statement of the stack-bound regime this
+dataset makes. Jain 0.9496: flow 0, whose GPU sits furthest from the
+selected port, sustains 1.68 GB/s against 3.0 to 3.2 for the other three,
+so GPU-to-port NUMA distance shapes per-flow rates within one node.
+Convergence under the frozen definition was not reached within the window
+for at least one flow (reported "not converged within stage"), the flows'
+final-20-second steady values being the reference. This cell landed after
+the first publication; its relations were scored by the unchanged frozen
+analyzer and folded in through the disclosed re-packaging.
+
 ### mx-pair (job 195732, gpu104 plus gpu003, 60 s per direction)
 
 | Direction | Chunks | Steady GB/s | delta p50 us | delta p95 us | delta max us |
@@ -322,10 +356,14 @@ Three independent framings, per the local rules.
 **Network and serialization physics.** Every rate is far under its
 ceiling: s1 at 4.99 GB/s is 20 percent of one 25.0 GB/s port; the i2
 aggregate at 8.55 GB/s is 32 percent of the destination's PCIe H2D bound;
-the mixed directions are 4.8 and 13.3 percent of a port. Chunk arithmetic
-is self-consistent everywhere: 8 MiB over 4.991 GB/s is 1681 us against a
-measured mean delta of 1681.5 us. Sender tx counters conserve payload to
-the MTU-9000 header model (0.6 percent) in every completed cell.
+the x4 aggregate at 11.10 GB/s is 44 percent of its single shared source
+port and 41 percent of the destination PCIe bound; the mixed directions
+are 4.8 and 13.3 percent of a port. Chunk arithmetic is self-consistent
+everywhere: 8 MiB over 4.991 GB/s is 1681 us against a measured mean
+delta of 1681.5 us. Sender tx counters conserve payload within the
+MTU-9000 header model in every completed cell (0.6 percent on the
+one-flow cells; 0.03 percent recorded on x4, where the counter sits
+slightly under payload plus nominal headers and is reported as recorded).
 
 **Host and transport physics.** The tracer contributes 13.2 to 14.5 us p50
 per chunk, 0.20 to 0.90 percent of realized chunk service in every
@@ -352,22 +390,25 @@ carry 2.8 times more the other way.
 The wave-19 calibration comparison consumes exactly the files under
 `dataset/`, whose per-file SHA-256 and byte sizes are pinned in
 [dataset/MANIFEST.json](dataset/MANIFEST.json), itself locked at SHA-256
-`a6b7e61e294d87d76ce69ee7042e15c2eade99bbc8789e296377615d2bd4af88` and
+`67f898a04dd0e6787d4d50d6139f99f3c507963c6c937a9505434cf2d9dca002` and
 enforced in CI by `tests/test_merlin_fabric_flow_dataset.py`, which
 verifies every tracked file's hash and size, rejects unmanifested files,
 and carries a mutation-sensitive negative control.
 
-One disclosed re-packaging: the dataset first published at manifest
-SHA-256 `dd45890c...` (commit `ab8776d`); the review fix round regenerated
-it at `a6b7e61e...`. Exactly five files changed, all under `stats/` (the
-analyzer now writes a two-component relative job identity instead of a
-machine-local absolute path, a `hosts` field naming both het components,
-and seven re-derived guard keys), 41 evidence files were added, nothing
-was removed, and **every series and metadata byte of the first publication
-is unchanged**, verifiable by comparing the two manifests across the two
-commits.
+Two disclosed re-packagings, each with the manifest transition stated.
+First, `dd45890c...` (commit `ab8776d`) to `a6b7e61e...` (review fix
+round): exactly five files changed, all under `stats/` (relative job
+identity instead of a machine-local absolute path, a `hosts` field naming
+both het components, seven re-derived guard keys), 41 evidence files
+added, nothing removed. Second, `a6b7e61e...` to `67f898a0...` (the x4
+cell landing): only `stats/relations.json` changed (E-I-7, E-T-1 and
+E-I-5 updated by the unchanged frozen analyzer), 40 x4 files added
+(series, summary, rank metadata, guard evidence, stats), nothing removed.
+Across both transitions **every previously published series and metadata
+byte is unchanged**, verifiable by comparing the manifests across the
+three commits.
 
-- **Repo-tracked reference (78 manifest-listed files, 4.74 MB, plus the
+- **Repo-tracked reference (114 manifest-listed files, 6.87 MB, plus the
   manifest itself):** per-cell destination-side per-chunk series
   (`*_dest.csv.gz`, deterministic gzip), cell summaries, per-rank metadata
   (hosts, roles, T0 clocks, tracer floors), the mixed-pair matrix probe,
@@ -380,8 +421,8 @@ commits.
   in-run `source.sha256`. Running
   `analyze_capture.py --dataset-root dataset/` re-derives all seven guard
   verdicts and all 18 relation rows from the tracked tree alone.
-- **Bulk-side mirror (7 files, 4.65 MB, hashed in the manifest under
-  `bulk/`):** the seven source-side series (`*_src.csv.gz`), one per flow;
+- **Bulk-side mirror (11 files, hashed in the manifest under
+  `bulk/`):** the eleven source-side series (`*_src.csv.gz`), one per flow;
   nothing else is hashed under `bulk/`. They live on the site storage root
   (see `docs/architecture.md`) and, as raw CSVs, in the Merlin capture
   tree under the per-job directories named in this record.
@@ -408,9 +449,11 @@ captured cell was void.
   serialization so the fabric model is not fitted to host-stack behavior.
 - **TRAF-52** registers the families this window could not run: the
   GH200-to-GH200 cells (freeze 2, gated on the gh-2n jitter ladder, job
-  195700) and the queued A100 cells i3/j3/i4/x4 (jobs 195730, 195731,
-  195734, 195735), all reproducible from the committed harness, scoreable
-  against the frozen bands with no code change, and foldable into the
-  dataset only through a follow-up packaging commit that moves no band.
+  195700) and the still-queued A100 cells i3/j3/i4 (jobs 195730, 195731,
+  195734), all reproducible from the committed harness, scoreable against
+  the frozen bands with no code change, and foldable into the dataset
+  only through a follow-up packaging commit that moves no band. The x4
+  cell (195735) demonstrated the protocol: it landed after the first
+  publication and was scored and folded in exactly that way.
 - The wave-16 leftover job 195649 remains queued and belongs to that
   study's reproduction path, untouched by this one.
