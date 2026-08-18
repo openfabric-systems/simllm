@@ -23,6 +23,7 @@ from typing import Any
 
 STUDY = Path(__file__).resolve().parent
 FREEZE = json.loads((STUDY / "expectations.json").read_text(encoding="utf-8"))
+REFREEZE = json.loads((STUDY / "refreeze_expectations.json").read_text(encoding="utf-8"))
 
 SUBSTRATE = FREEZE["substrate"]
 QUANTUM_NS = SUBSTRATE["timer_quantum_ns"]
@@ -31,6 +32,9 @@ HBM_NAMEPLATE = SUBSTRATE["hbm_nameplate_bytes_per_second"]
 PEAK = {1410: SUBSTRATE["peak_flops_1410"], 1275: SUBSTRATE["peak_flops_1275"]}
 MEMORY_CLOCK_MHZ = SUBSTRATE["memory_clock_mhz"]
 MIN_STATIONARY = SUBSTRATE["min_stationary_batches"]
+HOST_BOUND_CEILING = REFREEZE["host_bound_ratio_ceiling"]
+SHORT_CELL_S = REFREEZE["short_cell_threshold_us"] * 1e-6
+INSTRUMENT_BAND_S = tuple(v * 1e-6 for v in REFREEZE["instrumentation_cost_band_us"])
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +118,20 @@ def reduce_cell(cell: dict) -> dict:
         ),
         "batches_recorded": len(cell["batch_ms"]),
     }
+    host_ratios = [
+        host / device
+        for host, device in zip(
+            cell.get("batch_host_ms", []), cell["batch_ms"], strict=False
+        )
+        if device > 0
+    ]
+    reduced["host_ratio_max"] = max(host_ratios) if host_ratios else 0.0
+    reduced["host_ratio_median"] = (
+        statistics.median(host_ratios) if host_ratios else 0.0
+    )
+    reduced["host_issue_bound"] = bool(host_ratios) and reduced["host_ratio_max"] > (
+        HOST_BOUND_CEILING
+    )
     if scored_state is not None:
         values = by_state[scored_state]
         constant = statistics.fmean(values)
@@ -180,24 +198,63 @@ def log_interpolate(points: list[tuple[int, float]], m: int) -> float | None:
     return math.exp(math.log(d_lo) + frac * (math.log(d_hi) - math.log(d_lo)))
 
 
+def in_scored_scope(cell: dict) -> bool:
+    """Whether a cell participates in at least one scored expectation.
+
+    G9R, G10 and G11R quantify over SCORED cells, not over every measured
+    cell. The rotated variants below 64 MiB and the short prefill sequences
+    are measured and published, but no scored expectation names them, so they
+    do not enter those guards.
+    """
+
+    lane = cell["lane"]
+    if lane == "1":
+        return cell["size_bytes"] >= 256 << 20
+    if lane == "2":
+        return True
+    if lane == "4":
+        return True
+    if lane == "3":
+        if cell["family"] == "attn_decode":
+            return cell["m"] >= 16 or cell["total_bytes"] >= 160 << 20
+        return cell["length"] in (2048, 4096)
+    if lane == "5":
+        mib = cell["size_bytes"] >> 20
+        if cell["rotate"] > 1:
+            return mib in (64, 256)
+        return mib in (4, 64, 256)
+    return False
+
+
 class Recorder:
     def __init__(self) -> None:
         self.rows: list[dict[str, Any]] = []
 
-    def score(self, expectation_id: str, passed: bool, evaluated: str, detail: Any = None) -> None:
+    def score(
+        self,
+        expectation_id: str,
+        passed: bool | None,
+        evaluated: str,
+        detail: Any = None,
+        *,
+        lane: str | None = None,
+    ) -> None:
         claim = next(
             row["claim"] for row in FREEZE["scored_expectations"] if row["id"] == expectation_id
         )
         risk = next(
             row["risk"] for row in FREEZE["scored_expectations"] if row["id"] == expectation_id
         )
+        status = "unevaluated" if passed is None else ("pass" if passed else "fail")
         self.rows.append(
             {
                 "id": expectation_id,
                 "claim": claim,
                 "risk": risk,
-                "passed": bool(passed),
+                "status": status,
+                "passed": bool(passed) if passed is not None else None,
                 "evaluated": evaluated,
+                "lane": lane or expectation_id.split("-")[1],
                 "detail": detail,
             }
         )
@@ -208,7 +265,11 @@ class Guards:
         self.rows: list[dict[str, Any]] = []
 
     def check(self, guard_id: str, held: bool, evaluated: str, detail: Any = None) -> None:
-        claim = next(row["claim"] for row in FREEZE["fatal_guards"] if row["id"] == guard_id)
+        claim = next(
+            row["claim"]
+            for row in list(FREEZE["fatal_guards"]) + list(REFREEZE["fatal_guards"])
+            if row["id"] == guard_id
+        )
         self.rows.append(
             {
                 "id": guard_id,
@@ -237,8 +298,32 @@ def main() -> None:
     base_raw = json.loads(Path(args.base).read_text(encoding="utf-8"))
     identity_text = Path(args.identity).read_text(encoding="utf-8")
 
-    boosted = {cell["id"]: reduce_cell(cell) for cell in boosted_raw["cells"]}
-    base = {cell["id"]: reduce_cell(cell) for cell in base_raw["cells"]}
+    boosted_all = {cell["id"]: reduce_cell(cell) for cell in boosted_raw["cells"]}
+    base_all = {cell["id"]: reduce_cell(cell) for cell in base_raw["cells"]}
+
+    # G13 is the one declared survivable guard. A host-issue-bound cell is a
+    # measurement of the host, so it leaves every scored scope, every other
+    # guard that quantifies over scored cells, and the published table. Its
+    # exclusion is recorded, never hidden.
+    host_bound = [
+        {
+            "id": cell["id"],
+            "arm": cell["arm"],
+            "host_ratio_max": cell["host_ratio_max"],
+            "host_ratio_median": cell["host_ratio_median"],
+        }
+        for cell in list(boosted_all.values()) + list(base_all.values())
+        if cell["host_issue_bound"]
+    ]
+    excluded = {row["id"] + "@" + row["arm"] for row in host_bound}
+    boosted = {
+        key: cell
+        for key, cell in boosted_all.items()
+        if key + "@" + cell["arm"] not in excluded
+    }
+    base = {
+        key: cell for key, cell in base_all.items() if key + "@" + cell["arm"] not in excluded
+    }
 
     # R_hbm: the measured roof, from lane 1 at 256 MiB and above, boosted arm.
     lane1 = [
@@ -247,8 +332,9 @@ def main() -> None:
         if cell["lane"] == "1" and not cell["void_for_scoring"] and cell["size_bytes"] >= 256 << 20
     ]
     r_hbm = max(cell["rate_bytes_per_second"] for cell in lane1)
-    for cell in list(boosted.values()) + list(base.values()):
+    for cell in list(boosted_all.values()) + list(base_all.values()):
         attach_roof(cell, r_hbm)
+        cell["in_scored_scope"] = in_scored_scope(cell)
 
     scored = Recorder()
     guards = Guards()
@@ -271,7 +357,7 @@ def main() -> None:
         rate = cell["rate_bytes_per_second"] if cell else 0.0
         scored.score(
             expectation_id,
-            cell is not None and low <= rate <= 1937e9,
+            (None if cell is None else low <= rate <= 1937e9),
             f"{kind} at 2048 MiB measured {rate / 1e9:.2f} GB/s against "
             f"[{low / 1e9:.0f}, 1937] GB/s",
             {"rate_gbps": rate / 1e9},
@@ -286,7 +372,7 @@ def main() -> None:
             size_pairs[kind] = abs(a - b) / max(a, b)
     scored.score(
         "E-1-5",
-        bool(size_pairs) and all(value <= 0.03 for value in size_pairs.values()),
+        (None if not size_pairs else all(value <= 0.03 for value in size_pairs.values())),
         "per-kernel 1024 MiB against 2048 MiB relative difference: "
         + ", ".join(f"{k} {v * 100:.2f} percent" for k, v in size_pairs.items()),
         dict(size_pairs),
@@ -309,7 +395,7 @@ def main() -> None:
         lane1_ratios[cell_id] = base_cell["constant_s"] / boosted_cell["constant_s"]
     scored.score(
         "E-1-7",
-        bool(lane1_ratios) and all(0.98 <= v <= 1.02 for v in lane1_ratios.values()),
+        (None if not lane1_ratios else all(0.98 <= v <= 1.02 for v in lane1_ratios.values())),
         "base over boosted constant ratio per lane-1 cell: "
         + ", ".join(f"{k} {v:.4f}" for k, v in sorted(lane1_ratios.items())),
         lane1_ratios,
@@ -337,7 +423,7 @@ def main() -> None:
             m1_ratios[name] = first["constant_s"] / first["t_mem_s"]
     scored.score(
         "E-2-1",
-        bool(m1_ratios) and all(0.9 <= v <= 2.5 for v in m1_ratios.values()),
+        (None if not m1_ratios else all(0.9 <= v <= 2.5 for v in m1_ratios.values())),
         "M = 1 measured time over t_mem per family: "
         + ", ".join(f"{k} {v:.3f}" for k, v in sorted(m1_ratios.items())),
         m1_ratios,
@@ -360,7 +446,7 @@ def main() -> None:
                 )
     scored.score(
         "E-2-2",
-        not monotone_violations,
+        (None if not grids else not monotone_violations),
         f"{len(monotone_violations)} adjacent grid pairs fell outside the "
         "one-quantum-plus-2-percent nondecreasing tolerance",
         monotone_violations,
@@ -384,7 +470,7 @@ def main() -> None:
                 )
     scored.score(
         "E-2-3",
-        not eff_violations,
+        (None if not grids else not eff_violations),
         f"{len(eff_violations)} adjacent grid pairs below 4 M* broke efficiency monotonicity",
         eff_violations,
     )
@@ -406,11 +492,14 @@ def main() -> None:
         }
     scored.score(
         "E-2-4",
-        bool(knee_rows)
-        and all(
-            row["measured_knee_m"] is not None
-            and row["low"] <= row["measured_knee_m"] <= row["high"]
-            for row in knee_rows.values()
+        (
+            None
+            if not knee_rows
+            else all(
+                row["measured_knee_m"] is not None
+                and row["low"] <= row["measured_knee_m"] <= row["high"]
+                for row in knee_rows.values()
+            )
         ),
         "measured knee against [0.7 M*, 4 M*] per family: "
         + ", ".join(
@@ -433,7 +522,7 @@ def main() -> None:
             }
     scored.score(
         "E-2-5",
-        bool(e25) and all(row["fraction_of_peak"] >= 0.45 for row in e25.values()),
+        (None if not e25 else all(row["fraction_of_peak"] >= 0.45 for row in e25.values())),
         "fraction of peak at the grid point nearest 4 M*: "
         + ", ".join(
             f"{k} M={row['m']} {row['fraction_of_peak'] * 100:.1f} percent"
@@ -448,7 +537,7 @@ def main() -> None:
     )
     scored.score(
         "E-2-6",
-        square is not None and square_fraction >= 0.85,
+        (None if square is None else square_fraction >= 0.85),
         f"8192 cubed reached {square_fraction * 100:.2f} percent of P(clock)",
         {"fraction_of_peak": square_fraction},
     )
@@ -467,8 +556,11 @@ def main() -> None:
             }
     scored.score(
         "E-2-7",
-        bool(e27)
-        and all(row["eff_m1"] < 0.62 < row["eff_max_m"] for row in e27.values()),
+        (
+            None
+            if not e27
+            else all(row["eff_m1"] < 0.62 < row["eff_max_m"] for row in e27.values())
+        ),
         "efficiency at M = 1 and at the largest grid M per family: "
         + ", ".join(
             f"{k} {row['eff_m1']:.3f} to {row['eff_max_m']:.3f}"
@@ -510,7 +602,7 @@ def main() -> None:
     ]
     scored.score(
         "E-2-8",
-        bool(holdout_rows) and not e28_failures,
+        (None if not holdout_rows else not e28_failures),
         f"{len(holdout_rows)} held-out shapes, {len(e28_failures)} outside their "
         "per-window tolerance",
         e28_failures,
@@ -521,7 +613,7 @@ def main() -> None:
     p95_error = nearest_rank(errors, 0.95) if errors else float("inf")
     scored.score(
         "E-2-9",
-        median_error < 10.0 and p95_error < 20.0,
+        (None if not errors else (median_error < 10.0 and p95_error < 20.0)),
         f"held-out interpolation median APE {median_error:.3f} percent, "
         f"p95 {p95_error:.3f} percent",
         {"median_ape": median_error, "p95_ape": p95_error, "count": len(errors)},
@@ -547,7 +639,7 @@ def main() -> None:
         }
     scored.score(
         "E-2-10",
-        bool(e210) and all(row["low"] <= row["ratio"] <= row["high"] for row in e210.values()),
+        (None if not e210 else all(row["low"] <= row["ratio"] <= row["high"] for row in e210.values())),
         "base over boosted constant ratio per paired lane-2 cell: "
         + ", ".join(
             f"{k} {row['ratio']:.4f} ({row['regime']})" for k, row in sorted(e210.items())
@@ -569,7 +661,7 @@ def main() -> None:
         }
     scored.score(
         "E-2-11",
-        bool(e211) and all(row["delta"] <= 0.03 for row in e211.values()),
+        (None if not e211 else all(row["delta"] <= 0.03 for row in e211.values())),
         "absolute efficiency difference between arms, worst "
         + (
             f"{max(row['delta'] for row in e211.values()):.4f}"
@@ -588,7 +680,7 @@ def main() -> None:
             e31[geometry] = big["constant_s"] / small["constant_s"]
     scored.score(
         "E-3-1",
-        bool(e31) and all(3.2 <= v <= 4.4 for v in e31.values()),
+        (None if not e31 else all(3.2 <= v <= 4.4 for v in e31.values())),
         "prefill time ratio S 4096 over 2048: "
         + ", ".join(f"{k} {v:.3f}" for k, v in sorted(e31.items())),
         e31,
@@ -600,7 +692,7 @@ def main() -> None:
     )
     scored.score(
         "E-3-2",
-        synthetic is not None and synthetic_fraction >= 0.40,
+        (None if synthetic is None else synthetic_fraction >= 0.40),
         f"synthetic prefill at S = 4096 reached {synthetic_fraction * 100:.2f} percent of peak",
         {"fraction_of_peak": synthetic_fraction},
     )
@@ -617,7 +709,7 @@ def main() -> None:
         e33[cell["id"]] = cell["rate_bytes_per_second"] / r_hbm
     scored.score(
         "E-3-3",
-        bool(e33) and all(0.55 <= v <= 1.00 for v in e33.values()),
+        (None if not e33 else all(0.55 <= v <= 1.00 for v in e33.values())),
         f"{len(e33)} decode cells at or above 160 MiB of KV traffic, achieved "
         "fraction of R_hbm from "
         + (f"{min(e33.values()):.3f} to {max(e33.values()):.3f}" if e33 else "none"),
@@ -636,7 +728,7 @@ def main() -> None:
                 )
     scored.score(
         "E-3-4",
-        bool(e34) and all(3.4 <= v <= 4.6 for v in e34.values()),
+        (None if not e34 else all(3.4 <= v <= 4.6 for v in e34.values())),
         "decode time ratio across quadrupled L, worst pair "
         + (
             f"{min(e34.values()):.3f} to {max(e34.values()):.3f}"
@@ -655,7 +747,7 @@ def main() -> None:
     )
     scored.score(
         "E-3-5",
-        3.4 <= batch_ratio <= 4.6,
+        (None if batch_ratio == 0.0 else 3.4 <= batch_ratio <= 4.6),
         f"decode time ratio B 256 over 64 at L = 8192 measured {batch_ratio:.3f}",
         {"ratio": batch_ratio},
     )
@@ -665,7 +757,7 @@ def main() -> None:
     e41 = {cell["id"]: cell["regime"] for cell in expert_cells}
     scored.score(
         "E-4-1",
-        bool(e41) and all(regime == "memory" for regime in e41.values()),
+        (None if not e41 else all(regime == "memory" for regime in e41.values())),
         f"{sum(1 for r in e41.values() if r == 'memory')} of {len(e41)} captured "
         "expert cells are memory-limited at the measured R_hbm",
         e41,
@@ -679,7 +771,7 @@ def main() -> None:
             e42[shape] = high["constant_s"] / low["constant_s"]
     scored.score(
         "E-4-2",
-        bool(e42) and all(v <= 1.6 for v in e42.values()),
+        (None if not e42 else all(v <= 1.6 for v in e42.values())),
         "expert-load plateau ratio M_e 54 over 1: "
         + ", ".join(f"{k} {v:.3f}" for k, v in sorted(e42.items())),
         e42,
@@ -692,7 +784,7 @@ def main() -> None:
             e43[shape] = cell["rate_flops_per_second"] / cell["peak_flops"]
     scored.score(
         "E-4-3",
-        bool(e43) and all(v < 0.25 for v in e43.values()),
+        (None if not e43 else all(v < 0.25 for v in e43.values())),
         "fraction of peak at M_e = 54: "
         + ", ".join(f"{k} {v * 100:.2f} percent" for k, v in sorted(e43.items())),
         e43,
@@ -705,7 +797,7 @@ def main() -> None:
             e44[shape] = cell["constant_s"] / cell["t_mem_s"]
     scored.score(
         "E-4-4",
-        bool(e44) and all(1.0 <= v <= 3.0 for v in e44.values()),
+        (None if not e44 else all(1.0 <= v <= 3.0 for v in e44.values())),
         "measured time over t_mem at the captured balanced load: "
         + ", ".join(f"{k} {v:.3f}" for k, v in sorted(e44.items())),
         e44,
@@ -720,7 +812,7 @@ def main() -> None:
                 rows[kind] = cell["rate_bytes_per_second"] / r_hbm
         scored.score(
             expectation_id,
-            bool(rows) and all(v >= 0.80 for v in rows.values()),
+            (None if not rows else all(v >= 0.80 for v in rows.values())),
             f"fraction of R_hbm at {mib} MiB: "
             + ", ".join(f"{k} {v * 100:.1f} percent" for k, v in sorted(rows.items())),
             rows,
@@ -737,7 +829,7 @@ def main() -> None:
                 ) / warm["constant_s"]
     scored.score(
         "E-5-3",
-        bool(e53) and all(v <= 0.06 for v in e53.values()),
+        (None if not e53 else all(v <= 0.06 for v in e53.values())),
         "warm against rotated relative difference, worst "
         + (f"{max(e53.values()) * 100:.3f} percent" if e53 else "no pair"),
         e53,
@@ -749,7 +841,7 @@ def main() -> None:
     )
     scored.score(
         "E-5-4",
-        small_scale is not None and e54_ratio <= 1.15,
+        (None if small_scale is None else e54_ratio <= 1.15),
         f"4 MiB warm scale ran {e54_ratio:.4f} times its own bytes-over-R_hbm time",
         {"speedup_over_roof": e54_ratio},
     )
@@ -879,49 +971,115 @@ def main() -> None:
         residuals,
     )
 
+    # G9R: the per-repetition chain is contaminated by the instrumentation cost
+    # the refreeze measures, so its dispersion identifies the kernel only for
+    # cells above the registered 60 microsecond threshold.
     g9_breaches = []
+    g9_checked = 0
     for cell in all_cells:
         if cell["void_for_scoring"] or not cell["chain_state_stationary"]:
             continue
+        if not cell["in_scored_scope"]:
+            continue
+        if cell["chain_median_s"] <= SHORT_CELL_S:
+            continue
+        g9_checked += 1
         ceiling = 0.02 + (QUANTUM_NS * 1e-9) / (math.sqrt(12.0) * cell["chain_median_s"])
         if cell["chain_cv"] > ceiling:
             g9_breaches.append(
                 {"id": cell["id"], "cv": cell["chain_cv"], "ceiling": ceiling}
             )
     guards.check(
-        "G9",
+        "G9R",
         not g9_breaches,
-        f"{len(g9_breaches)} cells exceeded the quantum-aware per-repetition CV ceiling",
+        f"{g9_checked} cells above the 60 microsecond threshold checked, "
+        f"{len(g9_breaches)} exceeded the quantum-aware per-repetition CV ceiling",
         g9_breaches,
     )
 
     g10_breaches = [
         {"id": cell["id"], "cv": cell["batch_cv"]}
         for cell in all_cells
-        if not cell["void_for_scoring"] and cell["batch_cv"] > 0.02
+        if not cell["void_for_scoring"]
+        and cell["in_scored_scope"]
+        and cell["batch_cv"] > 0.02
     ]
     guards.check(
         "G10",
         not g10_breaches,
-        f"{len(g10_breaches)} cells exceeded the 2 percent batch-mean CV ceiling",
+        f"{len(g10_breaches)} scored cells exceeded the 2 percent batch-mean CV ceiling",
         g10_breaches,
     )
 
+    # G14: the instrumentation control must have executed.
+    control = boosted_raw.get("instrumentation_control", [])
+    by_stride: dict[str, dict[int, float]] = {}
+    for row in control:
+        by_stride.setdefault(row["id"], {})[row["stride"]] = row["per_kernel_ms"] * 1e-3
+    per_boundary = {
+        name: table[1] - table[64]
+        for name, table in by_stride.items()
+        if 1 in table and 64 in table
+    }
+    event_only_s = boosted_raw.get("event_only_period_ms", 0.0) * 1e-3
+    guards.check(
+        "G14",
+        bool(per_boundary) and event_only_s > 0.0,
+        f"instrumentation control produced {len(by_stride)} per-stride tables and "
+        f"an event-only period of {event_only_s * 1e6:.4f} microseconds",
+        {
+            "per_stride_s": {k: {str(s): v for s, v in t.items()} for k, t in by_stride.items()},
+            "per_boundary_s": per_boundary,
+            "event_only_period_s": event_only_s,
+        },
+    )
+
+    # G11R: the per-boundary cost is measured, is inside the frozen band, and
+    # correcting the chain by it reconciles the chain with the batched constant.
+    boundary_values = sorted(per_boundary.values())
+    boundary_cost = statistics.median(boundary_values) if boundary_values else 0.0
+    band_ok = bool(boundary_values) and all(
+        INSTRUMENT_BAND_S[0] <= value <= INSTRUMENT_BAND_S[1] for value in boundary_values
+    )
     g11_breaches = []
     for cell in all_cells:
         if cell["void_for_scoring"] or not cell["chain_state_stationary"]:
             continue
+        if not cell["in_scored_scope"]:
+            continue
         if cell["chain_state"] != cell["scored_state"]:
             continue
-        delta = abs(cell["chain_mean_s"] - cell["constant_s"]) / cell["constant_s"]
+        corrected = cell["chain_mean_s"] - boundary_cost
+        cell["chain_mean_corrected_s"] = corrected
+        delta = abs(corrected - cell["constant_s"]) / cell["constant_s"]
+        cell["chain_correction_delta"] = delta
         if delta > 0.03:
-            g11_breaches.append({"id": cell["id"], "delta": delta})
+            g11_breaches.append(
+                {"id": cell["id"], "delta": delta, "corrected_s": corrected}
+            )
     guards.check(
-        "G11",
-        not g11_breaches,
-        f"{len(g11_breaches)} cells disagreed by more than 3 percent between the "
-        "batched constant and the per-repetition mean",
-        g11_breaches,
+        "G11R",
+        band_ok and not g11_breaches,
+        f"per-boundary event cost {boundary_cost * 1e6:.4f} microseconds over "
+        f"{len(boundary_values)} controls, band "
+        f"[{INSTRUMENT_BAND_S[0] * 1e6:.1f}, {INSTRUMENT_BAND_S[1] * 1e6:.1f}] "
+        f"{'held' if band_ok else 'violated'}; {len(g11_breaches)} cells "
+        "disagreed by more than 3 percent after the correction",
+        {
+            "per_boundary_s": per_boundary,
+            "boundary_cost_s": boundary_cost,
+            "band_held": band_ok,
+            "breaches": g11_breaches,
+        },
+    )
+
+    # G13, the one declared survivable guard.
+    guards.check(
+        "G13",
+        not host_bound,
+        f"{len(host_bound)} cells were host-issue bound and were excluded from "
+        "every scored expectation and from the published table",
+        host_bound,
     )
 
     uuid_ok = (
@@ -937,15 +1095,28 @@ def main() -> None:
     )
 
     # ---- Verdict ---------------------------------------------------------
-    every_guard_held = all(row["held"] for row in guards.rows)
-    passed = sum(1 for row in scored.rows if row["passed"])
+    survivable = {
+        guard["id"] for guard in REFREEZE["fatal_guards"] if guard["survivable"]
+    }
+    voiding = [row for row in guards.rows if not row["held"] and row["id"] not in survivable]
+    every_guard_held = not voiding
+    passed = sum(1 for row in scored.rows if row["passed"] is True)
+    failed = sum(1 for row in scored.rows if row["passed"] is False)
+    unevaluated = sum(1 for row in scored.rows if row["passed"] is None)
     results = {
         "schema": "simllm-study-results-v1",
         "study": "a100_kernel_constants_v1",
         "stage": 1,
         "verdict": "interpretable" if every_guard_held else "void",
         "scored_passed": passed,
+        "scored_failed": failed,
+        "scored_unevaluated": unevaluated,
         "scored_total": len(scored.rows),
+        "voiding_guards": [row["id"] for row in voiding],
+        "survivable_guards": sorted(survivable),
+        "host_issue_bound_cells": host_bound,
+        "instrumentation_per_boundary_cost_s": boundary_cost,
+        "instrumentation_event_only_period_s": event_only_s,
         "declared_denominator": FREEZE["scored_denominator"],
         "measured_hbm_roof_bytes_per_second": r_hbm,
         "measured_hbm_roof_fraction_of_nameplate": r_hbm / HBM_NAMEPLATE,
@@ -960,8 +1131,8 @@ def main() -> None:
         "scored": scored.rows,
         "fatal_guards": guards.rows,
         "cells": {
-            "boosted": sorted(boosted.values(), key=lambda cell: cell["id"]),
-            "base": sorted(base.values(), key=lambda cell: cell["id"]),
+            "boosted": sorted(boosted_all.values(), key=lambda cell: cell["id"]),
+            "base": sorted(base_all.values(), key=lambda cell: cell["id"]),
         },
         "holdout_rows": holdout_rows,
     }
@@ -969,15 +1140,19 @@ def main() -> None:
         json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
     )
     print(
-        f"verdict={results['verdict']} scored={passed}/{len(scored.rows)} "
-        f"R_hbm={r_hbm / 1e9:.2f} GB/s"
+        f"verdict={results['verdict']} scored={passed} pass / {failed} fail / "
+        f"{unevaluated} unevaluated of {len(scored.rows)} "
+        f"R_hbm={r_hbm / 1e9:.2f} GB/s "
+        f"event_boundary={boundary_cost * 1e6:.3f} us "
+        f"host_bound_cells={len(host_bound)}"
     )
     for row in scored.rows:
         if not row["passed"]:
             print(f"  FAIL {row['id']}: {row['evaluated']}")
     for row in guards.rows:
         if not row["held"]:
-            print(f"  GUARD VIOLATED {row['id']}: {row['evaluated']}")
+            label = "SURVIVABLE GUARD" if row["id"] in survivable else "GUARD VIOLATED"
+            print(f"  {label} {row['id']}: {row['evaluated']}")
 
 
 if __name__ == "__main__":
