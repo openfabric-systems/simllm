@@ -138,6 +138,16 @@ provider service `C`. The launch class never reaches kernel service time. The
 `ideal` host profile contributes exactly zero, so a study with no host profile
 selected is reading kernel service time and nothing else.
 
+> Qualification pending. First-party A100 measurement in the
+> [graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md) finds a
+> device-side per-kernel cost that is 1.415 to 1.506 microseconds larger in
+> eager mode than in a graph, of which a null kernel accounts for 1.080. The
+> measurement does not determine whether the residual is kernel service time,
+> which would qualify this clause, or a device front-end gap outside kernel
+> service, which would leave the clause intact. The maintainer's ruling between
+> those two readings is pending and COMP-48 owns whatever qualification it
+> calls for. The clause above is unchanged and remains in force meanwhile.
+
 **There is no per-kernel tail, and the rationale is that tails are emergent.**
 Reported TTFT and TPOT distributions have wide tails in real deployments, and
 this model produces them from the network, from batching decisions and from
@@ -779,6 +789,29 @@ whose omitted excess is 1.79 to 12.31 times the whole modeled decode compute of
 a 24-layer top-8 MoE step. It registers no new task ID: COMP-1 and COMP-5 both
 stay open and keep every clause they registered.
 
+The two A100 calibration studies of the same campaign are void beside it, and
+neither closes anything. The
+[A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+violated three stability guards across two runs and deliberately withholds the
+`simllm-profile-table-v1` artifact it was built to produce, because a table
+from a void run is one a provider would load without noticing. Its retained
+evidence is a measured 1818.21 GB/s HBM roof, per-family roofline efficiency
+spanning 0.125 to 0.951 where the surrogate is a flat 0.7, captured MoE expert
+cells at 5.17 to 12.20 times their own memory roof, a bimodal 1275 and 1410 MHz
+SM clock that moves compute constants by the clock ratio and leaves
+memory-limited ones still, and a 2.34 microsecond device cost for one CUDA
+event placed between two launches. The
+[A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
+violated one dispersion guard and installs neither of the two
+`HostInitiationModel` profiles it measured. Its retained evidence separates
+host submission, 1,629,633 ps per eager launch against a flat 1.6 microseconds
+per graph replay at any chain length, from a device-side per-kernel cost that
+is 1.415 to 1.506 microseconds larger in eager mode than in a graph. That last
+number is why the CUDA-graph clause of the determinism contract above now
+carries a pending-ruling qualification note and why COMP-48 exists. Neither
+study registers a closure; between them they register COMP-43, COMP-44,
+COMP-45, COMP-46, COMP-47 and COMP-48.
+
 The [fixed host-step study](../../examples/host_step_cost_v1/RESULTS.md)
 re-established that measurement under a corrected freeze before installing
 anything. Corrected calibration attempt three was nonvoid and accepted: all
@@ -1007,6 +1040,41 @@ and an explicit reason:
   evidence only: no production framework kernel, no dynamic SASS, no Accel-Sim
   calibration and no held-out kernel matrix, so COMP-1 stays open on its first
   blocker.
+  The [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+  is reviewed `VOID` and therefore closes nothing, but its retained evidence
+  narrows the surrogate question further. Its measured HBM roof is 1818.21 GB/s,
+  89.17 percent of nameplate, and it publishes clock-conditioned constants
+  because application clock control is denied on that allocation. Three of its
+  findings bear directly on this task. The flat 0.7 roofline derate is wrong in
+  opposite directions for different shapes: measured roofline efficiency spans
+  0.315 to 0.763 on the granite QKV family and 0.820 to 0.951 on an
+  8192-squared synthetic family, so no single constant covers both. Captured
+  MoE expert GEMMs at the granite population's expert loads run 5.17 to 12.20
+  times their own memory roof over all 18 captured cells, because at those loads
+  the kernel is bound by a fixed per-kernel cost rather than by bandwidth or
+  arithmetic; COMP-43 owns that term and COMP-7's entry carries the same trap
+  for the per-rank load work. And the operand layout, not the shape, produced a factor 2.9 swing
+  between neighbouring token counts in the study's first run, which is why any
+  future table must record the layout its constants were measured under.
+  The [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
+  is also reviewed `VOID` and installs nothing. It retains evidence on part of
+  this task's second blocker, the launch and host-delay terms, on the target
+  architecture and host; the queueing term that blocker also names is not
+  measured by it, so the blocker is narrowed and not removed. As retained
+  evidence, the eager per-launch host cost on this A100 and EPYC pair is
+  1,629,633 ps, 31.07 percent below the Turing `eager-host-bound` point, which
+  alongside the already recorded Grace against EPYC difference is evidence that
+  a launch constant tracks the host and driver rather than the GPU generation.
+  Two host pairs are not a proof of that rule, and the rule stays a hypothesis
+  the next host measurement can refute. CUDA
+  graph replay costs the host 1.6 microseconds regardless of chain length, so
+  at 256 nodes the host pays 6.5 nanoseconds per enqueued kernel, a factor 251
+  below eager. And the study refutes the contract's CUDA-graph clause at the
+  device level: a real kernel's period is 1.42 to 1.51 microseconds larger in
+  eager mode than in a graph, of which a null kernel accounts for 1.08, so the
+  residual 0.34 to 0.43 microseconds is launch-mode-conditioned per-kernel cost
+  whose split between service time and front-end gap this driver will not
+  report.
 - COMP-5 (Precision; P1; L): provide the production capture
   environment required by COMP-1. The local GTX 1660 Ti still cannot qualify:
   Nsight Compute returns `ERR_NVGPUCTRPERM`, and display sharing produces the
@@ -1037,13 +1105,40 @@ and an explicit reason:
   measures the launch path as much as the kernel, so the production capture
   must amortize inside the timed region or declare a minimum kernel duration.
   Clocks were not locked there either, so the controlled-clock requirement is
-  untouched.
+  untouched. The
+  [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+  establishes why: on that allocation `nvidia-smi --lock-gpu-clocks` and
+  `nvidia-smi -ac` are both refused with "The current user does not have
+  permission to change clocks". The refusal was observed on three allocations
+  of this account on `a100-hourly`, on nodes `gpu101` and `gpu105`, so the
+  controlled-environment form of the stability bar cannot be met on the
+  allocations this project has obtained, without an administrator action it
+  does not have. Whether another account or another partition would be refused
+  is not established by that evidence. The study substituted a
+  clock-conditioned form, publishing constants per SM clock state over
+  clock-stationary batches, and that substitute itself failed on 16 of 97
+  scored cells, which is evidence about the environment rather than about the
+  kernels. It also measured two facts a production capture must respect: the
+  SM clock under load is bimodal at 1275 and 1410 MHz with a 283 to 432
+  millisecond transition, so a cell that spans the boost boundary mixes two
+  constants; and one `cudaEventRecord` placed between two consecutive launches
+  costs 2.34 microseconds of device time, so per-kernel event instrumentation
+  is not a free observation of a short kernel.
 - COMP-7 (Precision; P1; M): MoE compute assumes perfectly balanced routing:
   every rank computes `top_k` experts' flops for its own tokens and streams all
   resident experts once. Consume the landed `simllm-routed-experts-v1`
   projection through `RoutedMoeSupply`, using the same selected placement
   epoch as traffic, to drive per-rank effective expert load and hot-expert
-  imbalance.
+  imbalance. Pricing trap, from first-party A100 measurement: at the captured
+  granite expert loads the roofline is not the binding term. The
+  [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+  measured all 18 captured expert cells at 5.17 to 12.20 times their own memory
+  roof, because a load of 1 to 54 rows sits far below the 218 and 277 row
+  roofline knees of those two shapes and the kernel is bound by a fixed
+  per-kernel cost instead. That evidence is from a void run and closes nothing,
+  but any work here that makes per-rank expert load more precise is refining an
+  input to a term whose magnitude is wrong by 5 to 12 times, so COMP-43 should
+  land alongside it rather than after it.
 - COMP-9 (Precision; P1; L): locate and validate latency-tail fidelity in the
   network, batching and queueing chain, which is where the standing kernel-time
   determinism decision (maintainer, 2026-08-18) puts every tail. This task
@@ -1204,6 +1299,97 @@ and an explicit reason:
   ceiling is rejected rather than borrowing another architecture's number, and
   every accepted artifact stays byte-identical. This is P2 while no study
   selects a measured port ceiling and becomes P1 when one does.
+- COMP-43 (Precision; P1; M): price the fixed per-kernel cost that neither
+  compute provider carries. The surrogate being replaced is the absence of any
+  floor: `RooflineProvider` returns `max(flops/peak, bytes/bandwidth)` and
+  `ProfileTableProvider` returns a table entry, so a kernel whose work is
+  smaller than the device's own per-kernel cost is priced below what the device
+  can do. The identifying observables are first-party and already measured on
+  the target architecture by the
+  [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md):
+  the uninstrumented back-to-back period of an empty kernel is 1.904
+  microseconds, and the captured granite MoE expert GEMMs at their captured
+  expert loads measure 4.725 to 9.227 microseconds against memory roofs of
+  0.578 to 1.275 microseconds, a factor of 5.17 to 12.20 over all 18 cells.
+  Acceptance: a per-kernel floor whose value is measured on the architecture it
+  is applied to and refuses an architecture it was not measured on, an explicit
+  off path that reproduces every accepted artifact and timestamp byte for byte,
+  and a
+  reported before and after on the decode step of the granite fixture with the
+  omitted excess bounded rather than estimated. The evidence this task consumes
+  comes from a void run, so a non-void measurement (COMP-45) is a prerequisite
+  for the calibrated value even though the mechanism can land first.
+- COMP-45 (Precision; P1; M): produce a non-void A100 kernel-constant run. The
+  [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+  is void twice on its stability preconditions, so its constants close nothing
+  and its profile table is deliberately withheld. Two causes are identified and
+  neither is a kernel property. Application clock control is denied on the
+  Merlin A100 partition, so a cell that spans the 1275 to 1410 MHz boost
+  boundary mixes two constants; and one `cudaEventRecord` between two
+  consecutive launches costs 2.34 microseconds of device time, so a
+  per-repetition chain does not measure a short kernel. The surrogate being
+  replaced is the flat 0.7 roofline derate on `a100`. Acceptance: a protocol
+  whose stability precondition is achievable without clock control, stated and
+  frozen before the run; every scored cell inside its own frozen dispersion
+  ceiling; and a `simllm-profile-table-v1` artifact loadable by
+  `ProfileTableProvider` whose held-out interpolation error meets COMP-1's
+  registered median 10 percent and p95 20 percent bars. The void run already
+  reaches 0.70 percent median and 18.53 percent p95 on its held-out shapes, so
+  the bars are reachable; what is missing is a run whose guards hold.
+  Boundary. COMP-45 owns producing the artifact; COMP-1 is its consumer and
+  keeps the surrogate claim, so COMP-45 does not restate it. The registry
+  answers the consumption question ONE way, stated here: COMP-5 remains the
+  gate, and COMP-1 may consume an A100 profile only once COMP-5's
+  environment-scoped stability bar is met on the cells that profile contains.
+  COMP-45 is the work that makes that possible on an allocation without clock
+  control; it does not bypass COMP-5's gate, and closing COMP-45 does not by
+  itself license consumption.
+- COMP-47 (Precision; P1; L): reach a non-void A100 graph-launch run and
+  install the two host profiles it produces. The
+  [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md) is
+  reviewed `VOID`: fatal guard `GG7` was violated, so its behavioral score is
+  uninterpretable and no fraction of it is a result. Fourteen of its 15 scored
+  expectations passed and one failed, and that 14 is not a score; it is written
+  down only so a reader can see which relations survived. `GG7` bounds the
+  block-mean dispersion of every reported period at 4 percent, which a chain of
+  one to eight kernels cannot meet against the device's 1024 ns event quantum.
+  This is L rather than S because closing it needs a fresh allocation on the
+  target hardware and a re-frozen protocol, which is hardware evidence.
+- COMP-48 (Precision; P1; M): resolve the CUDA-graph clause of the kernel-time
+  determinism contract against first-party measurement, once the maintainer has
+  ruled. The
+  [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
+  measured a device-side per-kernel cost that is 1.415 to 1.506 microseconds
+  larger in eager mode than under CUDA-graph replay, roughly constant across
+  kernels whose own periods span 8.9 to 89.6 microseconds, of which a null
+  kernel accounts for 1.080 microseconds. Two readings fit that observation
+  equally well and this entry commits to neither. Under the first, the residual
+  0.335 to 0.426 microseconds is kernel service time, the constant is
+  launch-mode conditioned, and the contract clause needs qualifying. Under the
+  second, the residual is a device front-end gap that sits outside kernel
+  service time, the clause is intact as written, and what is missing is a
+  front-end term the model does not yet carry. The surrogate being replaced is
+  the absence of any first-party evidence on the question, which is why the
+  clause carried no qualification before. The identifying observable that
+  separates the two is per-kernel timing inside a captured graph, which the
+  driver on this allocation refuses, returning `invalid argument` for an event
+  recorded during stream capture; a different mechanism, for example Nsight
+  Systems kernel activity rows over a replayed graph, is required. Acceptance:
+  the maintainer's ruling is recorded; the contract text is qualified or
+  confirmed to match it; a measurement separating service time from front-end
+  gap on the target architecture is published; and the deterministic compute
+  path stays byte-identical whichever reading wins. This task does not
+  pre-empt the ruling and must not be closed by asserting one of the two
+  readings without it. The surrogate being replaced is the absence of any A100 entry
+  in `HostInitiationModel`, whose calibrated profiles today accept only
+  `gtx1660-ti-sm75`. Acceptance: a freeze whose dispersion guard is scoped to
+  the periods the study actually publishes, stated before the run; a run whose
+  guards hold; and `a100-epyc-eager-host` and `a100-epyc-cuda-graph` installed
+  with the same fail-closed device check the Turing profiles carry, rejecting
+  every key except `a100`. The measured values are already published as
+  retained evidence: 1,629,633 ps per eager launch over an empirical 1,625,986
+  to 1,927,260 ps, and 1,647,674 ps per graph replay independent of chain
+  length. Installing them from the void run is refused on purpose.
 
 ### Completeness
 
@@ -1308,6 +1494,44 @@ and an explicit reason:
   and the no-emission path preserves every accepted timestamp, counter and
   artifact byte exactly. This is P2 while no study consumes port events and
   becomes P1 when TRAF-45 packetizes the intra-node leg.
+- COMP-44 (Completeness; P2; S): let a calibrated host profile carry a fixed
+  per-invocation cost beside its per-launch constant. `HostInitiationModel`'s
+  calibrated form has exactly one term, `point_ps_per_launch`, composed as
+  `max(C, N * g)`, which is the right shape for eager launching and the wrong
+  shape for CUDA graph replay. The
+  [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
+  measured the graph host cost at 1.574 to 1.686 microseconds per replay across
+  chain lengths 1 to 256, a fitted per-node slope of 0.000297 microseconds at
+  an R-squared of 0.516, so there is no per-launch constant to fit: the cost is
+  a fixed per-replay term plus a per-node term indistinguishable from zero.
+  Expressing it as a per-launch constant makes the published point depend on
+  the chain length, which is why that study's `a100-epyc-cuda-graph` point is
+  declared scoped to a reference chain length rather than universal. The
+  surrogate being replaced is that scoping. Acceptance: a calibrated profile
+  may declare a fixed per-invocation term and a per-launch term, the
+  composition states which one a launch class uses, the exact `ideal` zero
+  profile and both Turing profiles reproduce every accepted artifact and
+  timestamp byte for byte, and a graph profile built from a fixed term is
+  independent of the launch count it is asked about. This is P2 while no study
+  selects an A100 host profile and becomes P1 when COMP-47 installs one.
+- COMP-46 (Completeness; P2; M): supply a production-grade decode attention
+  microbenchmark. The decode lane of the
+  [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
+  reached 5.5 to 13.3 percent of the measured HBM roof even after its warps
+  carried four independent online-softmax accumulators, and its time grew by
+  3.02 between batch 64 and batch 256 where the KV bytes grew by 4, so it is
+  still gaining efficiency with occupancy rather than sitting on the roof. Its
+  constants therefore describe that microbenchmark and not a paged or flash
+  decoding kernel, and the study says so. The surrogate being replaced is that
+  lane's own kernel. The path this adds is a second, selectable decode kernel
+  in the study harness; the existing kernel stays reachable and is the explicit
+  off path, so the current lane's constants remain reproducible byte for byte
+  after the new kernel lands. Acceptance: a decode kernel whose achieved KV
+  bandwidth reaches a frozen fraction of the measured roof over the whole batch
+  and cache-length grid, with the fraction stated before the run; a published
+  comparison against the current kernel on the identical grid; and the off path
+  reproducing the published constants of this study exactly. This is P2 while
+  no study consumes a decode attention constant and becomes P1 when one does.
 
 ### Uncategorized
 

@@ -1,0 +1,49 @@
+{
+  "schema": "simllm-study-refreeze-v1",
+  "study": "a100_kernel_constants_v1",
+  "stage": 1,
+  "supersedes_guards": ["G9", "G11"],
+  "retains_guards": ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G10", "G12"],
+  "retains_scored_expectations_unchanged": true,
+  "scored_denominator": 31,
+  "void_run": {
+    "job": "195964",
+    "verdict": "void",
+    "violated_guards": ["G9", "G10", "G11"],
+    "measured_hbm_roof_bytes_per_second": 1809450000000.0,
+    "instrumentation_inflation_samples_ns": {
+      "gemm_G3_m1": 2080,
+      "gemm_G1_m1": 2544,
+      "elem_scale_4mib_warm": 2624
+    }
+  },
+  "repairs": [
+    {"id": "R1", "claim": "The dense GEMM is issued as Out[N,M] = W[N,K] * X[K,M] in column-major with leading dimensions N, K and N, so no leading dimension depends on the token count."},
+    {"id": "R2", "claim": "Every timed batch is preceded by one untimed priming launch, so the timed region measures back-to-back kernels rather than one post-synchronization launch."},
+    {"id": "R3", "claim": "Every timed batch records the host wall time of its launch loop before any synchronization."},
+    {"id": "R4", "claim": "An instrumentation control times the same 64 launches with an event every 1, 4, 16 and 64 repetitions and times an event-only chain with no kernels."},
+    {"id": "R5", "claim": "The decode attention kernel carries four independent online-softmax accumulators per warp."}
+  ],
+  "instrumentation_cost_band_us": [1.0, 4.0],
+  "short_cell_threshold_us": 60.0,
+  "host_bound_ratio_ceiling": 0.8,
+  "fatal_guards": [
+    {"id": "G9R", "survivable": false, "claim": "Every scored cell whose instrumented chain median exceeds 60 microseconds has a per-repetition coefficient of variation, over the clock-stationary part of its diagnostic chain, of at most 0.02 plus q divided by sqrt(12) times the median."},
+    {"id": "G11R", "survivable": false, "claim": "The instrumentation control returns a per-boundary event cost in [1.0, 4.0] microseconds, and for every scored cell the batch-mean constant agrees with the instrumentation-corrected per-repetition mean within 3 percent."},
+    {"id": "G13", "survivable": true, "claim": "No scored cell is host-issue bound: in every scored batch the recorded host launch-loop wall time is at most 0.8 times the device elapsed time of the same batch."},
+    {"id": "G14", "survivable": false, "claim": "The instrumentation control executed and reported a per-boundary cost, a per-stride table over strides 1, 4, 16 and 64, and an event-only chain period."}
+  ],
+  "survivable_guard_remainder": {
+    "guard": "G13",
+    "on_failure": "the cell is marked host_issue_bound, excluded from every scored expectation, from every other guard that quantifies over scored cells, and from the published profile table, and reported with its host and device times",
+    "remains_interpretable": "every expectation none of whose cells were excluded, evaluated unchanged; an expectation that loses a cell is reported as evaluated over a reduced scope with the excluded cells named; an expectation whose entire scope is excluded is reported as unevaluated, never as a pass"
+  },
+  "unscored_records_added": [
+    "per-batch host launch-loop wall time of every cell",
+    "instrumentation control per-stride table and event-only chain period",
+    "run-1 evaluation of every scored expectation published beside run 2",
+    "cells excluded by G13 with their host and device times"
+  ],
+  "closes": [],
+  "does_not_close": ["COMP-1", "COMP-5"]
+}
