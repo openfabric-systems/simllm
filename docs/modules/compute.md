@@ -784,9 +784,15 @@ else in this module, never advances the caller's clock. The cost model, the
 identity and re-registration rules, and the ledger that spends that cost on the
 live metric chain are traffic-owned and are stated in
 [the interim collective completion and registration contract](traffic.md#collective-completion-and-registration-the-interim-contract).
-A communicator that does not ask for the gate emits exactly the events it
-emitted before the gate existed. BACK-47 still owns the device-facing packet
-emission contract at this same seam.
+Only two claims there rest on the ABI, that a registration entry point exists
+and that one seam serves NCCL and RCCL; the one-time charging rule, the
+per-buffer identity scope, the channel factor and the three re-registration
+events are declared model choices. This gate keeps its own registered-buffer
+state, which carries no generation and which the live chain never consults, so
+the seam and the traffic-owned ledger are two states that agree by convention
+until TRAF-58 unifies them. A communicator that does not ask for the gate emits
+exactly the events it emitted before the gate existed. BACK-47 still owns the
+device-facing packet emission contract at this same seam.
 
 The same [collective latency floor study](../../examples/collective_latency_floor_v1/RESULTS.md)
 closes COMP-11, with its undemonstrated mechanism clauses moved exactly to
@@ -826,7 +832,7 @@ and an explicit reason:
 | `sendProxyProgress` | `src/transport/net.cc`, `sendProxyProgress` |
 | `ncclNet.isend` | `src/include/plugin/net/net_v12.h`, `isend` member; `ncclIbIsend` in `src/transport/net_ib/p2p.cc` is the audited IB implementation |
 | `ncclNet.test` | `src/include/plugin/net/net_v12.h`, `test` member; called by `sendProxyProgress` in `src/transport/net.cc` |
-| `ncclNet.regMr` | `src/include/plugin/net/net_v12.h`, `regMr` member; the entry NCCL calls so an RDMA NIC can prepare a buffer, documented for the same struct family on the RCCL side in [the AMD GPU fabric note](../papers/amd-gpu-fabric.md) |
+| `ncclNet.regMr` | `src/include/plugin/net/net_v12.h`, `regMr` member, in the same audited NCCL `v2.30.7-1` release as the `isend` and `test` rows above; the entry NCCL calls so an RDMA NIC can prepare a buffer. The published `ncclNet_v6` form of the same member, and its RCCL equivalent, are quoted in [the AMD GPU fabric note](../papers/amd-gpu-fabric.md) |
 | `simllmChannelBufferRegistered` | simllm-invented: the one-time (communicator, channel, buffer) registration boundary, where the mirrored seam declares a cost that the traffic-owned ledger spends |
 | `wrap_ibv_post_send` | `src/include/ibvwrap.h`, `wrap_ibv_post_send`; called by `ncclIbIsend` in `src/transport/net_ib/p2p.cc` |
 | `wrap_ibv_poll_cq` | `src/include/ibvwrap.h`, `wrap_ibv_poll_cq`; called by `ncclIbTest` in `src/transport/net_ib/p2p.cc` |

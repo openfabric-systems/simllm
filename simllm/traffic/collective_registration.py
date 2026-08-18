@@ -21,23 +21,29 @@ re-registration and are the only three:
   generation bump that invalidates every channel and buffer of that
   communicator at once.
 
-Provenance. The cost is declared configuration, not a measurement. The
-*existence* of the registration, its one-time nature and its per-buffer scope
-come from the net plugin ABI recorded in ``docs/papers/amd-gpu-fabric.md``:
-``regMr`` and ``regMrDmaBuf`` are members of the documented ``ncclNet_v6``
-struct, NCCL calls them so an RDMA NIC can prepare a buffer, and RCCL exposes
-the same ABI under ``librccl-net.so``, so one seam serves both stacks. The
-*duration* comes from nowhere but this file. Asking a declared cost for a
-calibrated value fails closed rather than returning the declared number under a
-calibrated label; TRAF-56 is the calibration task.
+Provenance, stated narrowly. Exactly two things here come from evidence. The
+net plugin ABI recorded in ``docs/papers/amd-gpu-fabric.md`` establishes that a
+registration entry point *exists* (``regMr`` and ``regMrDmaBuf`` are members of
+the documented ``ncclNet_v6`` struct, and the audited ``net_v12.h`` of NCCL
+``v2.30.7-1`` carries the same ``regMr`` member) and that the *same ABI serves
+both stacks*, since RCCL exposes it under ``librccl-net.so``. Everything else
+below is a declared model choice, not a transcription of the ABI: that the cost
+is paid once rather than per call, that the identity is scoped to a buffer,
+that a channel is part of that identity, that exactly three events force a
+re-registration, and of course the 20 microsecond duration. Asking a declared
+cost for a calibrated value fails closed rather than returning the declared
+number under a calibrated label; TRAF-56 is the calibration task, and it has to
+measure the model choices as well as the constant.
 
-Layering. The mirrored stack seam in :mod:`simllm.compute.nccl_stack` observes
-the registration boundary and declares its cost, because that is where real
-NCCL's ``regMr`` and channel-FIFO establishment sit. It never advances a clock,
-which is that module's standing contract. This module owns the cost model and
-the ledger, and :mod:`simllm.backends.step_sink` is where the charge reaches
-the live metric chain. The three are one authority with explicit projections,
-not three parallel timing models.
+Layering, and where it is not yet clean. This module owns the cost model, the
+identity rules and the ledger, and :mod:`simllm.backends.step_sink` is where
+the charge reaches the live metric chain; those two are one authority with an
+explicit projection. The mirrored stack seam in
+:mod:`simllm.compute.nccl_stack` is *not* joined to them: its
+``require_buffer_registration`` gate keeps its own per-communicator
+``registered_buffers`` state, that state carries no generation, and the live
+chain never consults it. So a run today has two registration states that agree
+only by convention. TRAF-58 unifies them into one gate and one authority.
 
 Default off. A configuration that does not name a registration model builds a
 disabled ledger that charges zero for every identity, so every accepted
@@ -185,14 +191,19 @@ DECLARED_NCCL_CHANNEL_REGISTRATION_COST = CollectiveRegistrationCost(
         ),
         locator=(
             "the documented ncclNet_v6 regMr and regMrDmaBuf members, which NCCL "
-            "calls so an RDMA NIC can prepare a buffer, and which RCCL exposes "
-            "unchanged under librccl-net.so"
+            "calls so an RDMA NIC can prepare a buffer and which RCCL exposes "
+            "unchanged under librccl-net.so, together with the regMr member of "
+            "src/include/plugin/net/net_v12.h in the NCCL v2.30.7-1 release this "
+            "repository's name audit pins"
         ),
         basis=(
-            "the ABI establishes that a registration exists, happens once per "
-            "buffer and is a precondition for the transfer; it establishes "
-            "nothing about how long one takes, so this 20 microsecond constant "
-            "is configuration and not evidence"
+            "the ABI establishes two things and no more: that a registration "
+            "entry point exists at the plugin seam, and that one seam serves "
+            "both NCCL and RCCL. That the cost is paid once rather than per "
+            "call, that the identity is scoped to a buffer, that a channel "
+            "belongs to that identity, that exactly three events force a "
+            "re-registration, and the 20 microsecond duration itself are all "
+            "declared model choices with no measurement behind them"
         ),
     ),
 )
@@ -555,6 +566,11 @@ class CollectiveRegistrationLedger:
         """
 
         if identity.generation > 0 and identity.communicator_id in self._rebuilt:
+            #: Once rebuilt, a communicator keeps this label for every later
+            #: charge, including a genuinely new buffer at the new generation.
+            #: The label is evidence for a reader and never an input to the
+            #: amount, so the coarseness costs no picosecond; sharpening it
+            #: would need a per-generation buffer history.
             return REBUILD_REASON
         same_communicator = {
             registered

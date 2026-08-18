@@ -332,25 +332,35 @@ one-time registration cost, serialized ahead of its own completion; every later
 collective on a registered identity pays nothing. Exactly three events force a
 re-registration: a new buffer, a new peer set, and a communicator rebuild.
 
-**Where the three halves live.** The registration boundary is mirrored at the
-plugin seam in `simllm.compute.nccl_stack`, where `ncclNetRegMr` mirrors the
-net plugin's `regMr` together with the channel FIFO establishment that follows
-it, and where `require_buffer_registration` is the gate. That seam declares the
-cost and never advances a clock, which is that module's standing contract. The
-cost model, the identity rules and the ledger are traffic-owned, in
+**Where the halves live, and where they are not yet joined.** The cost model,
+the identity rules and the ledger are traffic-owned, in
 `simllm.traffic.collective_registration`. The live charge reaches TTFT and TPOT
 through `HtsimStepSinkConfig.collective_registration`, which is off by default;
 with no model named, the ledger charges zero, records nothing, and every
 accepted artifact, timestamp and metric stays byte-identical to the baseline.
+Those two are one authority with an explicit projection. The registration
+boundary is separately mirrored at the plugin seam in
+`simllm.compute.nccl_stack`, where `ncclNetRegMr` mirrors the net plugin's
+`regMr` together with the channel FIFO establishment that follows it and
+`require_buffer_registration` is the gate; that seam declares a cost and never
+advances a clock, which is that module's standing contract. The seam is not
+joined to the ledger: it keeps its own per-communicator registered-buffer
+state, that state carries no generation, and the live chain never consults it.
+TRAF-58 unifies them.
 
-**The cost is declared, not measured.** `regMr` and `regMrDmaBuf` are members
-of the documented `ncclNet_v6` struct, NCCL calls them so an RDMA NIC can
-prepare a buffer, and RCCL exposes the same ABI, so one seam serves both stacks
-(see [the AMD GPU fabric note](../papers/amd-gpu-fabric.md)). That ABI is where
-the existence, the one-time nature and the per-buffer scope of the registration
-come from. The 20 microsecond duration comes from configuration alone. Asking
-the shipped cost for a calibrated value raises rather than returning the
-declared constant under a calibrated label; TRAF-56 is the calibration.
+**Almost all of this is declared, not measured.** Exactly two things rest on
+evidence. `regMr` and `regMrDmaBuf` are members of the documented `ncclNet_v6`
+struct and NCCL calls them so an RDMA NIC can prepare a buffer, so a
+registration entry point exists at this seam; and RCCL exposes the same ABI, so
+one seam serves both stacks (see
+[the AMD GPU fabric note](../papers/amd-gpu-fabric.md)). Everything else is a
+model choice this repository declares: that the cost is paid once rather than
+per call, that the identity is scoped to a buffer, that a channel belongs to
+that identity, that exactly three events force a re-registration, and the 20
+microsecond duration. Asking the shipped cost for a calibrated value raises
+rather than returning the declared constant under a calibrated label; TRAF-56
+is the calibration, and it has to measure the model choices as well as the
+constant.
 
 **This is interim.** The registered destiny is a packetized NCCL and RCCL
 collective path over the GPU's own NVLink, xGMI and UALink ports, where a
@@ -1137,23 +1147,30 @@ default-constructed arm are unchanged.
   wall-clock gain and the measured error against the packet-level
   reference on the same schedules, and it must refuse configurations
   whose questions it cannot answer rather than returning a number.
-- TRAF-56 (Precision; P1; M): calibrate the collective registration cost.
-  `DECLARED_NCCL_CHANNEL_REGISTRATION_COST` charges 20,000,000 ps per
-  `(communicator, generation, channel, buffer)` identity, and that number is
-  configuration: the `ncclNet_v6` ABI establishes that the registration exists,
-  happens once per buffer and precedes the transfer, and establishes nothing
-  about its duration. The surrogate being replaced is therefore the constant
-  itself, and `calibrated_cost_ps` already fails closed so no consumer can read
-  it as measured. The identifying observable is the wall time between the
-  plugin entering `regMr` for a buffer and the first collective on that buffer
-  becoming eligible, captured at more than one buffer size and more than one
-  channel count so the size and channel dependence the declared constant
-  ignores is either measured or refuted. Acceptance: a `calibrated` cost with
-  its measurement named, held-out error reported against the capture, the
-  declared constant kept selectable for reproducing accepted runs, and a
-  before-and-after TTFT delta on the `nccl_registration_v1` live cell. P1
-  because `examples/nccl_registration_v1` opts the registration on, which makes
-  its calibration active-path precision.
+- TRAF-56 (Precision; P1; M): calibrate the collective registration cost and
+  the model choices around it. `DECLARED_NCCL_CHANNEL_REGISTRATION_COST` charges
+  20,000,000 ps per `(communicator, generation, channel, buffer)` identity, and
+  the ABI behind it establishes only that a registration entry point exists at
+  the plugin seam and that one seam serves NCCL and RCCL. The surrogate being
+  replaced is therefore larger than the constant: the once-per-identity
+  charging rule, the per-buffer identity scope, the channel factor and the
+  three-event re-registration set are declared model choices with no
+  measurement behind them, and a calibration that fits the duration while
+  leaving them assumed has calibrated the smaller half. `calibrated_cost_ps`
+  already fails closed so no consumer can read the constant as measured. The
+  identifying observable is the wall time between the plugin entering `regMr`
+  for a buffer and the first collective on that buffer becoming eligible,
+  captured at more than one buffer size and more than one channel count so the
+  size and channel dependence the declared constant ignores is either measured
+  or refuted, and repeated across a buffer reuse and a communicator rebuild so
+  the once-per-identity rule is tested rather than assumed. Acceptance: a
+  `calibrated` cost with its measurement named, held-out error reported against
+  the capture, each surviving model choice restated as measured or explicitly
+  retained as declared, the declared constant kept selectable for reproducing
+  accepted runs, and a before-and-after TTFT delta on the
+  `nccl_registration_v1` live cell. P1 because
+  `examples/nccl_registration_v1` opts the registration on, which makes its
+  calibration active-path precision.
 
 ### Completeness
 
@@ -1411,6 +1428,51 @@ default-constructed arm are unchanged.
   artifact stays byte-identical. Trigger: BACK-48 lands the
   port-kind-independent vocabulary and the compute-side port taxonomy carries a
   UALink row.
+- TRAF-58 (Completeness; P2; S): give collective registration one gate and one
+  authority. Two registration states exist today and agree only by convention.
+  `CollectiveRegistrationLedger` keys
+  `(communicator, generation, channel, buffer)` and owns the charge, while
+  `simllm.compute.nccl_stack`'s `require_buffer_registration` gate keeps a
+  separate per-communicator `registered_buffers` map that carries no
+  generation, is never invalidated by a rebuild, and is never consulted by the
+  live chain. A run can therefore satisfy the seam gate and pay nothing, or pay
+  and fail the seam gate, with nothing detecting either. Make the ledger the
+  sole authority and the seam a read-only projection joined by the same
+  identity, so the gate refuses exactly the collectives the ledger has not
+  charged. Acceptance: one identity type serves both, a rebuild invalidates the
+  seam gate as well as the ledger, a gated collective that the ledger has not
+  charged is refused, and both the ungated seam path and the disabled ledger
+  path stay byte-identical, including every accepted `nccl_stack_v1` sequence
+  and every `nccl_registration_v1` artifact. Trigger: any study that opts the
+  seam gate and the live charge in at once, which none does today.
+- TRAF-59 (Completeness; P2; S): teach the dependency cross-check about the
+  registration offset. `HtsimStepSink._execute_plan` advances
+  `artifact_offset_ps` by the composed service, which now includes the
+  registration charge, so every authority flow timestamp handed to
+  `complete_dependency_cross_check` is shifted by that charge while the
+  independently rendered comparison schedule carries none. Selecting
+  `dependency_cross_check` together with `collective_registration` therefore
+  reports a completion disagreement equal to the charge and calls a correct run
+  wrong. The class is pre-existing, since the calibrated base latency shifts
+  the same offsets, and that spelling is refused by an explicit configuration
+  guard while this one is not. Either refuse the pair the way the calibrated
+  profile is refused, or subtract the semantic terms before comparing.
+  Acceptance: the two selections either compose with no spurious disagreement
+  or are refused before the workdir exists, and the accepted cross-check
+  artifacts stay byte-identical. Trigger: a study selects both.
+- TRAF-60 (Completeness; P2; S): reconcile the registration ledger with
+  prepared-but-unconsumed replays. `HtsimPersistentStepSink.prepare` lowers
+  every record in the batch up front, so the ledger is charged for all of them,
+  while `StepCollectiveRegistrationOutcome` values are published only as each
+  record is consumed. A batch that is prepared and then abandoned, or consumed
+  in part, leaves the ledger's charged total ahead of every published
+  projection, which is exactly the authority-and-projection divergence the
+  repository's one-authority rule exists to prevent. Decide which of the two is
+  authoritative for an unconsumed step and make the other its exact projection,
+  or refuse preparation while a registration model is selected. Acceptance: the
+  ledger total and the published outcomes agree after any prefix of a prepared
+  batch is consumed, and the serial sink stays byte-identical. Trigger: a study
+  uses the persistent sink with a registration model, which none does today.
 
 ### Uncategorized
 
