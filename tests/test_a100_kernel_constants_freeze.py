@@ -170,3 +170,75 @@ def test_the_freeze_closes_nothing(freeze: dict) -> None:
 
 def prose_text() -> str:
     return EXPECTATIONS_MD.read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# The rerun refreeze. It supersedes two guards and retains every scored claim.
+# ---------------------------------------------------------------------------
+
+REFREEZE_JSON = STUDY / "refreeze_expectations.json"
+REFREEZE_MD = STUDY / "refreeze_expectations.md"
+
+
+@pytest.fixture(scope="module")
+def refreeze() -> dict:
+    return json.loads(REFREEZE_JSON.read_text(encoding="utf-8"))
+
+
+def test_the_refreeze_documents_are_present() -> None:
+    assert REFREEZE_JSON.is_file()
+    assert REFREEZE_MD.is_file()
+    assert EM_DASH not in REFREEZE_MD.read_text(encoding="utf-8")
+
+
+def test_the_refreeze_supersedes_only_the_two_instrumentation_guards(
+    refreeze: dict,
+    freeze: dict,
+) -> None:
+    superseded = set(refreeze["supersedes_guards"])
+    retained = set(refreeze["retains_guards"])
+    original = {guard["id"] for guard in freeze["fatal_guards"]}
+    assert superseded == {"G9", "G11"}
+    assert superseded | retained == original
+    assert superseded.isdisjoint(retained)
+
+
+def test_the_refreeze_changes_no_scored_claim(refreeze: dict, freeze: dict) -> None:
+    """The rerun re-evaluates a pre-registered claim set, it does not refreeze it."""
+
+    assert refreeze["retains_scored_expectations_unchanged"] is True
+    assert refreeze["scored_denominator"] == freeze["scored_denominator"]
+
+
+def test_exactly_one_refreeze_guard_is_declared_survivable(refreeze: dict) -> None:
+    survivable = [g["id"] for g in refreeze["fatal_guards"] if g["survivable"]]
+    assert survivable == ["G13"]
+    remainder = refreeze["survivable_guard_remainder"]
+    assert remainder["guard"] == "G13"
+    assert remainder["on_failure"].strip()
+    assert "never as a pass" in remainder["remains_interpretable"]
+
+
+def test_the_instrumentation_band_brackets_the_run_one_samples(refreeze: dict) -> None:
+    """The G11R band is derived from measured run-1 inflation, not invented."""
+
+    low, high = refreeze["instrumentation_cost_band_us"]
+    samples = refreeze["void_run"]["instrumentation_inflation_samples_ns"].values()
+    assert low > 0.0
+    for value in samples:
+        assert low * 1000.0 < value < high * 1000.0
+
+
+def test_the_void_run_is_recorded_as_void_with_its_violated_guards(refreeze: dict) -> None:
+    void = refreeze["void_run"]
+    assert void["verdict"] == "void"
+    assert set(void["violated_guards"]) == {"G9", "G10", "G11"}
+    assert void["job"] == "195964"
+
+
+def test_every_refreeze_guard_and_repair_appears_in_the_prose(refreeze: dict) -> None:
+    prose = REFREEZE_MD.read_text(encoding="utf-8")
+    for guard in refreeze["fatal_guards"]:
+        assert f"**{guard['id']}**" in prose, guard["id"]
+    for repair in refreeze["repairs"]:
+        assert f"**{repair['id']}**" in prose, repair["id"]
