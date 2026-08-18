@@ -18,6 +18,7 @@ EXPECTATIONS_JSON = STUDY / "expectations.json"
 EXPECTATIONS_MD = STUDY / "expectations.md"
 
 DECLARED_REGISTRATION_COST_PS = 20_000_000
+EM_DASH = "\u2014"
 
 
 @pytest.fixture(scope="module")
@@ -102,4 +103,4 @@ def test_every_fatal_guard_is_declared_with_a_claim(freeze: dict) -> None:
 
 def test_the_freeze_prose_has_no_em_dash() -> None:
     text = EXPECTATIONS_MD.read_text(encoding="utf-8")
-    assert "—" not in text
+    assert EM_DASH not in text

@@ -18,6 +18,7 @@ EXPECTATIONS_JSON = STUDY / "expectations.json"
 RESULTS_MD = STUDY / "RESULTS.md"
 
 COST_PS = 20_000_000
+EM_DASH = "\u2014"
 
 
 @pytest.fixture(scope="module")
@@ -169,4 +170,4 @@ def test_the_report_states_what_the_run_does_not_establish() -> None:
     assert "The cost is not calibrated" in text
     assert "No packetized handshake" in text
     assert "No live new-peer re-registration" in text
-    assert "—" not in text
+    assert EM_DASH not in text
