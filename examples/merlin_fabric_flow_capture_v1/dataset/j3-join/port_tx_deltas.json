@@ -1,0 +1,90 @@
+{
+ "node_gpu101": {
+  "hsn0": {
+   "rx_delta_bytes": 1049186092,
+   "tx_delta_bytes": 15665407
+  },
+  "hsn1": {
+   "rx_delta_bytes": 232401670902,
+   "tx_delta_bytes": 14507871927
+  },
+  "hsn2": {
+   "rx_delta_bytes": 224926,
+   "tx_delta_bytes": 228740
+  },
+  "hsn3": {
+   "rx_delta_bytes": 247158,
+   "tx_delta_bytes": 545316
+  },
+  "nmn0": {
+   "rx_delta_bytes": 709318,
+   "tx_delta_bytes": 363910
+  }
+ },
+ "node_gpu102": {
+  "hsn0": {
+   "rx_delta_bytes": 1119725978,
+   "tx_delta_bytes": 15507389
+  },
+  "hsn1": {
+   "rx_delta_bytes": 10401782,
+   "tx_delta_bytes": 2798059
+  },
+  "hsn2": {
+   "rx_delta_bytes": 950342343,
+   "tx_delta_bytes": 1116823181977
+  },
+  "hsn3": {
+   "rx_delta_bytes": 251198,
+   "tx_delta_bytes": 240986
+  },
+  "nmn0": {
+   "rx_delta_bytes": 713916,
+   "tx_delta_bytes": 354851
+  }
+ },
+ "node_gpu104": {
+  "hsn0": {
+   "rx_delta_bytes": 22067768619,
+   "tx_delta_bytes": 624209446
+  },
+  "hsn1": {
+   "rx_delta_bytes": 4914229656,
+   "tx_delta_bytes": 82659170
+  },
+  "hsn2": {
+   "rx_delta_bytes": 3651403540,
+   "tx_delta_bytes": 625450438478
+  },
+  "hsn3": {
+   "rx_delta_bytes": 12244036,
+   "tx_delta_bytes": 3224448
+  },
+  "nmn0": {
+   "rx_delta_bytes": 643315,
+   "tx_delta_bytes": 282252
+  }
+ },
+ "node_gpu105": {
+  "hsn0": {
+   "rx_delta_bytes": 3724746,
+   "tx_delta_bytes": 3560248
+  },
+  "hsn1": {
+   "rx_delta_bytes": 1254998124,
+   "tx_delta_bytes": 16863402
+  },
+  "hsn2": {
+   "rx_delta_bytes": 407417927,
+   "tx_delta_bytes": 602504330248
+  },
+  "hsn3": {
+   "rx_delta_bytes": 27651312,
+   "tx_delta_bytes": 27231722
+  },
+  "nmn0": {
+   "rx_delta_bytes": 719964,
+   "tx_delta_bytes": 354254
+  }
+ }
+}

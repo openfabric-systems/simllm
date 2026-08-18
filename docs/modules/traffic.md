@@ -959,25 +959,22 @@ default-constructed arm are unchanged.
   endpoint-process model that reproduces the i2 convergence transient
   and the staggered-join contrast within a frozen band while every
   calibrated steady quantity stays inside its accepted residual.
-- TRAF-52 (Precision; P2; M): complete the flow-capture families the
-  wave-18 window could not run. The GH200-to-GH200 cells were declared but
-  never frozen, because their jitter ladder (job 195700) cannot run before
-  the psicourse02 reservation lifts at 2026-08-19 08:00 and the chunk size
-  is not frozen before the ladder is measured; they arrive only under a
-  freeze-2 expectations-only commit with their own guard list and scored
-  denominator. The A100 cells i3-incast, j3-join and i4-incast (jobs 195730,
-  195731, 195734) remain queued behind the floating FLEX reservation;
-  x4-incast (195735) landed after the first publication and was scored
-  and folded in by exactly this protocol, passing E-I-7 at 11.095 GB/s.
-  When any remaining cell lands, its outputs drop into the study's
-  capture tree and `analyze_capture.py` scores it against the unchanged
-  frozen bands, with
-  the study's RESULTS recording, before j3 has run, that a post-specified
-  observation strains E-J-2's shared-bottleneck premise; if that relation
-  misses, its classification (specification error or machine fact) is made
-  at scoring time under the freeze's failure policy, not pre-committed. Acceptance: the missing cells captured or their impossibility
-  documented with scheduler evidence, scored against the existing freezes
-  with no band moved, and folded into the published dataset through a
+- TRAF-52 (Precision; P2; M): complete the GH200-to-GH200 flow-capture
+  family, the last family the wave-18 windows could not run. Every frozen
+  A100 cell is now captured, scored against the unchanged bands and
+  folded into the byte-locked dataset (x4 first, then i3, i4 and j3 in
+  the 2026-08-18 tranche-2 landing; the full 18-relation denominator is
+  evaluated at 16 pass and 2 honest failures, E-J-2 and E-J-3, classified
+  in the study's RESULTS as a specification error of the freeze's
+  shared-bottleneck and stationarity premises, with the bands left
+  unwidened). The GH cells were declared but never frozen, because their
+  jitter ladder (job 195700, still pending) cannot run before the
+  psicourse02 reservation lifts and the chunk size is not frozen before
+  the ladder is measured; they arrive only under a freeze-2
+  expectations-only commit with their own guard list and scored
+  denominator. Acceptance: the GH family captured under freeze 2 or its
+  impossibility documented with scheduler evidence, scored against its
+  own frozen bands, and folded into the published dataset through a
   packaging commit that preserves every existing byte lock.
 - TRAF-48 (Precision; P1; L): capture a cross-node collective on an RDMA fabric
   with GPUDirect RDMA active, which is the fabric the shipped cross-node

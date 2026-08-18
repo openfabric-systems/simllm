@@ -1,16 +1,20 @@
 # Merlin fabric flow capture v1 results
 
-The reviewed state is **PARTIAL by queue, clean by evidence: 11 of 18
-frozen relations evaluated, all 11 pass, every fatal guard held in every
-captured cell, and 7 relations unevaluated because the psicourse
-reservations pin the four-and-five-node A100 allocations until 2026-08-19
-08:00**. The study publishes the byte-locked reference dataset the wave-19
-Slingshot calibration comparison will consume: 630,293 verified 8 MiB
-chunks across the scored cells (782,825 including the post-specified join
-cell), each with a destination-clock completion timestamp, over one solo
-stream, two incast cells (three-node degree 2 and the two-node
-four-GPU-source shape), one mixed-architecture pair in both directions,
-and one post-specified two-flow join. This study makes no fabric-model
+The reviewed state is **COMPLETE for the A100 families: 18 of 18 frozen
+relations evaluated, 16 pass and 2 fail honestly (E-J-2 and E-J-3, the
+join cell's established-flow bars, classified below under the freeze's
+failure policy), every fatal guard held in every captured cell, and only
+the GH200-to-GH200 family still gated on its freeze-2 jitter ladder**.
+The study publishes the byte-locked reference dataset the wave-19
+Slingshot calibration comparison consumes: 1,305,427 verified 8 MiB
+chunks across the scored cells (1,457,959 including the post-specified
+join cell), each with a destination-clock completion timestamp, over one
+solo stream, a full incast degree ladder (degrees 1 through 4 plus the
+two-node four-GPU-source shape), the step-wise join cell, one
+mixed-architecture pair in both directions, and one post-specified
+two-flow join. The incast ladder's aggregate is non-monotone in degree
+(4.99, 8.55, 10.12, 8.35 GB/s at degrees 1 to 4), peaking at degree 3
+with perfect fairness throughout. This study makes no fabric-model
 claims and closes no fabric task; TRAF-51 registers the comparison and
 TRAF-52 the families still queued.
 
@@ -114,10 +118,30 @@ The last row is not discovery: it is phase 1 of the frozen mx-pair cell,
 and its 8-byte one-way value is the one scored under E-M-3; it appears in
 this table once, for comparability with the discovery pairs above it.
 
-The all-pair matrix jobs (195694 pinned, 195737 unpinned, four nodes each)
-never scheduled inside the window and remain queued; the pairs above are
-what the discovery reached. Pairs never allocated are reported as never
-allocated, not interpolated.
+The all-pair matrix jobs both landed 2026-08-18 evening (195694 pinned to
+gpu101, gpu102, gpu103, gpu105 in 42 seconds; 195737 unpinned, drawing
+the same four nodes, in 44 seconds), giving two independent samples of
+the full six-pair 8-byte matrix, now packaged under `dataset/discovery/`
+beside the frozen first two-node sample (whose `disco_matrix.json` copies
+in bit-identical to its freeze-pinned digest `922f88dd...`):
+
+| Pair | RTT 195694 / 195737 (us) | one-way 195694 / 195737 (us) |
+|---|---|---|
+| gpu101-gpu102 | 82.24 / 86.08 | 22.53 / 22.53 |
+| gpu101-gpu103 | 79.96 / 87.47 | 22.53 / 30.72 |
+| gpu101-gpu105 | 80.17 / 76.52 | 20.48 / 21.50 |
+| gpu102-gpu103 | 82.17 / 79.19 | 63.49 / 60.42 |
+| gpu102-gpu105 | 74.85 / 77.09 | 35.84 / 40.96 |
+| gpu103-gpu105 | 83.73 / 74.90 | 22.53 / 23.55 |
+
+Back-to-back RTTs are uniform across all pairs (74.9 to 87.5 us, no
+pair structure), while the isolated one-way medians show a reproducible
+elevation on exactly the two pairs involving gpu102 as a receiver-side
+endpoint (60 to 63 us on gpu102-gpu103 and 36 to 41 us on gpu102-gpu105,
+in both samples), consistent with resident load on that node rather
+than fabric distance. gpu104 pairs were never sampled by these jobs
+(the pinned set predates the FLEX discovery) and are reported as never
+sampled. All of this is unscored discovery evidence.
 
 ## Cells and runs
 
@@ -127,21 +151,23 @@ allocated, not interpolated.
 | `s1-stream` | 195728 | 2 x 1 (gpu102 dest, gpu105 source) | 00:05:14 | complete, rc 0 |
 | `i2-incast` | 195729 | 3 x 1 (gpu102 dest; gpu103, gpu105 sources) | 00:03:14 | complete, rc 0 |
 | `j2x-join` post-specified | 195764 | 3 x 1 (gpu102 dest; gpu103, gpu105 sources) | 00:03:12 | complete, rc 0 |
-| `i3-incast` | 195730 | 4 x 1 | | **queued, never ran** (estimated 2026-08-19 09:10) |
-| `j3-join` | 195731 | 4 x 1 | | **queued, never ran** (estimated 2026-08-19 09:40) |
-| `i4-incast` best effort | 195734 | 5 x 1 | | **queued, never ran** (estimated 2026-08-19 08:00) |
+| `i3-incast` | 195730 | 4 x 1 (gpu101 dest; gpu102, gpu104, gpu105 sources) | 00:03:14 | complete, rc 0; landed 2026-08-18 evening by backfill, folded in by the disclosed tranche-2 packaging |
+| `j3-join` | 195731 | 4 x 1 (gpu101 dest; gpu102, gpu104, gpu105 sources) | 00:04:13 | complete, rc 0; landed 2026-08-18 evening, folded in with two honest relation failures recorded below |
+| `i4-incast` best effort | 195734 | 5 x 1 (gpu101 dest; all four other A100 nodes source) | 00:03:12 | complete, rc 0; landed 2026-08-18 evening, every A100 node in one cell |
 | `x4-incast` best effort | 195735 | 2 x 4 (gpu102 sources, gpu105 dest) | 00:03:17 | complete, rc 0; landed overnight after the first publication and was folded in by the disclosed follow-up packaging |
 
-The blocking mechanism is structural, not luck: the two psicourse
-reservations hold two A100 nodes and two GH200 nodes until 2026-08-19
-08:00, the FLEX reservation floats onto whichever A100 nodes go idle, and
-a four-or-five-node 1-GPU allocation needs more simultaneous free nodes
-than the three that remain. Reproduction is mechanical: the queued jobs
-were submitted from the committed harness; when any of them lands, its
-outputs drop into the same capture tree and `analyze_capture.py` scores it
-against the same frozen bands with no code change. **Nothing about the
-missing cells is estimated, extrapolated or inferred**; their relations
-are unevaluated, never passed and never failed.
+At first publication the blocking mechanism was structural: the psicourse
+reservations plus the floating FLEX reservation left too few simultaneous
+free nodes for a four-or-five-node allocation. On the evening of
+2026-08-18 the scheduler backfilled all three remaining A100 cells (and
+both pair-matrix discovery jobs) onto windows that included the
+FLEX-reserved nodes, hours before the reservation lift. Each landed cell
+was collected, digest-verified byte-for-byte against the Merlin originals
+(231 files across the five late trees, zero mismatches; the j3 pull
+landed within seconds of job end and was re-verified specifically to rule
+out a partial flush), and scored by the byte-unchanged frozen analyzer:
+the reproduction path worked exactly as this record promised, three more
+times.
 
 The GH200-to-GH200 family is not in this freeze at all: as declared, it
 arrives only under a freeze-2 expectations commit gated on its own jitter
@@ -169,7 +195,7 @@ worth stating because four of the ten passing relations read that cell.
   enforced in-job for the homogeneous cells, transport half enforced
   in-job for mx, both halves re-derived for every cell by the analyzer
   from the packaged evidence.
-- **G2 clock and timer sanity.** Every one of the 542,760 recorded
+- **G2 clock and timer sanity.** Every one of the 1,457,959 recorded
   completion timestamps is finite, positive, and strictly increasing per
   flow.
 - **G3 sequence and value conservation.** Every arriving chunk's sequence
@@ -191,36 +217,37 @@ worth stating because four of the ten passing relations read that cell.
   UUIDs), no previously published cell's verdict or stats bytes changed,
   and the corrected formula still fails on any genuinely wrong placement.
 
-## Scored relations, 10 of 18 evaluated
+## Scored relations, 18 of 18 evaluated: 16 pass, 2 fail
 
 | Relation | Band | Measured | Verdict |
 |---|---|---|---|
-| E-T-1 tracer discipline, every frozen captured cell | floor p50 under 1.0 percent and spread under 0.3 percent of median chunk service | s1 0.90/0.06, i2 0.64/0.09, x4 0.63/0.09 (worst rank), mx-gh2a 0.20/0.03, mx-a2gh 0.55/0.02 percent | pass |
+| E-T-1 tracer discipline, every frozen captured cell | floor p50 under 1.0 percent and spread under 0.3 percent of median chunk service | all eight frozen cells within bounds (worst rank 0.90 percent p50, on s1) | pass |
 | E-S-1 s1 steady goodput | [2.0, 5.5] GB/s | 4.991 GB/s | pass |
 | E-S-2 s1 per-chunk p95 over p50 | at most 1.5 | 1.322 | pass |
 | E-I-1 i2 aggregate steady | [1.8, 9.0] GB/s | 8.548 GB/s | pass, 95 percent of the upper edge |
 | E-I-2 i2 aggregate over s1 steady | [0.9, 2.2] | 1.713 | pass |
-| E-I-3 i3 aggregate steady | [1.8, 12.0] GB/s | | unevaluated |
-| E-I-4 i3 aggregate over s1 | [0.9, 3.2] | | unevaluated |
-| E-I-5 Jain in every incast cell that runs | at least 0.6 | i2: 0.9795, x4: 0.9496 | pass |
-| E-I-6 i4 aggregate steady | [1.8, 14.0] GB/s | | unevaluated |
+| E-I-3 i3 aggregate steady | [1.8, 12.0] GB/s | 10.115 GB/s | pass |
+| E-I-4 i3 aggregate over s1 | [0.9, 3.2] | 2.027 | pass |
+| E-I-5 Jain in every incast cell that runs | at least 0.6 | i2: 0.9795, i3: 0.9995, i4: 1.0000, x4: 0.9496 | pass |
+| E-I-6 i4 aggregate steady | [1.8, 14.0] GB/s | 8.354 GB/s | pass |
 | E-I-7 x4 aggregate steady | [1.8, 12.0] GB/s | 11.095 GB/s | pass, 92 percent of the upper edge |
-| E-J-1 j3 flow-0 stage-0 over s1 | [0.7, 1.3] | | unevaluated |
-| E-J-2 j3 flow-0 stage-1 over stage-0 | at most 1.05 | | unevaluated |
-| E-J-3 j3 flow-0 stage-2 over stage-1 | at most 1.05 | | unevaluated |
-| E-J-4 j3 aggregate floor after joins | at least 0.7 x stage 0 | | unevaluated |
+| E-J-1 j3 flow-0 stage-0 over s1 | [0.7, 1.3] | 0.8307 | pass |
+| E-J-2 j3 flow-0 stage-1 over stage-0 | at most 1.05 | 1.0729 | **FAIL** |
+| E-J-3 j3 flow-0 stage-2 over stage-1 | at most 1.05 | 1.0894 | **FAIL** |
+| E-J-4 j3 aggregate floor after joins | at least 0.7 x stage 0 | 1.8634 | pass |
 | E-M-1 gh-to-a100 steady | [0.7, 3.5] GB/s | 1.202 GB/s | pass |
 | E-M-2 a100-to-gh steady | [2.0, 8.0] GB/s | 3.336 GB/s | pass |
 | E-M-3 mixed 8 B one-way | [8, 200] us | 24.256 us | pass |
 | E-M-4 signed: a100-to-gh at least 1.3 x gh-to-a100 | at least 1.3 | 2.775 | pass |
 
 The freeze's independence disclosure stands: the 18 relations read about
-13 independent quantities, and the 11 evaluated ones read about 9. Three
-qualifications on the passing set. E-T-1 and E-I-5 are quantified over
-"every cell that runs", so their passes are provisional: E-T-1 currently
-covers five frozen cells and E-I-5 two incast cells (both re-evaluated
-when x4 landed, both still passing), and they are re-evaluated again if
-any still-queued cell lands. E-M-3's band [8, 200] us was wide
+13 independent quantities, all now evaluated. (The previous revision's
+section header still said 10 evaluated while its own table showed 11, a
+merge-era slip corrected here.) Three qualifications on the passing set.
+E-T-1 and E-I-5 are quantified over "every cell that runs"; with every
+A100 cell captured they cover eight frozen cells and four incast cells
+respectively, both passing, and this freeze's scope is now closed (the
+GH family arrives only under freeze 2 with its own denominator). E-M-3's band [8, 200] us was wide
 enough that failure was implausible short of a harness defect: its lower
 edge is 1.6 times this study's own stated floor and its upper edge 8
 times the largest observation in hand at freeze time, so its pass carries
@@ -231,18 +258,36 @@ wrote them; with both sides on the final-20-second definition the ratio
 is 1.7157 against the published 1.7129, and the verdict is unchanged
 under either reading.
 
-**A warning the post-specified cell raises about E-J-2.** In j2x (unscored)
-the established flow's post-join steady was 1.054 times its solo steady,
-just past the 1.05 edge E-J-2 freezes for j3. The relation's reasoning ("a
-saturating flow cannot gain from a competitor") assumed a shared
-bottleneck, and the post-specified observation is source-stack-bound
-behavior in which the established flow need not lose anything. If j3 lands
-and E-J-2 misses, the freeze's failure policy applies as written: the miss
-is reported as refuted with a statement of whether it is a specification
-error of the freeze or a fact about the machine, weighing this evidence,
-and the classification is made then, not pre-committed from a
-post-specified measurement now. Either way the band is not widened.
-Recorded before j3 has run so the option is not invented after a miss.
+**The two failures, classified under the freeze's failure policy.** E-J-2
+measured 1.0729 and E-J-3 measured 1.0894 against the frozen bar of at
+most 1.05: the established flow's steady goodput rose about 7 then 9
+percent across the two joins instead of holding or falling. Both bands
+are refuted as written and neither is widened. The classification the
+policy requires, made now with the evidence on the table: **a
+specification error in this freeze, on two counts**. First, the premise
+("a saturating flow cannot gain from a competitor") presumed a shared
+bottleneck, and the campaign's own scored cells establish the machine is
+source-stack-bound (i2, i3, i4 and x4 all scale aggregate with stack
+count), so a competitor need not take anything from the established flow
+and the premise does not describe this machine. Second, the bar compares
+two 20-second steady windows of a rate process whose documented
+variability exceeds the 5 percent headroom: the solo stream's 1-second
+bins span 4.245 to 5.562 GB/s, and flow 0's stage-0 window caught a 3.6
+to 3.7 GB/s excursion in the final seconds before the first join (its
+earlier stage-0 bins sat near 4.4), depressing the denominator. The
+age-ramp alternative was checked and refuted: the s1 control shows a
+60-second-old flow already at steady rate (5.026 GB/s at age 40 to 60
+against 5.085 at 100 to 120), so the rise is not TCP ramp. The machine
+fact worth keeping: the established flow ran fastest with two
+competitors present (4.846 GB/s stage-2 steady against 4.146 solo
+steady), so the harm the relations guarded against, competitors stealing
+throughput from an established flow, did not occur in any direction;
+what failed is the freeze's assumption that a socket flow's rate is
+stationary enough for a 5 percent bar on 20-second windows. The
+post-specified j2x cell flagged exactly this before j3 ran (unscored
+ratio 1.054), and the pre-run revision of this paragraph, preserved in
+history, recorded that warning without pre-committing the
+classification.
 
 ## Descriptive statistics (the dataset)
 
@@ -291,6 +336,62 @@ allocation is itself a measured, reportable transient. The per-source
 asymmetry (gpu105 sustains 4.89 GB/s where gpu103 sustains 3.66) reappears
 identically in the post-specified join cell, so source identity, not flow
 count alone, shapes per-flow rates on this stack.
+
+### i3-incast (job 195730, gpu102, gpu104 and gpu105 into gpu101, 180 s)
+
+| Flow | Source | Chunks | delta p50 us | delta p95 us | steady GB/s |
+|---|---|---:|---:|---:|---:|
+| 0 | gpu102 | 73,316 | 2492 | 2578 | 3.425 |
+| 1 | gpu104 | 70,101 | 2496 | 2616 | 3.262 |
+| 2 | gpu105 | 73,537 | 2493 | 2749 | 3.429 |
+
+Aggregate steady 10.115 GB/s (2.027 times s1), Jain 0.9995, convergence
+43 seconds. Each source rode one hsn port (614.3, 586.5 and 620.1 GB tx
+respectively, header-exact). Three near-identical per-flow rates on a
+cell whose destination differs from i2's: at degree 3 the flows share
+tightly and fairly.
+
+### i4-incast (job 195734, every other A100 node into gpu101, 180 s)
+
+| Flow | Source | Chunks | delta p50 us | delta p95 us | steady GB/s |
+|---|---|---:|---:|---:|---:|
+| 0 | gpu102 | 45,874 | 3998 | 4184 | 2.094 |
+| 1 | gpu103 | 45,846 | 3961 | 4769 | 2.093 |
+| 2 | gpu104 | 45,358 | 4007 | 4183 | 2.073 |
+| 3 | gpu105 | 45,817 | 3998 | 4323 | 2.094 |
+
+Aggregate steady 8.354 GB/s at Jain 1.0000 (per-flow rates within 1
+percent of each other), convergence 151 seconds. **The incast ladder is
+non-monotone in degree**: 4.99, 8.55, 10.12, 8.35 GB/s at degrees 1
+through 4. Degree 4 falls 17 percent below degree 3 while fairness goes
+exactly flat, and settling slows (43 seconds at degree 3, 151 at degree
+4): the destination side begins to bind somewhere between three and four
+source stacks, and it binds fairly. The ceiling analysis says which side
+it is not: 8.35 GB/s sits at 31 percent of the destination's PCIe bound
+and 33 percent of one port, so neither wire nor PCIe saturates; the
+onset is in the host stack. This is a descriptive observation for the
+calibration consumer, not a model claim.
+
+### j3-join (job 195731, three staged joins into gpu101, 240 s)
+
+Flow 0 (gpu102) established at T0; flow 1 (gpu104) joins at 60 s; flow 2
+(gpu105) joins at 120 s.
+
+| Stage | Active | Aggregate steady GB/s | Flow 0 | Flow 1 | Flow 2 | Jain | Convergence |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 0: [0, 60) | 0 | 4.146 | 4.146 | | | 1.000 | 0 s |
+| 1: [60, 120) | 0, 1 | 7.725 | 4.448 | 3.277 | | 0.978 | 1 s |
+| 2: [120, 240) | 0, 1, 2 | 13.347 | 4.846 | 3.540 | 4.961 | 0.980 | 0 s |
+
+275,285 chunks. Every join settled within one second under the frozen
+convergence definition, reproducing at degree 3 what the post-specified
+j2x cell showed at degree 2: staggered joins on pre-established
+connections are near-instantaneous and non-disruptive, in sharp contrast
+to the simultaneous-start settling of the incast cells (43 to 151
+seconds). The stage-2 aggregate (13.347 GB/s) is the campaign's largest,
+and E-J-4 passed at 1.863 against its 0.7 floor: joins grew the
+aggregate rather than collapsing it. The two failed established-flow
+bars are classified above.
 
 ### x4-incast (job 195735, four gpu102 GPUs into one gpu105 GPU, 180 s)
 
@@ -390,12 +491,12 @@ carry 2.8 times more the other way.
 The wave-19 calibration comparison consumes exactly the files under
 `dataset/`, whose per-file SHA-256 and byte sizes are pinned in
 [dataset/MANIFEST.json](dataset/MANIFEST.json), itself locked at SHA-256
-`67f898a04dd0e6787d4d50d6139f99f3c507963c6c937a9505434cf2d9dca002` and
+`780fec5dac34a21199685a6333120e67fe39007c58b8cc53eb09b521a76f6e18` and
 enforced in CI by `tests/test_merlin_fabric_flow_dataset.py`, which
 verifies every tracked file's hash and size, rejects unmanifested files,
 and carries a mutation-sensitive negative control.
 
-Two disclosed re-packagings, each with the manifest transition stated.
+Three disclosed re-packagings, each with the manifest transition stated.
 First, `dd45890c...` (commit `ab8776d`) to `a6b7e61e...` (review fix
 round): exactly five files changed, all under `stats/` (relative job
 identity instead of a machine-local absolute path, a `hosts` field naming
@@ -404,11 +505,32 @@ added, nothing removed. Second, `a6b7e61e...` to `67f898a0...` (the x4
 cell landing): only `stats/relations.json` changed (E-I-7, E-T-1 and
 E-I-5 updated by the unchanged frozen analyzer), 40 x4 files added
 (series, summary, rank metadata, guard evidence, stats), nothing removed.
+Third, `67f898a0...` to `780fec5d...` (the tranche-2 landing of
+2026-08-18 evening): only `stats/relations.json` changed among existing
+files, and 100 files were added: the i3-incast, i4-incast and j3-join
+cells (22, 26 and 22 tracked files each, plus their stats and their 10
+bulk-side source series), 16 discovery files (the two four-node
+pair-matrix samples, 195694 and 195737, added beside the frozen
+two-node first sample 195692, each in its own directory, nothing
+overwritten), and one manifest-version snapshot. Every staged input was
+digest-verified against the Merlin originals before packaging (231
+files, zero mismatches). The snapshot,
+`manifest_versions/67f898a0...json`, preserves the tranche-1 manifest
+byte-exact (its own SHA-256 equals its name): the
+merlin_ss_fabric_loadbearing_v1 study froze that digest as its run-time
+dataset identity, and its repository test previously pinned the living
+manifest to it, which would have forbidden this dataset from ever
+growing through its own committed fold-in protocol. That test now
+verifies the frozen claim exactly: the consumed manifest version exists
+byte-exact in-tree and every file that study's frozen analyzer consumes
+still hashes to that version's entries. The loadbearing analyzer itself
+is untouched, its consumed files are byte-unchanged, and this
+accommodation is flagged for that study's owner to ratify.
 Across both transitions **every previously published series and metadata
 byte is unchanged**, verifiable by comparing the manifests across the
 three commits.
 
-- **Repo-tracked reference (114 manifest-listed files, 6.87 MB, plus the
+- **Repo-tracked reference (204 manifest-listed files, plus the
   manifest itself):** per-cell destination-side per-chunk series
   (`*_dest.csv.gz`, deterministic gzip), cell summaries, per-rank metadata
   (hosts, roles, T0 clocks, tracer floors), the mixed-pair matrix probe,
@@ -421,8 +543,9 @@ three commits.
   in-run `source.sha256`. Running
   `analyze_capture.py --dataset-root dataset/` re-derives all seven guard
   verdicts and all 18 relation rows from the tracked tree alone.
-- **Bulk-side mirror (11 files, hashed in the manifest under
-  `bulk/`):** the eleven source-side series (`*_src.csv.gz`), one per flow;
+- **Bulk-side mirror (21 files, hashed in the manifest under
+  `bulk/`):** the twenty-one source-side series (`*_src.csv.gz`), one per
+  flow;
   nothing else is hashed under `bulk/`. They live on the site storage root
   (see `docs/architecture.md`) and, as raw CSVs, in the Merlin capture
   tree under the per-job directories named in this record.
@@ -447,13 +570,11 @@ captured cell was void.
   Slingshot-class fabric instance versus this dataset on the incast and
   join families, with the socket host-stack floor separated from fabric
   serialization so the fabric model is not fitted to host-stack behavior.
-- **TRAF-52** registers the families this window could not run: the
-  GH200-to-GH200 cells (freeze 2, gated on the gh-2n jitter ladder, job
-  195700) and the still-queued A100 cells i3/j3/i4 (jobs 195730, 195731,
-  195734), all reproducible from the committed harness, scoreable against
-  the frozen bands with no code change, and foldable into the dataset
-  only through a follow-up packaging commit that moves no band. The x4
-  cell (195735) demonstrated the protocol: it landed after the first
-  publication and was scored and folded in exactly that way.
+- **TRAF-52** now covers only the GH200-to-GH200 family (freeze 2, gated
+  on the gh-2n jitter ladder, job 195700, still pending). Every frozen
+  A100 cell has been captured, scored against the unchanged bands and
+  folded in: x4 first, then i3, i4 and j3 in the tranche-2 landing, each
+  through the same packaging protocol with its manifest transition
+  disclosed and no band moved.
 - The wave-16 leftover job 195649 remains queued and belongs to that
   study's reproduction path, untouched by this one.

@@ -1,0 +1,112 @@
+{
+ "node_gpu101": {
+  "hsn0": {
+   "rx_delta_bytes": 141293549138,
+   "tx_delta_bytes": 1648036261
+  },
+  "hsn1": {
+   "rx_delta_bytes": 229978,
+   "tx_delta_bytes": 748230
+  },
+  "hsn2": {
+   "rx_delta_bytes": 124298,
+   "tx_delta_bytes": 112702
+  },
+  "hsn3": {
+   "rx_delta_bytes": 139262,
+   "tx_delta_bytes": 146384
+  },
+  "nmn0": {
+   "rx_delta_bytes": 514837,
+   "tx_delta_bytes": 250583
+  }
+ },
+ "node_gpu102": {
+  "hsn0": {
+   "rx_delta_bytes": 10399980,
+   "tx_delta_bytes": 626448
+  },
+  "hsn1": {
+   "rx_delta_bytes": 118776,
+   "tx_delta_bytes": 104618
+  },
+  "hsn2": {
+   "rx_delta_bytes": 459176121,
+   "tx_delta_bytes": 387164576717
+  },
+  "hsn3": {
+   "rx_delta_bytes": 165004,
+   "tx_delta_bytes": 152070
+  },
+  "nmn0": {
+   "rx_delta_bytes": 503276,
+   "tx_delta_bytes": 222997
+  }
+ },
+ "node_gpu103": {
+  "hsn0": {
+   "rx_delta_bytes": 247476903,
+   "tx_delta_bytes": 386789546718
+  },
+  "hsn1": {
+   "rx_delta_bytes": 660918,
+   "tx_delta_bytes": 21113884
+  },
+  "hsn2": {
+   "rx_delta_bytes": 483714,
+   "tx_delta_bytes": 9354440
+  },
+  "hsn3": {
+   "rx_delta_bytes": 210614,
+   "tx_delta_bytes": 204338
+  },
+  "nmn0": {
+   "rx_delta_bytes": 499749,
+   "tx_delta_bytes": 226870
+  }
+ },
+ "node_gpu104": {
+  "hsn0": {
+   "rx_delta_bytes": 17065906110,
+   "tx_delta_bytes": 515789772
+  },
+  "hsn1": {
+   "rx_delta_bytes": 3630216468,
+   "tx_delta_bytes": 61876448
+  },
+  "hsn2": {
+   "rx_delta_bytes": 2182297758,
+   "tx_delta_bytes": 382808659157
+  },
+  "hsn3": {
+   "rx_delta_bytes": 9463722,
+   "tx_delta_bytes": 700032
+  },
+  "nmn0": {
+   "rx_delta_bytes": 491628,
+   "tx_delta_bytes": 225904
+  }
+ },
+ "node_gpu105": {
+  "hsn0": {
+   "rx_delta_bytes": 4965887,
+   "tx_delta_bytes": 2735298
+  },
+  "hsn1": {
+   "rx_delta_bytes": 13958492,
+   "tx_delta_bytes": 1558608
+  },
+  "hsn2": {
+   "rx_delta_bytes": 345162494,
+   "tx_delta_bytes": 386451365910
+  },
+  "hsn3": {
+   "rx_delta_bytes": 103391330,
+   "tx_delta_bytes": 25004414
+  },
+  "nmn0": {
+   "rx_delta_bytes": 482654,
+   "tx_delta_bytes": 224139
+  }
+ }
+}

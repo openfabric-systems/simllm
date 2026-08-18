@@ -314,10 +314,31 @@ def test_descriptor_round_trips_into_a_runnable_cell():
 
 
 def test_dataset_manifest_pin_matches_the_freeze():
+    # The loadbearing freeze's FG-1 claims a run-time identity: at that
+    # study's runs the dataset manifest hashed to the frozen value, and
+    # every file its analyzer reads verified against that manifest. The
+    # capture dataset is a living dataset whose committed protocol folds
+    # late cells in through packaging commits (the consumed x4 cell itself
+    # arrived that way), so this test verifies exactly the frozen claim
+    # rather than pinning the living manifest forever: the consumed
+    # manifest version is preserved byte-exact under
+    # dataset/manifest_versions/<digest>.json, and every file the frozen
+    # analyzer consumes still hashes to that version's entry.
     import hashlib
 
-    digest = hashlib.sha256((DATASET / "MANIFEST.json").read_bytes()).hexdigest()
-    assert digest == analyzer.FROZEN_DATASET_MANIFEST_SHA256
+    snapshot = (DATASET / "manifest_versions"
+                / f"{analyzer.FROZEN_DATASET_MANIFEST_SHA256}.json")
+    data = snapshot.read_bytes()
+    assert hashlib.sha256(data).hexdigest() == \
+        analyzer.FROZEN_DATASET_MANIFEST_SHA256
+    frozen_manifest = json.loads(data)
+    consumed = ["stats/x4-incast_stats.json"] + [
+        f"x4-incast/x4-incast_flow{i}_dest.csv.gz" for i in range(4)]
+    for rel in consumed:
+        meta = frozen_manifest[rel]
+        blob = (DATASET / rel).read_bytes()
+        assert len(blob) == meta["bytes"], rel
+        assert hashlib.sha256(blob).hexdigest() == meta["sha256"], rel
 
 
 def test_x4_stats_agree_with_the_frozen_counts():
