@@ -161,12 +161,22 @@ metrics) and the full rnic-cn algorithm-book implementation
 (deterministic reservation ledger, windowed feedforward snapshots,
 fractional nflow, sender egress composition, BJP-derived resequencing
 window) are merged. The SimLLM pin for HTSim is on backend main at the
-ss-dragonfly fabric merge (`89b7a5a`), which carries the WQE bookkeeping
-commit, the composed SimLLM RNIC wrapper, the ABI-v2 event relay, and the
-Slingshot-class dragonfly fabric wave: the physical ss-dragonfly fabric with
+load-harness merge (`1dcbfec`), which carries the WQE bookkeeping
+commit, the composed SimLLM RNIC wrapper, the ABI-v2 event relay, the
+Slingshot-class dragonfly fabric wave (the physical ss-dragonfly fabric with
 Rosetta-style switches and progressive adaptive routing, its deterministic
-fixtures and sanity studies, the `htsim_ss_dragonfly` open-loop harness, and
-the `rnic-ss` endpoint hosted on the controlled two-tier ns-rosetta Clos.
+fixtures and sanity studies, the `htsim_ss_dragonfly` harness, and
+the `rnic-ss` endpoint hosted on the controlled two-tier ns-rosetta Clos),
+and the load harness that closed HTSIM-29 and HTSIM-30: paced sources at
+declared sub-line-rate offered load, closed-loop sources with a declared
+endpoint think-time seam for the measured Merlin per-chunk floors, explicit
+per-flow cells with distinct destination ports, and a single-switch-capable
+join, all default-off with the legacy invocations locked to golden bytes.
+Its pre-registered discrimination experiment showed two buffer
+configurations byte-identical at capture-shaped load and separated under a
+saturating shared-egress cell (13 genuine-risk rows, 8 entailed rows
+recorded but not counted), with the claim narrowed by review to what the
+new capabilities add: expressing the capture-shaped regime at all.
 The backend design note (`docs/ss-dragonfly-fabric/README.md` in the
 submodule) labels the wave "hosted, calibration pending"; the rnic driver
 rejects dragonfly `-topo` files at its own seam until a calibration ruling.
@@ -1343,24 +1353,6 @@ created" statement stands and refers to different, never-registered work.
   `htsim_ss_dragonfly` fabric harness, not this endpoint.
 - HTSIM-4 (Completeness; P2; M): GOAL parser hardening and the checked-in
   `txt2bin` build target.
-- HTSIM-29 (Completeness; P2; M): rate-controlled or closed-loop greedy
-  sources for `htsim_ss_dragonfly`. The harness's open-loop sources
-  inject at exactly the host link rate, so host-stack-bound offered
-  load (the Merlin captures run each stack at about a fifth of a port)
-  is inexpressible, and any shared-egress multi-flow cell lands in the
-  analyzed admission-capture artifact regime. The TRAF-51 calibration
-  therefore drove multi-flow families as compositions over solo cells;
-  shared-port families (the queued x4 capture above all) need a source
-  that offers at a configured rate or closes the loop per chunk.
-  Backend-repo work, registered here.
-- HTSIM-30 (Completeness; P2; S): multi-receiver patterns for
-  `htsim_ss_dragonfly`. Both shipped patterns send every flow to one
-  receiver host, and the join pattern rejects single-switch instances
-  outright (degree must be below the router count), so a
-  distinct-destination-port multi-flow cell, which is the shape every
-  captured Merlin incast and join family actually has, cannot couple
-  through one switch in one invocation. Backend-repo work, registered
-  here.
 - HTSIM-31 (Completeness; P2; S): update the backend design note's
   status section (`docs/ss-dragonfly-fabric/README.md`) from "hosted,
   calibration pending" to the calibrated-for-what wording the TRAF-51
