@@ -243,6 +243,33 @@ the flow-level work the GOAL emitter renders.
   frozen exclusion, and the open-loop shared-egress artifact regime is
   echoed only as a positive control. It changes no profile, no envelope
   and no reported metric.
+- The wave-21 load-bearing recalibration
+  ([merlin ss fabric loadbearing](../../examples/merlin_ss_fabric_loadbearing_v1/RESULTS.md))
+  reran the comparison with the fabric genuinely carrying risk through
+  the pinned load harness: the measured per-stack endpoint floors enter
+  as closed-loop think times and the sharing waits are simulated, so
+  the composed quantities are simulator outputs rather than external
+  arithmetic. All 8 scored rows passed with no guard fired: the
+  captured x4 shared-egress aggregate is reproduced within the frozen
+  band (composed 10.63 against measured 11.10 GB/s; the whole 4.21
+  percent residual is simulated queueing, and the disclosed fluid
+  napkin predicted it to 0.4 percent; the band is coarse by
+  construction, separating fluid-like sharing from a chunk-serializing
+  egress near 0.74 while tolerating up to roughly 2.5 times the
+  observed wait, so the sharing-mechanism class is validated rather
+  than a 4-percent tolerance), two buffer configurations
+  byte-identical at capture-shaped load produce opposite registered
+  verdicts on the composed x4 cell (4 MiB faults by the registered
+  closed-loop drop signature, 32 MiB completes in band) plus banded
+  saturating-arm separations, and the p50-static endpoint floor
+  overshoots the measured aggregate by the registered 12.7 percent,
+  refuting static p50 floors for skewed shared-port families (TRAF-53
+  evidence). None of this claims which buffer value the Merlin switch
+  physically has: the closed-loop abstraction carries no loss
+  recovery while the real transport does. A frozen late-arrival path
+  stands ready to score any tranche-2 shared-egress group with no
+  code change. It changes no profile, no envelope and no reported
+  metric.
 - Because the table is a surcharge on a transport that already contains one
   propagation delay, `realized_fixed_cost_ps` is what a run actually charges,
   and it exceeds a source capture that was itself a complete fixed cost by up
@@ -875,16 +902,36 @@ default-constructed arm are unchanged.
   (composed 1.77 and 0.983 against measured 1.72, 0.979 and 0.991); the
   mixed pair's 2.77x clause took the frozen out-of-scope branch with
   its endpoint floors handed to TRAF-53. What remains before the
-  registered clause is fully met: reproducing the 119-second
-  simultaneous-start convergence transient (impossible under a static
-  endpoint floor; needs the TRAF-53 endpoint-dynamics term), the
-  shared-port and higher-degree families (their captures are TRAF-52;
-  simulating them needs the backend harness gaps HTSIM-29 and
-  HTSIM-30 closed), any multi-switch adaptive-routing claim
-  (structurally unreachable at the single-switch shape that five-node
-  discovery determines), and fabric-model discrimination itself, which
-  needs loads near the port rate or fabric-side measurements the
-  capture does not contain. Acceptance: the remaining behaviors within
+  registered clause is fully met, after the wave-21 load-bearing
+  recalibration
+  ([merlin ss fabric loadbearing](../../examples/merlin_ss_fabric_loadbearing_v1/RESULTS.md),
+  freeze `179cdc9`) closed the load-bearing gap for the captured
+  shared-egress family: on the same declared instance, with the
+  pinned load harness's think-time seam carrying the per-stack
+  rate-derived endpoint floors, all 8 scored rows passed with no
+  guard fired, the x4 aggregate landed at 0.958 of measured inside
+  the frozen [0.90, 1.001] band with the entire residual being
+  simulated sharing waits (a coarse band by construction: it
+  distinguishes the sharing-mechanism class, tolerating up to roughly
+  2.5 times the observed wait), composed-level discrimination between two
+  buffer configurations was demonstrated (byte-identical at
+  capture-shaped load, opposite registered verdicts under the
+  composed x4 cell, banded saturating separations), and the
+  p50-static floor was refuted for skewed shared-port families (the
+  registered 12.7 percent overshoot, handed to TRAF-53). What remains
+  before the registered clause is fully met: reproducing the
+  119-second simultaneous-start convergence transient (impossible
+  under a static endpoint floor; needs the TRAF-53 endpoint-dynamics
+  term), the tranche-2 families (their captures are TRAF-52; the
+  recalibration's frozen late-arrival path scores any shared-egress
+  group among them with no code change), any multi-switch
+  adaptive-routing claim (structurally unreachable at the
+  single-switch shape that five-node discovery determines), the true
+  source-shared x4 mapping (inexpressible until HTSIM-32 and HTSIM-33
+  land; the destination-shared abstraction is declared with its cost
+  stated), and any statement about which fabric configuration Merlin
+  physically has, which needs fabric-side measurements the capture
+  does not contain. Acceptance: the remaining behaviors within
   tolerances stated in a freeze chain against byte-locked captures,
   with the endpoint floor an explicit separate term and no validated
   steady quantity regressing outside its accepted residual.
@@ -900,6 +947,13 @@ default-constructed arm are unchanged.
   (gpu105 sustains 4.89 to 4.99 GB/s where gpu103 sustains 3.66 to
   4.02), burst-versus-sustained differences of tens of percent with
   pair-dependent sign, and the mixed pair's 2.775x direction asymmetry.
+  The wave-21 recalibration added a measured refutation of the p50
+  form of the static floor on the shared-port x4 family: p50-derived
+  think times overshoot the measured aggregate by the registered 12.7
+  percent because the captured cadences are right-skewed (mean over
+  median 1.082 to 1.248 per stack), so no single static think time
+  reproduces both the mean and the median; an endpoint-process model
+  with genuine cadence dispersion is what closes that gap.
   The identifying observables are in the byte-locked capture dataset;
   the surrogate being replaced is the static floor. Acceptance: an
   endpoint-process model that reproduces the i2 convergence transient

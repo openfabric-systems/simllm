@@ -1,0 +1,44 @@
+# Closed-loop shared-egress variant of the declared Merlin instance for
+# the TRAF-51 load-bearing recalibration. Identical to
+# examples/merlin_ss_fabric_calibration_v1/merlin_a100_singleswitch_v1.topo
+# (SHA-256 c0a0050b074385b7daa8b9fa83619dfd49ec1bcbf21fd82447b6029d6cff8f18)
+# in every parameter except rosetta_buffer_bytes, which is raised from the
+# 4 MiB fixture default to 32 MiB.
+#
+# Why the buffer differs, stated as provenance:
+#   rosetta_buffer_bytes 33554432: declared-with-reason. Rosetta buffer
+#     sizing is unpublished, so no measured value exists to encode. The
+#     closed-loop source models the socket stack's self-clocked chunk
+#     cadence WITHOUT loss recovery (a physical drop is a fatal harness
+#     error by the registered load-harness contract), so the abstraction
+#     is valid only where no drop occurs. Four closed-loop flows through
+#     one shared egress hold at most one 938-packet chunk in flight each,
+#     bounding worst-case shared-buffer occupancy by three full chunk
+#     wire sizes, 3 * 938 * 9038 = 25,432,932 bytes, plus a few packets
+#     of granularity; the 4 MiB default cannot absorb even one two-burst
+#     overlap beyond 167.8 us (fill 25 wire bytes per ns), so it cannot
+#     carry the composed x4 cell at all, which the recalibration registers
+#     as a scored discrimination row rather than hiding. 32 MiB exceeds
+#     the worst-case bound by more than 8 MiB. The declared value does not
+#     tune any scored number: every occupancy the closed-loop cells can
+#     produce is below it, so any capacity at or above the bound yields
+#     byte-identical outputs, and the study checks exactly that with a
+#     64 MiB negative-control instance (structural row ST-1). The real
+#     transport carried the captured x4 traffic with TCP loss recovery
+#     absorbing any drops invisibly; nothing here claims Merlin's switch
+#     has, or lacks, this much buffer.
+#
+# Every other parameter, including the routing seed, carries the v1
+# instance's provenance unchanged; see that file for the per-parameter
+# tags. Every scored invocation passes -wire_bytes 9038 -header_bytes 90.
+topology dragonfly
+hosts_per_router 20
+routers_per_group 1
+global_links_per_router 0
+groups 1
+host_link_gbps 200
+host_link_latency_ps 300000
+switch_pipeline_ps 350000
+rosetta_buffer_bytes 33554432
+max_wire_packet_bytes 9038
+routing_seed 383530136519245852

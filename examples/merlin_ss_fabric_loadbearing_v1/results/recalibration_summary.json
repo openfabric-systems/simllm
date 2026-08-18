@@ -1,0 +1,139 @@
+{
+ "binary_sha256": "662416918457542c4fcab18aebd99f43f00cd80b5518ed78947a65e65620ce92",
+ "consistency": [
+  {
+   "detail": "control cell byte-identical across v1, x4buf32, x4buf64",
+   "holds": true,
+   "id": "CN-1"
+  },
+  {
+   "detail": "staggered-join mirror cadences equal the solo formulas (chunks [137, 126], injected 246694)",
+   "holds": true,
+   "id": "CN-2"
+  },
+  {
+   "detail": "paced mirror delivers exactly what it injects at the measured rates",
+   "holds": true,
+   "id": "CN-3"
+  }
+ ],
+ "dataset_manifest_sha256": "67f898a04dd0e6787d4d50d6139f99f3c507963c6c937a9505434cf2d9dca002",
+ "derived": [
+  {
+   "band": [
+    3243,
+    3255
+   ],
+   "id": "D-1",
+   "inside": true,
+   "value": 3248
+  },
+  {
+   "holds": true,
+   "id": "D-2",
+   "value": "560255151 < 4474404382"
+  },
+  {
+   "fluid_residual_p50": 0.00041361729035704897,
+   "fluid_residual_rate": 0.003986644546244977,
+   "id": "D-3"
+  },
+  {
+   "id": "D-4",
+   "per_flow_gbps": [
+    1.6334907578181816,
+    3.0915833483636366,
+    3.0824321396363636,
+    2.8200974894545454
+   ],
+   "sim_jain": 0.9513476435322735
+  }
+ ],
+ "fatal_failures": [],
+ "observed": {
+  "sat_b32": {
+   "dropped": 437,
+   "first_drop_ps": 4474404382
+  },
+  "sat_v1": {
+   "delivered": 14295,
+   "delivered_payload_bytes": 127911660,
+   "dropped": 3685,
+   "first_drop_ps": 560255151,
+   "injected": 17980
+  },
+  "x4_p50": {
+   "aggregate_bps": 12506651927.272728,
+   "per_flow_chunks": [
+    1028,
+    2413,
+    2355,
+    2404
+   ],
+   "ratio": 1.127213617290357
+  },
+  "x4_rate": {
+   "aggregate_bps": 10627603735.272728,
+   "per_flow_chunks": [
+    1071,
+    2027,
+    2021,
+    1849
+   ],
+   "ratio": 0.957856644546245
+  }
+ },
+ "rows": [
+  {
+   "class": "exact",
+   "detail": "bins af1d1e04.. masked 4bdf0f07.. manifest {'injected': 17980, 'delivered': 14295, 'delivered_payload_bytes': 127911660, 'dropped': 3685, 'first_drop_ps': 560255151}",
+   "id": "EX-1",
+   "verdict": "PASS"
+  },
+  {
+   "class": "exact",
+   "detail": "bins 7eb66e67.. chunks 1072cd8f.. masked 4a7ce046..",
+   "id": "EX-2",
+   "verdict": "PASS"
+  },
+  {
+   "class": "behavioral",
+   "detail": "aggregate 10.627604 GB/s ratio 0.95786 band [0.90, 1.001] fluid point 0.954; per-flow [1071, 2027, 2021, 1849]",
+   "id": "BE-1",
+   "verdict": "PASS"
+  },
+  {
+   "class": "behavioral",
+   "detail": "aggregate 12.506652 GB/s ratio 1.12721 band [1.05, 1.21] fluid point 1.127; per-flow [1028, 2413, 2355, 2404]",
+   "id": "BE-2",
+   "verdict": "PASS"
+  },
+  {
+   "class": "behavioral",
+   "detail": "x4r-v1 exits (2, 2), registered message present",
+   "id": "BE-3",
+   "verdict": "PASS"
+  },
+  {
+   "class": "behavioral",
+   "detail": "first_drop_ps 4474404382 band (4474000000, 4476000000) point 4474938884",
+   "id": "BE-4",
+   "verdict": "PASS"
+  },
+  {
+   "class": "behavioral",
+   "detail": "dropped 437 band (430, 442) point 436",
+   "id": "BE-5",
+   "verdict": "PASS"
+  },
+  {
+   "class": "structural",
+   "detail": "x4r-b32 and x4r-b64 byte-identical (bins, chunks; stdout masked)",
+   "id": "ST-1",
+   "verdict": "PASS"
+  }
+ ],
+ "study": "merlin_ss_fabric_loadbearing_v1",
+ "submodule_head": "1dcbfec36a33753bf978cf6323bade1a6645fe4f",
+ "void": false
+}
