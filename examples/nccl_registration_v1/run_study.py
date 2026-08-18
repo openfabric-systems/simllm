@@ -63,6 +63,31 @@ ARMS: dict[str, tuple[Any, int | None]] = {
 }
 
 
+#: Post-specified, added in the correction round and named as such everywhere.
+#: The frozen cells never put a per-artifact fabric term above the 20 us
+#: charge, so B2's counterfactual (folding the charge inside the existing
+#: max(local, fabric) composition) stays partly visible there. This cell is
+#: mixed-tp4 at a 10 Gbit/s link, where one 32,768-byte flow serializes for
+#: 26.2 us on top of the 2.000 us propagation reference, so a folded charge
+#: would be swallowed completely and the observed delta would be zero.
+POST_SPECIFIED_CELLS: dict[str, Any] = {
+    "slow-fabric-tp4": {
+        "dims": EXPECTATIONS["cells"]["mixed-tp4"]["dims"],
+        "tp_ranks": EXPECTATIONS["cells"]["mixed-tp4"]["tp_ranks"],
+        "hosts": EXPECTATIONS["cells"]["mixed-tp4"]["hosts"],
+        "profile": "rnic-nn-fluid",
+        "roofline_efficiency": 0.7,
+        "gpu": "b100",
+        "prompt_tokens": 64,
+        "steps": 2,
+        "collectives_per_step": 4,
+        "identities_one_channel": 4,
+        "linkspeed_bps": 10_000_000_000,
+        "arms": ["off", "on"],
+    }
+}
+
+
 def _dims(spec: dict[str, int]) -> ModelDims:
     return ModelDims(
         num_layers=spec["num_layers"],
@@ -140,9 +165,9 @@ def _run_arm(
     """Replay one cell under one arm and return everything it observed."""
 
     selection, rebuild_before = ARMS[arm]
-    kwargs: dict[str, Any] = {}
-    if selection is not None:
-        kwargs["collective_registration"] = selection
+    #: The off arm names the selection explicitly. Omitting it would make the
+    #: arm identical to the feature-absent construction, which would leave G1
+    #: comparing one construction with itself.
     sink = HtsimStepSink(
         HtsimStepSinkConfig(
             profile=cell["profile"],
@@ -152,7 +177,8 @@ def _run_arm(
             placement_manifest=_manifest(list(cell["hosts"])),
             provider=RooflineProvider(efficiency=cell["roofline_efficiency"]),
             gpu=GPU_ENVELOPES[cell["gpu"]],
-            **kwargs,
+            linkspeed_bps=cell.get("linkspeed_bps", 400_000_000_000),
+            collective_registration=selection,
         )
     )
     reducer = HtsimRequestMetricReducer({"r0": 0})
@@ -182,6 +208,14 @@ def _run_arm(
                 "backend_runs": locality.backend_runs,
                 "fabric_directed_bytes": locality.fabric_directed_bytes,
                 "nvlink_directed_bytes": locality.nvlink_directed_bytes,
+                #: the exact per-artifact fields the frozen G3 names
+                "fabric_phase_service_ps": list(locality.fabric_phase_service_ps),
+                "local_phase_service_ps": list(locality.local_phase_service_ps),
+                "base_phase_latency_ps": list(locality.base_phase_latency_ps),
+                "composed_phase_service_ps": list(
+                    locality.composed_phase_service_ps
+                ),
+                "local_phase_medium": list(locality.local_phase_medium),
                 "registration_phase_cost_ps": list(
                     locality.registration_phase_cost_ps
                 ),
@@ -206,6 +240,7 @@ def _run_arm(
         )
         virtual_time_ps = result.completed_at_ps
     (row,) = reducer.totals()
+    decode_span_ps = row.last_token_at_ps - row.first_token_at_ps
     return {
         "arm": arm,
         "steps": steps,
@@ -213,13 +248,52 @@ def _run_arm(
         "tpot_ps": float(row.tpot_ps) if row.tpot_ps is not None else None,
         "ttft_registration_ps": row.ttft_media.collective_registration_ps,
         "decode_registration_ps": row.decode_media.collective_registration_ps,
-        "decode_span_ps": row.last_token_at_ps - row.first_token_at_ps,
+        "decode_span_ps": decode_span_ps,
+        #: the request half of the frozen G4, which the step half does not cover
+        "ttft_partition_conserves": (
+            row.ttft_media.total_ps == row.ttft_ps
+            and row.ttft_attribution.total_ps == row.ttft_ps
+        ),
+        "decode_partition_conserves": (
+            row.decode_media.total_ps == decode_span_ps
+            and row.decode_attribution.total_ps == decode_span_ps
+        ),
         "goal_sha256": _goal_digests(sink.config.workdir),
+        "executed_geometry": _executed_geometry(sink, len(steps)),
         "ledger_charged_ps": sink.collective_registration_ledger.charged_ps,
         "registered_identities": [
             identity.to_json()
             for identity in sink.collective_registration_ledger.registered_identities
         ],
+    }
+
+
+def _executed_geometry(sink: HtsimStepSink, executed_steps: int) -> dict[str, Any]:
+    """Read the geometry back off the sink that actually ran.
+
+    G8 compares the freeze against what executed. Deriving both sides from the
+    freeze would compare the freeze with itself, so every field here comes from
+    the constructed configuration rather than from ``expectations.json``.
+    """
+
+    config = sink.config
+    dims = config.dims
+    manifest = config.placement_manifest
+    return {
+        "dims": {
+            "num_layers": dims.num_layers,
+            "hidden_size": dims.hidden_size,
+            "intermediate_size": dims.intermediate_size,
+            "num_heads": dims.num_heads,
+            "num_kv_heads": dims.num_kv_heads,
+            "head_size": dims.head_size,
+            "vocab_size": dims.vocab_size,
+            "dtype_bytes": dims.dtype_bytes,
+        },
+        "tp_ranks": list(config.tp_ranks),
+        "hosts": [placement.hostname for placement in manifest.ranks],
+        "profile": config.profile,
+        "steps": executed_steps,
     }
 
 
@@ -244,18 +318,48 @@ def _default_construction_arm(
     reducer = HtsimRequestMetricReducer({"r0": 0})
     virtual_time_ps = 0
     makespans = []
+    steps: list[dict[str, Any]] = []
     for record in _records(cell):
         record.virtual_time_ps = virtual_time_ps
         result = sink(record)
         assert result is not None
-        reducer.consume(record, result, sink.locality_outcomes[record.step_index])
+        locality = sink.locality_outcomes[record.step_index]
+        attribution = attribute_step_detail(result, locality)
+        reducer.consume(record, result, locality)
         makespans.append(result.step_latency_ps)
+        steps.append(
+            {
+                "step_index": record.step_index,
+                "makespan_ps": result.step_latency_ps,
+                "completed_at_ps": result.completed_at_ps,
+                "fabric_phase_service_ps": list(locality.fabric_phase_service_ps),
+                "local_phase_service_ps": list(locality.local_phase_service_ps),
+                "base_phase_latency_ps": list(locality.base_phase_latency_ps),
+                "composed_phase_service_ps": list(
+                    locality.composed_phase_service_ps
+                ),
+                "local_phase_medium": list(locality.local_phase_medium),
+                "media": {
+                    "kernel_ps": attribution.media.kernel_ps,
+                    "nvlink_ps": attribution.media.nvlink_ps,
+                    "fabric_ps": attribution.media.fabric_ps,
+                    "co_critical_ps": attribution.media.co_critical_ps,
+                    "collective_base_ps": attribution.media.collective_base_ps,
+                    "collective_registration_ps": (
+                        attribution.media.collective_registration_ps
+                    ),
+                    "total_ps": attribution.media.total_ps,
+                },
+            }
+        )
         virtual_time_ps = result.completed_at_ps
     (row,) = reducer.totals()
     return {
         "makespans_ps": makespans,
         "ttft_ps": row.ttft_ps,
+        "steps": steps,
         "goal_sha256": _goal_digests(sink.config.workdir),
+        "executed_geometry": _executed_geometry(sink, len(steps)),
         "registration_outcomes": len(sink.collective_registration_outcomes),
         "registration_phase_projection_empty": all(
             outcome.registration_phase_cost_ps == ()
@@ -264,14 +368,56 @@ def _default_construction_arm(
     }
 
 
+FROZEN_GUARD_CLAIMS = {
+    guard["id"]: guard["claim"] for guard in EXPECTATIONS["fatal_guards"]
+}
+
+#: the exact per-artifact fields the frozen G3 names, plus the composed value
+#: and the medium projection they have to agree on for the comparison to mean
+#: anything
+G3_STEP_FIELDS = (
+    "makespan_ps",
+    "completed_at_ps",
+    "fabric_phase_service_ps",
+    "local_phase_service_ps",
+    "base_phase_latency_ps",
+    "composed_phase_service_ps",
+    "local_phase_medium",
+    "media",
+)
+
+
 def _guards(results: dict[str, Any]) -> list[dict[str, Any]]:
-    """Evaluate the frozen fatal guards. Any failure voids the run."""
+    """Evaluate the frozen fatal guards. Any failure voids the run.
+
+    Every entry carries the frozen claim string verbatim and a separate
+    ``evaluated`` sentence saying what this runner actually checked. When the
+    two differ the entry is marked ``partially_evaluated`` and names what
+    covers the rest, so a weaker check can never be published under a frozen
+    guard identity.
+    """
 
     guards: list[dict[str, Any]] = []
 
-    def record(guard_id: str, claim: str, held: bool, detail: str = "") -> None:
+    def record(
+        guard_id: str,
+        held: bool,
+        *,
+        evaluated: str,
+        detail: str = "",
+        partially_evaluated: bool = False,
+        remainder_covered_by: str = "",
+    ) -> None:
         guards.append(
-            {"id": guard_id, "claim": claim, "held": bool(held), "detail": detail}
+            {
+                "id": guard_id,
+                "claim": FROZEN_GUARD_CLAIMS[guard_id],
+                "evaluated": evaluated,
+                "held": bool(held),
+                "partially_evaluated": bool(partially_evaluated),
+                "remainder_covered_by": remainder_covered_by,
+                "detail": detail,
+            }
         )
 
     g1 = True
@@ -290,9 +436,15 @@ def _guards(results: dict[str, Any]) -> list[dict[str, Any]]:
         g1_detail.append(f"{cell_name}={'equal' if same else 'DIFFERENT'}")
     record(
         "G1",
-        "the default-constructed arm and the explicitly disabled arm agree",
         g1,
-        ", ".join(g1_detail),
+        evaluated=(
+            "the off arm passes collective_registration=None explicitly and the "
+            "default arm omits the parameter, so the two constructions differ; "
+            "compared on step makespans, TTFT, the GOAL digest list, the "
+            "registration outcome count and the emptiness of the per-artifact "
+            "registration projection"
+        ),
+        detail=", ".join(g1_detail),
     )
 
     g2 = True
@@ -304,46 +456,92 @@ def _guards(results: dict[str, Any]) -> list[dict[str, Any]]:
                 continue
             same = payload["goal_sha256"] == off_digests
             g2 = g2 and same
-            g2_detail.append(f"{cell_name}/{arm}={'equal' if same else 'DIFFERENT'}")
+            g2_detail.append(
+                f"{cell_name}/{arm}={'equal' if same else 'DIFFERENT'}"
+                f"({len(off_digests)} artifacts)"
+            )
     record(
         "G2",
-        "every GOAL artifact SHA-256 is identical between the off and on arms",
         g2,
-        f"{len(results['cells']['mixed-tp4']['arms']['off']['goal_sha256'])} "
-        "artifacts in mixed-tp4; " + ", ".join(g2_detail),
+        evaluated=(
+            "every arm's GOAL digest list compared against its cell's off arm. "
+            "Vacuous in local-tp2, which writes no GOAL artifact at all; the "
+            "48 mixed-tp4 artifacts carry the whole guard"
+        ),
+        detail=", ".join(g2_detail),
     )
 
-    g3 = all(
-        cell["arms"]["off"]["ledger_charged_ps"] == 0
-        and all(
-            step["charged_registration_ps"] == 0
-            and step["registration_phase_cost_ps"] == []
-            and step["media"]["collective_registration_ps"] == 0
-            for step in cell["arms"]["off"]["steps"]
+    g3 = True
+    g3_detail = []
+    for cell_name, cell in results["cells"].items():
+        off_steps = cell["arms"]["off"]["steps"]
+        absent_steps = cell["default_construction"]["steps"]
+        same = len(off_steps) == len(absent_steps)
+        mismatched: list[str] = []
+        if same:
+            for off_step, absent_step in zip(off_steps, absent_steps, strict=True):
+                for field in G3_STEP_FIELDS:
+                    if off_step[field] != absent_step[field]:
+                        mismatched.append(f"step{off_step['step_index']}.{field}")
+            same = not mismatched
+        g3 = g3 and same
+        g3_detail.append(
+            f"{cell_name}={'identical' if same else 'DIFFERENT:' + ','.join(mismatched)}"
         )
-        for cell in results["cells"].values()
-    )
     record(
         "G3",
-        "the off arm charges nothing and publishes no registration term",
         g3,
+        evaluated=(
+            "field by field against the feature-absent computation: for every "
+            "step of both cells, the off arm's makespan, completion, "
+            "per-artifact fabric service, per-artifact local service, "
+            "per-artifact base latency, per-artifact composed service, "
+            "per-artifact medium and complete medium partition each equal the "
+            "value the arm built without the parameter produced"
+        ),
+        detail=", ".join(g3_detail),
     )
 
+    g4_steps = 0
     g4 = True
     for cell in results["cells"].values():
         for payload in cell["arms"].values():
             for step in payload["steps"]:
                 g4 = g4 and step["media"]["total_ps"] == step["makespan_ps"]
-    record("G4", "every step's medium partition conserves its makespan", g4)
+                g4_steps += 1
+            g4 = (
+                g4
+                and payload["ttft_partition_conserves"]
+                and payload["decode_partition_conserves"]
+            )
+    request_rows = sum(len(cell["arms"]) for cell in results["cells"].values())
+    record(
+        "G4",
+        g4,
+        evaluated=(
+            f"both halves of the frozen claim: {g4_steps} evaluated step "
+            f"partitions conserve their makespans, and {request_rows} per-request "
+            "rows conserve their TTFT and decode spans in both the coarse and "
+            "the medium view"
+        ),
+        detail=f"{g4_steps} steps, {request_rows} request rows",
+    )
 
-    g5 = results["fail_closed"]["calibrated_request_raises"] and results[
-        "fail_closed"
-    ]["unknown_selector_raises"]
+    fail_closed = results["fail_closed"]
+    g5 = (
+        fail_closed["calibrated_request_raises"]
+        and fail_closed["unknown_selector_raises"]
+        and fail_closed["calibrated_without_measurement_raises"]
+    )
     record(
         "G5",
-        "a calibrated request against a declared cost fails closed",
         g5,
-        results["fail_closed"]["calibrated_message"],
+        evaluated=(
+            "all three clauses: a calibrated request against the declared cost "
+            "raises, a calibrated provenance without a measurement locator "
+            "cannot be constructed, and an unknown model selector raises"
+        ),
+        detail=fail_closed["calibrated_message"],
     )
 
     g6 = True
@@ -365,32 +563,54 @@ def _guards(results: dict[str, Any]) -> list[dict[str, Any]]:
             g6_detail.append(f"{cell_name}/{arm}")
     record(
         "G6",
-        "no collective is charged registration on more than one artifact",
         g6,
-        ", ".join(g6_detail),
+        evaluated=(
+            "for every enabled arm and every step, the nonzero per-artifact "
+            "charges sum to the ledger charge and their count times the "
+            "per-identity cost times the channel count reproduces it"
+        ),
+        detail=", ".join(g6_detail),
     )
 
+    seam = results["seam"]
     record(
         "G7",
-        "the mirrored nccl_stack event stream is unchanged when no registration "
-        "is requested",
-        results["seam"]["ungated_stream_identical"],
-        f"{results['seam']['ungated_event_count']} events, "
-        f"{results['seam']['gated_registration_events']} registration events "
-        "when the gate is requested",
+        seam["accepted_sequences_reproduced"] and seam["ungated_stream_identical"],
+        evaluated=(
+            "against the accepted nccl_stack_v1 sequences: all "
+            f"{seam['accepted_sequence_count']} tracked per-rank event-sequence "
+            "rows of examples/nccl_stack_v1/results.csv were regenerated through "
+            "an ungated communicator and reproduce the tracked event count and "
+            "SHA-256 exactly; a default and an explicitly ungated communicator "
+            "also produce identical JSON"
+        ),
+        detail=(
+            f"{seam['ungated_event_count']} events in the reference inter-node "
+            f"rank 0 stream, {seam['gated_registration_events']} registration "
+            "events when the gate is requested"
+        ),
     )
 
     record(
         "G8",
-        "the results identity block equals the freeze",
         results["identity"] == results["frozen_identity"],
+        evaluated=(
+            "the geometry read back off the executed sinks, plus the declared "
+            "cost and evidence class read off the shipped model, compared "
+            "against expectations.json"
+        ),
+        detail=(
+            "both sides derived independently: the results side from the "
+            "constructed HtsimStepSinkConfig objects, the frozen side from the "
+            "freeze document"
+        ),
     )
 
     record(
         "G9",
-        "ledger construction facts hold",
         all(results["ledger_facts"].values()),
-        ", ".join(
+        evaluated="all six by-construction ledger facts re-derived in this runner",
+        detail=", ".join(
             f"{name}={'ok' if held else 'FAILED'}"
             for name, held in results["ledger_facts"].items()
         ),
@@ -564,6 +784,10 @@ def _scored(results: dict[str, Any]) -> dict[str, Any]:
                 "cell": name,
                 "off_ps": off_tail,
                 "on_ps": on_tail,
+                "goal_artifacts": len(cell["arms"]["off"]["goal_sha256"]),
+                #: the digest conjunct carries nothing in a cell that writes no
+                #: GOAL artifact; only the makespan conjunct does there
+                "goal_conjunct_vacuous": not cell["arms"]["off"]["goal_sha256"],
                 "unchanged": off_tail == on_tail
                 and cell["arms"]["off"]["goal_sha256"]
                 == cell["arms"]["on"]["goal_sha256"],
@@ -579,6 +803,15 @@ def _scored(results: dict[str, Any]) -> dict[str, Any]:
     )
 
     return {
+        "overlap_note": (
+            "O1, B1's 64-identity instance, B2's local-tp2 instance and O6's "
+            "step-0 equality are four views of one event: the 64 charges of "
+            "local-tp2 step 0. Once G9 holds, identity count times declared "
+            "cost is entailed, so those four do not multiply the evidence. The "
+            "genuinely independent risks the scored set covers are the charging "
+            "site, the phase-zero gate, the dedup across steps, the channel "
+            "multiplicity and the rebuild"
+        ),
         "exact_oracle_rows": {
             "denominator": len(rows),
             "passed": sum(1 for row in rows if row["passed"]),
@@ -593,6 +826,62 @@ def _scored(results: dict[str, Any]) -> dict[str, Any]:
             "families": families,
         },
     }
+
+
+def _counterfactual(results: dict[str, Any]) -> dict[str, Any]:
+    """Quantify what B2 would have seen had the charge been folded into the max.
+
+    The composition is per executed artifact, so the alternative this family
+    exists to reject is `max(local, fabric, registration)` on each charged
+    artifact rather than `registration + max(local, fabric)`. The observable
+    difference is the per-artifact fabric term summed over the charged
+    artifacts, which is what makes the discrimination weak when that term is
+    small and complete when it exceeds the charge.
+    """
+
+    rows = []
+    sources = [("frozen", name, cell) for name, cell in results["cells"].items()]
+    sources += [
+        ("post-specified", name, cell)
+        for name, cell in results["post_specified_cells"].items()
+    ]
+    for provenance, name, cell in sources:
+        on_step = cell["arms"]["on"]["steps"][0]
+        off_step = cell["arms"]["off"]["steps"][0]
+        charged_indexes = [
+            index
+            for index, value in enumerate(on_step["registration_phase_cost_ps"])
+            if value
+        ]
+        realized = [
+            max(
+                off_step["local_phase_service_ps"][index],
+                off_step["fabric_phase_service_ps"][index],
+            )
+            for index in charged_indexes
+        ]
+        observed_delta = on_step["makespan_ps"] - off_step["makespan_ps"]
+        folded_delta = sum(
+            max(service_ps, COST_PS) - service_ps for service_ps in realized
+        )
+        rows.append(
+            {
+                "provenance": provenance,
+                "cell": name,
+                "charged_artifacts": len(charged_indexes),
+                "per_artifact_realized_service_ps": realized[:1],
+                "observed_delta_ps": observed_delta,
+                "folded_into_max_delta_ps": folded_delta,
+                "discrimination_ps": observed_delta - folded_delta,
+                "discrimination_fraction": (
+                    (observed_delta - folded_delta) / observed_delta
+                    if observed_delta
+                    else None
+                ),
+                "fully_hidden_under_fold": folded_delta == 0,
+            }
+        )
+    return {"rows": rows}
 
 
 def _ledger_facts() -> dict[str, bool]:
@@ -649,6 +938,65 @@ def _ledger_facts() -> dict[str, bool]:
     return facts
 
 
+def _accepted_nccl_stack_sequences() -> dict[str, Any]:
+    """Regenerate the accepted nccl_stack_v1 sequences through an ungated stack.
+
+    The frozen G7 names those sequences, so the check reruns the accepted
+    study's own reference routes with the current, gate-carrying module and
+    compares each event count and SHA-256 against the tracked
+    ``examples/nccl_stack_v1/results.csv``. The digest is built by the accepted
+    study's own helpers, imported by path, so the two sides cannot drift on how
+    a sequence is serialized.
+    """
+
+    import csv
+    import importlib.util
+
+    accepted_dir = STUDY_DIR.parent / "nccl_stack_v1"
+    spec = importlib.util.spec_from_file_location(
+        "_accepted_nccl_stack_v1",
+        accepted_dir / "run_nccl_stack_v1.py",
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("the accepted nccl_stack_v1 runner could not be loaded")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    tracked: dict[tuple[str, str], dict[str, Any]] = {}
+    with (accepted_dir / "results.csv").open(encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            if row["family"].endswith("_event_sequence"):
+                tracked[(row["family"], row["check"])] = json.loads(row["expected"])
+
+    rows = []
+    reproduced = True
+    for (family, check), expected in sorted(tracked.items()):
+        route = (
+            module.NcclRoute.INTER_NODE
+            if family.startswith("inter_node")
+            else module.NcclRoute.INTRA_NODE
+        )
+        rank = int(check.rsplit("_", 1)[1])
+        _, stack, _, _ = module._run_reference_route(route, rank)
+        measured = tuple(module._event_tuple(event) for event in stack.events)
+        observed = {
+            "event_count": len(measured),
+            "sha256": module._digest(measured),
+        }
+        matched = observed == expected
+        reproduced = reproduced and matched
+        rows.append(
+            {
+                "family": family,
+                "check": check,
+                "expected": expected,
+                "observed": observed,
+                "matched": matched,
+            }
+        )
+    return {"reproduced": reproduced, "row_count": len(rows), "rows": rows}
+
+
 def _seam_evidence() -> dict[str, Any]:
     """Check the mirrored seam's off path and its gated registration events."""
 
@@ -702,6 +1050,8 @@ def _seam_evidence() -> dict[str, Any]:
         )
         return nccl_stack_events_to_json(stack.events)
 
+    accepted = _accepted_nccl_stack_sequences()
+
     gated_stack = NcclStack(clock=VirtualClock(start_ps=17), config=config)
     gated = ncclCommInitRank(
         gated_stack,
@@ -731,6 +1081,9 @@ def _seam_evidence() -> dict[str, Any]:
     default_events = ungated()
     return {
         "ungated_stream_identical": default_events == explicitly_ungated(),
+        "accepted_sequences_reproduced": accepted["reproduced"],
+        "accepted_sequence_count": accepted["row_count"],
+        "accepted_sequence_rows": accepted["rows"],
         "ungated_event_count": len(default_events),
         "gated_registration_events": len(registration.events),
         "gated_declared_total_ps": registration.total_declared_cost_ps,
@@ -740,7 +1093,10 @@ def _seam_evidence() -> dict[str, Any]:
 
 
 def _fail_closed_evidence() -> dict[str, Any]:
-    from simllm.traffic import resolve_collective_registration
+    from simllm.traffic import (
+        CollectiveRegistrationProvenance,
+        resolve_collective_registration,
+    )
 
     message = ""
     calibrated_raises = False
@@ -756,10 +1112,24 @@ def _fail_closed_evidence() -> dict[str, Any]:
     except ValueError:
         unknown_raises = True
 
+    #: the frozen G5's third clause: a cost cannot claim the calibrated class
+    #: without naming the measurement it was fitted to
+    construction_raises = False
+    try:
+        CollectiveRegistrationProvenance(
+            evidence_class="calibrated",
+            source="a capture that does not exist",
+            locator="a row that does not exist",
+            basis="none",
+        )
+    except ValueError:
+        construction_raises = True
+
     return {
         "calibrated_request_raises": calibrated_raises,
         "calibrated_message": message,
         "unknown_selector_raises": unknown_raises,
+        "calibrated_without_measurement_raises": construction_raises,
     }
 
 
@@ -786,19 +1156,27 @@ def run(workdir: Path) -> dict[str, Any]:
             ),
         }
 
+    #: Every field of the results side comes from what executed: the geometry
+    #: is read back off the constructed sinks and the cost off the shipped
+    #: model, so G8 compares the freeze against the run rather than against
+    #: itself.
     identity = {
-        "registration_cost_ps": COST_PS,
+        "registration_cost_ps": (
+            DECLARED_NCCL_CHANNEL_REGISTRATION_COST.registration_cost_ps
+        ),
         "evidence_class": DECLARED_NCCL_CHANNEL_REGISTRATION_COST.evidence_class,
         "cells": {
             name: {
-                "dims": cell["dims"],
-                "tp_ranks": cell["tp_ranks"],
-                "hosts": cell["hosts"],
-                "steps": cell["steps"],
-                "arms": cell["arms"],
-                "identities_one_channel": cell["identities_one_channel"],
+                "dims": cell["arms"]["off"]["executed_geometry"]["dims"],
+                "tp_ranks": cell["arms"]["off"]["executed_geometry"]["tp_ranks"],
+                "hosts": cell["arms"]["off"]["executed_geometry"]["hosts"],
+                "steps": cell["arms"]["off"]["executed_geometry"]["steps"],
+                "arms": sorted(cell["arms"]),
+                "identities_one_channel": (
+                    len(cell["arms"]["on"]["registered_identities"])
+                ),
             }
-            for name, cell in EXPECTATIONS["cells"].items()
+            for name, cell in cells.items()
         },
     }
     frozen_identity = {
@@ -810,12 +1188,23 @@ def run(workdir: Path) -> dict[str, Any]:
                 "tp_ranks": cell["tp_ranks"],
                 "hosts": cell["hosts"],
                 "steps": cell["steps"],
-                "arms": cell["arms"],
+                "arms": sorted(cell["arms"]),
                 "identities_one_channel": cell["identities_one_channel"],
             }
             for name, cell in EXPECTATIONS["cells"].items()
         },
     }
+
+    post_specified: dict[str, Any] = {}
+    for cell_name, cell in POST_SPECIFIED_CELLS.items():
+        arms = {
+            arm: _run_arm(cell_name, cell, arm, workdir) for arm in cell["arms"]
+        }
+        post_specified[cell_name] = {
+            "identities_one_channel": cell["identities_one_channel"],
+            "linkspeed_bps": cell["linkspeed_bps"],
+            "arms": arms,
+        }
 
     results: dict[str, Any] = {
         "study": "nccl_registration_v1",
@@ -823,12 +1212,14 @@ def run(workdir: Path) -> dict[str, Any]:
         "identity": identity,
         "frozen_identity": frozen_identity,
         "cells": cells,
+        "post_specified_cells": post_specified,
         "ledger_facts": _ledger_facts(),
         "seam": _seam_evidence(),
         "fail_closed": _fail_closed_evidence(),
     }
     results["fatal_guards"] = _guards(results)
     results["scored"] = _scored(results)
+    results["counterfactual"] = _counterfactual(results)
     results["verdict"] = (
         "void"
         if any(not guard["held"] for guard in results["fatal_guards"])
