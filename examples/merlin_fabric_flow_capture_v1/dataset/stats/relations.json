@@ -5,7 +5,8 @@
    "i2-incast": true,
    "mx-a2gh": true,
    "mx-gh2a": true,
-   "s1-stream": true
+   "s1-stream": true,
+   "x4-incast": true
   },
   "relation": "E-T-1",
   "verdict": "pass"
@@ -49,7 +50,8 @@
  {
   "band": "Jain >= 0.6 in every incast cell that runs",
   "measured": {
-   "i2-incast": 0.9795
+   "i2-incast": 0.9795,
+   "x4-incast": 0.9496
   },
   "relation": "E-I-5",
   "verdict": "pass"
@@ -62,9 +64,9 @@
  },
  {
   "band": "[1.8, 12.0] GB/s",
-  "measured": null,
+  "measured": 11.0952,
   "relation": "E-I-7",
-  "verdict": "unevaluated"
+  "verdict": "pass"
  },
  {
   "band": "[0.7, 1.3]",

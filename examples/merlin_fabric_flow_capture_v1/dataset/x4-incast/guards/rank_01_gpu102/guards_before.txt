@@ -1,0 +1,32 @@
+host=gpu102
+date=2026-08-18T06:30:56+02:00
+SLURM_PROCID=1 SLURM_LOCALID=1
+CUDA_VISIBLE_DEVICES=0,1,2,3
+=== G6 rank placement ===
+GPU 0: NVIDIA A100-SXM4-80GB (UUID: GPU-8e8b21a4-7216-3594-3479-3667d83c70e3)
+GPU 1: NVIDIA A100-SXM4-80GB (UUID: GPU-ac6e677d-4f6f-8d75-190f-df4e4b8976c6)
+GPU 2: NVIDIA A100-SXM4-80GB (UUID: GPU-56f1a286-573c-5320-5ec3-3961aef30360)
+GPU 3: NVIDIA A100-SXM4-80GB (UUID: GPU-50a79f95-570a-b298-37cf-80bb920c1173)
+gpu_uuid=GPU-8e8b21a4-7216-3594-3479-3667d83c70e3
+gpu_uuid=GPU-ac6e677d-4f6f-8d75-190f-df4e4b8976c6
+gpu_uuid=GPU-56f1a286-573c-5320-5ec3-3961aef30360
+gpu_uuid=GPU-50a79f95-570a-b298-37cf-80bb920c1173
+=== G2 clocks ===
+index, clocks.current.sm [MHz], clocks.current.memory [MHz], power.draw [W], temperature.gpu
+0, 210 MHz, 1593 MHz, 58.43 W, 27
+1, 210 MHz, 1593 MHz, 56.71 W, 25
+2, 210 MHz, 1593 MHz, 59.87 W, 26
+3, 210 MHz, 1593 MHz, 57.54 W, 25
+=== G4 foreign processes ===
+pid, process_name, used_gpu_memory [MiB]
+=== G1 host NIC inventory ===
+cassini_port_count=4
+ib_device_count=0
+0
+=== interfaces ===
+lo UNKNOWN
+nmn0 UP
+hsn0 UP
+hsn1 UP
+hsn2 UP
+hsn3 UP

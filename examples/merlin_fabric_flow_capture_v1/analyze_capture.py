@@ -38,19 +38,19 @@ import sys
 GB = 1e9
 
 # Frozen cell inventory: cell name -> (flows, window_s, offsets_s, ceiling
-# for the destination aggregate in GB/s).
+# for the destination aggregate in GB/s, declared node count).
 CELLS = {
-    "s1-stream": (1, 300.0, [0.0], 26.78),
-    "i2-incast": (2, 180.0, [0.0, 0.0], 26.78),
-    "i3-incast": (3, 180.0, [0.0, 0.0, 0.0], 26.78),
-    "j3-join": (3, 240.0, [0.0, 60.0, 120.0], 26.78),
+    "s1-stream": (1, 300.0, [0.0], 26.78, 2),
+    "i2-incast": (2, 180.0, [0.0, 0.0], 26.78, 3),
+    "i3-incast": (3, 180.0, [0.0, 0.0, 0.0], 26.78, 4),
+    "j3-join": (3, 240.0, [0.0, 60.0, 120.0], 26.78, 4),
     # Post-specified cell, added after freeze 1: descriptive statistics
     # only, no scored relation reads it.
-    "j2x-join": (2, 180.0, [0.0, 60.0], 26.78),
-    "i4-incast": (4, 180.0, [0.0, 0.0, 0.0, 0.0], 26.78),
-    "x4-incast": (4, 180.0, [0.0, 0.0, 0.0, 0.0], 26.78),
-    "mx-gh2a": (1, 60.0, [0.0], 26.78),
-    "mx-a2gh": (1, 60.0, [0.0], 100.0),
+    "j2x-join": (2, 180.0, [0.0, 60.0], 26.78, 3),
+    "i4-incast": (4, 180.0, [0.0, 0.0, 0.0, 0.0], 26.78, 5),
+    "x4-incast": (4, 180.0, [0.0, 0.0, 0.0, 0.0], 26.78, 2),
+    "mx-gh2a": (1, 60.0, [0.0], 26.78, 2),
+    "mx-a2gh": (1, 60.0, [0.0], 100.0, 2),
 }
 
 PER_FLOW_CEILING_GBPS = 25.0
@@ -97,7 +97,7 @@ def bin_goodput(times_ns, chunk_bytes, n_bins):
 
 def stage_bounds(cell):
     """Stage boundaries in seconds for a cell, from its frozen offsets."""
-    _, window, offsets, _ = CELLS[cell]
+    _, window, offsets, _, _ = CELLS[cell]
     starts = sorted(set(offsets))
     bounds = []
     for i, s in enumerate(starts):
@@ -128,7 +128,7 @@ def flow_deltas_ns(times_ns):
 
 def analyze_cell(cell, job_dir):
     """Compute the frozen descriptive statistics for one cell run."""
-    n_flows, window, offsets, agg_ceiling = CELLS[cell]
+    n_flows, window, offsets, agg_ceiling, n_nodes = CELLS[cell]
     n_bins = int(window)
     prefix = os.path.join(job_dir, cell)
     flows = {}
@@ -339,11 +339,10 @@ def analyze_cell(cell, job_dir):
                    and len(port_counts) >= evidence_units
                    and all(c == 0 for c in ib_counts))
     g4_ok = evidence_units > 0 and foreign_rows == 0
+    all_hosts = {m.get("host") for m in rank_meta if m.get("host")}
     g6_ok = (evidence_units > 0
              and len(gpu_uuids) >= max(ranks_expected, 1)
-             and len({m.get("host") for m in rank_meta
-                      if m.get("role") in ("dest", "source")})
-             >= min(ranks_expected, len(rank_meta)))
+             and len(all_hosts) == n_nodes)
     out["guards"] = {
         "G1_socket_transport": g1_ok,
         "G1_port_inventory": g1_ports_ok,

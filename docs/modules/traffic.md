@@ -213,7 +213,9 @@ the flow-level work the GOAL emitter renders.
   the Cray Cassini Slingshot fabric (kernel socket transport, GDR
   disabled): a 300-second solo stream at 4.991 GB/s steady, a degree-2
   incast whose aggregate reaches 1.71 times the solo rate because each
-  flow rides its own source stack and destination port, a mixed
+  flow rides its own source stack and destination port, a two-node cell
+  in which four same-node source stacks sharing one port reach 11.1 GB/s
+  (aggregate scales with stack count, not port count), a mixed
   A100-plus-GH200 pair with a 2.77x direction asymmetry (the Grace-sourced
   leg is the slow one), and a post-specified, unscored two-flow join in which the
   established flow loses nothing at the join. It changes no profile, no
@@ -909,11 +911,13 @@ default-constructed arm are unchanged.
   the psicourse02 reservation lifts at 2026-08-19 08:00 and the chunk size
   is not frozen before the ladder is measured; they arrive only under a
   freeze-2 expectations-only commit with their own guard list and scored
-  denominator. The A100 cells i3-incast, j3-join, i4-incast and x4-incast
-  (jobs 195730, 195731, 195734, 195735) were frozen and submitted but
-  still queued at publication behind the floating FLEX reservation; when
-  any lands, its outputs drop into the study's capture tree and
-  `analyze_capture.py` scores it against the unchanged frozen bands, with
+  denominator. The A100 cells i3-incast, j3-join and i4-incast (jobs 195730,
+  195731, 195734) remain queued behind the floating FLEX reservation;
+  x4-incast (195735) landed after the first publication and was scored
+  and folded in by exactly this protocol, passing E-I-7 at 11.095 GB/s.
+  When any remaining cell lands, its outputs drop into the study's
+  capture tree and `analyze_capture.py` scores it against the unchanged
+  frozen bands, with
   the study's RESULTS recording, before j3 has run, that a post-specified
   observation strains E-J-2's shared-bottleneck premise; if that relation
   misses, its classification (specification error or machine fact) is made
