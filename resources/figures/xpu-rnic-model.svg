@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="700" viewBox="0 0 940 700">
+  <defs>
+    <marker id="ab" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1,1 L11,6 L1,11 z" fill="#000000"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="940" height="700" fill="#ffffff"/>
+
+  <!-- stacked shadow box, then main node box -->
+  <rect x="58" y="58" width="840" height="470" rx="12" fill="#ffffff" stroke="#000000" stroke-width="2.5"/>
+  <rect x="40" y="40" width="840" height="470" rx="12" fill="#ffffff" stroke="#000000" stroke-width="2.5"/>
+
+  <!-- xPU device -->
+  <rect x="80" y="110" width="350" height="310" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <rect x="100" y="185" width="310" height="42" fill="#ffffff" stroke="#82b366" stroke-width="1.5"/>
+  <rect x="100" y="237" width="310" height="42" fill="#ffffff" stroke="#82b366" stroke-width="1.5"/>
+  <rect x="100" y="289" width="310" height="42" fill="#ffffff" stroke="#82b366" stroke-width="1.5"/>
+  <rect x="100" y="341" width="310" height="42" fill="#ffffff" stroke="#82b366" stroke-width="1.5"/>
+
+  <!-- RNIC device -->
+  <rect x="510" y="110" width="350" height="310" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+  <rect x="530" y="185" width="310" height="42" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="530" y="237" width="310" height="42" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="530" y="289" width="310" height="42" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="530" y="341" width="310" height="42" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+
+  <!-- peer xPUs (intra-node) -->
+  <rect x="80" y="452" width="350" height="44" fill="#f5f5f5" stroke="#666666" stroke-width="2"/>
+
+  <!-- host CPU with DRAM, on the same PCIe complex -->
+  <rect x="445" y="440" width="225" height="56" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/>
+
+  <!-- packet fabric (outside the node) -->
+  <rect x="510" y="560" width="350" height="76" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+
+  <!-- PCIe: xPU host interface to RNIC DMA/PCIe engine (double-headed) -->
+  <path d="M460,310 H508" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M460,310 H412" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+
+  <!-- host CPU branch of the PCIe complex (double-headed) -->
+  <path d="M470,375 V318" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M470,375 V438" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+
+  <!-- scale-up ports to peer xPUs (double-headed) -->
+  <path d="M255,418 V450" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M255,418 V385" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+
+  <!-- network port to the packet fabric (double-headed, exits the node) -->
+  <path d="M685,470 V558" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M685,470 V385" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+
+  <g font-family="'Times New Roman','Nimbus Roman','Liberation Serif','DejaVu Serif',serif" fill="#000000">
+    <text x="58" y="78" font-size="28">one simulated node</text>
+
+    <text x="255" y="141" font-size="24" text-anchor="middle" dominant-baseline="central">xPU device</text>
+    <text x="255" y="167" font-size="13" text-anchor="middle" dominant-baseline="central">NVIDIA GPU today; Google TPU and more xPUs on the way</text>
+    <text x="255" y="206" font-size="15" text-anchor="middle" dominant-baseline="central">compute core: SM / warp schedulers</text>
+    <text x="255" y="258" font-size="15" text-anchor="middle" dominant-baseline="central">HBM: memory cursor</text>
+    <text x="255" y="310" font-size="15" text-anchor="middle" dominant-baseline="central">PCIe host interface</text>
+    <text x="255" y="362" font-size="15" text-anchor="middle" dominant-baseline="central">scale-up ports: NVLink / xGMI / UALink</text>
+
+    <text x="685" y="141" font-size="24" text-anchor="middle" dominant-baseline="central">RNIC device</text>
+    <text x="685" y="167" font-size="13" text-anchor="middle" dominant-baseline="central">boxes behind one construction entry point</text>
+    <text x="685" y="206" font-size="15" text-anchor="middle" dominant-baseline="central">work queues: SQ / CQ, doorbells</text>
+    <text x="685" y="258" font-size="15" text-anchor="middle" dominant-baseline="central">QPC: connection and context memory</text>
+    <text x="685" y="310" font-size="15" text-anchor="middle" dominant-baseline="central">DMA / PCIe engine</text>
+    <text x="685" y="362" font-size="15" text-anchor="middle" dominant-baseline="central">network port: transport / CC policy</text>
+
+    <rect x="438" y="284" width="44" height="18" fill="#ffffff"/>
+    <text x="460" y="293" font-size="15" text-anchor="middle" dominant-baseline="central">PCIe</text>
+
+    <text x="255" y="468" font-size="15" text-anchor="middle" dominant-baseline="central">peer xPUs in the node</text>
+    <text x="255" y="486" font-size="12" text-anchor="middle" dominant-baseline="central">(intra-node collectives stay off the fabric)</text>
+
+    <text x="558" y="458" font-size="15" text-anchor="middle" dominant-baseline="central">host CPU + DRAM</text>
+    <text x="558" y="478" font-size="12" text-anchor="middle" dominant-baseline="central">(driver / proxy invoke; or GPU-initiated)</text>
+
+    <text x="685" y="588" font-size="20" text-anchor="middle" dominant-baseline="central">packet fabric</text>
+    <text x="685" y="614" font-size="13" text-anchor="middle" dominant-baseline="central">htsim: two-tier Clos; Slingshot-class dragonfly</text>
+
+    <text x="255" y="588" font-size="15" text-anchor="middle" dominant-baseline="central">every device is built from module boxes;</text>
+    <text x="255" y="612" font-size="15" text-anchor="middle" dominant-baseline="central">disable a box, keep the interface</text>
+  </g>
+</svg>

@@ -175,76 +175,24 @@ The implementation order is architectural, not just a feature ranking:
 each stage supplies the evidence needed to calibrate the next one. The
 linked task IDs own the detail.
 
-1. **Execution and completion boundary (complete).** Strict lowering,
-   validation, JSON round trips, central request/object bookkeeping and
-   graph-only serial replay implement `simllm-execution-graph-v1`,
-   `simllm-completion-event-v1`, `simllm-execution-result-v1` and
-   `simllm-request-bookkeeping-v1`. Exact lowering and WQE results:
-   [examples/core2_lowering](../examples/core2_lowering/RESULTS.md).
-   Actual device-schedule capture is owned by
-   [VLLM-12](modules/adapters-vllm.md#open-tasks) and
-   [SGL-10](modules/adapters-sglang.md#open-tasks).
-2. **Hybrid measured plus SASS compute.** Capture real framework
-   kernels, calibrate offline SASS replay against silicon, and populate
-   provenance-carrying tables. The first slice supplies a replaceable
-   intra-kernel scheduler, SM-residency, HBM and isolated-copy service model
-   plus exact synthetic validation. Its A100/H100 parameters are bootstrap
-   seeds, not COMP-1 closure:
+1. Execution and completion boundary: complete.
+2. Hybrid measured plus SASS compute:
    [COMP-1, COMP-5, COMP-6, COMP-10](modules/compute.md#open-tasks).
-3. **Explicit KV lifecycle.** Capture the framework's KV decisions
-   (allocation through eviction, swap, transfer, recompute):
-   [CORE-3](modules/core.md#open-tasks),
+3. Explicit KV lifecycle: [CORE-3](modules/core.md#open-tasks),
    [VLLM-11](modules/adapters-vllm.md#open-tasks),
-   [SGL-9](modules/adapters-sglang.md#open-tasks), validated in a
-   dedicated `examples/kv_cache_strategies/` study before KV bytes
-   couple to resource contention.
-4. **Resource queues and data movement.** The first coarse
-   `DeviceRuntime`: launch and stream queues, GPU/HBM, copy engines and
-   DMA, NCCL channels, GPU-affine RNIC submission, completion-event plumbing
-   and a labeled control queue: CORE-4, landed
-   ([core status](modules/core.md#status),
-   [examples/core4_runtime](../examples/core4_runtime/RESULTS.md)). CORE-8
-   fixes one cross-language queue-visit meaning and identity arbitration
-   baseline;
-   CORE-9 corrects the structural WQE projection. BACK-8 and the ABI-v1 part
-   of HTSIM-9 now compose native RNIC timing with htsim; CORE-4 invokes the
-   frozen path from the graph and CORE-5 reduces its completion into
-   `ExecutionResult`, `StepResult` and TTFT/TPOT. The CORE-21
-   same-contended-graph authority comparison has since landed. BACK-9, BACK-11
-   and BACK-12 complete the remaining RNIC mechanisms behind that path
-   (BACK-10 is closed, and BACK-18 has landed the modular entry point);
-   HTSIM-9 closed on the composed Tier C run whose ABI-v2 packet-issue
-   evidence populates the native timeline through the live metric chain, on
-   the BACK-25 and BACK-26 vocabulary, with the HTSIM-15, HTSIM-16 and
-   BACK-34 producer-side residuals landed as well.
-5. **Dependency-driven overlap.** Replace the serial step chain only
-   after KV and resource queues exist; framework lowering declares
-   dependencies, runtime arbitration determines realized overlap:
-   [TRAF-7](modules/traffic.md#open-tasks).
-6. **Paced comparison and residual closure.** Compare p50 through p99.9
-   TTFT/TPOT against real vLLM and SGLang in increasing-complexity
-   stages; the largest attributed residual selects the next fidelity
-   investment: [VLLM-4](modules/adapters-vllm.md#open-tasks),
+   [SGL-9](modules/adapters-sglang.md#open-tasks).
+4. Resource queues and data movement: CORE-4, CORE-5 and the composed
+   native RNIC chain landed;
+   [BACK-9, BACK-11, BACK-12](modules/backends.md#open-tasks).
+5. Dependency-driven overlap: [TRAF-7](modules/traffic.md#open-tasks).
+6. Paced comparison and residual closure:
+   [VLLM-4](modules/adapters-vllm.md#open-tasks),
    [SGL-4](modules/adapters-sglang.md#open-tasks).
-7. **Model-runner coupling and GPU-initiated networking.** Move the vLLM
-   seam from the executor RPC surface to the model runner, first as a
-   flagged skeleton and later under a real GPU worker (the SGLang adapter
-   already couples at that boundary) and let the
-   simulated GPU launch the NCCL work. The tracked host-memory registration of
-   the QPC and the rings (BACK-19) and the three per-queue submission shapes
-   with owned CQ consumers (BACK-20) have landed, leaving GPU-owned CQ
-   consumption and producer calibration open. The framework communicators
-   and the NCCL stack are simulated behind their real interfaces, trimmed
-   to the main path with observability inserted (the stack graph below):
-   [VLLM-13](modules/adapters-vllm.md#open-tasks),
-   [VLLM-14](modules/adapters-vllm.md#open-tasks),
+7. Model-runner coupling and GPU-initiated networking:
+   [VLLM-13, VLLM-14](modules/adapters-vllm.md#open-tasks),
    [SGL-11](modules/adapters-sglang.md#open-tasks),
-   [COMP-15](modules/compute.md#open-tasks),
-   [BACK-37](modules/backends.md#open-tasks),
-   [COMP-21](modules/compute.md#open-tasks),
-   [COMP-11](modules/compute.md#open-tasks). This deepens the visibility
-   available to the stage 6 comparisons; the executor-level mode stays the
-   GPU-less path.
+   [COMP-15, COMP-21](modules/compute.md#open-tasks),
+   [BACK-37](modules/backends.md#open-tasks).
 
 ## Fidelity levels and switches
 
@@ -501,24 +449,6 @@ lane is served by the simulated GPU model in `simllm.compute` (CTA/SM
 scheduling, HBM cursor, NVLink egress; the collective kernel is an
 explicitly submitted GPU task).
 
-### Sizing plan
-
-The build-out is sized module by module and filled step by step. The
-numbers are planning estimates, not commitments; each slice lands with its
-own study per the development process. Every first slice below has landed
-except the receive-leg and GPU-initiated halves of the proxy/`ncclNet` row;
-the sizes are kept as the original planning estimates for provenance.
-
-| Piece | Owner | First slice | Estimated size |
-|---|---|---|---|
-| vLLM adapter mirrored path (entry flag, no physical worker or runner) | [VLLM-13](modules/adapters-vllm.md#open-tasks) | empty calls, centralized timestamps | ~1,000 lines |
-| Simulated vLLM `GroupCoordinator` and device-communicator stubs | [VLLM-14](modules/adapters-vllm.md#open-tasks) | interface plus observability events | ~500 lines |
-| SGLang communicator half (shared base with vLLM's) | [SGL-11](modules/adapters-sglang.md#open-tasks) | interface plus observability events | ~400 lines |
-| NCCL model: communicator setup, logical channels, traffic planner | [COMP-15](modules/compute.md#open-tasks) | empty calls over the ring builder | ~800 lines |
-| GPU buffers and signals (data FIFO, flags, head/tail counters) | [COMP-15](modules/compute.md#open-tasks) | counters as events, no data contents | ~500 lines |
-| Proxy, `ncclNet`-shaped and ibverbs-shaped seams | [COMP-15](modules/compute.md#open-tasks) | isend/irecv/test plus post/poll stubs | ~700 lines |
-| Observability and centralized timestamps in the core | core (CORE-4 and CORE-5 landed; residual [CORE-17](modules/core.md#open-tasks)) | reuse the completion-event schema | ~300 lines |
-
 ### Function inventory
 
 The living list of mirrored functions, their simulation status and the
@@ -544,20 +474,22 @@ slices land.
 
 ## Module status
 
-One line per module; the linked doc is the source of truth.
+One line per module, stated as the final deliverable; the linked doc is
+the source of truth and its numbered open tasks carry the exact gap
+between this statement and today's tree.
 
-| Module | Status | Open |
+| Module | Final status | Open |
 |---|---|---|
-| [core](modules/core.md) | Implemented: virtual clock, step records, execution contracts, incremental append validation, the coarse DeviceRuntime, the completion reduction to StepResult and per-request TTFT/TPOT with seven-component critical-path attribution, and the structural RNIC network seam consuming composed native observations; the cross-layer projection is enforced rather than assumed, so a runtime object and its `CompletionEvent` or `RequestBookkeeper` projection can no longer disagree about a quantity one of them owns; the endpoint service model is cross-checked phase by phase against the fluid fabric serializer on the same graph; the KV cache lifecycle is accounted before contention, with allocation, prefix reuse, capacity pressure, eviction and preemption reaching TTFT and TPOT through the HBM queue and both off paths preserved exactly; the demonstrated CORE-15 live-seam clauses closed on Tier B, with the CORE-21 same-graph comparison landed afterwards; BRIDGE-1 closed for the pinned-binary prepared-replay scope with the online stateful session moved to BRIDGE-2, CORE-24 and HTSIM-18 | [18 open](modules/core.md#open-tasks) |
-| [workload](modules/workload.md) | Partial: Poisson/trace arrivals, fixed/lognormal/trace lengths, plus deterministic generation requests and exact client-observed TTFT/TPOT reduction | [3 open](modules/workload.md#open-tasks) |
-| [compute](modules/compute.md) | Implemented: roofline + profile tables, kernel families, dense/MoE geometry, host initiation model, trace-driven GPU service primitive with concurrent compute/memory/NCCL scheduling and A100/H100 bootstrap profiles, the audited zero-time NCCL stack skeleton with real-source-verified names, plus the optional GPU-side RNIC producer task coupling that makes submission cadence compete for SM residency and issue budget with the surrounding kernels. The fixed per-step host cost is now installed rather than omitted, calibrated on real silicon with provenance and empirical uncertainty, with an exact ideal-zero off path and with calibrated B100 and H100 requests failing closed because no measurement for those devices exists, and the GPU device composition entry point with typed PCIe and NVLink ports over those mechanisms. Kernel service time is a publicly stated, test-enforced deterministic constant keyed on kernel family, phase, token shape and architecture profile, with memory-bound kernels pinned to the HBM bound and every latency tail owned by the network, batching and queueing chain | [29 open](modules/compute.md#open-tasks) |
-| [placement](modules/placement.md) | Implemented: placement manifest round trip, declared placements, gpu-rank mapping, vLLM extraction; fabric manifest design-only | [3 open](modules/placement.md#open-tasks) |
-| [traffic](modules/traffic.md) | Implemented: collective patterns, TP step mapping, MoE all-to-all with captured non-uniform routing expansion, GOAL renderers for steps and execution graphs, and a qualified live vLLM schedule producer whose realized overlap is measured against a structure-matched control rather than assumed; the collective latency floor and NVLink form are calibrated rather than flat, with the propagation reference kept as a separate term and the legacy constants preserved on an exact off path | [39 open](modules/traffic.md#open-tasks) |
-| [goal](modules/goal.md) | Implemented: GOAL trace + txt2bin helper | none |
-| [preplay](modules/preplay.md) | Capture, replay and routing supply implemented: CPU oracle traces join arrivals into the bookkeeping, the vLLM adapters serve predefined tokens, and the per-token routing feeds the traffic expansion through the packed arena, with the projection retained as the validation-time form; the routed replay chain is validated end to end with scheduler-visible completions at oracle lengths and a raw-trace GOAL recomputation, a captured framework trace now joins into the same live replay path as the Transformers capture, over the same replay identities and with the framework scheduler kept as the sole KV authority, while the independent-framework oracle comparison stays blocked on a CPU-operator-bearing vLLM build | [4 open](modules/preplay.md#open-tasks) |
-| [backends](modules/backends.md) | Implemented: htsim invocation/parsing with per-layer, exact-sampling and GOAL-padding step-sink precision, plus native C++ RNIC SQ/CQ, network-port and shared PCIe transaction slices; the modular device entry point and versioned session run records with the policy-invariant hardware hash are landed; the virtual host-memory model with the QPC translation asymmetry and the three submission-source shapes with owned CQ consumers are landed; the composed htsim wrapper is on the backend main and the frozen Tier A gate passes; the GPU-initiated and CPU-proxy producers are coupled to the compute model with the frozen submission timeline byte-identical on defaults; the prepared worker-reuse step sink cuts recorded-replay wall time 3.4x to 5.4x with byte-identical simulated results while the per-step diagnostic sink stays the default; Tier B passed with the first TTFT and TPOT claim through the composed native RNIC chain, scoped to the frozen isolated fixture, and BACK-8 closes for its demonstrated clauses; the NetworkPort ABI v2 packet-attempt and transport-control vocabulary is landed with the htsim relay emitting genuine committed TX/RX boundaries, closing BACK-25 and BACK-26 at the vocabulary boundary with the physical control producers deferred to HTSIM-15 and HTSIM-16; the persistent flow session is requalified on held-out replays with 6.16x and 5.96x complete-boundary wall speedups under bands locked before the first session invocation, closing HTSIM-24; the backend commit_check gate can now fail, and its first honest run rejects the backend checkout on 17 of 95 authored bounds, tracked as HTSIM-25 | [29 open](modules/backends.md#open-tasks) |
-| [adapters-vllm](modules/adapters-vllm.md) | Implemented: SimExecutor on pinned v0.26.0, full RPC surface, step-record streaming, placement exporter, live tp=8 closed loop and exact sample attribution and the simulated GroupCoordinator, plus the flagged SimWorker skeleton through the worker-cls seam with a live engine smoke; VLLM-16 closed with a genuinely GPU-invisible in-process skeleton smoke via the combined device-namespace and CPU-platform mechanism | [16 open](modules/adapters-vllm.md#open-tasks) |
-| [adapters-sglang](modules/adapters-sglang.md) | Implemented: SimTpModelWorker via plugin entry point at pinned commit, live CPU-engine smoke, exact sample attribution, and the simulated vendored GroupCoordinator on the shared communicator base; the dispatch layer identity comes from SGLang itself, and an in-process scheduler pump drives a real Scheduler through the packet-level step sink to per-request TTFT and TPOT; strict single-GPU Granite-, Mixtral- and Qwen3-shaped MoE geometry readers plus a native streaming open-loop workload driver are unit-tested against synthetic configs | [19 open](modules/adapters-sglang.md#open-tasks) |
+| [core](modules/core.md) | The runtime spine: virtual clock, execution graphs and validation, the coarse device runtime, completion reduction into `StepResult` and per-request TTFT/TPOT with critical-path attribution, KV lifecycle accounting before contention, and the structural RNIC network seam | [18 open](modules/core.md#open-tasks) |
+| [workload](modules/workload.md) | Arrival and length processes, deterministic generation requests, and the client-observed TTFT/TPOT reduction | [3 open](modules/workload.md#open-tasks) |
+| [compute](modules/compute.md) | The xPU device, box-composed like the RNIC: the landed construction entry point with typed PCIe and NVLink ports, deterministic kernel service, concurrent task scheduling, host initiation and the NCCL stack behind the real interfaces; port packet emission, measured ceilings and vendor ports are [COMP-40, COMP-41 and COMP-35](modules/compute.md#open-tasks) | [29 open](modules/compute.md#open-tasks) |
+| [placement](modules/placement.md) | The mapper: placement and fabric manifests, rank-to-endpoint and GOAL-rank resolution | [3 open](modules/placement.md#open-tasks) |
+| [traffic](modules/traffic.md) | Semantic collectives to physical flows: TP and MoE patterns with captured expert routing, calibrated collective floors and NVLink forms, GOAL rendering, live framework schedule producers, and the Slingshot-class fabric calibration | [39 open](modules/traffic.md#open-tasks) |
+| [goal](modules/goal.md) | GOAL trace emission and the txt2bin helper | none |
+| [preplay](modules/preplay.md) | The offline CPU oracle: capture, arrival join, framework replay and routed-expert supply | [4 open](modules/preplay.md#open-tasks) |
+| [backends](modules/backends.md) | The modular RNIC device (work queues, QPC, DMA/PCIe, network port) behind one construction entry point, composed htsim sessions with versioned run records, and the native completion chain carrying packet-issue evidence into TTFT/TPOT | [29 open](modules/backends.md#open-tasks) |
+| [adapters-vllm](modules/adapters-vllm.md) | The no-fork vLLM adapter: `SimExecutor` on the pinned release, the flagged worker/runner skeleton, simulated communicators and placement export | [16 open](modules/adapters-vllm.md#open-tasks) |
+| [adapters-sglang](modules/adapters-sglang.md) | The no-fork SGLang adapter: plugin worker, in-process scheduler loop to TTFT/TPOT, MoE geometry readers, the streaming workload driver and simulated vendored communicators | [19 open](modules/adapters-sglang.md#open-tasks) |
 
 ## Study index
 

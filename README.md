@@ -9,7 +9,7 @@ Network-faithful simulation of LLM serving and training deployments
 </h3>
 
 <p align="center">
-| <a href="#about"><b>About</b></a> | <a href="#architecture"><b>Architecture</b></a> | <a href="#getting-started"><b>Getting Started</b></a> | <a href="#demo"><b>Demo</b></a> | <a href="#models"><b>Models</b></a> | <a href="#modules"><b>Modules</b></a> | <a href="#development"><b>Development</b></a> | <a href="#contributing"><b>Contributing</b></a> | <a href="docs/README_PRO.md"><b>Pro Guide</b></a> |
+| <a href="#about"><b>About</b></a> | <a href="#architecture"><b>Architecture</b></a> | <a href="#getting-started"><b>Getting Started</b></a> | <a href="#demo"><b>Demo</b></a> | <a href="#model"><b>Model</b></a> | <a href="#modules"><b>Modules</b></a> | <a href="#development"><b>Development</b></a> | <a href="#contributing"><b>Contributing</b></a> | <a href="docs/README_PRO.md"><b>Pro Guide</b></a> |
 </p>
 
 <p align="center">
@@ -37,10 +37,11 @@ Four ideas carry the design:
   one link. PCIe connects boxes inside a machine, NVLink connects NVIDIA GPUs
   to each other (xGMI on AMD ones), and Ethernet goes out to the rest of the
   cluster. The software on top turns each step's shared work into packets, and
-  every packet rides one of those ports. SimLLM already models the NIC this
-  way; the [packet-device model](docs/design/packet-device-model.md) is the
-  plan for modeling the GPU the same way, and it is explicit about what is not
-  built yet.
+  every packet rides one of those ports. SimLLM models the NIC this way,
+  and the GPU now composes the same way: its construction entry point with
+  typed PCIe and NVLink ports is landed. The
+  [packet-device model](docs/design/packet-device-model.md) states the full
+  target, and the open tasks name what is not built yet.
 - **Frontends are real, GPUs are simulated.** The framework's own
   scheduler, batching policy and KV/prefix-cache accounting run
   unmodified (they are CPU-side bookkeeping); only model execution is
@@ -207,122 +208,85 @@ The hardware/CC boundary, mlx5 hook, CX-7 evidence rules and full boundary
 campaign are in
 [docs/papers/rnic-hardware-calibration.md](docs/papers/rnic-hardware-calibration.md).
 
-## Models
+## Model
 
-What SimLLM models today and what is planned next. Each task ID links to
-the module doc that owns it.
+SimLLM ships one composed model, and this section states it as the final
+deliverable. The text is deliberately bold and projected: the numbered
+open tasks in the [module docs](docs/modules/) carry the exact gap
+between this statement and today's tree, so progress is measured in the
+task registry, not in hedged status prose here.
 
-The tables are grouped by box. The NIC is a box with PCIe ports and a 400G
-wire port. The GPU is a box with PCIe ports and NVLink or xGMI ports. A link
-joins two ports and carries packets, and the collective library on top (NCCL
-on NVIDIA, RCCL on AMD) decides which bytes cross which port. The NIC is built
-that way today. The GPU is not yet: its link to the other GPUs in the node is
-still one flat speed number rather than a port. The
-[packet-device model](docs/design/packet-device-model.md) states the target and
-names the tasks that close the difference.
+A deployment is simulated as nodes of **xPU + RNIC device pairs** on a
+packet-level fabric. Every device is a box built from boxes: hardware
+modules composed behind one construction entry point, where disabling a
+module keeps the same interface (its parameters go inert or are
+explicitly rejected), so one entry point serves everything from a bare
+core to the full device. A port is one link: PCIe connects boxes inside
+a machine, NVLink or xGMI connects accelerators to each other, and the
+wire port goes out to the fabric.
 
-### Network and NIC
+<p align="center">
+<img src="resources/figures/xpu-rnic-model.png" width="72%" alt="The xPU and RNIC mental model: one simulated node holds xPU and RNIC devices, each composed from module boxes; PCIe connects the xPU host interface, the RNIC DMA engine and the host CPU with DRAM, so network invocation can come from the host driver, a CPU proxy or the GPU itself; scale-up ports connect peer xPUs inside the node, and the RNIC network port feeds the packet fabric">
+</p>
 
-RNIC hardware and congestion control are separate model axes. A full-RNIC
-comparison holds the hardware profile fixed and swaps only the htsim
-transport/CC policy. The analytical fluid baseline keeps an explicit hardware
-bypass so closed-form validation remains available.
-The native WQ and PCIe slices now feed a composed flow-level path for the
-frozen isolated `rnic_live_v1` fixture, over a NetworkPort ABI whose v1 flow
-form stays the exact default and whose v2 form adds packet-attempt and
-transport-control events. Tier B projects the composed native completion
-through the execution graph, runtime and `StepResult` into the first TTFT and
-TPOT numbers in this repository that the native RNIC chain affects. That claim
-stays inside the frozen fixture: one request, single-WQE 4 KiB and 1 MiB
-payloads, a two-WQE FIFO, 200 and 400 Gbit/s, and native doorbell service of 0
-and 1,000 ps. It says nothing about congestion, multi-request contention or
-arbitrary graphs; packet issue timing landed afterwards with the Tier C run.
-BACK-8 and the demonstrated CORE-15 live-seam clauses closed on that evidence,
-and the CORE-21 same-contended-graph comparison and BACK-31 unlinked-native
-negative control landed after it. BACK-25 and BACK-26 closed with the ABI v2
-packet-attempt and transport-control vocabulary and an htsim relay that emits
-committed TX and RX boundaries, and HTSIM-9 closed on the composed Tier C run
-that carries packet-issue evidence through the live metric chain.
-The RNIC device itself is now built from modules behind one construction
-entry point: the work-queue core plus optional DMA (PCIe), QPC (connection
-and context) and network transport modules
-([backends](docs/modules/backends.md)). Disabling a module keeps the same
-interface, with its parameters inert or explicitly rejected, so one entry
-point serves everything from a bare work queue to the full device.
+### The xPU device
 
-#### RNIC hardware
+The accelerator is modeled the way the NIC is, as boxes already: the
+GPU composition entry point with typed PCIe and NVLink ports is landed
+and validated through the live metric chain
+([device-port study](examples/gpu_device_ports_v1/RESULTS.md)). The
+boxes are a compute core (SM and warp scheduling, issue budgets), an
+HBM module (the memory cursor every memory-bound kernel is pinned to),
+a PCIe host interface attached to the same shared PCIe fabric as the
+RNIC, and scale-up ports: NVLink today, with the AMD equivalent
+(xGMI / Infinity Fabric) and UALink behind the same port interface
+([COMP-35](docs/modules/compute.md#open-tasks)). Kernel service times
+are deterministic constants, a pure function of kernel family, phase,
+shape and the architecture profile; latency tails come from the
+network, batching and queueing, never from per-kernel stochasticity.
+Collectives run as explicitly submitted kernels that compete for SM
+residency, issue budget and egress with the surrounding compute. The
+ports still declare rather than emit packets and carry no measured
+ceilings ([COMP-40, COMP-41](docs/modules/compute.md#open-tasks)); the
+[packet-device model](docs/design/packet-device-model.md) states the
+full target. NVIDIA GPUs are the calibrated first target (A100/H100
+bootstrap profiles, B100 reference deployment); **Google TPU and
+further xPUs are on the way** behind the same device shape, with
+ICI-class scale-up ports.
 
-| Model | Status | What it is |
-|---|---|---|
-| RDMA Work Queue | partial, first native slice live in the frozen composed fixture ([study](examples/rnic_live_v1/RESULTS.md), [BACK-9](docs/modules/backends.md)) | SimLLM C++ now models one finite SQ/CQ pair, WR-prefix posting, doorbell batches, ordered retirement, signaling, polling, owner wrap, network backpressure and controlled queue failures; RQ/SRQ, shared CQs and mlx5 encoding remain planned |
-| PCIe, MMIO and DMA | available, deterministic transaction slice ([study](examples/rnic_pcie_v1/RESULTS.md), [BACK-16/17](docs/modules/backends.md)) | Shared host-store, MWr/MRd/CplD scheduling with finite credits, tags and buffers, class ledgers and analytical path profiles; measured calibration and optional BlueFlame, ATS/ATC and MSI-X remain planned |
-| QP, QPC and context memory | host memory available, QP lifecycle planned ([BACK-11](docs/modules/backends.md)) | BACK-19 landed the tracked virtual host memory ([study](examples/rnic_hostmem_v1/RESULTS.md)), so QPC, rings, doorbell records and data regions are explicit allocations and a QPC fetch skips the per-access translation that data buffers take; QP pairing and state transitions plus MTT/MPT and WQE-cache residency in a measured device-cache and host-ICM hierarchy remain planned |
-| Host and GPU submission | producer shapes and GPU task coupling available; GPU CQ consumption remains open ([BACK-37](docs/modules/backends.md)) | Who submits work and consumes completions: a host CPU driver ringing doorbells, a CPU proxy fed from GPU queues, or GPU-initiated rings (the GPU posts its own network work) with a GPU-owned completion queue |
-| TX/RX hardware pipelines | planned ([BACK-12](docs/modules/backends.md)) | Packetization, schedulers, port buffers, ACK/NAK/RNR/retry, CQE completion, PFC gates and location-specific fault injection |
-| CX-7 observable state | planned ([BACK-13/14/15](docs/modules/backends.md)) | Versioned driver-visible registers, counters and traces, verbs capture/replay, and Collie-seeded boundary calibration; undocumented internals stay explicit calibrated abstractions |
+### The RNIC device
 
-#### Congestion-control and transport policies
+Built from boxes behind one construction entry point, landed: the
+work-queue core (SQ/CQ, doorbell batches, signaling, backpressure) plus
+DMA (PCIe transactions with finite credits, tags and buffers), QPC
+(connection, context and tracked host memory) and network transport
+modules. The transport and congestion-control policy swaps
+independently of the hardware profile: `rnic-nn` and `rnic-nn-fluid` as
+the ideal baselines, `rnic-cn` explicit-rate, and DCQCN as the RoCEv2
+comparator, with the composed native chain carrying packet-issue
+evidence into TTFT and TPOT. The fabric is a two-tier Clos with
+detailed switch models (VoQ traffic manager, request/grant
+input-buffered); a Slingshot-class dragonfly (Rosetta-style switches,
+progressive adaptive routing) is hosted in the backend, with its
+single-switch Merlin instance validated and multi-switch adaptive
+routing owned by [TRAF-51](docs/modules/traffic.md#open-tasks). The
+reference configuration is 8 nodes x 8 B100 GPUs, one 400G NIC per
+GPU; intra-node traffic rides the scale-up ports and stays off the
+fabric. The remaining device mechanisms are numbered in
+[backends](docs/modules/backends.md).
 
-| Model | Status | What it is |
-|---|---|---|
-| `rnic-nn` | available through the composed flow adapter at the default ABI v1 flow form; the Tier C run carries the ABI v2 packet-issue events through the metric chain ([backends](docs/modules/backends.md)) | Packetized no-CC policy and the reference for normalized FCT; full-RNIC runs use the same hardware path as physical policies |
-| `rnic-nn-fluid` | available | Continuous fluid policy with deterministic closed forms and the explicit hardware-bypass 0 ps anchor |
-| `rnic-cn` | available through the composed flow adapter at the default ABI v1 flow form; the ABI v2 packet-issue chain landed with the Tier C run, and short-flow control-cost reuse remains open ([HTSIM-6](docs/modules/backends.md)) | Explicit-rate policy with deterministic reservations, packet spraying and resequencing, lossless without PFC |
-| DCQCN | available through the composed flow adapter at the default ABI v1 flow form; the ABI v2 packet-issue chain landed with the Tier C run, and persistent post-CNP DCQCN state remains open ([HTSIM-5](docs/modules/backends.md)) | RoCEv2 comparator with per-QP CNP state, rate reduction/recovery and ECN plus optional PFC; DCQCN calibration lands before programmable CC |
-| LogGOPSim flow level | planned ([BACK-2](docs/modules/backends.md)) | Fast flow-level sweeps before packet-level runs |
+### The serving stack around the devices
 
-Fabrics are two-tier Clos topologies with detailed switch models (VoQ
-traffic manager, request/grant input-buffered). The default reference
-configuration is 8 nodes x 8 B100 GPUs, one 400G NIC per GPU; intra-node
-traffic rides an NVLink-class path and stays off the fabric.
-A Slingshot-class dragonfly fabric (Rosetta-style switches, progressive
-adaptive routing) is hosted in the htsim backend; its single-switch
-Merlin instance passes exact serialization oracles, and a validated
-composition rule over measured endpoint floors reproduces the captured
-Merlin steady-state flow families. The captured loads do not
-discriminate between fabric models, and multi-switch adaptive routing
-is unvalidated
-(see [docs/modules/traffic.md](docs/modules/traffic.md), TRAF-51).
-
-### GPU compute
-
-| Model | Status | What it is |
-|---|---|---|
-| Roofline | available | Analytical `max(flops/peak, bytes/bandwidth)` per kernel family, dense and MoE geometry, per-GPU envelopes |
-| Profile tables | available | Measured (kernel, config, GPU) duration tables; versioned artifact with mandatory provenance and interpolation |
-| Trace-driven GPU service | available, bootstrap | Isolated-kernel CTA/SM/warp scheduling, dependency scoreboards, occupancy and HBM service, plus isolated copy descriptors; [22 post-specified exact-oracle rows](examples/gpu_service_model/RESULTS.md) match to zero cycles, A100/H100 seed timing is not yet silicon-validated |
-| Concurrent GPU tasks | available, service primitive | Explicitly submitted compute, memory and NCCL network kernels share SM residency, issue budgets, the HBM cursor and the NVLink egress cursor; the coarse DeviceRuntime (CORE-4) dispatches into this primitive today for the first coordinated bypass profile ([task-mix study](examples/gpu_task_mix/RESULTS.md), [runtime study](examples/core4_runtime/RESULTS.md)) |
-| NVLink egress + NCCL ring | available, first cut | One flat per-GPU egress serializer and the per-GPU egress kernel of a ring all-reduce; peer topology, ingress and reduction lanes are planned ([COMP-11](docs/modules/compute.md)) |
-| NCCL stack skeleton | available, zero-time component stream | Mirrored NCCL names and causal boundaries as `simllm.compute.nccl`: proxy-op enqueue, GPU send FIFO with head/tail credits, verbs posting, doorbell and CQE poll; the receive leg is absent and the event stream is not yet projected onto the live TTFT/TPOT chain ([study](examples/nccl_stack_v1/RESULTS.md)) |
-| SASS offline calibration | planned ([COMP-1/5](docs/modules/compute.md)) | Accel-Sim trace-driven replay populates the tables offline for configurations nobody measured; a cycle simulator never sits inside the step loop |
-| Service-time distributions | planned ([COMP-9](docs/modules/compute.md)) | Beyond-mean service times for honest p99+ tails |
-
-### Framework (scheduling and KV cache)
-
-| Framework | Real (runs unmodified) | Simulated | Doc |
-|---|---|---|---|
-| vLLM, pinned v0.26.0 | v1 scheduler, KV-cache manager, block pool, prefix hashing, preemption | Model execution, sampled tokens, step latency, and the `GroupCoordinator` communicator calls that feed the NCCL stack skeleton | [adapters-vllm](docs/modules/adapters-vllm.md) |
-| SGLang, pinned main commit | RadixCache prefix matching, eviction, token/request pool accounting, retraction | Forward results and timing, and the matching communicator calls on the same shared base | [adapters-sglang](docs/modules/adapters-sglang.md) |
-
-Planned on this axis: explicit KV-lifecycle capture
-([CORE-3](docs/modules/core.md), [VLLM-11](docs/modules/adapters-vllm.md),
-[SGL-9](docs/modules/adapters-sglang.md)), device-schedule capture
-([VLLM-12](docs/modules/adapters-vllm.md),
-[SGL-10](docs/modules/adapters-sglang.md)), and PD-disaggregation /
-KV-transfer traffic (M6). The vLLM model-runner seam, where the SGLang
-adapter already sits, is partly there: the flagged skeleton worker and runner
-are already live and GPU-invisible in process
-([vllm_skeleton_v1](examples/vllm_skeleton_v1/RESULTS.md)), and only the
-GPU-present half remains ([VLLM-13](docs/modules/adapters-vllm.md)).
-
-The offline CPU pre-play oracle is no longer planned: capture, arrival join,
-vLLM replay and routed-expert supply are live, so a real granite MoE run fixes
-each request's output length, stop reason and expert routing, and a replay run
-reproduces those completions at the oracle lengths with the captured routing
-driving the all-to-all ([preplay](docs/modules/preplay.md)). The one open half
-is the independent CPU comparison against a second framework build (PLAY-5),
-which is blocked because the installed CUDA vLLM build does not export the CPU
-memory operator.
+The frontends stay real: vLLM (pinned v0.26.0) and SGLang run their own
+schedulers, KV/prefix caches and batching unmodified, and their
+communicator layers plus the NCCL software stack are simulated behind
+the real interfaces down to the RNIC doorbell
+([adapters-vllm](docs/modules/adapters-vllm.md),
+[adapters-sglang](docs/modules/adapters-sglang.md),
+[compute](docs/modules/compute.md)). The CPU pre-play oracle fixes each
+request's true output length, stop reason and expert routing offline,
+so a replay drives the devices with real model behavior
+([preplay](docs/modules/preplay.md)).
 
 ## Modules
 
