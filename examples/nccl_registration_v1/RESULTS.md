@@ -162,6 +162,17 @@ measured 2.41 ms is above its floor by about three. The number is on the
 optimistic side of a real 7B deployment but inside the physical envelope, and
 no scored relation depends on it.
 
+## Reproduction, post-specified
+
+The freeze did not ask for this, so it is recorded as a post-specified check
+rather than as a scored relation. The study was executed a second time into a
+fresh working directory, with the same backend binaries, and the two
+`results.json` documents are byte-identical: every makespan, every TTFT, every
+fabric term decided by one of the 48 real `htsim_rnic` subprocesses, and every
+registration charge. That is the constant-completion half of the interim
+contract observed directly rather than asserted: for a given traffic and a
+given fabric state, nothing in this chain draws a different number twice.
+
 ## What this run does not establish
 
 - **The cost is not calibrated.** 20,000,000 ps is configuration. The ABI
