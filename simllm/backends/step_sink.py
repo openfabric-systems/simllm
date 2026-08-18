@@ -128,6 +128,9 @@ from simllm.traffic import (
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     CollectiveFixedCostEnvelope,
     CollectiveLatencyProfile,
+    CollectiveRegistrationEvent,
+    CollectiveRegistrationLedger,
+    CollectiveRegistrationModel,
     RoutedMoeSupply,
     StepLocalityPlan,
     critical_collective_endpoint_bytes,
@@ -137,6 +140,7 @@ from simllm.traffic import (
     render_step_goal,
     resolve_collective_fixed_cost_envelope,
     resolve_collective_latency_profile,
+    resolve_collective_registration,
     validate_execution_graph_locality_projection,
 )
 
@@ -209,6 +213,15 @@ class HtsimStepSinkConfig:
     collective_fixed_cost_envelope: str | CollectiveFixedCostEnvelope | None = None
     #: which arm of that bracket to charge; ``off`` is the exact default path
     collective_fixed_cost_arm: str = "off"
+    #: one-time channel-and-buffer registration model; None is the exact off path
+    collective_registration: str | CollectiveRegistrationModel | None = None
+    #: immutable registration model resolved during validation, never set by a caller
+    resolved_collective_registration: CollectiveRegistrationModel | None = field(
+        init=False,
+        repr=False,
+        compare=False,
+        default=None,
+    )
     #: immutable envelope resolved during validation, never set by a caller
     resolved_collective_fixed_cost_envelope: CollectiveFixedCostEnvelope | None = field(
         init=False,
@@ -262,6 +275,9 @@ class HtsimStepSinkConfig:
             raise ValueError(
                 "nvlink_bandwidth_bytes_per_second must be a positive integer"
             )
+        self.resolved_collective_registration = resolve_collective_registration(
+            self.collective_registration
+        )
         self.resolved_collective_fixed_cost_envelope = (
             resolve_collective_fixed_cost_envelope(self.collective_fixed_cost_envelope)
         )
@@ -451,6 +467,8 @@ class StepLocalityOutcome:
     local_phase_service_ps: tuple[int, ...] = ()
     #: semantic collective fixed cost by executed artifact, owned by no resource
     base_phase_latency_ps: tuple[int, ...] = ()
+    #: one-time registration charged at each artifact; empty on the off path
+    registration_phase_cost_ps: tuple[int, ...] = ()
     #: ``LOCAL_SERVICE_MEDIA`` owner of each artifact's local service term
     local_phase_medium: tuple[str, ...] = ()
     #: semantic ordering owner for every active path
@@ -484,6 +502,8 @@ class CollectiveArtifactTiming:
     fabric_transport_ps: int
     collective_base_latency_ps: int
     composed_service_ps: int
+    #: one-time channel-and-buffer registration serialized ahead of this artifact
+    registration_cost_ps: int = 0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "operation_ids", tuple(self.operation_ids))
@@ -499,6 +519,7 @@ class CollectiveArtifactTiming:
             "fabric_transport_ps",
             "collective_base_latency_ps",
             "composed_service_ps",
+            "registration_cost_ps",
         ):
             _require_nonnegative_timing(name, getattr(self, name))
         if self.collective_operation_id is None:
@@ -508,6 +529,10 @@ class CollectiveArtifactTiming:
                 )
             if self.collective_base_latency_ps:
                 raise ValueError("non-collective artifacts cannot carry a base latency")
+            if self.registration_cost_ps:
+                raise ValueError(
+                    "non-collective artifacts cannot carry a registration cost"
+                )
         else:
             if (
                 not isinstance(self.collective_operation_id, str)
@@ -524,9 +549,10 @@ class CollectiveArtifactTiming:
                 "critical_endpoint_bytes",
                 self.critical_endpoint_bytes,
             )
-        expected = self.collective_base_latency_ps + max(
-            self.local_service_ps,
-            self.fabric_transport_ps,
+        expected = (
+            self.registration_cost_ps
+            + self.collective_base_latency_ps
+            + max(self.local_service_ps, self.fabric_transport_ps)
         )
         if self.composed_service_ps != expected:
             raise ValueError("composed service disagrees with its calibrated terms")
@@ -634,6 +660,61 @@ class StepCollectiveTimingOutcome:
 
 
 @dataclass(frozen=True)
+class StepCollectiveRegistrationOutcome:
+    """What one scheduler-visible step paid to register channels and buffers.
+
+    This is a read-only projection of the sink's single registration ledger. It
+    is published only when a registration model is selected, so the off path
+    leaves the list empty rather than filling it with zeros.
+    """
+
+    step_index: int
+    model_id: str
+    cost_id: str
+    evidence_class: str
+    registration_cost_ps: int
+    channels_per_communicator: int
+    charged_ps: int
+    events: tuple[CollectiveRegistrationEvent, ...]
+    #: per executed artifact, in artifact order
+    artifact_registration_ps: tuple[int, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "events", tuple(self.events))
+        object.__setattr__(
+            self,
+            "artifact_registration_ps",
+            tuple(self.artifact_registration_ps),
+        )
+        _require_nonnegative_timing("step_index", self.step_index)
+        for name in ("model_id", "cost_id", "evidence_class"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a nonblank string")
+        _require_nonnegative_timing("registration_cost_ps", self.registration_cost_ps)
+        if (
+            type(self.channels_per_communicator) is not int
+            or self.channels_per_communicator < 1
+        ):
+            raise ValueError("channels_per_communicator must be a positive integer")
+        _require_nonnegative_timing("charged_ps", self.charged_ps)
+        for index, value in enumerate(self.artifact_registration_ps):
+            _require_nonnegative_timing(f"artifact_registration_ps[{index}]", value)
+        if sum(self.artifact_registration_ps) != self.charged_ps:
+            raise ValueError(
+                "per-artifact registration does not conserve the ledger charge"
+            )
+        if sum(event.cost_ps for event in self.events) != self.charged_ps:
+            raise ValueError(
+                "registration events do not conserve the ledger charge"
+            )
+        if any(
+            event.cost_ps != self.registration_cost_ps for event in self.events
+        ):
+            raise ValueError("every registration event charges the same declared cost")
+
+
+@dataclass(frozen=True)
 class _PlannedExecutionArtifact:
     """One checked graph-projection artifact executed at an ordered boundary."""
 
@@ -646,6 +727,7 @@ class _PlannedExecutionArtifact:
     participant_count: int | None = None
     critical_endpoint_bytes: int | None = None
     collective_base_latency_ps: int = 0
+    registration_cost_ps: int = 0
 
 
 @dataclass(frozen=True)
@@ -702,6 +784,8 @@ class _PlannedStep:
     collective_fixed_cost_envelope_id: str | None
     collective_fixed_cost_arm: str | None
     collective_evidence_class: str | None
+    collective_registration: CollectiveRegistrationModel | None
+    registration_events: tuple[CollectiveRegistrationEvent, ...]
 
 
 @dataclass(frozen=True)
@@ -713,6 +797,7 @@ class _SimulatedStep:
     locality_outcome: StepLocalityOutcome | None
     collective_timing_outcome: StepCollectiveTimingOutcome | None
     dependency_cross_check_report: DependencyCrossCheckReport | None
+    collective_registration_outcome: StepCollectiveRegistrationOutcome | None = None
 
 
 @dataclass(frozen=True)
@@ -741,6 +826,10 @@ class HtsimStepSink:
                 for rank in ranks:
                     self._rank_mapper.goal_rank(rank)
         self.config.workdir.mkdir(parents=True, exist_ok=True)
+        #: the one registration authority for this deployment; disabled by default
+        self._registration_ledger = CollectiveRegistrationLedger(
+            model=config.resolved_collective_registration
+        )
         #: one entry per simulated (non-None) step, in call order
         self.outcomes: list[StepNetworkOutcome] = []
         #: locality projection for the same simulated steps, in call order
@@ -749,12 +838,33 @@ class HtsimStepSink:
         self.collective_timing_outcomes: list[StepCollectiveTimingOutcome] = []
         #: explicitly selected independent dependency comparisons, in call order
         self.dependency_cross_check_reports: list[DependencyCrossCheckReport] = []
+        #: registration ledger projections; deliberately empty on the off path
+        self.collective_registration_outcomes: list[
+            StepCollectiveRegistrationOutcome
+        ] = []
 
     @property
     def host_model(self) -> HostInitiationModel:
         """The one host model applied by this sink's serial lowerer."""
 
         return self.config.host_model
+
+    @property
+    def collective_registration_ledger(self) -> CollectiveRegistrationLedger:
+        """The one registration authority this sink charges against."""
+
+        return self._registration_ledger
+
+    def rebuild_collective_communicators(self) -> None:
+        """Model a destroy-and-init cycle of every communicator seen so far.
+
+        This is the live form of the third re-registration event. The next
+        collective on each rebuilt communicator re-registers every channel and
+        every buffer, and pays for it. A disabled ledger has nothing to rebuild
+        and this is a no-op.
+        """
+
+        self._registration_ledger.rebuild_all()
 
     @staticmethod
     def _num_sampled(record: StepRecord) -> int:
@@ -901,6 +1011,22 @@ class HtsimStepSink:
                     for message in artifact.trace.messages
                 ),
             )
+        #: Charge the one registration ledger in graph order, once per semantic
+        #: collective, after every projection has validated and before any
+        #: artifact is built. The amount is spent on that collective's first
+        #: executed artifact, so a collective split into locality phases pays
+        #: exactly once.
+        registration_before = len(self._registration_ledger.events)
+        registration_by_operation: dict[str, int] = {}
+        for operation in collectives:
+            registration_by_operation[operation.operation_id] = (
+                self._registration_ledger.charge_collective(
+                    operation.work,
+                    operation.operation_id,
+                    step_index=record.step_index,
+                )
+            )
+        registration_events = self._registration_ledger.events[registration_before:]
         operation_by_id = {
             operation.operation_id: operation for operation in graph.operations
         }
@@ -982,6 +1108,9 @@ class HtsimStepSink:
                                 if timing_parameters is not None
                                 else None
                             ),
+                            registration_cost_ps=registration_by_operation.get(
+                                operation_id, 0
+                            ),
                         )
                     )
                     continue
@@ -1014,6 +1143,9 @@ class HtsimStepSink:
                             timing_parameters[2]
                             if timing_parameters is not None
                             else 0
+                        ),
+                        registration_cost_ps=registration_by_operation.get(
+                            operation_id, 0
                         ),
                     )
                 )
@@ -1083,6 +1215,11 @@ class HtsimStepSink:
                         collective_base_latency_ps=(
                             timing_parameters[2]
                             if timing_parameters is not None and phase_index == 0
+                            else 0
+                        ),
+                        registration_cost_ps=(
+                            registration_by_operation.get(operation_id, 0)
+                            if phase_index == 0
                             else 0
                         ),
                     )
@@ -1187,6 +1324,8 @@ class HtsimStepSink:
                 else cfg.collective_fixed_cost_arm
             ),
             collective_evidence_class=cfg.resolved_collective_evidence_class,
+            collective_registration=cfg.resolved_collective_registration,
+            registration_events=registration_events,
         )
 
     @staticmethod
@@ -1273,7 +1412,8 @@ class HtsimStepSink:
                 backend_runs += 1
             fabric_services.append(fabric_service_ps)
             composed_services.append(
-                artifact.collective_base_latency_ps
+                artifact.registration_cost_ps
+                + artifact.collective_base_latency_ps
                 + max(artifact.local_service_ps, fabric_service_ps)
             )
             artifact_offset_ps += composed_services[-1]
@@ -1368,6 +1508,11 @@ class HtsimStepSink:
             base_phase_latency_ps=tuple(
                 artifact.collective_base_latency_ps for artifact in plan.artifacts
             ),
+            registration_phase_cost_ps=(
+                tuple(artifact.registration_cost_ps for artifact in plan.artifacts)
+                if plan.collective_registration is not None
+                else ()
+            ),
             local_phase_medium=tuple(
                 NVLINK_MEDIUM
                 if artifact.collective_operation_id is not None
@@ -1413,6 +1558,7 @@ class HtsimStepSink:
                         collective_base_latency_ps=(
                             artifact.collective_base_latency_ps
                         ),
+                        registration_cost_ps=artifact.registration_cost_ps,
                         composed_service_ps=composed_service_ps,
                     )
                     for artifact, fabric_service_ps, composed_service_ps in zip(
@@ -1421,6 +1567,24 @@ class HtsimStepSink:
                         composed_phase_service_ps,
                         strict=True,
                     )
+                ),
+            )
+        registration_outcome = None
+        if plan.collective_registration is not None:
+            model = plan.collective_registration
+            registration_outcome = StepCollectiveRegistrationOutcome(
+                step_index=plan.step_index,
+                model_id=model.model_id,
+                cost_id=model.cost.cost_id,
+                evidence_class=model.cost.evidence_class,
+                registration_cost_ps=model.cost.registration_cost_ps,
+                channels_per_communicator=model.channels_per_communicator,
+                charged_ps=sum(
+                    event.cost_ps for event in plan.registration_events
+                ),
+                events=plan.registration_events,
+                artifact_registration_ps=tuple(
+                    artifact.registration_cost_ps for artifact in plan.artifacts
                 ),
             )
         result = StepResult(
@@ -1434,6 +1598,7 @@ class HtsimStepSink:
             locality_outcome=locality_outcome,
             collective_timing_outcome=collective_timing_outcome,
             dependency_cross_check_report=cross_check_report,
+            collective_registration_outcome=registration_outcome,
         )
 
     def _simulate_step(self, record: StepRecord) -> _SimulatedStep:
@@ -1460,6 +1625,10 @@ class HtsimStepSink:
         if simulation.dependency_cross_check_report is not None:
             self.dependency_cross_check_reports.append(
                 simulation.dependency_cross_check_report
+            )
+        if simulation.collective_registration_outcome is not None:
+            self.collective_registration_outcomes.append(
+                simulation.collective_registration_outcome
             )
         return simulation.result
 
