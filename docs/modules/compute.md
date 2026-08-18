@@ -75,6 +75,11 @@ per serving step.
   mechanisms already imply. With no declared ceiling, `GpuDevice.architecture`
   is the input object itself, so `sm_scheduler_model()` and
   `copy_engine_service()` reproduce every accepted artifact exactly.
+  `GpuPortProtocol` names PCIe and NVLink-C2C on the host link and NVLink,
+  PCIe, xGMI and UALink on the peer link. Naming a protocol is not supporting
+  it: xGMI and UALink have no first-party measurement and no declared profile
+  here, so a port claiming either is rejected during configuration with a
+  diagnostic naming COMP-35, which owns vendor instantiation for both.
 - `HostInitiationModel`: the exact-zero `ideal` profile, legacy additive
   constants, and two device-bound fixed-step launch-throughput profiles.
   `turing_cuda_graph(N)` and `turing_eager_host(N)` compose provider service
@@ -86,6 +91,75 @@ per serving step.
 
 Every estimate carries an honest uncertainty so results can report error
 bounds.
+
+## Kernel-time determinism
+
+This is the model's kernel-time semantics, and it is a contract, not an
+implementation detail. It follows the maintainer ruling of 2026-08-18.
+
+**A compute kernel's service time is a deterministic constant with no tail.**
+It is a pure function of exactly four inputs:
+
+1. the **kernel family** (`attn_gemm`, `attn_score`, `mlp_gemm`, `lm_head`,
+   `kv_read`, or the fused `llm_step` that projects onto them),
+2. the **phase**, prefill or decode,
+3. the **token and shape inputs**, i.e. `new_tokens`, `kv_tokens`, `sampled`
+   and the per-rank `ModelDims` geometry, and
+4. the **architecture profile**, i.e. the `GpuSpec` envelope or the
+   `GpuArchitectureProfile` the mechanistic replay is calibrated to.
+
+Nothing else may enter. The same four inputs give the same picoseconds on every
+rank, in every worker, through either frontend adapter, on every repeat, and in
+every process. No provider draws a random number, reads a wall clock or reads
+the environment, and no pricing entry point accepts a rank, a worker id or an
+adapter identity.
+
+**Rank and runner independence is a statement about the function, not about the
+shape.** Two ranks may legitimately carry different shape inputs and therefore
+different constants. Uneven expert parallelism is the case already in the
+repository: vLLM spreads global experts over the expert-parallel world and gives
+the low ranks the remainder, so 30 experts over 8 ranks leaves ranks 0 to 5 with
+four resident experts and ranks 6 and 7 with three. Those ranks stream different
+weight bytes and their decode steps cost different amounts. That is an input
+difference, and the contract is unaffected by it. What the contract forbids is a
+provider whose answer depends on who asked.
+
+**Memory-bound kernels are pinned to the HBM bound.** In the roofline provider
+a memory-bound estimate is exactly `bytes_moved / (mem_bandwidth * efficiency)`
+with no compute term leaking in, and it reports `bound="memory"`. In the
+mechanistic `SmSchedulerModel` a kernel whose limiter is the flat per-GPU HBM
+cursor takes exactly its cursor occupancy plus the profile's fixed HBM return
+latency, and adding SMs changes nothing.
+
+**CUDA-graph launch and eager launch differ only in the host launch cost.** The
+COMP-2 profiles already distinguish `turing-cuda-graph` from
+`turing-eager-host`, and both compose as `max(C, N * g)` over an unchanged
+provider service `C`. The launch class never reaches kernel service time. The
+`ideal` host profile contributes exactly zero, so a study with no host profile
+selected is reading kernel service time and nothing else.
+
+**There is no per-kernel tail, and the rationale is that tails are emergent.**
+Reported TTFT and TPOT distributions have wide tails in real deployments, and
+this model produces them from the network, from batching decisions and from
+queueing at contended resources, which is where they physically come from.
+Attributing a tail to per-kernel stochasticity would double count: the same
+spread would appear once in the kernel constant and again in the queueing that
+constant feeds. It would also be unfalsifiable at the metric, because a p99
+TTFT can be reproduced by an arbitrary mix of kernel noise and queue noise. So
+kernel service time carries a mean-valued constant with an honest uncertainty
+for error bounds, and every tail claim is owned by the network, batching and
+queueing chain (COMP-9).
+
+**Collective work is the one declared exception**, and it is owned by the
+traffic and collective side rather than here. Its destiny is a packetized path
+over the GPU's NVLink, xGMI or UALink ports; until then collectives complete
+through the deterministic ATLAHS and htsim chain with no-tail constant
+completion.
+
+Enforcement is in `tests/test_kernel_determinism.py`, which locks all four
+clauses with a mutation control for each, against the fixtures and exact
+constants pre-registered in
+[kernel_determinism_v1](../../examples/kernel_determinism_v1/expectations.md).
 
 ## Fixed per-step host profiles
 
@@ -911,6 +985,33 @@ and an explicit reason:
   projection through `RoutedMoeSupply`, using the same selected placement
   epoch as traffic, to drive per-rank effective expert load and hot-expert
   imbalance.
+- COMP-9 (Precision; P1; L): locate and validate latency-tail fidelity in the
+  network, batching and queueing chain, which is where the standing kernel-time
+  determinism decision (maintainer, 2026-08-18) puts every tail. This task
+  previously promised a measured or fitted service-time distribution on
+  `DurationEstimate` and the profile artifacts so CORE-5 could claim
+  kernel-level p99 and p99.9 accuracy. That scope is refuted for compute. A
+  kernel's service time is a deterministic constant with no tail, so a
+  per-kernel distribution would double count spread that the queueing it feeds
+  already produces, and a reported p99 TTFT could then be reproduced by an
+  arbitrary mix of kernel noise and queue noise, which makes the attribution
+  unfalsifiable at the metric. `DurationEstimate` keeps one nominal value plus
+  an honest uncertainty, and that uncertainty stays an error bound on a
+  constant, never a sampling distribution.
+  The surrogate now being replaced is the repository's silence about where a
+  reported tail comes from: p50 through p99.9 TTFT and TPOT are named as
+  milestone deliverables in `docs/architecture.md`, `adapters-vllm.md` and
+  `adapters-sglang.md` with no statement of which mechanism owns each
+  percentile. The identifying observables are per-visit queue waits under the
+  one queue-visit contract (`submitted_at`, `eligible_at`, `started_at`,
+  `finished_at`, `completed_at`), per-flow FCT from the packet-level backend,
+  and batch composition per step. Acceptance: each reported TTFT and TPOT
+  percentile is attributed to network, batching or queueing terms selected on
+  the realized critical path with no additive mixing of wait reductions; a
+  held-out workload's tail is predicted within a declared band; and removing all
+  fabric contention and all batching collapses the distribution onto the
+  deterministic constant this module guarantees. The deterministic compute path
+  stays byte-identical throughout.
 - COMP-31 (Precision; P1; L): complete the mechanism detail retained from
   COMP-11 after the calibrated endpoint serializer and semantic collective
   floor landed. The active selectable model still projects local traffic onto
@@ -967,20 +1068,27 @@ and an explicit reason:
   of two GPU cycles or 10 percent in every cell, and report the surrogate's
   before-versus-calibrated error. The calibration-off path must preserve every
   accepted TRAF-7 timestamp and artifact byte.
-- COMP-23 (Precision; P2; L): add a calibrated per-kernel latency
-  distribution provider beside the mean-valued table. The landed profile
-  table and trace-calibrated service model return one value per input, which
-  cannot express the run-to-run spread that clock, cache and scheduling
-  variation produce on real silicon. The Turing method anchor now supplies
+- COMP-23 (Precision; P2; L): record the calibrated per-kernel duration spread
+  as capture evidence beside the mean-valued table. The landed profile table and
+  trace-calibrated service model return one value per input, which cannot
+  express the run-to-run spread that clock, cache and scheduling variation
+  produce on real silicon, and a calibration that reports only a median cannot
+  say how well identified its own constant is. The Turing method anchor supplies
   41 raw samples per family, dtype and shape cell and demonstrates why the
-  distribution must retain outliers rather than only a mean. Those synthetic
-  TU116 samples validate the artifact shape but do not calibrate production
-  kernels. Fit a distribution per production kernel family after COMP-1 and
-  COMP-5 provide the target capture, carry the fit provenance, calibration
-  envelope and seed, and validate held-out quantiles against raw silicon
-  samples. Report the deterministic point-table error before the
-  distributional result. The deterministic providers remain exact
-  compatibility levels and their accepted artifacts stay byte-identical.
+  record must retain outliers rather than only a mean. Those synthetic TU116
+  samples validate the artifact shape but do not calibrate production kernels.
+  Fit the spread per production kernel family after COMP-1 and COMP-5 provide
+  the target capture, carry the fit provenance and calibration envelope, and
+  validate held-out quantiles against raw silicon samples. Report the
+  deterministic point-table error before the distributional result.
+  Scope constraint from the standing kernel-time determinism decision
+  (maintainer, 2026-08-18): the fitted spread is calibration evidence about how
+  well the constant is identified and about capture-environment stability, and
+  it feeds the estimate's honest uncertainty. It is not a sampling source. No
+  provider may draw from it to price a kernel, no seed enters a service path,
+  and a reported latency tail is owned by COMP-9's chain rather than by this
+  entry. The deterministic providers remain exact compatibility levels and their
+  accepted artifacts stay byte-identical.
 - COMP-24 (Precision; P1; M): extend the registered mixed-makespan forms
   beyond the single frozen fixture they were measured on. COMP-12 registered
   one issue-order pair and one residency-gated pair, so
@@ -1086,23 +1194,47 @@ and an explicit reason:
   must connect to this stack. Function and event identities must remain stable
   so later captures, timing calibration and adapter traces align with this
   first slice.
-- COMP-35 (Completeness; P2; M): instantiate vendor ports, so an AMD ROCm GPU
-  can be expressed at all. Once COMP-34 lands port objects, a vendor
-  instantiation names the peer port xGMI rather than NVLink and the collective
-  producer RCCL rather than NCCL, and supplies the envelope slots those names
-  need. No first-party AMD measurement exists in this repository and the only
-  figures available are vendor nameplate, so the instantiation must fail closed
-  exactly as a calibrated B100 or H100 host-cost request already does, rejecting
-  during configuration instead of borrowing an NVLink ceiling or an NVLink
-  efficiency. Acceptance: a declared xGMI profile carrying its own provenance
-  and validity window is required before any AMD cell runs; an undeclared or
-  unmeasured request is rejected with a diagnostic naming the missing profile
-  and the port it belongs to; and every accepted NVIDIA cell stays
-  byte-identical. This is P2 while no AMD study exists and becomes P1 when one
-  opts in. COMP-34 landed the port objects and made the xGMI protocol nameable,
-  and it rejects an xGMI port at configuration time with a diagnostic naming
-  this task, so what remains is a declared xGMI ceiling with its own provenance
-  and validity window plus the RCCL producer naming.
+- COMP-35 (Completeness; P2; M): instantiate vendor peer ports, so an AMD ROCm
+  GPU and a UALink pod can be expressed at all. Once COMP-34 lands port objects,
+  a vendor instantiation names the peer port xGMI or UALink rather than NVLink,
+  names the collective producer RCCL rather than NCCL on the AMD arm, and
+  supplies the envelope slots those names need. Neither protocol has a
+  first-party measurement in this repository and the only figures available for
+  either are vendor or consortium nameplate, so the instantiation must fail
+  closed exactly as a calibrated B100 or H100 host-cost request already does,
+  rejecting during configuration instead of borrowing an NVLink ceiling or an
+  NVLink efficiency. UALink is the sharper case of the same rule: the UALink 200G
+  1.0 specification states a 200 GT/s per-lane data rate carried at a 212.5 GT/s
+  signalling rate, so taking the headline figure as a payload ceiling repeats
+  exactly the NVLink4 signalling-versus-payload error the port taxonomy already
+  records. Acceptance: a declared xGMI or UALink profile carrying its own
+  provenance and validity window is required before any cell on that protocol
+  runs; an undeclared or unmeasured request is rejected with a diagnostic naming
+  the missing profile and the port it belongs to; and every accepted NVIDIA cell
+  stays byte-identical. This is P2 while no AMD or UALink study exists and
+  becomes P1 when one opts in. COMP-34 landed the port objects and made the xGMI
+  protocol nameable; the kernel-time determinism contract added UALink beside it
+  on the peer-link role, and both are rejected at configuration time with a
+  diagnostic naming this task, so what remains is a declared ceiling per
+  protocol with its own provenance and validity window, plus the RCCL producer
+  naming.
+- COMP-42 (Completeness; P2; S): normalize how the two adapter geometry readers
+  spell the optional dtype widths on `ModelDims`. The vLLM reader resolves
+  `weight_dtype_bytes` and `kv_dtype_bytes` from the quantization and cache
+  configs and stores explicit floats; the SGLang reader stores `None` and lets
+  `ModelDims` fall back to the activation width. Both resolve to the same number
+  through `weight_element_bytes` and `kv_element_bytes`, so no reported
+  picosecond moves today, which is measured by
+  [kernel_determinism_v1](../../examples/kernel_determinism_v1/expectations.md)
+  and pinned by `tests/test_kernel_determinism.py`. The unavailable path is a
+  consumer that compares or hashes `ModelDims` itself: two adapters describing
+  one identical rank would disagree, which is the failure mode BACK-50 already
+  records for the effective-hardware snapshot. Give SGLang the same quantization
+  and cache-dtype resolution vLLM has, or make both store the resolved width,
+  and keep the explicit unresolved path testable. The off path is the current
+  behavior: every accepted artifact and every priced step must stay
+  byte-identical, and the pinning test must be updated in the same change rather
+  than deleted.
 - COMP-40 (Completeness; P2; M): the landed GPU ports declare capabilities but
   emit no packet event, so an intra-node leg still cannot report an extent, an
   attempt, a TX boundary or an arrival in the same language a wire port uses.
@@ -1133,11 +1265,6 @@ and an explicit reason:
   rank) ULP effects could mask a real mismatch even though the integer
   identity is exact. Assert the sums in the integer domain when such
   shapes enter scope (audit note, examples/m5/RESULTS.md).
-- COMP-9: extend `DurationEstimate` and profile artifacts from one nominal
-  value plus uncertainty to a measured or fitted service-time distribution
-  with declared sample count and quantiles. CORE-5 needs this before claiming
-  kernel-level p99 or p99.9 tail accuracy; deterministic means remain valid
-  for closed-form sanity studies.
 - COMP-10: extend trace replay beyond synchronous normalized per-warp
   instructions. Add subpartition-aware scheduler ownership, barriers,
   `cp.async`, Hopper TMA and warpgroup async issue/commit/wait semantics, plus

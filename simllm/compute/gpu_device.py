@@ -46,10 +46,11 @@ uncertainty the base calibration earned by measurement. See
 folds the declared ceiling's reference into the emitted reference list.
 
 Everything a port cannot do fails closed at configuration time rather than at
-first use: a capability with no mechanism behind it, an xGMI port (COMP-35 owns
-vendor instantiation), a peer-store port on a calibration with no NVLink
-profile, a copy direction the engine does not declare, a bidirectional port that
-names only part of its own link, or two ports claiming one mechanism.
+first use: a capability with no mechanism behind it, an xGMI or UALink port
+(COMP-35 owns vendor instantiation for both), a peer-store port on a calibration
+with no NVLink profile, a copy direction the engine does not declare, a
+bidirectional port that names only part of its own link, or two ports claiming
+one mechanism.
 
 Error taxonomy, following `gpu_model`: a pure type mistake (a field that is not
 the required record, enum or string type) raises ``TypeError``, every
@@ -86,15 +87,18 @@ GPU_PORT_CONFIG_VERSION = 1
 class GpuPortProtocol(str, Enum):
     """Wire protocol a port speaks.
 
-    ``XGMI`` is nameable so an AMD topology can be described, but a port that
-    claims it is rejected: no first-party AMD measurement exists in this
-    repository and COMP-35 owns vendor instantiation.
+    ``XGMI`` and ``UALINK`` are nameable so an AMD topology and a UALink peer
+    fabric can be described, but a port that claims either is rejected: neither
+    has a first-party measurement or a declared profile in this repository, and
+    COMP-35 owns vendor instantiation for both. Naming a protocol is not
+    supporting it; see :data:`_UNPROFILED_PEER_PROTOCOLS`.
     """
 
     PCIE = "pcie"
     NVLINK_C2C = "nvlink_c2c"
     NVLINK = "nvlink"
     XGMI = "xgmi"
+    UALINK = "ualink"
 
 
 class GpuPortRole(str, Enum):
@@ -173,7 +177,20 @@ _ROLE_PROTOCOLS: dict[GpuPortRole, tuple[GpuPortProtocol, ...]] = {
         GpuPortProtocol.NVLINK,
         GpuPortProtocol.PCIE,
         GpuPortProtocol.XGMI,
+        GpuPortProtocol.UALINK,
     ),
+}
+
+#: Peer-link protocols this repository can name but cannot price. Neither has a
+#: first-party measurement or a declared profile here, and the only public
+#: figures for either are vendor nameplate, so a port claiming one is rejected
+#: during configuration rather than at first use. The value is
+#: ``(display name, what stays blocked)`` for the diagnostic. Removing an entry
+#: is how vendor instantiation lands: it requires a declared ceiling carrying
+#: its own provenance and validity window, which is COMP-35.
+_UNPROFILED_PEER_PROTOCOLS: dict[GpuPortProtocol, tuple[str, str]] = {
+    GpuPortProtocol.XGMI: ("xGMI", "an AMD cell"),
+    GpuPortProtocol.UALINK: ("UALink", "a UALink cell"),
 }
 
 _COPY_DIRECTION_ROLE: dict[CopyDirection, GpuPortRole] = {
@@ -283,12 +300,14 @@ class GpuPortConfig:
         self._validate_declared_ceiling()
 
     def _validate_protocol(self) -> None:
-        if self.protocol is GpuPortProtocol.XGMI:
+        unprofiled = _UNPROFILED_PEER_PROTOCOLS.get(self.protocol)
+        if unprofiled is not None:
+            label, blocked = unprofiled
             raise ValueError(
-                f"port {self.port_id!r} declares the xGMI protocol, which has no "
+                f"port {self.port_id!r} declares the {label} protocol, which has no "
                 "first-party or declared profile in this repository; vendor port "
-                "instantiation is COMP-35 and must supply a declared xGMI ceiling "
-                "with its own provenance before an AMD cell may run"
+                f"instantiation is COMP-35 and must supply a declared {label} ceiling "
+                f"with its own provenance before {blocked} may run"
             )
         if self.protocol not in _ROLE_PROTOCOLS[self.role]:
             allowed = ", ".join(item.value for item in _ROLE_PROTOCOLS[self.role])

@@ -44,3 +44,5 @@ examples/merlin_ss_fabric_calibration_v1/*.py text eol=lf
 examples/merlin_ss_fabric_calibration_v1/results/*.json text eol=lf
 tests/test_merlin_ss_fabric_calibration_results.py text eol=lf
 examples/kernel_determinism_v1/*.md text eol=lf
+examples/kernel_determinism_v1/*.py text eol=lf
+tests/test_kernel_determinism.py text eol=lf
