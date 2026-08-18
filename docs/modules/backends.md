@@ -201,11 +201,21 @@ has since validated the declared single-switch Merlin instance's exact
 serialization arithmetic and a frozen composition rule over measured
 endpoint host-stack floors for the captured steady-state families; the
 captured loads (each stack under a fifth of a port) do not discriminate
-between fabric models, which the study states as its own limit, and
-endpoint dynamics, shared-port families, multi-switch routing and
-fabric-model discrimination remain open (TRAF-53 in
-[traffic.md](traffic.md), HTSIM-29 to HTSIM-31 below), with the backend
-note's own wording update as HTSIM-31. A pin to an
+between fabric models, which the study states as its own limit. The
+wave-21 load-bearing recalibration
+([merlin_ss_fabric_loadbearing_v1](../../examples/merlin_ss_fabric_loadbearing_v1/RESULTS.md))
+then made the fabric carry genuine risk through the load harness's
+think-time seam: the captured x4 shared-egress aggregate is reproduced
+within its frozen band with the sharing waits simulated (composed
+10.63 against measured 11.10 GB/s), two buffer configurations that are
+byte-identical at capture-shaped load produce opposite registered
+verdicts on the composed x4 cell plus banded saturating-arm
+separations, and the p50-static endpoint floor is refuted for skewed
+shared-port families. Endpoint dynamics, the tranche-2 families,
+multi-switch routing and the source-shared x4 mapping remain open
+(TRAF-52 and TRAF-53 in [traffic.md](traffic.md), HTSIM-31 to
+HTSIM-33 below), with the backend note's own wording update as
+HTSIM-31. A pin to an
 append-only `<date>/simllm-addon` branch
 remains an intentional supported state while backend work is in review, but
 it is an intermediate state rather than the steady one. The same HTSIM
@@ -1371,11 +1381,37 @@ created" statement stands and refers to different, never-registered work.
 - HTSIM-31 (Completeness; P2; S): update the backend design note's
   status section (`docs/ss-dragonfly-fabric/README.md`) from "hosted,
   calibration pending" to the calibrated-for-what wording the TRAF-51
-  study established: steady-state solo, incast and staggered-join
+  studies established: steady-state solo, incast and staggered-join
   behavior at the captured distinct-port mappings and loads on the
-  declared single-switch Merlin instance, endpoint floor separate,
-  endpoint dynamics and multi-switch routing uncalibrated. Backend-repo
-  work, registered here; the simllm-side wording landed with the study.
+  declared single-switch Merlin instance, endpoint floor separate, plus
+  the wave-21 load-bearing additions (the shared-egress x4 aggregate
+  within its frozen band, composed-level buffer-configuration
+  discrimination, the p50-static-floor refutation); endpoint dynamics
+  and multi-switch routing uncalibrated. Backend-repo work, registered
+  here; the simllm-side wording landed with the studies.
+- HTSIM-32 (Completeness; P2; M): flow-identity-keyed delivery dispatch
+  in the ss-dragonfly load harness, so several flows can share one
+  (source, destination) host pair. `SsDragonflyLoadDispatch` routes
+  deliveries by the (source, destination) pair and rejects duplicates,
+  and the harness's explicit pattern enforces pairwise-distinct pairs,
+  so the captured x4 family's true mapping (four same-node stacks whose
+  combined traffic leaves one source port for one destination port) is
+  inexpressible; the wave-21 recalibration
+  ([merlin ss fabric loadbearing](../../examples/merlin_ss_fabric_loadbearing_v1/RESULTS.md))
+  had to model it as four source hosts into one shared destination
+  egress, a declared abstraction whose cost its freeze states. Packets
+  already carry a distinct flow id, so keying the dispatch by flow id
+  is the natural fix. Acceptance: an explicit cell with two or more
+  flows on one (src, dst) pair delivers per-flow chunk accounting
+  correctly, legacy invocations stay byte-identical, and a
+  source-shared x4 mirror cell becomes runnable.
+- HTSIM-33 (Completeness; P2; S): make the host injection queue depth a
+  topology parameter. The ss-dragonfly fabric hardcodes each host's
+  injection queue at 64 wire packets, which overflows (fatally, under
+  closed-loop sources) within tens of microseconds of any burst overlap
+  from co-hosted sources, so no source-side sharing study can run until
+  the depth is declarable; registered by the wave-21 recalibration
+  alongside HTSIM-32, which it gates.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit. Audited on
