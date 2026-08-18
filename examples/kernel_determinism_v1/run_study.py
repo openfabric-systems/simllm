@@ -489,6 +489,33 @@ def nondeterminism_audit(paths: Iterable[Path] | None = None) -> dict[str, list[
 IDENTITY_PARAMETERS = ("rank", "worker", "adapter", "device_index", "gpu_index", "gpu_id")
 
 
+#: modules that define a shipped ``ComputeProvider``. They are imported before
+#: the sweep so the subclass set is complete no matter what else the process has
+#: loaded, and the sweep keeps only ``simllm.`` classes so a study's own throwaway
+#: fixture provider cannot change what this audit covers. Without both halves the
+#: audited set depends on import order, which the artifact byte lock caught.
+FIRST_PARTY_PROVIDER_MODULES = (
+    "simllm.compute.provider",
+    "simllm.compute.gpu_model",
+    "simllm.adapters.sglang.host",
+)
+
+
+def first_party_providers() -> list[type]:
+    """Every shipped ``ComputeProvider`` subclass, in a stable order."""
+
+    for module in FIRST_PARTY_PROVIDER_MODULES:
+        importlib.import_module(module)
+    found: dict[str, type] = {}
+    pending = list(ComputeProvider.__subclasses__())
+    while pending:
+        subclass = pending.pop()
+        pending.extend(subclass.__subclasses__())
+        if subclass.__module__.startswith("simllm."):
+            found[f"{subclass.__module__}.{subclass.__qualname__}"] = subclass
+    return [found[key] for key in sorted(found)]
+
+
 def pricing_entry_points() -> dict[str, Any]:
     """Every callable that turns work into a duration."""
 
@@ -504,8 +531,11 @@ def pricing_entry_points() -> dict[str, Any]:
             HostInitiationModel.represented_estimate
         ),
     }
-    for subclass in ComputeProvider.__subclasses__():
-        entries[f"{subclass.__name__}.estimate"] = subclass.estimate
+    for subclass in first_party_providers():
+        key = f"{subclass.__name__}.estimate"
+        if key in entries:
+            key = f"{subclass.__module__}.{subclass.__qualname__}.estimate"
+        entries[key] = subclass.estimate
     return entries
 
 
@@ -956,6 +986,16 @@ def observations(rows: list[Row]) -> None:
             "protocol values",
             None,
             sorted(protocol.value for protocol in GpuPortProtocol),
+        )
+    )
+    rows.append(
+        Row(
+            "OBS-4",
+            OBSERVATION,
+            "pricing entry points covered by guard G5",
+            "audited names",
+            None,
+            sorted(pricing_entry_points()),
         )
     )
 

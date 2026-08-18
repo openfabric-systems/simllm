@@ -1,0 +1,672 @@
+{
+  "schema": "simllm-kernel-determinism-v1",
+  "freeze": "examples/kernel_determinism_v1/expectations.md",
+  "fixtures": {
+    "roofline_geometry": {
+      "num_layers": 2,
+      "hidden_size": 128,
+      "intermediate_size": 256,
+      "num_heads": 4,
+      "num_kv_heads": 2,
+      "head_size": 32,
+      "vocab_size": 1024,
+      "dtype_bytes": 2,
+      "weight_dtype_bytes": null,
+      "kv_dtype_bytes": null,
+      "defaulted_fields": [],
+      "num_experts": 0,
+      "top_k": 0,
+      "moe_intermediate_size": null,
+      "local_num_experts": 0
+    },
+    "roofline_gpu": {
+      "name": "kernel-determinism-fixture",
+      "peak_flops": 281474976710656.0,
+      "mem_bandwidth": 2199023255552.0
+    },
+    "roofline_efficiency": 0.5,
+    "host_profile": "ideal",
+    "mechanistic_source": "examples/gpu_task_mix/run_gpu_task_mix.py",
+    "mechanistic_transaction_bytes": 192,
+    "mechanistic_hbm_latency_cycles": 100,
+    "repeats": 64
+  },
+  "rows": [
+    {
+      "id": "G1-A1",
+      "evidence_class": "fatal_guard",
+      "family": "repeat determinism, roofline",
+      "case": "decode,requests=2,repeats=64",
+      "expected": 1,
+      "measured": 1,
+      "status": "PASS"
+    },
+    {
+      "id": "G1-A2",
+      "evidence_class": "fatal_guard",
+      "family": "repeat determinism, roofline",
+      "case": "decode,requests=4,repeats=64",
+      "expected": 1,
+      "measured": 1,
+      "status": "PASS"
+    },
+    {
+      "id": "G1-A3",
+      "evidence_class": "fatal_guard",
+      "family": "repeat determinism, roofline",
+      "case": "prefill,tokens=512,repeats=64",
+      "expected": 1,
+      "measured": 1,
+      "status": "PASS"
+    },
+    {
+      "id": "G1-A4",
+      "evidence_class": "fatal_guard",
+      "family": "repeat determinism, roofline",
+      "case": "prefill,tokens=1024,repeats=64",
+      "expected": 1,
+      "measured": 1,
+      "status": "PASS"
+    },
+    {
+      "id": "G1-B1",
+      "evidence_class": "fatal_guard",
+      "family": "repeat determinism, mechanistic",
+      "case": "bw=64,sms=1,repeats=64",
+      "expected": 1,
+      "measured": 1,
+      "status": "PASS"
+    },
+    {
+      "id": "G1-B2",
+      "evidence_class": "fatal_guard",
+      "family": "repeat determinism, mechanistic",
+      "case": "bw=32,sms=1,repeats=64",
+      "expected": 1,
+      "measured": 1,
+      "status": "PASS"
+    },
+    {
+      "id": "G1-C1",
+      "evidence_class": "fatal_guard",
+      "family": "repeat determinism, mechanistic",
+      "case": "bw=64,sms=2,repeats=64",
+      "expected": 1,
+      "measured": 1,
+      "status": "PASS"
+    },
+    {
+      "id": "G2-A1",
+      "evidence_class": "fatal_guard",
+      "family": "fresh-instance determinism, roofline",
+      "case": "decode,requests=2",
+      "expected": "{\"bound\":\"memory\",\"duration_ps\":834465,\"uncertainty\":0.5}",
+      "measured": "{\"bound\":\"memory\",\"duration_ps\":834465,\"uncertainty\":0.5}",
+      "status": "PASS"
+    },
+    {
+      "id": "G2-A2",
+      "evidence_class": "fatal_guard",
+      "family": "fresh-instance determinism, roofline",
+      "case": "decode,requests=4",
+      "expected": "{\"bound\":\"memory\",\"duration_ps\":894069,\"uncertainty\":0.5}",
+      "measured": "{\"bound\":\"memory\",\"duration_ps\":894069,\"uncertainty\":0.5}",
+      "status": "PASS"
+    },
+    {
+      "id": "G2-A3",
+      "evidence_class": "fatal_guard",
+      "family": "fresh-instance determinism, roofline",
+      "case": "prefill,tokens=512",
+      "expected": "{\"bound\":\"compute\",\"duration_ps\":3101304,\"uncertainty\":0.5}",
+      "measured": "{\"bound\":\"compute\",\"duration_ps\":3101304,\"uncertainty\":0.5}",
+      "status": "PASS"
+    },
+    {
+      "id": "G2-A4",
+      "evidence_class": "fatal_guard",
+      "family": "fresh-instance determinism, roofline",
+      "case": "prefill,tokens=1024",
+      "expected": "{\"bound\":\"compute\",\"duration_ps\":8108094,\"uncertainty\":0.5}",
+      "measured": "{\"bound\":\"compute\",\"duration_ps\":8108094,\"uncertainty\":0.5}",
+      "status": "PASS"
+    },
+    {
+      "id": "G2-B1",
+      "evidence_class": "fatal_guard",
+      "family": "fresh-instance determinism, mechanistic",
+      "case": "bw=64,sms=1",
+      "expected": "{\"architecture_profile_id\":\"task-mix-profile-sms1-sched4-ls4-alui1-hbm64-nv16\",\"calibration_id\":\"task-mix-calibration-sms1-sched4-ls4-alui1-hbm64-nv16\",\"completed_blocks\":8,\"completion_drain_cycles\":188,\"cta_waves\":1,\"dependency_stall_cycles\":0,\"duration_cycles\":196,\"duration_ps\":196000,\"hbm_request_instructions\":32,\"hbm_requested_bytes\":6144,\"hbm_serviced_bytes\":6144,\"hbm_transacted_bytes\":6144,\"implementation_id\":\"memory-8x4-192b\",\"issued_instructions\":32,\"model_implementation\":\"simllm-gpu-service-v2\",\"nvlink_request_instructions\":0,\"nvlink_requested_bytes\":0,\"nvlink_transacted_bytes\":0,\"pipeline_issue_counts\":[[\"alu\",0],[\"load_store\",32]],\"pipeline_stall_cycles\":0,\"relative_uncertainty\":0.0,\"resident_blocks_per_sm\":16,\"scheduler_stall_cycles\":7,\"sm_active_cycles\":[196],\"sm_completion_drain_cycles\":[188],\"sm_dependency_idle_cycles\":[0],\"sm_pipeline_idle_cycles\":[0],\"sm_scheduler_pressure_cycles\":[7],\"trace_id\":\"memory-8x4-192b-trace\"}",
+      "measured": "{\"architecture_profile_id\":\"task-mix-profile-sms1-sched4-ls4-alui1-hbm64-nv16\",\"calibration_id\":\"task-mix-calibration-sms1-sched4-ls4-alui1-hbm64-nv16\",\"completed_blocks\":8,\"completion_drain_cycles\":188,\"cta_waves\":1,\"dependency_stall_cycles\":0,\"duration_cycles\":196,\"duration_ps\":196000,\"hbm_request_instructions\":32,\"hbm_requested_bytes\":6144,\"hbm_serviced_bytes\":6144,\"hbm_transacted_bytes\":6144,\"implementation_id\":\"memory-8x4-192b\",\"issued_instructions\":32,\"model_implementation\":\"simllm-gpu-service-v2\",\"nvlink_request_instructions\":0,\"nvlink_requested_bytes\":0,\"nvlink_transacted_bytes\":0,\"pipeline_issue_counts\":[[\"alu\",0],[\"load_store\",32]],\"pipeline_stall_cycles\":0,\"relative_uncertainty\":0.0,\"resident_blocks_per_sm\":16,\"scheduler_stall_cycles\":7,\"sm_active_cycles\":[196],\"sm_completion_drain_cycles\":[188],\"sm_dependency_idle_cycles\":[0],\"sm_pipeline_idle_cycles\":[0],\"sm_scheduler_pressure_cycles\":[7],\"trace_id\":\"memory-8x4-192b-trace\"}",
+      "status": "PASS"
+    },
+    {
+      "id": "G2-B2",
+      "evidence_class": "fatal_guard",
+      "family": "fresh-instance determinism, mechanistic",
+      "case": "bw=32,sms=1",
+      "expected": "{\"architecture_profile_id\":\"task-mix-profile-sms1-sched4-ls4-alui1-hbm32-nv16\",\"calibration_id\":\"task-mix-calibration-sms1-sched4-ls4-alui1-hbm32-nv16\",\"completed_blocks\":8,\"completion_drain_cycles\":284,\"cta_waves\":1,\"dependency_stall_cycles\":0,\"duration_cycles\":292,\"duration_ps\":292000,\"hbm_request_instructions\":32,\"hbm_requested_bytes\":6144,\"hbm_serviced_bytes\":6144,\"hbm_transacted_bytes\":6144,\"implementation_id\":\"memory-8x4-192b\",\"issued_instructions\":32,\"model_implementation\":\"simllm-gpu-service-v2\",\"nvlink_request_instructions\":0,\"nvlink_requested_bytes\":0,\"nvlink_transacted_bytes\":0,\"pipeline_issue_counts\":[[\"alu\",0],[\"load_store\",32]],\"pipeline_stall_cycles\":0,\"relative_uncertainty\":0.0,\"resident_blocks_per_sm\":16,\"scheduler_stall_cycles\":7,\"sm_active_cycles\":[292],\"sm_completion_drain_cycles\":[284],\"sm_dependency_idle_cycles\":[0],\"sm_pipeline_idle_cycles\":[0],\"sm_scheduler_pressure_cycles\":[7],\"trace_id\":\"memory-8x4-192b-trace\"}",
+      "measured": "{\"architecture_profile_id\":\"task-mix-profile-sms1-sched4-ls4-alui1-hbm32-nv16\",\"calibration_id\":\"task-mix-calibration-sms1-sched4-ls4-alui1-hbm32-nv16\",\"completed_blocks\":8,\"completion_drain_cycles\":284,\"cta_waves\":1,\"dependency_stall_cycles\":0,\"duration_cycles\":292,\"duration_ps\":292000,\"hbm_request_instructions\":32,\"hbm_requested_bytes\":6144,\"hbm_serviced_bytes\":6144,\"hbm_transacted_bytes\":6144,\"implementation_id\":\"memory-8x4-192b\",\"issued_instructions\":32,\"model_implementation\":\"simllm-gpu-service-v2\",\"nvlink_request_instructions\":0,\"nvlink_requested_bytes\":0,\"nvlink_transacted_bytes\":0,\"pipeline_issue_counts\":[[\"alu\",0],[\"load_store\",32]],\"pipeline_stall_cycles\":0,\"relative_uncertainty\":0.0,\"resident_blocks_per_sm\":16,\"scheduler_stall_cycles\":7,\"sm_active_cycles\":[292],\"sm_completion_drain_cycles\":[284],\"sm_dependency_idle_cycles\":[0],\"sm_pipeline_idle_cycles\":[0],\"sm_scheduler_pressure_cycles\":[7],\"trace_id\":\"memory-8x4-192b-trace\"}",
+      "status": "PASS"
+    },
+    {
+      "id": "G2-C1",
+      "evidence_class": "fatal_guard",
+      "family": "fresh-instance determinism, mechanistic",
+      "case": "bw=64,sms=2",
+      "expected": "{\"architecture_profile_id\":\"task-mix-profile-sms2-sched4-ls4-alui1-hbm64-nv16\",\"calibration_id\":\"task-mix-calibration-sms2-sched4-ls4-alui1-hbm64-nv16\",\"completed_blocks\":8,\"completion_drain_cycles\":192,\"cta_waves\":1,\"dependency_stall_cycles\":0,\"duration_cycles\":196,\"duration_ps\":196000,\"hbm_request_instructions\":32,\"hbm_requested_bytes\":6144,\"hbm_serviced_bytes\":6144,\"hbm_transacted_bytes\":6144,\"implementation_id\":\"memory-8x4-192b\",\"issued_instructions\":32,\"model_implementation\":\"simllm-gpu-service-v2\",\"nvlink_request_instructions\":0,\"nvlink_requested_bytes\":0,\"nvlink_transacted_bytes\":0,\"pipeline_issue_counts\":[[\"alu\",0],[\"load_store\",32]],\"pipeline_stall_cycles\":0,\"relative_uncertainty\":0.0,\"resident_blocks_per_sm\":16,\"scheduler_stall_cycles\":0,\"sm_active_cycles\":[184,196],\"sm_completion_drain_cycles\":[180,192],\"sm_dependency_idle_cycles\":[0,0],\"sm_pipeline_idle_cycles\":[0,0],\"sm_scheduler_pressure_cycles\":[0,0],\"trace_id\":\"memory-8x4-192b-trace\"}",
+      "measured": "{\"architecture_profile_id\":\"task-mix-profile-sms2-sched4-ls4-alui1-hbm64-nv16\",\"calibration_id\":\"task-mix-calibration-sms2-sched4-ls4-alui1-hbm64-nv16\",\"completed_blocks\":8,\"completion_drain_cycles\":192,\"cta_waves\":1,\"dependency_stall_cycles\":0,\"duration_cycles\":196,\"duration_ps\":196000,\"hbm_request_instructions\":32,\"hbm_requested_bytes\":6144,\"hbm_serviced_bytes\":6144,\"hbm_transacted_bytes\":6144,\"implementation_id\":\"memory-8x4-192b\",\"issued_instructions\":32,\"model_implementation\":\"simllm-gpu-service-v2\",\"nvlink_request_instructions\":0,\"nvlink_requested_bytes\":0,\"nvlink_transacted_bytes\":0,\"pipeline_issue_counts\":[[\"alu\",0],[\"load_store\",32]],\"pipeline_stall_cycles\":0,\"relative_uncertainty\":0.0,\"resident_blocks_per_sm\":16,\"scheduler_stall_cycles\":0,\"sm_active_cycles\":[184,196],\"sm_completion_drain_cycles\":[180,192],\"sm_dependency_idle_cycles\":[0,0],\"sm_pipeline_idle_cycles\":[0,0],\"sm_scheduler_pressure_cycles\":[0,0],\"trace_id\":\"memory-8x4-192b-trace\"}",
+      "status": "PASS"
+    },
+    {
+      "id": "G3-A1",
+      "evidence_class": "fatal_guard",
+      "family": "ideal host profile is the exact identity",
+      "case": "decode,requests=2",
+      "expected": [
+        834465,
+        0
+      ],
+      "measured": [
+        834465,
+        0
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "G3-A2",
+      "evidence_class": "fatal_guard",
+      "family": "ideal host profile is the exact identity",
+      "case": "decode,requests=4",
+      "expected": [
+        894069,
+        0
+      ],
+      "measured": [
+        894069,
+        0
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "G3-A3",
+      "evidence_class": "fatal_guard",
+      "family": "ideal host profile is the exact identity",
+      "case": "prefill,tokens=512",
+      "expected": [
+        3101304,
+        0
+      ],
+      "measured": [
+        3101304,
+        0
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "G3-A4",
+      "evidence_class": "fatal_guard",
+      "family": "ideal host profile is the exact identity",
+      "case": "prefill,tokens=1024",
+      "expected": [
+        8108094,
+        0
+      ],
+      "measured": [
+        8108094,
+        0
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "G4",
+      "evidence_class": "fatal_guard",
+      "family": "no nondeterminism source in simllm/compute",
+      "case": "AST import audit",
+      "expected": {},
+      "measured": {},
+      "status": "PASS"
+    },
+    {
+      "id": "G5",
+      "evidence_class": "fatal_guard",
+      "family": "no caller identity in a pricing signature",
+      "case": "12 entry points",
+      "expected": {},
+      "measured": {},
+      "status": "PASS"
+    },
+    {
+      "id": "G6-xgmi",
+      "evidence_class": "fatal_guard",
+      "family": "unprofiled peer protocol fails closed naming its owner",
+      "case": "xgmi",
+      "expected": true,
+      "measured": true,
+      "status": "PASS"
+    },
+    {
+      "id": "G6-ualink",
+      "evidence_class": "fatal_guard",
+      "family": "unprofiled peer protocol fails closed naming its owner",
+      "case": "ualink",
+      "expected": true,
+      "measured": true,
+      "status": "PASS"
+    },
+    {
+      "id": "G6-nvlink",
+      "evidence_class": "fatal_guard",
+      "family": "the profiled peer protocol is unaffected",
+      "case": "nvlink peer store still constructs",
+      "expected": true,
+      "measured": true,
+      "status": "PASS"
+    },
+    {
+      "id": "C1",
+      "evidence_class": "control",
+      "family": "a changed efficiency changes the byte stream",
+      "case": "decode,requests=2,efficiency=0.25",
+      "expected": true,
+      "measured": true,
+      "status": "PASS"
+    },
+    {
+      "id": "C2",
+      "evidence_class": "control",
+      "family": "a changed geometry changes the price",
+      "case": "sglang tp_size=2",
+      "expected": true,
+      "measured": true,
+      "status": "PASS"
+    },
+    {
+      "id": "C3",
+      "evidence_class": "control",
+      "family": "a changed cursor bandwidth changes the duration",
+      "case": "bw=64 against bw=32",
+      "expected": true,
+      "measured": true,
+      "status": "PASS"
+    },
+    {
+      "id": "A1",
+      "evidence_class": "scored",
+      "family": "phase and token keying, roofline closed form",
+      "case": "decode,requests=2",
+      "expected": [
+        834465,
+        "memory"
+      ],
+      "measured": [
+        834465,
+        "memory"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "A2",
+      "evidence_class": "scored",
+      "family": "phase and token keying, roofline closed form",
+      "case": "decode,requests=4",
+      "expected": [
+        894069,
+        "memory"
+      ],
+      "measured": [
+        894069,
+        "memory"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "A3",
+      "evidence_class": "scored",
+      "family": "phase and token keying, roofline closed form",
+      "case": "prefill,tokens=512",
+      "expected": [
+        3101304,
+        "compute"
+      ],
+      "measured": [
+        3101304,
+        "compute"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "A4",
+      "evidence_class": "scored",
+      "family": "phase and token keying, roofline closed form",
+      "case": "prefill,tokens=1024",
+      "expected": [
+        8108094,
+        "compute"
+      ],
+      "measured": [
+        8108094,
+        "compute"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "B1",
+      "evidence_class": "scored",
+      "family": "memory-bound pin on the HBM cursor",
+      "case": "bytes=192,bw=64,sms=1",
+      "expected": [
+        196,
+        196000
+      ],
+      "measured": [
+        196,
+        196000
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "B2",
+      "evidence_class": "scored",
+      "family": "memory-bound pin on the HBM cursor",
+      "case": "bytes=192,bw=32,sms=1",
+      "expected": [
+        292,
+        292000
+      ],
+      "measured": [
+        292,
+        292000
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "C1",
+      "evidence_class": "scored",
+      "family": "the pin ignores SM count",
+      "case": "bytes=192,bw=64,sms=2",
+      "expected": [
+        196,
+        196000
+      ],
+      "measured": [
+        196,
+        196000
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "D1",
+      "evidence_class": "scored",
+      "family": "runner and adapter independence",
+      "case": "vllm reader against sglang reader, dense, tp=1",
+      "expected": {
+        "num_layers": 2,
+        "hidden_size": 128,
+        "intermediate_size": 256,
+        "num_heads": 4,
+        "num_kv_heads": 2,
+        "head_size": 32,
+        "vocab_size": 1024,
+        "dtype_bytes": 2,
+        "weight_element_bytes": 2.0,
+        "kv_element_bytes": 2.0,
+        "num_experts": 0,
+        "top_k": 0,
+        "moe_intermediate_size": null,
+        "local_num_experts": 0,
+        "defaulted_fields": [],
+        "weight_bytes": 589824,
+        "lm_head_bytes": 262144
+      },
+      "measured": {
+        "num_layers": 2,
+        "hidden_size": 128,
+        "intermediate_size": 256,
+        "num_heads": 4,
+        "num_kv_heads": 2,
+        "head_size": 32,
+        "vocab_size": 1024,
+        "dtype_bytes": 2,
+        "weight_element_bytes": 2.0,
+        "kv_element_bytes": 2.0,
+        "num_experts": 0,
+        "top_k": 0,
+        "moe_intermediate_size": null,
+        "local_num_experts": 0,
+        "defaulted_fields": [],
+        "weight_bytes": 589824,
+        "lm_head_bytes": 262144
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "DER-1",
+      "evidence_class": "derived",
+      "family": "A2 minus A1 is the KV read delta",
+      "case": "65536 bytes at the derated roof",
+      "expected": 59604,
+      "measured": 59604,
+      "status": "PASS"
+    },
+    {
+      "id": "DER-2",
+      "evidence_class": "derived",
+      "family": "prefill is superlinear in chunk length",
+      "case": "A4 over A3, four decimal places",
+      "expected": 2.6144,
+      "measured": 2.6144,
+      "status": "PASS"
+    },
+    {
+      "id": "DER-3",
+      "evidence_class": "derived",
+      "family": "the cursor term scales inversely with bandwidth",
+      "case": "B2 minus latency against twice B1 minus latency",
+      "expected": 192,
+      "measured": 192,
+      "status": "PASS"
+    },
+    {
+      "id": "DER-4",
+      "evidence_class": "derived",
+      "family": "equal geometry prices to equal picoseconds",
+      "case": "vllm reader against sglang reader",
+      "expected": 834465,
+      "measured": 834465,
+      "status": "PASS"
+    },
+    {
+      "id": "DER-5",
+      "evidence_class": "derived",
+      "family": "the frozen decode value reaches both adapters",
+      "case": "A1 predicted picoseconds",
+      "expected": 834465,
+      "measured": 834465,
+      "status": "PASS"
+    },
+    {
+      "id": "OBS-1",
+      "evidence_class": "observation",
+      "family": "fixture R geometry",
+      "case": "weight and lm-head bytes",
+      "expected": null,
+      "measured": [
+        589824,
+        262144
+      ],
+      "status": "REPORTED"
+    },
+    {
+      "id": "OBS-A1",
+      "evidence_class": "observation",
+      "family": "fused kernel work",
+      "case": "decode,requests=2",
+      "expected": null,
+      "measured": [
+        1832960,
+        917504,
+        [
+          [
+            "new_tokens",
+            2
+          ],
+          [
+            "sampled",
+            2
+          ],
+          [
+            "kv_tokens",
+            128
+          ]
+        ]
+      ],
+      "status": "REPORTED"
+    },
+    {
+      "id": "OBS-A2",
+      "evidence_class": "observation",
+      "family": "fused kernel work",
+      "case": "decode,requests=4",
+      "expected": null,
+      "measured": [
+        3665920,
+        983040,
+        [
+          [
+            "new_tokens",
+            4
+          ],
+          [
+            "sampled",
+            4
+          ],
+          [
+            "kv_tokens",
+            256
+          ]
+        ]
+      ],
+      "status": "REPORTED"
+    },
+    {
+      "id": "OBS-A3",
+      "evidence_class": "observation",
+      "family": "fused kernel work",
+      "case": "prefill,tokens=512",
+      "expected": null,
+      "measured": [
+        436469760,
+        1114112,
+        [
+          [
+            "new_tokens",
+            512
+          ],
+          [
+            "sampled",
+            1
+          ],
+          [
+            "kv_tokens",
+            512
+          ]
+        ]
+      ],
+      "status": "REPORTED"
+    },
+    {
+      "id": "OBS-A4",
+      "evidence_class": "observation",
+      "family": "fused kernel work",
+      "case": "prefill,tokens=1024",
+      "expected": null,
+      "measured": [
+        1141112832,
+        1376256,
+        [
+          [
+            "new_tokens",
+            1024
+          ],
+          [
+            "sampled",
+            1
+          ],
+          [
+            "kv_tokens",
+            1024
+          ]
+        ]
+      ],
+      "status": "REPORTED"
+    },
+    {
+      "id": "OBS-2",
+      "evidence_class": "observation",
+      "family": "the two readers spell the optional dtype widths differently",
+      "case": "weight_dtype_bytes and kv_dtype_bytes as stored",
+      "expected": null,
+      "measured": [
+        [
+          2.0,
+          2.0
+        ],
+        [
+          null,
+          null
+        ]
+      ],
+      "status": "REPORTED"
+    },
+    {
+      "id": "OBS-3",
+      "evidence_class": "observation",
+      "family": "peer-link protocols the taxonomy can name",
+      "case": "protocol values",
+      "expected": null,
+      "measured": [
+        "nvlink",
+        "nvlink_c2c",
+        "pcie",
+        "ualink",
+        "xgmi"
+      ],
+      "status": "REPORTED"
+    },
+    {
+      "id": "OBS-4",
+      "evidence_class": "observation",
+      "family": "pricing entry points covered by guard G5",
+      "case": "audited names",
+      "expected": null,
+      "measured": [
+        "ComputeProvider.estimate",
+        "ComputeProvider.estimate_layers",
+        "HostInitiationModel.represented_estimate",
+        "ProfileTableProvider.estimate",
+        "RooflineProvider.estimate",
+        "SmSchedulerModel.estimate",
+        "SmSchedulerModel.estimate_concurrent",
+        "TraceCalibratedGpuProvider.estimate",
+        "_PinnedEnvelopeProvider.estimate",
+        "transformer.estimate_step_latency_ps",
+        "transformer.step_kernel",
+        "transformer.step_kernels"
+      ],
+      "status": "REPORTED"
+    }
+  ],
+  "summary": {
+    "fatal_guards": 23,
+    "fatal_guards_violated": [],
+    "void": false,
+    "controls": 3,
+    "controls_failed": [],
+    "scored_total": 8,
+    "scored_passed": 8,
+    "scored_failed": [],
+    "derived_reported": 5,
+    "derived_failed": []
+  }
+}

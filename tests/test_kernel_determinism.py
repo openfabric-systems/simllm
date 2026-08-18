@@ -232,9 +232,33 @@ def test_the_identity_audit_covers_every_pricing_entry_point():
         "RooflineProvider.estimate",
         "ProfileTableProvider.estimate",
         "TraceCalibratedGpuProvider.estimate",
+        "_PinnedEnvelopeProvider.estimate",
         "SmSchedulerModel.estimate",
         "transformer.estimate_step_latency_ps",
     } <= entries
+
+
+def test_the_audited_entry_points_do_not_depend_on_import_order():
+    """A study's throwaway provider must not change what the audit covers.
+
+    Loading a study that subclasses ``ComputeProvider`` used to enlarge the
+    swept set, which made the audit's own reported coverage depend on what else
+    the process had imported. The artifact byte lock is what found it.
+    """
+
+    before = sorted(study.pricing_entry_points())
+
+    class _StudyLocalProvider(RooflineProvider):  # pragma: no cover - swept only
+        pass
+
+    after = sorted(study.pricing_entry_points())
+
+    assert before == after
+    assert _StudyLocalProvider not in study.first_party_providers()
+    assert all(
+        provider.__module__.startswith("simllm.")
+        for provider in study.first_party_providers()
+    )
 
 
 def test_the_two_adapters_read_the_same_cost_geometry():

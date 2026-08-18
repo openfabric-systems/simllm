@@ -158,8 +158,8 @@ completion.
 
 Enforcement is in `tests/test_kernel_determinism.py`, which locks all four
 clauses with a mutation control for each, against the fixtures and exact
-constants pre-registered in
-[kernel_determinism_v1](../../examples/kernel_determinism_v1/expectations.md).
+constants pre-registered by the
+[kernel determinism study](../../examples/kernel_determinism_v1/RESULTS.md).
 
 ## Fixed per-step host profiles
 
@@ -651,6 +651,25 @@ with COMP-40 as its compute-side half, and attaching measured per-port ceilings
 to a shipped profile is COMP-41.
 
 ## Status
+
+The kernel-time determinism contract above is stated publicly and enforced. The
+pre-registered
+[kernel determinism study](../../examples/kernel_determinism_v1/RESULTS.md) is
+nonvoid: all 23 fatal guards held, all 3 controls discriminated, and all 8
+frozen scored instances passed with a zero residual, with 5 derived rows and 8
+raw observations reported separately and never added in. It fixes the exact
+prefill and decode constants of its own fixture, shows the memory-bound pin on
+both the roofline and the SM-scheduler paths (including that the pin does not
+notice SM count), and shows the vLLM and SGLang readers pricing one step to the
+identical picosecond. Its findings are that the contract constrains the pricing
+function and not the per-rank shape assignment (an uneven expert split is an
+input difference, not a violation), that COMP-9's original per-kernel
+distribution scope is refuted rather than unfinished, and that the two adapter
+readers store two optional dtype fields differently while resolving them
+identically, which is COMP-42. The study makes no silicon claim, prices no
+collective, and validates no tail: locating the tail is COMP-9, which is open.
+An audit found no random source, wall clock or environment read anywhere in
+`simllm/compute`, so the guard that forbids them is a fence rather than a fix.
 
 Both providers, the transformer step model (fused and family-decomposed),
 the host model, and the trace-driven GPU service are implemented and
