@@ -254,6 +254,8 @@ __global__ void k_rmsnorm(const float* __restrict__ src, const float* __restrict
   for (int i = threadIdx.x; i < width; i += blockDim.x) out[i] = in[i] * inv * weight[i];
 }
 
+__global__ void k_nop() {}
+
 __global__ void k_fill_bf16(__nv_bfloat16* p, size_t n, float v) {
   size_t i = blockIdx.x * static_cast<size_t>(blockDim.x) + threadIdx.x;
   const size_t stride = static_cast<size_t>(gridDim.x) * blockDim.x;
@@ -297,43 +299,78 @@ __global__ void k_decode_attn(const __nv_bfloat16* __restrict__ q,
   }
   __syncthreads();
 
+  // Repair R5: four independent online-softmax accumulators per warp, so four
+  // cache rows are in flight at once and the walk is not held by one load
+  // latency at a time.
+  constexpr int kWays = 4;
   float qreg[8];
-  float acc[8];
-  for (int e = 0; e < per_lane; ++e) {
-    qreg[e] = qs[e * 32 + lane];
-    acc[e] = 0.f;
+  float acc[kWays][8];
+  float run_max[kWays];
+  float run_sum[kWays];
+  for (int e = 0; e < per_lane; ++e) qreg[e] = qs[e * 32 + lane];
+  for (int w = 0; w < kWays; ++w) {
+    run_max[w] = -INFINITY;
+    run_sum[w] = 0.f;
+    for (int e = 0; e < per_lane; ++e) acc[w][e] = 0.f;
   }
-  float run_max = -INFINITY;
-  float run_sum = 0.f;
 
   const size_t kv_base =
       (static_cast<size_t>(b) * heads_kv + hkv) * static_cast<size_t>(length) * head_size;
-  for (int t = warp; t < length; t += warps) {
-    const __nv_bfloat16* krow = kcache + kv_base + static_cast<size_t>(t) * head_size;
-    float dot = 0.f;
-    for (int e = 0; e < per_lane; ++e) {
-      dot += qreg[e] * __bfloat162float(krow[e * 32 + lane]);
+  const int step = warps * kWays;
+  for (int base = warp * kWays; base < length; base += step) {
+    float dot[kWays];
+    float vreg[kWays][8];
+#pragma unroll
+    for (int w = 0; w < kWays; ++w) dot[w] = 0.f;
+#pragma unroll
+    for (int w = 0; w < kWays; ++w) {
+      const int t = base + w;
+      if (t >= length) continue;
+      const __nv_bfloat16* krow = kcache + kv_base + static_cast<size_t>(t) * head_size;
+      const __nv_bfloat16* vrow = vcache + kv_base + static_cast<size_t>(t) * head_size;
+      for (int e = 0; e < per_lane; ++e) {
+        dot[w] += qreg[e] * __bfloat162float(krow[e * 32 + lane]);
+        vreg[w][e] = __bfloat162float(vrow[e * 32 + lane]);
+      }
     }
-    for (int offset = 16; offset > 0; offset >>= 1) {
-      dot += __shfl_xor_sync(0xffffffffu, dot, offset);
+#pragma unroll
+    for (int w = 0; w < kWays; ++w) {
+      for (int offset = 16; offset > 0; offset >>= 1) {
+        dot[w] += __shfl_xor_sync(0xffffffffu, dot[w], offset);
+      }
     }
-    const float score = dot * scale;
-    const float new_max = fmaxf(run_max, score);
-    const float correction = __expf(run_max - new_max);
-    const float p = __expf(score - new_max);
-    run_sum = run_sum * correction + p;
-    const __nv_bfloat16* vrow = vcache + kv_base + static_cast<size_t>(t) * head_size;
-    for (int e = 0; e < per_lane; ++e) {
-      acc[e] = acc[e] * correction + p * __bfloat162float(vrow[e * 32 + lane]);
+#pragma unroll
+    for (int w = 0; w < kWays; ++w) {
+      if (base + w >= length) continue;
+      const float score = dot[w] * scale;
+      const float new_max = fmaxf(run_max[w], score);
+      const float correction = __expf(run_max[w] - new_max);
+      const float p = __expf(score - new_max);
+      run_sum[w] = run_sum[w] * correction + p;
+      for (int e = 0; e < per_lane; ++e) {
+        acc[w][e] = acc[w][e] * correction + p * vreg[w][e];
+      }
+      run_max[w] = new_max;
     }
-    run_max = new_max;
+  }
+
+  // Merge the four ways inside the warp before the cross-warp merge.
+  float warp_max = -INFINITY;
+  for (int w = 0; w < kWays; ++w) warp_max = fmaxf(warp_max, run_max[w]);
+  float warp_sum = 0.f;
+  float merged[8];
+  for (int e = 0; e < per_lane; ++e) merged[e] = 0.f;
+  for (int w = 0; w < kWays; ++w) {
+    const float weight = __expf(run_max[w] - warp_max);
+    warp_sum += run_sum[w] * weight;
+    for (int e = 0; e < per_lane; ++e) merged[e] += acc[w][e] * weight;
   }
 
   if (lane == 0) {
-    wm[warp] = run_max;
-    wl[warp] = run_sum;
+    wm[warp] = warp_max;
+    wl[warp] = warp_sum;
   }
-  for (int e = 0; e < per_lane; ++e) wacc[warp * head_size + e * 32 + lane] = acc[e];
+  for (int e = 0; e < per_lane; ++e) wacc[warp * head_size + e * 32 + lane] = merged[e];
   __syncthreads();
 
   if (warp == 0) {
@@ -374,6 +411,7 @@ struct Cell {
   double probe_ms = 0.0;
   double correctness_residual = -1.0;
   std::vector<double> batch_ms;
+  std::vector<double> batch_host_ms;  // repair R3
   std::vector<ClockSample> before;
   std::vector<ClockSample> after;
   std::vector<double> chain_ms;
@@ -417,17 +455,28 @@ void measure(Cell& cell, const Launch& launch) {
   cell.group = group;
 
   // Twelve timed batches of `group` back-to-back launches.
+  //
+  // Repair R2: one untimed priming launch precedes the opening event, so the
+  // timed region begins with the stream already executing and measures
+  // back-to-back kernels rather than one post-synchronization launch.
+  // Repair R3: the host wall time of the launch loop is recorded before any
+  // synchronization, so a host-issue-bound cell is identifiable.
   int issued = 0;
   for (int batch = 0; batch < kBatches; ++batch) {
     const ClockSample before = clock_sample();
+    launch(issued++);
     CUDA_CHECK(cudaEventRecord(g_ev_a, g_stream));
+    const auto host_start = std::chrono::steady_clock::now();
     for (int i = 0; i < group; ++i) launch(issued++);
+    const auto host_stop = std::chrono::steady_clock::now();
     CUDA_CHECK(cudaEventRecord(g_ev_b, g_stream));
     CUDA_CHECK(cudaEventSynchronize(g_ev_b));
     float ms = 0.f;
     CUDA_CHECK(cudaEventElapsedTime(&ms, g_ev_a, g_ev_b));
     const ClockSample after = clock_sample();
     cell.batch_ms.push_back(ms);
+    cell.batch_host_ms.push_back(
+        std::chrono::duration<double, std::milli>(host_stop - host_start).count());
     cell.before.push_back(before);
     cell.after.push_back(after);
   }
@@ -460,17 +509,75 @@ void measure(Cell& cell, const Launch& launch) {
 void record(const Cell& cell) { g_cells.push_back(cell); }
 
 // ---------------------------------------------------------------------------
+// Repair R4: the instrumentation control. The same 64 launches are timed with
+// one event every 1, 4, 16 and 64 repetitions, so the per-boundary cost of the
+// event chain is measured rather than assumed. An event-only chain with no
+// kernels between the events gives the bare event-record period.
+// ---------------------------------------------------------------------------
+
+struct ControlRow {
+  std::string id;
+  int stride;
+  int reps;
+  double per_kernel_ms;
+};
+
+std::vector<ControlRow> g_controls;
+double g_event_only_period_ms = 0.0;
+
+void instrumentation_control(const std::string& id, const Launch& launch) {
+  const int reps = 64;
+  for (int stride : {1, 4, 16, 64}) {
+    for (int i = 0; i < 16; ++i) launch(i);
+    CUDA_CHECK(cudaStreamSynchronize(g_stream));
+    const int marks = reps / stride;
+    std::vector<cudaEvent_t> ev(marks + 1);
+    for (auto& e : ev) CUDA_CHECK(cudaEventCreate(&e));
+    launch(0);  // prime, as in the batch protocol
+    CUDA_CHECK(cudaEventRecord(ev[0], g_stream));
+    for (int mark = 0; mark < marks; ++mark) {
+      for (int s = 0; s < stride; ++s) launch(mark * stride + s);
+      CUDA_CHECK(cudaEventRecord(ev[mark + 1], g_stream));
+    }
+    CUDA_CHECK(cudaStreamSynchronize(g_stream));
+    float total_ms = 0.f;
+    CUDA_CHECK(cudaEventElapsedTime(&total_ms, ev[0], ev[marks]));
+    for (auto& e : ev) CUDA_CHECK(cudaEventDestroy(e));
+    g_controls.push_back({id, stride, reps, total_ms / reps});
+  }
+  std::fprintf(stderr, "[control] %s done\n", id.c_str());
+}
+
+void event_only_control() {
+  const int marks = 64;
+  std::vector<cudaEvent_t> ev(marks + 1);
+  for (auto& e : ev) CUDA_CHECK(cudaEventCreate(&e));
+  k_nop<<<1, 1, 0, g_stream>>>();
+  CUDA_CHECK(cudaEventRecord(ev[0], g_stream));
+  for (int mark = 0; mark < marks; ++mark) CUDA_CHECK(cudaEventRecord(ev[mark + 1], g_stream));
+  CUDA_CHECK(cudaStreamSynchronize(g_stream));
+  float total_ms = 0.f;
+  CUDA_CHECK(cudaEventElapsedTime(&total_ms, ev[0], ev[marks]));
+  for (auto& e : ev) CUDA_CHECK(cudaEventDestroy(e));
+  g_event_only_period_ms = total_ms / marks;
+}
+
+// ---------------------------------------------------------------------------
 // GEMM helpers.
 // ---------------------------------------------------------------------------
 
 __nv_bfloat16 *g_ga = nullptr, *g_gb = nullptr, *g_gc = nullptr;
 size_t g_gemm_elems = 0;
 
+// Repair R1: the engine-natural layout. A serving engine holds a fixed weight
+// matrix and varies the token count, so it issues Out[N,M] = W[N,K] * X[K,M]
+// in column-major with leading dimensions N, K and N. No leading dimension
+// depends on the token count M, which is what the first run got wrong.
 void gemm_nn(int m, int n, int k) {
   const float alpha = 1.0f, beta = 0.0f;
-  CUBLAS_CHECK(cublasGemmEx(g_blas, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, &alpha, g_ga,
-                            CUDA_R_16BF, m, g_gb, CUDA_R_16BF, k, &beta, g_gc,
-                            CUDA_R_16BF, m, CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT));
+  CUBLAS_CHECK(cublasGemmEx(g_blas, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha, g_ga,
+                            CUDA_R_16BF, n, g_gb, CUDA_R_16BF, k, &beta, g_gc,
+                            CUDA_R_16BF, n, CUBLAS_COMPUTE_32F, CUBLAS_GEMM_DEFAULT));
 }
 
 // Checks C[0] and C[last] against the exact expected K * 0.125.
@@ -585,6 +692,9 @@ void emit_cell(Json& j, const Cell& cell) {
   j.open_arr("batch_ms");
   for (double v : cell.batch_ms) j.arr_num(v);
   j.close_arr();
+  j.open_arr("batch_host_ms");
+  for (double v : cell.batch_host_ms) j.arr_num(v);
+  j.close_arr();
   j.open_arr("batch_clocks");
   for (size_t i = 0; i < cell.batch_ms.size(); ++i) {
     j.sep();
@@ -658,6 +768,26 @@ int main(int argc, char** argv) {
   };
 
   if (boosted) preheat(3.0);
+
+  // Instrumentation control (repair R4), boosted arm only. It runs before the
+  // lanes so its cost cannot be attributed to a lane cell.
+  if (boosted) {
+    float4* ctrl_pool = nullptr;
+    const size_t ctrl_bytes = 64ull * 1024ull * 1024ull;
+    CUDA_CHECK(cudaMalloc(&ctrl_pool, ctrl_bytes));
+    CUDA_CHECK(cudaMemset(ctrl_pool, 0x3f, ctrl_bytes));
+    const size_t ctrl_n4 = ctrl_bytes / sizeof(float4);
+    event_only_control();
+    instrumentation_control("ctrl_empty_kernel",
+                            [](int) { k_nop<<<1, 1, 0, g_stream>>>(); });
+    instrumentation_control("ctrl_gemm_G1_m64", [](int) { gemm_nn(64, 2048, 1024); });
+    instrumentation_control("ctrl_gemm_G4_m1", [](int) { gemm_nn(1, 8192, 8192); });
+    instrumentation_control("ctrl_gemm_G2_m1024", [](int) { gemm_nn(1024, 1024, 1024); });
+    instrumentation_control("ctrl_scale_64mib", [ctrl_pool, ctrl_n4](int) {
+      k_scale<<<kGridBlocks, kBlockThreads, 0, g_stream>>>(ctrl_pool, ctrl_n4, 1.0000001f);
+    });
+    CUDA_CHECK(cudaFree(ctrl_pool));
+  }
 
   // -------------------------------------------------------------------------
   // Lane 1, the measured HBM roof. Runs first.
@@ -1030,6 +1160,18 @@ int main(int argc, char** argv) {
   j.integer("chain_reps", kChainReps);
   j.integer("grid_blocks", kGridBlocks);
   j.integer("block_threads", kBlockThreads);
+  j.num("event_only_period_ms", g_event_only_period_ms);
+  j.open_arr("instrumentation_control");
+  for (const ControlRow& row : g_controls) {
+    j.sep();
+    j.raw("{");
+    j.str("id", row.id);
+    j.integer("stride", row.stride);
+    j.integer("reps", row.reps);
+    j.num("per_kernel_ms", row.per_kernel_ms);
+    j.close_obj();
+  }
+  j.close_arr();
   j.open_arr("cells");
   for (const Cell& cell : g_cells) emit_cell(j, cell);
   j.close_arr();
