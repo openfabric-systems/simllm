@@ -161,6 +161,19 @@ clauses with a mutation control for each, against the fixtures and exact
 constants pre-registered by the
 [kernel determinism study](../../examples/kernel_determinism_v1/RESULTS.md).
 
+Two limits of that enforcement, so the locks are not read as stronger than they
+are. First, the runner-independence evidence is asymmetric: the vLLM executor's
+own pricing method is invoked, while the SGLang worker is not importable without
+SGLang installed, so its half drives SGLang's own geometry reader into the same
+shared call its `_settle` makes rather than invoking `_settle` itself. Second,
+the "no random source, wall clock or environment read" check is a static fence
+over statically resolvable references: import statements and their aliases,
+`from` imports at any relative level, dotted attribute uses resolved through the
+alias map, and run-time imports with a constant name, with a computed import
+name rejected outright. It cannot see a source reached through a name it cannot
+resolve statically, such as a callable passed in as an argument. It is a fence
+against introducing one, not a proof that none can exist.
+
 ## Fixed per-step host profiles
 
 The fixed-step calibration is scoped to an NVIDIA GeForce GTX 1660 Ti
@@ -668,8 +681,14 @@ distribution scope is refuted rather than unfinished, and that the two adapter
 readers store two optional dtype fields differently while resolving them
 identically, which is COMP-42. The study makes no silicon claim, prices no
 collective, and validates no tail: locating the tail is COMP-9, which is open.
-An audit found no random source, wall clock or environment read anywhere in
+A static import and attribute-reference audit found no random source, wall clock
+or environment read reachable by a statically resolvable name anywhere in
 `simllm/compute`, so the guard that forbids them is a fence rather than a fix.
+Review widened that audit after showing its first form could be stepped around
+by a bare `numpy` import with a `numpy.random` use, by
+`importlib.import_module` or `__import__`, or by a relative import; its residual
+blind spot, a source reached through a name that cannot be resolved statically,
+is stated with the contract above rather than left implied.
 
 Both providers, the transformer step model (fused and family-decomposed),
 the host model, and the trace-driven GPU service are implemented and
@@ -1244,7 +1263,7 @@ and an explicit reason:
   `ModelDims` fall back to the activation width. Both resolve to the same number
   through `weight_element_bytes` and `kv_element_bytes`, so no reported
   picosecond moves today, which is measured by
-  [kernel_determinism_v1](../../examples/kernel_determinism_v1/expectations.md)
+  [kernel_determinism_v1](../../examples/kernel_determinism_v1/RESULTS.md)
   and pinned by `tests/test_kernel_determinism.py`. The unavailable path is a
   consumer that compares or hashes `ModelDims` itself: two adapters describing
   one identical rank would disagree, which is the failure mode BACK-50 already

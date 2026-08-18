@@ -73,18 +73,42 @@ Reported as a state, never as a fraction.
 | G2 | a freshly constructed provider or `SmSchedulerModel` produces the same byte string | 7 |
 | G3 | the ideal host profile leaves the duration unchanged and exposes zero picoseconds | 4 |
 | G4 | no module under `simllm/compute` imports a random-number source, a wall clock or an environment reader | 1 |
-| G5 | no pricing entry point accepts a rank, worker, adapter or device-index parameter, across 12 entry points | 1 |
+| G5 | no pricing entry point accepts a rank, worker, adapter or device-index parameter, across 13 entry points | 1 |
 | G6 | xGMI and UALink are rejected at configuration time naming COMP-35, and NVLink is unaffected | 3 |
+
+Delivered instance counts, against the freeze's own minimum. The freeze scoped
+G1 and G2 to the four R cells and the two M cells, i.e. 6 each, and named G3,
+G4, G5 and G6 without an instance count, so its stated minimum is 19. The run
+delivers 23: G1 and G2 each cover a third mechanistic cell (the two-SM cell that
+family C scores), and G6 covers three protocols rather than the one UALink case
+the freeze wrote down. Coverage rose against the freeze and nothing was dropped;
+23 is the delivered count, not a re-frozen target.
 
 G4's audit reads the module abstract syntax trees rather than grepping text, so
 a mention inside a comment or a docstring cannot satisfy or trip it. The whole
 `simllm/compute` package imports only deterministic standard-library modules:
 `abc`, `collections`, `csv`, `dataclasses`, `decimal`, `enum`, `fractions`,
 `hashlib`, `json`, `math`, `pathlib`, `re`, `statistics` and `typing`. There was
-no RNG and no clock to remove. The guard exists so that adding one is loud, and
-its own control in `tests/test_kernel_determinism.py` hands the audit a file
-that really does import `random`, `numpy.random` and `time` and requires all
-three to be reported.
+no RNG and no clock to remove. The guard exists so that adding one is loud.
+
+What G4 is, stated precisely, because its first published description claimed
+more than it implemented. It is a **static fence over statically resolvable
+references**, covering four forms: import statements including the alias, so a
+later `np.random` reference resolves back to `numpy.random`; `from` imports at
+any relative level, including the imported names of a pure `from . import x`;
+dotted attribute references such as `numpy.random.default_rng` resolved through
+the alias map, so a bare `import numpy` does not hide the use; and run-time
+imports through `__import__` or `importlib.import_module` with a constant name,
+with a computed name reported as an offender in its own right because it cannot
+be cleared. Review demonstrated that the first version missed all four of the
+last three categories, and it was widened rather than left with an overstated
+description. What it still cannot see is a nondeterministic source reached
+through a name it cannot resolve statically, for example a callable handed in as
+an argument or fetched off an object at run time. It is a fence against
+introducing one, not a proof that none can exist. Its controls in
+`tests/test_kernel_determinism.py` run nine source fragments through it,
+including the four evasions review found and two legitimate uses that must
+still pass.
 
 G1 and G2 are guards and not scored rows, and the freeze says why: the
 determinism of a deterministic function is entailed by its construction. These
@@ -160,16 +184,27 @@ freeze said so before the run: once the geometry agrees, both adapters call the
 same `estimate_step_latency_ps` on equal inputs, so equal output is entailed by
 the function being a function. The genuine risk was in the two readers agreeing.
 
+D1 compares two measurements against each other, not against a frozen literal,
+which is what makes it an agreement claim rather than a magnitude claim. It
+would still pass if both readers were wrong in the same way. The anchor to the
+frozen value is carried elsewhere and was pre-registered that way: DER-5 checks
+that the vLLM-read geometry prices cell A1 to the frozen 834,465 ps, and A1
+itself is the scored magnitude row that the artifact byte lock pins.
+
 How far each adapter's own path is actually driven, stated plainly because the
 two halves are not symmetric. On the vLLM side
 `tests/test_kernel_determinism.py` calls `SimExecutor._estimate_latency` itself,
 with a stand-in carrying the four attributes that method reads, and a second
-test asserts by source inspection that those four are all it reads, so the
-stand-in cannot be hiding a fifth. On the SGLang side the worker is not
-importable without SGLang installed, so its `_settle` call is reproduced rather
-than invoked: the study drives SGLang's own `model_dims_from_sglang` into the
-same `estimate_step_latency_ps` call `_settle` makes. That is weaker evidence
-for the SGLang half and is labeled as such.
+test walks that method's abstract syntax tree for `self` attribute accesses and
+requires exactly those four, so the stand-in cannot be hiding a fifth. That
+check was first written as a whitespace scan of the source; review demonstrated
+that it caught nothing, because `int(self.rank)`, `[self.worker_id]` and
+`f'{self.rank}'` are not at whitespace token boundaries, so the published claim
+was false as first written and the AST form replaced it. On the SGLang side the
+worker is not importable without SGLang installed, so its `_settle` call is
+reproduced rather than invoked: the study drives SGLang's own
+`model_dims_from_sglang` into the same `estimate_step_latency_ps` call `_settle`
+makes. That is weaker evidence for the SGLang half and is labeled as such.
 
 ## Derived rows, reported and not counted
 
@@ -195,7 +230,10 @@ and ranks 6 and 7 with three. Those ranks stream different weight bytes and
 their decode steps legitimately cost different amounts. A test that asserted
 "every rank prices a step identically" would fail on a correct model. The
 enforced invariant is instead that no provider accepts or reads a caller
-identity, which G5 audits across 11 pricing entry points.
+identity, which G5 audits across 13 pricing entry points. (That figure read 11
+when this report was first written, which was a stale residue of the run that
+preceded finding F6's fix; the guard table, F6 and observation OBS-4 now all
+read 13, matching `results.json`.)
 
 **F2. The two adapter geometry readers agree on every value the cost model reads
 and disagree on how two of them are stored.** The vLLM reader resolves
@@ -251,9 +289,24 @@ before sweeping and keeps only `simllm.` classes, so a study fixture cannot
 change what the audit covers, and
 `test_the_audited_entry_points_do_not_depend_on_import_order` pins it. The
 correction changed no scored row: G5 measured an empty offender set before and
-after, and the sweep now reports 12 shipped entry points, listed in observation
+after, and the sweep now reports 13 shipped entry points, listed in observation
 OBS-4. It is recorded here rather than quietly folded in, because the harness
 was edited after a run had been observed.
+
+Review pushed on this twice more and both pushes landed. First, the hardcoded
+module list that the fix relies on had no test, so a fourth provider module
+would have silently reintroduced the same dependence;
+`test_the_declared_provider_modules_cover_every_provider_in_the_package` now
+scans the package by parsing (not importing) and requires the list to equal the
+modules that actually define a provider. Second, the raw
+`__subclasses__()` sweep had survived in a sibling signature test, which now
+goes through the same `first_party_providers` helper. The explicit half of the
+entry-point list was also short one shipped surface,
+`CopyEngineServiceModel.estimate`, which produces its own picoseconds and is
+exported from the package; adding it is what moved the count from 12 to 13, and
+the maintenance rule is now written into that function: every callable exported
+from `simllm.compute` that turns work into a duration belongs there, not only
+the ones a step path happens to use.
 
 ## What this run does not establish
 

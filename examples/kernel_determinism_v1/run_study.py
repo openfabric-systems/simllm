@@ -36,6 +36,7 @@ import importlib.util
 import inspect
 import json
 import sys
+import textwrap
 from collections.abc import Iterable
 from dataclasses import dataclass, fields, is_dataclass
 from enum import Enum
@@ -49,6 +50,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from simllm.compute import (
     ComputeProvider,
+    CopyEngineServiceModel,
     GpuPortCapability,
     GpuPortConfig,
     GpuPortDirection,
@@ -444,18 +446,80 @@ NONDETERMINISM_SOURCES = (
     "numpy.random",
 )
 
+#: reported when a module imports under a name this audit cannot resolve
+#: statically. A computed import is not auditable, so it fails rather than
+#: passing quietly.
+COMPUTED_IMPORT = "<computed import>"
+
+#: call forms that import at run time rather than at module load
+_DYNAMIC_IMPORT_CALLS = ("__import__", "import_module", "importlib.import_module")
+
+
+def _dotted_name(node: ast.AST) -> str | None:
+    """Reconstruct ``a.b.c`` from an attribute or name chain, else ``None``."""
+
+    parts: list[str] = []
+    current = node
+    while isinstance(current, ast.Attribute):
+        parts.append(current.attr)
+        current = current.value
+    if not isinstance(current, ast.Name):
+        return None
+    parts.append(current.id)
+    return ".".join(reversed(parts))
+
 
 def imported_modules(path: Path) -> set[str]:
-    """Top-level module names imported by one source file, from its AST."""
+    """Module names one source file reaches, from its AST.
+
+    Four forms are covered, because a fence that only reads top-level ``import``
+    statements is trivially stepped around:
+
+    1. ``import a.b`` and ``import a.b as c``, including the alias, so a later
+       ``c.random`` reference resolves back to ``a.b.random``.
+    2. ``from a.b import c`` at any relative level, plus the imported names of a
+       pure relative ``from . import c``.
+    3. dotted references such as ``numpy.random.default_rng``, resolved through
+       the alias map, so a bare ``import numpy`` followed by ``numpy.random``
+       use is caught.
+    4. run-time imports, ``__import__("time")`` and
+       ``importlib.import_module("time")``, with a constant name. A dynamic
+       import whose name is computed yields :data:`COMPUTED_IMPORT`, because an
+       unresolvable name cannot be cleared.
+    """
 
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     found: set[str] = set()
+    aliases: dict[str, str] = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 found.add(alias.name)
-        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
-            found.add(node.module)
+                aliases[alias.asname or alias.name.split(".", 1)[0]] = alias.name
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                found.add(node.module)
+            else:
+                # ``from . import random`` carries the module in the alias list.
+                found.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.Call):
+            callee = _dotted_name(node.func)
+            if callee is None or callee not in _DYNAMIC_IMPORT_CALLS:
+                continue
+            first = node.args[0] if node.args else None
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                found.add(first.value)
+            else:
+                found.add(COMPUTED_IMPORT)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Attribute):
+            continue
+        dotted = _dotted_name(node)
+        if dotted is None:
+            continue
+        root, _, rest = dotted.partition(".")
+        if root in aliases and rest:
+            found.add(f"{aliases[root]}.{rest}")
     return found
 
 
@@ -477,12 +541,39 @@ def nondeterminism_audit(paths: Iterable[Path] | None = None) -> dict[str, list[
         hits = sorted(
             name
             for name in imported_modules(path)
-            if name in NONDETERMINISM_SOURCES
+            if name == COMPUTED_IMPORT
+            or name in NONDETERMINISM_SOURCES
             or any(name.startswith(f"{source}.") for source in NONDETERMINISM_SOURCES)
         )
         if hits:
             offenders[path.name] = hits
     return offenders
+
+
+def self_attributes_in_source(source: str) -> set[str]:
+    """Attribute names one source fragment reads off ``self``, from its AST.
+
+    Splitting the source on whitespace and keeping tokens that start with
+    ``self.`` looks equivalent and is not: it misses every reference that is not
+    at a token boundary, so ``int(self.rank)``, ``(self.rank,`` and
+    ``[self.worker_id]`` all slip past it. This walks ``ast.Attribute`` nodes
+    whose value is the name ``self`` instead, which has no such blind spot.
+    """
+
+    tree = ast.parse(textwrap.dedent(source))
+    return {
+        node.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "self"
+    }
+
+
+def self_attributes(function: Any) -> set[str]:
+    """Attribute names one function reads off ``self``."""
+
+    return self_attributes_in_source(inspect.getsource(function))
 
 
 #: parameter-name fragments that would make a price depend on who asked
@@ -501,6 +592,46 @@ FIRST_PARTY_PROVIDER_MODULES = (
 )
 
 
+def provider_defining_modules() -> set[str]:
+    """Modules under ``simllm`` that define a ``ComputeProvider`` subclass.
+
+    Found by parsing rather than by importing, so a module nothing has loaded
+    still shows up. `tests/test_kernel_determinism.py` requires this to equal
+    :data:`FIRST_PARTY_PROVIDER_MODULES` exactly, so adding a fourth provider
+    module fails loudly instead of quietly reintroducing the import-order
+    dependence the artifact byte lock caught.
+    """
+
+    trees: dict[str, ast.AST] = {}
+    for path in sorted((REPO_ROOT / "simllm").rglob("*.py")):
+        parts = list(path.relative_to(REPO_ROOT).with_suffix("").parts)
+        if parts[-1] == "__init__":
+            parts.pop()
+        trees[".".join(parts)] = ast.parse(
+            path.read_text(encoding="utf-8"), filename=str(path)
+        )
+
+    known = {"ComputeProvider"}
+    modules: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for module, tree in trees.items():
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ClassDef) or node.name in known:
+                    continue
+                bases = {
+                    name.rsplit(".", 1)[-1]
+                    for name in (_dotted_name(base) for base in node.bases)
+                    if name
+                }
+                if bases & known:
+                    known.add(node.name)
+                    modules.add(module)
+                    changed = True
+    return modules
+
+
 def first_party_providers() -> list[type]:
     """Every shipped ``ComputeProvider`` subclass, in a stable order."""
 
@@ -517,11 +648,22 @@ def first_party_providers() -> list[type]:
 
 
 def pricing_entry_points() -> dict[str, Any]:
-    """Every callable that turns work into a duration."""
+    """Every callable that turns work into a duration.
+
+    Maintenance rule for the explicit half of this list: every callable exported
+    from ``simllm.compute`` that turns work into a duration belongs here, not
+    only the ones a step path happens to use today. ``CopyEngineServiceModel``
+    is the case that was missed at first: it produces a `CopyServiceEstimate`
+    with its own picoseconds and is exported from the package, so it is a
+    pricing surface whether or not a transformer step reaches it. The provider
+    half of the list is swept rather than typed, and its module set is checked
+    by `tests/test_kernel_determinism.py`.
+    """
 
     entries: dict[str, Any] = {
         "ComputeProvider.estimate": ComputeProvider.estimate,
         "ComputeProvider.estimate_layers": ComputeProvider.estimate_layers,
+        "CopyEngineServiceModel.estimate": CopyEngineServiceModel.estimate,
         "SmSchedulerModel.estimate": SmSchedulerModel.estimate,
         "SmSchedulerModel.estimate_concurrent": SmSchedulerModel.estimate_concurrent,
         "transformer.step_kernel": step_kernel,

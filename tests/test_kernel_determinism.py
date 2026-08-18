@@ -16,9 +16,17 @@ instances, serialize to one byte string. The negative control in
 something.
 
 Rank and runner independence: no pricing entry point accepts a caller identity,
-no module under `simllm/compute` imports a random-number source, a wall clock or
-a process environment reader, and the vLLM and SGLang geometry readers agree on
-every value the cost model reads, so both adapters price one step identically.
+no module under `simllm/compute` reaches a random-number source, a wall clock or
+a process environment reader through a statically resolvable name, and the vLLM
+and SGLang geometry readers agree on every value the cost model reads, so both
+adapters price one step identically. The import audit is a static fence, not a
+proof: it covers import statements and their aliases, relative imports, dotted
+attribute uses resolved through the alias map, and run-time imports with a
+constant name (rejecting a computed one), and it cannot see a source reached
+through a name it cannot resolve. The runner half is asymmetric too: the vLLM
+executor's own pricing method is invoked, while the SGLang worker is not
+importable without SGLang, so its half drives SGLang's geometry reader into the
+same shared call its `_settle` makes.
 
 Phase and token keying: prefill and decode, and a changed token count, move the
 constant to the exact values the freeze predicted.
@@ -156,7 +164,11 @@ def test_the_determinism_lock_sees_a_changed_cursor_bandwidth():
 
 
 def test_no_compute_module_imports_a_nondeterminism_source():
-    """A duration may not depend on an RNG, a wall clock or the environment."""
+    """A duration may not depend on an RNG, a wall clock or the environment.
+
+    Enforced as a static fence over statically resolvable references; see the
+    module docstring for exactly what it covers and what it cannot see.
+    """
 
     assert study.nondeterminism_audit() == {}
 
@@ -178,6 +190,39 @@ def test_the_nondeterminism_audit_can_see_an_offender(tmp_path):
     assert study.nondeterminism_audit([clean]) == {}
 
 
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        # A bare numpy import with a dotted use: the import line alone is clean.
+        ("import numpy\nrng = numpy.random.default_rng()\n", True),
+        # The same through an alias, so the alias map has to be consulted.
+        ("import numpy as np\nrng = np.random.default_rng()\n", True),
+        # Run-time imports, which no import statement records.
+        ("import importlib\nm = importlib.import_module('time')\n", True),
+        ("m = __import__('time')\n", True),
+        # A relative import, which the original level==0 filter dropped.
+        ("from .random import thing\n", True),
+        ("from . import random\n", True),
+        # A computed import name cannot be cleared, so it is an offender itself.
+        ("import importlib\nm = importlib.import_module(a + b)\n", True),
+        # A legitimate bare numpy use must still pass.
+        ("import numpy\nx = numpy.array([1, 2])\n", False),
+        ("import math\nfrom fractions import Fraction\n", False),
+    ],
+)
+def test_the_audit_catches_the_forms_that_step_around_an_import_line(
+    tmp_path, source, expected
+):
+    """Widened after review demonstrated four evasions of the first fence."""
+
+    module = tmp_path / "candidate.py"
+    module.write_text(source, encoding="utf-8")
+
+    flagged = bool(study.nondeterminism_audit([module]))
+
+    assert flagged is expected
+
+
 def test_the_audit_covers_every_compute_module():
     """An audit that looked at nothing would also report no offender."""
 
@@ -194,11 +239,19 @@ def test_no_pricing_entry_point_accepts_a_caller_identity():
 
 
 def test_every_compute_provider_prices_on_kernel_and_gpu_alone():
+    """Swept through `first_party_providers`, not `__subclasses__` directly.
+
+    A raw `ComputeProvider.__subclasses__()` sweep here would repeat the exact
+    import-order defect the artifact byte lock caught in guard G5: what it
+    covers would depend on which study harnesses the process had loaded.
+    """
+
     import inspect
 
-    from simllm.compute import ComputeProvider
+    providers = study.first_party_providers()
 
-    for subclass in ComputeProvider.__subclasses__():
+    assert providers, "the sweep must not be empty"
+    for subclass in providers:
         parameters = list(inspect.signature(subclass.estimate).parameters)
         assert parameters == ["self", "kernel", "gpu"], subclass.__name__
 
@@ -233,9 +286,33 @@ def test_the_identity_audit_covers_every_pricing_entry_point():
         "ProfileTableProvider.estimate",
         "TraceCalibratedGpuProvider.estimate",
         "_PinnedEnvelopeProvider.estimate",
+        "CopyEngineServiceModel.estimate",
         "SmSchedulerModel.estimate",
         "transformer.estimate_step_latency_ps",
     } <= entries
+
+
+def test_the_declared_provider_modules_cover_every_provider_in_the_package():
+    """A fourth provider module must fail here, not silently widen the sweep.
+
+    `first_party_providers` imports a hardcoded module list before sweeping
+    subclasses. If a shipped provider ever lands outside that list, the sweep
+    would again depend on whether something else had imported it, which is the
+    F6 defect. This scans the package by parsing, so it sees a module nothing
+    has loaded.
+    """
+
+    assert study.provider_defining_modules() == set(study.FIRST_PARTY_PROVIDER_MODULES)
+
+
+def test_the_provider_module_scan_finds_subclasses_by_parsing():
+    """The control: the scan reads class bases, it does not return a fixed set."""
+
+    modules = study.provider_defining_modules()
+
+    assert "simllm.compute.provider" in modules
+    assert "simllm.compute.gpu_model" in modules
+    assert "simllm.compute.transformer" not in modules
 
 
 def test_the_audited_entry_points_do_not_depend_on_import_order():
@@ -309,19 +386,71 @@ def test_the_vllm_executors_own_pricing_method_returns_the_same_constant():
 
 
 def test_the_executor_pricing_method_reads_no_rank_or_worker_state():
-    """The stand-in above is only honest if those four attributes are all it uses."""
+    """The stand-in above is only honest if those four attributes are all it uses.
 
-    import inspect
+    Checked by walking `ast.Attribute` nodes whose value is the name `self`.
+    The first version of this test split the source on whitespace and kept
+    tokens starting with `self.`, which review showed was no check at all:
+    adding `+ int(self.rank)` to the method still passed it, because the
+    reference is not at a whitespace token boundary.
+    """
 
     from simllm.adapters.vllm.executor import SimExecutor
 
-    source = inspect.getsource(SimExecutor._estimate_latency)
-    attributes = {
-        name.split(".", 1)[1] for name in source.split() if name.startswith("self.")
-    }
-    attributes = {name.rstrip(",)") for name in attributes}
+    attributes = study.self_attributes(SimExecutor._estimate_latency)
 
     assert attributes == {"dims", "compute_provider", "gpu", "host_model"}
+    assert not any(
+        fragment in name.lower()
+        for name in attributes
+        for fragment in study.IDENTITY_PARAMETERS
+    )
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ("return self.dims", {"dims"}),
+        ("return int(self.rank)", {"rank"}),
+        ("return (self.rank, self.dims)", {"rank", "dims"}),
+        ("return [self.worker_id][0]", {"worker_id"}),
+        ("return self.dims + int(self.rank)", {"dims", "rank"}),
+        ("return {'a': self.gpu_id}", {"gpu_id"}),
+        ("return f'{self.rank}'", {"rank"}),
+    ],
+)
+def test_the_self_attribute_reader_sees_what_a_tokenizer_misses(body, expected):
+    """The control for the check above, using review's own counterexamples.
+
+    Every row except the first defeated the whitespace tokenizer this replaced.
+    """
+
+    source = f"def price(self):\n    {body}\n"
+
+    assert study.self_attributes_in_source(source) == expected
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "return int(self.rank)",
+        "return [self.worker_id][0]",
+        "return f'{self.rank}'",
+    ],
+)
+def test_the_replaced_tokenizer_really_did_miss_those_forms(body):
+    """The retired check, kept as a one-line demonstration of why it was retired."""
+
+    source = f"def price(self):\n    {body}\n"
+
+    tokenized = {
+        name.split(".", 1)[1].rstrip(",)")
+        for name in source.split()
+        if name.startswith("self.")
+    }
+
+    assert tokenized == set()
+    assert study.self_attributes_in_source(source) != set()
 
 
 def test_the_adapter_agreement_lock_sees_a_changed_geometry():

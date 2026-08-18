@@ -231,7 +231,7 @@
       "id": "G5",
       "evidence_class": "fatal_guard",
       "family": "no caller identity in a pricing signature",
-      "case": "12 entry points",
+      "case": "13 entry points",
       "expected": {},
       "measured": {},
       "status": "PASS"
@@ -643,6 +643,7 @@
       "measured": [
         "ComputeProvider.estimate",
         "ComputeProvider.estimate_layers",
+        "CopyEngineServiceModel.estimate",
         "HostInitiationModel.represented_estimate",
         "ProfileTableProvider.estimate",
         "RooflineProvider.estimate",
