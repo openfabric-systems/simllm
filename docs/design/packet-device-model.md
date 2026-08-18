@@ -40,10 +40,11 @@ Four sentences carry the whole model.
    the protocol identity, the direction, the ceiling and the provenance of that
    ceiling. The service model decides when a packet leaves and when it lands.
    An NVIDIA GPU has PCIe ports and NVLink ports; an AMD ROCm GPU has PCIe
-   ports and xGMI (Infinity Fabric) ports; a Grace Hopper superchip replaces
-   the GPU's host-side PCIe port with an NVLink-C2C port; an RNIC has PCIe
-   ports and wire ports. These are the same kind of object with different
-   parameters, not four different modeling techniques.
+   ports and xGMI (Infinity Fabric) ports; an accelerator in a UALink pod has a
+   UALink peer port; a Grace Hopper superchip replaces the GPU's host-side PCIe
+   port with an NVLink-C2C port; an RNIC has PCIe ports and wire ports. These
+   are the same kind of object with different parameters, not five different
+   modeling techniques.
 2. **Software stacks are the packet producers.** NCCL and RCCL are not a rate;
    they are the thing that decides how many bytes cross which port in what
    order. A collective becomes ring steps, ring steps become chunks, chunks
@@ -94,6 +95,7 @@ and
 | Peer link, NVLink3 | NVLink3, `NV4` mesh, 4 bonded links per ordered pair | A100 GPU to GPU inside a node | 100 GB/s per ordered pair and 300 GB/s per-GPU egress; measured 94.00 to 94.07 GB/s per pair (copy-engine wire efficiency 94.0 percent) and 281.65 GB/s on the three-way fan-out (93.9 percent) | first-party measured, A100 envelope |
 | Peer link, NVLink4 | NVLink4, `NV6` mesh, 6 bonded links per ordered pair | GH200 GPU to GPU inside a node | 150 GB/s per ordered pair and 450 GB/s per-GPU egress; measured 133.24 to 133.27 GB/s per pair (copy-engine wire efficiency 88.8 percent) and 398.71 GB/s on the fan-out (88.6 percent) | first-party measured, GH200 envelope |
 | Peer link, xGMI | xGMI over Infinity Fabric | AMD Instinct GPU to GPU inside a node | vendor nameplate only: AMD states up to 64 GB/s per point-to-point link and 448 GB/s aggregate per GPU over seven links, with 45 to 48 GB/s per link and 315 to 336 GB/s aggregate reported as realized | **not first-party**, AMD ROCm blog, no SimLLM measurement exists |
+| Peer link, UALink | UALink 200G 1.0 | accelerator to accelerator inside a UALink pod, up to 1,024 accelerators | consortium nameplate only: 200 GT/s per lane maximum data rate carried at a 212.5 GT/s signalling rate, over x1, x2 or x4 links, with a four-lane Station reaching 800 Gbit/s (100 GB/s) in each direction. The headline number is a signalling-derived figure, not a measured payload rate | **not first-party**, UALink Consortium specification, no SimLLM measurement exists |
 | Wire port, Ethernet | 400 Gbit/s RoCE-class over a two-tier Clos | RNIC to fabric, the default reference configuration | 400 Gbit/s, i.e. 50 GB/s per port per direction | model configuration, executed by the htsim packet models |
 
 Three rules follow directly from the table and are load bearing for everything
@@ -108,6 +110,10 @@ below.
   raw signalling rate; the payload rate after the 17/16 encoding overhead is
   25.0 GB/s, and taking the report at face value overstates a Hopper ceiling by
   6.25 percent. NVLink3 is unaffected because both figures are 25 GB/s there.
+  UALink states the same distinction in its own specification, a 200 GT/s data
+  rate carried at 212.5 GT/s to cover forward error correction and layer-1
+  encoding, so the same error is available to anyone who reads the headline as a
+  payload ceiling.
 - **The host port is not symmetric everywhere.** A100 PCIe was symmetric within
   2 percent; Grace C2C is asymmetric by 2.47 times, so a single bidirectional
   host-link rate is wrong on Grace Hopper in one direction, and which direction
@@ -372,8 +378,24 @@ The third part, which is really the safety rule, is that a port with no
 measured or declared profile fails closed. The repository already enforces this
 shape elsewhere: calibrated B100 and H100 host-cost requests are rejected during
 configuration rather than borrowing the measured Turing constant. A modeled
-xGMI port must behave the same way, because the only figures available for it
-today are vendor nameplate.
+xGMI or UALink port must behave the same way, because the only figures available
+for either today are vendor or consortium nameplate. Both protocols are
+nameable, so a topology can be described, and both are rejected during
+configuration with a diagnostic naming COMP-35, which owns supplying the
+declared ceiling either one needs.
+
+The fourth part is what the doctrine does **not** cover, and it is a standing
+decision rather than a calibration question. A compute kernel's service time is
+a deterministic constant with no tail: a pure function of kernel family, phase,
+token and shape inputs, and the architecture profile, identical across ranks and
+across GPU runners for the same inputs, with memory-bound kernels pinned to the
+HBM bound and CUDA-graph versus eager launch differing only in the host launch
+cost. Efficiency curves, port ceilings and stack overheads are what this
+doctrine calibrates; none of them is a source of per-kernel randomness. Every
+latency tail in a reported TTFT or TPOT comes from the network, from batching
+and from queueing, which is exactly the chain the ports and producers above
+describe. The full statement and its enforcement live in
+[compute.md](../modules/compute.md#kernel-time-determinism).
 
 ## What exists today, and what is registered as a gap
 
@@ -399,7 +421,7 @@ Registered by this document, with the state each task is in now:
 | Task | Gap it owns |
 |---|---|
 | COMP-34, closed | Landed the GPU device composition entry point with typed PCIe and NVLink ports over the existing copy-engine and NVLink-cursor mechanisms: protocol identity, role, direction, declared capabilities, ceiling and ceiling provenance behind one versioned configuration, with configuration-time rejection and a byte-identical off path. Validated by [gpu_device_ports_v1](../../examples/gpu_device_ports_v1/RESULTS.md). Residuals are COMP-40 and COMP-41. Peer topology, ingress service and reduction lanes stayed with COMP-31. |
-| COMP-35 | No vendor port instantiation exists, so an AMD ROCm GPU cannot be expressed at all and an xGMI ceiling has no first-party or declared profile to fail closed against. The protocol is now nameable and an xGMI port is rejected at configuration time with a diagnostic naming this task. |
+| COMP-35 | No vendor peer-port instantiation exists, so an AMD ROCm GPU and a UALink pod cannot be expressed at all, and neither an xGMI nor a UALink ceiling has a first-party or declared profile to fail closed against. Both protocols are now nameable and a port claiming either is rejected at configuration time with a diagnostic naming this task. |
 | COMP-40 | The landed GPU ports declare capabilities but emit no packet event, so an intra-node leg cannot report an extent, an attempt, a TX boundary or an arrival in the same language a wire port uses. Paired with BACK-48, which owns exposing that vocabulary to a non-wire port. |
 | COMP-41 | No shipped architecture profile carries a measured per-port ceiling. Every reachable ceiling is read out of a synthetic study calibration or declared by a study, so the measured cells in the port taxonomy above are not yet attached to a profile a run can select. |
 | BACK-46 | Composition landed on 2026-08-17: `GpuDevice` attaches to the shared fabric with its own endpoint identity and ordering domain, owns its regions, grants named peers read access, and has its transactions charged in a per-endpoint ledger, so a NIC payload read whose completer is a GPU-owned region is charged under the GPU's identity, and a foreign claim is refused with unchanged state ([study](../../examples/rnic_gpu_endpoint_v1/RESULTS.md): 10 of 10 published scored instances, no fatal guard violated, every accepted BACK-10, BACK-19 and BACK-20 artifact byte-identical). What remains is the metric clause: the relations are native WQE completion times rather than a projected TTFT or TPOT, so this entry stays open and BACK-49 carries the live chain. |
@@ -477,3 +499,4 @@ claims cite the study or header inline above instead.
 | RCCL "is a stand-alone library that provides multi-GPU and multi-node collective communication primitives optimized for AMD GPUs. It uses PCIe and xGMI high-speed interconnects" (documented version 2.30.7) | AMD, RCCL documentation, https://rocm.docs.amd.com/projects/rccl/en/develop/index.html |
 | RCCL's plugin page is titled "Using the NCCL Net plugin API", describes asynchronous `isend`, `irecv` and `test` with `regMr` buffer registration, and names the plugin library `librccl-net.so` | AMD, RCCL, Using the NCCL Net plugin API, https://rocm.docs.amd.com/projects/rccl/en/develop/how-to/using-nccl.html |
 | xGMI nameplate figures for MI300X: up to 64 GB/s per point-to-point link and 448 GB/s aggregate per GPU over seven links, with 45 to 48 GB/s per link and 315 to 336 GB/s aggregate reported as realized | AMD ROCm blog, "Understanding RCCL Bandwidth and xGMI Performance on AMD Instinct MI300X", Kolla, Alizadeh and Lee, 2 March 2025, https://rocm.blogs.amd.com/software-tools-optimization/mi300x-rccl-xgmi/README.html |
+| UALink nameplate figures: a 200 GT/s per-lane maximum data rate carried at a 212.5 GT/s signalling rate to cover forward error correction and layer-1 encoding, x1, x2 and x4 link widths, a four-lane Station reaching 800 Gbit/s in each direction, and scaling to 1,024 accelerators in a pod | UALink Consortium, UALink 200G 1.0 Specification (April 2025), https://ualinkconsortium.org/specification/ |
