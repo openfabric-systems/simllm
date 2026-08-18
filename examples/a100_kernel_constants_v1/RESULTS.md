@@ -131,6 +131,19 @@ kernel. The prior accepted
 study reproduces both to within 0.3 percent, which is an independent
 cross-check of two separately written harnesses.
 
+## One entailment the freeze should have caught
+
+E-1-6 asserts that `R_hbm` lies in [1700, 1937] GB/s. `R_hbm` is defined as the
+maximum achieved rate over the lane-1 cells at 256 MiB and above, and the
+maximum turned out to be the same 2048 MiB write cell that E-1-2 scores against
+the identical band. On this run the two expectations are therefore the same
+measurement checked twice, and E-1-6 carried almost no independent risk. It is
+not exactly entailed, because a cell below 2048 MiB could in principle have
+exceeded 1937 GB/s and broken E-1-6 while E-1-2 held, but that is a thin
+distinction and it should have been noticed when the freeze was written rather
+than after the run. It is disclosed here rather than quietly left in the
+denominator. The denominator is uninterpretable anyway, since the run is void.
+
 ## Finding 1: per-kernel event instrumentation is not free
 
 This is the reason run 1 was void and it is the most transferable result of the
