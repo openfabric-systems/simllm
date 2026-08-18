@@ -1022,6 +1022,21 @@ and an explicit reason:
   term. And the operand layout, not the shape, produced a factor 2.9 swing
   between neighbouring token counts in the study's first run, which is why any
   future table must record the layout its constants were measured under.
+  The [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
+  is also reviewed `VOID` and installs nothing, but it measures this task's
+  second blocker on the target architecture and host. The eager per-launch host
+  cost on this A100 and EPYC pair is 1,629,633 ps, 31.07 percent below the
+  Turing `eager-host-bound` point, which together with the already recorded
+  Grace against EPYC difference settles the transfer question: a launch
+  constant belongs to the host and driver, not to the GPU generation. CUDA
+  graph replay costs the host 1.6 microseconds regardless of chain length, so
+  at 256 nodes the host pays 6.5 nanoseconds per enqueued kernel, a factor 251
+  below eager. And the study refutes the contract's CUDA-graph clause at the
+  device level: a real kernel's period is 1.42 to 1.51 microseconds larger in
+  eager mode than in a graph, of which a null kernel accounts for 1.08, so the
+  residual 0.34 to 0.43 microseconds is launch-mode-conditioned per-kernel cost
+  whose split between service time and front-end gap this driver will not
+  report.
 - COMP-5 (Precision; P1; L): provide the production capture
   environment required by COMP-1. The local GTX 1660 Ti still cannot qualify:
   Nsight Compute returns `ERR_NVGPUCTRPERM`, and display sharing produces the
@@ -1270,6 +1285,22 @@ and an explicit reason:
   registered median 10 percent and p95 20 percent bars. The void run already
   reaches 0.70 percent median and 18.53 percent p95 on its held-out shapes, so
   the bars are reachable; what is missing is a run whose guards hold.
+- COMP-47 (Precision; P1; S): reach a non-void A100 graph-launch run and
+  install the two host profiles it produces. The
+  [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
+  passed 14 of its 15 scored expectations and every guard except `GG7`, which
+  bounds the block-mean dispersion of every reported period at 4 percent and
+  which a chain of one to eight kernels cannot meet against the device's 1024 ns
+  event quantum. The surrogate being replaced is the absence of any A100 entry
+  in `HostInitiationModel`, whose calibrated profiles today accept only
+  `gtx1660-ti-sm75`. Acceptance: a freeze whose dispersion guard is scoped to
+  the periods the study actually publishes, stated before the run; a run whose
+  guards hold; and `a100-epyc-eager-host` and `a100-epyc-cuda-graph` installed
+  with the same fail-closed device check the Turing profiles carry, rejecting
+  every key except `a100`. The measured values are already published as
+  retained evidence: 1,629,633 ps per eager launch over an empirical 1,625,986
+  to 1,927,260 ps, and 1,647,674 ps per graph replay independent of chain
+  length. Installing them from the void run is refused on purpose.
 
 ### Completeness
 
@@ -1374,6 +1405,26 @@ and an explicit reason:
   and the no-emission path preserves every accepted timestamp, counter and
   artifact byte exactly. This is P2 while no study consumes port events and
   becomes P1 when TRAF-45 packetizes the intra-node leg.
+- COMP-44 (Completeness; P2; S): let a calibrated host profile carry a fixed
+  per-invocation cost beside its per-launch constant. `HostInitiationModel`'s
+  calibrated form has exactly one term, `point_ps_per_launch`, composed as
+  `max(C, N * g)`, which is the right shape for eager launching and the wrong
+  shape for CUDA graph replay. The
+  [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
+  measured the graph host cost at 1.574 to 1.686 microseconds per replay across
+  chain lengths 1 to 256, a fitted per-node slope of 0.000297 microseconds at
+  an R-squared of 0.516, so there is no per-launch constant to fit: the cost is
+  a fixed per-replay term plus a per-node term indistinguishable from zero.
+  Expressing it as a per-launch constant makes the published point depend on
+  the chain length, which is why that study's `a100-epyc-cuda-graph` point is
+  declared scoped to a reference chain length rather than universal. The
+  surrogate being replaced is that scoping. Acceptance: a calibrated profile
+  may declare a fixed per-invocation term and a per-launch term, the
+  composition states which one a launch class uses, the exact `ideal` zero
+  profile and both Turing profiles reproduce every accepted artifact and
+  timestamp byte for byte, and a graph profile built from a fixed term is
+  independent of the launch count it is asked about. This is P2 while no study
+  selects an A100 host profile and becomes P1 when COMP-47 installs one.
 - COMP-46 (Completeness; P2; M): supply a production-grade decode attention
   microbenchmark. The decode lane of the
   [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)

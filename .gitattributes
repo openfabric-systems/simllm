@@ -66,3 +66,5 @@ examples/a100_graph_launch_v1/*.md text eol=lf
 examples/a100_graph_launch_v1/*.cu text eol=lf
 examples/a100_graph_launch_v1/*.py text eol=lf
 tests/test_a100_graph_launch_freeze.py text eol=lf
+examples/a100_graph_launch_v1/measurements/*.json text eol=lf
+tests/test_a100_graph_launch_results.py text eol=lf
