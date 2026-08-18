@@ -999,15 +999,21 @@ default-constructed arm are unchanged.
   hardware this project can reach and the reason is recorded so the dead end is
   not re-attempted: the only inter-node path is NCCL's kernel socket transport
   over Cray Cassini Slingshot ports with GPUDirect RDMA disabled rather than a
-  400 Gbit/s RDMA fabric, no width above 2 was schedulable, and width 8 at one
-  rank per node needs eight nodes on a five-node cluster. TRAF-48 owns the RDMA
-  capture and TRAF-50 the missing width.
-- TRAF-50 (Precision; P2; M): measure the mixed NVLink and fabric ring above
-  width 2 on the cluster this project can reach. The
+  400 Gbit/s RDMA fabric, and width 8 at one rank per node needs eight nodes
+  on a five-node cluster. The mixed-ring width-8 cell (two nodes by four
+  GPUs) did land late, on 2026-08-18, and its frozen relations all passed;
+  the one-rank-per-node width-8 clause stays physically unsatisfiable here.
+  TRAF-48 owns the RDMA capture and TRAF-50 the profile fold-in of the
+  measured width.
+- TRAF-50 (Precision; P2; M): fold the measured width-8 mixed ring into the
+  first-party cross-node profile behind a fresh freeze. The
   [cross-node collective envelope](../../examples/crossnode_collective_envelope_v1/RESULTS.md)
-  measured width 2 only, so the first-party cross-node profile supports one
-  width and fails closed everywhere else, and every relation its freeze wrote
-  about width scaling went unevaluated. A ring with some NVLink hops and some
+  measured width 2 at publication; its queued width-8 cell (two nodes by
+  four GPUs) landed 2026-08-18 and was scored by the study's committed
+  reproduction path, so every width-scaling relation its freeze wrote now
+  passes (8 B floor 50.790 us, width-8 over width-2 bus bandwidth 3.194,
+  the transferred width-8 intercept within 2.6 percent of measurement) and
+  the capture half of this task is done. A ring with some NVLink hops and some
   fabric hops is the shape a real two-node tensor-parallel deployment has, and
   it is the shape the composed SGLang deployment study prices with a transferred
   constant, so it is the width that matters most. The identifying observable is
