@@ -1,0 +1,113 @@
+{
+  "study": "nccl_registration_v1",
+  "subject": "NCCL/RCCL channel-and-buffer registration as a one-time modeled time cost gating first use, under the interim constant-completion contract",
+  "declared": {
+    "registration_cost_ps": 20000000,
+    "evidence_class": "declared",
+    "default_state": "disabled",
+    "identity_fields": [
+      "communicator",
+      "generation",
+      "channel",
+      "buffer"
+    ],
+    "reregistration_events": [
+      "new buffer",
+      "new peer set",
+      "communicator rebuild"
+    ]
+  },
+  "cells": {
+    "local-tp2": {
+      "dims": {
+        "num_layers": 32,
+        "hidden_size": 4096,
+        "intermediate_size": 11008,
+        "num_heads": 32,
+        "num_kv_heads": 32,
+        "head_size": 128,
+        "vocab_size": 32000,
+        "dtype_bytes": 2
+      },
+      "tp_ranks": [0, 1],
+      "hosts": ["a", "a"],
+      "profile": "rnic-nn-fluid",
+      "roofline_efficiency": 0.7,
+      "gpu": "b100",
+      "prompt_tokens": 512,
+      "steps": 3,
+      "collectives_per_step": 64,
+      "identities_one_channel": 64,
+      "arms": ["off", "on", "on-2ch", "on-rebuild"]
+    },
+    "mixed-tp4": {
+      "dims": {
+        "num_layers": 2,
+        "hidden_size": 1024,
+        "intermediate_size": 4096,
+        "num_heads": 16,
+        "num_kv_heads": 16,
+        "head_size": 64,
+        "vocab_size": 32000,
+        "dtype_bytes": 2
+      },
+      "tp_ranks": [0, 1, 2, 3],
+      "hosts": ["a", "a", "b", "b"],
+      "profile": "rnic-nn-fluid",
+      "roofline_efficiency": 0.7,
+      "gpu": "b100",
+      "prompt_tokens": 64,
+      "steps": 2,
+      "collectives_per_step": 4,
+      "identities_one_channel": 4,
+      "arms": ["off", "on"]
+    }
+  },
+  "fatal_guards": [
+    {"id": "G1", "claim": "the default-constructed arm and the explicitly disabled arm agree field by field"},
+    {"id": "G2", "claim": "every GOAL artifact SHA-256 is identical between the off and on arms"},
+    {"id": "G3", "claim": "the off arm reproduces the accepted baseline timings exactly"},
+    {"id": "G4", "claim": "every step and every request partition conserves its span exactly"},
+    {"id": "G5", "claim": "a calibrated request against a declared cost fails closed"},
+    {"id": "G6", "claim": "no collective is charged registration on more than one artifact"},
+    {"id": "G7", "claim": "the mirrored nccl_stack event stream is unchanged when no registration is requested"},
+    {"id": "G8", "claim": "the results identity block equals this freeze"},
+    {"id": "G9", "claim": "ledger construction facts: first charge pays, second charges zero, new buffer, new peer and bumped generation each re-pay, disabled charges zero"}
+  ],
+  "scored": {
+    "exact_oracle_rows": {
+      "denominator": 6,
+      "rows": [
+        {"id": "O1", "cell": "local-tp2", "claim": "TTFT_on - TTFT_off == 1280000000", "value_ps": 1280000000},
+        {"id": "O2", "cell": "local-tp2", "claim": "decode-step makespans are unchanged between on and off", "value_ps": 0},
+        {"id": "O3", "cell": "local-tp2", "claim": "TTFT_on-2ch - TTFT_off == 2560000000", "value_ps": 2560000000},
+        {"id": "O4", "cell": "local-tp2", "claim": "a rebuild re-pays exactly once on step 2 and leaves TTFT at the plain on-arm value", "value_ps": 1280000000},
+        {"id": "O5", "cell": "mixed-tp4", "claim": "TTFT_on - TTFT_off == 80000000 across a phase-split collective with a real backend", "value_ps": 80000000},
+        {"id": "O6", "cell": "both", "claim": "the published registration component equals the ledger charge per step"}
+      ]
+    },
+    "behavioral_families": {
+      "denominator_families": 3,
+      "denominator_instances": 7,
+      "families": [
+        {"id": "B1", "claim": "charged registration is exactly identities x 20000000 ps", "instances": 3},
+        {"id": "B2", "claim": "the charge is additive on top of the composed service, never absorbed by the max term", "instances": 2},
+        {"id": "B3", "claim": "steps after the registering step are untouched", "instances": 2}
+      ]
+    }
+  },
+  "physical_bounds": {
+    "charge_floor_ps": 0,
+    "charge_ceiling_local_tp2_one_channel_ps": 1280000000,
+    "charge_ceiling_local_tp2_two_channel_ps": 2560000000,
+    "charge_ceiling_mixed_tp4_one_channel_ps": 80000000,
+    "channel_doubling_factor": 2
+  },
+  "not_established": [
+    "no calibration of the registration cost",
+    "no packetized registration handshake",
+    "no live new-peer re-registration",
+    "no deregistration, cache eviction or size dependence",
+    "no evidence about whether the no-tail constant completion is the right collective model"
+  ]
+}

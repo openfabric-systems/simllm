@@ -133,20 +133,35 @@ backend submodules.
   graphs replay through `render_serial_execution_graph_goal`.
 - `attribute_step_detail` + `HtsimRequestMetricReducer`: the read-only
   projection from executed steps to per-request TTFT and TPOT. Artifacts run
-  serially and each composes as base plus the maximum of its local and fabric
-  service, so the step's realized interval is one disjoint subinterval per
-  artifact and the resource whose own service equals that maximum owns it.
-  `MediumAttribution` names `kernel_ps`, `nvlink_ps`, `fabric_ps`,
-  `co_critical_ps` and `collective_base_ps` separately, alongside `queue_ps`
-  and `control_ps`, and totals the same picoseconds as the coarse
+  serially and each composes as registration plus base plus the maximum of its
+  local and fabric service, so the step's realized interval is one disjoint
+  subinterval per artifact and the resource whose own service equals that
+  maximum owns it. `MediumAttribution` names `kernel_ps`, `nvlink_ps`,
+  `fabric_ps`, `co_critical_ps`, `collective_base_ps` and
+  `collective_registration_ps` separately, alongside `queue_ps` and
+  `control_ps`, and totals the same picoseconds as the coarse
   `LatencyAttribution` it rolls up into. `MaskedMediumService` reports what the
   losing medium ran concurrently; it is a work sum, has no total, and never
   enters a latency partition. `attribute_step` returns the coarse partition
   alone. The evidence comes from `StepLocalityOutcome`'s per-artifact
-  `local_phase_service_ps`, `base_phase_latency_ps` and `local_phase_medium`;
-  an outcome that carries NVLink work without them is refused rather than
-  approximated, and an all-remote outcome without them keeps its exact
-  historical partition.
+  `local_phase_service_ps`, `base_phase_latency_ps`,
+  `registration_phase_cost_ps` and `local_phase_medium`; an outcome that
+  carries NVLink work without them is refused rather than approximated, and an
+  all-remote outcome without them keeps its exact historical partition. A
+  registration cost without the medium projection is refused for the same
+  reason.
+- `HtsimStepSinkConfig.collective_registration` selects the one-time
+  channel-and-buffer registration model of the interim collective-completion
+  contract, which the traffic module states in full. `None` is the exact off
+  path: the sink's ledger charges zero, publishes no
+  `StepCollectiveRegistrationOutcome`, leaves `registration_phase_cost_ps`
+  empty and reproduces every accepted timestamp and artifact byte for byte.
+  With a model named, the sink charges each
+  `(communicator, generation, channel, buffer)` identity once at first use,
+  serialized ahead of that collective's first executed artifact, and
+  `rebuild_collective_communicators` models the destroy-and-init cycle that
+  forces a re-registration. The charge changes no emitted byte: it is time, not
+  traffic.
 
 ## Pinned submodules
 

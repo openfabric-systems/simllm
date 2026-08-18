@@ -95,6 +95,10 @@ class MediumAttribution:
     co_critical_ps: int = 0
     #: semantic collective fixed cost; no resource owns it
     collective_base_ps: int = 0
+    #: one-time channel-and-buffer registration serialized ahead of a collective;
+    #: no resource owns it, and it is kept apart from the base so a reader can
+    #: tell a per-call fixed cost from a once-per-identity setup cost
+    collective_registration_ps: int = 0
     #: steps the sink did not simulate, settled by the adapter's fallback
     control_ps: int = 0
 
@@ -106,6 +110,7 @@ class MediumAttribution:
             "fabric_ps",
             "co_critical_ps",
             "collective_base_ps",
+            "collective_registration_ps",
             "control_ps",
         ):
             _require_nonnegative_int(name, getattr(self, name))
@@ -121,6 +126,7 @@ class MediumAttribution:
             + self.fabric_ps
             + self.co_critical_ps
             + self.collective_base_ps
+            + self.collective_registration_ps
             + self.control_ps
         )
 
@@ -133,6 +139,7 @@ class MediumAttribution:
             + self.fabric_ps
             + self.co_critical_ps
             + self.collective_base_ps
+            + self.collective_registration_ps
         )
 
     def __add__(self, other: object) -> MediumAttribution:
@@ -145,6 +152,9 @@ class MediumAttribution:
             fabric_ps=self.fabric_ps + other.fabric_ps,
             co_critical_ps=self.co_critical_ps + other.co_critical_ps,
             collective_base_ps=self.collective_base_ps + other.collective_base_ps,
+            collective_registration_ps=(
+                self.collective_registration_ps + other.collective_registration_ps
+            ),
             control_ps=self.control_ps + other.control_ps,
         )
 
@@ -219,6 +229,7 @@ class _ArtifactOwnership:
 
     owner: str
     base_ps: int
+    registration_ps: int
     owned_ps: int
     #: local service declared for an NVLink-medium artifact, owned or masked
     nvlink_service_ps: int
@@ -233,6 +244,7 @@ def _artifact_ownership(
     fabric_ps: int,
     local_ps: int,
     base_ps: int,
+    registration_ps: int,
     medium: str,
 ) -> _ArtifactOwnership:
     """Resolve one artifact's realized service to the resource that decided it."""
@@ -245,6 +257,7 @@ def _artifact_ownership(
         ("fabric service", fabric_ps),
         ("local service", local_ps),
         ("base latency", base_ps),
+        ("registration cost", registration_ps),
     ):
         _require_nonnegative_int(f"{path} {name}", value)
     if medium == GPU_COMPUTE_MEDIUM:
@@ -252,10 +265,15 @@ def _artifact_ownership(
             raise ValueError(f"{path} is compute owned and cannot carry fabric service")
         if base_ps:
             raise ValueError(f"{path} is compute owned and cannot carry a base latency")
+        if registration_ps:
+            raise ValueError(
+                f"{path} is compute owned and cannot carry a registration cost"
+            )
     realized_ps = max(local_ps, fabric_ps)
-    if composed_ps != base_ps + realized_ps:
+    if composed_ps != registration_ps + base_ps + realized_ps:
         raise ValueError(
-            f"{path} composed service disagrees with its base and medium terms"
+            f"{path} composed service disagrees with its base and medium terms "
+            "once its registration cost is included"
         )
     nvlink_service_ps = local_ps if medium == NVLINK_MEDIUM else 0
     if realized_ps == 0:
@@ -272,6 +290,7 @@ def _artifact_ownership(
     return _ArtifactOwnership(
         owner=owner,
         base_ps=base_ps,
+        registration_ps=registration_ps,
         owned_ps=realized_ps,
         nvlink_service_ps=nvlink_service_ps,
         masked_nvlink_ps=local_ps if owner == FABRIC_OWNER else 0,
@@ -371,28 +390,52 @@ def attribute_step_detail(
             )
     else:
         local, base, medium = _legacy_medium_projection(locality)
+    registration = locality.registration_phase_cost_ps
+    if registration:
+        if not any(published):
+            raise ValueError(
+                "request attribution of a registration cost requires the "
+                "per-artifact medium projection"
+            )
+        if len(registration) != len(composed):
+            raise ValueError(
+                "the per-artifact registration projection disagrees in length "
+                "with the executed artifact services"
+            )
+    else:
+        registration = (0,) * len(composed)
 
     kernel_ps = 0
     nvlink_ps = 0
     fabric_owned_ps = 0
     co_critical_ps = 0
     base_ps = 0
+    registration_ps = 0
     masked_nvlink_ps = 0
     masked_fabric_ps = 0
     declared_nvlink_service_ps = 0
     for index, artifact in enumerate(
-        zip(composed, fabric, local, base, medium, strict=True)
+        zip(composed, fabric, local, base, registration, medium, strict=True)
     ):
-        composed_ps, fabric_ps, local_ps, artifact_base_ps, artifact_medium = artifact
+        (
+            composed_ps,
+            fabric_ps,
+            local_ps,
+            artifact_base_ps,
+            artifact_registration_ps,
+            artifact_medium,
+        ) = artifact
         ownership = _artifact_ownership(
             index=index,
             composed_ps=composed_ps,
             fabric_ps=fabric_ps,
             local_ps=local_ps,
             base_ps=artifact_base_ps,
+            registration_ps=artifact_registration_ps,
             medium=artifact_medium,
         )
         base_ps += ownership.base_ps
+        registration_ps += ownership.registration_ps
         masked_nvlink_ps += ownership.masked_nvlink_ps
         masked_fabric_ps += ownership.masked_fabric_ps
         declared_nvlink_service_ps += ownership.nvlink_service_ps
@@ -412,7 +455,9 @@ def attribute_step_detail(
 
     attribution = LatencyAttribution(
         kernel_ps=kernel_ps,
-        collective_ps=nvlink_ps + fabric_owned_ps + co_critical_ps + base_ps,
+        collective_ps=(
+            nvlink_ps + fabric_owned_ps + co_critical_ps + base_ps + registration_ps
+        ),
     )
     if attribution.total_ps != result.step_latency_ps:
         raise ValueError(
@@ -426,6 +471,7 @@ def attribute_step_detail(
             fabric_ps=fabric_owned_ps,
             co_critical_ps=co_critical_ps,
             collective_base_ps=base_ps,
+            collective_registration_ps=registration_ps,
         ),
         masked=MaskedMediumService(
             nvlink_ps=masked_nvlink_ps,
