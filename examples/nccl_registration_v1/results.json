@@ -1,0 +1,4404 @@
+{
+  "cells": {
+    "local-tp2": {
+      "arms": {
+        "off": {
+          "arm": "off",
+          "decode_registration_ps": 0,
+          "decode_span_ps": 4818016000,
+          "goal_sha256": [],
+          "ledger_charged_ps": 0,
+          "registered_identities": [],
+          "steps": [
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 5914368000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 5914368000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 0,
+                "kernel_ps": 5317760000,
+                "nvlink_ps": 596608000,
+                "total_ps": 5914368000
+              },
+              "nvlink_directed_bytes": 536870912,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [],
+              "step_index": 0
+            },
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 8323328000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 2408960000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 0,
+                "kernel_ps": 2407680000,
+                "nvlink_ps": 1280000,
+                "total_ps": 2408960000
+              },
+              "nvlink_directed_bytes": 1048576,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [],
+              "step_index": 1
+            },
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 10732384000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 2409056000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 0,
+                "kernel_ps": 2407776000,
+                "nvlink_ps": 1280000,
+                "total_ps": 2409056000
+              },
+              "nvlink_directed_bytes": 1048576,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [],
+              "step_index": 2
+            }
+          ],
+          "tpot_ps": 2409008000.0,
+          "ttft_ps": 5914368000,
+          "ttft_registration_ps": 0
+        },
+        "on": {
+          "arm": "on",
+          "decode_registration_ps": 0,
+          "decode_span_ps": 4818016000,
+          "goal_sha256": [],
+          "ledger_charged_ps": 1280000000,
+          "registered_identities": [
+            {
+              "buffer_id": "layer-0:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-0:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-2:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-2:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-3:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-3:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-4:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-4:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-5:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-5:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-6:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-6:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-7:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-7:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-8:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-8:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-9:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-9:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-10:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-10:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-11:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-11:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-12:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-12:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-13:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-13:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-14:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-14:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-15:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-15:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-16:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-16:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-17:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-17:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-18:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-18:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-19:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-19:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-20:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-20:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-21:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-21:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-22:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-22:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-23:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-23:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-24:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-24:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-25:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-25:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-26:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-26:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-27:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-27:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-28:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-28:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-29:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-29:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-30:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-30:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-31:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-31:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            }
+          ],
+          "steps": [
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 1280000000,
+              "completed_at_ps": 7194368000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 7194368000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 1280000000,
+                "fabric_ps": 0,
+                "kernel_ps": 5317760000,
+                "nvlink_ps": 596608000,
+                "total_ps": 7194368000
+              },
+              "nvlink_directed_bytes": 536870912,
+              "registration_event_count": 64,
+              "registration_phase_cost_ps": [
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0
+              ],
+              "step_index": 0
+            },
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 9603328000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 2408960000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 0,
+                "kernel_ps": 2407680000,
+                "nvlink_ps": 1280000,
+                "total_ps": 2408960000
+              },
+              "nvlink_directed_bytes": 1048576,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "step_index": 1
+            },
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 12012384000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 2409056000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 0,
+                "kernel_ps": 2407776000,
+                "nvlink_ps": 1280000,
+                "total_ps": 2409056000
+              },
+              "nvlink_directed_bytes": 1048576,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "step_index": 2
+            }
+          ],
+          "tpot_ps": 2409008000.0,
+          "ttft_ps": 7194368000,
+          "ttft_registration_ps": 1280000000
+        },
+        "on-2ch": {
+          "arm": "on-2ch",
+          "decode_registration_ps": 0,
+          "decode_span_ps": 4818016000,
+          "goal_sha256": [],
+          "ledger_charged_ps": 2560000000,
+          "registered_identities": [
+            {
+              "buffer_id": "layer-0:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-0:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-0:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-0:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-2:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-2:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-2:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-2:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-3:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-3:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-3:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-3:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-4:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-4:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-4:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-4:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-5:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-5:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-5:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-5:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-6:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-6:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-6:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-6:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-7:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-7:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-7:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-7:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-8:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-8:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-8:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-8:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-9:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-9:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-9:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-9:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-10:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-10:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-10:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-10:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-11:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-11:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-11:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-11:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-12:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-12:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-12:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-12:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-13:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-13:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-13:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-13:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-14:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-14:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-14:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-14:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-15:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-15:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-15:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-15:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-16:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-16:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-16:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-16:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-17:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-17:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-17:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-17:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-18:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-18:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-18:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-18:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-19:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-19:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-19:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-19:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-20:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-20:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-20:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-20:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-21:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-21:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-21:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-21:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-22:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-22:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-22:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-22:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-23:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-23:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-23:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-23:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-24:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-24:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-24:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-24:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-25:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-25:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-25:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-25:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-26:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-26:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-26:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-26:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-27:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-27:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-27:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-27:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-28:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-28:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-28:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-28:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-29:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-29:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-29:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-29:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-30:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-30:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-30:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-30:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-31:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-31:tp-attention",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-31:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-31:tp-mlp",
+              "channel_id": 1,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            }
+          ],
+          "steps": [
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 2560000000,
+              "completed_at_ps": 8474368000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 8474368000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 2560000000,
+                "fabric_ps": 0,
+                "kernel_ps": 5317760000,
+                "nvlink_ps": 596608000,
+                "total_ps": 8474368000
+              },
+              "nvlink_directed_bytes": 536870912,
+              "registration_event_count": 128,
+              "registration_phase_cost_ps": [
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0,
+                0,
+                40000000,
+                0,
+                40000000,
+                0
+              ],
+              "step_index": 0
+            },
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 10883328000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 2408960000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 0,
+                "kernel_ps": 2407680000,
+                "nvlink_ps": 1280000,
+                "total_ps": 2408960000
+              },
+              "nvlink_directed_bytes": 1048576,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "step_index": 1
+            },
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 13292384000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 2409056000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 0,
+                "kernel_ps": 2407776000,
+                "nvlink_ps": 1280000,
+                "total_ps": 2409056000
+              },
+              "nvlink_directed_bytes": 1048576,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "step_index": 2
+            }
+          ],
+          "tpot_ps": 2409008000.0,
+          "ttft_ps": 8474368000,
+          "ttft_registration_ps": 2560000000
+        },
+        "on-rebuild": {
+          "arm": "on-rebuild",
+          "decode_registration_ps": 1280000000,
+          "decode_span_ps": 6098016000,
+          "goal_sha256": [],
+          "ledger_charged_ps": 2560000000,
+          "registered_identities": [
+            {
+              "buffer_id": "layer-0:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-0:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-2:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-2:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-3:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-3:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-4:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-4:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-5:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-5:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-6:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-6:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-7:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-7:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-8:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-8:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-9:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-9:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-10:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-10:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-11:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-11:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-12:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-12:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-13:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-13:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-14:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-14:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-15:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-15:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-16:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-16:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-17:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-17:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-18:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-18:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-19:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-19:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-20:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-20:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-21:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-21:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-22:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-22:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-23:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-23:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-24:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-24:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-25:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-25:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-26:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-26:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-27:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-27:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-28:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-28:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-29:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-29:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-30:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-30:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-31:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-31:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-0:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-0:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-1:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-1:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-2:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-2:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-3:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-3:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-4:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-4:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-5:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-5:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-6:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-6:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-7:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-7:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-8:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-8:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-9:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-9:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-10:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-10:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-11:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-11:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-12:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-12:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-13:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-13:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-14:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-14:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-15:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-15:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-16:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-16:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-17:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-17:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-18:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-18:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-19:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-19:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-20:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-20:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-21:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-21:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-22:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-22:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-23:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-23:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-24:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-24:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-25:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-25:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-26:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-26:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-27:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-27:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-28:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-28:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-29:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-29:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-30:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-30:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-31:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            },
+            {
+              "buffer_id": "layer-31:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1]",
+              "generation": 1
+            }
+          ],
+          "steps": [
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 1280000000,
+              "completed_at_ps": 7194368000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 7194368000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 1280000000,
+                "fabric_ps": 0,
+                "kernel_ps": 5317760000,
+                "nvlink_ps": 596608000,
+                "total_ps": 7194368000
+              },
+              "nvlink_directed_bytes": 536870912,
+              "registration_event_count": 64,
+              "registration_phase_cost_ps": [
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0
+              ],
+              "step_index": 0
+            },
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 9603328000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 2408960000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 0,
+                "kernel_ps": 2407680000,
+                "nvlink_ps": 1280000,
+                "total_ps": 2408960000
+              },
+              "nvlink_directed_bytes": 1048576,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "step_index": 1
+            },
+            {
+              "artifact_count": 160,
+              "backend_runs": 0,
+              "charged_registration_ps": 1280000000,
+              "completed_at_ps": 13292384000,
+              "fabric_directed_bytes": 0,
+              "makespan_ps": 3689056000,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 1280000000,
+                "fabric_ps": 0,
+                "kernel_ps": 2407776000,
+                "nvlink_ps": 1280000,
+                "total_ps": 3689056000
+              },
+              "nvlink_directed_bytes": 1048576,
+              "registration_event_count": 64,
+              "registration_phase_cost_ps": [
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0,
+                0,
+                20000000,
+                0,
+                20000000,
+                0
+              ],
+              "step_index": 2
+            }
+          ],
+          "tpot_ps": 3049008000.0,
+          "ttft_ps": 7194368000,
+          "ttft_registration_ps": 1280000000
+        }
+      },
+      "channels": {
+        "off": 1,
+        "on": 1,
+        "on-2ch": 2,
+        "on-rebuild": 1
+      },
+      "collectives_per_step": 64,
+      "default_construction": {
+        "goal_sha256": [],
+        "makespans_ps": [
+          5914368000,
+          2408960000,
+          2409056000
+        ],
+        "registration_outcomes": 0,
+        "registration_phase_projection_empty": true,
+        "ttft_ps": 5914368000
+      },
+      "identities_one_channel": 64
+    },
+    "mixed-tp4": {
+      "arms": {
+        "off": {
+          "arm": "off",
+          "decode_registration_ps": 0,
+          "decode_span_ps": 72025760,
+          "goal_sha256": [
+            "0edfaf5da9e70b7848917290abb1bcf79a4abeb8d077f04e37da4be2a1b916bb",
+            "186ddc70ecdb47fc09430837c8ed9780cd62739f88c63c8ab318e5cb861f0eb1",
+            "1be3573586164d085c03cc56c180e7c7925c9c007fa1bbf5f2fb9d87a19d14b7",
+            "1fe704a519ed1be81efda04ad185ebd11fd190d4a99ffb67fbcda326cbef6783",
+            "208d48a8719601b4a312bcf967bfec60c26c733ced95031fab985f82e014027c",
+            "25510512b172338c7ff6f30b7cd8d3922d75c3ec7437fc9b23ef1ce52264a0da",
+            "295dc80fcbe6c8181943819e7969c678313c0c50c0da24d6efefa2222046dc07",
+            "29f89ffd79e76d1b7425f1da8e92434dbcf7f800b44e88a6d72646f5f855171b",
+            "2eb27e11a86f45f22414516d40f919a02eabe646c22f795d8d576cd548d1a2d5",
+            "339c556785f0ed011174f6529ffc046c1b776229e133f0b35ceb896d44cba0fd",
+            "357a2fb45840e9f39f8b1e3b1f4ddeaf736ce3461aea25bdfe6a82d38ee9597a",
+            "3620ba3fe8d58525ee9fb85bad68c9c457a9bda231ce02ca4419e57ff865fb59",
+            "38cdd97e201dd98cd2ec360db9812dbb4d734ad69364399ac96ae5886c041be3",
+            "3ae73a7732d77079a6c87535950919984c927dc536c506c811ebb08af3102926",
+            "3df103dc434e5ef372fb9587d26acc06a99caccf19339a4093f6ad8c8dc69517",
+            "3f4c02f0391c50d01143be87bc5512a560fd5f479f3b61ae55f55f72d1454f8c",
+            "4450ac8ce531c0b7f32b7c0015efd9823ddf42fa72a9cdde0cc3c8fab377caf9",
+            "4f803d23d1c32ad34ced39e4bad23ad63d9212b9986409302651504a7c3f23ca",
+            "4fd01d6d92e65868af8ac72d4ef18612dee2549bb456e19c45b66aa19d95b5ba",
+            "51e79b1dd1d0743e1c975a2fe16293f920b680bb44e29a9116b6a468ea01a45f",
+            "5522be344a26a6ac6f9e4184dd1b1b19bc45d51ebf2e32e507a5d690387dd38b",
+            "617aa54a15dfa7f8eb199498455bac9686f98f125131506f6619171b10e81db6",
+            "61a7ac11e0b6c4278066d2615e25781f698a9c4a6a700eab6a748fe3dc0af10a",
+            "629dee6203e3526ae1c8f00fa6bf0fab466835f84f6a1863b79b5617c1c33c1a",
+            "6390da2cb48a265b61a60224e3be7b13ef8675355efd3bb5466dfe47e2cd3666",
+            "684513cc8332001076b4df8c2b744534fb05820eb8a703a7e9e2168b8e322d15",
+            "6e641ec4466fe67a9503b1a30ed2b21bd39eb47af1e9ae1a8bbb7d3337757ee3",
+            "7619b2f98c01bb2aa32d8a98687579722ba9e9f049b363cf173442f8bd510cac",
+            "86228609979128d3f83f9d2ca5157cd64222f67ed904c81fc23d4535034fd183",
+            "8b6299d62f99b571ac42b8e35097d2afb8695249fa2f8d595c87e39c92fc40cd",
+            "8c257e8097db318099c7d808a798aa77650ea1bea733e41294a06b60f99e354b",
+            "95b196435dca8840d3ef0db789460a6347211eaacc612a85379697c8270854dc",
+            "972cbfb90ca1b54b482188057d68aaa90cb3f180c14c86681dc07ff4cb018173",
+            "a78b5bf11e8d508d08e881dfbf2780eddce1911fc0c83ef26d0daed6503f42a9",
+            "ac1bc475c3d4d85b5b423a7b2ea888169db9fd0f310e105bdd3b68a20a939452",
+            "b2bdeb22bfde3df7b4fce0e51c7eb0ffa0ff37bf010e5ab12ac59920ae3e6604",
+            "ba2ae5355f086dafa124be7557e6b03c5f22ef0bb013b76522a6903105a41e5f",
+            "bc008d95984d4a220e1e134183f76cd8c44ae5f3b22cae0c20724fce3f6b1dbe",
+            "be8139347ebf226508ad212d63f974d1416de77f626719744f572020f6c0b066",
+            "c1011d4534020a8850e1fd86b459de0497765cd72865a70daf38bfd5f62aba24",
+            "c7901e296c2970d8a270cc65b45c41d46436e7c606d260d1911634e5d08c36ce",
+            "c9e13108d24fa20498081b972821eae9aa50138487f748d4c35f1571e8b2a44c",
+            "cd795868c6d9844944d4991208ae6deb5bd1a3aa4a262edd1250d174eddb348b",
+            "da985bc2d8776d97f3296c374446fe8f63b626003c296975bf5adbea1c5d293d",
+            "e1fabfea5feb7d6b1744fe62b2abedbbc60b3bcc8eccd3aa1238f91fa8adabd8",
+            "e6c6bc2155205810fab384a6c7678c66316026ab89884b2344ddee336d8291e2",
+            "e80fc5d9c542cb9ad8b80c6934b83dc81aa43df2768230fed125de90d67759d2",
+            "eba2572381ec0eafe6295dcfabcfbd69c8e2dac55b3f145a2ca857e61866d379"
+          ],
+          "ledger_charged_ps": 0,
+          "registered_identities": [],
+          "steps": [
+            {
+              "artifact_count": 26,
+              "backend_runs": 24,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 87508640,
+              "fabric_directed_bytes": 1572864,
+              "makespan_ps": 87508640,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 63728640,
+                "kernel_ps": 23780000,
+                "nvlink_ps": 0,
+                "total_ps": 87508640
+              },
+              "nvlink_directed_bytes": 1572864,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [],
+              "step_index": 0
+            },
+            {
+              "artifact_count": 26,
+              "backend_runs": 24,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 159534400,
+              "fabric_directed_bytes": 24576,
+              "makespan_ps": 72025760,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 48245760,
+                "kernel_ps": 23780000,
+                "nvlink_ps": 0,
+                "total_ps": 72025760
+              },
+              "nvlink_directed_bytes": 24576,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [],
+              "step_index": 1
+            }
+          ],
+          "tpot_ps": 72025760.0,
+          "ttft_ps": 87508640,
+          "ttft_registration_ps": 0
+        },
+        "on": {
+          "arm": "on",
+          "decode_registration_ps": 0,
+          "decode_span_ps": 72025760,
+          "goal_sha256": [
+            "0edfaf5da9e70b7848917290abb1bcf79a4abeb8d077f04e37da4be2a1b916bb",
+            "186ddc70ecdb47fc09430837c8ed9780cd62739f88c63c8ab318e5cb861f0eb1",
+            "1be3573586164d085c03cc56c180e7c7925c9c007fa1bbf5f2fb9d87a19d14b7",
+            "1fe704a519ed1be81efda04ad185ebd11fd190d4a99ffb67fbcda326cbef6783",
+            "208d48a8719601b4a312bcf967bfec60c26c733ced95031fab985f82e014027c",
+            "25510512b172338c7ff6f30b7cd8d3922d75c3ec7437fc9b23ef1ce52264a0da",
+            "295dc80fcbe6c8181943819e7969c678313c0c50c0da24d6efefa2222046dc07",
+            "29f89ffd79e76d1b7425f1da8e92434dbcf7f800b44e88a6d72646f5f855171b",
+            "2eb27e11a86f45f22414516d40f919a02eabe646c22f795d8d576cd548d1a2d5",
+            "339c556785f0ed011174f6529ffc046c1b776229e133f0b35ceb896d44cba0fd",
+            "357a2fb45840e9f39f8b1e3b1f4ddeaf736ce3461aea25bdfe6a82d38ee9597a",
+            "3620ba3fe8d58525ee9fb85bad68c9c457a9bda231ce02ca4419e57ff865fb59",
+            "38cdd97e201dd98cd2ec360db9812dbb4d734ad69364399ac96ae5886c041be3",
+            "3ae73a7732d77079a6c87535950919984c927dc536c506c811ebb08af3102926",
+            "3df103dc434e5ef372fb9587d26acc06a99caccf19339a4093f6ad8c8dc69517",
+            "3f4c02f0391c50d01143be87bc5512a560fd5f479f3b61ae55f55f72d1454f8c",
+            "4450ac8ce531c0b7f32b7c0015efd9823ddf42fa72a9cdde0cc3c8fab377caf9",
+            "4f803d23d1c32ad34ced39e4bad23ad63d9212b9986409302651504a7c3f23ca",
+            "4fd01d6d92e65868af8ac72d4ef18612dee2549bb456e19c45b66aa19d95b5ba",
+            "51e79b1dd1d0743e1c975a2fe16293f920b680bb44e29a9116b6a468ea01a45f",
+            "5522be344a26a6ac6f9e4184dd1b1b19bc45d51ebf2e32e507a5d690387dd38b",
+            "617aa54a15dfa7f8eb199498455bac9686f98f125131506f6619171b10e81db6",
+            "61a7ac11e0b6c4278066d2615e25781f698a9c4a6a700eab6a748fe3dc0af10a",
+            "629dee6203e3526ae1c8f00fa6bf0fab466835f84f6a1863b79b5617c1c33c1a",
+            "6390da2cb48a265b61a60224e3be7b13ef8675355efd3bb5466dfe47e2cd3666",
+            "684513cc8332001076b4df8c2b744534fb05820eb8a703a7e9e2168b8e322d15",
+            "6e641ec4466fe67a9503b1a30ed2b21bd39eb47af1e9ae1a8bbb7d3337757ee3",
+            "7619b2f98c01bb2aa32d8a98687579722ba9e9f049b363cf173442f8bd510cac",
+            "86228609979128d3f83f9d2ca5157cd64222f67ed904c81fc23d4535034fd183",
+            "8b6299d62f99b571ac42b8e35097d2afb8695249fa2f8d595c87e39c92fc40cd",
+            "8c257e8097db318099c7d808a798aa77650ea1bea733e41294a06b60f99e354b",
+            "95b196435dca8840d3ef0db789460a6347211eaacc612a85379697c8270854dc",
+            "972cbfb90ca1b54b482188057d68aaa90cb3f180c14c86681dc07ff4cb018173",
+            "a78b5bf11e8d508d08e881dfbf2780eddce1911fc0c83ef26d0daed6503f42a9",
+            "ac1bc475c3d4d85b5b423a7b2ea888169db9fd0f310e105bdd3b68a20a939452",
+            "b2bdeb22bfde3df7b4fce0e51c7eb0ffa0ff37bf010e5ab12ac59920ae3e6604",
+            "ba2ae5355f086dafa124be7557e6b03c5f22ef0bb013b76522a6903105a41e5f",
+            "bc008d95984d4a220e1e134183f76cd8c44ae5f3b22cae0c20724fce3f6b1dbe",
+            "be8139347ebf226508ad212d63f974d1416de77f626719744f572020f6c0b066",
+            "c1011d4534020a8850e1fd86b459de0497765cd72865a70daf38bfd5f62aba24",
+            "c7901e296c2970d8a270cc65b45c41d46436e7c606d260d1911634e5d08c36ce",
+            "c9e13108d24fa20498081b972821eae9aa50138487f748d4c35f1571e8b2a44c",
+            "cd795868c6d9844944d4991208ae6deb5bd1a3aa4a262edd1250d174eddb348b",
+            "da985bc2d8776d97f3296c374446fe8f63b626003c296975bf5adbea1c5d293d",
+            "e1fabfea5feb7d6b1744fe62b2abedbbc60b3bcc8eccd3aa1238f91fa8adabd8",
+            "e6c6bc2155205810fab384a6c7678c66316026ab89884b2344ddee336d8291e2",
+            "e80fc5d9c542cb9ad8b80c6934b83dc81aa43df2768230fed125de90d67759d2",
+            "eba2572381ec0eafe6295dcfabcfbd69c8e2dac55b3f145a2ca857e61866d379"
+          ],
+          "ledger_charged_ps": 80000000,
+          "registered_identities": [
+            {
+              "buffer_id": "layer-0:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1-2-3]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-0:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1-2-3]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-attention",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1-2-3]",
+              "generation": 0
+            },
+            {
+              "buffer_id": "layer-1:tp-mlp",
+              "channel_id": 0,
+              "communicator_id": "all-reduce:[0-1-2-3]",
+              "generation": 0
+            }
+          ],
+          "steps": [
+            {
+              "artifact_count": 26,
+              "backend_runs": 24,
+              "charged_registration_ps": 80000000,
+              "completed_at_ps": 167508640,
+              "fabric_directed_bytes": 1572864,
+              "makespan_ps": 167508640,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 80000000,
+                "fabric_ps": 63728640,
+                "kernel_ps": 23780000,
+                "nvlink_ps": 0,
+                "total_ps": 167508640
+              },
+              "nvlink_directed_bytes": 1572864,
+              "registration_event_count": 4,
+              "registration_phase_cost_ps": [
+                0,
+                20000000,
+                0,
+                0,
+                0,
+                0,
+                0,
+                20000000,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                20000000,
+                0,
+                0,
+                0,
+                0,
+                0,
+                20000000,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "step_index": 0
+            },
+            {
+              "artifact_count": 26,
+              "backend_runs": 24,
+              "charged_registration_ps": 0,
+              "completed_at_ps": 239534400,
+              "fabric_directed_bytes": 24576,
+              "makespan_ps": 72025760,
+              "media": {
+                "co_critical_ps": 0,
+                "collective_base_ps": 0,
+                "collective_registration_ps": 0,
+                "fabric_ps": 48245760,
+                "kernel_ps": 23780000,
+                "nvlink_ps": 0,
+                "total_ps": 72025760
+              },
+              "nvlink_directed_bytes": 24576,
+              "registration_event_count": 0,
+              "registration_phase_cost_ps": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "step_index": 1
+            }
+          ],
+          "tpot_ps": 72025760.0,
+          "ttft_ps": 167508640,
+          "ttft_registration_ps": 80000000
+        }
+      },
+      "channels": {
+        "off": 1,
+        "on": 1
+      },
+      "collectives_per_step": 4,
+      "default_construction": {
+        "goal_sha256": [
+          "0edfaf5da9e70b7848917290abb1bcf79a4abeb8d077f04e37da4be2a1b916bb",
+          "186ddc70ecdb47fc09430837c8ed9780cd62739f88c63c8ab318e5cb861f0eb1",
+          "1be3573586164d085c03cc56c180e7c7925c9c007fa1bbf5f2fb9d87a19d14b7",
+          "1fe704a519ed1be81efda04ad185ebd11fd190d4a99ffb67fbcda326cbef6783",
+          "208d48a8719601b4a312bcf967bfec60c26c733ced95031fab985f82e014027c",
+          "25510512b172338c7ff6f30b7cd8d3922d75c3ec7437fc9b23ef1ce52264a0da",
+          "295dc80fcbe6c8181943819e7969c678313c0c50c0da24d6efefa2222046dc07",
+          "29f89ffd79e76d1b7425f1da8e92434dbcf7f800b44e88a6d72646f5f855171b",
+          "2eb27e11a86f45f22414516d40f919a02eabe646c22f795d8d576cd548d1a2d5",
+          "339c556785f0ed011174f6529ffc046c1b776229e133f0b35ceb896d44cba0fd",
+          "357a2fb45840e9f39f8b1e3b1f4ddeaf736ce3461aea25bdfe6a82d38ee9597a",
+          "3620ba3fe8d58525ee9fb85bad68c9c457a9bda231ce02ca4419e57ff865fb59",
+          "38cdd97e201dd98cd2ec360db9812dbb4d734ad69364399ac96ae5886c041be3",
+          "3ae73a7732d77079a6c87535950919984c927dc536c506c811ebb08af3102926",
+          "3df103dc434e5ef372fb9587d26acc06a99caccf19339a4093f6ad8c8dc69517",
+          "3f4c02f0391c50d01143be87bc5512a560fd5f479f3b61ae55f55f72d1454f8c",
+          "4450ac8ce531c0b7f32b7c0015efd9823ddf42fa72a9cdde0cc3c8fab377caf9",
+          "4f803d23d1c32ad34ced39e4bad23ad63d9212b9986409302651504a7c3f23ca",
+          "4fd01d6d92e65868af8ac72d4ef18612dee2549bb456e19c45b66aa19d95b5ba",
+          "51e79b1dd1d0743e1c975a2fe16293f920b680bb44e29a9116b6a468ea01a45f",
+          "5522be344a26a6ac6f9e4184dd1b1b19bc45d51ebf2e32e507a5d690387dd38b",
+          "617aa54a15dfa7f8eb199498455bac9686f98f125131506f6619171b10e81db6",
+          "61a7ac11e0b6c4278066d2615e25781f698a9c4a6a700eab6a748fe3dc0af10a",
+          "629dee6203e3526ae1c8f00fa6bf0fab466835f84f6a1863b79b5617c1c33c1a",
+          "6390da2cb48a265b61a60224e3be7b13ef8675355efd3bb5466dfe47e2cd3666",
+          "684513cc8332001076b4df8c2b744534fb05820eb8a703a7e9e2168b8e322d15",
+          "6e641ec4466fe67a9503b1a30ed2b21bd39eb47af1e9ae1a8bbb7d3337757ee3",
+          "7619b2f98c01bb2aa32d8a98687579722ba9e9f049b363cf173442f8bd510cac",
+          "86228609979128d3f83f9d2ca5157cd64222f67ed904c81fc23d4535034fd183",
+          "8b6299d62f99b571ac42b8e35097d2afb8695249fa2f8d595c87e39c92fc40cd",
+          "8c257e8097db318099c7d808a798aa77650ea1bea733e41294a06b60f99e354b",
+          "95b196435dca8840d3ef0db789460a6347211eaacc612a85379697c8270854dc",
+          "972cbfb90ca1b54b482188057d68aaa90cb3f180c14c86681dc07ff4cb018173",
+          "a78b5bf11e8d508d08e881dfbf2780eddce1911fc0c83ef26d0daed6503f42a9",
+          "ac1bc475c3d4d85b5b423a7b2ea888169db9fd0f310e105bdd3b68a20a939452",
+          "b2bdeb22bfde3df7b4fce0e51c7eb0ffa0ff37bf010e5ab12ac59920ae3e6604",
+          "ba2ae5355f086dafa124be7557e6b03c5f22ef0bb013b76522a6903105a41e5f",
+          "bc008d95984d4a220e1e134183f76cd8c44ae5f3b22cae0c20724fce3f6b1dbe",
+          "be8139347ebf226508ad212d63f974d1416de77f626719744f572020f6c0b066",
+          "c1011d4534020a8850e1fd86b459de0497765cd72865a70daf38bfd5f62aba24",
+          "c7901e296c2970d8a270cc65b45c41d46436e7c606d260d1911634e5d08c36ce",
+          "c9e13108d24fa20498081b972821eae9aa50138487f748d4c35f1571e8b2a44c",
+          "cd795868c6d9844944d4991208ae6deb5bd1a3aa4a262edd1250d174eddb348b",
+          "da985bc2d8776d97f3296c374446fe8f63b626003c296975bf5adbea1c5d293d",
+          "e1fabfea5feb7d6b1744fe62b2abedbbc60b3bcc8eccd3aa1238f91fa8adabd8",
+          "e6c6bc2155205810fab384a6c7678c66316026ab89884b2344ddee336d8291e2",
+          "e80fc5d9c542cb9ad8b80c6934b83dc81aa43df2768230fed125de90d67759d2",
+          "eba2572381ec0eafe6295dcfabcfbd69c8e2dac55b3f145a2ca857e61866d379"
+        ],
+        "makespans_ps": [
+          87508640,
+          72025760
+        ],
+        "registration_outcomes": 0,
+        "registration_phase_projection_empty": true,
+        "ttft_ps": 87508640
+      },
+      "identities_one_channel": 4
+    }
+  },
+  "fail_closed": {
+    "calibrated_message": "registration cost 'nccl-channel-registration-declared-v1' is 'declared', not calibrated: no measurement anchors it, so no calibrated value exists. Land TRAF-56 or ask for declared_cost_ps and publish the class",
+    "calibrated_request_raises": true,
+    "unknown_selector_raises": true
+  },
+  "fatal_guards": [
+    {
+      "claim": "the default-constructed arm and the explicitly disabled arm agree",
+      "detail": "local-tp2=equal, mixed-tp4=equal",
+      "held": true,
+      "id": "G1"
+    },
+    {
+      "claim": "every GOAL artifact SHA-256 is identical between the off and on arms",
+      "detail": "48 artifacts in mixed-tp4; local-tp2/on=equal, local-tp2/on-2ch=equal, local-tp2/on-rebuild=equal, mixed-tp4/on=equal",
+      "held": true,
+      "id": "G2"
+    },
+    {
+      "claim": "the off arm charges nothing and publishes no registration term",
+      "detail": "",
+      "held": true,
+      "id": "G3"
+    },
+    {
+      "claim": "every step's medium partition conserves its makespan",
+      "detail": "",
+      "held": true,
+      "id": "G4"
+    },
+    {
+      "claim": "a calibrated request against a declared cost fails closed",
+      "detail": "registration cost 'nccl-channel-registration-declared-v1' is 'declared', not calibrated: no measurement anchors it, so no calibrated value exists. Land TRAF-56 or ask for declared_cost_ps and publish the class",
+      "held": true,
+      "id": "G5"
+    },
+    {
+      "claim": "no collective is charged registration on more than one artifact",
+      "detail": "local-tp2/on, local-tp2/on-2ch, local-tp2/on-rebuild, mixed-tp4/on",
+      "held": true,
+      "id": "G6"
+    },
+    {
+      "claim": "the mirrored nccl_stack event stream is unchanged when no registration is requested",
+      "detail": "394 events, 2 registration events when the gate is requested",
+      "held": true,
+      "id": "G7"
+    },
+    {
+      "claim": "the results identity block equals the freeze",
+      "detail": "",
+      "held": true,
+      "id": "G8"
+    },
+    {
+      "claim": "ledger construction facts hold",
+      "detail": "disabled_charges_zero=ok, first_charge_pays=ok, second_charge_is_zero=ok, new_buffer_re_pays=ok, new_peer_re_pays=ok, rebuild_re_pays=ok",
+      "held": true,
+      "id": "G9"
+    }
+  ],
+  "freeze": "examples/nccl_registration_v1/expectations.md",
+  "frozen_identity": {
+    "cells": {
+      "local-tp2": {
+        "arms": [
+          "off",
+          "on",
+          "on-2ch",
+          "on-rebuild"
+        ],
+        "dims": {
+          "dtype_bytes": 2,
+          "head_size": 128,
+          "hidden_size": 4096,
+          "intermediate_size": 11008,
+          "num_heads": 32,
+          "num_kv_heads": 32,
+          "num_layers": 32,
+          "vocab_size": 32000
+        },
+        "hosts": [
+          "a",
+          "a"
+        ],
+        "identities_one_channel": 64,
+        "steps": 3,
+        "tp_ranks": [
+          0,
+          1
+        ]
+      },
+      "mixed-tp4": {
+        "arms": [
+          "off",
+          "on"
+        ],
+        "dims": {
+          "dtype_bytes": 2,
+          "head_size": 64,
+          "hidden_size": 1024,
+          "intermediate_size": 4096,
+          "num_heads": 16,
+          "num_kv_heads": 16,
+          "num_layers": 2,
+          "vocab_size": 32000
+        },
+        "hosts": [
+          "a",
+          "a",
+          "b",
+          "b"
+        ],
+        "identities_one_channel": 4,
+        "steps": 2,
+        "tp_ranks": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    "evidence_class": "declared",
+    "registration_cost_ps": 20000000
+  },
+  "identity": {
+    "cells": {
+      "local-tp2": {
+        "arms": [
+          "off",
+          "on",
+          "on-2ch",
+          "on-rebuild"
+        ],
+        "dims": {
+          "dtype_bytes": 2,
+          "head_size": 128,
+          "hidden_size": 4096,
+          "intermediate_size": 11008,
+          "num_heads": 32,
+          "num_kv_heads": 32,
+          "num_layers": 32,
+          "vocab_size": 32000
+        },
+        "hosts": [
+          "a",
+          "a"
+        ],
+        "identities_one_channel": 64,
+        "steps": 3,
+        "tp_ranks": [
+          0,
+          1
+        ]
+      },
+      "mixed-tp4": {
+        "arms": [
+          "off",
+          "on"
+        ],
+        "dims": {
+          "dtype_bytes": 2,
+          "head_size": 64,
+          "hidden_size": 1024,
+          "intermediate_size": 4096,
+          "num_heads": 16,
+          "num_kv_heads": 16,
+          "num_layers": 2,
+          "vocab_size": 32000
+        },
+        "hosts": [
+          "a",
+          "a",
+          "b",
+          "b"
+        ],
+        "identities_one_channel": 4,
+        "steps": 2,
+        "tp_ranks": [
+          0,
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    "evidence_class": "declared",
+    "registration_cost_ps": 20000000
+  },
+  "ledger_facts": {
+    "disabled_charges_zero": true,
+    "first_charge_pays": true,
+    "new_buffer_re_pays": true,
+    "new_peer_re_pays": true,
+    "rebuild_re_pays": true,
+    "second_charge_is_zero": true
+  },
+  "scored": {
+    "behavioral_families": {
+      "denominator_families": 3,
+      "denominator_instances": 7,
+      "families": [
+        {
+          "claim": "charged registration is exactly identities times the cost",
+          "id": "B1",
+          "instances": [
+            {
+              "charged_ps": 80000000,
+              "expected_ps": 80000000,
+              "identities": 4
+            },
+            {
+              "charged_ps": 1280000000,
+              "expected_ps": 1280000000,
+              "identities": 64
+            },
+            {
+              "charged_ps": 2560000000,
+              "expected_ps": 2560000000,
+              "identities": 128
+            }
+          ],
+          "passed": true
+        },
+        {
+          "claim": "the charge is additive and never absorbed by the max term",
+          "id": "B2",
+          "instances": [
+            {
+              "additive": true,
+              "cell": "local-tp2",
+              "charged_ps": 1280000000,
+              "off_ps": 5914368000,
+              "on_ps": 7194368000
+            },
+            {
+              "additive": true,
+              "cell": "mixed-tp4",
+              "charged_ps": 80000000,
+              "off_ps": 87508640,
+              "on_ps": 167508640
+            }
+          ],
+          "passed": true
+        },
+        {
+          "claim": "steps after the registering step are untouched",
+          "id": "B3",
+          "instances": [
+            {
+              "cell": "local-tp2",
+              "off_ps": [
+                2408960000,
+                2409056000
+              ],
+              "on_ps": [
+                2408960000,
+                2409056000
+              ],
+              "unchanged": true
+            },
+            {
+              "cell": "mixed-tp4",
+              "off_ps": [
+                72025760
+              ],
+              "on_ps": [
+                72025760
+              ],
+              "unchanged": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "passed_families": 3
+    },
+    "exact_oracle_rows": {
+      "denominator": 6,
+      "passed": 6,
+      "rows": [
+        {
+          "claim": "TTFT_on - TTFT_off equals identities times the declared cost",
+          "expected_ps": 1280000000,
+          "id": "O1",
+          "observed_ps": 1280000000,
+          "passed": true
+        },
+        {
+          "claim": "decode-step makespans are unchanged between on and off",
+          "expected_ps": 0,
+          "id": "O2",
+          "observed_ps": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        {
+          "claim": "two channels move TTFT by exactly twice the one-channel amount",
+          "expected_ps": 2560000000,
+          "id": "O3",
+          "observed_ps": 2560000000,
+          "passed": true
+        },
+        {
+          "claim": "a rebuild re-pays exactly once and leaves TTFT alone",
+          "expected_ps": 1280000000,
+          "id": "O4",
+          "observed_ps": 1280000000,
+          "passed": true,
+          "ttft_matches_plain_on_arm": true
+        },
+        {
+          "claim": "a phase-split collective on a real backend still pays once",
+          "expected_ps": 80000000,
+          "id": "O5",
+          "observed_ps": 80000000,
+          "passed": true
+        },
+        {
+          "claim": "the published registration component equals the ledger charge",
+          "id": "O6",
+          "observed": [
+            "on:[1280000000, 0, 0]",
+            "on-2ch:[2560000000, 0, 0]",
+            "on-rebuild:[1280000000, 0, 1280000000]",
+            "on:[80000000, 0]"
+          ],
+          "passed": true
+        }
+      ]
+    }
+  },
+  "seam": {
+    "clock_unmoved": true,
+    "gated_declared_total_ps": 20000000,
+    "gated_registration_events": 2,
+    "ungated_event_count": 394,
+    "ungated_stream_identical": true,
+    "unregistered_buffer_refused": true
+  },
+  "study": "nccl_registration_v1",
+  "verdict": "interpretable"
+}

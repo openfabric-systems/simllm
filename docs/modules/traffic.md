@@ -825,7 +825,16 @@ by `ncclNetRegMr` and `require_buffer_registration`. It is off by default: a
 `CollectiveRegistrationLedger` built with no model charges zero, records
 nothing, and leaves every accepted artifact, timestamp and metric exactly where
 it was. The declared cost is 20,000,000 ps per identity, `calibrated_cost_ps`
-fails closed on it, and TRAF-56 is the calibration.
+fails closed on it, and TRAF-56 is the calibration. The
+[registration study](../../examples/nccl_registration_v1/RESULTS.md) is
+interpretable with all nine fatal guards held, 6 of 6 exact-oracle rows and 3
+of 3 behavioral families over 7 instances, in two classes never summed. The
+opt-in moves TTFT by exactly 1,280,000,000 ps in a TP2 prefill cell whose 64
+collectives register 64 identities, by exactly twice that at two channels, and
+by exactly 80,000,000 ps in a two-node TP4 cell where every collective is split
+into several executed artifacts and a real `htsim_rnic` process decides each
+fabric term. Every later step, every GOAL artifact digest and the
+default-constructed arm are unchanged.
 
 ## Open tasks
 
