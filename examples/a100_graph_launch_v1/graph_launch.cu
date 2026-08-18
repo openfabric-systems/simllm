@@ -390,10 +390,17 @@ Cell measure_graph(const std::string& tag, int length, bool inner_events) {
   if (inner_events) {
     CUDA_CHECK(cudaGraphLaunch(exec, g_stream));
     CUDA_CHECK(cudaStreamSynchronize(g_stream));
+    // Repair R6, post-specified and disclosed: an event recorded during stream
+    // capture becomes a graph node whose elapsed time this driver refuses to
+    // report, returning cudaErrorInvalidValue. The instrumented cells feed one
+    // unscored record only, so a refusal is recorded as -1 and the run
+    // continues rather than losing every scored measurement to it.
     for (int i = 0; i < length; ++i) {
       float ms = 0.f;
-      CUDA_CHECK(cudaEventElapsedTime(&ms, inner[2 * i], inner[2 * i + 1]));
-      cell.inner_kernel_ms.push_back(ms);
+      const cudaError_t status =
+          cudaEventElapsedTime(&ms, inner[2 * i], inner[2 * i + 1]);
+      cell.inner_kernel_ms.push_back(status == cudaSuccess ? ms : -1.0);
+      if (status != cudaSuccess) cudaGetLastError();
     }
     for (auto& e : inner) CUDA_CHECK(cudaEventDestroy(e));
   }
