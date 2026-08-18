@@ -515,6 +515,258 @@
         "worst_payload_bytes": 16384,
         "worst_signed_error_percent": 43.40031116821663
       }
+    },
+    "w8-default": {
+      "allreduce": {
+        "anchor_endpoint_bytes": [
+          896,
+          344064,
+          1376256,
+          234881024
+        ],
+        "anchor_payloads": [
+          512,
+          196608,
+          786432,
+          134217728
+        ],
+        "anchor_rates_gbps": [
+          0.008016491161296125,
+          0.5377720753087374,
+          4.0598096917498365,
+          5.1463289099376315
+        ],
+        "available": true,
+        "clears_bar": false,
+        "flat_slope_gbps": 5.1463289099376315,
+        "flat_worst_payload_bytes": 262144,
+        "flat_worst_signed_error_percent": -84.11481023196892,
+        "held_out": [
+          {
+            "measured_us": 76.59519911,
+            "modeled_us": 256.4299582375935,
+            "payload_bytes": 4096,
+            "signed_error_percent": 234.78594117802209
+          },
+          {
+            "measured_us": 104.1919947,
+            "modeled_us": 359.5558116641745,
+            "payload_bytes": 16384,
+            "signed_error_percent": 245.08967094779547
+          },
+          {
+            "measured_us": 160.5119944,
+            "modeled_us": 514.398084345989,
+            "payload_bytes": 65536,
+            "signed_error_percent": 220.47329937480922
+          },
+          {
+            "measured_us": 203.5200119,
+            "modeled_us": 618.8731691579497,
+            "payload_bytes": 131072,
+            "signed_error_percent": 204.08467618507927
+          },
+          {
+            "measured_us": 880.8959961,
+            "modeled_us": 611.5767979262179,
+            "payload_bytes": 262144,
+            "signed_error_percent": -30.573325269514434
+          },
+          {
+            "measured_us": 877.4144173,
+            "modeled_us": 516.502227348652,
+            "payload_bytes": 393216,
+            "signed_error_percent": -41.13360606290871
+          },
+          {
+            "measured_us": 936.2431526,
+            "modeled_us": 458.99110654888375,
+            "payload_bytes": 524288,
+            "signed_error_percent": -50.97522419531298
+          },
+          {
+            "measured_us": 466.79039,
+            "modeled_us": 496.8240073385308,
+            "payload_bytes": 1048576,
+            "signed_error_percent": 6.434069334317444
+          },
+          {
+            "measured_us": 602.5216103,
+            "modeled_us": 707.4404023916904,
+            "payload_bytes": 1572864,
+            "signed_error_percent": 17.413282826395317
+          },
+          {
+            "measured_us": 764.2111778,
+            "modeled_us": 914.778944721607,
+            "payload_bytes": 2097152,
+            "signed_error_percent": 19.702376947044836
+          },
+          {
+            "measured_us": 1038.131237,
+            "modeled_us": 1322.7530290201512,
+            "payload_bytes": 3145728,
+            "signed_error_percent": 27.416744807973746
+          },
+          {
+            "measured_us": 1320.550442,
+            "modeled_us": 1724.3777549845877,
+            "payload_bytes": 4194304,
+            "signed_error_percent": 30.580226255725844
+          },
+          {
+            "measured_us": 2206.719971,
+            "modeled_us": 3292.609578451434,
+            "payload_bytes": 8388608,
+            "signed_error_percent": 49.20831014908298
+          },
+          {
+            "measured_us": 6728.089905,
+            "modeled_us": 6330.350025890192,
+            "payload_bytes": 16777216,
+            "signed_error_percent": -5.911631454481992
+          },
+          {
+            "measured_us": 12176.99814,
+            "modeled_us": 12214.599336432582,
+            "payload_bytes": 33554432,
+            "signed_error_percent": 0.30878871787839973
+          },
+          {
+            "measured_us": 23152.94647,
+            "modeled_us": 23612.67318366065,
+            "payload_bytes": 67108864,
+            "signed_error_percent": 1.985607811326874
+          }
+        ],
+        "worst_payload_bytes": 16384,
+        "worst_signed_error_percent": 245.08967094779547
+      },
+      "alltoallv": {
+        "anchor_endpoint_bytes": [
+          3584,
+          1376256,
+          7340032,
+          939524096
+        ],
+        "anchor_payloads": [
+          512,
+          196608,
+          1048576,
+          134217728
+        ],
+        "anchor_rates_gbps": [
+          0.09283819162109141,
+          1.3014428645409017,
+          2.0665100996128736,
+          2.2528665607478513
+        ],
+        "available": true,
+        "clears_bar": false,
+        "flat_slope_gbps": 2.2528665607478513,
+        "flat_worst_payload_bytes": 65536,
+        "flat_worst_signed_error_percent": -42.642560542226015,
+        "held_out": [
+          {
+            "measured_us": 149.6575952,
+            "modeled_us": 212.5542528731835,
+            "payload_bytes": 4096,
+            "signed_error_percent": 42.02704018404773
+          },
+          {
+            "measured_us": 203.5200119,
+            "modeled_us": 355.22770386016566,
+            "payload_bytes": 16384,
+            "signed_error_percent": 74.54190403384389
+          },
+          {
+            "measured_us": 511.5903854,
+            "modeled_us": 663.7325526098857,
+            "payload_bytes": 65536,
+            "signed_error_percent": 29.73905912851147
+          },
+          {
+            "measured_us": 826.7264366,
+            "modeled_us": 933.7546498858958,
+            "payload_bytes": 131072,
+            "signed_error_percent": 12.946025256681107
+          },
+          {
+            "measured_us": 1421.107197,
+            "modeled_us": 1392.07808998807,
+            "payload_bytes": 262144,
+            "signed_error_percent": -2.042710576176903
+          },
+          {
+            "measured_us": 2002.380753,
+            "modeled_us": 1836.2431603917933,
+            "payload_bytes": 393216,
+            "signed_error_percent": -8.297003072931886
+          },
+          {
+            "measured_us": 2366.003227,
+            "modeled_us": 2240.5119409575955,
+            "payload_bytes": 524288,
+            "signed_error_percent": -5.303935540338325
+          },
+          {
+            "measured_us": 2626.662445,
+            "modeled_us": 2974.051510225271,
+            "payload_bytes": 786432,
+            "signed_error_percent": 13.225493282798706
+          },
+          {
+            "measured_us": 4525.312042,
+            "modeled_us": 5379.347469248663,
+            "payload_bytes": 1572864,
+            "signed_error_percent": 18.87240966638879
+          },
+          {
+            "measured_us": 6849.075317,
+            "modeled_us": 7106.5154635015715,
+            "payload_bytes": 2097152,
+            "signed_error_percent": 3.758757709417838
+          },
+          {
+            "measured_us": 9465.753937,
+            "modeled_us": 10539.202833759797,
+            "payload_bytes": 3145728,
+            "signed_error_percent": 11.340342289734267
+          },
+          {
+            "measured_us": 11828.07007,
+            "modeled_us": 13951.192672745186,
+            "payload_bytes": 4194304,
+            "signed_error_percent": 17.949864941450983
+          },
+          {
+            "measured_us": 23356.36444,
+            "modeled_us": 27472.731496289613,
+            "payload_bytes": 8388608,
+            "signed_error_percent": 17.6241771995985
+          },
+          {
+            "measured_us": 48996.24939,
+            "modeled_us": 54184.2924022894,
+            "payload_bytes": 16777216,
+            "signed_error_percent": 10.58865337016647
+          },
+          {
+            "measured_us": 98803.19824,
+            "modeled_us": 106952.50875297117,
+            "payload_bytes": 33554432,
+            "signed_error_percent": 8.248022997368892
+          },
+          {
+            "measured_us": 202141.7969,
+            "modeled_us": 211195.18729321798,
+            "payload_bytes": 67108864,
+            "signed_error_percent": 4.4787325194782595
+          }
+        ],
+        "worst_payload_bytes": 16384,
+        "worst_signed_error_percent": 74.54190403384389
+      }
     }
   },
   "fatal": [],
@@ -597,18 +849,23 @@
       "passed": true
     },
     {
-      "detail": "width-8 cell absent, relation unevaluated",
-      "evaluated": false,
+      "detail": "width-8 floor 50.790 us against width-2 floor 40.141 us",
+      "evaluated": true,
       "id": "E-A-2",
-      "observed": {},
-      "passed": false
+      "observed": {
+        "w2_us": 40.14079869,
+        "w8_us": 50.79039931
+      },
+      "passed": true
     },
     {
-      "detail": "width-8 cell absent, relation unevaluated",
-      "evaluated": false,
+      "detail": "width-8 cross-node 8 B all-reduce floor is 50.790 us, band [20, 250]",
+      "evaluated": true,
       "id": "E-A-3",
-      "observed": {},
-      "passed": false
+      "observed": {
+        "value_us": 50.79039931
+      },
+      "passed": true
     },
     {
       "detail": "width-2 measured floor 40.141 us over the shipped cross-node provisional 13.488 us is 2.976, band [1.2, 12], signed prediction was underestimate",
@@ -632,18 +889,26 @@
       "passed": true
     },
     {
-      "detail": "width-8 cell absent, relation unevaluated",
-      "evaluated": false,
+      "detail": "width-8 asymptotic bus bandwidth 5.141 GB/s over width-2 1.610 GB/s is 3.194, band [1.5, 8.0]",
+      "evaluated": true,
       "id": "E-A-6",
-      "observed": {},
-      "passed": false
+      "observed": {
+        "gain": 3.193835015765517,
+        "w2_gbps": 1.609540953,
+        "w8_gbps": 5.140608255
+      },
+      "passed": true
     },
     {
-      "detail": "width-8 cell absent, relation unevaluated",
-      "evaluated": false,
+      "detail": "width-8 floor 50.790 us in band [20, 250]; the shipped cross-node provisional 49.488 us sits -2.6 percent from it, sign reported and not scored",
+      "evaluated": true,
       "id": "E-A-7",
-      "observed": {},
-      "passed": false
+      "observed": {
+        "shipped_signed_percent": -2.5646782220582596,
+        "shipped_us": 49.487789,
+        "value_us": 50.79039931
+      },
+      "passed": true
     },
     {
       "detail": "width-2 all-to-allv floor 41.062 us over all-reduce floor 40.141 us is 1.023, band [0.5, 2.0]",
@@ -657,18 +922,24 @@
       "passed": true
     },
     {
-      "detail": "width-8 cell absent, relation unevaluated",
-      "evaluated": false,
+      "detail": "width-8 all-to-allv floor 89.805 us over all-reduce floor 50.790 us is 1.768, band [1.0, 6.0]",
+      "evaluated": true,
       "id": "E-T-2",
-      "observed": {},
-      "passed": false
+      "observed": {
+        "a2a_us": 89.80479836,
+        "ar_us": 50.79039931,
+        "ratio": 1.7681451530214405
+      },
+      "passed": true
     },
     {
-      "detail": "width-8 cell absent, relation unevaluated",
-      "evaluated": false,
+      "detail": "width-8 aggregate cross-node rate at a 1 MiB per-pair payload is 1.152 GB/s, band [1.0, 40.0]",
+      "evaluated": true,
       "id": "E-T-3",
-      "observed": {},
-      "passed": false
+      "observed": {
+        "value_gbps": 1.151742698298139
+      },
+      "passed": true
     },
     {
       "detail": "four-port point-to-point bandwidth 7.908 GB/s over single-port 3.301 GB/s is 2.396, band [1.2, 4.0]",
@@ -740,11 +1011,14 @@
       "passed": true
     },
     {
-      "detail": "width-8 cell absent, relation unevaluated",
-      "evaluated": false,
+      "detail": "width-8 measured floor 50.790 us over the shipped local width-8 intercept 30.128 us is 1.686, band [1.2, 8.0], signed prediction was underestimate",
+      "evaluated": true,
       "id": "E-M-1",
-      "observed": {},
-      "passed": false
+      "observed": {
+        "measured_us": 50.79039931,
+        "ratio": 1.6858188535997491
+      },
+      "passed": true
     },
     {
       "detail": "width-2 measured floor 40.141 us over the shipped local width-2 intercept 10.722 us is 3.744, band [1.5, 12.0], signed prediction was underestimate",
@@ -779,17 +1053,9 @@
       }
     }
   ],
-  "scored_evaluated": 11,
-  "scored_passed": 11,
+  "scored_evaluated": 18,
+  "scored_passed": 18,
   "study": "crossnode_collective_envelope_v1",
-  "unevaluated": [
-    "E-A-2",
-    "E-A-3",
-    "E-A-6",
-    "E-A-7",
-    "E-T-2",
-    "E-T-3",
-    "E-M-1"
-  ],
+  "unevaluated": [],
   "void": false
 }

@@ -53,3 +53,4 @@ examples/kernel_determinism_v1/*.py text eol=lf
 examples/kernel_determinism_v1/results.json text eol=lf
 tests/test_kernel_determinism.py text eol=lf
 tests/test_kernel_determinism_study.py text eol=lf
+examples/crossnode_collective_envelope_v1/measurements/*.json text eol=lf

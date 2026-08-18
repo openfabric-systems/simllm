@@ -5,6 +5,9 @@ frozen relations never got a measurement`. Every fatal guard held. The study
 produces the repository's first first-party cross-node collective numbers and
 lands them as a calibrated, provenance-labeled profile. **TRAF-36 does not
 close**, for reasons the freeze stated before any number existed.
+(Late-arrival update, 2026-08-18: the queued width-8 cell ran overnight and
+all 18 of 18 frozen relations now pass; see the dated section at the end of
+this file. The paragraph above is kept as written at publication time.)
 
 Two results are worth more than the score. The shipped intercept that carries
 70.6 to 95.3 percent of the composed SGLang deployment step is a factor 3.74
@@ -64,7 +67,7 @@ kernel TCP stack. The ports are 25.0 GB/s each; the stack is the constraint.
 | Cell | Job | Nodes x GPUs | Elapsed | State |
 |---|---|---|---:|---|
 | `w2-default` and `w2-fournic` | `195648` | 2 x 1 on `gpu102`, `gpu105` | 00:00:27 | complete |
-| `w8-default` | `195649` | 2 x 4 | | **queued, never ran** |
+| `w8-default` | `195649` | 2 x 4 on `gpu102`, `gpu105` | 00:00:36 | complete (ran 2026-08-18, see the late-arrival section) |
 | `w4x2` post-specified | `195654` | 2 x 2 | | **queued, never ran** |
 | `w4-default` optional | | 4 x 1 | | **never submitted** |
 
@@ -388,8 +391,76 @@ Cannot anchor:
   the width-4 file as post-specified evidence that no relation is scored
   against. Neither may be folded into the profile without a fresh freeze, the
   width-4 cell because it is post-specified and the width-8 cell because its
-  relations were frozen and must be scored rather than fitted.
+  relations were frozen and must be scored rather than fitted. (2026-08-18:
+  job `195649` landed and was scored by exactly this path; the capture half
+  of TRAF-50 now exists and the profile fold-in still awaits its fresh
+  freeze. Job `195654` left the queue without running.)
 - TRAF-43 stays open and is untouched. This study reports against its bar for
   comparability and claims nothing about it, because that task is about the
   intra-node NVLink serializer and this is a different transport. What this
   study contributes to it is the mechanism, not a candidate.
+
+## Late arrival, 2026-08-18: the width-8 cell ran and every frozen relation now passes
+
+Job `195649` (2 nodes x 4 GPUs, `gpu102` and `gpu105`) was submitted
+2026-08-17 12:45:36 from this study's committed harness, stayed queued
+behind the course reservations for eighteen hours, and ran 2026-08-18
+06:29:50 to 06:30:26, exit 0. The freeze (`0348861`, 2026-08-17 12:41:18)
+predates the data; the run's `crossnode_lane.cu` is byte-identical to the
+committed copy (SHA-256 `2150e856...`, recorded in the job's own
+`source.sha256`), and `score_expectations.py` scored the new measurement
+against the unchanged freeze with no code change. This is the
+pre-registration mechanism working as designed: the seven relations below
+were frozen before any width-8 byte moved and waited for their data.
+
+Fatal guards: every guard held in the width-8 run (four Cassini ports and
+zero InfiniBand devices per node, `Using network Socket` and GDR 0 on all
+eight ranks, eight distinct GPU UUIDs, zero conservation mismatches
+across all 44 cells). The mixed ring engaged all four hsn ports per node
+(`NET/Socket/1` through `/4`), unlike the width-2 cell's single port.
+
+The seven previously unevaluated relations, now scored:
+
+| Relation | Measured | Verdict |
+|---|---|---|
+| E-A-2 width-8 8 B floor above width-2 floor | 50.790 us against 40.141 us | pass |
+| E-A-3 width-8 8 B all-reduce floor in [20, 250] us | 50.790 us | pass |
+| E-A-6 width-8 over width-2 asymptotic bus bandwidth in [1.5, 8.0] | 5.141 over 1.610 GB/s is 3.194 | pass |
+| E-A-7 width-8 floor in [20, 250] us, sign reported not scored | 50.790 us; the shipped provisional 49.488 us sits -2.6 percent from it | pass |
+| E-T-2 width-8 all-to-allv over all-reduce floor in [1.0, 6.0] | 89.805 over 50.790 us is 1.768 | pass |
+| E-T-3 width-8 aggregate cross-node rate at 1 MiB per pair in [1.0, 40.0] GB/s | 1.152 GB/s | pass |
+| E-M-1 width-8 floor over the shipped local intercept in [1.2, 8.0], signed underestimate | 50.790 over 30.128 us is 1.686, underestimate as predicted | pass |
+
+With the eleven publication-time rows unchanged, **18 of 18 frozen
+relations are evaluated and all pass**.
+
+The E-A-7 sign, which the freeze explicitly declined to predict, is the
+finding: the transferred `b200-nccl-2.27-cross-node-provisional-v1`
+width-8 intercept lands within 2.6 percent of the measurement, because
+its two construction errors nearly cancel at this width: it charges 14
+fabric steps where this ring crosses the fabric only twice (inflation)
+and prices each step at an RDMA cost where this stack pays a socket cost
+(deflation). The same constant was 2.976 times too small at width 2,
+where only the second error operates. A transferred constant that is
+nearly exact at one width and off by a factor three at another is the
+clearest single illustration in this repository of why transferred
+constants need per-width measurement, and it is now measured rather than
+argued.
+
+Also recorded: the frozen four-anchor curve rule, applied to the width-8
+lanes exactly as frozen, misses its 15 percent bar by its widest margin
+yet (worst held-out error 245.09 percent at 16 KiB on the width-8
+all-reduce lane), so the anchor-rule defect the publication-time record
+already documented grows with width and passes to the next candidate
+unretouched.
+
+Artifacts: `measurements/crossnode_w8_default.json` (SHA-256
+`0f489d1e20a46fecb86430ca07419a0dab08e003a2dcbf181e88e1580d816be7`)
+joins the tracked measurements with an eol lock;
+`measurements/scored.json` regenerated by the frozen scorer, SHA-256
+`44cc3036...` before to `083db410...` after, with the publication-time
+version preserved in git history. No profile, envelope or reported
+metric changes here: folding the width-8 row into
+`a100-nccl-2.31-cross-node-socket-v1` requires the fresh freeze
+TRAF-50's acceptance names, which this collection deliberately does not
+perform.
