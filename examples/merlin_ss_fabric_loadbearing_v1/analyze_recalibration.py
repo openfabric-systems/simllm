@@ -131,7 +131,7 @@ def masked_stdout_sha256(text: str) -> str:
 
 def parse_stdout(text: str) -> dict[str, object]:
     """Parse the harness manifest lines into scalars plus per-flow records."""
-    out: dict[str, object] = {"flows": []}
+    out: dict[str, object] = {"flow_records": []}
     for line in text.splitlines():
         if line.startswith(("[ss-dragonfly manifest]", "[ss-dragonfly load]")):
             for token in line.split():
@@ -144,7 +144,7 @@ def parse_stdout(text: str) -> dict[str, object]:
                 if "=" in token:
                     key, value = token.split("=", 1)
                     flow[key] = value
-            out["flows"].append(flow)  # type: ignore[union-attr]
+            out["flow_records"].append(flow)  # type: ignore[union-attr]
     return out
 
 
@@ -286,7 +286,7 @@ def check_cell_guards(cell: Cell, fatal: list[str]) -> None:
         fatal.append(f"FG-3: {name} aggregate bin over {bound}")
     seam = CELL_SEAM.get(name)
     if seam is not None:
-        flows = cell.manifest["flows"]  # type: ignore[index]
+        flows = cell.manifest["flow_records"]  # type: ignore[index]
         for index, (think, offered, start) in enumerate(seam):
             flow = flows[index]  # type: ignore[index]
             want_think = "na" if think is None else str(think)
@@ -297,7 +297,7 @@ def check_cell_guards(cell: Cell, fatal: list[str]) -> None:
                 fatal.append(f"FG-7: {name} flow {index} seam echo mismatch")
     if cell.paths["r1"]["chunks"].exists():
         chunks = read_chunks(cell.paths["r1"]["chunks"])
-        flows = cell.manifest["flows"]  # type: ignore[index]
+        flows = cell.manifest["flow_records"]  # type: ignore[index]
         for flow_record in flows:  # type: ignore[union-attr]
             flow_id = int(flow_record["flow"])
             declared = int(flow_record["chunks_completed"])
@@ -381,7 +381,7 @@ def evaluate(run_root: Path, dataset_root: Path, out_dir: Path) -> int:
             for key in ("injected", "delivered", "delivered_payload_bytes",
                         "dropped", "first_drop_ps")}
     per_flow_injected = [int(f["injected_packets"])
-                        for f in sat_v1.manifest["flows"]]  # type: ignore[index]
+                        for f in sat_v1.manifest["flow_records"]]  # type: ignore[index]
     ex1_ok = ex1_ok and all(
         ints[k] == ARCHIVED_DISC_A_MANIFEST[k] for k in ints) and \
         per_flow_injected == ARCHIVED_DISC_A_MANIFEST["per_flow_injected"]
@@ -480,7 +480,7 @@ def evaluate(run_root: Path, dataset_root: Path, out_dir: Path) -> int:
     for entry in x4p_bins:
         per_flow_payload[entry["flow_id"]] = (
             per_flow_payload.get(entry["flow_id"], 0) + entry["delivered_payload_bytes"])
-    x4p_flows = x4p.manifest["flows"]  # type: ignore[index]
+    x4p_flows = x4p.manifest["flow_records"]  # type: ignore[index]
     cn3_ok = int(x4p.manifest["dropped"]) == 0 and all(  # type: ignore[arg-type]
         per_flow_payload.get(int(f["flow"]), -1) ==
         int(f["injected_packets"]) * PAYLOAD_B for f in x4p_flows)
