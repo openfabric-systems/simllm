@@ -1,0 +1,20 @@
+# Negative-control variant for the buffer-insensitivity claim of the
+# x4buf32 instance: identical in every parameter except
+# rosetta_buffer_bytes doubled to 64 MiB. The closed-loop shared-egress
+# cells bound worst-case occupancy at 25,432,932 bytes plus packet
+# granularity, below both capacities, so the x4buf32 and x4buf64 runs of
+# the same cell must be byte-identical (structural row ST-1); any
+# difference is an in-flight accounting or loop defect, never hardware
+# truth. See merlin_a100_singleswitch_v1_x4buf32.topo for the shared
+# provenance and the declared-with-reason buffer statement.
+topology dragonfly
+hosts_per_router 20
+routers_per_group 1
+global_links_per_router 0
+groups 1
+host_link_gbps 200
+host_link_latency_ps 300000
+switch_pipeline_ps 350000
+rosetta_buffer_bytes 67108864
+max_wire_packet_bytes 9038
+routing_seed 383530136519245852
