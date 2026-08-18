@@ -57,7 +57,7 @@ here rather than acted on.
 | expectations-only freeze | `3284a53` |
 | measurement harness | `1c09a43` |
 | run 1, aborted after every scored cell | job `196020` |
-| non-fatal readback repair | `ec26d45` follow-up commit |
+| non-fatal readback repair | `94c8f7b` |
 | run 2, reviewed `VOID` | job `196033` |
 
 Job `196020` completed every scored cell and then aborted in the final
