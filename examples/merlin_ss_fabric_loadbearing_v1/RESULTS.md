@@ -6,14 +6,22 @@ as recorded, and the registered two-configuration discrimination
 statement is demonstrated at the composed level**. What that
 establishes, stated precisely: with the fabric genuinely load-bearing,
 the hosted Slingshot-class instance reproduces the captured x4
-shared-egress family's steady aggregate to within 4.3 percent from
+shared-egress family's steady aggregate to within 4.21 percent from
 per-stack rate-derived endpoint floors (simulated composed 10.6276
 against measured 11.0952 GB/s, ratio 0.9579 inside the frozen
 [0.90, 1.001] band), with the sharing waits genuinely simulated: the
 zero-wait composed value equals the measured aggregate by construction,
-so the entire 4.2 percent residual is the simulator's own shared-egress
-queueing, and the disclosed fluid napkin predicted it to within 0.4
-percent (0.954 against 0.958). The same composed cell run on the 4 MiB
+so the entire 4.21 percent residual is the simulator's own
+shared-egress queueing, and the disclosed fluid napkin predicted it to
+within 0.4 percent (0.954 against 0.958). The band's discriminating
+power is coarse by construction and travels with every citation of
+that tight residual (review correction 1): [0.90, 1.001] separates
+fluid-like sharing from a chunk-serializing egress (which would land
+near 0.74) and from starvation, but tolerates up to roughly 2.5 times
+the observed sharing wait (doubling every simulated wait would still
+pass at 0.9192), so the 4.21 percent residual is a reported
+observation, not a validated tolerance, and what the PASS validates is
+the sharing-mechanism class. The same composed cell run on the 4 MiB
 buffer configuration faults by the registered closed-loop drop
 signature while the 32 MiB configuration completes clean in band, the
 capture-shaped control cell is byte-identical across all three buffer
@@ -84,7 +92,11 @@ run bytes.
   re-derived from the tracked dataset bytes equal the frozen values
   exactly.
 - FG-7 seam echo: every manifest flow line echoes its declared
-  think_ps, offered_bps and start_ps exactly, in every cell.
+  think_ps, offered_bps and start_ps exactly, in every cell that
+  produced a manifest (10 of 11). The fault arm writes no manifest, so
+  its seam declarations are verified at the argv level only: its
+  recorded argument list is byte-identical to the clean x4 rate arms'
+  (review correction 4).
 
 ## Scored rows, 8 of 8 pass
 
@@ -127,8 +139,11 @@ what the shared egress at 44.8 percent utilization adds under
 round-robin VoQ grants. The disclosed fluid napkin predicted per-flow
 window counts of {1069, 2012, 2006, 1852} against the simulator's
 {1071, 2027, 2021, 1849} (D-3 residuals: +0.0040 rate arm, +0.0004 p50
-arm), so the flow-level water-filling model captured the packet-level
-sharing dynamics almost exactly.
+arm), so the flow-level water-filling model predicted the aggregate
+ratios and per-flow window counts almost exactly; the agreement claim
+is limited to those recorded quantities (review correction 2), since
+no within-run wait traces or fault instants exist to compare
+trajectories against.
 
 ## The discrimination outcome, as registered
 
@@ -138,9 +153,20 @@ sharing dynamics almost exactly.
 - Composed leg: the identical composed x4 closed-loop cell completes
   clean and in band on 32 MiB (FG-4 plus BE-1) and faults by the
   registered signature on 4 MiB (BE-3): opposite registered verdicts.
-  The 4 MiB fault also confirms the freeze's napkin: a two-burst
-  overlap beyond 167.8 us must overfill 4 MiB, and the fluid model
-  predicted the first crossing at 21.4 ms of the 6-s window.
+  Scope of BE-3's risk, corrected by the review (correction 3): the
+  genuine risk was the fault SIGNATURE (the registered exit and
+  message, i.e. the harness's drop detection and error path behaving
+  as registered) and the clean-on-32-MiB contrast, not the occurrence
+  itself, because the freeze's own beat arithmetic makes a full burst
+  overlap, hence a 4 MiB overfill, near-entailed within about 0.77 to
+  0.91 s of the 6-s window unless the closed loop phase-locks, a
+  mechanism the freeze never names. No simulated fault instant was
+  recorded (the faulting harness writes no manifest, bins or chunks);
+  the reviewer's wall-clock inference, recorded as the best estimate
+  with its indirectness labeled, notes the per-packet wall cost is
+  stable across the six clean load cells and places the fault arm's
+  stall near the 0.91-s flows-1-and-2 cadence beat, not at the fluid
+  trajectory's own 21.4-ms first crossing.
 - Saturating leg: first drops at 560,255,151 ps (v1, EX-1) against
   4,474,404,382 ps (x4buf32, BE-4), drop counts 3,685 against 437
   (BE-5), difference 3,248 inside the derived [3,243, 3,255] band
@@ -176,20 +202,29 @@ Three independent framings, per the local rules.
 wave-20 evaluation of record byte for byte on the same parameter block
 (EX-1, EX-2), the 32 MiB first-drop lands 534.5 ns early against a
 3.91-ms linear-fill extrapolation (0.014 percent of the extrapolated
-interval, within the pacing quantization), and the drop-count
-difference equals the buffer delta over the wire packet size (3,248
-against 29,360,128 / 9,038 = 3,248.5). No bin anywhere exceeded the
-packet quantization bound.
+interval), and the drop-count difference equals the buffer delta over
+the wire packet size (3,248 against 29,360,128 / 9,038 = 3,248.5). Two
+quantization scales for that first-drop miss, stated honestly (review
+correction 5): the freeze's rationale named the 278-ns combined
+arrival gap, and the miss is 1.92 times that scale (0.96 times the
+556-ns per-flow gap), so a band matched to the freeze's own stated
+rationale would have FAILED while the registered 2-us band passed; the
+linear-fill model is validated at the 0.014 percent level and its
+sub-microsecond correction term is unmodeled. No bin anywhere exceeded
+the packet quantization bound.
 
 **Queueing physics.** At 44.8 percent offered utilization of one
 shared egress, the simulated mean wait per 339-us chunk burst is 117
 to 153 us. The M/D/1-shaped ballpark rho * S / (2 (1 - rho)) gives
-137.6 us, and the disclosed fluid model's prediction of the composed
-aggregate was within 0.4 percent of the packet-level result, so the
-sharing residual behaves like genuine burst queueing, not like an
-artifact of the harness. The p50-arm overshoot (12.7 percent) sits
-between the zero-wait ceiling (20.5 percent) and the rate-arm level,
-exactly where its higher 54.0 percent utilization puts it.
+137.6 us, corroboration-grade only (review correction 6): closed-loop
+near-periodic arrivals are not the Poisson family, and agreement at
+the 15-percent level carries no inference. The load-bearing
+consistency evidence is the disclosed fluid model, whose
+composed-aggregate prediction landed within 0.4 percent of the
+packet-level result, so the sharing residual is consistent with burst
+queueing at this utilization. The p50-arm overshoot (12.7 percent)
+sits between the zero-wait ceiling (20.5 percent) and the rate-arm
+level, exactly where its higher 54.0 percent utilization puts it.
 
 **End-to-end plausibility.** The composed model reproduces the
 capture's shared-port headline (aggregate scaling with stack count:
@@ -209,7 +244,9 @@ single-switch Merlin instance at the pinned load harness: the
 shared-egress x4 family's steady aggregate at its captured load (44.8
 percent of one port) is reproduced within the frozen band with
 per-stack rate-derived endpoint floors as declared think times and the
-sharing waits genuinely simulated; fabric-configuration discrimination
+sharing waits genuinely simulated (band power as stated in the
+headline: the sharing-mechanism class is validated, not a
+4-percent-level tolerance); fabric-configuration discrimination
 at the composed level is demonstrated (the registered
 indistinguishable-then-separated triple); and the p50-static endpoint
 floor is refuted for skewed shared-port families (a static think time
@@ -245,9 +282,21 @@ any shared-egress group feeds R-LATE-AGG through
 the x4 self-check reproduces this study's think table byte-exactly,
 enforced by `tests/test_merlin_ss_fabric_loadbearing_harness.py`),
 run by `run_cells.py --late`, scored by `--score-late` against the
-frozen [0.90, 1.001] band with no code change and no band moved. GH
-cells fail closed unless their floors derive from the GH cells
-themselves (the E-A-7 per-width rule).
+frozen [0.90, 1.001] band with no code change and no band moved. Two
+hardenings from the review round (corrections 7 and 8), both
+future-only with the tracked results proven byte-identical: the
+scoring path now applies the applicable fatal-guard set (run identity
+with absence failing closed, repeat determinism, clean execution,
+conservation, seam echo, the 500-completion floor) before any band
+verdict and reports VOID on a violation, and the derivation
+machine-checks the shared-egress classification against the recorded
+port evidence (a dominant sender hsn port carrying the group payload,
+or a dominant destination hsn device), failing closed when readable
+evidence refutes it; where a cell's evidence shape cannot be evaluated
+the descriptor's `mapping_check` says `not-machine-checkable` with the
+reason, and any late score published from such a descriptor must
+repeat that label. GH cells fail closed unless their floors derive
+from the GH cells themselves (the E-A-7 per-width rule).
 
 ## Residual registrations
 
@@ -260,6 +309,77 @@ themselves (the E-A-7 per-width rule).
 - TRAF-51: stays open, entry narrowed to the un-met remainder.
 - TRAF-53: gains the p50-floor refutation evidence (BE-2) and the
   mean-versus-median skew numbers.
+
+## Post-specified corrections (adversarial evidence review)
+
+Recorded after the review of the published record, which otherwise
+verified the study end to end (freeze immutable with the napkin
+reproducing every disclosed value, chronology to the second, the
+`fc48ec0` fix confirmed logic-neutral, the scored form regenerating
+byte-for-byte, and an independent fresh-binary rerun reproducing every
+row with FG-1 correctly voiding it as not the run of record). The
+frozen files (`expectations.md`, both new `.topo` instances,
+`napkin_x4_fluid.py`, the locked `results/` bytes) are byte-identical
+to their commits; no band, verdict or registered value changed.
+
+1. **BE-1's discriminating power.** The [0.90, 1.001] band tolerates
+   up to roughly 2.5 times the observed sharing wait (doubling every
+   simulated wait still passes at 0.9192, failure only near 2.5x);
+   what it separates is fluid-like sharing from a chunk-serializing
+   egress (about 0.74) or starvation. The freeze disclosed the
+   coarseness; this file and the registry citations of the 4.21
+   percent residual now carry the power statement so the tight number
+   is never read as a validated tolerance.
+2. **The fluid model's agreement claim.** "Captured the packet-level
+   sharing dynamics almost exactly" overstated; the agreement is the
+   composed aggregate ratios and per-flow window counts, the only
+   recorded quantities, and the wording now says so.
+3. **BE-3's risk scope.** The fault occurrence was near-entailed: the
+   freeze's own beat arithmetic forces a full burst overlap, hence a
+   4 MiB overfill, within about 0.77 to 0.91 s of the window unless
+   the closed loop phase-locks, a mechanism the freeze never names.
+   The genuine risk was the fault signature and the clean-on-32-MiB
+   contrast. The earlier "confirms the freeze's napkin 21.4 ms
+   crossing" sentence is withdrawn: no fault instant was recorded (the
+   faulting harness writes no manifest, bins or chunks), and the
+   reviewer's wall-clock inference (per-packet wall cost stable across
+   the six clean load cells) placing the stall near the 0.91-s beat is
+   recorded as the best estimate, explicitly indirect.
+4. **FG-7's quantifier.** "In every cell" over-stated: the echo is
+   verifiable only in the 10 manifest-producing cells; the fault arm's
+   seam declarations are verified at the argv level (its recorded
+   argument list is byte-identical to the clean x4 rate arms').
+5. **BE-4's quantization scales.** The 534,502 ps early arrival is
+   1.92 times the 278-ns combined arrival gap the freeze's rationale
+   named (0.96 times the per-flow gap); a band matched to the stated
+   rationale would have failed while the registered 2-us band passed.
+   Recorded per the corrections convention; the registered band and
+   verdict stand.
+6. **The M/D/1 comparison's grade.** Corroboration only: closed-loop
+   near-periodic arrivals are not the Poisson family, and 15-percent
+   agreement carries no inference; "behaves like genuine burst
+   queueing, not an artifact" is softened to consistency wording.
+7. **Late-path fail-closed hardening (future-only).** The analyzer
+   defaulted a missing submodule pin to the frozen value (absence
+   passed) and `--score-late` applied no fatal guards; both are fixed
+   (absence fails closed; the applicable guard set gates every late
+   band verdict with VOID on violation), covered by new harness tests,
+   and the re-run analyzer reproduces the tracked `results/` bytes
+   identically.
+8. **Late-path mapping check (future-only).** The shared-egress
+   classification previously trusted the operator's `--shared-flows`
+   input; the derivation now machine-checks it against the recorded
+   port counters (the x4 self-check verifies as shared sender port
+   hsn2 and dominant destination device hsn3), fails closed on
+   refuting evidence, and labels unevaluable evidence
+   `not-machine-checkable`; byte-identity of the tracked results
+   re-proven after the change.
+9. **Numeric and chronology nits.** The headline's "within 4.3
+   percent" and the registry's "4.2 percent" are unified to the
+   recomputed 4.21 percent; and the `.gitattributes` eol rules landed
+   with the freeze commit rather than with the packaging commit the
+   freeze's deliverable list named (the safe direction: the rules
+   preceded every tracked artifact they cover).
 
 ## Reproduction
 

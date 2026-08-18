@@ -339,13 +339,20 @@ def note(records: list[dict[str, object]], row_id: str, ok: bool, detail: str) -
     print(f"{row_id} [consistency, unscored]: {'holds' if ok else 'VIOLATED'} {detail}")
 
 
+def check_run_identity(manifest: dict[str, object], fatal: list[str]) -> None:
+    """FG-1's run-identity half. Absence of a field fails closed: a manifest
+    that never recorded the pin cannot prove it was the run of record
+    (review finding F5; the run of record carries both fields)."""
+    if manifest.get("binary_sha256") != FROZEN_BINARY_SHA256:
+        fatal.append("FG-1: binary sha missing or mismatched")
+    if manifest.get("submodule_head") != FROZEN_PIN:
+        fatal.append("FG-1: submodule pin missing or mismatched")
+
+
 def evaluate(run_root: Path, dataset_root: Path, out_dir: Path) -> int:
     fatal: list[str] = []
     manifest = json.loads((run_root / "run_manifest.json").read_text(encoding="utf-8"))
-    if manifest["binary_sha256"] != FROZEN_BINARY_SHA256:
-        fatal.append("FG-1: binary sha mismatch")
-    if manifest.get("submodule_head", FROZEN_PIN) != FROZEN_PIN:
-        fatal.append("FG-1: submodule pin mismatch")
+    check_run_identity(manifest, fatal)
     tracked = {
         "v1": REPO_ROOT / "examples" / "merlin_ss_fabric_calibration_v1" /
         "merlin_a100_singleswitch_v1.topo",
@@ -536,6 +543,70 @@ def evaluate(run_root: Path, dataset_root: Path, out_dir: Path) -> int:
     return 0
 
 
+def verify_shared_egress_evidence(dataset_root: Path, cell: str,
+                                  group_payload_bytes: int) -> dict[str, str]:
+    """Machine check of the freeze's shared-egress mapping rule (review F6).
+
+    The frozen rule classifies a group as shared-egress when its flows share
+    one recorded sender hsn port or one destination hsn device. The recorded
+    counters can prove that directly when the cell's evidence has per-node
+    hsn tx and rx deltas: a single sender interface carrying at least 90
+    percent of its node's hsn tx and at least 99 percent of the group's
+    payload proves a shared sender port, and a single receiver interface
+    carrying at least 90 percent of its node's hsn rx while that rx total is
+    at least 1 percent of the payload (the cxi_ss1 rx counter undercounts
+    bulk receive by roughly 10x) proves a shared destination device. When
+    the evidence is readable and refutes both, the derivation fails closed;
+    when its shape cannot be evaluated (missing or empty per-node counters),
+    the descriptor says so rather than silently trusting the operator's
+    --shared-flows input, and RESULTS must repeat that label.
+    """
+    path = dataset_root / cell / "port_tx_deltas.json"
+    try:
+        deltas = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"status": "not-machine-checkable",
+                "detail": "port_tx_deltas.json unreadable"}
+    nodes: dict[str, dict[str, dict[str, int]]] = {}
+    for node, interfaces in deltas.items():
+        if not isinstance(interfaces, dict):
+            continue
+        hsn = {name: counters for name, counters in interfaces.items()
+               if name.startswith("hsn") and isinstance(counters, dict)}
+        if hsn:
+            nodes[node] = hsn
+    if len(nodes) < 2:
+        return {"status": "not-machine-checkable",
+                "detail": "fewer than two nodes carry hsn counters"}
+    sender = None
+    receiver = None
+    for node, hsn in nodes.items():
+        tx = {name: int(c.get("tx_delta_bytes", 0)) for name, c in hsn.items()}
+        rx = {name: int(c.get("rx_delta_bytes", 0)) for name, c in hsn.items()}
+        tx_total, rx_total = sum(tx.values()), sum(rx.values())
+        if tx_total > 0:
+            top_name, top = max(tx.items(), key=lambda item: item[1])
+            if top * 10 >= 9 * tx_total and top * 100 >= 99 * group_payload_bytes:
+                sender = (node, top_name)
+        if rx_total > 0:
+            top_name, top = max(rx.items(), key=lambda item: item[1])
+            if top * 10 >= 9 * rx_total and rx_total * 100 >= group_payload_bytes:
+                receiver = (node, top_name)
+    if sender and receiver and sender[0] != receiver[0]:
+        return {"status": "machine-verified-both",
+                "detail": f"sender {sender[0]}/{sender[1]}, "
+                          f"destination {receiver[0]}/{receiver[1]}"}
+    if sender:
+        return {"status": "machine-verified-shared-sender-port",
+                "detail": f"sender {sender[0]}/{sender[1]}"}
+    if receiver:
+        return {"status": "machine-verified-shared-destination-device",
+                "detail": f"destination {receiver[0]}/{receiver[1]}"}
+    raise SystemExit(
+        f"fail closed: {cell} port evidence shows no shared sender port and "
+        "no shared destination device for the group")
+
+
 def derive_late_cell(dataset_root: Path, cell: str,
                      shared_flows: list[int]) -> dict[str, object]:
     """Emit a frozen-formula closed-loop descriptor for a shared-egress group.
@@ -546,7 +617,9 @@ def derive_late_cell(dataset_root: Path, cell: str,
     staggered 400 us apart, duration 6e12 ps on the x4buf32 instance,
     think_i = round(20e12 / n_i) - F from the group's final-20-second
     completion counts. Fails closed on missing evidence, a foreign chunk
-    size, or an occupancy bound above the x4buf32 capacity.
+    size, an occupancy bound above the x4buf32 capacity, or port evidence
+    that refutes the shared-egress classification; where the evidence shape
+    cannot be machine-checked the descriptor's mapping_check says so.
     """
     if len(shared_flows) < 2:
         raise SystemExit("fail closed: a shared-egress group needs >= 2 flows")
@@ -556,6 +629,7 @@ def derive_late_cell(dataset_root: Path, cell: str,
     if (len(shared_flows) - 1) * CHUNK_WIRE_B >= X4BUF32_CAPACITY_B:
         raise SystemExit("fail closed: occupancy bound exceeds the x4buf32 capacity")
     flows = []
+    group_chunks_total = 0
     for index, flow in enumerate(shared_flows):
         series = dataset_root / cell / f"{cell}_flow{flow}_dest.csv.gz"
         if not series.exists():
@@ -569,26 +643,108 @@ def derive_late_cell(dataset_root: Path, cell: str,
         count = sum(1 for t in ts if 160_000_000_000 <= t < 180_000_000_000)
         if count == 0:
             raise SystemExit(f"fail closed: {cell} flow {flow} empty window")
+        group_chunks_total += len(ts)
         flows.append({
             "src": 4 + index, "dst": 19,
             "think_ps": int(round(Fraction(20 * 10**12, count)) - F_PS),
             "start_ps": 400_000_000 * index,
             "measured_count": count,
         })
+    mapping_check = verify_shared_egress_evidence(
+        dataset_root, cell, group_chunks_total * CHUNK_B)
     return {
         "cell": f"late-{cell}", "instance": "x4buf32",
         "chunk_payload_bytes": CHUNK_B, "duration_ps": 6_000_000_000_000,
         "window_ps": [WINDOW_LO_PS, WINDOW_HI_PS],
         "band": [str(BAND_BE1[0]), str(BAND_BE1[1])],
         "flows": flows,
+        "mapping_check": mapping_check,
         "measured_group_aggregate_bps":
             float(Fraction(sum(f["measured_count"] for f in flows) * CHUNK_B, 20)),
     }
 
 
+def late_fatal_guards(run_root: Path, descriptor: dict[str, object]) -> list[str]:
+    """The applicable fatal-guard set for a late cell (review F5): run
+    identity, repeat determinism, clean execution, conservation, seam echo
+    and the completion floor, evaluated before any band verdict, because
+    BE-1's meaning rests on exactly these preconditions."""
+    fatal: list[str] = []
+    manifest_path = run_root / "run_manifest.json"
+    if not manifest_path.exists():
+        return ["FG-1: late run manifest missing"]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    check_run_identity(manifest, fatal)
+    name = str(descriptor["cell"])
+    record = manifest.get("cells", {}).get(name)
+    if record is None:
+        fatal.append(f"FG-1: late run manifest lacks cell {name}")
+        return fatal
+    cell = Cell(run_root, name, record)
+    if not cell.repeats_identical():
+        fatal.append(f"FG-2: {name} repeats differ")
+    if cell.exit[0] != 0:
+        fatal.append(f"FG-4: {name} exit {cell.exit[0]}")
+        return fatal
+    m = cell.manifest
+    injected = int(m["injected"])  # type: ignore[arg-type]
+    delivered = int(m["delivered"])  # type: ignore[arg-type]
+    dropped = int(m["dropped"])  # type: ignore[arg-type]
+    payload = int(m["delivered_payload_bytes"])  # type: ignore[arg-type]
+    if dropped != 0:
+        fatal.append(f"FG-4: {name} closed-loop cell dropped packets")
+    if injected != delivered + dropped:
+        fatal.append(f"FG-3: {name} injected != delivered + dropped")
+    if payload != delivered * PAYLOAD_B:
+        fatal.append(f"FG-3: {name} payload arithmetic")
+    per_bin: dict[int, int] = {}
+    for entry in read_bins(cell.paths["r1"]["csv"]):
+        if entry["delivered_payload_bytes"] > BIN_BOUND_B:
+            fatal.append(f"FG-3: {name} per-flow bin over quantization bound")
+            break
+        per_bin[entry["bin_start_ps"]] = (
+            per_bin.get(entry["bin_start_ps"], 0) + entry["delivered_payload_bytes"])
+    if any(total > BIN_BOUND_B for total in per_bin.values()):
+        fatal.append(f"FG-3: {name} aggregate bin over the single-port bound")
+    records = m["flow_records"]  # type: ignore[index]
+    declared = descriptor["flows"]  # type: ignore[index]
+    if len(records) != len(declared):  # type: ignore[arg-type]
+        fatal.append(f"FG-7: {name} flow count mismatch")
+        return fatal
+    chunks = read_chunks(cell.paths["r1"]["chunks"])
+    for index, want in enumerate(declared):  # type: ignore[arg-type]
+        have = records[index]  # type: ignore[index]
+        if have.get("think_ps") != str(want["think_ps"]) or \
+                have.get("start_ps") != str(want["start_ps"]) or \
+                have.get("offered_bps") != "line":
+            fatal.append(f"FG-7: {name} flow {index} seam echo mismatch")
+        rows = chunks.get(index, [])
+        if len(rows) != int(have.get("chunks_completed", -1)):
+            fatal.append(f"FG-5: {name} flow {index} chunk rows != manifest")
+        comps = [c for (_, _, c) in rows]
+        if comps != sorted(comps) or len(set(comps)) != len(comps):
+            fatal.append(f"FG-5: {name} flow {index} completions not increasing")
+        in_window = sum(1 for c in comps if WINDOW_LO_PS <= c < WINDOW_HI_PS)
+        if in_window < 500:
+            fatal.append(f"FG-5: {name} flow {index} only {in_window} in window")
+    return fatal
+
+
 def score_late(descriptor_path: Path, run_root: Path, out_dir: Path) -> int:
     descriptor = json.loads(descriptor_path.read_text(encoding="utf-8"))
     name = descriptor["cell"]
+    fatal = late_fatal_guards(run_root, descriptor)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"late_{name}_score.json"
+    if fatal:
+        result: dict[str, object] = {
+            "cell": name, "verdict": "VOID", "fatal_failures": fatal,
+            "mapping_check": descriptor.get("mapping_check"),
+        }
+        out_path.write_text(json.dumps(result, indent=1, sort_keys=True) + "\n",
+                            encoding="utf-8")
+        print(json.dumps(result, indent=1, sort_keys=True))
+        return 1
     chunks = read_chunks(run_root / f"{name}_r1.chunks.csv")
     per_flow = [
         sum(1 for (_, _, c) in chunks.get(i, [])
@@ -604,10 +760,10 @@ def score_late(descriptor_path: Path, run_root: Path, out_dir: Path) -> int:
         "cell": name, "per_flow_chunks": per_flow,
         "aggregate_bps": float(aggregate), "ratio": float(ratio),
         "band": [str(BAND_BE1[0]), str(BAND_BE1[1])],
+        "fatal_failures": [],
+        "mapping_check": descriptor.get("mapping_check"),
         "verdict": "PASS" if ok else "FAIL",
     }
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"late_{name}_score.json"
     out_path.write_text(json.dumps(result, indent=1, sort_keys=True) + "\n",
                         encoding="utf-8")
     print(json.dumps(result, indent=1, sort_keys=True))

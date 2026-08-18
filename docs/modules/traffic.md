@@ -251,18 +251,25 @@ the flow-level work the GOAL emitter renders.
   the composed quantities are simulator outputs rather than external
   arithmetic. All 8 scored rows passed with no guard fired: the
   captured x4 shared-egress aggregate is reproduced within the frozen
-  band (composed 10.63 against measured 11.10 GB/s; the whole 4.2
+  band (composed 10.63 against measured 11.10 GB/s; the whole 4.21
   percent residual is simulated queueing, and the disclosed fluid
-  napkin predicted it to 0.4 percent), two buffer configurations
+  napkin predicted it to 0.4 percent; the band is coarse by
+  construction, separating fluid-like sharing from a chunk-serializing
+  egress near 0.74 while tolerating up to roughly 2.5 times the
+  observed wait, so the sharing-mechanism class is validated rather
+  than a 4-percent tolerance), two buffer configurations
   byte-identical at capture-shaped load produce opposite registered
   verdicts on the composed x4 cell (4 MiB faults by the registered
   closed-loop drop signature, 32 MiB completes in band) plus banded
   saturating-arm separations, and the p50-static endpoint floor
   overshoots the measured aggregate by the registered 12.7 percent,
   refuting static p50 floors for skewed shared-port families (TRAF-53
-  evidence). A frozen late-arrival path stands ready to score any
-  tranche-2 shared-egress group with no code change. It changes no
-  profile, no envelope and no reported metric.
+  evidence). None of this claims which buffer value the Merlin switch
+  physically has: the closed-loop abstraction carries no loss
+  recovery while the real transport does. A frozen late-arrival path
+  stands ready to score any tranche-2 shared-egress group with no
+  code change. It changes no profile, no envelope and no reported
+  metric.
 - Because the table is a surcharge on a transport that already contains one
   propagation delay, `realized_fixed_cost_ps` is what a run actually charges,
   and it exceeds a source capture that was itself a complete fixed cost by up
@@ -904,7 +911,9 @@ default-constructed arm are unchanged.
   rate-derived endpoint floors, all 8 scored rows passed with no
   guard fired, the x4 aggregate landed at 0.958 of measured inside
   the frozen [0.90, 1.001] band with the entire residual being
-  simulated sharing waits, composed-level discrimination between two
+  simulated sharing waits (a coarse band by construction: it
+  distinguishes the sharing-mechanism class, tolerating up to roughly
+  2.5 times the observed wait), composed-level discrimination between two
   buffer configurations was demonstrated (byte-identical at
   capture-shaped load, opposite registered verdicts under the
   composed x4 cell, banded saturating separations), and the

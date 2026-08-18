@@ -211,7 +211,10 @@ within its frozen band with the sharing waits simulated (composed
 byte-identical at capture-shaped load produce opposite registered
 verdicts on the composed x4 cell plus banded saturating-arm
 separations, and the p50-static endpoint floor is refuted for skewed
-shared-port families. Endpoint dynamics, the tranche-2 families,
+shared-port families. None of this claims which buffer value the
+Merlin switch physically has: the closed-loop abstraction carries no
+loss recovery while the real transport does. Endpoint dynamics, the
+tranche-2 families,
 multi-switch routing and the source-shared x4 mapping remain open
 (TRAF-52 and TRAF-53 in [traffic.md](traffic.md), HTSIM-31 to
 HTSIM-33 below), with the backend note's own wording update as
