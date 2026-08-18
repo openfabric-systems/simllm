@@ -1,0 +1,46 @@
+{
+ "node_gpu102": {
+  "hsn0": {
+   "rx_delta_bytes": 180244,
+   "tx_delta_bytes": 4351517
+  },
+  "hsn1": {
+   "rx_delta_bytes": 156430,
+   "tx_delta_bytes": 2242554
+  },
+  "hsn2": {
+   "rx_delta_bytes": 1245787179,
+   "tx_delta_bytes": 2014248211193
+  },
+  "hsn3": {
+   "rx_delta_bytes": 158572,
+   "tx_delta_bytes": 2275264
+  },
+  "nmn0": {
+   "rx_delta_bytes": 620761,
+   "tx_delta_bytes": 267172
+  }
+ },
+ "node_gpu105": {
+  "hsn0": {
+   "rx_delta_bytes": 1115310,
+   "tx_delta_bytes": 6603527
+  },
+  "hsn1": {
+   "rx_delta_bytes": 1333656,
+   "tx_delta_bytes": 608065
+  },
+  "hsn2": {
+   "rx_delta_bytes": 1654727,
+   "tx_delta_bytes": 638948
+  },
+  "hsn3": {
+   "rx_delta_bytes": 203806567796,
+   "tx_delta_bytes": 1117118024
+  },
+  "nmn0": {
+   "rx_delta_bytes": 613460,
+   "tx_delta_bytes": 273467
+  }
+ }
+}
