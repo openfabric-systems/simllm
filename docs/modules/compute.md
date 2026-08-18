@@ -775,6 +775,19 @@ reports 5 of 5 passing behavioral relation families over all 35 instances and
 10 of 10 fatal unscored structural invariants. This zero-time component stream
 is not yet projected onto the live TTFT/TPOT metric chain.
 
+One boundary of that skeleton now carries an opt-in gate. `ncclNetRegMr`
+mirrors the net plugin's `regMr` together with the channel FIFO establishment
+that follows it, and a communicator built with `require_buffer_registration`
+refuses a collective whose destination buffer is not registered on every
+channel. The seam declares the registration's one-time cost and, as everywhere
+else in this module, never advances the caller's clock. The cost model, the
+identity and re-registration rules, and the ledger that spends that cost on the
+live metric chain are traffic-owned and are stated in
+[the interim collective completion and registration contract](traffic.md#collective-completion-and-registration-the-interim-contract).
+A communicator that does not ask for the gate emits exactly the events it
+emitted before the gate existed. BACK-47 still owns the device-facing packet
+emission contract at this same seam.
+
 The same [collective latency floor study](../../examples/collective_latency_floor_v1/RESULTS.md)
 closes COMP-11, with its undemonstrated mechanism clauses moved exactly to
 COMP-31. The selectable profile replaces the flat local endpoint rate, adds
@@ -813,6 +826,8 @@ and an explicit reason:
 | `sendProxyProgress` | `src/transport/net.cc`, `sendProxyProgress` |
 | `ncclNet.isend` | `src/include/plugin/net/net_v12.h`, `isend` member; `ncclIbIsend` in `src/transport/net_ib/p2p.cc` is the audited IB implementation |
 | `ncclNet.test` | `src/include/plugin/net/net_v12.h`, `test` member; called by `sendProxyProgress` in `src/transport/net.cc` |
+| `ncclNet.regMr` | `src/include/plugin/net/net_v12.h`, `regMr` member; the entry NCCL calls so an RDMA NIC can prepare a buffer, documented for the same struct family on the RCCL side in [the AMD GPU fabric note](../papers/amd-gpu-fabric.md) |
+| `simllmChannelBufferRegistered` | simllm-invented: the one-time (communicator, channel, buffer) registration boundary, where the mirrored seam declares a cost that the traffic-owned ledger spends |
 | `wrap_ibv_post_send` | `src/include/ibvwrap.h`, `wrap_ibv_post_send`; called by `ncclIbIsend` in `src/transport/net_ib/p2p.cc` |
 | `wrap_ibv_poll_cq` | `src/include/ibvwrap.h`, `wrap_ibv_poll_cq`; called by `ncclIbTest` in `src/transport/net_ib/p2p.cc` |
 | `simllmRnicRingDoorbell` | simllm-invented: exposes the RNIC notification hidden inside the verbs provider's post operation |

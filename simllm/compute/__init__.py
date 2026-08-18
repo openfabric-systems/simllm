@@ -127,6 +127,7 @@ from simllm.compute.nccl import (
 from simllm.compute.nccl_stack import (
     NCCL_STACK_EVENT_SCHEMA,
     NcclCollectiveResult,
+    NcclRegistrationResult,
     NcclRoute,
     NcclStack,
     NcclStackConfig,
@@ -139,6 +140,7 @@ from simllm.compute.nccl_stack import (
     nccl_stack_events_to_json,
     ncclAllReduce,
     ncclCommInitRank,
+    ncclNetRegMr,
     validate_nccl_stack_events,
 )
 from simllm.compute.provider import (
@@ -239,6 +241,7 @@ __all__ = [
     "MixedMakespanRegime",
     "ModelDims",
     "NcclCollectiveResult",
+    "NcclRegistrationResult",
     "NcclRoute",
     "NcclStack",
     "NcclStackConfig",
@@ -276,6 +279,7 @@ __all__ = [
     "load_gpu_model_artifact",
     "ncclAllReduce",
     "ncclCommInitRank",
+    "ncclNetRegMr",
     "nccl_ring_allreduce_launch",
     "nccl_ring_allreduce_task",
     "nccl_ring_egress_bytes",

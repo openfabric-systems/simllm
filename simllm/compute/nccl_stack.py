@@ -12,6 +12,19 @@ published work. The GPU advances send ``tail``; the proxy advances send
 intra-node route stays in the collective kernel and never enters proxy, net,
 verbs, doorbell, or network-completion code.
 
+One boundary in this skeleton is where real NCCL prepares memory before any
+transfer can use it: the net plugin's ``regMr`` together with the establishment
+of the channel FIFO it will be posted from. :func:`ncclNetRegMr` mirrors that
+boundary and *declares* the one-time registration cost of a
+``(communicator, channel, buffer)`` identity. It does not spend that cost,
+because this module never advances the caller's clock. The cost model and its
+ledger live in :mod:`simllm.traffic.collective_registration`, and the live
+charge lands in :mod:`simllm.backends.step_sink`. Registration is off by
+default: a communicator built without ``require_buffer_registration`` behaves
+exactly as before, emits exactly the same events, and gates nothing. BACK-47
+owns the device-facing packet-emission contract at this same seam and is not
+claimed here.
+
 The audited NCCL name mapping is recorded in ``docs/modules/compute.md``. It is
 based on NVIDIA NCCL release ``v2.30.7-1``. This module mirrors names and causal
 shape only and contains no copied NCCL implementation.
@@ -1329,6 +1342,20 @@ class _NcclCommunicator:
     world_size: int
     logical_channels: tuple[_NcclLogicalChannel, ...]
     gpu_channels: tuple[_NcclGpuChannel, ...]
+    #: opt-in gate: a collective must name a registered buffer to run
+    require_buffer_registration: bool = False
+    #: channels registered per buffer identity, in registration order
+    registered_buffers: dict[str, tuple[int, ...]] = field(default_factory=dict)
+
+    def buffer_is_registered(self, buffer_id: str) -> bool:
+        """Whether every channel of this communicator has registered a buffer."""
+
+        channels = self.registered_buffers.get(buffer_id)
+        if channels is None:
+            return False
+        return set(channels) == {
+            channel.channel_id for channel in self.logical_channels
+        }
 
     def gpu_channel(self, channel_id: int) -> _NcclGpuChannel:
         if channel_id < 0 or channel_id >= len(self.gpu_channels):
@@ -1340,6 +1367,31 @@ class _NcclCommunicator:
 
     def snapshots(self) -> tuple[_NcclChannelSnapshot, ...]:
         return tuple(channel.snapshot() for channel in self.gpu_channels)
+
+
+@dataclass(frozen=True)
+class NcclRegistrationResult:
+    """Structural result of one zero-time channel-and-buffer registration.
+
+    ``declared_cost_ps`` is what one channel's registration is declared to
+    cost, and ``total_declared_cost_ps`` is that cost across the channels this
+    call registered. Neither value moves this stack's caller-owned clock: the
+    seam declares the cost and the live chain spends it.
+    """
+
+    communicator_id: str
+    buffer_id: str
+    buffer_bytes: int
+    channel_ids: tuple[int, ...]
+    declared_cost_ps: int
+    total_declared_cost_ps: int
+    events: tuple[NcclStackEvent, ...]
+
+    def __post_init__(self) -> None:
+        if self.total_declared_cost_ps != self.declared_cost_ps * len(self.channel_ids):
+            raise ValueError(
+                "the declared registration total disagrees with its per-channel cost"
+            )
 
 
 @dataclass(frozen=True)
@@ -1360,8 +1412,16 @@ def ncclCommInitRank(
     nranks: int,
     communicator_id: str,
     rank: int,
+    require_buffer_registration: bool = False,
 ) -> _NcclCommunicator:
-    """Create one rank-local communicator with the real API's call shape."""
+    """Create one rank-local communicator with the real API's call shape.
+
+    ``require_buffer_registration`` is the opt-in interim gate of the
+    2026-08-18 ruling: a collective on this communicator must name a buffer
+    that :func:`ncclNetRegMr` has registered on every channel. It defaults to
+    ``False``, and a communicator that leaves it alone emits exactly the events
+    it emitted before this gate existed.
+    """
 
     if not isinstance(stack, NcclStack):
         raise TypeError("stack must be an NcclStack")
@@ -1371,6 +1431,8 @@ def ncclCommInitRank(
     if isinstance(rank, bool) or not isinstance(rank, int) or not 0 <= rank < nranks:
         raise ValueError("rank must be an integer in [0, nranks)")
     communicator_id = _string(communicator_id, "communicator_id")
+    if not isinstance(require_buffer_registration, bool):
+        raise TypeError("require_buffer_registration must be a boolean")
     stack._observer.call(
         "ncclCommInitRank",
         NcclStackLane.CPU,
@@ -1398,6 +1460,76 @@ def ncclCommInitRank(
         world_size=nranks,
         logical_channels=logical_channels,
         gpu_channels=gpu_channels,
+        require_buffer_registration=require_buffer_registration,
+    )
+
+
+def ncclNetRegMr(
+    communicator: _NcclCommunicator,
+    *,
+    buffer_id: str,
+    buffer_bytes: int,
+    declared_cost_ps: int = 0,
+) -> NcclRegistrationResult:
+    """Register one destination buffer on every channel of a communicator.
+
+    This mirrors the net plugin's ``regMr``, the entry NCCL calls so an RDMA
+    NIC can prepare a buffer, paired with the channel FIFO the registered
+    buffer will be posted from. A second registration of the same buffer is
+    refused rather than silently re-charged: which events force a
+    re-registration is a decision the traffic-owned ledger makes, not this
+    seam.
+
+    ``declared_cost_ps`` is carried through and published; it never advances
+    the caller's clock, which stays this module's standing contract.
+    """
+
+    if not isinstance(communicator, _NcclCommunicator):
+        raise TypeError("communicator must be returned by ncclCommInitRank")
+    buffer_id = _string(buffer_id, "buffer_id")
+    buffer_bytes = _require_positive_integer("buffer_bytes", buffer_bytes)
+    _integer(declared_cost_ps, "declared_cost_ps", nonnegative=True)
+    if buffer_id in communicator.registered_buffers:
+        raise ValueError(
+            f"buffer {buffer_id!r} is already registered on communicator "
+            f"{communicator.communicator_id!r}"
+        )
+    stack = communicator.stack
+    start_event = len(stack.events)
+    channel_ids = []
+    for channel in communicator.logical_channels:
+        stack._observer.call(
+            "ncclNet.regMr",
+            NcclStackLane.CPU,
+            rank=communicator.rank,
+            communicator_id=communicator.communicator_id,
+            operation_id=f"register:{buffer_id}",
+            channel_id=channel.channel_id,
+            send_peer_rank=channel.send_peer,
+            subject="memory_registration",
+            value=buffer_bytes,
+        )
+        stack._observer.signal(
+            "simllmChannelBufferRegistered",
+            NcclStackLane.CPU,
+            rank=communicator.rank,
+            communicator_id=communicator.communicator_id,
+            operation_id=f"register:{buffer_id}",
+            channel_id=channel.channel_id,
+            send_peer_rank=channel.send_peer,
+            subject="registration_complete",
+            value=declared_cost_ps,
+        )
+        channel_ids.append(channel.channel_id)
+    communicator.registered_buffers[buffer_id] = tuple(channel_ids)
+    return NcclRegistrationResult(
+        communicator_id=communicator.communicator_id,
+        buffer_id=buffer_id,
+        buffer_bytes=buffer_bytes,
+        channel_ids=tuple(channel_ids),
+        declared_cost_ps=declared_cost_ps,
+        total_declared_cost_ps=declared_cost_ps * len(channel_ids),
+        events=stack.events[start_event:],
     )
 
 
@@ -1470,14 +1602,40 @@ def ncclAllReduce(
     payload_bytes: int,
     operation_id: str,
     route: NcclRoute,
+    buffer_id: str | None = None,
 ) -> NcclCollectiveResult:
-    """Plan and execute one name-mirrored, zero-time ring all-reduce."""
+    """Plan and execute one name-mirrored, zero-time ring all-reduce.
+
+    ``buffer_id`` names the destination buffer. It is required exactly when the
+    communicator was built with ``require_buffer_registration``, which is the
+    interim gate: a collective cannot run on memory the plugin has not
+    registered. A communicator without that gate ignores the argument and
+    behaves as it always has.
+    """
 
     if not isinstance(communicator, _NcclCommunicator):
         raise TypeError("communicator must be returned by ncclCommInitRank")
     operation_id = _string(operation_id, "operation_id")
     if not isinstance(route, NcclRoute):
         raise TypeError("route must be an NcclRoute")
+    if communicator.require_buffer_registration:
+        if buffer_id is None:
+            raise ValueError(
+                f"communicator {communicator.communicator_id!r} requires buffer "
+                "registration, so a collective must name its destination buffer"
+            )
+        buffer_id = _string(buffer_id, "buffer_id")
+        if not communicator.buffer_is_registered(buffer_id):
+            raise ValueError(
+                f"buffer {buffer_id!r} is not registered on every channel of "
+                f"communicator {communicator.communicator_id!r}: call "
+                "ncclNetRegMr before the first collective that uses it"
+            )
+    elif buffer_id is not None:
+        raise ValueError(
+            "buffer_id names a registered buffer and requires a communicator "
+            "built with require_buffer_registration"
+        )
     layout = _validated_ring_layout(
         payload_bytes=payload_bytes,
         world_size=communicator.world_size,
@@ -1522,6 +1680,7 @@ def ncclAllReduce(
 __all__ = [
     "NCCL_STACK_EVENT_SCHEMA",
     "NcclCollectiveResult",
+    "NcclRegistrationResult",
     "NcclRoute",
     "NcclStack",
     "NcclStackConfig",
@@ -1530,6 +1689,7 @@ __all__ = [
     "NcclStackLane",
     "ncclAllReduce",
     "ncclCommInitRank",
+    "ncclNetRegMr",
     "nccl_stack_event_from_json",
     "nccl_stack_event_to_json",
     "nccl_stack_events_from_json",
