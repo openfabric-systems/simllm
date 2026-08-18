@@ -74,3 +74,4 @@ examples/merlin_ss_fabric_loadbearing_v1/*.py text eol=lf
 examples/merlin_ss_fabric_loadbearing_v1/results/*.json text eol=lf
 tests/test_merlin_ss_fabric_loadbearing_results.py text eol=lf
 tests/test_merlin_ss_fabric_loadbearing_harness.py text eol=lf
+examples/merlin_fabric_flow_capture_v1/dataset/**/*.host text eol=lf

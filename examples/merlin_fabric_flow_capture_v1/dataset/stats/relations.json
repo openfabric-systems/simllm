@@ -3,6 +3,9 @@
   "band": "floor p50 under 1.0 percent and spread under 0.3 percent",
   "measured": {
    "i2-incast": true,
+   "i3-incast": true,
+   "i4-incast": true,
+   "j3-join": true,
    "mx-a2gh": true,
    "mx-gh2a": true,
    "s1-stream": true,
@@ -37,20 +40,22 @@
  },
  {
   "band": "[1.8, 12.0] GB/s",
-  "measured": null,
+  "measured": 10.115,
   "relation": "E-I-3",
-  "verdict": "unevaluated"
+  "verdict": "pass"
  },
  {
-  "band": "[0.9, 3.2]",
-  "measured": null,
+  "band": "[0.9, 3.2] x s1",
+  "measured": 2.0268,
   "relation": "E-I-4",
-  "verdict": "unevaluated"
+  "verdict": "pass"
  },
  {
   "band": "Jain >= 0.6 in every incast cell that runs",
   "measured": {
    "i2-incast": 0.9795,
+   "i3-incast": 0.9995,
+   "i4-incast": 1.0,
    "x4-incast": 0.9496
   },
   "relation": "E-I-5",
@@ -58,9 +63,9 @@
  },
  {
   "band": "[1.8, 14.0] GB/s",
-  "measured": null,
+  "measured": 8.3542,
   "relation": "E-I-6",
-  "verdict": "unevaluated"
+  "verdict": "pass"
  },
  {
   "band": "[1.8, 12.0] GB/s",
@@ -69,28 +74,28 @@
   "verdict": "pass"
  },
  {
-  "band": "[0.7, 1.3]",
-  "measured": null,
+  "band": "[0.7, 1.3] x s1",
+  "measured": 0.8307,
   "relation": "E-J-1",
-  "verdict": "unevaluated"
+  "verdict": "pass"
  },
  {
   "band": "<= 1.05",
-  "measured": null,
+  "measured": 1.0729,
   "relation": "E-J-2",
-  "verdict": "unevaluated"
+  "verdict": "FAIL"
  },
  {
   "band": "<= 1.05",
-  "measured": null,
+  "measured": 1.0894,
   "relation": "E-J-3",
-  "verdict": "unevaluated"
+  "verdict": "FAIL"
  },
  {
-  "band": ">= 0.7",
-  "measured": null,
+  "band": ">= 0.7 x stage 0",
+  "measured": 1.8634,
   "relation": "E-J-4",
-  "verdict": "unevaluated"
+  "verdict": "pass"
  },
  {
   "band": "[0.7, 3.5] GB/s",

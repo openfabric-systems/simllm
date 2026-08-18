@@ -1,0 +1,11 @@
+job_id=195692
+label=a100-2n
+modes=battery matrix jitter
+date_iso=2026-08-17T15:25:23+02:00
+partition=a100-hourly
+nodelist=gpu[101-102]
+nnodes=2
+ntasks=2
+nccl_root=/data/user/ext-wang_y1/simllm-stage/a100_hw_envelope_v1/nccl/nvidia_nccl_cu12-2.31.2-py3-none-manylinux_2_18_x86_64/nvidia/nccl
+cuda_module=cuda/12.2.2
+arch_flag=sm_80
