@@ -16,14 +16,19 @@ Run 2 (Slurm job `195982`) violated three fatal guards:
 | Guard | Outcome |
 |---|---|
 | `G9R` | 16 of 97 scored cells above the 60 microsecond threshold exceeded the quantum-aware per-repetition CV ceiling. |
-| `G10` | 2 scored cells exceeded the 2 percent batch-mean CV ceiling: `hbm_write_512mib` at 2.305 percent and `attn_decode_b256_l2048` at 3.315 percent. |
+| `G10` | 2 scored cells exceeded the 2 percent batch-mean CV ceiling: `hbm_write_512mib` at 2.305 percent and `attn_decode_b256_l2048` at 3.315 percent, both in the boosted arm. |
 | `G11R` | The measured per-boundary event cost held its band, but 21 scored cells still disagreed with their batched constant by more than 3 percent after the correction. |
 
 `G13`, the one guard the refreeze declared survivable, also fired once and was
-survived exactly as the refreeze said it would be: `moe_expert_down_m54` in the
-BASE arm was host-issue bound at a host-to-device ratio of 0.870, so it was
-excluded from every scored expectation, from the other guards and from any
-published table, and it is reported here with its ratio.
+survived exactly as the refreeze said it would be. `moe_expert_down_m54` in the
+BASE arm was host-issue bound, so it was excluded from every scored
+expectation, from the other guards and from any published table. The refreeze
+promised it would be reported with both its host and its device times, and it
+is: over its 12 batches of 16 launches each, the host launch loop took a mean
+of 86.375 microseconds against a mean device elapsed time of 130.304
+microseconds, a mean ratio of 0.653 and a worst-batch ratio of 0.870 against
+the 0.8 ceiling. The per-batch arrays of both are in
+`measurements/results.json` under `host_issue_bound_cells`.
 
 Sixteen of the 31 scored expectations passed and 15 failed. **That 16 is not a
 score.** A violated fatal guard asserts that the precondition under which the
@@ -68,6 +73,30 @@ expectation, which is what those guards say, rather than to every measured
 cell. The correction removed three rotated-variant cells at 4 and 16 MiB from
 `G10`, which no scored expectation names. It changed no measured value and no
 bound, and the verdict was void before and after it.
+
+## Run 1 beside run 2, as the refreeze promised
+
+The refreeze listed "the run-1 evaluation of every scored expectation,
+published beside run 2's" as an unscored record. It is in
+`measurements/results.json` under `previous_run`, produced by re-scoring run
+1's retained raw output with the identical scorer and its own identity record,
+so the two columns are the same instrument applied twice. Run 1 is void under
+that instrument too, on `G9R`, `G10`, `G11R` and `G14`, the last because run 1
+predates the instrumentation control the refreeze added.
+
+Run 1 scored 15 pass and 16 fail; run 2 scored 16 and 15. Five rows moved, and
+the direction of each is the interesting part:
+
+| Expectation | Run 1 | Run 2 | What moved it |
+|---|---|---|---|
+| E-1-7 | pass | fail | the 1024 MiB write ratio drifted to 1.0206, just outside [0.98, 1.02] |
+| E-2-9 | fail | pass | held-out interpolation median error fell from 32.66 to 0.70 percent under repair R1 |
+| E-3-2 | fail | pass | synthetic prefill rose from 39.85 to 40.44 percent of peak, across a 40 percent threshold |
+| E-3-5 | pass | fail | the repaired decode kernel scales differently in batch, 3.024 against a [3.4, 4.6] band |
+| E-4-2 | fail | pass | the expert-load plateau tightened from 1.81 and 2.09 to 1.55 and 1.50 under repair R1 |
+
+Twenty-six rows did not move at all. Two of the five that did, E-1-7 and
+E-3-5, moved from pass to fail, so the repairs did not simply buy passes.
 
 ## The permission denial, recorded
 
@@ -124,12 +153,18 @@ boosted arm and is the denominator of every memory-bound statement here.
 | copy | 1633.7 | 1665.3 | 1673.8 | 1678.3 |
 | triad | 1726.8 | 1747.5 | 1755.8 | 1759.1 |
 
-All values GB/s. The size dependence above 1024 MiB is under 1 percent per
-kernel. The prior accepted
+All values GB/s. Between 1024 and 2048 MiB the rate moves by 0.19 percent for
+triad, 0.27 for copy, 0.58 for read and 0.99 for write, taking the larger value
+as the denominator. Against the smaller value the write figure is 1.004
+percent, so "under one percent" holds only on the first convention and the
+convention is named here rather than assumed. The prior accepted
 [A100 hardware envelope](../a100_hardware_envelope_v1/RESULTS.md) measured
-1770.5 GB/s read and 1672.4 GB/s copy at 4 GiB on this hardware class; this
-study reproduces both to within 0.3 percent, which is an independent
-cross-check of two separately written harnesses.
+1770.5 GB/s read and 1672.4 GB/s copy at 4 GiB on this hardware class. This
+study's largest size is 2048 MiB, so the comparison is across sizes rather than
+at one: read measures 1766.4 GB/s here against 1770.5 GB/s there, 0.23 percent
+apart, and copy measures 1678.3 against 1672.4, 0.36 percent apart. Two
+separately written harnesses at two different sizes agree to better than 0.4
+percent.
 
 ## One entailment the freeze should have caught
 
@@ -199,7 +234,12 @@ are fixed at `N` and `K`.
 | `M` = 8192 | 3727.6 us | 3707.4 us | 0.99 |
 
 The effect is confined to shapes whose token count is not a convenient
-multiple, and it vanishes at large `M`. Its practical size is what matters:
+multiple, and it vanishes at large `M`. The size quoted here is the run-1
+shape-to-shape swing between two neighbouring grid points of family G4, `M` = 87
+at 264.9 us against `M` = 64 at 110.2 us, a factor **2.40**, recomputable from
+the retained run-1 file. An earlier draft of this report said 2.9; that figure
+came from comparing non-neighbouring points and is withdrawn. Its practical
+size is what matters:
 under the wrong layout, log-linear interpolation of the held-out shapes carried
 a median absolute percentage error of 32.66 percent and a p95 of 130.83
 percent; under the engine-natural layout the same interpolation over the same
@@ -241,7 +281,10 @@ roofline, exactly as the campaign brief signed: the A100 machine balance is
 granite population puts 13.5 rows on a balanced expert with 54 as the absolute
 ceiling. E-4-1, E-4-2 and E-4-3 all passed.
 
-What the roofline gets wrong is the magnitude, by an order of magnitude:
+What the roofline gets wrong is the magnitude, by an order of magnitude. Over
+all 18 captured cells the measured time is 5.17 to 12.20 times `t_mem`, with
+the minimum at `expert_gate_up` `M_e` = 1 and the maximum at `expert_down`
+`M_e` = 4. Four representative cells:
 
 | Cell | measured | `t_mem` at `R_hbm` | measured over `t_mem` |
 |---|---:|---:|---:|
@@ -284,14 +327,18 @@ happens later.
 The freeze defines the contract's constant as the warm steady state and
 promised the warm-versus-rotated delta as an unscored definition note. It is
 small everywhere it was measured: the worst warm-against-rotated difference at
-64 MiB and above is 0.687 percent, over nine paired cells. The rotation pools
+64 MiB and above is 0.687 percent, over the six paired cells E-5-3 scores,
+which are `scale`, `add` and `rmsnorm` at 64 and at 256 MiB. The rotation pools
 exceeded the 40 MiB L2 by at least a factor 8, so the agreement is not a
 failure to cool the cache. On this device, for streaming kernels of this class,
 choosing the warm definition costs nothing.
 
-The related prediction E-5-4 also held: a 4 MiB scale, whose working set fits
-the L2 comfortably, ran at 1.0024 times its own bytes-over-`R_hbm` time rather
-than faster. A small streaming kernel on this device does not convert L2
+The related prediction E-5-4 also held. E-5-4 bounds how much FASTER than its
+own bytes-over-`R_hbm` time the cell may run, so the scored quantity is
+`t_mem / t_measured` and its ceiling is 1.15. A 4 MiB scale, whose working set
+fits the L2 comfortably, measured 1.0024, meaning it ran 0.24 percent faster
+than the roof rather than the 15 percent the bound allowed. It did not convert
+L2 residency into bandwidth. A small streaming kernel on this device does not convert L2
 residency into bandwidth.
 
 ## Finding 7: two lanes measured the harness rather than the hardware
@@ -299,8 +346,11 @@ residency into bandwidth.
 Two lanes produced numbers that describe the microbenchmark and must not be
 read as A100 properties.
 
-The decode attention kernel reached 5.5 to 13.3 percent of `R_hbm` even after
-repair R5 put four independent online-softmax accumulators in every warp. E-3-3
+The decode attention kernel reached 5.5 to 13.3 percent of `R_hbm` over the six
+cells E-3-3 scores, which are the ones carrying at least 160 MiB of KV traffic,
+and 0.5 to 13.3 percent over all 20 decode cells including the small-batch ones
+E-3-3 does not reach. That is after repair R5 put four independent
+online-softmax accumulators in every warp. E-3-3
 predicted 55 to 100 percent and is refuted for this kernel. The scaling
 diagnostics say why: time grew by 3.02 between batch 64 and batch 256 at
 `L` = 8192 where the KV bytes grew by 4, so the kernel is still gaining
@@ -351,12 +401,15 @@ Delivered, as retained evidence from a void run:
 
 - the measured HBM roof and its size dependence;
 - the clock-conditioned constants of 246 boosted cells and 18 base cells, with
-  their per-batch clock states, batch-mean spreads and per-repetition series
-  summaries, in `measurements/results.json`;
+  their per-batch clock states, batch-mean spreads, per-repetition series
+  summaries and per-cell mean host launch-loop and device batch times, in
+  `measurements/results.json`;
 - the per-family roofline efficiency surfaces over the knee-anchored grids;
 - the measured per-boundary event-instrumentation cost and the uninstrumented
   back-to-back kernel period;
-- the warm-versus-rotated deltas.
+- the warm-versus-rotated deltas;
+- the run-1 evaluation of every scored expectation beside run 2's, and the
+  excluded cell's per-batch host and device times.
 
 Withheld deliberately:
 
@@ -369,6 +422,13 @@ Withheld deliberately:
   `RooflineProvider(efficiency=0.7)` are untouched.
 
 ## What stays open
+
+Three tasks are registered from these findings and are named here so a reader
+can trace each one to the measurement that produced it: **COMP-43** owns the
+fixed per-kernel cost that finding 4 measures, **COMP-45** owns reaching a
+non-void run under a protocol whose stability precondition survives the absent
+clock control, and **COMP-46** owns replacing the decode attention kernel of
+finding 7.
 
 - **COMP-1 stays open** on both of its blockers. This study captured no
   production framework kernel, replayed no SASS and calibrated no Accel-Sim

@@ -115,7 +115,7 @@ raw mode difference `P_eager - P_graph` is nearly constant across kernels:
 | `g2` | 1.4150 us | 0.3350 us |
 | `g4` | 1.5063 us | 0.4263 us |
 
-A real kernel costs about 1.42 to 1.51 microseconds more per invocation in
+A real kernel costs 1.415 to 1.506 microseconds more per invocation in
 eager mode than in a graph, and that difference barely moves across kernels
 whose own periods span 8.9 to 89.6 microseconds. The null kernel captures 1.08
 of it; the residual 0.34 to 0.43 microseconds is a per-kernel cost that a real
@@ -174,8 +174,13 @@ the central structural result.** Host cost per replay of a `K`-node graph:
 The fitted per-node slope is 0.000297 microseconds at an R-squared of 0.516,
 which is a way of saying there is no trend to fit: replaying a 256-node graph
 costs the host the same 1.6 microseconds as replaying a 1-node graph. At
-`K` = 256 the host pays 6.5 nanoseconds per enqueued kernel against 1.626
-microseconds in eager mode, a factor of 251.
+`K` = 256 the host pays 6.47 nanoseconds per enqueued kernel against 1.626
+microseconds per eager launch at the same `K`, a factor of 251. Two nearby
+numbers describe different quantities and are kept apart throughout: 1.6296
+microseconds is the FITTED SLOPE of eager host loop time against `K` over
+`K` in [8, 256], while 1.626 microseconds is the MEASURED PER-LAUNCH COST at
+the single point `K` = 256, which is also the minimum of that quantity over
+the sweep and therefore the lower end of the profile's empirical range.
 
 **The Turing constant does not transfer, and `H6` measured by how much.** The
 accepted COMP-2 `eager-host-bound` point is 2,364,255 ps. This host and GPU
@@ -194,8 +199,8 @@ evidence.
 
 | Profile | launch class | point | empirical range |
 |---|---|---:|---|
-| `a100-epyc-eager-host` | `eager-host-bound` | 1,629,633 ps | 1,625,986 to 1,927,260 ps |
-| `a100-epyc-cuda-graph` | `cuda-graph-node` | 25,745 ps at `K_ref` = 64 | 6,468 to 199,308 ps |
+| `a100-epyc-eager-host` | `eager-host-bound` | 1,629,633 ps, the fitted slope | 1,625,986 to 1,927,260 ps, the measured per-launch cost over `K` in [8, 256] |
+| `a100-epyc-cuda-graph` | `cuda-graph-node` | 25,745 ps, the measured per-enqueued-kernel cost at `K_ref` = 64 | 6,468 to 199,308 ps, the same quantity over `K` in [8, 256] |
 
 The graph profile also carries a fixed per-replay cost of 1,647,674 ps that the
 calibrated profile form has nowhere to put.
@@ -212,8 +217,17 @@ was invented for it.
 ## Quantity 3: the device inter-kernel gap, reserved
 
 Recorded with provenance and wired to nothing, as the campaign brief requires.
-A test walks every module under `simllm` with an AST parse and asserts neither
-value appears as an integer literal and no identifier names the quantity.
+A test walks every `*.py` module under `simllm` with an AST parse and asserts
+that none of the nine published integers, the two reserved-gap constants and
+the seven profile constants, appears as an integer literal, and that no
+identifier or attribute name matches the vocabulary a real wiring would use.
+The scan scope is stated rather than implied: it covers Python sources under
+`simllm` only. It does not cover the C++ under `simllm/backends/rnic`, the
+tracked JSON artifacts, or anything under `examples` and `tests`, where the
+constants are published on purpose. A wiring that reached the model through a
+non-Python path or through a value computed at run time would not be caught by
+it, and it is a fence against introducing one rather than a proof that none can
+exist.
 
 | Constant | Value |
 |---|---:|
@@ -238,16 +252,26 @@ different kernels together costs no more than chaining each of them alone.
 
 Three numbers here were measured before, by different harnesses:
 
-| Quantity | This study | Independent value | Source |
-|---|---:|---:|---|
-| graph replay period per node, null kernel | 0.7957 us | 0.791 us | a100 hardware envelope |
-| eager back-to-back period, null kernel | 1.8757 us | 1.806 us, 1.904 us | a100 hardware envelope, stage 1 |
-| `g4` back-to-back period, eager | 89.556 us | 89.648 us | stage 1 |
-| `g2` back-to-back period, eager | 18.793 us | 18.816 us | stage 1 |
-| `g1` back-to-back period, eager | 8.944 us | 9.072 us | stage 1 |
+| Quantity | This study | Independent value | Source | Difference |
+|---|---:|---:|---|---:|
+| graph replay period per node, null kernel | 0.7957 us | 0.791 us | a100 hardware envelope | 0.59 percent |
+| eager back-to-back period, null kernel | 1.8757 us | 1.806 us | a100 hardware envelope | **3.86 percent** |
+| eager back-to-back period, null kernel | 1.8757 us | 1.904 us | stage 1 | 1.49 percent |
+| `g4` back-to-back period, eager | 89.556 us | 89.648 us | stage 1 | 0.10 percent |
+| `g2` back-to-back period, eager | 18.793 us | 18.816 us | stage 1 | 0.12 percent |
+| `g1` back-to-back period, eager | 8.944 us | 9.072 us | stage 1 | 1.41 percent |
 
 Four separately written harnesses across three Slurm jobs agree to within 1.5
-percent on every one. That is the strongest evidence in this campaign that the
+percent on five of these six comparisons. The sixth does not: the eager
+back-to-back null-kernel period differs from the A100 hardware envelope's
+pipelined launch by 3.86 percent, which is the largest disagreement anywhere in
+the campaign. Stage 1's own value for the same quantity is 1.904 us, so this
+study sits between the two prior measurements and 3.86 percent is the spread
+across all three rather than an error in one of them. An earlier draft of this
+report claimed 1.5 percent on every row; it reached that number by quoting the
+more favourable of the two independent values for this quantity, and the claim
+is withdrawn. The four GEMM and graph-node rows still agree to better than 1.5
+percent, and that remains the strongest evidence in this campaign that the
 numbers describe the device rather than a harness.
 
 ## Physical sanity review
@@ -289,9 +313,14 @@ and neither is so large as to be implausible.
   calibrated host profile form.
 - **COMP-47** is registered for a non-void graph-launch run, since `GG7` as
   frozen cannot be met by a sweep that includes chains of one kernel.
-- The device-side per-kernel cost is launch-mode conditioned by about 1.4 to
-  1.5 microseconds and the split between kernel service and front-end gap is
-  unmeasured, because this driver refuses per-kernel timing inside a captured
-  graph. Separating them needs a different mechanism.
+- **COMP-48** is registered to own the qualification of the kernel-time
+  determinism contract's CUDA-graph clause. The measurement shows the
+  device-side per-kernel cost is launch-mode conditioned by 1.415 to 1.506
+  microseconds; it does not show whether that belongs to kernel service time or
+  to a device front-end gap, because this driver refuses per-kernel timing
+  inside a captured graph. Those are two different models with two different
+  consequences for the contract, and the maintainer's ruling on which one holds
+  is pending. This report takes no position between them and COMP-48 stays
+  framed neutrally until the ruling lands.
 - Everything here is one A100 SXM4 80 GB on one AMD EPYC host with one driver.
   The host-issue constants explicitly do not transfer across hosts.

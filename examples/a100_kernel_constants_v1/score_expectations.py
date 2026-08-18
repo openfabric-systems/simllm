@@ -125,6 +125,12 @@ def reduce_cell(cell: dict) -> dict:
         )
         if device > 0
     ]
+    host_seconds = [value * 1e-3 for value in cell.get("batch_host_ms", [])]
+    device_seconds = [value * 1e-3 for value in cell["batch_ms"]]
+    reduced["_host_loop_seconds"] = host_seconds
+    reduced["_device_batch_seconds"] = device_seconds
+    reduced["host_loop_mean_s"] = statistics.fmean(host_seconds) if host_seconds else 0.0
+    reduced["device_batch_mean_s"] = statistics.fmean(device_seconds) if device_seconds else 0.0
     reduced["host_ratio_max"] = max(host_ratios) if host_ratios else 0.0
     reduced["host_ratio_median"] = (
         statistics.median(host_ratios) if host_ratios else 0.0
@@ -286,17 +292,8 @@ class Guards:
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--boosted", required=True)
-    parser.add_argument("--base", required=True)
-    parser.add_argument("--identity", required=True)
-    parser.add_argument("--out", required=True)
-    args = parser.parse_args()
-
-    boosted_raw = json.loads(Path(args.boosted).read_text(encoding="utf-8"))
-    base_raw = json.loads(Path(args.base).read_text(encoding="utf-8"))
-    identity_text = Path(args.identity).read_text(encoding="utf-8")
+def score_run(boosted_raw: dict, base_raw: dict, identity_text: str) -> dict:
+    """Evaluate one run against the freeze and the refreeze, and return it."""
 
     boosted_all = {cell["id"]: reduce_cell(cell) for cell in boosted_raw["cells"]}
     base_all = {cell["id"]: reduce_cell(cell) for cell in base_raw["cells"]}
@@ -311,6 +308,11 @@ def main() -> None:
             "arm": cell["arm"],
             "host_ratio_max": cell["host_ratio_max"],
             "host_ratio_median": cell["host_ratio_median"],
+            "host_loop_mean_s": cell["host_loop_mean_s"],
+            "device_batch_mean_s": cell["device_batch_mean_s"],
+            "host_loop_seconds": cell["_host_loop_seconds"],
+            "device_batch_seconds": cell["_device_batch_seconds"],
+            "group": cell["group"],
         }
         for cell in list(boosted_all.values()) + list(base_all.values())
         if cell["host_issue_bound"]
@@ -1131,27 +1133,111 @@ def main() -> None:
         "scored": scored.rows,
         "fatal_guards": guards.rows,
         "cells": {
-            "boosted": sorted(boosted_all.values(), key=lambda cell: cell["id"]),
-            "base": sorted(base_all.values(), key=lambda cell: cell["id"]),
+            "boosted": [
+                {k: v for k, v in cell.items() if not k.startswith("_")}
+                for cell in sorted(boosted_all.values(), key=lambda cell: cell["id"])
+            ],
+            "base": [
+                {k: v for k, v in cell.items() if not k.startswith("_")}
+                for cell in sorted(base_all.values(), key=lambda cell: cell["id"])
+            ],
         },
         "holdout_rows": holdout_rows,
     }
+    return results
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--boosted", required=True)
+    parser.add_argument("--base", required=True)
+    parser.add_argument("--identity", required=True)
+    parser.add_argument("--out", required=True)
+    parser.add_argument(
+        "--previous-boosted",
+        help="raw boosted output of an earlier run, scored by this same code and "
+        "published beside this run as the refreeze promised",
+    )
+    parser.add_argument("--previous-base")
+    parser.add_argument("--previous-identity")
+    parser.add_argument("--previous-label", default="run-1")
+    args = parser.parse_args()
+
+    identity_text = Path(args.identity).read_text(encoding="utf-8")
+    results = score_run(
+        json.loads(Path(args.boosted).read_text(encoding="utf-8")),
+        json.loads(Path(args.base).read_text(encoding="utf-8")),
+        identity_text,
+    )
+
+    if args.previous_boosted and args.previous_base:
+        previous_identity = (
+            Path(args.previous_identity).read_text(encoding="utf-8")
+            if args.previous_identity
+            else identity_text
+        )
+        previous = score_run(
+            json.loads(Path(args.previous_boosted).read_text(encoding="utf-8")),
+            json.loads(Path(args.previous_base).read_text(encoding="utf-8")),
+            previous_identity,
+        )
+        previous_scored = {row["id"]: row for row in previous["scored"]}
+        results["previous_run"] = {
+            "label": args.previous_label,
+            "verdict": previous["verdict"],
+            "voiding_guards": previous["voiding_guards"],
+            "scored_passed": previous["scored_passed"],
+            "scored_failed": previous["scored_failed"],
+            "scored_unevaluated": previous["scored_unevaluated"],
+            "measured_hbm_roof_bytes_per_second": previous[
+                "measured_hbm_roof_bytes_per_second"
+            ],
+            "scored": [
+                {
+                    "id": row["id"],
+                    "status": row["status"],
+                    "evaluated": row["evaluated"],
+                }
+                for row in previous["scored"]
+            ],
+            "comparison": [
+                {
+                    "id": row["id"],
+                    "previous_status": previous_scored[row["id"]]["status"],
+                    "status": row["status"],
+                }
+                for row in results["scored"]
+            ],
+        }
+
     Path(args.out).write_text(
         json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
     )
     print(
-        f"verdict={results['verdict']} scored={passed} pass / {failed} fail / "
-        f"{unevaluated} unevaluated of {len(scored.rows)} "
-        f"R_hbm={r_hbm / 1e9:.2f} GB/s "
-        f"event_boundary={boundary_cost * 1e6:.3f} us "
-        f"host_bound_cells={len(host_bound)}"
+        f"verdict={results['verdict']} scored={results['scored_passed']} pass / "
+        f"{results['scored_failed']} fail / {results['scored_unevaluated']} unevaluated "
+        f"of {results['scored_total']} "
+        f"R_hbm={results['measured_hbm_roof_bytes_per_second'] / 1e9:.2f} GB/s "
+        f"event_boundary={results['instrumentation_per_boundary_cost_s'] * 1e6:.3f} us "
+        f"host_bound_cells={len(results['host_issue_bound_cells'])}"
     )
-    for row in scored.rows:
-        if not row["passed"]:
-            print(f"  FAIL {row['id']}: {row['evaluated']}")
-    for row in guards.rows:
+    if "previous_run" in results:
+        moved = [
+            row
+            for row in results["previous_run"]["comparison"]
+            if row["previous_status"] != row["status"]
+        ]
+        print(f"  previous run: {results['previous_run']['verdict']}, {len(moved)} rows moved")
+    for row in results["scored"]:
+        if row["passed"] is not True:
+            print(f"  {row['status'].upper()} {row['id']}: {row['evaluated']}")
+    for row in results["fatal_guards"]:
         if not row["held"]:
-            label = "SURVIVABLE GUARD" if row["id"] in survivable else "GUARD VIOLATED"
+            label = (
+                "SURVIVABLE GUARD"
+                if row["id"] in results["survivable_guards"]
+                else "GUARD VIOLATED"
+            )
             print(f"  {label} {row['id']}: {row['evaluated']}")
 
 

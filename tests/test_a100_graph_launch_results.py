@@ -100,10 +100,11 @@ def test_the_reserved_device_gap_is_recorded_and_wired_to_nothing(results: dict)
     """The seed constant is published with provenance and consumed by no code.
 
     The source side of this lock is AST-based rather than a substring scan: it
-    walks every module under ``simllm`` and looks for the reserved picosecond
-    values as integer literals and for any identifier that names the quantity.
-    A substring scan over the raw text would be fooled by a comment and would
-    fire on one inside a docstring.
+    walks every ``*.py`` module under ``simllm`` and looks for all nine
+    published picosecond values as integer literals, and for any identifier or
+    attribute a real wiring would use. A substring scan over the raw text would
+    be fooled by a comment and would fire on one inside a docstring. The scan
+    covers Python sources under ``simllm`` only, which RESULTS.md states.
     """
 
     reserved = results["reserved_device_gap"]
@@ -116,9 +117,35 @@ def test_the_reserved_device_gap_is_recorded_and_wired_to_nothing(results: dict)
     assert reserved["provenance"].startswith("examples/a100_graph_launch_v1")
 
     forbidden_values = {graph_ps, eager_ps}
-    forbidden_names = ("null_kernel_period", "in_graph_gap", "graph_launch")
+    for profile in results["output_profiles"].values():
+        for field in (
+            "point_ps",
+            "empirical_min_ps",
+            "empirical_max_ps",
+            "fixed_per_replay_ps",
+        ):
+            value = profile.get(field)
+            if isinstance(value, int):
+                forbidden_values.add(value)
+    # Nine integers: the two reserved-gap constants and the seven the two
+    # withheld host profiles carry.
+    assert len(forbidden_values) == 9
+    forbidden_names = (
+        "null_kernel_period",
+        "in_graph_gap",
+        "graph_launch",
+        "a100_epyc",
+        "a100epyc",
+        "epyc_eager",
+        "epyc_cuda_graph",
+        "graph_node_cost",
+        "eager_host_cost",
+        "front_end_gap",
+    )
     package = Path(__file__).resolve().parents[1] / "simllm"
+    scanned = 0
     for path in sorted(package.rglob("*.py")):
+        scanned += 1
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.Constant) and isinstance(node.value, int):
@@ -127,6 +154,49 @@ def test_the_reserved_device_gap_is_recorded_and_wired_to_nothing(results: dict)
                 assert not any(part in node.id for part in forbidden_names), path
             if isinstance(node, ast.Attribute):
                 assert not any(part in node.attr for part in forbidden_names), path
+    # The scan scope is asserted rather than assumed, and RESULTS states it.
+    assert scanned > 20
+    report = (STUDY / "RESULTS.md").read_text(encoding="utf-8")
+    assert "It does not cover the C++ under `simllm/backends/rnic`" in report
+
+
+def test_the_registry_entry_carries_the_void_and_not_a_score_disclaimer() -> None:
+    """COMP-47 must not quote 14 of 15 as if it were a score.
+
+    Stage 1's disclaimer is locked as a string in its own report; this locks
+    stage 2's in both places it appears, the report and the registry entry that
+    cites it, so a later edit cannot quietly turn a void run into a fraction.
+    """
+
+    report = RESULTS_MD.read_text(encoding="utf-8")
+    assert "The reviewed study state is `VOID`" in report
+    assert "**That 14 is not a\nscore.**" in report
+
+    registry = (
+        Path(__file__).resolve().parents[1] / "docs" / "modules" / "compute.md"
+    ).read_text(encoding="utf-8")
+    entry_start = registry.index("- COMP-47 (Precision; P1; L)")
+    entry = registry[entry_start : registry.index("\n- COMP-4", entry_start + 10)]
+    assert "reviewed `VOID`" in entry
+    assert "that 14 is not a score" in entry
+    assert "uninterpretable" in entry
+    assert "14 of its 15" not in entry
+
+
+def test_the_contract_clause_points_at_the_finding_and_the_pending_ruling() -> None:
+    """The refuted clause must be discoverable from the contract text."""
+
+    registry = (
+        Path(__file__).resolve().parents[1] / "docs" / "modules" / "compute.md"
+    ).read_text(encoding="utf-8")
+    clause = registry[registry.index("**CUDA-graph launch and eager launch differ") :][:2400]
+    assert "examples/a100_graph_launch_v1/RESULTS.md" in clause
+    assert "pending" in clause
+    assert "COMP-48" in clause
+    # The standing ruling text itself is untouched: the sentence still stands.
+    assert (
+        "The launch class never reaches kernel service time." in clause
+    )
 
 
 def test_the_output_profiles_carry_their_definition_and_range(results: dict) -> None:

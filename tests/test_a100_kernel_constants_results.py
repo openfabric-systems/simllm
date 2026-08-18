@@ -11,6 +11,7 @@ means anything.
 
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 
@@ -192,3 +193,89 @@ def test_no_calibrated_profile_table_is_published(results: dict) -> None:
     assert not (STUDY / "profile_table_a100.json").exists()
     assert not list(STUDY.glob("**/*profile_table*.json"))
     assert results["verdict"] == "void"
+
+
+def test_no_void_constant_reached_the_model(results: dict) -> None:
+    """The stage-1 equivalent of stage 2's non-publication guard.
+
+    Globbing inside the study directory only shows that no table file was
+    written there. It says nothing about a constant reaching the model by
+    another route. This walks every ``*.py`` module under ``simllm`` with an
+    AST parse and asserts that neither the measured HBM roof, the measured
+    per-boundary instrumentation cost, nor any lane-1 or MoE constant appears
+    as an integer literal, and that no identifier names the study. Scope: the
+    Python sources under ``simllm`` only, which is the same scope stage 2
+    declares in its report.
+    """
+
+    forbidden_values = {
+        round(results["measured_hbm_roof_bytes_per_second"]),
+        round(results["instrumentation_per_boundary_cost_s"] * 1e12),
+        round(results["instrumentation_event_only_period_s"] * 1e12),
+    }
+    for cell in results["cells"]["boosted"]:
+        if cell["void_for_scoring"]:
+            continue
+        if cell["lane"] in {"1", "4"}:
+            forbidden_values.add(cell["constant_ps"])
+    assert len(forbidden_values) > 20
+    forbidden_names = (
+        "kernel_constants",
+        "a100_kernel_constant",
+        "measured_hbm_roof",
+        "r_hbm",
+        "clock_conditioned_constant",
+        "event_boundary_cost",
+    )
+    package = Path(__file__).resolve().parents[1] / "simllm"
+    scanned = 0
+    for path in sorted(package.rglob("*.py")):
+        scanned += 1
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant) and isinstance(node.value, int):
+                assert node.value not in forbidden_values, f"{path}:{node.lineno}"
+            if isinstance(node, ast.Name):
+                assert not any(part in node.id.lower() for part in forbidden_names), path
+            if isinstance(node, ast.Attribute):
+                assert not any(part in node.attr.lower() for part in forbidden_names), path
+    assert scanned > 20
+
+
+def test_the_run_one_evaluation_is_published_beside_run_two(results: dict) -> None:
+    """The refreeze promised this unscored record; it must actually be there."""
+
+    previous = results["previous_run"]
+    assert previous["verdict"] == "void"
+    assert previous["label"].startswith("run 1")
+    assert len(previous["scored"]) == results["scored_total"]
+    comparison = {row["id"]: row for row in previous["comparison"]}
+    assert len(comparison) == results["scored_total"]
+    moved = [row for row in comparison.values() if row["previous_status"] != row["status"]]
+    assert {row["id"] for row in moved} == {"E-1-7", "E-2-9", "E-3-2", "E-3-5", "E-4-2"}
+    # The repairs did not simply buy passes: two rows moved the other way.
+    regressed = [row for row in moved if row["status"] == "fail"]
+    assert {row["id"] for row in regressed} == {"E-1-7", "E-3-5"}
+
+
+def test_the_excluded_cell_publishes_its_host_and_device_times(results: dict) -> None:
+    """G13's remainder names both times, not only the ratio."""
+
+    excluded = results["host_issue_bound_cells"]
+    assert len(excluded) == 1
+    row = excluded[0]
+    assert row["host_loop_mean_s"] > 0
+    assert row["device_batch_mean_s"] > row["host_loop_mean_s"]
+    assert len(row["host_loop_seconds"]) == len(row["device_batch_seconds"]) == 12
+    assert row["host_ratio_max"] == pytest.approx(
+        max(h / d for h, d in zip(row["host_loop_seconds"], row["device_batch_seconds"], strict=True))
+    )
+
+
+def test_every_cell_publishes_its_host_and_device_batch_means(results: dict) -> None:
+    """The per-batch host wall time is published as a time, not only a ratio."""
+
+    for arm in ("boosted", "base"):
+        for cell in results["cells"][arm]:
+            assert cell["host_loop_mean_s"] >= 0
+            assert cell["device_batch_mean_s"] > 0
