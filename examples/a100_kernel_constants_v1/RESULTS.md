@@ -63,7 +63,16 @@ matching its commit.
 | `refreeze_expectations.md` | `d4e2b0ffd6a941249d46d1c245446cb0f2641967c6f7199571e758c9e6206e7e` |
 | run 2 boosted raw | `bdfc2efaac77018fbdc641249f4195475b6013a0e08deaf3ae88c5fff05232ad` |
 | run 2 base raw | `822c8ffeb07674625dd9d87d795b351be65ae1b6f82afaa7dc449cf2fae0e12e` |
-| `measurements/results.json` | `bef749281f2767ef81e9906561c3334e70dad5918cb016893b142c66e6b4fd15` |
+| `measurements/results.json` | `c2233dbd86a2acec858c0b9b2f599e0d64212e33d8b354d51ad41a0159cb0577` |
+
+The results file was regenerated once after first publication, to add the three
+records the refreeze had promised and this report had not delivered: the run-1
+evaluation beside run 2's, the per-cell mean host launch-loop and device batch
+times rather than only their ratio, and the excluded cell's two series. Its
+earlier digest was
+`bef749281f2767ef81e9906561c3334e70dad5918cb016893b142c66e6b4fd15`. No measured
+value, bound, verdict or guard outcome changed in that regeneration; the two
+raw files it is derived from are unchanged and their digests above still hold.
 
 Neither expectations document was edited after any run. Two post-run repairs
 were made to the scoring script only and are disclosed here: it learned to read
