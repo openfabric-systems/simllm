@@ -116,3 +116,24 @@ def test_mutation_is_detected():
     truncated = dict(manifest)
     truncated[rel] = dict(truncated[rel], bytes=manifest[rel]["bytes"] + 1)
     assert _verify(truncated, RESULTS) != []
+
+
+def test_dataset_guard_accepts_the_preserved_manifest_snapshot():
+    # Correction 10: after a capture fold-in advances the living
+    # manifest, FG-1 must verify the frozen snapshot instead of
+    # voiding. On the current tree the living manifest has moved, so
+    # this exercises the snapshot path end to end; the negative
+    # control mutates the resolved manifest bytes and must void.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "analyze_recalibration",
+        RESULTS.parent / "analyze_recalibration.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    fatal: list[str] = []
+    mod.verify_dataset(mod.DEFAULT_DATASET, fatal)
+    assert fatal == [], f"FG-1 must accept the frozen snapshot: {fatal}"
+    bogus: list[str] = []
+    mod.FROZEN_DATASET_MANIFEST_SHA256 = "0" * 64
+    mod.verify_dataset(mod.DEFAULT_DATASET, bogus)
+    assert bogus and "FG-1" in bogus[0], "mutated pin must fail closed"

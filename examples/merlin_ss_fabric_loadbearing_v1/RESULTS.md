@@ -381,6 +381,24 @@ to their commits; no band, verdict or registered value changed.
    freeze's deliverable list named (the safe direction: the rules
    preceded every tracked artifact they cover).
 
+- Correction 10 (post-published, fold-in compatibility, 2026-08-18
+  evening): the FG-1 dataset clause originally hashed the LIVING
+  capture MANIFEST.json against the frozen digest, which voided every
+  rerun the moment the capture study's committed fold-in protocol
+  advanced the dataset (the tranche-2 landing did exactly that, and
+  the same protocol delivered the x4 cell this study consumed). The
+  clause now verifies the freeze's actual claim: it accepts the living
+  manifest only while it still is the frozen version, and otherwise
+  requires the preserved byte-exact snapshot at
+  dataset/manifest_versions/ under the frozen digest, failing closed
+  on absence or self-hash mismatch, with the consumed files verified
+  against the frozen entries either way. The guard's recorded basis is
+  unchanged (the frozen digest), the analyzer rerun on the
+  post-fold-in dataset reproduces the tracked summary byte for byte,
+  and the companion CI test performs the matching snapshot
+  verification. This mirrors, one level deeper, the disclosed test
+  repoint the tranche-2 landing made for the same reason.
+
 ## Reproduction
 
 ```bash

@@ -189,10 +189,28 @@ def derive_x4_inputs(dataset_root: Path) -> dict[str, object]:
 
 
 def verify_dataset(dataset_root: Path, fatal: list[str]) -> None:
+    # The freeze's claim is the CONSUMED manifest version, not the living
+    # dataset tip: the capture study's committed fold-in protocol advances
+    # MANIFEST.json, preserving each superseded version byte-exact and
+    # self-verifying under dataset/manifest_versions/<its sha256>.json.
+    # Accept the living manifest only while it still IS the frozen version;
+    # otherwise require the preserved snapshot and fail closed on absence
+    # or self-hash mismatch. The guard's recorded basis is the frozen
+    # digest either way (post-published amendment, disclosed in RESULTS
+    # correction 10; published outputs proven byte-identical).
     manifest_path = dataset_root / "MANIFEST.json"
     if sha256_file(manifest_path) != FROZEN_DATASET_MANIFEST_SHA256:
-        fatal.append("FG-1: dataset manifest sha mismatch")
-        return
+        snapshot = (dataset_root / "manifest_versions"
+                    / f"{FROZEN_DATASET_MANIFEST_SHA256}.json")
+        if not snapshot.is_file():
+            fatal.append("FG-1: frozen dataset manifest version absent "
+                         "(neither the living manifest nor a preserved "
+                         "snapshot matches the freeze)")
+            return
+        if sha256_file(snapshot) != FROZEN_DATASET_MANIFEST_SHA256:
+            fatal.append("FG-1: manifest snapshot fails its self-hash")
+            return
+        manifest_path = snapshot
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     consumed = ["stats/x4-incast_stats.json"] + [
         f"x4-incast/x4-incast_flow{i}_dest.csv.gz" for i in range(4)]
