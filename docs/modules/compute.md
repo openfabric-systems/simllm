@@ -1532,6 +1532,19 @@ and an explicit reason:
   comparison against the current kernel on the identical grid; and the off path
   reproducing the published constants of this study exactly. This is P2 while
   no study consumes a decode attention constant and becomes P1 when one does.
+- COMP-49 (Completeness; P1; M): reify the xPU's inter-subsystem
+  communication as a streaming crossbar behind the common interface. The
+  README states the device as pluggable subsystems, the hardware scheduler,
+  HBM, the copy engines, the PCIe host port and the scale-up ports,
+  communicating over one common interface. Today the service model couples
+  them through direct cursor and budget references with no reified
+  interconnect object. Add a crossbar of point-to-point streaming lanes: a
+  subsystem pushes work descriptors down a lane and consumes them from the
+  far end, with no shared bus, since the model deliberately has no NoC on
+  the GPU; the crossbar is contention-free by design and every crossing
+  emits an observability event. The default composition must preserve every
+  accepted baseline byte for byte. BACK-53 owns the RNIC counterpart, a
+  NoC-like signal-slot bus whose contention is a registered future upgrade.
 
 ### Uncategorized
 

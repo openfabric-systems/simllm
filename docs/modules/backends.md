@@ -1317,6 +1317,20 @@ created" statement stands and refers to different, never-registered work.
   Refuse reuse of a released domain, or retire its cursors with the claim.
   Acceptance: a reclaimed domain cannot inherit a cursor, the rejection or
   retirement is tested, and every accepted timestamp stays byte-identical.
+- BACK-53 (Completeness; P1; L): reify the RNIC's inter-subsystem
+  communication as a signal-slot event bus behind the common interface. The
+  README states the device at the top level as three pluggable subsystems,
+  the congestion-control algorithm (CCA), the PCIe engine with the DMA
+  controller, and QPC management, communicating over one common interface.
+  Today the landed modular entry point composes those modules, but their
+  interactions ride direct calls with no reified interconnect object. Add a
+  Qt-style signal-slot bus: each subsystem declares named signals and slots
+  at its boundary, connections are declared at composition time, and every
+  crossing emits an observability event on the existing stream. Shape the
+  bus like a NoC so a later precision task can price arbitration and
+  contention; this landing is contention-free by construction with zero bus
+  cost, and the default composition must preserve every accepted artifact
+  byte for byte. COMP-49 owns the xPU counterpart, a streaming crossbar.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 

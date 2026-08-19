@@ -232,47 +232,67 @@ wire port goes out to the fabric.
 ### The xPU device
 
 The accelerator is modeled the way the NIC is, as boxes already: the
-GPU composition entry point with typed PCIe and NVLink ports is landed
-and validated through the live metric chain
-([device-port study](examples/gpu_device_ports_v1/RESULTS.md)). The
-boxes are a compute core (SM and warp scheduling, issue budgets), an
-HBM module (the memory cursor every memory-bound kernel is pinned to),
-a PCIe host interface attached to the same shared PCIe fabric as the
-RNIC, and scale-up ports: NVLink today, with the AMD equivalent
-(xGMI / Infinity Fabric) and UALink behind the same port interface
-([COMP-35](docs/modules/compute.md#open-tasks)). Kernel service times
-are deterministic constants, a pure function of kernel family, phase,
-shape and the architecture profile; latency tails come from the
+composition entry point with typed PCIe and NVLink ports is landed and
+validated through the live metric chain
+([device-port study](examples/gpu_device_ports_v1/RESULTS.md)). Its
+pluggable subsystems are the hardware scheduler (SM and warp
+scheduling, issue budgets), HBM (the memory cursor every memory-bound
+kernel is pinned to), the copy engines (DMA), the PCIe host port on the
+same shared PCIe fabric as the RNIC, and the scale-up ports (NVLink
+today; xGMI / Infinity Fabric and UALink behind the same port
+interface, [COMP-35](docs/modules/compute.md#open-tasks)).
+
+```
+  hardware scheduler | HBM | copy engines | PCIe port | scale-up ports
+  ------------------------------------------------------------------
+              common interface: streaming crossbar
+    (no NoC on the GPU: point-to-point, contention-free by design)
+```
+
+Subsystems stream work to each other over a crossbar rather than a
+shared bus; reifying that crossbar as the common interface is
+[COMP-49](docs/modules/compute.md#open-tasks), and the ports' packet
+emission and measured ceilings are
+[COMP-40 and COMP-41](docs/modules/compute.md#open-tasks). Kernel
+service times are deterministic constants; latency tails come from the
 network, batching and queueing, never from per-kernel stochasticity.
-Collectives run as explicitly submitted kernels that compete for SM
-residency, issue budget and egress with the surrounding compute. The
-ports still declare rather than emit packets and carry no measured
-ceilings ([COMP-40, COMP-41](docs/modules/compute.md#open-tasks)); the
-[packet-device model](docs/design/packet-device-model.md) states the
-full target. NVIDIA GPUs are the calibrated first target (A100/H100
-bootstrap profiles, B100 reference deployment); **Google TPU and
-further xPUs are on the way** behind the same device shape, with
-ICI-class scale-up ports.
+NVIDIA GPUs are the calibrated first target; **Google TPU and further
+xPUs are on the way** behind the same device shape, with ICI-class
+scale-up ports.
 
 ### The RNIC device
 
-Built from boxes behind one construction entry point, landed: the
-work-queue core (SQ/CQ, doorbell batches, signaling, backpressure) plus
-DMA (PCIe transactions with finite credits, tags and buffers), QPC
-(connection, context and tracked host memory) and network transport
-modules. The transport and congestion-control policy swaps
-independently of the hardware profile: `rnic-nn` and `rnic-nn-fluid` as
-the ideal baselines, `rnic-cn` explicit-rate, and DCQCN as the RoCEv2
-comparator, with the composed native chain carrying packet-issue
-evidence into TTFT and TPOT. The fabric is a two-tier Clos with
-detailed switch models (VoQ traffic manager, request/grant
-input-buffered); a Slingshot-class dragonfly (Rosetta-style switches,
-progressive adaptive routing) is hosted in the backend, with its
-single-switch Merlin instance validated and multi-switch adaptive
-routing owned by [TRAF-51](docs/modules/traffic.md#open-tasks). The
-reference configuration is 8 nodes x 8 B100 GPUs, one 400G NIC per
-GPU; intra-node traffic rides the scale-up ports and stays off the
-fabric. The remaining device mechanisms are numbered in
+At the top level the RNIC is three pluggable subsystems behind one
+common interface, all composed by the landed construction entry point
+and driven by the work-queue core: the congestion-control algorithm
+(CCA) on the network side, the PCIe engine with the DMA controller
+toward the host, and QPC management for connection and context state.
+The CCA swaps without touching the other two: Data Center Quantized
+Congestion Notification (DCQCN), the Null Network (NN) ideal baseline
+`rnic-nn` with its fluid closed form, and the explicit-rate `rnic-cn`,
+with the composed native chain carrying packet-issue evidence into
+TTFT and TPOT.
+
+```
+  +----------------+   +--------------------+   +----------------+
+  | CCA            |   | PCIe engine (DMA)  |   | QPC management |
+  +-------+--------+   +---------+----------+   +-------+--------+
+          |                      |                      |
+  ========+======================+======================+========
+        common interface: signal-slot event bus (NoC-like;
+                     contention-free today)
+```
+
+The subsystems talk over a Qt-style signal-slot event bus shaped like
+a NoC, so bus contention can be priced later; today the bus is
+contention-free by construction, and reifying it is
+[BACK-53](docs/modules/backends.md#open-tasks). The device feeds a
+two-tier Clos fabric with detailed switch models; a Slingshot-class
+dragonfly is hosted, with multi-switch adaptive routing owned by
+[TRAF-51](docs/modules/traffic.md#open-tasks). The reference
+configuration is 8 nodes x 8 B100 GPUs, one 400G NIC per GPU;
+intra-node traffic rides the scale-up ports and stays off the fabric.
+The remaining device mechanisms are numbered in
 [backends](docs/modules/backends.md).
 
 ### The serving stack around the devices
