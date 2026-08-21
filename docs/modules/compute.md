@@ -898,8 +898,11 @@ labels remain attribution only: relabeling an otherwise identical task does
 not change service.
 Before observation, a mixed cell's physical floor is exactly the maximum of
 the applicable isolated floor for every authored member copy. Width changes
-copy multiplicity but cannot reduce that maximum. Its finite ceiling is the
-same-members serialized control.
+copy multiplicity but cannot reduce that maximum. Its finite ceiling is the sum
+of the applicable member ceilings over every authored copy. The deliberately
+serialized same-members control is a separate measured upper bound checked
+after observation, never the pre-observation ceiling, because a
+pre-observation bound may never borrow a measured value.
 
 Selection is explicit and fail closed. An exact silicon point wins, followed
 by a point covered by an existing validated silicon fit. Per-entry fit support
@@ -1061,11 +1064,14 @@ profiler exports and bulk replay outputs live under the external root
 configured by `SIMLLM_DATA_ROOT`, never in
 Git; the public artifact records their content hashes and provenance.
 
-## COMP-1: offline SASS calibration plan
+## COMP-1: offline device calibration plan
 
 Strictly offline; the step loop never invokes a cycle-level simulator.
 
-- Use a hybrid measured plus SASS pipeline. Raw cycle-simulator output is
+- Anchor every target on its own silicon capture. Target-native measurement is
+  the evidence for A100, H100 and AMD alike. Only the A100 lane may add a
+  qualified SASS replay, and only to fill a declared missing exact cell inside
+  the silicon-validated SM80 envelope. Raw cycle-simulator output is
   never treated as silicon truth. Pin a support envelope for every table:
   framework and commit, model, GPU architecture, CUDA/toolchain, dtype and
   quantization, eager or CUDA-graph mode, kernel implementation, tensor
@@ -1073,16 +1079,19 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   Unsupported combinations miss loudly rather than borrowing a precise-
   looking number.
 - Capture the exact production run first. Nsight/CUPTI metadata records
-  kernel identity, launch order, streams, shapes and silicon durations;
-  NVBit supplies the SASS traces required by Accel-Sim. Key table entries
+  kernel identity, launch order, streams, shapes and silicon durations. On
+  the A100 lane only, NVBit supplies the SASS traces the sidecar needs; the
+  H100 and AMD lanes stop at this capture. Key table entries
   by kernel binary/hash plus the semantic shape, not by a family label alone,
   so a framework or compiler kernel change invalidates the correct entries.
 - Build one replayable microbenchmark per captured kernel implementation.
   It must reproduce launch parameters, tensor layout, dtype, workspace,
   stream/graph mode and relevant cache state. Sweep the captured shape axes,
   not synthetic square GEMMs that the real framework never launches.
-- Replay traces offline with a pinned Accel-Sim/GPGPU-Sim configuration on
-  hardware that the simulator supports. Fit and report calibration residuals
+- On the A100 lane, replay traces offline with the pinned Accel-Sim and
+  GPGPU-Sim configuration inside its qualified SM80 support region. Every
+  other target skips this step entirely and fails closed on a simulator
+  request. Fit and report calibration residuals
   against silicon using train shapes, then evaluate held-out shapes. Launch
   overhead, host delay and queueing are measured separately from kernel
   service, so the SASS table cannot hide a missing runtime queue.
@@ -2006,6 +2015,34 @@ and an explicit reason:
   only the installed ones. A measurement campaign run before COMP-44 supplies
   a non-overlappable term would therefore fail this bar by construction and
   could close nothing.
+- COMP-53 (Precision; P0; S): amend the frozen `transformer-dag-v1` physical
+  sanity and guard contract before its first campaign cell runs. Four defects
+  make the current freeze unevaluable or circular, and no cell has been
+  observed yet, so the amendment lands as a new expectations-only freeze
+  rather than an in-place edit of the existing record. First, `EQ5` maxes over
+  `kernel_floor_ps`, which no equation, contract field or prose defines
+  anywhere in the repository; COMP-43 owns the term it means, but the freeze
+  never says so or says how it is obtained. Second, `EQ6` consumes
+  `applicable_stage_floors_ps`, which no equation produces. Third, the floor
+  half of the contract reads `compute_rate`, `hbm_rate` and `peer_rate`
+  without declaring them, while every ceiling-side input is declared in
+  `finite_campaign_envelope_fields` and bound by `finite_evidence_rule` to
+  preexisting qualified evidence and never the current cell outcome. A floor
+  derived from the measurement it bounds is circular, and a physical-bound
+  violation is a fatal guard, so the asymmetry can void or silently spare a
+  campaign for the wrong reason. Fourth, `G11` separates the timeline, counter
+  and dynamic-instruction passes but omits the mixed pass the same freeze
+  declares, leaving the fourth pass outside the only guard that enforces pass
+  separation. Also settle the mixed-cell denominator a scalar compute-memory
+  envelope inherits: the design statement drops all 28 mixed cells while the
+  suite's own `mixed_rule` requires every cell whose member capabilities are
+  ready, which is the 12 with no communication member. Acceptance: the amended
+  freeze defines every term its equations use, declares and evidence-binds
+  every floor-side input on the same footing as the ceiling side, covers all
+  four passes in the pass-separation guard, states the reduced denominator,
+  and locks its own schema string and the closed `preflight_states` enum in
+  the freeze test. No measured value may be read before it lands, and the
+  amendment cites this chronology.
 
 ### Completeness
 
@@ -2036,7 +2073,9 @@ and an explicit reason:
   exactly one resident stage per plan rank is a separate resolver and CORE-26
   composition constraint, never permission to coalesce or drop capture rows.
   COMP-50 owns both binding schemas plus their identity, shape and selector
-  schemas; VLLM-12 and SGL-10 are thin producers. This task owns capture
+  schemas; this task additionally owns `simllm-moe-routing-sidecar-v1`, the
+  routing evidence a captured MoE graph needs.
+  VLLM-12 and SGL-10 are thin producers. This task owns capture
   projection, topology normalization, activity joins and validation of both
   frozen ledgers. It does not absorb COMP-17's per-layer timing projection.
   When physical capture is disabled, every existing graph, aggregate record,
@@ -2226,7 +2265,12 @@ and an explicit reason:
 - COMP-50 (Completeness; P1; L): deliver the vendor-neutral offline calibration
   package and compact device-model contract. Own
   `simllm-device-calibration-bundle-v1`, `simllm-device-model-v1`, canonical
-  record and content-hash rules, noncollective and collective-stage binding
+  record and content-hash rules including
+  `simllm-calibration-canonical-bytes-v1`, the narrower
+  `simllm-calibration-canonical-ascii-conformance-v1` subset and the
+  independent C++17 verifier that covers only that subset,
+  `simllm-calibration-token-fixture-v1`,
+  noncollective and collective-stage binding
   schemas and pure resolvers, shape and implementation identities, typed
   resource axes with known masks, strict validators, generic split and fit
   orchestration, compilers, the `HardwareCollector` and

@@ -347,8 +347,8 @@ fidelity plan).
 - [ ] M5 (in progress): MoE all-to-all studies with captured expert
       routing driving the traffic, plus offline calibration. The pre-play
       oracle's capture, join, replay and routed-supply halves are
-      validated; SASS compute calibration and the independent CPU
-      comparison half of the oracle remain
+      validated; target-native device compute calibration and the
+      independent CPU comparison half of the oracle remain
 - [ ] M6: PD-disaggregation and KV-transfer traffic modeling
 - [ ] M7 (in progress): the rest of the RNIC module set. The composition
       entry point, the PCIe/DMA slice, virtual host memory, the three

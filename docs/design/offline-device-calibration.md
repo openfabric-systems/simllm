@@ -173,10 +173,11 @@ closure. Both pure resolvers consume the total selected-model tuple, not one
 global model. The traffic plan supplies topology but never chooses an
 implementation. Version 1 supports exactly one resident stage per rank and
 rejects multi-stage composition until stream and dependency evidence identifies
-its order. Each rank carries a `CollectiveDeviceRankFrontier` whose plan hash,
-rank, one stage ordinal, entry action IDs and terminal action IDs match the
-traffic plan exactly. A static device model never enumerates future graph
-instance hashes. Calibrated mode rejects a missing or extra binding, a
+its order. Each rank carries a `CollectiveDeviceRankFrontier` whose parent
+collective operation, plan hash, rank, one stage ordinal, entry action IDs and
+terminal action IDs match the traffic plan exactly. A static device model
+never enumerates future graph instance hashes. Calibrated mode rejects a
+missing or extra binding, a
 device/model mismatch, a stage also scheduled as `ComputeWork`, and every
 kernel-name fallback.
 
@@ -350,8 +351,12 @@ ceiling. A mixed cell's pre-observation floor is exactly the maximum of the
 applicable isolated floor for every authored member copy; width changes copy
 multiplicity but cannot reduce that maximum. Before reading a result, every
 cell also records either a defensible
-finite first-principles ceiling or the explicit value `unbounded`; mixed cells
-use the same-members serialized control as their finite ceiling. Fatal
+finite first-principles ceiling, or, for an isolated or graph cell with no
+defensible finite bound, the explicit value `unbounded`. A mixed cell's finite
+ceiling is the sum of the applicable member ceilings over every authored copy.
+The deliberately serialized same-members control is a separate measured upper
+bound checked after observation, never the pre-observation ceiling, because a
+pre-observation bound may never borrow a measured value. Fatal
 identity, conservation, clock, split and physical-bound guards void the
 campaign rather than reducing a score.
 
@@ -480,7 +485,7 @@ externally visible boundary becomes integer picoseconds.
 
 Load builds and validates indexes once in `O(N log N)`. The hot path performs
 no artifact parsing, fitting, subprocess execution or instruction replay.
-For `k` resident requests and `R` declared resource axes, one device event is
+For `k` resident requests and `R` active resource axes, one device event is
 bounded by `O(kR)` and resident state by `O(kR)` plus the immutable model index.
 Each artifact declares finite limits for entries, axes and resident requests
 before it is accepted.
@@ -661,28 +666,38 @@ and 6, while communication-enabled profiles consume only the applicable gates.
 
 ## Ownership map
 
-- COMP-50 owns schemas, canonicalization, validation, compilation, both pure
-  binding resolvers and the contributor workflow. COMP-51 owns the untouched
-  external sidecar.
-- COMP-6 owns generic noncollective and collective-stage capture joins;
-  VLLM-12 and SGL-10 own thin framework observations.
-- COMP-5 owns environment qualification. COMP-1 owns per-target compute and
-  memory numerical acceptance for A100, H100 and AMD; only the A100 lane owns
-  Accel-Sim correlation and selective filling. COMP-22 owns communication GPU
-  demand. COMP-24 identifies and accepts whether the closed
-  `independent-resource-v1` axes and residency rules explain held-out mixtures.
-  Any nonempty interaction form requires a versioned interface amendment and a
-  new expectations-only freeze.
-- COMP-25 owns synthetic noncollective selection, resolved operation binding
-  sets and live batch reachability. COMP-22 supplies collective-stage evidence;
-  CORE-26 owns its live rank-barrier composition. CORE-45 owns the complete
-  resolved-device binding-closure provenance. CORE-12 owns incremental
-  admission and the compute-owned external-frontier lease capability that
-  CORE-26 consumes.
-- CORE-50 owns only versioned core projection of registered device resources;
-  CORE-8 owns loss-checked queue-visit projection.
-- COMP-35 owns vendor peer ports, COMP-41 measured port ceilings, CORE-11 and
-  CORE-13 device composition, CORE-26 cross-node composition, and CORE-27 only
-  actually observed mover visits.
-- COMP-52 owns explicit architecture-derived candidates and never changes the
-  validated default.
+This map names the lanes this document creates or reshapes. It is not the
+registry: the module docs under `docs/modules/` remain the source of truth for
+every task, including the ones the calibration suite depends on but does not
+reshape.
+
+- The calibration package (COMP-50) owns schemas, canonicalization,
+  validation, compilation, both pure binding resolvers and the contributor
+  workflow, including the canonical-bytes and ASCII-conformance schemas, the
+  native ASCII verifier and the token-fixture schema. The untouched external
+  sidecar is COMP-51.
+- Generic noncollective and collective-stage capture joins, plus the MoE
+  routing sidecar schema, belong to COMP-6; thin framework observations belong
+  to VLLM-12 and SGL-10.
+- Environment qualification is COMP-5. Per-target compute and memory numerical
+  acceptance for A100, H100 and AMD is COMP-1; only the A100 lane owns
+  Accel-Sim correlation and selective filling. Communication GPU demand is
+  COMP-22. Whether the closed `independent-resource-v1` axes and residency
+  rules explain held-out mixtures is identified and accepted by COMP-24. Any
+  nonempty interaction form requires a versioned interface amendment and a new
+  expectations-only freeze.
+- Synthetic noncollective selection, resolved operation binding sets and live
+  batch reachability are COMP-25. Collective-stage evidence comes from
+  COMP-22, and its live rank-barrier composition is CORE-26. The complete
+  resolved-device binding-closure provenance is CORE-45. Incremental admission
+  and the compute-owned external-frontier lease capability that CORE-26
+  consumes are CORE-12.
+- Versioned core projection of registered device resources is CORE-50 and
+  nothing else; loss-checked queue-visit projection is CORE-8.
+- Vendor peer ports are COMP-35, measured port ceilings COMP-41, device
+  composition CORE-11 and CORE-13, cross-node composition CORE-26, and only
+  actually observed mover visits CORE-27.
+- Explicit architecture-derived candidates are COMP-52, which never changes
+  the validated default.
+- The freeze amendment this document's expectation suite still needs before
+  its first campaign cell runs is COMP-53.
