@@ -416,6 +416,49 @@ satisfy one claim together.
 service entries, a typed resource registry and a per-entry evidence ledger. Its
 `architecture-derived` basis requires candidate status; only target-silicon
 evidence may carry validated status. The
+strict top-level object contains exactly `schema`, `device_model_id`,
+`device_kind_id`, `acceptance_status`, `target_basis`,
+`device_identity_sha256`, `operating_envelope_sha256`,
+`support_envelope_sha256`, `evidence_manifest_sha256`, `fit_sha256`,
+`expectations_commit`, `dispatch_signature_sha256s`, `shape_schemas`,
+`implementation_selector_sha256`, `collective_stage_selector_sha256`,
+`resource_registry`, `interaction_contract`,
+`host_initiation_profile_sha256`, `service_entries`,
+`service_entry_evidence`, `scalar_profile_table_sha256`, `gpu_spec_sha256`,
+`gpu_architecture_profile_sha256`, `gpu_device_config_sha256`,
+`validation_record_sha256`, `validation_summary_sha256`,
+`acceptance_bars_sha256` and `model_limits`. The expectations commit is
+lowercase hexadecimal of length 40 or 64. Dispatch signatures are a sorted,
+unique, nonempty digest tuple; shape schemas are nonempty and sorted uniquely
+by schema ID.
+
+The required implementation-selector reference resolves to declarative data
+only. Code, callbacks, expressions and binaries reject. The collective-stage
+selector reference is nullable exactly when the support envelope claims no
+collective device stage. The resource registry and
+`independent-resource-v1` contract are inline and match the model device kind.
+Each service-entry member is exactly `{service_entry_id, entry}`, sorted and
+unique by nonblank ID with unique `(implementation_id, shape_vector)` keys.
+Each evidence member contains exactly `service_entry_id`,
+`source_selection`, `source_record_sha256s`, `residual_record_sha256`,
+`support_envelope_sha256`, `operating_envelope_sha256`,
+`isolated_duration_ps` and exact rational `uncertainty_bound`, sorted
+one-to-one with the entries. Source selection is exactly `silicon`,
+`silicon-fit`, `accel-sim`, `analytical-transfer` or `simulator-derived`.
+
+Device identity, operating and support envelopes, evidence manifest, fit,
+implementation selector, validation record, validation summary and acceptance
+bars are required content references. Collective selector, host initiation,
+scalar profile table, GPU spec, GPU architecture profile and GPU device
+configuration are explicitly nullable references. `model_limits` contains
+exactly `max_shape_schemas`, `max_shape_axes_per_schema`,
+`max_resource_axes`, `max_service_entries`, `max_epochs_per_entry` and
+`max_resident_entries`; every value is a positive signed-128 integer and
+bounds the corresponding count. Every nonnull reference is reachable from the
+release closure and cross-record identities agree. Raw traces, sample vectors,
+profiler rows and simulator dependencies stay outside the model.
+
+The
 `simllm-device-resource-registry-v1` has exactly `schema`, `device_kind_id`,
 sorted unique `active_axis_ids` and `axes` sorted by unique `axis_id`; active
 IDs are a subset. Every strict axis has exactly `axis_id`, `axis_class`,

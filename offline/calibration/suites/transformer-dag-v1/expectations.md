@@ -576,6 +576,56 @@ plus `architecture-derived` rejects. Run provenance copies both wire values
 unchanged. Runtime selects validated models by default and admits a candidate
 only under explicit experimental opt-in.
 
+The complete compact record is `simllm-device-model-v1`. Its strict top-level
+fields are, in canonical-key order rather than presentation order, `schema`,
+`device_model_id`, `device_kind_id`, `acceptance_status`, `target_basis`,
+`device_identity_sha256`, `operating_envelope_sha256`,
+`support_envelope_sha256`, `evidence_manifest_sha256`, `fit_sha256`,
+`expectations_commit`, `dispatch_signature_sha256s`, `shape_schemas`,
+`implementation_selector_sha256`, `collective_stage_selector_sha256`,
+`resource_registry`, `interaction_contract`,
+`host_initiation_profile_sha256`, `service_entries`,
+`service_entry_evidence`, `scalar_profile_table_sha256`, `gpu_spec_sha256`,
+`gpu_architecture_profile_sha256`, `gpu_device_config_sha256`,
+`validation_record_sha256`, `validation_summary_sha256`,
+`acceptance_bars_sha256` and `model_limits`. The expectations commit is one
+lowercase hexadecimal Git object ID of length 40 or 64. Dispatch-signature
+digests are a sorted, unique, nonempty tuple. Shape schemas are a nonempty
+tuple sorted uniquely by shape-schema ID.
+
+The implementation selector is a required content-addressed declarative-data
+reference. It can contain no code, callback, expression or binary. The
+collective-stage selector is required-nullable and is null exactly when the
+support envelope claims no collective device stage. The resource registry and
+the closed `independent-resource-v1` interaction contract are inline, and the
+registry device kind equals the model device kind. Each strict service-entry
+member is exactly `{service_entry_id, entry}`. Members are nonempty, sorted and
+unique by nonblank service-entry ID, and their `(implementation_id,
+shape_vector)` keys are unique.
+
+Each strict evidence-ledger member is exactly `service_entry_id`,
+`source_selection`, `source_record_sha256s`, `residual_record_sha256`,
+`support_envelope_sha256`, `operating_envelope_sha256`,
+`isolated_duration_ps` and `uncertainty_bound`. It is sorted one-to-one with
+the service entries. Source selection is exactly `silicon`, `silicon-fit`,
+`accel-sim`, `analytical-transfer` or `simulator-derived`; source-record
+digests are sorted, unique and nonempty. Isolated duration is a nonnegative
+integer used for verification, and uncertainty is an exact nonnegative
+rational. The required content references are device identity, operating and
+support envelopes, evidence manifest, fit, implementation selector,
+validation record, validation summary and acceptance bars. Collective
+selector, host initiation, scalar profile table, GPU spec, GPU architecture
+profile and GPU device configuration references are explicitly nullable.
+
+`model_limits` has exactly `max_shape_schemas`,
+`max_shape_axes_per_schema`, `max_resource_axes`, `max_service_entries`,
+`max_epochs_per_entry` and `max_resident_entries`. Each is a positive
+signed-128 integer and bounds the corresponding inline or runtime count. Every
+required and nonnull reference resolves inside the release closure, and all
+cross-record device, envelope, selector, entry and validation identities
+agree. Raw traces, sample vectors, profiler rows, simulator dependencies and
+executable selector content are forbidden from this compact artifact.
+
 `BatchKernelService` has one exact pure call:
 `dispatch_batch(requests: tuple[ResolvedDeviceServiceRequest,...],
 common_start_ps: int, snapshot: DeviceServiceSnapshot) ->

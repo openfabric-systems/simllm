@@ -620,6 +620,125 @@ def test_canonical_byte_and_model_identity_contracts_are_exact() -> None:
     }
 
 
+def test_compact_device_model_contract_is_exact() -> None:
+    assert _load(EXPECTATIONS_JSON)["device_model_contract"] == {
+        "schema": "simllm-device-model-v1",
+        "fields": [
+            "schema",
+            "device_model_id",
+            "device_kind_id",
+            "acceptance_status",
+            "target_basis",
+            "device_identity_sha256",
+            "operating_envelope_sha256",
+            "support_envelope_sha256",
+            "evidence_manifest_sha256",
+            "fit_sha256",
+            "expectations_commit",
+            "dispatch_signature_sha256s",
+            "shape_schemas",
+            "implementation_selector_sha256",
+            "collective_stage_selector_sha256",
+            "resource_registry",
+            "interaction_contract",
+            "host_initiation_profile_sha256",
+            "service_entries",
+            "service_entry_evidence",
+            "scalar_profile_table_sha256",
+            "gpu_spec_sha256",
+            "gpu_architecture_profile_sha256",
+            "gpu_device_config_sha256",
+            "validation_record_sha256",
+            "validation_summary_sha256",
+            "acceptance_bars_sha256",
+            "model_limits",
+        ],
+        "expectations_commit_rule": (
+            "required-lowercase-hex-git-object-id-of-length-40-or-64"
+        ),
+        "dispatch_signature_rule": "sorted-unique-nonempty-sha256-tuple",
+        "shape_schema_rule": "nonempty-tuple-sorted-unique-by-shape-schema-id",
+        "implementation_selector_rule": (
+            "required-content-addressed-declarative-data-reference-with-no-code-"
+            "callback-expression-or-binary"
+        ),
+        "collective_selector_rule": (
+            "required-nullable-content-addressed-declarative-data-reference-null-"
+            "exactly-when-the-support-envelope-claims-no-collective-stage"
+        ),
+        "resource_rule": (
+            "inline-strict-device-resource-registry-with-device-kind-matching-the-"
+            "model-and-inline-independent-resource-v1-interaction-contract"
+        ),
+        "service_entry_record_fields": ["service_entry_id", "entry"],
+        "service_entry_rule": (
+            "nonempty-tuple-sorted-unique-by-nonblank-service-entry-id-with-unique-"
+            "implementation-id-shape-vector-keys"
+        ),
+        "service_entry_evidence_fields": [
+            "service_entry_id",
+            "source_selection",
+            "source_record_sha256s",
+            "residual_record_sha256",
+            "support_envelope_sha256",
+            "operating_envelope_sha256",
+            "isolated_duration_ps",
+            "uncertainty_bound",
+        ],
+        "source_selection_values": [
+            "silicon",
+            "silicon-fit",
+            "accel-sim",
+            "analytical-transfer",
+            "simulator-derived",
+        ],
+        "service_entry_evidence_rule": (
+            "sorted-one-to-one-with-service-entries-nonempty-source-record-sha256s-"
+            "and-exact-nonnegative-rational-uncertainty-bound"
+        ),
+        "required_reference_fields": [
+            "device_identity_sha256",
+            "operating_envelope_sha256",
+            "support_envelope_sha256",
+            "evidence_manifest_sha256",
+            "fit_sha256",
+            "implementation_selector_sha256",
+            "validation_record_sha256",
+            "validation_summary_sha256",
+            "acceptance_bars_sha256",
+        ],
+        "nullable_reference_fields": [
+            "collective_stage_selector_sha256",
+            "host_initiation_profile_sha256",
+            "scalar_profile_table_sha256",
+            "gpu_spec_sha256",
+            "gpu_architecture_profile_sha256",
+            "gpu_device_config_sha256",
+        ],
+        "model_limit_fields": [
+            "max_shape_schemas",
+            "max_shape_axes_per_schema",
+            "max_resource_axes",
+            "max_service_entries",
+            "max_epochs_per_entry",
+            "max_resident_entries",
+        ],
+        "model_limit_rule": (
+            "strict-positive-signed-128-integers-bound-every-inline-count-and-"
+            "runtime-residency"
+        ),
+        "raw_evidence_rule": (
+            "raw-traces-sample-vectors-profiler-rows-simulator-dependencies-and-"
+            "executable-selector-content-are-forbidden"
+        ),
+        "reference_closure_rule": (
+            "every-required-or-nonnull-reference-resolves-in-the-release-closure-"
+            "and-every-inline-or-referenced-record-matches-model-device-envelope-"
+            "selector-entry-and-validation-identities"
+        ),
+    }
+
+
 def test_dispatch_context_and_signature_contracts_are_exact() -> None:
     assert _load(EXPECTATIONS_JSON)["dispatch_contract"] == {
         "trait_schema": "simllm-typed-dispatch-trait-v1",
