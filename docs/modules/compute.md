@@ -467,6 +467,17 @@ selected is reading kernel service time and nothing else.
 > this model. COMP-48 identifies the host term without changing kernel service
 > or adding a device-front-end stage. The kernel-service clause above is
 > unchanged.
+>
+> That assignment needs a host composition able to carry the term. The
+> [host launch composition study](../../examples/host_launch_composition_v1/RESULTS.md)
+> shows the shipped `max(C, N * g)` form predicts a launch-mode delta of
+> exactly zero whenever per-kernel service reaches the eager per-launch
+> constant, which covers every real kernel that study measured, so its
+> relative error against the measurement is exactly 1.0 and about 2,000 GPU
+> cycles. The zero is structural: it holds for any per-launch constants, so
+> installing A100 constants does not change it. COMP-44 owns giving a
+> calibrated profile a non-overlappable term, and COMP-48 cannot meet its bar
+> before it lands.
 
 **There is no per-kernel tail, and the rationale is that tails are emergent.**
 Reported TTFT and TPOT distributions have wide tails in real deployments, and
@@ -1984,6 +1995,17 @@ and an explicit reason:
   observed launch-mode delta within the larger of two GPU cycles or 10 percent
   in every supported cell. Also require no double charge with COMP-43's kernel floor or COMP-47's
   host profiles, and byte-identical kernel service and off-path results.
+  That bar is unreachable under today's calibrated composition and this task
+  is blocked on COMP-44 until it is not. The
+  [host launch composition study](../../examples/host_launch_composition_v1/RESULTS.md)
+  is nonvoid and refutes the reachability: `max(C, N * g)` returns a
+  launch-mode delta of exactly zero for every per-kernel service at or above
+  the eager per-launch constant, so its error against the measured 1.415 to
+  1.506 microseconds is exactly 1.0 and roughly 2,000 GPU cycles, and the
+  study's `R7` shows the zero holds for any per-launch constants rather than
+  only the installed ones. A measurement campaign run before COMP-44 supplies
+  a non-overlappable term would therefore fail this bar by construction and
+  could close nothing.
 
 ### Completeness
 
@@ -2148,13 +2170,26 @@ and an explicit reason:
   Expressing it as a per-launch constant makes the published point depend on
   the chain length, which is why that study's `a100-epyc-cuda-graph` point is
   declared scoped to a reference chain length rather than universal. The
-  surrogate being replaced is that scoping. Acceptance: a calibrated profile
-  may declare a fixed per-invocation term and a per-launch term, the
-  composition states which one a launch class uses, the exact `ideal` zero
+  surrogate being replaced is that scoping. The
+  [host launch composition study](../../examples/host_launch_composition_v1/RESULTS.md)
+  widens the question from which term to which operator. Every calibrated term
+  today composes as `max(C, N * g)`, whose exposed contribution is exactly zero
+  once per-kernel service reaches the per-launch constant, so no calibrated
+  term of any magnitude can express a per-kernel cost that the measurement
+  shows is flat across a factor-ten range of kernel period. The shipped
+  `legacy-fixed-step` branch already composes additively and returns exactly
+  that shape, so the repository has the operator but no calibrated profile is
+  allowed to use it. Acceptance: a calibrated profile may declare a fixed
+  per-invocation term and a per-launch term, each term declares whether it
+  overlaps device service or is non-overlappable, the composition states which
+  terms a launch class uses, an additive term reproduces a launch-mode delta
+  independent of provider service, the exact `ideal` zero
   profile and both Turing profiles reproduce every accepted artifact and
   timestamp byte for byte, and a graph profile built from a fixed term is
   independent of the launch count it is asked about. This is P2 while no study
-  selects an A100 host profile and becomes P1 when COMP-47 installs one.
+  selects an A100 host profile and becomes P1 when COMP-47 installs one or when
+  COMP-48 opens its measurement campaign, whichever comes first, because
+  COMP-48's acceptance cannot be met without it.
 - COMP-46 (Completeness; P2; M): supply a production-grade decode attention
   microbenchmark. The decode lane of the
   [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)

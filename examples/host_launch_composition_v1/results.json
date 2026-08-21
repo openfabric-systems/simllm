@@ -1,0 +1,1270 @@
+{
+  "schema": "simllm-study-results-v1",
+  "study": "host_launch_composition_v1",
+  "freeze_sha256": "31391ddcf82dc6ce81b80a8355ee614f87bda7087aa46d03789c53bf6cc58095",
+  "run_state": "nonvoid",
+  "voiding_guards": [],
+  "scored_passed": 2,
+  "scored_denominator": 2,
+  "cells": [
+    {
+      "cell_id": "c-below-graph/n1",
+      "c1_ps": 400000,
+      "launch_count": 1,
+      "total_service_ps": 400000,
+      "eager": {
+        "duration_ps": 2364255,
+        "provider_duration_ps": 400000,
+        "launch_floor_ps": 2364255,
+        "exposed_ps": 1964255,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 809306,
+        "provider_duration_ps": 400000,
+        "launch_floor_ps": 809306,
+        "exposed_ps": 409306,
+        "bound": "host-initiation"
+      },
+      "ideal": {
+        "duration_ps": 400000,
+        "provider_duration_ps": 400000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 1800000,
+        "provider_duration_ps": 400000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 1554949,
+      "per_kernel_delta_ps": 1554949,
+      "predicted_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-below-graph/n8",
+      "c1_ps": 400000,
+      "launch_count": 8,
+      "total_service_ps": 3200000,
+      "eager": {
+        "duration_ps": 18914040,
+        "provider_duration_ps": 3200000,
+        "launch_floor_ps": 18914040,
+        "exposed_ps": 15714040,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 6474448,
+        "provider_duration_ps": 3200000,
+        "launch_floor_ps": 6474448,
+        "exposed_ps": 3274448,
+        "bound": "host-initiation"
+      },
+      "ideal": {
+        "duration_ps": 3200000,
+        "provider_duration_ps": 3200000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 4600000,
+        "provider_duration_ps": 3200000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 12439592,
+      "per_kernel_delta_ps": 1554949,
+      "predicted_delta_ps": 12439592
+    },
+    {
+      "cell_id": "c-below-graph/n64",
+      "c1_ps": 400000,
+      "launch_count": 64,
+      "total_service_ps": 25600000,
+      "eager": {
+        "duration_ps": 151312320,
+        "provider_duration_ps": 25600000,
+        "launch_floor_ps": 151312320,
+        "exposed_ps": 125712320,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 51795584,
+        "provider_duration_ps": 25600000,
+        "launch_floor_ps": 51795584,
+        "exposed_ps": 26195584,
+        "bound": "host-initiation"
+      },
+      "ideal": {
+        "duration_ps": 25600000,
+        "provider_duration_ps": 25600000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 27000000,
+        "provider_duration_ps": 25600000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 99516736,
+      "per_kernel_delta_ps": 1554949,
+      "predicted_delta_ps": 99516736
+    },
+    {
+      "cell_id": "c-below-graph/n256",
+      "c1_ps": 400000,
+      "launch_count": 256,
+      "total_service_ps": 102400000,
+      "eager": {
+        "duration_ps": 605249280,
+        "provider_duration_ps": 102400000,
+        "launch_floor_ps": 605249280,
+        "exposed_ps": 502849280,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 207182336,
+        "provider_duration_ps": 102400000,
+        "launch_floor_ps": 207182336,
+        "exposed_ps": 104782336,
+        "bound": "host-initiation"
+      },
+      "ideal": {
+        "duration_ps": 102400000,
+        "provider_duration_ps": 102400000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 103800000,
+        "provider_duration_ps": 102400000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 398066944,
+      "per_kernel_delta_ps": 1554949,
+      "predicted_delta_ps": 398066944
+    },
+    {
+      "cell_id": "c-at-graph/n1",
+      "c1_ps": 809306,
+      "launch_count": 1,
+      "total_service_ps": 809306,
+      "eager": {
+        "duration_ps": 2364255,
+        "provider_duration_ps": 809306,
+        "launch_floor_ps": 2364255,
+        "exposed_ps": 1554949,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 809306,
+        "provider_duration_ps": 809306,
+        "launch_floor_ps": 809306,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 809306,
+        "provider_duration_ps": 809306,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 2209306,
+        "provider_duration_ps": 809306,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 1554949,
+      "per_kernel_delta_ps": 1554949,
+      "predicted_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-at-graph/n8",
+      "c1_ps": 809306,
+      "launch_count": 8,
+      "total_service_ps": 6474448,
+      "eager": {
+        "duration_ps": 18914040,
+        "provider_duration_ps": 6474448,
+        "launch_floor_ps": 18914040,
+        "exposed_ps": 12439592,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 6474448,
+        "provider_duration_ps": 6474448,
+        "launch_floor_ps": 6474448,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 6474448,
+        "provider_duration_ps": 6474448,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 7874448,
+        "provider_duration_ps": 6474448,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 12439592,
+      "per_kernel_delta_ps": 1554949,
+      "predicted_delta_ps": 12439592
+    },
+    {
+      "cell_id": "c-at-graph/n64",
+      "c1_ps": 809306,
+      "launch_count": 64,
+      "total_service_ps": 51795584,
+      "eager": {
+        "duration_ps": 151312320,
+        "provider_duration_ps": 51795584,
+        "launch_floor_ps": 151312320,
+        "exposed_ps": 99516736,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 51795584,
+        "provider_duration_ps": 51795584,
+        "launch_floor_ps": 51795584,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 51795584,
+        "provider_duration_ps": 51795584,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 53195584,
+        "provider_duration_ps": 51795584,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 99516736,
+      "per_kernel_delta_ps": 1554949,
+      "predicted_delta_ps": 99516736
+    },
+    {
+      "cell_id": "c-at-graph/n256",
+      "c1_ps": 809306,
+      "launch_count": 256,
+      "total_service_ps": 207182336,
+      "eager": {
+        "duration_ps": 605249280,
+        "provider_duration_ps": 207182336,
+        "launch_floor_ps": 605249280,
+        "exposed_ps": 398066944,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 207182336,
+        "provider_duration_ps": 207182336,
+        "launch_floor_ps": 207182336,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 207182336,
+        "provider_duration_ps": 207182336,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 208582336,
+        "provider_duration_ps": 207182336,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 398066944,
+      "per_kernel_delta_ps": 1554949,
+      "predicted_delta_ps": 398066944
+    },
+    {
+      "cell_id": "c-between/n1",
+      "c1_ps": 1500000,
+      "launch_count": 1,
+      "total_service_ps": 1500000,
+      "eager": {
+        "duration_ps": 2364255,
+        "provider_duration_ps": 1500000,
+        "launch_floor_ps": 2364255,
+        "exposed_ps": 864255,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 1500000,
+        "provider_duration_ps": 1500000,
+        "launch_floor_ps": 809306,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 1500000,
+        "provider_duration_ps": 1500000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 2900000,
+        "provider_duration_ps": 1500000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 864255,
+      "per_kernel_delta_ps": 864255,
+      "predicted_delta_ps": 864255
+    },
+    {
+      "cell_id": "c-between/n8",
+      "c1_ps": 1500000,
+      "launch_count": 8,
+      "total_service_ps": 12000000,
+      "eager": {
+        "duration_ps": 18914040,
+        "provider_duration_ps": 12000000,
+        "launch_floor_ps": 18914040,
+        "exposed_ps": 6914040,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 12000000,
+        "provider_duration_ps": 12000000,
+        "launch_floor_ps": 6474448,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 12000000,
+        "provider_duration_ps": 12000000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 13400000,
+        "provider_duration_ps": 12000000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 6914040,
+      "per_kernel_delta_ps": 864255,
+      "predicted_delta_ps": 6914040
+    },
+    {
+      "cell_id": "c-between/n64",
+      "c1_ps": 1500000,
+      "launch_count": 64,
+      "total_service_ps": 96000000,
+      "eager": {
+        "duration_ps": 151312320,
+        "provider_duration_ps": 96000000,
+        "launch_floor_ps": 151312320,
+        "exposed_ps": 55312320,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 96000000,
+        "provider_duration_ps": 96000000,
+        "launch_floor_ps": 51795584,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 96000000,
+        "provider_duration_ps": 96000000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 97400000,
+        "provider_duration_ps": 96000000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 55312320,
+      "per_kernel_delta_ps": 864255,
+      "predicted_delta_ps": 55312320
+    },
+    {
+      "cell_id": "c-between/n256",
+      "c1_ps": 1500000,
+      "launch_count": 256,
+      "total_service_ps": 384000000,
+      "eager": {
+        "duration_ps": 605249280,
+        "provider_duration_ps": 384000000,
+        "launch_floor_ps": 605249280,
+        "exposed_ps": 221249280,
+        "bound": "host-initiation"
+      },
+      "graph": {
+        "duration_ps": 384000000,
+        "provider_duration_ps": 384000000,
+        "launch_floor_ps": 207182336,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 384000000,
+        "provider_duration_ps": 384000000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 385400000,
+        "provider_duration_ps": 384000000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 221249280,
+      "per_kernel_delta_ps": 864255,
+      "predicted_delta_ps": 221249280
+    },
+    {
+      "cell_id": "c-at-eager/n1",
+      "c1_ps": 2364255,
+      "launch_count": 1,
+      "total_service_ps": 2364255,
+      "eager": {
+        "duration_ps": 2364255,
+        "provider_duration_ps": 2364255,
+        "launch_floor_ps": 2364255,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 2364255,
+        "provider_duration_ps": 2364255,
+        "launch_floor_ps": 809306,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 2364255,
+        "provider_duration_ps": 2364255,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 3764255,
+        "provider_duration_ps": 2364255,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-at-eager/n8",
+      "c1_ps": 2364255,
+      "launch_count": 8,
+      "total_service_ps": 18914040,
+      "eager": {
+        "duration_ps": 18914040,
+        "provider_duration_ps": 18914040,
+        "launch_floor_ps": 18914040,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 18914040,
+        "provider_duration_ps": 18914040,
+        "launch_floor_ps": 6474448,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 18914040,
+        "provider_duration_ps": 18914040,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 20314040,
+        "provider_duration_ps": 18914040,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-at-eager/n64",
+      "c1_ps": 2364255,
+      "launch_count": 64,
+      "total_service_ps": 151312320,
+      "eager": {
+        "duration_ps": 151312320,
+        "provider_duration_ps": 151312320,
+        "launch_floor_ps": 151312320,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 151312320,
+        "provider_duration_ps": 151312320,
+        "launch_floor_ps": 51795584,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 151312320,
+        "provider_duration_ps": 151312320,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 152712320,
+        "provider_duration_ps": 151312320,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-at-eager/n256",
+      "c1_ps": 2364255,
+      "launch_count": 256,
+      "total_service_ps": 605249280,
+      "eager": {
+        "duration_ps": 605249280,
+        "provider_duration_ps": 605249280,
+        "launch_floor_ps": 605249280,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 605249280,
+        "provider_duration_ps": 605249280,
+        "launch_floor_ps": 207182336,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 605249280,
+        "provider_duration_ps": 605249280,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 606649280,
+        "provider_duration_ps": 605249280,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-above-eager/n1",
+      "c1_ps": 4000000,
+      "launch_count": 1,
+      "total_service_ps": 4000000,
+      "eager": {
+        "duration_ps": 4000000,
+        "provider_duration_ps": 4000000,
+        "launch_floor_ps": 2364255,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 4000000,
+        "provider_duration_ps": 4000000,
+        "launch_floor_ps": 809306,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 4000000,
+        "provider_duration_ps": 4000000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 5400000,
+        "provider_duration_ps": 4000000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-above-eager/n8",
+      "c1_ps": 4000000,
+      "launch_count": 8,
+      "total_service_ps": 32000000,
+      "eager": {
+        "duration_ps": 32000000,
+        "provider_duration_ps": 32000000,
+        "launch_floor_ps": 18914040,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 32000000,
+        "provider_duration_ps": 32000000,
+        "launch_floor_ps": 6474448,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 32000000,
+        "provider_duration_ps": 32000000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 33400000,
+        "provider_duration_ps": 32000000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-above-eager/n64",
+      "c1_ps": 4000000,
+      "launch_count": 64,
+      "total_service_ps": 256000000,
+      "eager": {
+        "duration_ps": 256000000,
+        "provider_duration_ps": 256000000,
+        "launch_floor_ps": 151312320,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 256000000,
+        "provider_duration_ps": 256000000,
+        "launch_floor_ps": 51795584,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 256000000,
+        "provider_duration_ps": 256000000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 257400000,
+        "provider_duration_ps": 256000000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-above-eager/n256",
+      "c1_ps": 4000000,
+      "launch_count": 256,
+      "total_service_ps": 1024000000,
+      "eager": {
+        "duration_ps": 1024000000,
+        "provider_duration_ps": 1024000000,
+        "launch_floor_ps": 605249280,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 1024000000,
+        "provider_duration_ps": 1024000000,
+        "launch_floor_ps": 207182336,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 1024000000,
+        "provider_duration_ps": 1024000000,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 1025400000,
+        "provider_duration_ps": 1024000000,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g1/n1",
+      "c1_ps": 8943667,
+      "launch_count": 1,
+      "total_service_ps": 8943667,
+      "eager": {
+        "duration_ps": 8943667,
+        "provider_duration_ps": 8943667,
+        "launch_floor_ps": 2364255,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 8943667,
+        "provider_duration_ps": 8943667,
+        "launch_floor_ps": 809306,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 8943667,
+        "provider_duration_ps": 8943667,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 10343667,
+        "provider_duration_ps": 8943667,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g1/n8",
+      "c1_ps": 8943667,
+      "launch_count": 8,
+      "total_service_ps": 71549336,
+      "eager": {
+        "duration_ps": 71549336,
+        "provider_duration_ps": 71549336,
+        "launch_floor_ps": 18914040,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 71549336,
+        "provider_duration_ps": 71549336,
+        "launch_floor_ps": 6474448,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 71549336,
+        "provider_duration_ps": 71549336,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 72949336,
+        "provider_duration_ps": 71549336,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g1/n64",
+      "c1_ps": 8943667,
+      "launch_count": 64,
+      "total_service_ps": 572394688,
+      "eager": {
+        "duration_ps": 572394688,
+        "provider_duration_ps": 572394688,
+        "launch_floor_ps": 151312320,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 572394688,
+        "provider_duration_ps": 572394688,
+        "launch_floor_ps": 51795584,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 572394688,
+        "provider_duration_ps": 572394688,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 573794688,
+        "provider_duration_ps": 572394688,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g1/n256",
+      "c1_ps": 8943667,
+      "launch_count": 256,
+      "total_service_ps": 2289578752,
+      "eager": {
+        "duration_ps": 2289578752,
+        "provider_duration_ps": 2289578752,
+        "launch_floor_ps": 605249280,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 2289578752,
+        "provider_duration_ps": 2289578752,
+        "launch_floor_ps": 207182336,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 2289578752,
+        "provider_duration_ps": 2289578752,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 2290978752,
+        "provider_duration_ps": 2289578752,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g2/n1",
+      "c1_ps": 18792667,
+      "launch_count": 1,
+      "total_service_ps": 18792667,
+      "eager": {
+        "duration_ps": 18792667,
+        "provider_duration_ps": 18792667,
+        "launch_floor_ps": 2364255,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 18792667,
+        "provider_duration_ps": 18792667,
+        "launch_floor_ps": 809306,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 18792667,
+        "provider_duration_ps": 18792667,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 20192667,
+        "provider_duration_ps": 18792667,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g2/n8",
+      "c1_ps": 18792667,
+      "launch_count": 8,
+      "total_service_ps": 150341336,
+      "eager": {
+        "duration_ps": 150341336,
+        "provider_duration_ps": 150341336,
+        "launch_floor_ps": 18914040,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 150341336,
+        "provider_duration_ps": 150341336,
+        "launch_floor_ps": 6474448,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 150341336,
+        "provider_duration_ps": 150341336,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 151741336,
+        "provider_duration_ps": 150341336,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g2/n64",
+      "c1_ps": 18792667,
+      "launch_count": 64,
+      "total_service_ps": 1202730688,
+      "eager": {
+        "duration_ps": 1202730688,
+        "provider_duration_ps": 1202730688,
+        "launch_floor_ps": 151312320,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 1202730688,
+        "provider_duration_ps": 1202730688,
+        "launch_floor_ps": 51795584,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 1202730688,
+        "provider_duration_ps": 1202730688,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 1204130688,
+        "provider_duration_ps": 1202730688,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g2/n256",
+      "c1_ps": 18792667,
+      "launch_count": 256,
+      "total_service_ps": 4810922752,
+      "eager": {
+        "duration_ps": 4810922752,
+        "provider_duration_ps": 4810922752,
+        "launch_floor_ps": 605249280,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 4810922752,
+        "provider_duration_ps": 4810922752,
+        "launch_floor_ps": 207182336,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 4810922752,
+        "provider_duration_ps": 4810922752,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 4812322752,
+        "provider_duration_ps": 4810922752,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g4/n1",
+      "c1_ps": 89555999,
+      "launch_count": 1,
+      "total_service_ps": 89555999,
+      "eager": {
+        "duration_ps": 89555999,
+        "provider_duration_ps": 89555999,
+        "launch_floor_ps": 2364255,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 89555999,
+        "provider_duration_ps": 89555999,
+        "launch_floor_ps": 809306,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 89555999,
+        "provider_duration_ps": 89555999,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 90955999,
+        "provider_duration_ps": 89555999,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g4/n8",
+      "c1_ps": 89555999,
+      "launch_count": 8,
+      "total_service_ps": 716447992,
+      "eager": {
+        "duration_ps": 716447992,
+        "provider_duration_ps": 716447992,
+        "launch_floor_ps": 18914040,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 716447992,
+        "provider_duration_ps": 716447992,
+        "launch_floor_ps": 6474448,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 716447992,
+        "provider_duration_ps": 716447992,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 717847992,
+        "provider_duration_ps": 716447992,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g4/n64",
+      "c1_ps": 89555999,
+      "launch_count": 64,
+      "total_service_ps": 5731583936,
+      "eager": {
+        "duration_ps": 5731583936,
+        "provider_duration_ps": 5731583936,
+        "launch_floor_ps": 151312320,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 5731583936,
+        "provider_duration_ps": 5731583936,
+        "launch_floor_ps": 51795584,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 5731583936,
+        "provider_duration_ps": 5731583936,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 5732983936,
+        "provider_duration_ps": 5731583936,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g4/n256",
+      "c1_ps": 89555999,
+      "launch_count": 256,
+      "total_service_ps": 22926335744,
+      "eager": {
+        "duration_ps": 22926335744,
+        "provider_duration_ps": 22926335744,
+        "launch_floor_ps": 605249280,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "graph": {
+        "duration_ps": 22926335744,
+        "provider_duration_ps": 22926335744,
+        "launch_floor_ps": 207182336,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "ideal": {
+        "duration_ps": 22926335744,
+        "provider_duration_ps": 22926335744,
+        "launch_floor_ps": 0,
+        "exposed_ps": 0,
+        "bound": "compute"
+      },
+      "legacy_fixed_step": {
+        "duration_ps": 22927735744,
+        "provider_duration_ps": 22926335744,
+        "launch_floor_ps": 1400000,
+        "exposed_ps": 1400000,
+        "bound": "host-initiation"
+      },
+      "delta_ps": 0,
+      "per_kernel_delta_ps": 0,
+      "predicted_delta_ps": 0
+    }
+  ],
+  "relations": {
+    "R1": {
+      "passed": true,
+      "kind": "exact-identity",
+      "scored": false
+    },
+    "R2": {
+      "passed": true,
+      "kind": "post-specified-regression",
+      "scored": false,
+      "cell_count": 20
+    },
+    "R3": {
+      "passed": true,
+      "kind": "exact-identity",
+      "scored": false
+    },
+    "R4": {
+      "passed": true,
+      "kind": "genuine-risk",
+      "scored": true,
+      "measured_cv": 0.0313320024108013,
+      "period_span": 10.013342290136697,
+      "modeled_per_kernel_delta_ps": [
+        0,
+        0,
+        0
+      ]
+    },
+    "R5": {
+      "passed": true,
+      "kind": "genuine-risk",
+      "scored": true,
+      "relative_errors": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "absolute_miss_in_gpu_cycles": [
+        2054.537376586742,
+        1995.768688293371,
+        2124.5853314527503
+      ]
+    },
+    "R6": {
+      "passed": true,
+      "kind": "exact-identity",
+      "scored": false
+    },
+    "R7": {
+      "passed": true,
+      "kind": "exact-identity",
+      "scored": false
+    }
+  },
+  "fatal_guards": {
+    "G1": {
+      "passed": true
+    },
+    "G2": {
+      "passed": true
+    },
+    "G3": {
+      "passed": true
+    },
+    "G4": {
+      "passed": true,
+      "results_json_sha256": "5c26035da27c40b86149c243361c74221da8bc51f4ad8c5851018510ab2ec65c"
+    },
+    "G5": {
+      "passed": true,
+      "claim": "writes only results.json inside this directory"
+    }
+  },
+  "cells_checked": 32
+}
