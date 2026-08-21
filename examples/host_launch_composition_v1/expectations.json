@@ -1,0 +1,469 @@
+{
+  "schema": "simllm-study-expectations-v1",
+  "study": "host_launch_composition_v1",
+  "state": "expectations-only",
+  "chronology": {
+    "harness_exists": false,
+    "full_sweep_run": false,
+    "prior_probe": {
+      "ran_before_this_freeze": true,
+      "api": "simllm.compute.host.HostInitiationModel.represented_estimate",
+      "launch_count": 1,
+      "c1_ps": [
+        8900000,
+        18793000,
+        28225300,
+        89556000
+      ],
+      "profiles": [
+        "turing-eager-host",
+        "turing-cuda-graph"
+      ],
+      "observed": "zero launch-mode delta in all four cells",
+      "consequence": "R2 is a post-specified regression check for these four cells only"
+    },
+    "pre_registration_claim": "partial; named probed cells are post-specified"
+  },
+  "constants_under_test": {
+    "turing_cuda_graph_point_ps": 809306,
+    "turing_eager_host_point_ps": 2364255,
+    "source": "simllm/compute/host.py _calibrated_values",
+    "composition_calibrated": "max(provider_duration_ps, launch_count * point_ps_per_launch)",
+    "composition_legacy_fixed_step": "provider_duration_ps + initiation_delay_ps"
+  },
+  "retained_a100_evidence": {
+    "source_study": "examples/a100_graph_launch_v1",
+    "status": "VOID, retained evidence only, never an anchor or fit input",
+    "results_json_sha256": "5c26035da27c40b86149c243361c74221da8bc51f4ad8c5851018510ab2ec65c",
+    "eager_per_launch_host_ps": 1629633,
+    "gpu_clock_hz": 1410000000,
+    "two_gpu_cycles_ps": 1418,
+    "cells": [
+      {
+        "kernel": "g1",
+        "p_eager_ps": 8943667,
+        "p_graph_ps": 7487000,
+        "measured_delta_ps": 1456667
+      },
+      {
+        "kernel": "g2",
+        "p_eager_ps": 18792667,
+        "p_graph_ps": 17377667,
+        "measured_delta_ps": 1415000
+      },
+      {
+        "kernel": "g4",
+        "p_eager_ps": 89555999,
+        "p_graph_ps": 88049668,
+        "measured_delta_ps": 1506331
+      }
+    ]
+  },
+  "sweep": {
+    "axis_1_c1_ps": [
+      400000,
+      809306,
+      1500000,
+      2364255,
+      4000000,
+      8943667,
+      18792667,
+      89555999
+    ],
+    "axis_2_launch_count": [
+      1,
+      8,
+      64,
+      256
+    ],
+    "axis_3_composition": [
+      "turing-eager-host",
+      "turing-cuda-graph",
+      "ideal",
+      "legacy-fixed-step"
+    ],
+    "calibrated_cell_count": 32
+  },
+  "predicted_cells": [
+    {
+      "cell_id": "c-below-graph/n1",
+      "c1_ps": 400000,
+      "launch_count": 1,
+      "predicted_eager_ps": 2364255,
+      "predicted_graph_ps": 809306,
+      "predicted_delta_ps": 1554949,
+      "predicted_per_kernel_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-below-graph/n8",
+      "c1_ps": 400000,
+      "launch_count": 8,
+      "predicted_eager_ps": 18914040,
+      "predicted_graph_ps": 6474448,
+      "predicted_delta_ps": 12439592,
+      "predicted_per_kernel_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-below-graph/n64",
+      "c1_ps": 400000,
+      "launch_count": 64,
+      "predicted_eager_ps": 151312320,
+      "predicted_graph_ps": 51795584,
+      "predicted_delta_ps": 99516736,
+      "predicted_per_kernel_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-below-graph/n256",
+      "c1_ps": 400000,
+      "launch_count": 256,
+      "predicted_eager_ps": 605249280,
+      "predicted_graph_ps": 207182336,
+      "predicted_delta_ps": 398066944,
+      "predicted_per_kernel_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-at-graph/n1",
+      "c1_ps": 809306,
+      "launch_count": 1,
+      "predicted_eager_ps": 2364255,
+      "predicted_graph_ps": 809306,
+      "predicted_delta_ps": 1554949,
+      "predicted_per_kernel_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-at-graph/n8",
+      "c1_ps": 809306,
+      "launch_count": 8,
+      "predicted_eager_ps": 18914040,
+      "predicted_graph_ps": 6474448,
+      "predicted_delta_ps": 12439592,
+      "predicted_per_kernel_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-at-graph/n64",
+      "c1_ps": 809306,
+      "launch_count": 64,
+      "predicted_eager_ps": 151312320,
+      "predicted_graph_ps": 51795584,
+      "predicted_delta_ps": 99516736,
+      "predicted_per_kernel_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-at-graph/n256",
+      "c1_ps": 809306,
+      "launch_count": 256,
+      "predicted_eager_ps": 605249280,
+      "predicted_graph_ps": 207182336,
+      "predicted_delta_ps": 398066944,
+      "predicted_per_kernel_delta_ps": 1554949
+    },
+    {
+      "cell_id": "c-between/n1",
+      "c1_ps": 1500000,
+      "launch_count": 1,
+      "predicted_eager_ps": 2364255,
+      "predicted_graph_ps": 1500000,
+      "predicted_delta_ps": 864255,
+      "predicted_per_kernel_delta_ps": 864255
+    },
+    {
+      "cell_id": "c-between/n8",
+      "c1_ps": 1500000,
+      "launch_count": 8,
+      "predicted_eager_ps": 18914040,
+      "predicted_graph_ps": 12000000,
+      "predicted_delta_ps": 6914040,
+      "predicted_per_kernel_delta_ps": 864255
+    },
+    {
+      "cell_id": "c-between/n64",
+      "c1_ps": 1500000,
+      "launch_count": 64,
+      "predicted_eager_ps": 151312320,
+      "predicted_graph_ps": 96000000,
+      "predicted_delta_ps": 55312320,
+      "predicted_per_kernel_delta_ps": 864255
+    },
+    {
+      "cell_id": "c-between/n256",
+      "c1_ps": 1500000,
+      "launch_count": 256,
+      "predicted_eager_ps": 605249280,
+      "predicted_graph_ps": 384000000,
+      "predicted_delta_ps": 221249280,
+      "predicted_per_kernel_delta_ps": 864255
+    },
+    {
+      "cell_id": "c-at-eager/n1",
+      "c1_ps": 2364255,
+      "launch_count": 1,
+      "predicted_eager_ps": 2364255,
+      "predicted_graph_ps": 2364255,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-at-eager/n8",
+      "c1_ps": 2364255,
+      "launch_count": 8,
+      "predicted_eager_ps": 18914040,
+      "predicted_graph_ps": 18914040,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-at-eager/n64",
+      "c1_ps": 2364255,
+      "launch_count": 64,
+      "predicted_eager_ps": 151312320,
+      "predicted_graph_ps": 151312320,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-at-eager/n256",
+      "c1_ps": 2364255,
+      "launch_count": 256,
+      "predicted_eager_ps": 605249280,
+      "predicted_graph_ps": 605249280,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-above-eager/n1",
+      "c1_ps": 4000000,
+      "launch_count": 1,
+      "predicted_eager_ps": 4000000,
+      "predicted_graph_ps": 4000000,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-above-eager/n8",
+      "c1_ps": 4000000,
+      "launch_count": 8,
+      "predicted_eager_ps": 32000000,
+      "predicted_graph_ps": 32000000,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-above-eager/n64",
+      "c1_ps": 4000000,
+      "launch_count": 64,
+      "predicted_eager_ps": 256000000,
+      "predicted_graph_ps": 256000000,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-above-eager/n256",
+      "c1_ps": 4000000,
+      "launch_count": 256,
+      "predicted_eager_ps": 1024000000,
+      "predicted_graph_ps": 1024000000,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g1/n1",
+      "c1_ps": 8943667,
+      "launch_count": 1,
+      "predicted_eager_ps": 8943667,
+      "predicted_graph_ps": 8943667,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g1/n8",
+      "c1_ps": 8943667,
+      "launch_count": 8,
+      "predicted_eager_ps": 71549336,
+      "predicted_graph_ps": 71549336,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g1/n64",
+      "c1_ps": 8943667,
+      "launch_count": 64,
+      "predicted_eager_ps": 572394688,
+      "predicted_graph_ps": 572394688,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g1/n256",
+      "c1_ps": 8943667,
+      "launch_count": 256,
+      "predicted_eager_ps": 2289578752,
+      "predicted_graph_ps": 2289578752,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g2/n1",
+      "c1_ps": 18792667,
+      "launch_count": 1,
+      "predicted_eager_ps": 18792667,
+      "predicted_graph_ps": 18792667,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g2/n8",
+      "c1_ps": 18792667,
+      "launch_count": 8,
+      "predicted_eager_ps": 150341336,
+      "predicted_graph_ps": 150341336,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g2/n64",
+      "c1_ps": 18792667,
+      "launch_count": 64,
+      "predicted_eager_ps": 1202730688,
+      "predicted_graph_ps": 1202730688,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g2/n256",
+      "c1_ps": 18792667,
+      "launch_count": 256,
+      "predicted_eager_ps": 4810922752,
+      "predicted_graph_ps": 4810922752,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g4/n1",
+      "c1_ps": 89555999,
+      "launch_count": 1,
+      "predicted_eager_ps": 89555999,
+      "predicted_graph_ps": 89555999,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g4/n8",
+      "c1_ps": 89555999,
+      "launch_count": 8,
+      "predicted_eager_ps": 716447992,
+      "predicted_graph_ps": 716447992,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g4/n64",
+      "c1_ps": 89555999,
+      "launch_count": 64,
+      "predicted_eager_ps": 5731583936,
+      "predicted_graph_ps": 5731583936,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    },
+    {
+      "cell_id": "c-g4/n256",
+      "c1_ps": 89555999,
+      "launch_count": 256,
+      "predicted_eager_ps": 22926335744,
+      "predicted_graph_ps": 22926335744,
+      "predicted_delta_ps": 0,
+      "predicted_per_kernel_delta_ps": 0
+    }
+  ],
+  "relations": [
+    {
+      "id": "R1",
+      "kind": "exact-identity",
+      "scored": false,
+      "claim": "D_profile equals max(launch_count * c1_ps, launch_count * point_ps_per_launch) exactly for every calibrated cell."
+    },
+    {
+      "id": "R2",
+      "kind": "post-specified-regression",
+      "scored": false,
+      "claim": "For every c1_ps >= 2364255 and every launch count, the model launch-mode delta and both exposed_ps values are exactly 0.",
+      "cell_count": 20
+    },
+    {
+      "id": "R3",
+      "kind": "exact-identity",
+      "scored": false,
+      "claim": "per-kernel delta is 1554949 ps for c1_ps <= 809306, 2364255 - c1_ps for 809306 < c1_ps <= 2364255, and 0 for c1_ps > 2364255; it is independent of launch count and nonincreasing in c1_ps."
+    },
+    {
+      "id": "R4",
+      "kind": "genuine-risk",
+      "scored": true,
+      "claim": "The three measured A100 deltas have a coefficient of variation below 0.04 across a per-kernel period range above a factor 10, while the model predicts exactly 0 at all three periods, so measured and modeled shapes disagree in direction and shape."
+    },
+    {
+      "id": "R5",
+      "kind": "genuine-risk",
+      "scored": true,
+      "claim": "The relative error of the max-composed prediction against each measured delta is exactly 1.0, and the absolute miss exceeds 990 GPU cycles, so both halves of the COMP-48 bar are missed."
+    },
+    {
+      "id": "R6",
+      "kind": "exact-identity",
+      "scored": false,
+      "claim": "legacy-fixed-step returns exposed_ps equal to initiation_delay_ps for every c1_ps and launch count, a per-invocation constant independent of device service."
+    },
+    {
+      "id": "R7",
+      "kind": "exact-identity",
+      "scored": false,
+      "claim": "For any nonnegative g_e >= g_g the max composition gives a per-kernel delta of exactly 0 whenever c1_ps >= g_e; with the A100 eager point of 1629633 ps this holds in every real-kernel cell of that study."
+    },
+    {
+      "id": "R8",
+      "kind": "projected-arithmetic",
+      "scored": false,
+      "claim": "For a decode step of N launches the model exposes exactly 0 host contribution in the measured regime while the retained measurement implies about N * 1.4 microseconds of additional eager device time. Arithmetic on retained evidence, not a measured step."
+    }
+  ],
+  "fatal_guards": [
+    {
+      "id": "G1",
+      "claim": "The ideal profile returns duration equal to provider duration and exposed_ps exactly 0 in every cell."
+    },
+    {
+      "id": "G2",
+      "claim": "The calibrated profiles carry exactly 809306 ps and 2364255 ps and reject every GpuSpec name except gtx1660-ti-sm75."
+    },
+    {
+      "id": "G3",
+      "claim": "Every returned duration is an integer picosecond and a second evaluation of the whole grid is bit-identical."
+    },
+    {
+      "id": "G4",
+      "claim": "The three A100 deltas are read verbatim from the committed results file whose SHA-256 is 5c26035da27c40b86149c243361c74221da8bc51f4ad8c5851018510ab2ec65c."
+    },
+    {
+      "id": "G5",
+      "claim": "The study mutates no shipped behavior and writes no file outside its own directory."
+    }
+  ],
+  "survivable_fatal_guards": [],
+  "denominators": {
+    "genuine_risk": 2,
+    "exact_identity": 4,
+    "post_specified": 1,
+    "projected": 1,
+    "fatal_guards": 5
+  },
+  "tasks": [
+    "COMP-44",
+    "COMP-47",
+    "COMP-48"
+  ],
+  "closes": [],
+  "does_not_close": [
+    "COMP-44",
+    "COMP-47",
+    "COMP-48"
+  ]
+}
