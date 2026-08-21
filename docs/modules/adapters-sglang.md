@@ -612,12 +612,15 @@ closed id.
   [examples/compute_fidelity_v1](../../examples/compute_fidelity_v1/expectations.md);
   SGLang's own model runner, its fused MoE path and the pump's unrolled
   `event_loop_normal` issue their own launches and nobody has counted them.
-  The identifying observable is the count of device-visible kernel launches
-  per model step at the pinned commit for one fixed geometry, enumerated from
-  SGLang sources and confirmed against a CUPTI or Nsight Systems capture of a
-  real decode step. Acceptance requires an SGLang-specific bracket, the signed
+  SGL-10 is the sole producer of the physical graph and device-visible launch
+  observations. This entry adds no second source-enumeration, CUPTI or Nsight
+  capture path; it is the evidence-gated closure audit over SGL-10's graph.
+  The identifying observable is its exact launch count per model step at the
+  pinned commit for one fixed geometry, with source enumeration serving only
+  as a cross-check. Acceptance requires an SGLang-specific bracket, the signed
   error of the transferred vLLM bracket against it, and an unchanged ideal
-  path. The
+  path. Remove this entry only when the SGL-10 capture also satisfies that
+  existing acceptance. The
   [first A100 pilot](../../examples/sglang_a100_kernel_pilot_v1/RESULTS.md)
   is `0/0, blocked before behavioral execution`: its exact PyTorch CUDA 13.0
   runtime could not initialize against Merlin driver 565.57.01, which exposes
@@ -625,11 +628,11 @@ closed id.
   after its static source preflight. Parent-observable guards held, but the
   run-local package, imported-source, backend and CUDA identities were not
   reached, and no launch count was observed. SGL-24 therefore remains open.
-  Its next attempt must use a separate expectations-only v2 freeze and a new
-  versioned CUDA 12.9 runtime while retaining the exact SGLang source, model,
-  workload, backends, profiler settings, ideal control and launch-count
-  acceptance. The v1 runtime remains immutable evidence and must never be
-  changed in place.
+  Its next attempt through SGL-10 must use a separate expectations-only v2
+  freeze and a new versioned CUDA 12.9 runtime while retaining the exact SGLang
+  source, model, workload, backends, profiler settings, ideal control and
+  launch-count acceptance. The v1 runtime remains immutable evidence and must
+  never be changed in place.
 - SGL-25 (Precision; P1; S): price the end-to-end study's sink-free control
   cell on the same model its sink cells price. The sink cells declare the
   2-byte, 4-resident-expert per-rank geometry
@@ -667,6 +670,25 @@ closed id.
 
 ### Completeness
 
+- SGL-10 (Completeness; P1; L): add a thin source-backed producer for the
+  supported model runner's physical device schedule. Emit one concrete
+  `ExecutionGraph` instance, a total set of observed
+  `OperationImplementationBinding` records for noncollective launches and a
+  total set of `CollectiveDeviceStageBinding` records for supported
+  GPU-resident NCCL/RCCL stages under the same identity envelope as the compute
+  profile. Preserve CUDA or ROCm stream and program order, event waits,
+  physical kernel launches, supported collective launch and chunk boundaries,
+  synchronous or asynchronous completion frontiers, radix events and
+  overlap-scheduler dependencies. This adapter owns framework observation
+  only: SGL-17 owns communicator
+  semantic-site observations, COMP-6 owns the generic identity projection and
+  totality checks, and compute and runtime own replay, service timing,
+  `CompletionEvent`, `StepResult`, TTFT and TPOT. Never infer device
+  concurrency from an aggregate phase duration. When this producer is disabled
+  or absent, preserve every accepted worker record, event sidecar, sink call,
+  timestamp, token and completion order exactly. Reject unsupported or
+  incomplete capture before emitting a partial graph or either binding set.
+  COMP-6 alone owns the separate topology projection and template hash.
 - SGL-11 (Completeness; P1; L) (remaining after the zero-time first slice):
   extend the SGLang-shaped mirror only as accepted adapter modes make further
   pinned `GroupCoordinator` calls reachable. In particular, DCP attention and
@@ -742,8 +764,3 @@ closed id.
 - SGL-7: mamba/hybrid-attention models need the auxiliary-state pool the
   stub does not build; the stub currently builds a plain `ReqToTokenPool`
   only.
-- SGL-10: capture and replay the supported model runner's CUDA stream/event,
-  kernel and NCCL schedule as an `ExecutionGraph` template keyed by the same
-  identity envelope as its compute table. Bind batch shapes, radix events and
-  overlap-scheduler dependencies at runtime; never infer device concurrency
-  from a single elapsed phase duration.

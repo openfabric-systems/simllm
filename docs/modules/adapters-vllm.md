@@ -671,6 +671,26 @@ and zero changed all-to-all bytes. The detailed evidence is in
   byte-identical fully routed baseline plus the preserved refusal for every
   geometry still unsupported.
 
+- VLLM-12 (Completeness; P1; L): add a thin source-backed producer for the
+  supported model runner's physical device schedule. Emit one concrete
+  `ExecutionGraph` instance, a total set of observed
+  `OperationImplementationBinding` records for noncollective launches and a
+  total set of `CollectiveDeviceStageBinding` records for supported
+  GPU-resident NCCL/RCCL stages under the same identity envelope as the compute
+  profile. Preserve
+  CUDA or ROCm stream and program order, event waits, physical kernel launches,
+  supported NCCL/RCCL launch and chunk boundaries, and synchronous or
+  asynchronous completion frontiers. Bind per-step shapes and framework KV
+  events without inferring concurrency from aggregate phase timings. This
+  adapter owns
+  framework observation only: COMP-6 owns the generic identity projection and
+  totality checks, while compute and runtime own replay, service timing,
+  `CompletionEvent`, `StepResult`, TTFT and TPOT. VLLM-23 owns expansion beyond
+  the currently accepted model and shape modes. When this producer is disabled
+  or absent, preserve every accepted executor and worker record, event sidecar,
+  sink call, timestamp, token and completion order exactly. Reject unsupported
+  or incomplete capture before emitting a partial graph or either binding set.
+  COMP-6 alone owns the separate topology projection and template hash.
 - VLLM-13 (Completeness; P1; L) (remaining GPU-present half after the flagged
   skeleton): the skeleton DP coordination half has landed through
   `SimGroupCoordinator`, including consumption of its local padded-token
@@ -744,9 +764,3 @@ and zero changed all-to-all bytes. The detailed evidence is in
   batch-queue loop's interleaved `execute_model`/`sample_tokens` pairs map
   to the right steps, plus per-stage step accounting; until then
   `supports_pp` stays False and vLLM rejects PP > 1 up front.
-- VLLM-12: capture and replay the supported model runner's device schedule as
-  an `ExecutionGraph` template keyed with the same identity envelope as the
-  compute profile. Preserve CUDA stream order, event waits, kernel launches,
-  NCCL launch/chunk boundaries and synchronous/asynchronous completion points.
-  The simulated executor binds step shapes and framework KV events to this
-  template; it does not invent concurrency from aggregate phase timings.

@@ -32,6 +32,18 @@ own modules.
   attribution and separately typed additive visit totals. The earlier
   `atlahs-closed-loop-result-v1` name had no accepted payload and is rejected
   explicitly rather than upgraded from invented fields.
+  `simllm-step-result-v3` preserves that metric payload field for field and
+  adds one required `run_provenance_ref` object with exactly `schema` equal to
+  `simllm-run-provenance-v2` and `sha256` equal to that canonical record's
+  lowercase hexadecimal SHA-256. The v2 provenance writer preserves the core
+  v1-family byte convention: compact UTF-8 JSON followed by exactly one LF.
+  The reference hashes the complete serialized record including that terminal
+  LF; it does not use the calibration record writer's no-newline convention.
+  The live publisher atomically publishes the
+  canonical provenance record beside the v3 result and verifies the reference
+  before any callback or terminal frame. A path that emits no live provenance
+  keeps using strict v2 and reproduces its bytes exactly; an empty, dangling or
+  fabricated v3 reference is invalid.
 - Record serialization both ways: `step_record_to_json`,
   `step_records_to_json`, `write_step_records`, `step_record_from_json` and
   `step_records_from_jsonl`, plus `step_result_to_json` and
@@ -99,6 +111,61 @@ executions. Each use carries its own scope. Causal object lineage may narrow a
 batched request set, but cannot introduce a request absent from its causal
 parents.
 
+### Registered device resource projection
+
+The registered-device extension is a new strict wire family. It does not widen
+the accepted vocabulary of `simllm-completion-event-v1`,
+`simllm-execution-result-v1` or `simllm-request-bookkeeping-v1`:
+
+- `simllm-completion-event-v2` preserves every v1 event field and adds one
+  closed `registered-device` resource-reference variant. That variant carries
+  `registry_sha256`, `device_kind_id`, `device_instance_id`, `axis_id`,
+  `resource_instance_id` and `latency_owner`.
+- `simllm-execution-result-v2` contains only v2 completion events and preserves
+  the v1 completion-boundary and physical-quiescence meanings.
+- `simllm-request-bookkeeping-v2` contains the same v2 completion events and
+  preserves the v1 append, lineage and query meanings.
+
+`registry_sha256` is the canonical identity of the validated device resource
+registry. `device_kind_id` and `axis_id` must resolve in that exact registry.
+`device_instance_id` distinguishes concrete devices of the same kind, while
+`resource_instance_id` distinguishes resources on that device, e.g. an HBM
+service, copy engine, channel or peer port. Their tuple is unique within one
+run. Core owns a
+closed `LatencyOwner` vocabulary whose wire values are exactly `queue_ps`,
+`kv_ps`, `kernel_ps`, `dma_ps`, `collective_ps`, `nic_ps` and `control_ps`, the
+seven fields already conserved by `LatencyAttribution`. The registered
+reference must name one of them. Unknown registries, unknown device kinds,
+blank device or resource instances and absent or unknown latency owners are rejected before a
+completion or bookkeeping record is published.
+
+The in-memory surface is the closed union
+`ResourceReference = ResourceRef | RegisteredDeviceResourceRef`.
+`ResourceRef` retains its enum-valued `ResourceKind` and identifier exactly.
+`RegisteredDeviceResourceRef` carries only `registry_sha256`,
+`device_kind_id`, `device_instance_id`, `axis_id`, `resource_instance_id` and
+`LatencyOwner`. Authoritative `QueueVisit`,
+v2 completion and v2 bookkeeping projections accept that union; v1 records
+accept only `ResourceRef`. A bare axis ID, base unit or capacity string can
+never masquerade as either reference variant.
+
+The v2 JSON union is exact. A legacy resource retains the v1 object bytes
+`{"kind": <ResourceKind wire value>, "resource_id": <string>}`. A registered
+resource is the strict object `{"kind": "registered-device",
+"registry_sha256": ..., "device_kind_id": ..., "device_instance_id": ...,
+"axis_id": ..., "resource_instance_id": ..., "latency_owner": ...}` with no
+other member. `registered-device` is a union discriminator, not a new
+`ResourceKind` value. The strict v1 reader rejects it, and the strict v2 reader
+rejects missing or unknown members and every other discriminator.
+
+The resource registry remains compute-owned. Core validates its supplied
+identity, registered kind and latency projection, but does not interpret
+service-demand axes, capacities or interaction laws. A device resource becomes
+a queue visit only when its authoritative runtime emits the visit boundaries;
+an internal service axis is never promoted into a core queue merely because it
+is registered. Strict v1 readers and canonical v1 bytes remain unchanged, and
+each strict reader rejects a payload from the other wire version.
+
 ### Precision selection and run provenance
 
 `PrecisionConfig` names one level for each of the eight seams in the fidelity
@@ -140,6 +207,48 @@ disagreement. Two entry points keep that honest:
 `ComputeProvider` declares. A caller-defined provider that declares nothing
 resolves to `None`: the surface records that the spelling constrains nothing
 here rather than putting a guessed level into a stamp.
+
+`simllm-run-provenance-v2` preserves every v1 source and precision field and
+adds exactly top-level `instance_graph_sha256`,
+`resolved_device_binding_closure_sha256` and canonical `device_models` members.
+For a compact-device execution its inherited `source_schema` is exactly
+`simllm-execution-graph-v1` and inherited `source_sha256` equals
+`instance_graph_sha256`; two different source identities reject the record.
+The closure hash names the graph-total
+`simllm-resolved-device-binding-closure-v1` record, not one different closure
+per device. Each device-model entry has exactly `device_instance_id`,
+`device_model_id`, `device_model_sha256`, `acceptance_status`, `target_basis`
+and `operating_envelope_sha256`. Acceptance status has the closed wire values
+`candidate` and `validated`; target basis has the closed wire values
+`target-silicon` and `architecture-derived`. Provenance copies both unchanged
+from the selected model and rejects `architecture-derived` with any status
+other than `candidate`. Entries are unique and ordered by device instance ID.
+Exactly one model is selected per device instance, but a heterogeneous tuple
+across device instances is legal and remains part of the result identity. The
+resolved operation set, optional collective set and their dispatch context
+must name exactly these device-instance/model-SHA pairs and the provenance
+graph; a cross-graph, cross-context or cross-model splice rejects publication.
+The
+selected model and operating-envelope records are reachable in the result's
+content-addressed artifact closure and are digest-verified before publication.
+Candidate and architecture-derived selections remain explicit facts; recording
+either never promotes it to validated target-silicon evidence.
+
+The live result carries provenance by content identity, not by copying a
+mutable selection object into request metrics. `simllm-step-result-v3` adds the
+single `run_provenance_ref` described at the scheduler boundary, while every
+TTFT, TPOT and attribution field keeps the v2 meaning. A selected compact
+device model requires a total resolved-device-binding-closure digest and a v3
+result. The
+compatibility path keeps strict `simllm-run-provenance-v1` available as a
+separate record and keeps `simllm-step-result-v2` byte-identical.
+
+An in-process publisher adopts the canonical provenance object and v3 result in
+one prepared result batch before callbacks. An out-of-process session sends the
+canonical provenance record in the same transaction before its terminal v3
+frame; the receiver recomputes the digest and refuses to publish either object
+on mismatch or absence. A content hash never stands alone as the only way to
+retrieve result provenance.
 
 ### Authority, queue visits and arbitration
 
@@ -853,10 +962,14 @@ configuration, and that qualification is now discharged; see
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
-  `CompletionEvent` and `RequestBookkeeper`; use a versioned bookkeeping or
-  completion-event extension only where v1 cannot represent that projection
-  without ambiguity. Keep language-specific mechanisms behind the same
-  contract: the native side extracts a protocol-neutral exact reservation
+  `CompletionEvent` and `RequestBookkeeper`. Use an existing closed
+  `ResourceKind` when it faithfully names the projected outer resource, and
+  consume CORE-50's strict registered-device reference only for an
+  otherwise-unrepresentable outer resource owned by a compact device service,
+  without interpreting its compute-owned registry or converting an internal
+  service axis into a queue visit. Keep language-specific mechanisms
+  behind the same contract: the native side extracts a protocol-neutral exact
+  reservation
   timeline and finite-capacity resource from the PCIe implementation, while
   Python uses a reference serial and capacity resource for GPU and runtime
   queues. Mandatory protocol rules stay in their owning adapters. Shared
@@ -876,10 +989,24 @@ configuration, and that qualification is now discharged; see
 - CORE-12 (Precision; P1; M): admit a kernel that becomes legal while a
   concurrent kernel batch is already active. The first coarse runtime freezes
   the co-runnable set at dispatch and waits until batch completion before a
-  later arrival can enter. Identify admission and completion offsets from a
-  reproducible multi-stream trace. Acceptance must vary arrival offset and
-  residency pressure, match the observed overlap bands, and preserve the
-  simultaneous-arrival and single-kernel baselines exactly.
+  later arrival can enter. This task is the sole owner of transactional
+  later-arrival admission into an active device engine; COMP-25's complete-tuple
+  batch service does not close it. Identify admission and completion offsets
+  from a reproducible multi-stream trace. Acceptance must vary arrival offset
+  and residency pressure, match the observed overlap bands, preserve the
+  simultaneous-arrival and single-kernel baselines exactly, and prove that
+  resolution, feasibility, dispatch, advance or prepare failure aborts without
+  callbacks or mutation of live engine, arbitration, runtime or bookkeeping
+  state. Successful adoption follows one fixed infallible order after every
+  participant prepares: device engine, arbitration policy, runtime state, one
+  bookkeeping batch, then callbacks. Consume the compute-owned transaction's
+  pure `admissible`, timestamped mutating `dispatch_granted`,
+  `peek_next_event_ps`, typed `advance`, compute-owned `release_held`, read-only
+  `accounting`, and `prepare`/`commit`/`abort` capabilities;
+  drain equal-time events to a finite fixed point. The device-engine transaction
+  is quiescent when runtime requests its physical closure; this does not require
+  unrelated network or background work to drain and does not change the
+  separate framework-completion or optional physical-quiescence boundary.
 - CORE-13 (Precision; P1; L): replace the flat per-endpoint intra-node
   NVLink-class serializer with calibrated compute-owned NCCL/NVLink service.
   The current surrogate uses payload bytes and one configured rate; it does
@@ -922,7 +1049,23 @@ configuration, and that qualification is now discharged; see
   independent GPU-versus-RNIC surrogate with one runtime composition of the
   GPU-resident NCCL task and the existing WQE/NIC authority. Consume the
   resource demands calibrated by COMP-22 and compose with CORE-13 and COMP-11
-  rather than adding a second SM, HBM or NVLink scheduler. Sweep payload,
+  rather than adding a second SM, HBM or NVLink scheduler. Version 1 consumes
+  the exact `CollectiveDeviceRankFrontier` barrier: one resolved resident stage
+  per plan rank, device grant releasing that rank's copied entry actions, and
+  a compute-owned residency lease released at the maximum of internal device
+  work finish and the copied traffic-terminal frontier. The stage charges only
+  GPU-resident SM/HBM demand; existing traffic remains sole chunk and port
+  timing authority and supplies its terminal timestamp read-only. The
+  composite stage visit finishes and completes at lease release, while the
+  internal work-finish-to-release interval is occupancy evidence rather than an
+  additive latency term. The live path consumes CORE-12's incremental
+  external-frontier transaction: device work finish is an explicit service
+  event, traffic supplies a read-only terminal timestamp, and the compute
+  transaction alone returns the final fact and releases the reservation.
+  Offline capture and fitting do not wait for CORE-12. The
+  semantic collective emits one completion at the maximum across ranks; no
+  stage emits another graph completion. Reject a multi-stage rank until capture
+  identifies its stream dependencies. Sweep payload,
   participant count, channel count and compute-neighbor pressure across the
   crossover; require TTFT and TPOT to enter the measured overlap bands and
   reconcile every GPU and network byte exactly. Zero GPU demand and disabled
@@ -1044,9 +1187,13 @@ configuration, and that qualification is now discharged; see
   canonical `ExecutionGraph`, source `StepRecord` and starting bookkeeping
   cursor.
   Output event frames carry canonical `CompletionEvent` values and the exact
-  append batch of object, stage and completion facts; the terminal frame
-  carries `ExecutionResult`, `simllm-step-result-v2`, ending ledger cursor and
-  physical quiescence separately from framework completion. Reject loss,
+  append batch of object, stage and completion facts. A compact-device session
+  emits the canonical `simllm-run-provenance-v2` record in a provenance frame
+  before the terminal frame. The terminal carries `ExecutionResult`, strict
+  `simllm-step-result-v2` on the compatibility path or
+  `simllm-step-result-v3` plus its verified provenance reference when a compact
+  device model is selected, ending ledger cursor and physical quiescence
+  separately from framework completion. Reject loss,
   duplication, cursor disagreement, graph/event identity disagreement and
   timestamp regression before publishing a result. The explicit diagnostic
   and BRIDGE-1 prepared modes remain the identity off paths and must preserve
@@ -1059,13 +1206,31 @@ configuration, and that qualification is now discharged; see
   those two levels from its own components and must name them explicitly. Add
   an observable selector for each, resolve it through
   `check_precision_selection`, and keep every current spelling byte-identical.
-- CORE-45 (Completeness; P1; M): emit the run provenance stamp from a live
-  run. `RunProvenance` round-trips and the precision surface study stamps its
-  own result, but no sink or backend run writes one today: a sink observes
-  four seams and cannot compose a complete configuration by itself, and the
-  source artifact identity is not known when it is constructed. Give the
-  closed-loop path a place to bind a complete configuration to the source it
-  consumed, so a published result carries its own fidelity configuration
-  without a study assembling it by hand. The bypass-identity contract already
-  excludes run provenance, so the emission must leave every accepted byte
-  class unchanged.
+- CORE-45 (Completeness; P1; M): emit device-model provenance from a live run.
+  `simllm-run-provenance-v1` round-trips and the precision surface study stamps
+  its own result, but no sink or backend run writes one. Add the strict
+  `simllm-run-provenance-v2` device-model selection tuple and the required
+  provenance reference in `simllm-step-result-v3`. Bind every selected model
+  ID and hash, acceptance status, target basis, operating envelope and total
+  resolved-device-binding-closure digest to the source graph and complete precision
+  configuration before publishing TTFT or TPOT. Reject an incomplete model
+  selection, more than one model for one device instance, missing closure
+  digest or provenance hash disagreement. Heterogeneous device instances may
+  select different models; aggregators group compatible provenance or reject
+  cross-envelope aggregation rather than erasing that tuple. The strict v1
+  provenance reader, strict v2 step-result
+  reader and every accepted v1/v2 byte remain unchanged; the explicit path
+  with no live provenance continues to emit v2 rather than an empty v3 record.
+- CORE-50 (Completeness; P1; M): extend completion and bookkeeping resource
+  references with the strict registered-device wire variant defined above.
+  Add the closed in-memory `ResourceReference` union without widening
+  `ResourceKind`.
+  Keep core-owned `ResourceKind` and `LatencyOwner` vocabularies closed;
+  validate a supplied registry SHA-256, registered device kind and axis,
+  concrete device and resource instances, and required latency owner without parsing the compute-owned demand
+  or capacity schema. Emit the new variant only through
+  `simllm-completion-event-v2`, `simllm-execution-result-v2` and
+  `simllm-request-bookkeeping-v2`; reject an unknown registry or kind before
+  publishing any projection. Shared fixtures must prove loss-free CORE-8
+  projection, exact latency attribution, rejection of service-axis strings as
+  queue resources and unchanged strict v1 readers and canonical bytes.

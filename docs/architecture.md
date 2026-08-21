@@ -280,6 +280,11 @@ references do not impose their original transient scope on later users.
   distributed collective ranks arrive after their own predecessor frontiers.
   The serial GOAL renderer rejects cross-rank operation barriers that it
   cannot encode.
+  `simllm-execution-graph-v1` is also the only DAG used by physical capture and
+  calibrated execution. It stays device neutral and byte-for-byte unchanged.
+  Exact implementation and typed shape identities live in total binding
+  sidecars. An instance graph hash joins evidence only; runtime service
+  selection never uses a graph hash.
 - **Central bookkeeping** (`simllm/core/bookkeeping.py`): validated frozen
   stage, object-lineage and completion facts behind one mutable append seam,
   with strict JSON round trips and request/execution/object queries.
@@ -295,10 +300,13 @@ references do not impose their original transient scope on later users.
   extensible mechanism model, not an analytical roofline in disguise.
   Catalog replay happens once while constructing a provider or artifact, and
   validated artifacts compile into O(1) profile tables. Detailed Accel-Sim
-  replay still runs offline for configurations nobody measured. The serving
-  step loop invokes neither cycle simulator. Every estimate carries provenance
-  and uncertainty so bootstrap parameters cannot be mistaken for silicon
-  validation.
+  replay is an optional offline, silicon-anchored source for declared missing
+  SM80 compute and memory points only. It is rejected for H100 and later ISA,
+  AMD ROCm devices, communication service and serving-loop invocation. The
+  complete evidence bundle, compact model and support policy are defined in
+  [Offline device calibration](design/offline-device-calibration.md). Every
+  estimate carries provenance and uncertainty so bootstrap parameters cannot
+  be mistaken for silicon validation.
 - **Host initiation model** (`simllm/compute/host.py`): the data-parallel
   handoff chain (receive data plus a small start packet, compute, hand data
   over, write a small packet releasing the next rank) is exactly GOAL's
@@ -543,19 +551,18 @@ section states the contract every level must satisfy.
 2. **Every seam names a compatibility level.** That level's accepted
    artifacts stay byte-identical as other levels are added, which is what
    makes the rest of the ladder safe to extend.
-3. **Deterministic and calibrated levels are labeled, never mixed
-   silently.** A deterministic level returns one value per input. A
-   calibrated level returns a draw from a distribution fitted offline
-   against captured evidence, and must carry the fit provenance, the
-   calibration envelope it is valid within, and the seed that reproduces
-   the draw. A result produced at a calibrated level is reported with its
-   distributional claim, not as a point estimate.
+3. **Determinism and calibration basis are labeled, never mixed silently.**
+   Calibration says where parameters came from; it does not automatically
+   enable sampling. Compute kernel service is a deterministic constant and
+   captured spread informs uncertainty and environment stability only.
+   Workload or network levels that intentionally sample a fitted distribution
+   declare that sampling mode, its envelope and the seed that reproduces it.
 4. **The run records its configuration.** A result is only interpretable
    with the precision that produced it, so the selected level of every
-   seam belongs in the run provenance. CORE-36 owns making that one
-   validated surface rather than the current per-seam mixture of provider
-   objects, profile strings, manifests, build options and environment
-   variables.
+   seam belongs in the run provenance. The v1 precision-selection surface is
+   landed; CORE-45 owns live emission of the selected device-model identity,
+   acceptance status, target basis, operating envelope and resolved-binding
+   digest while preserving strict old result bytes.
 5. **Cross-checking is an explicit mode, not an accident.** Where two
    paths can execute the same schedule, as the ATLAHS GOAL path and the
    runtime's own dependency realization both can, exactly one is the
@@ -642,21 +649,21 @@ Open public evidence seeds the A100 SXM 80 GB and H100 SXM 80 GB profiles:
   and the A100 test device is not assumed to match the target SKU exactly.
 - The [Accel-Sim ISCA 2020 paper](https://doi.org/10.1109/ISCA45697.2020.00047)
   and [framework repository](https://github.com/accel-sim/accel-sim-framework)
-  define the external SASS trace-replay and correlation path used by COMP-1.
+  define the optional external SASS trace-replay source. COMP-51 owns its
+  untouched offline sidecar; COMP-1 may use it only for qualified selective
+  A100 SM80 gaps.
 
 These sources do not establish production-kernel timing accuracy. Public
 measurements can initialize a parameter with explicit uncertainty, but exact
 framework kernel identity, copy-engine topology, cache state, launch mode and
-silicon durations must come from a capture ledger.
-`simllm-gpu-model-artifact-v2` binds a target-architecture calibration and a
-structured capture envelope to trace, kernel and copy identities, stream
-order, numeric observed core/memory clocks, simulated cycles, optional
-measured samples, calibration split, uncertainty and replay counters. Its
-strict loader reruns deterministic estimates and rejects target, clock,
-identity or sample-summary drift. Bulk raw traces stay outside Git under
-`/data3/yifeng/`. COMP-1,
-COMP-5, COMP-6 and advanced instruction/cache semantics in COMP-10 remain
-open. The inter-operation `DeviceRuntime` in CORE-4 is complete for the
+silicon durations come from the capture ledger. The production path is
+`simllm-device-calibration-bundle-v1` to `simllm-device-model-v1`, as defined in
+[offline device calibration](design/offline-device-calibration.md).
+`simllm-gpu-model-artifact-v2` remains a strict legacy import format and is not
+the contributor or release authority. Bulk raw traces stay outside Git under
+`/data3/yifeng/`. COMP-1, COMP-5, COMP-6 and advanced instruction/cache
+semantics in COMP-10 own the retained numerical and capture work. The
+inter-operation `DeviceRuntime` in CORE-4 is complete for the
 coordinated first coarse bypass profile and the frozen Tier B structural
 fixture, with its residual approximations registered as CORE-11 through
 CORE-14, CORE-16 and CORE-21; CORE-21 has since closed.
