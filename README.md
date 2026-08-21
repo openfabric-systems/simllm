@@ -371,8 +371,11 @@ for new GPUs, topology configs, metrics/plotting.
 
 ## License
 
-SimLLM is licensed under [Apache-2.0](LICENSE). The backend submodules
-keep their own permissive licenses (htsim: BSD 2-Clause,
+Copyright 2026 Yifeng Wang.
+
+SimLLM is developed as part of the OpenFabric Systems project and licensed
+under [Apache-2.0](LICENSE). See [NOTICE](NOTICE) for attribution. The backend
+submodules keep their own permissive licenses (htsim: BSD 2-Clause,
 UEC/UCL/UPB/Broadcom; ATLAHS: MIT, SPCL).
 
 ## Design & References

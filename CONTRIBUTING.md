@@ -29,6 +29,29 @@ cmake --build build/rnic --parallel
 ctest --test-dir build/rnic --output-on-failure
 ```
 
+## Developer Certificate of Origin
+
+SimLLM uses the [Developer Certificate of Origin 1.1](DCO) instead of a
+Contributor License Agreement. Every commit in a contribution must include a
+`Signed-off-by` trailer certifying that the contributor has the right to submit
+the work under the repository's license.
+
+Add the trailer automatically with Git's `--signoff` option:
+
+```bash
+git commit --signoff -m "Describe the change"
+```
+
+The resulting commit message ends with:
+
+```text
+Signed-off-by: Your Name <you@example.com>
+```
+
+Use your real name and an email address that matches the commit author. The
+sign-off is a certification under the DCO, not a copyright assignment or a
+Contributor License Agreement.
+
 ## Where to contribute
 
 - **Workload generators** (`simllm/workload/`): arrival processes, length
