@@ -78,3 +78,4 @@ examples/merlin_fabric_flow_capture_v1/dataset/**/*.host text eol=lf
 offline/calibration/suites/transformer-dag-v1/*.json text eol=lf
 offline/calibration/suites/transformer-dag-v1/*.md text eol=lf
 tests/test_transformer_dag_calibration_freeze.py text eol=lf
+tests/native/calibration_canonical/* text eol=lf

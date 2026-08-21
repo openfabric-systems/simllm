@@ -907,8 +907,9 @@ Observed and synthetic binding are distinct:
   `ResolvedOperationServiceBindingSet` for that graph before scheduling starts.
 - An implementation reference is structured and content addressed. A target
   implementation names vendor, ISA, module or code-object hash, function or
-  code hash, backend or algorithm identity and launch formula. An analytical
-  reference instead names a declarative model hash and target applicability;
+  code hash, backend or algorithm identity and a trusted launch-template
+  identifier in `launch_formula_id`. An analytical reference instead names a
+  declarative model hash and target applicability;
   it is allowed only for the explicit architecture-derived COMP-52 path.
 - Calibrated mode requires exactly one binding for every compute operation,
   rejects extras and forbids kernel-name fallback. If one dispatch signature

@@ -1,0 +1,206 @@
+from __future__ import annotations
+
+import io
+import json
+import subprocess
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+import simllm.calibration.cli as cli_module
+from simllm.calibration.cli import build_parser, main
+from simllm.calibration.doctor import DoctorRecord, DoctorState
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_parser_exposes_exact_stable_command_names() -> None:
+    parser = build_parser()
+    subparsers = next(
+        action for action in parser._actions if action.dest == "command"
+    )
+
+    assert tuple(subparsers.choices) == (
+        "doctor",
+        "run",
+        "validate",
+        "pack",
+        "submit",
+    )
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["--help"],
+        ["doctor", "--help"],
+        ["run", "--help"],
+        ["validate", "--help"],
+        ["pack", "--help"],
+        ["submit", "--help"],
+    ],
+)
+def test_help_needs_no_hardware_or_simulator_package(arguments: list[str]) -> None:
+    source = (
+        "import sys; "
+        "from simllm.calibration.cli import main; "
+        f"argv={arguments!r}; "
+        "\ntry:\n main(argv)\nexcept SystemExit as error:\n "
+        "assert error.code == 0\n"
+        "forbidden=('torch','cupy','cuda','rocm','rocprofiler','accel_sim'); "
+        "assert not any(name == prefix or name.startswith(prefix + '.') "
+        "for name in sys.modules for prefix in forbidden)"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", source],
+        cwd=REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "usage:" in completed.stdout
+
+
+def test_inert_doctor_emits_one_deterministic_typed_record() -> None:
+    first = io.StringIO()
+    second = io.StringIO()
+
+    assert main(["doctor"], stdout=first) == 0
+    assert main(["doctor"], stdout=second) == 0
+
+    assert first.getvalue() == second.getvalue()
+    record = json.loads(first.getvalue())
+    assert DoctorRecord.from_obj(record).state is DoctorState.BLOCKED
+    assert record == {
+        "capabilities": [],
+        "reason": (
+            "This installation provides backend-neutral protocols only; concrete "
+            "CUDA, ROCm and offline simulator probes are not installed."
+        ),
+        "reason_code": "no-concrete-backends",
+        "schema": "simllm-calibration-doctor-v1",
+        "state": "blocked",
+    }
+
+
+def test_inert_doctor_loads_no_hardware_or_simulator_runtime() -> None:
+    source = (
+        "import sys; from simllm.calibration.cli import main; "
+        "assert main(['doctor']) == 0; "
+        "forbidden=('torch','cupy','cuda','rocm','rocprofiler','accel_sim'); "
+        "assert not any(name == prefix or name.startswith(prefix + '.') "
+        "for name in sys.modules for prefix in forbidden)"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", source],
+        cwd=REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout)["state"] == "blocked"
+
+
+@pytest.mark.parametrize("command", ["run", "pack", "submit"])
+def test_unimplemented_commands_fail_without_side_effects(
+    command: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    before = tuple(tmp_path.iterdir())
+    output = io.StringIO()
+    errors = io.StringIO()
+    root_option = "--suite-root" if command == "run" else "--registry-root"
+
+    status = main(
+        [command, root_option, str(tmp_path / "must-not-be-created")],
+        stdout=output,
+        stderr=errors,
+    )
+
+    assert status == 2
+    assert output.getvalue() == ""
+    assert errors.getvalue().startswith(f"simllm-calibrate: {command}:")
+    assert tuple(tmp_path.iterdir()) == before
+
+
+def test_validate_fails_cleanly_when_validator_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_import = cli_module.importlib.import_module
+
+    def import_without_validator(name: str):
+        if name == "simllm.calibration.validation":
+            raise ModuleNotFoundError("validation module is absent", name=name)
+        return real_import(name)
+
+    monkeypatch.setattr(cli_module.importlib, "import_module", import_without_validator)
+    output = io.StringIO()
+    errors = io.StringIO()
+
+    status = main(
+        ["validate", str(tmp_path / "object.json")],
+        stdout=output,
+        stderr=errors,
+    )
+
+    assert status == 2
+    assert output.getvalue() == ""
+    assert "object validator is unavailable" in errors.getvalue()
+
+
+def test_validate_lazily_calls_the_object_validator(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = tmp_path / "object.json"
+    calls: list[Path] = []
+    module = types.ModuleType("simllm.calibration.validation")
+
+    class Report:
+        def to_obj(self) -> dict[str, object]:
+            return {"schema": "test-validation-v1", "valid": True}
+
+    def validate_path(path: Path) -> Report:
+        calls.append(path)
+        return Report()
+
+    module.validate_path = validate_path
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    output = io.StringIO()
+
+    assert main(["validate", str(target)], stdout=output) == 0
+    assert calls == [target]
+    assert json.loads(output.getvalue()) == {
+        "schema": "test-validation-v1",
+        "valid": True,
+    }
+
+
+def test_validate_reports_reader_errors_without_writing_an_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = tmp_path / "bad.json"
+    module = types.ModuleType("simllm.calibration.validation")
+
+    def validate_path(path: Path) -> None:
+        raise ValueError(f"invalid object at {path.name}")
+
+    module.validate_path = validate_path
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    errors = io.StringIO()
+
+    status = main(["validate", str(target)], stderr=errors)
+
+    assert status == 2
+    assert "validation failed: invalid object at bad.json" in errors.getvalue()
+    assert not target.exists()

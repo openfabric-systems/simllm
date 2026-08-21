@@ -235,7 +235,8 @@ The model selector then uses semantic work and typed shape. Once
 change service. `ImplementationRef` has two closed variants:
 
 - a target code-object reference with vendor, ISA, module or code-object hash,
-  function or code hash, backend or algorithm identity and launch formula;
+  function or code hash, backend or algorithm identity and a trusted
+  launch-template identifier in `launch_formula_id`;
 - a declarative analytical reference with its own model hash, exact target
   applicability and anchor/delta evidence, allowed only for COMP-52 candidates.
 
@@ -415,8 +416,8 @@ satisfy one claim together.
 `architecture-derived`, a support envelope, shape schemas, selectors, exact
 service entries, a typed resource registry and a per-entry evidence ledger. Its
 `architecture-derived` basis requires candidate status; only target-silicon
-evidence may carry validated status. The
-strict top-level object contains exactly `schema`, `device_model_id`,
+evidence may carry validated status. The strict top-level object contains
+exactly `schema`, `device_model_id`,
 `device_kind_id`, `acceptance_status`, `target_basis`,
 `device_identity_sha256`, `operating_envelope_sha256`,
 `support_envelope_sha256`, `evidence_manifest_sha256`, `fit_sha256`,
@@ -458,8 +459,7 @@ bounds the corresponding count. Every nonnull reference is reachable from the
 release closure and cross-record identities agree. Raw traces, sample vectors,
 profiler rows and simulator dependencies stay outside the model.
 
-The
-`simllm-device-resource-registry-v1` has exactly `schema`, `device_kind_id`,
+The `simllm-device-resource-registry-v1` has exactly `schema`, `device_kind_id`,
 sorted unique `active_axis_ids` and `axes` sorted by unique `axis_id`; active
 IDs are a subset. Every strict axis has exactly `axis_id`, `axis_class`,
 `service_scope`, `base_unit`, `clock_domain_id`, `capacity_source_id`, `rate`,
@@ -681,7 +681,7 @@ lane consumes an unfrozen contract.
 | Wave | Work | Exit gate |
 |---|---|---|
 | 0 | Freeze public interfaces, task ownership, support policy and the authored transformer-DAG expectation suite | Documentation and freeze checks pass; no behavior, simulator checkout or measured result lands |
-| 1A | COMP-50 canonical records, validators, collector and doctor protocols, compiler shell and inert local CLI | Canonical vectors, malicious archives, absent-tool behavior, split isolation and exact off-path checks pass |
+| 1A | COMP-50 canonical records, validators, collector and doctor protocols, compiler shell and inert local CLI | Canonical vectors, malicious records, absent-tool behavior, split isolation and exact off-path checks pass; archive safety remains in Wave 5B |
 | 1B | COMP-51 untouched Accel-Sim sidecar, licenses, pinned dependencies and offline smoke | Integration waits for 1A's canonical writer; default offline CI still requires no sidecar; separate networked release verification proves the exact pin fetchable and branch-reachable |
 | 2 | COMP-6 vendor activity joins plus physical identity projection, with VLLM-12 and SGL-10 capture producers | Both frameworks emit total bindings for the same contract; disabled producers are exact |
 | 3 | COMP-50 CUDA/ROCm doctor backends, COMP-5 qualification and A100, H100 and AMD silicon campaigns; COMP-22 communication-demand capture | Every retained campaign is non-void and content addressed; silicon lanes require 1A, not 1B |

@@ -31,6 +31,9 @@ preplay = [
 Homepage = "https://github.com/openfabric-systems/simllm"
 Issues = "https://github.com/openfabric-systems/simllm/issues"
 
+[project.scripts]
+simllm-calibrate = "simllm.calibration.cli:main"
+
 # SGLang discovers and runs this before constructing its Scheduler. The
 # callable is a no-op unless the simulation or oracle gate is explicit, so an
 # installed simllm never changes a real SGLang deployment by accident.
