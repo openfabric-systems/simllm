@@ -881,6 +881,47 @@ identity, rejects an
 unknown role or unresolved reference, and never selects service. These are
 validation guards, not examples.
 
+`simllm-model-kernel-inventory-v1` is the content-addressed offline workload
+denominator for one exact `(framework, model)` pair. Its strict top level is
+exactly `schema`, `suite`, `framework`, `model`, `shape_schemas`,
+`kernel_families`, `cases` and `implementation_identity`. The suite identity
+binds its ID, exact source bytes and total case count. The framework identity
+binds ID, version, source commit, required-nullable source tree and the offline
+entry seam. The model identity binds checkpoint name, revision, config and
+weight hashes, weight byte count, data type, quantization and exact unsharded
+geometry. A mismatch, defaulted geometry field or unsupported checkpoint
+rejects before an inventory object is written.
+
+The extraction join is exact and has one authority at each layer. The pinned
+framework's CPU-safe configuration surface supplies model geometry. The
+unchanged authored suite supplies the ordered phase and shape cases. Those
+cases serialize and reload through the existing `StepRecord` path;
+`step_kernels()` supplies the ordered family aggregate work and typed shape
+coordinates; the serial execution-graph lowerer supplies each unbound instance
+and normalized template identity. The inventory stores every case in suite
+order with the suite-cell, step-record, instance-graph and template-graph
+digests. Every case contains the complete ordered family projection. A family
+entry binds its shape-schema identity and logical prefill and decode launch
+counts; each case binds the matching shape vector, logical launch count and
+exact aggregate integer FLOPs and HBM bytes. Family sums equal `step_kernel()`
+exactly. The Granite MoE denominator has one logical invocation per layer for
+attention GEMM, attention score, MLP GEMM and KV read, plus one LM-head
+invocation per step. These counts describe logical workload structure, never
+physical launch fusion.
+
+The vLLM driver uses the explicit skeleton gate and the SGLang driver uses its
+CPU device and model-configuration path. Neither initializes a GPU engine or
+claims physical observation. The implementation-identity envelope therefore
+carries `code_object_hashes` and `observed_launches` only as strict
+`{state: "absent-by-design", value: null}` markers, together with the tasks
+that own the later target-silicon join. Unknown data never becomes a known
+placeholder. The `simllm-calibrate extract` command resolves the suite through
+the calibration registry rules, imports only the selected framework driver at
+dispatch, and writes the inventory to the existing content-addressed object
+store only after all cases validate. Ordinary `simllm` imports and command
+help do not import either framework. The hand-authored suite remains an exact
+bypass: extraction does not rewrite its bytes.
+
 Observed and synthetic binding are distinct:
 
 - A physical capture records the implementation reported by the framework and
@@ -1287,6 +1328,16 @@ framework DAG capture through a content-addressed evidence bundle to a compact
 deterministic device model. The model records typed shape and implementation
 selection, exact source provenance and a support envelope; optional Accel-Sim
 use is isolated to qualified A100 gaps and is absent from online execution.
+
+The nonvoid
+[offline model-extraction study](../../examples/model_extraction_v1/RESULTS.md)
+publishes the Granite column's vLLM and SGLang inventories. Both framework
+paths emit all 15 cases with identical structural denominators, exactly 97
+logical family invocations per case and two graph-template classes; repeated
+extractions are byte identical and no fatal guard is violated. This makes the
+first COMP-54 coverage column literal. It is structure-only evidence: all
+physical implementation fields remain absent by design, and the task stays
+open for the nominated Qwen3.8-27B column and the Kimi K3 structure half.
 
 The kernel-time determinism contract above is stated publicly and enforced. The
 pre-registered
@@ -2389,7 +2440,11 @@ and an explicit reason:
   rejects rather than emitting a partial column. COMP-50 owns the canonical
   record rules this task reuses; this task owns the extraction
   orchestration, the inventory schema, the per-framework drivers and the
-  coverage denominators it publishes.
+  coverage denominators it publishes. The Granite first slice is published
+  for both framework rows by `model_extraction_v1`; complete the remaining
+  nominated columns (Qwen3.8-27B, and the Kimi K3 structure half beside the
+  COMP-59 physical envelope) with their own exact checkpoint identities and
+  freeze-first shape grids, and until then this task stays open.
 - COMP-59 (Completeness; P1; L): fill coverage columns for models whose
   weights exceed the reachable fleet, with the Kimi K3 class (2.8T-parameter
   MXFP4 MoE against 1.6 TB of total A100 HBM and about 1.15 TB of GH200
