@@ -6,7 +6,9 @@ optional, untouched upstream sidecar for qualified A100 gaps. It is neither an
 online dependency nor a substitute for target-silicon evidence.
 
 This note freezes the architecture, ownership and execution order. The module
-registries remain the source of truth for open work.
+registries remain the source of truth for open work. The live fill state of
+the measurement campaign, per target, framework and model, is tracked in the
+[calibration coverage matrix](calibration-coverage.md).
 
 ## Boundary
 
@@ -706,6 +708,17 @@ when that profile emits an otherwise-unrepresentable outer queue resource;
 registering internal service axes alone never requires it. Scalar and
 compute-memory profiles with no new authoritative visit bypass Waves 5P, 5I
 and 6, while communication-enabled profiles consume only the applicable gates.
+
+Amendment (maintainer, 2026-08-24): execution priority inside these waves
+follows measured silicon on the reachable cluster targets. The A100 and GH200
+lanes run their capture and measurement campaigns first, tracked per target,
+framework and model in the [calibration coverage matrix](calibration-coverage.md),
+with COMP-54 supplying the offline model-workload extraction that enumerates
+each column. Wave 1B proceeds only when a measured A100 column exposes an
+explicitly missing exact point that the source precedence already reserves for
+the sidecar: a kernel that can be measured on the target is measured, never
+simulated. This amendment reorders execution and changes no interface,
+schema, ownership or precedence rule above.
 
 ## Ownership map
 

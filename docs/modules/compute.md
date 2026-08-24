@@ -2368,6 +2368,28 @@ and an explicit reason:
   model hash, status, target basis and envelope, and an unsupported target
   fails closed. Disabling this path preserves the validated-anchor model and
   every accepted result byte exactly.
+- COMP-54 (Completeness; P1; L): extract a model's device workload from a
+  given inference framework offline. Given a declared framework identity at
+  its pinned version (vLLM or SGLang), an exact model checkpoint identity and
+  a declared phase and shape grid, drive the framework's capture seams
+  offline and emit one content-addressed
+  `simllm-model-kernel-inventory-v1` record per `(framework, model)`: the
+  execution-graph template identity, the ordered kernel families with typed
+  invocation shapes and per-phase launch counts, and the
+  implementation-identity envelope that declares the model's calibration
+  suite denominators and its column in the
+  [calibration coverage matrix](../design/calibration-coverage.md). The
+  structure half runs with no GPU present, through the flagged vLLM skeleton
+  and SGLang CPU engine paths; the physical-identity half (code objects,
+  observed launches) joins later on target silicon through VLLM-12, SGL-10
+  and COMP-6 and never enters the CPU-derived record, which marks those
+  fields absent by design rather than fabricating them. The hand-authored
+  `transformer-dag-v1` suite remains the explicit bypass and its accepted
+  bytes stay identical. An extraction that cannot produce a total inventory
+  rejects rather than emitting a partial column. COMP-50 owns the canonical
+  record rules this task reuses; this task owns the extraction
+  orchestration, the inventory schema, the per-framework drivers and the
+  coverage denominators it publishes.
 
 ### Uncategorized
 

@@ -348,7 +348,11 @@ fidelity plan).
       routing driving the traffic, plus offline calibration. The pre-play
       oracle's capture, join, replay and routed-supply halves are
       validated; target-native device compute calibration and the
-      independent CPU comparison half of the oracle remain
+      independent CPU comparison half of the oracle remain. Device models
+      are measured directly on real GPUs we can reach (A100 and GH200
+      nodes) first, with simulator fill reserved for qualified gaps; the
+      per-framework, per-model coverage lives in the
+      [calibration coverage matrix](docs/design/calibration-coverage.md)
 - [ ] M6: PD-disaggregation and KV-transfer traffic modeling
 - [ ] M7 (in progress): the rest of the RNIC module set. The composition
       entry point, the PCIe/DMA slice, virtual host memory, the three
