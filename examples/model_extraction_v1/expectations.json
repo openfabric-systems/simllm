@@ -1,0 +1,148 @@
+{
+  "schema": "simllm-model-extraction-expectations-v1",
+  "study": "model-extraction-v1",
+  "authored_after_commit": "7196435081841c77c6271f41c16923f070d32023",
+  "working_tree_before_freeze": "clean",
+  "suite": {
+    "id": "transformer-dag-v1",
+    "relative_path": "offline/calibration/suites/transformer-dag-v1/suite.json",
+    "sha256": "5ec3296dd34ef42c65bc3677916aedc284585ec5b6b11ea2ecd5873a3e5d2266",
+    "case_count": 15
+  },
+  "model": {
+    "name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "weight_sha256": "f7ae1cee56a9ea6c5360437b1c0407f8d84816b2cc75470f4e7e5236fa2a07dc",
+    "weight_bytes": 2669283096,
+    "layers": 24
+  },
+  "frameworks": [
+    {
+      "id": "vllm",
+      "version": "0.26.0",
+      "source_commit": "568afb3a13806beb53bb2e6bd518269357b237c0",
+      "source_tree": null,
+      "entry_seam": "flagged-skeleton-step-record-v1"
+    },
+    {
+      "id": "sglang",
+      "version": "0.0.0.dev1+g8f2a3ad6d",
+      "source_commit": "8f2a3ad6d7d68c58ae65b61a75bb2115449addca",
+      "source_tree": "5be26db1f559064c0f9e724e78c1a8f619754867",
+      "entry_seam": "cpu-engine-step-record-v1"
+    }
+  ],
+  "sweep": {
+    "parameters": [
+      {
+        "id": "prefill-prompt-tokens-per-request",
+        "values": [32, 128, 192, 256, 512],
+        "fixed_requests": 4
+      },
+      {
+        "id": "decode-context-tokens",
+        "values": [128, 512, 1024, 2048, 8192],
+        "fixed_batch": 4
+      },
+      {
+        "id": "moe-decode-batch",
+        "values": [1, 4, 8, 16, 64],
+        "fixed_context_tokens": 2048
+      }
+    ],
+    "case_order": "suite-graph-cells-array-order"
+  },
+  "inventory_contract": {
+    "schema": "simllm-model-kernel-inventory-v1",
+    "top_level_fields": [
+      "schema",
+      "suite",
+      "framework",
+      "model",
+      "shape_schemas",
+      "kernel_families",
+      "cases",
+      "implementation_identity"
+    ],
+    "ordered_families": [
+      "attn_gemm",
+      "attn_score",
+      "mlp_gemm",
+      "lm_head",
+      "kv_read"
+    ],
+    "layer_repeated_families": [
+      "attn_gemm",
+      "attn_score",
+      "mlp_gemm",
+      "kv_read"
+    ],
+    "once_per_step_families": ["lm_head"],
+    "logical_launch_count_formula": "4 * layers + 1",
+    "logical_launch_count_at_frozen_layers": 97,
+    "physical_fields": ["code_object_hashes", "observed_launches"],
+    "physical_field_state": "absent-by-design",
+    "physical_field_value": null
+  },
+  "relations": [
+    {
+      "id": "R1-exact-family-projection",
+      "evidence_class": "behavioral-relation",
+      "expectation": "each-case-ordered-family-multiset-shapes-flops-and-bytes-equal-step-kernels-exact-sum-projection"
+    },
+    {
+      "id": "R2-layer-launch-scaling",
+      "evidence_class": "behavioral-relation",
+      "expectation": "four-layer-repeated-family-counts-equal-layers-and-lm-head-count-equals-one-for-total-4L-plus-1"
+    },
+    {
+      "id": "R3-shape-axis-sensitivity",
+      "evidence_class": "behavioral-relation",
+      "expectation": "prefill-prompt-decode-context-and-moe-batch-sweeps-change-their-declared-shape-vectors-exactly"
+    },
+    {
+      "id": "R4-template-equivalence-classes",
+      "evidence_class": "behavioral-relation",
+      "expectation": "ten-single-rank-cases-share-one-template-five-four-rank-moe-cases-share-another-and-the-two-templates-differ"
+    },
+    {
+      "id": "R5-byte-determinism",
+      "evidence_class": "exact-oracle",
+      "expectation": "same-framework-same-suite-reextraction-is-byte-identical"
+    }
+  ],
+  "fatal_guards": [
+    "suite-bytes-changed",
+    "checkpoint-revision-config-weight-or-size-mismatch",
+    "framework-version-or-source-identity-mismatch",
+    "missing-or-duplicate-suite-case",
+    "unknown-or-partial-kernel-family-projection",
+    "nonintegral-or-negative-projected-work",
+    "physical-identity-field-not-absent-by-design",
+    "ordinary-simllm-import-loads-framework-runtime"
+  ],
+  "negative_controls": [
+    "unsupported-model-rejects-without-output",
+    "partial-case-set-rejects-without-output",
+    "unknown-family-rejects-without-output",
+    "unflagged-vllm-skeleton-rejects-without-output"
+  ],
+  "bypass": {
+    "name": "hand-authored-transformer-dag-v1",
+    "expected_suite_sha256": "5ec3296dd34ef42c65bc3677916aedc284585ec5b6b11ea2ecd5873a3e5d2266",
+    "expected_change": "none"
+  },
+  "evidence_classes": [
+    "run-configuration",
+    "exact-oracle",
+    "behavioral-relation",
+    "structural-invariant",
+    "native-test-executable"
+  ],
+  "closure": {
+    "closes": [],
+    "keeps_open": ["COMP-54"],
+    "physical_followups": ["COMP-6", "VLLM-12", "SGL-10"]
+  }
+}
