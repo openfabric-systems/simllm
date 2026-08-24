@@ -17,10 +17,18 @@ SUITE_DIR = REPOSITORY / "offline" / "calibration" / "suites" / "transformer-dag
 SUITE_JSON = SUITE_DIR / "suite.json"
 EXPECTATIONS_JSON = SUITE_DIR / "expectations.json"
 EXPECTATIONS_MD = SUITE_DIR / "expectations.md"
+AMENDMENT_JSON = SUITE_DIR / "expectations-amendment-2026-08-24.json"
+AMENDMENT_MD = SUITE_DIR / "expectations-amendment-2026-08-24.md"
 THIS_TEST = Path(__file__).resolve()
 
 EM_DASH = "\u2014"
-EXPECTED_SUITE_FILES = {"suite.json", "expectations.json", "expectations.md"}
+EXPECTED_SUITE_FILES = {
+    "suite.json",
+    "expectations.json",
+    "expectations.md",
+    "expectations-amendment-2026-08-24.json",
+    "expectations-amendment-2026-08-24.md",
+}
 FORBIDDEN_OUTPUT_KEYS = {
     "result",
     "results",
@@ -76,7 +84,7 @@ def test_freeze_directory_contains_authored_inputs_only() -> None:
 
 
 def test_authored_json_has_no_duplicate_keys() -> None:
-    for path in (SUITE_JSON, EXPECTATIONS_JSON):
+    for path in (SUITE_JSON, EXPECTATIONS_JSON, AMENDMENT_JSON):
         assert isinstance(_load(path), dict)
 
     try:
@@ -137,8 +145,187 @@ def test_freeze_chronology_and_nonclosure_are_explicit() -> None:
     assert freeze["does_not_close"] == expected_tasks
 
 
+def test_amendment_schema_chronology_and_closed_preflight_enum_are_exact() -> None:
+    amendment = _load(AMENDMENT_JSON)
+    assert amendment["schema"] == "simllm-transformer-dag-expectations-amendment-v1"
+    assert amendment["amends_schema"] == "simllm-transformer-dag-expectations-v1"
+    assert amendment["chronology"] == {
+        "class": "expectations-only-amendment",
+        "authored_on": "2026-08-24",
+        "base_freeze_commit": "45665fd",
+        "defect_registration_commit": "60e3a83",
+        "registered_task": "COMP-53",
+        "no_campaign_cell_observed_or_read_before_amendment": True,
+        "authored_before_first_campaign_cell": True,
+        "contains_generated_values": False,
+        "contains_measured_values": False,
+    }
+    assert amendment["preflight_states"] == [
+        {
+            "state": "ready",
+            "meaning": "all required capabilities exist and the authored cell may run",
+        },
+        {
+            "state": "blocked",
+            "meaning": (
+                "a named site or tool capability is absent and no observation is produced"
+            ),
+        },
+        {
+            "state": "not-applicable",
+            "meaning": "an optional mode is outside the declared target envelope",
+        },
+        {
+            "state": "rejected",
+            "meaning": "the backend must refuse an unsupported target or feature",
+        },
+    ]
+    assert amendment["preflight_states"] == _load(EXPECTATIONS_JSON)["preflight_states"]
+
+
+def test_amendment_supersedes_only_the_registered_defects() -> None:
+    scope = _load(AMENDMENT_JSON)["scope"]
+    assert scope == {
+        "supersedes": [
+            {
+                "section": "physical_sanity_contract",
+                "clauses": [
+                    "finite_campaign_envelope_fields",
+                    "finite_evidence_rule",
+                ],
+            },
+            {
+                "section": "equations",
+                "ids": ["EQ2", "EQ3", "EQ4", "EQ5", "EQ6"],
+            },
+            {"section": "fatal_guards", "ids": ["G11"]},
+        ],
+        "clarifies": ["scalar-compute-memory-mixed-cell-denominator"],
+        "retains_every_other_base_freeze_clause": True,
+    }
+
+
+def test_amended_floor_inputs_are_declared_and_independently_evidence_bound() -> None:
+    contract = _load(AMENDMENT_JSON)["campaign_envelope_contract"]
+    assert contract["content_rule"] == (
+        "content-address-and-freeze-before-the-first-observation"
+    )
+    assert contract["ceiling_side_fields"] == _load(EXPECTATIONS_JSON)[
+        "physical_sanity_contract"
+    ]["finite_campaign_envelope_fields"]
+    assert contract["floor_side_fields"] == [
+        "flops",
+        "hbm_bytes",
+        "peer_bytes",
+        "maximum_compute_rate",
+        "maximum_hbm_rate",
+        "maximum_peer_port_rate",
+        "kernel_floor_ps_by_implementation",
+        "applicable_stages",
+        "dependency_edges",
+    ]
+    assert contract["evidence_rule"] == (
+        "every-ceiling-side-and-floor-side-field-cites-preexisting-qualified-"
+        "evidence-and-never-the-current-cell-outcome"
+    )
+    assert contract["lineage_rule"] == (
+        "reject-any-field-whose-direct-or-transitive-evidence-lineage-includes-a-"
+        "timing-or-result-from-the-cell-it-bounds"
+    )
+    assert contract["missing_floor_rule"] == (
+        "a-missing-or-unqualified-floor-side-field-blocks-the-cell-before-any-timing-is-read"
+    )
+    assert "exact-target-architecture-and-operating-envelope" in contract["target_rule"]
+
+
+def test_amended_equations_define_every_input_output_and_operator() -> None:
+    amendment = _load(AMENDMENT_JSON)
+    definitions = amendment["term_definitions"]
+    operator_definitions = amendment["operator_definitions"]
+    equations = amendment["replacement_equations"]
+    assert [equation["id"] for equation in equations] == [
+        "EQ2",
+        "EQ3",
+        "EQ4",
+        "EQ5",
+        "EQ5A",
+        "EQ6",
+    ]
+    used_terms = {
+        term
+        for equation in equations
+        for direction in ("inputs", "outputs")
+        for term in equation[direction]
+    }
+    used_operators = {
+        operator for equation in equations for operator in equation["operators"]
+    }
+    assert set(definitions) == used_terms
+    assert set(operator_definitions) == used_operators
+    for equation in equations:
+        expression_symbols = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", equation["expression"]))
+        declared_symbols = (
+            set(equation["inputs"])
+            | set(equation["outputs"])
+            | set(equation["operators"])
+        )
+        assert expression_symbols == declared_symbols, equation["id"]
+    assert definitions["kernel_floor_ps"] == (
+        "zero-for-a-nonkernel-stage-otherwise-the-exact-target-and-implementation-"
+        "matched-nonnegative-fixed-per-kernel-floor-owned-by-COMP-43-and-obtained-"
+        "from-preexisting-nonvoid-qualified-evidence"
+    )
+    assert definitions["applicable_stage_floors_ps"] == (
+        "the-EQ5A-map-with-one-isolated_floor_ps-value-for-every-and-only-applicable-stage"
+    )
+
+
+def test_amended_g11_covers_all_four_declared_passes() -> None:
+    amendment = _load(AMENDMENT_JSON)
+    guard = amendment["replacement_fatal_guard"]
+    assert guard == {
+        "id": "G11",
+        "name": "pass-separation",
+        "passes": ["timeline", "counter", "dynamic-instruction", "mixed"],
+        "claim": (
+            "Timeline, counter, dynamic-instruction and mixed passes remain separate; "
+            "counter replay is never used as the concurrency timeline, and no pass "
+            "output substitutes for another pass's evidence."
+        ),
+    }
+    protocol = _load(EXPECTATIONS_JSON)["measurement_protocol"]
+    assert {f"{pass_name.replace('-', '_')}_pass" for pass_name in guard["passes"]} <= set(
+        protocol
+    )
+
+
+def test_scalar_compute_memory_envelope_has_twelve_ready_mixed_cells() -> None:
+    suite = _load(SUITE_JSON)
+    denominator = _load(AMENDMENT_JSON)["scalar_compute_memory_mixed_denominator"]
+    ready = set(denominator["ready_capabilities"])
+    eligible_arms = [
+        arm for arm in suite["mixed_matrix"]["arms"] if set(arm["members"]) <= ready
+    ]
+    widths = suite["mixed_matrix"]["widths"]
+    assert denominator == {
+        "full_mixed_cell_denominator": 28,
+        "ready_capabilities": ["compute", "memory"],
+        "unsupported_capabilities": ["communication"],
+        "included_arms": ["mix-compute", "mix-memory", "mix-compute-memory"],
+        "included_widths": [1, 4, 2, 3],
+        "reduced_mixed_cell_denominator": 12,
+        "rule": (
+            "include-every-mixed-cell-whose-member-capabilities-are-ready-and-"
+            "exclude-only-cells-with-an-unsupported-communication-member"
+        ),
+    }
+    assert denominator["included_arms"] == [arm["id"] for arm in eligible_arms]
+    assert denominator["included_widths"] == [width["value"] for width in widths]
+    assert denominator["reduced_mixed_cell_denominator"] == len(eligible_arms) * len(widths)
+
+
 def test_machine_freezes_use_no_float_tokens_or_output_fields() -> None:
-    for path in (SUITE_JSON, EXPECTATIONS_JSON):
+    for path in (SUITE_JSON, EXPECTATIONS_JSON, AMENDMENT_JSON):
         document = _load(path)
         assert not any(isinstance(value, float) for value in _walk(document))
         keys = {key for key in _keys(document) if key in FORBIDDEN_OUTPUT_KEYS}
@@ -2118,6 +2305,11 @@ def test_machine_ids_are_all_present_in_the_prose() -> None:
     for section in ("graph_cells", "communication_cells"):
         for row in suite[section]:
             assert f"`{row['id']}`" in prose, row["id"]
+    amendment = _load(AMENDMENT_JSON)
+    amendment_prose = AMENDMENT_MD.read_text(encoding="utf-8")
+    for row in amendment["replacement_equations"]:
+        assert f"**{row['id']}**" in amendment_prose, row["id"]
+    assert f"**{amendment['replacement_fatal_guard']['id']} " in amendment_prose
 
 
 def test_freeze_files_have_no_em_dash_or_nonportable_path() -> None:
@@ -2128,7 +2320,13 @@ def test_freeze_files_have_no_em_dash_or_nonportable_path() -> None:
     windows_drive = re.compile(r"(?<![A-Za-z0-9_])[A-Za-z]:[\\/]")
     home_shortcut = re.compile(r"(?<![A-Za-z0-9_])~[\\/]")
     url = re.compile(r"https?://[^\s`\"]+")
-    for path in (SUITE_JSON, EXPECTATIONS_JSON, EXPECTATIONS_MD):
+    for path in (
+        SUITE_JSON,
+        EXPECTATIONS_JSON,
+        EXPECTATIONS_MD,
+        AMENDMENT_JSON,
+        AMENDMENT_MD,
+    ):
         text = path.read_text(encoding="utf-8")
         assert EM_DASH not in text
         masked = url.sub("", text)

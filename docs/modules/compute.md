@@ -2111,35 +2111,6 @@ and an explicit reason:
   only the installed ones. A measurement campaign run before COMP-44 supplies
   a non-overlappable term would therefore fail this bar by construction and
   could close nothing.
-- COMP-53 (Precision; P0; S): amend the frozen `transformer-dag-v1` physical
-  sanity and guard contract before its first campaign cell runs. Four defects
-  make the current freeze unevaluable or circular, and no cell has been
-  observed yet, so the amendment lands as a new expectations-only freeze
-  rather than an in-place edit of the existing record. First, `EQ5` maxes over
-  `kernel_floor_ps`, which no equation, contract field or prose defines
-  anywhere in the repository; COMP-43 owns the term it means, but the freeze
-  never says so or says how it is obtained. Second, `EQ6` consumes
-  `applicable_stage_floors_ps`, which no equation produces. Third, the floor
-  half of the contract reads `compute_rate`, `hbm_rate` and `peer_rate`
-  without declaring them, while every ceiling-side input is declared in
-  `finite_campaign_envelope_fields` and bound by `finite_evidence_rule` to
-  preexisting qualified evidence and never the current cell outcome. A floor
-  derived from the measurement it bounds is circular, and a physical-bound
-  violation is a fatal guard, so the asymmetry can void or silently spare a
-  campaign for the wrong reason. Fourth, `G11` separates the timeline, counter
-  and dynamic-instruction passes but omits the mixed pass the same freeze
-  declares, leaving the fourth pass outside the only guard that enforces pass
-  separation. Also settle the mixed-cell denominator a scalar compute-memory
-  envelope inherits: the design statement drops all 28 mixed cells while the
-  suite's own `mixed_rule` requires every cell whose member capabilities are
-  ready, which is the 12 with no communication member. Acceptance: the amended
-  freeze defines every term its equations use, declares and evidence-binds
-  every floor-side input on the same footing as the ceiling side, covers all
-  four passes in the pass-separation guard, states the reduced denominator,
-  and locks its own schema string and the closed `preflight_states` enum in
-  the freeze test. No measured value may be read before it lands, and the
-  amendment cites this chronology.
-
 ### Completeness
 
 - COMP-4 (Completeness; P2; M): add generic multi-axis interpolation as an
