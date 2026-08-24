@@ -82,3 +82,5 @@ tests/native/calibration_canonical/* text eol=lf
 offline/calibration/model-inventories/*.json text eol=lf
 examples/host_launch_composition_v1/*.json text eol=lf
 examples/host_launch_composition_v1/*.md text eol=lf
+offline/calibration/suites/qwen3.8-27b-text-v1/*.json text eol=lf
+offline/calibration/suites/qwen3.8-27b-text-v1/*.md text eol=lf

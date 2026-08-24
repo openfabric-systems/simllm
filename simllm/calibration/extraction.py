@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import replace
+import re
+from collections.abc import Mapping
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -66,6 +68,121 @@ class ModelExtractionError(ValueError):
     """A requested inventory is unsupported, inconsistent or incomplete."""
 
 
+@dataclass(frozen=True, slots=True)
+class FrameworkTextStack:
+    """Normalized text-stack structure read from one framework config."""
+
+    architecture: str
+    wrapper_model_type: str
+    text_model_type: str
+    scope: str
+    geometry: ModelGeometry
+    layer_types: tuple[str, ...]
+    linear_attention_mechanism: str
+    linear_conv_kernel_dim: int
+    linear_key_head_dim: int
+    linear_value_head_dim: int
+    linear_num_key_heads: int
+    linear_num_value_heads: int
+    attn_output_gate: bool
+    output_gate_type: str
+    state_dtype: str
+    excluded_components: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        strings = (
+            self.architecture,
+            self.wrapper_model_type,
+            self.text_model_type,
+            self.scope,
+            self.linear_attention_mechanism,
+            self.output_gate_type,
+            self.state_dtype,
+        )
+        if any(not isinstance(value, str) or not value for value in strings):
+            raise ValueError("framework text-stack strings must be nonblank")
+        if not isinstance(self.geometry, ModelGeometry):
+            raise TypeError("framework text-stack geometry must be ModelGeometry")
+        if len(self.layer_types) != self.geometry.layers:
+            raise ValueError("framework layer schedule length does not match geometry")
+        if any(
+            value not in {"linear_attention", "full_attention"}
+            for value in self.layer_types
+        ):
+            raise ValueError("framework layer schedule has an unknown attention type")
+        linear_geometry = (
+            self.linear_conv_kernel_dim,
+            self.linear_key_head_dim,
+            self.linear_value_head_dim,
+            self.linear_num_key_heads,
+            self.linear_num_value_heads,
+        )
+        if any(type(value) is not int or value <= 0 for value in linear_geometry):
+            raise ValueError("framework linear-attention geometry must be positive")
+        if type(self.attn_output_gate) is not bool:
+            raise TypeError("framework attention output-gate flag must be boolean")
+        if not self.excluded_components or any(
+            not isinstance(value, str) or not value for value in self.excluded_components
+        ):
+            raise ValueError("framework excluded components must be nonblank")
+
+    def to_obj(self) -> dict[str, Any]:
+        return {
+            "architecture": self.architecture,
+            "wrapper_model_type": self.wrapper_model_type,
+            "text_model_type": self.text_model_type,
+            "scope": self.scope,
+            "geometry": self.geometry.to_obj(),
+            "layer_types": list(self.layer_types),
+            "linear_attention_mechanism": self.linear_attention_mechanism,
+            "linear_conv_kernel_dim": self.linear_conv_kernel_dim,
+            "linear_key_head_dim": self.linear_key_head_dim,
+            "linear_value_head_dim": self.linear_value_head_dim,
+            "linear_num_key_heads": self.linear_num_key_heads,
+            "linear_num_value_heads": self.linear_num_value_heads,
+            "attn_output_gate": self.attn_output_gate,
+            "output_gate_type": self.output_gate_type,
+            "state_dtype": self.state_dtype,
+            "excluded_components": list(self.excluded_components),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class FrameworkConfigurationProjection:
+    """Framework identity, native binding, and normalized text structure."""
+
+    framework: FrameworkIdentity
+    configuration_seam: str
+    architecture_binding: str
+    text_implementation: str
+    text_stack: FrameworkTextStack
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.framework, FrameworkIdentity):
+            raise TypeError("configuration projection framework must be typed")
+        for value in (
+            self.configuration_seam,
+            self.architecture_binding,
+            self.text_implementation,
+        ):
+            if not isinstance(value, str) or not value:
+                raise ValueError("configuration projection strings must be nonblank")
+        if not isinstance(self.text_stack, FrameworkTextStack):
+            raise TypeError("configuration projection text stack must be typed")
+
+    def to_obj(self) -> dict[str, Any]:
+        framework = self.framework.to_obj()
+        framework.pop("entry_seam")
+        return {
+            "schema": "simllm-framework-text-config-projection-v1",
+            "framework": framework,
+            "configuration_seam": self.configuration_seam,
+            "architecture_binding": self.architecture_binding,
+            "text_implementation": self.text_implementation,
+            "text_stack": self.text_stack.to_obj(),
+        }
+
+
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -77,7 +194,7 @@ def _sha256_file(path: Path) -> str:
 def _model_identity(value: object) -> ModelCheckpointIdentity:
     if not isinstance(value, dict):
         raise ModelExtractionError("suite.reference_model: expected an object")
-    expected = {
+    core_fields = {
         "name",
         "revision",
         "config_sha256",
@@ -87,10 +204,29 @@ def _model_identity(value: object) -> ModelCheckpointIdentity:
         "quantization",
         "geometry",
     }
-    if set(value) != expected:
+    metadata_fields = {
+        "parameter_count",
+        "weight_identity_source",
+        "weight_identity_revision_url",
+        "weight_identity_tree_url",
+        "weight_manifest_rule",
+        "local_weight_byte_verification",
+        "local_weight_verification_policy",
+        "weight_shards",
+        "architecture",
+        "model_type",
+        "text_stack",
+    }
+    actual_fields = frozenset(value)
+    if actual_fields not in {
+        frozenset(core_fields),
+        frozenset(core_fields | metadata_fields),
+    }:
         raise ModelExtractionError(
-            "suite.reference_model: expected exact transformer-dag-v1 identity fields"
+            "suite.reference_model: expected exact local or API-metadata identity fields"
         )
+    if metadata_fields.issubset(value):
+        _validate_metadata_weight_identity(value)
     geometry = value["geometry"]
     if not isinstance(geometry, dict):
         raise ModelExtractionError("suite.reference_model.geometry: expected an object")
@@ -104,6 +240,55 @@ def _model_identity(value: object) -> ModelCheckpointIdentity:
         quantization=value["quantization"],
         geometry=ModelGeometry.from_obj(geometry, "suite.reference_model.geometry"),
     )
+
+
+def _validate_metadata_weight_identity(value: Mapping[str, Any]) -> None:
+    if value["weight_identity_source"] != "hugging-face-api-metadata":
+        raise ModelExtractionError("unsupported model weight identity source")
+    for field in ("weight_identity_revision_url", "weight_identity_tree_url"):
+        item = value[field]
+        if not isinstance(item, str) or not item.startswith("https://huggingface.co/api/"):
+            raise ModelExtractionError(f"suite.reference_model.{field}: invalid API URL")
+    if value["weight_manifest_rule"] != (
+        "sha256-of-canonical-json-array-of-name-sha256-bytes-records-sorted-by-name"
+    ):
+        raise ModelExtractionError("unsupported weight manifest rule")
+    if value["local_weight_byte_verification"] is not False:
+        raise ModelExtractionError("API-metadata identity must disable local weight checks")
+    if value["local_weight_verification_policy"] != "intentionally-not-performed":
+        raise ModelExtractionError("API-metadata identity must disclose local policy")
+    parameter_count = value["parameter_count"]
+    if type(parameter_count) is not int or parameter_count <= 0:
+        raise ModelExtractionError("API parameter count must be a positive integer")
+    shards = value["weight_shards"]
+    if not isinstance(shards, list) or not shards:
+        raise ModelExtractionError("API weight shard manifest must be nonempty")
+    names: list[str] = []
+    total_bytes = 0
+    for index, shard in enumerate(shards):
+        if not isinstance(shard, dict) or set(shard) != {"name", "sha256", "bytes"}:
+            raise ModelExtractionError(f"weight shard {index} has invalid fields")
+        name = shard["name"]
+        digest = shard["sha256"]
+        size = shard["bytes"]
+        if not isinstance(name, str) or not re.fullmatch(
+            r"model-\d{5}-of-\d{5}[.]safetensors", name
+        ):
+            raise ModelExtractionError(f"weight shard {index} has invalid name")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ModelExtractionError(f"weight shard {index} has invalid digest")
+        if type(size) is not int or size <= 0:
+            raise ModelExtractionError(f"weight shard {index} has invalid byte count")
+        names.append(name)
+        total_bytes += size
+    if names != sorted(names) or len(names) != len(set(names)):
+        raise ModelExtractionError("API weight shards must be uniquely sorted by name")
+    if total_bytes != value["weight_bytes"]:
+        raise ModelExtractionError("API weight shard byte total does not match the suite")
+    if canonical_sha256(shards) != value["weight_sha256"]:
+        raise ModelExtractionError("API weight shard manifest hash does not match the suite")
+    if 2 * parameter_count > total_bytes:
+        raise ModelExtractionError("API BF16 parameter payload exceeds physical shard bytes")
 
 
 def load_extraction_suite(raw: bytes) -> tuple[dict[str, Any], ModelCheckpointIdentity]:
@@ -137,8 +322,10 @@ def load_extraction_suite(raw: bytes) -> tuple[dict[str, Any], ModelCheckpointId
 def validate_checkpoint(
     checkpoint_root: Path,
     identity: ModelCheckpointIdentity,
+    *,
+    metadata_only: bool = False,
 ) -> None:
-    """Verify the exact local snapshot and its single Granite weight object."""
+    """Verify a local config substrate and the declared weight policy."""
 
     if not checkpoint_root.is_dir():
         raise ModelExtractionError(f"checkpoint root is not a directory: {checkpoint_root}")
@@ -150,13 +337,19 @@ def validate_checkpoint(
     config = checkpoint_root / "config.json"
     if not config.is_file():
         raise ModelExtractionError("checkpoint has no config.json")
+    if _sha256_file(config) != identity.config_sha256:
+        raise ModelExtractionError("checkpoint config hash does not match the suite")
     weights = tuple(sorted(checkpoint_root.glob("*.safetensors")))
+    if metadata_only:
+        if weights:
+            raise ModelExtractionError(
+                "API-metadata extraction requires a weight-free local substrate"
+            )
+        return
     if len(weights) != 1 or not weights[0].is_file():
         raise ModelExtractionError(
             f"checkpoint requires exactly one safetensors weight object, found {len(weights)}"
         )
-    if _sha256_file(config) != identity.config_sha256:
-        raise ModelExtractionError("checkpoint config hash does not match the suite")
     if weights[0].stat().st_size != identity.weight_bytes:
         raise ModelExtractionError("checkpoint weight byte count does not match the suite")
     if _sha256_file(weights[0]) != identity.weight_sha256:
@@ -250,7 +443,11 @@ def _case_record(cell: dict[str, Any], ordinal: int) -> StepRecord:
         request_phase = RequestPhase.PREFILL
         contexts = (length,) * count
         new_tokens = (length,) * count
-    elif family in {"memory-decode", "moe-communication-decode"}:
+    elif family in {
+        "memory-decode",
+        "moe-communication-decode",
+        "dense-batch-decode",
+    }:
         expected = required | {"batch", "context_tokens", "new_tokens_per_request"}
         if family == "moe-communication-decode":
             expected |= {"expert_participants", "parallelism_override"}
@@ -305,8 +502,7 @@ def _records_from_suite(
     suite: dict[str, Any],
     step_records_path: Path,
 ) -> tuple[StepRecord, ...]:
-    cells = suite["graph_cells"]
-    records = tuple(_case_record(cell, index) for index, cell in enumerate(cells))
+    records = case_records_from_suite(suite)
     write_step_records(records, step_records_path)
     loaded = tuple(step_records_from_jsonl(step_records_path))
     if [step_record_to_json(record) for record in loaded] != [
@@ -314,6 +510,15 @@ def _records_from_suite(
     ]:
         raise ModelExtractionError("StepRecord path did not preserve the complete case set")
     return loaded
+
+
+def case_records_from_suite(suite: Mapping[str, Any]) -> tuple[StepRecord, ...]:
+    """Validate authored shapes and build records without writing a stream."""
+
+    cells = suite.get("graph_cells")
+    if not isinstance(cells, list):
+        raise ModelExtractionError("suite.graph_cells must be an array")
+    return tuple(_case_record(cell, index) for index, cell in enumerate(cells))
 
 
 def _exact_work(value: float, path: str) -> int:
@@ -414,17 +619,11 @@ def _projections(
     return tuple(result)
 
 
-def extract_model_inventory(
-    *,
-    suite_raw: bytes,
+def _validate_framework_declaration(
+    suite: Mapping[str, Any],
     framework: FrameworkIdentity,
-    checkpoint_root: Path,
-    framework_dims: ModelDims,
-    step_records_path: Path,
-) -> ModelKernelInventory:
-    """Build one total inventory after every identity and projection check."""
-
-    suite, model = load_extraction_suite(suite_raw)
+    projection: FrameworkConfigurationProjection | None,
+) -> None:
     declared_frameworks = suite.get("frameworks")
     if not isinstance(declared_frameworks, list):
         raise ModelExtractionError("suite.frameworks must be an array")
@@ -433,14 +632,124 @@ def extract_model_inventory(
     matching = [
         item for item in declared_frameworks if item.get("id") == framework.framework_id
     ]
-    expected_framework = framework.to_obj().copy()
-    expected_framework.pop("entry_seam")
-    if matching != [
-        {key: value for key, value in expected_framework.items() if value is not None}
-    ]:
+    expected = framework.to_obj().copy()
+    expected.pop("entry_seam")
+    expected = {key: value for key, value in expected.items() if value is not None}
+    if projection is not None:
+        if projection.framework != framework:
+            raise ModelExtractionError("framework projection identity changed")
+        expected.update(
+            {
+                "architecture_binding": projection.architecture_binding,
+                "text_implementation": projection.text_implementation,
+            }
+        )
+    if matching != [expected]:
         raise ModelExtractionError("runtime framework identity does not match the suite")
-    validate_checkpoint(checkpoint_root, model)
+
+
+def _validate_text_stack(
+    reference_model: Mapping[str, Any],
+    projection: FrameworkConfigurationProjection,
+) -> None:
+    text = reference_model.get("text_stack")
+    if not isinstance(text, dict):
+        raise ModelExtractionError("suite text-stack contract must be an object")
+    expected_fields = {
+        "scope",
+        "model_type",
+        "layer_pattern",
+        "pattern_repetitions",
+        "linear_attention_layers",
+        "full_attention_layers",
+        "linear_attention_mechanism",
+        "linear_conv_kernel_dim",
+        "linear_key_head_dim",
+        "linear_value_head_dim",
+        "linear_num_key_heads",
+        "linear_num_value_heads",
+        "attn_output_gate",
+        "output_gate_type",
+        "state_dtype",
+        "excluded_components",
+    }
+    if set(text) != expected_fields:
+        raise ModelExtractionError("suite text-stack contract has unexpected fields")
+    pattern = text["layer_pattern"]
+    repetitions = text["pattern_repetitions"]
+    if (
+        not isinstance(pattern, list)
+        or not pattern
+        or type(repetitions) is not int
+        or repetitions <= 0
+    ):
+        raise ModelExtractionError("suite text-stack layer pattern is invalid")
+    schedule = tuple(pattern) * repetitions
+    linear_layers = schedule.count("linear_attention")
+    full_layers = schedule.count("full_attention")
+    if (
+        len(schedule) != projection.text_stack.geometry.layers
+        or linear_layers != text["linear_attention_layers"]
+        or full_layers != text["full_attention_layers"]
+        or linear_layers + full_layers != len(schedule)
+    ):
+        raise ModelExtractionError("suite text-stack layer counts are inconsistent")
+    expected = {
+        "architecture": reference_model.get("architecture"),
+        "wrapper_model_type": reference_model.get("model_type"),
+        "text_model_type": text["model_type"],
+        "scope": text["scope"],
+        "geometry": reference_model["geometry"],
+        "layer_types": list(schedule),
+        "linear_attention_mechanism": text["linear_attention_mechanism"],
+        "linear_conv_kernel_dim": text["linear_conv_kernel_dim"],
+        "linear_key_head_dim": text["linear_key_head_dim"],
+        "linear_value_head_dim": text["linear_value_head_dim"],
+        "linear_num_key_heads": text["linear_num_key_heads"],
+        "linear_num_value_heads": text["linear_num_value_heads"],
+        "attn_output_gate": text["attn_output_gate"],
+        "output_gate_type": text["output_gate_type"],
+        "state_dtype": text["state_dtype"],
+        "excluded_components": text["excluded_components"],
+    }
+    if projection.text_stack.to_obj() != expected:
+        raise ModelExtractionError("framework text-stack projection does not match the suite")
+    if linear_layers:
+        raise ModelExtractionError(
+            "COMP-62: Qwen3.5 Gated DeltaNet linear attention is outside the "
+            "frozen inventory family set; refusing partial "
+            f"{projection.framework.framework_id} inventory"
+        )
+
+
+def extract_model_inventory(
+    *,
+    suite_raw: bytes,
+    framework: FrameworkIdentity,
+    checkpoint_root: Path,
+    framework_dims: ModelDims,
+    step_records_path: Path,
+    framework_projection: FrameworkConfigurationProjection | None = None,
+) -> ModelKernelInventory:
+    """Build one total inventory after every identity and projection check."""
+
+    suite, model = load_extraction_suite(suite_raw)
+    _validate_framework_declaration(suite, framework, framework_projection)
+    reference_model = suite["reference_model"]
+    metadata_only = (
+        reference_model.get("weight_identity_source")
+        == "hugging-face-api-metadata"
+    )
+    validate_checkpoint(checkpoint_root, model, metadata_only=metadata_only)
     validate_framework_dims(framework_dims, model)
+    case_records_from_suite(suite)
+    has_text_contract = "text_stack" in reference_model
+    if has_text_contract and framework_projection is None:
+        raise ModelExtractionError("suite requires a framework text-stack projection")
+    if framework_projection is not None:
+        if not has_text_contract:
+            raise ModelExtractionError("framework supplied an undeclared text stack")
+        _validate_text_stack(reference_model, framework_projection)
     records = _records_from_suite(suite, step_records_path)
     cells = suite["graph_cells"]
     case_dims = tuple(
@@ -522,7 +831,10 @@ def extract_model_inventory(
 __all__ = [
     "LAYER_REPEATED_FAMILIES",
     "ORDERED_FAMILIES",
+    "FrameworkConfigurationProjection",
+    "FrameworkTextStack",
     "ModelExtractionError",
+    "case_records_from_suite",
     "extract_model_inventory",
     "load_extraction_suite",
     "validate_checkpoint",

@@ -1,0 +1,321 @@
+{
+  "schema": "simllm-transformer-dag-suite-v1",
+  "suite": "qwen3.8-27b-text-v1",
+  "state": "authored-inputs-only",
+  "reference_model": {
+    "name": "Qwen/Qwen3.8-27B",
+    "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+    "config_sha256": "191e0af232104ed8b65258cf3fb2b842e288008baca7633c11b82a1ac7203aab",
+    "parameter_count": 27781427952,
+    "weight_sha256": "72b5a8b6db0ad258d743ddbf3de4efda86b1ee894f08564f31044d921c17074c",
+    "weight_bytes": 55563006776,
+    "weight_identity_source": "hugging-face-api-metadata",
+    "weight_identity_revision_url": "https://huggingface.co/api/models/Qwen/Qwen3.8-27B/revision/1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0?expand[]=sha&expand[]=safetensors",
+    "weight_identity_tree_url": "https://huggingface.co/api/models/Qwen/Qwen3.8-27B/tree/1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0?recursive=true&expand=true",
+    "weight_manifest_rule": "sha256-of-canonical-json-array-of-name-sha256-bytes-records-sorted-by-name",
+    "local_weight_byte_verification": false,
+    "local_weight_verification_policy": "intentionally-not-performed",
+    "weight_shards": [
+      {
+        "name": "model-00001-of-00018.safetensors",
+        "sha256": "ba0ce20aae489ad196733da5064bcdf159a1fe84f53336648196e1ebb7751b1c",
+        "bytes": 3966730552
+      },
+      {
+        "name": "model-00002-of-00018.safetensors",
+        "sha256": "06a148c01bfbe3faa14a5f184a7ff29a706f7ae1c8b2705d2058e26d17a001fb",
+        "bytes": 3043080328
+      },
+      {
+        "name": "model-00003-of-00018.safetensors",
+        "sha256": "2e1bf62cbcd406eaa64b60d10353e1f0ef4039d0976e56f05cabe953454f9968",
+        "bytes": 2542796952
+      },
+      {
+        "name": "model-00004-of-00018.safetensors",
+        "sha256": "511e34063187882659753c4d93f3859f93c019fd438d8813071921c81d9a3f1a",
+        "bytes": 3988973152
+      },
+      {
+        "name": "model-00005-of-00018.safetensors",
+        "sha256": "635cb53446dc74f219740fc59e18b774f877b803b9722e289ca62575a6efa701",
+        "bytes": 2099339864
+      },
+      {
+        "name": "model-00006-of-00018.safetensors",
+        "sha256": "0bc5214fac607f0e6cc92eec3789d4b8559410ef9fce66621ba8158e8410dae0",
+        "bytes": 3979553696
+      },
+      {
+        "name": "model-00007-of-00018.safetensors",
+        "sha256": "80b0c49033e9a0d5762562aa12f4acdb7f54da586f3d0110f28c48d91cf07892",
+        "bytes": 2108759344
+      },
+      {
+        "name": "model-00008-of-00018.safetensors",
+        "sha256": "7192c5b66185d3592927daabee1cc19e6f6e0ce75988ee20e824b624765fda79",
+        "bytes": 3979553696
+      },
+      {
+        "name": "model-00009-of-00018.safetensors",
+        "sha256": "af3c48cc37af44f3db6ae0579baf019180d48d9c527caa0a1f03ff85813a56d8",
+        "bytes": 2108759344
+      },
+      {
+        "name": "model-00010-of-00018.safetensors",
+        "sha256": "163490a76f3bea3a40855b7efc04ce6d27afaf1a34f0bbde495b9491f76457c9",
+        "bytes": 3979553696
+      },
+      {
+        "name": "model-00011-of-00018.safetensors",
+        "sha256": "5f3ae1b948aeee39da77aec558e8236cd65fe4d7cb7686a76bb007acc563c6d8",
+        "bytes": 2108759344
+      },
+      {
+        "name": "model-00012-of-00018.safetensors",
+        "sha256": "a3de1c7114677a8f5ac5c4892c90e8238ea5c1e2038c80e757dfc87c3902ca55",
+        "bytes": 3979553696
+      },
+      {
+        "name": "model-00013-of-00018.safetensors",
+        "sha256": "06ab79a41f74c9c5cb734816feb0c7fc364104b227165ee7391231e1155aa02a",
+        "bytes": 2108759344
+      },
+      {
+        "name": "model-00014-of-00018.safetensors",
+        "sha256": "4138ed94603065ba884bbcadedb04d7718bb40117e85e6f5c6fc5b9c05b7a85b",
+        "bytes": 3979553696
+      },
+      {
+        "name": "model-00015-of-00018.safetensors",
+        "sha256": "69224e27b9de4e7dbf6fc936c6eaae08447bda3b80a6c31a871ab451173afd22",
+        "bytes": 2108759344
+      },
+      {
+        "name": "model-00016-of-00018.safetensors",
+        "sha256": "73cb9a1089fb6155cb648609478d6633be8a5c7d9ca5a05bc8925ce8a553cefe",
+        "bytes": 3979564040
+      },
+      {
+        "name": "model-00017-of-00018.safetensors",
+        "sha256": "beb51f01056142ac4984bd800507b0dd0fd18de57f8e9ef6ea41d1a3598983a8",
+        "bytes": 2108759344
+      },
+      {
+        "name": "model-00018-of-00018.safetensors",
+        "sha256": "1d3479509e21494658f9b64d317f5ea8e55c4025d28c702d6c4d0b356ce8ea06",
+        "bytes": 3392197344
+      }
+    ],
+    "dtype": "bfloat16",
+    "quantization": "none",
+    "architecture": "Qwen3_5ForConditionalGeneration",
+    "model_type": "qwen3_5",
+    "geometry": {
+      "layers": 64,
+      "hidden_size": 5120,
+      "intermediate_size": 17408,
+      "num_heads": 24,
+      "num_kv_heads": 4,
+      "head_size": 256,
+      "num_experts": 0,
+      "top_k": 0,
+      "vocab_size": 248320
+    },
+    "text_stack": {
+      "scope": "text-only",
+      "model_type": "qwen3_5_text",
+      "layer_pattern": [
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention"
+      ],
+      "pattern_repetitions": 16,
+      "linear_attention_layers": 48,
+      "full_attention_layers": 16,
+      "linear_attention_mechanism": "Qwen3.5 Gated DeltaNet",
+      "linear_conv_kernel_dim": 4,
+      "linear_key_head_dim": 128,
+      "linear_value_head_dim": 128,
+      "linear_num_key_heads": 16,
+      "linear_num_value_heads": 48,
+      "attn_output_gate": true,
+      "output_gate_type": "swish",
+      "state_dtype": "float32",
+      "excluded_components": [
+        "multimodal-vision-encoder",
+        "one-layer-mtp-speculative-head"
+      ]
+    }
+  },
+  "frameworks": [
+    {
+      "id": "vllm",
+      "version": "0.26.0",
+      "source_commit": "568afb3a13806beb53bb2e6bd518269357b237c0",
+      "architecture_binding": "model_executor/models/registry.py:573",
+      "text_implementation": "QwenGatedDeltaNetAttention"
+    },
+    {
+      "id": "sglang",
+      "version": "0.0.0.dev1+g8f2a3ad6d",
+      "source_commit": "8f2a3ad6d7d68c58ae65b61a75bb2115449addca",
+      "source_tree": "5be26db1f559064c0f9e724e78c1a8f619754867",
+      "architecture_binding": "python/sglang/srt/models/qwen3_5.py:2319",
+      "text_implementation": "Qwen3_5GatedDeltaNet with RadixLinearAttention"
+    }
+  ],
+  "phase_scope": {
+    "mode": "text-only",
+    "included_phases": ["prefill", "decode"],
+    "excluded_components": [
+      "multimodal-vision-encoder",
+      "one-layer-mtp-speculative-head"
+    ],
+    "unsupported_mechanism_policy": "reject-total-inventory-under-COMP-62"
+  },
+  "base_parallelism": {
+    "tensor": 1,
+    "pipeline": 1,
+    "data": 1,
+    "expert": 1
+  },
+  "graph_cells": [
+    {
+      "id": "cp-train-r4-t128",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "train",
+      "requests": 4,
+      "prompt_tokens_per_request": 32,
+      "total_prompt_tokens": 128
+    },
+    {
+      "id": "cp-train-r4-t768",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "train",
+      "requests": 4,
+      "prompt_tokens_per_request": 192,
+      "total_prompt_tokens": 768
+    },
+    {
+      "id": "cp-train-r4-t2048",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "train",
+      "requests": 4,
+      "prompt_tokens_per_request": 512,
+      "total_prompt_tokens": 2048
+    },
+    {
+      "id": "cp-validation-r4-t512",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "validation",
+      "requests": 4,
+      "prompt_tokens_per_request": 128,
+      "total_prompt_tokens": 512
+    },
+    {
+      "id": "cp-test-r4-t1024",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "test",
+      "requests": 4,
+      "prompt_tokens_per_request": 256,
+      "total_prompt_tokens": 1024
+    },
+    {
+      "id": "md-train-b4-c128",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 4,
+      "context_tokens": 128,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-train-b4-c1024",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 4,
+      "context_tokens": 1024,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-train-b4-c8192",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 4,
+      "context_tokens": 8192,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-validation-b4-c512",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "validation",
+      "batch": 4,
+      "context_tokens": 512,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-test-b4-c2048",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "test",
+      "batch": 4,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-train-b1-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 1,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-train-b16-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 16,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-train-b64-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 64,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-validation-b4-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "validation",
+      "batch": 4,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-test-b8-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "test",
+      "batch": 8,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    }
+  ]
+}

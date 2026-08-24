@@ -763,6 +763,14 @@ def _matching_moe_family(model_config: Any, hf: Any) -> str | None:
         model_types.intersection(_UNSUPPORTED_MOE_MODEL_TYPES)
         or architectures.intersection(_UNSUPPORTED_MOE_ARCHITECTURES)
     )
+    architecture_identifies_moe = any(
+        "moe" in name or "mixtral" in name or "dbrx" in name for name in architectures
+    )
+    qwen35_dense = "qwen3_5_text" in model_types
+    if qwen35_dense and (supported or explicit_unsupported or architecture_identifies_moe):
+        raise ValueError(
+            "SGLang qwen3_5_text config conflicts with a routed MoE identity"
+        )
     if supported and explicit_unsupported:
         raise ValueError(
             "SGLang model_type and architectures identify conflicting MoE families: "
@@ -770,9 +778,8 @@ def _matching_moe_family(model_config: Any, hf: Any) -> str | None:
         )
     if supported:
         return next(iter(supported))
-    architecture_identifies_moe = any(
-        "moe" in name or "mixtral" in name or "dbrx" in name for name in architectures
-    )
+    if qwen35_dense:
+        return "dense"
     return "unsupported" if explicit_unsupported or architecture_identifies_moe else None
 
 
@@ -872,6 +879,8 @@ def _moe_geometry(
     ep_num_redundant_experts: Any,
 ) -> tuple[int, int, int, int] | None:
     family = _matching_moe_family(model_config, hf)
+    if family == "dense":
+        return None
     has_sentinel = _has_moe_sentinel(model_config, hf)
     if family is None and not has_sentinel:
         return None
