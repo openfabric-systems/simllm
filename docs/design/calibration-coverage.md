@@ -81,7 +81,7 @@ before any cell of that column runs.
 
 | Column | Identity | State |
 |---|---|---|
-| granite-3.0-1b-a400m-instruct | `ibm-granite/granite-3.0-1b-a400m-instruct`, revision `ffec3c35`, pinned with hashes in the [transformer-dag-v1 suite](../../offline/calibration/suites/transformer-dag-v1/suite.json) | Suite authored; extraction owned by COMP-54 |
+| granite-3.0-1b-a400m-instruct | `ibm-granite/granite-3.0-1b-a400m-instruct`, revision `ffec3c35`, pinned with hashes in the [transformer-dag-v1 suite](../../offline/calibration/suites/transformer-dag-v1/suite.json) | Offline denominators published by [model_extraction_v1](../../examples/model_extraction_v1/RESULTS.md): [vLLM inventory](../../offline/calibration/model-inventories/e74e995a89588a304aa852593d3505cfab9a94d2c068c82dbe9c776da7119af9.json) and [SGLang inventory](../../offline/calibration/model-inventories/147fe4398d5615afe7954c9199134de37f706da2cecda8fc37d6514ad936c54c.json) |
 | dense Llama-class checkpoint | Nominated at its extraction freeze | Planned (COMP-54) |
 | larger routed-MoE checkpoint | Nominated at its extraction freeze | Planned (COMP-54) |
 

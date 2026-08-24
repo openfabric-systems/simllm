@@ -1329,6 +1329,16 @@ deterministic device model. The model records typed shape and implementation
 selection, exact source provenance and a support envelope; optional Accel-Sim
 use is isolated to qualified A100 gaps and is absent from online execution.
 
+The nonvoid
+[offline model-extraction study](../../examples/model_extraction_v1/RESULTS.md)
+publishes the Granite column's vLLM and SGLang inventories. Both framework
+paths emit all 15 cases with identical structural denominators, exactly 97
+logical family invocations per case and two graph-template classes; repeated
+extractions are byte identical and no fatal guard is violated. This makes the
+first COMP-54 coverage column literal. It is structure-only evidence: all
+physical implementation fields remain absent by design, and the task stays
+open for the planned dense Llama-class and larger routed-MoE columns.
+
 The kernel-time determinism contract above is stated publicly and enforced. The
 pre-registered
 [kernel determinism study](../../examples/kernel_determinism_v1/RESULTS.md) is
@@ -2430,7 +2440,11 @@ and an explicit reason:
   rejects rather than emitting a partial column. COMP-50 owns the canonical
   record rules this task reuses; this task owns the extraction
   orchestration, the inventory schema, the per-framework drivers and the
-  coverage denominators it publishes.
+  coverage denominators it publishes. The Granite first slice is published
+  for both framework rows by `model_extraction_v1`. Complete the remaining
+  planned dense Llama-class and larger routed-MoE columns with their own exact
+  checkpoint identities and freeze-first shape grids; until then COMP-54 stays
+  open.
 
 ### Uncategorized
 
