@@ -120,9 +120,15 @@ def _typed_handlers() -> dict[str, Callable[[object], object]]:
 
     from .bindings import TYPED_RECORD_READERS as BINDING_READERS
     from .doctor import TYPED_RECORD_READERS as DOCTOR_READERS
+    from .model_inventory import TYPED_RECORD_READERS as INVENTORY_READERS
 
     handlers: dict[str, Callable[[object], object]] = {}
-    for source in (DEVICE_MODEL_READERS, BINDING_READERS, DOCTOR_READERS):
+    for source in (
+        DEVICE_MODEL_READERS,
+        BINDING_READERS,
+        DOCTOR_READERS,
+        INVENTORY_READERS,
+    ):
         overlap = handlers.keys() & source.keys()
         if overlap:
             raise RuntimeError(f"duplicate typed record readers for {sorted(overlap)!r}")

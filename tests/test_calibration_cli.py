@@ -6,12 +6,14 @@ import subprocess
 import sys
 import types
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 import simllm.calibration.cli as cli_module
 from simllm.calibration.cli import build_parser, main
 from simllm.calibration.doctor import DoctorRecord, DoctorState
+from simllm.calibration.record_types import RecordObject
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
@@ -24,6 +26,7 @@ def test_parser_exposes_exact_stable_command_names() -> None:
 
     assert tuple(subparsers.choices) == (
         "doctor",
+        "extract",
         "run",
         "validate",
         "pack",
@@ -36,6 +39,7 @@ def test_parser_exposes_exact_stable_command_names() -> None:
     [
         ["--help"],
         ["doctor", "--help"],
+        ["extract", "--help"],
         ["run", "--help"],
         ["validate", "--help"],
         ["pack", "--help"],
@@ -105,6 +109,142 @@ def test_inert_doctor_loads_no_hardware_or_simulator_runtime() -> None:
 
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout)["state"] == "blocked"
+
+
+def test_extract_lazily_resolves_suite_and_writes_one_content_object(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    suite_root = tmp_path / "calibration"
+    suite_file = suite_root / "suites" / "transformer-dag-v1" / "suite.json"
+    suite_file.parent.mkdir(parents=True)
+    suite_file.write_bytes(b"suite bytes")
+    checkpoint = tmp_path / "checkpoint"
+    checkpoint.mkdir()
+    output_root = tmp_path / "objects"
+    steps = tmp_path / "steps.jsonl"
+    calls: list[dict[str, object]] = []
+    module = types.ModuleType("simllm.adapters.vllm.extraction")
+    record = RecordObject.from_value({"schema": "test-inventory-v1", "value": 1})
+
+    def extract(**kwargs: object) -> SimpleNamespace:
+        calls.append(kwargs)
+        return SimpleNamespace(
+            framework=SimpleNamespace(framework_id="vllm"),
+            model=SimpleNamespace(name="unit/model"),
+            cases=(object(),),
+            record=record,
+        )
+
+    module.extract = extract
+    real_import = cli_module.importlib.import_module
+
+    def import_with_driver(name: str):
+        if name == module.__name__:
+            return module
+        return real_import(name)
+
+    monkeypatch.setattr(cli_module.importlib, "import_module", import_with_driver)
+    output = io.StringIO()
+    status = main(
+        [
+            "extract",
+            "--framework",
+            "vllm",
+            "--suite-root",
+            str(suite_root),
+            "--checkpoint-root",
+            str(checkpoint),
+            "--step-records",
+            str(steps),
+            "--output-root",
+            str(output_root),
+        ],
+        stdout=output,
+    )
+
+    assert status == 0
+    assert calls == [
+        {
+            "suite_raw": b"suite bytes",
+            "checkpoint_root": checkpoint,
+            "step_records_path": steps,
+        }
+    ]
+    assert (output_root / f"{record.record_id}.json").read_bytes() == record.canonical
+    assert json.loads(output.getvalue()) == {
+        "schema": "simllm-model-kernel-inventory-extraction-v1",
+        "framework": "vllm",
+        "model": "unit/model",
+        "case_count": 1,
+        "record_schema": "test-inventory-v1",
+        "record_sha256": record.record_id,
+        "size_bytes": len(record.canonical),
+    }
+
+
+def test_extract_rejection_writes_no_content_object(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    suite_root = tmp_path / "calibration"
+    suite_file = suite_root / "suites" / "transformer-dag-v1" / "suite.json"
+    suite_file.parent.mkdir(parents=True)
+    suite_file.write_bytes(b"suite bytes")
+    checkpoint = tmp_path / "checkpoint"
+    checkpoint.mkdir()
+    output_root = tmp_path / "objects"
+    module = types.ModuleType("simllm.adapters.vllm.extraction")
+
+    def reject(**kwargs: object) -> None:
+        raise RuntimeError("partial capture")
+
+    module.extract = reject
+    real_import = cli_module.importlib.import_module
+    monkeypatch.setattr(
+        cli_module.importlib,
+        "import_module",
+        lambda name: module if name == module.__name__ else real_import(name),
+    )
+    errors = io.StringIO()
+    status = main(
+        [
+            "extract",
+            "--framework",
+            "vllm",
+            "--suite-root",
+            str(suite_root),
+            "--checkpoint-root",
+            str(checkpoint),
+            "--step-records",
+            str(tmp_path / "steps.jsonl"),
+            "--output-root",
+            str(output_root),
+        ],
+        stderr=errors,
+    )
+
+    assert status == 2
+    assert "partial capture" in errors.getvalue()
+    assert not output_root.exists()
+
+
+def test_ordinary_import_and_extract_help_load_no_framework_runtime() -> None:
+    source = (
+        "import sys; import simllm; "
+        "from simllm.calibration.cli import main; "
+        "\ntry:\n main(['extract', '--help'])\nexcept SystemExit as error:\n "
+        "assert error.code == 0\n"
+        "assert 'vllm' not in sys.modules; assert 'sglang' not in sys.modules"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", source],
+        cwd=REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 @pytest.mark.parametrize("command", ["run", "pack", "submit"])

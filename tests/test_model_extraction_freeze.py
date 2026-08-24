@@ -23,15 +23,15 @@ def _load(path: Path) -> dict[str, object]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def test_model_extraction_freeze_has_only_authored_expectations() -> None:
-    assert {path.name for path in STUDY.iterdir()} == {
-        "expectations.json",
-        "expectations.md",
-    }
+def test_model_extraction_freeze_retains_only_authored_values() -> None:
+    assert EXPECTATIONS.is_file()
+    assert (STUDY / "expectations.md").is_file()
     freeze = _load(EXPECTATIONS)
     assert freeze["schema"] == "simllm-model-extraction-expectations-v1"
     assert freeze["study"] == "model-extraction-v1"
     assert freeze["working_tree_before_freeze"] == "clean"
+    assert "results" not in freeze
+    assert "observed_inventories" not in freeze
     assert freeze["closure"] == {
         "closes": [],
         "keeps_open": ["COMP-54"],

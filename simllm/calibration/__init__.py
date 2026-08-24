@@ -14,6 +14,7 @@ __all__ = [
     "CalibrationCompiler",
     "CalibrationValidationError",
     "HardwareCollector",
+    "ModelKernelInventory",
     "OfflineKernelSimulator",
     "RootKind",
     "RootResolutionError",
@@ -35,6 +36,10 @@ _EXPORTS = {
         "CalibrationValidationError",
     ),
     "HardwareCollector": ("simllm.calibration.protocols", "HardwareCollector"),
+    "ModelKernelInventory": (
+        "simllm.calibration.model_inventory",
+        "ModelKernelInventory",
+    ),
     "OfflineKernelSimulator": (
         "simllm.calibration.protocols",
         "OfflineKernelSimulator",

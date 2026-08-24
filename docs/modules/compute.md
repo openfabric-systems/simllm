@@ -881,6 +881,47 @@ identity, rejects an
 unknown role or unresolved reference, and never selects service. These are
 validation guards, not examples.
 
+`simllm-model-kernel-inventory-v1` is the content-addressed offline workload
+denominator for one exact `(framework, model)` pair. Its strict top level is
+exactly `schema`, `suite`, `framework`, `model`, `shape_schemas`,
+`kernel_families`, `cases` and `implementation_identity`. The suite identity
+binds its ID, exact source bytes and total case count. The framework identity
+binds ID, version, source commit, required-nullable source tree and the offline
+entry seam. The model identity binds checkpoint name, revision, config and
+weight hashes, weight byte count, data type, quantization and exact unsharded
+geometry. A mismatch, defaulted geometry field or unsupported checkpoint
+rejects before an inventory object is written.
+
+The extraction join is exact and has one authority at each layer. The pinned
+framework's CPU-safe configuration surface supplies model geometry. The
+unchanged authored suite supplies the ordered phase and shape cases. Those
+cases serialize and reload through the existing `StepRecord` path;
+`step_kernels()` supplies the ordered family aggregate work and typed shape
+coordinates; the serial execution-graph lowerer supplies each unbound instance
+and normalized template identity. The inventory stores every case in suite
+order with the suite-cell, step-record, instance-graph and template-graph
+digests. Every case contains the complete ordered family projection. A family
+entry binds its shape-schema identity and logical prefill and decode launch
+counts; each case binds the matching shape vector, logical launch count and
+exact aggregate integer FLOPs and HBM bytes. Family sums equal `step_kernel()`
+exactly. The Granite MoE denominator has one logical invocation per layer for
+attention GEMM, attention score, MLP GEMM and KV read, plus one LM-head
+invocation per step. These counts describe logical workload structure, never
+physical launch fusion.
+
+The vLLM driver uses the explicit skeleton gate and the SGLang driver uses its
+CPU device and model-configuration path. Neither initializes a GPU engine or
+claims physical observation. The implementation-identity envelope therefore
+carries `code_object_hashes` and `observed_launches` only as strict
+`{state: "absent-by-design", value: null}` markers, together with the tasks
+that own the later target-silicon join. Unknown data never becomes a known
+placeholder. The `simllm-calibrate extract` command resolves the suite through
+the calibration registry rules, imports only the selected framework driver at
+dispatch, and writes the inventory to the existing content-addressed object
+store only after all cases validate. Ordinary `simllm` imports and command
+help do not import either framework. The hand-authored suite remains an exact
+bypass: extraction does not rewrite its bytes.
+
 Observed and synthetic binding are distinct:
 
 - A physical capture records the implementation reported by the framework and

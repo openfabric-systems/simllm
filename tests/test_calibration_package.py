@@ -70,7 +70,7 @@ def test_module_entry_point_exposes_the_stable_help() -> None:
         text=True,
     )
 
-    assert "{doctor,run,validate,pack,submit}" in completed.stdout
+    assert "{doctor,extract,run,validate,pack,submit}" in completed.stdout
 
 
 def test_console_script_is_declared() -> None:
