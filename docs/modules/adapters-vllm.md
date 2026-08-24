@@ -736,6 +736,20 @@ and zero changed all-to-all bytes. The detailed evidence is in
   rebinding and request completion while preserving those explicit refusals,
   the implemented Granite schedule and the producer-disabled serial path
   exactly.
+- VLLM-30 (Completeness; P1; L): bump the pinned vLLM from v0.26.0 to a
+  current release that executes the `KimiK3ForConditionalGeneration` and
+  `Qwen3_5ForConditionalGeneration` families (maintainer authorization
+  2026-08-24). Before the single-sourced pinned version switches, re-verify
+  every landed seam against the new source: the `SimExecutor` executor RPC
+  surface and its refusal gates, the flagged worker-cls skeleton gate, the
+  simulated `GroupCoordinator` mirrored signatures, the step-record
+  serializer fields, the placement exporter and the COMP-54 extraction
+  driver. Every accepted artifact binding the v0.26.0 framework identity
+  remains valid historical evidence and is never re-labeled; published
+  inventory columns are re-extracted under the new identity so the coverage
+  matrix stays internally consistent, and the previous pinned environment
+  remains reproducible beside the new one. A seam the new release breaks is
+  repaired or its refusal is preserved loudly, never silently widened.
 
 ### Uncategorized
 

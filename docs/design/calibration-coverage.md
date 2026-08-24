@@ -86,7 +86,7 @@ never silently bumped past the pins.
 |---|---|---|
 | granite-3.0-1b-a400m-instruct | `ibm-granite/granite-3.0-1b-a400m-instruct`, revision `ffec3c35`, pinned with hashes in the [transformer-dag-v1 suite](../../offline/calibration/suites/transformer-dag-v1/suite.json) | Offline denominators published by [model_extraction_v1](../../examples/model_extraction_v1/RESULTS.md): [vLLM inventory](../../offline/calibration/model-inventories/e74e995a89588a304aa852593d3505cfab9a94d2c068c82dbe9c776da7119af9.json) and [SGLang inventory](../../offline/calibration/model-inventories/147fe4398d5615afe7954c9199134de37f706da2cecda8fc37d6514ad936c54c.json); the anchored first column and the small-MoE control for the beyond-node-memory route |
 | Qwen3.8-27B | `Qwen/Qwen3.8-27B` (open Apache 2.0 dense multimodal checkpoint, 27.78B parameters, architecture `Qwen3_5ForConditionalGeneration`); exact revision and hashes pinned at its extraction freeze | Planned (COMP-54). The architecture is present in both pinned framework registries (inspection 2026-08-24); the extraction freeze owns the binding verification |
-| Kimi K3 | `moonshotai/Kimi-K3` (open-weight 2.8T-parameter MoE, 104B active, 896 experts with 16 selected, hybrid linear attention, native MXFP4 checkpoint, released 2026-07); exact revision and hashes pinned at its extraction freeze | Blocked: the `KimiK3ForConditionalGeneration` architecture postdates both framework pins (registry inspection 2026-08-24; the newest pinned Kimi family is K2.5), so the COMP-54 structure half and the COMP-59 envelope both wait on a maintainer pin decision |
+| Kimi K3 | `moonshotai/Kimi-K3` (open-weight 2.8T-parameter MoE, 104B active, 896 experts with 16 selected, hybrid linear attention, native MXFP4 checkpoint, released 2026-07); exact revision and hashes pinned at its extraction freeze | Blocked on the pin bump in flight: the `KimiK3ForConditionalGeneration` architecture postdates both current framework pins (registry inspection 2026-08-24), and the maintainer authorized the bump the same day; VLLM-30 and SGL-32 own it, and the column unblocks when both land |
 
 Closed-weight models are out of scope regardless of interest: a column
 requires open weights because capture executes the real checkpoint, so the
@@ -106,6 +106,12 @@ and in-graph instrumentation follows the constraint the
 study measured: the driver refuses CUDA-event timing on capture-recorded
 events, so in-graph evidence rides the profiler lane.
 
+Capture additionally splits by serving pool, matching disaggregated
+deployment: the prefill pool's eager or piecewise-compiled kernel stream
+and the decode pool's replayed CUDA graph are separate capture
+denominators for every cell, owned by the same VLLM-12 and SGL-10
+producers (maintainer direction 2026-08-24).
+
 ## Models beyond node memory
 
 A frontier MoE column is filled without hosting the full checkpoint. The
@@ -120,10 +126,15 @@ any KV or activation memory and atop an inter-node path that runs NCCL
 over the kernel socket transport. Full-model serving capture for that
 class is therefore out on this fleet.
 
-The route: COMP-54 extracts the structure half from the model
-configuration alone, and COMP-59 owns the reduced-depth same-geometry
-physical capture envelope that supplies observed implementation
-identities and per-expert load grids on the reachable targets. That
+Physical capture never requires the real checkpoint: the frameworks
+instantiate the architecture with dummy-weight loading, so no download
+and no real inference is involved, and only the resident parameter bytes
+of the instantiated depth bound the target (maintainer direction
+2026-08-24). The route: COMP-54 extracts the structure half from the
+model configuration alone, and COMP-59 owns the reduced-depth
+same-geometry physical capture envelope, now with dummy weights, that
+supplies observed implementation identities and per-expert load grids on
+the reachable targets. That
 envelope is its own declared identity: it never claims the full
 checkpoint's routing population, weights or end-to-end makespans. Numeric
 format keeps cells honest per target: a native MXFP4 checkpoint executes
@@ -134,8 +145,8 @@ signature separates them.
 
 | Target | granite-3.0-1b-a400m-instruct | Qwen3.8-27B | Kimi K3 |
 |---|---|---|---|
-| A100-SXM4-80GB | **blocked**: COMP-53 amendment, then the COMP-45 protocol, then capture (VLLM-12, COMP-6). Retained non-filling evidence exists: the void [a100_kernel_constants_v1](../../examples/a100_kernel_constants_v1/RESULTS.md) and [a100_graph_launch_v1](../../examples/a100_graph_launch_v1/RESULTS.md) measured granite kernel families as microbenchmarks outside the framework chain | **planned**: follows the granite cells; single-GPU fit (about 56 GB of BF16 weights on an 80 GB part) with TP 1, 2 and 4 sweeps on the NV4 mesh; pin support verified at the extraction freeze | **blocked**: the architecture is absent from the pinned frameworks (maintainer pin decision), then the COMP-59 envelope on the MXFP4-on-SM80 lane |
-| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification; single-GPU fit with headroom | **blocked**: the same pin gate, then the COMP-59 envelope on SM90 |
+| A100-SXM4-80GB | **blocked**: COMP-53 amendment, then the COMP-45 protocol, then capture (VLLM-12, COMP-6). Retained non-filling evidence exists: the void [a100_kernel_constants_v1](../../examples/a100_kernel_constants_v1/RESULTS.md) and [a100_graph_launch_v1](../../examples/a100_graph_launch_v1/RESULTS.md) measured granite kernel families as microbenchmarks outside the framework chain | **planned**: follows the granite cells; single-GPU fit (about 56 GB of BF16 weights on an 80 GB part) with TP 1, 2 and 4 sweeps on the NV4 mesh; pin support verified at the extraction freeze | **blocked**: the pin bump in flight (VLLM-30), then the COMP-59 envelope on the MXFP4-on-SM80 lane |
+| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification; single-GPU fit with headroom | **blocked**: the pin bump in flight (VLLM-30), then the COMP-59 envelope on SM90 |
 | GTX 1660 Ti (TU116) | **anchor**: [compute_fidelity_v1](../../examples/compute_fidelity_v1/RESULTS.md) and [host_step_cost_v1](../../examples/host_step_cost_v1/RESULTS.md); never fills | not planned | not planned |
 | H100, B100, B200 | **derived** (COMP-52); fail closed today | **derived** (COMP-52) | **derived** (COMP-52) |
 | AMD slot | unbound | unbound | unbound |
@@ -144,8 +155,8 @@ signature separates them.
 
 | Target | granite-3.0-1b-a400m-instruct | Qwen3.8-27B | Kimi K3 |
 |---|---|---|---|
-| A100-SXM4-80GB | **planned**: the SGL-10 producer follows the vLLM cell on the same qualified environment | **planned**: follows the vLLM cell; pin support verified at the extraction freeze | **blocked**: the same pin gate as the vLLM column, then the COMP-59 envelope after the vLLM route lands |
-| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification | **blocked**: the same pin gate, then the COMP-59 envelope on SM90 |
+| A100-SXM4-80GB | **planned**: the SGL-10 producer follows the vLLM cell on the same qualified environment | **planned**: follows the vLLM cell; pin support verified at the extraction freeze | **blocked**: the pin bump in flight (SGL-32), then the COMP-59 envelope after the vLLM route lands |
+| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification | **blocked**: the pin bump in flight (SGL-32), then the COMP-59 envelope on SM90 |
 | GTX 1660 Ti (TU116) | **anchor**: [sglang_host_step_v1](../../examples/sglang_host_step_v1/RESULTS.md) Turing host profiles; never fills | not planned | not planned |
 | H100, B100, B200 | **derived** (COMP-52); fail closed today | **derived** (COMP-52) | **derived** (COMP-52) |
 | AMD slot | unbound | unbound | unbound |
