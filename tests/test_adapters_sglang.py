@@ -700,6 +700,36 @@ def test_dense_projection_does_not_validate_irrelevant_moe_parallel_sizes():
     assert dense.num_experts == 0
 
 
+def test_qwen35_dense_projection_ignores_inherited_moe_defaults():
+    config = _model_config(
+        model_type="qwen3_5_text",
+        architectures=["Qwen3_5ForConditionalGeneration"],
+        intermediate_size=17408,
+        num_experts=512,
+        num_experts_per_tok=10,
+        moe_intermediate_size=512,
+    )
+
+    dense = model_dims_from_sglang(config)
+
+    assert dense.num_experts == 0
+    assert dense.top_k == 0
+    assert dense.moe_intermediate_size is None
+
+
+def test_qwen35_dense_identity_conflict_still_rejects():
+    config = _model_config(
+        model_type="qwen3_5_text",
+        architectures=["Qwen3MoeForCausalLM"],
+        num_experts=512,
+        num_experts_per_tok=10,
+        moe_intermediate_size=512,
+    )
+
+    with pytest.raises(ValueError, match="conflicts with a routed MoE identity"):
+        model_dims_from_sglang(config)
+
+
 def test_model_dims_from_sglang_rejects_multimodal_moe_wrapper():
     text = _model_config(
         model_type="qwen3_moe",
@@ -1107,4 +1137,3 @@ def test_absent_replay_serves_the_fabricated_token_for_every_row(tmp_path):
         joined_replay_path(tmp_path), max_context_len=4096
     )
     assert sample_adapter_tokens(source, batch, rows, 512) == [20]
-
