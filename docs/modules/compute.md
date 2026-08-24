@@ -2390,6 +2390,29 @@ and an explicit reason:
   record rules this task reuses; this task owns the extraction
   orchestration, the inventory schema, the per-framework drivers and the
   coverage denominators it publishes.
+- COMP-59 (Completeness; P1; L): fill coverage columns for models whose
+  weights exceed the reachable fleet, with the Kimi K3 class (2.8T-parameter
+  MXFP4 MoE against 1.6 TB of total A100 HBM and about 1.15 TB of GH200
+  HBM) as the first instance. Own the reduced-depth same-geometry physical
+  capture envelope: instantiate the framework's real model class with the
+  declared layer depth reduced and every per-layer geometry, numeric format
+  and kernel-selection input preserved, capture observed implementation
+  identities and launch schedules on the reachable targets through the
+  VLLM-12, SGL-10 and COMP-6 chain in both eager and captured-graph launch
+  modes, and sweep per-expert load grids that cover the deployment shape
+  range. The envelope is its own declared identity: it never claims the
+  full checkpoint's routing population, weights or end-to-end makespans,
+  and its records state that scope explicitly. Structure-half enumeration
+  of the full-depth column stays COMP-54 (configuration-only projection);
+  this task owns the physical envelope, its distinct-envelope identity
+  rules, the per-target numeric-format implementation split (a native
+  MXFP4 checkpoint executes different implementations on SM80 than on
+  SM90) and the control validation that reduced-depth capture reproduces
+  the full-depth per-layer inventory exactly for a model small enough to
+  run both ways, with the pinned granite checkpoint as that control. Fail
+  closed when a framework cannot execute the reduced-depth instantiation.
+  Disabling the route leaves every accepted record and the hand-authored
+  suites byte-identical.
 
 ### Uncategorized
 
