@@ -750,6 +750,19 @@ closed id.
   disagrees with the sink's enclosed value by up to one nanosecond per step. A
   single-rank run takes the fallback on every step. Acceptance must state which
   of the two is authoritative and make the other agree or refuse.
+- SGL-32 (Completeness; P1; L): bump the pinned SGLang source from commit
+  `8f2a3ad` to a current main commit that executes the `kimi_k3` family
+  (maintainer authorization 2026-08-24; the pinned tree already carries
+  `qwen3_5`). Before the pin switches, re-verify the plugin entry seam and
+  every landed contract against the new source: the entry-point discovery
+  gate, the `SimTpModelWorker` and stub construction template with its
+  load-bearing field contracts, the CPU engine path, the streaming workload
+  driver, the vendored communicator signatures and the COMP-54 extraction
+  driver. Every accepted artifact binding the old source identity remains
+  valid historical evidence and is never re-labeled; published inventory
+  columns are re-extracted under the new identity, and the previous pinned
+  environment remains reproducible beside the new one. A moved or removed
+  upstream seam is re-anchored or refused loudly, never silently bypassed.
 
 ### Uncategorized
 
