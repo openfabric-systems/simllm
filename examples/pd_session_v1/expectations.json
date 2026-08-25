@@ -1,0 +1,92 @@
+{
+  "schema": "simllm-pd-session-expectations-v1",
+  "as_of_commit": "d3f909bc2b7e69b3e6127a13ea195e50b3c0f4ea",
+  "chronology": {
+    "tracked_worktree_before_freeze": "clean",
+    "implementation_existed_before_freeze": false,
+    "scored_run_existed_before_freeze": false
+  },
+  "frontend": {
+    "name": "vllm",
+    "version": "0.27.1",
+    "model_id": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "model_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "fixture_sha256": "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341"
+  },
+  "source_audit_sha256": {
+    "simllm/adapters/vllm/executor.py": "eb2d9b8c328f9a02ea1ee7180c22787eedd08371c088eee9f30b017c6991d057",
+    "vllm/config/kv_transfer.py": "64bde41204a5eea02cf2bb886e3479de90d5aab238e0d8a50de488d27edae4be",
+    "vllm/distributed/kv_transfer/kv_connector/v1/base.py": "ec3e461a802fdbc0d324d8cb200a161042da0614cfc0cb342accdd9d58dca31d",
+    "vllm/v1/core/sched/scheduler.py": "c67bda2886b52865ddafabaae7d797c359e930752f374421a33e537d94a5f45a",
+    "vllm/v1/engine/core.py": "6fdd067f54e5d42c57ff413e292685f5bdf6f343498d85c9262567f1eb746916",
+    "vllm/outputs.py": "44e2ea5d8a34403a99a867b42806e8102b3d9e7b1a0f735af26e6650cc482342"
+  },
+  "deployment": {
+    "gpus_per_engine": 8,
+    "first_slice_prefill_engines": 1,
+    "first_slice_decode_engines": 1,
+    "target_prefill_engines": 16,
+    "target_decode_engines": 40,
+    "target_simulated_ranks": 448,
+    "scale_points": [
+      {"prefill_engines": 1, "decode_engines": 1},
+      {"prefill_engines": 2, "decode_engines": 2}
+    ]
+  },
+  "model_geometry": {
+    "num_layers": 24,
+    "hidden_size": 1024,
+    "num_attention_heads": 16,
+    "num_kv_heads": 8,
+    "head_size": 64,
+    "kv_element_bytes": 2,
+    "kv_bytes_per_prompt_token": 49152
+  },
+  "request_sweep": {
+    "prompt_tokens": [8, 16],
+    "handoff_ps": [100000000, 200000000],
+    "decode_output_tokens": 4,
+    "cells": 4
+  },
+  "physical_bounds": {
+    "link_floor_bps": 400000000000,
+    "slow_path_ceiling_bps": 10000000000,
+    "slow_path_fixed_ceiling_ps": 50000000,
+    "handoff_bounds_ps": {
+      "8": {"floor": 7864320, "ceiling": 364572800},
+      "16": {"floor": 15728640, "ceiling": 679145600}
+    },
+    "per_step_service_ps": {"floor": 1000000, "ceiling": 100000000000}
+  },
+  "evidence_classes": {
+    "behavioral_families": 2,
+    "behavioral_instances": 6,
+    "exact_oracle_rows": 4,
+    "structural_invariants": "unscored",
+    "native_engine_smoke": "separate",
+    "scale_measurements": "descriptive"
+  },
+  "exact_relations": [
+    "ttft_equals_prefill_queue_plus_prefill_service_plus_handoff_plus_decode_admission_wait_plus_decode_first_token_service",
+    "doubling_handoff_adds_exactly_100000000_ps_to_ttft_and_zero_to_tpot_at_each_prompt_length",
+    "sixteen_prompt_tokens_produce_exactly_twice_the_kv_bytes_of_eight_prompt_tokens",
+    "the_448_rank_manifest_has_128_prefill_and_320_decode_ranks"
+  ],
+  "behavioral_relations": [
+    "handoff_constant_changes_ttft_only",
+    "doubling_prompt_length_strictly_increases_prefill_service_and_ttft_while_tpot_does_not_decrease"
+  ],
+  "fatal_guards": [
+    "pinned_source_hash_or_version_disagreement",
+    "engine_role_or_connector_role_disagreement",
+    "executors_do_not_share_one_virtual_clock_object",
+    "request_identity_loss_or_duplicate_handoff",
+    "nonmonotonic_handoff_or_token_timestamp",
+    "ttft_decomposition_disagreement",
+    "handoff_outside_frozen_physical_bounds",
+    "fabric_backend_run_in_the_constant_only_slice",
+    "one_plus_one_or_target_manifest_structural_disagreement",
+    "missing_or_nonmonotonic_engine_scale_measurement"
+  ]
+}
