@@ -168,7 +168,24 @@ class DeclaredKvHandoffPolicy:
 
         if not isinstance(clock, VirtualClock):
             raise TypeError("clock must be a VirtualClock")
-        submitted_at_ps = clock.now_ps
+        event = self.schedule(
+            submitted_at_ps=clock.now_ps,
+            request_id=request_id,
+            kv_bytes=kv_bytes,
+        )
+        clock.advance_to(event.completed_at_ps)
+        return event
+
+    def schedule(
+        self,
+        *,
+        submitted_at_ps: int,
+        request_id: str,
+        kv_bytes: int,
+    ) -> KvHandoffEvent:
+        """Schedule one independent handoff without advancing a shared clock."""
+
+        submitted_at_ps = _nonnegative_int("submitted_at_ps", submitted_at_ps)
         completed_at_ps = submitted_at_ps + self.duration_ps
         event = KvHandoffEvent(
             request_id=request_id,
@@ -180,7 +197,6 @@ class DeclaredKvHandoffPolicy:
             completed_at_ps=completed_at_ps,
             pricing_arm="declared-constant" if self.enabled else "off",
         )
-        clock.advance_to(event.completed_at_ps)
         return event
 
 
