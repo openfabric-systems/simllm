@@ -11,7 +11,6 @@ import argparse
 import hashlib
 import json
 import os
-import resource
 import subprocess
 import time
 from fractions import Fraction
@@ -500,6 +499,9 @@ def analyze_behavior(behavior: dict[str, Any]) -> dict[str, Any]:
 
 
 def _rss_kib() -> int:
+    reason = scale_memory_probe_unavailability_reason()
+    if reason is not None:
+        raise RuntimeError(reason)
     status = Path("/proc/self/status").read_text(encoding="utf-8")
     for line in status.splitlines():
         if line.startswith("VmRSS:"):
@@ -508,10 +510,35 @@ def _rss_kib() -> int:
 
 
 def _peak_rss_kib() -> int:
+    reason = scale_memory_probe_unavailability_reason()
+    if reason is not None:
+        raise RuntimeError(reason)
+    import resource
+
     return int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
 
+def scale_memory_probe_unavailability_reason() -> str | None:
+    try:
+        import resource  # noqa: F401
+    except ModuleNotFoundError:
+        return (
+            "engine-scale feasibility probe unavailable: Python's resource "
+            "module is not available on this platform"
+        )
+    if not Path("/proc/self/status").is_file():
+        return (
+            "engine-scale feasibility probe unavailable: /proc/self/status "
+            "is not available on this platform"
+        )
+    return None
+
+
 def run_scale_child(args: argparse.Namespace) -> int:
+    reason = scale_memory_probe_unavailability_reason()
+    if reason is not None:
+        raise SystemExit(reason)
+
     from simllm.adapters.vllm.pd_session import VllmDisaggregatedSession
 
     prefill_engines, decode_engines = args.scale_child

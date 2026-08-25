@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import builtins
 import importlib.util
 import json
 import sys
 from pathlib import Path, PureWindowsPath
 from types import SimpleNamespace
+
+import pytest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 STUDY_PATH = REPOSITORY_ROOT / "examples/pd_session_v1/run_study.py"
@@ -102,6 +105,36 @@ def test_scale_child_command_uses_posix_rendering_for_windows_paths():
     assert all("\\" not in value for value in command)
     assert "C:/env/python.exe" in command
     assert "D:/runs/core51/2p-2d" in command
+
+
+def test_study_imports_without_resource_and_refuses_scale_probe(monkeypatch):
+    original_import = builtins.__import__
+
+    def blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "resource":
+            raise ModuleNotFoundError("blocked resource import")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", blocked_import)
+    study = _study()
+
+    reason = study.scale_memory_probe_unavailability_reason()
+    assert reason == (
+        "engine-scale feasibility probe unavailable: Python's resource "
+        "module is not available on this platform"
+    )
+    with pytest.raises(SystemExit, match="engine-scale feasibility probe unavailable"):
+        study.run_scale_child(SimpleNamespace(scale_child=(1, 1)))
+
+
+def test_engine_scale_memory_probe_when_platform_supports_it():
+    study = _study()
+    reason = study.scale_memory_probe_unavailability_reason()
+    if reason is not None:
+        pytest.skip(reason)
+
+    assert study._rss_kib() > 0
+    assert study._peak_rss_kib() > 0
 
 
 def test_scale_summary_is_descriptive_and_never_claims_fit():
