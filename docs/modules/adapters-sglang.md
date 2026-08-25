@@ -764,6 +764,20 @@ closed id.
   disagrees with the sink's enclosed value by up to one nanosecond per step. A
   single-rank run takes the fallback on every step. Acceptance must state which
   of the two is authoritative and make the other agree or refuse.
+- SGL-33 (Completeness; P1; L): run the disaggregated serving session with
+  SGLang instances in both pool roles, mirroring the CORE-51 contract on
+  the framework whose public deployment the CORE-54 flagship reproduces.
+  Audit the pinned SGLang disaggregation surface (its prefill-decode
+  disaggregation mode and KV transfer seam) and prefer the real seam with
+  a driver-level join as the disclosed fallback; the frameworks' own
+  schedulers stay the only batching authority; the KV handoff prices
+  through TRAF-61 with the declared-constant bypass; per-request TTFT and
+  TPOT reduce through the existing runtime chain. Expert-parallel
+  attention and dense data-parallel arrangements follow the disclosed
+  configurations recorded in the deployment dossier. The vLLM session,
+  every accepted SGLang worker record and the granite smoke bytes stay
+  identical when this session is absent.
+
 ### Uncategorized
 
 - SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic

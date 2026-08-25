@@ -1291,6 +1291,29 @@ see [the disaggregated-session results](../../examples/pd_session_v1/RESULTS.md)
   TRAF-62, PLACE-5 and VLLM-35; those residuals own the live 448-rank scale,
   lookup pricing, packet handoff, physical target topology and concurrent
   multi-request path respectively.
+- CORE-54 (Completeness; P1; L): reproduce the public DeepSeek-V3 deployment
+  curve inside the simulator, evidence first. Freeze the published anchors
+  from [the deployment disclosures](../papers/deepseek-deployment-disclosures.md)
+  before any run, then drive the disaggregated session at the disclosed
+  SGLang 96-GPU shape (4 prefill nodes EP32, 9 decode nodes EP72, 8 GPUs
+  each) with one-shot requests at the disclosed input lengths, sweeping
+  offered load so each configuration traces a curve of aggregated output
+  throughput against per-token request delay, plotted with the upper-right
+  corner optimal. Compute prices from the DeepSeek per-rank lookup
+  projection on the Hopper-anchored campaign tables; intra-node collectives
+  and PCIe submission ride the declared constants under the dossier's
+  calibration policy (fitted on a declared anchor subset inside physically
+  justified envelopes, scored on the held-out anchors); the fabric and the
+  prefill-to-decode KV transfer ride the packet simulator through TRAF-61.
+  Acceptance: the simulated curve within 5 percent of every held-out
+  published anchor, error bars propagated from the calibrated component
+  uncertainties, and a second legend carrying DeepSeek's own H800
+  production profile and declared what-if configurations including the
+  16-prefill plus 40-decode target. Depends on COMP-67's column, CORE-52
+  and CORE-53's concurrent scaled session, SGL-33's SGLang-side session,
+  TRAF-61 and the GH200-anchored campaign tables; a bar this task cannot
+  meet is reported as a refutation with findings, never absorbed by
+  loosening the frozen anchors.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool
