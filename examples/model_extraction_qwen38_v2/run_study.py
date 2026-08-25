@@ -244,7 +244,7 @@ def _family_relations(
     for family in inventory.kernel_families:
         row = family_by_id[family.family_id]
         schema = schemas[family.shape_schema_id]
-        if tuple(axis.name for axis in schema.axes) != tuple(row["shape_axes"]):
+        if tuple(axis.axis_id for axis in schema.axes) != tuple(row["shape_axes"]):
             return False, {
                 "cases": conserved_cases,
                 "families": exact_families,
