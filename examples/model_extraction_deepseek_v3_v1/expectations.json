@@ -1,0 +1,674 @@
+{
+  "schema": "simllm-model-extraction-deepseek-v3-expectations-v1",
+  "study": "model-extraction-deepseek-v3-v1",
+  "authored_after_commit": "dc350b6996215adf69384c23335b496440042fe7",
+  "working_tree_before_freeze": "clean-except-gitignored-sizing-note",
+  "suite": {
+    "id": "deepseek-v3-text-v1-frameworks-2026-08-25",
+    "relative_path": "offline/calibration/suites/deepseek-v3-text-v1-frameworks-2026-08-25/suite.json",
+    "sha256": "88f718c94ad35bb0c74314811680b5ebff7e5df70759096dc0b640f84f47bd69",
+    "case_count": 20,
+    "reference_model_canonical_sha256": "ff41fb1caa5909350aae2e10f864e28d7c276ab03441227574be32b506a934e2",
+    "graph_cells_canonical_sha256": "afb5b54338cdc33b736e7222322d2df26e8424fe0a307223e1d7a2ebbb08dd29",
+    "deployment_projections_canonical_sha256": "87ecb9f62d55e8d362ff83b7679a557006c5c95940e6630cb180dc7b6ba3df43"
+  },
+  "historical_byte_locks": {
+    "offline/calibration/suites/transformer-dag-v1/suite.json": "5ec3296dd34ef42c65bc3677916aedc284585ec5b6b11ea2ecd5873a3e5d2266",
+    "offline/calibration/suites/transformer-dag-v1-frameworks-2026-08-24/suite.json": "1282207c5ad8c8c0d0bea586bca7a39197a997dc165c3ad730a9847ddedd9dce",
+    "offline/calibration/suites/qwen3.8-27b-text-v1/suite.json": "560aab048f7c9db463f53614178faded06a7d3b62b7e775f6943e1b52fbfe6e2",
+    "offline/calibration/suites/qwen3.8-27b-text-v1-frameworks-2026-08-25/suite.json": "7be24843ffae71de65a1eab243eab9f592ce614097d701d5234eabd0c5980a9c",
+    "examples/model_extraction_qwen38_v2/RESULTS.md": "2b96a43f02eac8fa75f7a4677a4ae956d2b0556ad2a40f046cfdc41099846cde",
+    "offline/calibration/model-inventories/147fe4398d5615afe7954c9199134de37f706da2cecda8fc37d6514ad936c54c.json": "147fe4398d5615afe7954c9199134de37f706da2cecda8fc37d6514ad936c54c",
+    "offline/calibration/model-inventories/33758c3c71d5dacae8f6a82cb937f5e70b0d28eaa7c2358c13baccbd8d8725e2.json": "33758c3c71d5dacae8f6a82cb937f5e70b0d28eaa7c2358c13baccbd8d8725e2",
+    "offline/calibration/model-inventories/3998b208bef6498709a9a4b6b2ca2e1825a9db54918186f4fc4387a9ee2b9b9a.json": "3998b208bef6498709a9a4b6b2ca2e1825a9db54918186f4fc4387a9ee2b9b9a",
+    "offline/calibration/model-inventories/77ea0abb4803d2cab5689f6893563e9a973f0e29160ec1975f1c76b3046e30d1.json": "77ea0abb4803d2cab5689f6893563e9a973f0e29160ec1975f1c76b3046e30d1",
+    "offline/calibration/model-inventories/9d1c6164d149b98a4d019bee31d8d3a7ce3ee38cb96b7e0bab03393fde3d4747.json": "9d1c6164d149b98a4d019bee31d8d3a7ce3ee38cb96b7e0bab03393fde3d4747",
+    "offline/calibration/model-inventories/e74e995a89588a304aa852593d3505cfab9a94d2c068c82dbe9c776da7119af9.json": "e74e995a89588a304aa852593d3505cfab9a94d2c068c82dbe9c776da7119af9"
+  },
+  "checkpoint_choice": {
+    "selected": "deepseek-ai/DeepSeek-V3",
+    "revision": "e815299b0bcbac849fa540c768ef21845365c9eb",
+    "selection_ground": "DeepSeek production disclosure names the original V3 checkpoint; both pinned registries bind DeepseekV3ForCausalLM",
+    "v3_0324_revision": "e9b33add76883f293d6bf61f6bd89b497e80e335",
+    "v3_0324_structural_relation": "all model and quantization configuration fields are identical; only transformers_version differs from 4.33.1 to 4.46.3",
+    "r1_scope": "excluded; reasoning-tuned checkpoint identity is not substituted for the deployment checkpoint"
+  },
+  "model": {
+    "name": "deepseek-ai/DeepSeek-V3",
+    "revision": "e815299b0bcbac849fa540c768ef21845365c9eb",
+    "config_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
+    "parameter_count": 684531386000,
+    "weight_sha256": "ec8b878368c5fdb9f3288bd3a36a723a1637ec76464135a3f5b2e9aeff4072b4",
+    "weight_bytes": 688586727753,
+    "weight_shard_count": 163,
+    "local_weight_byte_verification": false,
+    "base_layers": 61,
+    "dense_layers": 3,
+    "moe_layers": 58,
+    "mtp_layers": 1
+  },
+  "frameworks": [
+    {
+      "id": "vllm",
+      "version": "0.27.1",
+      "source_commit": "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac",
+      "source_tree": null,
+      "entry_seam": "flagged-skeleton-step-record-v1",
+      "configuration_seam": "ModelConfig-with-skip-tokenizer-init",
+      "architecture_binding": "model_executor/models/registry.py:93",
+      "source_files": [
+        "vllm/model_executor/models/deepseek_v2.py",
+        "vllm/model_executor/models/deepseek_mtp.py"
+      ]
+    },
+    {
+      "id": "sglang",
+      "version": "0.5.19.dev345+gbfeae4e79",
+      "source_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "source_tree": "9ffe149f40e1cd5bff7dadc6806ad1927d312e69",
+      "entry_seam": "cpu-engine-step-record-v1",
+      "configuration_seam": "DeviceConfig-cpu-plus-ModelConfig-with-multimodal-disabled",
+      "architecture_binding": "python/sglang/srt/models/deepseek_v2.py:3231",
+      "source_files": [
+        "python/sglang/srt/models/deepseek_v2.py",
+        "python/sglang/srt/models/deepseek_nextn.py"
+      ]
+    }
+  ],
+  "accounting_convention": {
+    "multiply_accumulate_flops": 2,
+    "scalar_arithmetic_or_nonlinear_flops": 1,
+    "layout_metadata_and_topk_selection_flops": 0,
+    "fp8_weight_bytes": 1,
+    "fp8_scale_bytes": 4,
+    "fp8_scale_block": [
+      128,
+      128
+    ],
+    "bf16_weight_bytes": 2,
+    "bf16_activation_state_bytes": 2,
+    "activation_hbm_traffic": "not-invented-between-logical-families"
+  },
+  "geometry_symbols": {
+    "H": 7168,
+    "I": 18432,
+    "Nq": 128,
+    "Qr": 1536,
+    "KVr": 512,
+    "Dn": 128,
+    "Dr": 64,
+    "Dv": 128,
+    "L": 61,
+    "Ld": 3,
+    "Lm": 58,
+    "E": 256,
+    "K": 8,
+    "M": 2048,
+    "V": 129280,
+    "Lmtp": 1
+  },
+  "inventory_contract": {
+    "schema": "simllm-model-kernel-inventory-v1",
+    "ordered_families": [
+      "mla_q_compression",
+      "mla_q_decompression",
+      "mla_kv_compression",
+      "mla_kv_decompression",
+      "mla_rotary_split",
+      "mla_attention",
+      "mla_compressed_kv_read",
+      "mla_output_projection",
+      "dense_early_mlp",
+      "moe_router",
+      "moe_shared_expert",
+      "moe_routed_experts",
+      "lm_head",
+      "multi_token_prediction_head"
+    ],
+    "families": [
+      {
+        "id": "mla_q_compression",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 61,
+        "flops_per_new_token_per_layer": 22020096,
+        "static_hbm_bytes_per_layer": 11012736
+      },
+      {
+        "id": "mla_q_decompression",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 61,
+        "flops_per_new_token_per_layer": 75497472,
+        "static_hbm_bytes_per_layer": 37757952
+      },
+      {
+        "id": "mla_kv_compression",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 61,
+        "flops_per_new_token_per_layer": 8257536,
+        "static_hbm_bytes_per_layer": 4129888
+      },
+      {
+        "id": "mla_kv_decompression",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 61,
+        "flops_per_new_token_per_layer": 33554432,
+        "static_hbm_bytes_per_layer": 16781312
+      },
+      {
+        "id": "mla_rotary_split",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 61,
+        "flops_per_new_token_per_layer": 24768,
+        "static_hbm_bytes_per_layer": 0
+      },
+      {
+        "id": "mla_attention",
+        "shape_axes": [
+          "new_tokens",
+          "kv_tokens"
+        ],
+        "layers": 61,
+        "prefill_flops_per_attention_pair_per_layer": 81920,
+        "decode_flops_per_attention_pair_per_layer": 278528,
+        "static_hbm_bytes_per_layer": 0
+      },
+      {
+        "id": "mla_compressed_kv_read",
+        "shape_axes": [
+          "kv_tokens"
+        ],
+        "layers": 61,
+        "flops_per_case": 0,
+        "hbm_bytes_per_kv_token_per_layer": 1152
+      },
+      {
+        "id": "mla_output_projection",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 61,
+        "flops_per_new_token_per_layer": 234881024,
+        "static_hbm_bytes_per_layer": 117469184
+      },
+      {
+        "id": "dense_early_mlp",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 3,
+        "flops_per_new_token_per_layer": 792723456,
+        "static_hbm_bytes_per_layer": 396458496
+      },
+      {
+        "id": "moe_router",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 58,
+        "flops_per_new_token_per_layer": 3670551,
+        "static_hbm_bytes_per_layer": 3671040
+      },
+      {
+        "id": "moe_shared_expert",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 58,
+        "flops_per_new_token_per_layer": 88080384,
+        "static_hbm_bytes_per_layer": 44050944
+      },
+      {
+        "id": "moe_routed_experts",
+        "shape_axes": [
+          "new_tokens"
+        ],
+        "layers": 58,
+        "flops_per_new_token_per_layer": 704643072,
+        "static_hbm_bytes_per_layer": 11277041664
+      },
+      {
+        "id": "lm_head",
+        "shape_axes": [
+          "sampled"
+        ],
+        "layers": 1,
+        "flops_per_sampled_token": 1853358080,
+        "static_hbm_bytes": 1853358080
+      },
+      {
+        "id": "multi_token_prediction_head",
+        "shape_axes": [
+          "new_tokens",
+          "kv_tokens",
+          "sampled",
+          "mtp_enabled"
+        ],
+        "layers": 1,
+        "launch_scale_axis": "mtp_enabled",
+        "fixed_flops_per_new_token": 1376150231,
+        "prefill_flops_per_attention_pair": 81920,
+        "decode_flops_per_attention_pair": 278528,
+        "flops_per_sampled_token": 1853358080,
+        "static_hbm_bytes_when_enabled": 13570793696,
+        "hbm_bytes_per_kv_token_when_enabled": 1152
+      }
+    ],
+    "logical_visit_count_formula": "61 * 8 + 3 + 58 * 3 + 1 + mtp_enabled",
+    "logical_visit_count_without_mtp": 666,
+    "logical_visit_count_with_mtp": 667,
+    "base_fixed_flops_per_new_token": 71397377782,
+    "prefill_flops_per_attention_pair": 4997120,
+    "decode_flops_per_attention_pair": 16990208,
+    "flops_per_sampled_token": 1853358080,
+    "base_static_hbm_bytes": 671295240544,
+    "base_hbm_bytes_per_kv_token": 70272,
+    "mtp_fixed_flops_per_new_token": 1376150231,
+    "mtp_prefill_flops_per_attention_pair": 81920,
+    "mtp_decode_flops_per_attention_pair": 278528,
+    "mtp_flops_per_sampled_token": 1853358080,
+    "mtp_static_hbm_bytes": 13570793696,
+    "mtp_hbm_bytes_per_kv_token": 1152,
+    "physical_field_state": "absent-by-design"
+  },
+  "exact_case_oracles": [
+    {
+      "case_id": "cp-train-r4-t128",
+      "phase": "prefill",
+      "new_tokens": 128,
+      "sequences": 4,
+      "kv_tokens": 128,
+      "attention_pairs": 2048,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 9156511890176,
+      "aggregate_hbm_bytes": 671304235360
+    },
+    {
+      "case_id": "cp-train-r4-t768",
+      "phase": "prefill",
+      "new_tokens": 768,
+      "sequences": 4,
+      "kv_tokens": 768,
+      "attention_pairs": 73728,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 55209027232256,
+      "aggregate_hbm_bytes": 671349209440
+    },
+    {
+      "case_id": "cp-train-r4-t2048",
+      "phase": "prefill",
+      "new_tokens": 2048,
+      "sequences": 4,
+      "kv_tokens": 2048,
+      "attention_pairs": 524288,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 148849173180416,
+      "aggregate_hbm_bytes": 671439157600
+    },
+    {
+      "case_id": "cp-validation-r4-t512",
+      "phase": "prefill",
+      "new_tokens": 512,
+      "sequences": 4,
+      "kv_tokens": 512,
+      "attention_pairs": 32768,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 36726616484864,
+      "aggregate_hbm_bytes": 671331219808
+    },
+    {
+      "case_id": "cp-test-r4-t1024",
+      "phase": "prefill",
+      "new_tokens": 1024,
+      "sequences": 4,
+      "kv_tokens": 1024,
+      "attention_pairs": 131072,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 73773310793728,
+      "aggregate_hbm_bytes": 671367199072
+    },
+    {
+      "case_id": "md-train-b4-c128",
+      "phase": "decode",
+      "new_tokens": 4,
+      "sequences": 4,
+      "kv_tokens": 512,
+      "attention_pairs": 508,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 301633969112,
+      "aggregate_hbm_bytes": 671331219808
+    },
+    {
+      "case_id": "md-train-b4-c1024",
+      "phase": "decode",
+      "new_tokens": 4,
+      "sequences": 4,
+      "kv_tokens": 4096,
+      "attention_pairs": 4092,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 362526874584,
+      "aggregate_hbm_bytes": 671583074656
+    },
+    {
+      "case_id": "md-train-b4-c8192",
+      "phase": "decode",
+      "new_tokens": 4,
+      "sequences": 4,
+      "kv_tokens": 32768,
+      "attention_pairs": 32764,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 849670118360,
+      "aggregate_hbm_bytes": 673597913440
+    },
+    {
+      "case_id": "md-validation-b4-c512",
+      "phase": "decode",
+      "new_tokens": 4,
+      "sequences": 4,
+      "kv_tokens": 2048,
+      "attention_pairs": 2044,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 327730928600,
+      "aggregate_hbm_bytes": 671439157600
+    },
+    {
+      "case_id": "md-test-b4-c2048",
+      "phase": "decode",
+      "new_tokens": 4,
+      "sequences": 4,
+      "kv_tokens": 8192,
+      "attention_pairs": 8188,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 432118766552,
+      "aggregate_hbm_bytes": 671870908768
+    },
+    {
+      "case_id": "db-train-b1-c2048",
+      "phase": "decode",
+      "new_tokens": 1,
+      "sequences": 1,
+      "kv_tokens": 2048,
+      "attention_pairs": 2047,
+      "sampled": 1,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 108029691638,
+      "aggregate_hbm_bytes": 671439157600
+    },
+    {
+      "case_id": "db-train-b16-c2048",
+      "phase": "decode",
+      "new_tokens": 16,
+      "sequences": 16,
+      "kv_tokens": 32768,
+      "attention_pairs": 32752,
+      "sampled": 16,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 1728475066208,
+      "aggregate_hbm_bytes": 673597913440
+    },
+    {
+      "case_id": "db-train-b64-c2048",
+      "phase": "decode",
+      "new_tokens": 64,
+      "sequences": 64,
+      "kv_tokens": 131072,
+      "attention_pairs": 131008,
+      "sampled": 64,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 6913900264832,
+      "aggregate_hbm_bytes": 680505932128
+    },
+    {
+      "case_id": "db-validation-b4-c2048",
+      "phase": "decode",
+      "new_tokens": 4,
+      "sequences": 4,
+      "kv_tokens": 8192,
+      "attention_pairs": 8188,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 432118766552,
+      "aggregate_hbm_bytes": 671870908768
+    },
+    {
+      "case_id": "db-test-b8-c2048",
+      "phase": "decode",
+      "new_tokens": 8,
+      "sequences": 8,
+      "kv_tokens": 16384,
+      "attention_pairs": 16376,
+      "sampled": 8,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 864237533104,
+      "aggregate_hbm_bytes": 672446576992
+    },
+    {
+      "case_id": "sglang-prefill-ep32-r16-t16384",
+      "phase": "prefill",
+      "new_tokens": 16384,
+      "sequences": 16,
+      "kv_tokens": 16384,
+      "attention_pairs": 8388608,
+      "sampled": 16,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 1211723172118528,
+      "aggregate_hbm_bytes": 672446576992
+    },
+    {
+      "case_id": "sglang-prefill-ep32-r8-t16384",
+      "phase": "prefill",
+      "new_tokens": 16384,
+      "sequences": 8,
+      "kv_tokens": 16384,
+      "attention_pairs": 16777216,
+      "sampled": 8,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 1253627226062848,
+      "aggregate_hbm_bytes": 672446576992
+    },
+    {
+      "case_id": "sglang-prefill-ep32-r4-t16384",
+      "phase": "prefill",
+      "new_tokens": 16384,
+      "sequences": 4,
+      "kv_tokens": 16384,
+      "attention_pairs": 33554432,
+      "sampled": 4,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 1337457574248448,
+      "aggregate_hbm_bytes": 672446576992
+    },
+    {
+      "case_id": "sglang-decode-ep72-b32-c2000",
+      "phase": "decode",
+      "new_tokens": 32,
+      "sequences": 32,
+      "kv_tokens": 64000,
+      "attention_pairs": 63968,
+      "sampled": 32,
+      "mtp_enabled": 0,
+      "logical_visit_count": 666,
+      "aggregate_flops": 3430853172928,
+      "aggregate_hbm_bytes": 675792648544
+    },
+    {
+      "case_id": "sglang-decode-ep72-mtp-b16-c4000",
+      "phase": "decode",
+      "new_tokens": 16,
+      "sequences": 16,
+      "kv_tokens": 64000,
+      "attention_pairs": 63984,
+      "sampled": 16,
+      "mtp_enabled": 1,
+      "logical_visit_count": 667,
+      "aggregate_flops": 2328606710992,
+      "aggregate_hbm_bytes": 689437170240
+    }
+  ],
+  "deployment_projection_contract": {
+    "schema": "simllm-deepseek-deployment-projection-v1",
+    "logical_expert_count": 256,
+    "redundant_expert_slots": 32,
+    "physical_expert_slots": 288,
+    "redundancy_rule": "duplicate physical residency only; redundant slots never create new logical expert identities or work",
+    "per_expert_static_hbm_bytes_all_base_moe_layers": 2554954752,
+    "per_expert_flops_per_dispatch_all_base_moe_layers": 5108662272,
+    "rank_classes": {
+      "ep32": [
+        {
+          "rank_count": 32,
+          "logical_experts_per_rank": 8,
+          "redundant_slots_per_rank": 1,
+          "physical_slots_per_rank": 9
+        }
+      ],
+      "ep72": [
+        {
+          "rank_count": 40,
+          "logical_experts_per_rank": 4,
+          "redundant_slots_per_rank": 0,
+          "physical_slots_per_rank": 4
+        },
+        {
+          "rank_count": 32,
+          "logical_experts_per_rank": 3,
+          "redundant_slots_per_rank": 1,
+          "physical_slots_per_rank": 4
+        }
+      ],
+      "ep144": [
+        {
+          "rank_count": 112,
+          "logical_experts_per_rank": 2,
+          "redundant_slots_per_rank": 0,
+          "physical_slots_per_rank": 2
+        },
+        {
+          "rank_count": 32,
+          "logical_experts_per_rank": 1,
+          "redundant_slots_per_rank": 1,
+          "physical_slots_per_rank": 2
+        }
+      ]
+    },
+    "disclosed_case_oracles": [
+      {
+        "case_id": "sglang-prefill-ep32-r16-t16384",
+        "expert_parallel": 32,
+        "local_new_tokens_per_rank": 16384,
+        "global_routed_visits_per_moe_layer": 4194304,
+        "routed_visits_per_unique_expert_per_moe_layer": 16384,
+        "unsharded_base_routed_flops": 21427282602098688,
+        "mtp_extra_routed_flops": 0
+      },
+      {
+        "case_id": "sglang-prefill-ep32-r8-t16384",
+        "expert_parallel": 32,
+        "local_new_tokens_per_rank": 16384,
+        "global_routed_visits_per_moe_layer": 4194304,
+        "routed_visits_per_unique_expert_per_moe_layer": 16384,
+        "unsharded_base_routed_flops": 21427282602098688,
+        "mtp_extra_routed_flops": 0
+      },
+      {
+        "case_id": "sglang-prefill-ep32-r4-t16384",
+        "expert_parallel": 32,
+        "local_new_tokens_per_rank": 16384,
+        "global_routed_visits_per_moe_layer": 4194304,
+        "routed_visits_per_unique_expert_per_moe_layer": 16384,
+        "unsharded_base_routed_flops": 21427282602098688,
+        "mtp_extra_routed_flops": 0
+      },
+      {
+        "case_id": "sglang-decode-ep72-b32-c2000",
+        "expert_parallel": 72,
+        "local_new_tokens_per_rank": 32,
+        "global_routed_visits_per_moe_layer": 18432,
+        "routed_visits_per_unique_expert_per_moe_layer": 72,
+        "unsharded_base_routed_flops": 94162862997504,
+        "mtp_extra_routed_flops": 0
+      },
+      {
+        "case_id": "sglang-decode-ep72-mtp-b16-c4000",
+        "expert_parallel": 72,
+        "local_new_tokens_per_rank": 16,
+        "global_routed_visits_per_moe_layer": 9216,
+        "routed_visits_per_unique_expert_per_moe_layer": 36,
+        "unsharded_base_routed_flops": 47081431498752,
+        "mtp_extra_routed_flops": 811748818944
+      }
+    ],
+    "production_workload_shape_rule": "DeepSeek disclosed EP32 and EP144 topology units but no batch or context shape; publish exact per-rank static family shapes and do not invent a dynamic throughput cell"
+  },
+  "physical_sanity": {
+    "h100_or_h800_hbm_bytes_per_second": 3350000000000,
+    "base_common_nonrouted_static_hbm_bytes": 17226824032,
+    "ep32_physical_static_hbm_bytes_per_rank": 40221416800,
+    "ep72_physical_static_hbm_bytes_per_rank": 27446643040,
+    "ep144_physical_static_hbm_bytes_per_rank": 22336733536,
+    "ep32_one_pass_hbm_floor_picoseconds": 12006393074,
+    "ep72_one_pass_hbm_floor_picoseconds": 8193027773,
+    "ep144_one_pass_hbm_floor_picoseconds": 6667681652,
+    "base_inventory_hbm_bytes": 671295240544,
+    "enabled_mtp_inventory_hbm_bytes": 684866034240,
+    "checkpoint_payload_bytes": 688586727753
+  },
+  "expected_relations": [
+    "exact-framework-configuration-projection",
+    "exact-family-and-case-projection",
+    "family-conservation-through-both-frameworks",
+    "byte-deterministic-repeat-extraction",
+    "cross-framework-structural-agreement",
+    "exact-deployment-rank-class-conservation",
+    "historical-granite-and-qwen-byte-locks",
+    "no-local-weight-files-and-no-physical-code-objects"
+  ],
+  "closure_rule": {
+    "passing_effect": "close COMP-67 and publish the DeepSeek-V3 lookup column",
+    "residual_ids": [
+      "COMP-69",
+      "COMP-70",
+      "VLLM-38",
+      "SGL-34"
+    ],
+    "fatal_rule": "any fatal guard voids the study and COMP-67 remains open"
+  }
+}
+
