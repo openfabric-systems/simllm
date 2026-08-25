@@ -9,7 +9,7 @@ freeze edit, the tracked working tree was clean. The required sizing note was
 present only in the ignored local notes layer.
 
 The suite is `deepseek-v3-text-v1-frameworks-2026-08-25`, with file SHA-256
-`7a59f181561c24e5d631cb7164333ae8e0491eb586c2b77a6582c922a73b0b60`.
+`0a8297a7990c42ee6b2277c7507d90ee875ab07ba3c91324b5098d1a928dabea`.
 It contains 20 authored cases and four deployment projections. This freeze
 contains only identities, formulas, exact oracles and expected relations. It
 contains no implementation, inventory, run log, observed digest, measured
@@ -20,6 +20,13 @@ An expectations-only canonical-format amendment follows freeze commit
 the exact rational string `5/2`, because repository canonical JSON forbids
 floating-point tokens. The value, formulas, cases and acceptance relations do
 not change, and no scored extraction preceded the amendment.
+
+A second expectations-only source-name amendment follows implementation
+commit `15c7bb8fc64b4e34aef7af1a19f74b3a679d750e`. Direct inspection of the
+pinned SGLang source identified its class as `DeepseekV2AttentionMLA`; vLLM
+uses `DeepseekV2Attention`. The suite now records each framework's literal
+class name. No formula, case, acceptance relation or observed inventory
+changed, and no scored extraction preceded this amendment.
 
 ## Checkpoint and framework boundary
 

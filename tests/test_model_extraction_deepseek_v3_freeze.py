@@ -14,7 +14,7 @@ SUITE = (
     / "offline/calibration/suites/"
     "deepseek-v3-text-v1-frameworks-2026-08-25/suite.json"
 )
-SUITE_SHA256 = "7a59f181561c24e5d631cb7164333ae8e0491eb586c2b77a6582c922a73b0b60"
+SUITE_SHA256 = "0a8297a7990c42ee6b2277c7507d90ee875ab07ba3c91324b5098d1a928dabea"
 
 
 def _load(path: Path) -> dict[str, object]:
@@ -69,6 +69,9 @@ def test_deepseek_v3_freeze_contains_authored_expectations_only() -> None:
     assert freeze["canonical_json_amendment_after_commit"] == (
         "724666a90ac643647c8f304ee052b92850be1656"
     )
+    assert freeze["framework_source_amendment_after_commit"] == (
+        "15c7bb8fc64b4e34aef7af1a19f74b3a679d750e"
+    )
     assert "results" not in freeze
     assert "observed_inventories" not in freeze
     assert (STUDY / ".gitattributes").read_text(encoding="utf-8") == (
@@ -103,6 +106,13 @@ def test_deepseek_v3_checkpoint_and_manifest_are_exact() -> None:
         "ec8b878368c5fdb9f3288bd3a36a723a1637ec76464135a3f5b2e9aeff4072b4"
     )
     assert model["local_weight_byte_verification"] is False
+    implementations = {
+        row["id"]: row["text_implementation"] for row in suite["frameworks"]
+    }
+    assert implementations == {
+        "vllm": "DeepseekV2Attention and DeepseekV2MoE",
+        "sglang": "DeepseekV2AttentionMLA and DeepseekV2MoE",
+    }
 
 
 def test_deepseek_v3_historical_inputs_are_byte_locked() -> None:

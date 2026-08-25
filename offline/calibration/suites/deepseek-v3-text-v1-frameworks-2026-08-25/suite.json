@@ -890,7 +890,7 @@
       "source_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
       "source_tree": "9ffe149f40e1cd5bff7dadc6806ad1927d312e69",
       "architecture_binding": "python/sglang/srt/models/deepseek_v2.py:3231",
-      "text_implementation": "DeepseekV2Attention and DeepseekV2MoE"
+      "text_implementation": "DeepseekV2AttentionMLA and DeepseekV2MoE"
     }
   ],
   "phase_scope": {
