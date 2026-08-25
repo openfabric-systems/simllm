@@ -305,6 +305,7 @@ class KernelFamilyDefinition:
     family_id: str
     shape_schema_id: str
     phase_launch_counts: tuple[PhaseLaunchCount, ...]
+    launch_scale_axis: str | None = None
 
     def __post_init__(self) -> None:
         _string(self.family_id, "KernelFamilyDefinition.family_id")
@@ -314,22 +315,28 @@ class KernelFamilyDefinition:
             raise ValueError(
                 "KernelFamilyDefinition.phase_launch_counts must be prefill then decode"
             )
+        if self.launch_scale_axis is not None:
+            _string(
+                self.launch_scale_axis,
+                "KernelFamilyDefinition.launch_scale_axis",
+            )
 
     def to_obj(self) -> dict[str, Any]:
-        return {
+        value = {
             "family_id": self.family_id,
             "shape_schema_id": self.shape_schema_id,
             "phase_launch_counts": [item.to_obj() for item in self.phase_launch_counts],
         }
+        if self.launch_scale_axis is not None:
+            value["launch_scale_axis"] = self.launch_scale_axis
+        return value
 
     @classmethod
     def from_obj(cls, value: object, path: str) -> KernelFamilyDefinition:
         payload = _object(value, path)
-        _fields(
-            payload,
-            {"family_id", "shape_schema_id", "phase_launch_counts"},
-            path,
-        )
+        required = {"family_id", "shape_schema_id", "phase_launch_counts"}
+        if set(payload) not in {frozenset(required), frozenset(required | {"launch_scale_axis"})}:
+            _fields(payload, required, path)
         return cls(
             family_id=_string(payload["family_id"], f"{path}.family_id"),
             shape_schema_id=_string(
@@ -343,6 +350,14 @@ class KernelFamilyDefinition:
                         f"{path}.phase_launch_counts",
                     )
                 )
+            ),
+            launch_scale_axis=(
+                _string(
+                    payload["launch_scale_axis"],
+                    f"{path}.launch_scale_axis",
+                )
+                if "launch_scale_axis" in payload
+                else None
             ),
         )
 
@@ -369,7 +384,6 @@ class KernelProjection:
         _integer(
             self.logical_launch_count,
             "KernelProjection.logical_launch_count",
-            positive=True,
         )
         _integer(self.aggregate_flops, "KernelProjection.aggregate_flops")
         _integer(self.aggregate_hbm_bytes, "KernelProjection.aggregate_hbm_bytes")
@@ -402,7 +416,6 @@ class KernelProjection:
             logical_launch_count=_integer(
                 payload["logical_launch_count"],
                 f"{path}.logical_launch_count",
-                positive=True,
             ),
             aggregate_flops=_integer(
                 payload["aggregate_flops"], f"{path}.aggregate_flops"
@@ -610,6 +623,17 @@ class ModelKernelInventory:
                     f"case[{case.case_id}].{projection.family_id}.shape_vector",
                 )
                 expected_count = family.count_for(case.phase)
+                if family.launch_scale_axis is not None:
+                    schema = schema_by_id[family.shape_schema_id]
+                    axis_ids = tuple(axis.axis_id for axis in schema.axes)
+                    try:
+                        scale_index = axis_ids.index(family.launch_scale_axis)
+                    except ValueError as error:
+                        raise ValueError(
+                            f"family {family.family_id!r} launch scale axis "
+                            f"{family.launch_scale_axis!r} is absent from its shape schema"
+                        ) from error
+                    expected_count *= projection.shape_vector.values[scale_index]
                 if projection.logical_launch_count != expected_count:
                     raise ValueError(
                         f"case {case.case_id!r} family {family.family_id!r} has "
