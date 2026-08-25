@@ -22,7 +22,7 @@ from simllm.calibration.model_inventory import ModelKernelInventory
 
 REPOSITORY = Path(__file__).resolve().parents[2]
 EXPECTATIONS = Path(__file__).with_name("expectations.json")
-FREEZE_COMMIT = "e1e26634bd68c54b6073d2ec663da0a121d909e0"
+FREEZE_COMMIT = "5dc2877292fe40a74a49c1e2270e6a39d08613db"
 SUITE_ID = "deepseek-v3-text-v1-frameworks-2026-08-25"
 
 

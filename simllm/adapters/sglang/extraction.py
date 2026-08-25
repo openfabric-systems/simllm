@@ -33,7 +33,9 @@ SGLANG_CONFIGURATION_SEAM = (
 SGLANG_QWEN35_BINDING = "python/sglang/srt/models/qwen3_5.py:2319"
 SGLANG_QWEN35_IMPLEMENTATION = "Qwen3_5GatedDeltaNet with RadixLinearAttention"
 SGLANG_DEEPSEEK_V3_BINDING = "python/sglang/srt/models/deepseek_v2.py:3231"
-SGLANG_DEEPSEEK_V3_IMPLEMENTATION = "DeepseekV2Attention and DeepseekV2MoE"
+SGLANG_DEEPSEEK_V3_IMPLEMENTATION = (
+    "DeepseekV2AttentionMLA and DeepseekV2MoE"
+)
 
 
 def _source_root(distribution: importlib.metadata.Distribution) -> Path:
@@ -160,7 +162,8 @@ def _deepseek_v3_projection(
     if (
         architecture not in entry_names
         or deepseek_v2.DeepseekV3ForCausalLM.__name__ != architecture
-        or deepseek_v2.DeepseekV2Attention.__name__ != "DeepseekV2Attention"
+        or deepseek_v2.DeepseekV2AttentionMLA.__name__
+        != "DeepseekV2AttentionMLA"
         or deepseek_v2.DeepseekV2MoE.__name__ != "DeepseekV2MoE"
     ):
         raise RuntimeError("SGLang DeepSeek-V3 architecture binding does not match the pin")
