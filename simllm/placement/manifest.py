@@ -63,6 +63,8 @@ class RankPlacement:
     local_expert_ids: dict[int, list[int]] = field(default_factory=dict)
     #: expert-placement epoch these expert assignments belong to
     placement_epoch: int = 0
+    #: disaggregated serving pool role; absent for ordinary placements
+    pool_role: str | None = None
 
 
 @dataclass
@@ -86,7 +88,11 @@ class PlacementManifest:
 
     def save(self, path: str | Path) -> Path:
         path = Path(path)
-        path.write_text(json.dumps(asdict(self), indent=2) + "\n")
+        raw = asdict(self)
+        for rank in raw["ranks"]:
+            if rank["pool_role"] is None:
+                del rank["pool_role"]
+        path.write_text(json.dumps(raw, indent=2) + "\n")
         return path
 
     @classmethod
@@ -116,4 +122,89 @@ class PlacementManifest:
             source=raw.get("source", "declared"),
             framework=raw.get("framework"),
             framework_version=raw.get("framework_version"),
+        )
+
+
+@dataclass(frozen=True)
+class GpuFabricPlacement:
+    """One simulated GPU's concrete node, PCIe, and NIC attachment."""
+
+    global_rank: int
+    gpu_id: str
+    node_id: str
+    pcie_location: str
+    nic_id: str
+
+
+@dataclass(frozen=True)
+class NicFabricPlacement:
+    """One GPU-affine NIC pinned to a switch-facing fabric location."""
+
+    nic_id: str
+    node_id: str
+    fabric_location: str
+    affine_gpu_rank: int
+
+
+@dataclass(frozen=True)
+class FabricNodePlacement:
+    """The concrete GPU and NIC inventory of one serving node."""
+
+    node_id: str
+    pool_role: str
+    gpus: tuple[GpuFabricPlacement, ...]
+    nics: tuple[NicFabricPlacement, ...]
+
+
+@dataclass
+class FabricTopologyManifest:
+    """Concrete disaggregated inventory using the pinned fabric schema."""
+
+    nodes: list[FabricNodePlacement]
+    goal_rank_mapping: str = "gpu-rank"
+    source: str = "declared"
+    schema: str = FABRIC_SCHEMA
+
+    def by_rank(self, global_rank: int) -> GpuFabricPlacement:
+        for node in self.nodes:
+            for gpu in node.gpus:
+                if gpu.global_rank == global_rank:
+                    return gpu
+        raise KeyError(f"global rank {global_rank} not in fabric manifest")
+
+    def by_nic(self, nic_id: str) -> NicFabricPlacement:
+        for node in self.nodes:
+            for nic in node.nics:
+                if nic.nic_id == nic_id:
+                    return nic
+        raise KeyError(f"NIC {nic_id!r} not in fabric manifest")
+
+    def save(self, path: str | Path) -> Path:
+        path = Path(path)
+        path.write_text(json.dumps(asdict(self), indent=2) + "\n")
+        return path
+
+    @classmethod
+    def load(cls, path: str | Path) -> FabricTopologyManifest:
+        raw = json.loads(Path(path).read_text())
+        if raw.get("schema") != FABRIC_SCHEMA:
+            raise ValueError(f"unsupported schema: {raw.get('schema')!r}")
+        nodes = []
+        for node in raw["nodes"]:
+            nodes.append(
+                FabricNodePlacement(
+                    node_id=node["node_id"],
+                    pool_role=node["pool_role"],
+                    gpus=tuple(
+                        GpuFabricPlacement(**gpu) for gpu in node.get("gpus", ())
+                    ),
+                    nics=tuple(
+                        NicFabricPlacement(**nic) for nic in node.get("nics", ())
+                    ),
+                )
+            )
+        return cls(
+            nodes=nodes,
+            goal_rank_mapping=raw.get("goal_rank_mapping", "gpu-rank"),
+            source=raw.get("source", "declared"),
         )

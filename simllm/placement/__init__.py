@@ -30,10 +30,18 @@ backend.
 """
 
 from simllm.placement.declared import declared_manifest
+from simllm.placement.disaggregated import (
+    DisaggregatedDeploymentManifests,
+    disaggregated_manifests,
+)
 from simllm.placement.manifest import (
     FABRIC_SCHEMA,
     PLACEMENT_SCHEMA,
+    FabricNodePlacement,
+    FabricTopologyManifest,
+    GpuFabricPlacement,
     GroupMembership,
+    NicFabricPlacement,
     PlacementManifest,
     RankPlacement,
 )
@@ -42,9 +50,15 @@ from simllm.placement.mapper import RankMapper
 __all__ = [
     "FABRIC_SCHEMA",
     "PLACEMENT_SCHEMA",
+    "DisaggregatedDeploymentManifests",
+    "FabricNodePlacement",
+    "FabricTopologyManifest",
+    "GpuFabricPlacement",
     "GroupMembership",
+    "NicFabricPlacement",
     "PlacementManifest",
     "RankMapper",
     "RankPlacement",
     "declared_manifest",
+    "disaggregated_manifests",
 ]
