@@ -1,0 +1,104 @@
+{
+  "schema": "simllm-pd-session-concurrent-expectations-v1",
+  "as_of_commit": "dc350b6b83d2697cdcf317a2616c1523e1046210",
+  "chronology": {
+    "tracked_worktree_before_freeze": "clean",
+    "implementation_existed_before_freeze": false,
+    "scored_run_existed_before_freeze": false
+  },
+  "frontend": {
+    "name": "vllm",
+    "version": "0.27.1",
+    "python_version": "3.10.18",
+    "model_id": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "model_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "fixture_sha256": "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341"
+  },
+  "source_audit_sha256": {
+    "simllm/adapters/vllm/executor.py": "3e04a3318e44c6d806d4efa58c8052ee6f74dcbcc474ddc2e89623a4e379c279",
+    "simllm/adapters/vllm/pd_connector.py": "d2d5ca76b019a61023961e7ca26fc61ee750562f0a261fd76c6dfd3e6989c6de",
+    "simllm/adapters/vllm/pd_session.py": "04bc7aadf64267bd00e2ea8a0aec7992dfa1e74db860b62d05176bc8a57828c4",
+    "simllm/core/pd_session.py": "63052edef4ea40bda0b13bb7650004f89784c314c519d145f78568c276895705",
+    "vllm/config/kv_transfer.py": "64bde41204a5eea02cf2bb886e3479de90d5aab238e0d8a50de488d27edae4be",
+    "vllm/distributed/kv_transfer/kv_connector/v1/base.py": "ec3e461a802fdbc0d324d8cb200a161042da0614cfc0cb342accdd9d58dca31d",
+    "vllm/outputs.py": "44e2ea5d8a34403a99a867b42806e8102b3d9e7b1a0f735af26e6650cc482342",
+    "vllm/v1/core/sched/scheduler.py": "c67bda2886b52865ddafabaae7d797c359e930752f374421a33e537d94a5f45a",
+    "vllm/v1/engine/core.py": "6fdd067f54e5d42c57ff413e292685f5bdf6f343498d85c9262567f1eb746916",
+    "vllm/v1/engine/llm_engine.py": "46caab7b8a09d74321ef7a64683e8019b2187810725c80a15298cf9f51f1df03"
+  },
+  "core51_baseline_sha256": {
+    "examples/pd_session_v1/.gitattributes": "a79691a93b46e49ce460c26ef22afcc03d6eca1e63bf2edbc20e96159510f6c9",
+    "examples/pd_session_v1/RESULTS.md": "fea7a659879c0c1bf9a2a7a2751edb7ec84286a9e790f7a193ac8b2933f96276",
+    "examples/pd_session_v1/expectations.json": "064d48044820b673ff99c0fb2ea6d185e8caca1633314a3146fcc3cfb3ff0aba",
+    "examples/pd_session_v1/expectations.md": "12aa356846d9a0f316d47e48024db498dd71bd034c9ef1c589e96f55614bac82",
+    "examples/pd_session_v1/results.json": "9660a5bcd47706fe857694d68340aab9fdab2d7096632624e6f310118d4a435e",
+    "examples/pd_session_v1/run_study.py": "56d96ba0f1979ddf5160b93c19c4e93b57406c6ebf76d61e4a5661f9b317410b"
+  },
+  "deployment": {
+    "tensor_parallel_size": 8,
+    "pool_ratios": [
+      {"prefill_engines": 1, "decode_engines": 1},
+      {"prefill_engines": 1, "decode_engines": 2},
+      {"prefill_engines": 2, "decode_engines": 1}
+    ],
+    "max_num_seqs": 8
+  },
+  "request_sweep": {
+    "offered_load_requests_per_second": [8, 16, 32],
+    "interarrival_ps": [125000000000, 62500000000, 31250000000],
+    "prompt_tokens": [8, 16],
+    "requests_per_cell": 8,
+    "decode_output_tokens_per_request": 4,
+    "handoff_ps": 100000000,
+    "cells": 18
+  },
+  "curve_record": {
+    "schema": "simllm-deployment-curve-v1",
+    "point_schema": "simllm-deployment-curve-point-v1",
+    "aggregated_output_throughput": "all terminal output tokens divided by last terminal completion minus first admission",
+    "per_token_request_delay": "arithmetic mean across requests of terminal completion minus admission divided by that request's output token count",
+    "exact_representation": "integer numerator and denominator pairs",
+    "orientation": "throughput rightward and inverse per-token request delay upward"
+  },
+  "physical_bounds": {
+    "per_step_service_ps": {"floor": 1000000, "ceiling": 100000000000},
+    "client_visible_decode_tokens_per_second": {"floor": 10, "ceiling": 100000}
+  },
+  "exact_relations": [
+    "each offered request is admitted exactly once under its stable session identity",
+    "each stable session identity maps to one distinct prefill-local and one distinct decode-local identity",
+    "each admission produces exactly one handoff and one terminal result",
+    "each terminal result carries exactly four decode tokens without loss duplication or reordering",
+    "every request timeline conserves its TTFT decomposition exactly",
+    "every curve point conserves requests and output tokens exactly",
+    "the accepted CORE-51 study files retain their frozen SHA-256 digests"
+  ],
+  "behavioral_relations": [
+    "the highest offered load produces a genuine multi-request scheduler batch in both roles for every pool ratio",
+    "aggregated output throughput is nondecreasing from the lowest to the highest offered load within each prompt and pool ratio curve",
+    "per-token request delay is nondecreasing from the lowest to the highest offered load within each prompt and pool ratio curve",
+    "doubling prompt length doubles KV handoff bytes exactly for every request"
+  ],
+  "evidence_classes": {
+    "behavioral_families": 4,
+    "curve_families": 6,
+    "curve_points": 18,
+    "exact_conservation": "fatal-unscored",
+    "baseline_byte_identity": "fatal-unscored",
+    "source_and_runtime_identity": "fatal-unscored"
+  },
+  "fatal_guards": [
+    "pinned_source_hash_model_fixture_or_version_disagreement",
+    "core51_baseline_byte_disagreement",
+    "pool_role_or_shared_clock_disagreement",
+    "duplicate_or_lost_stable_session_identity",
+    "pool_local_identity_reuse_or_cross_request_alias",
+    "admission_handoff_terminal_or_token_conservation_failure",
+    "nonmonotonic_request_timestamps",
+    "ttft_decomposition_disagreement",
+    "curve_request_or_output_token_conservation_failure",
+    "missing_multi_request_batch_in_either_role",
+    "step_service_or_decode_rate_outside_physical_bounds"
+  ]
+}

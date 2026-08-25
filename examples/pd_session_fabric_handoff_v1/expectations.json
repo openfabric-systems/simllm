@@ -1,0 +1,105 @@
+{
+  "schema": "simllm-pd-session-fabric-handoff-expectations-v1",
+  "as_of_commit": "dc350b6b83d2697cdcf317a2616c1523e1046210",
+  "chronology": {
+    "tracked_worktree_before_freeze": "clean",
+    "implementation_existed_before_freeze": false,
+    "scored_run_existed_before_freeze": false
+  },
+  "runtime": {
+    "python_version": "3.10.18",
+    "htsim_gitlink": "1dcbfec36a33753bf978cf6323bade1a6645fe4f",
+    "htsim_rnic_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+    "txt2bin_sha256": "df348be0f3e9138b2bf2e1f360df0a8c377f07161f2e16940e47d68bf9a3c50a",
+    "profile": "rnic-nn",
+    "transport_kind": "packetized-null-network"
+  },
+  "source_audit_sha256": {
+    "simllm/adapters/vllm/pd_session.py": "04bc7aadf64267bd00e2ea8a0aec7992dfa1e74db860b62d05176bc8a57828c4",
+    "simllm/backends/htsim_rnic.py": "33777ab17653b15fda068df3b76776408feaa921bdefeacff97c6aa63a808ad6",
+    "simllm/core/pd_session.py": "63052edef4ea40bda0b13bb7650004f89784c314c519d145f78568c276895705",
+    "simllm/goal/emitter.py": "5bd3a73b061c7229325d524d7aa4c9a4203fdeaf3ba616d6c80f7bbde359e9dd",
+    "simllm/placement/disaggregated.py": "83a90bae0ff47fcb38a7dc6115f30b4b0db4f77ab702f05f9a2912e89ff9ef12",
+    "simllm/traffic/patterns.py": "85740c1256d7e4ae4c66d062c49a719c2f7209a543953b33c1a160095ab217da"
+  },
+  "core51_baseline_sha256": {
+    "examples/pd_session_v1/.gitattributes": "a79691a93b46e49ce460c26ef22afcc03d6eca1e63bf2edbc20e96159510f6c9",
+    "examples/pd_session_v1/RESULTS.md": "fea7a659879c0c1bf9a2a7a2751edb7ec84286a9e790f7a193ac8b2933f96276",
+    "examples/pd_session_v1/expectations.json": "064d48044820b673ff99c0fb2ea6d185e8caca1633314a3146fcc3cfb3ff0aba",
+    "examples/pd_session_v1/expectations.md": "12aa356846d9a0f316d47e48024db498dd71bd034c9ef1c589e96f55614bac82",
+    "examples/pd_session_v1/results.json": "9660a5bcd47706fe857694d68340aab9fdab2d7096632624e6f310118d4a435e",
+    "examples/pd_session_v1/run_study.py": "56d96ba0f1979ddf5160b93c19c4e93b57406c6ebf76d61e4a5661f9b317410b"
+  },
+  "model_geometry": {
+    "num_layers": 24,
+    "num_kv_heads": 8,
+    "head_size": 64,
+    "kv_element_bytes": 2,
+    "kv_bytes_per_prompt_token": 49152
+  },
+  "transfer": {
+    "tensor_parallel_size": 8,
+    "prefill_goal_ranks": [0, 1, 2, 3, 4, 5, 6, 7],
+    "decode_goal_ranks": [8, 9, 10, 11, 12, 13, 14, 15],
+    "pairing": "same tensor-parallel local rank",
+    "chunks_per_request": 8,
+    "pcie_submission_ps": 20000000,
+    "constant_arm_ps": 100000000,
+    "completion": "last required receive arrival"
+  },
+  "sweep": {
+    "prompt_tokens": [8, 16],
+    "link_bandwidth_bps": [200000000000, 400000000000],
+    "cells": 4,
+    "aggregate_kv_bytes": {"8": 393216, "16": 786432},
+    "per_pair_chunk_bytes": {"8": 49152, "16": 98304}
+  },
+  "physical_bounds_ps": {
+    "8": {
+      "200000000000": {"parallel_serialization_floor": 1966080, "packet_service_ceiling": 65728640},
+      "400000000000": {"parallel_serialization_floor": 983040, "packet_service_ceiling": 57864320}
+    },
+    "16": {
+      "200000000000": {"parallel_serialization_floor": 3932160, "packet_service_ceiling": 81457280},
+      "400000000000": {"parallel_serialization_floor": 1966080, "packet_service_ceiling": 65728640}
+    }
+  },
+  "constant_arm_timing_control": {
+    "8": {"ttft_ps": 273376000, "tpot_ps": 77952000},
+    "16": {"ttft_ps": 292912000, "tpot_ps": 77976000}
+  },
+  "exact_relations": [
+    "aggregate KV bytes equal geometry bytes for the prompt context",
+    "eight positive chunks partition aggregate bytes exactly",
+    "sources 0 through 7 and destinations 8 through 15 each appear exactly once",
+    "packet service starts only after the full declared PCIe submission term",
+    "handoff completion equals the last required receive arrival",
+    "packet TTFT minus constant TTFT equals packet handoff duration minus constant handoff duration exactly",
+    "packet and constant decode TPOT are equal exactly",
+    "constant and off arms emit no backend artifacts and preserve accepted baseline bytes and timestamps"
+  ],
+  "behavioral_relations": [
+    "halving link bandwidth does not reduce packet service time at either context length",
+    "doubling context length doubles aggregate bytes and does not reduce packet service time at either bandwidth",
+    "only the explicit packet arm emits GOAL binary completion and flow artifacts"
+  ],
+  "evidence_classes": {
+    "behavioral_families": 3,
+    "behavioral_instances": 8,
+    "exact_oracle_rows": 4,
+    "conservation_and_authority": "fatal-unscored",
+    "baseline_byte_identity": "fatal-unscored"
+  },
+  "fatal_guards": [
+    "pinned_source_binary_or_gitlink_disagreement",
+    "core51_baseline_byte_disagreement",
+    "geometry_pairing_chunk_or_endpoint_conservation_failure",
+    "pcie_submission_not_ordered_before_packet_service",
+    "handoff_completion_not_equal_to_last_required_arrival",
+    "packet_backend_not_quiescent",
+    "constant_or_off_arm_emits_backend_artifact",
+    "constant_arm_timestamp_disagreement",
+    "ttft_signed_difference_or_tpot_identity_failure",
+    "packet_service_outside_frozen_physical_bounds"
+  ]
+}
