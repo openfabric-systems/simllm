@@ -233,8 +233,15 @@ re-verify before its cells are priced by summation.
 The campaign's product is one unified lookup record per campaign
 (COMP-64): kernel-cycle decompositions keyed so the simulator can price
 any step by lookup, compiled into the existing profile-table and
-device-model service-entry forms rather than a second authority. The
-declared input-dependency contract (maintainer direction, 2026-08-25):
+device-model service-entry forms rather than a second authority.
+Scouting evidence (2026-08-25) sharpens the record's granularity:
+family-level efficiency surfaces do not transfer across models (median
+error 99.4 percent on the donor-covered 35.3 percent of a step, with
+the closed library selecting different kernel variants per model and
+shape regime), so entries key on implementation identity and every new
+model column measures at least one anchor per kernel specialization.
+The declared input-dependency contract (maintainer direction,
+2026-08-25):
 
 - A decode entry's key is the batch plus the per-request KV lengths.
   For a dense model that key is complete: the token values change no
