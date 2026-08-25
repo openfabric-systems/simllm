@@ -1,0 +1,164 @@
+{
+  "schema": "simllm-model-extraction-expectations-v1",
+  "study": "model-extraction-qwen38-v1",
+  "authored_after_commit": "59e27d0ed2c105a0aebc8bffd7ccf647cdf0527f",
+  "working_tree_before_freeze": "clean",
+  "suite": {
+    "id": "qwen3.8-27b-text-v1",
+    "relative_path": "offline/calibration/suites/qwen3.8-27b-text-v1/suite.json",
+    "sha256": "560aab048f7c9db463f53614178faded06a7d3b62b7e775f6943e1b52fbfe6e2",
+    "case_count": 15
+  },
+  "model": {
+    "name": "Qwen/Qwen3.8-27B",
+    "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+    "config_sha256": "191e0af232104ed8b65258cf3fb2b842e288008baca7633c11b82a1ac7203aab",
+    "parameter_count": 27781427952,
+    "weight_identity_source": "hugging-face-api-metadata",
+    "weight_shard_count": 18,
+    "weight_sha256": "72b5a8b6db0ad258d743ddbf3de4efda86b1ee894f08564f31044d921c17074c",
+    "weight_bytes": 55563006776,
+    "local_weight_byte_verification": false,
+    "layers": 64,
+    "linear_attention_layers": 48,
+    "full_attention_layers": 16
+  },
+  "frameworks": [
+    {
+      "id": "vllm",
+      "version": "0.26.0",
+      "source_commit": "568afb3a13806beb53bb2e6bd518269357b237c0",
+      "source_tree": null,
+      "configuration_seam": "ModelConfig-with-skip-tokenizer-init",
+      "architecture_binding": "model_executor/models/registry.py:573"
+    },
+    {
+      "id": "sglang",
+      "version": "0.0.0.dev1+g8f2a3ad6d",
+      "source_commit": "8f2a3ad6d7d68c58ae65b61a75bb2115449addca",
+      "source_tree": "5be26db1f559064c0f9e724e78c1a8f619754867",
+      "configuration_seam": "DeviceConfig-cpu-plus-ModelConfig-with-multimodal-disabled",
+      "architecture_binding": "python/sglang/srt/models/qwen3_5.py:2319"
+    }
+  ],
+  "sweep": {
+    "parameters": [
+      {
+        "id": "prefill-prompt-tokens-per-request",
+        "values": [32, 128, 192, 256, 512],
+        "fixed_requests": 4
+      },
+      {
+        "id": "decode-context-tokens",
+        "values": [128, 512, 1024, 2048, 8192],
+        "fixed_batch": 4
+      },
+      {
+        "id": "dense-decode-batch",
+        "values": [1, 4, 8, 16, 64],
+        "fixed_context_tokens": 2048
+      }
+    ],
+    "case_order": "suite-graph-cells-array-order"
+  },
+  "structure_contract": {
+    "architecture": "Qwen3_5ForConditionalGeneration",
+    "wrapper_model_type": "qwen3_5",
+    "text_model_type": "qwen3_5_text",
+    "scope": "text-only",
+    "layer_pattern": [
+      "linear_attention",
+      "linear_attention",
+      "linear_attention",
+      "full_attention"
+    ],
+    "pattern_repetitions": 16,
+    "unsupported_mechanism": "Qwen3.5 Gated DeltaNet",
+    "residual_task": "COMP-62",
+    "required_outcome": "reject-total-inventory-before-step-record-or-inventory-write",
+    "complete_inventory_count": 0,
+    "requested_inventory_count": 2
+  },
+  "relations": [
+    {
+      "id": "R1-exact-framework-text-projection",
+      "evidence_class": "behavioral-relation",
+      "expectation": "each-framework-projects-the-exact-wrapper-text-model-dense-geometry-and-gated-delta-net-parameters"
+    },
+    {
+      "id": "R2-hybrid-layer-scaling",
+      "evidence_class": "behavioral-relation",
+      "expectation": "three-linear-and-one-full-attention-layer-repeat-sixteen-times-for-48-linear-16-full-and-64-total"
+    },
+    {
+      "id": "R3-shape-axis-sensitivity",
+      "evidence_class": "behavioral-relation",
+      "expectation": "prefill-prompt-decode-context-and-dense-batch-sweeps-change-their-declared-step-record-axes-exactly"
+    },
+    {
+      "id": "R4-total-rejection",
+      "evidence_class": "structural-invariant",
+      "expectation": "each-framework-names-COMP-62-and-gated-delta-net-then-rejects-before-writing-step-records-or-an-inventory"
+    },
+    {
+      "id": "R5-rejection-byte-determinism",
+      "evidence_class": "exact-oracle",
+      "expectation": "same-framework-same-suite-repeated-rejection-records-are-byte-identical"
+    },
+    {
+      "id": "R6-cross-framework-structural-agreement",
+      "evidence_class": "behavioral-relation",
+      "expectation": "normalized-vllm-and-sglang-text-projections-are-exactly-equal"
+    }
+  ],
+  "producer_checker_sharing": {
+    "R1-exact-framework-text-projection": "partially-shared-framework-config-projection-with-independent-frozen-expected-values",
+    "R2-hybrid-layer-scaling": "partially-shared-layer-normalization-with-independent-count-and-pattern-checks",
+    "R3-shape-axis-sensitivity": "shared-production-case-parser-with-independent-authored-cell-expectations",
+    "R4-total-rejection": "independent-process-status-and-output-absence-checks",
+    "R5-rejection-byte-determinism": "independent-byte-comparison-of-two-process-results",
+    "R6-cross-framework-structural-agreement": "independent-framework-producers-with-one-normalized-checker"
+  },
+  "unscored_until_comp_62": [
+    "five-family-projection-and-conservation",
+    "logical-launch-count-formula",
+    "execution-graph-template-equivalence-classes",
+    "inventory-object-byte-determinism"
+  ],
+  "fatal_guards": [
+    "suite-bytes-changed",
+    "api-metadata-revision-parameter-count-shard-count-manifest-or-byte-total-mismatch",
+    "local-config-revision-or-hash-mismatch",
+    "local-configuration-substrate-contains-a-weight-file",
+    "framework-version-source-or-architecture-binding-mismatch",
+    "framework-text-geometry-layer-order-or-mechanism-mismatch",
+    "missing-duplicate-or-reordered-suite-case",
+    "step-record-or-inventory-written-after-required-rejection",
+    "ordinary-simllm-import-loads-framework-runtime"
+  ],
+  "dropped_fatal_guards": [
+    {
+      "guard": "local-weight-shard-byte-and-hash-verification",
+      "reason": "maintainer-policy-forbids-model-weight-downloads-and-requires-api-metadata-identity"
+    }
+  ],
+  "negative_controls": [
+    "mutated-api-shard-manifest-rejects",
+    "local-safetensors-presence-rejects",
+    "mutated-layer-schedule-rejects-without-output",
+    "unsupported-architecture-rejects-without-output",
+    "sglang-unknown-or-routed-moe-config-still-rejects"
+  ],
+  "evidence_classes": [
+    "run-configuration",
+    "exact-oracle",
+    "behavioral-relation",
+    "structural-invariant",
+    "native-test-executable"
+  ],
+  "closure": {
+    "closes": [],
+    "keeps_open": ["COMP-54", "COMP-62"],
+    "publishes_complete_inventories": []
+  }
+}

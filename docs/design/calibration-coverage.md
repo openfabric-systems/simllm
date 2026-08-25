@@ -85,7 +85,7 @@ never silently bumped past the pins.
 | Column | Identity | State |
 |---|---|---|
 | granite-3.0-1b-a400m-instruct | `ibm-granite/granite-3.0-1b-a400m-instruct`, revision `ffec3c35`, pinned with hashes in the [transformer-dag-v1 suite](../../offline/calibration/suites/transformer-dag-v1/suite.json) | Offline denominators published by [model_extraction_v1](../../examples/model_extraction_v1/RESULTS.md) and the [framework pin bump](../../examples/framework_pin_bump_v1/RESULTS.md): vLLM [v0.26.0](../../offline/calibration/model-inventories/e74e995a89588a304aa852593d3505cfab9a94d2c068c82dbe9c776da7119af9.json) and [v0.27.1](../../offline/calibration/model-inventories/33758c3c71d5dacae8f6a82cb937f5e70b0d28eaa7c2358c13baccbd8d8725e2.json); SGLang [`8f2a3ad`](../../offline/calibration/model-inventories/147fe4398d5615afe7954c9199134de37f706da2cecda8fc37d6514ad936c54c.json) and [`bfeae4e`](../../offline/calibration/model-inventories/3998b208bef6498709a9a4b6b2ca2e1825a9db54918186f4fc4387a9ee2b9b9a.json). This is the anchored first column and the small-MoE control for the beyond-node-memory route |
-| Qwen3.8-27B | `Qwen/Qwen3.8-27B` (open Apache 2.0 dense multimodal checkpoint, 27.78B parameters, architecture `Qwen3_5ForConditionalGeneration`); exact revision and hashes pinned at its extraction freeze | Planned (COMP-54). The architecture is present in both pinned framework registries (pin-bump verification 2026-08-25); the extraction freeze owns the binding verification |
+| Qwen3.8-27B | `Qwen/Qwen3.8-27B` (open Apache 2.0 dense multimodal checkpoint, 27.78B parameters, architecture `Qwen3_5ForConditionalGeneration`); exact revision and hashes pinned at its extraction freeze | Offline structure verified and total extraction rejected by [model_extraction_qwen38_v1](../../examples/model_extraction_qwen38_v1/RESULTS.md): both pinned framework configuration surfaces agree on 48 Qwen3.5 Gated DeltaNet and 16 full-attention layers, but zero complete inventories are published until COMP-62 prices the missing families; COMP-54 stays open |
 | Kimi K3 | `moonshotai/Kimi-K3` (open-weight 2.8T-parameter MoE, 104B active, 896 experts with 16 selected, hybrid linear attention, native MXFP4 checkpoint, released 2026-07); exact revision and hashes pinned at its extraction freeze | Planned behind COMP-59. Both pinned registries resolve `KimiK3ForConditionalGeneration` through their native Kimi K3 implementations (pin-bump verification 2026-08-25); COMP-54 still owns exact checkpoint binding, and no Kimi weights were downloaded or executed by the pin bump |
 
 Closed-weight models are out of scope regardless of interest: a column
@@ -111,6 +111,57 @@ deployment: the prefill pool's eager or piecewise-compiled kernel stream
 and the decode pool's replayed CUDA graph are separate capture
 denominators for every cell, owned by the same VLLM-12 and SGL-10
 producers (maintainer direction 2026-08-24).
+
+## Repeat distributions and the KV axis
+
+Two further protocol requirements bind every measured cell (maintainer
+direction, 2026-08-24):
+
+- **Repeat distributions.** Every CUDA-graph decode cell replays its
+  graph hundreds of times and publishes the distribution, not only a
+  center. A tight single peak is the expected outcome and evidences the
+  kernel-time determinism ruling. Several peaks indicate a conditioned
+  effect that must be named and published per condition; the known
+  bimodal SM clock states and launch-path variants are the first
+  suspects. A genuine width is an environment-stability defect handled
+  under COMP-5, never averaged away. Eager cells repeat the same way at
+  smaller counts. Distribution plots ship with the campaign artifacts,
+  and the device model's uncertainty bound consumes the observed spread.
+- **The KV axis.** A decode cell is a shard of a decode-pool step at a
+  declared KV length, and its measured time must respond to that length.
+  The capture populates real paged-attention state (dummy contents, real
+  block tables) at sixteen KV lengths spanning one to one hundred
+  percent of the model's supported context, so attention kernels
+  traverse the true page count. For Qwen3.8-27B that grid reaches
+  262,144 tokens, where only the sixteen full-attention layers scale
+  while the Gated DeltaNet layers hold constant recurrent state, a
+  measured hybrid signature. The decode shape vector carries the
+  KV-length axis through the existing typed shape schema; no new
+  interface is required. The simulator-side paged KV management remains
+  owned by the registered CORE-3, VLLM-11 and SGL-9 lifecycle tasks,
+  which this protocol's evidence feeds.
+- **The memory split.** The component decomposition separates KV traffic
+  from weight traffic inside the memory term: weight reads are constant
+  per decode step while KV reads scale with length, so the two carry
+  different extrapolation laws and are never fitted as one.
+- **Cycles first, per-component domains.** Raw records carry elapsed SM
+  cycles beside wall time with both the SM and DRAM clocks observed per
+  window, because time depends on the SM frequency. Each component
+  publishes in its own invariant domain: the compute term in SM cycles,
+  the memory term as bytes over achieved bandwidth conditioned on the
+  measured DRAM clock, and the fixed term in time with its host and
+  front-end anchors. The bimodal SM clock states double as the empirical
+  check: a compute-bound kernel's cycles agree across clock states while
+  its time differs, and a memory-bound kernel's time agrees while its
+  cycles differ.
+- **Memory-subsystem constancy.** The campaign answers explicitly
+  whether the DRAM clock is constant across cells, batches, KV lengths
+  and SM clock states, and whether achieved memory throughput depends on
+  placement or access pattern. The named suspect is scattered paged KV
+  blocks: at fixed KV length, fresh contiguous block tables are measured
+  against deliberately fragmented ones, and the verdict (scatter
+  insensitive within noise, or a quantified penalty with its mechanism)
+  is published with the evidence.
 
 ## Models beyond node memory
 

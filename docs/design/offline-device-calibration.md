@@ -344,8 +344,14 @@ also in captured-graph mode when that backend reports support. A full
 communication-validated envelope additionally executes all 20 communication
 and all 28 mixed cells for each claimed framework and supported launch mode. A
 scalar compute-memory envelope instead declares communication unsupported and
-does not inherit those denominators. Two framework claims may not satisfy one
-logical denominator with disjoint subsets.
+does not inherit the 20-cell communication denominator. Amendment (maintainer,
+2026-08-24): under the frozen `mixed_rule`, that envelope inherits the reduced
+mixed denominator of 12, comprising all four widths of `mix-compute`,
+`mix-memory` and `mix-compute-memory`, because those are every cell whose member
+capabilities are ready. The 16 cells with a communication member remain
+excluded. This dated amendment corrects only the scalar envelope denominator;
+it changes no suite topology, interface, acceptance bar or evidence rule. Two
+framework claims may not satisfy one logical denominator with disjoint subsets.
 
 Each measurement starts with physical bounds. Compute cannot beat FLOPs over
 the applicable peak; memory cannot beat compulsory bytes over measured HBM
@@ -755,5 +761,6 @@ reshape.
   actually observed mover visits CORE-27.
 - Explicit architecture-derived candidates are COMP-52, which never changes
   the validated default.
-- The freeze amendment this document's expectation suite still needs before
-  its first campaign cell runs is COMP-53.
+- The preflight physical-sanity amendment is frozen in
+  `offline/calibration/suites/transformer-dag-v1/expectations-amendment-2026-08-24.json`;
+  it closes COMP-53 before the first campaign cell runs.

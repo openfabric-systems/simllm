@@ -2111,35 +2111,6 @@ and an explicit reason:
   only the installed ones. A measurement campaign run before COMP-44 supplies
   a non-overlappable term would therefore fail this bar by construction and
   could close nothing.
-- COMP-53 (Precision; P0; S): amend the frozen `transformer-dag-v1` physical
-  sanity and guard contract before its first campaign cell runs. Four defects
-  make the current freeze unevaluable or circular, and no cell has been
-  observed yet, so the amendment lands as a new expectations-only freeze
-  rather than an in-place edit of the existing record. First, `EQ5` maxes over
-  `kernel_floor_ps`, which no equation, contract field or prose defines
-  anywhere in the repository; COMP-43 owns the term it means, but the freeze
-  never says so or says how it is obtained. Second, `EQ6` consumes
-  `applicable_stage_floors_ps`, which no equation produces. Third, the floor
-  half of the contract reads `compute_rate`, `hbm_rate` and `peer_rate`
-  without declaring them, while every ceiling-side input is declared in
-  `finite_campaign_envelope_fields` and bound by `finite_evidence_rule` to
-  preexisting qualified evidence and never the current cell outcome. A floor
-  derived from the measurement it bounds is circular, and a physical-bound
-  violation is a fatal guard, so the asymmetry can void or silently spare a
-  campaign for the wrong reason. Fourth, `G11` separates the timeline, counter
-  and dynamic-instruction passes but omits the mixed pass the same freeze
-  declares, leaving the fourth pass outside the only guard that enforces pass
-  separation. Also settle the mixed-cell denominator a scalar compute-memory
-  envelope inherits: the design statement drops all 28 mixed cells while the
-  suite's own `mixed_rule` requires every cell whose member capabilities are
-  ready, which is the 12 with no communication member. Acceptance: the amended
-  freeze defines every term its equations use, declares and evidence-binds
-  every floor-side input on the same footing as the ceiling side, covers all
-  four passes in the pass-separation guard, states the reduced denominator,
-  and locks its own schema string and the closed `preflight_states` enum in
-  the freeze test. No measured value may be read before it lands, and the
-  amendment cites this chronology.
-
 ### Completeness
 
 - COMP-4 (Completeness; P2; M): add generic multi-axis interpolation as an
@@ -2468,6 +2439,20 @@ and an explicit reason:
   closed when a framework cannot execute the reduced-depth instantiation.
   Disabling the route leaves every accepted record and the hand-authored
   suites byte-identical.
+- COMP-62 (Completeness; P1; L): extend the offline model inventory family set
+  for Qwen3.5 Gated DeltaNet linear-attention layers. Price the input
+  projections, width-four short convolution, recurrent-state read, update and
+  write, gated normalization, output projection and dense MLP for both prefill
+  and decode shapes, with exact integer FLOPs, HBM bytes and logical launch
+  counts. Preserve the ordered Qwen3.8-27B schedule of 48 linear-attention and
+  16 full-attention layers and prove family conservation for every one of the
+  15 frozen text-only cases through both pinned framework configuration
+  surfaces. Until that total projection exists, both drivers reject the
+  Qwen3.8-27B column before writing StepRecords or an inventory, and the
+  Granite full-attention suite and published inventory bytes remain exactly
+  unchanged. Acceptance requires byte-deterministic complete inventories from
+  vLLM and SGLang with exact cross-framework structural agreement and no
+  multimodal encoder or speculative-head leakage.
 
 ### Uncategorized
 
