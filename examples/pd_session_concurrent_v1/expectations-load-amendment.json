@@ -1,0 +1,43 @@
+{
+  "schema": "simllm-pd-session-concurrent-load-amendment-v1",
+  "chronology": {
+    "original_expectations_commit": "7536e08b32009951470f310e4f459216c7212dbc",
+    "implementation_commit": "d6bd2cd520dfc731bc59e25928128d6b77918045",
+    "first_scored_run_existed_before_amendment": true,
+    "classification": "post-specified regression"
+  },
+  "retained_void_run": {
+    "sha256": "7121ab1b99eeb4809de8e2546351fd03653cd7acf30cee99a0c50155d401d5c5",
+    "status": "VOID",
+    "fatal_findings": [
+      {"guard": "missing-multi-request-batch", "pool_ratio": [1, 1]},
+      {"guard": "missing-multi-request-batch", "pool_ratio": [1, 2]},
+      {"guard": "missing-multi-request-batch", "pool_ratio": [2, 1]}
+    ],
+    "maximum_prefill_batch_size": 1,
+    "maximum_decode_batch_size": 1,
+    "conservation_rows_held": 18,
+    "maximum_ttft_residual_ps": 0
+  },
+  "unit_correction": {
+    "observed_prefill_service_ps": [95424000, 114936000],
+    "original_minimum_interarrival_ps": 31250000000,
+    "diagnosis": "the original highest-load interarrival was over 271 times the longest observed prefill service and could not create overlap"
+  },
+  "replacement_request_sweep": {
+    "offered_load_requests_per_second": [8000, 16000, 32000],
+    "interarrival_ps": [125000000, 62500000, 31250000],
+    "prompt_tokens": [8, 16],
+    "requests_per_cell": 8,
+    "decode_output_tokens_per_request": 4,
+    "handoff_ps": 100000000,
+    "cells": 18
+  },
+  "unchanged_acceptance": [
+    "all original fatal guards and conservation relations",
+    "all original pool ratios and prompt lengths",
+    "genuine multi-request scheduler batches in both roles",
+    "all original curve definitions and behavioral directions",
+    "the byte-locked CORE-51 baseline"
+  ]
+}
