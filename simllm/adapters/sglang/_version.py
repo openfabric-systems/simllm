@@ -7,5 +7,5 @@ the pin, and the package must stay lazily importable, so the constant lives
 here.
 """
 
-#: SGLang main-branch commit this adapter is written against (2026-08-04).
-PINNED_SGLANG_COMMIT = "8f2a3ad"
+#: SGLang main-branch commit this adapter is written against (2026-08-24).
+PINNED_SGLANG_COMMIT = "bfeae4e"

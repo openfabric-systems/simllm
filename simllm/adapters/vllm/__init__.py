@@ -1,4 +1,4 @@
-"""vLLM adapter, pinned to vLLM **v0.26.0** (milestone M2).
+"""vLLM adapter, pinned to vLLM **v0.27.1** (milestone M2).
 
 vLLM's v1 engine resolves its executor class from a dotted import path, so
 SimLLM plugs in without a fork::

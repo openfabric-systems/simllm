@@ -18,6 +18,7 @@ dependencies = [
 dev = [
     "pytest>=7",
     "ruff>=0.4",
+    "setuptools>=68",
 ]
 plot = [
     "matplotlib>=3.7",
@@ -30,6 +31,9 @@ preplay = [
 [project.urls]
 Homepage = "https://github.com/openfabric-systems/simllm"
 Issues = "https://github.com/openfabric-systems/simllm/issues"
+
+[project.scripts]
+simllm-calibrate = "simllm.calibration.cli:main"
 
 # SGLang discovers and runs this before constructing its Scheduler. The
 # callable is a no-op unless the simulation or oracle gate is explicit, so an

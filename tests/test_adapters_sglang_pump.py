@@ -7,6 +7,7 @@ imports SGLang: the gate environment does not have it, and CI never does.
 
 from __future__ import annotations
 
+import importlib.util
 from dataclasses import dataclass
 from typing import Any
 
@@ -307,10 +308,16 @@ def test_the_pump_module_imports_without_sglang_or_torch():
     import simllm.adapters.sglang.pump as pump_module
 
     assert "sglang" not in dir(pump_module)
-    with pytest.raises(ImportError):
-        pump_module.tokenized_generate_request(
+    if importlib.util.find_spec("sglang") is None:
+        with pytest.raises(ImportError):
+            pump_module.tokenized_generate_request(
+                request_id="r0", input_token_ids=(1, 2), max_new_tokens=1
+            )
+    else:
+        request = pump_module.tokenized_generate_request(
             request_id="r0", input_token_ids=(1, 2), max_new_tokens=1
         )
+        assert request.rid == "r0"
 
 
 # The chunked-prefill gate (SGL-12 closed; the refusal condition moved)

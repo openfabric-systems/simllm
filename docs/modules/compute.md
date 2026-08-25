@@ -1,12 +1,11 @@
 # simllm.compute
 
-Pluggable compute-time providers plus the host initiation model. The core
-needs one number per GOAL `calc` node: how long a rank computes before it
-hands data over. Providers answer at different fidelity/cost points. A compact
-trace-driven service model replays captured kernels when a provider or
-calibration artifact is built. Its online provider path is a cached lookup;
-external Accel-Sim replay also remains offline. Neither simulator runs once
-per serving step.
+Pluggable compute-time providers plus the host initiation model. The scalar
+compatibility path needs one number per GOAL `calc` node: how long a rank
+computes before it hands data over. Higher-fidelity execution resolves compact
+immutable service entries and advances the selected batch or incremental
+device service. Trace replay, profiling, fitting and external Accel-Sim use
+remain offline; none runs once per serving step.
 
 ## Interface
 
@@ -88,6 +87,364 @@ per serving step.
   floor, empirical bounds and exposed host contribution. The named Turing
   profiles accept only `GpuSpec.name="gtx1660-ti-sm75"`; a B100 or H100
   selection fails during configuration instead of borrowing the constant.
+- `HardwareCollector`: an offline-only producer of environment records,
+  physical launch observations and silicon measurements. Vendor backends may
+  use CUDA/CUPTI/Nsight, ROCm/rocprofiler or another declared toolchain, but
+  they emit the same typed evidence records and never enter the serving import
+  path.
+- `OfflineKernelSimulator`: an offline-only adapter over a pinned external
+  simulator. It consumes content-addressed captured inputs and emits typed
+  simulator observations. It is optional, capability queried and never a
+  source of silicon truth.
+- `CalibrationCompiler`: the deterministic offline compiler from validated
+  evidence and an immutable split to a compact device model. It applies
+  source precedence, fits only the training partition, scores validation and
+  test partitions without fitting them, and emits no model when a fatal guard
+  fails.
+- `simllm-device-calibration-bundle-v1`: the contributor and campaign
+  evidence envelope. It is an acyclic content-addressed record graph whose
+  raw traces and profiler exports remain external blobs named by digest. It
+  carries capture and simulator environments, exact graph and implementation
+  observations, silicon measurements, optional simulator observations,
+  immutable train/validation/test membership, fit inputs and validation
+  results. An evidence manifest hashes only its evidence records; a fit names
+  that manifest; a release manifest names the evidence manifest, fit, compact
+  model and validation result, so no record hashes itself or forms a cycle.
+- `OperationImplementationBinding`: an observed-capture sidecar joining an
+  exact `(instance_graph_sha256, operation_id, launch_ordinal)` to the
+  `implementation_ref` actually reported by the model runner and profiler and
+  its typed `shape_vector`. Those five fields are the complete record; fitted
+  demand and service-entry identity are forbidden. The instance graph hash is
+  evidence provenance only.
+- `CollectiveDeviceStageBinding`: an observed-capture sidecar joining
+  `(instance_graph_sha256, collective_operation_id,
+  collective_plan_integrity_sha256, rank, launch_ordinal)` to one observed
+  GPU-resident NCCL or RCCL `ImplementationRef` and typed `ShapeVector`. Demand
+  stays in measurement records and compiled service entries. The binding is an
+  internal physical stage of its parent `CollectiveWork`, not a second graph
+  operation or an independent completion authority.
+- `simllm-resolved-operation-service-binding-set-v1`: an immutable
+  per-execution sidecar produced before device state mutates. It contains
+  exactly `schema`, `instance_graph_sha256`, `dispatch_context_sha256` and
+  `bindings`. The immutable dispatch context includes the validated rank/device
+  assignment and a total tuple of selected models keyed by device instance. The
+  applicable selected model resolves every compute operation from its semantic
+  work and typed shape to exactly one implementation and service entry. Online service
+  lookup uses `(implementation_id, shape_vector)`, never a graph hash or a
+  kernel-name fallback. Each member contains exactly `instance_graph_sha256`,
+  `operation_id`, `launch_ordinal`, `device_instance_id`,
+  `device_model_sha256`, normalized `semantic_key`, `shape_vector`,
+  `implementation_ref`, `service_entry_id`, `resolution_source` exactly
+  `selector` or `observed-binding`, and required-nullable
+  `observed_implementation_binding_sha256`. Bindings follow graph operation
+  tuple order, then launch ordinal. Device/model identity must match the
+  selected-model tuple.
+- `simllm-device-dispatch-context-v1`: the canonical preflight identity shared
+  by both resolved sets. It contains exactly `schema`,
+  `instance_graph_sha256`, `rank_device_assignments` and
+  `selected_device_models`. A rank assignment contains exactly `rank` and
+  `device_instance_id`; assignments are unique, sorted by integer rank and
+  total over every graph participant rank. A model selection contains exactly
+  `device_instance_id`, `device_model_id`, `device_model_sha256` and
+  `dispatch_signature_sha256`; selections are unique, sorted by device
+  instance, and cover exactly the devices used by the assignments.
+  `simllm-dispatch-signature-v1` contains exactly `schema`, `framework_id`,
+  `framework_version`, `backend_id`, `backend_version`, `kernel_library_id`,
+  `kernel_library_version`, `algorithm_policy_id`, `device_isa`,
+  `numeric_traits` and `layout_traits`. Every identifier and version is
+  nonblank. Each trait follows the nested
+  `simllm-typed-dispatch-trait-v1` contract and is the strict object
+  `{trait_id, value_type, value}`;
+  its type is exactly `integer`, `string` or `boolean`, its value matches that
+  type, and each tuple is sorted with unique nonblank trait IDs. Launch mode is
+  forbidden because it changes host initiation only. The dispatch-context
+  digest is the SHA-256 of this exact canonical context record, and each model
+  selection's signature digest resolves to the exact signature used by that
+  model.
+- `OperationServiceResolver.resolve(graph, selected_device_models,
+  dispatch_context) ->
+  ResolvedOperationServiceBindingSet`: validates the frozen model envelope,
+  normalizes every typed shape, resolves every implementation and exact service
+  entry, and proves totality before any runtime or service state mutates. It is
+  pure and deterministic.
+- `CollectiveDeviceStageResolver.resolve(planned_graph,
+  selected_device_models,
+  dispatch_context) -> ResolvedCollectiveDeviceStageSet`: the device model's
+  stage selector resolves the ordered GPU-resident implementations, shapes and
+  service entries for every supported semantic collective and rank. The
+  traffic-owned `CollectivePlan` supplies topology and frontier identities, not
+  implementation choice. The resolver proves totality before mutation and
+  never creates a `ComputeWork` node. The semantic collective remains the sole
+  graph lifecycle and completion authority; compute owns only stage
+  feasibility, SM/HBM reservation, service and release. Version 1 rejects a
+  stage entry with nonzero peer-port or data-mover demand; those intervals stay
+  with the existing traffic plan and later observed-mover composition. Each
+  fresh `ResolvedCollectiveDeviceStage` contains `instance_graph_sha256`,
+  `collective_operation_id`, `collective_plan_integrity_sha256`, rank,
+  `launch_ordinal`, `device_instance_id`, `device_model_sha256`, selected
+  `implementation_ref`, normalized `shape_vector`, `service_entry_id` and
+  `resolution_source` exactly `selector`. It requires no
+  historical capture binding; validation compares the two records separately.
+- `CollectiveDeviceRankFrontier`: the conservative version-1 handoff nested in
+  the resolved stage set. It carries `collective_operation_id`, exact
+  `collective_plan_integrity_sha256`, rank, `ordered_stage_ordinals`, and the
+  exact `entry_action_ids` and `terminal_action_ids` copied from that rank's
+  traffic-owned plan. Version 1 requires exactly one resolved resident stage
+  per rank and rejects a multi-stage online composition until stream and
+  dependency evidence identifies its order. There is one frontier for every
+  plan rank, every action resolves to that rank, the copied tuples match the
+  plan byte for byte, and every resolved stage occurs exactly once with no
+  extra.
+- `simllm-resolved-collective-device-stage-set-v1`: the nonempty canonical
+  collective set with exactly `schema`, `instance_graph_sha256`,
+  `dispatch_context_sha256`, `stages` and `rank_frontiers`. Stages are ordered
+  by graph collective tuple order, plan rank order and launch ordinal;
+  frontiers are ordered by graph collective tuple order and plan rank order.
+  Every stage device/model pair matches the selected-model tuple. A graph with
+  no resolved collective stage omits this record and uses null in the closure;
+  an empty record is invalid.
+- `simllm-resolved-device-binding-closure-v1`: a canonical immutable record
+  with exactly `schema`, `instance_graph_sha256`,
+  `operation_service_binding_set_sha256` and nullable
+  `collective_device_stage_set_sha256`. Run provenance hashes this complete
+  closure, so a communication-stage choice cannot disappear from a result.
+  The operation set must name the closure's graph. A nonnull collective set
+  must name that same graph and the operation set's exact dispatch-context
+  digest. Every device/model pair in either set must match the dispatch
+  context and the selected-model tuple copied into run provenance. A mismatch
+  is a splice error and rejects the whole closure before publication.
+  For a resolved collective rank, `submitted_at` is parent collective launch
+  completion and `eligible_at` is the maximum of that boundary and rank-local
+  graph-predecessor readiness. The device-stage grant at `started_at` releases
+  that rank's existing plan entry actions. The device engine reaches
+  `device_work_finished_at_ps` when its throughput demands and floors finish,
+  but compute retains the stage's lifetime residency and exclusive
+  reservations. Traffic alone owns every plan action, extent, byte, peer-port
+  and network timestamp. Define `traffic_terminal_at_ps` as the maximum of the
+  rank's `eligible_at` identity element and every copied terminal-action
+  completion, so a legal sparse rank with no terminal action remains defined.
+  The read-only traffic boundary gates the compute-owned lease release:
+  `rank_release_at_ps = max(device_work_finished_at_ps,
+  traffic_terminal_at_ps)`. Compute releases reservations there, rank
+  completion equals that boundary, and the parent emits one graph completion
+  at the maximum across ranks. No plan action depends on release, so the gate
+  is acyclic. A disabled
+  path, or an entry whose every active-axis demand is known zero in every epoch
+  and whose every epoch floor is null or zero, constructs no device visit,
+  delays no entry action beyond the same preexisting legal boundary and
+  preserves the accepted traffic schedule exactly. A positive floor prevents
+  that bypass even when every demand is zero.
+  The authoritative stage `QueueVisit` remains under the parent
+  `collective_operation_id` and uses the stable subject object ID
+  `<operation-id>:rank:<rank>:stage:<launch-ordinal>`. Its `finished_at` and
+  `completed_at` both equal `rank_release_at_ps`. Version 1 identifies this
+  composite visit with the existing
+  legacy `GPU_SCHEDULER` `ResourceRef`; internal service axes do not become
+  separate queue visits. CORE-8 loss-checks its normal completion and
+  bookkeeping projection. CORE-50 is required only if a later model projects
+  an otherwise-unrepresentable outer resource. The stage emits no independent
+  graph-operation completion; only the semantic collective emits that event.
+  The interval from `device_work_finished_at_ps` to `rank_release_at_ps` is
+  lease-held occupancy evidence, never another additive kernel or network
+  latency term. CORE-26 implements this through an incremental request with
+  `release_mode=external-frontier`; after traffic publishes its terminal fact,
+  runtime calls the compute-owned transaction's `release_held` method. Traffic
+  never mutates the reservation directly.
+- `simllm-device-model-v1`: the deterministic compact online artifact. It
+  contains model identity, closed `acceptance_status` exactly `candidate` or
+  `validated`, closed `target_basis` exactly `target-silicon` or
+  `architecture-derived`, a support envelope, shape schemas, implementation
+  and collective-stage selectors, exact service entries, a typed resource-axis
+  registry with an explicit known mask, and a per-entry evidence ledger.
+  `architecture-derived` requires `acceptance_status=candidate`; target-silicon
+  models may be either candidate or validated.
+  Unknown demand is distinct from an explicit zero. The artifact contains
+  neither raw traces nor an Accel-Sim dependency.
+
+The exact `simllm-device-model-v1` object contains `schema`,
+`device_model_id`, `device_kind_id`, `acceptance_status`, `target_basis`,
+`device_identity_sha256`, `operating_envelope_sha256`,
+`support_envelope_sha256`, `evidence_manifest_sha256`, `fit_sha256`,
+`expectations_commit`, `dispatch_signature_sha256s`, `shape_schemas`,
+`implementation_selector_sha256`, `collective_stage_selector_sha256`,
+`resource_registry`, `interaction_contract`,
+`host_initiation_profile_sha256`, `service_entries`,
+`service_entry_evidence`, `scalar_profile_table_sha256`, `gpu_spec_sha256`,
+`gpu_architecture_profile_sha256`, `gpu_device_config_sha256`,
+`validation_record_sha256`, `validation_summary_sha256`,
+`acceptance_bars_sha256` and `model_limits`, with no extra members. The
+expectations commit is lowercase hexadecimal with length 40 or 64. Dispatch
+signature digests are sorted, unique and nonempty. Shape schemas are nonempty
+and sorted uniquely by schema ID.
+
+The implementation selector is a required content-addressed declarative-data
+record with no code, callback, expression or binary. The collective selector
+is nullable and is null exactly when the support envelope claims no
+collective-device stage. The resource registry and
+`independent-resource-v1` interaction contract are inline and name the model's
+device kind. Each service-entry member is exactly `{service_entry_id, entry}`;
+members are nonempty, sorted uniquely by nonblank ID and unique by
+`(implementation_id, shape_vector)`. Each evidence-ledger member contains
+exactly `service_entry_id`, `source_selection`, `source_record_sha256s`,
+`residual_record_sha256`, `support_envelope_sha256`,
+`operating_envelope_sha256`, `isolated_duration_ps` and
+`uncertainty_bound`, sorted one-to-one with service entries. Source selection
+is exactly `silicon`, `silicon-fit`, `accel-sim`, `analytical-transfer` or
+`simulator-derived`; source digests are sorted, unique and nonempty, duration
+is nonnegative and uncertainty is an exact nonnegative rational.
+
+Device identity, both envelopes, evidence manifest, fit, implementation
+selector, validation record, validation summary and acceptance-bars
+references are required. Collective selector, host initiation, scalar profile
+table, GPU spec, GPU architecture profile and GPU device configuration
+references are explicitly nullable. `model_limits` contains exactly
+`max_shape_schemas`, `max_shape_axes_per_schema`, `max_resource_axes`,
+`max_service_entries`, `max_epochs_per_entry` and `max_resident_entries`, each
+a positive signed-128 integer that bounds the corresponding count. Every
+nonnull reference resolves inside the release closure and cross-record device,
+envelope, selector, entry and validation identities agree. Raw traces, sample
+vectors, profiler rows and simulator dependencies stay outside this artifact.
+- `simllm-device-resource-registry-v1`: the canonical registry carried by a
+  device model. Its exact members are `schema`, `device_kind_id`,
+  `active_axis_ids` and `axes`. Axis IDs are unique; `axes` sort
+  lexicographically by `axis_id`; `active_axis_ids` are a sorted unique subset.
+  Each strict `DeviceResourceAxis` has exactly `axis_id`, `axis_class`,
+  `service_scope`, `base_unit`, `clock_domain_id`, `capacity_source_id`,
+  `rate`, `residency_capacity` and `exclusive_capacity`. The class is exactly
+  `throughput`, `residency` or `exclusive`; service scope is exactly
+  `device-internal`, `peer-port` or `data-mover`. All three capacity members
+  are required, and exactly the class-appropriate one is nonnull. `rate` is the
+  exact object `{numerator, denominator}` with reduced nonnegative numerator
+  and positive denominator; residency capacity is a nonnegative integer and
+  exclusive capacity is a positive integer slot count. The registry SHA-256 is
+  over this exact canonical record.
+  A cycle-denominated throughput rate requires a clock domain; a wall-time
+  rate leaves it null. Non-throughput axes reject a rate. An active axis with
+  any positive accepted demand requires positive class-appropriate capacity at
+  load time.
+- `DeviceResourceVector`: a `registry_sha256`, `device_kind_id`, integer values
+  and Boolean known bits aligned to the registry's complete axis order. A known
+  value is nonnegative; a negative demand is a load error. A known zero means
+  that service entry has no demand on the axis. Every active-axis value must be
+  known; inactive-axis entries use an unknown bit and canonical zero placeholder
+  that carries no demand. Unknown never becomes a known zero.
+  Throughput demand, residency demand and exclusive occupancy are never
+  interchanged. Load and evaluation reject any numerator, denominator,
+  cross-product or accumulation outside the signed 128-bit domain; one ceiling
+  occurs only at the externally visible integer-picosecond boundary.
+- `DeviceServiceEntry`: an immutable `(implementation_id, shape_vector)` key
+  and a nonempty ordered tuple of immutable `ServiceEpochDefinition` values.
+  Each epoch carries one aligned `DeviceResourceVector` of resource-native
+  demands and an optional fixed floor in integer picoseconds. Entries contain
+  no start time or editable service rate. Throughput values are consumable work;
+  residency and exclusive values are held requirements and never decrement.
+  Admission reserves the per-axis maximum residency and exclusive requirement
+  across all epochs for the entry's full lifetime. Runtime resident state owns
+  admission, epoch start, current epoch and remaining throughput demand. An
+  epoch advances only after every throughput demand reaches zero and its fixed
+  floor has elapsed. An ordinary entry releases its lifetime reservations at
+  final work completion; a collective stage follows the rank lease-release
+  rule above.
+- `independent-resource-v1`: the only version-1 resource law. Every throughput
+  axis divides its one registry capacity equally among resident epochs with
+  positive remaining demand on that axis, using exact rational arithmetic.
+  Axes otherwise progress independently. `interaction_terms` must be empty and
+  a nonempty term set is rejected pending a versioned interface amendment.
+  Mechanistic service lookup uses exact `DeviceServiceEntry` cells and never
+  interpolates resource demands or reservations. An optional compiled scalar
+  table may declare one integer shape axis for duration interpolation. Between
+  canonical cells `x0 < x < x1`, it evaluates
+  `y = y0 + (y1 - y0) * (x - x0) / (x1 - x0)` with exact reduced rationals,
+  inclusive support, exact hits first, lower-cell tie choice and one ceiling
+  only when `y` becomes an externally visible integer-picosecond duration.
+  Generic multi-axis interpolation remains COMP-4.
+- `BatchKernelService`: the first live capability. It consumes one fully
+  resolved co-runnable tuple and preserves the current complete-tuple order,
+  cycle-to-picosecond ceiling, composition cursors and barrier mechanics. Its
+  enabled service may intentionally change completion and metric values. The
+  scalar and legacy off paths preserve their service calls, cursors, reports
+  and result bytes exactly. Its pure call is
+  `dispatch_batch(requests: tuple[ResolvedDeviceServiceRequest, ...],
+  common_start_ps: int, snapshot: DeviceServiceSnapshot) ->
+  BatchKernelServiceResult`. Inputs are immutable and ordered; the result
+  contains an ordered `ServiceFact` tuple, `DeviceAccounting` and
+  `next_snapshot`. The service mutates no live state and emits no callback or
+  graph completion. Runtime validates the complete result before atomically
+  adopting the snapshot and facts. Failure leaves live state unchanged.
+  `ResolvedDeviceServiceRequest` contains exactly a stable `subject_key`,
+  `service_entry_id` and `release_mode`, whose closed values are `work-finish`
+  and `external-frontier`. `DeviceServiceSnapshot` is the strict object
+  `{device_instance_id, device_model_sha256, registry_sha256,
+  resident_states}`; runtime composition cursors never enter it. Resident
+  states are canonically ordered by `(admission_sequence, subject_key)`, but
+  version-1 batch dispatch accepts only an empty input tuple and a successful
+  total result must return it empty. Nonempty resumable state belongs to
+  CORE-12 incremental service. Batch service accepts only `work-finish` and
+  rejects `external-frontier`; the initial COMP-25 batch path is therefore
+  ordinary noncollective service.
+  At `common_start_ps`, and after every release, batch admission first releases
+  completed reservations, then scans pending requests in original tuple order,
+  admitting each request that is feasible against the updated snapshot and
+  skipping the rest. Zero-duration completions and newly feasible requests are
+  drained to a finite same-time fixed point before time advances. Preflight
+  rejects a request whose lifetime reservation maxima exceed device capacity.
+  Every `ServiceFact` has exactly `subject_key`, `epoch_index`,
+  `submitted_at`, `eligible_at`, `started_at`, `work_finished_at`,
+  `finished_at` and `completed_at`. For an ordinary batch request,
+  `work_finished_at=finished_at`.
+  Facts are serialized in request tuple order, then ascending epoch index. For
+  the first epoch, `submitted_at=eligible_at=common_start_ps` and `started_at`
+  is its admission grant. For every later epoch,
+  `submitted_at=eligible_at=started_at` equals the preceding epoch's
+  `work_finished_at`. An intermediate epoch has
+  `finished_at=completed_at=work_finished_at`; the ordinary final epoch also
+  has all three equal.
+  `DeviceAccounting` has exactly `registry_sha256`, aligned reduced-rational
+  `admitted_throughput` and `served_throughput` totals, and aligned integer
+  `acquired_reservations`, `released_reservations` and
+  `held_reservation_ps` totals. Throughput totals are zero on non-throughput
+  axes; reservation totals are zero on throughput axes. Held reservation is
+  demand units times lease duration and is also zero on throughput axes.
+  Validation requires contiguous declared epochs, exactly one final
+  completion per input subject, no extra field, subject or epoch, monotonic
+  boundaries, served equal to admitted, released equal to acquired, exact
+  agreement with the input entries, no resident leakage, and a next snapshot
+  with the same device, model and registry identities.
+  Transactional admission of a later operation into an active device is a
+  separate CORE-12 capability rather than an implied property of this batch
+  interface.
+- `IncrementalDeviceService.begin(snapshot) ->
+  IncrementalDeviceServiceTransaction`: the CORE-12 capability. A transaction
+  exposes pure `admissible(request, now_ps) -> Feasibility`, mutating
+  `dispatch_granted(request, admission_sequence, now_ps)`,
+  `peek_next_event_ps() -> int | None`, `advance(to_ps) ->
+  tuple[DeviceServiceEvent, ...]`, mutating
+  `release_held(subject_key, release_at_ps) -> ServiceFact`, read-only
+  `accounting() -> DeviceAccounting`, and `prepare()`, `commit()` and `abort()`.
+  `now_ps` equals runtime's current logical time and transaction time never
+  decreases. `DeviceServiceEvent` is a closed union: a
+  `WorkFinishedEvent` has exactly `{kind: "work-finished", subject_key,
+  epoch_index, at_ps}`, while a `ServiceFactEvent` has exactly
+  `{kind: "service-fact", fact}` with one strict `ServiceFact`. Intermediate
+  epochs and ordinary final epochs emit a service fact when work finishes. An
+  external-frontier final epoch emits only `WorkFinishedEvent` at work finish.
+  A `work-finish` request releases normally. An `external-frontier` request
+  retains its lifetime reservations after work finish; `release_held` is valid
+  exactly once, only for that mode's final epoch, only after its
+  `WorkFinishedEvent`, and at a boundary no earlier than work finish. Runtime
+  first advances the transaction through that boundary;
+  `release_held` then releases at the transaction's current time and returns
+  the one final fact whose `work_finished_at` preserves the earlier boundary
+  and whose `finished_at=completed_at=release_at_ps`. CORE-26 alone supplies
+  that release boundary from the read-only traffic terminal. Runtime alone
+  selects a grant. If the traffic terminal is already known, release follows
+  work finish immediately; otherwise runtime advances to the later terminal.
+  `peek_next_event_ps()=None` while a subject is held means that compute has no
+  internal event, not that the global runtime is quiescent or dead. Events sort
+  by time, admission sequence, epoch index and then variant, with
+  `work-finished` before `service-fact`. Every participant
+  prepares before the fixed infallible adoption order: device engine,
+  arbitration policy, runtime state, one bookkeeping batch, then callbacks.
 
 Every estimate carries an honest uncertainty so results can report error
 bounds.
@@ -97,8 +454,8 @@ bounds.
 This is the model's kernel-time semantics, and it is a contract, not an
 implementation detail. It follows the maintainer ruling of 2026-08-18.
 
-**A compute kernel's service time is a deterministic constant with no tail.**
-It is a pure function of exactly four inputs:
+**A compute kernel's isolated service law and resource demand are deterministic
+constants with no tail.** They are a pure function of exactly four inputs:
 
 1. the **kernel family** (`attn_gemm`, `attn_score`, `mlp_gemm`, `lm_head`,
    `kv_read`, or the fused `llm_step` that projects onto them),
@@ -108,11 +465,19 @@ It is a pure function of exactly four inputs:
 4. the **architecture profile**, i.e. the `GpuSpec` envelope or the
    `GpuArchitectureProfile` the mechanistic replay is calibrated to.
 
-Nothing else may enter. The same four inputs give the same picoseconds on every
-rank, in every worker, through either frontend adapter, on every repeat, and in
-every process. No provider draws a random number, reads a wall clock or reads
-the environment, and no pricing entry point accepts a rank, a worker id or an
-adapter identity.
+Nothing else may enter. The same four inputs give the same isolated floor and
+demand vector on every rank, in every worker, through either frontend adapter,
+on every repeat, and in every process. No provider draws a random number, reads
+a wall clock or reads the environment, and no pricing entry point accepts a
+rank, a worker ID or an adapter identity.
+
+The constant does not erase deterministic contention. The device engine
+combines immutable demand with its one capacity registry, admitted resident
+state and the closed resource law. The resulting `started_at` to `finished_at`
+resource interval may lengthen when co-resident work changes, but identical
+model, graph and admission state produces the identical interval. Reports keep
+the isolated floor and demand distinct from that realized contended interval;
+neither is sampled.
 
 **Rank and runner independence is a statement about the function, not about the
 shape.** Two ranks may legitimately carry different shape inputs and therefore
@@ -138,15 +503,25 @@ provider service `C`. The launch class never reaches kernel service time. The
 `ideal` host profile contributes exactly zero, so a study with no host profile
 selected is reading kernel service time and nothing else.
 
-> Qualification pending. First-party A100 measurement in the
+> Launch-mode ownership is explicit. First-party A100 measurement in the
 > [graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md) finds a
 > device-side per-kernel cost that is 1.415 to 1.506 microseconds larger in
 > eager mode than in a graph, of which a null kernel accounts for 1.080. The
-> measurement does not determine whether the residual is kernel service time,
-> which would qualify this clause, or a device front-end gap outside kernel
-> service, which would leave the clause intact. The maintainer's ruling between
-> those two readings is pending and COMP-48 owns whatever qualification it
-> calls for. The clause above is unchanged and remains in force meanwhile.
+> standing ruling assigns every launch-mode effect to the host launch path in
+> this model. COMP-48 identifies the host term without changing kernel service
+> or adding a device-front-end stage. The kernel-service clause above is
+> unchanged.
+>
+> That assignment needs a host composition able to carry the term. The
+> [host launch composition study](../../examples/host_launch_composition_v1/RESULTS.md)
+> shows the shipped `max(C, N * g)` form predicts a launch-mode delta of
+> exactly zero whenever per-kernel service reaches the eager per-launch
+> constant, which covers every real kernel that study measured, so its
+> relative error against the measurement is exactly 1.0 and about 2,000 GPU
+> cycles. The zero is structural: it holds for any per-launch constants, so
+> installing A100 constants does not change it. COMP-44 owns giving a
+> calibrated profile a non-overlappable term, and COMP-48 cannot meet its bar
+> before it lands.
 
 **There is no per-kernel tail, and the rationale is that tails are emergent.**
 Reported TTFT and TPOT distributions have wide tails in real deployments, and
@@ -411,6 +786,262 @@ Neither extrapolates to other shared-memory fractions, launch shapes,
 instruction mixes or GPU architectures, and the synthetic 1 GHz profile is a
 mechanism fixture rather than any silicon calibration.
 
+## Offline device calibration
+
+Device calibration has one evidence path and one compact serving path. The
+offline path captures production executions on real devices, qualifies any
+optional simulator observations, fits and validates a model, and publishes a
+small immutable artifact. The serving path loads that artifact and performs
+deterministic resolution and service lookup. It never imports a profiler,
+launches a subprocess, replays an instruction trace or invokes Accel-Sim.
+
+`simllm-execution-graph-v1` remains the only runnable DAG format and remains
+byte-for-byte unchanged. Its exact canonical unbound JSON bytes produce
+`instance_graph_sha256`, which joins capture evidence only. In that preimage,
+every `ComputeWork` retains its semantic fields and serializes both
+`nominal_duration_ps` and `uncertainty_fraction` as explicit `null` members.
+The calibration canonical writer encodes the exact JSON object returned by the
+strict graph-v1 serializer. Because graph v1 permits finite float config
+scalars but the calibration canonical grammar deliberately has no binary-float
+spelling, a graph admitted for calibration binding rejects every float-valued
+`ComputeWork.config` member. Integer, Boolean and string config members remain
+valid; the existing graph-v1 reader is unchanged.
+A separately
+versioned `simllm-execution-graph-template-v1` projection is written by the
+calibration canonical writer. Operations receive integer ordinals in original
+graph tuple order; distinct ranks map to `0..n-1` in ascending source-rank
+order; within each normalized rank, distinct logical queues receive ordinals in
+first-operation occurrence order. Every dependency and completion frontier is
+rewritten to those operation ordinals. Its `template_graph_sha256` groups
+equivalent structures and defines held-out splits; it never selects service.
+The strict top-level record contains exactly `schema`, `operations`,
+`completion_operation_ordinals` and `collective_plans`, including an empty
+collective tuple. Operations preserve source tuple order, and array position is
+the operation ordinal. Each operation contains exactly `rank_ordinal`,
+`logical_queue_ordinal`, `priority`, `work`,
+`depends_on_operation_ordinals` and
+`participant_local_depends_on_operation_ordinals`. Dependency tuples are
+sorted unique ordinals. An empty source completion frontier normalizes to all
+operation ordinals; an explicit frontier becomes a sorted unique tuple.
+
+`work` is a closed strict union. Its variants are exactly `{kind: "compute",
+kernel}`, `{kind: "kv-cache", action}`, `{kind: "dma", source_role,
+destination_role}`, `{kind: "collective", collective, algorithm_hint,
+rank_ordinals, channel_ordinal, pair_rank_ordinals}` and `{kind: "control",
+mode, message, destination_rank_ordinals}`. Nullable `algorithm_hint` remains
+present. Collective and control rank tuples preserve source order. Each sparse
+collective pair is exactly `[source_rank_ordinal, destination_rank_ordinal]` in
+the source aggregate-pair order with its bytes removed; an empty pair table
+stays empty. Effective collective channels use `channel_hint` or the canonical
+`default` value and receive graph-global ordinals by first collective-operation
+occurrence, preserving channel equality while removing spelling. DMA uses
+source and destination roles from the
+`simllm-device-endpoint-role-v1` normalizer. It accepts `host`, `host:pinned`,
+`host:pageable`, `gpu:<rank>`, `gpu:<rank>:hbm` and `cuda:<rank>`; GPU rank
+tokens rewrite through the same rank map and must resolve. Every other endpoint
+role rejects the projection rather than entering a hash.
+
+Each projected collective plan contains exactly `operation_ordinal`,
+`algorithm`, `channel_ordinal`, `rank_order`, `rounds`, `actions`, `extents`,
+`entry_action_ordinals` and `terminal_action_ordinals`. Plans preserve source
+tuple order, which graph validation aligns to collective-operation order.
+`rank_order` contains normalized rank ordinals while preserving its source
+order.
+Their `channel_ordinal` repeats the semantic collective's effective channel as
+a loss check. Round transfer channels use a separate graph-global ordinal
+namespace assigned by first plan and round occurrence because they identify a
+different traffic resource. A round contains exactly
+`{transfer_channel_ordinal}` and its array position is its ordinal. An action
+contains exactly `{rank_ordinal, kind, extent_ordinal,
+depends_on_action_ordinals}` and its array position is its ordinal. An extent
+contains exactly `{round_ordinal, source_rank_ordinal,
+destination_rank_ordinal, send_action_ordinal, receive_action_ordinal}` and its
+array position is its ordinal. Entry and terminal maps contain exactly
+`{rank_ordinal, action_ordinals}` in plan rank order, with each action tuple
+sorted. Every reference is rewritten and total.
+
+The normalized rank map uses the ascending union of every operation anchor,
+collective participant, control destination, accepted DMA endpoint and plan
+rank. The projection excludes execution, step, operation, queue, channel,
+action, extent, request, pool, block, descriptor and correlation identities;
+release and not-before timestamps; placement epochs; compute config, FLOPs,
+HBM, duration and uncertainty; every other KV field; DMA bytes; collective,
+control, plan and extent payloads; request attribution; round tags and indices;
+and integrity hashes. Changing only an excluded value or consistently renaming
+an ordinalized identity leaves the hash unchanged. Dependency and completion
+tuple permutations, empty versus explicit-all completion, and null versus
+`default` channel spelling are invariant. Changing retained source tuple order
+other than the explicitly sorted dependency, completion and frontier-set
+fields, priority, dependency scope, effective completion, retained rank or
+queue equivalence, work kind or family, DMA role, collective rank order,
+sparse-pair support, channel sharing, plan presence or any retained round,
+action, extent or frontier edge changes it. Rank relabeling is invariant only
+when it preserves source-rank order. Projection is idempotent, leaks no raw
+identity, rejects an
+unknown role or unresolved reference, and never selects service. These are
+validation guards, not examples.
+
+`simllm-model-kernel-inventory-v1` is the content-addressed offline workload
+denominator for one exact `(framework, model)` pair. Its strict top level is
+exactly `schema`, `suite`, `framework`, `model`, `shape_schemas`,
+`kernel_families`, `cases` and `implementation_identity`. The suite identity
+binds its ID, exact source bytes and total case count. The framework identity
+binds ID, version, source commit, required-nullable source tree and the offline
+entry seam. The model identity binds checkpoint name, revision, config and
+weight hashes, weight byte count, data type, quantization and exact unsharded
+geometry. A mismatch, defaulted geometry field or unsupported checkpoint
+rejects before an inventory object is written.
+
+The extraction join is exact and has one authority at each layer. The pinned
+framework's CPU-safe configuration surface supplies model geometry. The
+unchanged authored suite supplies the ordered phase and shape cases. Those
+cases serialize and reload through the existing `StepRecord` path;
+`step_kernels()` supplies the ordered family aggregate work and typed shape
+coordinates; the serial execution-graph lowerer supplies each unbound instance
+and normalized template identity. The inventory stores every case in suite
+order with the suite-cell, step-record, instance-graph and template-graph
+digests. Every case contains the complete ordered family projection. A family
+entry binds its shape-schema identity and logical prefill and decode launch
+counts; each case binds the matching shape vector, logical launch count and
+exact aggregate integer FLOPs and HBM bytes. Family sums equal `step_kernel()`
+exactly. The Granite MoE denominator has one logical invocation per layer for
+attention GEMM, attention score, MLP GEMM and KV read, plus one LM-head
+invocation per step. These counts describe logical workload structure, never
+physical launch fusion.
+
+The vLLM driver uses the explicit skeleton gate and the SGLang driver uses its
+CPU device and model-configuration path. Neither initializes a GPU engine or
+claims physical observation. The implementation-identity envelope therefore
+carries `code_object_hashes` and `observed_launches` only as strict
+`{state: "absent-by-design", value: null}` markers, together with the tasks
+that own the later target-silicon join. Unknown data never becomes a known
+placeholder. The `simllm-calibrate extract` command resolves the suite through
+the calibration registry rules, imports only the selected framework driver at
+dispatch, and writes the inventory to the existing content-addressed object
+store only after all cases validate. Ordinary `simllm` imports and command
+help do not import either framework. The hand-authored suite remains an exact
+bypass: extraction does not rewrite its bytes.
+
+Observed and synthetic binding are distinct:
+
+- A physical capture records the implementation reported by the framework and
+  profiler in `OperationImplementationBinding`. No selector may rewrite that
+  observation. A supported physical graph lowers every noncollective physical
+  launch to its own compute operation with explicit order and dependencies. A
+  noncollective semantic operation that still hides two or more launches is
+  unsupported rather than receiving several service entries.
+- Physical NCCL and RCCL launches remain internal stages of their parent
+  semantic `CollectiveWork`. Capture records each in
+  `CollectiveDeviceStageBinding`, with exact plan hash, rank and launch ordinal,
+  and proves that the observed stage set is complete. The traffic-owned
+  `CollectivePlan` remains the only algorithm, chunk and transfer expansion.
+  Online version 1 resolves exactly one stage per rank plus its copied rank
+  frontier; device service owns its SM and HBM interval, while runtime and
+  traffic emit only the parent collective's graph completion and retain chunk,
+  peer-port and mover timing. A multi-stage rank is unsupported, and no
+  physical stage is also scheduled or charged as a `ComputeWork` node.
+- A simulated execution normalizes semantic work through a registered
+  `ShapeSchema`. Framework, backend, kernel-library version, numeric and layout
+  support are frozen in the selected device-model envelope; launch mode is
+  excluded from kernel dispatch. A model-owned selector then resolves semantic
+  work and typed shape to one `ImplementationRef`. It produces a fresh total
+  `ResolvedOperationServiceBindingSet` for that graph before scheduling starts.
+- An implementation reference is structured and content addressed. A target
+  implementation names vendor, ISA, module or code-object hash, function or
+  code hash, backend or algorithm identity and a trusted launch-template
+  identifier in `launch_formula_id`. An analytical reference instead names a
+  declarative model hash and target applicability;
+  it is allowed only for the explicit architecture-derived COMP-52 path.
+- Calibrated mode requires exactly one binding for every compute operation,
+  rejects extras and forbids kernel-name fallback. If one dispatch signature
+  maps to multiple observed implementations, the context is incomplete and
+  validation rejects it rather than choosing arbitrarily.
+
+Within one envelope, semantic work and typed shape may select different
+implementations. Envelope labels validate applicability; they are not service
+inputs. Once `(implementation_id, shape_vector)` is fixed, framework, adapter,
+backend, library and launch-mode labels cannot change service. This preserves the
+kernel-time contract: the selected device model fixes its implementation
+selector, and repeated family, phase and shape inputs on that profile resolve
+the same constant.
+
+The measurement campaign makes the three workload strata physical, rather
+than treating their labels as model inputs:
+
+| Stratum | Required production measurements | Boundary |
+|---|---|---|
+| Compute | High-arithmetic-intensity kernels over shape, occupancy and SM-pressure sweeps; FLOPs, pipeline issue, residency and separate host-launch observations | Kernel service and device demand only |
+| Memory | KV, attention and streaming kernels over bytes, cache state and concurrency; requested and transacted HBM bytes, cache counters and HBM service | Enforce FLOPs/peak and compulsory-bytes/HBM floors |
+| Communication | GPU-resident NCCL or RCCL kernels over payload, participants and channels, isolated and co-running with compute and memory; SM, HBM, peer-egress and observed mover demand | Excludes collective expansion, wire serialization, RNIC queues, congestion and FCT |
+
+Every full or communication-validated campaign contains isolated controls for
+all three strata, every pairwise mixture, a three-way mixture and held-out
+physical framework graphs. A scalar compute-memory campaign may omit
+communication only by declaring that capability unsupported. Splits are by
+shape and graph identity, never repeated launches of the same cell.
+Graph-level silicon makespan and critical path are holdout oracles. Resource
+labels remain attribution only: relabeling an otherwise identical task does
+not change service.
+Before observation, a mixed cell's physical floor is exactly the maximum of
+the applicable isolated floor for every authored member copy. Width changes
+copy multiplicity but cannot reduce that maximum. Its finite ceiling is the sum
+of the applicable member ceilings over every authored copy. The deliberately
+serialized same-members control is a separate measured upper bound checked
+after observation, never the pre-observation ceiling, because a
+pre-observation bound may never borrow a measured value.
+
+Selection is explicit and fail closed. An exact silicon point wins, followed
+by a point covered by an existing validated silicon fit. Per-entry fit support
+is a declared subset of the train-defined target envelope and may be exact-only
+or exclude a categorical implementation region. A qualified Accel-Sim
+observation may fill only a declared missing exact kernel cell inside the
+train-defined, silicon-validated SM80 target envelope and between the required
+real anchors when no validated silicon fit covers that cell. It records
+`coverage-gap` as its reason and carries its measured calibration residual. If
+a valid silicon fit later covers the cell, that fit outranks the simulator. An
+analytical roofline is used only when the selected policy
+explicitly permits it. Otherwise lookup fails. Sources are never averaged or
+blended silently.
+
+The optional Accel-Sim sidecar is an untouched upstream checkout pinned to
+[`3016c658f810bdae9a14bf4534ee99e9945eedae`](https://github.com/accel-sim/accel-sim-framework/commit/3016c658f810bdae9a14bf4534ee99e9945eedae).
+That upstream development snapshot is selected because the latest official
+release, [v1.3.0](https://github.com/accel-sim/accel-sim-framework/releases/tag/v1.3.0),
+does not contain the A100 configuration. All SimLLM wrappers, configurations
+and contributor tooling live outside the upstream tree. The associated
+upstream A100 archive is pinned at statistics commit
+`ee21104be44ad55dfde789111d3b94372be8435f` and GPGPU-Sim commit
+`6c3cf4ff32110908386d605a7034fc67666a92de`. Its site-local A100 hardware and
+trace inputs are not publicly fetched, so archive-golden conformance is the
+initial gate. Exact upstream reproduction waits for those inputs to be obtained
+and hash locked; a fresh project capture is labeled project reproduction.
+
+| Target or use | Real-device evidence | Accel-Sim use |
+|---|---|---|
+| A100, SM80 compute and memory | Required silicon anchors | Optional missing-region fill only after correlation qualifies the exact tool and hardware envelope |
+| H100 or later NVIDIA ISA | Required | Rejected until an upstream target is independently qualified |
+| AMD ROCm device | Required; scalar compact profiles may publish before vendor peer ports | Rejected because the CUDA, NVBit and NVIDIA SASS path does not support ROCm |
+| Communication and data movers | Required on the target stack | Rejected for every communication-stratum observation, including GPU demand, wire service, congestion and FCT |
+| Serving loop or online model build | Compact model only; validated by default, candidate only under explicit experimental opt-in | Rejected |
+
+The capability-matrix name `amd-rocm-target` denotes one parameterized campaign
+slot rather than one GPU. Before measurement, a campaign binds it to one exact
+immutable target ID and content-addressed envelope with SKU, architecture or
+ISA, driver, ROCm, profiler and collective-library identities. All rows in one
+claim use that same binding. A different target has a separate campaign,
+denominator and model identity; rows from two AMD targets cannot satisfy one
+claim together.
+
+Contributor uploads are deterministic small evidence releases, not executable
+code submissions. The offline tool validates schema versions, duplicate and
+unknown fields, finite numeric domains, content hashes, safe relative paths,
+archive count and size limits, total bindings, immutable split isolation,
+physical floors, licenses and source provenance before producing a reviewable
+model diff. Raw traces stay outside Git. Candidate status never implies
+validated status, and promotion requires an untouched held-out run plus live
+TTFT or TPOT provenance. The complete roadmap and ownership are summarized in
+[Offline device calibration](../design/offline-device-calibration.md).
+
 ## Seed profiles and calibration ledger
 
 `GpuArchitectureProfile` contains structural limits. Its swappable
@@ -441,17 +1072,20 @@ claim that an arbitrary kernel reaches it. Public documentation does not
 expose a complete copy-engine timing or selection contract, so the seed
 profiles intentionally contain no copy engines until capture supplies them.
 
-The production path uses the
+The optional A100 SM80 gap-filling lane uses the
 [Accel-Sim paper](https://doi.org/10.1109/ISCA45697.2020.00047) and
 [Accel-Sim framework](https://github.com/accel-sim/accel-sim-framework) for
-external SASS replay and counter correlation. Every capture/calibration
-run must eventually close this production ledger before COMP-1 can close:
+external SASS replay and counter correlation. Every target-silicon campaign
+must close the applicable production ledger below before COMP-1 can close;
+only a simulator-filled A100 campaign must also close the Accel-Sim fields.
+H100 and AMD use their target-native capture evidence and have no Accel-Sim
+dependency:
 
 | Component | Required evidence |
 |---|---|
 | Run envelope | framework and commit, model, exact GPU SKU and UUID, driver, CUDA, libraries, dtype/quantization, eager or graph mode, numeric observed core/memory clocks, lock policy and warm-up policy |
 | Kernel identity | binary and function hash, semantic operation, launch order, stream, grid/block dimensions, registers, static/dynamic shared memory, cooperative/cluster flags |
-| SASS and scheduler | tracer/version, trace hash, warp and CTA identities, instruction classes and dependencies, elapsed cycles, eligible/active warps, issue utilization and stall reasons |
+| Instruction and scheduler | target-native tracer/version and trace or code-object hash where supported, warp/wave and CTA/workgroup identities, instruction classes and dependencies, elapsed cycles, eligible/active execution units, issue utilization and stall reasons; an A100 simulator fill additionally names the qualified SASS/Accel-Sim records |
 | Memory | requested and transacted bytes, cache hit/miss counters, HBM throughput, latency probes, cache-state protocol and memory-clock state |
 | Copy | API kind, direction and endpoints, bytes, stream/event order, reported device engine capabilities, setup samples, sustained bandwidth and concurrent-copy experiment |
 | Fit | immutable train/held-out split, raw samples, sample count, fitted parameters, residuals by component, uncertainty and creation date |
@@ -463,10 +1097,11 @@ CTA/warp traces, stream order, requested and transacted bytes, copy
 direction/endpoints, raw duration samples, deterministic replay, split and
 residual. A captured artifact must use the calibration's exact core and target
 memory clocks; seed calibrations without a numeric memory-clock target cannot
-claim captured measurements. It does not yet encode profiler cache counters,
-per-warp eligible/active samples, 3D launch coordinates or concurrent-copy
-experiments. Those production ledger fields land with COMP-1 and COMP-10 in a
-new schema version before either task closes. Bulk counter exports remain
+claim captured measurements. This legacy import-only schema stays frozen
+without profiler cache counters, per-warp eligible/active samples, 3D launch
+coordinates or concurrent-copy experiments. The production
+`simllm-device-calibration-bundle-v1` carries those typed records under the
+COMP-1 and COMP-10 acceptance boundaries. Bulk counter exports remain
 content-addressed outside Git.
 
 The ledger keeps structural facts separate from fitted timing parameters. A
@@ -476,13 +1111,17 @@ provider interfaces.
 
 ### Artifact boundary
 
-`simllm-gpu-model-artifact-v2` is the versioned interchange record for this
-model. It complements `simllm-profile-table-v1`: the GPU-model artifact keeps
-one replay auditable, while the profile table is the compact online lookup
-surface produced after calibration. The reader promotes v1 artifacts by
+`simllm-gpu-model-artifact-v2` remains a strict compatibility and import record
+for the existing internal SASS replay model. New physical captures, external
+simulator observations and concurrent evidence use
+`simllm-device-calibration-bundle-v1`; new compact releases use
+`simllm-device-model-v1`. The legacy artifact complements
+`simllm-profile-table-v1`: it keeps one internal replay auditable, while the
+profile table remains a supported scalar online lookup surface. The reader
+promotes v1 artifacts by
 renaming the clarified per-SM completion counter and filling the absent NVLink
-profile and counters with `null` and zero; writers always emit v2. A GPU-model
-artifact retains:
+profile and counters with `null` and zero; compatibility writers continue to
+emit v2 byte for byte. A GPU-model artifact retains:
 
 - the architecture-profile identity, exact SKU, structural limits, fitted
   parameter set, source links and declared uncertainty;
@@ -511,11 +1150,14 @@ profiler exports and bulk replay outputs live under the external root
 configured by `SIMLLM_DATA_ROOT`, never in
 Git; the public artifact records their content hashes and provenance.
 
-## COMP-1: offline SASS calibration plan
+## COMP-1: offline device calibration plan
 
 Strictly offline; the step loop never invokes a cycle-level simulator.
 
-- Use a hybrid measured plus SASS pipeline. Raw cycle-simulator output is
+- Anchor every target on its own silicon capture. Target-native measurement is
+  the evidence for A100, H100 and AMD alike. Only the A100 lane may add a
+  qualified SASS replay, and only to fill a declared missing exact cell inside
+  the silicon-validated SM80 envelope. Raw cycle-simulator output is
   never treated as silicon truth. Pin a support envelope for every table:
   framework and commit, model, GPU architecture, CUDA/toolchain, dtype and
   quantization, eager or CUDA-graph mode, kernel implementation, tensor
@@ -523,25 +1165,29 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   Unsupported combinations miss loudly rather than borrowing a precise-
   looking number.
 - Capture the exact production run first. Nsight/CUPTI metadata records
-  kernel identity, launch order, streams, shapes and silicon durations;
-  NVBit supplies the SASS traces required by Accel-Sim. Key table entries
+  kernel identity, launch order, streams, shapes and silicon durations. On
+  the A100 lane only, NVBit supplies the SASS traces the sidecar needs; the
+  H100 and AMD lanes stop at this capture. Key table entries
   by kernel binary/hash plus the semantic shape, not by a family label alone,
   so a framework or compiler kernel change invalidates the correct entries.
 - Build one replayable microbenchmark per captured kernel implementation.
   It must reproduce launch parameters, tensor layout, dtype, workspace,
   stream/graph mode and relevant cache state. Sweep the captured shape axes,
   not synthetic square GEMMs that the real framework never launches.
-- Replay traces offline with a pinned Accel-Sim/GPGPU-Sim configuration on
-  hardware that the simulator supports. Fit and report calibration residuals
+- On the A100 lane, replay traces offline with the pinned Accel-Sim and
+  GPGPU-Sim configuration inside its qualified SM80 support region. Every
+  other target skips this step entirely and fails closed on a simulator
+  request. Fit and report calibration residuals
   against silicon using train shapes, then evaluate held-out shapes. Launch
   overhead, host delay and queueing are measured separately from kernel
   service, so the SASS table cannot hide a missing runtime queue.
-- Populate `simllm-gpu-model-artifact-v2` with capture hash, kernel hash, GPU,
-  tool versions, shape, measured samples, simulated cycles, calibrated
-  duration, uncertainty, calibration split and creation date. Derive the
-  compact `simllm-profile-table-v1` lookup entry from that record and retain
-  the model artifact's identity in table provenance. Both artifacts are
-  immutable; changing an identity field produces a new record.
+- Populate `simllm-device-calibration-bundle-v1` with capture and kernel
+  hashes, target identity, tool versions, typed shape, measured samples,
+  optional simulated cycles, calibrated duration, uncertainty, immutable
+  split and contributor-supplied creation date. Compile it into
+  `simllm-device-model-v1` and, where scalar service is sufficient, an existing
+  `simllm-profile-table-v1`. Every output retains a per-entry evidence ledger;
+  changing an identity field produces a new content-addressed record.
 - Initial acceptance bars, to be tightened from evidence: 100 percent kernel
   identity coverage for the supported run; the stability bar below; held-out
   per-kernel median absolute percentage error below 10 percent and p95 below
@@ -591,17 +1237,17 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   the target architecture belongs to this task's "launch overhead, host delay
   and queueing are measured separately from kernel service" clause, and no knob
   is added to the step path until it is measured.
-- Simulator starting point: Accel-Sim v1.3.0 in SASS trace-driven mode over
-  GPGPU-Sim 4.x with a compatible NVBit tracer. Tool versions remain pinned
-  per artifact because modern framework kernels and GPU architectures may
-  require newer support than this starting point provides.
-- B100: no validated Accel-Sim config exists. The per-family
-  efficiency-versus-shape surface measured on the validated GPU is
-  transferred onto the B100 roofline roofs (peak flops and HBM bandwidth
-  of the declared envelope), replacing the flat 0.7 derate, with
-  explicitly inflated uncertainty in every transferred entry. The first
-  real B100 capture recalibrates by table swap; nothing in the step loop
-  changes.
+- Simulator starting point: the official Accel-Sim development commit
+  `3016c658f810bdae9a14bf4534ee99e9945eedae` in SASS trace-driven mode with
+  its pinned GPGPU-Sim and compatible NVBit tracer. The pin is qualified only
+  for the supported SM80 region against silicon anchors. The official v1.3.0
+  release lacks that A100 configuration, while H100, later NVIDIA ISA and AMD
+  ROCm targets have no qualified path and reject simulator use.
+- Architecture-derived targets are separate COMP-52 candidates. They use a
+  content-addressed declarative analytical implementation, an accepted anchor
+  and explicit parameter deltas with inflated uncertainty. They are never the
+  default, never described as Accel-Sim-backed and never promoted without
+  target-specific validation.
 - Hard dependency (COMP-5): local CUDA 12.4 and CUPTI activity timing work on
   the GTX 1660 Ti with driver 550.90.07. Nsight Compute attaches but returns
   `ERR_NVGPUCTRPERM` because the loaded driver has
@@ -613,7 +1259,9 @@ Strictly offline; the step loop never invokes a cycle-level simulator.
   does not have, so the controlled-environment form of the stability bar cannot
   be met here at all. Production closure needs counter permission, a non-display
   device with lockable clocks, and allocation on the exact target architecture
-  with a compatible dynamic SASS and Accel-Sim path. The
+  with target-native activity and counter evidence. A simulator-filled A100
+  campaign additionally needs the qualified dynamic-SASS and Accel-Sim path;
+  H100 and AMD do not. The
   [A100 environment qualification](../../examples/a100_environment_qualification_v1/RESULTS.md)
   now proves that one Merlin A100 allocation supports CUDA activity, basic
   performance counters, static SASS and exact environment provenance. It does
@@ -674,6 +1322,22 @@ with COMP-40 as its compute-side half, and attaching measured per-port ceilings
 to a shipped profile is COMP-41.
 
 ## Status
+
+The module exposes one vendor-neutral offline calibration contract from real
+framework DAG capture through a content-addressed evidence bundle to a compact
+deterministic device model. The model records typed shape and implementation
+selection, exact source provenance and a support envelope; optional Accel-Sim
+use is isolated to qualified A100 gaps and is absent from online execution.
+
+The nonvoid
+[offline model-extraction study](../../examples/model_extraction_v1/RESULTS.md)
+publishes the Granite column's vLLM and SGLang inventories. Both framework
+paths emit all 15 cases with identical structural denominators, exactly 97
+logical family invocations per case and two graph-template classes; repeated
+extractions are byte identical and no fatal guard is violated. This makes the
+first COMP-54 coverage column literal. It is structure-only evidence: all
+physical implementation fields remain absent by design, and the task stays
+open for the nominated Qwen3.8-27B column and the Kimi K3 structure half.
 
 The kernel-time determinism contract above is stated publicly and enforced. The
 pre-registered
@@ -806,9 +1470,9 @@ violated one dispersion guard and installs neither of the two
 `HostInitiationModel` profiles it measured. Its retained evidence separates
 host submission, 1,629,633 ps per eager launch against a flat 1.6 microseconds
 per graph replay at any chain length, from a device-side per-kernel cost that
-is 1.415 to 1.506 microseconds larger in eager mode than in a graph. That last
-number is why the CUDA-graph clause of the determinism contract above now
-carries a pending-ruling qualification note and why COMP-48 exists. Neither
+is 1.415 to 1.506 microseconds larger in eager mode than in a graph. The
+standing ruling assigns that last number to the modeled host launch path,
+which is why COMP-48 exists. Neither
 study registers a closure; between them they register COMP-43, COMP-44,
 COMP-45, COMP-46, COMP-47 and COMP-48.
 
@@ -990,7 +1654,14 @@ and an explicit reason:
 ### Precision
 
 - COMP-1 (Precision; P1; L): complete production compute calibration.
-  The Turing method anchor lands activity capture, immutable raw samples,
+  This task is the numerical capstone for every selected target: it owns
+  target-silicon compute and memory anchors, per-device fit inputs, untouched
+  test error and live TTFT/TPOT evidence for A100, H100 and AMD campaigns. Its
+  Accel-Sim correlation and selective missing-region filling apply only to the
+  supported A100 SM80 envelope. COMP-50 owns the generic record schemas,
+  canonicalizer, compiler and validators; COMP-1 supplies their device-specific
+  evidence and acceptance results rather than widening those interfaces. The Turing method anchor lands
+  activity capture, immutable raw samples,
   train-only table compilation, interpolation and the provider seam, but its
   numbers are synthetic TU116 evidence. Its final run passed held-out
   calibrated median and p95 error at 0.674 percent and 1.773 percent versus
@@ -998,12 +1669,15 @@ and an explicit reason:
   Stability is no longer the reason this task is open: the fidelity study
   showed the 3-of-50 miss came from 7 samples in 2,050 against a worst trimmed
   coefficient of variation of 1.054 percent, and refroze the bar in the
-  environment-scoped form above. Two things now block it. First, no
-  target-architecture evidence exists: replace the active A100/H100 bootstrap
-  and the flat 0.7 roofline surrogate only after capturing exact production
-  framework kernels on the target architecture, collecting the full activity,
-  counter and dynamic-SASS ledger, calibrating pinned Accel-Sim replay, and
-  validating immutable held-out kernels. Second, the fixed-step seam now has
+  environment-scoped form above. Two things now block it. First, no complete
+  target-architecture evidence exists. Replace an active bootstrap or the flat
+  0.7 roofline surrogate only after capturing exact production framework
+  kernels on the target, collecting the full activity and counter ledger plus
+  target-native implementation or code-object identity, and validating
+  immutable held-out kernels. The A100 SM80 lane additionally collects its
+  dynamic-SASS ledger and may qualify pinned Accel-Sim replay inside the
+  supported envelope to fill declared gaps. H100 and AMD lanes neither require
+  nor consume Accel-Sim. Second, the fixed-step seam now has
   calibrated Turing CUDA-graph and eager-host profiles, but no H100 or B100
   constant. The fidelity study's omitted excess of 1.79 to 12.31 times the
   modeled decode compute therefore remains unbounded on the production target,
@@ -1069,14 +1743,17 @@ and an explicit reason:
   the next host measurement can refute. CUDA
   graph replay costs the host 1.6 microseconds regardless of chain length, so
   at 256 nodes the host pays 6.5 nanoseconds per enqueued kernel, a factor 251
-  below eager. And the study refutes the contract's CUDA-graph clause at the
-  device level: a real kernel's period is 1.42 to 1.51 microseconds larger in
-  eager mode than in a graph, of which a null kernel accounts for 1.08, so the
-  residual 0.34 to 0.43 microseconds is launch-mode-conditioned per-kernel cost
-  whose split between service time and front-end gap this driver will not
-  report.
+  below eager. The same study observes a real kernel period 1.42 to 1.51
+  microseconds larger in eager mode than in a graph, of which a null kernel
+  accounts for 1.08. The standing kernel-time ruling keeps that launch-mode
+  effect outside service; COMP-48 owns identifying it as a host launch term.
 - COMP-5 (Precision; P1; L): provide the production capture
-  environment required by COMP-1. The local GTX 1660 Ti still cannot qualify:
+  environment required by COMP-1. This task owns qualification policy,
+  validity and stability evidence, fatal void rules and the hardware harness.
+  COMP-50 owns the typed CUDA and ROCm doctor records and backend
+  implementations that this task scores. The policy applies to A100, H100 and
+  AMD campaigns without making COMP-5 the owner of each device calibration.
+  The local GTX 1660 Ti still cannot qualify:
   Nsight Compute returns `ERR_NVGPUCTRPERM`, and display sharing produces the
   residency and clock-state excursions measured by the fidelity study. The
   [A100 environment qualification](../../examples/a100_environment_qualification_v1/RESULTS.md)
@@ -1179,18 +1856,21 @@ and an explicit reason:
   count, and held-out phase-completion error no larger than 10 percent or
   1 microsecond, whichever is larger. Report the reduced-form profile's
   before error and preserve the exact `legacy` and all-remote identity paths.
-- COMP-17 (Precision; P1; M): after COMP-6 supplies per-invocation captured
-  shapes, populate `estimate_layers` for `ProfileTableProvider` and
-  `TraceCalibratedGpuProvider`. The current surrogate is the step sink's even
-  split whenever these calibrated providers are selected. Use a real model's
-  measured per-layer profile, or a published layer-heterogeneity reference,
-  as the fidelity anchor and calibration target. Acceptance requires the
-  modeled normalized layer-to-layer shape to match that anchor within its
-  declared measurement uncertainty. Use measured per-layer kernel durations
-  as the identifying observable, reconcile their integer sum to the existing
-  fused estimate exactly, and require every rendered cumulative boundary to
-  remain within the declared capture uncertainty. The explicit no-breakdown
-  path must retain the accepted GOAL bytes and TTFT exactly.
+- COMP-17 (Precision; P1; M): audit and close the calibrated per-layer timing
+  gap only after COMP-6 supplies exact per-invocation captured shapes and
+  bindings and COMP-25 selects their resolved graph pricing on the live path.
+  The current surrogate is the step sink's even split whenever
+  `ProfileTableProvider` or `TraceCalibratedGpuProvider` is selected. On the
+  primary exact-binding path, acceptance requires that no supported run uses
+  that split, that measured per-invocation durations reconcile their integer
+  sum to the fused estimate exactly, and that every rendered cumulative
+  boundary stays within the declared capture uncertainty. COMP-6 and COMP-25
+  own the production behavior; this entry owns the evidence-gated closure
+  audit and adds no parallel projection. If a supported fallback still needs
+  `estimate_layers`, register that residual under a new P2 task before closing
+  this entry, with a measured layer-heterogeneity anchor and the original
+  normalized-shape acceptance. The explicit no-breakdown path must retain the
+  accepted GOAL bytes and TTFT exactly.
 - COMP-21 (Precision; P1; L): calibrate the active optional RNIC producer
   task shapes that currently use a synthetic normalized trace. The v1
   surrogate charges one 64-byte descriptor store plus publication for a CPU
@@ -1212,12 +1892,17 @@ and an explicit reason:
   and host-CPU paths must retain every accepted timestamp and artifact byte.
 - COMP-22 (Precision; P1; L): calibrate the GPU resource demand of the active
   cross-node collective path before CORE-26 and CORE-27 replace TRAF-7's
-  independent-resource surrogate. Capture pinned NCCL collectives across
+  independent-resource surrogate. This task owns only the communication
+  stratum's GPU-resident demand. Collective expansion, wire serialization,
+  RNIC service, congestion and FCT remain with their existing traffic and
+  backend authorities. Capture pinned NCCL or RCCL collectives across
   payload, participant and channel-count sweeps, alone and beside compute- and
   HBM-bound kernels. Use kernel residency, channel occupancy, SM issue, HBM
   read/write traffic, network ingress/egress and any copy-engine or GPUDirect
   activity as identifying observables. Record an explicit zero for resources
-  absent from the measured path. Replace the synthetic demands only when an
+  absent from the measured path, including whether any data mover is present,
+  and supply those observed zero or nonzero demands to CORE-26 and CORE-27
+  without charging downstream service here. Replace the synthetic demands only when an
   independent holdout predicts task completion and queue wait within the larger
   of two GPU cycles or 10 percent in every cell, and report the surrogate's
   before-versus-calibrated error. The calibration-off path must preserve every
@@ -1231,9 +1916,10 @@ and an explicit reason:
   41 raw samples per family, dtype and shape cell and demonstrates why the
   record must retain outliers rather than only a mean. Those synthetic TU116
   samples validate the artifact shape but do not calibrate production kernels.
-  Fit the spread per production kernel family after COMP-1 and COMP-5 provide
-  the target capture, carry the fit provenance and calibration envelope, and
-  validate held-out quantiles against raw silicon samples. Report the
+  Calibrate the uncertainty envelope per production kernel family after COMP-1
+  and COMP-5 provide the target capture, carry the fit provenance and
+  calibration envelope, and validate held-out quantiles against raw silicon
+  samples. Report the
   deterministic point-table error before the distributional result.
   Scope constraint from the standing kernel-time determinism decision
   (maintainer, 2026-08-18): the fitted spread is calibration evidence about how
@@ -1242,32 +1928,57 @@ and an explicit reason:
   provider may draw from it to price a kernel, no seed enters a service path,
   and a reported latency tail is owned by COMP-9's chain rather than by this
   entry. The deterministic providers remain exact compatibility levels and their
-  accepted artifacts stay byte-identical.
-- COMP-24 (Precision; P1; M): extend the registered mixed-makespan forms
-  beyond the single frozen fixture they were measured on. COMP-12 registered
-  one issue-order pair and one residency-gated pair, so
+  accepted artifacts stay byte-identical. COMP-50 owns the generic observation
+  and validation records, while COMP-6, VLLM-12 and SGL-10 own capture
+  production. This entry closes only when production observations retain the
+  external sample-blob SHA-256 and byte count, integer summaries, a complete
+  spread and excursion census, validation-calibrated uncertainty and untouched
+  test evidence, and validated promotion recomputes and verifies the external
+  raw blob. It adds no second record schema or capture path.
+- COMP-24 (Precision; P1; M): qualify the closed
+  `independent-resource-v1` mixed-service form beyond the single frozen fixture
+  on which its explicit axes and residency rules were measured. COMP-12
+  registered one issue-order pair and one residency-gated pair, so
   `decompose_mixed_makespan` refuses a replay in which more than one task
   waited for residency, and no measured row covers other shared-memory
   fractions, register or warp pressure, launch shapes or instruction mixes.
-  The surrogate being replaced is the assumption that the two-task rows
-  generalize. Use isolated controls, admission cycles and concurrent
-  makespans as the identifying observables, sweep the residency currencies
-  independently so the binding one is identified rather than assumed, and
-  require the extended form to predict each held-out cell exactly on the
-  synthetic fixture before any silicon claim. The registered two-task rows
-  must stay exact.
+  The surrogate being replaced is the assumption that those explicit resource
+  axes and the two-task rows generalize. Use isolated controls, admission cycles
+  and concurrent makespans as the identifying observables, sweep the residency
+  currencies independently so the binding one is identified rather than
+  assumed, and require `independent-resource-v1` to predict each held-out cell
+  exactly on the synthetic fixture before any silicon claim. The registered
+  two-task rows must stay exact. COMP-6 then supplies real isolated, pairwise
+  and three-way graphs as silicon identifying inputs. COMP-50 owns generic
+  split handling, fit orchestration and compilation; COMP-24 owns only this
+  task-specific numerical identification and acceptance. If held-out evidence
+  requires any nonempty interaction term, reject it under v1 and land a
+  versioned interface amendment plus a new expectations-only freeze before
+  fitting that form. On untouched silicon cells, both mixed completion and
+  queue wait must remain within the larger of two GPU cycles or 10 percent;
+  every synthetic fixture row remains exact.
 - COMP-25 (Precision; P1; M): connect the concurrent kernel service to a
   production step path. The trace-driven SM scheduler is reachable through
   `CoarseDeviceRuntime(kernel_services=...)` and COMP-12 demonstrated the
   chain to `StepResult`, TTFT and TPOT, but no production study or step sink
   selects it. Every reported production step therefore takes the scalar
   `ComputeWork.nominal_duration_ps` path, whose concurrent makespan is the
-  independent-resource maximum and carries neither registered form. Supply
-  the per-operation `KernelLaunch` records a production step needs (COMP-6
-  owns the per-invocation shapes), select the service explicitly, and report
-  the before-versus-after TTFT and TPOT change on one accepted study. The
-  explicit scalar off path must keep every accepted baseline timestamp
-  exactly.
+  independent-resource maximum and carries neither registered form. Implement
+  the device-model-owned synthetic `ImplementationSelector`, resolve and
+  validate one immutable total `ResolvedOperationServiceBindingSet` plus
+  digest per graph before scheduling, and select the complete-tuple
+  `BatchKernelService` on the live path while preserving the existing batch
+  order, cursor and cycle-ceiling mechanics. COMP-6 owns observed
+  physical bindings and shapes; CORE-12 owns incremental later-arrival
+  admission. Freeze the pure selector and resolved-set digest first, let
+  CORE-45 consume that digest, then close both tasks through shared live
+  integration. Before implementation, freeze one no-contention single-request
+  prefill and decode fixture. The selected critical-path device-service delta
+  must equal the `StepResult` latency delta and signed TTFT delta exactly, and
+  the fixed decode chain's TPOT delta must equal its per-step selected service
+  delta exactly. Report the before-and-after TTFT and TPOT values. The
+  explicit scalar off path must keep every accepted service call tuple,
+  cursor, visit, report, timestamp and result byte exactly.
 - COMP-28 (Precision; P2; L): After COMP-21 supplies device-bound structural
   captures for CPU-proxy and GPU-initiated network submission, fit and
   validate their scalar host-initiation projections for the analytical
@@ -1277,7 +1988,9 @@ and an explicit reason:
   uncertainty. The ideal zero-cost profile remains the exact compatibility
   path.
 - COMP-41 (Precision; P2; M): attach measured per-port ceilings to a shipped
-  architecture profile. COMP-34 landed ports that carry a ceiling with its
+  architecture profile. This task owns shipped, measured port ceilings and
+  their envelopes, never kernel calibration or a fabricated transport rate.
+  COMP-34 landed ports that carry a ceiling with its
   provenance, but every ceiling reachable today is either read out of a
   synthetic study calibration (`calibration_derived`) or declared by a study
   (`model_configuration`); no shipped profile carries a `first_party_measured`
@@ -1355,33 +2068,8 @@ and an explicit reason:
   one to eight kernels cannot meet against the device's 1024 ns event quantum.
   This is L rather than S because closing it needs a fresh allocation on the
   target hardware and a re-frozen protocol, which is hardware evidence.
-- COMP-48 (Precision; P1; M): resolve the CUDA-graph clause of the kernel-time
-  determinism contract against first-party measurement, once the maintainer has
-  ruled. The
-  [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
-  measured a device-side per-kernel cost that is 1.415 to 1.506 microseconds
-  larger in eager mode than under CUDA-graph replay, roughly constant across
-  kernels whose own periods span 8.9 to 89.6 microseconds, of which a null
-  kernel accounts for 1.080 microseconds. Two readings fit that observation
-  equally well and this entry commits to neither. Under the first, the residual
-  0.335 to 0.426 microseconds is kernel service time, the constant is
-  launch-mode conditioned, and the contract clause needs qualifying. Under the
-  second, the residual is a device front-end gap that sits outside kernel
-  service time, the clause is intact as written, and what is missing is a
-  front-end term the model does not yet carry. The surrogate being replaced is
-  the absence of any first-party evidence on the question, which is why the
-  clause carried no qualification before. The identifying observable that
-  separates the two is per-kernel timing inside a captured graph, which the
-  driver on this allocation refuses, returning `invalid argument` for an event
-  recorded during stream capture; a different mechanism, for example Nsight
-  Systems kernel activity rows over a replayed graph, is required. Acceptance:
-  the maintainer's ruling is recorded; the contract text is qualified or
-  confirmed to match it; a measurement separating service time from front-end
-  gap on the target architecture is published; and the deterministic compute
-  path stays byte-identical whichever reading wins. This task does not
-  pre-empt the ruling and must not be closed by asserting one of the two
-  readings without it. The surrogate being replaced is the absence of any A100 entry
-  in `HostInitiationModel`, whose calibrated profiles today accept only
+  The surrogate being replaced is the absence of any A100 entry in
+  `HostInitiationModel`, whose calibrated profiles today accept only
   `gtx1660-ti-sm75`. Acceptance: a freeze whose dispersion guard is scoped to
   the periods the study actually publishes, stated before the run; a run whose
   guards hold; and `a100-epyc-eager-host` and `a100-epyc-cuda-graph` installed
@@ -1390,17 +2078,95 @@ and an explicit reason:
   retained evidence: 1,629,633 ps per eager launch over an empirical 1,625,986
   to 1,927,260 ps, and 1,647,674 ps per graph replay independent of chain
   length. Installing them from the void run is refused on purpose.
-
+- COMP-48 (Precision; P1; M): identify the launch-mode residual as host
+  initiation. The standing kernel-time
+  determinism ruling rejects the service-time reading: CUDA-graph versus eager
+  mode never changes kernel service, so no launch-class field may reach a
+  kernel-service key. The
+  [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
+  measured a device-side per-kernel cost that is 1.415 to 1.506 microseconds
+  larger in eager mode than under CUDA-graph replay, roughly constant across
+  kernels whose own periods span 8.9 to 89.6 microseconds, of which a null
+  kernel accounts for 1.080 microseconds. The identifying observable is
+  activity timing across graph replay and eager execution with host submission
+  measured separately. The existing driver cannot record an event during
+  stream capture, so the new protocol must use a non-perturbing source such as
+  profiler activity rows and must distinguish unchanged service from host
+  launch visibility rather than subtracting two compound periods. No
+  device-front-end service stage exists. Freeze null and real-kernel families,
+  eager and graph modes, at
+  least two chain lengths and an immutable train/validation/test split. Fit no
+  value from test. Acceptance requires measured host initiation to predict the
+  observed launch-mode delta within the larger of two GPU cycles or 10 percent
+  in every supported cell. Also require no double charge with COMP-43's kernel floor or COMP-47's
+  host profiles, and byte-identical kernel service and off-path results.
+  That bar is unreachable under today's calibrated composition and this task
+  is blocked on COMP-44 until it is not. The
+  [host launch composition study](../../examples/host_launch_composition_v1/RESULTS.md)
+  is nonvoid and refutes the reachability: `max(C, N * g)` returns a
+  launch-mode delta of exactly zero for every per-kernel service at or above
+  the eager per-launch constant, so its error against the measured 1.415 to
+  1.506 microseconds is exactly 1.0 and roughly 2,000 GPU cycles, and the
+  study's `R7` shows the zero holds for any per-launch constants rather than
+  only the installed ones. A measurement campaign run before COMP-44 supplies
+  a non-overlappable term would therefore fail this bar by construction and
+  could close nothing.
 ### Completeness
 
-- COMP-13 (Completeness; P1; M): extend `simllm-gpu-model-artifact-v2` with a
-  narrow concurrent replay record for `GpuTask` inputs and
-  `GpuConcurrentEstimate` outputs,
-  including task order, per-task submission/eligibility,
-  admission/completion, requested and
+- COMP-4 (Completeness; P2; M): add generic multi-axis interpolation as an
+  explicit optional path without weakening the device-model v1 boundary.
+  Version 1 supports exact cells or one declared affine axis, and
+  `ProfileTableProvider` likewise permits one config axis while every other
+  axis is pinned; a query differing on two or more axes fails closed. The new
+  path is unavailable today, and that explicit refusal remains the exact off
+  path. Before implementation, freeze target-silicon grid cells that vary at
+  least two axes independently, the interpolation equation and a quantitative
+  untouched-cell error band. Enabling the path must meet that band, while
+  disabling it must reproduce every accepted exact lookup, one-axis
+  interpolation, rejection and artifact byte exactly. No accepted calibration
+  or runtime path may invoke generic multi-axis interpolation silently.
+- COMP-6 (Completeness; P1; M): produce generic physical capture identities
+  and typed invocation shapes. Join every observed noncollective physical
+  launch by exact `(instance_graph_sha256, operation_id, launch_ordinal)` and
+  preserve an immutable `OperationImplementationBinding`. For each supported
+  semantic collective, preserve the ordered GPU-resident stages as
+  `CollectiveDeviceStageBinding` records joined by exact
+  `(instance_graph_sha256, collective_operation_id,
+  collective_plan_integrity_sha256, rank, launch_ordinal)`.
+  Validate both noncollective operation-to-launch totality and collective
+  plan-to-stage totality without changing `simllm-execution-graph-v1` or
+  creating a second collective completion authority. Capture preserves every
+  observed launch when one rank has multiple stages. The online v1 resolver's
+  exactly one resident stage per plan rank is a separate resolver and CORE-26
+  composition constraint, never permission to coalesce or drop capture rows.
+  COMP-50 owns both binding schemas plus their identity, shape and selector
+  schemas; this task additionally owns `simllm-moe-routing-sidecar-v1`, the
+  routing evidence a captured MoE graph needs.
+  VLLM-12 and SGL-10 are thin producers. This task owns capture
+  projection, topology normalization, activity joins and validation of both
+  frozen ledgers. It does not absorb COMP-17's per-layer timing projection.
+  When physical capture is disabled, every existing graph, aggregate record,
+  timestamp and completion remains byte-identical.
+- COMP-10 (Completeness; P1; L): extend SimLLM trace replay beyond synchronous
+  normalized per-warp instructions. Add subpartition-aware scheduler
+  ownership, CTA barriers, `cp.async`, Hopper TMA and warpgroup asynchronous
+  issue, commit and wait semantics, plus calibrated cache partitions, bank
+  conflicts and hit/miss behavior. Until each mechanism lands with capture
+  evidence, its opcode or launch form fails closed rather than borrowing a
+  scalar latency. The synchronous normalized replay is the exact compatibility
+  path. Test every enabled supported mechanism beside that bypass, require
+  unsupported opcodes and launch forms to reject, and preserve every accepted
+  synchronous record and timestamp exactly. SimLLM replay remains distinct
+  from the external Accel-Sim sidecar and never patches or substitutes for it.
+- COMP-13 (Completeness; P1; M): add narrow content-addressed COMP-50
+  concurrent input and output records for `GpuTask` and
+  `GpuConcurrentEstimate`. Preserve exact task order and the five queue-visit
+  times (submitted, eligible, started, finished and completed), requested and
   transacted HBM/NVLink bytes, request counts and deterministic replay
-  validation. Until that record lands, concurrent demo CSVs are reviewed
-  evidence but are not GPU-model artifacts.
+  validation. `simllm-gpu-model-artifact-v2` remains import-only and every
+  accepted legacy artifact stays byte-identical. Until the new records land,
+  concurrent demo CSVs are reviewed evidence but are not calibration-bundle
+  records.
 - COMP-14 (Completeness; P2; L): add optional NCCL algorithm builders for
   tree all-reduce, all-to-all, reduce-scatter and all-gather behind an
   explicit algorithm selection. The ring builder remains the identity
@@ -1439,7 +2205,7 @@ and an explicit reason:
   must connect to this stack. Function and event identities must remain stable
   so later captures, timing calibration and adapter traces align with this
   first slice.
-- COMP-35 (Completeness; P2; M): instantiate vendor peer ports, so an AMD ROCm
+- COMP-35 (Completeness; P1; M): instantiate vendor peer ports, so an AMD ROCm
   GPU and a UALink pod can be expressed at all. Once COMP-34 lands port objects,
   a vendor instantiation names the peer port xGMI or UALink rather than NVLink,
   names the collective producer RCCL rather than NCCL on the AMD arm, and
@@ -1456,12 +2222,15 @@ and an explicit reason:
   provenance and validity window is required before any cell on that protocol
   runs; an undeclared or unmeasured request is rejected with a diagnostic naming
   the missing profile and the port it belongs to; and every accepted NVIDIA cell
-  stays byte-identical. This is P2 while no AMD or UALink study exists and
-  becomes P1 when one opts in. COMP-34 landed the port objects and made the xGMI
-  protocol nameable; the kernel-time determinism contract added UALink beside it
-  on the peer-link role, and both are rejected at configuration time with a
-  diagnostic naming this task, so what remains is a declared ceiling per
-  protocol with its own provenance and validity window, plus the RCCL producer
+  stays byte-identical. The accepted AMD calibration roadmap makes this P1,
+  while every unqualified AMD or UALink port remains fail closed. This task
+  owns only xGMI or UALink peer-port instantiation and RCCL identity. An AMD
+  scalar compute-model candidate does not wait for it. COMP-34 landed the port
+  objects and made the xGMI protocol nameable; the kernel-time determinism
+  contract added UALink beside it on the peer-link role, and both are rejected
+  at configuration time with a diagnostic naming this task. What remains is a
+  declared ceiling per protocol with its own provenance and validity window,
+  plus the RCCL producer
   naming.
 - COMP-42 (Completeness; P2; S): normalize how the two adapter geometry readers
   spell the optional dtype widths on `ModelDims`. The vLLM reader resolves
@@ -1507,13 +2276,26 @@ and an explicit reason:
   Expressing it as a per-launch constant makes the published point depend on
   the chain length, which is why that study's `a100-epyc-cuda-graph` point is
   declared scoped to a reference chain length rather than universal. The
-  surrogate being replaced is that scoping. Acceptance: a calibrated profile
-  may declare a fixed per-invocation term and a per-launch term, the
-  composition states which one a launch class uses, the exact `ideal` zero
+  surrogate being replaced is that scoping. The
+  [host launch composition study](../../examples/host_launch_composition_v1/RESULTS.md)
+  widens the question from which term to which operator. Every calibrated term
+  today composes as `max(C, N * g)`, whose exposed contribution is exactly zero
+  once per-kernel service reaches the per-launch constant, so no calibrated
+  term of any magnitude can express a per-kernel cost that the measurement
+  shows is flat across a factor-ten range of kernel period. The shipped
+  `legacy-fixed-step` branch already composes additively and returns exactly
+  that shape, so the repository has the operator but no calibrated profile is
+  allowed to use it. Acceptance: a calibrated profile may declare a fixed
+  per-invocation term and a per-launch term, each term declares whether it
+  overlaps device service or is non-overlappable, the composition states which
+  terms a launch class uses, an additive term reproduces a launch-mode delta
+  independent of provider service, the exact `ideal` zero
   profile and both Turing profiles reproduce every accepted artifact and
   timestamp byte for byte, and a graph profile built from a fixed term is
   independent of the launch count it is asked about. This is P2 while no study
-  selects an A100 host profile and becomes P1 when COMP-47 installs one.
+  selects an A100 host profile and becomes P1 when COMP-47 installs one or when
+  COMP-48 opens its measurement campaign, whichever comes first, because
+  COMP-48's acceptance cannot be met without it.
 - COMP-46 (Completeness; P2; M): supply a production-grade decode attention
   microbenchmark. The decode lane of the
   [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
@@ -1543,27 +2325,193 @@ and an explicit reason:
   far end, with no shared bus, since the model deliberately has no NoC on
   the GPU; the crossbar is contention-free by design and every crossing
   emits an observability event. The default composition must preserve every
-  accepted baseline byte for byte. BACK-53 owns the RNIC counterpart, a
+  accepted baseline byte for byte. It may transport typed resource-vector
+  descriptors, but it owns no calibration coefficients, resource registry or
+  service-model fit. BACK-53 owns the RNIC counterpart, a
   NoC-like signal-slot bus whose contention is a registered future upgrade.
+- COMP-50 (Completeness; P1; L): deliver the vendor-neutral offline calibration
+  package and compact device-model contract. Own
+  `simllm-device-calibration-bundle-v1`, `simllm-device-model-v1`, canonical
+  record and content-hash rules including
+  `simllm-calibration-canonical-bytes-v1`, the narrower
+  `simllm-calibration-canonical-ascii-conformance-v1` subset and the
+  independent C++17 verifier that covers only that subset,
+  `simllm-calibration-token-fixture-v1`,
+  noncollective and collective-stage binding
+  schemas and pure resolvers, shape and implementation identities, typed
+  resource axes with known masks, strict validators, generic split and fit
+  orchestration, compilers, the `HardwareCollector` and
+  `OfflineKernelSimulator` protocol interfaces, CUDA and ROCm doctor backends,
+  the local CLI and the contributor submission contract. Keep GPU and
+  simulator scripts, workloads and configuration under top-level
+  `offline/calibration/`; keep the lazy offline record/compiler package under
+  `simllm/calibration/`; publish reviewed compact data under `devices/`.
+  Keep those tracked roots as the single authorities; an installed release may
+  carry only a manifest-digest-checked immutable archive built from them, with
+  explicit suite and registry root overrides and no second editable copy.
+  Compile both scalar profile-table service and optional mechanistic service
+  without making a precision claim; COMP-1, COMP-22 and COMP-24 own their
+  evidence and numerical acceptance.
+  Raw traces remain external and uploads contain data only. Enabling,
+  disabling or omitting this optional path preserves accepted scalar,
+  GPU-model-v2, default-import, validation and serving bytes and timestamps
+  exactly. Candidate and validated status are distinct, and validation fails
+  closed on unknown fields, duplicate keys, nonfinite values, unsafe archives,
+  hash mismatch, incomplete bindings, split leakage or physical-floor
+  violation.
+- COMP-51 (Completeness; P1; M): add the official Accel-Sim framework unchanged
+  as an optional offline submodule and close its reproducible dependency
+  envelope at `third_party/accel-sim-framework`. Pin upstream commit
+  `3016c658f810bdae9a14bf4534ee99e9945eedae`; keep every SimLLM wrapper,
+  configuration and script outside the checkout; record upstream and
+  transitive licenses; provide a hash-locked prefetch bundle and an offline
+  smoke that runs after dependencies are present. Pin the associated upstream
+  statistics archive at `ee21104be44ad55dfde789111d3b94372be8435f` and
+  GPGPU-Sim at `6c3cf4ff32110908386d605a7034fc67666a92de`. Check the
+  archive golden without claiming an exact public A100 rerun because its
+  site-local hardware statistics and trace inputs are not distributed; claim
+  exact reproduction only after those inputs are acquired and hash locked.
+  Reject recursive initialization, an unexpected nested submodule state and
+  dirty edits beneath the official gitlink. Default imports, validators,
+  serving, tests and contributor checks never fetch or require the submodule.
+  Separate networked release verification must prove that the exact framework
+  pin is fetchable and branch-reachable; default offline CI remains network
+  free. Reject H100, later NVIDIA ISA, AMD ROCm,
+  communication and serving-loop invocation. Numerical SM80 correlation and
+  selective filling remain COMP-1. Absence, disablement or an unsupported
+  request preserves every accepted default byte and timestamp exactly.
+- COMP-52 (Completeness; P2; L): support explicit architecture-derived device
+  candidates when target silicon is not yet available. Require a validated
+  anchor, declared architecture deltas, a content-addressed analytical
+  `ImplementationRef`, target code-object availability when a code-object
+  reference is selected, applicability guards, inflated uncertainty and
+  anchor/delta evidence joins. The result is candidate-only, nondefault and
+  never described as Accel-Sim or silicon calibrated. Every run records the
+  model hash, status, target basis and envelope, and an unsupported target
+  fails closed. Disabling this path preserves the validated-anchor model and
+  every accepted result byte exactly.
+- COMP-54 (Completeness; P1; L): extract a model's device workload from a
+  given inference framework offline. Given a declared framework identity at
+  its pinned version (vLLM or SGLang), an exact model checkpoint identity and
+  a declared phase and shape grid, drive the framework's capture seams
+  offline and emit one content-addressed
+  `simllm-model-kernel-inventory-v1` record per `(framework, model)`: the
+  execution-graph template identity, the ordered kernel families with typed
+  invocation shapes and per-phase launch counts, and the
+  implementation-identity envelope that declares the model's calibration
+  suite denominators and its column in the
+  [calibration coverage matrix](../design/calibration-coverage.md). The
+  structure half runs with no GPU present, through the flagged vLLM skeleton
+  and SGLang CPU engine paths; the physical-identity half (code objects,
+  observed launches) joins later on target silicon through VLLM-12, SGL-10
+  and COMP-6 and never enters the CPU-derived record, which marks those
+  fields absent by design rather than fabricating them. The hand-authored
+  `transformer-dag-v1` suite remains the explicit bypass and its accepted
+  bytes stay identical. An extraction that cannot produce a total inventory
+  rejects rather than emitting a partial column. COMP-50 owns the canonical
+  record rules this task reuses; this task owns the extraction
+  orchestration, the inventory schema, the per-framework drivers and the
+  coverage denominators it publishes. The Granite first slice is published
+  for both framework rows by `model_extraction_v1`; complete the remaining
+  nominated columns (Qwen3.8-27B, and the Kimi K3 structure half beside the
+  COMP-59 physical envelope) with their own exact checkpoint identities and
+  freeze-first shape grids, and until then this task stays open.
+- COMP-59 (Completeness; P1; L): fill coverage columns for models whose
+  weights exceed the reachable fleet, with the Kimi K3 class (2.8T-parameter
+  MXFP4 MoE against 1.6 TB of total A100 HBM and about 1.15 TB of GH200
+  HBM) as the first instance. Own the reduced-depth same-geometry physical
+  capture envelope: instantiate the framework's real model class with the
+  declared layer depth reduced and every per-layer geometry, numeric format
+  and kernel-selection input preserved, capture observed implementation
+  identities and launch schedules on the reachable targets through the
+  VLLM-12, SGL-10 and COMP-6 chain in both eager and captured-graph launch
+  modes, and sweep per-expert load grids that cover the deployment shape
+  range. The envelope is its own declared identity: it never claims the
+  full checkpoint's routing population, weights or end-to-end makespans,
+  and its records state that scope explicitly. Structure-half enumeration
+  of the full-depth column stays COMP-54 (configuration-only projection);
+  this task owns the physical envelope, its distinct-envelope identity
+  rules, the per-target numeric-format implementation split (a native
+  MXFP4 checkpoint executes different implementations on SM80 than on
+  SM90) and the control validation that reduced-depth capture reproduces
+  the full-depth per-layer inventory exactly for a model small enough to
+  run both ways, with the pinned granite checkpoint as that control. Fail
+  closed when a framework cannot execute the reduced-depth instantiation.
+  Disabling the route leaves every accepted record and the hand-authored
+  suites byte-identical.
+- COMP-62 (Completeness; P1; L): extend the offline model inventory family set
+  for Qwen3.5 Gated DeltaNet linear-attention layers. Price the input
+  projections, width-four short convolution, recurrent-state read, update and
+  write, gated normalization, output projection and dense MLP for both prefill
+  and decode shapes, with exact integer FLOPs, HBM bytes and logical launch
+  counts. Preserve the ordered Qwen3.8-27B schedule of 48 linear-attention and
+  16 full-attention layers and prove family conservation for every one of the
+  15 frozen text-only cases through both pinned framework configuration
+  surfaces. Until that total projection exists, both drivers reject the
+  Qwen3.8-27B column before writing StepRecords or an inventory, and the
+  Granite full-attention suite and published inventory bytes remain exactly
+  unchanged. Acceptance requires byte-deterministic complete inventories from
+  vLLM and SGLang with exact cross-framework structural agreement and no
+  multimodal encoder or speculative-head leakage.
+- COMP-64 (Completeness; P1; L): deliver the scripted in-framework
+  kernel-cycle capture pipeline and its unified lookup record. One clean
+  scripted workflow drives the pinned framework at a declared (model,
+  parallelism configuration, pool, launch mode, shape point) with
+  dummy-weight instantiation, records the per-kernel stream with elapsed
+  cycles and both observed clocks, decomposes each kernel into compute
+  cycles, memory service and fixed overhead in their own invariant
+  domains, repeats replays for the distribution verdict, and emits one
+  canonical content-addressed lookup record per campaign. Entry keys:
+  framework identity, model, pool, launch mode, parallelism
+  configuration, then the pool's shape axes; a decode key is batch plus
+  the per-request KV lengths, and a prefill key is computed new tokens
+  plus existing context, which is exactly how radix and prefix hits
+  enter. The declared input-dependency contract travels with the record:
+  a dense decode entry is content-independent given its key; content
+  enters only through MoE expert routing, which is keyed separately from
+  the captured routing evidence; sampling kernels are content-independent
+  in time. Where the framework's compile step exposes the decode graph,
+  infer the kernel list statically at compile time and cross-check it
+  against the runtime recording; where the profiler grants it, use
+  program-counter sampling for in-kernel cycle attribution. Each entry
+  carries its distribution verdict and code-object references, and the
+  record compiles into the existing profile-table and device-model
+  service-entry forms rather than becoming a second pricing authority.
+  The retained-fixture first slice is delivered by
+  [kernel_cycle_lut_v1](../../examples/kernel_cycle_lut_v1/RESULTS.md): it
+  freezes and validates the strict record, analyzer, candidate compilers and
+  portable dry campaign without new GPU time. This does not close COMP-64.
+  Execute the registered campaign on the qualified target, with COMP-65 and
+  COMP-66 completing the two explicitly residual attribution paths. COMP-1
+  keeps numerical acceptance; COMP-45's cycle-normalized publication rule is
+  satisfied by the per-domain component form.
+- COMP-65 (Completeness; P1; L): add static decode-graph inference where a
+  pinned framework exposes a compile product. Before a GPU replay, read the
+  framework-owned compiled graph and emit the ordered kernel implementation
+  list with its graph identity, then require the runtime recording to match
+  that list without loss, duplication or order drift. A framework or shape
+  whose compile step exposes no total graph records `unavailable` and keeps
+  the runtime-only COMP-64 path; it never fabricates a static list or blocks
+  an explicitly unsupported producer. Acceptance requires at least one
+  supported vLLM cell and one supported SGLang cell, an intentional mismatch
+  fixture that rejects, and byte-identical runtime-only records when static
+  inference is unavailable or disabled.
+- COMP-66 (Completeness; P1; L): complete in-kernel cycle attribution with
+  program-counter sampling on a qualified profiler and GPU target that grant
+  it. Join sampled program counters to the exact per-kernel SASS digest,
+  attribute sampled cycles to the frozen compute, memory-stall and fixed
+  categories, and retain the sampling interval, dropped-sample count and
+  permission verdict. A denied or unavailable profiler records that verdict
+  and preserves COMP-64's aggregate elapsed-cycle decomposition exactly;
+  denial is not zero sampled work. Acceptance requires one granted capture
+  whose category cycles conserve the sampled total within the frozen sampling
+  uncertainty, one denied fixture, and exact bypass equivalence for every
+  timestamp, component and compiled service value.
 
 ### Uncategorized
 
-- COMP-4: multi-axis interpolation in `ProfileTableProvider`. The landed
-  rule interpolates along one config axis with every other axis pinned to
-  covered values; a query differing on two or more axes raises `KeyError`
-  instead of attempting a multilinear fit.
-- COMP-6: per-layer kernel shapes. `step_kernels` aggregates each family
-  over all layers of the step; SASS tables index per-invocation shapes,
-  so the mapping needs a per-layer (per-invocation) split before tables
-  can be keyed the way the tracer sees kernels.
 - COMP-8: the fused-vs-family sum invariant test compares in float; above
   2 to the 53rd flops (a 32k-token prefill chunk on a 100B-class dense
   rank) ULP effects could mask a real mismatch even though the integer
   identity is exact. Assert the sums in the integer domain when such
   shapes enter scope (audit note, examples/m5/RESULTS.md).
-- COMP-10: extend trace replay beyond synchronous normalized per-warp
-  instructions. Add subpartition-aware scheduler ownership, barriers,
-  `cp.async`, Hopper TMA and warpgroup async issue/commit/wait semantics, plus
-  calibrated cache partitions, bank conflicts and hit/miss behavior. Until
-  each mechanism lands with capture evidence, its opcode or launch form must
-  fail closed rather than borrow a scalar latency.

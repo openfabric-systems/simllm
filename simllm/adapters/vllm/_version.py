@@ -6,4 +6,4 @@ just to learn the version), so the constant lives here.
 """
 
 #: vLLM release this adapter is written against and tested for API shape.
-PINNED_VLLM_VERSION = "0.26.0"
+PINNED_VLLM_VERSION = "0.27.1"

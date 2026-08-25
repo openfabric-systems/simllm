@@ -1,6 +1,6 @@
 """vLLM v1 executor that replaces model execution with a simulated GPU.
 
-Pinned to vLLM **v0.26.0**. The v1 engine resolves its executor class from a
+Pinned to vLLM **v0.27.1**. The v1 engine resolves its executor class from a
 dotted import path, so SimLLM plugs in without a fork::
 
     SIMLLM_VLLM_MODE=virtual SIMLLM_VLLM_GPU=b100 \\

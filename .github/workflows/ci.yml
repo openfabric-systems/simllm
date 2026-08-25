@@ -48,3 +48,22 @@ jobs:
           python examples/rnic_wq_v1/run_rnic_wq_v1.py
           --check
           --build-dir build/rnic_wq_v1_ci
+
+  native-calibration-canonical:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install test dependencies
+        run: pip install -e .[dev]
+      - name: Configure independent canonical verifier
+        run: >-
+          cmake -S tests/native/calibration_canonical
+          -B build/calibration-canonical
+          -DCMAKE_BUILD_TYPE=Release
+      - name: Build independent canonical verifier
+        run: cmake --build build/calibration-canonical --parallel
+      - name: Check cross-language canonical vectors
+        run: pytest -q tests/test_calibration_canonical_native.py

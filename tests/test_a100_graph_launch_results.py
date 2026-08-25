@@ -183,17 +183,17 @@ def test_the_registry_entry_carries_the_void_and_not_a_score_disclaimer() -> Non
     assert "14 of its 15" not in entry
 
 
-def test_the_contract_clause_points_at_the_finding_and_the_pending_ruling() -> None:
-    """The refuted clause must be discoverable from the contract text."""
+def test_the_contract_clause_points_at_the_finding_and_the_settled_ruling() -> None:
+    """The finding and settled ownership must be discoverable from the contract."""
 
     registry = (
         Path(__file__).resolve().parents[1] / "docs" / "modules" / "compute.md"
     ).read_text(encoding="utf-8")
     clause = registry[registry.index("**CUDA-graph launch and eager launch differ") :][:2400]
     assert "examples/a100_graph_launch_v1/RESULTS.md" in clause
-    assert "pending" in clause
+    assert "standing ruling assigns every launch-mode effect" in clause
+    assert "host launch path" in clause
     assert "COMP-48" in clause
-    # The standing ruling text itself is untouched: the sentence still stands.
     assert (
         "The launch class never reaches kernel service time." in clause
     )

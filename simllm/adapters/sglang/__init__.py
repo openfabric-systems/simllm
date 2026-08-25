@@ -1,4 +1,4 @@
-"""SGLang adapter, pinned to SGLang main commit **8f2a3ad** (milestone M3).
+"""SGLang adapter, pinned to SGLang main commit **bfeae4e** (milestone M3).
 
 The seam is the TP worker: ``SimTpModelWorker`` subclasses SGLang's
 ``TpModelWorker`` (the same pattern as SGLang's own MLX worker) and replaces

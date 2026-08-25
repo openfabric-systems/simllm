@@ -60,6 +60,7 @@ def _tracked_files() -> list[Path]:
 
 
 _BARE_RATIONAL = re.compile(r"\A/\d+(?:\.\d+)?\Z")
+_JSON_ESCAPE = re.compile(r'(?:\\)+(?:u[0-9A-Fa-f]{4}|["\\/bfnrt])')
 
 
 def _is_bare_rational(match: str) -> bool:
@@ -72,6 +73,20 @@ def _is_bare_rational(match: str) -> bool:
     """
 
     return bool(_BARE_RATIONAL.match(match))
+
+
+def _is_json_escape_vector(match: str) -> bool:
+    """Ignore a UNC-shaped run made entirely from JSON escape spellings.
+
+    Canonical-JSON conformance vectors contain source-level backslashes before
+    control escapes and surrogate pairs. The UNC matcher can begin at two of
+    those backslashes, but a real UNC or personal path retains an unconsumed
+    separator or path component after the JSON escapes are removed.
+    """
+
+    if not re.search(r"(?:\\)+u[0-9A-Fa-f]{4}", match):
+        return False
+    return "\\" not in _JSON_ESCAPE.sub("", match)
 
 
 def _line_matches(text: str, pattern: re.Pattern[str]) -> list[tuple[int, str]]:
@@ -130,6 +145,8 @@ def test_scripts_have_no_personal_path_defaults() -> None:
             continue
         text = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
         for line_number, match in _line_matches(text, PERSONAL_SCRIPT_PATH):
+            if _is_json_escape_vector(match):
+                continue
             violations.append(f"{relative_path}:{line_number}: {match}")
 
     assert not violations, "personal script filesystem paths:\n" + "\n".join(violations)
@@ -201,3 +218,20 @@ def test_personal_script_matcher_covers_user_roots() -> None:
     )
 
     assert all(PERSONAL_SCRIPT_PATH.search(path) for path in personal_paths)
+
+
+def test_json_escape_exemption_is_narrower_than_personal_paths() -> None:
+    escape_vectors = (
+        r'\\u0000\\u0001\\u001f',
+        r'\\ud800\\udc00',
+        r'\\","controls":"\b\f\n\r\t\u0001',
+    )
+    personal_paths = (
+        r"\\server\share\u0001",
+        r"\\server\u0001\project",
+        r"C:\Users\u0001\project",
+        "/home/u0001/project",
+    )
+
+    assert all(_is_json_escape_vector(value) for value in escape_vectors)
+    assert not any(_is_json_escape_vector(value) for value in personal_paths)
