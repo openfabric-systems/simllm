@@ -14,17 +14,21 @@ from typing import Any
 STUDY_DIR = Path(__file__).resolve().parent
 REPOSITORY_ROOT = STUDY_DIR.parents[1]
 EXPECTATIONS_PATH = STUDY_DIR / "expectations.json"
+LOAD_AMENDMENT_PATH = STUDY_DIR / "expectations-load-amendment.json"
 TRACE_PATH = REPOSITORY_ROOT / "examples/preplay_trace_v1/granite_length_cap.jsonl"
 
 EXPECTATIONS_COMMIT = "7536e08b32009951470f310e4f459216c7212dbc"
+LOAD_AMENDMENT_COMMIT = "e5ee8a975c88dad683228ee4b22e9d9b1be382e2"
 IMPLEMENTATION_COMMIT = "d6bd2cd520dfc731bc59e25928128d6b77918045"
 RESULT_SCHEMA = "simllm-pd-session-concurrent-study-result-v1"
 MODEL_ID = "ibm-granite/granite-3.0-1b-a400m-instruct"
 MODEL_REVISION = "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
 VLLM_VERSION = "0.27.1"
 PROMPT_LENGTHS = (8, 16)
-OFFERED_LOADS = (8, 16, 32)
-INTERARRIVAL_PS = (125_000_000_000, 62_500_000_000, 31_250_000_000)
+ORIGINAL_OFFERED_LOADS = (8, 16, 32)
+ORIGINAL_INTERARRIVAL_PS = (125_000_000_000, 62_500_000_000, 31_250_000_000)
+OFFERED_LOADS = (8_000, 16_000, 32_000)
+INTERARRIVAL_PS = (125_000_000, 62_500_000, 31_250_000)
 POOL_RATIOS = ((1, 1), (1, 2), (2, 1))
 REQUESTS_PER_CELL = 8
 DECODE_OUTPUT_TOKENS = 4
@@ -124,16 +128,16 @@ def _validate_frozen_arithmetic(frozen: dict[str, Any]) -> None:
         for row in deployment["pool_ratios"]
     ) != POOL_RATIOS:
         raise SystemExit("pool ratio sweep drifted")
-    if tuple(sweep["offered_load_requests_per_second"]) != OFFERED_LOADS:
-        raise SystemExit("offered load sweep drifted")
-    if tuple(sweep["interarrival_ps"]) != INTERARRIVAL_PS:
-        raise SystemExit("interarrival sweep drifted")
+    if tuple(sweep["offered_load_requests_per_second"]) != ORIGINAL_OFFERED_LOADS:
+        raise SystemExit("original offered load sweep drifted")
+    if tuple(sweep["interarrival_ps"]) != ORIGINAL_INTERARRIVAL_PS:
+        raise SystemExit("original interarrival sweep drifted")
     if any(load * interval != PS_PER_SECOND for load, interval in zip(
-        OFFERED_LOADS,
-        INTERARRIVAL_PS,
+        ORIGINAL_OFFERED_LOADS,
+        ORIGINAL_INTERARRIVAL_PS,
         strict=True,
     )):
-        raise SystemExit("offered load and interarrival arithmetic disagrees")
+        raise SystemExit("original offered load and interarrival arithmetic disagrees")
     if tuple(sweep["prompt_tokens"]) != PROMPT_LENGTHS:
         raise SystemExit("prompt sweep drifted")
     if sweep["requests_per_cell"] != REQUESTS_PER_CELL:
@@ -142,7 +146,9 @@ def _validate_frozen_arithmetic(frozen: dict[str, Any]) -> None:
         raise SystemExit("decode output length drifted")
     if sweep["handoff_ps"] != HANDOFF_PS:
         raise SystemExit("handoff constant drifted")
-    if sweep["cells"] != len(POOL_RATIOS) * len(PROMPT_LENGTHS) * len(OFFERED_LOADS):
+    if sweep["cells"] != len(POOL_RATIOS) * len(PROMPT_LENGTHS) * len(
+        ORIGINAL_OFFERED_LOADS
+    ):
         raise SystemExit("cell count drifted")
     if curve["schema"] != "simllm-deployment-curve-v1":
         raise SystemExit("curve schema drifted")
@@ -155,6 +161,43 @@ def _validate_frozen_arithmetic(frozen: dict[str, Any]) -> None:
         "source_and_runtime_identity": "fatal-unscored",
     }:
         raise SystemExit("evidence class registry drifted")
+
+
+def _validate_load_amendment(amendment: dict[str, Any]) -> None:
+    if LOAD_AMENDMENT_COMMIT != "e5ee8a975c88dad683228ee4b22e9d9b1be382e2":
+        raise SystemExit("load amendment commit literal drifted")
+    chronology = amendment["chronology"]
+    if chronology != {
+        "original_expectations_commit": EXPECTATIONS_COMMIT,
+        "implementation_commit": IMPLEMENTATION_COMMIT,
+        "first_scored_run_existed_before_amendment": True,
+        "classification": "post-specified regression",
+    }:
+        raise SystemExit("load amendment chronology drifted")
+    void_run = amendment["retained_void_run"]
+    if void_run["status"] != "VOID" or void_run["sha256"] != (
+        "7121ab1b99eeb4809de8e2546351fd03653cd7acf30cee99a0c50155d401d5c5"
+    ):
+        raise SystemExit("retained void run identity drifted")
+    sweep = amendment["replacement_request_sweep"]
+    if tuple(sweep["offered_load_requests_per_second"]) != OFFERED_LOADS:
+        raise SystemExit("amended offered load sweep drifted")
+    if tuple(sweep["interarrival_ps"]) != INTERARRIVAL_PS:
+        raise SystemExit("amended interarrival sweep drifted")
+    if any(
+        load * interval != PS_PER_SECOND
+        for load, interval in zip(OFFERED_LOADS, INTERARRIVAL_PS, strict=True)
+    ):
+        raise SystemExit("amended offered load arithmetic disagrees")
+    for key, expected in (
+        ("prompt_tokens", list(PROMPT_LENGTHS)),
+        ("requests_per_cell", REQUESTS_PER_CELL),
+        ("decode_output_tokens_per_request", DECODE_OUTPUT_TOKENS),
+        ("handoff_ps", HANDOFF_PS),
+        ("cells", len(POOL_RATIOS) * len(PROMPT_LENGTHS) * len(OFFERED_LOADS)),
+    ):
+        if sweep[key] != expected:
+            raise SystemExit(f"amended {key} drifted")
 
 
 def _source_audit(
@@ -208,7 +251,9 @@ def check_registry(args: argparse.Namespace) -> dict[str, Any]:
     if args.run_dir.exists():
         raise SystemExit(f"selected run directory already exists: {args.run_dir}")
     frozen = _load_json(EXPECTATIONS_PATH)
+    amendment = _load_json(LOAD_AMENDMENT_PATH)
     _validate_frozen_arithmetic(frozen)
+    _validate_load_amendment(amendment)
     _require_implementation_ancestor()
     frontend = frozen["frontend"]
     if frontend["name"] != "vllm" or frontend["version"] != VLLM_VERSION:
@@ -227,6 +272,10 @@ def check_registry(args: argparse.Namespace) -> dict[str, Any]:
         raise SystemExit("VLLM_ENABLE_V1_MULTIPROCESSING=0 is required")
     return {
         "expectations_commit": EXPECTATIONS_COMMIT,
+        "load_amendment_commit": LOAD_AMENDMENT_COMMIT,
+        "load_amendment_sha256": _sha256(LOAD_AMENDMENT_PATH),
+        "evidence_classification": "post-specified regression",
+        "retained_void_run_sha256": amendment["retained_void_run"]["sha256"],
         "implementation_commit": IMPLEMENTATION_COMMIT,
         "run_head": _git_head(),
         "source_audit": _source_audit(frozen, args.vllm_source),
@@ -750,8 +799,9 @@ def main() -> None:
     provenance = check_registry(args)
     if args.check_only:
         print(
-            "check-only validated 18 frozen cells, 6 curve records, source and "
-            "runtime identity, and all CORE-51 baseline digests; no artifacts produced"
+            "check-only validated 18 amended cells, 6 curve records, source and "
+            "runtime identity, the retained void run identity, and all CORE-51 "
+            "baseline digests; no artifacts produced"
         )
         return
     _require_clean_worktree()

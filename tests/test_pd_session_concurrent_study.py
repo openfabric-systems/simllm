@@ -79,7 +79,11 @@ def _observation():
     cells = []
     for prefill, decode in ((1, 1), (1, 2), (2, 1)):
         for prompt in (8, 16):
-            for load, throughput, delay in ((8, 10, 10), (16, 20, 20), (32, 30, 30)):
+            for load, throughput, delay in (
+                (8_000, 10, 10),
+                (16_000, 20, 20),
+                (32_000, 30, 30),
+            ):
                 cells.append(_cell(prefill, decode, prompt, load, throughput, delay))
     return {
         "baseline": {
@@ -103,6 +107,18 @@ def test_frozen_registry_arithmetic_is_self_consistent():
     )
 
     study._validate_frozen_arithmetic(frozen)
+
+
+def test_load_amendment_is_self_consistent():
+    study = _study()
+    amendment = json.loads(
+        (
+            REPOSITORY_ROOT
+            / "examples/pd_session_concurrent_v1/expectations-load-amendment.json"
+        ).read_text()
+    )
+
+    study._validate_load_amendment(amendment)
 
 
 def test_analysis_keeps_fatal_and_behavioral_evidence_separate():
