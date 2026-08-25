@@ -1,6 +1,6 @@
 {
   "schema": "simllm-pd-session-concurrent-expectations-v1",
-  "as_of_commit": "dc350b6b83d2697cdcf317a2616c1523e1046210",
+  "as_of_commit": "dc350b6996215adf69384c23335b496440042fe7",
   "chronology": {
     "tracked_worktree_before_freeze": "clean",
     "implementation_existed_before_freeze": false,
