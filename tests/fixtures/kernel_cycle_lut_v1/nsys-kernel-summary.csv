@@ -1,0 +1,6 @@
+pool,shape,name,count_per_step,median_duration_ns,record_count
+decode,1,"void flash::flash_fwd_splitkv_combine_kernel<Flash_fwd_kernel_traits<(int)64, (int)64, (int)256, (int)4, cutlass::bfloat16_t>>(flash::Flash_fwd_params)",24,8096.0,384
+decode,1,"void flash::flash_fwd_splitkv_kernel<Flash_fwd_kernel_traits<(int)64, (int)64, (int)256, (int)4, cutlass::bfloat16_t>>(flash::Flash_fwd_params)",24,9504.0,384
+decode,1,fused_moe_kernel,48,12480.0,768
+decode,1,"std::enable_if<!T7, void>::type internal::gemvx::kernel<int, int, __nv_bfloat16>(T13)",48,6303.5,768
+decode,1,"void vllm::moe::topkGating<(int)8, (int)32, __nv_bfloat16>(const T7 *)",24,4368.0,384

@@ -1,0 +1,94 @@
+{
+  "schema": "simllm-kernel-cycle-campaign-v1",
+  "frameworks": [
+    {
+      "name": "sglang",
+      "target_environment_variable": "SIMLLM_SGLANG_KERNEL_CAPTURE_TARGET"
+    },
+    {
+      "name": "vllm",
+      "target_environment_variable": "SIMLLM_VLLM_KERNEL_CAPTURE_TARGET"
+    }
+  ],
+  "pools": ["decode", "prefill"],
+  "launch_modes": ["cuda-graph", "eager"],
+  "parallelism": [
+    {
+      "tensor_parallel": 1,
+      "pipeline_parallel": 1,
+      "data_parallel": 1,
+      "expert_parallel": 1
+    },
+    {
+      "tensor_parallel": 2,
+      "pipeline_parallel": 1,
+      "data_parallel": 1,
+      "expert_parallel": 1
+    },
+    {
+      "tensor_parallel": 4,
+      "pipeline_parallel": 1,
+      "data_parallel": 1,
+      "expert_parallel": 1
+    }
+  ],
+  "decode_batches": [1, 8, 32],
+  "kv_grid_basis_points": [
+    100,
+    200,
+    400,
+    600,
+    800,
+    1200,
+    1600,
+    2400,
+    3200,
+    4000,
+    5000,
+    6000,
+    7000,
+    8000,
+    9000,
+    10000
+  ],
+  "kv_placement_modes": ["fresh-contiguous", "deliberately-fragmented"],
+  "prefill_shapes": [
+    {"computed_new_tokens": 128, "existing_context_tokens": 0},
+    {"computed_new_tokens": 128, "existing_context_tokens": 512},
+    {"computed_new_tokens": 512, "existing_context_tokens": 0},
+    {"computed_new_tokens": 512, "existing_context_tokens": 2048},
+    {"computed_new_tokens": 2048, "existing_context_tokens": 0}
+  ],
+  "replays": {"cuda-graph": 256, "eager": 64},
+  "nsys": {
+    "cuda_graph_trace": "node",
+    "trace": ["cuda", "nvtx", "cublas", "cudnn"],
+    "sample": "none",
+    "wait": "all"
+  },
+  "ncu": {
+    "clock_control": "none",
+    "replay_mode": "kernel",
+    "metrics": [
+      "gpu__cycles_elapsed.max",
+      "gpu__time_duration.sum",
+      "gpu__time_duration.sum.per_second",
+      "dram__bytes_read.sum",
+      "dram__bytes_write.sum",
+      "dram__throughput.avg.pct_of_peak_sustained_elapsed",
+      "sm__throughput.avg.pct_of_peak_sustained_elapsed"
+    ],
+    "program_counter_sections": ["SourceCounters"]
+  },
+  "code_object_harvest": {
+    "clean_runs": 2,
+    "require_byte_identical_manifests": true,
+    "classes": [
+      "triton-jit",
+      "wheel-precompiled-cuda",
+      "closed-library",
+      "unknown"
+    ],
+    "digests": ["ptx_sha256", "sass_sha256"]
+  }
+}
