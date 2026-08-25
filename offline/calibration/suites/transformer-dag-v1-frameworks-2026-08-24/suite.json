@@ -1,0 +1,521 @@
+{
+  "schema": "simllm-transformer-dag-suite-v1",
+  "suite": "transformer-dag-v1",
+  "state": "authored-inputs-only",
+  "reference_model": {
+    "name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "weight_sha256": "f7ae1cee56a9ea6c5360437b1c0407f8d84816b2cc75470f4e7e5236fa2a07dc",
+    "weight_bytes": 2669283096,
+    "dtype": "bfloat16",
+    "quantization": "none",
+    "geometry": {
+      "layers": 24,
+      "hidden_size": 1024,
+      "intermediate_size": 512,
+      "num_heads": 16,
+      "num_kv_heads": 8,
+      "head_size": 64,
+      "num_experts": 32,
+      "top_k": 8,
+      "vocab_size": 49155
+    }
+  },
+  "frameworks": [
+    {
+      "id": "vllm",
+      "version": "0.27.1",
+      "source_commit": "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac"
+    },
+    {
+      "id": "sglang",
+      "version": "0.5.19.dev345+gbfeae4e79",
+      "source_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "source_tree": "9ffe149f40e1cd5bff7dadc6806ad1927d312e69"
+    }
+  ],
+  "launch_modes": [
+    {
+      "id": "eager",
+      "requirement": "required"
+    },
+    {
+      "id": "captured-graph",
+      "requirement": "required-when-backend-reports-supported",
+      "vendor_spelling": "recorded-by-collector"
+    }
+  ],
+  "observation_expansion": {
+    "context_axes": ["target", "framework", "launch_mode"],
+    "target_rule": "every-capability-matrix-target-using-its-supported-real-silicon-collector",
+    "framework_rule": "every-frozen-framework-row",
+    "launch_mode_rule": "eager-required-and-captured-graph-required-when-backend-reports-supported",
+    "graph_rule": "every-graph-cell-in-every-required-context",
+    "communication_rule": "every-communication-cell-in-every-required-context-with-authored-participant-capability-ready",
+    "mixed_rule": "every-mixed-cell-in-every-required-context-where-all-member-capabilities-are-ready",
+    "unavailable_rule": "blocked-not-applicable-or-rejected-produces-no-observation-and-never-a-zero",
+    "claim_rule": "an-unobserved-required-context-cannot-contribute-to-a-validated-capability",
+    "denominator_rule": "graph-communication-and-mixed-denominators-count-authored-topology-cells-not-expanded-observations"
+  },
+  "parameterized_target_slots": [
+    {
+      "id": "amd-rocm-target",
+      "binding_rule": "bind-to-one-exact-immutable-concrete-target-and-operating-envelope-before-the-first-observation",
+      "isolation_rule": "different-concrete-targets-cannot-share-an-authored-denominator-evidence-split-or-device-model"
+    }
+  ],
+  "token_fixture_contract": {
+    "schema": "simllm-calibration-token-fixture-v1",
+    "case_ordinal_rule": "zero-based-graph-cells-array-order",
+    "request_ordinal_rule": "zero-based-within-case",
+    "request_id_rule": "<case-id>:request:<request-ordinal>",
+    "request_count_rule": "requests-for-compute-prefill-and-batch-for-decode-families",
+    "sequence_length_rule": "prompt-tokens-per-request-for-compute-prefill-and-context-tokens-for-decode-families",
+    "token_formula": "token_id = 256 + ((104729 * case_ordinal + 8191 * request_ordinal + 131 * position) mod (vocab_size - 256))",
+    "content_address_rule": "external-fixture-id-is-lowercase-sha256-of-the-canonical-token-fixture-record-and-is-not-an-authored-output-in-this-freeze",
+    "attention_rule": "all-tokens-active",
+    "position_rule": "position-ids-are-zero-through-sequence-length-minus-one",
+    "padding_rule": "no-padding-beyond-authored-shape",
+    "sampling_rule": "greedy-temperature-zero-with-no-random-number-generator",
+    "decode_rule": "one-decode-forward-and-output-token-is-not-recursively-consumed",
+    "routing_sidecar_schema": "simllm-moe-routing-sidecar-v1",
+    "routing_sidecar_fields": ["case_id", "request_id", "layer_ordinal", "token_position", "ordered_expert_ids"],
+    "routing_rule": "capture-records-exact-top-k-moe-routing-and-divergence-within-one-claimed-envelope-is-fatal-or-requires-a-separate-envelope"
+  },
+  "base_parallelism": {
+    "tensor": 1,
+    "pipeline": 1,
+    "data": 1,
+    "expert": 1
+  },
+  "communication_contract": {
+    "supported_operation_algorithms": [
+      {
+        "operation": "all-reduce",
+        "algorithm_hint": "ring",
+        "scalar_payload_convention": "full-reduced-input-bytes-per-rank"
+      },
+      {
+        "operation": "all-to-allv",
+        "algorithm_hint": "pairwise",
+        "scalar_payload_convention": "bytes-per-ordered-source-destination-pair"
+      }
+    ],
+    "pair_payload_bytes_rule": "empty-table-uses-the-scalar-payload-convention",
+    "byte_floor_rule": "derive-peer-port-service-bytes-from-operation-algorithm-and-payload-convention-before-EQ4",
+    "rank_rule": "ranks-are-zero-through-participants-minus-one",
+    "placement_rule": "rank-i-maps-to-node-i-and-local-gpu-zero",
+    "locality": "cross-node",
+    "transport_class": "vendor-native-gpu-direct-rdma",
+    "unsupported_rule": "a-campaign-without-the-required-placement-or-transport-declares-communication-unsupported",
+    "channel_count_rule": "every-cell-declares-a-positive-integer-channel-count",
+    "channel_axis_rule": "at-four-participants-and-1048576-payload-bytes-train-uses-one-and-four-channels-validation-uses-two-and-test-uses-three"
+  },
+  "graph_cells": [
+    {
+      "id": "cp-train-r4-t128",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "train",
+      "requests": 4,
+      "prompt_tokens_per_request": 32,
+      "total_prompt_tokens": 128
+    },
+    {
+      "id": "cp-train-r4-t768",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "train",
+      "requests": 4,
+      "prompt_tokens_per_request": 192,
+      "total_prompt_tokens": 768
+    },
+    {
+      "id": "cp-train-r4-t2048",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "train",
+      "requests": 4,
+      "prompt_tokens_per_request": 512,
+      "total_prompt_tokens": 2048
+    },
+    {
+      "id": "cp-validation-r4-t512",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "validation",
+      "requests": 4,
+      "prompt_tokens_per_request": 128,
+      "total_prompt_tokens": 512
+    },
+    {
+      "id": "cp-test-r4-t1024",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "test",
+      "requests": 4,
+      "prompt_tokens_per_request": 256,
+      "total_prompt_tokens": 1024
+    },
+    {
+      "id": "md-train-b4-c128",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 4,
+      "context_tokens": 128,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-train-b4-c1024",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 4,
+      "context_tokens": 1024,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-train-b4-c8192",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 4,
+      "context_tokens": 8192,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-validation-b4-c512",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "validation",
+      "batch": 4,
+      "context_tokens": 512,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-test-b4-c2048",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "test",
+      "batch": 4,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "mc-train-b1-c2048",
+      "family": "moe-communication-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 1,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1,
+      "expert_participants": 4,
+      "parallelism_override": {"expert": 4}
+    },
+    {
+      "id": "mc-train-b16-c2048",
+      "family": "moe-communication-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 16,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1,
+      "expert_participants": 4,
+      "parallelism_override": {"expert": 4}
+    },
+    {
+      "id": "mc-train-b64-c2048",
+      "family": "moe-communication-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 64,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1,
+      "expert_participants": 4,
+      "parallelism_override": {"expert": 4}
+    },
+    {
+      "id": "mc-validation-b4-c2048",
+      "family": "moe-communication-decode",
+      "phase": "decode",
+      "split": "validation",
+      "batch": 4,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1,
+      "expert_participants": 4,
+      "parallelism_override": {"expert": 4}
+    },
+    {
+      "id": "mc-test-b8-c2048",
+      "family": "moe-communication-decode",
+      "phase": "decode",
+      "split": "test",
+      "batch": 8,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1,
+      "expert_participants": 4,
+      "parallelism_override": {"expert": 4}
+    }
+  ],
+  "communication_cells": [
+    {
+      "id": "comm-all-reduce-p4-b65536-ch2",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 2,
+      "split": "train",
+      "participants": 4,
+      "payload_bytes": 65536,
+      "axis_roles": ["payload"]
+    },
+    {
+      "id": "comm-all-reduce-p4-b16777216-ch2",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 2,
+      "split": "train",
+      "participants": 4,
+      "payload_bytes": 16777216,
+      "axis_roles": ["payload"]
+    },
+    {
+      "id": "comm-all-reduce-p4-b1048576-ch2",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 2,
+      "split": "validation",
+      "participants": 4,
+      "payload_bytes": 1048576,
+      "axis_roles": ["payload", "participants", "channel_count"]
+    },
+    {
+      "id": "comm-all-reduce-p4-b4194304-ch2",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 2,
+      "split": "test",
+      "participants": 4,
+      "payload_bytes": 4194304,
+      "axis_roles": ["payload"]
+    },
+    {
+      "id": "comm-all-reduce-p2-b1048576-ch2",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 2,
+      "split": "train",
+      "participants": 2,
+      "payload_bytes": 1048576,
+      "axis_roles": ["participants"]
+    },
+    {
+      "id": "comm-all-reduce-p8-b1048576-ch2",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 2,
+      "split": "train",
+      "participants": 8,
+      "payload_bytes": 1048576,
+      "axis_roles": ["participants"]
+    },
+    {
+      "id": "comm-all-reduce-p6-b1048576-ch2",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 2,
+      "split": "test",
+      "participants": 6,
+      "payload_bytes": 1048576,
+      "axis_roles": ["participants"]
+    },
+    {
+      "id": "comm-all-reduce-p4-b1048576-ch1",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 1,
+      "split": "train",
+      "participants": 4,
+      "payload_bytes": 1048576,
+      "axis_roles": ["channel_count"]
+    },
+    {
+      "id": "comm-all-reduce-p4-b1048576-ch4",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 4,
+      "split": "train",
+      "participants": 4,
+      "payload_bytes": 1048576,
+      "axis_roles": ["channel_count"]
+    },
+    {
+      "id": "comm-all-reduce-p4-b1048576-ch3",
+      "operation": "all-reduce",
+      "algorithm_hint": "ring",
+      "channel_count": 3,
+      "split": "test",
+      "participants": 4,
+      "payload_bytes": 1048576,
+      "axis_roles": ["channel_count"]
+    },
+    {
+      "id": "comm-all-to-allv-p4-b65536-ch2",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 2,
+      "split": "train",
+      "participants": 4,
+      "payload_bytes": 65536,
+      "pair_payload_bytes": [],
+      "axis_roles": ["payload"]
+    },
+    {
+      "id": "comm-all-to-allv-p4-b16777216-ch2",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 2,
+      "split": "train",
+      "participants": 4,
+      "payload_bytes": 16777216,
+      "pair_payload_bytes": [],
+      "axis_roles": ["payload"]
+    },
+    {
+      "id": "comm-all-to-allv-p4-b1048576-ch2",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 2,
+      "split": "validation",
+      "participants": 4,
+      "payload_bytes": 1048576,
+      "pair_payload_bytes": [],
+      "axis_roles": ["payload", "participants", "channel_count"]
+    },
+    {
+      "id": "comm-all-to-allv-p4-b4194304-ch2",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 2,
+      "split": "test",
+      "participants": 4,
+      "payload_bytes": 4194304,
+      "pair_payload_bytes": [],
+      "axis_roles": ["payload"]
+    },
+    {
+      "id": "comm-all-to-allv-p2-b1048576-ch2",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 2,
+      "split": "train",
+      "participants": 2,
+      "payload_bytes": 1048576,
+      "pair_payload_bytes": [],
+      "axis_roles": ["participants"]
+    },
+    {
+      "id": "comm-all-to-allv-p8-b1048576-ch2",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 2,
+      "split": "train",
+      "participants": 8,
+      "payload_bytes": 1048576,
+      "pair_payload_bytes": [],
+      "axis_roles": ["participants"]
+    },
+    {
+      "id": "comm-all-to-allv-p6-b1048576-ch2",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 2,
+      "split": "test",
+      "participants": 6,
+      "payload_bytes": 1048576,
+      "pair_payload_bytes": [],
+      "axis_roles": ["participants"]
+    },
+    {
+      "id": "comm-all-to-allv-p4-b1048576-ch1",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 1,
+      "split": "train",
+      "participants": 4,
+      "payload_bytes": 1048576,
+      "pair_payload_bytes": [],
+      "axis_roles": ["channel_count"]
+    },
+    {
+      "id": "comm-all-to-allv-p4-b1048576-ch4",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 4,
+      "split": "train",
+      "participants": 4,
+      "payload_bytes": 1048576,
+      "pair_payload_bytes": [],
+      "axis_roles": ["channel_count"]
+    },
+    {
+      "id": "comm-all-to-allv-p4-b1048576-ch3",
+      "operation": "all-to-allv",
+      "algorithm_hint": "pairwise",
+      "channel_count": 3,
+      "split": "test",
+      "participants": 4,
+      "payload_bytes": 1048576,
+      "pair_payload_bytes": [],
+      "axis_roles": ["channel_count"]
+    }
+  ],
+  "mixed_matrix": {
+    "start_pattern": "simultaneous",
+    "canonical_member_order": ["compute", "memory", "communication"],
+    "arms": [
+      {"id": "mix-compute", "members": ["compute"]},
+      {"id": "mix-memory", "members": ["memory"]},
+      {"id": "mix-communication", "members": ["communication"]},
+      {"id": "mix-compute-memory", "members": ["compute", "memory"]},
+      {"id": "mix-compute-communication", "members": ["compute", "communication"]},
+      {"id": "mix-memory-communication", "members": ["memory", "communication"]},
+      {
+        "id": "mix-compute-memory-communication",
+        "members": ["compute", "memory", "communication"]
+      }
+    ],
+    "widths": [
+      {"value": 1, "split": "train"},
+      {"value": 4, "split": "train"},
+      {"value": 2, "split": "validation"},
+      {"value": 3, "split": "test"}
+    ],
+    "cell_id_rule": "<arm-id>-w<width>",
+    "width_semantics": "number-of-copies-per-arm-member",
+    "copy_id_rule": "<cell-id>:<member>:<rep>",
+    "flattening_order": "member-major-in-canonical-member-order-then-zero-based-repetition-ordinal",
+    "timestamp_rule": "all-copies-have-identical-submitted-at-and-eligible-at",
+    "device_rule": "all-copies-share-one-device-instance",
+    "batch_order_rule": "flattened-copy-tuple-is-the-exact-BatchKernelService-request-order",
+    "representative_selection": {
+      "compute": "greatest-authored-flops-among-captured-dense-gemm-bindings",
+      "memory": "greatest-authored-compulsory-bytes-among-captured-decode-attention-or-streaming-bindings",
+      "communication": "greatest-logical-payload-among-captured-collective-bindings",
+      "tie_break": "canonical-implementation-identity"
+    }
+  },
+  "split_rules": {
+    "kernel_unit": ["implementation_id", "shape_vector"],
+    "kernel_membership_precedence": ["train", "validation", "test"],
+    "duplicate_rule": "assign-every-occurrence-to-the-first-present-split-in-precedence-order",
+    "repetition_rule": "all-repetitions-of-one-cell-stay-in-one-split",
+    "graph_unit": ["template_graph_sha256", "case_id"],
+    "support_rule": "derive-support-from-train-only",
+    "validation_rule": "select-model-form-source-policy-and-uncertainty-only",
+    "test_rule": "open-only-after-fit-and-validation-choices-are-frozen",
+    "tail_rule": "stable-singleton-exact-entry-only-with-no-interpolation-or-concurrent-sharing",
+    "mandatory_test_rule": "at-least-one-unique-test-unit-per-claimed-family"
+  }
+}

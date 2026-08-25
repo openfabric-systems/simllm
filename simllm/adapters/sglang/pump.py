@@ -19,7 +19,7 @@ interleaves ``llm.llm_engine.step()``.
 SGLang ships in-tree precedent for constructing the scheduler directly:
 ``srt/ray/scheduler_actor.py`` does it with no ``mp.Process`` at all.
 
-Three facts about the pinned commit ``8f2a3ad`` are load bearing here and are
+Three facts about the pinned commit ``bfeae4e`` are load bearing here and are
 recorded so a future reader can re-verify them:
 
 - ``event_loop_normal`` reads requests, calls ``process_input_requests``, plans

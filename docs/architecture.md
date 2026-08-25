@@ -31,7 +31,7 @@ requests ran, how many prefill/decode tokens each, how many tokens were served
 from cache) goes to the core, and a **step result** (simulated step latency,
 flow completions) comes back.
 
-**vLLM (v1 engine, pinned to v0.26.0):** no fork needed. The engine's step
+**vLLM (v1 engine, pinned to v0.27.1):** no fork needed. The engine's step
 loop is `EngineCore.step()`, i.e. `Scheduler.schedule()` producing a
 `SchedulerOutput`, then `Executor.execute_model(scheduler_output)` returning
 a `ModelRunnerOutput`, then `Scheduler.update_from_output()`. The executor

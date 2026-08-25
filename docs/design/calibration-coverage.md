@@ -84,9 +84,9 @@ never silently bumped past the pins.
 
 | Column | Identity | State |
 |---|---|---|
-| granite-3.0-1b-a400m-instruct | `ibm-granite/granite-3.0-1b-a400m-instruct`, revision `ffec3c35`, pinned with hashes in the [transformer-dag-v1 suite](../../offline/calibration/suites/transformer-dag-v1/suite.json) | Offline denominators published by [model_extraction_v1](../../examples/model_extraction_v1/RESULTS.md): [vLLM inventory](../../offline/calibration/model-inventories/e74e995a89588a304aa852593d3505cfab9a94d2c068c82dbe9c776da7119af9.json) and [SGLang inventory](../../offline/calibration/model-inventories/147fe4398d5615afe7954c9199134de37f706da2cecda8fc37d6514ad936c54c.json); the anchored first column and the small-MoE control for the beyond-node-memory route |
-| Qwen3.8-27B | `Qwen/Qwen3.8-27B` (open Apache 2.0 dense multimodal checkpoint, 27.78B parameters, architecture `Qwen3_5ForConditionalGeneration`); exact revision and hashes pinned at its extraction freeze | Planned (COMP-54). The architecture is present in both pinned framework registries (inspection 2026-08-24); the extraction freeze owns the binding verification |
-| Kimi K3 | `moonshotai/Kimi-K3` (open-weight 2.8T-parameter MoE, 104B active, 896 experts with 16 selected, hybrid linear attention, native MXFP4 checkpoint, released 2026-07); exact revision and hashes pinned at its extraction freeze | Blocked on the pin bump in flight: the `KimiK3ForConditionalGeneration` architecture postdates both current framework pins (registry inspection 2026-08-24), and the maintainer authorized the bump the same day; VLLM-30 and SGL-32 own it, and the column unblocks when both land |
+| granite-3.0-1b-a400m-instruct | `ibm-granite/granite-3.0-1b-a400m-instruct`, revision `ffec3c35`, pinned with hashes in the [transformer-dag-v1 suite](../../offline/calibration/suites/transformer-dag-v1/suite.json) | Offline denominators published by [model_extraction_v1](../../examples/model_extraction_v1/RESULTS.md) and the [framework pin bump](../../examples/framework_pin_bump_v1/RESULTS.md): vLLM [v0.26.0](../../offline/calibration/model-inventories/e74e995a89588a304aa852593d3505cfab9a94d2c068c82dbe9c776da7119af9.json) and [v0.27.1](../../offline/calibration/model-inventories/33758c3c71d5dacae8f6a82cb937f5e70b0d28eaa7c2358c13baccbd8d8725e2.json); SGLang [`8f2a3ad`](../../offline/calibration/model-inventories/147fe4398d5615afe7954c9199134de37f706da2cecda8fc37d6514ad936c54c.json) and [`bfeae4e`](../../offline/calibration/model-inventories/3998b208bef6498709a9a4b6b2ca2e1825a9db54918186f4fc4387a9ee2b9b9a.json). This is the anchored first column and the small-MoE control for the beyond-node-memory route |
+| Qwen3.8-27B | `Qwen/Qwen3.8-27B` (open Apache 2.0 dense multimodal checkpoint, 27.78B parameters, architecture `Qwen3_5ForConditionalGeneration`); exact revision and hashes pinned at its extraction freeze | Planned (COMP-54). The architecture is present in both pinned framework registries (pin-bump verification 2026-08-25); the extraction freeze owns the binding verification |
+| Kimi K3 | `moonshotai/Kimi-K3` (open-weight 2.8T-parameter MoE, 104B active, 896 experts with 16 selected, hybrid linear attention, native MXFP4 checkpoint, released 2026-07); exact revision and hashes pinned at its extraction freeze | Planned behind COMP-59. Both pinned registries resolve `KimiK3ForConditionalGeneration` through their native Kimi K3 implementations (pin-bump verification 2026-08-25); COMP-54 still owns exact checkpoint binding, and no Kimi weights were downloaded or executed by the pin bump |
 
 Closed-weight models are out of scope regardless of interest: a column
 requires open weights because capture executes the real checkpoint, so the
@@ -141,22 +141,22 @@ format keeps cells honest per target: a native MXFP4 checkpoint executes
 different kernel implementations on SM80 than on SM90, and the dispatch
 signature separates them.
 
-## vLLM matrix (pinned v0.26.0)
+## vLLM matrix (pinned v0.27.1)
 
 | Target | granite-3.0-1b-a400m-instruct | Qwen3.8-27B | Kimi K3 |
 |---|---|---|---|
-| A100-SXM4-80GB | **blocked**: COMP-53 amendment, then the COMP-45 protocol, then capture (VLLM-12, COMP-6). Retained non-filling evidence exists: the void [a100_kernel_constants_v1](../../examples/a100_kernel_constants_v1/RESULTS.md) and [a100_graph_launch_v1](../../examples/a100_graph_launch_v1/RESULTS.md) measured granite kernel families as microbenchmarks outside the framework chain | **planned**: follows the granite cells; single-GPU fit (about 56 GB of BF16 weights on an 80 GB part) with TP 1, 2 and 4 sweeps on the NV4 mesh; pin support verified at the extraction freeze | **blocked**: the pin bump in flight (VLLM-30), then the COMP-59 envelope on the MXFP4-on-SM80 lane |
-| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification; single-GPU fit with headroom | **blocked**: the pin bump in flight (VLLM-30), then the COMP-59 envelope on SM90 |
+| A100-SXM4-80GB | **blocked**: COMP-53 amendment, then the COMP-45 protocol, then capture (VLLM-12, COMP-6). Retained non-filling evidence exists: the void [a100_kernel_constants_v1](../../examples/a100_kernel_constants_v1/RESULTS.md) and [a100_graph_launch_v1](../../examples/a100_graph_launch_v1/RESULTS.md) measured granite kernel families as microbenchmarks outside the framework chain | **planned**: follows the granite cells; single-GPU fit (about 56 GB of BF16 weights on an 80 GB part) with TP 1, 2 and 4 sweeps on the NV4 mesh; pin support verified at the extraction freeze | **blocked**: COMP-59 must qualify the reduced-depth envelope on the MXFP4-on-SM80 lane |
+| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification; single-GPU fit with headroom | **blocked**: COMP-59 must qualify the reduced-depth envelope on SM90 |
 | GTX 1660 Ti (TU116) | **anchor**: [compute_fidelity_v1](../../examples/compute_fidelity_v1/RESULTS.md) and [host_step_cost_v1](../../examples/host_step_cost_v1/RESULTS.md); never fills | not planned | not planned |
 | H100, B100, B200 | **derived** (COMP-52); fail closed today | **derived** (COMP-52) | **derived** (COMP-52) |
 | AMD slot | unbound | unbound | unbound |
 
-## SGLang matrix (pinned main-branch commit)
+## SGLang matrix (pinned main commit bfeae4e)
 
 | Target | granite-3.0-1b-a400m-instruct | Qwen3.8-27B | Kimi K3 |
 |---|---|---|---|
-| A100-SXM4-80GB | **planned**: the SGL-10 producer follows the vLLM cell on the same qualified environment | **planned**: follows the vLLM cell; pin support verified at the extraction freeze | **blocked**: the pin bump in flight (SGL-32), then the COMP-59 envelope after the vLLM route lands |
-| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification | **blocked**: the pin bump in flight (SGL-32), then the COMP-59 envelope on SM90 |
+| A100-SXM4-80GB | **planned**: the SGL-10 producer follows the vLLM cell on the same qualified environment | **planned**: follows the vLLM cell; pin support verified at the extraction freeze | **blocked**: COMP-59 must qualify the reduced-depth envelope after the vLLM route lands |
+| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification | **blocked**: COMP-59 must qualify the reduced-depth envelope on SM90 |
 | GTX 1660 Ti (TU116) | **anchor**: [sglang_host_step_v1](../../examples/sglang_host_step_v1/RESULTS.md) Turing host profiles; never fills | not planned | not planned |
 | H100, B100, B200 | **derived** (COMP-52); fail closed today | **derived** (COMP-52) | **derived** (COMP-52) |
 | AMD slot | unbound | unbound | unbound |
@@ -175,9 +175,8 @@ reachable GPUs, and the sidecar is demand-driven.
    then repeat the granite cells.
 4. Qwen3.8-27B cells follow the granite cells on each qualified target,
    after its extraction freeze verifies pinned-framework support.
-5. Kimi K3 cells enter through the beyond-node-memory route once the
-   maintainer pin decision admits the architecture and COMP-59 lands, with
-   the granite reduced-depth control validated first.
+5. Kimi K3 cells enter through the beyond-node-memory route after COMP-59
+   lands, with the granite reduced-depth control validated first.
 6. Further columns by nomination: extraction first, then rows in the
    same order.
 7. The Accel-Sim sidecar (COMP-51, Wave 1B) proceeds only when a
