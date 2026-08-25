@@ -1534,6 +1534,16 @@ default-constructed arm are unchanged.
   ledger total and the published outcomes agree after any prefix of a prepared
   batch is consumed, and the serial sink stays byte-identical. Trigger: a study
   uses the persistent sink with a registration model, which none does today.
+- TRAF-61 (Completeness; P1; M): render the prefill-to-decode KV transfer of
+  the disaggregated session as fabric traffic. Per-request KV bytes derive
+  from the model geometry and the request's context length, sourced at the
+  prefill rank set and sunk at the decode rank set per the placement, and
+  ride the existing flow rendering and GOAL machinery with no second traffic
+  authority. A declared-constant bypass arm prices the handoff without the
+  fabric and its off path preserves every accepted artifact byte for byte.
+  Composes with CORE-51's session and PLACE-4's placement; per-pair sizes
+  and chunking follow the same conventions as the existing collective
+  renderers.
 
 ### Uncategorized
 
