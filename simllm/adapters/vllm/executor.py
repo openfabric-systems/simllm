@@ -56,6 +56,8 @@ Environment variable            Meaning (default)
                                 ``granite-dbo`` enables the audited Granite
                                 MoE observation producer; ``off`` preserves
                                 the absent-observation path (``off``).
+``SIMLLM_VLLM_POOL_ROLE``       declares this engine instance as ``single``,
+                                ``prefill``, or ``decode`` (``single``).
 ``SIMLLM_VLLM_WORKER_MODE``     ``skeleton`` enables the flagged
                                 :class:`simllm.adapters.vllm.SimWorker` path.
                                 Any other value is rejected when that worker
@@ -298,6 +300,7 @@ class SimExecutorConfig:
     step_records_path: str | None = None
     replay_run_path: str | None = None
     observed_schedule: str = OBSERVED_SCHEDULE_OFF
+    pool_role: str = "single"
 
     def __post_init__(self) -> None:
         if self.mode not in ("virtual", "paced"):
@@ -307,6 +310,11 @@ class SimExecutorConfig:
             raise ValueError(
                 "SIMLLM_VLLM_OBSERVED_SCHEDULE must be one of "
                 f"{known}; got {self.observed_schedule!r}"
+            )
+        if self.pool_role not in ("single", "prefill", "decode"):
+            raise ValueError(
+                "SIMLLM_VLLM_POOL_ROLE must be single, prefill, or decode, "
+                f"got {self.pool_role!r}"
             )
         if self.kv_memory_bytes <= 0:
             raise ValueError("SIMLLM_VLLM_KV_MEMORY_BYTES must be positive")
@@ -362,6 +370,9 @@ class SimExecutorConfig:
                 )
                 or OBSERVED_SCHEDULE_OFF
             ).lower(),
+            pool_role=(
+                _env_str(env, "SIMLLM_VLLM_POOL_ROLE", "single") or "single"
+            ).lower(),
         )
 
     def gpu_spec(self) -> GpuSpec:
@@ -391,6 +402,7 @@ class SimExecutorHooks:
     gpu: GpuSpec | None = None
     host_model: HostInitiationModel | None = None
     config: SimExecutorConfig | None = None
+    clock: VirtualClock | None = None
 
 
 _HOOKS = SimExecutorHooks()
@@ -405,6 +417,7 @@ def configure(
     gpu: GpuSpec | None = None,
     host_model: HostInitiationModel | None = None,
     config: SimExecutorConfig | None = None,
+    clock: VirtualClock | None = None,
 ) -> SimExecutorHooks:
     """Set the hooks the next :class:`SimExecutor` in this process picks up.
 
@@ -421,6 +434,10 @@ def configure(
         _HOOKS.host_model = host_model
     if config is not None:
         _HOOKS.config = config
+    if clock is not None:
+        if not isinstance(clock, VirtualClock):
+            raise TypeError("clock must be a VirtualClock")
+        _HOOKS.clock = clock
     return _HOOKS
 
 
@@ -437,6 +454,7 @@ def reset_configuration() -> SimExecutorHooks:
     _HOOKS.gpu = None
     _HOOKS.host_model = None
     _HOOKS.config = None
+    _HOOKS.clock = None
     return _HOOKS
 
 
@@ -1494,6 +1512,7 @@ class SimExecutor(_ExecutorBase):
         gpu: GpuSpec | None = None,
         host_model: HostInitiationModel | None = None,
         config: SimExecutorConfig | None = None,
+        clock: VirtualClock | None = None,
     ) -> None:
         if _VLLM_IMPORT_ERROR is not None:
             raise _missing_vllm_error()
@@ -1534,6 +1553,7 @@ class SimExecutor(_ExecutorBase):
             fallback_latency=self._estimate_latency,
             host_model=self.host_model,
             gpu=self.gpu,
+            clock=clock if clock is not None else _HOOKS.clock,
         )
         #: every translated step, in order; the offline mode renders these
         self.step_records = self._runtime.step_records

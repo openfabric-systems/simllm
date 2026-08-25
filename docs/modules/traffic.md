@@ -875,6 +875,14 @@ into several executed artifacts and a real `htsim_rnic` process decides each
 fabric term. Every later step, every GOAL artifact digest and the
 default-constructed arm are unchanged.
 
+The declared-constant half of TRAF-61 is live in the CORE-51 session. One
+handoff record derives 393,216 or 786,432 bytes from the Granite KV geometry
+at prompt lengths 8 and 16, advances the shared clock by the selected 100 or
+200 microseconds, and emits no backend run or packet artifact. Doubling the
+constant moves every TTFT by exactly 100,000,000 ps and moves no TPOT. The
+fabric-rendered half remains TRAF-62, so TRAF-61 stays open; see
+[the disaggregated-session results](../../examples/pd_session_v1/RESULTS.md).
+
 ## Open tasks
 
 ### Precision
@@ -1543,7 +1551,20 @@ default-constructed arm are unchanged.
   fabric and its off path preserves every accepted artifact byte for byte.
   Composes with CORE-51's session and PLACE-4's placement; per-pair sizes
   and chunking follow the same conventions as the existing collective
-  renderers.
+  renderers. The declared-constant arm is delivered with exact KV-byte
+  accounting, one timing authority and zero backend runs. TRAF-62 owns the
+  remaining packet-rendered half, so this task stays open.
+- TRAF-62 (Completeness; P1; L): render the disaggregated session's KV handoff
+  through the existing flow and GOAL machinery. Aggregate bytes come from the
+  same model geometry and context authority as the accepted constant arm;
+  source-to-destination pairing and chunks follow the repository's existing
+  transfer conventions. Charge the declared PCIe submission term before
+  packet service and complete the handoff at the last required arrival.
+  Acceptance sweeps context length and link bandwidth, proves exact byte and
+  endpoint conservation, and moves TTFT by the exact signed difference from
+  the constant arm without moving decode TPOT. Only the explicit packet arm
+  may emit backend artifacts; constant and off arms must preserve their
+  accepted bytes and timestamps exactly. Depends on PLACE-5.
 
 ### Uncategorized
 

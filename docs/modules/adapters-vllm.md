@@ -125,6 +125,22 @@ executor only when the engine core runs in the same process (`LLM(...)`, or
 independent in-process engines to clear every accumulated hook. An explicit
 constructor config takes priority over hooks and the environment.
 
+Disaggregated session driver (`simllm/adapters/vllm/pd_session.py`):
+
+- `VllmDisaggregatedSession` constructs separate in-process prefill and decode
+  engines with pool-local adapter configuration, calls
+  `reset_configuration()` between constructions, and injects one shared
+  virtual clock into every engine.
+- The pinned vLLM v0.27.1 scheduler-side KV connector is the real control
+  seam. It gates producer completion and consumer external-token admission,
+  while an explicit core KV-handoff event is the sole transfer-time authority.
+  Pool-local request IDs stay distinct and one stable session request ID is
+  carried in connector metadata. Simulated workers have no paged KV tensors,
+  so worker tensor transfer is explicitly false rather than fabricated.
+- Each engine's scheduler remains its only batching authority. The delivered
+  first slice drives one request at a time; concurrent multi-request admission
+  remains VLLM-35.
+
 Flagged worker-boundary skeleton
 (`simllm/adapters/vllm/worker.py`):
 
@@ -599,6 +615,15 @@ inventory recorded in
 [the pin-bump results](../../examples/framework_pin_bump_v1/RESULTS.md); the
 v0.26.0 inventory and its study remain unchanged historical evidence.
 
+The CORE-51 first slice reaches the real vLLM v0.27.1 disaggregated-prefill
+control seam under `SimExecutor`. One eight-worker prefill engine hands its
+stable session request to one eight-worker decode engine through the
+scheduler-side connector and the shared virtual clock. All four frozen TTFT
+decompositions have 0 ps residual, and all six behavioral relations pass.
+The workers deliberately move no KV tensor because simulated GPUs allocate no
+paged KV storage. Concurrent multi-request scheduling remains VLLM-35; see
+[the disaggregated-session results](../../examples/pd_session_v1/RESULTS.md).
+
 ## Open tasks
 
 ### Precision
@@ -653,6 +678,17 @@ v0.26.0 inventory and its study remain unchanged historical evidence.
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
 
 ### Completeness
+
+- VLLM-35 (Completeness; P1; L): admit multiple in-flight session requests to
+  the prefill and decode pools while each stock vLLM scheduler remains the sole
+  batching authority for its pool. Preserve one stable session identity across
+  both pool-local scheduler identities and allow independent producer
+  completions to make consumers eligible without serializing unrelated
+  requests in the driver. Acceptance sweeps offered load, prompt length and
+  small prefill-to-decode engine ratios, observes a genuine multi-request
+  scheduler batch in both roles, and conserves every admission, handoff and
+  terminal token exactly. The one-request-at-a-time CORE-51 slice is the
+  explicit baseline and must retain its accepted timestamps and artifacts.
 
 - VLLM-25 (Completeness; P2; M): support shared-expert and mixed dense and
   routed MoE geometries in the config reader. `model_dims_from_vllm_config`
