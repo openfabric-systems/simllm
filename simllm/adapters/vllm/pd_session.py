@@ -35,10 +35,11 @@ from simllm.compute import (
     RooflineProvider,
 )
 from simllm.core import (
-    DeclaredKvHandoffPolicy,
+    KV_HANDOFF_AUTHORITY,
     DisaggregatedRequestTimeline,
     KvHandoffEvent,
     KvHandoffGeometry,
+    KvHandoffPolicy,
     ServingPoolRole,
     StepRecord,
     VirtualClock,
@@ -90,7 +91,7 @@ class VllmPdSessionConfig:
     workdir: Path
     dims: ModelDims
     handoff_geometry: KvHandoffGeometry
-    handoff_policy: DeclaredKvHandoffPolicy
+    handoff_policy: KvHandoffPolicy
     model_revision: str | None = None
     prefill_engines: int = 1
     decode_engines: int = 1
@@ -114,8 +115,8 @@ class VllmPdSessionConfig:
             raise TypeError("dims must be ModelDims")
         if not isinstance(self.handoff_geometry, KvHandoffGeometry):
             raise TypeError("handoff_geometry must be KvHandoffGeometry")
-        if not isinstance(self.handoff_policy, DeclaredKvHandoffPolicy):
-            raise TypeError("handoff_policy must be DeclaredKvHandoffPolicy")
+        if not isinstance(self.handoff_policy, KvHandoffPolicy):
+            raise TypeError("handoff_policy must implement KvHandoffPolicy")
         for name in (
             "prefill_engines",
             "decode_engines",
@@ -675,7 +676,7 @@ class VllmDisaggregatedSession:
         self,
         state: _ConcurrentRequestState,
         output: Any,
-        policy: DeclaredKvHandoffPolicy,
+        policy: KvHandoffPolicy,
     ) -> None:
         tokens = tuple(output.outputs[0].token_ids)
         if len(tokens) != 1 or not output.finished:
@@ -709,7 +710,6 @@ class VllmDisaggregatedSession:
             state.prefill_internal_id,
         )
         state.bootstrap_token_id = tokens[0]
-        state.kv_transfer_params = dict(kv_params)
         state.handoff = policy.schedule(
             submitted_at_ps=self.clock.now_ps,
             request_id=request.request_id,
@@ -717,6 +717,15 @@ class VllmDisaggregatedSession:
                 len(request.prompt_token_ids)
             ),
         )
+        state.kv_transfer_params = dict(kv_params)
+        if state.handoff.authority != KV_HANDOFF_AUTHORITY:
+            state.kv_transfer_params.update(
+                {
+                    "timing_authority": state.handoff.authority,
+                    "pricing_arm": state.handoff.pricing_arm,
+                    "handoff_completed_at_ps": state.handoff.completed_at_ps,
+                }
+            )
         self.handoffs.append(state.handoff)
         if sum(
             event.request_id == request.request_id for event in self.handoffs
@@ -750,7 +759,7 @@ class VllmDisaggregatedSession:
         self,
         engine: VllmPoolEngine,
         states: Sequence[_ConcurrentRequestState],
-        policy: DeclaredKvHandoffPolicy,
+        policy: KvHandoffPolicy,
     ) -> tuple[str, ...]:
         before_records = len(engine.executor.step_records)
         outputs = engine.llm.llm_engine.step()
@@ -800,7 +809,7 @@ class VllmDisaggregatedSession:
         self,
         requests: Sequence[VllmPdRequest],
         *,
-        handoff_policy: DeclaredKvHandoffPolicy | None = None,
+        handoff_policy: KvHandoffPolicy | None = None,
     ) -> VllmPdConcurrentResult:
         """Drive several requests while the two stock schedulers own batching."""
 
@@ -820,8 +829,8 @@ class VllmDisaggregatedSession:
         if min(request.admitted_at_ps for request in rows) < self.clock.now_ps:
             raise ValueError("request admission cannot precede the session clock")
         policy = self.config.handoff_policy if handoff_policy is None else handoff_policy
-        if not isinstance(policy, DeclaredKvHandoffPolicy):
-            raise TypeError("handoff_policy must be DeclaredKvHandoffPolicy")
+        if not isinstance(policy, KvHandoffPolicy):
+            raise TypeError("handoff_policy must implement KvHandoffPolicy")
 
         states = tuple(
             _ConcurrentRequestState(
@@ -961,7 +970,7 @@ class VllmDisaggregatedSession:
         *,
         decode_output_tokens: int,
         admitted_at_ps: int | None = None,
-        handoff_policy: DeclaredKvHandoffPolicy | None = None,
+        handoff_policy: KvHandoffPolicy | None = None,
     ) -> VllmPdRequestResult:
         """Run one request through prefill, handoff, and decode in order."""
 
@@ -991,8 +1000,8 @@ class VllmDisaggregatedSession:
             raise ValueError("admitted_at_ps cannot precede the session clock")
         self.clock.advance_to(admitted)
         policy = self.config.handoff_policy if handoff_policy is None else handoff_policy
-        if not isinstance(policy, DeclaredKvHandoffPolicy):
-            raise TypeError("handoff_policy must be DeclaredKvHandoffPolicy")
+        if not isinstance(policy, KvHandoffPolicy):
+            raise TypeError("handoff_policy must implement KvHandoffPolicy")
         self._request_ids.add(request_id)
 
         prefill = self.prefill_engines[self._next_prefill]
@@ -1049,6 +1058,15 @@ class VllmDisaggregatedSession:
         self.handoffs.append(handoff)
         if sum(event.request_id == request_id for event in self.handoffs) != 1:
             raise RuntimeError("request emitted other than one KV handoff")
+        if handoff.authority != KV_HANDOFF_AUTHORITY:
+            kv_params = dict(kv_params)
+            kv_params.update(
+                {
+                    "timing_authority": handoff.authority,
+                    "pricing_arm": handoff.pricing_arm,
+                    "handoff_completed_at_ps": handoff.completed_at_ps,
+                }
+            )
 
         decode = self.decode_engines[self._next_decode]
         self._next_decode = (self._next_decode + 1) % len(self.decode_engines)

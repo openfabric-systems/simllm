@@ -16,6 +16,7 @@ from simllm.adapters.vllm.pd_session import (
 )
 from simllm.core import (
     KV_HANDOFF_AUTHORITY,
+    PACKET_KV_HANDOFF_AUTHORITY,
     DeclaredKvHandoffPolicy,
     DisaggregatedRequestTimeline,
     KvHandoffEvent,
@@ -121,6 +122,36 @@ def test_timeline_reduces_exact_ttft_and_decode_only_tpot():
     assert timeline.ttft_ps == 165
     assert timeline.tpot_ps == Fraction(105, 3)
     assert timeline.to_json()["decomposition"]["total_ps"] == 165
+
+
+def test_packet_handoff_submission_and_service_both_reach_ttft():
+    handoff = KvHandoffEvent(
+        request_id="request-packet",
+        kv_bytes=393_216,
+        submitted_at_ps=110,
+        eligible_at_ps=130,
+        started_at_ps=130,
+        finished_at_ps=160,
+        completed_at_ps=160,
+        pricing_arm="packet",
+        authority=PACKET_KV_HANDOFF_AUTHORITY,
+    )
+
+    timeline = DisaggregatedRequestTimeline(
+        request_id="request-packet",
+        admitted_at_ps=10,
+        prefill_eligible_at_ps=20,
+        prefill_completed_at_ps=110,
+        handoff=handoff,
+        decode_eligible_at_ps=160,
+        decode_token_completed_at_ps=(200, 230),
+    )
+
+    assert handoff.submission_ps == 20
+    assert handoff.service_ps == 30
+    assert handoff.total_ps == 50
+    assert timeline.decomposition_total_ps == timeline.ttft_ps == 190
+    assert timeline.to_json()["decomposition"]["handoff_ps"] == 50
 
 
 def test_timeline_rejects_a_second_timing_story():

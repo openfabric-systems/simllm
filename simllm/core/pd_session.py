@@ -11,12 +11,15 @@ from __future__ import annotations
 import enum
 from dataclasses import dataclass
 from fractions import Fraction
+from typing import Protocol, runtime_checkable
 
 from simllm.core.clock import VirtualClock
 
 PD_SESSION_SCHEMA = "simllm-pd-session-result-v1"
 KV_HANDOFF_AUTHORITY = "simllm-declared-kv-handoff-v1"
-KV_HANDOFF_ARMS = ("off", "declared-constant")
+PACKET_KV_HANDOFF_AUTHORITY = "simllm-packet-kv-handoff-v1"
+KV_HANDOFF_AUTHORITIES = (KV_HANDOFF_AUTHORITY, PACKET_KV_HANDOFF_AUTHORITY)
+KV_HANDOFF_ARMS = ("off", "declared-constant", "packet")
 
 
 def _nonnegative_int(name: str, value: object) -> int:
@@ -113,16 +116,29 @@ class KvHandoffEvent:
             raise ValueError("KV handoff timestamps must be monotonic")
         if self.pricing_arm not in KV_HANDOFF_ARMS:
             raise ValueError(f"pricing_arm must be one of {KV_HANDOFF_ARMS}")
-        if self.authority != KV_HANDOFF_AUTHORITY:
-            raise ValueError(f"authority must be {KV_HANDOFF_AUTHORITY!r}")
+        if self.authority not in KV_HANDOFF_AUTHORITIES:
+            raise ValueError(f"authority must be one of {KV_HANDOFF_AUTHORITIES}")
         if self.queue_wait_ps != 0:
-            raise ValueError("the declared KV handoff has no internal queue")
+            raise ValueError("the KV handoff has no internal queue")
         if self.visibility_ps != 0:
-            raise ValueError("the declared KV handoff has no visibility tail")
-        if self.pricing_arm == "off" and self.service_ps != 0:
-            raise ValueError("the off KV handoff arm must have zero service")
-        if self.pricing_arm == "declared-constant" and self.service_ps == 0:
-            raise ValueError("the declared-constant KV handoff must have service")
+            raise ValueError("the KV handoff has no visibility tail")
+        if self.pricing_arm == "off":
+            if self.authority != KV_HANDOFF_AUTHORITY or self.total_ps != 0:
+                raise ValueError("the off KV handoff arm must be a declared identity")
+        elif self.pricing_arm == "declared-constant":
+            if self.authority != KV_HANDOFF_AUTHORITY:
+                raise ValueError("the constant arm must retain declared authority")
+            if self.submission_ps != 0 or self.service_ps == 0:
+                raise ValueError("the declared-constant handoff must be pure service")
+        else:
+            if self.authority != PACKET_KV_HANDOFF_AUTHORITY:
+                raise ValueError("the packet arm must carry packet authority")
+            if self.submission_ps == 0 or self.service_ps == 0:
+                raise ValueError("the packet arm needs submission and packet service")
+
+    @property
+    def submission_ps(self) -> int:
+        return self.eligible_at_ps - self.submitted_at_ps
 
     @property
     def queue_wait_ps(self) -> int:
@@ -135,6 +151,33 @@ class KvHandoffEvent:
     @property
     def visibility_ps(self) -> int:
         return self.completed_at_ps - self.finished_at_ps
+
+    @property
+    def total_ps(self) -> int:
+        return self.completed_at_ps - self.submitted_at_ps
+
+
+@runtime_checkable
+class KvHandoffPolicy(Protocol):
+    """Narrow scheduling surface shared by constant and packet arms."""
+
+    def apply(
+        self,
+        clock: VirtualClock,
+        *,
+        request_id: str,
+        kv_bytes: int,
+    ) -> KvHandoffEvent:
+        """Apply one handoff to the caller's sole virtual clock."""
+
+    def schedule(
+        self,
+        *,
+        submitted_at_ps: int,
+        request_id: str,
+        kv_bytes: int,
+    ) -> KvHandoffEvent:
+        """Schedule one handoff without advancing a shared clock."""
 
 
 @dataclass(frozen=True)
@@ -267,7 +310,7 @@ class DisaggregatedRequestTimeline:
         return (
             self.prefill_queue_ps
             + self.prefill_service_ps
-            + self.handoff.service_ps
+            + self.handoff.total_ps
             + self.decode_admission_wait_ps
             + self.decode_first_token_service_ps
         )
@@ -317,7 +360,7 @@ class DisaggregatedRequestTimeline:
             "decomposition": {
                 "prefill_queue_ps": self.prefill_queue_ps,
                 "prefill_service_ps": self.prefill_service_ps,
-                "handoff_ps": self.handoff.service_ps,
+                "handoff_ps": self.handoff.total_ps,
                 "decode_admission_wait_ps": self.decode_admission_wait_ps,
                 "decode_first_token_service_ps": self.decode_first_token_service_ps,
                 "total_ps": self.decomposition_total_ps,
@@ -327,11 +370,14 @@ class DisaggregatedRequestTimeline:
 
 __all__ = [
     "KV_HANDOFF_ARMS",
+    "KV_HANDOFF_AUTHORITIES",
     "KV_HANDOFF_AUTHORITY",
+    "PACKET_KV_HANDOFF_AUTHORITY",
     "PD_SESSION_SCHEMA",
     "DeclaredKvHandoffPolicy",
     "DisaggregatedRequestTimeline",
     "KvHandoffEvent",
     "KvHandoffGeometry",
+    "KvHandoffPolicy",
     "ServingPoolRole",
 ]

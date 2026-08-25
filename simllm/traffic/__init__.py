@@ -83,6 +83,12 @@ from simllm.traffic.execution_goal import (
     render_serial_execution_graph_goal,
     verify_execution_goal_projection,
 )
+from simllm.traffic.kv_handoff import (
+    DEFAULT_PACKET_KV_TAG,
+    PACKET_KV_HANDOFF_SCHEMA,
+    PacketKvHandoffArtifact,
+    PacketKvHandoffPolicy,
+)
 from simllm.traffic.locality import (
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     ClassifiedCommunicationPhase,
@@ -174,6 +180,7 @@ __all__ = [
     "DECLARED_NCCL_CHANNEL_REGISTRATION_COST",
     "DEFAULT_COLLECTIVE_PLAN_BASE_TAG",
     "DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND",
+    "DEFAULT_PACKET_KV_TAG",
     "EXPERT_PARALLEL_TP_ALLREDUCE_SITES",
     "FABRIC_RING_STEP_HIGH_PS",
     "FABRIC_RING_STEP_LOW_PS",
@@ -190,6 +197,7 @@ __all__ = [
     "OBSERVED_MIXED_BYTE_EVIDENCE",
     "OBSERVED_NO_BYTE_EVIDENCE",
     "OBSERVED_PAIR_TABLE_EVIDENCE",
+    "PACKET_KV_HANDOFF_SCHEMA",
     "REBUILD_REASON",
     "ROUTED_EVIDENCE_CAPTURED",
     "ROUTED_EVIDENCE_MODES",
@@ -217,6 +225,8 @@ __all__ = [
     "MoeAllToAll",
     "MoeMessageGrouping",
     "MoeMessageSequence",
+    "PacketKvHandoffArtifact",
+    "PacketKvHandoffPolicy",
     "RequestFidelityError",
     "RequestFidelityReport",
     "RoutedConservationReport",

@@ -91,12 +91,15 @@ from simllm.core.kv import (
 )
 from simllm.core.pd_session import (
     KV_HANDOFF_ARMS,
+    KV_HANDOFF_AUTHORITIES,
     KV_HANDOFF_AUTHORITY,
+    PACKET_KV_HANDOFF_AUTHORITY,
     PD_SESSION_SCHEMA,
     DeclaredKvHandoffPolicy,
     DisaggregatedRequestTimeline,
     KvHandoffEvent,
     KvHandoffGeometry,
+    KvHandoffPolicy,
     ServingPoolRole,
 )
 from simllm.core.precision import (
@@ -204,8 +207,10 @@ __all__ = [
     "EXECUTION_RESULT_SCHEMA",
     "KV_ACCOUNTING_SCHEMA",
     "KV_HANDOFF_ARMS",
+    "KV_HANDOFF_AUTHORITIES",
     "KV_HANDOFF_AUTHORITY",
     "LEGACY_RESULT_SCHEMA",
+    "PACKET_KV_HANDOFF_AUTHORITY",
     "PD_SESSION_SCHEMA",
     "PRECISION_CONFIG_SCHEMA",
     "PRECISION_SEAMS",
@@ -264,6 +269,7 @@ __all__ = [
     "KvCacheWork",
     "KvHandoffEvent",
     "KvHandoffGeometry",
+    "KvHandoffPolicy",
     "KvLifecycleLedger",
     "KvPoolAccounting",
     "KvPoolSpec",
