@@ -132,6 +132,11 @@ def test_scale_summary_is_descriptive_and_never_claims_fit():
     result = study.summarize_scale(cells)
 
     assert result["target_engine_count"] == 56
+    assert result["target_incremental_current_rss_kib_range"] == [
+        5040.0,
+        5880.0,
+    ]
     assert result["target_incremental_peak_rss_kib_range"] == [5600.0, 6160.0]
+    assert result["peak_high_watermark_censored"] is False
     assert result["target_sequential_construction_seconds_range"] == [50.4, 56.0]
     assert result["fit_claim"] is False

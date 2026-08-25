@@ -613,6 +613,7 @@ def run_scale_points(args: argparse.Namespace) -> list[dict[str, Any]]:
 def summarize_scale(cells: list[dict[str, Any]]) -> dict[str, Any]:
     summaries = []
     per_engine_memory = []
+    per_engine_peak_memory = []
     per_engine_seconds = []
     for cell in cells:
         engines = cell["retained_engines"]
@@ -621,8 +622,10 @@ def summarize_scale(cells: list[dict[str, Any]]) -> dict[str, Any]:
             cell["final_current_rss_kib"] - cell["baseline_current_rss_kib"]
         )
         memory_per_engine = Fraction(peak_delta, engines)
+        current_memory_per_engine = Fraction(current_delta, engines)
         seconds_per_engine = cell["total_construction_seconds"] / engines
-        per_engine_memory.append(memory_per_engine)
+        per_engine_memory.append(current_memory_per_engine)
+        per_engine_peak_memory.append(memory_per_engine)
         per_engine_seconds.append(seconds_per_engine)
         summaries.append(
             {
@@ -631,6 +634,7 @@ def summarize_scale(cells: list[dict[str, Any]]) -> dict[str, Any]:
                 "retained_engines": engines,
                 "peak_rss_delta_kib": peak_delta,
                 "current_rss_delta_kib": current_delta,
+                "current_rss_kib_per_engine": float(current_memory_per_engine),
                 "peak_rss_kib_per_engine": float(memory_per_engine),
                 "total_construction_seconds": cell["total_construction_seconds"],
                 "construction_seconds_per_engine": seconds_per_engine,
@@ -639,10 +643,18 @@ def summarize_scale(cells: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "cells": summaries,
         "target_engine_count": 56,
-        "target_incremental_peak_rss_kib_range": [
+        "memory_extrapolation_basis": "current-resident-set-size",
+        "target_incremental_current_rss_kib_range": [
             float(min(per_engine_memory) * 56),
             float(max(per_engine_memory) * 56),
         ],
+        "target_incremental_peak_rss_kib_range": [
+            float(min(per_engine_peak_memory) * 56),
+            float(max(per_engine_peak_memory) * 56),
+        ],
+        "peak_high_watermark_censored": all(
+            value == 0 for value in per_engine_peak_memory
+        ),
         "target_sequential_construction_seconds_range": [
             min(per_engine_seconds) * 56,
             max(per_engine_seconds) * 56,
@@ -654,6 +666,10 @@ def summarize_scale(cells: list[dict[str, Any]]) -> dict[str, Any]:
             "engines construct sequentially and remain resident",
         ],
         "fit_claim": False,
+        "reporting_chronology": (
+            "Post-specified after scored-v1 exposed an import-time peak above "
+            "every retained-engine sample; acceptance relations are unchanged."
+        ),
     }
 
 
