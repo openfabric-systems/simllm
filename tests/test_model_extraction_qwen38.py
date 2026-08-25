@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from simllm.calibration.extraction import (
+    QWEN_GATED_DELTA_NET_FAMILIES,
     FrameworkConfigurationProjection,
     FrameworkTextStack,
     ModelExtractionError,
@@ -15,7 +16,11 @@ from simllm.calibration.extraction import (
     extract_model_inventory,
     load_extraction_suite,
 )
-from simllm.calibration.model_inventory import FrameworkIdentity, ModelGeometry
+from simllm.calibration.model_inventory import (
+    FrameworkIdentity,
+    ModelGeometry,
+    ModelKernelInventory,
+)
 from simllm.compute import ModelDims
 from simllm.core import RequestPhase
 
@@ -82,11 +87,15 @@ def _projection(suite: dict[str, object]) -> FrameworkConfigurationProjection:
     )
 
 
-def _extract(tmp_path: Path, suite: dict[str, object], config: bytes) -> None:
+def _extract(
+    tmp_path: Path,
+    suite: dict[str, object],
+    config: bytes,
+) -> ModelKernelInventory:
     checkpoint = tmp_path / REVISION
     checkpoint.mkdir()
     (checkpoint / "config.json").write_bytes(config)
-    extract_model_inventory(
+    return extract_model_inventory(
         suite_raw=json.dumps(suite).encode(),
         framework=FRAMEWORK,
         checkpoint_root=checkpoint,
@@ -96,14 +105,24 @@ def _extract(tmp_path: Path, suite: dict[str, object], config: bytes) -> None:
     )
 
 
-def test_qwen38_metadata_only_extraction_rejects_before_writing(tmp_path: Path) -> None:
+def test_qwen38_historical_suite_now_projects_a_complete_inventory(
+    tmp_path: Path,
+) -> None:
     config = b'{"model_type":"qwen3_5"}'
     suite = _suite(config)
 
-    with pytest.raises(ModelExtractionError, match=r"COMP-62.*Gated DeltaNet"):
-        _extract(tmp_path, suite, config)
+    inventory = _extract(tmp_path, suite, config)
 
-    assert not (tmp_path / "steps.jsonl").exists()
+    assert [family.family_id for family in inventory.kernel_families] == list(
+        QWEN_GATED_DELTA_NET_FAMILIES
+    )
+    assert len(inventory.cases) == 15
+    assert all(
+        sum(projection.logical_launch_count for projection in case.kernel_projections)
+        == 449
+        for case in inventory.cases
+    )
+    assert (tmp_path / "steps.jsonl").is_file()
 
 
 def test_qwen38_metadata_manifest_mutation_rejects(tmp_path: Path) -> None:
