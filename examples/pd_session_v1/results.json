@@ -1,0 +1,87 @@
+{
+  "schema": "simllm-pd-session-study-summary-v1",
+  "status": "PASS",
+  "expectations_commit": "303a958f80062726573ab0717decb84895cad8f9",
+  "implementation_commit": "f25fc8fe6612c938fcef4a6c62f6d709f7bf77a0",
+  "harness_commit": "5c34e985fc68dacf0ce6d668c26685e84cc13f8d",
+  "reporting_fix_commit": "22c76eb6b1314643f6a77f6b3918744e659b9b07",
+  "raw_result_sha256": "870071e532e3aa587cce55eb40e2969007063cce43a65cf2280ee0746027d4c4",
+  "exact_oracle_rows": {
+    "held": 4,
+    "total": 4,
+    "maximum_ttft_decomposition_residual_ps": 0
+  },
+  "behavioral_relations": {
+    "held": 6,
+    "total": 6,
+    "handoff_ttft_delta_ps": 100000000
+  },
+  "cells": [
+    {
+      "prompt_tokens": 8,
+      "handoff_ps": 100000000,
+      "kv_bytes": 393216,
+      "prefill_service_ps": 95424000,
+      "decode_first_token_service_ps": 77952000,
+      "ttft_ps": 273376000,
+      "tpot_ps": 77952000
+    },
+    {
+      "prompt_tokens": 8,
+      "handoff_ps": 200000000,
+      "kv_bytes": 393216,
+      "prefill_service_ps": 95424000,
+      "decode_first_token_service_ps": 77952000,
+      "ttft_ps": 373376000,
+      "tpot_ps": 77952000
+    },
+    {
+      "prompt_tokens": 16,
+      "handoff_ps": 100000000,
+      "kv_bytes": 786432,
+      "prefill_service_ps": 114936000,
+      "decode_first_token_service_ps": 77976000,
+      "ttft_ps": 292912000,
+      "tpot_ps": 77976000
+    },
+    {
+      "prompt_tokens": 16,
+      "handoff_ps": 200000000,
+      "kv_bytes": 786432,
+      "prefill_service_ps": 114936000,
+      "decode_first_token_service_ps": 77976000,
+      "ttft_ps": 392912000,
+      "tpot_ps": 77976000
+    }
+  ],
+  "fatal_guards": {
+    "status": "PASS",
+    "findings": 0,
+    "packet_backend_runs": 0,
+    "shared_clock": true,
+    "target_manifest_ranks": 448
+  },
+  "scale": {
+    "measured_engine_counts": [2, 4],
+    "resident_rss_delta_kib": [63476, 64112],
+    "resident_rss_kib_per_engine": [31738, 16028],
+    "total_construction_seconds": [1.4733197493478656, 1.5184511132538319],
+    "target_engine_count": 56,
+    "target_incremental_resident_rss_kib_range": [897568, 1777328],
+    "target_sequential_construction_seconds_range": [
+      21.258315585553646,
+      41.252952981740236
+    ],
+    "peak_high_watermark_censored": true,
+    "fit_claim": false
+  },
+  "scope": {
+    "live_prefill_engines": 1,
+    "live_decode_engines": 1,
+    "simulated_workers_per_engine": 8,
+    "target_manifest_only": true,
+    "packet_rendered_kv": false,
+    "lookup_pricing": false,
+    "sglang": false
+  }
+}

@@ -32,6 +32,12 @@ both.
   a unique global-rank-to-host projection with nonblank hostnames and unique
   local GPU endpoints, so an active traffic run cannot silently change its
   locality authority.
+- `disaggregated_manifests(prefill_nodes=..., decode_nodes=...,
+  gpus_per_node=...)`: builds the paired placement and fabric projections for
+  the fixed prefill/decode deployment. Every rank carries its pool role and a
+  deterministic GPU-affine NIC projection through the existing schema. The
+  builder validates the one-plus-one live slice and the 16-plus-40 structural
+  target without inventing a second manifest format.
 
 ## Status
 
@@ -55,6 +61,14 @@ captured locality study covers one-node, two-node and all-remote placements;
 see [the results](../../examples/nvlink_locality_v1/RESULTS.md). This required
 no manifest schema change. General `unique-nic` projection remains PLACE-2.
 
+The first PLACE-4 slice builds the one-prefill plus one-decode placement used
+by the live CORE-51 session and structurally renders the same builder at 16
+prefill plus 40 decode nodes. The target contains exactly 448 unique ranks,
+GPUs and NIC projections with role counts of 128 prefill and 320 decode ranks.
+The deterministic location labels are simulated projections rather than a
+complete physical switch and link graph, so the physical target half remains
+PLACE-5 and PLACE-4 stays open.
+
 ## Open tasks
 
 ### Completeness
@@ -66,7 +80,19 @@ no manifest schema change. General `unique-nic` projection remains PLACE-2.
   resolution through the existing manifest schemas and GOAL-rank mapping.
   Smaller instances of the same shape (one plus one node first) come from
   the same builder. The general-manifest halves stay PLACE-1 and PLACE-2;
-  this task owns the concrete disaggregated target and its role field.
+  this task owns the concrete disaggregated target and its role field. The
+  role-aware one-plus-one live manifest and 448-rank structural render are
+  delivered. PLACE-5 owns the remaining physical-location half, so this task
+  stays open until that projection is literal.
+- PLACE-5 (Completeness; P1; M): replace the disaggregated target builder's
+  deterministic simulated location labels with the complete fixed target
+  topology. Bind every GPU-affine NIC to its port, switch, link rate and
+  propagation delay through `simllm-fabric-topology-v1`, then validate the
+  same authority through GOAL rendering. Acceptance requires exact rank, GPU,
+  NIC and role conservation at one-plus-one and 16-plus-40, complete endpoint
+  reachability, and byte-identical placement records when physical rendering
+  is disabled. General inventory discovery and `unique-nic` mapping remain
+  PLACE-1 and PLACE-2.
 - PLACE-1 (Completeness; P2; L): fabric topology schema contents and general
   NIC selection in the mapper, sourcing intra-node structure from NCCL
   topology dumps. This is no longer blocked: CORE-4 validated the first

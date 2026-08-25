@@ -49,6 +49,19 @@ own modules.
   `step_records_from_jsonl`, plus `step_result_to_json` and
   `step_result_from_json` for full results.
 
+### Disaggregated serving boundary
+
+- `DisaggregatedSession` composes one prefill pool, one explicit
+  `KvHandoffEvent` and one decode pool on a shared `VirtualClock`. The two
+  framework schedulers remain the only batching authorities. The session
+  carries one stable request identity across pool-local scheduler identities,
+  and it reports TTFT from session admission through the first decode token
+  and TPOT only from decode-pool cadence.
+- `KvHandoffEvent` is the sole handoff timing authority. Its declared-constant
+  arm derives bytes from model KV geometry and prompt context, advances the
+  shared clock once, and publishes a loss-checked read-only record. The packet
+  arm remains TRAF-62.
+
 ### Execution and completion boundary
 
 `simllm.core` publishes four versioned contracts:
@@ -942,9 +955,31 @@ and never earlier. PLAY-13 and CORE-34 were accepted under the barrier
 configuration, and that qualification is now discharged; see
 [the routing lifetime results](../../examples/routing_lifetime_v1/RESULTS.md).
 
+The first CORE-51 disaggregated-session slice is live through the pinned vLLM
+0.27.1 scheduler seam. One eight-rank prefill engine and one eight-rank decode
+engine share one virtual clock; the scheduler-side KV connector gates producer
+completion and consumer admission while one core handoff event owns the
+declared 100 or 200 microsecond transfer. The frozen study passed all four
+exact decomposition rows with 0 ps residual and all six behavioral relations.
+It also rendered the 16-prefill plus 40-decode target as 448 rank, GPU and NIC
+records without running those engines. The live 56-engine target, accepted
+lookup pricing, packetized handoff, physical target topology and concurrent
+multi-request batching remain CORE-52, CORE-53, TRAF-62, PLACE-5 and VLLM-35;
+see [the disaggregated-session results](../../examples/pd_session_v1/RESULTS.md).
+
 ## Open tasks
 
 ### Precision
+
+- CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
+  roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
+  Bind each prefill and decode step to the lookup key and provenance already
+  owned by the compute provider chain, then rerun the frozen prompt-length and
+  handoff-cost grid. Acceptance requires exact lookup-record selection, the
+  signed TTFT and TPOT movement predicted from the selected rows, and an
+  explicit roofline comparator that preserves this slice's accepted bytes and
+  timestamps when the lookup record is absent. This task depends on COMP-64
+  and does not create another pricing model.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
@@ -1249,4 +1284,19 @@ configuration, and that qualification is now discharged; see
   charges the declared PCIe submission constant and then the packet
   simulator. First slice runs one prefill node plus one decode node of eight
   simulated GPUs each; the full 448-rank target scales through the same
-  session with a stated engine-count feasibility bound.
+  session with a stated engine-count feasibility bound. The first slice is
+  delivered through the real vLLM scheduler-side KV connector and a shared
+  virtual clock, with the declared-constant handoff, role-aware manifests and
+  one-plus-one live run. This umbrella remains open on CORE-52, CORE-53,
+  TRAF-62, PLACE-5 and VLLM-35; those residuals own the live 448-rank scale,
+  lookup pricing, packet handoff, physical target topology and concurrent
+  multi-request path respectively.
+- CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
+  through the same disaggregated session with 448 simulated workers. Retain
+  every engine simultaneously, route requests through every declared pool
+  instance, and report measured resident memory, construction time, request
+  throughput and virtual-time conservation per added engine. The one-plus-one
+  session and manifest-only 448-rank render are the explicit smaller off path
+  and must remain byte-identical. If the integration host cannot retain all 56
+  engines, keep this task open and report the measured stopping point rather
+  than extrapolating a pass. Depends on VLLM-35 and PLACE-5.
