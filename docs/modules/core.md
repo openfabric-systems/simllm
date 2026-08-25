@@ -966,6 +966,12 @@ records without running those engines. The live 56-engine target, accepted
 lookup pricing, packetized handoff, physical target topology and concurrent
 multi-request batching remain CORE-52, CORE-53, TRAF-62, PLACE-5 and VLLM-35;
 see [the disaggregated-session results](../../examples/pd_session_v1/RESULTS.md).
+The concurrent extension now conserves 144 independent request lifecycles at
+0 ps maximum decomposition residual and exposes stock-scheduler batches in
+both roles across all three small pool ratios. Its exact curve records are
+live, but the frozen delay direction is refuted in all six curves, so VLLM-35
+stays open through VLLM-39; see
+[the concurrent-session results](../../examples/pd_session_concurrent_v1/RESULTS.md).
 
 ## Open tasks
 

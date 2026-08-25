@@ -9,6 +9,9 @@ from types import SimpleNamespace
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 STUDY_PATH = REPOSITORY_ROOT / "examples/pd_session_concurrent_v1/run_study.py"
+COMPACT_RESULT_PATH = (
+    REPOSITORY_ROOT / "examples/pd_session_concurrent_v1/results.json"
+)
 
 
 def _study():
@@ -119,6 +122,30 @@ def test_load_amendment_is_self_consistent():
     )
 
     study._validate_load_amendment(amendment)
+
+
+def test_compact_result_keeps_evidence_classes_and_exact_curve_values():
+    result = json.loads(COMPACT_RESULT_PATH.read_text())
+
+    assert result["status"] == "REFUTED"
+    assert result["fatal_guards"] == {"status": "HELD", "findings": []}
+    assert result["conservation"] == {
+        "cells": 18,
+        "admissions": 144,
+        "handoffs": 144,
+        "terminals": 144,
+        "terminal_decode_tokens": 576,
+        "maximum_ttft_residual_ps": 0,
+    }
+    assert result["behavioral_families"]["delay_nondecreasing_with_load"] == {
+        "held": 0,
+        "evaluated": 6,
+    }
+    points = result["example_curve"]["points"]
+    assert [
+        point["offered_load_requests_per_second"]["numerator"] for point in points
+    ] == [8_000, 16_000, 32_000]
+    assert [point["output_token_count"] for point in points] == [32, 32, 32]
 
 
 def test_analysis_keeps_fatal_and_behavioral_evidence_separate():
