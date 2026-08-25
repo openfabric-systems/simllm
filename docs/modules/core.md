@@ -1234,3 +1234,19 @@ configuration, and that qualification is now discharged; see
   publishing any projection. Shared fixtures must prove loss-free CORE-8
   projection, exact latency attribution, rejection of service-axis strings as
   queue resources and unchanged strict v1 readers and canonical bytes.
+- CORE-51 (Completeness; P1; L): run the disaggregated serving session toward
+  the 40 decode plus 16 prefill node target: separate prefill-pool and
+  decode-pool instances of a real frontend over simulated GPUs in one driven
+  session, each pool's role declared per instance, joined by the
+  prefill-to-decode KV handoff priced through TRAF-61 (a declared constant
+  transfer is the explicit first arm), placed by PLACE-4's manifests, and
+  reduced to per-request TTFT and TPOT through the existing runtime chain
+  with no second authority. Audit the pinned frameworks' own disaggregation
+  seams (the vLLM KV-connector surface first) and prefer the real seam where
+  reachable, with a driver-level join as the disclosed fallback. Compute
+  prices from the kernel-cycle lookup record or its roofline bootstrap;
+  intra-node collectives ride the declared constant arm; inter-node work
+  charges the declared PCIe submission constant and then the packet
+  simulator. First slice runs one prefill node plus one decode node of eight
+  simulated GPUs each; the full 448-rank target scales through the same
+  session with a stated engine-count feasibility bound.

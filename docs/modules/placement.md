@@ -59,6 +59,14 @@ no manifest schema change. General `unique-nic` projection remains PLACE-2.
 
 ### Completeness
 
+- PLACE-4 (Completeness; P1; M): build the 448-rank disaggregated placement:
+  placement and fabric manifests for 40 decode plus 16 prefill nodes of
+  eight GPUs and one NIC each, with each rank's pool role carried in the
+  manifest, every GPU and NIC pinned to a physical fabric location, and
+  resolution through the existing manifest schemas and GOAL-rank mapping.
+  Smaller instances of the same shape (one plus one node first) come from
+  the same builder. The general-manifest halves stay PLACE-1 and PLACE-2;
+  this task owns the concrete disaggregated target and its role field.
 - PLACE-1 (Completeness; P2; L): fabric topology schema contents and general
   NIC selection in the mapper, sourcing intra-node structure from NCCL
   topology dumps. This is no longer blocked: CORE-4 validated the first

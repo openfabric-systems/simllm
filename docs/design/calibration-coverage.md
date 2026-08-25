@@ -197,6 +197,37 @@ calibration design freezes, is owned by the VLLM-12 and SGL-10 producers
 with COMP-6's joins, and is the static complement to the dynamic SASS
 traces the Accel-Sim sidecar consumes.
 
+## The deployment target and the closed loop
+
+The campaign's deployment target is a disaggregated cluster of 40 decode
+nodes and 16 prefill nodes, eight GPUs each, 448 ranks (maintainer
+direction, 2026-08-25). The end-to-end loop closes without measuring at
+that scale: the real frontends run their schedulers for both pools over
+simulated GPUs, per-token compute comes from the single-GPU dummy-weight
+lookup record, and communication splits at the node boundary. Intra-node
+collectives ride a declared constant (the NVLink path stays a black box
+for now). Inter-node communication charges a declared constant for
+submitting the doorbell and work-queue entry over PCIe to the RNIC, and
+everything after that belongs to the packet simulator, which already
+carries the RNIC, congestion control and fabric. Placement pins every
+simulated GPU and NIC to a physical location through the placement and
+fabric manifests, which is what makes the two pools sit at different
+places on the same fabric. Owners: CORE-51 (the disaggregated serving
+session), TRAF-61 (the prefill-to-decode KV transfer as fabric
+traffic), PLACE-4 (the 448-rank placement), with the constant arms
+riding the existing collective-floor and registration mechanisms rather
+than new ones.
+
+Single-stream verification (2026-08-25): across every captured cell so
+far (both models, tensor-parallel one through four, expert parallel,
+graph and eager, about 1.5 million kernel records), every compute and
+collective kernel executed on exactly one stream per run with zero
+cross-stream overlap, so kernel order is total and a step's compute time
+is the sum of its kernels plus gaps at these default configurations.
+The claim is verified for the pinned vLLM; the SGLang capture arm
+repeats the check when it lands, and any opted-in overlap feature must
+re-verify before its cells are priced by summation.
+
 ## The lookup record and its keys
 
 The campaign's product is one unified lookup record per campaign

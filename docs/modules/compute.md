@@ -451,6 +451,15 @@ bounds.
 
 ## Kernel-time determinism
 
+Empirical support recorded 2026-08-25: every captured vLLM cell to date
+(both models, tensor-parallel widths one through four, expert parallel,
+graph and eager modes, about 1.5 million kernel records) executed all
+compute and collective kernels on exactly one stream per run with zero
+cross-stream overlap. Kernel order is total at the default
+configurations, so a step's compute time is the sum of its kernels plus
+inter-kernel gaps; the coverage matrix design note carries the check and
+its re-verification condition for opted-in overlap features.
+
 This is the model's kernel-time semantics, and it is a contract, not an
 implementation detail. It follows the maintainer ruling of 2026-08-18.
 
