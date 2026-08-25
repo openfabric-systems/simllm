@@ -186,7 +186,7 @@ class ModelDims:
         return int(self.hidden_size * self.vocab_size * self.weight_element_bytes)
 
 
-def _step_shape(record: StepRecord) -> tuple[int, int, int]:
+def step_shape(record: StepRecord) -> tuple[int, int, int]:
     """(new_tokens, kv_read_tokens, attention_pairs) of one step record.
 
     ``attention_pairs`` counts ``n * (prior_context + n/2)`` query-key pairs
@@ -212,13 +212,13 @@ def step_kernel(dims: ModelDims, record: StepRecord, num_sampled: int) -> Kernel
     FLOPs are 2 per multiply-accumulate over (a) the projections for every
     scheduled token (dense MLP, or ``top_k`` activated experts per token for
     MoE dims), (b) the attention score and value passes over the
-    query-key-pair count of :func:`_step_shape`, and (c) the LM head for the
+    query-key-pair count of :func:`step_shape`, and (c) the LM head for the
     tokens that actually sample. Bytes are the resident weights (read once
     per step; for MoE only the experts resident on this rank), the LM head,
     and the KV cache of every scheduled request's context, which is what
     makes decode steps memory-bound in the roofline.
     """
-    new_tokens, kv_read_tokens, attention_pairs = _step_shape(record)
+    new_tokens, kv_read_tokens, attention_pairs = step_shape(record)
     dense_flops = 2 * new_tokens * (dims.attention_params + dims.mlp_active_params)
     attn_flops = 4 * attention_pairs * dims.num_layers * dims.num_heads * dims.head_size
     head_flops = 2 * num_sampled * dims.hidden_size * dims.vocab_size
@@ -270,7 +270,7 @@ def step_kernels(dims: ModelDims, record: StepRecord, num_sampled: int) -> list[
     total. Families aggregate over all layers of the step; per-layer
     (per-invocation) kernel shapes for SASS table keys are COMP-6.
     """
-    new_tokens, kv_read_tokens, attention_pairs = _step_shape(record)
+    new_tokens, kv_read_tokens, attention_pairs = step_shape(record)
     attn_weight_bytes = int(dims.attention_params * dims.weight_element_bytes)
     mlp_weight_bytes = dims.weight_bytes - attn_weight_bytes
     kv_bytes = (

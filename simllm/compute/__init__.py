@@ -170,6 +170,7 @@ from simllm.compute.transformer import (
     estimate_step_latency_ps,
     step_kernel,
     step_kernels,
+    step_shape,
 )
 
 __all__ = [
@@ -296,5 +297,6 @@ __all__ = [
     "sha256_file",
     "step_kernel",
     "step_kernels",
+    "step_shape",
     "validate_nccl_stack_events",
 ]

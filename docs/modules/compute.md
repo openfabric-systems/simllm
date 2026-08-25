@@ -66,6 +66,10 @@ remain offline; none runs once per serving step.
   streams them). This is the COMP-1 groundwork: offline SASS runs
   populate per-family profile tables, and the step loop sums per-family
   estimates instead of pricing one opaque blob.
+- `step_shape`: the shared integer projection from a `StepRecord` to new-token,
+  KV-token and attention-pair counts. The standard transformer and Qwen Gated
+  DeltaNet inventory builders consume this one authority, so a hybrid model
+  cannot silently use different case axes.
 - `GpuDeviceConfig` and `GpuDevice`: the versioned GPU composition entry point.
   A device is an architecture profile plus typed `GpuPortConfig` ports, each
   carrying protocol, role, direction, declared capabilities, an optional
@@ -905,18 +909,69 @@ The extraction join is exact and has one authority at each layer. The pinned
 framework's CPU-safe configuration surface supplies model geometry. The
 unchanged authored suite supplies the ordered phase and shape cases. Those
 cases serialize and reload through the existing `StepRecord` path;
-`step_kernels()` supplies the ordered family aggregate work and typed shape
-coordinates; the serial execution-graph lowerer supplies each unbound instance
-and normalized template identity. The inventory stores every case in suite
-order with the suite-cell, step-record, instance-graph and template-graph
-digests. Every case contains the complete ordered family projection. A family
-entry binds its shape-schema identity and logical prefill and decode launch
-counts; each case binds the matching shape vector, logical launch count and
-exact aggregate integer FLOPs and HBM bytes. Family sums equal `step_kernel()`
-exactly. The Granite MoE denominator has one logical invocation per layer for
-attention GEMM, attention score, MLP GEMM and KV read, plus one LM-head
-invocation per step. These counts describe logical workload structure, never
-physical launch fusion.
+`step_kernels()` supplies the standard-transformer family work, while the
+Gated DeltaNet builder consumes the same `step_shape()` axes and emits its
+integer-only family work. The serial execution-graph lowerer supplies each
+unbound instance and normalized template identity. The inventory stores every
+case in suite order with the suite-cell, step-record, instance-graph and
+template-graph digests. Every case contains the complete ordered family
+projection. A family entry binds its shape-schema identity and logical prefill
+and decode launch counts; each case binds the matching shape vector, logical
+launch count and exact aggregate integer FLOPs and HBM bytes. Family sums equal
+an independently composed total exactly. The Granite MoE denominator has one
+logical invocation per layer for attention GEMM, attention score, MLP GEMM and
+KV read, plus one LM-head invocation per step. These counts describe logical
+workload structure, never physical launch fusion.
+
+The Qwen3.5 Gated DeltaNet projection follows both pinned native
+implementations. vLLM's `QwenGatedDeltaNetAttention` and SGLang's
+`Qwen3_5GatedDeltaNet` each construct Q, K, V, Z, B and A input projections, a
+width-four depthwise causal convolution, a float32 recurrent state, gated
+root-mean-square normalization and a value-to-hidden output projection. Both
+construct dense gate, up and down MLP projections in every text layer. The
+outer multimodal encoder and the one-layer multi-token-prediction head are
+excluded at the framework configuration boundary.
+
+For hidden width `H`, dense intermediate width `I`, linear key and value head
+counts `Nk` and `Nv`, head widths `Dk` and `Dv`, and convolution width `W`, let
+`K=Nk*Dk`, `V=Nv*Dv`, `C=2*K+V`, `S=Nv*Dv*Dk` and
+`X=C*(W-1)`. The input projection owns
+`Pin=H*(2*K+2*V+2*Nv)` weights for Q, K, V, Z, B and A. The convolution owns
+`C*W` weights and `X` persistent BF16 elements per sequence. The recurrence
+owns `S` float32 elements per sequence, plus the `Nv`-element float32 `A_log`
+and `dt_bias` vectors. Gated normalization owns `Dv` shared BF16 weights, the
+output projection owns `V*H` weights, and every dense MLP owns `3*H*I`
+weights.
+
+One multiply-accumulate is two floating-point operations. Scalar arithmetic,
+square root, reciprocal square root, exponential, sigmoid and softplus each
+count as one operation; reshapes and metadata count as zero. The recurrent
+update normalizes Q and K for `Nk*(7*Dk+2)` operations. For each value head it
+forms the gates, decays the state, predicts and gates the V residual, applies
+the outer-product update and multiplies Q for
+`7*Dv*Dk+2*Dv+7` operations. Its exact token cost is therefore
+`U=Nk*(7*Dk+2)+Nv*(7*Dv*Dk+2*Dv+7)`. Gated normalization costs
+`Nv*(7*Dv+2)` operations per token.
+
+For `T` new tokens, `R` sequences, `KVT` full-attention KV tokens, `P`
+full-attention query-key pairs and `Zs` sampled tokens, the eight linear-layer
+families are input projection `2*T*Ll*Pin` FLOPs; short convolution
+`2*T*Ll*C*W` FLOPs and `2*R*Ll*X` BF16 state elements moved; recurrent-state
+read and write, each `R*Ll*S` float32 elements moved; update `T*Ll*U` FLOPs;
+gated normalization `T*Ll*Nv*(7*Dv+2)` FLOPs; output projection
+`2*T*Ll*V*H` FLOPs; and the dense MLP `2*T*L*3*H*I` FLOPs. Static family HBM
+bytes are exactly their owned weights at the declared weight width. The three
+full-attention families retain their accepted formulas over `Lf` layers, and
+the LM head costs `2*Zs*H*vocab_size` FLOPs.
+
+Qwen3.8-27B fixes `H=5120`, `I=17408`, `Nk=16`, `Nv=48`, `Dk=Dv=128`,
+`W=4`, `Ll=48`, `Lf=16` and `L=64`. Its ordered inventory is full-attention
+GEMM, full-attention score, KV read, the seven Gated DeltaNet mechanism
+families, dense MLP and LM head. Every case has
+`48*8 + 16*4 + 1 = 449` logical family visits. Its conserved totals are
+`47,966,017,280*T + 393,216*P + 2,542,796,800*Zs` FLOPs and
+`50,241,239,040 + 307,888,128*R + 65,536*KVT` HBM bytes. The same forms apply
+to prefill and decode; only the `StepRecord` axes change.
 
 The vLLM driver uses the explicit skeleton gate and the SGLang driver uses its
 CPU device and model-configuration path. Neither initializes a GPU engine or
@@ -2448,20 +2503,6 @@ and an explicit reason:
   closed when a framework cannot execute the reduced-depth instantiation.
   Disabling the route leaves every accepted record and the hand-authored
   suites byte-identical.
-- COMP-62 (Completeness; P1; L): extend the offline model inventory family set
-  for Qwen3.5 Gated DeltaNet linear-attention layers. Price the input
-  projections, width-four short convolution, recurrent-state read, update and
-  write, gated normalization, output projection and dense MLP for both prefill
-  and decode shapes, with exact integer FLOPs, HBM bytes and logical launch
-  counts. Preserve the ordered Qwen3.8-27B schedule of 48 linear-attention and
-  16 full-attention layers and prove family conservation for every one of the
-  15 frozen text-only cases through both pinned framework configuration
-  surfaces. Until that total projection exists, both drivers reject the
-  Qwen3.8-27B column before writing StepRecords or an inventory, and the
-  Granite full-attention suite and published inventory bytes remain exactly
-  unchanged. Acceptance requires byte-deterministic complete inventories from
-  vLLM and SGLang with exact cross-framework structural agreement and no
-  multimodal encoder or speculative-head leakage.
 - COMP-64 (Completeness; P1; L): deliver the scripted in-framework
   kernel-cycle capture pipeline and its unified lookup record. One clean
   scripted workflow drives the pinned framework at a declared (model,

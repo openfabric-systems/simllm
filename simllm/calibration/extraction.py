@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from simllm.backends.step_lowerer import SerialStepLowerer, SerialStepLowererConfig
-from simllm.compute import ModelDims, step_kernel, step_kernels
+from simllm.compute import ModelDims, step_kernel, step_kernels, step_shape
 from simllm.compute.device_model import ShapeAxis, ShapeSchema, ShapeVector
 from simllm.core import (
     RequestPhase,
@@ -48,12 +48,26 @@ ORDERED_FAMILIES = (
     "lm_head",
     "kv_read",
 )
+QWEN_GATED_DELTA_NET_FAMILIES = (
+    "attn_gemm",
+    "attn_score",
+    "kv_read",
+    "gdn_input_projection",
+    "gdn_short_convolution",
+    "gdn_state_read",
+    "gdn_state_update",
+    "gdn_state_write",
+    "gdn_gated_norm",
+    "gdn_output_projection",
+    "mlp_gemm",
+    "lm_head",
+)
 LAYER_REPEATED_FAMILIES = frozenset(
     {"attn_gemm", "attn_score", "mlp_gemm", "kv_read"}
 )
 _SHAPE_SCHEMA_IDS = {
     family: f"simllm-{family.replace('_', '-')}-invocation-shape-v1"
-    for family in ORDERED_FAMILIES
+    for family in dict.fromkeys(ORDERED_FAMILIES + QWEN_GATED_DELTA_NET_FAMILIES)
 }
 _SHAPE_AXES = {
     "attn_gemm": ("new_tokens",),
@@ -61,11 +75,44 @@ _SHAPE_AXES = {
     "mlp_gemm": ("new_tokens",),
     "lm_head": ("sampled",),
     "kv_read": ("kv_tokens",),
+    "gdn_input_projection": ("new_tokens",),
+    "gdn_short_convolution": ("new_tokens", "sequences"),
+    "gdn_state_read": ("sequences",),
+    "gdn_state_update": ("new_tokens",),
+    "gdn_state_write": ("sequences",),
+    "gdn_gated_norm": ("new_tokens",),
+    "gdn_output_projection": ("new_tokens",),
 }
 
 
 class ModelExtractionError(ValueError):
     """A requested inventory is unsupported, inconsistent or incomplete."""
+
+
+@dataclass(frozen=True, slots=True)
+class _ExactFamilyWork:
+    """One integer-only offline family projection before record validation."""
+
+    name: str
+    flops: int
+    bytes_moved: int
+    config: tuple[tuple[str, int], ...]
+
+    def __post_init__(self) -> None:
+        if not self.name:
+            raise ModelExtractionError("inventory family name must be nonblank")
+        for label, value in (("flops", self.flops), ("bytes", self.bytes_moved)):
+            if type(value) is not int or value < 0:
+                raise ModelExtractionError(
+                    f"inventory family {self.name!r} {label} must be a nonnegative integer"
+                )
+        if any(
+            not axis or type(value) is not int or value < 0
+            for axis, value in self.config
+        ):
+            raise ModelExtractionError(
+                f"inventory family {self.name!r} shape must be nonnegative integers"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -521,10 +568,278 @@ def case_records_from_suite(suite: Mapping[str, Any]) -> tuple[StepRecord, ...]:
     return tuple(_case_record(cell, index) for index, cell in enumerate(cells))
 
 
-def _exact_work(value: float, path: str) -> int:
+def _exact_work(value: object, path: str) -> int:
+    if type(value) is int and value >= 0:
+        return value
     if not isinstance(value, float) or not value.is_integer() or value < 0:
         raise ModelExtractionError(f"{path}: expected exact nonnegative integer work")
     return int(value)
+
+
+def _validate_qwen_gdn_text_stack(text_stack: FrameworkTextStack) -> None:
+    expected_identity = {
+        "architecture": "Qwen3_5ForConditionalGeneration",
+        "wrapper_model_type": "qwen3_5",
+        "text_model_type": "qwen3_5_text",
+        "scope": "text-only",
+        "linear_attention_mechanism": "Qwen3.5 Gated DeltaNet",
+        "attn_output_gate": True,
+        "output_gate_type": "swish",
+        "state_dtype": "float32",
+        "excluded_components": (
+            "multimodal-vision-encoder",
+            "one-layer-mtp-speculative-head",
+        ),
+    }
+    mismatches = [
+        name
+        for name, expected in expected_identity.items()
+        if getattr(text_stack, name) != expected
+    ]
+    linear_layers = text_stack.layer_types.count("linear_attention")
+    full_layers = text_stack.layer_types.count("full_attention")
+    if mismatches:
+        raise ModelExtractionError(
+            "unsupported Gated DeltaNet text-stack fields: " + ", ".join(mismatches)
+        )
+    if not linear_layers or not full_layers:
+        raise ModelExtractionError(
+            "Gated DeltaNet extraction requires linear and full attention layers"
+        )
+    if text_stack.geometry.num_experts or text_stack.geometry.top_k:
+        raise ModelExtractionError("Gated DeltaNet extraction requires a dense MLP")
+
+
+def _qwen_gdn_family_work(
+    dims: ModelDims,
+    record: StepRecord,
+    num_sampled: int,
+    text_stack: FrameworkTextStack,
+) -> tuple[_ExactFamilyWork, ...]:
+    """Project the pinned Qwen3.5 text stack with integer-only arithmetic."""
+
+    _validate_qwen_gdn_text_stack(text_stack)
+    new_tokens, kv_tokens, attention_pairs = step_shape(record)
+    sequences = len(record.scheduled)
+    linear_layers = text_stack.layer_types.count("linear_attention")
+    full_layers = text_stack.layer_types.count("full_attention")
+    hidden = dims.hidden_size
+    key_heads = text_stack.linear_num_key_heads
+    value_heads = text_stack.linear_num_value_heads
+    key_head_dim = text_stack.linear_key_head_dim
+    value_head_dim = text_stack.linear_value_head_dim
+    key_width = key_heads * key_head_dim
+    value_width = value_heads * value_head_dim
+    conv_width = text_stack.linear_conv_kernel_dim
+    conv_channels = 2 * key_width + value_width
+    conv_state_elements = conv_channels * (conv_width - 1)
+    recurrent_state_elements = value_heads * value_head_dim * key_head_dim
+    full_attention_params = hidden * (
+        dims.num_heads * dims.head_size
+        + 2 * dims.num_kv_heads * dims.head_size
+    ) + dims.num_heads * dims.head_size * hidden
+    input_projection_params = hidden * (
+        2 * key_width + 2 * value_width + 2 * value_heads
+    )
+    conv_params = conv_channels * conv_width
+    update_flops_per_token = key_heads * (7 * key_head_dim + 2) + value_heads * (
+        7 * value_head_dim * key_head_dim + 2 * value_head_dim + 7
+    )
+    norm_flops_per_token = value_heads * (7 * value_head_dim + 2)
+    output_projection_params = value_width * hidden
+    mlp_params = 3 * hidden * dims.intermediate_size
+    head_params = hidden * dims.vocab_size
+    weight_bytes = int(dims.weight_element_bytes)
+    activation_bytes = dims.dtype_bytes
+    state_bytes = 4
+
+    return (
+        _ExactFamilyWork(
+            name="attn_gemm",
+            flops=2 * new_tokens * full_layers * full_attention_params,
+            bytes_moved=weight_bytes * full_layers * full_attention_params,
+            config=(("new_tokens", new_tokens),),
+        ),
+        _ExactFamilyWork(
+            name="attn_score",
+            flops=(
+                4
+                * attention_pairs
+                * full_layers
+                * dims.num_heads
+                * dims.head_size
+            ),
+            bytes_moved=0,
+            config=(("new_tokens", new_tokens), ("kv_tokens", kv_tokens)),
+        ),
+        _ExactFamilyWork(
+            name="kv_read",
+            flops=0,
+            bytes_moved=(
+                2
+                * kv_tokens
+                * full_layers
+                * dims.num_kv_heads
+                * dims.head_size
+                * activation_bytes
+            ),
+            config=(("kv_tokens", kv_tokens),),
+        ),
+        _ExactFamilyWork(
+            name="gdn_input_projection",
+            flops=2 * new_tokens * linear_layers * input_projection_params,
+            bytes_moved=weight_bytes * linear_layers * input_projection_params,
+            config=(("new_tokens", new_tokens),),
+        ),
+        _ExactFamilyWork(
+            name="gdn_short_convolution",
+            flops=2 * new_tokens * linear_layers * conv_params,
+            bytes_moved=(
+                weight_bytes * linear_layers * conv_params
+                + 2
+                * activation_bytes
+                * sequences
+                * linear_layers
+                * conv_state_elements
+            ),
+            config=(("new_tokens", new_tokens), ("sequences", sequences)),
+        ),
+        _ExactFamilyWork(
+            name="gdn_state_read",
+            flops=0,
+            bytes_moved=(
+                state_bytes
+                * sequences
+                * linear_layers
+                * recurrent_state_elements
+            ),
+            config=(("sequences", sequences),),
+        ),
+        _ExactFamilyWork(
+            name="gdn_state_update",
+            flops=new_tokens * linear_layers * update_flops_per_token,
+            bytes_moved=state_bytes * linear_layers * 2 * value_heads,
+            config=(("new_tokens", new_tokens),),
+        ),
+        _ExactFamilyWork(
+            name="gdn_state_write",
+            flops=0,
+            bytes_moved=(
+                state_bytes
+                * sequences
+                * linear_layers
+                * recurrent_state_elements
+            ),
+            config=(("sequences", sequences),),
+        ),
+        _ExactFamilyWork(
+            name="gdn_gated_norm",
+            flops=new_tokens * linear_layers * norm_flops_per_token,
+            bytes_moved=weight_bytes * linear_layers * value_head_dim,
+            config=(("new_tokens", new_tokens),),
+        ),
+        _ExactFamilyWork(
+            name="gdn_output_projection",
+            flops=2 * new_tokens * linear_layers * output_projection_params,
+            bytes_moved=weight_bytes * linear_layers * output_projection_params,
+            config=(("new_tokens", new_tokens),),
+        ),
+        _ExactFamilyWork(
+            name="mlp_gemm",
+            flops=2 * new_tokens * dims.num_layers * mlp_params,
+            bytes_moved=weight_bytes * dims.num_layers * mlp_params,
+            config=(("new_tokens", new_tokens),),
+        ),
+        _ExactFamilyWork(
+            name="lm_head",
+            flops=2 * num_sampled * head_params,
+            bytes_moved=weight_bytes * head_params,
+            config=(("sampled", num_sampled),),
+        ),
+    )
+
+
+def _qwen_gdn_total_work(
+    dims: ModelDims,
+    record: StepRecord,
+    num_sampled: int,
+    text_stack: FrameworkTextStack,
+) -> tuple[int, int]:
+    """Independently compose the Qwen total used for conservation checks."""
+
+    new_tokens, kv_tokens, attention_pairs = step_shape(record)
+    sequences = len(record.scheduled)
+    linear_layers = text_stack.layer_types.count("linear_attention")
+    full_layers = text_stack.layer_types.count("full_attention")
+    hidden = dims.hidden_size
+    key_heads = text_stack.linear_num_key_heads
+    value_heads = text_stack.linear_num_value_heads
+    key_head_dim = text_stack.linear_key_head_dim
+    value_head_dim = text_stack.linear_value_head_dim
+    key_width = key_heads * key_head_dim
+    value_width = value_heads * value_head_dim
+    conv_width = text_stack.linear_conv_kernel_dim
+    conv_channels = 2 * key_width + value_width
+    full_attention_params = hidden * (
+        dims.num_heads * dims.head_size
+        + 2 * dims.num_kv_heads * dims.head_size
+    ) + dims.num_heads * dims.head_size * hidden
+    input_projection_params = hidden * (
+        2 * key_width + 2 * value_width + 2 * value_heads
+    )
+    conv_params = conv_channels * conv_width
+    recurrent_state_elements = value_heads * value_head_dim * key_head_dim
+    update_flops = key_heads * (7 * key_head_dim + 2) + value_heads * (
+        7 * value_head_dim * key_head_dim + 2 * value_head_dim + 7
+    )
+    norm_flops = value_heads * (7 * value_head_dim + 2)
+    output_projection_params = value_width * hidden
+    mlp_params = 3 * hidden * dims.intermediate_size
+    head_params = hidden * dims.vocab_size
+    token_flops = (
+        2 * full_layers * full_attention_params
+        + 2 * linear_layers * input_projection_params
+        + 2 * linear_layers * conv_params
+        + linear_layers * update_flops
+        + linear_layers * norm_flops
+        + 2 * linear_layers * output_projection_params
+        + 2 * dims.num_layers * mlp_params
+    )
+    flops = (
+        token_flops * new_tokens
+        + 4
+        * attention_pairs
+        * full_layers
+        * dims.num_heads
+        * dims.head_size
+        + 2 * num_sampled * head_params
+    )
+    weight_bytes = int(dims.weight_element_bytes)
+    static_bytes = weight_bytes * (
+        full_layers * full_attention_params
+        + linear_layers
+        * (
+            input_projection_params
+            + conv_params
+            + value_head_dim
+            + output_projection_params
+        )
+        + dims.num_layers * mlp_params
+        + head_params
+    ) + 4 * linear_layers * 2 * value_heads
+    sequence_bytes = linear_layers * (
+        2 * dims.dtype_bytes * conv_channels * (conv_width - 1)
+        + 2 * 4 * recurrent_state_elements
+    )
+    kv_bytes = (
+        2
+        * kv_tokens
+        * full_layers
+        * dims.num_kv_heads
+        * dims.head_size
+        * dims.dtype_bytes
+    )
+    return flops, static_bytes + sequence_bytes * sequences + kv_bytes
 
 
 def _case_dims(dims: ModelDims, cell: dict[str, Any]) -> ModelDims:
@@ -540,9 +855,10 @@ def _case_dims(dims: ModelDims, cell: dict[str, Any]) -> ModelDims:
 
 def _shape_schemas(
     specs_by_case: tuple[tuple[Any, ...], ...],
+    ordered_families: tuple[str, ...] = ORDERED_FAMILIES,
 ) -> tuple[ShapeSchema, ...]:
     schemas = []
-    for family_index, family in enumerate(ORDERED_FAMILIES):
+    for family_index, family in enumerate(ordered_families):
         axis_names = _SHAPE_AXES[family]
         vectors = [dict(specs[family_index].config) for specs in specs_by_case]
         axes = tuple(
@@ -576,6 +892,41 @@ def _family_definitions(layers: int) -> tuple[KernelFamilyDefinition, ...]:
             ),
         )
         for family in ORDERED_FAMILIES
+    )
+
+
+def _qwen_gdn_family_definitions(
+    text_stack: FrameworkTextStack,
+) -> tuple[KernelFamilyDefinition, ...]:
+    linear_layers = text_stack.layer_types.count("linear_attention")
+    full_layers = text_stack.layer_types.count("full_attention")
+    layer_counts = {
+        "attn_gemm": full_layers,
+        "attn_score": full_layers,
+        "kv_read": full_layers,
+        "gdn_input_projection": linear_layers,
+        "gdn_short_convolution": linear_layers,
+        "gdn_state_read": linear_layers,
+        "gdn_state_update": linear_layers,
+        "gdn_state_write": linear_layers,
+        "gdn_gated_norm": linear_layers,
+        "gdn_output_projection": linear_layers,
+        "mlp_gemm": text_stack.geometry.layers,
+        "lm_head": 1,
+    }
+    return tuple(
+        KernelFamilyDefinition(
+            family_id=family,
+            shape_schema_id=_SHAPE_SCHEMA_IDS[family],
+            phase_launch_counts=tuple(
+                PhaseLaunchCount(
+                    phase=phase,
+                    logical_launch_count=layer_counts[family],
+                )
+                for phase in ("prefill", "decode")
+            ),
+        )
+        for family in QWEN_GATED_DELTA_NET_FAMILIES
     )
 
 
@@ -651,7 +1002,7 @@ def _validate_framework_declaration(
 def _validate_text_stack(
     reference_model: Mapping[str, Any],
     projection: FrameworkConfigurationProjection,
-) -> None:
+) -> FrameworkTextStack:
     text = reference_model.get("text_stack")
     if not isinstance(text, dict):
         raise ModelExtractionError("suite text-stack contract must be an object")
@@ -715,11 +1066,8 @@ def _validate_text_stack(
     if projection.text_stack.to_obj() != expected:
         raise ModelExtractionError("framework text-stack projection does not match the suite")
     if linear_layers:
-        raise ModelExtractionError(
-            "COMP-62: Qwen3.5 Gated DeltaNet linear attention is outside the "
-            "frozen inventory family set; refusing partial "
-            f"{projection.framework.framework_id} inventory"
-        )
+        _validate_qwen_gdn_text_stack(projection.text_stack)
+    return projection.text_stack
 
 
 def extract_model_inventory(
@@ -744,37 +1092,70 @@ def extract_model_inventory(
     validate_framework_dims(framework_dims, model)
     case_records_from_suite(suite)
     has_text_contract = "text_stack" in reference_model
+    text_stack = None
     if has_text_contract and framework_projection is None:
         raise ModelExtractionError("suite requires a framework text-stack projection")
     if framework_projection is not None:
         if not has_text_contract:
             raise ModelExtractionError("framework supplied an undeclared text stack")
-        _validate_text_stack(reference_model, framework_projection)
+        text_stack = _validate_text_stack(reference_model, framework_projection)
     records = _records_from_suite(suite, step_records_path)
     cells = suite["graph_cells"]
     case_dims = tuple(
         _case_dims(framework_dims, cell) for cell in cells
     )
-    specs_by_case = tuple(
-        tuple(step_kernels(dims, record, record.num_sampled or 0))
-        for dims, record in zip(case_dims, records, strict=True)
+    has_gated_delta_net = text_stack is not None and (
+        "linear_attention" in text_stack.layer_types
     )
-    if any(tuple(spec.name for spec in specs) != ORDERED_FAMILIES for specs in specs_by_case):
-        raise ModelExtractionError("step_kernels() did not produce the frozen family order")
-    schemas = _shape_schemas(specs_by_case)
-    definitions = _family_definitions(model.geometry.layers)
+    if has_gated_delta_net:
+        assert text_stack is not None
+        ordered_families = QWEN_GATED_DELTA_NET_FAMILIES
+        specs_by_case = tuple(
+            _qwen_gdn_family_work(
+                dims,
+                record,
+                record.num_sampled or 0,
+                text_stack,
+            )
+            for dims, record in zip(case_dims, records, strict=True)
+        )
+        definitions = _qwen_gdn_family_definitions(text_stack)
+    else:
+        ordered_families = ORDERED_FAMILIES
+        specs_by_case = tuple(
+            tuple(step_kernels(dims, record, record.num_sampled or 0))
+            for dims, record in zip(case_dims, records, strict=True)
+        )
+        definitions = _family_definitions(model.geometry.layers)
+    if any(
+        tuple(spec.name for spec in specs) != ordered_families
+        for specs in specs_by_case
+    ):
+        raise ModelExtractionError("inventory builder changed the frozen family order")
+    schemas = _shape_schemas(specs_by_case, ordered_families)
     cases = []
     for ordinal, (cell, record, dims, specs) in enumerate(
         zip(cells, records, case_dims, specs_by_case, strict=True)
     ):
-        fused = step_kernel(dims, record, record.num_sampled or 0)
         projected_flops = sum(_exact_work(spec.flops, "family.flops") for spec in specs)
         projected_bytes = sum(
             _exact_work(spec.bytes_moved, "family.bytes_moved") for spec in specs
         )
-        if projected_flops != _exact_work(fused.flops, "fused.flops"):
+        if has_gated_delta_net:
+            assert text_stack is not None
+            fused_flops, fused_bytes = _qwen_gdn_total_work(
+                dims,
+                record,
+                record.num_sampled or 0,
+                text_stack,
+            )
+        else:
+            fused = step_kernel(dims, record, record.num_sampled or 0)
+            fused_flops = _exact_work(fused.flops, "fused.flops")
+            fused_bytes = _exact_work(fused.bytes_moved, "fused.bytes_moved")
+        if projected_flops != fused_flops:
             raise ModelExtractionError(f"case {cell['id']!r} family FLOPs are not exact")
-        if projected_bytes != _exact_work(fused.bytes_moved, "fused.bytes_moved"):
+        if projected_bytes != fused_bytes:
             raise ModelExtractionError(f"case {cell['id']!r} family bytes are not exact")
         ep_ranks = (
             tuple(range(cell["expert_participants"]))
@@ -831,6 +1212,7 @@ def extract_model_inventory(
 __all__ = [
     "LAYER_REPEATED_FAMILIES",
     "ORDERED_FAMILIES",
+    "QWEN_GATED_DELTA_NET_FAMILIES",
     "FrameworkConfigurationProjection",
     "FrameworkTextStack",
     "ModelExtractionError",
