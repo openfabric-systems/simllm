@@ -163,6 +163,40 @@ direction, 2026-08-24):
   insensitive within noise, or a quantified penalty with its mechanism)
   is published with the evidence.
 
+## Code objects
+
+The CUDA graph is a runtime record of launches, not a compiler product:
+the framework wraps its decode forward in stream capture, recording each
+kernel's function handle, arguments, grid and dependencies, and replays
+the instantiated graph per batch bucket. The kernels those graph nodes
+point at come from three classes with different determinism regimes, and
+every measured cell records which class each kernel belongs to
+(maintainer direction, 2026-08-25):
+
+- Triton just-in-time kernels (framework-authored kernels and the
+  compiled-fusion output) are built at runtime per specialization and
+  architecture through PTX and then SASS, cached on disk. They are
+  reproducible for a fixed framework pin, toolchain and architecture
+  once autotuning is pinned, and the campaign verifies that claim by
+  harvesting the caches twice from clean state and asserting
+  byte-identical manifests.
+- Wheel-precompiled CUDA C++ kernels ship as fatbins whose SASS is fixed
+  by the wheel hash; embedded PTX is extracted where present.
+- Closed libraries (cuBLAS and cuBLASLt) ship SASS only, and their
+  per-shape variant selection is a runtime heuristic: the campaign
+  records the selected kernel name per shape and notes that a captured
+  graph freezes the selection for its replays. A variant flip between
+  captures at one shape has already been observed once and is the
+  motivating instance.
+
+The two frameworks genuinely differ in their code objects even where the
+mathematics agree, so implementation identity is always per framework.
+The deterministic extraction (per-kernel PTX and SASS digests with the
+compile configuration) fills the implementation-reference contract the
+calibration design freezes, is owned by the VLLM-12 and SGL-10 producers
+with COMP-6's joins, and is the static complement to the dynamic SASS
+traces the Accel-Sim sidecar consumes.
+
 ## Models beyond node memory
 
 A frontier MoE column is filled without hosting the full checkpoint. The
