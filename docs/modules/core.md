@@ -59,8 +59,10 @@ own modules.
   and TPOT only from decode-pool cadence.
 - `KvHandoffEvent` is the sole handoff timing authority. Its declared-constant
   arm derives bytes from model KV geometry and prompt context, advances the
-  shared clock once, and publishes a loss-checked read-only record. The packet
-  arm remains TRAF-62.
+  shared clock once, and publishes a loss-checked read-only record. Its packet
+  policy charges PCIe submission, renders the same bytes through GOAL and the
+  packet backend, and completes at the last required arrival. TRAF-62 and
+  TRAF-64 retain the PLACE-5-dependent target-topology qualification.
 
 ### Execution and completion boundary
 
@@ -963,9 +965,13 @@ declared 100 or 200 microsecond transfer. The frozen study passed all four
 exact decomposition rows with 0 ps residual and all six behavioral relations.
 It also rendered the 16-prefill plus 40-decode target as 448 rank, GPU and NIC
 records without running those engines. The live 56-engine target, accepted
-lookup pricing, packetized handoff, physical target topology and concurrent
-multi-request batching remain CORE-52, CORE-53, TRAF-62, PLACE-5 and VLLM-35;
-see [the disaggregated-session results](../../examples/pd_session_v1/RESULTS.md).
+lookup pricing, physical packet-handoff topology and validated concurrent
+throughput-delay shape remain CORE-52, CORE-53, TRAF-62, TRAF-64, PLACE-5,
+VLLM-35 and VLLM-39. The bounded packet handoff itself is live and moves TTFT
+by the exact signed difference from the constant arm at 0 ps residual without
+moving decode TPOT; see
+[the disaggregated-session results](../../examples/pd_session_v1/RESULTS.md)
+and [the packet-handoff results](../../examples/pd_session_fabric_handoff_v1/RESULTS.md).
 The concurrent extension now conserves 144 independent request lifecycles at
 0 ps maximum decomposition residual and exposes stock-scheduler batches in
 both roles across all three small pool ratios. Its exact curve records are
@@ -1294,9 +1300,9 @@ stays open through VLLM-39; see
   delivered through the real vLLM scheduler-side KV connector and a shared
   virtual clock, with the declared-constant handoff, role-aware manifests and
   one-plus-one live run. This umbrella remains open on CORE-52, CORE-53,
-  TRAF-62, PLACE-5 and VLLM-35; those residuals own the live 448-rank scale,
-  lookup pricing, packet handoff, physical target topology and concurrent
-  multi-request path respectively.
+  TRAF-62, TRAF-64, PLACE-5 and VLLM-35; those residuals own the live 448-rank
+  scale, lookup pricing, topology-qualified packet handoff, physical target
+  topology and validated concurrent curve respectively.
 - CORE-54 (Completeness; P1; L): reproduce the public DeepSeek-V3 deployment
   curve inside the simulator, evidence first. Freeze the published anchors
   from [the deployment disclosures](../papers/deepseek-deployment-disclosures.md)

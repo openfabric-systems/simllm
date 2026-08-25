@@ -1,0 +1,92 @@
+{
+  "schema": "simllm-pd-session-fabric-handoff-compact-result-v1",
+  "status": "PASS",
+  "raw_result_sha256": "311d20615e49e5d8610bd519650b4e818179408d1784ebdf6380d0f8b5889189",
+  "fatal_guards": {
+    "status": "HELD",
+    "findings": []
+  },
+  "conservation": {
+    "exact_rows": 4,
+    "aggregate_kv_bytes_by_prompt": {"8": 393216, "16": 786432},
+    "chunks_per_request": 8,
+    "flows_per_request": 8,
+    "source_ranks": [0, 1, 2, 3, 4, 5, 6, 7],
+    "destination_ranks": [8, 9, 10, 11, 12, 13, 14, 15],
+    "maximum_metric_residual_ps": 0
+  },
+  "exact_oracle_rows": [
+    {
+      "prompt_tokens": 8,
+      "link_bandwidth_bps": 200000000000,
+      "aggregate_kv_bytes": 393216,
+      "packet_service_ps": 4163200,
+      "packet_duration_ps": 24163200,
+      "constant_ttft_ps": 273376000,
+      "packet_ttft_ps": 197539200,
+      "signed_handoff_difference_ps": -75836800,
+      "signed_ttft_difference_ps": -75836800,
+      "metric_residual_ps": 0,
+      "tpot_ps": {"numerator": 77952000, "denominator": 1}
+    },
+    {
+      "prompt_tokens": 8,
+      "link_bandwidth_bps": 400000000000,
+      "aggregate_kv_bytes": 393216,
+      "packet_service_ps": 3081600,
+      "packet_duration_ps": 23081600,
+      "constant_ttft_ps": 273376000,
+      "packet_ttft_ps": 196457600,
+      "signed_handoff_difference_ps": -76918400,
+      "signed_ttft_difference_ps": -76918400,
+      "metric_residual_ps": 0,
+      "tpot_ps": {"numerator": 77952000, "denominator": 1}
+    },
+    {
+      "prompt_tokens": 16,
+      "link_bandwidth_bps": 200000000000,
+      "aggregate_kv_bytes": 786432,
+      "packet_service_ps": 6160000,
+      "packet_duration_ps": 26160000,
+      "constant_ttft_ps": 292912000,
+      "packet_ttft_ps": 219072000,
+      "signed_handoff_difference_ps": -73840000,
+      "signed_ttft_difference_ps": -73840000,
+      "metric_residual_ps": 0,
+      "tpot_ps": {"numerator": 77976000, "denominator": 1}
+    },
+    {
+      "prompt_tokens": 16,
+      "link_bandwidth_bps": 400000000000,
+      "aggregate_kv_bytes": 786432,
+      "packet_service_ps": 4080000,
+      "packet_duration_ps": 24080000,
+      "constant_ttft_ps": 292912000,
+      "packet_ttft_ps": 216992000,
+      "signed_handoff_difference_ps": -75920000,
+      "signed_ttft_difference_ps": -75920000,
+      "metric_residual_ps": 0,
+      "tpot_ps": {"numerator": 77976000, "denominator": 1}
+    }
+  ],
+  "behavioral_relations": {
+    "halving_bandwidth_does_not_reduce_service": {"held": 2, "evaluated": 2},
+    "doubling_context_does_not_reduce_service": {"held": 2, "evaluated": 2},
+    "only_packet_arm_emits_backend_artifacts": {"held": 4, "evaluated": 4}
+  },
+  "arm_isolation": {
+    "packet_request_directories": 4,
+    "packet_artifacts_per_request": [
+      "kv-handoff.goal",
+      "kv-handoff.bin",
+      "flow-completions.csv",
+      "packet-handoff.json"
+    ],
+    "constant_or_off_packet_artifact_delta": 0,
+    "core51_tracked_artifacts_byte_identical": true
+  },
+  "task_effect": {
+    "traf_62": "open on PLACE-5",
+    "traf_64": "registered for topology-qualified closure"
+  }
+}

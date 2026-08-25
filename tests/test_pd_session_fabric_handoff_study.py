@@ -14,6 +14,7 @@ STUDY_PATH = (
 EXPECTATIONS_PATH = (
     REPOSITORY_ROOT / "examples/pd_session_fabric_handoff_v1/expectations.json"
 )
+RESULTS_PATH = REPOSITORY_ROOT / "examples/pd_session_fabric_handoff_v1/results.json"
 
 
 def _study():
@@ -134,6 +135,19 @@ def test_frozen_packet_registry_arithmetic_is_self_consistent():
     frozen = json.loads(EXPECTATIONS_PATH.read_text())
 
     study._validate_frozen_arithmetic(frozen)
+
+
+def test_compact_result_records_the_passing_packet_mechanism():
+    result = json.loads(RESULTS_PATH.read_text())
+
+    assert result["status"] == "PASS"
+    assert result["fatal_guards"] == {"status": "HELD", "findings": []}
+    assert result["conservation"]["exact_rows"] == 4
+    assert result["conservation"]["maximum_metric_residual_ps"] == 0
+    assert result["arm_isolation"]["constant_or_off_packet_artifact_delta"] == 0
+    assert result["arm_isolation"]["core51_tracked_artifacts_byte_identical"]
+    assert result["exact_oracle_rows"][1]["signed_ttft_difference_ps"] == -76_918_400
+    assert result["exact_oracle_rows"][1]["metric_residual_ps"] == 0
 
 
 def test_analysis_passes_exact_conservation_and_behavioral_relations():
