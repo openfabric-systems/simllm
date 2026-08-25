@@ -2,13 +2,15 @@
   "schema": "simllm-model-extraction-deepseek-v3-expectations-v1",
   "study": "model-extraction-deepseek-v3-v1",
   "authored_after_commit": "dc350b6996215adf69384c23335b496440042fe7",
+  "canonical_json_amendment_after_commit": "724666a90ac643647c8f304ee052b92850be1656",
+  "canonical_json_amendment": "encode the exact router factor as rational string 5/2 because canonical records forbid floating-point tokens",
   "working_tree_before_freeze": "clean-except-gitignored-sizing-note",
   "suite": {
     "id": "deepseek-v3-text-v1-frameworks-2026-08-25",
     "relative_path": "offline/calibration/suites/deepseek-v3-text-v1-frameworks-2026-08-25/suite.json",
-    "sha256": "88f718c94ad35bb0c74314811680b5ebff7e5df70759096dc0b640f84f47bd69",
+    "sha256": "7a59f181561c24e5d631cb7164333ae8e0491eb586c2b77a6582c922a73b0b60",
     "case_count": 20,
-    "reference_model_canonical_sha256": "ff41fb1caa5909350aae2e10f864e28d7c276ab03441227574be32b506a934e2",
+    "reference_model_canonical_sha256": "1e2a350edfbd9d765e9be47555a48ef69f9510b896c52025da5425f740239bb0",
     "graph_cells_canonical_sha256": "afb5b54338cdc33b736e7222322d2df26e8424fe0a307223e1d7a2ebbb08dd29",
     "deployment_projections_canonical_sha256": "87ecb9f62d55e8d362ff83b7679a557006c5c95940e6630cb180dc7b6ba3df43"
   },
@@ -671,4 +673,3 @@
     "fatal_rule": "any fatal guard voids the study and COMP-67 remains open"
   }
 }
-

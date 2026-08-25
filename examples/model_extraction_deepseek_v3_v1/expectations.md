@@ -9,11 +9,17 @@ freeze edit, the tracked working tree was clean. The required sizing note was
 present only in the ignored local notes layer.
 
 The suite is `deepseek-v3-text-v1-frameworks-2026-08-25`, with file SHA-256
-`88f718c94ad35bb0c74314811680b5ebff7e5df70759096dc0b640f84f47bd69`.
+`7a59f181561c24e5d631cb7164333ae8e0491eb586c2b77a6582c922a73b0b60`.
 It contains 20 authored cases and four deployment projections. This freeze
 contains only identities, formulas, exact oracles and expected relations. It
 contains no implementation, inventory, run log, observed digest, measured
 value or outcome-dependent threshold.
+
+An expectations-only canonical-format amendment follows freeze commit
+`724666a90ac643647c8f304ee052b92850be1656`. It spells the router scale as
+the exact rational string `5/2`, because repository canonical JSON forbids
+floating-point tokens. The value, formulas, cases and acceptance relations do
+not change, and no scored extraction preceded the amendment.
 
 ## Checkpoint and framework boundary
 

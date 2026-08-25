@@ -863,7 +863,7 @@
       "scoring_func": "sigmoid",
       "topk_method": "noaux_tc",
       "norm_topk_prob": true,
-      "routed_scaling_factor": 2.5,
+      "routed_scaling_factor": "5/2",
       "num_nextn_predict_layers": 1,
       "weight_block_size": [
         128,
