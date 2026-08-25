@@ -144,12 +144,19 @@ def test_dry_commands_cover_nsys_components_and_program_counter_pass(plan: dict)
 
     assert len(commands) == 3
     assert commands[0][0] == "nsys"
+    assert "--output=configured-run-root/cell/nsys" in commands[0]
     assert "--cuda-graph-trace=node" in commands[0]
     assert "--trace=cuda,nvtx,cublas,cudnn" in commands[0]
     assert commands[1][0] == "ncu"
+    assert commands[1][commands[1].index("--export") + 1] == (
+        "configured-run-root/cell/ncu-components"
+    )
     assert commands[1][commands[1].index("--clock-control") + 1] == "none"
     assert "dram__bytes_read.sum" in commands[1][commands[1].index("--metrics") + 1]
     assert commands[2][commands[2].index("--section") + 1] == "SourceCounters"
+    assert commands[2][commands[2].index("--export") + 1] == (
+        "configured-run-root/cell/ncu-pc-sampling"
+    )
     assert all(
         command[-3:] == ["pinned-vllm-target", "--cell-spec", "configured-run-root/cell/cell.json"]
         for command in commands

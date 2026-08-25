@@ -409,14 +409,14 @@ def commands_for_cell(
     if not target:
         raise RuntimeError(f"{target_variable} must name the pinned framework target")
     output = Path(output_dir)
-    target_command = [target, "--cell-spec", str(output / "cell.json")]
+    target_command = [target, "--cell-spec", (output / "cell.json").as_posix()]
     nsys = cell["collectors"]["nsys"]
     ncu = cell["collectors"]["ncu"]
     commands = [
         [
             "nsys",
             "profile",
-            f"--output={output / 'nsys'}",
+            f"--output={(output / 'nsys').as_posix()}",
             "--force-overwrite=false",
             f"--cuda-graph-trace={nsys['cuda_graph_trace']}",
             f"--trace={','.join(nsys['trace'])}",
@@ -442,7 +442,7 @@ def commands_for_cell(
             "--metrics",
             ",".join(ncu["metrics"]),
             "--export",
-            str(output / "ncu-components"),
+            (output / "ncu-components").as_posix(),
             *target_command,
         ],
         [
@@ -460,7 +460,7 @@ def commands_for_cell(
             "--section",
             ",".join(cell["collectors"]["program_counter_sampling"]["sections"]),
             "--export",
-            str(output / "ncu-pc-sampling"),
+            (output / "ncu-pc-sampling").as_posix(),
             *target_command,
         ],
     ]
@@ -508,7 +508,7 @@ def run_cell(
             ),
             "--format=csv",
             "--loop-ms=200",
-            f"--filename={clock_path}",
+            f"--filename={clock_path.as_posix()}",
         ],
         env=environ,
     )
