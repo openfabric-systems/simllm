@@ -1,0 +1,192 @@
+{
+  "schema": "simllm-study-freeze-v1",
+  "study": "kernel_cycle_lut_v1",
+  "task": "COMP-64",
+  "authored_against": "7e5b1ce26104d5252f94ee94350947d874f844c9",
+  "working_tree_before_freeze": "clean",
+  "execution_scope": "retained-fixtures-only-no-gpu",
+  "lookup_schema": "simllm-kernel-cycle-lut-v1",
+  "lookup_key_order": [
+    "framework_identity",
+    "model_identity",
+    "pool",
+    "launch_mode",
+    "parallelism",
+    "shape",
+    "routing_for_routed_families_only"
+  ],
+  "key_contract": {
+    "framework_identity_fields": [
+      "name",
+      "version",
+      "revision",
+      "package_sha256"
+    ],
+    "model_identity_fields": [
+      "family",
+      "name",
+      "revision",
+      "config_sha256",
+      "weights_sha256"
+    ],
+    "parallelism_fields": [
+      "tensor_parallel",
+      "pipeline_parallel",
+      "data_parallel",
+      "expert_parallel"
+    ],
+    "decode_shape_fields": [
+      "batch_size",
+      "per_request_kv_lengths"
+    ],
+    "prefill_shape_fields": [
+      "computed_new_tokens",
+      "existing_context_tokens"
+    ],
+    "dense_routing_rule": "routing-field-is-forbidden",
+    "routed_routing_rule": "routing-field-is-required-and-carries-expert-loads-plus-evidence-sha256"
+  },
+  "component_contract": {
+    "composition": "sum-kernels-of-max-compute-memory-plus-fixed",
+    "compute_domain": "integer-sm-cycles",
+    "memory_domain": "integer-bytes-over-achieved-bandwidth-at-observed-memory-clock",
+    "memory_fields": [
+      "weight_bytes",
+      "kv_bytes",
+      "other_bytes",
+      "achieved_bandwidth_bytes_per_second",
+      "service_ps"
+    ],
+    "unknown_memory_rule": "all-byte-and-bandwidth-fields-null-and-service-ps-zero",
+    "fixed_domain": "integer-picoseconds",
+    "reconstruction_error_ps_max": 1
+  },
+  "distribution_contract": {
+    "fields": [
+      "replay_count",
+      "peak_count",
+      "peak_centers_ps",
+      "trimmed_coefficient_of_variation_ppm",
+      "clock_correlation_ppm",
+      "verdict"
+    ],
+    "graph_minimum_replays": 256,
+    "eager_minimum_replays": 64,
+    "retained_fixture_expected_verdict": "insufficient-replays",
+    "device_model_consumes_observed_spread": true
+  },
+  "campaign_protocol": {
+    "pools": ["decode", "prefill"],
+    "launch_modes": ["cuda-graph", "eager"],
+    "kv_grid_basis_points": [
+      100,
+      200,
+      400,
+      600,
+      800,
+      1200,
+      1600,
+      2400,
+      3200,
+      4000,
+      5000,
+      6000,
+      7000,
+      8000,
+      9000,
+      10000
+    ],
+    "kv_placement_modes": ["fresh-contiguous", "deliberately-fragmented"],
+    "clock_observations": ["sm-clock-hz", "memory-clock-hz"],
+    "ncu_clock_control": "none",
+    "ncu_required_metrics": [
+      "elapsed-time",
+      "elapsed-sm-cycles",
+      "dram-read-bytes",
+      "dram-write-bytes",
+      "achieved-dram-throughput",
+      "achieved-compute-throughput"
+    ],
+    "program_counter_sampling": "attempt-and-record-granted-denied-or-unavailable",
+    "code_object_classes": [
+      "triton-jit",
+      "wheel-precompiled-cuda",
+      "closed-library",
+      "unknown"
+    ],
+    "code_object_digests": ["ptx_sha256", "sass_sha256"],
+    "clean_harvest_runs": 2,
+    "harvest_acceptance": "byte-identical-canonical-manifests"
+  },
+  "retained_fixture": {
+    "source": "external-kernelprobe-job-197735-and-ncu-job-197760",
+    "framework": "vllm",
+    "model": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "pool": "decode",
+    "launch_mode": "cuda-graph",
+    "batch_size": 1,
+    "per_request_kv_lengths": [16],
+    "instrument_overlap_kernel_count": 5,
+    "observed_sm_clock_hz": 1410000000,
+    "observed_memory_clock_hz": 1593000000,
+    "enclosing_wall_step_ps_ceiling": 2323678000
+  },
+  "evidence_classes": {
+    "behavioral_relation_families": 1,
+    "behavioral_parameterized_instances": 5,
+    "fatal_guards": 7,
+    "exact_oracle_rows": 0,
+    "native_executables": 0
+  },
+  "scored_relations": [
+    {
+      "id": "R1-cross-instrument-elapsed-agreement",
+      "risk": "genuine",
+      "instances": 5,
+      "ratio_lower_ppm": 500000,
+      "ratio_upper_ppm": 2000000,
+      "claim": "For each mapped kernel family observed by both instruments, the Nsight Compute elapsed time divided by the Nsight Systems median lies from 0.5 through 2.0 inclusive."
+    }
+  ],
+  "fatal_guards": [
+    {
+      "id": "G1",
+      "claim": "Every fixture excerpt carries its retained-source SHA-256 and the analyzer rejects a digest mismatch."
+    },
+    {
+      "id": "G2",
+      "claim": "Every emitted lookup record is strict canonical calibration JSON and its external record identity is the SHA-256 of those exact bytes."
+    },
+    {
+      "id": "G3",
+      "claim": "Every kernel reconstructs measured elapsed time within one picosecond as max(compute service, memory service) plus fixed overhead, and the entry total is the sum of those kernel reconstructions."
+    },
+    {
+      "id": "G4",
+      "claim": "A dense decode key missing per-request KV lengths rejects, and a routed-family key missing routing evidence rejects."
+    },
+    {
+      "id": "G5",
+      "claim": "Two analyses of identical fixture bytes emit byte-identical lookup records with one identical content identity."
+    },
+    {
+      "id": "G6",
+      "claim": "The scalar projection round-trips through simllm-profile-table-v1 and the mechanistic projection round-trips through existing device-model service-entry readers without changing the lookup duration."
+    },
+    {
+      "id": "G7",
+      "claim": "Every retained per-kernel elapsed time is positive, no per-kernel time exceeds the enclosing wall-step ceiling, and both observed clocks are positive."
+    }
+  ],
+  "closure": {
+    "closes": [],
+    "keeps_open": ["COMP-64"],
+    "expected_residual_ids": ["COMP-65", "COMP-66"],
+    "does_not_claim": [
+      "gpu-campaign-execution",
+      "numerical-calibration",
+      "compile-time-graph-inference",
+      "program-counter-attribution"
+    ]
+  }
+}

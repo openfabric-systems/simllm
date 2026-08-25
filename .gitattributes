@@ -86,3 +86,7 @@ offline/calibration/suites/qwen3.8-27b-text-v1/*.json text eol=lf
 offline/calibration/suites/qwen3.8-27b-text-v1/*.md text eol=lf
 offline/calibration/suites/**/*.json text eol=lf
 offline/calibration/suites/**/*.md text eol=lf
+tests/fixtures/kernel_cycle_lut_v1/* text eol=lf
+examples/kernel_cycle_lut_v1/*.json text eol=lf
+examples/kernel_cycle_lut_v1/*.md text eol=lf
+examples/kernel_cycle_lut_v1/*.py text eol=lf

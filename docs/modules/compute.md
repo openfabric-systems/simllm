@@ -2477,11 +2477,36 @@ and an explicit reason:
   carries its distribution verdict and code-object references, and the
   record compiles into the existing profile-table and device-model
   service-entry forms rather than becoming a second pricing authority.
-  The first slice builds and freezes the pipeline against the retained
-  probe raw artifacts as fixtures with no new GPU time; the registered
-  campaign then executes it on the qualified target. COMP-1 keeps
-  numerical acceptance; COMP-45's cycle-normalized publication rule is
+  The retained-fixture first slice is delivered by
+  [kernel_cycle_lut_v1](../../examples/kernel_cycle_lut_v1/RESULTS.md): it
+  freezes and validates the strict record, analyzer, candidate compilers and
+  portable dry campaign without new GPU time. This does not close COMP-64.
+  Execute the registered campaign on the qualified target, with COMP-65 and
+  COMP-66 completing the two explicitly residual attribution paths. COMP-1
+  keeps numerical acceptance; COMP-45's cycle-normalized publication rule is
   satisfied by the per-domain component form.
+- COMP-65 (Completeness; P1; L): add static decode-graph inference where a
+  pinned framework exposes a compile product. Before a GPU replay, read the
+  framework-owned compiled graph and emit the ordered kernel implementation
+  list with its graph identity, then require the runtime recording to match
+  that list without loss, duplication or order drift. A framework or shape
+  whose compile step exposes no total graph records `unavailable` and keeps
+  the runtime-only COMP-64 path; it never fabricates a static list or blocks
+  an explicitly unsupported producer. Acceptance requires at least one
+  supported vLLM cell and one supported SGLang cell, an intentional mismatch
+  fixture that rejects, and byte-identical runtime-only records when static
+  inference is unavailable or disabled.
+- COMP-66 (Completeness; P1; L): complete in-kernel cycle attribution with
+  program-counter sampling on a qualified profiler and GPU target that grant
+  it. Join sampled program counters to the exact per-kernel SASS digest,
+  attribute sampled cycles to the frozen compute, memory-stall and fixed
+  categories, and retain the sampling interval, dropped-sample count and
+  permission verdict. A denied or unavailable profiler records that verdict
+  and preserves COMP-64's aggregate elapsed-cycle decomposition exactly;
+  denial is not zero sampled work. Acceptance requires one granted capture
+  whose category cycles conserve the sampled total within the frozen sampling
+  uncertainty, one denied fixture, and exact bypass equivalence for every
+  timestamp, component and compiled service value.
 
 ### Uncategorized
 

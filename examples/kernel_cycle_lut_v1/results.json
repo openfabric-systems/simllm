@@ -1,0 +1,124 @@
+{
+  "closure": {
+    "closes": [],
+    "does_not_claim": [
+      "gpu-campaign-execution",
+      "numerical-calibration",
+      "compile-time-graph-inference",
+      "program-counter-attribution"
+    ],
+    "expected_residual_ids": [
+      "COMP-65",
+      "COMP-66"
+    ],
+    "keeps_open": [
+      "COMP-64"
+    ]
+  },
+  "evidence_classes": {
+    "behavioral_parameterized_instances": 5,
+    "behavioral_relation_families": 1,
+    "exact_oracle_rows": 0,
+    "fatal_guards": 7,
+    "native_executables": 0
+  },
+  "expectation_commit": "10f4ad2b450d5d559cd67d50ccb87e2557e7123d",
+  "fatal_guards": {
+    "G1": {
+      "passed": true,
+      "verified_fixture_sources": 4
+    },
+    "G2": {
+      "passed": true,
+      "record_sha256": "e495f3ca5d0858cf371b19205ae6b7747d633695020d10f58645c5f245086070"
+    },
+    "G3": {
+      "max_abs_reconstruction_error_ps": 0,
+      "measured_service_ps": 2047488000,
+      "passed": true,
+      "reconstructed_service_ps": 2047488000
+    },
+    "G4": {
+      "passed": true,
+      "rejected": [
+        "routed-missing-routing",
+        "dense-missing-kv"
+      ]
+    },
+    "G5": {
+      "first_sha256": "e495f3ca5d0858cf371b19205ae6b7747d633695020d10f58645c5f245086070",
+      "passed": true,
+      "second_sha256": "e495f3ca5d0858cf371b19205ae6b7747d633695020d10f58645c5f245086070"
+    },
+    "G6": {
+      "acceptance_status": "candidate",
+      "device_service_duration_ps": 2047488000,
+      "device_service_entry_count": 1,
+      "passed": true,
+      "profile_table_duration_ps": 2047488000,
+      "profile_table_schema": "simllm-profile-table-v1",
+      "target_duration_ps": 2047488000
+    },
+    "G7": {
+      "maximum_observed_kernel_ps": 17984000,
+      "observed_memory_clock_hz": 1593000000,
+      "observed_sm_clock_hz": 1410000000,
+      "passed": true,
+      "per_kernel_ceiling_ps": 2323678000,
+      "per_kernel_floor_ps": 1
+    }
+  },
+  "freeze_sha256": "bdb910e63fa6315ca9d91c1ff448e7810bc05c29ae8641838f35292fcd39af78",
+  "lookup_record": {
+    "acceptance_status": "candidate",
+    "coverage": "partial-kernel-subset",
+    "distribution_verdict": "insufficient-replays",
+    "measured_service_ps": 2047488000,
+    "replay_count": 16,
+    "schema": "simllm-kernel-cycle-lut-v1",
+    "sha256": "e495f3ca5d0858cf371b19205ae6b7747d633695020d10f58645c5f245086070"
+  },
+  "relations": {
+    "R1-cross-instrument-elapsed-agreement": {
+      "instances": [
+        {
+          "kernel_id": "flash_combine",
+          "passed": true,
+          "ratio_ppm": 1739130
+        },
+        {
+          "kernel_id": "flash_split_kv",
+          "passed": true,
+          "ratio_ppm": 1262626
+        },
+        {
+          "kernel_id": "fused_moe",
+          "passed": true,
+          "ratio_ppm": 1441026
+        },
+        {
+          "kernel_id": "gemvx",
+          "passed": true,
+          "ratio_ppm": 1375744
+        },
+        {
+          "kernel_id": "topk_gating",
+          "passed": true,
+          "ratio_ppm": 1355311
+        }
+      ],
+      "maximum_ratio_ppm": 1739130,
+      "passed": true,
+      "ratio_lower_ppm": 500000,
+      "ratio_upper_ppm": 2000000,
+      "scored": true
+    }
+  },
+  "run_state": "nonvoid",
+  "schema": "simllm-kernel-cycle-lut-study-result-v1",
+  "scored_denominator_relation_families": 1,
+  "scored_parameterized_instances": 5,
+  "scored_passed_relation_families": 1,
+  "study": "kernel_cycle_lut_v1",
+  "voiding_guards": []
+}

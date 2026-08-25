@@ -1,0 +1,6 @@
+kernel_id,kernel_name,elapsed_us,elapsed_sm_cycles,compute_or_memory_sol_ppm,dram_sol_ppm,sm_throughput_ppm,active_warps_ppm,waves_per_sm_milli
+flash_combine,flash_fwd_splitkv_combine_kernel,14.080,18224,2830,2540,1080,61700,0
+flash_split_kv,flash_fwd_splitkv_kernel,12.000,14531,23550,1760,30700,71770,590
+fused_moe,fused_moe_kernel,17.984,22163,523860,523860,86100,74950,590
+gemvx,internal::gemvx::kernel,8.672,11358,255100,255100,137070,139330,790
+topk_gating,topkGating,5.920,7476,5340,10,340,24390,0

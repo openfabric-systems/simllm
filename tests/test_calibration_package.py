@@ -122,6 +122,7 @@ def test_wheel_contains_the_lazy_package_and_no_checkout_only_roots(
         "simllm/calibration/cli.py",
         "simllm/calibration/doctor.py",
         "simllm/calibration/identity.py",
+        "simllm/calibration/kernel_cycle_lut.py",
         "simllm/calibration/manifests.py",
         "simllm/calibration/protocols.py",
         "simllm/calibration/record_types.py",

@@ -1,0 +1,144 @@
+{
+  "schema": "simllm-kernel-cycle-input-v1",
+  "acceptance_status": "candidate",
+  "campaign_id": "retained-granite-tp1-b1-candidate",
+  "created": "2026-08-25",
+  "implementation_id": "vllm.granite.tp1.decode.cuda-graph.partial-v1",
+  "coverage": "partial-kernel-subset",
+  "device": {
+    "device_kind_id": "nvidia-a100-sm80",
+    "gpu_name": "NVIDIA A100-SXM4-80GB",
+    "gpu_uuid": "GPU-b830e204-421b-969a-1ee6-f672b22393d4",
+    "architecture": "sm80",
+    "memory_capacity_bytes_per_second": 2039040000000
+  },
+  "capture_protocol": {
+    "graph_minimum_replays": 256,
+    "eager_minimum_replays": 64,
+    "program_counter_sampling": "not-captured",
+    "compile_graph_inference": "not-captured",
+    "code_object_double_harvest": "not-captured"
+  },
+  "key": {
+    "framework_identity": {
+      "name": "vllm",
+      "version": "0.26.0+cu129",
+      "revision": null,
+      "package_sha256": "6ce4ca30616f0a35810391015622b197a7b8b267ed27f8716f0789db79ff578b"
+    },
+    "model_identity": {
+      "family": "routed",
+      "name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+      "revision": null,
+      "config_sha256": null,
+      "weights_sha256": null
+    },
+    "pool": "decode",
+    "launch_mode": "cuda-graph",
+    "parallelism": {
+      "tensor_parallel": 1,
+      "pipeline_parallel": 1,
+      "data_parallel": 1,
+      "expert_parallel": 1
+    },
+    "shape": {
+      "batch_size": 1,
+      "per_request_kv_lengths": [16]
+    },
+    "input_dependency": "moe-routing-dependent",
+    "routing": {
+      "availability": "not-captured",
+      "expert_loads": null,
+      "evidence_sha256": "42b21f91bac61a20d0fe1a91431e218a8ce33bb467d5df97b963e5646a11069e"
+    }
+  },
+  "selection": {
+    "repeat_kernel_id": "fused_moe",
+    "kernel_mappings": [
+      {
+        "kernel_id": "flash_combine",
+        "nsys_name_contains": "flash_fwd_splitkv_combine_kernel",
+        "implementation_class": "wheel-precompiled-cuda",
+        "code_object": {
+          "ptx_sha256": null,
+          "sass_sha256": null,
+          "compile_configuration_sha256": null
+        }
+      },
+      {
+        "kernel_id": "flash_split_kv",
+        "nsys_name_contains": "flash_fwd_splitkv_kernel",
+        "implementation_class": "wheel-precompiled-cuda",
+        "code_object": {
+          "ptx_sha256": null,
+          "sass_sha256": null,
+          "compile_configuration_sha256": null
+        }
+      },
+      {
+        "kernel_id": "fused_moe",
+        "nsys_name_contains": "fused_moe_kernel",
+        "implementation_class": "triton-jit",
+        "code_object": {
+          "ptx_sha256": null,
+          "sass_sha256": null,
+          "compile_configuration_sha256": null
+        }
+      },
+      {
+        "kernel_id": "gemvx",
+        "nsys_name_contains": "internal::gemvx::kernel",
+        "implementation_class": "closed-library",
+        "code_object": {
+          "ptx_sha256": null,
+          "sass_sha256": null,
+          "compile_configuration_sha256": null
+        }
+      },
+      {
+        "kernel_id": "topk_gating",
+        "nsys_name_contains": "topkGating",
+        "implementation_class": "wheel-precompiled-cuda",
+        "code_object": {
+          "ptx_sha256": null,
+          "sass_sha256": null,
+          "compile_configuration_sha256": null
+        }
+      }
+    ]
+  },
+  "sources": [
+    {
+      "name": "ncu-kernel-metrics",
+      "path": "ncu-kernel-metrics.csv",
+      "sha256": "7d34d20a1963f142af31bc0b87b2b312df7f7c20072a09ebe959fcf81055eb42",
+      "bytes": 505,
+      "retained_source_name": "REPORT.md#Granite-TP1-bounded-Nsight-Compute-seed",
+      "retained_source_sha256": "bd410bf51b4aece12be63f172d144e5fb3b6896a4a80bcdedc37f0b597abb579"
+    },
+    {
+      "name": "nsys-kernel-summary",
+      "path": "nsys-kernel-summary.csv",
+      "sha256": "56d07a3de3764f0ca24da6a84db8896795b374bcb10314a89e557b7943f6e64c",
+      "bytes": 657,
+      "retained_source_name": "raw/197735-granite-tp1-graph/analysis/kernel-summary.csv",
+      "retained_source_sha256": "50975eb52e94c0589ba3f8c6ac33c2bfc5b301c6758ace31a580c838741f738a"
+    },
+    {
+      "name": "nsys-ordered-kernels",
+      "path": "nsys-ordered-kernels.csv",
+      "sha256": "4fd436c1b585947a9c500e125ee0da0841111eb55f4f57b611e9851274493414",
+      "bytes": 603,
+      "retained_source_name": "raw/197735-granite-tp1-graph/analysis/ordered-kernels.csv",
+      "retained_source_sha256": "42b21f91bac61a20d0fe1a91431e218a8ce33bb467d5df97b963e5646a11069e"
+    },
+    {
+      "name": "observed-clocks",
+      "path": "observed-clocks.csv",
+      "sha256": "51f09c6e93d3ebca5e684f0b4f1d7ab32b9a5349a0eb710fdcfe4eb40e72d928",
+      "bytes": 109,
+      "retained_source_name": "raw/197735-granite-tp1-graph/clocks.csv",
+      "retained_source_sha256": "98ee726ff4290266ac033841b12d6f2cee7663b267a5cf58cd9e81c1b70a3765"
+    }
+  ]
+}

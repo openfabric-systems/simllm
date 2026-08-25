@@ -11,8 +11,11 @@ from importlib import import_module
 from typing import Any
 
 __all__ = [
+    "KERNEL_CYCLE_INPUT_SCHEMA",
+    "KERNEL_CYCLE_LUT_SCHEMA",
     "CalibrationCompiler",
     "CalibrationValidationError",
+    "DeviceServiceCompilation",
     "HardwareCollector",
     "ModelKernelInventory",
     "OfflineKernelSimulator",
@@ -21,8 +24,12 @@ __all__ = [
     "RootSelection",
     "RootSource",
     "ValidationResult",
+    "analyze_kernel_cycle_capture",
+    "compile_device_service_entries",
+    "compile_profile_table",
     "resolve_registry_root",
     "resolve_suite_root",
+    "validate_kernel_cycle_lut",
     "validate_path",
 ]
 
@@ -35,7 +42,19 @@ _EXPORTS = {
         "simllm.calibration.validation",
         "CalibrationValidationError",
     ),
+    "DeviceServiceCompilation": (
+        "simllm.calibration.kernel_cycle_lut",
+        "DeviceServiceCompilation",
+    ),
     "HardwareCollector": ("simllm.calibration.protocols", "HardwareCollector"),
+    "KERNEL_CYCLE_INPUT_SCHEMA": (
+        "simllm.calibration.kernel_cycle_lut",
+        "KERNEL_CYCLE_INPUT_SCHEMA",
+    ),
+    "KERNEL_CYCLE_LUT_SCHEMA": (
+        "simllm.calibration.kernel_cycle_lut",
+        "KERNEL_CYCLE_LUT_SCHEMA",
+    ),
     "ModelKernelInventory": (
         "simllm.calibration.model_inventory",
         "ModelKernelInventory",
@@ -55,12 +74,28 @@ _EXPORTS = {
         "simllm.calibration.validation",
         "ValidationResult",
     ),
+    "analyze_kernel_cycle_capture": (
+        "simllm.calibration.kernel_cycle_lut",
+        "analyze_kernel_cycle_capture",
+    ),
+    "compile_device_service_entries": (
+        "simllm.calibration.kernel_cycle_lut",
+        "compile_device_service_entries",
+    ),
+    "compile_profile_table": (
+        "simllm.calibration.kernel_cycle_lut",
+        "compile_profile_table",
+    ),
     "resolve_registry_root": (
         "simllm.calibration.registry",
         "resolve_registry_root",
     ),
     "resolve_suite_root": ("simllm.calibration.registry", "resolve_suite_root"),
     "validate_path": ("simllm.calibration.validation", "validate_path"),
+    "validate_kernel_cycle_lut": (
+        "simllm.calibration.kernel_cycle_lut",
+        "validate_kernel_cycle_lut",
+    ),
 }
 
 
