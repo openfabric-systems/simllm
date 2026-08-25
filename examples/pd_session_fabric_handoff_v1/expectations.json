@@ -4,13 +4,14 @@
   "chronology": {
     "tracked_worktree_before_freeze": "clean",
     "implementation_existed_before_freeze": false,
-    "scored_run_existed_before_freeze": false
+    "scored_run_existed_before_freeze": false,
+    "converter_correction_before_first_scored_run": true
   },
   "runtime": {
     "python_version": "3.10.18",
     "htsim_gitlink": "1dcbfec36a33753bf978cf6323bade1a6645fe4f",
     "htsim_rnic_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
-    "txt2bin_sha256": "df348be0f3e9138b2bf2e1f360df0a8c377f07161f2e16940e47d68bf9a3c50a",
+    "txt2bin_sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b",
     "profile": "rnic-nn",
     "transport_kind": "packetized-null-network"
   },
