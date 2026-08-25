@@ -203,6 +203,7 @@ def fake_vllm_config():
             data_parallel_size=1,
             world_size=1,
             rank=0,
+            enable_fault_tolerance=False,
         ),
         scheduler_config=SimpleNamespace(),
         device_config=SimpleNamespace(device="cuda"),
@@ -378,7 +379,7 @@ def test_pinned_version_has_one_source():
     import simllm.adapters.vllm.executor as executor_module
 
     assert package.PINNED_VLLM_VERSION is executor_module.PINNED_VLLM_VERSION
-    assert package.PINNED_VLLM_VERSION == "0.26.0"
+    assert package.PINNED_VLLM_VERSION == "0.27.1"
 
 
 def test_lazy_exports_do_not_import_the_executor_eagerly():
@@ -409,7 +410,7 @@ def test_construction_without_vllm_raises_a_clear_error():
     with pytest.raises(ImportError) as excinfo:
         SimExecutor(object())
     message = str(excinfo.value)
-    assert "vLLM v0.26.0" in message
+    assert "vLLM v0.27.1" in message
     assert "distributed-executor-backend" in message
 
 
@@ -447,6 +448,11 @@ def test_sim_worker_rejects_v2_and_device_requiring_executor_paths(monkeypatch):
         backend_config.parallel_config.distributed_executor_backend = backend
         with pytest.raises(RuntimeError, match=backend):
             make_sim_worker(vllm_config=backend_config)
+
+    fault_tolerant_config = fake_vllm_config()
+    fault_tolerant_config.parallel_config.enable_fault_tolerance = True
+    with pytest.raises(RuntimeError, match="fault tolerance"):
+        make_sim_worker(vllm_config=fault_tolerant_config)
 
     async_config = fake_vllm_config()
     async_config.scheduler_config.async_scheduling = True

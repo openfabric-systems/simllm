@@ -19,7 +19,7 @@ from simllm.calibration.model_inventory import (
     ModelKernelInventory,
 )
 
-VLLM_SOURCE_COMMIT = "568afb3a13806beb53bb2e6bd518269357b237c0"
+VLLM_SOURCE_COMMIT = "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac"
 VLLM_EXTRACTION_SEAM = "flagged-skeleton-step-record-v1"
 VLLM_CONFIGURATION_SEAM = "ModelConfig-with-skip-tokenizer-init"
 VLLM_QWEN35_BINDING = "model_executor/models/registry.py:573"

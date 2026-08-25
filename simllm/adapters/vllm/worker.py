@@ -16,7 +16,7 @@ stock worker can initialize a device. The remaining ``SIMLLM_VLLM_*``
 variables are shared with :class:`simllm.adapters.vllm.SimExecutor` and are
 documented in :mod:`simllm.adapters.vllm.executor`.
 
-The class subclasses vLLM v0.26.0's GPU ``Worker`` when vLLM is present, but
+The class subclasses vLLM v0.27.1's GPU ``Worker`` when vLLM is present, but
 overrides every ordinary initialization and step entry that would reach CUDA.
 Its model runner mirrors the selected v1 algorithm names and call order while
 leaving physical ``_model_forward`` computation empty. The optional audited
@@ -233,8 +233,9 @@ except ImportError as exc:
             vllm_config.kernel_config.ir_op_priority.set_default()
 
             self.elastic_ep_executor = None
+            self.worker_sentinel = None
             self._sleep_saved_buffers: dict[str, Any] = {}
-            self._sleep_rebuild_draft_metadata_buffers = False
+            self._sleep_saved_draft_buffers: dict[str, Any] = {}
             self.weight_transfer_engine = None
             self._weight_update_active = False
             self.profiler = None
@@ -634,6 +635,12 @@ class SimWorker(_GpuWorkerBase):
                 "VLLM_USE_V2_MODEL_RUNNER=0; V2 rebinding remains in VLLM-13."
             )
         parallel_config = vllm_config.parallel_config
+        if bool(getattr(parallel_config, "enable_fault_tolerance", False)):
+            raise RuntimeError(
+                "SimWorker skeleton does not support vLLM fault tolerance: "
+                "the worker sentinel requires a device-backed worker lifecycle "
+                "(VLLM-13)."
+            )
         backend = getattr(parallel_config, "distributed_executor_backend", None)
         if backend in {"ray", "external_launcher"}:
             raise RuntimeError(

@@ -1,6 +1,6 @@
 """SGLang TP model worker that replaces model execution with a simulated GPU.
 
-Pinned to SGLang main at commit ``8f2a3ad`` (2026-08-04). The seam is the TP
+Pinned to SGLang main at commit ``bfeae4e`` (2026-08-24). The seam is the TP
 worker: the scheduler constructs it in ``Scheduler.init_tp_model_worker``,
 the same point where SGLang swaps in its MLX worker on Apple Silicon, and
 SGLang's plugin framework can replace that method without a fork (see
@@ -1174,7 +1174,7 @@ class SimModelRunnerStub(_ModelRunnerBase):
         elif chunk is not None:
             self.sliding_window_size = chunk
         self.dtype = self.model_config.dtype
-        self.weight_load_mem_usage = 0
+        self.weight_load_time = 0.0
 
     def _schedule_ctx(self) -> Any:
         try:
@@ -1297,7 +1297,8 @@ class SimModelRunnerStub(_ModelRunnerBase):
         )
 
         self.decode_cuda_graph_runner = None
-        self.graph_mem_usage = 0
+        self.graph_memory_usage = {}
+        self.graph_time_usage = {}
         self.attn_backend = None
         self.init_ngram_embedding_manager()
         logger.info(
@@ -1326,9 +1327,32 @@ class SimTpModelWorker(_TpWorkerBase):
     overrides model-runner construction and the forward itself.
     """
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        server_args: Any,
+        gpu_id: int,
+        ps: Any,
+        nccl_port: int,
+        is_draft_worker: bool = False,
+        req_to_token_pool: Any = None,
+        token_to_kv_pool_allocator: Any = None,
+        memory_pool_config: Any = None,
+        is_multi_layer_eagle: bool = False,
+        context_length: int | None = None,
+        draft_attention_backend: str | None = None,
+    ) -> None:
         if _SGLANG_IMPORT_ERROR is not None:
             raise _missing_sglang_error()
+        if (
+            is_draft_worker
+            or is_multi_layer_eagle
+            or draft_attention_backend is not None
+        ):
+            raise RuntimeError(
+                "SimTpModelWorker serves only the plain target-model worker; "
+                "draft workers and multi-layer EAGLE require speculative state "
+                "that the stub does not fabricate (SGL-5)."
+            )
         self.sim_config = _HOOKS.config or SimWorkerConfig.from_env()
         self.sim_gpu = _HOOKS.gpu or self.sim_config.gpu_spec()
         self.compute_provider: ComputeProvider = (
@@ -1362,7 +1386,19 @@ class SimTpModelWorker(_TpWorkerBase):
         self.simulated_tp_group: SimGroupCoordinator | None = None
         self.coordinator_observer: GroupCoordinatorObserver | None = None
         self._coordinator_event_stream: GroupCoordinatorEventStream | None = None
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            server_args=server_args,
+            gpu_id=gpu_id,
+            ps=ps,
+            nccl_port=nccl_port,
+            is_draft_worker=is_draft_worker,
+            req_to_token_pool=req_to_token_pool,
+            token_to_kv_pool_allocator=token_to_kv_pool_allocator,
+            memory_pool_config=memory_pool_config,
+            is_multi_layer_eagle=is_multi_layer_eagle,
+            context_length=context_length,
+            draft_attention_backend=draft_attention_backend,
+        )
         tp_size = int(getattr(self.server_args, "tp_size", 1) or 1)
         self.dims = model_dims_from_sglang(
             self.model_config,
@@ -1446,6 +1482,7 @@ class SimTpModelWorker(_TpWorkerBase):
             req_to_token_pool=self.req_to_token_pool,
             token_to_kv_pool_allocator=self.token_to_kv_pool_allocator,
             memory_pool_config=self.memory_pool_config,
+            draft_attention_backend=self.draft_attention_backend,
         )
 
     def get_pad_input_ids_func(self) -> None:
@@ -1472,7 +1509,8 @@ class SimTpModelWorker(_TpWorkerBase):
         pp_proxy_tensors: Any = None,
         is_verify: bool = False,
         skip_attn_backend_init: Any = None,
-        **kwargs: Any,
+        *,
+        capture_hidden_mode: Any = None,
     ) -> Any:
         """Simulate one step and fabricate its ``GenerationBatchResult``.
 
@@ -1485,6 +1523,12 @@ class SimTpModelWorker(_TpWorkerBase):
         import torch
         from sglang.srt.layers.logits_processor import LogitsProcessorOutput
         from sglang.srt.managers.utils import GenerationBatchResult
+
+        if capture_hidden_mode is not None:
+            raise NotImplementedError(
+                "SimTpModelWorker fabricates no hidden states; hidden-state "
+                "capture is unsupported (SGL-5)."
+            )
 
         if batch is None:
             raise RuntimeError(

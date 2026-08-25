@@ -21,9 +21,9 @@ from simllm.calibration.model_inventory import (
     ModelKernelInventory,
 )
 
-SGLANG_VERSION = "0.0.0.dev1+g8f2a3ad6d"
-SGLANG_SOURCE_COMMIT = "8f2a3ad6d7d68c58ae65b61a75bb2115449addca"
-SGLANG_SOURCE_TREE = "5be26db1f559064c0f9e724e78c1a8f619754867"
+SGLANG_VERSION = "0.5.19.dev345+gbfeae4e79"
+SGLANG_SOURCE_COMMIT = "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3"
+SGLANG_SOURCE_TREE = "9ffe149f40e1cd5bff7dadc6806ad1927d312e69"
 SGLANG_EXTRACTION_SEAM = "cpu-engine-step-record-v1"
 SGLANG_CONFIGURATION_SEAM = (
     "DeviceConfig-cpu-plus-ModelConfig-with-multimodal-disabled"

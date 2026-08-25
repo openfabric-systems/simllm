@@ -1,7 +1,7 @@
 # simllm.adapters.sglang
 
-SGLang frontend adapter, pinned to SGLang main commit **8f2a3ad**
-(2026-08-04; SGLang moves fast, so the pin is a commit, not a release). The
+SGLang frontend adapter, pinned to SGLang main commit **bfeae4e**
+(2026-08-24; SGLang moves fast, so the pin is a commit, not a release). The
 seam is the TP worker, installed without a fork through SGLang's plugin
 framework.
 
@@ -533,6 +533,20 @@ select a nonideal host profile and carry it to TTFT and TPOT, but the matrix
 makes SGL-26's second clause, the fallback path a collective-free step would
 take, unreachable rather than settled.
 
+SGL-32 is complete. The 2026-08-25 qualification moved the pin to SGLang
+commit `bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3`, source tree
+`9ffe149f40e1cd5bff7dadc6806ad1927d312e69`, installed as
+`0.5.19.dev345+gbfeae4e79`. The dynamically built native registry retains Kimi
+K3, Qwen3.5 and every required Granite family. Plugin, worker, CPU engine,
+pump, communicator and extraction tests pass against that source, and the
+CPU-only in-process pump reaches `SimTpModelWorker`. The worker mirror now
+carries the current graph, weight-load, context-length and draft-attention
+fields, and refuses speculative or hidden-state paths before fabricating a
+result. Repeated Granite extraction produced the new canonical inventory
+recorded in
+[the pin-bump results](../../examples/framework_pin_bump_v1/RESULTS.md); the
+`8f2a3ad` inventory and its study remain unchanged historical evidence.
+
 ## Open tasks
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
@@ -750,20 +764,6 @@ closed id.
   disagrees with the sink's enclosed value by up to one nanosecond per step. A
   single-rank run takes the fallback on every step. Acceptance must state which
   of the two is authoritative and make the other agree or refuse.
-- SGL-32 (Completeness; P1; L): bump the pinned SGLang source from commit
-  `8f2a3ad` to a current main commit that executes the `kimi_k3` family
-  (maintainer authorization 2026-08-24; the pinned tree already carries
-  `qwen3_5`). Before the pin switches, re-verify the plugin entry seam and
-  every landed contract against the new source: the entry-point discovery
-  gate, the `SimTpModelWorker` and stub construction template with its
-  load-bearing field contracts, the CPU engine path, the streaming workload
-  driver, the vendored communicator signatures and the COMP-54 extraction
-  driver. Every accepted artifact binding the old source identity remains
-  valid historical evidence and is never re-labeled; published inventory
-  columns are re-extracted under the new identity, and the previous pinned
-  environment remains reproducible beside the new one. A moved or removed
-  upstream seam is re-anchored or refused loudly, never silently bypassed.
-
 ### Uncategorized
 
 - SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic

@@ -37,7 +37,7 @@ SGLANG_INSTALLED = importlib.util.find_spec("sglang") is not None
 GOLDEN_TRACE = Path(__file__).parents[1] / "examples/preplay_trace_v1/writer_golden.jsonl"
 
 
-# ScheduleBatch stubs: same attribute names as SGLang @ 8f2a3ad, nothing else
+# ScheduleBatch stubs: only the source-backed attribute names, nothing else
 
 
 class FakeForwardMode:
@@ -108,7 +108,7 @@ def test_package_imports_without_sglang():
     assert "sglang" not in sys.modules
     import simllm.adapters.sglang.worker as worker_module
 
-    assert worker_module.PINNED_SGLANG_COMMIT == "8f2a3ad"
+    assert worker_module.PINNED_SGLANG_COMMIT == "bfeae4e"
     assert "sglang" not in sys.modules
     assert worker_module.sglang_is_available() is False
 
@@ -120,7 +120,7 @@ def test_construction_without_sglang_raises_a_clear_error():
     with pytest.raises(ImportError) as excinfo:
         SimTpModelWorker(server_args=object(), gpu_id=0, ps=object(), nccl_port=0)
     message = str(excinfo.value)
-    assert "8f2a3ad" in message
+    assert "bfeae4e" in message
     assert "plugin" in message
 
 
@@ -384,7 +384,29 @@ def test_pinned_sglang_classes_carry_every_transcribed_field():
     import inspect
 
     from sglang.srt.managers.schedule_batch import Req, ScheduleBatch
+    from sglang.srt.managers.tp_worker import TpModelWorker
+    from sglang.srt.model_executor.model_runner import ModelRunner
     from sglang.srt.sampling.sampling_params import SamplingParams
+
+    from simllm.adapters.sglang.worker import SimModelRunnerStub, SimTpModelWorker
+
+    def signature_shape(owner, name):
+        return [
+            (parameter.name, parameter.kind, parameter.default)
+            for parameter in inspect.signature(getattr(owner, name)).parameters.values()
+        ]
+
+    assert signature_shape(SimTpModelWorker, "__init__") == signature_shape(
+        TpModelWorker, "__init__"
+    )
+    assert signature_shape(
+        SimTpModelWorker, "forward_batch_generation"
+    ) == signature_shape(TpModelWorker, "forward_batch_generation")
+    runner_parameters = inspect.signature(ModelRunner.__init__).parameters
+    assert "draft_attention_backend" in runner_parameters
+    stub_source = inspect.getsource(SimModelRunnerStub)
+    for name in ("graph_memory_usage", "graph_time_usage", "weight_load_time"):
+        assert f"self.{name}" in stub_source
 
     request_source = inspect.getsource(Req.__init__)
     for name in (

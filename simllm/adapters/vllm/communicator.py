@@ -1,6 +1,6 @@
 """Shape-only vLLM GroupCoordinator mirror with zero-time observations.
 
-The public operation names and signatures mirror vLLM v0.26.0's
+The public operation names and signatures mirror vLLM v0.27.1's
 ``GroupCoordinator``. Construction is deliberately simulation-specific: the
 caller supplies resolved ranks and the only :class:`VirtualClock`, so this
 module never creates a torch process group or imports vLLM.
