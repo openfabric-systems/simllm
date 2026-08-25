@@ -197,6 +197,29 @@ calibration design freezes, is owned by the VLLM-12 and SGL-10 producers
 with COMP-6's joins, and is the static complement to the dynamic SASS
 traces the Accel-Sim sidecar consumes.
 
+## The lookup record and its keys
+
+The campaign's product is one unified lookup record per campaign
+(COMP-64): kernel-cycle decompositions keyed so the simulator can price
+any step by lookup, compiled into the existing profile-table and
+device-model service-entry forms rather than a second authority. The
+declared input-dependency contract (maintainer direction, 2026-08-25):
+
+- A decode entry's key is the batch plus the per-request KV lengths.
+  For a dense model that key is complete: the token values change no
+  work, so every input prices identically at the same key. Content
+  enters through exactly one door, MoE expert routing, whose
+  per-token load split is captured evidence and keyed separately.
+- A prefill entry's key is the computed new tokens plus the existing
+  context. A radix or prefix hit is not a separate mechanism: it moves a
+  request along those two axes (fewer computed tokens, more existing
+  context), and the frameworks' own schedulers report both numbers per
+  step, so cache effects price through the same key.
+- Where the framework's compile step exposes the decode graph, the
+  kernel list is inferred statically at compile time and cross-checked
+  against the runtime recording; program-counter sampling attributes
+  in-kernel cycles where the profiler grants it.
+
 ## Models beyond node memory
 
 A frontier MoE column is filled without hosting the full checkpoint. The

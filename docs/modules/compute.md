@@ -2453,6 +2453,35 @@ and an explicit reason:
   unchanged. Acceptance requires byte-deterministic complete inventories from
   vLLM and SGLang with exact cross-framework structural agreement and no
   multimodal encoder or speculative-head leakage.
+- COMP-64 (Completeness; P1; L): deliver the scripted in-framework
+  kernel-cycle capture pipeline and its unified lookup record. One clean
+  scripted workflow drives the pinned framework at a declared (model,
+  parallelism configuration, pool, launch mode, shape point) with
+  dummy-weight instantiation, records the per-kernel stream with elapsed
+  cycles and both observed clocks, decomposes each kernel into compute
+  cycles, memory service and fixed overhead in their own invariant
+  domains, repeats replays for the distribution verdict, and emits one
+  canonical content-addressed lookup record per campaign. Entry keys:
+  framework identity, model, pool, launch mode, parallelism
+  configuration, then the pool's shape axes; a decode key is batch plus
+  the per-request KV lengths, and a prefill key is computed new tokens
+  plus existing context, which is exactly how radix and prefix hits
+  enter. The declared input-dependency contract travels with the record:
+  a dense decode entry is content-independent given its key; content
+  enters only through MoE expert routing, which is keyed separately from
+  the captured routing evidence; sampling kernels are content-independent
+  in time. Where the framework's compile step exposes the decode graph,
+  infer the kernel list statically at compile time and cross-check it
+  against the runtime recording; where the profiler grants it, use
+  program-counter sampling for in-kernel cycle attribution. Each entry
+  carries its distribution verdict and code-object references, and the
+  record compiles into the existing profile-table and device-model
+  service-entry forms rather than becoming a second pricing authority.
+  The first slice builds and freezes the pipeline against the retained
+  probe raw artifacts as fixtures with no new GPU time; the registered
+  campaign then executes it on the qualified target. COMP-1 keeps
+  numerical acceptance; COMP-45's cycle-normalized publication rule is
+  satisfied by the per-domain component form.
 
 ### Uncategorized
 
