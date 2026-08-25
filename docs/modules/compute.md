@@ -2558,6 +2558,28 @@ and an explicit reason:
   uncertainty, one denied fixture, and exact bypass equivalence for every
   timestamp, component and compiled service value.
 
+- COMP-67 (Completeness; P1; L): extend the offline inventory family set for
+  DeepSeek-V3 and publish its column. Price the multi-head latent attention
+  path (the low-rank KV compression and decompression projections, the
+  compressed-cache read whose per-token bytes follow the latent width rather
+  than the head count, and the rotary split), the DeepSeek MoE layers
+  (shared plus routed experts with their gating, at the checkpoint's expert
+  counts and top-k), the dense early layers and the multi-token-prediction
+  head as declared families with exact integer FLOPs, HBM bytes and logical
+  launch counts per layer, derived from both pinned framework sources and
+  the model configuration with no weight download. Preserve the checkpoint's
+  exact layer schedule, prove family conservation for every declared case
+  through both framework configuration surfaces, and publish
+  byte-deterministic complete inventories for both frameworks with exact
+  cross-framework structural agreement. Additionally publish the
+  deployment-sharded projection: per-rank family shapes under the disclosed
+  parallelism configurations (the SGLang 96-GPU prefill EP32 and decode
+  EP72 arrangements and DeepSeek's production EP32 and EP144 units,
+  recorded in
+  [the deployment disclosures](../papers/deepseek-deployment-disclosures.md)),
+  so the capture campaign and the CORE-54 flagship price per-rank steps by
+  lookup. The Granite and Qwen suites and inventories stay byte-identical.
+
 ### Uncategorized
 
 - COMP-8: the fused-vs-family sum invariant test compares in float; above
