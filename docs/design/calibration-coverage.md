@@ -144,6 +144,24 @@ direction, 2026-08-24):
   from weight traffic inside the memory term: weight reads are constant
   per decode step while KV reads scale with length, so the two carry
   different extrapolation laws and are never fitted as one.
+- **Cycles first, per-component domains.** Raw records carry elapsed SM
+  cycles beside wall time with both the SM and DRAM clocks observed per
+  window, because time depends on the SM frequency. Each component
+  publishes in its own invariant domain: the compute term in SM cycles,
+  the memory term as bytes over achieved bandwidth conditioned on the
+  measured DRAM clock, and the fixed term in time with its host and
+  front-end anchors. The bimodal SM clock states double as the empirical
+  check: a compute-bound kernel's cycles agree across clock states while
+  its time differs, and a memory-bound kernel's time agrees while its
+  cycles differ.
+- **Memory-subsystem constancy.** The campaign answers explicitly
+  whether the DRAM clock is constant across cells, batches, KV lengths
+  and SM clock states, and whether achieved memory throughput depends on
+  placement or access pattern. The named suspect is scattered paged KV
+  blocks: at fixed KV length, fresh contiguous block tables are measured
+  against deliberately fragmented ones, and the verdict (scatter
+  insensitive within noise, or a quantified penalty with its mechanism)
+  is published with the evidence.
 
 ## Models beyond node memory
 
