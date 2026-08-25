@@ -624,6 +624,12 @@ The workers deliberately move no KV tensor because simulated GPUs allocate no
 paged KV storage. Concurrent multi-request scheduling remains VLLM-35; see
 [the disaggregated-session results](../../examples/pd_session_v1/RESULTS.md).
 
+The pinned DeepSeek-V3 configuration surface now publishes a complete logical
+inventory beside SGLang's structurally identical record. Its physical code
+objects and observed launches remain absent by design and name VLLM-38 as the
+framework-owned join; see
+[the DeepSeek inventory results](../../examples/model_extraction_deepseek_v3_v1/RESULTS.md).
+
 ## Open tasks
 
 ### Precision
@@ -678,6 +684,16 @@ paged KV storage. Concurrent multi-request scheduling remains VLLM-35; see
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
 
 ### Completeness
+
+- VLLM-38 (Completeness; P2; L): join the published DeepSeek-V3 logical
+  inventory to vLLM's physical MLA, routed-expert, shared-expert, dense and
+  MTP launches on supported target silicon. Extend VLLM-12's source-backed
+  producer with the DeepSeek operation identities and bind every launch by
+  COMP-6's exact graph, operation and ordinal keys. Reject a missing or
+  ambiguous family before emitting a partial physical envelope. With the
+  DeepSeek capture absent or disabled, preserve both published logical
+  inventory bytes, every StepRecord and every existing physical capture byte
+  exactly.
 
 - VLLM-35 (Completeness; P1; L): admit multiple in-flight session requests to
   the prefill and decode pools while each stock vLLM scheduler remains the sole

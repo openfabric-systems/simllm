@@ -547,6 +547,12 @@ recorded in
 [the pin-bump results](../../examples/framework_pin_bump_v1/RESULTS.md); the
 `8f2a3ad` inventory and its study remain unchanged historical evidence.
 
+The pinned DeepSeek-V3 configuration surface now publishes a complete logical
+inventory beside vLLM's structurally identical record. Its physical code
+objects and observed launches remain absent by design and name SGL-34 as the
+framework-owned join; see
+[the DeepSeek inventory results](../../examples/model_extraction_deepseek_v3_v1/RESULTS.md).
+
 ## Open tasks
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
@@ -683,6 +689,16 @@ closed id.
   matches.
 
 ### Completeness
+
+- SGL-34 (Completeness; P1; L): join the published DeepSeek-V3 logical
+  inventory to SGLang's physical MLA, routed-expert, shared-expert, dense and
+  MTP launches for the EP32 prefill and EP72 decode configurations used by
+  CORE-54. Extend SGL-10's source-backed producer and SGL-17's semantic-site
+  observations with the DeepSeek operation identities, then bind every launch
+  through COMP-6 without coalescing redundant expert slots. Reject a missing
+  or ambiguous family before emitting a partial physical envelope. With this
+  producer absent or disabled, preserve both published logical inventory
+  bytes, every accepted worker record and every existing capture byte exactly.
 
 - SGL-10 (Completeness; P1; L): add a thin source-backed producer for the
   supported model runner's physical device schedule. Emit one concrete
