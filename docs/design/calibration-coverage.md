@@ -112,6 +112,39 @@ and the decode pool's replayed CUDA graph are separate capture
 denominators for every cell, owned by the same VLLM-12 and SGL-10
 producers (maintainer direction 2026-08-24).
 
+## Repeat distributions and the KV axis
+
+Two further protocol requirements bind every measured cell (maintainer
+direction, 2026-08-24):
+
+- **Repeat distributions.** Every CUDA-graph decode cell replays its
+  graph hundreds of times and publishes the distribution, not only a
+  center. A tight single peak is the expected outcome and evidences the
+  kernel-time determinism ruling. Several peaks indicate a conditioned
+  effect that must be named and published per condition; the known
+  bimodal SM clock states and launch-path variants are the first
+  suspects. A genuine width is an environment-stability defect handled
+  under COMP-5, never averaged away. Eager cells repeat the same way at
+  smaller counts. Distribution plots ship with the campaign artifacts,
+  and the device model's uncertainty bound consumes the observed spread.
+- **The KV axis.** A decode cell is a shard of a decode-pool step at a
+  declared KV length, and its measured time must respond to that length.
+  The capture populates real paged-attention state (dummy contents, real
+  block tables) at sixteen KV lengths spanning one to one hundred
+  percent of the model's supported context, so attention kernels
+  traverse the true page count. For Qwen3.8-27B that grid reaches
+  262,144 tokens, where only the sixteen full-attention layers scale
+  while the Gated DeltaNet layers hold constant recurrent state, a
+  measured hybrid signature. The decode shape vector carries the
+  KV-length axis through the existing typed shape schema; no new
+  interface is required. The simulator-side paged KV management remains
+  owned by the registered CORE-3, VLLM-11 and SGL-9 lifecycle tasks,
+  which this protocol's evidence feeds.
+- **The memory split.** The component decomposition separates KV traffic
+  from weight traffic inside the memory term: weight reads are constant
+  per decode step while KV reads scale with length, so the two carry
+  different extrapolation laws and are never fitted as one.
+
 ## Models beyond node memory
 
 A frontier MoE column is filled without hosting the full checkpoint. The
