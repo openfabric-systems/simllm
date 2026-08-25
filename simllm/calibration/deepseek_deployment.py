@@ -13,6 +13,7 @@ DEEPSEEK_DEPLOYMENT_PROJECTION_SCHEMA = (
 )
 _BASE_ROUTED_FAMILY = "moe_routed_experts"
 _MTP_FAMILY = "multi_token_prediction_head"
+_COMPRESSED_KV_READ_FAMILY = "mla_compressed_kv_read"
 
 
 def _positive(value: object, path: str) -> int:
@@ -311,7 +312,12 @@ def build_deepseek_deployment_projection(
     base_common_bytes = sum(
         item.aggregate_hbm_bytes
         for item in first_case.kernel_projections
-        if item.family_id not in {_BASE_ROUTED_FAMILY, _MTP_FAMILY}
+        if item.family_id
+        not in {
+            _BASE_ROUTED_FAMILY,
+            _MTP_FAMILY,
+            _COMPRESSED_KV_READ_FAMILY,
+        }
     )
     declarations = suite.get("deployment_projections")
     if not isinstance(declarations, list) or len(declarations) != 4:

@@ -297,6 +297,12 @@ def test_deepseek_v3_sharded_projection_conserves_rank_classes(
     assert vllm["expert_contract"]["per_expert_layer_flops"] * 58 == (
         freeze["per_expert_flops_per_dispatch_all_base_moe_layers"]
     )
+    expected_physical_bytes = {
+        "sglang-prefill-ep32-dp-attention": 40_221_416_800,
+        "sglang-decode-ep72-dp-attention": 27_446_643_040,
+        "deepseek-production-prefill-ep32": 40_221_416_800,
+        "deepseek-production-decode-ep144": 22_336_733_536,
+    }
     for unit in vllm["units"]:
         classes = unit["static_rank_classes"]
         assert sum(
@@ -307,6 +313,9 @@ def test_deepseek_v3_sharded_projection_conserves_rank_classes(
             row["rank_count"] * row["physical_slots_per_rank"]
             for row in classes
         ) == 288
+        assert {
+            row["base"]["physical_total_hbm_bytes_per_rank"] for row in classes
+        } == {expected_physical_bytes[unit["id"]]}
         if unit["id"].startswith("sglang-"):
             assert unit["dynamic_projection_state"] == "exact-disclosed-workload"
             assert unit["case_projections"]
