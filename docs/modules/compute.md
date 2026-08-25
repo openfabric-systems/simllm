@@ -2503,20 +2503,6 @@ and an explicit reason:
   closed when a framework cannot execute the reduced-depth instantiation.
   Disabling the route leaves every accepted record and the hand-authored
   suites byte-identical.
-- COMP-62 (Completeness; P1; L): extend the offline model inventory family set
-  for Qwen3.5 Gated DeltaNet linear-attention layers. Price the input
-  projections, width-four short convolution, recurrent-state read, update and
-  write, gated normalization, output projection and dense MLP for both prefill
-  and decode shapes, with exact integer FLOPs, HBM bytes and logical launch
-  counts. Preserve the ordered Qwen3.8-27B schedule of 48 linear-attention and
-  16 full-attention layers and prove family conservation for every one of the
-  15 frozen text-only cases through both pinned framework configuration
-  surfaces. Until that total projection exists, both drivers reject the
-  Qwen3.8-27B column before writing StepRecords or an inventory, and the
-  Granite full-attention suite and published inventory bytes remain exactly
-  unchanged. Acceptance requires byte-deterministic complete inventories from
-  vLLM and SGLang with exact cross-framework structural agreement and no
-  multimodal encoder or speculative-head leakage.
 - COMP-64 (Completeness; P1; L): deliver the scripted in-framework
   kernel-cycle capture pipeline and its unified lookup record. One clean
   scripted workflow drives the pinned framework at a declared (model,

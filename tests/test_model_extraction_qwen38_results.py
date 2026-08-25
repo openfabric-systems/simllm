@@ -18,7 +18,7 @@ def test_qwen38_results_publish_a_blocked_total_rejection() -> None:
     assert "Local weight-byte and weight-hash verification is intentionally not" in text
 
 
-def test_qwen38_coverage_changes_only_the_model_state_claim() -> None:
+def test_qwen38_historical_rejection_is_superseded_only_in_coverage() -> None:
     rows = [
         line
         for line in COVERAGE.read_text(encoding="utf-8").splitlines()
@@ -26,7 +26,6 @@ def test_qwen38_coverage_changes_only_the_model_state_claim() -> None:
     ]
 
     assert len(rows) == 1
-    assert "model_extraction_qwen38_v1" in rows[0]
-    assert "zero complete inventories" in rows[0]
-    assert "COMP-62" in rows[0]
-    assert "COMP-54 stays open" in rows[0]
+    assert "model_extraction_qwen38_v1" not in rows[0]
+    assert "model_extraction_qwen38_v2" in rows[0]
+    assert "COMP-54 stays open for the Kimi K3 structure half" in rows[0]
