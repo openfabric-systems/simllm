@@ -1,0 +1,108 @@
+{
+  "schema": "simllm-pd-session-kernel-cycle-study-summary-v1",
+  "status": "VOID",
+  "expectation_commit": "fda6eed557aef037bf1794da1c1d8556a10a1ee0",
+  "implementation_commit": "6817019376d153be2a4b6cdd972bbec36dfa23e6",
+  "harness_commit": "2e87c766981bf33f386343b06c99334874cc6399",
+  "raw_result_sha256": "d9d62a64e3ba61e9909f9bfebdb06202eb09d17c8f50bfb9abd69d75430f5196",
+  "voiding_guard": "record-absent-cell-or-request-byte-drift",
+  "candidate_record": {
+    "sha256": "e495f3ca5d0858cf371b19205ae6b7747d633695020d10f58645c5f245086070",
+    "acceptance_status": "candidate",
+    "coverage": "partial-kernel-subset",
+    "record_device_kind_id": "nvidia-a100-sm80",
+    "calibration_claim": false,
+    "prefill_lookup_hits": 0,
+    "prefill_lookup_misses": 4,
+    "decode_lookup_hits": 2,
+    "decode_lookup_misses": 14,
+    "selected_entry_key_sha256": "d178524fd1bbc3719f7d45065e3a35b41ef9abfec3965d1db453152a30e303e1"
+  },
+  "cells": [
+    {
+      "prompt_tokens": 8,
+      "handoff_ps": 100000000,
+      "kv_bytes": 393216,
+      "roofline_ttft_ps": 273376000,
+      "lookup_ttft_ps": 273376000,
+      "signed_ttft_delta_ps": 0,
+      "roofline_tpot_ps": 77952000,
+      "lookup_tpot_ps": 77952000,
+      "signed_tpot_delta_ps": 0
+    },
+    {
+      "prompt_tokens": 8,
+      "handoff_ps": 200000000,
+      "kv_bytes": 393216,
+      "roofline_ttft_ps": 373376000,
+      "lookup_ttft_ps": 373376000,
+      "signed_ttft_delta_ps": 0,
+      "roofline_tpot_ps": 77952000,
+      "lookup_tpot_ps": 77952000,
+      "signed_tpot_delta_ps": 0
+    },
+    {
+      "prompt_tokens": 16,
+      "handoff_ps": 100000000,
+      "kv_bytes": 786432,
+      "roofline_ttft_ps": 292912000,
+      "lookup_ttft_ps": 2265112000,
+      "signed_ttft_delta_ps": 1972200000,
+      "roofline_tpot_ps": 77976000,
+      "lookup_tpot_ps": 77976000,
+      "signed_tpot_delta_ps": 0
+    },
+    {
+      "prompt_tokens": 16,
+      "handoff_ps": 200000000,
+      "kv_bytes": 786432,
+      "roofline_ttft_ps": 392912000,
+      "lookup_ttft_ps": 2365112000,
+      "signed_ttft_delta_ps": 1972200000,
+      "roofline_tpot_ps": 77976000,
+      "lookup_tpot_ps": 77976000,
+      "signed_tpot_delta_ps": 0
+    }
+  ],
+  "record_absent_identity": {
+    "accepted_compact_cells_identical": true,
+    "kv_bytes_and_timestamps_identical": true,
+    "complete_request_result_bytes_identical": false,
+    "differing_fields": [
+      "decode_internal_request_id",
+      "prefill_internal_request_id"
+    ],
+    "first_observation_sha256": [
+      "62548b7e100865281899e4e86dc091f967da9cce3ab3337123248696535208c7",
+      "6e52074600d8a1bee9ac9eca47b32074cb01ee0c954b65838fa04a38a2719cee",
+      "e0b44e06f36a7f4a0521cde7e28fde9d0ef441a78e19c3091ad391a51b43008a",
+      "25c613c17d902be0ae4b65fc093226faee5d231f2c39d57e1fb06d23cbc0938a"
+    ],
+    "second_observation_sha256": [
+      "2bd985f8cc8bf5627a0b45fcb14af3fd20e50bd6c5617416026aa4facd69d4e0",
+      "56b939fdd4d70ee26417b33b8eeb664d40339ab4f606ae47e29524f4c79cfc62",
+      "168dbde9671d5895d9ece934047ea91be17a46d704aef5735388dd4df10f683c",
+      "e793eb93c3a514876ec939dc5871c41839d6f0d13e3ad416081ed2fba1ffa468"
+    ],
+    "diagnostic_chronology": "post-specified-after-the-void-run"
+  },
+  "physical_sanity": {
+    "candidate_service_ps": 2047488000,
+    "candidate_enclosing_step_ceiling_ps": 2323678000,
+    "live_step_min_ps": 77952000,
+    "live_step_max_ps": 2050176000,
+    "decode_tokens_per_second": [
+      12828.40722495895,
+      12828.40722495895,
+      12824.45880783831,
+      12824.45880783831
+    ]
+  },
+  "task_effect": {
+    "core_53": "open",
+    "core_58": "registered",
+    "comp_73": "registered",
+    "comp_64": "unchanged-open",
+    "milestone": "unchanged"
+  }
+}

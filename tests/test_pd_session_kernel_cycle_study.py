@@ -51,3 +51,54 @@ def test_study_renders_command_paths_with_posix_separators() -> None:
     runner = _runner()
 
     assert runner.render_cli_path(PureWindowsPath("C:/study/run")) == "C:/study/run"
+
+
+def test_void_result_retains_exact_movement_without_scoring_it() -> None:
+    result = json.loads((STUDY / "results.json").read_text(encoding="utf-8"))
+
+    assert result["status"] == "VOID"
+    assert result["voiding_guard"] == "record-absent-cell-or-request-byte-drift"
+    assert [row["signed_ttft_delta_ps"] for row in result["cells"]] == [
+        0,
+        0,
+        1_972_200_000,
+        1_972_200_000,
+    ]
+    assert [row["signed_tpot_delta_ps"] for row in result["cells"]] == [
+        0,
+        0,
+        0,
+        0,
+    ]
+
+
+def test_record_absent_result_identifies_the_exact_byte_difference() -> None:
+    result = json.loads((STUDY / "results.json").read_text(encoding="utf-8"))
+    identity = result["record_absent_identity"]
+
+    assert identity["accepted_compact_cells_identical"] is True
+    assert identity["kv_bytes_and_timestamps_identical"] is True
+    assert identity["complete_request_result_bytes_identical"] is False
+    assert identity["differing_fields"] == [
+        "decode_internal_request_id",
+        "prefill_internal_request_id",
+    ]
+    assert identity["diagnostic_chronology"] == "post-specified-after-the-void-run"
+
+
+def test_candidate_provenance_never_claims_calibration_or_total_coverage() -> None:
+    result = json.loads((STUDY / "results.json").read_text(encoding="utf-8"))
+    candidate = result["candidate_record"]
+
+    assert candidate["acceptance_status"] == "candidate"
+    assert candidate["coverage"] == "partial-kernel-subset"
+    assert candidate["calibration_claim"] is False
+    assert candidate["prefill_lookup_hits"] == 0
+    assert candidate["decode_lookup_hits"] == 2
+    assert result["task_effect"] == {
+        "core_53": "open",
+        "core_58": "registered",
+        "comp_73": "registered",
+        "comp_64": "unchanged-open",
+        "milestone": "unchanged",
+    }
