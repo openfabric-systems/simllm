@@ -150,6 +150,7 @@ def test_in_process_builder_skips_unused_tokenizer_initialization(monkeypatch):
     build_in_process_scheduler(model_path="config-only-model")
 
     assert captured["skip_tokenizer_init"] is True
+    assert captured["max_prefill_tokens"] == 16_384
 
 
 def test_read_output_batch_projects_finished_rows_only():

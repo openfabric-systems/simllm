@@ -32,6 +32,7 @@ ANCHOR_PATH = STUDY_DIR / "expectations.json"
 SCORED_EXPECTATIONS_PATH = STUDY_DIR / "scored_expectations.json"
 DEFAULT_CONFIG_PATH = STUDY_DIR / "flagship_config.json"
 RESULT_SCHEMA = "simllm-deployment-curve-flagship-result-v1"
+QUALIFICATION_SCHEMA = "simllm-deployment-curve-binding-qualification-v1"
 RUN_ROOT_ENV = "SIMLLM_CORE54_RUN_ROOT"
 SGLANG_VERSION = "0.5.19.dev345+gbfeae4e79"
 SGLANG_COMMIT = "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3"
@@ -602,6 +603,48 @@ def run_study(
     return result
 
 
+def run_binding_qualification(
+    config: dict[str, Any],
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    """Qualify live lookup shapes without fitting or reading anchor values."""
+
+    args.run_dir.mkdir(parents=True, exist_ok=False)
+    candidate_path = REPOSITORY_ROOT / config["candidate_record"]["path"]
+    candidate = candidate_path.read_bytes()
+    observations = [
+        _runtime_observation(
+            config,
+            args.model_path,
+            args.run_dir / "sessions",
+            candidate,
+            observation,
+            suffix="qualification",
+        )
+        for observation in config["exact_shape_observations"]
+    ]
+    selections = [_selection_summary(row) for row in observations]
+    result = {
+        "schema": QUALIFICATION_SCHEMA,
+        "status": (
+            "PASS" if all(row["selected"] for row in selections) else "PARTIAL"
+        ),
+        "run_head": _git_head(),
+        "configuration_sha256": sha256(args.config),
+        "candidate_record_sha256": config["candidate_record"]["sha256"],
+        "candidate_acceptance_status": config["candidate_record"][
+            "acceptance_status"
+        ],
+        "fit_performed": False,
+        "anchor_numeric_values_accessed": False,
+        "held_out_score_performed": False,
+        "observations": observations,
+        "candidate_selections": selections,
+    }
+    write_json(args.run_dir / "binding-qualification.json", result)
+    return result
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
@@ -611,6 +654,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--txt2bin", type=Path)
     parser.add_argument("--htsim-rnic", type=Path)
     parser.add_argument("--check-only", action="store_true")
+    parser.add_argument("--qualify-binding-only", action="store_true")
     return parser.parse_args()
 
 
@@ -630,6 +674,15 @@ def main() -> int:
         print(
             "check-only: scored freeze, separate allocation, candidate digest, "
             "load grids and blocked MTP rule passed; no artifact written"
+        )
+        return 0
+    if args.qualify_binding_only:
+        result = run_binding_qualification(config, args)
+        selected = sum(row["selected"] for row in result["candidate_selections"])
+        print(
+            f"binding qualification {result['status']}: selected {selected}/"
+            f"{len(result['candidate_selections'])}; wrote "
+            f"{render_cli_path(args.run_dir / 'binding-qualification.json')}"
         )
         return 0
     result = run_study(anchors, scored, config, args)

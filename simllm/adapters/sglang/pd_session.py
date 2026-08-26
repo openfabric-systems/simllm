@@ -486,6 +486,7 @@ def _engine_process_main(connection: Any, config: _EngineLaunchConfig) -> None:
             page_size=1,
             context_length=config.context_length,
             max_total_tokens=config.max_total_tokens,
+            max_prefill_tokens=max(config.max_total_tokens, 16_384),
             max_running_requests=config.max_running_requests,
             chunked_prefill_size=-1,
             random_seed=config.random_seed,

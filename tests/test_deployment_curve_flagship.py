@@ -170,6 +170,48 @@ def test_runner_projects_handoff_event_fields_without_assuming_a_json_method():
     }
 
 
+def test_binding_qualification_never_fits_or_scores(monkeypatch, tmp_path):
+    runner = _runner()
+    config = _json("flagship_config.json")
+
+    def observation(config, model_path, run_dir, candidate, declared, *, suffix):
+        del config, model_path, run_dir, candidate, suffix
+        pool = declared["pool"]
+        return {
+            "anchor_id": declared["anchor_id"],
+            "pool": pool,
+            "pricing_provenance": {
+                pool: {
+                    "record_sha256": (
+                        "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52"
+                    ),
+                    "acceptance_status": "candidate",
+                    "lookup_hits": 1,
+                    "lookup_misses": 0,
+                    "selected_entry_key_sha256s": ["1" * 64],
+                }
+            },
+        }
+
+    monkeypatch.setattr(runner, "_runtime_observation", observation)
+    args = type(
+        "Args",
+        (),
+        {
+            "run_dir": tmp_path / "qualification",
+            "model_path": tmp_path / "model",
+            "config": STUDY_DIR / "flagship_config.json",
+        },
+    )()
+
+    result = runner.run_binding_qualification(config, args)
+
+    assert result["status"] == "PASS"
+    assert result["fit_performed"] is False
+    assert result["anchor_numeric_values_accessed"] is False
+    assert result["held_out_score_performed"] is False
+
+
 def test_shared_curve_records_keep_output_axis_and_target_scale():
     tools = _tools()
     frozen = _json("scored_expectations.json")
