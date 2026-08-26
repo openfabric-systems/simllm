@@ -1,0 +1,180 @@
+{
+  "schema": "simllm-sglang-pd-session-compact-result-v1",
+  "status": "REFUTED",
+  "evidence_classification": "preregistered relations with a post-run analyzer correction",
+  "provenance": {
+    "expectation_commit": "191c237700431507639f963a0ee69e94292611c6",
+    "run_commit": "9e9e61808db0a6dc26985b717fca24a5eafd13e0",
+    "analyzer_correction_commit": "623195eb5ceb38d626dcabdd473592af9795efa3",
+    "original_analyzer_void_sha256": "007814fb2a9df1580f58303a5a8eaa058478573384b267a5cead4e3d4345783f"
+  },
+  "native_seam": {
+    "status": "unreachable-bufferless-worker-bfeae4e",
+    "selected_join": "driver-level",
+    "timing_authority": "simllm-declared-kv-handoff-v1",
+    "residual_task": "SGL-35"
+  },
+  "fatal_guards": {
+    "status": "HELD",
+    "findings": []
+  },
+  "conservation": {
+    "cells": 18,
+    "admissions": 144,
+    "handoffs": 144,
+    "terminals": 144,
+    "decode_tokens": 576,
+    "maximum_ttft_residual_ps": 0
+  },
+  "constant_sensitivity": {
+    "ttft_delta_ps": 100000000,
+    "tpot_delta_ps": {
+      "numerator": 0,
+      "denominator": 1
+    },
+    "other_terms_identical": true
+  },
+  "packet_exact": {
+    "aggregate_kv_bytes": 393216,
+    "chunks": 8,
+    "flows": 8,
+    "packet_service_ps": 3081600,
+    "packet_duration_ps": 23081600,
+    "constant_ttft_ps": 264304000,
+    "packet_ttft_ps": 187385600,
+    "signed_ttft_delta_ps": -76918400,
+    "signed_handoff_delta_ps": -76918400,
+    "metric_residual_ps": 0,
+    "tpot_identical": true
+  },
+  "batching": [
+    {
+      "prefill_engines": 1,
+      "decode_engines": 1,
+      "maximum_prefill_batch_size": 3,
+      "maximum_decode_batch_size": 8
+    },
+    {
+      "prefill_engines": 1,
+      "decode_engines": 2,
+      "maximum_prefill_batch_size": 3,
+      "maximum_decode_batch_size": 4
+    },
+    {
+      "prefill_engines": 2,
+      "decode_engines": 1,
+      "maximum_prefill_batch_size": 4,
+      "maximum_decode_batch_size": 8
+    }
+  ],
+  "behavioral_families": {
+    "genuine_multi_request_batching": {
+      "held": 3,
+      "evaluated": 3
+    },
+    "throughput_nondecreasing_with_load": {
+      "held": 4,
+      "evaluated": 6,
+      "refuted_configuration_ids": [
+        "sglang-p1-d2-prompt8",
+        "sglang-p2-d1-prompt16"
+      ]
+    },
+    "prompt_kv_byte_doubling": {
+      "held": 9,
+      "evaluated": 9
+    }
+  },
+  "example_curve": {
+    "schema": "simllm-deployment-curve-v1",
+    "configuration_id": "sglang-p1-d1-prompt8",
+    "prefill_engines": 1,
+    "decode_engines": 1,
+    "prompt_tokens": 8,
+    "orientation": {
+      "x": "aggregated-output-throughput-rightward",
+      "y": "inverse-per-token-request-delay-upward"
+    },
+    "points": [
+      {
+        "schema": "simllm-deployment-curve-point-v1",
+        "offered_load_requests_per_second": {
+          "numerator": 8000,
+          "denominator": 1
+        },
+        "aggregated_output_throughput_tokens_per_second": {
+          "numerator": 2000000000,
+          "denominator": 91523
+        },
+        "per_token_request_delay_ps": {
+          "numerator": 242029000,
+          "denominator": 1
+        },
+        "request_count": 8,
+        "output_token_count": 32
+      },
+      {
+        "schema": "simllm-deployment-curve-point-v1",
+        "offered_load_requests_per_second": {
+          "numerator": 16000,
+          "denominator": 1
+        },
+        "aggregated_output_throughput_tokens_per_second": {
+          "numerator": 2000000000,
+          "denominator": 65661
+        },
+        "per_token_request_delay_ps": {
+          "numerator": 193268500,
+          "denominator": 1
+        },
+        "request_count": 8,
+        "output_token_count": 32
+      },
+      {
+        "schema": "simllm-deployment-curve-point-v1",
+        "offered_load_requests_per_second": {
+          "numerator": 32000,
+          "denominator": 1
+        },
+        "aggregated_output_throughput_tokens_per_second": {
+          "numerator": 4000000000,
+          "denominator": 112509
+        },
+        "per_token_request_delay_ps": {
+          "numerator": 182986250,
+          "denominator": 1
+        },
+        "request_count": 8,
+        "output_token_count": 32
+      }
+    ]
+  },
+  "flagship": {
+    "nodes": 13,
+    "ranks": 104,
+    "core54_claimed_ranks": 96,
+    "arithmetic_difference": 8,
+    "residual_task": "CORE-57"
+  },
+  "physical_sanity": {
+    "minimum_step_ps": 76800000,
+    "maximum_step_ps": 548799360,
+    "minimum_decode_tokens_per_second": {
+      "numerator": 1562500000,
+      "denominator": 1085867
+    },
+    "maximum_decode_tokens_per_second": {
+      "numerator": 62500000,
+      "denominator": 5247
+    },
+    "resident_weight_read_floor_ps": 52691712,
+    "packet_shard_serialization_floor_ps": 983040,
+    "packet_service_ps": 3081600
+  },
+  "task_effect": {
+    "SGL-33": "OPEN",
+    "SGL-35": "OPEN",
+    "SGL-36": "OPEN",
+    "CORE-57": "OPEN"
+  }
+}

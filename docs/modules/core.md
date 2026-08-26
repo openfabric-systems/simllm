@@ -978,6 +978,15 @@ both roles across all three small pool ratios. Its exact curve records are
 live, but the frozen delay direction is refuted in all six curves, so VLLM-35
 stays open through VLLM-39; see
 [the concurrent-session results](../../examples/pd_session_concurrent_v1/RESULTS.md).
+The corresponding SGLang session also conserves 144 request lifecycles and 576
+decode tokens with 0 ps maximum decomposition residual, and its packet handoff
+moves TTFT by the exact signed -76,918,400 ps difference without moving TPOT.
+Its throughput is nondecreasing in 4 of 6 frozen curves, so SGL-33 remains open
+through SGL-36. The structural SGLang render also exposes a separate allocation
+finding: four eight-GPU prefill nodes plus nine eight-GPU decode nodes contain
+104 ranks, 8 more than CORE-54's current 96-rank statement. CORE-57 owns that
+P0 correction before the flagship allocation is asserted; see
+[the SGLang session results](../../examples/sglang_pd_session_v1/RESULTS.md).
 
 The CORE-53 session binding is live as an explicit content-addressed candidate
 path through the existing compute provider chain. The retained candidate row
@@ -992,6 +1001,19 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
 ## Open tasks
 
 ### Precision
+
+- CORE-57 (Precision; P0; M): resolve the CORE-54 flagship allocation before
+  any physical comparison or plot claims one deployment. The published role
+  units are four eight-GPU prefill nodes and nine eight-GPU decode nodes, which
+  project to 13 nodes and 104 ranks, while CORE-54 currently calls the same
+  shape a 12-node, 96-GPU deployment. The identifying evidence is the cited
+  public configuration's allocation scope and whether the two role-unit counts
+  are simultaneous or alternatives. Acceptance requires an expectations-only
+  amendment before the first flagship run, one internally consistent node,
+  GPU, rank and NIC total across the dossier, placement manifest and curve
+  record, and exact preservation of the 104-rank structural comparator. A
+  result produced while the 96 versus 104 disagreement remains is void for
+  flagship allocation claims.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.

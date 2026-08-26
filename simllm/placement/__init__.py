@@ -56,6 +56,10 @@ from simllm.placement.manifest import (
     RankPlacement,
 )
 from simllm.placement.mapper import RankMapper
+from simllm.placement.sglang_disaggregated import (
+    SglangPoolArrangement,
+    sglang_disaggregated_manifests,
+)
 
 __all__ = [
     "DECLARED_CLOS_ENDPOINTS_PER_LEAF",
@@ -79,6 +83,8 @@ __all__ = [
     "PlacementManifest",
     "RankMapper",
     "RankPlacement",
+    "SglangPoolArrangement",
     "declared_manifest",
     "disaggregated_manifests",
+    "sglang_disaggregated_manifests",
 ]
