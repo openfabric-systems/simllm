@@ -1,0 +1,50 @@
+{
+  "exposure_protocol": {
+    "access_log_schema": "simllm-deployment-curve-traf67-access-v1",
+    "expected_held_out_access_ledger": [],
+    "expected_visible_access_count": 1,
+    "forbidden_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "permitted_anchor_ids": [
+      "sglang_prefill_1k"
+    ],
+    "reader_path": "examples/deployment_curve_v1/traf67_field_reader.py",
+    "record_path": "examples/deployment_curve_v1/comp75_calibration_result.json",
+    "record_sha256": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+    "selector": "/calibration_rows[anchor_id=sglang_prefill_1k]",
+    "whole_record_reads_permitted": false
+  },
+  "frozen_repetition": {
+    "component_service_envelope_amended": false,
+    "event_ledger_amended": false,
+    "expected_preservation_lock_count": 27,
+    "expected_signed_movement": {
+      "prediction": "decrease",
+      "signed_residual": "more_negative"
+    },
+    "expected_visible_percentages": {
+      "residual_after_percent": "-23.423673",
+      "residual_before_percent": "-0.592425",
+      "residual_movement_percentage_points": "-22.831248"
+    },
+    "operator": "max(C, P) + min(C, P) / 2",
+    "parameters_amended_or_refit": false,
+    "source_ranges_amended": false,
+    "traf66_expectations_sha256": "406a4ba250387268b9cf726f0888bcc65246f065a07e2b35b5564438ec4d3534",
+    "traf66_independent_sign_sha256": "2c563d33302d86b3fbbf3600dab2c3087abc32876af4c5ba8897c186d6b22310",
+    "traf66_overlap_boundary_sha256": "f2f19990de99cf04d4e8683c65707e0387e5aa521f5c20a6364788d271f6f619"
+  },
+  "scope_locks": {
+    "decode_pricing_changed": false,
+    "model_weights_downloaded": false,
+    "nvlink_scope_touched": false,
+    "scored_flagship_rerun_performed": false,
+    "traf65_touched": false,
+    "web_pages_fetched": false
+  },
+  "schema": "simllm-deployment-curve-traf67-expectations-v1",
+  "status": "EXPECTATIONS_ONLY",
+  "task": "TRAF-67"
+}
