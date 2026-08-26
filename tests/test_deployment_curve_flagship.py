@@ -40,6 +40,10 @@ def _plot():
     return _module("deployment_curve_flagship_plot", "plot_flagship.py")
 
 
+def _publisher():
+    return _module("deployment_curve_flagship_publisher", "publish_flagship.py")
+
+
 def _json(name: str):
     return json.loads((STUDY_DIR / name).read_text(encoding="utf-8"))
 
@@ -210,6 +214,65 @@ def test_binding_qualification_never_fits_or_scores(monkeypatch, tmp_path):
     assert result["fit_performed"] is False
     assert result["anchor_numeric_values_accessed"] is False
     assert result["held_out_score_performed"] is False
+
+
+def test_publication_projection_omits_bulk_and_preserves_score():
+    publisher = _publisher()
+    result = {
+        "schema": "simllm-deployment-curve-flagship-result-v1",
+        "status": "REFUTED",
+        "verdict": "SCORABLE_HELD_OUT_REFUTED_MTP_BLOCKED",
+        "scope": "priced held-out prefill anchors only",
+        "core54_closure": False,
+        "closure_reason": "literal acceptance not met",
+        "provenance": {},
+        "allocation": {},
+        "scale_mapping": {},
+        "topology": {},
+        "constant_fit": {},
+        "constant_fit_sha256": "1" * 64,
+        "held_out_score": {"status": "REFUTED"},
+        "held_out_score_sha256": "2" * 64,
+        "anchor_predictions": [],
+        "curves": [],
+        "stable_identity_guard": {"equal": True},
+        "packet_observation": {},
+        "session_observations": [
+            {
+                "anchor_id": "anchor",
+                "pool": "prefill",
+                "candidate_entry_index": 0,
+                "admissions": 1,
+                "terminals": 1,
+                "prompt_tokens_per_request": 1,
+                "total_prompt_tokens": 1,
+                "stable_projection_sha256": "3" * 64,
+                "stable_requests": [{"bulk": True}],
+                "batches": {},
+                "prefill_ranks": [0],
+                "decode_ranks": [1],
+            }
+        ],
+        "candidate_selections": [],
+        "runtime_finding": "finding",
+        "dominant_held_out_contributor": "contributor",
+        "residuals_required": [],
+    }
+    binding = {
+        "schema": "simllm-deployment-curve-binding-qualification-v1",
+        "status": "PARTIAL",
+        "run_head": "4" * 40,
+        "fit_performed": False,
+        "anchor_numeric_values_accessed": False,
+        "held_out_score_performed": False,
+        "candidate_selections": [],
+    }
+
+    publication = publisher.build_publication_result(result, binding, {})
+
+    assert publication["held_out_score"] == {"status": "REFUTED"}
+    assert "stable_requests" not in publication["scored_session_summary"][0]
+    assert publication["candidate_binding"]["held_out_score_performed"] is False
 
 
 def test_shared_curve_records_keep_output_axis_and_target_scale():

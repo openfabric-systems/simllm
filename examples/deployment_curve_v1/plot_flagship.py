@@ -129,9 +129,11 @@ def render_flagship_figure(
         2,
         figsize=(7.0, 4.33),
         gridspec_kw={"width_ratios": (1.8, 1.0)},
-        constrained_layout=True,
+        constrained_layout=False,
     )
+    figure.subplots_adjust(left=0.10, right=0.97, bottom=0.18, top=0.82, wspace=0.30)
     simulated_handles = []
+    disclosure_handles = []
     context_handles = []
     all_x = []
     all_y = []
@@ -198,6 +200,17 @@ def render_flagship_figure(
         )
         all_x.append(disclosure["x"])
         all_y.append(disclosure["y"])
+        disclosure_handles.append(
+            Line2D(
+                [0],
+                [0],
+                color="#111111",
+                marker=disclosure["marker"],
+                markerfacecolor="white",
+                linestyle="none",
+                label=disclosure["label"],
+            )
+        )
     curve_axis.axvline(
         plot["h800_x"],
         color="#555555",
@@ -228,8 +241,8 @@ def render_flagship_figure(
     curve_axis.set_xlim(max(0.0, min(all_x) - 0.06 * x_span), max(all_x) + 0.06 * x_span)
     curve_axis.set_ylim(min(all_y) / 1.25, max(all_y) * 1.25)
     first_legend = curve_axis.legend(
-        handles=simulated_handles,
-        title="Simulated SGLang",
+        handles=simulated_handles + disclosure_handles,
+        title="SGLang configuration and disclosures",
         loc="upper left",
         frameon=True,
         facecolor="white",
@@ -301,16 +314,17 @@ def render_flagship_figure(
         edgecolor="#cccccc",
     )
     figure.suptitle(
-        "DeepSeek-V3 deployment curve: "
+        "DeepSeek-V3: "
         f"held-out prefill {plot['verdict']} "
         f"(max {plot['maximum_error_percent']:.2f}%); "
-        "MTP BLOCKED on COMP-72",
-        fontsize=9.5,
+        "MTP BLOCKED (COMP-72)",
+        fontsize=9.2,
         fontweight="bold",
+        y=0.97,
     )
     figure.text(
         0.5,
-        0.005,
+        0.025,
         "Prefill and decode are separate disclosure experiments. Bands are "
         "deterministic component intervals, not confidence intervals.",
         ha="center",

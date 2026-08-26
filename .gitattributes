@@ -133,3 +133,15 @@ simllm/adapters/sglang/pump.py text eol=lf
 tests/test_adapters_sglang_pump.py text eol=lf
 simllm/adapters/sglang/worker.py text eol=lf
 tests/test_adapters_sglang.py text eol=lf
+examples/deployment_curve_v1/publish_flagship.py text eol=lf
+examples/deployment_curve_v1/flagship_result.json text eol=lf
+examples/deployment_curve_v1/RESULTS.md text eol=lf
+.gitattributes text eol=lf
+docs/README_PRO.md text eol=lf
+docs/modules/core.md text eol=lf
+docs/modules/compute.md text eol=lf
+docs/modules/adapters-sglang.md text eol=lf
+docs/modules/traffic.md text eol=lf
+docs/task-ledger.json text eol=lf
+examples/deployment_curve_v1/figures/*.pdf -text -diff
+examples/deployment_curve_v1/figures/*.png -text -diff

@@ -63,3 +63,27 @@
   named COMP-72 blocker rather than a sizing uncertainty.
 - External work not represented by line counts: COMP-72 resumable Merlin MTP
   execution and any future promotion of the candidate pricing record.
+
+## Completion accounting
+
+- Final scored verdict: `SCORABLE_HELD_OUT_REFUTED_MTP_BLOCKED`; maximum
+  priced held-out error 69.20%, with MTP unpriced on COMP-72.
+- Scored run: `$SIMLLM_CORE54_RUN_ROOT/attempt-5`; post-score no-fit,
+  no-anchor-value and no-score binding qualification:
+  `$SIMLLM_CORE54_RUN_ROOT/attempt-6-binding-qualification`.
+- Preserved bring-up attempts: attempts 1 through 4, each terminated before a
+  held-out score was written.
+- Publication payload: 64 KiB compact JSON, 33 KiB PDF and 237 KiB PNG in the
+  study directory. Request traces and packet intermediates remain external.
+- Actual tracked change against the requested base before generated binary and
+  compact-result accounting: approximately 3,250 insertions and 120 deletions
+  across freeze, implementation, tests, study and literal registry updates.
+- The reusable implementation exceeded the initial range because the scored
+  path needed process-safe content-addressed provider transfer, tokenizer-free
+  pretokenized scheduler setup, an explicit audited dimension override, exact
+  token-budget qualification, a no-rescore binding mode and compact publishing.
+  Tests remained inside the expected range; documentation and freeze material
+  remained near the expected range.
+- Final task movement: CORE-57 closed; CORE-54 and CORE-56 remain open. New
+  residuals are CORE-59, COMP-74 and SGL-38. Existing COMP-72, SGL-36 and
+  TRAF-64 retain their non-duplicated scopes.

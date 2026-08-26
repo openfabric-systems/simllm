@@ -982,11 +982,13 @@ The corresponding SGLang session also conserves 144 request lifecycles and 576
 decode tokens with 0 ps maximum decomposition residual, and its packet handoff
 moves TTFT by the exact signed -76,918,400 ps difference without moving TPOT.
 Its throughput is nondecreasing in 4 of 6 frozen curves, so SGL-33 remains open
-through SGL-36. The structural SGLang render also exposes a separate allocation
-finding: four eight-GPU prefill nodes plus nine eight-GPU decode nodes contain
-104 ranks, 8 more than CORE-54's current 96-rank statement. CORE-57 owns that
-P0 correction before the flagship allocation is asserted; see
-[the SGLang session results](../../examples/sglang_pd_session_v1/RESULTS.md).
+through SGL-36. The scored CORE-54 freeze resolves the allocation finding
+before its first run: the four-node EP32 prefill and nine-node EP72 decode
+disclosures are separate experiments on the 12-node cluster. Their
+simultaneous 104-rank render remains a structural comparator and is not called
+the 96-GPU system; joint deployments appear only as declared what-if context.
+This closes CORE-57 while preserving the original structural render; see
+[the scored deployment result](../../examples/deployment_curve_v1/RESULTS.md).
 
 The CORE-53 session binding is live as an explicit content-addressed candidate
 path through the existing compute provider chain. The retained candidate row
@@ -1001,19 +1003,6 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
 ## Open tasks
 
 ### Precision
-
-- CORE-57 (Precision; P0; M): resolve the CORE-54 flagship allocation before
-  any physical comparison or plot claims one deployment. The published role
-  units are four eight-GPU prefill nodes and nine eight-GPU decode nodes, which
-  project to 13 nodes and 104 ranks, while CORE-54 currently calls the same
-  shape a 12-node, 96-GPU deployment. The identifying evidence is the cited
-  public configuration's allocation scope and whether the two role-unit counts
-  are simultaneous or alternatives. Acceptance requires an expectations-only
-  amendment before the first flagship run, one internally consistent node,
-  GPU, rank and NIC total across the dossier, placement manifest and curve
-  record, and exact preservation of the 104-rank structural comparator. A
-  result produced while the 96 versus 104 disagreement remains is void for
-  flagship allocation claims.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
@@ -1041,6 +1030,18 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   differ only in the declared opaque fields, and unchanged accepted
   `pd_session_v1` compact cells. The void run remains void and cannot be
   retrospectively rescored.
+
+- CORE-59 (Precision; P1; M): replace the CORE-54 flagship's one shared
+  collective-surcharge residual with role- and shape-specific mechanisms
+  identified without held-out disclosure values. The first scored run pins the
+  shared term to its 0 ps floor: the EP32 1K calibration projection is 66.71%
+  high while the EP72 standard-decode projection is 59.83% low, so moving one
+  positive additive term cannot improve both roles. Identify the missing
+  service from component-complete prefill and decode evidence, freeze every new
+  constant and envelope before another scored run, and fit only the existing
+  calibration split. Acceptance requires a mechanism-specific signed movement
+  for both calibration rows, no held-out access before the next frozen fit, and
+  exact preservation of the published refutation and its artifacts.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
@@ -1355,9 +1356,9 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
 - CORE-54 (Completeness; P1; L): reproduce the public DeepSeek-V3 deployment
   curve inside the simulator, evidence first. Freeze the published anchors
   from [the deployment disclosures](../papers/deepseek-deployment-disclosures.md)
-  before any run, then drive the disaggregated session at the disclosed
-  SGLang 96-GPU shape (4 prefill nodes EP32, 9 decode nodes EP72, 8 GPUs
-  each) with one-shot requests at the disclosed input lengths, sweeping
+  before any run, then drive the disaggregated session as the disclosure's
+  separate 4-node EP32 prefill and 9-node EP72 decode experiments, with 8 GPUs
+  per node and one-shot requests at the disclosed input lengths, sweeping
   offered load so each configuration traces a curve of aggregated output
   throughput against per-token request delay, plotted with the upper-right
   corner optimal. Compute prices from the DeepSeek per-rank lookup
@@ -1374,7 +1375,11 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   and CORE-53's concurrent scaled session, SGL-33's SGLang-side session,
   TRAF-61 and the GH200-anchored campaign tables; a bar this task cannot
   meet is reported as a refutation with findings, never absorbed by
-  loosening the frozen anchors.
+  loosening the frozen anchors. The first scored run is honestly REFUTED:
+  priced held-out prefill errors are 69.20% at 2K and 63.35% at 4K, and the MTP
+  anchor is BLOCKED on COMP-72's absent cell. The figure, propagated component
+  bands, separate-experiment allocation and second legend are published, but
+  CORE-54 remains open through CORE-59, COMP-72, SGL-36, SGL-38 and TRAF-64.
 - CORE-56 (Completeness; P1; M): bind the content-addressed local Hopper
   candidate into the CORE-54 flagship after CORE-53's generic seam lands.
   Selection must opt into candidate status explicitly and pin lookup digest
@@ -1386,7 +1391,12 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   visible in the flagship result, a wrong digest or acceptance status to fail
   closed, and the existing roofline comparator to remain byte-identical when
   candidate selection is disabled. This task does not validate the prices or
-  relax CORE-54's held-out anchor and uncertainty bars.
+  relax CORE-54's held-out anchor and uncertainty bars. The post-score,
+  no-anchor-value qualification selects all three exact EP32 prefill rows with
+  candidate provenance, while the EP72 standard-decode row misses because the
+  driver-level join does not expose remote KV 2000 in the decode request shape.
+  CORE-56 therefore remains open through SGL-38; MTP remains an explicit absent
+  row rather than a lookup miss eligible for interpolation.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool

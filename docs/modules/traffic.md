@@ -1573,7 +1573,11 @@ and [the target-topology result](../../examples/disaggregated_target_topology_v1
   chain and unchanged decode TPOT. The bounded packet cell and the constant
   and off arms remain byte-for-byte and timestamp-for-timestamp identical.
   PLACE-5 supplies the complete declared physical graph, so this task is
-  unblocked.
+  unblocked. CORE-54 adds a DeepSeek MLA bounded cell with 281,088,000 bytes,
+  eight conserved 35,136,000-byte rank-pair messages and quiescent 200 and 400
+  Gbit/s arms. It derives the role rank subsets from PLACE-5 but does not feed
+  the complete fabric manifest and paths into the packet driver, so TRAF-64
+  remains open and this evidence is not a target-path qualification.
 
 ### Uncategorized
 

@@ -2669,6 +2669,18 @@ SGLang EP32 prefill and EP72 decode shapes. See
   record remains the exact roofline comparator path. This is the bounded
   session-coverage slice of COMP-64, not a second capture format or pricing
   authority.
+- COMP-74 (Completeness; P1; M): replace CORE-54's zero-width candidate
+  distribution placeholder with repeat-derived DeepSeek row uncertainty. The
+  scored result propagates the record point, physical constant envelope and a
+  distribution contribution of zero that explicitly makes no stability claim
+  because only one retained seed exists. After COMP-72 supplies repeated exact
+  EP32 prefill and EP72 decode cells, estimate the per-key distribution without
+  pooling roles, prompt lengths or MTP modes; preserve the evidence-class
+  ledger and candidate status. Acceptance requires a preregistered repeat
+  statistic and interval rule, at least two independent retained repetitions
+  per priced key, nonzero intervals where the observations vary, and exact
+  reproduction of the current point predictions when distribution propagation
+  is disabled.
 
 ### Uncategorized
 
