@@ -7,6 +7,7 @@ device-model service-entry types. It never becomes a serving-side authority.
 
 from __future__ import annotations
 
+import copy
 import csv
 import json
 import re
@@ -17,7 +18,12 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, NoReturn
 
-from simllm.calibration.canonical import canonical_sha256, sha256_bytes, validate_sha256
+from simllm.calibration.canonical import (
+    canonical_bytes,
+    canonical_sha256,
+    sha256_bytes,
+    validate_sha256,
+)
 from simllm.calibration.record_types import RecordObject
 from simllm.compute.device_model import (
     DeviceResourceAxis,
@@ -34,10 +40,21 @@ from simllm.compute.device_model import (
     ShapeVector,
     validate_device_service_entries,
 )
-from simllm.compute.provider import ProfileTableProvenance, ProfileTableProvider
+from simllm.compute.provider import (
+    ComputeProvider,
+    GpuSpec,
+    KernelSpec,
+    ProfileLookupBinding,
+    ProfileTableProvenance,
+    ProfileTableProvider,
+    RooflineProvider,
+)
 
 KERNEL_CYCLE_LUT_SCHEMA = "simllm-kernel-cycle-lut-v1"
 KERNEL_CYCLE_INPUT_SCHEMA = "simllm-kernel-cycle-input-v1"
+KERNEL_CYCLE_PRICING_PROVENANCE_SCHEMA = (
+    "simllm-kernel-cycle-pricing-provenance-v1"
+)
 PS_PER_SECOND = 1_000_000_000_000
 
 _IMPLEMENTATION_CLASSES = {
@@ -1014,6 +1031,9 @@ def _profile_config(key: Mapping[str, Any]) -> tuple[tuple[str, int], ...]:
 
 def compile_profile_table(
     value: Mapping[str, Any] | str | bytes | bytearray | memoryview,
+    *,
+    lookup_binding: ProfileLookupBinding | None = None,
+    comparator: ComputeProvider | None = None,
 ) -> ProfileTableProvider:
     """Compile a lookup record into the established scalar profile provider."""
 
@@ -1044,6 +1064,216 @@ def compile_profile_table(
             created=str(payload["created"]),
             references=(f"record-sha256:{record.record_id}",),
         ),
+        lookup_binding=lookup_binding,
+        comparator=comparator,
+    )
+
+
+def _selection_key_template(
+    record: RecordObject,
+    *,
+    pool: str,
+    selection_entry_index: int,
+) -> dict[str, Any]:
+    if pool not in _POOLS:
+        raise ValueError(f"pool must be one of {sorted(_POOLS)}")
+    entries = record.value["entries"]
+    if (
+        isinstance(selection_entry_index, bool)
+        or type(selection_entry_index) is not int
+    ):
+        raise TypeError("selection_entry_index must be an integer")
+    if not 0 <= selection_entry_index < len(entries):
+        raise IndexError("selection_entry_index is outside the lookup record")
+    key = json.loads(record.canonical)["entries"][selection_entry_index]["key"]
+    key["pool"] = pool
+    key.pop("shape")
+    return key
+
+
+class KernelCycleLookupBinding:
+    """Exact kernel-cycle key selection inside ``ProfileTableProvider``.
+
+    The selected record owns framework, model, launch, parallelism and routing
+    identity. Each live ``KernelSpec`` supplies only the pool-specific dynamic
+    shape. A complete canonical key selects exactly one compiled profile-table
+    row. The owning profile provider delegates a miss to its explicit
+    comparator without changing that estimate.
+
+    This provider accepts candidate records because candidate status is part
+    of its required provenance. Accepting the record never promotes it to a
+    calibration claim.
+    """
+
+    def __init__(
+        self,
+        record: RecordObject,
+        *,
+        pool: str,
+        selection_entry_index: int = 0,
+    ) -> None:
+        self.record = record
+        self.pool = pool
+        self._key_template = _selection_key_template(
+            record,
+            pool=pool,
+            selection_entry_index=selection_entry_index,
+        )
+        self._record_gpu = GpuSpec(
+            name=str(record.value["device"]["gpu_name"]),
+            peak_flops=1.0,
+            mem_bandwidth=1.0,
+        )
+        self._entries_by_key: dict[bytes, list[Mapping[str, Any]]] = {}
+        for entry_value in record.value["entries"]:
+            entry = _object(entry_value, "record.entries[]")
+            key_bytes = canonical_bytes(entry["key"])
+            self._entries_by_key.setdefault(key_bytes, []).append(entry)
+        self._lookup_hits = 0
+        self._lookup_misses = 0
+        self._selected_key_sha256s: list[str] = []
+
+    def _query_key(self, kernel: KernelSpec) -> dict[str, Any] | None:
+        requests = kernel.request_shapes
+        if not requests:
+            return None
+        query = copy.deepcopy(self._key_template)
+        if self.pool == "decode":
+            query["shape"] = {
+                "batch_size": len(requests),
+                "per_request_kv_lengths": [
+                    request.prior_context_tokens for request in requests
+                ],
+            }
+        else:
+            query["shape"] = {
+                "computed_new_tokens": sum(
+                    request.num_new_tokens for request in requests
+                ),
+                "existing_context_tokens": sum(
+                    request.prior_context_tokens for request in requests
+                ),
+            }
+        return query
+
+    def _select(
+        self,
+        kernel: KernelSpec,
+    ) -> tuple[dict[str, Any] | None, Mapping[str, Any] | None]:
+        query = self._query_key(kernel)
+        if query is None:
+            return None, None
+        matches = self._entries_by_key.get(canonical_bytes(query), [])
+        if len(matches) > 1:
+            raise ValueError(
+                "kernel-cycle lookup found duplicate rows for complete key "
+                f"{canonical_sha256(query)}"
+            )
+        return query, matches[0] if matches else None
+
+    def selection_for(self, kernel: KernelSpec) -> dict[str, Any]:
+        """Describe one pure exact-key decision without pricing or counting."""
+
+        query, entry = self._select(kernel)
+        return {
+            "query_key_sha256": (
+                None if query is None else canonical_sha256(query)
+            ),
+            "selected": entry is not None,
+            "selected_entry_key_sha256": (
+                None if entry is None else canonical_sha256(entry["key"])
+            ),
+            "implementation_id": (
+                None if entry is None else str(entry["implementation_id"])
+            ),
+        }
+
+    def profile_query(
+        self,
+        kernel: KernelSpec,
+    ) -> tuple[KernelSpec, GpuSpec] | None:
+        """Return one compiled exact query, or ``None`` for comparator use."""
+
+        _, entry = self._select(kernel)
+        if entry is None:
+            return None
+        key_sha256 = canonical_sha256(entry["key"])
+        if key_sha256 not in self._selected_key_sha256s:
+            self._selected_key_sha256s.append(key_sha256)
+        return (
+            KernelSpec(
+                name=str(entry["implementation_id"]),
+                flops=0,
+                bytes_moved=0,
+                config=_profile_config(entry["key"]),
+            ),
+            self._record_gpu,
+        )
+
+    def record_lookup(self, selected: bool) -> None:
+        """Record one estimate decision without conflating layer queries."""
+
+        if selected:
+            self._lookup_hits += 1
+        else:
+            self._lookup_misses += 1
+
+    def pricing_provenance(self) -> dict[str, Any]:
+        """Return the candidate-safe record identity and selection ledger."""
+
+        payload = self.record.value
+        entries = payload["entries"]
+        coverages = sorted({str(entry["coverage"]) for entry in entries})
+        selected = tuple(self._selected_key_sha256s)
+        return {
+            "schema": KERNEL_CYCLE_PRICING_PROVENANCE_SCHEMA,
+            "record_sha256": self.record.record_id,
+            "acceptance_status": str(payload["acceptance_status"]),
+            "campaign_id": str(payload["campaign_id"]),
+            "coverage": coverages[0] if len(coverages) == 1 else "mixed",
+            "record_device_kind_id": str(payload["device"]["device_kind_id"]),
+            "pool": self.pool,
+            "selected_entry_key_sha256": selected[-1] if selected else None,
+            "selected_entry_key_sha256s": list(selected),
+            "lookup_hits": self._lookup_hits,
+            "lookup_misses": self._lookup_misses,
+            "calibration_claim": False,
+        }
+
+
+def compile_session_profile_provider(
+    value: Mapping[str, Any] | str | bytes | bytearray | memoryview,
+    *,
+    expected_sha256: str,
+    pool: str,
+    comparator: ComputeProvider | None = None,
+    selection_entry_index: int = 0,
+) -> ProfileTableProvider:
+    """Bind a content-addressed lookup record into its profile-table form."""
+
+    record = validate_kernel_cycle_lut(value)
+    expected = validate_sha256(expected_sha256, "expected_sha256")
+    if record.record_id != expected:
+        raise ValueError(
+            "kernel-cycle record content address disagrees: "
+            f"expected {expected}, found {record.record_id}"
+        )
+    fallback = (
+        RooflineProvider(efficiency=0.7)
+        if comparator is None
+        else comparator
+    )
+    if not isinstance(fallback, ComputeProvider):
+        raise TypeError("comparator must implement ComputeProvider")
+    binding = KernelCycleLookupBinding(
+        record,
+        pool=pool,
+        selection_entry_index=selection_entry_index,
+    )
+    return compile_profile_table(
+        record.canonical,
+        lookup_binding=binding,
+        comparator=fallback,
     )
 
 

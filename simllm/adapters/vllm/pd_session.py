@@ -101,6 +101,8 @@ class VllmPdSessionConfig:
     provider: ComputeProvider = field(
         default_factory=lambda: RooflineProvider(efficiency=0.7)
     )
+    prefill_provider: ComputeProvider | None = None
+    decode_provider: ComputeProvider | None = None
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
 
@@ -127,11 +129,24 @@ class VllmPdSessionConfig:
             _positive_int(name, getattr(self, name))
         if not isinstance(self.provider, ComputeProvider):
             raise TypeError("provider must implement ComputeProvider")
+        for name in ("prefill_provider", "decode_provider"):
+            value = getattr(self, name)
+            if value is not None and not isinstance(value, ComputeProvider):
+                raise TypeError(f"{name} must implement ComputeProvider or be None")
         if not isinstance(self.gpu, GpuSpec):
             raise TypeError("gpu must be GpuSpec")
         if not isinstance(self.host_model, HostInitiationModel):
             raise TypeError("host_model must be HostInitiationModel")
         self.host_model.validate_device(self.gpu)
+
+    def provider_for_role(self, role: ServingPoolRole) -> ComputeProvider:
+        """Resolve an optional pool-specific provider without changing defaults."""
+
+        if role is ServingPoolRole.PREFILL:
+            return self.prefill_provider or self.provider
+        if role is ServingPoolRole.DECODE:
+            return self.decode_provider or self.provider
+        raise ValueError(f"unsupported serving pool role {role!r}")
 
 
 @dataclass(frozen=True)
@@ -166,6 +181,7 @@ class VllmPdRequestResult:
     kv_transfer_params: dict[str, Any]
     prefill_records: tuple[StepRecord, ...]
     decode_records: tuple[StepRecord, ...]
+    compute_pricing: dict[str, Any] | None = None
 
     def to_json(self) -> dict[str, object]:
         value = self.timeline.to_json()
@@ -182,6 +198,8 @@ class VllmPdRequestResult:
                 "decode_step_count": len(self.decode_records),
             }
         )
+        if self.compute_pricing is not None:
+            value["compute_pricing"] = dict(self.compute_pricing)
         return value
 
 
@@ -464,6 +482,7 @@ class VllmDisaggregatedSession:
 
         reset_configuration()
         engine_id = f"simllm-{role.value}-{ordinal}"
+        provider = self.config.provider_for_role(role)
         placement = _engine_local_placement(
             role, self.config.tensor_parallel_size
         )
@@ -474,7 +493,7 @@ class VllmDisaggregatedSession:
                 tp_ranks=placement.group_ranks(0, "tp"),
                 dims=self.config.dims,
                 workdir=engine_workdir / "steps",
-                provider=self.config.provider,
+                provider=provider,
                 gpu=self.config.gpu,
                 host_model=self.config.host_model,
                 placement_manifest=placement,
@@ -491,7 +510,7 @@ class VllmDisaggregatedSession:
         )
         configure(
             step_sink=sink,
-            compute_provider=self.config.provider,
+            compute_provider=provider,
             gpu=self.config.gpu,
             host_model=self.config.host_model,
             config=executor_config,
@@ -561,6 +580,20 @@ class VllmDisaggregatedSession:
             if any(row.request_id == request_id for row in record.scheduled):
                 return record.virtual_time_ps
         raise RuntimeError(f"scheduler never released request {request_id!r}")
+
+    @staticmethod
+    def _compute_pricing(
+        prefill: VllmPoolEngine,
+        decode: VllmPoolEngine,
+    ) -> dict[str, Any] | None:
+        prefill_provenance = prefill.executor.compute_provider.pricing_provenance()
+        decode_provenance = decode.executor.compute_provider.pricing_provenance()
+        if prefill_provenance is None and decode_provenance is None:
+            return None
+        return {
+            "prefill": prefill_provenance,
+            "decode": decode_provenance,
+        }
 
     def _drive_request(
         self,
@@ -953,6 +986,10 @@ class VllmDisaggregatedSession:
                     kv_transfer_params=dict(state.kv_transfer_params),
                     prefill_records=prefill_records,
                     decode_records=decode_records,
+                    compute_pricing=self._compute_pricing(
+                        state.prefill,
+                        state.decode,
+                    ),
                 )
             )
         return VllmPdConcurrentResult(
@@ -1114,6 +1151,7 @@ class VllmDisaggregatedSession:
             kv_transfer_params=dict(kv_params),
             prefill_records=prefill_records,
             decode_records=decode_records,
+            compute_pricing=self._compute_pricing(prefill, decode),
         )
 
     def shutdown(self) -> None:

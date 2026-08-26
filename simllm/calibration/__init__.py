@@ -13,10 +13,12 @@ from typing import Any
 __all__ = [
     "KERNEL_CYCLE_INPUT_SCHEMA",
     "KERNEL_CYCLE_LUT_SCHEMA",
+    "KERNEL_CYCLE_PRICING_PROVENANCE_SCHEMA",
     "CalibrationCompiler",
     "CalibrationValidationError",
     "DeviceServiceCompilation",
     "HardwareCollector",
+    "KernelCycleLookupBinding",
     "ModelKernelInventory",
     "OfflineKernelSimulator",
     "RootKind",
@@ -27,6 +29,7 @@ __all__ = [
     "analyze_kernel_cycle_capture",
     "compile_device_service_entries",
     "compile_profile_table",
+    "compile_session_profile_provider",
     "resolve_registry_root",
     "resolve_suite_root",
     "validate_kernel_cycle_lut",
@@ -54,6 +57,14 @@ _EXPORTS = {
     "KERNEL_CYCLE_LUT_SCHEMA": (
         "simllm.calibration.kernel_cycle_lut",
         "KERNEL_CYCLE_LUT_SCHEMA",
+    ),
+    "KERNEL_CYCLE_PRICING_PROVENANCE_SCHEMA": (
+        "simllm.calibration.kernel_cycle_lut",
+        "KERNEL_CYCLE_PRICING_PROVENANCE_SCHEMA",
+    ),
+    "KernelCycleLookupBinding": (
+        "simllm.calibration.kernel_cycle_lut",
+        "KernelCycleLookupBinding",
     ),
     "ModelKernelInventory": (
         "simllm.calibration.model_inventory",
@@ -85,6 +96,10 @@ _EXPORTS = {
     "compile_profile_table": (
         "simllm.calibration.kernel_cycle_lut",
         "compile_profile_table",
+    ),
+    "compile_session_profile_provider": (
+        "simllm.calibration.kernel_cycle_lut",
+        "compile_session_profile_provider",
     ),
     "resolve_registry_root": (
         "simllm.calibration.registry",
