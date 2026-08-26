@@ -303,6 +303,17 @@ def _build_granite_entries(
             },
             _lookup_shape(pool, primary, secondary),
         )
+        key["routing"] = {
+            "availability": "not-captured",
+            "expert_loads": None,
+            "evidence_sha256": canonical_sha256(
+                {
+                    "cell_id": cell_id,
+                    "model": inputs["models"]["granite"]["name"],
+                    "routing_state": "not-captured",
+                }
+            ),
+        }
         evidence = _evidence(
             service_class="MEASURED",
             split=split,
@@ -318,7 +329,7 @@ def _build_granite_entries(
         )
         result.append(
             _entry(
-                implementation_id=f"granite-3.0-8b-instruct-vllm-{cell_id}",
+                implementation_id=f"granite-3.0-1b-a400m-instruct-vllm-{cell_id}",
                 key=key,
                 service_ps=service_ps,
                 sm_hz=GRANITE_SM_HZ,
@@ -516,6 +527,7 @@ def _score(record: dict[str, Any], freeze: dict[str, Any]) -> dict[str, Any]:
         "GH200 counter-pass attribution",
         "full-depth DeepSeek silicon captures",
         "uncaptured tensor-parallel widths",
+        "retained per-cell routed expert-load vectors",
     ]
     return {
         "verdict": "CANDIDATE_COMPILED",

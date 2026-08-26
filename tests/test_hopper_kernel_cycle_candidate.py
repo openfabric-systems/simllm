@@ -53,7 +53,8 @@ def test_profile_and_device_contracts_compile_without_a_binding_adapter() -> Non
     measured = next(
         entry
         for entry in record.value["entries"]
-        if entry["implementation_id"] == "granite-3.0-8b-instruct-vllm-graph-decode-b1-kv16"
+        if entry["implementation_id"]
+        == "granite-3.0-1b-a400m-instruct-vllm-graph-decode-b1-kv16"
     )
     estimate = profile.estimate(
         KernelSpec(
@@ -78,6 +79,19 @@ def test_profile_and_device_contracts_compile_without_a_binding_adapter() -> Non
     assert device.lookup_record_sha256 == record.record_id
     assert device.acceptance_status == "candidate"
     assert len(device.service_entries) == len(record.value["entries"])
+
+
+def test_granite_identity_is_the_exact_retained_routed_model() -> None:
+    entries = validate_kernel_cycle_lut(_candidate_value()).value["entries"]
+    granite = [entry for entry in entries if entry["implementation_id"].startswith("granite")]
+
+    assert {entry["key"]["model_identity"]["name"] for entry in granite} == {
+        "ibm-granite/granite-3.0-1b-a400m-instruct"
+    }
+    assert {entry["key"]["model_identity"]["family"] for entry in granite} == {"routed"}
+    assert {entry["key"]["routing"]["availability"] for entry in granite} == {
+        "not-captured"
+    }
 
 
 def test_declared_deepseek_rows_are_exact_61_over_4_transforms() -> None:
