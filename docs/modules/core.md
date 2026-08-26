@@ -990,6 +990,23 @@ the 96-GPU system; joint deployments appear only as declared what-if context.
 This closes CORE-57 while preserving the original structural render; see
 [the scored deployment result](../../examples/deployment_curve_v1/RESULTS.md).
 
+The [second scored CORE-54 run](../../examples/deployment_curve_v1/RESULTS_RUN2.md)
+prices prefill through the clean COMP-75 composition and enables SGL-38's
+default-off remote-KV decode projection. All four exact candidate keys select
+live, so CORE-56 is complete. The independently reproduced COMP-75 authority,
+not the preserved void CORE-60 record, supplies the destination deduplication,
+FP8 dispatch bytes and max-like overlap used by the run, so CORE-60 is also
+complete without promoting that void record. The inherited surcharge fits to
+0 ps with zero applications per step. Both priced held-out prefill rows miss
+the frozen 5 percent bar: 2K is 5.113992 percent high and 4K is 13.976233
+percent high. The shared communication term dominates all three compute rows
+and flattens their point capacities at 57,332.324550 tokens per second per
+node. Standard decode binds the exact EP72 candidate key but predicts
+8,949.759685 tokens per second per node, 59.834128 percent below the published
+calibration value. No decode-side mechanism or in-run adjustment is claimed.
+CORE-54 remains open on the refuted prefill score, the COMP-72 MTP cell,
+COMP-76 decode repetition, CORE-61 depth validity and COMP-74 distributions.
+
 The CORE-53 session binding is live as an explicit content-addressed candidate
 path through the existing compute provider chain. The retained candidate row
 is selected twice at the exact prior-KV-16 decode shape, its status and partial
@@ -1031,20 +1048,17 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   `pd_session_v1` compact cells. The void run remains void and cannot be
   retrospectively rescored.
 
-- CORE-60 (Precision; P1; M): resolve the remaining EP32 prefill service
-  composition after CORE-59's frozen physical mechanism moves the visible 1K
-  calibration projection from 66.71% high to 51.48% low. The existing uniform
-  routing path serializes 58 dispatch and combine pairs and prices
-  3,320,872,128,000 ps at the 400 Gbit/s point arm, with no free or fitted
-  constant. Identify from calibration-only component evidence which physical
-  contract explains the overcorrection: per-rank token ownership, routed wire
-  precision, same-destination expert deduplication, or framework-supported
-  compute and communication overlap. Freeze the selected composition and every
-  envelope before another comparison, reuse the existing placement and traffic
-  authorities, and reject an unmeasured scale factor. Acceptance requires an
-  independently justified signed movement of the 1K calibration row, exact
-  preservation of CORE-59's freeze and result, no held-out numeric access, and
-  no scored flagship rerun. SGL-38 remains the sole owner of the decode bind.
+- CORE-61 (Precision; P1; M): validate whether the measured four-layer EP72
+  standard-decode basis may be extrapolated linearly to DeepSeek-V3's declared
+  61-layer depth. Freeze at least two measured depths and the exact batch-32,
+  remote-KV-2000 shape before comparison; retain the candidate key, per-layer
+  work inventory and every fixed component separately. Acceptance requires a
+  held-out depth prediction within 5 percent of its measured service and a
+  signed residual ledger that distinguishes depth scaling from the finite
+  compute/communication overlap owned by TRAF-66. The published 22,282
+  tokens-per-second calibration value is comparison evidence only and may not
+  tune the depth rule. COMP-76 owns independent repetition of the four-layer
+  basis, while COMP-72 owns the missing MTP cell.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
@@ -1381,27 +1395,13 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   loosening the frozen anchors. The first scored run is honestly REFUTED:
   priced held-out prefill errors are 69.20% at 2K and 63.35% at 4K, and the MTP
   anchor is BLOCKED on COMP-72's absent cell. The figure, propagated component
-  bands, separate-experiment allocation and second legend are published, but
-  CORE-54 remains open through CORE-60, COMP-72, SGL-36 and TRAF-64.
-- CORE-56 (Completeness; P1; M): bind the content-addressed local Hopper
-  candidate into the CORE-54 flagship after CORE-53's generic seam lands.
-  Selection must opt into candidate status explicitly and pin lookup digest
-  `ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52`;
-  propagate each `MEASURED`, `DECLARED` and `DISCLOSED` class into run
-  provenance, price only exact present keys, and reject MTP or any other
-  absent shape without interpolation. Acceptance requires the four declared
-  full-depth per-rank values to be selected exactly, candidate status to be
-  visible in the flagship result, a wrong digest or acceptance status to fail
-  closed, and the existing roofline comparator to remain byte-identical when
-  candidate selection is disabled. This task does not validate the prices or
-  relax CORE-54's held-out anchor and uncertainty bars. The post-score,
-  no-anchor-value qualification selects all three exact EP32 prefill rows with
-  candidate provenance, while the EP72 standard-decode row misses because the
-  driver-level join does not expose remote KV 2000 in the decode request shape.
-  SGL-38 now supplies the default-off remote-KV shape projection, but CORE-56
-  remains open until a later integrator qualification enables it and publishes
-  the live selection. MTP remains an explicit absent row rather than a lookup
-  miss eligible for interpolation.
+  bands, separate-experiment allocation and second legend are published. The
+  second scored run applies the clean COMP-75 composition and selects all four
+  exact candidate keys, but still REFUTES the priced prefill scope at 5.113992
+  percent for 2K and 13.976233 percent for 4K. MTP remains BLOCKED and the
+  disclosed decode calibration row misses 59.834128 percent low. CORE-54 stays
+  open on those literal results, COMP-72, COMP-74, COMP-76, CORE-61, SGL-36 and
+  TRAF-64.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool
