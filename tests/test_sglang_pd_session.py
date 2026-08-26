@@ -19,7 +19,7 @@ from simllm.adapters.sglang.pd_session import (
     SglangPdRequest,
     SglangPdSessionConfig,
 )
-from simllm.compute import ModelDims
+from simllm.compute import ComputeProvider, DurationEstimate, KernelSpec, ModelDims
 from simllm.core import (
     DeclaredKvHandoffPolicy,
     KvHandoffGeometry,
@@ -171,6 +171,21 @@ class _FakePoolEngine:
     def close(self):
         return None
 
+    def pricing_provenance(self):
+        return self.config.provider.pricing_provenance()
+
+
+class _ProvenanceProvider(ComputeProvider):
+    def __init__(self, label):
+        self.label = label
+
+    def estimate(self, kernel: KernelSpec, gpu):
+        del kernel, gpu
+        return DurationEstimate(1, "test")
+
+    def pricing_provenance(self):
+        return {"label": self.label}
+
 
 @pytest.fixture
 def fake_pool_engines(monkeypatch):
@@ -222,6 +237,34 @@ def test_session_rejects_arrangement_that_does_not_divide_role(tmp_path):
             prefill_arrangement=SglangPoolArrangement(True, 3, 1, 1),
             decode_arrangement=_arrangement(8),
         )
+
+
+def test_session_selects_pool_specific_providers_and_surfaces_provenance(
+    tmp_path,
+    fake_pool_engines,
+):
+    config = _config(tmp_path)
+    config = SglangPdSessionConfig(
+        **{
+            **config.__dict__,
+            "prefill_provider": _ProvenanceProvider("prefill"),
+            "decode_provider": _ProvenanceProvider("decode"),
+        }
+    )
+    request = SglangPdRequest("request", (1, 2), 4, 0)
+
+    with SglangDisaggregatedSession(config) as session:
+        result = session.run_requests((request,)).requests[0]
+
+    assert [launch.provider.label for launch in fake_pool_engines.launches] == [
+        "prefill",
+        "decode",
+    ]
+    assert result.compute_pricing == {
+        "prefill": {"label": "prefill"},
+        "decode": {"label": "decode"},
+    }
+    assert result.to_json()["compute_pricing"] == result.compute_pricing
 
 
 def test_session_conserves_stable_identities_and_scheduler_batches(
