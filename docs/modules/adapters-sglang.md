@@ -565,6 +565,17 @@ frozen throughput direction was refuted in 2 of 6 curves, so SGL-33 remains
 open through SGL-36; see
 [the disaggregated-session results](../../examples/sglang_pd_session_v1/RESULTS.md).
 
+SGL-38 is complete. The default-off `project_remote_kv_length` session option
+carries each driver-owned prompt length to the decode child under its immutable
+pool-local request identity. The worker adds that length only to the logical
+context projected into `KernelRequestShape`; it does not fabricate KV tensors,
+report cached tokens, or change scheduler batches. The exact 32-request,
+KV-2000 candidate key selected once with zero comparator misses in each of two
+repetitions, the CORE-58 stable projection was equal, and the disabled prompt,
+handoff, token and timestamp projection retained its pre-change digest. This
+was an import-free contract qualification and not a scored flagship rerun; see
+[the decode-shape result](../../examples/sglang_decode_shape_v1/RESULTS.md).
+
 ## Open tasks
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
@@ -714,19 +725,6 @@ closed id.
   packet-handoff and uncalibrated comparator records. CORE-54's first scored
   figure uses an explicitly labeled analytic capacity projection, not this
   missing physical surface, so its 69.20% refutation does not close SGL-36.
-
-- SGL-38 (Precision; P1; M): project the driver-level handoff's remote KV
-  length into the decode scheduler's `KernelRequestShape`. The CORE-54
-  post-score qualification batches all 32 standard-decode requests together,
-  but the decode worker sees only their bootstrap input and therefore misses
-  candidate key
-  `05d1c33cdef9c12e25eb9159adc9dc80f1cd57b6333778f9efb5fb24cd6a74aa`
-  for 32 requests at prior KV length 2000. Carry the immutable remote-prefix
-  length through the join without fabricating KV tensors or changing the
-  scheduler's batching authority. Acceptance requires that exact key to select
-  once with zero comparator misses, the preregistered stable identity
-  projection to remain equal across repetitions, and every prompt, handoff,
-  token and timestamp in the feature-disabled session to remain byte-identical.
 
 ### Completeness
 

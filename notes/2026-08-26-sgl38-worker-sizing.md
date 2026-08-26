@@ -49,3 +49,18 @@
   without affecting feature-disabled serialization.
 - External work not represented by line counts: the later integrator-dispatched
   scored flagship rerun and the parallel CORE-59 pricing-mechanism work.
+
+## Completion accounting
+
+- Production code: 63 changed lines across the SGLang driver session and
+  worker translator.
+- Focused tests: 303 changed lines. This exceeded the expected upper bound by
+  43 lines because the tests spell out the complete CORE-58 stable projection
+  and the exact pre-change prompt, handoff, token and timestamp byte projection
+  instead of importing the scored study.
+- Freeze and closure evidence: the compact expectations file, this sizing note,
+  and the SGL-38 result and registry updates.
+- Bulk evidence: none. No model weights were downloaded and no scored flagship
+  run was dispatched.
+- Local commit sequence: expectations-only freeze `c765c0c`, followed by
+  implementation and focused proof `fc4ef11`.

@@ -125,6 +125,7 @@ examples/deployment_curve_v1/scored_expectations.md text eol=lf
 notes/2026-08-26-core54run-worker-sizing.md text eol=lf
 notes/2026-08-26-sgl38-worker-sizing.md text eol=lf
 examples/sglang_decode_shape_v1/expectations.json text eol=lf
+examples/sglang_decode_shape_v1/RESULTS.md text eol=lf
 examples/deployment_curve_v1/flagship_config.json text eol=lf
 examples/deployment_curve_v1/flagship_tools.py text eol=lf
 examples/deployment_curve_v1/run_flagship.py text eol=lf
