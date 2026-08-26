@@ -31,13 +31,23 @@ backend.
 
 from simllm.placement.declared import declared_manifest
 from simllm.placement.disaggregated import (
+    DECLARED_CLOS_ENDPOINTS_PER_LEAF,
+    DECLARED_CLOS_EVIDENCE_CLASS,
+    DECLARED_CLOS_LINK_PROPAGATION_DELAY_PS,
+    DECLARED_CLOS_LINK_RATE_BPS,
+    DECLARED_CLOS_SPINE_SWITCHES,
+    DECLARED_CLOS_SWITCH_LATENCY_PS,
+    DECLARED_CLOS_TOPOLOGY_NAME,
     DisaggregatedDeploymentManifests,
     disaggregated_manifests,
 )
 from simllm.placement.manifest import (
     FABRIC_SCHEMA,
     PLACEMENT_SCHEMA,
+    FabricLink,
     FabricNodePlacement,
+    FabricSwitchPlacement,
+    FabricSwitchPort,
     FabricTopologyManifest,
     GpuFabricPlacement,
     GroupMembership,
@@ -48,10 +58,20 @@ from simllm.placement.manifest import (
 from simllm.placement.mapper import RankMapper
 
 __all__ = [
+    "DECLARED_CLOS_ENDPOINTS_PER_LEAF",
+    "DECLARED_CLOS_EVIDENCE_CLASS",
+    "DECLARED_CLOS_LINK_PROPAGATION_DELAY_PS",
+    "DECLARED_CLOS_LINK_RATE_BPS",
+    "DECLARED_CLOS_SPINE_SWITCHES",
+    "DECLARED_CLOS_SWITCH_LATENCY_PS",
+    "DECLARED_CLOS_TOPOLOGY_NAME",
     "FABRIC_SCHEMA",
     "PLACEMENT_SCHEMA",
     "DisaggregatedDeploymentManifests",
+    "FabricLink",
     "FabricNodePlacement",
+    "FabricSwitchPlacement",
+    "FabricSwitchPort",
     "FabricTopologyManifest",
     "GpuFabricPlacement",
     "GroupMembership",
