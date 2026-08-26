@@ -1,0 +1,121 @@
+{
+  "acceptance": {
+    "core61_closes_on_local_arm": false,
+    "held_out_tolerance_percent": "5",
+    "missing_requirement": "Predict a second frozen depth and compare it with measured service at the exact batch-32, remote-KV-2000 shape.",
+    "registry_movement": "Land the single-depth separated derivation and move the eight-layer held-out measurement into the resumable COMP-72 Merlin remainder.",
+    "reserved_residual_id": "CORE-63"
+  },
+  "classification": {
+    "ambiguous_fixed_component_rule": "Do not place it in F. Leave it in the four-layer repeatable basis and report that the retained record does not prove it is per-step fixed.",
+    "compute_service_ps": "ceil(compute_sm_cycles * 1000000000000 / observed_clocks.sm_hz.median)",
+    "fixed_component_fields": [
+      "/entries[7]/kernels[0]/components/fixed_overhead_ps"
+    ],
+    "fixed_component_rule": "Count fixed_overhead_ps times launch_count in F only when coverage is complete-kernel-stream, kernel_id is aggregate_noncollective_step_service, launch_count is one, and the recorded method identifies retained additive noncollective service.",
+    "four_layer_repeatable_service_ps": "sum(launch_count * max(compute_service_ps, memory.service_ps))",
+    "per_layer_service_ps": "four_layer_repeatable_service_ps / 4",
+    "reconstruction_rule": "T4 = F + four_layer_repeatable_service_ps = F + 4 * p",
+    "rejected_as_fixed": [
+      "compute_sm_cycles",
+      "memory.service_ps",
+      "fixed_overhead_ps without an explicit whole-step aggregate identity",
+      "published throughput context",
+      "collective or TRAF-66 overlap service"
+    ]
+  },
+  "comparison_context": {
+    "may_tune_or_select": false,
+    "published_tokens_per_second": 22282,
+    "role": "comparison only; it is not an input to either extrapolation"
+  },
+  "deferred_merlin": {
+    "comp72_commands_live_beside_this_remainder_in": "examples/hopper_kernel_cycle_candidate_v1/expectations.json#/deferred_merlin",
+    "comp72_task_id": "COMP-72",
+    "core61_depth8_base_command": "ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:25:00 --job-name=gh-core61-d8-base --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=base,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=16384,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch",
+    "core61_depth8_decode_command": "ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:20:00 --job-name=gh-core61-d8-decode --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=decode,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=65536,MAX_NUM_SEQS=64,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch",
+    "exact_shape": {
+      "batch_size": 32,
+      "remote_kv_tokens_per_request": 2000
+    },
+    "maintenance_gate": {
+      "not_before_local": "2026-08-28T06:30",
+      "timezone": "Europe/Zurich"
+    },
+    "output_root": "/data3/yifeng/simllm-dev/wave-runs/core61d/",
+    "prediction_depth_layers": 8,
+    "resume_rule": "After the maintenance gate, submit base then decode under the existing COMP-72 freeze. Preserve every digest-complete output and stop cleanly on SSH loss."
+  },
+  "evidence_class": {
+    "corrected_service_class": "DECLARED",
+    "depth_basis_count": 1,
+    "description": "DECLARED derivation from a MEASURED decomposition at one depth",
+    "source_component_class_required": "DISCLOSED",
+    "source_service_class_required": "MEASURED"
+  },
+  "exposure_protocol": {
+    "access_log_schema": "simllm-deployment-curve-core61-depth-access-v1",
+    "allowed_fields": [
+      "/entries[7]/coverage",
+      "/entries[7]/evidence/component_class",
+      "/entries[7]/evidence/service_class",
+      "/entries[7]/implementation_id",
+      "/entries[7]/kernels[0]/components/compute_sm_cycles",
+      "/entries[7]/kernels[0]/components/fixed_overhead_ps",
+      "/entries[7]/kernels[0]/components/memory/service_ps",
+      "/entries[7]/kernels[0]/components/method",
+      "/entries[7]/kernels[0]/kernel_id",
+      "/entries[7]/kernels[0]/launch_count",
+      "/entries[7]/kernels[0]/measured_elapsed_ps",
+      "/entries[7]/key",
+      "/entries[7]/measured_service_ps",
+      "/entries[7]/observed_clocks/sm_hz/median"
+    ],
+    "expected_physical_key": {
+      "batch_size": 32,
+      "data_parallel": 1,
+      "expert_parallel": 1,
+      "kv_lengths": "32 entries, each exactly 2000",
+      "launch_mode": "cuda-graph",
+      "pool": "decode",
+      "tensor_parallel": 1
+    },
+    "expected_implementation_id": "deepseek-v3-reduced4-vllm-ep72-decode-b32-c2000",
+    "reader_path": "examples/deployment_curve_v1/core61_depth_field_reader.py",
+    "record_path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+    "record_sha256_from_published_manifest": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+    "selector": "/entries[7]",
+    "unselected_values_may_be_decoded": false,
+    "whole_record_reads_permitted": false
+  },
+  "hypothesis": {
+    "expected_direction": "strictly smaller when F is positive; unchanged when F is zero",
+    "linear_minus_separated_ps": "57 / 4 * F",
+    "linear_rule": "T_linear(61) = 61 / 4 * T(4)",
+    "mechanism": "The linear rule multiplies each per-step fixed component by 15.25 even though it occurs once per decode step.",
+    "separated_rule": "T_separated(61) = F + 61 * p where T(4) = F + 4 * p"
+  },
+  "invalid_if": [
+    "the target entry identity or exact shape differs",
+    "the entry is not MEASURED service with a DISCLOSED component decomposition",
+    "the selected entry contains more than one kernel",
+    "the aggregate kernel is not an explicit one-launch whole-step record",
+    "the component reconstruction differs from measured_service_ps",
+    "a fixed component is negative",
+    "the published throughput value enters selection, classification, or arithmetic",
+    "any retained record is read as a whole"
+  ],
+  "preserved_scope": {
+    "analytical_gate_touched": false,
+    "comp76_touched": false,
+    "decode_session_code_touched": false,
+    "model_weights_downloaded": false,
+    "nvlink_module_touched": false,
+    "scored_runs_touched": false,
+    "web_pages_fetched": false
+  },
+  "rounding": "Round nonnegative rational picoseconds half up only at the published step boundary.",
+  "schema": "simllm-deployment-curve-core61-depth-expectations-v1",
+  "status": "EXPECTATIONS_ONLY",
+  "task": "CORE-61"
+}
