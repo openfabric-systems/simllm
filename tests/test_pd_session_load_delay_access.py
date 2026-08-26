@@ -44,6 +44,13 @@ def _entry(batch_size: int, *, split: str = "calibration") -> dict:
 
 
 def _record() -> bytes:
+    unselected = [
+        {
+            "forbidden": f"raw-skip-{index}",
+            "model": "deepseek" if index < 8 else "other-granite-shape",
+        }
+        for index in range(14)
+    ]
     return json.dumps(
         {
             "acceptance_status": "candidate",
@@ -55,10 +62,11 @@ def _record() -> bytes:
                 "forbidden_device_sentinel": "not returned",
             },
             "entries": [
+                *unselected,
                 _entry(1),
-                _entry(8),
                 _entry(32, split="held-out"),
-                {"model": "deepseek", "forbidden": "must not be consumed"},
+                _entry(8),
+                {"forbidden": "must not be consumed after entry 16"},
             ],
             "forbidden_top_level_sentinel": "must not be consumed",
         },
@@ -85,8 +93,9 @@ def test_reader_returns_only_two_permitted_rows_and_stops_before_held_out() -> N
     assert projection["coverage"] == "complete-kernel-stream"
     assert consumed < len(payload)
     unread = payload[consumed:]
-    assert b'"batch_size": 32' in unread
-    assert b"must not be consumed" in unread
+    assert b"must not be consumed after entry 16" in unread
+    assert b'"batch_size": 32' not in unread
+    assert all("forbidden" not in row for row in projection["entries"])
 
 
 def test_reader_rejects_if_second_row_is_the_held_out_shape() -> None:
@@ -96,7 +105,12 @@ def test_reader_rejects_if_second_row_is_the_held_out_shape() -> None:
             "acceptance_status": "candidate",
             "campaign_id": "candidate-campaign",
             "device": {"device_kind_id": "nvidia-hopper-sm90"},
-            "entries": [_entry(1), _entry(32, split="held-out")],
+            "entries": [
+                *({"raw": index} for index in range(14)),
+                _entry(1),
+                {"raw": "held-out-not-decoded"},
+                _entry(32, split="held-out"),
+            ],
         },
         sort_keys=True,
     ).encode("utf-8")
@@ -139,6 +153,6 @@ def test_access_protocol_freezes_only_calibration_batch_one_and_eight() -> None:
         row["service_class"] == "MEASURED" and row["split"] == "calibration"
         for row in protocol["permitted_entry_selectors"]
     )
-    assert protocol["forbidden"]["entry_indices"] == [2]
+    assert protocol["forbidden"]["entry_indices"] == [0, 1, 2, 3, 4, 5, 6, 7, 15]
     assert protocol["forbidden"]["model_families"] == ["deepseek"]
     assert protocol["pre_protocol_incident"]["status"] == "CONTAMINATED"

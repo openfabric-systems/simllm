@@ -25,9 +25,10 @@ TOP_LEVEL_FIELDS = (
 )
 DEVICE_FIELD = "device_kind_id"
 ENTRY_SELECTORS = (
-    "/entries[0:key.model_identity.name=ibm-granite/granite-3.0-1b-a400m-instruct,pool=decode,launch_mode=cuda-graph,batch_size=1,kv=16]",
-    "/entries[1:key.model_identity.name=ibm-granite/granite-3.0-1b-a400m-instruct,pool=decode,launch_mode=cuda-graph,batch_size=8,kv=16]",
+    "/entries[14:key.model_identity.name=ibm-granite/granite-3.0-1b-a400m-instruct,pool=decode,launch_mode=cuda-graph,batch_size=1,kv=16]",
+    "/entries[16:key.model_identity.name=ibm-granite/granite-3.0-1b-a400m-instruct,pool=decode,launch_mode=cuda-graph,batch_size=8,kv=16]",
 )
+ENTRY_INDEX_TO_BATCH = {14: 1, 16: 8}
 _WHITESPACE = b" \t\r\n"
 _DELIMITERS = _WHITESPACE + b",]}"
 
@@ -179,6 +180,36 @@ def _capture_value(cursor: _Cursor, first: bytes | None = None) -> bytes:
     return bytes(value)
 
 
+def _skip_raw_container(cursor: _Cursor, first: bytes) -> None:
+    """Traverse one unselected object or array without decoding any field."""
+
+    if first not in (b"{", b"["):
+        raise ValueError("unselected entry must be a JSON container")
+    nesting = [first]
+    in_string = False
+    escaped = False
+    while nesting:
+        current = cursor.read()
+        if not current:
+            raise ValueError("unterminated unselected JSON container")
+        if in_string:
+            if escaped:
+                escaped = False
+            elif current == b"\\":
+                escaped = True
+            elif current == b'"':
+                in_string = False
+            continue
+        if current == b'"':
+            in_string = True
+        elif current in (b"{", b"["):
+            nesting.append(current)
+        elif current in (b"}", b"]"):
+            expected = b"{" if current == b"}" else b"["
+            if nesting.pop() != expected:
+                raise ValueError("mismatched unselected JSON container")
+
+
 def _selected_object_field(cursor: _Cursor, field: str) -> tuple[Any, int]:
     _expect(cursor, b"{")
     selected: Any | None = None
@@ -262,18 +293,25 @@ def extract_surface_projection(
                 raise ValueError(f"required provenance fields precede entries: {missing}")
             _expect(cursor, b"[")
             entries = []
-            for index, batch_size in enumerate((1, 8)):
+            for index in range(max(ENTRY_INDEX_TO_BATCH) + 1):
                 first = _skip_space(cursor)
                 if first != b"{":
-                    raise ValueError(f"permitted entry {index} is missing")
-                raw = _capture_value(cursor, first)
-                entry = json.loads(raw.decode("utf-8"))
-                if not isinstance(entry, dict):
-                    raise TypeError("permitted surface entry must be an object")
-                _validate_entry(entry, batch_size)
-                entries.append(entry)
-                access_offsets.append((ENTRY_SELECTORS[index], cursor.bytes_consumed))
-                if index == 0:
+                    raise ValueError(f"candidate entry {index} is missing")
+                batch_size = ENTRY_INDEX_TO_BATCH.get(index)
+                if batch_size is None:
+                    _skip_raw_container(cursor, first)
+                else:
+                    raw = _capture_value(cursor, first)
+                    entry = json.loads(raw.decode("utf-8"))
+                    if not isinstance(entry, dict):
+                        raise TypeError("permitted surface entry must be an object")
+                    _validate_entry(entry, batch_size)
+                    entries.append(entry)
+                    selector_index = 0 if index == 14 else 1
+                    access_offsets.append(
+                        (ENTRY_SELECTORS[selector_index], cursor.bytes_consumed)
+                    )
+                if index < max(ENTRY_INDEX_TO_BATCH):
                     _expect(cursor, b",")
             projection["entries"] = entries
             projection["coverage"] = entries[0]["coverage"]

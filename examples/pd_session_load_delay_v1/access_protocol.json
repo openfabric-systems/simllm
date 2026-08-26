@@ -10,7 +10,7 @@
   },
   "permitted_entry_selectors": [
     {
-      "entry_index": 0,
+      "entry_index": 14,
       "model_name": "ibm-granite/granite-3.0-1b-a400m-instruct",
       "pool": "decode",
       "launch_mode": "cuda-graph",
@@ -21,7 +21,7 @@
       "split": "calibration"
     },
     {
-      "entry_index": 1,
+      "entry_index": 16,
       "model_name": "ibm-granite/granite-3.0-1b-a400m-instruct",
       "pool": "decode",
       "launch_mode": "cuda-graph",
@@ -33,11 +33,13 @@
     }
   ],
   "forbidden": {
-    "entry_indices": [2],
+    "entry_indices": [0, 1, 2, 3, 4, 5, 6, 7, 15],
     "shape_rows": ["granite-graph-decode-b32-kv16"],
     "model_families": ["deepseek"],
-    "whole_file_or_whole_record_access": true
+    "whole_file_or_whole_record_access": true,
+    "row_decode_or_capture": true
   },
+  "index_derivation": "candidate builder sorts implementation_id after concatenating 12 Granite and 8 DeepSeek entries; lexical order places the permitted graph-decode b1 and b8 rows at 14 and 16, with held-out b32 at 15",
   "required_provenance_fields": [
     "acceptance_status",
     "campaign_id",
