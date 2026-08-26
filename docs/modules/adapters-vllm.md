@@ -138,8 +138,11 @@ Disaggregated session driver (`simllm/adapters/vllm/pd_session.py`):
   carried in connector metadata. Simulated workers have no paged KV tensors,
   so worker tensor transfer is explicitly false rather than fabricated.
 - Each engine's scheduler remains its only batching authority. The delivered
-  first slice drives one request at a time; concurrent multi-request admission
-  remains VLLM-35.
+  concurrent path admits several stable session requests, releases each decode
+  consumer from its own completed producer handoff and records the pool-local
+  scheduler batches without assembling them in the driver. Exact deployment
+  curve records reduce completed requests to aggregate output throughput and
+  per-token request delay.
 
 Flagged worker-boundary skeleton
 (`simllm/adapters/vllm/worker.py`):
@@ -621,8 +624,12 @@ stable session request to one eight-worker decode engine through the
 scheduler-side connector and the shared virtual clock. All four frozen TTFT
 decompositions have 0 ps residual, and all six behavioral relations pass.
 The workers deliberately move no KV tensor because simulated GPUs allocate no
-paged KV storage. Concurrent multi-request scheduling remains VLLM-35; see
-[the disaggregated-session results](../../examples/pd_session_v1/RESULTS.md).
+paged KV storage. The concurrent extension admits multiple requests across
+one-plus-one, one-plus-two and two-plus-one pool ratios, conserves all 144
+request lifecycles and exposes stock-scheduler batches as wide as eight. Its
+exact throughput curves are live, while the frozen nondecreasing delay claim
+is refuted and remains VLLM-35 through VLLM-39; see
+[the concurrent-session results](../../examples/pd_session_concurrent_v1/RESULTS.md).
 
 The pinned DeepSeek-V3 configuration surface now publishes a complete logical
 inventory beside SGLang's structurally identical record. Its physical code
@@ -682,6 +689,19 @@ framework-owned join; see
   matrix. Hold out at least one model and group size; require modeled median
   and p95 call cost within a pre-registered relative or additive band, then
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
+- VLLM-39 (Precision; P1; M): identify the load-delay shape of the concurrent
+  disaggregated session before VLLM-35 closes. The current deterministic
+  roofline path amortizes batch service strongly enough that per-token request
+  delay falls or dips in all six post-specified curves even while throughput
+  rises, refuting the frozen monotonic-delay claim. Measure or import an
+  accepted pool-local batch-service surface over a frozen offered-load range,
+  separate batching gain from scheduler queue wait, and hold out at least one
+  prompt length and one prefill-to-decode ratio. Acceptance requires exact
+  request conservation, a quantitative prediction band for every held-out
+  curve point, and either a validated direction or an explicit withdrawal of
+  the monotonic claim. The CORE-51 one-request control and the current
+  deterministic comparator remain byte-for-byte and timestamp-for-timestamp
+  identical.
 
 ### Completeness
 
@@ -705,6 +725,10 @@ framework-owned join; see
   scheduler batch in both roles, and conserves every admission, handoff and
   terminal token exactly. The one-request-at-a-time CORE-51 slice is the
   explicit baseline and must retain its accepted timestamps and artifacts.
+  The concurrent mechanism, all conservation guards and genuine batches in
+  both roles are delivered, but the frozen delay-direction relation is
+  refuted in all six curves. This task stays open on VLLM-39 rather than
+  weakening that relation after observation.
 
 - VLLM-25 (Completeness; P2; M): support shared-expert and mixed dense and
   routed MoE geometries in the config reader. `model_dims_from_vllm_config`

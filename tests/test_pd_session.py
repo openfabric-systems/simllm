@@ -7,8 +7,16 @@ from simllm.adapters.vllm.executor import (
     configure,
     reset_configuration,
 )
+from simllm.adapters.vllm.pd_session import (
+    DEPLOYMENT_CURVE_SCHEMA,
+    VllmPdCurvePoint,
+    VllmPdCurveRecord,
+    VllmPdRequest,
+    VllmPdRequestResult,
+)
 from simllm.core import (
     KV_HANDOFF_AUTHORITY,
+    PACKET_KV_HANDOFF_AUTHORITY,
     DeclaredKvHandoffPolicy,
     DisaggregatedRequestTimeline,
     KvHandoffEvent,
@@ -50,6 +58,24 @@ def test_declared_handoff_is_one_clock_visit():
     assert event.service_ps == 100_000_000
     assert event.visibility_ps == 0
     assert clock.now_ps == event.completed_at_ps
+
+
+def test_declared_handoffs_can_be_scheduled_independently():
+    policy = DeclaredKvHandoffPolicy(duration_ps=100)
+
+    first = policy.schedule(
+        submitted_at_ps=17,
+        request_id="request-0",
+        kv_bytes=10,
+    )
+    second = policy.schedule(
+        submitted_at_ps=17,
+        request_id="request-1",
+        kv_bytes=20,
+    )
+
+    assert first.submitted_at_ps == second.submitted_at_ps == 17
+    assert first.completed_at_ps == second.completed_at_ps == 117
 
 
 def test_handoff_off_arm_is_identity():
@@ -96,6 +122,36 @@ def test_timeline_reduces_exact_ttft_and_decode_only_tpot():
     assert timeline.ttft_ps == 165
     assert timeline.tpot_ps == Fraction(105, 3)
     assert timeline.to_json()["decomposition"]["total_ps"] == 165
+
+
+def test_packet_handoff_submission_and_service_both_reach_ttft():
+    handoff = KvHandoffEvent(
+        request_id="request-packet",
+        kv_bytes=393_216,
+        submitted_at_ps=110,
+        eligible_at_ps=130,
+        started_at_ps=130,
+        finished_at_ps=160,
+        completed_at_ps=160,
+        pricing_arm="packet",
+        authority=PACKET_KV_HANDOFF_AUTHORITY,
+    )
+
+    timeline = DisaggregatedRequestTimeline(
+        request_id="request-packet",
+        admitted_at_ps=10,
+        prefill_eligible_at_ps=20,
+        prefill_completed_at_ps=110,
+        handoff=handoff,
+        decode_eligible_at_ps=160,
+        decode_token_completed_at_ps=(200, 230),
+    )
+
+    assert handoff.submission_ps == 20
+    assert handoff.service_ps == 30
+    assert handoff.total_ps == 50
+    assert timeline.decomposition_total_ps == timeline.ttft_ps == 190
+    assert timeline.to_json()["decomposition"]["handoff_ps"] == 50
 
 
 def test_timeline_rejects_a_second_timing_story():
@@ -157,3 +213,82 @@ def test_executor_hooks_carry_one_declared_pool_role_and_clock():
 def test_executor_config_rejects_an_undeclared_pool_role():
     with pytest.raises(ValueError, match="POOL_ROLE"):
         SimExecutorConfig(pool_role="worker")
+
+
+def _curve_request(request_id, admitted_at_ps, completed_at_ps):
+    handoff = KvHandoffEvent(
+        request_id=request_id,
+        kv_bytes=1,
+        submitted_at_ps=admitted_at_ps + 10,
+        eligible_at_ps=admitted_at_ps + 10,
+        started_at_ps=admitted_at_ps + 10,
+        finished_at_ps=admitted_at_ps + 20,
+        completed_at_ps=admitted_at_ps + 20,
+        pricing_arm="declared-constant",
+    )
+    token_times = tuple(completed_at_ps - offset for offset in (3, 2, 1, 0))
+    timeline = DisaggregatedRequestTimeline(
+        request_id=request_id,
+        admitted_at_ps=admitted_at_ps,
+        prefill_eligible_at_ps=admitted_at_ps,
+        prefill_completed_at_ps=admitted_at_ps + 10,
+        handoff=handoff,
+        decode_eligible_at_ps=admitted_at_ps + 20,
+        decode_token_completed_at_ps=token_times,
+    )
+    return VllmPdRequestResult(
+        timeline=timeline,
+        prefill_engine_id="prefill-0",
+        decode_engine_id="decode-0",
+        prefill_internal_request_id=f"prefill-{request_id}",
+        decode_internal_request_id=f"decode-{request_id}",
+        bootstrap_token_id=512,
+        decode_token_ids=(1, 2, 3, 4),
+        kv_transfer_params={},
+        prefill_records=(),
+        decode_records=(),
+    )
+
+
+def test_curve_point_uses_exact_terminal_throughput_and_mean_request_delay():
+    requests = (
+        _curve_request("a", 0, 100),
+        _curve_request("b", 10, 130),
+    )
+
+    point = VllmPdCurvePoint.from_requests(Fraction(16), requests)
+
+    assert point.aggregated_output_throughput_tokens_per_second == Fraction(
+        8 * 1_000_000_000_000,
+        130,
+    )
+    assert point.per_token_request_delay_ps == Fraction(55, 2)
+    assert point.request_count == 2
+    assert point.output_token_count == 8
+
+
+def test_curve_record_is_machine_readable_and_load_ordered():
+    requests = (_curve_request("a", 0, 100),)
+    points = tuple(
+        VllmPdCurvePoint.from_requests(Fraction(load), requests)
+        for load in (8, 16, 32)
+    )
+
+    record = VllmPdCurveRecord("p1-d1-prompt8", 1, 1, 8, points)
+
+    rendered = record.to_json()
+    assert rendered["schema"] == DEPLOYMENT_CURVE_SCHEMA
+    assert [
+        row["offered_load_requests_per_second"]["numerator"]
+        for row in rendered["points"]
+    ] == [8, 16, 32]
+    with pytest.raises(ValueError, match="unique and increasing"):
+        VllmPdCurveRecord("unordered", 1, 1, 8, tuple(reversed(points)))
+
+
+def test_concurrent_request_validates_stable_admission_input():
+    request = VllmPdRequest("request-0", (1, 2), 4, 17)
+
+    assert request.prompt_token_ids == (1, 2)
+    with pytest.raises(ValueError, match="nonnegative integers"):
+        VllmPdRequest("bad", (1, -1), 4, 17)

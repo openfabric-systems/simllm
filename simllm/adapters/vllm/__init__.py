@@ -137,7 +137,16 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "PD_CONNECTOR_MODULE": ("pd_session", "PD_CONNECTOR_MODULE"),
     "PD_CONNECTOR_NAME": ("pd_session", "PD_CONNECTOR_NAME"),
     "PD_KV_PARAMS_SCHEMA": ("pd_session", "PD_KV_PARAMS_SCHEMA"),
+    "DEPLOYMENT_CURVE_POINT_SCHEMA": (
+        "pd_session",
+        "DEPLOYMENT_CURVE_POINT_SCHEMA",
+    ),
+    "DEPLOYMENT_CURVE_SCHEMA": ("pd_session", "DEPLOYMENT_CURVE_SCHEMA"),
     "VllmDisaggregatedSession": ("pd_session", "VllmDisaggregatedSession"),
+    "VllmPdConcurrentResult": ("pd_session", "VllmPdConcurrentResult"),
+    "VllmPdCurvePoint": ("pd_session", "VllmPdCurvePoint"),
+    "VllmPdCurveRecord": ("pd_session", "VllmPdCurveRecord"),
+    "VllmPdRequest": ("pd_session", "VllmPdRequest"),
     "VllmPdRequestResult": ("pd_session", "VllmPdRequestResult"),
     "VllmPdSessionConfig": ("pd_session", "VllmPdSessionConfig"),
     "VllmPoolEngine": ("pd_session", "VllmPoolEngine"),
@@ -147,6 +156,8 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 __all__ = [
+    "DEPLOYMENT_CURVE_POINT_SCHEMA",
+    "DEPLOYMENT_CURVE_SCHEMA",
     "FLOAT32",
     "GPU_ENVELOPES",
     "GRANITE_ALL2ALL_BACKEND",
@@ -191,6 +202,10 @@ __all__ = [
     "TranslatedStep",
     "VllmBatchSlice",
     "VllmDisaggregatedSession",
+    "VllmPdConcurrentResult",
+    "VllmPdCurvePoint",
+    "VllmPdCurveRecord",
+    "VllmPdRequest",
     "VllmPdRequestResult",
     "VllmPdSessionConfig",
     "VllmPoolEngine",

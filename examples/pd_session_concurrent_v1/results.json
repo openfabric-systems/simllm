@@ -1,0 +1,99 @@
+{
+  "schema": "simllm-pd-session-concurrent-compact-result-v1",
+  "status": "REFUTED",
+  "evidence_classification": "post-specified regression",
+  "raw_runs": {
+    "original_void_sha256": "7121ab1b99eeb4809de8e2546351fd03653cd7acf30cee99a0c50155d401d5c5",
+    "amended_refutation_sha256": "2306cdc7a5700bf6e6a9ca34c07a5a0a8bd3877726f168c8611fe28a993a5b62"
+  },
+  "fatal_guards": {
+    "status": "HELD",
+    "findings": []
+  },
+  "conservation": {
+    "cells": 18,
+    "admissions": 144,
+    "handoffs": 144,
+    "terminals": 144,
+    "terminal_decode_tokens": 576,
+    "maximum_ttft_residual_ps": 0
+  },
+  "batching": [
+    {
+      "prefill_engines": 1,
+      "decode_engines": 1,
+      "maximum_prefill_batch_size": 4,
+      "maximum_decode_batch_size": 8
+    },
+    {
+      "prefill_engines": 1,
+      "decode_engines": 2,
+      "maximum_prefill_batch_size": 4,
+      "maximum_decode_batch_size": 4
+    },
+    {
+      "prefill_engines": 2,
+      "decode_engines": 1,
+      "maximum_prefill_batch_size": 3,
+      "maximum_decode_batch_size": 8
+    }
+  ],
+  "behavioral_families": {
+    "genuine_multi_request_batching": {"held": 3, "evaluated": 3},
+    "throughput_nondecreasing_with_load": {"held": 6, "evaluated": 6},
+    "delay_nondecreasing_with_load": {"held": 0, "evaluated": 6},
+    "prompt_kv_byte_doubling": {"held": 9, "evaluated": 9}
+  },
+  "example_curve": {
+    "schema": "simllm-deployment-curve-v1",
+    "configuration_id": "p1-d1-prompt8",
+    "prefill_engines": 1,
+    "decode_engines": 1,
+    "prompt_tokens": 8,
+    "points": [
+      {
+        "offered_load_requests_per_second": {"numerator": 8000, "denominator": 1},
+        "aggregated_output_throughput_tokens_per_second": {"numerator": 4000000000, "denominator": 203407},
+        "per_token_request_delay_ps": {"numerator": 212327500, "denominator": 1},
+        "request_count": 8,
+        "output_token_count": 32
+      },
+      {
+        "offered_load_requests_per_second": {"numerator": 16000, "denominator": 1},
+        "aggregated_output_throughput_tokens_per_second": {"numerator": 200000000, "denominator": 7617},
+        "per_token_request_delay_ps": {"numerator": 199582000, "denominator": 1},
+        "request_count": 8,
+        "output_token_count": 32
+      },
+      {
+        "offered_load_requests_per_second": {"numerator": 32000, "denominator": 1},
+        "aggregated_output_throughput_tokens_per_second": {"numerator": 4000000000, "denominator": 123951},
+        "per_token_request_delay_ps": {"numerator": 196310000, "denominator": 1},
+        "request_count": 8,
+        "output_token_count": 32
+      }
+    ]
+  },
+  "core51_control": {
+    "ttft_ps": 273376000,
+    "tpot_ps": {"numerator": 77952000, "denominator": 1},
+    "prefill_service_ps": 95424000,
+    "handoff_ps": 100000000,
+    "decode_first_token_service_ps": 77952000,
+    "tracked_artifacts_byte_identical": true
+  },
+  "physical_sanity": {
+    "resident_weight_read_floor_ps": 40108032,
+    "derated_resident_weight_read_floor_ps": 57297189,
+    "minimum_step_service_ps": 77952000,
+    "maximum_step_service_ps": 317776000,
+    "minimum_decode_tokens_per_second": {"numerator": 62500000, "denominator": 19861},
+    "maximum_decode_tokens_per_second": {"numerator": 125000000, "denominator": 9857},
+    "prompt8_handoff_serialization_floor_at_400g_ps": 7864320,
+    "declared_handoff_ps": 100000000
+  },
+  "task_effect": {
+    "vllm_35": "open",
+    "vllm_39": "registered"
+  }
+}
