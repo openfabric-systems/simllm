@@ -49,7 +49,7 @@
   "configurations": [
     {
       "configuration_id": "granite-vllm-1p1-bootstrap",
-      "legend_label": "Granite vLLM, 1P+1D, bootstrap",
+      "legend_label": "Granite vLLM, 1P+1D, prompt 8, bootstrap",
       "framework": "vllm",
       "pool": {
         "prefill_nodes": 1,
@@ -107,6 +107,84 @@
       "requests": {
         "offered_load_requests_per_second": [8000, 16000, 32000],
         "prompt_tokens": 8,
+        "requests_per_point": 8,
+        "decode_output_tokens_per_request": 4,
+        "max_model_len": 64,
+        "max_num_seqs": 8,
+        "num_gpu_blocks_override": 64,
+        "token_id": 512
+      },
+      "uncertainty": {
+        "distribution_spreads": [],
+        "tuned_constant_envelopes": [
+          {
+            "constant_id": "kv_handoff_ps",
+            "throughput_tokens_per_second_per_ps": 0,
+            "delay_ps_per_ps": {"numerator": 1, "denominator": 4}
+          }
+        ]
+      }
+    },
+    {
+      "configuration_id": "granite-vllm-1p1-prompt16-bootstrap",
+      "legend_label": "Granite vLLM, 1P+1D, prompt 16, bootstrap",
+      "framework": "vllm",
+      "pool": {
+        "prefill_nodes": 1,
+        "decode_nodes": 1,
+        "gpus_per_node": 8
+      },
+      "arrangement": {
+        "prefill": {
+          "tensor_parallel": 8,
+          "expert_parallel": 1,
+          "data_parallel": 1,
+          "pipeline_parallel": 1
+        },
+        "decode": {
+          "tensor_parallel": 8,
+          "expert_parallel": 1,
+          "data_parallel": 1,
+          "pipeline_parallel": 1
+        }
+      },
+      "model": {
+        "id": "ibm-granite/granite-3.0-1b-a400m-instruct",
+        "revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+        "column": "granite-roofline-bootstrap",
+        "dims": {
+          "num_layers": 24,
+          "hidden_size": 1024,
+          "intermediate_size": 64,
+          "num_heads": 2,
+          "num_kv_heads": 1,
+          "head_size": 64,
+          "vocab_size": 49155,
+          "dtype_bytes": 2,
+          "num_experts": 32,
+          "top_k": 8,
+          "moe_intermediate_size": 64,
+          "local_num_experts": 32
+        },
+        "kv_geometry": {
+          "num_layers": 24,
+          "num_kv_heads": 8,
+          "head_size": 64,
+          "element_bytes": 2
+        }
+      },
+      "pricing": {
+        "mode": "bootstrap",
+        "gpu": "b100",
+        "roofline_efficiency": 0.7,
+        "record_uncertainty_relative": 0.5,
+        "collective_fixed_cost_envelope": "intra-node-fixed-cost-v1",
+        "collective_fixed_cost_arm": "lower",
+        "kv_handoff_constant_id": "kv_handoff_ps"
+      },
+      "requests": {
+        "offered_load_requests_per_second": [8000, 16000, 32000],
+        "prompt_tokens": 16,
         "requests_per_point": 8,
         "decode_output_tokens_per_request": 4,
         "max_model_len": 64,

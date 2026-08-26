@@ -307,30 +307,66 @@ def test_uncertainty_propagates_all_three_source_classes_exactly():
     ]
 
 
-def test_dry_run_config_declares_complete_one_plus_one_session():
+def test_dry_run_config_declares_two_complete_one_plus_one_sessions():
     study = _study()
     config = _config()
 
     study.validate_study_config(config)
 
-    deployment = config["configurations"][0]
-    assert deployment["framework"] == "vllm"
-    assert deployment["pool"] == {
-        "prefill_nodes": 1,
-        "decode_nodes": 1,
-        "gpus_per_node": 8,
-    }
-    assert deployment["model"]["column"] == "granite-roofline-bootstrap"
-    assert deployment["pricing"]["mode"] == "bootstrap"
-    assert deployment["requests"]["offered_load_requests_per_second"] == [
-        8_000,
-        16_000,
-        32_000,
+    assert len(config["configurations"]) == 2
+    assert [deployment["requests"]["prompt_tokens"] for deployment in config["configurations"]] == [
+        8,
+        16,
     ]
+    for deployment in config["configurations"]:
+        assert deployment["framework"] == "vllm"
+        assert deployment["pool"] == {
+            "prefill_nodes": 1,
+            "decode_nodes": 1,
+            "gpus_per_node": 8,
+        }
+        assert deployment["model"]["column"] == "granite-roofline-bootstrap"
+        assert deployment["pricing"]["mode"] == "bootstrap"
+        assert deployment["requests"]["offered_load_requests_per_second"] == [
+            8_000,
+            16_000,
+            32_000,
+        ]
     assert config["study"] == {
         "classification": "dry-run",
         "label": "CORE-54 scaffold dry run",
         "scored_flagship": False,
+    }
+
+
+def test_two_parameter_dry_run_expectations_precede_the_two_curve_run():
+    expectations = json.loads((STUDY_DIR / "dry_run_expectations.json").read_text())
+
+    assert expectations["chronology"] == {
+        "scaffold_implementation_existed_before_this_freeze": True,
+        "one_prompt_dry_run_existed_before_this_freeze": True,
+        "two_parameter_dry_run_existed_before_this_freeze": False,
+        "classification": "post-specified dry-run regression",
+    }
+    assert expectations["scope"]["prompt_tokens"] == [8, 16]
+    assert expectations["scope"]["offered_load_requests_per_second"] == [
+        8_000,
+        16_000,
+        32_000,
+    ]
+    assert expectations["physical_bounds"]["decode_weight_read"] == {
+        "active_parameter_count": 400_000_000,
+        "bytes_per_parameter": 2,
+        "tensor_parallel_ranks": 8,
+        "b100_hbm_bytes_per_second_per_rank": 8_000_000_000_000,
+        "per_rank_weight_bytes": 100_000_000,
+        "per_token_floor_ps": 12_500_000,
+        "memory_only_ceiling_tokens_per_second_per_request": 80_000,
+    }
+    assert expectations["disposition"] == {
+        "flagship_score": "NOT_SCORED",
+        "core54_closure": False,
+        "claim": "scaffold operation only",
     }
 
 
