@@ -1,0 +1,106 @@
+{
+  "schema": "simllm-sglang-decode-shape-expectations-v1",
+  "study": "SGL-38 remote KV decode request shape",
+  "date": "2026-08-26",
+  "status": "EXPECTATIONS_ONLY",
+  "chronology": {
+    "candidate_record_existed_before_this_freeze": true,
+    "core58_stable_identity_field_set_existed_before_this_freeze": true,
+    "feature_disabled_baseline_observed_before_this_freeze": true,
+    "corrected_selected_key_proof_existed_before_this_freeze": false,
+    "scored_flagship_rerun_existed_before_this_freeze": false
+  },
+  "feature_gate": {
+    "config_field": "project_remote_kv_length",
+    "default": false,
+    "scheduler_batching_authority": "unchanged-stock-sglang-scheduler",
+    "kv_tensor_transfer": false
+  },
+  "selected_key_acceptance": {
+    "candidate_record_path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+    "candidate_record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+    "candidate_entry_index": 3,
+    "candidate_implementation_id": "deepseek-v3-full61-vllm-ep72-decode-b32-c2000",
+    "request_count": 32,
+    "remote_prefix_tokens_per_request": 2000,
+    "num_new_tokens_per_request": 1,
+    "projected_context_length_per_request": 2001,
+    "selected_entry_key_sha256": "05d1c33cdef9c12e25eb9159adc9dc80f1cd57b6333778f9efb5fb24cd6a74aa",
+    "lookup_hits": 1,
+    "lookup_misses": 0,
+    "selected_entry_key_sha256s": [
+      "05d1c33cdef9c12e25eb9159adc9dc80f1cd57b6333778f9efb5fb24cd6a74aa"
+    ]
+  },
+  "stable_identity_projection": {
+    "included": [
+      "timeline.request_id",
+      "timeline.admitted_at_ps",
+      "timeline.prefill_eligible_at_ps",
+      "timeline.prefill_completed_at_ps",
+      "timeline.handoff.request_id",
+      "timeline.handoff.submitted_at_ps",
+      "timeline.handoff.completed_at_ps",
+      "timeline.handoff.kv_bytes",
+      "timeline.handoff.pricing_arm",
+      "timeline.handoff.authority",
+      "timeline.decode_eligible_at_ps",
+      "timeline.decode_token_completed_at_ps",
+      "prefill_engine_id",
+      "decode_engine_id",
+      "bootstrap_token_id",
+      "decode_token_ids",
+      "prefill_step_count",
+      "decode_step_count",
+      "join_metadata excluding process identifiers",
+      "compute_pricing record_sha256, acceptance_status, pool and selected entry key hashes"
+    ],
+    "excluded": [
+      "prefill_internal_request_id",
+      "decode_internal_request_id",
+      "prefill_process_id",
+      "decode_process_id",
+      "complete serialized request-result bytes"
+    ],
+    "repetitions": 2,
+    "required_equal": true
+  },
+  "feature_disabled_byte_identity": {
+    "fixture_request_count": 2,
+    "fixture_prompt_token_ids": [
+      [0, 1, 2, 3],
+      [1, 2, 3, 4]
+    ],
+    "fixture_decode_output_tokens": 4,
+    "canonical_projection_fields": [
+      "request_id",
+      "prompt_token_ids",
+      "handoff.request_id",
+      "handoff.authority",
+      "handoff.pricing_arm",
+      "handoff.kv_bytes",
+      "handoff.submitted_at_ps",
+      "handoff.eligible_at_ps",
+      "handoff.started_at_ps",
+      "handoff.finished_at_ps",
+      "handoff.completed_at_ps",
+      "bootstrap_token_id",
+      "decode_token_ids",
+      "timestamps.admitted_at_ps",
+      "timestamps.prefill_eligible_at_ps",
+      "timestamps.prefill_completed_at_ps",
+      "timestamps.decode_eligible_at_ps",
+      "timestamps.decode_token_completed_at_ps"
+    ],
+    "canonical_json_sha256": "48a655471cf6fd72fa42e3f5bb70355b5b12c9b8397dd96ae4ff6bacd01fc094",
+    "required_byte_identical": true
+  },
+  "disallowed": [
+    "fabricated KV tensors",
+    "scheduler batching changes",
+    "pricing mechanism changes",
+    "constant envelope changes",
+    "deployment_curve_v1 edits",
+    "scored flagship rerun"
+  ]
+}

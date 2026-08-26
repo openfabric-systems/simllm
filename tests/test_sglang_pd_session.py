@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from fractions import Fraction
 from pathlib import Path
 from types import SimpleNamespace
@@ -19,7 +21,14 @@ from simllm.adapters.sglang.pd_session import (
     SglangPdRequest,
     SglangPdSessionConfig,
 )
-from simllm.compute import ComputeProvider, DurationEstimate, KernelSpec, ModelDims
+from simllm.calibration.kernel_cycle_lut import compile_session_profile_provider
+from simllm.compute import (
+    ComputeProvider,
+    DurationEstimate,
+    KernelSpec,
+    ModelDims,
+    step_kernel,
+)
 from simllm.core import (
     DeclaredKvHandoffPolicy,
     KvHandoffGeometry,
@@ -31,6 +40,15 @@ from simllm.core import (
 from simllm.placement import (
     SglangPoolArrangement,
     sglang_disaggregated_manifests,
+)
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+EXPECTATIONS_PATH = (
+    REPOSITORY_ROOT / "examples/sglang_decode_shape_v1/expectations.json"
+)
+CANDIDATE_PATH = (
+    REPOSITORY_ROOT
+    / "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json"
 )
 
 
@@ -70,6 +88,7 @@ def _config(
     handoff_ps: int = 100,
     prefill_engines: int = 1,
     decode_engines: int = 1,
+    project_remote_kv_length: bool = False,
 ) -> SglangPdSessionConfig:
     return SglangPdSessionConfig(
         model_path=tmp_path / "model",
@@ -81,6 +100,7 @@ def _config(
         decode_arrangement=_arrangement(decode_engines * 8),
         prefill_engines=prefill_engines,
         decode_engines=decode_engines,
+        project_remote_kv_length=project_remote_kv_length,
     )
 
 
@@ -88,6 +108,7 @@ class _FakePoolEngine:
     """Deterministic scheduler-shaped test double at the process RPC seam."""
 
     launches: ClassVar[list] = []
+    instances: ClassVar[list] = []
 
     def __init__(self, config, *, timeout_s):
         del timeout_s
@@ -107,17 +128,28 @@ class _FakePoolEngine:
         self.worker_type = "SimTpModelWorker"
         self.records = []
         self.results = []
+        self.submissions = []
+        self.remote_prefix_tokens = {}
         self._unfinished = {}
+        self._output_targets = {}
         self._step_index = 0
         type(self).launches.append(config)
+        type(self).instances.append(self)
 
     @property
     def has_unfinished_requests(self):
         return bool(self._unfinished)
 
-    def submit(self, *, request_id, input_token_ids, max_new_tokens):
+    def submit(self, *, request_id, input_token_ids, max_new_tokens, **kwargs):
         del input_token_ids
+        self.submissions.append(dict(kwargs))
+        remote_prefix_tokens = kwargs.pop("remote_prefix_tokens", None)
+        if kwargs:
+            raise TypeError(f"unexpected submit arguments: {sorted(kwargs)}")
+        if remote_prefix_tokens is not None:
+            self.remote_prefix_tokens[request_id] = remote_prefix_tokens
         self._unfinished[request_id] = max_new_tokens
+        self._output_targets[request_id] = max_new_tokens
 
     def step(self, now_ps):
         request_ids = list(self._unfinished)
@@ -131,7 +163,14 @@ class _FakePoolEngine:
             step_index=self._step_index,
             virtual_time_ps=now_ps,
             scheduled=[
-                ScheduledRequest(request_id, phase, 1, context_length=1)
+                ScheduledRequest(
+                    request_id,
+                    phase,
+                    1,
+                    context_length=(
+                        1 + self.remote_prefix_tokens.get(request_id, 0)
+                    ),
+                )
                 for request_id in request_ids
             ],
             num_sampled=len(sampled),
@@ -155,9 +194,7 @@ class _FakePoolEngine:
                 completions.append(
                     SimpleNamespace(
                         request_id=request_id,
-                        output_token_count=(
-                            1 if self.role.value == "prefill" else 4
-                        ),
+                        output_token_count=self._output_targets.pop(request_id),
                     )
                 )
         return {
@@ -187,11 +224,138 @@ class _ProvenanceProvider(ComputeProvider):
         return {"label": self.label}
 
 
+class _ShapePricingFakePoolEngine(_FakePoolEngine):
+    """Fake stock scheduler that sends its authored shape to the provider."""
+
+    kernels: ClassVar[list[KernelSpec]] = []
+
+    def step(self, now_ps):
+        response = super().step(now_ps)
+        if self.role.value == "decode":
+            record = response["record"]
+            kernel = step_kernel(self.config.dims, record, record.num_sampled)
+            type(self).kernels.append(kernel)
+            self.config.provider.estimate(kernel, self.config.gpu)
+        return response
+
+
 @pytest.fixture
 def fake_pool_engines(monkeypatch):
     _FakePoolEngine.launches = []
+    _FakePoolEngine.instances = []
     monkeypatch.setattr(pd_session, "_ProcessPoolEngine", _FakePoolEngine)
     return _FakePoolEngine
+
+
+@pytest.fixture
+def shape_pricing_fake_pool_engines(monkeypatch):
+    _ShapePricingFakePoolEngine.launches = []
+    _ShapePricingFakePoolEngine.instances = []
+    _ShapePricingFakePoolEngine.kernels = []
+    monkeypatch.setattr(
+        pd_session,
+        "_ProcessPoolEngine",
+        _ShapePricingFakePoolEngine,
+    )
+    return _ShapePricingFakePoolEngine
+
+
+def _expectations():
+    return json.loads(EXPECTATIONS_PATH.read_text(encoding="utf-8"))
+
+
+def _stable_projection(row):
+    value = row.to_json()
+    stable = {
+        name: value[name]
+        for name in (
+            "request_id",
+            "admitted_at_ps",
+            "prefill_eligible_at_ps",
+            "prefill_completed_at_ps",
+            "handoff",
+            "decode_eligible_at_ps",
+            "decode_token_completed_at_ps",
+            "prefill_engine_id",
+            "decode_engine_id",
+            "bootstrap_token_id",
+            "decode_token_ids",
+            "prefill_step_count",
+            "decode_step_count",
+        )
+    }
+    join = dict(value["join_metadata"])
+    join.pop("prefill_process_id")
+    join.pop("decode_process_id")
+    stable["join_metadata"] = join
+    if "compute_pricing" in value:
+        stable["compute_pricing"] = value["compute_pricing"]
+    return stable
+
+
+def _disabled_byte_projection(requests, result):
+    rows = []
+    for request, row in zip(requests, result.requests, strict=True):
+        timeline = row.timeline
+        rows.append(
+            {
+                "request_id": request.request_id,
+                "prompt_token_ids": list(request.prompt_token_ids),
+                "handoff": {
+                    "request_id": timeline.handoff.request_id,
+                    "authority": timeline.handoff.authority,
+                    "pricing_arm": timeline.handoff.pricing_arm,
+                    "kv_bytes": timeline.handoff.kv_bytes,
+                    "submitted_at_ps": timeline.handoff.submitted_at_ps,
+                    "eligible_at_ps": timeline.handoff.eligible_at_ps,
+                    "started_at_ps": timeline.handoff.started_at_ps,
+                    "finished_at_ps": timeline.handoff.finished_at_ps,
+                    "completed_at_ps": timeline.handoff.completed_at_ps,
+                },
+                "bootstrap_token_id": row.bootstrap_token_id,
+                "decode_token_ids": list(row.decode_token_ids),
+                "timestamps": {
+                    "admitted_at_ps": timeline.admitted_at_ps,
+                    "prefill_eligible_at_ps": timeline.prefill_eligible_at_ps,
+                    "prefill_completed_at_ps": timeline.prefill_completed_at_ps,
+                    "decode_eligible_at_ps": timeline.decode_eligible_at_ps,
+                    "decode_token_completed_at_ps": list(
+                        timeline.decode_token_completed_at_ps
+                    ),
+                },
+            }
+        )
+    return json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()
+
+
+def _run_selected_shape(tmp_path):
+    expected = _expectations()["selected_key_acceptance"]
+    provider = compile_session_profile_provider(
+        CANDIDATE_PATH.read_bytes(),
+        expected_sha256=expected["candidate_record_sha256"],
+        pool="decode",
+        selection_entry_index=expected["candidate_entry_index"],
+    )
+    base = _config(tmp_path, project_remote_kv_length=True)
+    config = SglangPdSessionConfig(
+        **{
+            **base.__dict__,
+            "decode_provider": provider,
+            "max_running_requests": 64,
+        }
+    )
+    requests = tuple(
+        SglangPdRequest(
+            f"standard-decode-{index:02d}",
+            tuple(1_000 + (index + token) % 97 for token in range(2_000)),
+            1,
+            0,
+        )
+        for index in range(32)
+    )
+    with SglangDisaggregatedSession(config) as session:
+        result = session.run_requests(requests)
+    return result
 
 
 def test_structural_arrangements_project_role_groups_and_flagship_width():
@@ -237,6 +401,90 @@ def test_session_rejects_arrangement_that_does_not_divide_role(tmp_path):
             prefill_arrangement=SglangPoolArrangement(True, 3, 1, 1),
             decode_arrangement=_arrangement(8),
         )
+
+
+def test_remote_kv_shape_flag_requires_a_boolean(tmp_path):
+    base = _config(tmp_path)
+
+    with pytest.raises(TypeError, match="must be a boolean"):
+        SglangPdSessionConfig(
+            **{
+                **base.__dict__,
+                "project_remote_kv_length": 1,
+            }
+        )
+
+
+def test_remote_kv_shape_selects_exact_candidate_once_and_is_stable(
+    tmp_path,
+    shape_pricing_fake_pool_engines,
+):
+    expected = _expectations()["selected_key_acceptance"]
+
+    first = _run_selected_shape(tmp_path / "first")
+    second = _run_selected_shape(tmp_path / "second")
+
+    expected_batch = tuple(f"standard-decode-{index:02d}" for index in range(32))
+    assert first.decode_batches == (expected_batch,)
+    assert second.decode_batches == first.decode_batches
+    assert first.maximum_decode_batch_size == expected["request_count"]
+    assert len(shape_pricing_fake_pool_engines.kernels) == 2
+    for kernel in shape_pricing_fake_pool_engines.kernels:
+        assert len(kernel.request_shapes) == expected["request_count"]
+        assert {
+            shape.num_new_tokens for shape in kernel.request_shapes
+        } == {expected["num_new_tokens_per_request"]}
+        assert {
+            shape.context_length for shape in kernel.request_shapes
+        } == {expected["projected_context_length_per_request"]}
+        assert {
+            shape.prior_context_tokens for shape in kernel.request_shapes
+        } == {expected["remote_prefix_tokens_per_request"]}
+
+    for result in (first, second):
+        pricing = result.requests[-1].compute_pricing["decode"]
+        assert pricing["record_sha256"] == expected["candidate_record_sha256"]
+        assert pricing["lookup_hits"] == expected["lookup_hits"]
+        assert pricing["lookup_misses"] == expected["lookup_misses"]
+        assert pricing["selected_entry_key_sha256"] == expected[
+            "selected_entry_key_sha256"
+        ]
+        assert pricing["selected_entry_key_sha256s"] == expected[
+            "selected_entry_key_sha256s"
+        ]
+
+    assert [_stable_projection(row) for row in first.requests] == [
+        _stable_projection(row) for row in second.requests
+    ]
+
+
+def test_remote_kv_shape_disabled_preserves_frozen_session_bytes(
+    tmp_path,
+    fake_pool_engines,
+):
+    frozen = _expectations()["feature_disabled_byte_identity"]
+    prompts = frozen["fixture_prompt_token_ids"]
+    requests = tuple(
+        SglangPdRequest(
+            f"request-{index:02d}",
+            tuple(prompt),
+            frozen["fixture_decode_output_tokens"],
+            0,
+        )
+        for index, prompt in enumerate(prompts)
+    )
+
+    with SglangDisaggregatedSession(_config(tmp_path)) as session:
+        result = session.run_requests(requests)
+
+    decode_engine = next(
+        engine
+        for engine in fake_pool_engines.instances
+        if engine.role.value == "decode"
+    )
+    assert decode_engine.submissions == [{} for _ in requests]
+    payload = _disabled_byte_projection(requests, result)
+    assert hashlib.sha256(payload).hexdigest() == frozen["canonical_json_sha256"]
 
 
 def test_session_selects_pool_specific_providers_and_surfaces_provenance(

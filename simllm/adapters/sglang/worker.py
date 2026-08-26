@@ -609,10 +609,30 @@ class SglStepTranslator:
 
     def __init__(self, *, sample_identity: bool = True) -> None:
         self._cached_reported: set[str] = set()
+        self._remote_prefix_tokens: dict[str, int] = {}
         self.sample_identity = bool(sample_identity)
 
     def __len__(self) -> int:
         return len(self._cached_reported)
+
+    def register_remote_prefix(self, request_id: str, num_tokens: int) -> None:
+        """Bind one immutable driver-owned prefix to a pool-local request.
+
+        The prefix changes only the logical context projected to compute
+        pricing. It does not report a radix hit, allocate cache pages, or add
+        tokens to the framework request seen by the scheduler.
+        """
+
+        if not isinstance(request_id, str) or not request_id.strip():
+            raise ValueError("request_id must be a nonblank string")
+        if isinstance(num_tokens, bool) or type(num_tokens) is not int:
+            raise TypeError("num_tokens must be an integer")
+        if num_tokens < 1:
+            raise ValueError("num_tokens must be positive")
+        existing = self._remote_prefix_tokens.get(request_id)
+        if existing is not None and existing != num_tokens:
+            raise ValueError("remote prefix length is immutable for one request")
+        self._remote_prefix_tokens[request_id] = num_tokens
 
     def translate(
         self, *, step_index: int, virtual_time_ps: int, rows: list[BatchRow]
@@ -638,7 +658,10 @@ class SglStepTranslator:
                     phase=RequestPhase.DECODE if row.is_decode else RequestPhase.PREFILL,
                     num_new_tokens=row.num_new_tokens,
                     num_cached_tokens=row.cached_tokens if report_cache else 0,
-                    context_length=row.context_length,
+                    context_length=(
+                        row.context_length
+                        + self._remote_prefix_tokens.get(row.rid, 0)
+                    ),
                 )
             )
         if not self.sample_identity:
@@ -1530,6 +1553,11 @@ class SimTpModelWorker(_TpWorkerBase):
         if self.sim_config.token_id is not None:
             return max(0, min(self.sim_config.token_id, vocab_size - 1))
         return vocab_size // 2
+
+    def register_remote_prefix(self, request_id: str, num_tokens: int) -> None:
+        """Carry a driver-owned prefix into logical request-shape pricing."""
+
+        self.translator.register_remote_prefix(request_id, num_tokens)
 
     def forward_batch_generation(
         self,

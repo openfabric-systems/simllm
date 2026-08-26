@@ -1382,7 +1382,7 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   priced held-out prefill errors are 69.20% at 2K and 63.35% at 4K, and the MTP
   anchor is BLOCKED on COMP-72's absent cell. The figure, propagated component
   bands, separate-experiment allocation and second legend are published, but
-  CORE-54 remains open through CORE-60, COMP-72, SGL-36, SGL-38 and TRAF-64.
+  CORE-54 remains open through CORE-60, COMP-72, SGL-36 and TRAF-64.
 - CORE-56 (Completeness; P1; M): bind the content-addressed local Hopper
   candidate into the CORE-54 flagship after CORE-53's generic seam lands.
   Selection must opt into candidate status explicitly and pin lookup digest
@@ -1398,8 +1398,10 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   no-anchor-value qualification selects all three exact EP32 prefill rows with
   candidate provenance, while the EP72 standard-decode row misses because the
   driver-level join does not expose remote KV 2000 in the decode request shape.
-  CORE-56 therefore remains open through SGL-38; MTP remains an explicit absent
-  row rather than a lookup miss eligible for interpolation.
+  SGL-38 now supplies the default-off remote-KV shape projection, but CORE-56
+  remains open until a later integrator qualification enables it and publishes
+  the live selection. MTP remains an explicit absent row rather than a lookup
+  miss eligible for interpolation.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool
