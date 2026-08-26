@@ -2687,6 +2687,15 @@ depth extrapolation, and TRAF-66 owns the finite-overlap residual.
   selecting the first cell without a digest-complete directory and never
   overwriting a completed cell. Run the exact DeepSeek base, decode and MTP
   `gh-hourly` submissions pinned in the same freeze. Stop cleanly on SSH loss.
+  CORE-61 adds a companion held-out eight-layer capture under the same freeze,
+  forbidden before `2026-08-28T06:30` in `Europe/Zurich`. Its exact base
+  submission is `ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:25:00 --job-name=gh-core61-d8-base --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=base,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=16384,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch`.
+  Its exact batch-32, remote-KV-2000 decode submission is
+  `ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:20:00 --job-name=gh-core61-d8-decode --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=decode,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=65536,MAX_NUM_SEQS=64,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch`.
+  Submit base then decode, retain every digest-complete output below the
+  CORE-61 external run root, and stop cleanly on SSH loss. The preregistered
+  eight-layer prediction is 3,751,359,511 ps; its measurement and signed
+  residual remain absent while Merlin is unavailable.
   Acceptance requires all registered Granite cells plus the exact DeepSeek
   physical cells, retained source and output digests, and a resumable campaign
   record whose completed-cell prefix survives interruption byte for byte.

@@ -1,0 +1,222 @@
+{
+  "comparison_context": {
+    "implied_step_displayed": false,
+    "published_tokens_per_second": 22282,
+    "used_as_arithmetic_input": false,
+    "used_for_selection_or_classification": false
+  },
+  "declared_61_layer_step": {
+    "linear_rule": {
+      "exact": {
+        "decimal_ms": "28.604120000",
+        "decimal_ps": "28604120000.000000",
+        "denominator": 1,
+        "numerator": 28604120000
+      },
+      "published_ps": 28604120000
+    },
+    "separated_rule": {
+      "exact": {
+        "decimal_ms": "28.604113032",
+        "decimal_ps": "28604113031.750000",
+        "denominator": 4,
+        "numerator": 114416452127
+      },
+      "published_ps": 28604113032
+    },
+    "signed_movement_separated_minus_linear": {
+      "absolute_share_of_linear_ppm": "0.243610",
+      "direction": "decrease",
+      "exact": {
+        "decimal_ms": "-0.000006968",
+        "decimal_ps": "-6968.250000",
+        "denominator": 4,
+        "numerator": -27873
+      },
+      "published_ps": -6968
+    }
+  },
+  "decomposition": {
+    "fixed_share_of_t4_ppm": "0.260705",
+    "four_layer_measured_service_ps": 1875680000,
+    "four_layer_repeatable_ps": 1875679511,
+    "kernel": {
+      "compute_service_ps": 1875679511,
+      "compute_sm_cycles": 3066736,
+      "fixed_overhead_ps": 489,
+      "kernel_id": "aggregate_noncollective_step_service",
+      "launch_count": 1,
+      "median_sm_hz": 1635000000,
+      "memory_service_ps": 0,
+      "method": "Retained Nsys additive noncollective service encoded as elapsed SM-clock cycles; component attribution remains a disclosed A100 bound because GH200 counters were denied"
+    },
+    "materiality_verdict": "NONZERO_BUT_REPORT_EXACT_MAGNITUDE_WITHOUT_TUNED_THRESHOLD",
+    "per_layer_repeatable": {
+      "decimal_ms": "0.468919878",
+      "decimal_ps": "468919877.750000",
+      "denominator": 4,
+      "numerator": 1875679511
+    },
+    "per_step_fixed_ps": 489,
+    "reconstruction_error_ps": 0
+  },
+  "evidence_class": {
+    "description": "DECLARED derivation from a MEASURED decomposition at one depth",
+    "measured_depth_count": 1,
+    "service_class": "DECLARED",
+    "source_component_class": "DISCLOSED",
+    "source_service_class": "MEASURED",
+    "validated_depth_rule": false
+  },
+  "expectations_commit": "a6ba1461655ff4cca553658e613f589d705dc578",
+  "held_out_depth_prediction": {
+    "depth_layers": 8,
+    "evidence_class": "DECLARED",
+    "measured_service_ps": null,
+    "published_ps": 3751359511,
+    "service": {
+      "decimal_ms": "3.751359511",
+      "decimal_ps": "3751359511.000000",
+      "denominator": 1,
+      "numerator": 3751359511
+    },
+    "shape": {
+      "batch_size": 32,
+      "remote_kv_tokens_per_request": 2000
+    },
+    "signed_residual_percent": null,
+    "status": "BLOCKED_ON_MERLIN_MAINTENANCE"
+  },
+  "registry": {
+    "comp72": "OPEN_WITH_CORE61_DEPTH8_COMPANION_COMMANDS",
+    "comp76": "UNCHANGED",
+    "core61": "OPEN",
+    "local_movement": "separated extrapolation derived from one retained measured depth",
+    "merlin_remainder": "measure the frozen eight-layer batch-32 remote-KV-2000 cell and score the held-out residual within 5 percent",
+    "reserved_residual_id": "CORE-63"
+  },
+  "schema": "simllm-deployment-curve-core61-depth-result-v1",
+  "signed_residual_ledger": [
+    {
+      "direction": "decrease",
+      "owner": "CORE-61",
+      "signed_ps": -6968,
+      "state": "DECLARED_SINGLE_DEPTH",
+      "term": "depth scaling correction"
+    },
+    {
+      "direction": "unchanged_not_recomputed",
+      "owner": "TRAF-66",
+      "signed_ps": null,
+      "state": "OUT_OF_SCOPE",
+      "term": "finite compute and communication overlap"
+    },
+    {
+      "direction": "unknown_until_second_measurement",
+      "owner": "CORE-61",
+      "signed_ps": null,
+      "state": "BLOCKED_ON_COMP-72_MERLIN_REMAINDER",
+      "term": "held-out depth prediction residual"
+    }
+  ],
+  "source": {
+    "access": {
+      "bytes_consumed": 21700,
+      "classification": "retained_measured_decomposition",
+      "fields": [
+        "/entries[7]/coverage",
+        "/entries[7]/evidence/component_class",
+        "/entries[7]/evidence/service_class",
+        "/entries[7]/implementation_id",
+        "/entries[7]/kernels[0]/components/compute_sm_cycles",
+        "/entries[7]/kernels[0]/components/fixed_overhead_ps",
+        "/entries[7]/kernels[0]/components/memory/service_ps",
+        "/entries[7]/kernels[0]/components/method",
+        "/entries[7]/kernels[0]/kernel_id",
+        "/entries[7]/kernels[0]/launch_count",
+        "/entries[7]/kernels[0]/measured_elapsed_ps",
+        "/entries[7]/key",
+        "/entries[7]/measured_service_ps",
+        "/entries[7]/observed_clocks/sm_hz/median"
+      ],
+      "record": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+      "record_sha256_from_published_manifest": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+      "schema": "simllm-deployment-curve-core61-depth-access-v1",
+      "selector": "/entries[7]",
+      "status": "PASS",
+      "unselected_values_decoded": false,
+      "whole_record_loaded": false
+    },
+    "candidate_key": {
+      "framework_identity": {
+        "name": "vllm",
+        "package_sha256": "d73c897b0bde9e515c30101f694989fb65821a8543e7cad8f95e5440dc6bae81",
+        "revision": null,
+        "version": "0.27.1+cu129"
+      },
+      "input_dependency": "moe-routing-dependent",
+      "launch_mode": "cuda-graph",
+      "model_identity": {
+        "config_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
+        "family": "routed",
+        "name": "deepseek-ai/DeepSeek-V3-reduced-depth-4",
+        "revision": "e815299b0bcbac849fa540c768ef21845365c9eb",
+        "weights_sha256": null
+      },
+      "parallelism": {
+        "data_parallel": 1,
+        "expert_parallel": 1,
+        "pipeline_parallel": 1,
+        "tensor_parallel": 1
+      },
+      "pool": "decode",
+      "routing": {
+        "availability": "not-captured",
+        "evidence_sha256": "c4434df081d971809e1a9c51b3ca4392a9fedab8927f12b44543d4ede77bb32a",
+        "expert_loads": null
+      },
+      "shape": {
+        "batch_size": 32,
+        "per_request_kv_lengths": [
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000,
+          2000
+        ]
+      }
+    },
+    "implementation_id": "deepseek-v3-reduced4-vllm-ep72-decode-b32-c2000",
+    "published_record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+    "selector": "/entries[7]"
+  },
+  "status": "LOCAL_DERIVATION_COMPLETE_CORE61_OPEN",
+  "task": "CORE-61"
+}
