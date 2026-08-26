@@ -553,6 +553,18 @@ objects and observed launches remain absent by design and name SGL-34 as the
 framework-owned join; see
 [the DeepSeek inventory results](../../examples/model_extraction_deepseek_v3_v1/RESULTS.md).
 
+The SGLang disaggregated session runs stock schedulers in both prefill and
+decode pools under one parent virtual clock. Stable session identities cross a
+disclosed driver-level join, and the key-value cache handoff uses the shared
+declared-constant and packet policies. Attention data parallelism, dense data
+parallelism and expert parallelism project into placement groups and traffic
+endpoints without claiming real tensor execution. The first concurrent study
+held every fatal guard, conserved 144 request lifecycles and 576 decode tokens,
+and produced a maximum time-to-first-token decomposition residual of 0 ps. Its
+frozen throughput direction was refuted in 2 of 6 curves, so SGL-33 remains
+open through SGL-36; see
+[the disaggregated-session results](../../examples/sglang_pd_session_v1/RESULTS.md).
+
 ## Open tasks
 
 Closed this milestone: SGL-1 (the worker, this module). SGL-2 (upstream
@@ -687,6 +699,19 @@ closed id.
   whose declared shard equals the framework's own parallel configuration, with
   the accepted single-rank artifacts byte-identical when the declaration
   matches.
+- SGL-36 (Precision; P1; L): identify the physical load-throughput and
+  load-delay surface of the disaggregated SGLang session before CORE-54 uses
+  it as deployment evidence. The current surrogate is an eight-request grid
+  driven by the uncalibrated Granite roofline bootstrap; it refutes the frozen
+  nondecreasing-throughput relation in `sglang-p1-d2-prompt8` and
+  `sglang-p2-d1-prompt16`, including a fall from 19,071.038 to 17,818.108
+  output tokens/s in the latter curve's last interval. Identify the replacement
+  from SGLang's own admitted, first-token and terminal timestamps at the
+  disclosed prefill/decode arrangements over a preregistered steady-state load
+  sweep. Acceptance requires calibrated throughput, median and p95 TTFT and
+  TPOT within frozen bands on held-out loads, an explained direction for every
+  curve segment, and exact preservation of the current constant-handoff,
+  packet-handoff and uncalibrated comparator records.
 
 ### Completeness
 
@@ -792,7 +817,22 @@ closed id.
   attention and dense data-parallel arrangements follow the disclosed
   configurations recorded in the deployment dossier. The vLLM session,
   every accepted SGLang worker record and the granite smoke bytes stay
-  identical when this session is absent.
+  identical when this session is absent. The session, arrangement projections,
+  both handoff arms and exact curve schema are live. The frozen run held every
+  fatal guard and conserved all 144 request lifecycles, but throughput was
+  nondecreasing in only 4 of 6 curves. This task therefore stays open through
+  SGL-36 rather than treating an uncalibrated curve refutation as closure.
+- SGL-35 (Completeness; P2; M): make the pinned SGLang native
+  prefill-decode connector reachable with the bufferless simulated worker and
+  no GPU. The current prefill path rejects the fake transfer backend, while the
+  decode path requires `kv_cache_dtype_str`, registered transfer metadata and
+  key-value tensors the simulated worker does not own. Add only the metadata
+  and registration seam needed for native scheduler coordination, with no real
+  tensor operation or second timing authority. Acceptance requires one native
+  CPU-only request to conserve the stable session identity through both stock
+  schedulers and to reproduce the accepted constant and packet TTFT/TPOT
+  relations. Disabling the native connector must preserve every driver-level
+  join record, timestamp, batch and random draw exactly.
 
 ### Uncategorized
 

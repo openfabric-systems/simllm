@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples/sglang_pd_session_v1/run_study.py"
 EXPECTATIONS = ROOT / "examples/sglang_pd_session_v1/expectations.json"
+RESULTS = ROOT / "examples/sglang_pd_session_v1/results.json"
 
 
 def _namespace():
@@ -62,3 +63,38 @@ def test_identity_conservation_does_not_require_handoff_completion_order():
     assert identity_ledgers_hold(admitted, handed_off, list(admitted))
     assert not identity_ledgers_hold(admitted, handed_off[:-1], list(admitted))
     assert not identity_ledgers_hold(admitted, handed_off[:-1] + [admitted[0]], list(admitted))
+
+
+def test_compact_result_preserves_the_deciding_evidence():
+    result = json.loads(RESULTS.read_text(encoding="utf-8"))
+
+    assert result["status"] == "REFUTED"
+    assert result["fatal_guards"] == {"status": "HELD", "findings": []}
+    assert result["conservation"] == {
+        "cells": 18,
+        "admissions": 144,
+        "handoffs": 144,
+        "terminals": 144,
+        "decode_tokens": 576,
+        "maximum_ttft_residual_ps": 0,
+    }
+    assert result["packet_exact"]["signed_ttft_delta_ps"] == -76_918_400
+    assert result["packet_exact"]["metric_residual_ps"] == 0
+    assert result["behavioral_families"][
+        "throughput_nondecreasing_with_load"
+    ] == {
+        "held": 4,
+        "evaluated": 6,
+        "refuted_configuration_ids": [
+            "sglang-p1-d2-prompt8",
+            "sglang-p2-d1-prompt16",
+        ],
+    }
+    assert result["example_curve"]["schema"] == "simllm-deployment-curve-v1"
+    assert len(result["example_curve"]["points"]) == 3
+    assert result["task_effect"] == {
+        "SGL-33": "OPEN",
+        "SGL-35": "OPEN",
+        "SGL-36": "OPEN",
+        "CORE-57": "OPEN",
+    }
