@@ -45,7 +45,8 @@
   class remains byte-identical.
 - Bulk evidence: frozen fits, one-shot scores, live session traces, packet
   intermediates, manifests, and reproducibility diagnostics live under
-  `/data3/yifeng/simllm-dev/wave-runs/core54run3/` and are not tracked.
+  `$SIMLLM_CORE54RUN3_RUN_ROOT`; dispatch binds it to the requested external
+  `wave-runs/core54run3` root, and none of that bulk is tracked.
 
 ### Frozen mechanism and attenuation sizing
 
