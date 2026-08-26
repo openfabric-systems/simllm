@@ -2693,6 +2693,19 @@ SGLang EP32 prefill and EP72 decode shapes. See
   per priced key, nonzero intervals where the observations vary, and exact
   reproduction of the current point predictions when distribution propagation
   is disabled.
+- COMP-75 (Completeness; P1; S): repeat CORE-60's component-only freeze and
+  visible calibration movement without the protocol-void source exposure.
+  Use a fresh worker and a preregistered source allowlist restricted to the
+  pinned SGLang implementation files and exact line ranges needed for FP8
+  dispatch, destination-rank incidence and two-batch stage interleaving. The
+  allowlist must exclude framework evaluation tables and every forbidden
+  anchor payload before source inspection begins. Reproduce or refute the
+  frozen destination arithmetic, packet services and max-like composition
+  without reading this void run's external-source values. Acceptance requires
+  a new expectations-only commit before its visible comparison, an empty
+  held-out access ledger, exact preservation of the void CORE-60 evidence,
+  independently signed movement, no free or fitted parameter and no scored
+  flagship rerun. The void record cannot be promoted retrospectively.
 
 ### Uncategorized
 

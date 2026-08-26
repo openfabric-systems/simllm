@@ -1,0 +1,373 @@
+{
+  "calibration_split": {
+    "forbidden_anchor_ids": [
+      "sglang_decode_simulated_mtp",
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "visible_anchor_ids": [
+      "sglang_prefill_1k",
+      "sglang_decode_standard"
+    ]
+  },
+  "chronology": {
+    "core59_public_result_known": true,
+    "core60_calibration_comparison_performed": false,
+    "held_out_numeric_values_accessed": true,
+    "mechanism_service_derived_before_comparison": true,
+    "scored_comparison_performed": false,
+    "visible_calibration_values_already_public_from_core59": true
+  },
+  "invalidation": {
+    "external_source_exposed_forbidden_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "reason": "The official SGLang overlap source rendered its evaluation table during source inspection before this freeze. The values were not used, but literal no-held-out-access acceptance is not met.",
+    "replacement_owner": "COMP-75"
+  },
+  "composition": {
+    "candidate_compute_service_ps": 1363249960000,
+    "candidate_service_source": "CORE-59 aggregate_noncollective_step_service",
+    "form": "total_step_service_ps = max(candidate_compute_service_ps, communication_service_ps)",
+    "hidden_service_form": "min(candidate_compute_service_ps, communication_service_ps)",
+    "incremental_service_form": "max(communication_service_ps - candidate_compute_service_ps, 0)",
+    "justification": "The selected SGLang prefill path divides the batch into two children and advances their operation stages together. Its explicit yield boundaries split dispatch and combine into launch and completion halves around expert and shared-expert compute. For a steady-state throughput row, independently measured candidate compute service is the only available hiding budget, so the two resource streams compose by max. No overlap fraction is introduced.",
+    "selected_arm": "point",
+    "service_arms": [
+      {
+        "communication_service_ps": {
+          "lower": 2286179760360,
+          "selected": 2286179760360,
+          "upper": 2286179762680
+        },
+        "dispatch_phase_service_ps": {
+          "lower": 13410556120,
+          "selected": 13410556120,
+          "upper": 13410556140
+        },
+        "exposed_incremental_service_ps": {
+          "lower": 922929800360,
+          "selected": 922929800360,
+          "upper": 922929802680
+        },
+        "fabric_link_rate_bits_per_second": 400000000000,
+        "hidden_compute_service_ps": 1363249960000,
+        "id": "point",
+        "total_step_service_ps": {
+          "lower": 2286179760360,
+          "selected": 2286179760360,
+          "upper": 2286179762680
+        },
+        "combine_phase_service_ps": {
+          "lower": 26006336300,
+          "selected": 26006336300,
+          "upper": 26006336320
+        }
+      },
+      {
+        "communication_service_ps": {
+          "lower": 4572127520720,
+          "selected": 4572127520720,
+          "upper": 4572127525360
+        },
+        "dispatch_phase_service_ps": {
+          "lower": 26819112240,
+          "selected": 26819112240,
+          "upper": 26819112280
+        },
+        "exposed_incremental_service_ps": {
+          "lower": 3208877560720,
+          "selected": 3208877560720,
+          "upper": 3208877565360
+        },
+        "fabric_link_rate_bits_per_second": 200000000000,
+        "hidden_compute_service_ps": 1363249960000,
+        "id": "sensitivity",
+        "total_step_service_ps": {
+          "lower": 4572127520720,
+          "selected": 4572127520720,
+          "upper": 4572127525360
+        },
+        "combine_phase_service_ps": {
+          "lower": 52010672600,
+          "selected": 52010672600,
+          "upper": 52010672640
+        }
+      }
+    ]
+  },
+  "contracts": [
+    {
+      "adopted": true,
+      "contract": "per-rank token ownership",
+      "evidence": [
+        {
+          "citation": "case sglang-prefill-ep32-r16-t16384",
+          "path": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json",
+          "sha256": "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        }
+      ],
+      "frozen_rule": "Price 16384 newly computed tokens on each of 32 owning ranks. The projection's 4194304 routed visits per layer equals 32 * 16384 * 8 and its 131072 visits per rank equals 16384 * 8.",
+      "signed_effect_relative_to_core59": "unchanged",
+      "status": "verified-existing"
+    },
+    {
+      "adopted": true,
+      "contract": "routed wire precision",
+      "evidence": [
+        {
+          "citation": "lines 227-291",
+          "path": "python/sglang/srt/layers/moe/utils.py",
+          "sha256": "4ff2fa9835b36b4614c224adf75bcfed1694c13f0954befd1c90bde2793cd931"
+        },
+        {
+          "citation": "lines 511-609 and 625-658",
+          "path": "python/sglang/srt/layers/moe/token_dispatcher/deepep.py",
+          "sha256": "17b4caa60c3b1d4da7b146bfaa7726c726988f47b899e8394c7dab4891346ac9"
+        },
+        {
+          "citation": "lines 462-517 and 605-641",
+          "path": "python/sglang/kernels/ops/quantization/fp8_kernel.py",
+          "sha256": "b0036da53d89d54c8e4a22b81139141f05defc710cf1d56926845511968f42e0"
+        },
+        {
+          "citation": "lines 450-474",
+          "path": "python/sglang/srt/layers/moe/moe_runner/deep_gemm.py",
+          "sha256": "16c4b808e1e3d97c3e299acbd52bbf6a9412f89a62ac2548270e2917dfd06364"
+        },
+        {
+          "citation": "lines 35-39",
+          "path": "python/sglang/srt/layers/deep_gemm_wrapper/configurer.py",
+          "sha256": "5ffe5079bbd081d1d24379897f3a750d0ca2caf74b27533b1a00a038fe64cd55"
+        },
+        {
+          "citation": "lines 988-992",
+          "path": "python/sglang/srt/environ.py",
+          "sha256": "708b9a9d2ca8302d060a967592f8833a54c6e893330d864853a94b8147faf4d5"
+        }
+      ],
+      "frozen_rule": "On the pinned H100 DeepEP prefill path, dispatch sends one FP8 byte for each of 7168 elements plus 56 float32 group scales at group size 128, or 7392 bytes per token-destination. Expert output is BF16, so combine sends 14336 bytes per token-destination.",
+      "signed_effect_relative_to_core59": "increase-throughput",
+      "status": "selected"
+    },
+    {
+      "adopted": true,
+      "contract": "same-destination expert deduplication",
+      "evidence": [
+        {
+          "citation": "lines 570-609",
+          "path": "python/sglang/srt/layers/moe/token_dispatcher/deepep.py",
+          "sha256": "17b4caa60c3b1d4da7b146bfaa7726c726988f47b899e8394c7dab4891346ac9"
+        },
+        {
+          "citation": "lines 1207-1221",
+          "path": "simllm/traffic/step_comm.py",
+          "sha256": "cf291724fabd9e0fd67761296a2978a6298edc92fb615bc000515e049db8d071"
+        }
+      ],
+      "frozen_rule": "DeepEP dispatch is driven by is_token_in_rank, so a token is transferred once to each selected destination rank and combine reverses that rank incidence after destination-side expert reduction. Under uniform routing without replacement across 256 experts, with 8 experts resident on each of 32 ranks, p_rank = 1 - C(248, 8) / C(256, 8). Expected unique destinations are 32 * p_rank and expected remote destinations are 31 * p_rank.",
+      "signed_effect_relative_to_core59": "increase-throughput",
+      "status": "selected"
+    },
+    {
+      "adopted": true,
+      "contract": "framework-supported compute and communication overlap",
+      "evidence": [
+        {
+          "citation": "lines 38-71",
+          "path": "python/sglang/srt/batch_overlap/operations.py",
+          "sha256": "4fa10e000917528813f53ec522a9bf61b90cfaa47f90436a2ec62c59821d271c"
+        },
+        {
+          "citation": "lines 89-132",
+          "path": "python/sglang/srt/batch_overlap/operations_strategy.py",
+          "sha256": "0a2f266aebdbbad3341c9ec977af8832cdff905359a911b0801cb2deaa90cf98"
+        },
+        {
+          "citation": "lines 880-941",
+          "path": "python/sglang/srt/batch_overlap/two_batch_overlap.py",
+          "sha256": "625ce63b0a191c773911270b62ce89b6b4015681060224d48eb0fcdbfdb2dc3f"
+        },
+        {
+          "citation": "lines 2832-2883",
+          "path": "python/sglang/srt/models/deepseek_v2.py",
+          "sha256": "9ad5ad6641b63bea76ab5ece588401f263271e1758f0e3c2292dc37edb7db14f"
+        },
+        {
+          "citation": "Two-Batch Overlap section",
+          "path": "https://www.lmsys.org/blog/2025-05-05-large-scale-ep/"
+        }
+      ],
+      "frozen_rule": "Use the pinned two-batch prefill schedule's max-like steady-state composition. The candidate's independently measured aggregate noncollective service is the entire hiding budget. There is no fitted hidden fraction.",
+      "signed_effect_relative_to_core59": "increase-throughput",
+      "status": "selected"
+    }
+  ],
+  "decode_disposition": {
+    "mechanism_count": 0,
+    "owner": "SGL-38",
+    "pricing_changed": false,
+    "signed_movement": "unchanged"
+  },
+  "evidence": {
+    "candidate_record": {
+      "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+      "sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52"
+    },
+    "framework_source": {
+      "commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "repository": "sgl-project/sglang",
+      "source_tree": "9ffe149dc3e546258979838952962fc01243b164155773104592df35267c28685",
+      "version": "0.5.19.dev345+gbfeae4e79"
+    },
+    "htsim": {
+      "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+      "derivation_run_root": "/data3/yifeng/simllm-dev/wave-runs/core60/freeze-derivation-v1",
+      "profile": "rnic-nn",
+      "txt2bin_sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b"
+    }
+  },
+  "locks": {
+    "core59_artifacts": [
+      {
+        "path": "examples/deployment_curve_v1/core59_expectations.json",
+        "sha256": "ac31943849b118b0d29b60f43c3ca239f66b070720bac4192b13cf57d6cda8e3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_expectations.md",
+        "sha256": "345a1763f3f1203bc15c457757461e040dcea1922a80e73190924651e400c0b1"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_calibration_result.json",
+        "sha256": "d28d1a99b585c4b10c6c501965579b08285ad7683222f0c43457d5ae25fbdf43"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_calibration_result.md",
+        "sha256": "8cb68d7b86b5ff13c737ae626310c98891cbe8647c7435e2dc2f42cc1e3ab2da"
+      }
+    ],
+    "first_scored_run_artifacts": [
+      {
+        "path": "examples/deployment_curve_v1/scored_expectations.json",
+        "sha256": "9048342b4eaa1cc07183c82b16884eafaf3fb00e9664132db63f27572d2ee192"
+      },
+      {
+        "path": "examples/deployment_curve_v1/scored_expectations.md",
+        "sha256": "dcba281b50ca91db89e0eaac09d67d222eef97d7ac197c127563652a22d470c3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_config.json",
+        "sha256": "0e16edd3224b33c7a587d15a792aa48d6770219200dc50b6c364567c59e67ea0"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_result.json",
+        "sha256": "ed06a2e8bce838f96c8365151a450ddf9a80ebde7520c3e37c40960b4a633e08"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS.md",
+        "sha256": "699dc8d14bfc4fc20a9fafe81aa13ad216a23de664b9a9cec50e97d3e84a7dc3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_tools.py",
+        "sha256": "e4324919ea1b4ccb2ad7cd4980901cd356f94e4883f82851531dd3c27a466075"
+      },
+      {
+        "path": "examples/deployment_curve_v1/run_flagship.py",
+        "sha256": "f95a7fd3e98459d7ccc6f41167735b942dd1f2f00169a4d29a7fb1e6ffc3c34f"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.pdf",
+        "sha256": "0105947ed8eb524c178f3ee7025c4e035aa93e2362d7842815947d50527e0063"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.png",
+        "sha256": "b51ff4726ba23ac65ea23be34b9394654517b66a14360dfd91478e9767e42553"
+      }
+    ]
+  },
+  "parameters": {
+    "fitted": [],
+    "free": [],
+    "rejected": [
+      "communication_scale_factor",
+      "overlap_fraction",
+      "destination_dedup_factor"
+    ]
+  },
+  "schema": "simllm-deployment-curve-core60-expectations-v1",
+  "signed_movement_expectations": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "direction_relative_to_candidate_only": "decrease",
+      "direction_relative_to_core59": "increase",
+      "reason": "The composed point retains positive exposed communication service but replaces CORE-59's larger serial communication addition."
+    },
+    {
+      "anchor_id": "sglang_decode_standard",
+      "direction_relative_to_candidate_only": "unchanged",
+      "direction_relative_to_core59": "unchanged",
+      "reason": "SGL-38 remains the sole decode-bind owner and CORE-60 changes no decode service."
+    }
+  ],
+  "status": "EXPECTATIONS_ONLY_VOID",
+  "task": "CORE-60",
+  "traffic": {
+    "combine": {
+      "fabric_bytes_per_phase": {
+        "lower": 1280125032,
+        "selected": 1280125032,
+        "upper": 1280125056
+      },
+      "local_bytes_per_phase": {
+        "lower": 373369801,
+        "selected": 373369801,
+        "upper": 373369808
+      },
+      "per_pair_bytes": {
+        "exact_denominator": 129313035125,
+        "exact_numerator": 6897369004861554688,
+        "lower": 53338543,
+        "selected": 53338543,
+        "upper": 53338544
+      },
+      "vector_bytes": 14336
+    },
+    "dedup_probability": {
+      "expected_remote_destinations_denominator": 4138017124000,
+      "expected_remote_destinations_numerator": 29130450541729,
+      "expected_unique_destinations_denominator": 129313035125,
+      "expected_unique_destinations_numerator": 939691952959,
+      "formula": "p_rank = 1 - C(248, 8) / C(256, 8)",
+      "p_rank_denominator": 4138017124000,
+      "p_rank_numerator": 939691952959,
+      "uniform_routing_assumption": "Each token chooses 8 distinct experts uniformly without replacement from 256 logical experts, and each EP rank owns 8 logical experts."
+    },
+    "dispatch": {
+      "fabric_bytes_per_phase": {
+        "lower": 660064464,
+        "selected": 660064464,
+        "upper": 660064488
+      },
+      "local_bytes_per_phase": {
+        "lower": 192518802,
+        "selected": 192518802,
+        "upper": 192518809
+      },
+      "per_pair_bytes": {
+        "exact_denominator": 129313035125,
+        "exact_numerator": 3556455893131739136,
+        "lower": 27502686,
+        "selected": 27502686,
+        "upper": 27502687
+      },
+      "vector_bytes": 7392
+    },
+    "floor_rule": "Select floor(exact expected aggregate bytes per ordered rank pair), matching the existing uniform traffic authority's integer floor. The adjacent ceiling is propagated as the rounding envelope.",
+    "local_peer_count": 7,
+    "moe_layers": 58,
+    "new_tokens_per_rank": 16384,
+    "remote_peer_count": 24,
+    "traffic_authority": "architecture expectation -> ordered pair payload -> existing placement locality -> rnic-nn htsim"
+  }
+}

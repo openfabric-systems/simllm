@@ -1,0 +1,225 @@
+{
+  "accessed_anchor_ids": [
+    "sglang_prefill_1k",
+    "sglang_decode_standard"
+  ],
+  "calibration_rows": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "baseline_candidate_only": {
+        "denominator": 34081249,
+        "numerator": 3276800000000
+      },
+      "core59_point": {
+        "denominator": 585515261,
+        "numerator": 16384000000000
+      },
+      "decimal_summary": {
+        "candidate_tokens_per_second_per_node": "96146.711055",
+        "core59_tokens_per_second_per_node": "27982.191228",
+        "core60_tokens_per_second_per_node": "57332.324550",
+        "published_tokens_per_second_per_node": "57674.000000",
+        "signed_error_after_percent": "-0.592425",
+        "signed_error_before_percent": "66.707201",
+        "signed_error_core59_percent": "-51.482139",
+        "signed_movement_from_candidate_percent": "-40.369958",
+        "signed_movement_from_core59_percent": "104.888617"
+      },
+      "prediction": {
+        "contributions": [
+          {
+            "compute_service_ps": 1363249960000,
+            "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+            "source_kind": "candidate-record"
+          },
+          {
+            "lower_total_service_ps": 2286179760360,
+            "selected_total_service_ps": 2286179760360,
+            "source_id": "core60_ep32_prefill_composition_v1",
+            "source_kind": "physical-composition",
+            "upper_total_service_ps": 4572127525360
+          }
+        ],
+        "lower": {
+          "denominator": 57151594067,
+          "numerator": 1638400000000000
+        },
+        "point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        },
+        "upper": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 57674
+      },
+      "signed_movement_from_candidate_only": {
+        "absolute_tokens_per_second_per_node": {
+          "denominator": 1947896541789737241,
+          "numerator": -75606409245491200000000
+        },
+        "direction": "decrease",
+        "relative_to_reference": {
+          "denominator": 57154494009,
+          "numerator": -23073245009
+        }
+      },
+      "signed_movement_from_core59": {
+        "absolute_tokens_per_second_per_node": {
+          "denominator": 33464828477002571349,
+          "numerator": 982197177401344000000000
+        },
+        "direction": "increase",
+        "relative_to_reference": {
+          "denominator": 57154494009,
+          "numerator": 59948558191
+        }
+      },
+      "signed_relative_error_after": {
+        "denominator": 1648164143737533,
+        "numerator": -9764143737533
+      },
+      "signed_relative_error_before": {
+        "denominator": 982800977413,
+        "numerator": 655599022587
+      },
+      "signed_relative_error_core59": {
+        "denominator": 16884503581457,
+        "numerator": -8692503581457
+      },
+      "total_service_ps": 2286179760360
+    },
+    {
+      "anchor_id": "sglang_decode_standard",
+      "baseline_candidate_only": {
+        "denominator": 715103,
+        "numerator": 6400000000
+      },
+      "core59_point": {
+        "denominator": 715103,
+        "numerator": 6400000000
+      },
+      "decimal_summary": {
+        "candidate_tokens_per_second_per_node": "8949.759685",
+        "core59_tokens_per_second_per_node": "8949.759685",
+        "core60_tokens_per_second_per_node": "8949.759685",
+        "published_tokens_per_second_per_node": "22282.000000",
+        "signed_error_after_percent": "-59.834128",
+        "signed_error_before_percent": "-59.834128",
+        "signed_error_core59_percent": "-59.834128",
+        "signed_movement_from_candidate_percent": "0.000000",
+        "signed_movement_from_core59_percent": "0.000000"
+      },
+      "prediction": {
+        "contributions": [
+          {
+            "compute_service_ps": 28604120000,
+            "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+            "source_kind": "candidate-record"
+          },
+          {
+            "lower_total_service_ps": 28604120000,
+            "selected_total_service_ps": 28604120000,
+            "source_id": "core60_ep32_prefill_composition_v1",
+            "source_kind": "physical-composition",
+            "upper_total_service_ps": 28604120000
+          }
+        ],
+        "lower": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        },
+        "point": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        },
+        "upper": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 22282
+      },
+      "signed_movement_from_candidate_only": {
+        "absolute_tokens_per_second_per_node": {
+          "denominator": 1,
+          "numerator": 0
+        },
+        "direction": "unchanged",
+        "relative_to_reference": {
+          "denominator": 1,
+          "numerator": 0
+        }
+      },
+      "signed_movement_from_core59": {
+        "absolute_tokens_per_second_per_node": {
+          "denominator": 1,
+          "numerator": 0
+        },
+        "direction": "unchanged",
+        "relative_to_reference": {
+          "denominator": 1,
+          "numerator": 0
+        }
+      },
+      "signed_relative_error_after": {
+        "denominator": 7966962523,
+        "numerator": -4766962523
+      },
+      "signed_relative_error_before": {
+        "denominator": 7966962523,
+        "numerator": -4766962523
+      },
+      "signed_relative_error_core59": {
+        "denominator": 7966962523,
+        "numerator": -4766962523
+      },
+      "total_service_ps": 28604120000
+    }
+  ],
+  "classification": "CALIBRATION_ONLY_NOT_SCORED_PROTOCOL_VOID",
+  "decode_pricing_changed": false,
+  "expectations_sha256": "d588a5df408e55410d8d1c09ef692f929f60393e30695bf46f13ce992b9fd8b0",
+  "externally_exposed_held_out_anchor_ids": [
+    "sglang_prefill_2k",
+    "sglang_prefill_4k"
+  ],
+  "fitted_parameters": [],
+  "forbidden_anchor_ids_accessed": [],
+  "held_out_numeric_values_accessed": true,
+  "held_out_score_performed": false,
+  "mechanism_evidence": {
+    "path": "$SIMLLM_CORE60_RUN_ROOT/mechanism-evidence-v2/mechanism-evidence.json",
+    "sha256": "191aae90805a13afeb3005ca8bbf9809e69af72c4cf18d152ec43ff41bdf9bf0",
+    "status": "PASS"
+  },
+  "preservation_lock": {
+    "checked_artifact_count": 13,
+    "core59_mutated": false,
+    "first_scored_run_mutated": false,
+    "status": "PASS"
+  },
+  "remainder": {
+    "applied_to_projection": false,
+    "description": "Resolve the finite two-batch-overlap prologue and epilogue boundary from a framework trace; the point residual is close to one frozen dispatch phase but is not evidence for subtracting one.",
+    "id": "TRAF-66",
+    "service_surplus_dispatch_phase_ratio": "1.009943992066973",
+    "service_surplus_ps": {
+      "denominator": 28837,
+      "numerator": 390565749501320
+    },
+    "signed_relative_error": {
+      "denominator": 1648164143737533,
+      "numerator": -9764143737533
+    }
+  },
+  "schema": "simllm-deployment-curve-core60-calibration-v1",
+  "scored_flagship_rerun_performed": false,
+  "status": "VOID"
+}
