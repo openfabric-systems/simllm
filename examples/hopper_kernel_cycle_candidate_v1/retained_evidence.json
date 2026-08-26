@@ -1,0 +1,166 @@
+{
+  "schema": "simllm-hopper-retained-evidence-v1",
+  "campaign_id": "hopper-local-candidate-2026-08-26",
+  "created": "2026-08-26",
+  "framework": {
+    "name": "vllm",
+    "version": "0.27.1+cu129",
+    "revision": null,
+    "package_sha256": "d73c897b0bde9e515c30101f694989fb65821a8543e7cad8f95e5440dc6bae81"
+  },
+  "device": {
+    "device_kind_id": "nvidia-gh200-sm90",
+    "gpu_name": "NVIDIA GH200 120GB",
+    "gpu_uuid": "retained-gh200-envelope-no-uuid-claim",
+    "architecture": "sm90",
+    "memory_capacity_bytes_per_second": 4022780000000
+  },
+  "sources": [
+    {
+      "name": "a100-attribution-report",
+      "root": "evidence",
+      "path": "REPORT.md",
+      "bytes": 209093,
+      "sha256": "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+    },
+    {
+      "name": "deepseek-decode-kernel-summary",
+      "root": "evidence",
+      "path": "gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/analysis/kernel-summary.csv",
+      "bytes": 13985,
+      "sha256": "c4d8ece981478ce57ebca95f7f2f168865713b66e87ed21a1d3f76976e834b7c"
+    },
+    {
+      "name": "deepseek-decode-summary",
+      "root": "evidence",
+      "path": "gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/analysis/decode-summary.csv",
+      "bytes": 363,
+      "sha256": "0915df1850d2b9cefa13bcc246d5a6640deb94e102a8075908a4d8a93c140c58"
+    },
+    {
+      "name": "deepseek-deployment-projection",
+      "root": "repo",
+      "path": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json",
+      "bytes": 27611,
+      "sha256": "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+    },
+    {
+      "name": "deepseek-prefill-cell-summary",
+      "root": "evidence",
+      "path": "gh200lane/capture-198883-deepseek-v3-tp1-graph-base/analysis/cell-summary.csv",
+      "bytes": 276,
+      "sha256": "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a"
+    },
+    {
+      "name": "deepseek-prefill-kernel-summary",
+      "root": "evidence",
+      "path": "gh200lane/capture-198883-deepseek-v3-tp1-graph-base/analysis/kernel-summary.csv",
+      "bytes": 64219,
+      "sha256": "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb"
+    },
+    {
+      "name": "gh200-lane-report",
+      "root": "evidence",
+      "path": "gh200lane/REPORT.md",
+      "bytes": 35140,
+      "sha256": "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798"
+    },
+    {
+      "name": "granite-a100-vs-gh200",
+      "root": "evidence",
+      "path": "gh200lane/granite-a100-vs-gh200.csv",
+      "bytes": 4448,
+      "sha256": "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175"
+    },
+    {
+      "name": "granite-eager-kernel-summary",
+      "root": "evidence",
+      "path": "gh200lane/granite-repeats-198878-tp1-eager/analysis/kernel-summary.csv",
+      "bytes": 39564,
+      "sha256": "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3"
+    },
+    {
+      "name": "granite-eager-repeat-summary",
+      "root": "evidence",
+      "path": "gh200lane/granite-repeats-198878-tp1-eager/analysis/repeat-summary.csv",
+      "bytes": 1025,
+      "sha256": "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8"
+    },
+    {
+      "name": "granite-graph-b32-kernel-summary",
+      "root": "evidence",
+      "path": "gh200lane/granite-repeats-198869-tp1-graph/analysis/kernel-summary.csv",
+      "bytes": 3928,
+      "sha256": "452bde33ab070843223cd3aeddeb257995d23a0cf41dc108a309d59d50c55034"
+    },
+    {
+      "name": "granite-graph-b32-repeat-summary",
+      "root": "evidence",
+      "path": "gh200lane/granite-repeats-198869-tp1-graph/analysis/repeat-summary.csv",
+      "bytes": 349,
+      "sha256": "7560d065c09f79b1e11646c3c118ca194f2b5a79f3c06bcdd8b6c35906e90280"
+    },
+    {
+      "name": "granite-graph-kernel-summary",
+      "root": "evidence",
+      "path": "gh200lane/granite-repeats-198874-tp1-graph/analysis/kernel-summary.csv",
+      "bytes": 25146,
+      "sha256": "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632"
+    },
+    {
+      "name": "granite-graph-repeat-summary",
+      "root": "evidence",
+      "path": "gh200lane/granite-repeats-198874-tp1-graph/analysis/repeat-summary.csv",
+      "bytes": 900,
+      "sha256": "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+    }
+  ],
+  "models": {
+    "granite": {
+      "family": "routed",
+      "name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+      "revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+      "config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+      "weights_sha256": null
+    },
+    "deepseek_reduced": {
+      "family": "routed",
+      "name": "deepseek-ai/DeepSeek-V3-reduced-depth-4",
+      "revision": "e815299b0bcbac849fa540c768ef21845365c9eb",
+      "config_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
+      "weights_sha256": null
+    },
+    "deepseek_full": {
+      "family": "routed",
+      "name": "deepseek-ai/DeepSeek-V3",
+      "revision": "e815299b0bcbac849fa540c768ef21845365c9eb",
+      "config_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
+      "weights_sha256": "ec8b878368c5fdb9f3288bd3a36a723a1637ec76464135a3f5b2e9aeff4072b4"
+    }
+  },
+  "granite_cells": [
+    ["graph-decode-b1-kv16", "cuda-graph", "decode", 1, 16, 1110576000, 4232, 300, "calibration", "granite-graph-repeat-summary", "granite-graph-kernel-summary"],
+    ["graph-decode-b8-kv16", "cuda-graph", "decode", 8, 16, 1892831500, 1538, 300, "calibration", "granite-graph-repeat-summary", "granite-graph-kernel-summary"],
+    ["graph-decode-b32-kv16", "cuda-graph", "decode", 32, 16, 2082912000, 2896, 300, "held-out", "granite-graph-b32-repeat-summary", "granite-graph-b32-kernel-summary"],
+    ["graph-prefill-l128", "cuda-graph", "prefill", 128, 0, 2127104000, 1243, 30, "calibration", "granite-graph-repeat-summary", "granite-graph-kernel-summary"],
+    ["graph-prefill-l512", "cuda-graph", "prefill", 512, 0, 2979456000, 1717, 30, "calibration", "granite-graph-repeat-summary", "granite-graph-kernel-summary"],
+    ["graph-prefill-l2048", "cuda-graph", "prefill", 2048, 0, 6652928000, 1619, 30, "held-out", "granite-graph-repeat-summary", "granite-graph-kernel-summary"],
+    ["eager-decode-b1-kv16", "eager", "decode", 1, 16, 1221632000, 1883, 30, "calibration", "granite-eager-repeat-summary", "granite-eager-kernel-summary"],
+    ["eager-decode-b8-kv16", "eager", "decode", 8, 16, 2035072000, 2702, 30, "calibration", "granite-eager-repeat-summary", "granite-eager-kernel-summary"],
+    ["eager-decode-b32-kv16", "eager", "decode", 32, 16, 2195360000, 939, 30, "held-out", "granite-eager-repeat-summary", "granite-eager-kernel-summary"],
+    ["eager-prefill-l128", "eager", "prefill", 128, 0, 2217696000, 1306, 30, "calibration", "granite-eager-repeat-summary", "granite-eager-kernel-summary"],
+    ["eager-prefill-l512", "eager", "prefill", 512, 0, 3059520000, 1536, 30, "calibration", "granite-eager-repeat-summary", "granite-eager-kernel-summary"],
+    ["eager-prefill-l2048", "eager", "prefill", 2048, 0, 6919552000, 3004, 30, "held-out", "granite-eager-repeat-summary", "granite-eager-kernel-summary"]
+  ],
+  "deepseek_cells": [
+    ["ep32-prefill-r16-l1024-t16384", "prefill", 16, 1024, 89393440000, 1515000000, "calibration", "prefill_r16_l1024_t16384"],
+    ["ep32-prefill-r8-l2048-t16384", "prefill", 8, 2048, 93134208000, 1500000000, "calibration", "prefill_r8_l2048_t16384"],
+    ["ep32-prefill-r4-l4096-t16384", "prefill", 4, 4096, 104598911000, 1500000000, "held-out", "prefill_r4_l4096_t16384"],
+    ["ep72-decode-b32-c2000", "decode", 32, 2000, 1875680000, 1635000000, "calibration", "decode_b32_c2000"]
+  ],
+  "depth_projection": {
+    "source_layers": 4,
+    "target_layers": 61,
+    "rule": "retained reduced-depth service multiplied by 61 / 4"
+  }
+}

@@ -73,6 +73,9 @@ _DISTRIBUTION_VERDICTS = {
     "insufficient-replays",
 }
 _ROUTING_AVAILABILITY = {"captured", "not-captured"}
+_SERVICE_EVIDENCE_CLASSES = {"MEASURED", "DECLARED"}
+_COMPONENT_EVIDENCE_CLASSES = {"DISCLOSED"}
+_CELL_SPLITS = {"calibration", "held-out"}
 _SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/+-]*\Z")
 
 
@@ -343,6 +346,46 @@ def _distribution(value: object, path: str) -> None:
     _enum(payload["verdict"], f"{path}.verdict", _DISTRIBUTION_VERDICTS)
 
 
+def _entry_evidence(value: object, path: str) -> None:
+    payload = _object(value, path)
+    _fields(
+        payload,
+        path,
+        {
+            "service_class",
+            "component_class",
+            "split",
+            "source_sha256s",
+            "derivation",
+        },
+    )
+    service_class = _enum(
+        payload["service_class"],
+        f"{path}.service_class",
+        _SERVICE_EVIDENCE_CLASSES,
+    )
+    _enum(
+        payload["component_class"],
+        f"{path}.component_class",
+        _COMPONENT_EVIDENCE_CLASSES,
+    )
+    _enum(payload["split"], f"{path}.split", _CELL_SPLITS)
+    sources = _array(payload["source_sha256s"], f"{path}.source_sha256s")
+    if not sources:
+        _fail(f"{path}.source_sha256s", "must not be empty")
+    digests = [
+        _sha256(source, f"{path}.source_sha256s[{index}]")
+        for index, source in enumerate(sources)
+    ]
+    if digests != sorted(digests) or len(digests) != len(set(digests)):
+        _fail(f"{path}.source_sha256s", "digests must be sorted and unique")
+    derivation = _optional_string(payload["derivation"], f"{path}.derivation")
+    if service_class == "MEASURED" and derivation is not None:
+        _fail(f"{path}.derivation", "measured service must not have a derivation")
+    if service_class == "DECLARED" and derivation is None:
+        _fail(f"{path}.derivation", "declared service requires a derivation")
+
+
 def _memory_components(value: object, path: str) -> None:
     payload = _object(value, path)
     _fields(
@@ -587,19 +630,24 @@ def validate_kernel_cycle_lut(
     for index, entry in enumerate(entries):
         path = f"record.entries[{index}]"
         item = _object(entry, path)
+        entry_fields = {
+            "key",
+            "implementation_id",
+            "coverage",
+            "measured_service_ps",
+            "observed_clocks",
+            "distribution",
+            "kernels",
+        }
+        if "evidence" in item:
+            entry_fields.add("evidence")
         _fields(
             item,
             path,
-            {
-                "key",
-                "implementation_id",
-                "coverage",
-                "measured_service_ps",
-                "observed_clocks",
-                "distribution",
-                "kernels",
-            },
+            entry_fields,
         )
+        if "evidence" in item:
+            _entry_evidence(item["evidence"], f"{path}.evidence")
         _lookup_key(item["key"], f"{path}.key", acceptance_status=status)
         implementation_ids.append(
             _identifier(item["implementation_id"], f"{path}.implementation_id")

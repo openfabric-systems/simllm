@@ -1,0 +1,96 @@
+{
+  "acceptance_status": "candidate",
+  "deepseek_per_rank_per_layer": [
+    {
+      "evidence_class": "DECLARED",
+      "implementation_id": "deepseek-v3-full61-vllm-ep32-prefill-r16-l1024-t16384",
+      "per_layer_ps": 22348360000,
+      "rank_service_ps": 1363249960000,
+      "split": "calibration"
+    },
+    {
+      "evidence_class": "DECLARED",
+      "implementation_id": "deepseek-v3-full61-vllm-ep32-prefill-r4-l4096-t16384",
+      "per_layer_ps": 26149727750,
+      "rank_service_ps": 1595133392750,
+      "split": "held-out"
+    },
+    {
+      "evidence_class": "DECLARED",
+      "implementation_id": "deepseek-v3-full61-vllm-ep32-prefill-r8-l2048-t16384",
+      "per_layer_ps": 23283552000,
+      "rank_service_ps": 1420296672000,
+      "split": "calibration"
+    },
+    {
+      "evidence_class": "DECLARED",
+      "implementation_id": "deepseek-v3-full61-vllm-ep72-decode-b32-c2000",
+      "per_layer_ps": 468920000,
+      "rank_service_ps": 28604120000,
+      "split": "calibration"
+    },
+    {
+      "evidence_class": "MEASURED",
+      "implementation_id": "deepseek-v3-reduced4-vllm-ep32-prefill-r16-l1024-t16384",
+      "per_layer_ps": 22348360000,
+      "rank_service_ps": 89393440000,
+      "split": "calibration"
+    },
+    {
+      "evidence_class": "MEASURED",
+      "implementation_id": "deepseek-v3-reduced4-vllm-ep32-prefill-r4-l4096-t16384",
+      "per_layer_ps": 26149727750,
+      "rank_service_ps": 104598911000,
+      "split": "held-out"
+    },
+    {
+      "evidence_class": "MEASURED",
+      "implementation_id": "deepseek-v3-reduced4-vllm-ep32-prefill-r8-l2048-t16384",
+      "per_layer_ps": 23283552000,
+      "rank_service_ps": 93134208000,
+      "split": "calibration"
+    },
+    {
+      "evidence_class": "MEASURED",
+      "implementation_id": "deepseek-v3-reduced4-vllm-ep72-decode-b32-c2000",
+      "per_layer_ps": 468920000,
+      "rank_service_ps": 1875680000,
+      "split": "calibration"
+    }
+  ],
+  "freeze_sha256": "9c92756d2deab0a1cf18509b3b5f96770c7a18c96fb4eb14feb1f58af45a20fa",
+  "input_sha256": "0cd3adeaa7bd50c08e3691c59c5bd3a29a552d5d29860bd81850bd75e601779a",
+  "lookup_record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+  "schema": "simllm-hopper-kernel-cycle-candidate-result-v1",
+  "score": {
+    "absent": [
+      "granite registered grid: 1212 ABSENT cells",
+      "DeepSeek EP72 MTP B16 KV4000: ABSENT",
+      "GH200 counter-pass attribution",
+      "full-depth DeepSeek silicon captures",
+      "uncaptured tensor-parallel widths",
+      "retained per-cell routed expert-load vectors"
+    ],
+    "component_overlay_ledger": {
+      "deepseek_v3": {
+        "DISCLOSED": 8
+      },
+      "granite": {
+        "DISCLOSED": 12
+      }
+    },
+    "entry_count": 20,
+    "evidence_ledger": {
+      "deepseek_v3": {
+        "DECLARED": 4,
+        "MEASURED": 4
+      },
+      "granite": {
+        "MEASURED": 12
+      }
+    },
+    "held_out_policy": "compiled by the frozen identity transform only; no fitted parameter exists",
+    "scored_after_freeze": true,
+    "verdict": "CANDIDATE_COMPILED"
+  }
+}
