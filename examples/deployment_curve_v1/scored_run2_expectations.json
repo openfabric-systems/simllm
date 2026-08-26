@@ -1,0 +1,520 @@
+{
+  "schema": "simllm-deployment-curve-scored-run2-expectations-v1",
+  "study": "CORE-54 second scored DeepSeek-V3 deployment curve",
+  "date": "2026-08-26",
+  "status": "EXPECTATIONS_ONLY",
+  "chronology": {
+    "first_scored_run_existed_before_this_freeze": true,
+    "core59_mechanism_record_existed_before_this_freeze": true,
+    "core60_void_composition_existed_before_this_freeze": true,
+    "comp75_clean_repetition_existed_before_this_freeze": true,
+    "sgl38_remote_kv_projection_existed_before_this_freeze": true,
+    "second_scored_runner_existed_before_this_freeze": false,
+    "second_fitted_constants_existed_before_this_freeze": false,
+    "second_held_out_score_existed_before_this_freeze": false,
+    "second_flagship_figure_existed_before_this_freeze": false
+  },
+  "dispatch_identity": {
+    "worktree": "core54run2",
+    "branch": "codex/core54run2_scored",
+    "base_main_sha": "9ee51a327eaff8a3d09fdf3e39c03791140ba4cf"
+  },
+  "dependency_gate": {
+    "must_all_be_ancestors_of_run_head": [
+      {
+        "dependency": "first CORE-54 scored run",
+        "merge_commit": "61ef185"
+      },
+      {
+        "dependency": "SGL-38 remote-KV decode shape",
+        "merge_commit": "af99656"
+      },
+      {
+        "dependency": "CORE-59 role mechanisms",
+        "merge_commit": "03da155"
+      },
+      {
+        "dependency": "CORE-60 composition evidence",
+        "merge_commit": "162de14"
+      },
+      {
+        "dependency": "COMP-75 clean repetition",
+        "merge_commit": "9ee51a327eaff8a3d09fdf3e39c03791140ba4cf"
+      }
+    ],
+    "dispatch_before_all_merged": "VOID"
+  },
+  "inherited_rulings": {
+    "allocation": {
+      "prefill_experiment": {
+        "nodes": 4,
+        "ranks": 32,
+        "gpus_per_node": 8,
+        "expert_parallelism": 32,
+        "simultaneous_with_decode_experiment": false
+      },
+      "decode_experiment": {
+        "nodes": 9,
+        "ranks": 72,
+        "gpus_per_node": 8,
+        "expert_parallelism": 72,
+        "simultaneous_with_prefill_experiment": false
+      },
+      "structural_comparator_only": {
+        "prefill_plus_decode_nodes": 13,
+        "ranks": 104,
+        "may_be_called_96_gpu_system": false
+      },
+      "joint_deployments": "Second-legend what-if context only"
+    },
+    "largest_faithful_live_scale": {
+      "prefill_engines": 1,
+      "decode_engines": 1,
+      "simulated_gpus_per_engine": 8,
+      "live_ranks": 16,
+      "prefill_target_multiplier": 4,
+      "decode_target_multiplier": 9
+    },
+    "stable_identity_field_set": "CORE-58 unchanged",
+    "mtp_absent": {
+      "anchor_id": "sglang_decode_simulated_mtp",
+      "status": "BLOCKED",
+      "dependency": "COMP-72 resumable Merlin execution",
+      "prediction": null,
+      "numeric_anchor_may_be_read": false
+    }
+  },
+  "offered_load_sweep_requests_per_second": {
+    "sglang_prefill_1k": [32, 64, 128, 256],
+    "sglang_prefill_2k": [16, 32, 64, 128],
+    "sglang_prefill_4k": [8, 16, 32, 64],
+    "sglang_decode_standard": [2000, 4000, 8000, 16000, 32000],
+    "sglang_decode_simulated_mtp": [1000, 2000, 4000, 8000, 16000],
+    "all_interarrivals_are_integer_picoseconds": true
+  },
+  "pricing_configuration": {
+    "prefill": {
+      "mechanism_path": "CORE-59 prefill dispatch and combine",
+      "composition_authority": {
+        "path": "examples/deployment_curve_v1/comp75_calibration_result.json",
+        "sha256": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+        "status": "PASS",
+        "verdict": "REPRODUCED"
+      },
+      "dispatch_wire": {
+        "format": "FP8 plus float32 scale per 128 hidden elements",
+        "vector_bytes": 7392
+      },
+      "combine_wire": {
+        "format": "BF16",
+        "vector_bytes": 14336
+      },
+      "same_destination_deduplication": true,
+      "operator": "max",
+      "overlap_budget": "measured candidate compute service",
+      "new_free_or_fitted_tunables": 0,
+      "point_arm": {
+        "fabric_link_rate_bits_per_second": 400000000000,
+        "communication_service_ps": {
+          "lower": 2286179760360,
+          "selected": 2286179760360,
+          "upper": 2286179762680
+        }
+      },
+      "sensitivity_arm": {
+        "fabric_link_rate_bits_per_second": 200000000000,
+        "communication_service_ps": {
+          "lower": 4572127520720,
+          "selected": 4572127520720,
+          "upper": 4572127525360
+        },
+        "role": "named sensitivity, not a substitute deployment point"
+      },
+      "prompt_transfer_assumption": "Per-rank token totals are constant across the disclosed prompt lengths, so the communication term is shared and only the measured compute rows differ.",
+      "per_rank_new_tokens": 16384,
+      "per_node_tokens": 131072,
+      "compute_rows": [
+        {
+          "anchor_id": "sglang_prefill_1k",
+          "candidate_entry_index": 0,
+          "measured_compute_service_ps": 1363249960000
+        },
+        {
+          "anchor_id": "sglang_prefill_2k",
+          "candidate_entry_index": 2,
+          "measured_compute_service_ps": 1420296672000
+        },
+        {
+          "anchor_id": "sglang_prefill_4k",
+          "candidate_entry_index": 1,
+          "measured_compute_service_ps": 1595133392750
+        }
+      ]
+    },
+    "decode": {
+      "mechanism_count": 0,
+      "mechanism_authority": "CORE-59 zero-count finding",
+      "remote_kv_projection": {
+        "config_field": "project_remote_kv_length",
+        "default": false,
+        "enabled_for_this_run": true,
+        "remote_prefix_tokens_per_request": 2000,
+        "request_count": 32,
+        "expected_lookup_hits": 1,
+        "expected_lookup_misses": 0,
+        "exact_candidate_key_sha256": "05d1c33cdef9c12e25eb9159adc9dc80f1cd57b6333778f9efb5fb24cd6a74aa"
+      },
+      "measured_four_layer_basis_ps": 1875680000,
+      "depth_extrapolation": "measured four-layer basis * 61 / 4",
+      "declared_full_depth_service_ps": 28604120000,
+      "per_node_tokens": 256,
+      "visible_calibration_tokens_per_second_per_node": 22282,
+      "visible_calibration_implied_step_ps": {
+        "numerator": 128000000000000,
+        "denominator": 11141
+      },
+      "expected_signed_direction": "throughput underprediction",
+      "expected_signed_relative_error": {
+        "numerator": -4766962523,
+        "denominator": 7966962523
+      },
+      "in_run_adjustment_allowed": false,
+      "registered_resolution": [
+        "TRAF-66 finite-overlap residual",
+        "COMP-72 measured DeepSeek cells",
+        "CORE-61 depth-extrapolation validity"
+      ]
+    }
+  },
+  "constants": {
+    "tunable": [
+      {
+        "id": "intra_node_collective_surcharge_ps",
+        "unit": "ps_per_routed_collective",
+        "initial": 15064014,
+        "envelope": {
+          "lower": 0,
+          "upper": 30128029
+        },
+        "first_run_application_count_per_step": 116,
+        "second_run_mechanism_path_application_count_per_step": 0,
+        "reason": "CORE-59 found the historical shared surcharge non-role-identifiable and fixed its successor mechanism-path application count at zero.",
+        "disposition": "inherited fitted parameter, not a measurement"
+      }
+    ],
+    "composition_new_tunables": [],
+    "fixed_but_propagated": [
+      {
+        "id": "pcie_submission_ps",
+        "selected": 20000000,
+        "envelope": {
+          "lower": 100000,
+          "upper": 20000000
+        },
+        "reason_not_tuned": "No calibration-split anchor identifies exact handoff latency."
+      },
+      {
+        "id": "fabric_link_rate_bps",
+        "selected": 400000000000,
+        "envelope": {
+          "lower": 200000000000,
+          "upper": 400000000000
+        },
+        "reason_not_tuned": "PLACE-5 fixes the point rate and the 200 Gbit/s row remains a sensitivity."
+      }
+    ]
+  },
+  "pre_fit_prediction_model": {
+    "prefill_formula": "per_node_tokens * 1000000000000 / max(measured_compute_service_ps, communication_service_ps)",
+    "decode_formula": "per_node_tokens * 1000000000000 / declared_full_depth_service_ps",
+    "constant_effect": "The inherited tunable has zero applications on both second-run mechanism paths.",
+    "distribution_effect": "Zero-width insufficient-replays placeholder registered by COMP-74; no stability or zero-variance claim."
+  },
+  "pre_fit_predicted_bands": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "candidate_entry_index": 0,
+      "candidate_compute_service_ps": 1363249960000,
+      "composed_service_ps": {
+        "lower": 2286179760360,
+        "point": 2286179760360,
+        "upper": 2286179762680
+      },
+      "per_node_tokens": 131072,
+      "lower": {
+        "numerator": 3276800000000000,
+        "denominator": 57154494067
+      },
+      "point": {
+        "numerator": 3276800000000000,
+        "denominator": 57154494009
+      },
+      "upper": {
+        "numerator": 3276800000000000,
+        "denominator": 57154494009
+      },
+      "unit": "tokens_per_second_per_node"
+    },
+    {
+      "anchor_id": "sglang_prefill_2k",
+      "candidate_entry_index": 2,
+      "candidate_compute_service_ps": 1420296672000,
+      "composed_service_ps": {
+        "lower": 2286179760360,
+        "point": 2286179760360,
+        "upper": 2286179762680
+      },
+      "per_node_tokens": 131072,
+      "lower": {
+        "numerator": 3276800000000000,
+        "denominator": 57154494067
+      },
+      "point": {
+        "numerator": 3276800000000000,
+        "denominator": 57154494009
+      },
+      "upper": {
+        "numerator": 3276800000000000,
+        "denominator": 57154494009
+      },
+      "unit": "tokens_per_second_per_node"
+    },
+    {
+      "anchor_id": "sglang_prefill_4k",
+      "candidate_entry_index": 1,
+      "candidate_compute_service_ps": 1595133392750,
+      "composed_service_ps": {
+        "lower": 2286179760360,
+        "point": 2286179760360,
+        "upper": 2286179762680
+      },
+      "per_node_tokens": 131072,
+      "lower": {
+        "numerator": 3276800000000000,
+        "denominator": 57154494067
+      },
+      "point": {
+        "numerator": 3276800000000000,
+        "denominator": 57154494009
+      },
+      "upper": {
+        "numerator": 3276800000000000,
+        "denominator": 57154494009
+      },
+      "unit": "tokens_per_second_per_node"
+    },
+    {
+      "anchor_id": "sglang_decode_standard",
+      "candidate_entry_index": 3,
+      "candidate_service_ps": 28604120000,
+      "per_node_tokens": 256,
+      "lower": {
+        "numerator": 6400000000,
+        "denominator": 715103
+      },
+      "point": {
+        "numerator": 6400000000,
+        "denominator": 715103
+      },
+      "upper": {
+        "numerator": 6400000000,
+        "denominator": 715103
+      },
+      "unit": "tokens_per_second_per_node"
+    },
+    {
+      "anchor_id": "sglang_decode_simulated_mtp",
+      "status": "BLOCKED",
+      "prediction": null,
+      "reason": "The candidate record has no EP72 MTP batch-16 KV-4000 cell.",
+      "dependency": "COMP-72 resumable Merlin execution"
+    }
+  ],
+  "fit_rule": {
+    "visible_anchor_ids": [
+      "sglang_prefill_1k",
+      "sglang_decode_standard"
+    ],
+    "forbidden_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k",
+      "sglang_decode_simulated_mtp"
+    ],
+    "objective": "Minimize summed squared relative point error across calibration anchors inside inherited closed envelopes.",
+    "resolution": "integer picoseconds",
+    "tie_break": "select the smaller physical value",
+    "expected_flat_fit_value_ps": 0,
+    "freeze_after_fit": true,
+    "out_of_envelope_rule": "Report the in-envelope calibration miss and never widen an envelope or add a mechanism after observation."
+  },
+  "scoring_rule": {
+    "scorable_held_out_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "blocked_held_out_anchor_ids": [
+      "sglang_decode_simulated_mtp"
+    ],
+    "maximum_absolute_relative_error": {
+      "numerator": 1,
+      "denominator": 20
+    },
+    "formula": "abs(predicted_point - published) / published",
+    "one_shot": "Held-out values are loaded once only after the fit artifact is serialized and content-addressed.",
+    "mtp_rule": "Do not load, impute or score the MTP numeric anchor. Emit BLOCKED on COMP-72 with no prediction.",
+    "overall_scope": "The numerical verdict covers only the two priced prefill held-out anchors."
+  },
+  "uncertainty_rule": {
+    "record_interval": "Use the COMP-75 selected 400 Gbit/s communication record's exact integer-rounding endpoints for prefill and the exact candidate point for decode.",
+    "constant_interval": "Evaluate both endpoints of every inherited envelope; the fitted surcharge contributes zero width because its second-run application count is zero.",
+    "distribution_interval": "Propagate an explicit zero-width placeholder labeled insufficient-replays under COMP-74; do not claim zero physical variance.",
+    "sensitivity_context": "Retain the 200 Gbit/s communication record separately from the fixed PLACE-5 400 Gbit/s deployment-point band.",
+    "curve_method": "deterministic-additive-interval-v1"
+  },
+  "decode_reality": {
+    "evidence_backed_mechanism_count": 0,
+    "declared_step_milliseconds": 28.60412,
+    "visible_throughput_implied_step_milliseconds": 11.489094336235526,
+    "expected_calibration_miss_direction": "prediction low",
+    "expected_absolute_relative_error_percent": 59.8341,
+    "resolution_is_registered_work_not_in_run_tuning": true
+  },
+  "figure_contract": {
+    "canvas_inches": [7.0, 4.33],
+    "primary_format": "PDF",
+    "companion_format": "PNG",
+    "x": "aggregated output throughput increasing rightward",
+    "y": "inverse per-token request delay increasing upward",
+    "optimal_corner": "upper-right",
+    "dry_run_watermark": false,
+    "main_legend": "simulated SGLang configurations with deterministic bands",
+    "second_legend": [
+      "DeepSeek H800 production profile",
+      "declared PLACE-5 16-prefill plus 40-decode what-if"
+    ],
+    "required_annotations": [
+      "priced prefill held-out verdict and scope",
+      "MTP BLOCKED on COMP-72",
+      "standard-decode calibration miss"
+    ]
+  },
+  "preservation_lock": {
+    "class": "prior-record-byte-identity",
+    "artifacts": [
+      {
+        "path": "examples/deployment_curve_v1/expectations.json",
+        "sha256": "b1a918ed02329a242d033943fb18b93fd9be8fdaa18093477e6abb8298540df5"
+      },
+      {
+        "path": "examples/deployment_curve_v1/scored_expectations.json",
+        "sha256": "9048342b4eaa1cc07183c82b16884eafaf3fb00e9664132db63f27572d2ee192"
+      },
+      {
+        "path": "examples/deployment_curve_v1/scored_expectations.md",
+        "sha256": "dcba281b50ca91db89e0eaac09d67d222eef97d7ac197c127563652a22d470c3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_config.json",
+        "sha256": "0e16edd3224b33c7a587d15a792aa48d6770219200dc50b6c364567c59e67ea0"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_result.json",
+        "sha256": "ed06a2e8bce838f96c8365151a450ddf9a80ebde7520c3e37c40960b4a633e08"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS.md",
+        "sha256": "699dc8d14bfc4fc20a9fafe81aa13ad216a23de664b9a9cec50e97d3e84a7dc3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_tools.py",
+        "sha256": "e4324919ea1b4ccb2ad7cd4980901cd356f94e4883f82851531dd3c27a466075"
+      },
+      {
+        "path": "examples/deployment_curve_v1/run_flagship.py",
+        "sha256": "f95a7fd3e98459d7ccc6f41167735b942dd1f2f00169a4d29a7fb1e6ffc3c34f"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.pdf",
+        "sha256": "0105947ed8eb524c178f3ee7025c4e035aa93e2362d7842815947d50527e0063"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.png",
+        "sha256": "b51ff4726ba23ac65ea23be34b9394654517b66a14360dfd91478e9767e42553"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_expectations.json",
+        "sha256": "ac31943849b118b0d29b60f43c3ca239f66b070720bac4192b13cf57d6cda8e3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_expectations.md",
+        "sha256": "345a1763f3f1203bc15c457757461e040dcea1922a80e73190924651e400c0b1"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_calibration_result.json",
+        "sha256": "d28d1a99b585c4b10c6c501965579b08285ad7683222f0c43457d5ae25fbdf43"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_calibration_result.md",
+        "sha256": "8cb68d7b86b5ff13c737ae626310c98891cbe8647c7435e2dc2f42cc1e3ab2da"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_expectations.json",
+        "sha256": "d588a5df408e55410d8d1c09ef692f929f60393e30695bf46f13ce992b9fd8b0"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_expectations.md",
+        "sha256": "4ccde55a2425963d29379881491d3bf4812542eb9781d716d8355f90a2a9c117"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_calibration_result.json",
+        "sha256": "85bf16992725b6bc56592b1dba46b69b0238c7992fb5bbdb06e2543b7b6a357e"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_calibration_result.md",
+        "sha256": "9e48a3f314c3a87b3469c73b67ab30702410d135668d9ca32152c0ff5a7237cd"
+      },
+      {
+        "path": "examples/deployment_curve_v1/comp75_expectations.json",
+        "sha256": "70344ee93b7557486ff4f61191aa4c0213d471a35981863d2e60be34e4a48f5a"
+      },
+      {
+        "path": "examples/deployment_curve_v1/comp75_expectations.md",
+        "sha256": "24558903a3c0df5e9acf41d7e39b4ad0b82e5fb8d277f6ae85affd9533c0a5e3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/comp75_calibration_result.json",
+        "sha256": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb"
+      },
+      {
+        "path": "examples/deployment_curve_v1/comp75_calibration_result.md",
+        "sha256": "fa05a54fd85b31193a30ea61b3a04354f6eabbc537c981bcb9efaf1de0d603d9"
+      },
+      {
+        "path": "examples/sglang_decode_shape_v1/expectations.json",
+        "sha256": "5574957e9722847349262bcbcda4037caf9d81c41ed711d207b9630e4952463c"
+      },
+      {
+        "path": "examples/sglang_decode_shape_v1/RESULTS.md",
+        "sha256": "6cc97dd73a9a1f54ce57a916d8f791ada9e4fbc43550e0722f57848ac372cff0"
+      }
+    ]
+  },
+  "fatal_guards": [
+    "a required dependency is absent from run head",
+    "a preservation-lock digest disagrees",
+    "prefill and decode disclosure experiments are presented as one 96-GPU allocation",
+    "SGL-38 remote-KV projection is not enabled for the scored decode experiment",
+    "the exact decode candidate key does not select with one hit and zero misses",
+    "the fit path reads a held-out or context-only anchor",
+    "held-out scoring occurs before the fit artifact is frozen and content-addressed",
+    "a fitted value leaves its inherited closed envelope",
+    "a composition free or fitted tunable is introduced",
+    "the MTP row receives an imputed price or numeric read",
+    "the figure carries a watermark or omits verdict scope or decode miss"
+  ],
+  "expected_disposition": {
+    "if_scorable_max_error_at_most_5_percent": "Publish a scoped pass for the two priced prefill anchors and keep CORE-54 open on MTP, decode reproduction and distribution evidence.",
+    "if_scorable_max_error_above_5_percent": "Publish every per-anchor row and the dominant contributor without widening an envelope or adjusting the run.",
+    "core54_closure": "Requires the literal registered acceptance, including MTP, decode reproduction and COMP-74 distributions."
+  }
+}

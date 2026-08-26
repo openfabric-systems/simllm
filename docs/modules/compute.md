@@ -1754,6 +1754,15 @@ with -341.675450 tokens per second per node or -0.592425 percent remaining
 signed error. No free or fitted parameter, scored flagship rerun, decode price,
 TRAF-65 material, htsim module or NVLink model changes.
 
+The second CORE-54 scored run consumes that clean composition without adding
+a tunable and binds the exact EP72 standard-decode candidate key through
+SGL-38's explicitly enabled projection. The declared 61-over-4 depth price is
+28.604120 ms per decode step, against 11.489094 ms implied by the published
+calibration throughput. This is a 59.834128 percent throughput miss in the
+known low direction. It is not repaired by changing the retained candidate
+row: COMP-76 owns a clean repetition of its four-layer basis, CORE-61 owns the
+depth extrapolation, and TRAF-66 owns the finite-overlap residual.
+
 ## Open tasks
 
 ### Precision
@@ -2706,6 +2715,17 @@ TRAF-65 material, htsim module or NVLink model changes.
   per priced key, nonzero intervals where the observations vary, and exact
   reproduction of the current point predictions when distribution propagation
   is disabled.
+- COMP-76 (Completeness; P1; M): independently repeat the measured four-layer
+  DeepSeek EP72 standard-decode basis used by the CORE-54 candidate projection.
+  Freeze the source allowlist, exact batch-32 and remote-KV-2000 key, profiler
+  identity, service decomposition and comparison rule before inspecting the
+  retained candidate value. Use no published-throughput value for selection or
+  adjustment and introduce no free parameter. Acceptance requires the same
+  exact candidate key, at least two digest-complete independent repetitions,
+  a preregistered agreement verdict for the 1,875,680,000 ps basis, and an
+  explicit evidence-class ledger without promoting candidate status. CORE-61
+  separately tests the 61-layer extrapolation; COMP-72 separately owns MTP;
+  COMP-74 separately owns repeat-derived distribution intervals.
 ### Uncategorized
 
 - COMP-8: the fused-vs-family sum invariant test compares in float; above
