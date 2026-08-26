@@ -909,6 +909,30 @@ and [the target-topology result](../../examples/disaggregated_target_topology_v1
   independently justified signed movement, preservation of CORE-60 and its
   packet evidence, no fitted overlap or boundary fraction, no held-out numeric
   access and no scored flagship rerun. Decode pricing remains outside scope.
+
+  The 2026-08-26 [finite-boundary result](../../examples/deployment_curve_v1/traf66_calibration_result.md)
+  derives `max(C, P) + min(C, P) / 2` from the two child ledgers. Across 58
+  sparse layers it conserves 116 dispatch launches and completions, 116
+  combine launches and completions, 232 yields and 234 child-stage advances.
+  The packet-dominant 1K branch adds `C / 2`, rather than subtracting a
+  dispatch phase, so the independently reconstructed visible residual moves
+  from -0.592425% to -23.423673%. The form structurally restores 2K and 4K
+  prompt dependence through `compute_service_ps / 2`, without accessing or
+  comparing either value. All 27 prior records remain byte-identical and no
+  scored run, decode price or TRAF-65 file changed. The record is protocol
+  void because a whole-file component inventory exposed a held-out row before
+  the freeze; that value was neither used nor compared, but the ledger is not
+  empty. TRAF-66 therefore remains open and TRAF-67 owns the exact clean
+  repetition.
+- TRAF-67 (Precision; P1; S): repeat TRAF-66's frozen finite two-child boundary
+  under a clean exposure protocol. Reuse the committed source ranges, event
+  ledger, `max(C, P) + min(C, P) / 2` form and component-service envelope
+  without amendment or refit; access only the visible 1K COMP-75 calibration
+  row; reproduce the independent signed movement and all 27 preservation
+  locks; and retain an empty held-out ledger. Do not access or compare the 2K
+  or 4K values, rerun the scored flagship, change decode pricing, or touch
+  TRAF-65. A literal pass may close TRAF-66 and this clean-repetition task; the
+  third scored run alone owns the held-out comparison.
 - TRAF-51 (Precision; P1; L): complete the Slingshot fabric calibration
   beyond the steady-state partial. The wave-19 comparison
   ([merlin ss fabric calibration](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md),
