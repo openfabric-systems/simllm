@@ -1,0 +1,242 @@
+{
+  "accessed_visible_anchor_ids": [
+    "sglang_prefill_1k"
+  ],
+  "calibration_rows": [
+    {
+      "absolute_remaining_error_tokens_per_second_per_node": {
+        "denominator": 57154494009,
+        "numerator": -19528287475066
+      },
+      "anchor_id": "sglang_prefill_1k",
+      "baseline_candidate_only": {
+        "denominator": 34081249,
+        "numerator": 3276800000000
+      },
+      "candidate_service_ps": 1363249960000,
+      "core59_point": {
+        "denominator": 585515261,
+        "numerator": 16384000000000
+      },
+      "core59_total_service_ps": 4684122088000,
+      "per_node_tokens": 131072,
+      "prediction": {
+        "lower": {
+          "denominator": 57154494067,
+          "numerator": 3276800000000000
+        },
+        "point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        },
+        "upper": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 57674
+      },
+      "signed_movement_from_candidate_only": {
+        "absolute_tokens_per_second_per_node": {
+          "denominator": 1947896541789737241,
+          "numerator": -75606409245491200000000
+        },
+        "direction": "decrease",
+        "relative_to_reference": {
+          "denominator": 57154494009,
+          "numerator": -23073245009
+        }
+      },
+      "signed_movement_from_core59": {
+        "absolute_tokens_per_second_per_node": {
+          "denominator": 33464828477002571349,
+          "numerator": 982197177401344000000000
+        },
+        "direction": "increase",
+        "relative_to_reference": {
+          "denominator": 57154494009,
+          "numerator": 59948558191
+        }
+      },
+      "signed_relative_error_after": {
+        "denominator": 1648164143737533,
+        "numerator": -9764143737533
+      },
+      "signed_relative_error_before": {
+        "denominator": 982800977413,
+        "numerator": 655599022587
+      },
+      "signed_relative_error_core59": {
+        "denominator": 16884503581457,
+        "numerator": -8692503581457
+      },
+      "total_service_ps": 2286179760360
+    }
+  ],
+  "classification": "CALIBRATION_ONLY_NOT_SCORED_CLEAN_REPETITION",
+  "decode_pricing_changed": false,
+  "expectations_sha256": "70344ee93b7557486ff4f61191aa4c0213d471a35981863d2e60be34e4a48f5a",
+  "fitted_parameters": [],
+  "free_parameters": [],
+  "held_out_access_ledger": [],
+  "held_out_numeric_values_accessed": false,
+  "held_out_score_performed": false,
+  "independent_signoff": {
+    "absolute_remaining_error_tokens_per_second_per_node": {
+      "denominator": 57154494009,
+      "numerator": -19528287475066
+    },
+    "candidate_only": {
+      "denominator": 34081249,
+      "numerator": 3276800000000
+    },
+    "comp75": {
+      "denominator": 57154494009,
+      "numerator": 3276800000000000
+    },
+    "core59": {
+      "denominator": 585515261,
+      "numerator": 16384000000000
+    },
+    "method": "direct Fraction reconstruction from raw tokens and integer services",
+    "movement_from_candidate_only": {
+      "absolute_tokens_per_second_per_node": {
+        "denominator": 1947896541789737241,
+        "numerator": -75606409245491200000000
+      },
+      "direction": "decrease",
+      "relative_to_reference": {
+        "denominator": 57154494009,
+        "numerator": -23073245009
+      }
+    },
+    "movement_from_core59": {
+      "absolute_tokens_per_second_per_node": {
+        "denominator": 33464828477002571349,
+        "numerator": 982197177401344000000000
+      },
+      "direction": "increase",
+      "relative_to_reference": {
+        "denominator": 57154494009,
+        "numerator": 59948558191
+      }
+    },
+    "signed_relative_remaining_error": {
+      "denominator": 1648164143737533,
+      "numerator": -9764143737533
+    }
+  },
+  "preservation_lock": {
+    "checked_artifacts": [
+      {
+        "path": "notes/2026-08-26-comp75-source-allowlist.md",
+        "sha256": "5d0ef8d86dd105e9e18ddb87d7e6c30b5dcd918bd8ac63ca20ed751e21f33831"
+      },
+      {
+        "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+        "sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_expectations.json",
+        "sha256": "ac31943849b118b0d29b60f43c3ca239f66b070720bac4192b13cf57d6cda8e3"
+      },
+      {
+        "path": "examples/merlin_ss_fabric_calibration_v1/expectations.md",
+        "sha256": "7109a83484ba1342c48eda6a99c78731a936aa98c60a9c7c5ccc4026b6f31000"
+      },
+      {
+        "path": "examples/model_extraction_deepseek_v3_v1/expectations.json",
+        "sha256": "76baa3cc897c4a04b1e13db46f45e6183f3b7ea4d100f6216d90bd37ba3d1933"
+      },
+      {
+        "path": "examples/disaggregated_target_topology_v1/expectations.md",
+        "sha256": "c01b1b7f13d4b16404ee0230ad014327a254f3f22ea3e8cc794dedd787517400"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_calibration_result.json",
+        "sha256": "85bf16992725b6bc56592b1dba46b69b0238c7992fb5bbdb06e2543b7b6a357e"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_calibration_result.md",
+        "sha256": "9e48a3f314c3a87b3469c73b67ab30702410d135668d9ca32152c0ff5a7237cd"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_composition.py",
+        "sha256": "6106375f5208181574dec46e01329516ff78bc497cf0d68cfbaef0b948f209e7"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_expectations.json",
+        "sha256": "d588a5df408e55410d8d1c09ef692f929f60393e30695bf46f13ce992b9fd8b0"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_expectations.md",
+        "sha256": "4ccde55a2425963d29379881491d3bf4812542eb9781d716d8355f90a2a9c117"
+      },
+      {
+        "path": "examples/deployment_curve_v1/run_core60_composition.py",
+        "sha256": "6574065214b4d2fb8b717e840c3c440f5c5e6d738d80f003cbaecdc359f72dd3"
+      },
+      {
+        "path": "notes/2026-08-26-core60-worker-sizing.md",
+        "sha256": "4b7f98b1b19193d0e2f4e1677329e68bd2bfee5ed698dd1fe28008a6b9429ce1"
+      },
+      {
+        "path": "tests/test_deployment_curve_core60.py",
+        "sha256": "8a523d6cf4017d9b7a265a2741c7a67a6f524c77aa0ba19f85e22f4cd2b17cf1"
+      }
+    ],
+    "status": "PASS",
+    "void_core60_artifacts": [
+      {
+        "path": "examples/deployment_curve_v1/core60_calibration_result.json",
+        "sha256": "85bf16992725b6bc56592b1dba46b69b0238c7992fb5bbdb06e2543b7b6a357e"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_calibration_result.md",
+        "sha256": "9e48a3f314c3a87b3469c73b67ab30702410d135668d9ca32152c0ff5a7237cd"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_composition.py",
+        "sha256": "6106375f5208181574dec46e01329516ff78bc497cf0d68cfbaef0b948f209e7"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_expectations.json",
+        "sha256": "d588a5df408e55410d8d1c09ef692f929f60393e30695bf46f13ce992b9fd8b0"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_expectations.md",
+        "sha256": "4ccde55a2425963d29379881491d3bf4812542eb9781d716d8355f90a2a9c117"
+      },
+      {
+        "path": "examples/deployment_curve_v1/run_core60_composition.py",
+        "sha256": "6574065214b4d2fb8b717e840c3c440f5c5e6d738d80f003cbaecdc359f72dd3"
+      },
+      {
+        "path": "notes/2026-08-26-core60-worker-sizing.md",
+        "sha256": "4b7f98b1b19193d0e2f4e1677329e68bd2bfee5ed698dd1fe28008a6b9429ce1"
+      },
+      {
+        "path": "tests/test_deployment_curve_core60.py",
+        "sha256": "8a523d6cf4017d9b7a265a2741c7a67a6f524c77aa0ba19f85e22f4cd2b17cf1"
+      }
+    ],
+    "void_core60_mutated": false
+  },
+  "record_comparison": {
+    "contracts": {
+      "destination_arithmetic": "REPRODUCED",
+      "max_like_composition": "REPRODUCED",
+      "packet_services": "REPRODUCED"
+    },
+    "core60_external_source_values_accessed": false,
+    "core60_promoted": false,
+    "core60_record_status_unchanged": "VOID",
+    "verdict": "REPRODUCED"
+  },
+  "schema": "simllm-deployment-curve-comp75-calibration-v1",
+  "scored_flagship_rerun_performed": false,
+  "source_allowlist_preregistered_sha256": "e5bc633175a1636615c9867a2caa10e591cace4ab40bcef13c18108d77c4190b",
+  "status": "PASS"
+}

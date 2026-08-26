@@ -1741,6 +1741,19 @@ classes for EP32, EP72 and EP144 and exact dynamic work for the disclosed
 SGLang EP32 prefill and EP72 decode shapes. See
 [the DeepSeek inventory results](../../examples/model_extraction_deepseek_v3_v1/RESULTS.md).
 
+The [COMP-75 clean repetition](../../examples/deployment_curve_v1/comp75_calibration_result.md)
+reproduces CORE-60's destination-rank arithmetic, dispatch and combine packet
+services, and max-like composition without reading the void record's external
+source values. The source allowlist was committed before inspection and the
+expectations-only record was committed before the visible comparison. The
+held-out ledger is empty, all void CORE-60 artifacts remain byte-identical,
+and the void record remains void. An independent direct signer places the 1K
+row at 57,332.324550 tokens per second per node, a 40.369958 percent decrease
+from candidate-only pricing and a 104.888617 percent increase from CORE-59,
+with -341.675450 tokens per second per node or -0.592425 percent remaining
+signed error. No free or fitted parameter, scored flagship rerun, decode price,
+TRAF-65 material, htsim module or NVLink model changes.
+
 ## Open tasks
 
 ### Precision
@@ -2693,20 +2706,6 @@ SGLang EP32 prefill and EP72 decode shapes. See
   per priced key, nonzero intervals where the observations vary, and exact
   reproduction of the current point predictions when distribution propagation
   is disabled.
-- COMP-75 (Completeness; P1; S): repeat CORE-60's component-only freeze and
-  visible calibration movement without the protocol-void source exposure.
-  Use a fresh worker and a preregistered source allowlist restricted to the
-  pinned SGLang implementation files and exact line ranges needed for FP8
-  dispatch, destination-rank incidence and two-batch stage interleaving. The
-  allowlist must exclude framework evaluation tables and every forbidden
-  anchor payload before source inspection begins. Reproduce or refute the
-  frozen destination arithmetic, packet services and max-like composition
-  without reading this void run's external-source values. Acceptance requires
-  a new expectations-only commit before its visible comparison, an empty
-  held-out access ledger, exact preservation of the void CORE-60 evidence,
-  independently signed movement, no free or fitted parameter and no scored
-  flagship rerun. The void record cannot be promoted retrospectively.
-
 ### Uncategorized
 
 - COMP-8: the fused-vs-family sum invariant test compares in float; above
