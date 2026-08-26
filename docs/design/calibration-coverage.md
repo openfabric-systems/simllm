@@ -59,7 +59,7 @@ Cell states:
 | Target | Where | Row status |
 |---|---|---|
 | NVIDIA A100-SXM4-80GB | Merlin `gmerlin7` cluster, `a100-*` partitions: five nodes of four GPUs in an NV4 all-pair NVLink3 mesh, EPYC host | Capture-capable: environment qualified by [a100_environment_qualification_v1](../../examples/a100_environment_qualification_v1/RESULTS.md); the production protocol is gated on the COMP-53 freeze amendment and the COMP-45 cycle-normalized publication form |
-| NVIDIA GH200 | Merlin `gmerlin7` cluster, `gh-*` partitions: three nodes of four GPUs, Grace aarch64 host | Envelope measured by [gh200_hardware_envelope_v1](../../examples/gh200_hardware_envelope_v1/RESULTS.md); framework capture needs a qualified CUDA 12 aarch64 environment lane first (COMP-5 scope) |
+| NVIDIA GH200 | Merlin `gmerlin7` cluster, `gh-*` partitions: three nodes of four GPUs, Grace aarch64 host | Envelope measured by [gh200_hardware_envelope_v1](../../examples/gh200_hardware_envelope_v1/RESULTS.md); retained vLLM Nsys service partially fills Granite and DeepSeek-V3 through the candidate [local Hopper study](../../examples/hopper_kernel_cycle_candidate_v1/RESULTS.md), while the registered campaign and GH200 counter qualification remain COMP-72 and COMP-5 work |
 | NVIDIA GTX 1660 Ti (TU116) | Local workstation | Anchor only: profiler counters are denied and display sharing breaks stability, so it can never qualify (COMP-5); its calibrated host profiles and fidelity study transfer method, not numbers |
 | NVIDIA H100, B100, B200 | No reachable silicon | Derived lane only; calibrated requests fail closed today |
 | AMD (`amd-rocm-target` slot) | No reachable silicon | Campaign slot unbound; binds to one immutable target identity when silicon is reachable |
@@ -290,23 +290,23 @@ signature separates them.
 
 ## vLLM matrix (pinned v0.27.1)
 
-| Target | granite-3.0-1b-a400m-instruct | Qwen3.8-27B | Kimi K3 |
-|---|---|---|---|
-| A100-SXM4-80GB | **blocked**: COMP-53 amendment, then the COMP-45 protocol, then capture (VLLM-12, COMP-6). Retained non-filling evidence exists: the void [a100_kernel_constants_v1](../../examples/a100_kernel_constants_v1/RESULTS.md) and [a100_graph_launch_v1](../../examples/a100_graph_launch_v1/RESULTS.md) measured granite kernel families as microbenchmarks outside the framework chain | **planned**: follows the granite cells; single-GPU fit (about 56 GB of BF16 weights on an 80 GB part) with TP 1, 2 and 4 sweeps on the NV4 mesh; pin support verified at the extraction freeze | **blocked**: COMP-59 must qualify the reduced-depth envelope on the MXFP4-on-SM80 lane |
-| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification; single-GPU fit with headroom | **blocked**: COMP-59 must qualify the reduced-depth envelope on SM90 |
-| GTX 1660 Ti (TU116) | **anchor**: [compute_fidelity_v1](../../examples/compute_fidelity_v1/RESULTS.md) and [host_step_cost_v1](../../examples/host_step_cost_v1/RESULTS.md); never fills | not planned | not planned |
-| H100, B100, B200 | **derived** (COMP-52); fail closed today | **derived** (COMP-52) | **derived** (COMP-52) |
-| AMD slot | unbound | unbound | unbound |
+| Target | granite-3.0-1b-a400m-instruct | Qwen3.8-27B | DeepSeek-V3 | Kimi K3 |
+|---|---|---|---|---|
+| A100-SXM4-80GB | **blocked**: COMP-53 amendment, then the COMP-45 protocol, then capture (VLLM-12, COMP-6). Retained non-filling evidence exists: the void [a100_kernel_constants_v1](../../examples/a100_kernel_constants_v1/RESULTS.md) and [a100_graph_launch_v1](../../examples/a100_graph_launch_v1/RESULTS.md) measured granite kernel families as microbenchmarks outside the framework chain | **planned**: follows the granite cells; single-GPU fit (about 56 GB of BF16 weights on an 80 GB part) with TP 1, 2 and 4 sweeps on the NV4 mesh; pin support verified at the extraction freeze | **blocked**: COMP-59 must qualify the reduced-depth envelope on the SM80 lane | **blocked**: COMP-59 must qualify the reduced-depth envelope on the MXFP4-on-SM80 lane |
+| GH200 | **partial**: the candidate [local Hopper study](../../examples/hopper_kernel_cycle_candidate_v1/RESULTS.md) publishes Nsys service for 12 exact TP1 graph and eager scouting cells. The 1,212-cell registered grid, GH200 counters, retained route loads, code objects and other TP widths are absent under COMP-72, COMP-5 and COMP-71 | **planned**: after the registered environment qualification; single-GPU fit with headroom | **partial**: the same candidate study publishes three four-layer prefill rows and one four-layer decode row as MEASURED, plus four 61-over-4 full-depth rows as DECLARED. MTP, full-depth silicon, GH200 counters, retained route loads and other TP widths are absent | **blocked**: COMP-59 must qualify the reduced-depth envelope on SM90 |
+| GTX 1660 Ti (TU116) | **anchor**: [compute_fidelity_v1](../../examples/compute_fidelity_v1/RESULTS.md) and [host_step_cost_v1](../../examples/host_step_cost_v1/RESULTS.md); never fills | not planned | not planned | not planned |
+| H100, B100, B200 | **derived** (COMP-52); fail closed today | **derived** (COMP-52) | **derived** (COMP-52) | **derived** (COMP-52) |
+| AMD slot | unbound | unbound | unbound | unbound |
 
 ## SGLang matrix (pinned main commit bfeae4e)
 
-| Target | granite-3.0-1b-a400m-instruct | Qwen3.8-27B | Kimi K3 |
-|---|---|---|---|
-| A100-SXM4-80GB | **planned**: the SGL-10 producer follows the vLLM cell on the same qualified environment | **planned**: follows the vLLM cell; pin support verified at the extraction freeze | **blocked**: COMP-59 must qualify the reduced-depth envelope after the vLLM route lands |
-| GH200 | **planned**: after the A100 cell and the GH200 environment qualification | **planned**: after the environment qualification | **blocked**: COMP-59 must qualify the reduced-depth envelope on SM90 |
-| GTX 1660 Ti (TU116) | **anchor**: [sglang_host_step_v1](../../examples/sglang_host_step_v1/RESULTS.md) Turing host profiles; never fills | not planned | not planned |
-| H100, B100, B200 | **derived** (COMP-52); fail closed today | **derived** (COMP-52) | **derived** (COMP-52) |
-| AMD slot | unbound | unbound | unbound |
+| Target | granite-3.0-1b-a400m-instruct | Qwen3.8-27B | DeepSeek-V3 | Kimi K3 |
+|---|---|---|---|---|
+| A100-SXM4-80GB | **planned**: the SGL-10 producer follows the vLLM cell on the same qualified environment | **planned**: follows the vLLM cell; pin support verified at the extraction freeze | **blocked**: COMP-59 must qualify the reduced-depth envelope after the vLLM route lands | **blocked**: COMP-59 must qualify the reduced-depth envelope after the vLLM route lands |
+| GH200 | **planned**: vLLM's partial retained rows do not transfer across framework identity | **planned**: after the environment qualification | **planned**: no retained SGLang silicon row exists; vLLM's candidate service does not transfer | **blocked**: COMP-59 must qualify the reduced-depth envelope on SM90 |
+| GTX 1660 Ti (TU116) | **anchor**: [sglang_host_step_v1](../../examples/sglang_host_step_v1/RESULTS.md) Turing host profiles; never fills | not planned | not planned | not planned |
+| H100, B100, B200 | **derived** (COMP-52); fail closed today | **derived** (COMP-52) | **derived** (COMP-52) | **derived** (COMP-52) |
+| AMD slot | unbound | unbound | unbound | unbound |
 
 ## Fill order
 

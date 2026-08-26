@@ -988,6 +988,16 @@ finding: four eight-GPU prefill nodes plus nine eight-GPU decode nodes contain
 P0 correction before the flagship allocation is asserted; see
 [the SGLang session results](../../examples/sglang_pd_session_v1/RESULTS.md).
 
+The CORE-53 session binding is live as an explicit content-addressed candidate
+path through the existing compute provider chain. The retained candidate row
+is selected twice at the exact prior-KV-16 decode shape, its status and partial
+coverage remain in request provenance, and every miss delegates to an explicit
+roofline comparator. The first acceptance run is void: both record-absent arms
+reproduce every accepted KV byte count and timestamp, but their complete
+request-result bytes differ in the two vLLM-owned random pool-local request
+identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
+[the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
+
 ## Open tasks
 
 ### Precision
@@ -1013,7 +1023,24 @@ P0 correction before the flagship allocation is asserted; see
   signed TTFT and TPOT movement predicted from the selected rows, and an
   explicit roofline comparator that preserves this slice's accepted bytes and
   timestamps when the lookup record is absent. This task depends on COMP-64
-  and does not create another pricing model.
+  and does not create another pricing model. The candidate binding and exact
+  signed movement are implemented, but the frozen acceptance run is void on
+  complete request-result byte identity and the record covers only one decode
+  shape. CORE-58 owns the identity-proof boundary and COMP-73 owns the missing
+  target-record coverage; this task stays open on both.
+
+- CORE-58 (Precision; P1; S): repair the CORE-53 record-absent identity
+  acceptance boundary after its frozen run was voided solely by the fresh
+  random suffixes in vLLM's prefill and decode pool-local request identifiers.
+  Before rerunning, freeze either a canonical comparison projection that
+  retains every pricing-relevant and client-visible field, KV byte count and
+  timestamp while excluding only those two opaque identifiers, or a stable
+  identifier mechanism that does not change the accepted off path. Acceptance
+  requires two independent native sessions to match byte for byte on the
+  frozen boundary, an exact diagnostic proving that the unprojected results
+  differ only in the declared opaque fields, and unchanged accepted
+  `pd_session_v1` compact cells. The void run remains void and cannot be
+  retrospectively rescored.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
@@ -1348,6 +1375,18 @@ P0 correction before the flagship allocation is asserted; see
   TRAF-61 and the GH200-anchored campaign tables; a bar this task cannot
   meet is reported as a refutation with findings, never absorbed by
   loosening the frozen anchors.
+- CORE-56 (Completeness; P1; M): bind the content-addressed local Hopper
+  candidate into the CORE-54 flagship after CORE-53's generic seam lands.
+  Selection must opt into candidate status explicitly and pin lookup digest
+  `ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52`;
+  propagate each `MEASURED`, `DECLARED` and `DISCLOSED` class into run
+  provenance, price only exact present keys, and reject MTP or any other
+  absent shape without interpolation. Acceptance requires the four declared
+  full-depth per-rank values to be selected exactly, candidate status to be
+  visible in the flagship result, a wrong digest or acceptance status to fail
+  closed, and the existing roofline comparator to remain byte-identical when
+  candidate selection is disabled. This task does not validate the prices or
+  relax CORE-54's held-out anchor and uncertainty bars.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool

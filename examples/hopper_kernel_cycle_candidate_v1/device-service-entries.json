@@ -1,0 +1,1591 @@
+{
+  "acceptance_status": "candidate",
+  "lookup_record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+  "resource_registry": {
+    "active_axis_ids": [
+      "sm-cycles"
+    ],
+    "axes": [
+      {
+        "axis_class": "throughput",
+        "axis_id": "sm-cycles",
+        "base_unit": "cycles",
+        "capacity_source_id": "kernel-cycle-lut-observed-sm-clock",
+        "clock_domain_id": "sm-clock",
+        "exclusive_capacity": null,
+        "rate": {
+          "denominator": 1,
+          "numerator": 1
+        },
+        "residency_capacity": null,
+        "service_scope": "device-internal"
+      }
+    ],
+    "device_kind_id": "nvidia-gh200-sm90",
+    "schema": "simllm-device-resource-registry-v1"
+  },
+  "resource_registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+  "schema": "simllm-kernel-cycle-device-service-compilation-v1",
+  "service_entries": [
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  2418831
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 181,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-eager-decode-b1-kv16",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-decode-b1-v1",
+            "values": [
+              1,
+              16
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-05e7f3a27c120c2fab65ad6576b03511ea88c4bc1423ae7cb1334cdb96fefd79"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "held-out"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  13172797
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 222,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-graph-prefill-l2048",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              2048,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-0660e540e7cbd1e8608c732e8f3f4170837c53d7d6082a9e5beeb2d9d3bc57d9"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": "retained reduced-depth service multiplied by 61 / 4",
+        "service_class": "DECLARED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  2065323689
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 264,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "deepseek-v3-full61-vllm-ep32-prefill-r16-l1024-t16384",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              16384,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-0ca900e7f3549df6cb76997e8a8d8ba5f25f752f8b3eb385dea4ade40addfb36"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  4211665
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 464,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-graph-prefill-l128",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              128,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-22d749ef8defd992d1706a108aaac9ce40a72a7e49c1e96e6ac156ba048f022f"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "held-out"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  13700712
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 484,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-eager-prefill-l2048",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              2048,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-2b6e9eceaf2d67f14ec9a6b5b65dd952deecc7a3ed98442c45ab939f373e7504"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0915df1850d2b9cefa13bcc246d5a6640deb94e102a8075908a4d8a93c140c58",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "c4d8ece981478ce57ebca95f7f2f168865713b66e87ed21a1d3f76976e834b7c",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  3066736
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 489,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "deepseek-v3-reduced4-vllm-ep72-decode-b32-c2000",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-decode-b32-v1",
+            "values": [
+              32,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-2cef7bcfca8bd0f3d06a008df1979588ac9aacc2a017d4a5d432745a3bfbdab3"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "held-out"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  156898366
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 333,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "deepseek-v3-reduced4-vllm-ep32-prefill-r4-l4096-t16384",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              16384,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-59ec652d2b8fcf0ac1bd9bc811d2ee519c32cf058c49fbb679ceff47142b1efb"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": "retained reduced-depth service multiplied by 61 / 4",
+        "service_class": "DECLARED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  2130445008
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 0,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "deepseek-v3-full61-vllm-ep32-prefill-r8-l2048-t16384",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              16384,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-5fbf8b77dc6e6eae0d92dd6744f4095091db87df4994b5e219fbdeb77faf63f8"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "452bde33ab070843223cd3aeddeb257995d23a0cf41dc108a309d59d50c55034",
+          "7560d065c09f79b1e11646c3c118ca194f2b5a79f3c06bcdd8b6c35906e90280",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "held-out"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  4124165
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 383,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-graph-decode-b32-kv16",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-decode-b32-v1",
+            "values": [
+              32,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-6580cb1b2b7a5250df84c124f8290697990d05659c0318c2799a46ef1304ea9c"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": "retained reduced-depth service multiplied by 61 / 4",
+        "service_class": "DECLARED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "held-out"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  2392700089
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 83,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "deepseek-v3-full61-vllm-ep32-prefill-r4-l4096-t16384",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              16384,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-68114b8a0900f213a809107f656e0d077dcb756459b947ec439aca497da8b9b8"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  139701312
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 0,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "deepseek-v3-reduced4-vllm-ep32-prefill-r8-l2048-t16384",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              16384,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-6ab06a026022d3f238eb64c8cf30aa63edb57685cc29999be233cc610e89a51b"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": "retained reduced-depth service multiplied by 61 / 4",
+        "service_class": "DECLARED",
+        "source_sha256s": [
+          "0915df1850d2b9cefa13bcc246d5a6640deb94e102a8075908a4d8a93c140c58",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "c4d8ece981478ce57ebca95f7f2f168865713b66e87ed21a1d3f76976e834b7c",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  46767736
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 122,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "deepseek-v3-full61-vllm-ep72-decode-b32-c2000",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-decode-b32-v1",
+            "values": [
+              32,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000,
+              2000
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-71610fda1047ff7c706473ab96a02d3e8ebad8a0587bff0d63b972356faf09e8"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  2198940
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 242,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-graph-decode-b1-kv16",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-decode-b1-v1",
+            "values": [
+              1,
+              16
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-82a7ab1f7429987cf55e1d399f80f9605876b8a920114f3d8022688bfd0455dd"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  6057849
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 303,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-eager-prefill-l512",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              512,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-8c7c92469478cc7a56de729a04986ef441a3a00e52325355031dc0692518f291"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  4029442
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 282,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-eager-decode-b8-kv16",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-decode-b8-v1",
+            "values": [
+              8,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-8c8980c869eab3359d10a17ce5350d326e2450e34b4c145532b3c1e8c1110155"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  4391038
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 40,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-eager-prefill-l128",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              128,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-958e6ab6113f12a49f3063e001a67ec5cff04ba77d928e16e367ed10219efb71"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  5899322
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 444,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-graph-prefill-l512",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              512,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-bffe7b2864a26808100b7db00bafdb8ca4c7d2c062d4babd4f515fa7bf0d321b"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  135431061
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 396,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "deepseek-v3-reduced4-vllm-ep32-prefill-r16-l1024-t16384",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-prefill-v1",
+            "values": [
+              16384,
+              0
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-e0a647724f127de407e4339ac2e8f56fadf8e778d9fbffeb50801b1aab3007c3"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "calibration"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  3747806
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 186,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-graph-decode-b8-kv16",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-decode-b8-v1",
+            "values": [
+              8,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-f3ddfd1012c71000a42134367726a447ab916956717e53fe69bb282ffa3b9974"
+      }
+    },
+    {
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "held-out"
+      },
+      "service_entry": {
+        "entry": {
+          "epochs": [
+            {
+              "fixed_floor_ps": null,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  4346812
+                ]
+              }
+            },
+            {
+              "fixed_floor_ps": 404,
+              "resource_vector": {
+                "device_kind_id": "nvidia-gh200-sm90",
+                "known": [
+                  true
+                ],
+                "registry_sha256": "cd51a4df4aba580cc69a84849843e2ddbe86b3873bcfc6fa3336c328db8b0987",
+                "values": [
+                  0
+                ]
+              }
+            }
+          ],
+          "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-eager-decode-b32-kv16",
+          "shape_vector": {
+            "shape_schema_id": "kernel-cycle-decode-b32-v1",
+            "values": [
+              32,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16
+            ]
+          }
+        },
+        "service_entry_id": "kernel-cycle-fad19eef9ad5dbcd69628d8369548ca361b604cff215cb58f2c716fe3423d907"
+      }
+    }
+  ],
+  "shape_schemas": [
+    {
+      "axes": [
+        {
+          "axis_id": "batch_size",
+          "maximum": 1,
+          "minimum": 1,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0000",
+          "maximum": 16,
+          "minimum": 16,
+          "unit": "tokens"
+        }
+      ],
+      "schema": "simllm-shape-schema-v1",
+      "shape_schema_id": "kernel-cycle-decode-b1-v1"
+    },
+    {
+      "axes": [
+        {
+          "axis_id": "batch_size",
+          "maximum": 32,
+          "minimum": 32,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0000",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0001",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0002",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0003",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0004",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0005",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0006",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0007",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0008",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0009",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0010",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0011",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0012",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0013",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0014",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0015",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0016",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0017",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0018",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0019",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0020",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0021",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0022",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0023",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0024",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0025",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0026",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0027",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0028",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0029",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0030",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0031",
+          "maximum": 2000,
+          "minimum": 16,
+          "unit": "tokens"
+        }
+      ],
+      "schema": "simllm-shape-schema-v1",
+      "shape_schema_id": "kernel-cycle-decode-b32-v1"
+    },
+    {
+      "axes": [
+        {
+          "axis_id": "batch_size",
+          "maximum": 8,
+          "minimum": 8,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0000",
+          "maximum": 16,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0001",
+          "maximum": 16,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0002",
+          "maximum": 16,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0003",
+          "maximum": 16,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0004",
+          "maximum": 16,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0005",
+          "maximum": 16,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0006",
+          "maximum": 16,
+          "minimum": 16,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "kv_length_0007",
+          "maximum": 16,
+          "minimum": 16,
+          "unit": "tokens"
+        }
+      ],
+      "schema": "simllm-shape-schema-v1",
+      "shape_schema_id": "kernel-cycle-decode-b8-v1"
+    },
+    {
+      "axes": [
+        {
+          "axis_id": "computed_new_tokens",
+          "maximum": 16384,
+          "minimum": 128,
+          "unit": "tokens"
+        },
+        {
+          "axis_id": "existing_context_tokens",
+          "maximum": 0,
+          "minimum": 0,
+          "unit": "tokens"
+        }
+      ],
+      "schema": "simllm-shape-schema-v1",
+      "shape_schema_id": "kernel-cycle-prefill-v1"
+    }
+  ]
+}

@@ -24,8 +24,10 @@ both.
   no live groups to ask and the formula is its specification. The
   `source` field keeps the two kinds distinguishable forever.
 - Fabric topology manifest (`simllm-fabric-topology-v1`): GPU to PCIe/NVLink
-  to NIC to switch to link graph. Schema name pinned in `manifest.py`;
-  contents land with M4.
+  to NIC to switch to link graph. `FabricTopologyManifest` round-trips node
+  inventory, switch ports and physical links, validates one termination per
+  NIC and port, proves endpoint connectivity and resolves structured GOAL
+  messages to deterministic shortest paths.
 - `RankMapper`: rank to GOAL-rank assignment mirroring the htsim drivers'
   `-goal_rank_mapping` (`gpu-rank` implemented; `unique-nic` needs the
   fabric manifest), plus `is_intra_node`. Construction validates and snapshots
@@ -33,11 +35,12 @@ both.
   local GPU endpoints, so an active traffic run cannot silently change its
   locality authority.
 - `disaggregated_manifests(prefill_nodes=..., decode_nodes=...,
-  gpus_per_node=...)`: builds the paired placement and fabric projections for
-  the fixed prefill/decode deployment. Every rank carries its pool role and a
-  deterministic GPU-affine NIC projection through the existing schema. The
-  builder validates the one-plus-one live slice and the 16-plus-40 structural
-  target without inventing a second manifest format.
+  gpus_per_node=..., render_physical_topology=...)`: builds the paired
+  placement and fabric projections for the fixed prefill/decode deployment.
+  Every rank carries its pool role and one GPU-affine NIC through the existing
+  schemas. Physical rendering supplies the declared two-tier 400 Gbit/s Clos
+  with explicit 1,000,000 ps link delays; disabling it preserves the accepted
+  placement bytes and emits no physical graph.
 
 ## Status
 
@@ -51,8 +54,7 @@ extension class whose one RPC returns this rank's entry, and
 M4 first slice (tested against the same DP=2 x PP=2 x TP=4 worked example,
 exact group lists) and closes the placement half of VLLM-7; the M4 studies
 and the live tp=8 closed-loop run drive `HtsimStepSink` off
-`declared_manifest(tp=8).group_ranks(0, "tp")`. Fabric manifest and NIC
-selection are design-only.
+`declared_manifest(tp=8).group_ranks(0, "tp")`.
 
 TRAF-10 now consumes this existing placement authority directly: collective
 segments are classified by semantic global rank before fabric GOAL-rank
@@ -61,38 +63,20 @@ captured locality study covers one-node, two-node and all-remote placements;
 see [the results](../../examples/nvlink_locality_v1/RESULTS.md). This required
 no manifest schema change. General `unique-nic` projection remains PLACE-2.
 
-The first PLACE-4 slice builds the one-prefill plus one-decode placement used
-by the live CORE-51 session and structurally renders the same builder at 16
-prefill plus 40 decode nodes. The target contains exactly 448 unique ranks,
-GPUs and NIC projections with role counts of 128 prefill and 320 decode ranks.
-The deterministic location labels are simulated projections rather than a
-complete physical switch and link graph, so the physical target half remains
-PLACE-5 and PLACE-4 stays open.
+The disaggregated builder supplies the one-prefill plus one-decode placement
+used by the live CORE-51 session and the same fixed structure at 16 prefill
+plus 40 decode nodes. The target contains exactly 448 unique ranks, GPUs and
+NICs with role counts of 128 prefill and 320 decode. Its declared physical
+graph has 56 leaf switches, eight spines, 896 links and 1,344 switch ports.
+All 448 endpoints are reachable, all 448 cross-leaf GOAL witness messages
+resolve to four-link paths, and disabling physical rendering reproduces both
+pre-change placement records byte for byte. See the
+[PLACE-5 result](../../examples/disaggregated_target_topology_v1/RESULTS.md).
 
 ## Open tasks
 
 ### Completeness
 
-- PLACE-4 (Completeness; P1; M): build the 448-rank disaggregated placement:
-  placement and fabric manifests for 40 decode plus 16 prefill nodes of
-  eight GPUs and one NIC each, with each rank's pool role carried in the
-  manifest, every GPU and NIC pinned to a physical fabric location, and
-  resolution through the existing manifest schemas and GOAL-rank mapping.
-  Smaller instances of the same shape (one plus one node first) come from
-  the same builder. The general-manifest halves stay PLACE-1 and PLACE-2;
-  this task owns the concrete disaggregated target and its role field. The
-  role-aware one-plus-one live manifest and 448-rank structural render are
-  delivered. PLACE-5 owns the remaining physical-location half, so this task
-  stays open until that projection is literal.
-- PLACE-5 (Completeness; P1; M): replace the disaggregated target builder's
-  deterministic simulated location labels with the complete fixed target
-  topology. Bind every GPU-affine NIC to its port, switch, link rate and
-  propagation delay through `simllm-fabric-topology-v1`, then validate the
-  same authority through GOAL rendering. Acceptance requires exact rank, GPU,
-  NIC and role conservation at one-plus-one and 16-plus-40, complete endpoint
-  reachability, and byte-identical placement records when physical rendering
-  is disabled. General inventory discovery and `unique-nic` mapping remain
-  PLACE-1 and PLACE-2.
 - PLACE-1 (Completeness; P2; L): fabric topology schema contents and general
   NIC selection in the mapper, sourcing intra-node structure from NCCL
   topology dumps. This is no longer blocked: CORE-4 validated the first

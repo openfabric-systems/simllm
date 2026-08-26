@@ -883,10 +883,13 @@ constant moves every TTFT by exactly 100,000,000 ps and moves no TPOT. Its
 explicit packet arm renders eight pairwise shards through GOAL and the packet
 backend after one 20,000,000 ps PCIe submission term. The bounded study
 conserves every byte and endpoint, completes at the last arrival, moves TTFT
-with 0 ps residual and leaves decode TPOT unchanged. TRAF-61 and TRAF-62 stay
-open for the PLACE-5-dependent target topology now registered as TRAF-64; see
-[the constant-arm results](../../examples/pd_session_v1/RESULTS.md) and
-[the packet-arm results](../../examples/pd_session_fabric_handoff_v1/RESULTS.md).
+with 0 ps residual and leaves decode TPOT unchanged. PLACE-5 now supplies the
+complete declared target topology, so the bounded TRAF-62 packet mechanism is
+closed and TRAF-64 is unblocked for target-scale qualification. TRAF-61 stays
+open until that qualification; see
+[the constant-arm results](../../examples/pd_session_v1/RESULTS.md),
+[the packet-arm results](../../examples/pd_session_fabric_handoff_v1/RESULTS.md)
+and [the target-topology result](../../examples/disaggregated_target_topology_v1/RESULTS.md).
 
 ## Open tasks
 
@@ -1557,28 +1560,9 @@ open for the PLACE-5-dependent target topology now registered as TRAF-64; see
   Composes with CORE-51's session and PLACE-4's placement; per-pair sizes
   and chunking follow the same conventions as the existing collective
   renderers. The declared-constant arm is delivered with exact KV-byte
-  accounting, one timing authority and zero backend runs. TRAF-62 owns the
-  packet-rendered half. That bounded half is now delivered, but this task stays
-  open with TRAF-62 until TRAF-64 qualifies it on PLACE-5's target topology.
-- TRAF-62 (Completeness; P1; L): render the disaggregated session's KV handoff
-  through the existing flow and GOAL machinery. Aggregate bytes come from the
-  same model geometry and context authority as the accepted constant arm;
-  source-to-destination pairing and chunks follow the repository's existing
-  transfer conventions. Charge the declared PCIe submission term before
-  packet service and complete the handoff at the last required arrival.
-  Acceptance sweeps context length and link bandwidth, proves exact byte and
-  endpoint conservation, and moves TTFT by the exact signed difference from
-  the constant arm without moving decode TPOT. Only the explicit packet arm
-  may emit backend artifacts; constant and off arms must preserve their
-  accepted bytes and timestamps exactly. Depends on PLACE-5.
-  The bounded one-prefill plus one-decode mechanism passes four exact rows at
-  0 ps residual: it conserves every byte and endpoint, charges PCIe before
-  packet service, completes at the last arrival, changes TTFT by the exact
-  signed handoff difference and leaves decode TPOT fixed. The constant and off
-  controls emit no packet artifact and every CORE-51 baseline digest remains
-  exact. This task stays open on its registered PLACE-5 dependency; TRAF-64
-  owns the target-topology qualification rather than treating the bounded cell
-  as that acceptance.
+  accounting, one timing authority and zero backend runs. The closed TRAF-62
+  packet-rendered half delivers the bounded mechanism. This task stays open
+  until TRAF-64 qualifies that mechanism on the fixed target topology.
 - TRAF-64 (Completeness; P1; L): qualify the delivered packet KV handoff on
   PLACE-5's fixed physical target topology. Derive source and destination
   ranks, chunks and paths from the accepted role-aware placement rather than
@@ -1588,7 +1572,8 @@ open for the PLACE-5-dependent target topology now registered as TRAF-64; see
   packet service interval, the exact signed TTFT effect on the live metric
   chain and unchanged decode TPOT. The bounded packet cell and the constant
   and off arms remain byte-for-byte and timestamp-for-timestamp identical.
-  Depends on PLACE-5.
+  PLACE-5 supplies the complete declared physical graph, so this task is
+  unblocked.
 
 ### Uncategorized
 
