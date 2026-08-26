@@ -1007,6 +1007,16 @@ calibration value. No decode-side mechanism or in-run adjustment is claimed.
 CORE-54 remains open on the refuted prefill score, the COMP-72 MTP cell,
 COMP-76 decode repetition, CORE-61 depth validity and COMP-74 distributions.
 
+The [third scored CORE-54 run](../../examples/deployment_curve_v1/RESULTS_RUN3.md)
+fits the calibration-clean overlap-exposure fraction to its perfect-overlap
+floor and applies the independently frozen expert-balance attenuation factor.
+The two scorable held-out prefill anchors pass the 5 percent bar at -4.519707
+percent for 2K and +3.530310 percent for 4K under the declared benchmark-bias
+model. Their unattenuated errors remain published at +5.113992 percent and
++13.976233 percent. MTP remains blocked without numeric access and the
+standard-decode calibration miss remains unattenuated at -59.834128 percent.
+This scoped prefill pass does not close CORE-54 or any registered residual.
+
 The CORE-53 session binding is live as an explicit content-addressed candidate
 path through the existing compute provider chain. The retained candidate row
 is selected twice at the exact prior-KV-16 decode shape, its status and partial
@@ -1399,9 +1409,14 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   second scored run applies the clean COMP-75 composition and selects all four
   exact candidate keys, but still REFUTES the priced prefill scope at 5.113992
   percent for 2K and 13.976233 percent for 4K. MTP remains BLOCKED and the
-  disclosed decode calibration row misses 59.834128 percent low. CORE-54 stays
-  open on those literal results, COMP-72, COMP-74, COMP-76, CORE-61, SGL-36 and
-  TRAF-64.
+  disclosed decode calibration row misses 59.834128 percent low. The third
+  scored run fits the calibration-clean overlap exposure to `f = 0` and passes
+  both scorable held-out prefill anchors under the frozen benchmark-bias model:
+  2K is 4.519707 percent low and 4K is 3.530310 percent high. The corresponding
+  unattenuated errors remain 5.113992 percent and 13.976233 percent high. MTP
+  remains BLOCKED without numeric access and the decode calibration residual
+  remains unattenuated. CORE-54 stays open on COMP-72, COMP-74, COMP-76,
+  CORE-61, SGL-36 and TRAF-64.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool
