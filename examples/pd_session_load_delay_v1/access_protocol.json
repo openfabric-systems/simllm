@@ -1,0 +1,55 @@
+{
+  "schema": "simllm-pd-session-load-delay-access-protocol-v1",
+  "status": "ACCESS_PROTOCOL_ONLY",
+  "task": "VLLM-39",
+  "authored_against": "97d34b0aa34fb25f55c24cfd39b923119cf69c95",
+  "candidate_record": {
+    "content_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+    "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+    "whole_record_reads_permitted": false
+  },
+  "permitted_entry_selectors": [
+    {
+      "entry_index": 0,
+      "model_name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+      "pool": "decode",
+      "launch_mode": "cuda-graph",
+      "tensor_parallel": 1,
+      "batch_size": 1,
+      "per_request_kv_length": 16,
+      "service_class": "MEASURED",
+      "split": "calibration"
+    },
+    {
+      "entry_index": 1,
+      "model_name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+      "pool": "decode",
+      "launch_mode": "cuda-graph",
+      "tensor_parallel": 1,
+      "batch_size": 8,
+      "per_request_kv_length": 16,
+      "service_class": "MEASURED",
+      "split": "calibration"
+    }
+  ],
+  "forbidden": {
+    "entry_indices": [2],
+    "shape_rows": ["granite-graph-decode-b32-kv16"],
+    "model_families": ["deepseek"],
+    "whole_file_or_whole_record_access": true
+  },
+  "required_provenance_fields": [
+    "acceptance_status",
+    "campaign_id",
+    "coverage",
+    "device.device_kind_id"
+  ],
+  "access_log_schema": "simllm-pd-session-load-delay-access-v1",
+  "pre_protocol_incident": {
+    "status": "CONTAMINATED",
+    "usable_for_freeze_or_score": false,
+    "command_class": "broad-rg-repository-scan",
+    "affected_path_family": "examples/hopper_kernel_cycle_candidate_v1",
+    "disclosure": "the scan preceded the committed reader and surfaced a DeepSeek summary row"
+  }
+}
