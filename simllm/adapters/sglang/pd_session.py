@@ -399,6 +399,7 @@ class _EngineLaunchConfig:
     model_path: Path
     engine_workdir: Path
     ranks: tuple[int, ...]
+    tensor_parallel_ranks: tuple[int, ...]
     attention_data_parallel_ranks: tuple[int, ...]
     dense_data_parallel_ranks: tuple[int, ...]
     expert_parallel_ranks: tuple[int, ...]
@@ -435,7 +436,7 @@ def _engine_process_main(connection: Any, config: _EngineLaunchConfig) -> None:
         sink = HtsimStepSink(
             HtsimStepSinkConfig(
                 profile="rnic-nn-fluid",
-                tp_ranks=config.ranks,
+                tp_ranks=config.tensor_parallel_ranks,
                 ep_ranks=config.expert_parallel_ranks,
                 dims=config.dims,
                 workdir=config.engine_workdir / "steps",
@@ -443,8 +444,6 @@ def _engine_process_main(connection: Any, config: _EngineLaunchConfig) -> None:
                 gpu=config.gpu,
                 host_model=config.host_model,
                 placement_manifest=config.placement,
-                collective_fixed_cost_envelope="intra-node-fixed-cost-v1",
-                collective_fixed_cost_arm="lower",
             )
         )
         configure(
@@ -577,6 +576,7 @@ class _ProcessPoolEngine:
         self.ordinal = config.ordinal
         self.engine_id = config.engine_id
         self.ranks = config.ranks
+        self.tensor_parallel_ranks = config.tensor_parallel_ranks
         self.attention_data_parallel_ranks = (
             config.attention_data_parallel_ranks
         )
@@ -784,6 +784,11 @@ class SglangDisaggregatedSession:
                         model_path=self.config.model_path,
                         engine_workdir=self.config.workdir / engine_id,
                         ranks=self._engine_ranks(role, ordinal),
+                        tensor_parallel_ranks=self._engine_group_ranks(
+                            role,
+                            ordinal,
+                            "tp",
+                        ),
                         attention_data_parallel_ranks=self._engine_group_ranks(
                             role,
                             ordinal,
@@ -932,6 +937,12 @@ class SglangDisaggregatedSession:
             "session_clock_authority": SGLANG_SESSION_AUTHORITY,
             "prefill_ranks": list(state.prefill.ranks),
             "decode_ranks": list(state.decode.ranks),
+            "prefill_tensor_parallel_ranks": list(
+                state.prefill.tensor_parallel_ranks
+            ),
+            "decode_tensor_parallel_ranks": list(
+                state.decode.tensor_parallel_ranks
+            ),
             "prefill_process_id": state.prefill.process_id,
             "decode_process_id": state.decode.process_id,
             "prefill_scheduler_type": state.prefill.scheduler_type,

@@ -1,10 +1,11 @@
 """SGLang parallel arrangements over disaggregated serving manifests.
 
-The stock CPU scheduler stays width one in the simulated session. This module
-projects the deployment's simulated GPUs into the role-local attention data
-parallel, dense data parallel and expert parallel groups that SGLang's public
-DeepSeek configurations disclose. The groups are structural inputs to
-placement and traffic rendering. They do not request distributed tensor work.
+The stock CPU scheduler stays tensor-parallel width one in the simulated
+session. This module projects the deployment's simulated GPUs into singleton
+tensor groups plus the role-local attention data parallel, dense data parallel
+and expert parallel groups that SGLang's public DeepSeek configurations
+disclose. The groups are structural inputs to placement and traffic rendering.
+They do not request distributed tensor work.
 """
 
 from __future__ import annotations
@@ -114,6 +115,7 @@ def _apply_arrangement(
     for rank in manifests.placement.ranks:
         if rank.pool_role != role.value:
             continue
+        rank.groups["tp"] = GroupMembership(0, [rank.global_rank])
         for name, size in sizes.items():
             rank.groups[name] = _partition_membership(
                 role_ranks,

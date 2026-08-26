@@ -48,5 +48,7 @@ def test_flagship_render_is_literal_104_rank_structure():
     assert flagship["ranks"] == flagship["gpus"] == flagship["nics"] == 104
     assert len(flagship["prefill_ep"]) == 32
     assert len(flagship["decode_ep"]) == 72
+    assert flagship["prefill_tp"] == [0]
+    assert flagship["decode_tp"] == [32]
     assert flagship["decode_dense_dp"] == [32]
     assert flagship["core54_claimed_ranks"] == 96

@@ -96,6 +96,7 @@ class _FakePoolEngine:
         self.ordinal = config.ordinal
         self.engine_id = config.engine_id
         self.ranks = config.ranks
+        self.tensor_parallel_ranks = config.tensor_parallel_ranks
         self.attention_data_parallel_ranks = (
             config.attention_data_parallel_ranks
         )
@@ -196,9 +197,11 @@ def test_structural_arrangements_project_role_groups_and_flagship_width():
     assert len(manifests.placement.ranks) == 104
     assert len(tuple(manifests.fabric.nodes)) == 13
     assert manifests.placement.group_ranks(0, "attn_dp") == list(range(32))
+    assert manifests.placement.group_ranks(0, "tp") == [0]
     assert manifests.placement.group_ranks(0, "dense_dp") == list(range(32))
     assert manifests.placement.group_ranks(0, "ep") == list(range(32))
     assert manifests.placement.group_ranks(32, "attn_dp") == list(range(32, 104))
+    assert manifests.placement.group_ranks(32, "tp") == [32]
     assert manifests.placement.group_ranks(32, "dense_dp") == [32]
     assert manifests.placement.group_ranks(32, "ep") == list(range(32, 104))
 
@@ -260,6 +263,8 @@ def test_session_conserves_stable_identities_and_scheduler_batches(
     assert len(fake_pool_engines.launches) == 2
     assert fake_pool_engines.launches[0].expert_parallel_ranks == tuple(range(8))
     assert fake_pool_engines.launches[1].expert_parallel_ranks == tuple(range(8, 16))
+    assert fake_pool_engines.launches[0].tensor_parallel_ranks == (0,)
+    assert fake_pool_engines.launches[1].tensor_parallel_ranks == (8,)
 
 
 def test_handoff_constant_moves_ttft_alone(tmp_path, fake_pool_engines):

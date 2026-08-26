@@ -429,6 +429,9 @@ def _pool_metadata(session: Any) -> dict[str, Any]:
         "scheduler_types": [engine.scheduler_type for engine in engines],
         "worker_types": [engine.worker_type for engine in engines],
         "simulated_worker_counts": [engine.simulated_worker_count for engine in engines],
+        "tensor_parallel_sizes": [
+            len(engine.tensor_parallel_ranks) for engine in engines
+        ],
         "attention_data_parallel_sizes": [
             len(engine.attention_data_parallel_ranks) for engine in engines
         ],
@@ -460,9 +463,11 @@ def _flagship_render() -> dict[str, Any]:
         "gpus": sum(len(node.gpus) for node in manifests.fabric.nodes),
         "nics": sum(len(node.nics) for node in manifests.fabric.nodes),
         "prefill_attn_dp": placement.group_ranks(0, "attn_dp"),
+        "prefill_tp": placement.group_ranks(0, "tp"),
         "prefill_dense_dp": placement.group_ranks(0, "dense_dp"),
         "prefill_ep": placement.group_ranks(0, "ep"),
         "decode_attn_dp": placement.group_ranks(32, "attn_dp"),
+        "decode_tp": placement.group_ranks(32, "tp"),
         "decode_dense_dp": placement.group_ranks(32, "dense_dp"),
         "decode_ep": placement.group_ranks(32, "ep"),
         "core54_claimed_ranks": 96,
@@ -725,6 +730,7 @@ def analyze_observation(observation: dict[str, Any]) -> dict[str, Any]:
             and set(pool["scheduler_types"]) == {"Scheduler"}
             and set(pool["worker_types"]) == {"SimTpModelWorker"}
             and set(pool["simulated_worker_counts"]) == {8}
+            and set(pool["tensor_parallel_sizes"]) == {1}
         )
         if not pool_held:
             fatal.append({"guard": "pool-process-or-runtime-identity", "pool": pool})
@@ -793,9 +799,11 @@ def analyze_observation(observation: dict[str, Any]) -> dict[str, Any]:
         flagship["nodes"] == 13
         and flagship["ranks"] == flagship["gpus"] == flagship["nics"] == 104
         and flagship["prefill_attn_dp"] == list(range(32))
+        and flagship["prefill_tp"] == [0]
         and flagship["prefill_dense_dp"] == list(range(32))
         and flagship["prefill_ep"] == list(range(32))
         and flagship["decode_attn_dp"] == list(range(32, 104))
+        and flagship["decode_tp"] == [32]
         and flagship["decode_dense_dp"] == [32]
         and flagship["decode_ep"] == list(range(32, 104))
         and flagship["core54_claimed_ranks"] == 96
