@@ -1,0 +1,1468 @@
+{
+  "acceptance_status": "candidate",
+  "entries": [
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          32
+        ],
+        [
+          "expert_parallel",
+          32
+        ],
+        [
+          "computed_new_tokens",
+          16384
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 1363249960000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": "retained reduced-depth service multiplied by 61 / 4",
+        "service_class": "DECLARED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "deepseek-v3-full61-vllm-ep32-prefill-r16-l1024-t16384",
+      "uncertainty": 0.0
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          32
+        ],
+        [
+          "expert_parallel",
+          32
+        ],
+        [
+          "computed_new_tokens",
+          16384
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 1595133392750,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": "retained reduced-depth service multiplied by 61 / 4",
+        "service_class": "DECLARED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "held-out"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "deepseek-v3-full61-vllm-ep32-prefill-r4-l4096-t16384",
+      "uncertainty": 0.0
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          32
+        ],
+        [
+          "expert_parallel",
+          32
+        ],
+        [
+          "computed_new_tokens",
+          16384
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 1420296672000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": "retained reduced-depth service multiplied by 61 / 4",
+        "service_class": "DECLARED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "deepseek-v3-full61-vllm-ep32-prefill-r8-l2048-t16384",
+      "uncertainty": 0.0
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          72
+        ],
+        [
+          "expert_parallel",
+          72
+        ],
+        [
+          "batch_size",
+          32
+        ],
+        [
+          "kv_length_0000",
+          2000
+        ],
+        [
+          "kv_length_0001",
+          2000
+        ],
+        [
+          "kv_length_0002",
+          2000
+        ],
+        [
+          "kv_length_0003",
+          2000
+        ],
+        [
+          "kv_length_0004",
+          2000
+        ],
+        [
+          "kv_length_0005",
+          2000
+        ],
+        [
+          "kv_length_0006",
+          2000
+        ],
+        [
+          "kv_length_0007",
+          2000
+        ],
+        [
+          "kv_length_0008",
+          2000
+        ],
+        [
+          "kv_length_0009",
+          2000
+        ],
+        [
+          "kv_length_0010",
+          2000
+        ],
+        [
+          "kv_length_0011",
+          2000
+        ],
+        [
+          "kv_length_0012",
+          2000
+        ],
+        [
+          "kv_length_0013",
+          2000
+        ],
+        [
+          "kv_length_0014",
+          2000
+        ],
+        [
+          "kv_length_0015",
+          2000
+        ],
+        [
+          "kv_length_0016",
+          2000
+        ],
+        [
+          "kv_length_0017",
+          2000
+        ],
+        [
+          "kv_length_0018",
+          2000
+        ],
+        [
+          "kv_length_0019",
+          2000
+        ],
+        [
+          "kv_length_0020",
+          2000
+        ],
+        [
+          "kv_length_0021",
+          2000
+        ],
+        [
+          "kv_length_0022",
+          2000
+        ],
+        [
+          "kv_length_0023",
+          2000
+        ],
+        [
+          "kv_length_0024",
+          2000
+        ],
+        [
+          "kv_length_0025",
+          2000
+        ],
+        [
+          "kv_length_0026",
+          2000
+        ],
+        [
+          "kv_length_0027",
+          2000
+        ],
+        [
+          "kv_length_0028",
+          2000
+        ],
+        [
+          "kv_length_0029",
+          2000
+        ],
+        [
+          "kv_length_0030",
+          2000
+        ],
+        [
+          "kv_length_0031",
+          2000
+        ]
+      ],
+      "duration_ps": 28604120000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": "retained reduced-depth service multiplied by 61 / 4",
+        "service_class": "DECLARED",
+        "source_sha256s": [
+          "0915df1850d2b9cefa13bcc246d5a6640deb94e102a8075908a4d8a93c140c58",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "c4d8ece981478ce57ebca95f7f2f168865713b66e87ed21a1d3f76976e834b7c",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "deepseek-v3-full61-vllm-ep72-decode-b32-c2000",
+      "uncertainty": 0.0
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "computed_new_tokens",
+          16384
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 89393440000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "deepseek-v3-reduced4-vllm-ep32-prefill-r16-l1024-t16384",
+      "uncertainty": 0.0
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "computed_new_tokens",
+          16384
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 104598911000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "held-out"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "deepseek-v3-reduced4-vllm-ep32-prefill-r4-l4096-t16384",
+      "uncertainty": 0.0
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "computed_new_tokens",
+          16384
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 93134208000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "1d0e01e192516cd8211de6c79d620ba24b4ab0831a827cc564edc930a27a079a",
+          "59af4fa7d0ad13aea52321c6b72043d608a87588aa50a9c541127d9a440254eb",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "deepseek-v3-reduced4-vllm-ep32-prefill-r8-l2048-t16384",
+      "uncertainty": 0.0
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "batch_size",
+          32
+        ],
+        [
+          "kv_length_0000",
+          2000
+        ],
+        [
+          "kv_length_0001",
+          2000
+        ],
+        [
+          "kv_length_0002",
+          2000
+        ],
+        [
+          "kv_length_0003",
+          2000
+        ],
+        [
+          "kv_length_0004",
+          2000
+        ],
+        [
+          "kv_length_0005",
+          2000
+        ],
+        [
+          "kv_length_0006",
+          2000
+        ],
+        [
+          "kv_length_0007",
+          2000
+        ],
+        [
+          "kv_length_0008",
+          2000
+        ],
+        [
+          "kv_length_0009",
+          2000
+        ],
+        [
+          "kv_length_0010",
+          2000
+        ],
+        [
+          "kv_length_0011",
+          2000
+        ],
+        [
+          "kv_length_0012",
+          2000
+        ],
+        [
+          "kv_length_0013",
+          2000
+        ],
+        [
+          "kv_length_0014",
+          2000
+        ],
+        [
+          "kv_length_0015",
+          2000
+        ],
+        [
+          "kv_length_0016",
+          2000
+        ],
+        [
+          "kv_length_0017",
+          2000
+        ],
+        [
+          "kv_length_0018",
+          2000
+        ],
+        [
+          "kv_length_0019",
+          2000
+        ],
+        [
+          "kv_length_0020",
+          2000
+        ],
+        [
+          "kv_length_0021",
+          2000
+        ],
+        [
+          "kv_length_0022",
+          2000
+        ],
+        [
+          "kv_length_0023",
+          2000
+        ],
+        [
+          "kv_length_0024",
+          2000
+        ],
+        [
+          "kv_length_0025",
+          2000
+        ],
+        [
+          "kv_length_0026",
+          2000
+        ],
+        [
+          "kv_length_0027",
+          2000
+        ],
+        [
+          "kv_length_0028",
+          2000
+        ],
+        [
+          "kv_length_0029",
+          2000
+        ],
+        [
+          "kv_length_0030",
+          2000
+        ],
+        [
+          "kv_length_0031",
+          2000
+        ]
+      ],
+      "duration_ps": 1875680000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0915df1850d2b9cefa13bcc246d5a6640deb94e102a8075908a4d8a93c140c58",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "c4d8ece981478ce57ebca95f7f2f168865713b66e87ed21a1d3f76976e834b7c",
+          "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "deepseek-v3-reduced4-vllm-ep72-decode-b32-c2000",
+      "uncertainty": 0.0
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "batch_size",
+          1
+        ],
+        [
+          "kv_length_0000",
+          16
+        ]
+      ],
+      "duration_ps": 1221632000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-eager-decode-b1-kv16",
+      "uncertainty": 0.001883
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "batch_size",
+          32
+        ],
+        [
+          "kv_length_0000",
+          16
+        ],
+        [
+          "kv_length_0001",
+          16
+        ],
+        [
+          "kv_length_0002",
+          16
+        ],
+        [
+          "kv_length_0003",
+          16
+        ],
+        [
+          "kv_length_0004",
+          16
+        ],
+        [
+          "kv_length_0005",
+          16
+        ],
+        [
+          "kv_length_0006",
+          16
+        ],
+        [
+          "kv_length_0007",
+          16
+        ],
+        [
+          "kv_length_0008",
+          16
+        ],
+        [
+          "kv_length_0009",
+          16
+        ],
+        [
+          "kv_length_0010",
+          16
+        ],
+        [
+          "kv_length_0011",
+          16
+        ],
+        [
+          "kv_length_0012",
+          16
+        ],
+        [
+          "kv_length_0013",
+          16
+        ],
+        [
+          "kv_length_0014",
+          16
+        ],
+        [
+          "kv_length_0015",
+          16
+        ],
+        [
+          "kv_length_0016",
+          16
+        ],
+        [
+          "kv_length_0017",
+          16
+        ],
+        [
+          "kv_length_0018",
+          16
+        ],
+        [
+          "kv_length_0019",
+          16
+        ],
+        [
+          "kv_length_0020",
+          16
+        ],
+        [
+          "kv_length_0021",
+          16
+        ],
+        [
+          "kv_length_0022",
+          16
+        ],
+        [
+          "kv_length_0023",
+          16
+        ],
+        [
+          "kv_length_0024",
+          16
+        ],
+        [
+          "kv_length_0025",
+          16
+        ],
+        [
+          "kv_length_0026",
+          16
+        ],
+        [
+          "kv_length_0027",
+          16
+        ],
+        [
+          "kv_length_0028",
+          16
+        ],
+        [
+          "kv_length_0029",
+          16
+        ],
+        [
+          "kv_length_0030",
+          16
+        ],
+        [
+          "kv_length_0031",
+          16
+        ]
+      ],
+      "duration_ps": 2195360000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "held-out"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-eager-decode-b32-kv16",
+      "uncertainty": 0.000939
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "batch_size",
+          8
+        ],
+        [
+          "kv_length_0000",
+          16
+        ],
+        [
+          "kv_length_0001",
+          16
+        ],
+        [
+          "kv_length_0002",
+          16
+        ],
+        [
+          "kv_length_0003",
+          16
+        ],
+        [
+          "kv_length_0004",
+          16
+        ],
+        [
+          "kv_length_0005",
+          16
+        ],
+        [
+          "kv_length_0006",
+          16
+        ],
+        [
+          "kv_length_0007",
+          16
+        ]
+      ],
+      "duration_ps": 2035072000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-eager-decode-b8-kv16",
+      "uncertainty": 0.002702
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "computed_new_tokens",
+          128
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 2217696000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-eager-prefill-l128",
+      "uncertainty": 0.001306
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "computed_new_tokens",
+          2048
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 6919552000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "held-out"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-eager-prefill-l2048",
+      "uncertainty": 0.003004
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "computed_new_tokens",
+          512
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 3059520000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "0175596768eefe15a949e52cd54a8589601ad5a4c6f93093f3921dafd74272c8",
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "5ea26aadf0bad9979380dc23495879ab0d9003b298b3d3bcfb451e2316ceaef3",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-eager-prefill-l512",
+      "uncertainty": 0.001536
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "batch_size",
+          1
+        ],
+        [
+          "kv_length_0000",
+          16
+        ]
+      ],
+      "duration_ps": 1110576000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-graph-decode-b1-kv16",
+      "uncertainty": 0.004232
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "batch_size",
+          32
+        ],
+        [
+          "kv_length_0000",
+          16
+        ],
+        [
+          "kv_length_0001",
+          16
+        ],
+        [
+          "kv_length_0002",
+          16
+        ],
+        [
+          "kv_length_0003",
+          16
+        ],
+        [
+          "kv_length_0004",
+          16
+        ],
+        [
+          "kv_length_0005",
+          16
+        ],
+        [
+          "kv_length_0006",
+          16
+        ],
+        [
+          "kv_length_0007",
+          16
+        ],
+        [
+          "kv_length_0008",
+          16
+        ],
+        [
+          "kv_length_0009",
+          16
+        ],
+        [
+          "kv_length_0010",
+          16
+        ],
+        [
+          "kv_length_0011",
+          16
+        ],
+        [
+          "kv_length_0012",
+          16
+        ],
+        [
+          "kv_length_0013",
+          16
+        ],
+        [
+          "kv_length_0014",
+          16
+        ],
+        [
+          "kv_length_0015",
+          16
+        ],
+        [
+          "kv_length_0016",
+          16
+        ],
+        [
+          "kv_length_0017",
+          16
+        ],
+        [
+          "kv_length_0018",
+          16
+        ],
+        [
+          "kv_length_0019",
+          16
+        ],
+        [
+          "kv_length_0020",
+          16
+        ],
+        [
+          "kv_length_0021",
+          16
+        ],
+        [
+          "kv_length_0022",
+          16
+        ],
+        [
+          "kv_length_0023",
+          16
+        ],
+        [
+          "kv_length_0024",
+          16
+        ],
+        [
+          "kv_length_0025",
+          16
+        ],
+        [
+          "kv_length_0026",
+          16
+        ],
+        [
+          "kv_length_0027",
+          16
+        ],
+        [
+          "kv_length_0028",
+          16
+        ],
+        [
+          "kv_length_0029",
+          16
+        ],
+        [
+          "kv_length_0030",
+          16
+        ],
+        [
+          "kv_length_0031",
+          16
+        ]
+      ],
+      "duration_ps": 2082912000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "452bde33ab070843223cd3aeddeb257995d23a0cf41dc108a309d59d50c55034",
+          "7560d065c09f79b1e11646c3c118ca194f2b5a79f3c06bcdd8b6c35906e90280",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+        ],
+        "split": "held-out"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-graph-decode-b32-kv16",
+      "uncertainty": 0.002896
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "batch_size",
+          8
+        ],
+        [
+          "kv_length_0000",
+          16
+        ],
+        [
+          "kv_length_0001",
+          16
+        ],
+        [
+          "kv_length_0002",
+          16
+        ],
+        [
+          "kv_length_0003",
+          16
+        ],
+        [
+          "kv_length_0004",
+          16
+        ],
+        [
+          "kv_length_0005",
+          16
+        ],
+        [
+          "kv_length_0006",
+          16
+        ],
+        [
+          "kv_length_0007",
+          16
+        ]
+      ],
+      "duration_ps": 1892831500,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-graph-decode-b8-kv16",
+      "uncertainty": 0.001538
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "computed_new_tokens",
+          128
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 2127104000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-graph-prefill-l128",
+      "uncertainty": 0.001243
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "computed_new_tokens",
+          2048
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 6652928000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "held-out"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-graph-prefill-l2048",
+      "uncertainty": 0.001619
+    },
+    {
+      "config": [
+        [
+          "tensor_parallel",
+          1
+        ],
+        [
+          "pipeline_parallel",
+          1
+        ],
+        [
+          "data_parallel",
+          1
+        ],
+        [
+          "expert_parallel",
+          1
+        ],
+        [
+          "computed_new_tokens",
+          512
+        ],
+        [
+          "existing_context_tokens",
+          0
+        ]
+      ],
+      "duration_ps": 2979456000,
+      "evidence": {
+        "component_class": "DISCLOSED",
+        "derivation": null,
+        "service_class": "MEASURED",
+        "source_sha256s": [
+          "31986b61c620c8380e05de0cad7aeb73a06985741a28716e05624b05f879c175",
+          "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798",
+          "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8",
+          "e4bb0ac5907b9399168d2f1b0398e7b439d73efe426d239ccd17843789057632",
+          "f014bf183645f5a218285201b4046344026922a96cdc7885001ff23f974a5a10"
+        ],
+        "split": "calibration"
+      },
+      "gpu": "NVIDIA GH200 120GB",
+      "kernel": "granite-3.0-1b-a400m-instruct-vllm-graph-prefill-l512",
+      "uncertainty": 0.001717
+    }
+  ],
+  "lookup_record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+  "provenance": {
+    "created": "2026-08-26",
+    "gpu": "NVIDIA GH200 120GB",
+    "references": [
+      "record-sha256:ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52"
+    ],
+    "source": "capture-candidate",
+    "version": "simllm-kernel-cycle-lut-v1"
+  },
+  "schema": "simllm-profile-table-v1"
+}

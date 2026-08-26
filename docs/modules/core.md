@@ -1326,6 +1326,18 @@ stays open through VLLM-39; see
   TRAF-61 and the GH200-anchored campaign tables; a bar this task cannot
   meet is reported as a refutation with findings, never absorbed by
   loosening the frozen anchors.
+- CORE-56 (Completeness; P1; M): bind the content-addressed local Hopper
+  candidate into the CORE-54 flagship after CORE-53's generic seam lands.
+  Selection must opt into candidate status explicitly and pin lookup digest
+  `ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52`;
+  propagate each `MEASURED`, `DECLARED` and `DISCLOSED` class into run
+  provenance, price only exact present keys, and reject MTP or any other
+  absent shape without interpolation. Acceptance requires the four declared
+  full-depth per-rank values to be selected exactly, candidate status to be
+  visible in the flagship result, a wrong digest or acceptance status to fail
+  closed, and the existing roofline comparator to remain byte-identical when
+  candidate selection is disabled. This task does not validate the prices or
+  relax CORE-54's held-out anchor and uncertainty bars.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool

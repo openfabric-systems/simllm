@@ -132,10 +132,10 @@
     },
     "deepseek_full": {
       "family": "routed",
-      "name": "deepseek-ai/DeepSeek-V3-declared-depth-61",
+      "name": "deepseek-ai/DeepSeek-V3",
       "revision": "e815299b0bcbac849fa540c768ef21845365c9eb",
       "config_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
-      "weights_sha256": null
+      "weights_sha256": "ec8b878368c5fdb9f3288bd3a36a723a1637ec76464135a3f5b2e9aeff4072b4"
     }
   },
   "granite_cells": [

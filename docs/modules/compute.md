@@ -1788,6 +1788,16 @@ SGLang EP32 prefill and EP72 decode shapes. See
   evidence only: no production framework kernel, no dynamic SASS, no Accel-Sim
   calibration and no held-out kernel matrix, so COMP-1 stays open on its first
   blocker.
+  The candidate [local Hopper campaign](../../examples/hopper_kernel_cycle_candidate_v1/RESULTS.md)
+  now narrows that blocker for exact retained cells only. It publishes 12
+  Granite TP1 Nsys service rows and four reduced-depth DeepSeek TP1 rows as
+  `MEASURED`, plus four full-depth DeepSeek rows as the declared `61 / 4`
+  projection. Its held-out rows use no fitted parameter, and its service clears
+  the frozen physical floors. It is not the complete target-architecture
+  evidence this task requires: the 1,212-cell registered Granite grid, MTP,
+  full-depth DeepSeek silicon, other TP widths, retained expert loads, GH200
+  counters and immutable held-out kernel matrix remain absent. The record
+  therefore stays candidate and COMP-1 remains open.
   The [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
   is reviewed `VOID` and therefore closes nothing, but its retained evidence
   narrows the surrogate question further. Its measured HBM roof is 1818.21 GB/s,
@@ -1875,6 +1885,16 @@ SGLang EP32 prefill and EP72 decode shapes. See
   constants; and one `cudaEventRecord` placed between two consecutive launches
   costs 2.34 microseconds of device time, so per-kernel event instrumentation
   is not a free observation of a short kernel.
+  The local Hopper campaign adds a partial GH200 framework lane without
+  closing this task. Its accepted lean pulls have one 1,980 MHz SM clock bin,
+  one 2,619 MHz DRAM clock bin and sub-0.5-percent service CV across the 12
+  Granite scouting rows, but the site denied the GH200 counter pass and the
+  registered environment sweep did not run before Merlin became unreachable.
+  Nsys is service authority for those exact rows; A100 attribution remains a
+  disclosed transferred bound. COMP-71 owns campaign-specific attribution and
+  route evidence, and COMP-72 owns resumable registered execution when the
+  cluster returns. COMP-5 remains open on GH200 counter qualification and the
+  full registered stability sweep.
 - COMP-7 (Precision; P1; M): MoE compute assumes perfectly balanced routing:
   every rank computes `top_k` experts' flops for its own tokens and streams all
   resident experts once. Consume the landed `simllm-routed-experts-v1`
@@ -2206,6 +2226,17 @@ SGLang EP32 prefill and EP72 decode shapes. See
   conservation over accepted and rejected proposal patterns, a separately
   frozen interpretation of the disclosure's simulated-MTP arm, a signed
   TTFT/TPOT effect, and byte-identical ordinary cases when MTP is disabled.
+- COMP-71 (Precision; P1; M): replace the local Hopper candidate's aggregate
+  elapsed-clock component representation with campaign-specific GH200
+  attribution and routed-load evidence. The candidate preserves exact Nsys
+  noncollective service but its component class is `DISCLOSED` from the A100
+  counter pass, and its routed keys record expert loads as `not-captured`.
+  On a GH200 lane that grants the counters required by COMP-66, retain the
+  exact SASS join, counter permission record, per-cell expert loads and
+  compute, memory-stall and fixed categories for the emitted Granite and
+  DeepSeek shapes. Acceptance requires category conservation inside the frozen
+  uncertainty, exact route-load conservation, no service-duration change and
+  byte-identical candidate selection when the enriched path is disabled.
 
 ### Completeness
 
@@ -2567,6 +2598,12 @@ SGLang EP32 prefill and EP72 decode shapes. See
   COMP-66 completing the two explicitly residual attribution paths. COMP-1
   keeps numerical acceptance; COMP-45's cycle-normalized publication rule is
   satisfied by the per-domain component form.
+  The [local Hopper candidate](../../examples/hopper_kernel_cycle_candidate_v1/RESULTS.md)
+  carries this clause as far as the lean pull allows: one canonical candidate
+  compiles 12 Granite and eight DeepSeek service entries into both established
+  forms, with per-entry `MEASURED`, `DECLARED` and `DISCLOSED` classes and no
+  imputed absent row. The registered campaign itself did not run, so COMP-64
+  remains open through COMP-72.
 - COMP-65 (Completeness; P1; L): add static decode-graph inference where a
   pinned framework exposes a compile product. Before a GPU replay, read the
   framework-owned compiled graph and emit the ordered kernel implementation
@@ -2589,6 +2626,18 @@ SGLang EP32 prefill and EP72 decode shapes. See
   whose category cycles conserve the sampled total within the frozen sampling
   uncertainty, one denied fixture, and exact bypass equivalence for every
   timestamp, component and compiled service value.
+- COMP-72 (Completeness; P1; L): execute the deferred registered Hopper
+  campaign when Merlin is reachable, under
+  `examples/hopper_kernel_cycle_candidate_v1/expectations.json` without an
+  expectations amendment after a scored cell. Render the Granite plan with
+  `.venv/bin/python offline/calibration/kernel_cycle_capture.py plan --suite offline/calibration/suites/kernel-cycle-v1/suite.json --model ibm-granite/granite-3.0-1b-a400m-instruct --model-revision ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445 --model-family routed --max-context-tokens 4096 --output $SIMLLM_CAMPAIGN_RUN_ROOT/granite-plan.json`.
+  Resume with `.venv/bin/python offline/calibration/kernel_cycle_capture.py run-cell --plan $SIMLLM_CAMPAIGN_RUN_ROOT/granite-plan.json --cell-id $SIMLLM_CAMPAIGN_CELL_ID --output-dir $SIMLLM_CAMPAIGN_RUN_ROOT/cells/$SIMLLM_CAMPAIGN_CELL_ID`,
+  selecting the first cell without a digest-complete directory and never
+  overwriting a completed cell. Run the exact DeepSeek base, decode and MTP
+  `gh-hourly` submissions pinned in the same freeze. Stop cleanly on SSH loss.
+  Acceptance requires all registered Granite cells plus the exact DeepSeek
+  physical cells, retained source and output digests, and a resumable campaign
+  record whose completed-cell prefix survives interruption byte for byte.
 
 ### Uncategorized
 
