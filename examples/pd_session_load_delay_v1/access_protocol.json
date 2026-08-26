@@ -41,8 +41,8 @@
   "required_provenance_fields": [
     "acceptance_status",
     "campaign_id",
-    "coverage",
-    "device.device_kind_id"
+    "device.device_kind_id",
+    "entries[].coverage"
   ],
   "access_log_schema": "simllm-pd-session-load-delay-access-v1",
   "pre_protocol_incident": {

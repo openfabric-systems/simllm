@@ -25,6 +25,7 @@ def _reader():
 def _entry(batch_size: int, *, split: str = "calibration") -> dict:
     return {
         "implementation_id": f"granite-graph-decode-b{batch_size}-kv16",
+        "coverage": "complete-kernel-stream",
         "key": {
             "model_identity": {
                 "name": "ibm-granite/granite-3.0-1b-a400m-instruct"
@@ -48,7 +49,6 @@ def _record() -> bytes:
             "acceptance_status": "candidate",
             "campaign_id": "candidate-campaign",
             "capture_protocol": {"unselected": "skipped"},
-            "coverage": "partial-registered-grid",
             "device": {
                 "architecture": "sm90",
                 "device_kind_id": "nvidia-hopper-sm90",
@@ -81,7 +81,8 @@ def test_reader_returns_only_two_permitted_rows_and_stops_before_held_out() -> N
     ]
     assert projection["acceptance_status"] == "candidate"
     assert projection["device_kind_id"] == "nvidia-hopper-sm90"
-    assert len(accesses) == 6
+    assert len(accesses) == 5
+    assert projection["coverage"] == "complete-kernel-stream"
     assert consumed < len(payload)
     unread = payload[consumed:]
     assert b'"batch_size": 32' in unread
@@ -94,7 +95,6 @@ def test_reader_rejects_if_second_row_is_the_held_out_shape() -> None:
         {
             "acceptance_status": "candidate",
             "campaign_id": "candidate-campaign",
-            "coverage": "partial-registered-grid",
             "device": {"device_kind_id": "nvidia-hopper-sm90"},
             "entries": [_entry(1), _entry(32, split="held-out")],
         },

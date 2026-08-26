@@ -22,7 +22,6 @@ RECORD_LABEL = "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json"
 TOP_LEVEL_FIELDS = (
     "acceptance_status",
     "campaign_id",
-    "coverage",
 )
 DEVICE_FIELD = "device_kind_id"
 ENTRY_SELECTORS = (
@@ -229,6 +228,7 @@ def _validate_entry(entry: Mapping[str, Any], batch_size: int) -> None:
         "per_request_kv_lengths": shape.get("per_request_kv_lengths") == expected_kv,
         "service_class": evidence.get("service_class") == "MEASURED",
         "split": evidence.get("split") == "calibration",
+        "coverage": entry.get("coverage") == "complete-kernel-stream",
     }
     failed = sorted(name for name, held in checks.items() if not held)
     if failed:
@@ -276,6 +276,7 @@ def extract_surface_projection(
                 if index == 0:
                     _expect(cursor, b",")
             projection["entries"] = entries
+            projection["coverage"] = entries[0]["coverage"]
             return projection, access_offsets, cursor.bytes_consumed
         else:
             _skip_value(cursor)

@@ -11,9 +11,10 @@ MEASURED calibration evidence. It stops at the closing byte of entry 1.
 
 The next Granite batch-32 row is the source study's held-out shape and must not
 be read. DeepSeek rows and all later record fields must not be read. The reader
-returns only the four required top-level provenance fields and the two
-permitted rows, never the whole record, and appends one LF-terminated access
-event for every returned selector.
+returns only the three required top-level provenance fields and the two
+permitted rows, whose row-local coverage fields complete provenance. It never
+returns the whole record and appends one LF-terminated access event for every
+returned selector.
 
 Initial reconnaissance violated the required ordering: a broad repository
 `rg` scanned the candidate path family before this reader existed and surfaced

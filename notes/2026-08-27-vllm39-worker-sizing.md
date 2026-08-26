@@ -16,8 +16,9 @@ The lane is limited to the `pd_session_concurrent` lineage and the vLLM adapter
 documentation. The parallel analytical-gate and `deployment_curve_v1` work,
 plot machinery, model-weight downloads, web access, remote Git mutation,
 deletion and README prose outside mechanical task-progress or open-count cells
-are excluded. Bulk run evidence belongs under
-`/data3/yifeng/simllm-dev/wave-runs/vllm39/`.
+are excluded. Bulk run evidence belongs under `$SIMLLM_VLLM39_RUN_ROOT`;
+dispatch binds that variable to the requested external `wave-runs/vllm39`
+directory.
 
 ## Exposure protocol and incident
 
