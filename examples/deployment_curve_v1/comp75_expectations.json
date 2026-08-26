@@ -1,0 +1,308 @@
+{
+  "calibration_split": {
+    "forbidden_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k",
+      "sglang_decode_simulated_mtp"
+    ],
+    "held_out_access_ledger": [],
+    "visible_anchor_ids": [
+      "sglang_prefill_1k"
+    ]
+  },
+  "chronology": {
+    "allowlist_commit": "a219ac539913bbc959b6d02a09b6deea91133173",
+    "allowlist_committed_before_source_inspection": true,
+    "framework_evaluation_tables_accessed": false,
+    "held_out_numeric_values_accessed": false,
+    "mechanism_service_derived_before_comparison": true,
+    "scored_comparison_performed": false,
+    "scored_flagship_rerun_performed": false,
+    "visible_calibration_comparison_performed": false,
+    "visible_calibration_numeric_values_accessed": false,
+    "void_core60_external_source_values_accessed": false,
+    "web_pages_fetched": false
+  },
+  "component_evidence": {
+    "candidate_compute_record": {
+      "entry_index": 0,
+      "implementation_id": "deepseek-v3-full61-vllm-ep32-prefill-r16-l1024-t16384",
+      "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+      "service_ps": 1363249960000,
+      "sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52"
+    },
+    "core59_expectations": {
+      "path": "examples/deployment_curve_v1/core59_expectations.json",
+      "sha256": "ac31943849b118b0d29b60f43c3ca239f66b070720bac4192b13cf57d6cda8e3"
+    },
+    "fabric_sensitivity": {
+      "path": "examples/merlin_ss_fabric_calibration_v1/expectations.md",
+      "rate_bits_per_second": 200000000000,
+      "sha256": "7109a83484ba1342c48eda6a99c78731a936aa98c60a9c7c5ccc4026b6f31000"
+    },
+    "htsim": {
+      "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+      "profile": "rnic-nn",
+      "txt2bin_sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b"
+    },
+    "model_extraction": {
+      "path": "examples/model_extraction_deepseek_v3_v1/expectations.json",
+      "sha256": "76baa3cc897c4a04b1e13db46f45e6183f3b7ea4d100f6216d90bd37ba3d1933"
+    },
+    "packet_preregistration_run": {
+      "external_root_token": "<COMP75_RUN_ROOT>",
+      "failed_attempt_retained": "preregistered-packet-service-a219ac5",
+      "run_root": "preregistered-packet-service-a219ac5-attempt2"
+    },
+    "placement_point": {
+      "path": "examples/disaggregated_target_topology_v1/expectations.md",
+      "rate_bits_per_second": 400000000000,
+      "sha256": "c01b1b7f13d4b16404ee0230ad014327a254f3f22ea3e8cc794dedd787517400"
+    }
+  },
+  "composition": {
+    "candidate_compute_service_ps": 1363249960000,
+    "operator": "max",
+    "selected_arm": "point",
+    "service_arms": [
+      {
+        "communication_service_ps": {
+          "lower": 2286179760360,
+          "selected": 2286179760360,
+          "upper": 2286179762680
+        },
+        "combine_phase_service_ps": {
+          "lower": 26006336300,
+          "selected": 26006336300,
+          "upper": 26006336320
+        },
+        "dispatch_phase_service_ps": {
+          "lower": 13410556120,
+          "selected": 13410556120,
+          "upper": 13410556140
+        },
+        "exposed_incremental_service_ps": {
+          "lower": 922929800360,
+          "selected": 922929800360,
+          "upper": 922929802680
+        },
+        "fabric_link_rate_bits_per_second": 400000000000,
+        "hidden_compute_service_ps": 1363249960000,
+        "id": "point",
+        "total_step_service_ps": {
+          "lower": 2286179760360,
+          "selected": 2286179760360,
+          "upper": 2286179762680
+        }
+      },
+      {
+        "communication_service_ps": {
+          "lower": 4572127520720,
+          "selected": 4572127520720,
+          "upper": 4572127525360
+        },
+        "combine_phase_service_ps": {
+          "lower": 52010672600,
+          "selected": 52010672600,
+          "upper": 52010672640
+        },
+        "dispatch_phase_service_ps": {
+          "lower": 26819112240,
+          "selected": 26819112240,
+          "upper": 26819112280
+        },
+        "exposed_incremental_service_ps": {
+          "lower": 3208877560720,
+          "selected": 3208877560720,
+          "upper": 3208877565360
+        },
+        "fabric_link_rate_bits_per_second": 200000000000,
+        "hidden_compute_service_ps": 1363249960000,
+        "id": "sensitivity",
+        "total_step_service_ps": {
+          "lower": 4572127520720,
+          "selected": 4572127520720,
+          "upper": 4572127525360
+        }
+      }
+    ],
+    "two_batch_interleaving": {
+      "copies_of_operation_sequence": 2,
+      "stage_offsets": [
+        0,
+        "tbo_delta_stages"
+      ]
+    }
+  },
+  "decode_disposition": {
+    "mechanism_count": 0,
+    "owner": "SGL-38",
+    "pricing_changed": false,
+    "signed_movement": "unchanged"
+  },
+  "parameters": {
+    "fitted": [],
+    "free": [],
+    "rejected": [
+      "communication_scale_factor",
+      "overlap_fraction",
+      "destination_dedup_factor"
+    ]
+  },
+  "preservation_locks": {
+    "void_core60_artifacts": [
+      {
+        "path": "examples/deployment_curve_v1/core60_calibration_result.json",
+        "sha256": "85bf16992725b6bc56592b1dba46b69b0238c7992fb5bbdb06e2543b7b6a357e"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_calibration_result.md",
+        "sha256": "9e48a3f314c3a87b3469c73b67ab30702410d135668d9ca32152c0ff5a7237cd"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_composition.py",
+        "sha256": "6106375f5208181574dec46e01329516ff78bc497cf0d68cfbaef0b948f209e7"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_expectations.json",
+        "sha256": "d588a5df408e55410d8d1c09ef692f929f60393e30695bf46f13ce992b9fd8b0"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_expectations.md",
+        "sha256": "4ccde55a2425963d29379881491d3bf4812542eb9781d716d8355f90a2a9c117"
+      },
+      {
+        "path": "examples/deployment_curve_v1/run_core60_composition.py",
+        "sha256": "6574065214b4d2fb8b717e840c3c440f5c5e6d738d80f003cbaecdc359f72dd3"
+      },
+      {
+        "path": "notes/2026-08-26-core60-worker-sizing.md",
+        "sha256": "4b7f98b1b19193d0e2f4e1677329e68bd2bfee5ed698dd1fe28008a6b9429ce1"
+      },
+      {
+        "path": "tests/test_deployment_curve_core60.py",
+        "sha256": "8a523d6cf4017d9b7a265a2741c7a67a6f524c77aa0ba19f85e22f4cd2b17cf1"
+      }
+    ]
+  },
+  "record_comparison_expectation": {
+    "destination_arithmetic": "reproduce",
+    "max_like_composition": "reproduce",
+    "packet_services": "reproduce",
+    "void_core60_promoted": false
+  },
+  "schema": "simllm-deployment-curve-comp75-expectations-v1",
+  "signed_movement_expectations": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "direction_relative_to_candidate_only": "decrease",
+      "direction_relative_to_core59": "increase",
+      "remaining_error_sign": "not_preregistered_without_visible_target"
+    }
+  ],
+  "source_allowlist": {
+    "commit": "a219ac539913bbc959b6d02a09b6deea91133173",
+    "path": "notes/2026-08-26-comp75-source-allowlist.md",
+    "portable_rendering_sha256": "5d0ef8d86dd105e9e18ddb87d7e6c30b5dcd918bd8ac63ca20ed751e21f33831",
+    "preregistered_sha256": "e5bc633175a1636615c9867a2caa10e591cace4ab40bcef13c18108d77c4190b",
+    "rendering_correction": "The post-inspection edit replaces only the absolute root spelling with SGLANG_SOURCE_ROOT; files and ranges are unchanged."
+  },
+  "source_contracts": [
+    {
+      "contract": "fp8_dispatch",
+      "file_sha256": "17b4caa60c3b1d4da7b146bfaa7726c726988f47b899e8394c7dab4891346ac9",
+      "interpretation": "FP8 dispatch sends one byte per hidden element plus one four-byte scale per 128 elements.",
+      "line_range": "434-468,521-536",
+      "path": "python/sglang/srt/layers/moe/token_dispatcher/deepep.py",
+      "range_sha256s": [
+        "2ea75ae15700740a03694c2bd2a92485f10eb3a8ad978bab3ae4a1e2eb72e562",
+        "0a75748e97acdafddc33a30ee4ae3043fae64b4cf1a531adf0832779847b1902"
+      ]
+    },
+    {
+      "contract": "destination_rank_incidence",
+      "file_sha256": "17b4caa60c3b1d4da7b146bfaa7726c726988f47b899e8394c7dab4891346ac9",
+      "interpretation": "DeepEP derives per-rank token counts and token-in-rank incidence from top-k routing IDs before dispatch.",
+      "line_range": "563-615",
+      "path": "python/sglang/srt/layers/moe/token_dispatcher/deepep.py",
+      "range_sha256": "462866bfa602bc1aceed6104f81ca278d43ed714d2f10d74c64d86fdd0198bb9"
+    },
+    {
+      "contract": "two_batch_stage_interleaving",
+      "file_sha256": "625ce63b0a191c773911270b62ce89b6b4015681060224d48eb0fcdbfdb2dc3f",
+      "interpretation": "Two copies of one operation sequence execute with stage offsets zero and tbo_delta_stages, using distinct dispatchers, before output merge.",
+      "line_range": "880-941,1085-1134",
+      "path": "python/sglang/srt/batch_overlap/two_batch_overlap.py",
+      "range_sha256s": [
+        "4599687f7fad87739bdc5aba91bba758c8fd1f6313ee04a97ddf7159818041f8",
+        "235220c3b206047ff02b108c7a580a79290f382cad234afb12098cccbc8229f9"
+      ]
+    }
+  ],
+  "status": "EXPECTATIONS_ONLY",
+  "task": "COMP-75",
+  "traffic": {
+    "combine": {
+      "fabric_bytes_per_phase": {
+        "lower": 1280125032,
+        "selected": 1280125032,
+        "upper": 1280125056
+      },
+      "local_bytes_per_phase": {
+        "lower": 373369801,
+        "selected": 373369801,
+        "upper": 373369808
+      },
+      "per_pair_bytes": {
+        "exact_denominator": 129313035125,
+        "exact_numerator": 6897369004861554688,
+        "lower": 53338543,
+        "selected": 53338543,
+        "upper": 53338544
+      },
+      "vector_bytes": 14336,
+      "vector_formula": "hidden_size * bf16_bytes_per_element"
+    },
+    "dedup_probability": {
+      "expected_remote_destinations_denominator": 4138017124000,
+      "expected_remote_destinations_numerator": 29130450541729,
+      "expected_unique_destinations_denominator": 129313035125,
+      "expected_unique_destinations_numerator": 939691952959,
+      "p_rank_denominator": 4138017124000,
+      "p_rank_numerator": 939691952959
+    },
+    "dispatch": {
+      "fabric_bytes_per_phase": {
+        "lower": 660064464,
+        "selected": 660064464,
+        "upper": 660064488
+      },
+      "local_bytes_per_phase": {
+        "lower": 192518802,
+        "selected": 192518802,
+        "upper": 192518809
+      },
+      "per_pair_bytes": {
+        "exact_denominator": 129313035125,
+        "exact_numerator": 3556455893131739136,
+        "lower": 27502686,
+        "selected": 27502686,
+        "upper": 27502687
+      },
+      "vector_bytes": 7392,
+      "vector_formula": "hidden_size * fp8_bytes_per_element + hidden_size / fp8_group_elements * fp8_scale_bytes"
+    },
+    "expert_parallel": 32,
+    "fp8_bytes_per_element": 1,
+    "fp8_group_elements": 128,
+    "fp8_scale_bytes": 4,
+    "hidden_size": 7168,
+    "local_peer_count": 7,
+    "logical_experts": 256,
+    "moe_layers": 58,
+    "new_tokens_per_rank": 16384,
+    "remote_peer_count": 24,
+    "same_destination_deduplication": true,
+    "top_k": 8
+  }
+}
