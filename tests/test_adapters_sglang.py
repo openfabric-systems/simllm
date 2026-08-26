@@ -226,6 +226,49 @@ def test_translation_reports_the_radix_hit_exactly_once():
     assert record2.total_new_tokens == 1
 
 
+def test_remote_prefix_changes_only_the_logical_context_projection():
+    translator = SglStepTranslator()
+    translator.register_remote_prefix("decode-request", 2_000)
+    translator.register_remote_prefix("decode-request", 2_000)
+    rows = [
+        BatchRow(
+            rid="decode-request",
+            is_decode=False,
+            num_new_tokens=1,
+            context_length=1,
+        ),
+        BatchRow(
+            rid="local-request",
+            is_decode=False,
+            num_new_tokens=1,
+            context_length=1,
+        ),
+    ]
+
+    record = translator.translate(step_index=0, virtual_time_ps=7, rows=rows)
+
+    assert record.scheduled[0].context_length == 2_001
+    assert record.scheduled[0].num_cached_tokens == 0
+    assert record.scheduled[1].context_length == 1
+    with pytest.raises(ValueError, match="immutable"):
+        translator.register_remote_prefix("decode-request", 1_999)
+
+
+@pytest.mark.parametrize(
+    ("request_id", "num_tokens", "error"),
+    [
+        ("", 1, "nonblank"),
+        ("request", True, "integer"),
+        ("request", 0, "positive"),
+    ],
+)
+def test_remote_prefix_rejects_ambiguous_registration(
+    request_id, num_tokens, error
+):
+    with pytest.raises((TypeError, ValueError), match=error):
+        SglStepTranslator().register_remote_prefix(request_id, num_tokens)
+
+
 def test_mixed_decode_row_never_reports_a_cache_hit():
     translator = SglStepTranslator()
     rows = [

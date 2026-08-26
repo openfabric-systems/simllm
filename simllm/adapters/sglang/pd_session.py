@@ -106,6 +106,7 @@ class SglangPdSessionConfig:
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
     framework_version: str = SGLANG_VERSION
     rpc_timeout_s: int = 300
+    project_remote_kv_length: bool = False
 
     def __post_init__(self) -> None:
         for name in ("model_path", "workdir"):
@@ -145,6 +146,8 @@ class SglangPdSessionConfig:
             raise TypeError("host_model must be HostInitiationModel")
         if not isinstance(self.framework_version, str) or not self.framework_version:
             raise ValueError("framework_version must be a nonblank string")
+        if type(self.project_remote_kv_length) is not bool:
+            raise TypeError("project_remote_kv_length must be a boolean")
         self.host_model.validate_device(self.gpu)
         role_widths = {
             "prefill": self.prefill_engines * self.simulated_gpus_per_engine,
@@ -514,6 +517,11 @@ def _engine_process_main(connection: Any, config: _EngineLaunchConfig) -> None:
                 connection.send({"ok": True})
                 break
             if operation == "submit":
+                if "remote_prefix_tokens" in command:
+                    worker.register_remote_prefix(
+                        command["request_id"],
+                        command["remote_prefix_tokens"],
+                    )
                 request = tokenized_generate_request(
                     request_id=command["request_id"],
                     input_token_ids=command["input_token_ids"],
@@ -668,17 +676,22 @@ class _ProcessPoolEngine:
         request_id: str,
         input_token_ids: Sequence[int],
         max_new_tokens: int,
+        remote_prefix_tokens: int | None = None,
     ) -> None:
         if request_id in self._unfinished:
             raise ValueError(f"request {request_id!r} is already active")
-        self._rpc(
-            {
-                "operation": "submit",
-                "request_id": request_id,
-                "input_token_ids": tuple(input_token_ids),
-                "max_new_tokens": max_new_tokens,
-            }
-        )
+        command = {
+            "operation": "submit",
+            "request_id": request_id,
+            "input_token_ids": tuple(input_token_ids),
+            "max_new_tokens": max_new_tokens,
+        }
+        if remote_prefix_tokens is not None:
+            command["remote_prefix_tokens"] = _positive_int(
+                "remote_prefix_tokens",
+                remote_prefix_tokens,
+            )
+        self._rpc(command)
         self._unfinished.add(request_id)
 
     def step(self, now_ps: int) -> dict[str, Any]:
@@ -953,10 +966,14 @@ class SglangDisaggregatedSession:
         request = state.request
         internal_id = f"{state.decode.engine_id}:decode:{request.request_id}"
         state.decode_record_start = len(state.decode.records)
+        submit_kwargs: dict[str, int] = {}
+        if self.config.project_remote_kv_length:
+            submit_kwargs["remote_prefix_tokens"] = len(request.prompt_token_ids)
         state.decode.submit(
             request_id=internal_id,
             input_token_ids=(state.bootstrap_token_id,),
             max_new_tokens=request.decode_output_tokens,
+            **submit_kwargs,
         )
         state.decode_internal_id = internal_id
         state.join_metadata = {
