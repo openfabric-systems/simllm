@@ -1,0 +1,161 @@
+{
+  "accessed_anchor_ids": [
+    "sglang_prefill_1k",
+    "sglang_decode_standard"
+  ],
+  "calibration_rows": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "baseline_candidate_only": {
+        "denominator": 34081249,
+        "numerator": 3276800000000
+      },
+      "decimal_summary": {
+        "baseline_tokens_per_second_per_node": "96146.711055",
+        "published_tokens_per_second_per_node": "57674.000000",
+        "signed_error_after_percent": "-51.482139",
+        "signed_error_before_percent": "66.707201",
+        "signed_movement_percent": "-70.896361",
+        "updated_tokens_per_second_per_node": "27982.191228"
+      },
+      "mechanism_service_ps": 3320872128000,
+      "prediction": {
+        "contributions": [
+          {
+            "point_service_ps": 1363249960000,
+            "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+            "source_kind": "candidate-record"
+          },
+          {
+            "lower_service_ps": 3320872128000,
+            "selected_service_ps": 3320872128000,
+            "source_id": "prefill_ep32_moe_dispatch_combine_v1",
+            "source_kind": "role-shape-mechanism",
+            "upper_service_ps": 6641512256000
+          }
+        ],
+        "lower": {
+          "denominator": 1000595277,
+          "numerator": 16384000000000
+        },
+        "point": {
+          "denominator": 585515261,
+          "numerator": 16384000000000
+        },
+        "upper": {
+          "denominator": 585515261,
+          "numerator": 16384000000000
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 57674
+      },
+      "signed_movement": {
+        "absolute_tokens_per_second_per_node": {
+          "denominator": 19955091403440989,
+          "numerator": -1360229223628800000000
+        },
+        "direction": "decrease",
+        "relative_to_baseline": {
+          "denominator": 585515261,
+          "numerator": -415109016
+        }
+      },
+      "signed_relative_error_after": {
+        "denominator": 16884503581457,
+        "numerator": -8692503581457
+      },
+      "signed_relative_error_before": {
+        "denominator": 982800977413,
+        "numerator": 655599022587
+      }
+    },
+    {
+      "anchor_id": "sglang_decode_standard",
+      "baseline_candidate_only": {
+        "denominator": 715103,
+        "numerator": 6400000000
+      },
+      "decimal_summary": {
+        "baseline_tokens_per_second_per_node": "8949.759685",
+        "published_tokens_per_second_per_node": "22282.000000",
+        "signed_error_after_percent": "-59.834128",
+        "signed_error_before_percent": "-59.834128",
+        "signed_movement_percent": "0.000000",
+        "updated_tokens_per_second_per_node": "8949.759685"
+      },
+      "mechanism_service_ps": 0,
+      "prediction": {
+        "contributions": [
+          {
+            "point_service_ps": 28604120000,
+            "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+            "source_kind": "candidate-record"
+          },
+          {
+            "lower_service_ps": 0,
+            "selected_service_ps": 0,
+            "source_id": null,
+            "source_kind": "role-shape-mechanism",
+            "upper_service_ps": 0
+          }
+        ],
+        "lower": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        },
+        "point": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        },
+        "upper": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 22282
+      },
+      "signed_movement": {
+        "absolute_tokens_per_second_per_node": {
+          "denominator": 1,
+          "numerator": 0
+        },
+        "direction": "unchanged",
+        "relative_to_baseline": {
+          "denominator": 1,
+          "numerator": 0
+        }
+      },
+      "signed_relative_error_after": {
+        "denominator": 7966962523,
+        "numerator": -4766962523
+      },
+      "signed_relative_error_before": {
+        "denominator": 7966962523,
+        "numerator": -4766962523
+      }
+    }
+  ],
+  "classification": "CALIBRATION_ONLY_NOT_SCORED",
+  "expectations_sha256": "ac31943849b118b0d29b60f43c3ca239f66b070720bac4192b13cf57d6cda8e3",
+  "fitted_parameters": [],
+  "forbidden_anchor_ids_accessed": [],
+  "held_out_numeric_values_accessed": false,
+  "held_out_score_performed": false,
+  "historical_refutation_lock": {
+    "checked_artifact_count": 9,
+    "first_scored_run_mutated": false,
+    "status": "PASS"
+  },
+  "mechanism_evidence": {
+    "path": "$SIMLLM_CORE59_RUN_ROOT/mechanism-evidence-1/mechanism-evidence.json",
+    "sha256": "4752eaf36bfc596b7fa793a12b8afb1307bee4c6f5237036864c1568266b34c1",
+    "status": "PASS"
+  },
+  "schema": "simllm-deployment-curve-core59-calibration-v1",
+  "shared_collective_surcharge_application_count": 0,
+  "status": "FROZEN"
+}

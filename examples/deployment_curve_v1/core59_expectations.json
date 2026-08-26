@@ -1,0 +1,294 @@
+{
+  "calibration_split": {
+    "forbidden_anchor_ids": [
+      "sglang_decode_simulated_mtp",
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "visible_anchor_ids": [
+      "sglang_prefill_1k",
+      "sglang_decode_standard"
+    ]
+  },
+  "chronology": {
+    "calibration_numeric_values_accessed": false,
+    "held_out_numeric_values_accessed": false,
+    "mechanism_service_derived_before_comparison": true,
+    "scored_comparison_performed": false
+  },
+  "constants": {
+    "declared": [
+      {
+        "envelope": {
+          "lower": 58,
+          "upper": 58
+        },
+        "id": "deepseek_v3_moe_layers",
+        "justification": "The 61-layer model has three dense early layers and 58 routed MoE layers. This is exact architecture inventory, not a fit variable.",
+        "selected": 58,
+        "unit": "layers"
+      },
+      {
+        "envelope": {
+          "lower": 2,
+          "upper": 2
+        },
+        "id": "moe_collective_phases_per_layer",
+        "justification": "The existing traffic authority renders exactly one dispatch and one combine all-to-allv for each routed layer.",
+        "selected": 2,
+        "unit": "phases_per_layer"
+      },
+      {
+        "envelope": {
+          "lower": 32,
+          "upper": 32
+        },
+        "id": "prefill_expert_parallel_ranks",
+        "justification": "The calibration deployment projection declares EP32 and the placement authority maps it to four eight-GPU nodes.",
+        "selected": 32,
+        "unit": "ranks"
+      },
+      {
+        "envelope": {
+          "lower": 16384,
+          "upper": 16384
+        },
+        "id": "prefill_new_tokens_per_rank",
+        "justification": "The visible EP32 calibration case and candidate key both declare 16384 computed new tokens per rank.",
+        "selected": 16384,
+        "unit": "tokens"
+      },
+      {
+        "envelope": {
+          "lower": 8,
+          "upper": 8
+        },
+        "id": "routed_experts_per_token",
+        "justification": "DeepSeek-V3 routes every token to top-k 8 experts in the pinned model and deployment projection.",
+        "selected": 8,
+        "unit": "experts_per_token"
+      },
+      {
+        "envelope": {
+          "lower": 7168,
+          "upper": 7168
+        },
+        "id": "hidden_vector_elements",
+        "justification": "The pinned DeepSeek-V3 model configuration declares hidden size 7168.",
+        "selected": 7168,
+        "unit": "elements"
+      },
+      {
+        "envelope": {
+          "lower": 2,
+          "upper": 2
+        },
+        "id": "routed_vector_bytes_per_element",
+        "justification": "The existing ModelDims and traffic path use the declared two-byte activation dtype. No alternate wire precision is claimed by the calibration evidence.",
+        "selected": 2,
+        "unit": "bytes_per_element"
+      },
+      {
+        "envelope": {
+          "lower": 450000000000,
+          "upper": 450000000000
+        },
+        "id": "nvlink_endpoint_bandwidth_bytes_per_second",
+        "justification": "This is the existing placement-locality serializer constant. The full-duplex endpoint ledger charges max ingress or egress, never their sum.",
+        "selected": 450000000000,
+        "unit": "bytes_per_second"
+      },
+      {
+        "envelope": {
+          "lower": 200000000000,
+          "upper": 400000000000
+        },
+        "id": "fabric_link_rate_bits_per_second",
+        "justification": "PLACE-5 fixes the 400 Gbit/s physical point arm. The already frozen 200 Gbit/s packet arm is the pessimistic sensitivity endpoint.",
+        "selected": 400000000000,
+        "unit": "bits_per_second"
+      }
+    ],
+    "new_free_constants": [],
+    "tunable": []
+  },
+  "decode_disposition": {
+    "data_parallel_attention_synchronization_count": 0,
+    "mechanism_count": 0,
+    "reason": "The component-complete standard-decode evidence does not identify a positive missing service independently of the unbound measured decode shape. SGL-38 owns that bind, so CORE-59 adds no decode residual and composes without absorbing its error.",
+    "shape_gate": {
+      "batch_size": 32,
+      "expert_parallel": 72,
+      "moe_layers": 58,
+      "new_tokens_per_rank": 32,
+      "per_request_kv_length": 2000
+    },
+    "signed_movement": "zero"
+  },
+  "evidence": {
+    "candidate_calibration_rows": [
+      {
+        "candidate_entry_index": 0,
+        "component_kernel_id": "aggregate_noncollective_step_service",
+        "coverage": "complete-kernel-stream",
+        "implementation_id": "deepseek-v3-full61-vllm-ep32-prefill-r16-l1024-t16384",
+        "pool": "prefill",
+        "routing_availability": "not-captured",
+        "service_class": "DECLARED",
+        "service_ps": 1363249960000
+      },
+      {
+        "candidate_entry_index": 3,
+        "component_kernel_id": "aggregate_noncollective_step_service",
+        "coverage": "complete-kernel-stream",
+        "implementation_id": "deepseek-v3-full61-vllm-ep72-decode-b32-c2000",
+        "pool": "decode",
+        "routing_availability": "not-captured",
+        "service_class": "DECLARED",
+        "service_ps": 28604120000
+      }
+    ],
+    "candidate_record": {
+      "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+      "sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52"
+    },
+    "deployment_projection": {
+      "calibration_cases": [
+        "sglang-prefill-ep32-r16-t16384",
+        "sglang-decode-ep72-b32-c2000"
+      ],
+      "path": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json",
+      "sha256": "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+    },
+    "htsim": {
+      "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+      "profile": "rnic-nn",
+      "txt2bin_sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b"
+    },
+    "packet_session": {
+      "point_completion_csv_sha256": "b54c8ccbfcd71e52c66e4519884121e08b574474600bc44b23a14f04e5dbd598",
+      "point_manifest_sha256": "583edb584cceb7db6176944440724f4cd40dfc0fce24651214fb7d8a9405b379",
+      "point_rate_bits_per_second": 400000000000,
+      "sensitivity_completion_csv_sha256": "fcec276f2b6c8a1622db46787ee453ebc8f0a2d792094cacd25d7f8ed682de56",
+      "sensitivity_manifest_sha256": "024562ef3d6d18cd18f3ec8d77a82a522f09afc76f52e11cc3341bab64456308",
+      "sensitivity_rate_bits_per_second": 200000000000
+    }
+  },
+  "historical_refutation_lock": {
+    "first_scored_run_is_immutable": true,
+    "tracked_artifacts": [
+      {
+        "path": "examples/deployment_curve_v1/scored_expectations.json",
+        "sha256": "9048342b4eaa1cc07183c82b16884eafaf3fb00e9664132db63f27572d2ee192"
+      },
+      {
+        "path": "examples/deployment_curve_v1/scored_expectations.md",
+        "sha256": "dcba281b50ca91db89e0eaac09d67d222eef97d7ac197c127563652a22d470c3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_config.json",
+        "sha256": "0e16edd3224b33c7a587d15a792aa48d6770219200dc50b6c364567c59e67ea0"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_result.json",
+        "sha256": "ed06a2e8bce838f96c8365151a450ddf9a80ebde7520c3e37c40960b4a633e08"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS.md",
+        "sha256": "699dc8d14bfc4fc20a9fafe81aa13ad216a23de664b9a9cec50e97d3e84a7dc3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_tools.py",
+        "sha256": "e4324919ea1b4ccb2ad7cd4980901cd356f94e4883f82851531dd3c27a466075"
+      },
+      {
+        "path": "examples/deployment_curve_v1/run_flagship.py",
+        "sha256": "f95a7fd3e98459d7ccc6f41167735b942dd1f2f00169a4d29a7fb1e6ffc3c34f"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.pdf",
+        "sha256": "0105947ed8eb524c178f3ee7025c4e035aa93e2362d7842815947d50527e0063"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.png",
+        "sha256": "b51ff4726ba23ac65ea23be34b9394654517b66a14360dfd91478e9767e42553"
+      }
+    ]
+  },
+  "mechanisms": [
+    {
+      "data_parallel_attention_synchronization_count": 0,
+      "id": "prefill_ep32_moe_dispatch_combine_v1",
+      "physical_service": {
+        "arms": [
+          {
+            "composed_phase_service_ps": 28628208000,
+            "fabric_link_rate_bits_per_second": 400000000000,
+            "fabric_phase_service_ps": 28628208000,
+            "id": "point",
+            "local_phase_service_ps": 913427000,
+            "total_mechanism_service_ps": 3320872128000
+          },
+          {
+            "composed_phase_service_ps": 57254416000,
+            "fabric_link_rate_bits_per_second": 200000000000,
+            "fabric_phase_service_ps": 57254416000,
+            "id": "sensitivity",
+            "local_phase_service_ps": 913427000,
+            "total_mechanism_service_ps": 6641512256000
+          }
+        ],
+        "envelope": {
+          "lower": 3320872128000,
+          "upper": 6641512256000
+        },
+        "selected_arm": "point",
+        "unit": "ps_per_candidate_step"
+      },
+      "role": "prefill",
+      "shape_gate": {
+        "expert_parallel": 32,
+        "hidden_size": 7168,
+        "moe_layers": 58,
+        "new_tokens_per_rank": 16384,
+        "top_k": 8,
+        "vector_bytes_per_element": 2
+      },
+      "traffic_arithmetic": {
+        "application_count": 116,
+        "fabric_bytes_per_phase": 1409286144,
+        "local_bytes_per_phase": 411041792,
+        "local_peer_count": 7,
+        "per_pair_bytes": 58720256,
+        "per_pair_formula": "new_tokens_per_rank * top_k * hidden_size * vector_bytes_per_element // expert_parallel",
+        "remote_peer_count": 24,
+        "total_directed_bytes_per_phase": 1820327936
+      },
+      "traffic_authority": "StepRecord -> step_moe_alltoalls -> execution graph -> placement locality -> rnic-nn htsim",
+      "tunable": false
+    }
+  ],
+  "schema": "simllm-deployment-curve-core59-expectations-v1",
+  "shared_residual_disposition": {
+    "historical_id": "intra_node_collective_surcharge_ps",
+    "next_run_application_count": 0,
+    "next_run_selected_ps": null,
+    "reason": "The shared positive additive term is not role-identifiable. It remains in the immutable first-run artifacts and is absent from the CORE-59 projection."
+  },
+  "signed_movement_expectations": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "direction": "decrease",
+      "mechanism_id": "prefill_ep32_moe_dispatch_combine_v1",
+      "reason": "Positive dispatch and combine service increases the calibration denominator."
+    },
+    {
+      "anchor_id": "sglang_decode_standard",
+      "direction": "unchanged",
+      "mechanism_id": null,
+      "reason": "The frozen decode mechanism count is zero pending the independently owned measured-row bind."
+    }
+  ],
+  "status": "EXPECTATIONS_ONLY",
+  "task": "CORE-59"
+}

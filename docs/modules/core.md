@@ -1031,17 +1031,20 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   `pd_session_v1` compact cells. The void run remains void and cannot be
   retrospectively rescored.
 
-- CORE-59 (Precision; P1; M): replace the CORE-54 flagship's one shared
-  collective-surcharge residual with role- and shape-specific mechanisms
-  identified without held-out disclosure values. The first scored run pins the
-  shared term to its 0 ps floor: the EP32 1K calibration projection is 66.71%
-  high while the EP72 standard-decode projection is 59.83% low, so moving one
-  positive additive term cannot improve both roles. Identify the missing
-  service from component-complete prefill and decode evidence, freeze every new
-  constant and envelope before another scored run, and fit only the existing
-  calibration split. Acceptance requires a mechanism-specific signed movement
-  for both calibration rows, no held-out access before the next frozen fit, and
-  exact preservation of the published refutation and its artifacts.
+- CORE-60 (Precision; P1; M): resolve the remaining EP32 prefill service
+  composition after CORE-59's frozen physical mechanism moves the visible 1K
+  calibration projection from 66.71% high to 51.48% low. The existing uniform
+  routing path serializes 58 dispatch and combine pairs and prices
+  3,320,872,128,000 ps at the 400 Gbit/s point arm, with no free or fitted
+  constant. Identify from calibration-only component evidence which physical
+  contract explains the overcorrection: per-rank token ownership, routed wire
+  precision, same-destination expert deduplication, or framework-supported
+  compute and communication overlap. Freeze the selected composition and every
+  envelope before another comparison, reuse the existing placement and traffic
+  authorities, and reject an unmeasured scale factor. Acceptance requires an
+  independently justified signed movement of the 1K calibration row, exact
+  preservation of CORE-59's freeze and result, no held-out numeric access, and
+  no scored flagship rerun. SGL-38 remains the sole owner of the decode bind.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
@@ -1379,7 +1382,7 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   priced held-out prefill errors are 69.20% at 2K and 63.35% at 4K, and the MTP
   anchor is BLOCKED on COMP-72's absent cell. The figure, propagated component
   bands, separate-experiment allocation and second legend are published, but
-  CORE-54 remains open through CORE-59, COMP-72, SGL-36 and TRAF-64.
+  CORE-54 remains open through CORE-60, COMP-72, SGL-36 and TRAF-64.
 - CORE-56 (Completeness; P1; M): bind the content-addressed local Hopper
   candidate into the CORE-54 flagship after CORE-53's generic seam lands.
   Selection must opt into candidate status explicitly and pin lookup digest
