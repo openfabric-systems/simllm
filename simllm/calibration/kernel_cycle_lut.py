@@ -1162,6 +1162,7 @@ class KernelCycleLookupBinding:
     ) -> None:
         self.record = record
         self.pool = pool
+        self.selection_entry_index = selection_entry_index
         self._key_template = _selection_key_template(
             record,
             pool=pool,
@@ -1180,6 +1181,21 @@ class KernelCycleLookupBinding:
         self._lookup_hits = 0
         self._lookup_misses = 0
         self._selected_key_sha256s: list[str] = []
+
+    def __reduce__(self) -> tuple[Any, tuple[Any, ...]]:
+        """Serialize the binding without traversing immutable mapping proxies."""
+
+        return (
+            _restore_kernel_cycle_lookup_binding,
+            (
+                self.record.canonical,
+                self.pool,
+                self.selection_entry_index,
+                self._lookup_hits,
+                self._lookup_misses,
+                tuple(self._selected_key_sha256s),
+            ),
+        )
 
     def _query_key(self, kernel: KernelSpec) -> dict[str, Any] | None:
         requests = kernel.request_shapes
@@ -1287,6 +1303,27 @@ class KernelCycleLookupBinding:
             "lookup_misses": self._lookup_misses,
             "calibration_claim": False,
         }
+
+
+def _restore_kernel_cycle_lookup_binding(
+    canonical: bytes,
+    pool: str,
+    selection_entry_index: int,
+    lookup_hits: int,
+    lookup_misses: int,
+    selected_key_sha256s: tuple[str, ...],
+) -> KernelCycleLookupBinding:
+    """Rebuild one process-safe lookup binding from its canonical authority."""
+
+    binding = KernelCycleLookupBinding(
+        validate_kernel_cycle_lut(canonical),
+        pool=pool,
+        selection_entry_index=selection_entry_index,
+    )
+    binding._lookup_hits = lookup_hits
+    binding._lookup_misses = lookup_misses
+    binding._selected_key_sha256s = list(selected_key_sha256s)
+    return binding
 
 
 def compile_session_profile_provider(

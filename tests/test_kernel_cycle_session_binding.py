@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import pickle
 from pathlib import Path
 
 import pytest
@@ -163,6 +164,17 @@ def test_content_address_mismatch_rejects_before_pricing(record) -> None:
             expected_sha256="0" * 64,
             pool="decode",
         )
+
+
+def test_compiled_provider_round_trips_across_spawn_serialization(record) -> None:
+    provider = _provider(record, comparator=FixedComparator())
+
+    restored = pickle.loads(pickle.dumps(provider))
+    estimate = restored.estimate(_kernel(16), GPU_ENVELOPES["b100"])
+
+    assert estimate.duration_ps == 2_047_488_000
+    assert restored.pricing_provenance()["record_sha256"] == record.record_id
+    assert restored.pricing_provenance()["lookup_hits"] == 1
 
 
 def test_duplicate_complete_keys_reject_instead_of_using_file_order(record) -> None:

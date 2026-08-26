@@ -128,3 +128,4 @@ examples/deployment_curve_v1/flagship_tools.py text eol=lf
 examples/deployment_curve_v1/run_flagship.py text eol=lf
 examples/deployment_curve_v1/plot_flagship.py text eol=lf
 tests/test_deployment_curve_flagship.py text eol=lf
+simllm/calibration/kernel_cycle_lut.py text eol=lf
