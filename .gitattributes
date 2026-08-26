@@ -159,6 +159,8 @@ examples/deployment_frontier_v1/*.json text eol=lf
 examples/deployment_frontier_v1/*.md text eol=lf
 examples/deployment_frontier_v1/*.py text eol=lf
 examples/deployment_frontier_v1/*.csv text eol=lf
+examples/deployment_frontier_v1/figures/*.pdf -text -diff
+examples/deployment_frontier_v1/figures/*.png -text -diff
 tests/test_deployment_frontier_*.py text eol=lf
 examples/a100_nvlink_packet_v1/*.json text eol=lf
 examples/a100_nvlink_packet_v1/*.md text eol=lf
