@@ -1,0 +1,294 @@
+{
+  "schema": "simllm-deployment-curve-anchor-freeze-v1",
+  "as_of_commit": "4f7a316926ecd55fb00d376e5aae1bcfc01c1929",
+  "chronology": {
+    "implementation_existed_before_freeze": false,
+    "scored_flagship_run_existed_before_freeze": false,
+    "granite_dry_run_existed_before_freeze": false
+  },
+  "sources": {
+    "sglang_2025_05_05": {
+      "title": "Deploying DeepSeek with PD Disaggregation and Large-Scale Expert Parallelism on 96 H100 GPUs",
+      "publisher": "LMSYS Org",
+      "publication_date": "2025-05-05",
+      "url": "https://www.lmsys.org/blog/2025-05-05-large-scale-ep/",
+      "local_transcription": "docs/papers/deepseek-deployment-disclosures.md"
+    },
+    "deepseek_2025_03_01": {
+      "title": "DeepSeek-V3/R1 Inference System Overview",
+      "publisher": "DeepSeek open-infra-index, Open Source Week day 6",
+      "publication_date": "2025-03-01",
+      "url": "https://github.com/deepseek-ai/open-infra-index/blob/main/202502OpenSourceWeek/day_6_one_more_thing_deepseekV3R1_inference_system_overview.md",
+      "local_transcription": "docs/papers/deepseek-deployment-disclosures.md"
+    }
+  },
+  "axis_contract": {
+    "x": {
+      "quantity": "aggregated_output_throughput",
+      "unit": "tokens_per_second",
+      "direction": "rightward",
+      "definition": "all terminal output tokens divided by last terminal completion minus first admission"
+    },
+    "y": {
+      "quantity": "inverse_per_token_request_delay",
+      "unit": "tokens_per_second",
+      "direction": "upward",
+      "definition": "one divided by the arithmetic mean across requests of terminal completion minus admission divided by that request's output token count",
+      "record_projection": "1000000000000 divided by per_token_request_delay_ps"
+    },
+    "optimal_corner": "upper-right",
+    "sweep_parameter": "offered_load_requests_per_second",
+    "one_curve_per_configuration": true
+  },
+  "acceptance": {
+    "scope": "held_out_sglang_numeric_anchors",
+    "maximum_absolute_relative_error": 0.05,
+    "formula": "abs(simulated - published) / published",
+    "curve_distance_rule": "score each held-out anchor against the matching simulated configuration and observable",
+    "curve_uncertainty_rule": "the held-out point passes only when the propagated simulated interval intersects the closed plus-or-minus 5 percent interval around the published value",
+    "pricing_dependent_bands_frozen_here": false,
+    "pricing_band_deferment": "No component-derived numerical band is frozen until the scored-run expectations commit can cite the built pricing records. The 5 percent disclosure bar is fixed here and is not a pricing band."
+  },
+  "calibration_split": {
+    "calibration_anchor_ids": [
+      "sglang_prefill_1k",
+      "sglang_decode_standard"
+    ],
+    "held_out_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k",
+      "sglang_decode_simulated_mtp"
+    ],
+    "context_only_anchor_ids": [
+      "sglang_headline_prefill",
+      "sglang_headline_output",
+      "sglang_ttft_range",
+      "sglang_inter_token_latency",
+      "sglang_output_cost",
+      "sglang_prefill_delta",
+      "sglang_mtp_decode_delta",
+      "deepseek_production_prefill",
+      "deepseek_production_decode"
+    ],
+    "rule": "a fitted constant may read only calibration_anchor_ids; scoring may read only held_out_anchor_ids; rounded, ranged, cost, comparison, and second-legend values remain context-only"
+  },
+  "disclosed_configurations": {
+    "sglang_reproduction": {
+      "framework": "sglang",
+      "accelerator": "H100",
+      "cluster_nodes": 12,
+      "gpus_per_node": 8,
+      "cluster_gpus": 96,
+      "interconnect": "InfiniBand",
+      "provider": "Atlas Cloud",
+      "prefill": {
+        "nodes": 4,
+        "gpus": 32,
+        "expert_parallelism": 32,
+        "tokens_per_device": 16384,
+        "attention": "data-parallel",
+        "dense_feed_forward": "data-parallel"
+      },
+      "decode": {
+        "nodes": 9,
+        "gpus": 72,
+        "expert_parallelism": 72,
+        "attention": "data-parallel"
+      },
+      "model_experts": {
+        "total": 288,
+        "base": 256,
+        "redundant": 32
+      }
+    },
+    "deepseek_production": {
+      "framework": "deepseek-production",
+      "accelerator": "H800",
+      "gpus_per_node": 8,
+      "prefill": {
+        "nodes": 4,
+        "gpus": 32,
+        "routed_expert_parallelism": 32,
+        "mla_and_shared_expert_data_parallelism": 32,
+        "redundant_routed_experts": 32,
+        "routed_experts_per_gpu": 9,
+        "shared_experts_per_gpu": 1
+      },
+      "decode": {
+        "nodes": 18,
+        "gpus": 144,
+        "expert_parallelism": 144
+      }
+    },
+    "declared_what_if": {
+      "prefill_nodes": 16,
+      "decode_nodes": 40,
+      "gpus_per_node": 8,
+      "total_nodes": 56,
+      "total_gpus": 448
+    }
+  },
+  "anchors": [
+    {
+      "id": "sglang_prefill_1k",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Prefill benchmark table, 1K row",
+      "role": "calibration",
+      "observable": "prefill_throughput_per_node",
+      "input_length_label": "1K",
+      "value": 57674,
+      "unit": "tokens_per_second_per_node",
+      "versus_tp16": 3.3
+    },
+    {
+      "id": "sglang_prefill_2k",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Prefill benchmark table, 2K row",
+      "role": "held-out",
+      "observable": "prefill_throughput_per_node",
+      "input_length_label": "2K",
+      "value": 54543,
+      "unit": "tokens_per_second_per_node",
+      "versus_tp16": 3.3
+    },
+    {
+      "id": "sglang_prefill_4k",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Prefill benchmark table, 4K row",
+      "role": "held-out",
+      "observable": "prefill_throughput_per_node",
+      "input_length_label": "4K",
+      "value": 50302,
+      "unit": "tokens_per_second_per_node",
+      "versus_tp16": 3.3
+    },
+    {
+      "id": "sglang_decode_standard",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Decode benchmark table, Standard row",
+      "role": "calibration",
+      "observable": "decode_throughput_per_node",
+      "batch_per_node": 256,
+      "kv_length": 2000,
+      "value": 22282,
+      "unit": "tokens_per_second_per_node",
+      "aggregated_value": 200538,
+      "aggregated_unit": "tokens_per_second",
+      "aggregation_nodes": 9
+    },
+    {
+      "id": "sglang_decode_simulated_mtp",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Decode benchmark table, Simulated MTP row",
+      "role": "held-out",
+      "observable": "decode_throughput_per_node",
+      "batch_per_node": 128,
+      "kv_length": 4000,
+      "value": 17373,
+      "unit": "tokens_per_second_per_node",
+      "aggregated_value": 156357,
+      "aggregated_unit": "tokens_per_second",
+      "aggregation_nodes": 9
+    },
+    {
+      "id": "sglang_headline_prefill",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Headline",
+      "role": "context-only",
+      "observable": "prefill_throughput_per_node",
+      "input_length": 2000,
+      "value": 52300,
+      "unit": "tokens_per_second_per_node",
+      "precision": "rounded"
+    },
+    {
+      "id": "sglang_headline_output",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Headline",
+      "role": "context-only",
+      "observable": "decode_throughput_per_node",
+      "input_length": 2000,
+      "value": 22300,
+      "unit": "tokens_per_second_per_node",
+      "precision": "rounded"
+    },
+    {
+      "id": "sglang_ttft_range",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Headline",
+      "role": "context-only",
+      "observable": "time_to_first_token",
+      "lower": 2,
+      "upper": 5,
+      "unit": "seconds"
+    },
+    {
+      "id": "sglang_inter_token_latency",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Headline",
+      "role": "context-only",
+      "observable": "inter_token_latency",
+      "value": 100,
+      "unit": "milliseconds",
+      "precision": "around"
+    },
+    {
+      "id": "sglang_output_cost",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Headline",
+      "role": "context-only",
+      "observable": "estimated_output_cost",
+      "value": 0.20,
+      "currency": "USD",
+      "denominator_tokens": 1000000,
+      "precision": "estimated"
+    },
+    {
+      "id": "sglang_prefill_delta",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Stated delta against the official DeepSeek profile",
+      "role": "context-only",
+      "observable": "prefill_relative_delta",
+      "value": 5.6,
+      "unit": "percent",
+      "compared_sglang_value": 50302,
+      "compared_deepseek_normalized_value": 62713
+    },
+    {
+      "id": "sglang_mtp_decode_delta",
+      "source_id": "sglang_2025_05_05",
+      "source_locator": "Stated delta against the official DeepSeek profile",
+      "role": "context-only",
+      "observable": "simulated_mtp_decode_relative_delta",
+      "value": 6.6,
+      "unit": "percent_below",
+      "compared_sglang_value": 17373,
+      "compared_deepseek_value": 18598,
+      "decode_node_count_ratio": 0.5
+    },
+    {
+      "id": "deepseek_production_prefill",
+      "source_id": "deepseek_2025_03_01",
+      "source_locator": "Disclosed averages across all production traffic",
+      "role": "context-only",
+      "observable": "prefill_throughput_per_node",
+      "value": 73700,
+      "unit": "tokens_per_second_per_node",
+      "includes_cache_hits": true,
+      "precision": "about"
+    },
+    {
+      "id": "deepseek_production_decode",
+      "source_id": "deepseek_2025_03_01",
+      "source_locator": "Disclosed averages across all production traffic",
+      "role": "context-only",
+      "observable": "decode_throughput_per_node",
+      "value": 14800,
+      "unit": "tokens_per_second_per_node",
+      "aggregated_value": 266400,
+      "aggregated_unit": "tokens_per_second",
+      "aggregation_nodes": 18,
+      "precision": "about"
+    }
+  ]
+}
