@@ -4,7 +4,7 @@
     "classification": "scored",
     "label": "CORE-54 DeepSeek-V3 scored flagship",
     "expectations_path": "examples/deployment_curve_v1/scored_expectations.json",
-    "expectations_commit": "07bb32487faf6e66429a98d3602697e267b29ff7"
+    "expectations_commit": "c390618327de6950c542ef22698a337bf821e012"
   },
   "candidate_record": {
     "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
