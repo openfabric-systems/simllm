@@ -26,6 +26,7 @@ from simllm.core import (
     RequestPhase,
     ScheduledRequest,
     StepRecord,
+    StepResult,
 )
 from simllm.placement import (
     SglangPoolArrangement,
@@ -104,6 +105,7 @@ class _FakePoolEngine:
         self.scheduler_type = "Scheduler"
         self.worker_type = "SimTpModelWorker"
         self.records = []
+        self.results = []
         self._unfinished = {}
         self._step_index = 0
         type(self).launches.append(config)
@@ -136,6 +138,12 @@ class _FakePoolEngine:
         )
         self._step_index += 1
         self.records.append(record)
+        result = StepResult(
+            step_index=record.step_index,
+            step_latency_ps=10,
+            completed_at_ps=now_ps + 10,
+        )
+        self.results.append(result)
         completions = []
         for request_id in request_ids:
             remaining = self._unfinished[request_id] - 1
@@ -154,6 +162,7 @@ class _FakePoolEngine:
         return {
             "completed_at_ps": now_ps + 10,
             "record": record,
+            "result": result,
             "completions": tuple(completions),
             "token_id": 512,
         }
@@ -232,6 +241,10 @@ def test_session_conserves_stable_identities_and_scheduler_batches(
     assert result.maximum_prefill_batch_size == 2
     assert result.maximum_decode_batch_size == 2
     assert all(len(row.decode_token_ids) == 4 for row in result.requests)
+    assert all(
+        [step.step_latency_ps for step in row.decode_results] == [10, 10, 10, 10]
+        for row in result.requests
+    )
     assert all(row.timeline.decomposition_total_ps == row.timeline.ttft_ps for row in result.requests)
     assert all(row.timeline.tpot_ps == Fraction(10) for row in result.requests)
     assert all(row.join_metadata["join_mode"] == SGLANG_PD_JOIN_MODE for row in result.requests)

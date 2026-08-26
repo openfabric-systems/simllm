@@ -41,6 +41,7 @@ from simllm.core import (
     KvHandoffPolicy,
     ServingPoolRole,
     StepRecord,
+    StepResult,
     VirtualClock,
 )
 from simllm.placement import (
@@ -202,6 +203,8 @@ class SglangPdRequestResult:
     join_metadata: dict[str, Any]
     prefill_records: tuple[StepRecord, ...]
     decode_records: tuple[StepRecord, ...]
+    prefill_results: tuple[StepResult, ...]
+    decode_results: tuple[StepResult, ...]
 
     def to_json(self) -> dict[str, object]:
         value = self.timeline.to_json()
@@ -507,19 +510,31 @@ def _engine_process_main(connection: Any, config: _EngineLaunchConfig) -> None:
                 raise ValueError(f"unknown engine operation {operation!r}")
             worker.clock.advance_to(command["now_ps"])
             before_records = len(worker.step_records)
+            before_results = len(worker.step_results)
             outcome = pump.step()
             record = None
+            result = None
             if outcome.ran_batch:
                 if len(worker.step_records) != before_records + 1:
                     raise RuntimeError("one SGLang batch did not emit one StepRecord")
+                if len(worker.step_results) != before_results + 1:
+                    raise RuntimeError("one SGLang batch did not emit one StepResult")
                 record = worker.step_records[-1]
+                result = worker.step_results[-1]
+                if result.step_index != record.step_index:
+                    raise RuntimeError("SGLang StepRecord and StepResult disagree")
+                if result.completed_at_ps != worker.clock.now_ps:
+                    raise RuntimeError("SGLang StepResult disagrees with its child clock")
             elif len(worker.step_records) != before_records:
                 raise RuntimeError("an idle SGLang step emitted a StepRecord")
+            elif len(worker.step_results) != before_results:
+                raise RuntimeError("an idle SGLang step emitted a StepResult")
             connection.send(
                 {
                     "ok": True,
                     "completed_at_ps": worker.clock.now_ps,
                     "record": record,
+                    "result": result,
                     "completions": outcome.completions,
                     "token_id": worker.token_id,
                     "record_count": len(worker.step_records),
@@ -568,6 +583,7 @@ class _ProcessPoolEngine:
         self.dense_data_parallel_ranks = config.dense_data_parallel_ranks
         self.expert_parallel_ranks = config.expert_parallel_ranks
         self.records: list[StepRecord] = []
+        self.results: list[StepResult] = []
         self._unfinished: set[str] = set()
         self._timeout_s = timeout_s
         context = multiprocessing.get_context("spawn")
@@ -642,8 +658,14 @@ class _ProcessPoolEngine:
     def step(self, now_ps: int) -> dict[str, Any]:
         response = self._rpc({"operation": "step", "now_ps": now_ps})
         record = response["record"]
+        result = response["result"]
         if record is not None:
+            if result is None:
+                raise RuntimeError(f"{self.engine_id} omitted its StepResult")
             self.records.append(record)
+            self.results.append(result)
+        elif result is not None:
+            raise RuntimeError(f"{self.engine_id} returned an orphan StepResult")
         for completion in response["completions"]:
             if completion.request_id not in self._unfinished:
                 raise RuntimeError(
@@ -1136,6 +1158,20 @@ class SglangDisaggregatedSession:
                     state.decode_record_start : state.decode_record_stop
                 ]
             )
+            prefill_results = tuple(
+                state.prefill.results[
+                    state.prefill_record_start : state.prefill_record_stop
+                ]
+            )
+            decode_results = tuple(
+                state.decode.results[
+                    state.decode_record_start : state.decode_record_stop
+                ]
+            )
+            if len(prefill_results) != len(prefill_records):
+                raise RuntimeError("prefill records and results do not align")
+            if len(decode_results) != len(decode_records):
+                raise RuntimeError("decode records and results do not align")
             decode_eligible = self._first_release(
                 decode_records,
                 state.decode_internal_id,
@@ -1163,6 +1199,8 @@ class SglangDisaggregatedSession:
                     join_metadata=dict(state.join_metadata),
                     prefill_records=prefill_records,
                     decode_records=decode_records,
+                    prefill_results=prefill_results,
+                    decode_results=decode_results,
                 )
             )
         return SglangPdConcurrentResult(
