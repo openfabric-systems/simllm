@@ -2,8 +2,8 @@
 
 Status: frozen before source inspection
 
-Pinned source tree:
-`/data3/yifeng/simllm-dev/wave-runs/ds67/sglang-source-bfeae4e79/`
+Pinned source tree: `<SGLANG_SOURCE_ROOT>/`, where the configured external root
+must have the leaf name `sglang-source-bfeae4e79`.
 
 Pinned source commit: `bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3`
 
