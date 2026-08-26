@@ -92,3 +92,13 @@ def test_declared_deepseek_rows_are_exact_61_over_4_transforms() -> None:
         assert declared["evidence"]["derivation"] == (
             "retained reduced-depth service multiplied by 61 / 4"
         )
+
+
+def test_frozen_score_accepts_an_omitted_zero_class() -> None:
+    namespace = runpy.run_path(str(STUDY_DIR / "run_study.py"))
+    freeze = json.loads((STUDY_DIR / "expectations.json").read_text(encoding="utf-8"))
+
+    score = namespace["_score"](_candidate_value(), freeze)
+
+    assert score["verdict"] == "CANDIDATE_COMPILED"
+    assert score["evidence_ledger"]["granite"] == {"MEASURED": 12}

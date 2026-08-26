@@ -491,7 +491,11 @@ def _score(record: dict[str, Any], freeze: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("every emitted component bound must remain DISCLOSED")
     expected = freeze["ledger_expectations"]
     for family in ("granite", "deepseek_v3"):
-        if ledger[family] != expected[family]["service_entries"]:
+        normalized = {
+            evidence_class: ledger[family].get(evidence_class, 0)
+            for evidence_class in ("MEASURED", "DECLARED")
+        }
+        if normalized != expected[family]["service_entries"]:
             raise ValueError(f"{family}: ledger mismatch {ledger[family]}")
 
     floors = {128: 199_000_000, 512: 383_000_000, 2048: 1_531_000_000}
