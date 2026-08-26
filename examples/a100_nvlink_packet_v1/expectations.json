@@ -1,0 +1,3449 @@
+{
+  "schema": "simllm-a100-nvlink-packet-expectations-v1",
+  "study_id": "a100_nvlink_packet_v1",
+  "task_id": "TRAF-65",
+  "status": "expectations_only",
+  "frozen_on": "2026-08-26",
+  "chronology": {
+    "rule": "This record is committed before the harness and before any timed TRAF-65 run.",
+    "existing_evidence_only": [
+      "examples/a100_hardware_envelope_v1/RESULTS.md"
+    ],
+    "prohibited_writeback": "No TRAF-65 observation may change this file. A new hypothesis requires a new version and a new freeze."
+  },
+  "target": {
+    "cluster": "Merlin",
+    "partition": "a100-hourly",
+    "node_shape": "one qualified four-A100-SXM4-80GB NV4 node",
+    "bulk_root_local": "/data3/yifeng/simllm-dev/wave-runs/traf65",
+    "bulk_root_merlin": "~/simllm-data/traf65",
+    "maintenance_reservation": "SD26082026",
+    "unavailable_until": "2026-08-28T06:30"
+  },
+  "published_measurement_anchors": {
+    "provenance": "a100_hardware_envelope_v1",
+    "ordered_pair_copy_engine_payload_rate_gbps": {
+      "minimum": 94,
+      "maximum": 94.07,
+      "physical_nameplate_ceiling": 100
+    },
+    "three_way_fanout_copy_engine_payload_rate_gbps": {
+      "measured": 281.65,
+      "physical_nameplate_ceiling": 300
+    },
+    "per_physical_link_payload_rate_ceiling_gbps": 25
+  },
+  "candidate_hypothesis": {
+    "evidence_class": "declared_candidate_not_hardware_measurement",
+    "payload_bytes": 256,
+    "header_bytes": 16,
+    "full_packet_payload_efficiency": 0.9411764705882353,
+    "predicted_ordered_pair_payload_rate_gbps": 94.11764705882354,
+    "predicted_three_way_fanout_payload_rate_gbps": 282.3529411764706,
+    "tx": {
+      "links_per_peer": 4,
+      "per_link_rate_bytes_per_second": 25000000000,
+      "endpoint_egress_rate_bytes_per_second": 300000000000,
+      "bond_policy": "earliest_available_packet_striping",
+      "request_response_direction": "write payload travels as request; read control travels as request and read payload travels as response",
+      "credit_unit_bytes": 272,
+      "credits_per_destination": 256
+    },
+    "switch": {
+      "mode": "pass_through",
+      "fifo_placement": "none",
+      "arbitration": "none",
+      "note": "Contention, FIFO placement, and head-of-line parameters belong to this module in non-pass-through profiles. They are inert and unidentifiable on the direct-mesh A100 profile."
+    },
+    "rx": {
+      "ingress_rate_bytes_per_second": 300000000000,
+      "buffer_capacity_bytes": 1048576,
+      "credit_return_latency_ps": 200000,
+      "reassembly_policy": "extent_sequence",
+      "delivery_order": "per_extent",
+      "note": "These are independent RX declarations, not copies of TX values."
+    }
+  },
+  "global_acceptance": {
+    "held_out_error": "throughput and completion error no larger than 10 percent or 1 microsecond, whichever is larger",
+    "first_saturation_knee": "within one frozen sweep point",
+    "conservation": [
+      "exact logical bytes",
+      "exact request and response bytes",
+      "one terminal per extent",
+      "no loss, duplication, or double charge"
+    ],
+    "packet_step": "within one raw-counter quantum",
+    "required_records": [
+      "logical bytes",
+      "per-link and per-direction raw and data counter deltas",
+      "batch time",
+      "issuer-local latency",
+      "completion and drain time",
+      "per-source rate",
+      "checksum",
+      "topology",
+      "clocks",
+      "competing processes",
+      "CRC, replay, and recovery deltas"
+    ],
+    "nccl_scope": "NCCL send and receive validate protocol conservation only and never define packet format."
+  },
+  "fatal_guards": [
+    "payload corruption",
+    "non-NV4 or fallback path",
+    "raw bytes below data bytes",
+    "non-monotone counter",
+    "unexplained nominal replay or error",
+    "rate above 25 GB/s per physical link",
+    "rate above 100 GB/s per ordered pair",
+    "rate above 300 GB/s per GPU direction",
+    "throttling or a competing process"
+  ],
+  "decision_rules": {
+    "packet_overhead_vs_copy_engine_coalescing": "Accept the 256+16 packet-overhead explanation only if raw-minus-data steps follow 16*ceil(payload/256) across SM writes, dependent reads, and copy-engine traffic, survive alignment, lane-mask, stride, reuse, and blind holdouts, and the common fitted form predicts completion. If the 94 GB/s envelope or steps occur only for the copy engine, or move with copy-engine message aggregation while SM counter steps do not, classify the effect as copy-engine coalescing and refute packet-format authority.",
+    "bonding": "Four-link bonding requires four active per-link counter deltas, each no more than 25 GB/s, balance within the frozen band at saturation, ordered-pair payload inside the published 94.00 to 94.07 GB/s row, and three-way fan-out containing the published 281.65 GB/s row without exceeding 300 GB/s. Stream-count-only scaling or idle links refutes packet striping across four links.",
+    "credits": "Finite credits require a reproducible first 95-percent knee across outstanding-window, burst, gap, and recovery sweeps, with the knee shifting by packet wire bytes and returning after the frozen recovery gap. A knee that follows only producer launch occupancy is not a credit result. Report fitted unit, window, and return latency as effective quantities.",
+    "fifo_placement": "Source-local interference with other-peer bulk identifies TX queue scope; destination incast interference identifies RX ingress or merge scope. On A100 the switch module is pass-through, so any added bytes, time, reordering, or queue visit in that module is a fatal model defect rather than evidence of a physical switch FIFO.",
+    "head_of_line": "Head-of-line blocking requires ordered small/large latency asymmetry that survives matched offered load and is localized by same-pair, other-peer, remote-incast, direction, and distinct-region controls. A shared-cache-line-only effect is memory acceptance, not transport FIFO evidence."
+  },
+  "catalog": [
+    {
+      "ordinal": 1,
+      "stable_name": "CORNER_NVPKT_001_payload_bytes",
+      "corner": "packetization",
+      "sweep": "payload bytes 1 through 512",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 2,
+      "stable_name": "CORNER_NVPKT_002_candidate_boundaries",
+      "corner": "packetization",
+      "sweep": "candidate-boundary neighbours through 4096 bytes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 3,
+      "stable_name": "CORNER_NVPKT_003_256b_residuals",
+      "corner": "packetization",
+      "sweep": "256*k+r residual matrix",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 4,
+      "stable_name": "CORNER_NVPKT_004_destination_alignment",
+      "corner": "packetization",
+      "sweep": "destination alignment",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 5,
+      "stable_name": "CORNER_NVPKT_005_source_alignment",
+      "corner": "packetization",
+      "sweep": "source alignment",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 6,
+      "stable_name": "CORNER_NVPKT_006_access_width",
+      "corner": "packetization",
+      "sweep": "access width",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 7,
+      "stable_name": "CORNER_NVPKT_007_active_warp_lanes",
+      "corner": "packetization",
+      "sweep": "active warp lanes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 8,
+      "stable_name": "CORNER_NVPKT_008_lane_mask_shape",
+      "corner": "packetization",
+      "sweep": "lane-mask shape",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 9,
+      "stable_name": "CORNER_NVPKT_009_address_stride",
+      "corner": "packetization",
+      "sweep": "address stride",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 10,
+      "stable_name": "CORNER_NVPKT_010_fixed_total_bytes",
+      "corner": "packetization",
+      "sweep": "fixed total bytes with varied message size",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 11,
+      "stable_name": "CORNER_NVPKT_011_fixed_message_size",
+      "corner": "packetization",
+      "sweep": "fixed message size with varied count",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 12,
+      "stable_name": "CORNER_NVPKT_012_address_reuse",
+      "corner": "packetization",
+      "sweep": "address reuse versus separation",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 13,
+      "stable_name": "CORNER_NVPKT_013_peer_write",
+      "corner": "packetization",
+      "sweep": "peer-write length and alignment",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "write_request_direction"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 14,
+      "stable_name": "CORNER_NVPKT_014_peer_read",
+      "corner": "packetization",
+      "sweep": "peer-read length and alignment",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "dependent_sm_peer_read"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "read_request_response_direction"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 15,
+      "stable_name": "CORNER_NVPKT_015_producer_comparison",
+      "corner": "packetization",
+      "sweep": "copy-engine versus SM producers",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "producer_coalescing_boundary"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 16,
+      "stable_name": "CORNER_NVPKT_016_blind_holdout",
+      "corner": "packetization",
+      "sweep": "seeded blind lengths, masks, and alignments",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "candidate_wire_byte_residual",
+        "low": -1,
+        "high": 1,
+        "unit": "counter_quantum",
+        "relation": "raw_bytes - (data_bytes + 16 * ceil(data_packets_payload_bytes / 256))",
+        "secondary_metric": "full_packet_pair_payload_rate",
+        "secondary_low": 93,
+        "secondary_high": 95,
+        "secondary_unit": "GB/s",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "max_payload_bytes",
+          "header_bytes",
+          "packetization_granularity"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "reassembly_policy",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 17,
+      "stable_name": "CORNER_NVBOND_017_ordered_pair_matrix",
+      "corner": "bond_and_wire",
+      "sweep": "all ordered GPU pairs",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "copy_engine_ordered_pair_payload_rate",
+        "low": 94,
+        "high": 94.07,
+        "unit": "GB/s",
+        "relation": "published measured envelope row",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 18,
+      "stable_name": "CORNER_NVBOND_018_per_link_balance",
+      "corner": "bond_and_wire",
+      "sweep": "per-link counter balance",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "max_over_min_per_link_payload_rate",
+        "low": 1,
+        "high": 1.1,
+        "unit": "ratio",
+        "relation": "four active links after counter quantization",
+        "hard_ceiling": 25,
+        "hard_ceiling_unit": "GB/s per physical link"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 19,
+      "stable_name": "CORNER_NVBOND_019_stream_count",
+      "corner": "bond_and_wire",
+      "sweep": "stream count",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 20,
+      "stable_name": "CORNER_NVBOND_020_producer_concurrency",
+      "corner": "bond_and_wire",
+      "sweep": "producer concurrency",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 21,
+      "stable_name": "CORNER_NVBOND_021_bandwidth_ramp",
+      "corner": "bond_and_wire",
+      "sweep": "bandwidth ramp",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 22,
+      "stable_name": "CORNER_NVBOND_022_offered_rate",
+      "corner": "bond_and_wire",
+      "sweep": "offered rate",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 23,
+      "stable_name": "CORNER_NVBOND_023_burst_length",
+      "corner": "bond_and_wire",
+      "sweep": "burst length",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 24,
+      "stable_name": "CORNER_NVBOND_024_source_fanout",
+      "corner": "bond_and_wire",
+      "sweep": "source fan-out",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "copy_engine_three_way_fanout_payload_rate",
+        "low": 275,
+        "high": 285,
+        "unit": "GB/s",
+        "relation": "candidate band containing the published 281.65 GB/s measurement",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per GPU direction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 25,
+      "stable_name": "CORNER_NVBOND_025_destination_fanin",
+      "corner": "bond_and_wire",
+      "sweep": "destination fan-in",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "three_way_fanin_payload_rate",
+        "low": 240,
+        "high": 300,
+        "unit": "GB/s",
+        "relation": "declared RX candidate band with no published A100 incast measurement",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per GPU direction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 26,
+      "stable_name": "CORNER_NVBOND_026_symmetric_bidirectional",
+      "corner": "bond_and_wire",
+      "sweep": "symmetric bidirectional traffic",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 27,
+      "stable_name": "CORNER_NVBOND_027_asymmetric_bidirectional",
+      "corner": "bond_and_wire",
+      "sweep": "asymmetric bidirectional traffic",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 28,
+      "stable_name": "CORNER_NVBOND_028_disjoint_unidirectional",
+      "corner": "bond_and_wire",
+      "sweep": "disjoint unidirectional pairs",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 29,
+      "stable_name": "CORNER_NVBOND_029_disjoint_bidirectional",
+      "corner": "bond_and_wire",
+      "sweep": "disjoint bidirectional pairs",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 30,
+      "stable_name": "CORNER_NVBOND_030_full_mesh",
+      "corner": "bond_and_wire",
+      "sweep": "all ordered mesh flows",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "payload_rate_over_applicable_physical_ceiling",
+        "low": 0.9,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "saturated copy-engine reference; ceilings scale with active links and directions",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 31,
+      "stable_name": "CORNER_NVBOND_031_startup_state",
+      "corner": "bond_and_wire",
+      "sweep": "cold versus warm startup",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "repeat_rate_over_warm_reference",
+        "low": 0.95,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "uncontaminated repetitions only",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 32,
+      "stable_name": "CORNER_NVBOND_032_node_time_repeatability",
+      "corner": "bond_and_wire",
+      "sweep": "node and time repeatability",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "repeat_rate_over_warm_reference",
+        "low": 0.95,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "uncontaminated repetitions only",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "links_per_peer",
+          "per_link_rate_bytes_per_second",
+          "bond_policy",
+          "endpoint_egress_rate_bytes_per_second"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 33,
+      "stable_name": "CORNER_NVINC_033_one_source",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "one-source baseline",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 34,
+      "stable_name": "CORNER_NVINC_034_two_source",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "two-source simultaneous incast",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 35,
+      "stable_name": "CORNER_NVINC_035_three_source",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "three-source simultaneous incast",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 36,
+      "stable_name": "CORNER_NVINC_036_fixed_aggregate_rate",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "fixed aggregate rate across fan-in",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 37,
+      "stable_name": "CORNER_NVINC_037_per_source_rate",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "per-source offered rate",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 38,
+      "stable_name": "CORNER_NVINC_038_start_skew",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "start skew",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 39,
+      "stable_name": "CORNER_NVINC_039_join_leave",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "step-wise join and leave",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 40,
+      "stable_name": "CORNER_NVINC_040_burst_depth",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "burst depth",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 41,
+      "stable_name": "CORNER_NVINC_041_equal_message_size",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "equal message sizes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 42,
+      "stable_name": "CORNER_NVINC_042_unequal_message_size",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "unequal message sizes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 43,
+      "stable_name": "CORNER_NVINC_043_one_elephant_two_mice",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "one elephant with two mice",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 44,
+      "stable_name": "CORNER_NVINC_044_two_elephants_one_mouse",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "two elephants with one mouse",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 45,
+      "stable_name": "CORNER_NVINC_045_push_distinct_buffers",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "push incast into distinct buffers",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 46,
+      "stable_name": "CORNER_NVINC_046_pull_gather",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "pull gather from three buffers",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 47,
+      "stable_name": "CORNER_NVINC_047_hot_destination",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "hot destination region versus dispersed control",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 48,
+      "stable_name": "CORNER_NVINC_048_long_soak",
+      "corner": "incast_and_destination_fifo",
+      "sweep": "long fairness, tail, and drain soak",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_ingress_rate_over_300GBps",
+        "low": 0.8,
+        "high": 1,
+        "unit": "ratio",
+        "relation": "candidate RX band; fairness rows also require each equal source within 0.80 to 1.20 of equal share",
+        "hard_ceiling": 300,
+        "hard_ceiling_unit": "GB/s per destination ingress"
+      },
+      "identifies": {
+        "tx": [
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_rate_bytes_per_second",
+          "buffer_capacity_bytes",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 49,
+      "stable_name": "CORNER_NVCRD_049_dependent_round_trip",
+      "corner": "credit_depletion_and_return",
+      "sweep": "dependent round trip",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "dependent_sm_peer_read"
+      ],
+      "expected_band": {
+        "metric": "dependent_latency_repeat_ratio",
+        "low": 0.9,
+        "high": 1.1,
+        "unit": "ratio",
+        "relation": "same payload and clock state; latency must remain monotone in serialized bytes",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 50,
+      "stable_name": "CORNER_NVCRD_050_outstanding_write_16b",
+      "corner": "credit_depletion_and_return",
+      "sweep": "outstanding 16-byte writes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "post_knee_rate_over_isolated_pair_reference",
+        "low": 0.95,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "first 95-percent knee must be reproduced within one frozen sweep point",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 51,
+      "stable_name": "CORNER_NVCRD_051_outstanding_write_32b",
+      "corner": "credit_depletion_and_return",
+      "sweep": "outstanding 32-byte writes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "post_knee_rate_over_isolated_pair_reference",
+        "low": 0.95,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "first 95-percent knee must be reproduced within one frozen sweep point",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 52,
+      "stable_name": "CORNER_NVCRD_052_outstanding_write_64b",
+      "corner": "credit_depletion_and_return",
+      "sweep": "outstanding 64-byte writes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "post_knee_rate_over_isolated_pair_reference",
+        "low": 0.95,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "first 95-percent knee must be reproduced within one frozen sweep point",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 53,
+      "stable_name": "CORNER_NVCRD_053_outstanding_write_128b",
+      "corner": "credit_depletion_and_return",
+      "sweep": "outstanding 128-byte writes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "post_knee_rate_over_isolated_pair_reference",
+        "low": 0.95,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "first 95-percent knee must be reproduced within one frozen sweep point",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 54,
+      "stable_name": "CORNER_NVCRD_054_outstanding_write_256b",
+      "corner": "credit_depletion_and_return",
+      "sweep": "outstanding 256-byte writes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "post_knee_rate_over_isolated_pair_reference",
+        "low": 0.95,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "first 95-percent knee must be reproduced within one frozen sweep point",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 55,
+      "stable_name": "CORNER_NVCRD_055_outstanding_read",
+      "corner": "credit_depletion_and_return",
+      "sweep": "outstanding reads",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "dependent_sm_peer_read"
+      ],
+      "expected_band": {
+        "metric": "post_knee_rate_over_isolated_pair_reference",
+        "low": 0.95,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "first 95-percent knee must be reproduced within one frozen sweep point",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 56,
+      "stable_name": "CORNER_NVCRD_056_outstanding_atomic",
+      "corner": "credit_depletion_and_return",
+      "sweep": "outstanding atomics",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "post_knee_rate_over_isolated_pair_reference",
+        "low": 0.95,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "first 95-percent knee must be reproduced within one frozen sweep point",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 57,
+      "stable_name": "CORNER_NVCRD_057_burst_length",
+      "corner": "credit_depletion_and_return",
+      "sweep": "burst length at fixed window",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "observed_rate_over_gap_adjusted_offered_rate",
+        "low": 0.9,
+        "high": 1.1,
+        "unit": "ratio",
+        "relation": "below the saturation knee; above it the pair ceiling applies",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 58,
+      "stable_name": "CORNER_NVCRD_058_inter_message_gap",
+      "corner": "credit_depletion_and_return",
+      "sweep": "inter-message gap",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "observed_rate_over_gap_adjusted_offered_rate",
+        "low": 0.9,
+        "high": 1.1,
+        "unit": "ratio",
+        "relation": "below the saturation knee; above it the pair ceiling applies",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 59,
+      "stable_name": "CORNER_NVCRD_059_inter_burst_gap",
+      "corner": "credit_depletion_and_return",
+      "sweep": "inter-burst recovery gap",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "observed_rate_over_gap_adjusted_offered_rate",
+        "low": 0.9,
+        "high": 1.1,
+        "unit": "ratio",
+        "relation": "below the saturation knee; above it the pair ceiling applies",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 60,
+      "stable_name": "CORNER_NVCRD_060_duty_cycle",
+      "corner": "credit_depletion_and_return",
+      "sweep": "duty cycle",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "observed_rate_over_gap_adjusted_offered_rate",
+        "low": 0.9,
+        "high": 1.1,
+        "unit": "ratio",
+        "relation": "below the saturation knee; above it the pair ceiling applies",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 61,
+      "stable_name": "CORNER_NVCRD_061_adaptive_knee_zoom",
+      "corner": "credit_depletion_and_return",
+      "sweep": "adaptive zoom around first 95-percent knee",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "predicted_knee_index_minus_observed_knee_index",
+        "low": -1,
+        "high": 1,
+        "unit": "sweep_point",
+        "relation": "predeclared bisection around the first 95-percent throughput point",
+        "hard_ceiling": 100,
+        "hard_ceiling_unit": "GB/s per ordered pair"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 62,
+      "stable_name": "CORNER_NVCRD_062_two_streams_one_pair",
+      "corner": "credit_depletion_and_return",
+      "sweep": "two streams on one pair",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_rate_over_independent_resource_reference",
+        "low": 0.9,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "separates per-destination credits from shared TX or RX capacity",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 63,
+      "stable_name": "CORNER_NVCRD_063_one_source_two_peers",
+      "corner": "credit_depletion_and_return",
+      "sweep": "one source to two peers",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_rate_over_independent_resource_reference",
+        "low": 0.9,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "separates per-destination credits from shared TX or RX capacity",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 64,
+      "stable_name": "CORNER_NVCRD_064_opposite_directions",
+      "corner": "credit_depletion_and_return",
+      "sweep": "opposite directions on one pair",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "aggregate_rate_over_independent_resource_reference",
+        "low": 0.9,
+        "high": 1.05,
+        "unit": "ratio",
+        "relation": "separates per-destination credits from shared TX or RX capacity",
+        "hard_ceiling": 1,
+        "hard_ceiling_unit": "applicable physical ceiling fraction"
+      },
+      "identifies": {
+        "tx": [
+          "credit_unit_bytes",
+          "credits_per_destination",
+          "destination_credit_scope"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "credit_return_latency_ps",
+          "buffer_capacity_bytes",
+          "credit_return_policy"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 65,
+      "stable_name": "CORNER_NVHOL_065_small_behind_large",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "small behind large",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 66,
+      "stable_name": "CORNER_NVHOL_066_large_behind_small",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "large behind small",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 67,
+      "stable_name": "CORNER_NVHOL_067_separate_streams",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "separate streams on one pair",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 68,
+      "stable_name": "CORNER_NVHOL_068_alternating_sizes",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "alternating sizes",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 69,
+      "stable_name": "CORNER_NVHOL_069_bimodal_mix",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "seeded bimodal mix",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 70,
+      "stable_name": "CORNER_NVHOL_070_same_pair_bulk",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "latency flow under same-pair bulk",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 71,
+      "stable_name": "CORNER_NVHOL_071_other_peer_bulk",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "latency flow under other-peer bulk from same source",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 72,
+      "stable_name": "CORNER_NVHOL_072_remote_incast",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "latency flow under remote incast",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 73,
+      "stable_name": "CORNER_NVHOL_073_write_write",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "write with write",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 74,
+      "stable_name": "CORNER_NVHOL_074_read_read",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "read with read",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "dependent_sm_peer_read"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 75,
+      "stable_name": "CORNER_NVHOL_075_same_direction_read_write",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "read and write with same payload direction",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 76,
+      "stable_name": "CORNER_NVHOL_076_opposite_direction_read_write",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "read and write with opposite payload directions",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 77,
+      "stable_name": "CORNER_NVHOL_077_distinct_regions",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "distinct memory regions",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_over_dispersed_region_control",
+        "low": 0.9,
+        "high": 1.1,
+        "unit": "ratio",
+        "relation": "distinct regions are the no-hotspot control",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "control-normalized completion ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 78,
+      "stable_name": "CORNER_NVHOL_078_shared_cache_line",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "shared-cache-line hotspot versus dispersed control",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 79,
+      "stable_name": "CORNER_NVHOL_079_post_burst_drain",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "post-burst drain",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "drain_time_over_serialization_floor",
+        "low": 1,
+        "high": 2,
+        "unit": "ratio",
+        "relation": "all credits and buffers must return to baseline",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "serialization-floor ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    },
+    {
+      "ordinal": 80,
+      "stable_name": "CORNER_NVHOL_080_blind_mixed_soak",
+      "corner": "fifo_partition_and_head_of_line",
+      "sweep": "seeded blind mixed soak",
+      "execution_modes": [
+        "isolated",
+        "corner_frame",
+        "all_corners_frame"
+      ],
+      "producer_classes": [
+        "persistent_sm_peer_write",
+        "dependent_sm_peer_read",
+        "copy_engine_reference"
+      ],
+      "expected_band": {
+        "metric": "latency_flow_completion_over_isolated_control",
+        "low": 1,
+        "high": 4,
+        "unit": "ratio",
+        "relation": "ordering must be conserved; ratios classify TX versus RX blocking while the A100 switch stays pass-through",
+        "hard_ceiling": 4,
+        "hard_ceiling_unit": "isolated-control ratio"
+      },
+      "identifies": {
+        "tx": [
+          "egress_queue_scope",
+          "bond_policy"
+        ],
+        "switch": [
+          "mode",
+          "pass_through_byte_identity"
+        ],
+        "rx": [
+          "ingress_queue_scope",
+          "merge_service_rate_bytes_per_second",
+          "delivery_order"
+        ]
+      },
+      "switch_identifiability": "The direct-mesh A100 cell identifies only pass-through identity. It cannot identify a physical switch FIFO, virtual-channel count, arbitration rule, or buffer depth."
+    }
+  ]
+}

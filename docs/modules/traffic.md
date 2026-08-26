@@ -1408,6 +1408,24 @@ and [the target-topology result](../../examples/disaggregated_target_topology_v1
   task to close; the live held-out result promotes it to `calibrated` and closes
   TRAF-65. No downstream task depends on TRAF-65 being closed.
 
+  Local-arm progress on 2026-08-26 does not close this entry. The final
+  expectations-only commit is `d74b123`, with SHA-256
+  `212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571`.
+  The GPU-free arm compiled the three-producer mock harness and completed all
+  86 resumable cells: 80 isolated, five ordered `corner_frame` and one
+  `all_corners_frame`, totaling 14,035 rows whose manifests verify. Those rows
+  carry no measurement claim. The additive htsim candidate composes separate
+  TX, switch and RX modules, makes the A100 direct-mesh switch an exact
+  pass-through, and returns the caller's analytic result by object identity
+  when no candidate is selected. Its comparison uses only the already
+  published 94.00 to 94.07 GB/s ordered-pair and 281.65 GB/s fan-out envelope
+  rows. The 80-case on-silicon campaign remains this entry's own resumable
+  remainder, so reserved IDs TRAF-67 and TRAF-68 are not consumed. Maintenance
+  reservation `SD26082026` holds every Merlin GPU node down until
+  `2026-08-28T06:30`; the exact digest-pinned staging, pending-index and
+  `sbatch` commands are in the
+  [TRAF-65 resume record](../../examples/a100_nvlink_packet_v1/RESUME.md).
+
 ### Completeness
 
 - TRAF-49 (Completeness; P2; M): let a profile that supports only the widths it
