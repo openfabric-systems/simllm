@@ -86,3 +86,39 @@ presented as measurements. Non-circularity: constants are fitted on a
 declared calibration subset of the published anchors and the 5 percent
 bar is scored on the held-out remainder, so the claim cannot be
 manufactured by the fit.
+
+## Per-anchor benchmark-bias attenuation (maintainer, 2026-08-26)
+
+The published anchors are benchmark numbers, and the disclosure itself
+states the conditions that make them favorable: in-distribution expert
+balance, fixed exact-length synthetic inputs packed to 16,384 tokens per
+device, and incomplete MTP integration. Where a published point is biased
+by such a benchmark simplification relative to the physics simLLM models,
+a per-anchor attenuation factor may be applied to the comparison, under
+five binding rules that extend, and never relax, the constants policy
+above.
+
+1. Named mechanism: each factor names the specific benchmark
+   simplification it corrects (for example, balanced expert routing
+   versus the uniform-routing dispatch incidence simLLM derives, or
+   perfect length packing versus a realistic length distribution), and
+   the correction applies only to the anchors that simplification
+   touches.
+2. Independent quantification: the factor's magnitude is derived from
+   mechanism arithmetic or published evidence that does not include the
+   anchor's own numeric value. A factor whose only support is that it
+   makes the line fit is out of bounds; with one free factor per point,
+   agreement is vacuous, so admissible factors must be fewer than the
+   anchors they touch or derived with zero anchor input.
+3. Freeze first: attenuation factors and their derivations are frozen
+   in the expectations-only commit before any scored comparison, like
+   every other constant.
+4. Dual publication: the unattenuated prediction is always published
+   next to the attenuated one, the figure states that the scored claim
+   is under the declared benchmark-bias model, and each factor's
+   uncertainty propagates into the error bars.
+5. Scope: attenuation addresses benchmark-condition bias in the
+   published point, never gaps in simLLM's own mechanism. A miss whose
+   dominant contributor is a registered modeling residual (for example
+   the decode depth-extrapolation gap) is resolved by that registered
+   work, not by attenuating the anchor.
