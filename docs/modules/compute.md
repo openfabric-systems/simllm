@@ -10,8 +10,9 @@ remain offline; none runs once per serving step.
 ## Interface
 
 - `KernelSpec`: fused work plus its stable shape key. A fused transformer step
-  also carries the exact `family_kernels` projection used to apportion work;
-  ordinary kernels leave it empty.
+  also carries the exact `family_kernels` projection used to apportion work
+  and the ordered per-request token shapes used by exact record selection;
+  ordinary kernels leave both projections empty.
 - `ComputeProvider.estimate(kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate`
 - `ComputeProvider.estimate_layers(kernel, gpu, num_layers)`: optional ordered
   layer estimates for the same fused kernel. The default returns `None` and
@@ -33,6 +34,12 @@ remain offline; none runs once per serving step.
   opt-in that sums a fused kernel's declared family projections and propagates
   conservative uncertainty. The default ignores that projection, retains the
   historical miss behavior and serializes the same table byte for byte.
+  A separate opt-in lookup binding forms one complete canonical record key
+  from the live request shapes and translates an exact hit into this same
+  table provider. It requires an explicit comparator provider; a miss delegates
+  to that comparator unchanged. Canonical record bytes plus their required
+  SHA-256 select the binding, so a key-compatible replacement record, including
+  a later Hopper campaign record, needs no production-code change.
 - `ComputeCalibrationArtifact`: strict
   `simllm-compute-calibration-v1` capture record. It binds GPU, driver, CUDA,
   profiler, source, binary, static-SASS and capture-manifest identities to an
@@ -1393,6 +1400,17 @@ deterministic device model. The model records typed shape and implementation
 selection, exact source provenance and a support envelope; optional Accel-Sim
 use is isolated to qualified A100 gaps and is absent from online execution.
 
+The retained kernel-cycle candidate now binds into the live disaggregated
+session through `ProfileTableProvider`, rather than through a second provider
+type or timing authority. Exact selection retains the record SHA-256, candidate
+status, campaign, partial coverage and device kind in run provenance, with
+`calibration_claim=false`. The first CORE-53 study selected the only decode
+row twice and delegated 18 uncovered steps to roofline. Its acceptance run is
+void on the separate complete-result identity guard, and the record has no
+prefill row plus only one decode shape, so COMP-73 owns the target-record
+coverage needed for closure; see
+[the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
+
 The nonvoid
 [offline model-extraction study](../../examples/model_extraction_v1/RESULTS.md)
 publishes the Granite column's vLLM and SGLang inventories. Both framework
@@ -2638,6 +2656,19 @@ SGLang EP32 prefill and EP72 decode shapes. See
   Acceptance requires all registered Granite cells plus the exact DeepSeek
   physical cells, retained source and output digests, and a resumable campaign
   record whose completed-cell prefix survives interruption byte for byte.
+- COMP-73 (Completeness; P1; L): produce the key-compatible target record that
+  makes the CORE-53 frozen disaggregated session grid total. The accepted
+  retained fixture is A100, vLLM 0.26, tensor parallel one and partial decode
+  coverage; it has no prefill row and covers only batch one at prior KV length
+  16. Capture and publish the campaign's Hopper record by canonical content
+  address for the pinned session identity, tensor parallel eight, both frozen
+  prefill shapes and every decode prior-context shape exercised by the 8-token
+  and 16-token prompts. Exact selection must price every required step with no
+  lookup miss, preserve candidate or validated status without promotion, and
+  move TTFT and TPOT by the preregistered selected-row arithmetic. Supplying no
+  record remains the exact roofline comparator path. This is the bounded
+  session-coverage slice of COMP-64, not a second capture format or pricing
+  authority.
 
 ### Uncategorized
 

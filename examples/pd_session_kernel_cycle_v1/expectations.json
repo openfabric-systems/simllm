@@ -1,0 +1,233 @@
+{
+  "schema": "simllm-pd-session-kernel-cycle-freeze-v1",
+  "study": "pd_session_kernel_cycle_v1",
+  "task": "CORE-53",
+  "authored_against": "4f7a316926ecd55fb00d376e5aae1bcfc01c1929",
+  "working_tree_before_freeze": "clean-except-required-ignored-sizing-note",
+  "chronology": {
+    "binding_implementation_existed_before_freeze": false,
+    "scored_run_existed_before_freeze": false,
+    "baseline_result_existed_before_freeze": true,
+    "candidate_record_existed_before_freeze": true
+  },
+  "baseline": {
+    "study": "pd_session_v1",
+    "schema": "simllm-pd-session-study-summary-v1",
+    "tracked_sha256": {
+      "examples/pd_session_v1/.gitattributes": "a79691a93b46e49ce460c26ef22afcc03d6eca1e63bf2edbc20e96159510f6c9",
+      "examples/pd_session_v1/RESULTS.md": "fea7a659879c0c1bf9a2a7a2751edb7ec84286a9e790f7a193ac8b2933f96276",
+      "examples/pd_session_v1/expectations.json": "064d48044820b673ff99c0fb2ea6d185e8caca1633314a3146fcc3cfb3ff0aba",
+      "examples/pd_session_v1/expectations.md": "12aa356846d9a0f316d47e48024db498dd71bd034c9ef1c589e96f55614bac82",
+      "examples/pd_session_v1/results.json": "9660a5bcd47706fe857694d68340aab9fdab2d7096632624e6f310118d4a435e",
+      "examples/pd_session_v1/run_study.py": "56d96ba0f1979ddf5160b93c19c4e93b57406c6ebf76d61e4a5661f9b317410b"
+    },
+    "cells": [
+      {
+        "prompt_tokens": 8,
+        "handoff_ps": 100000000,
+        "kv_bytes": 393216,
+        "prefill_service_ps": 95424000,
+        "decode_first_token_service_ps": 77952000,
+        "ttft_ps": 273376000,
+        "tpot_ps": 77952000
+      },
+      {
+        "prompt_tokens": 8,
+        "handoff_ps": 200000000,
+        "kv_bytes": 393216,
+        "prefill_service_ps": 95424000,
+        "decode_first_token_service_ps": 77952000,
+        "ttft_ps": 373376000,
+        "tpot_ps": 77952000
+      },
+      {
+        "prompt_tokens": 16,
+        "handoff_ps": 100000000,
+        "kv_bytes": 786432,
+        "prefill_service_ps": 114936000,
+        "decode_first_token_service_ps": 77976000,
+        "ttft_ps": 292912000,
+        "tpot_ps": 77976000
+      },
+      {
+        "prompt_tokens": 16,
+        "handoff_ps": 200000000,
+        "kv_bytes": 786432,
+        "prefill_service_ps": 114936000,
+        "decode_first_token_service_ps": 77976000,
+        "ttft_ps": 392912000,
+        "tpot_ps": 77976000
+      }
+    ]
+  },
+  "candidate_record": {
+    "source_fixture": "tests/fixtures/kernel_cycle_lut_v1",
+    "schema": "simllm-kernel-cycle-lut-v1",
+    "sha256": "e495f3ca5d0858cf371b19205ae6b7747d633695020d10f58645c5f245086070",
+    "acceptance_status": "candidate",
+    "campaign_id": "retained-granite-tp1-b1-candidate",
+    "coverage": "partial-kernel-subset",
+    "device_kind_id": "nvidia-a100-sm80",
+    "framework_version": "0.26.0+cu129",
+    "pool": "decode",
+    "launch_mode": "cuda-graph",
+    "tensor_parallel": 1,
+    "batch_size": 1,
+    "per_request_kv_lengths": [16],
+    "routing_availability": "not-captured",
+    "distribution_verdict": "insufficient-replays",
+    "measured_service_ps": 2047488000
+  },
+  "binding_contract": {
+    "provider_chain": "ComputeProvider-estimate-of-step-kernel",
+    "record_input": "canonical-bytes-plus-required-content-sha256",
+    "selection": "exact-complete-entry-key",
+    "shape_projection": {
+      "prefill": "sum-computed-new-tokens-plus-sum-existing-context-tokens",
+      "decode": "ordered-batch-size-plus-each-request-prior-context-length"
+    },
+    "miss_policy": "explicit-roofline-comparator",
+    "record_absent_policy": "the-existing-roofline-provider-object",
+    "duplicate_match_policy": "reject",
+    "content_mismatch_policy": "reject-before-pricing",
+    "provenance_schema": "simllm-kernel-cycle-pricing-provenance-v1",
+    "required_provenance_fields": [
+      "record_sha256",
+      "acceptance_status",
+      "campaign_id",
+      "coverage",
+      "record_device_kind_id",
+      "selected_entry_key_sha256"
+    ],
+    "candidate_rule": "surface-candidate-status-and-make-no-calibration-claim",
+    "future_record_rule": "a-key-compatible-Hopper-record-is-selected-by-canonical-content-and-shape-with-no-code-change"
+  },
+  "sweep": {
+    "prompt_tokens": [8, 16],
+    "handoff_ps": [100000000, 200000000],
+    "decode_output_tokens": 4,
+    "cells": 4,
+    "expected_selected_steps": [
+      {
+        "prompt_tokens": 16,
+        "handoff_ps": 100000000,
+        "pool": "decode",
+        "prior_context_tokens": 16,
+        "step_position": "first-client-visible-token"
+      },
+      {
+        "prompt_tokens": 16,
+        "handoff_ps": 200000000,
+        "pool": "decode",
+        "prior_context_tokens": 16,
+        "step_position": "first-client-visible-token"
+      }
+    ],
+    "expected_lookup_hits": 2,
+    "expected_prefill_lookup_hits": 0,
+    "expected_decode_lookup_hits": 2
+  },
+  "movement_oracle": {
+    "candidate_provider_ps": 2047488000,
+    "roofline_provider_ps_at_kv16": 75292525,
+    "roofline_represented_ps_at_kv16": 75288000,
+    "candidate_represented_ps_at_kv16": 2047488000,
+    "signed_selected_step_delta_ps": 1972200000,
+    "cells": [
+      {
+        "prompt_tokens": 8,
+        "handoff_ps": 100000000,
+        "expected_ttft_ps": 273376000,
+        "signed_ttft_delta_ps": 0,
+        "expected_tpot_ps": 77952000,
+        "signed_tpot_delta_ps": 0
+      },
+      {
+        "prompt_tokens": 8,
+        "handoff_ps": 200000000,
+        "expected_ttft_ps": 373376000,
+        "signed_ttft_delta_ps": 0,
+        "expected_tpot_ps": 77952000,
+        "signed_tpot_delta_ps": 0
+      },
+      {
+        "prompt_tokens": 16,
+        "handoff_ps": 100000000,
+        "expected_ttft_ps": 2265112000,
+        "signed_ttft_delta_ps": 1972200000,
+        "expected_tpot_ps": 77976000,
+        "signed_tpot_delta_ps": 0
+      },
+      {
+        "prompt_tokens": 16,
+        "handoff_ps": 200000000,
+        "expected_ttft_ps": 2365112000,
+        "signed_ttft_delta_ps": 1972200000,
+        "expected_tpot_ps": 77976000,
+        "signed_tpot_delta_ps": 0
+      }
+    ]
+  },
+  "physical_bounds": {
+    "candidate_kernel_subset_service_ps": {
+      "floor": 1,
+      "ceiling": 2323678000
+    },
+    "live_nonempty_step_service_ps": {
+      "floor": 1000000,
+      "ceiling": 100000000000
+    },
+    "decode_tokens_per_second": {
+      "floor": 10,
+      "ceiling": 100000
+    },
+    "interpretation": "the-candidate-A100-partial-record-is-a-mechanism-input-not-a-B100-calibration"
+  },
+  "evidence_classes": {
+    "exact_oracle_rows": 4,
+    "behavioral_relation_families": 3,
+    "behavioral_parameterized_instances": 8,
+    "fatal_guards": 9,
+    "native_engine_smoke": "separate"
+  },
+  "scored_relations": [
+    {
+      "id": "R1-signed-selected-row-movement",
+      "instances": 4,
+      "claim": "Each lookup-arm cell has the exact frozen signed TTFT and TPOT delta from its selected rows."
+    },
+    {
+      "id": "R2-handoff-orthogonality",
+      "instances": 2,
+      "claim": "Doubling handoff service adds exactly 100000000 ps to TTFT without changing selection or TPOT at each prompt length."
+    },
+    {
+      "id": "R3-record-absent-byte-identity",
+      "instances": 2,
+      "claim": "Two independent record-absent runs preserve the accepted compact cells and full request-result bytes exactly."
+    }
+  ],
+  "fatal_guards": [
+    "candidate-source-or-content-digest-disagreement",
+    "record-schema-or-candidate-status-disagreement",
+    "nonexact-or-duplicate-entry-selection",
+    "provider-chain-provenance-loss",
+    "accepted-pd-session-v1-tracked-byte-drift",
+    "record-absent-cell-or-request-byte-drift",
+    "ttft-decomposition-or-kv-byte-disagreement",
+    "candidate-or-live-service-outside-physical-bounds",
+    "candidate-status-promoted-to-calibration"
+  ],
+  "closure_rule": {
+    "close_core_53_only_if": "the-candidate-record-literally-prices-every-required-prefill-and-decode-step-and-all-acceptance-relations-hold",
+    "known_candidate_limit": "the-record-has-one-partial-decode-row-and-no-prefill-row",
+    "if_not_literal": "keep-CORE-53-open-and-register-the-exact-record-coverage-remainder",
+    "reserved_ids": ["CORE-58", "COMP-73"],
+    "does_not_claim": [
+      "B100-or-Hopper-calibration",
+      "complete-prefill-or-decode-coverage",
+      "validated-routing-distribution",
+      "COMP-64-campaign-completion"
+    ]
+  }
+}

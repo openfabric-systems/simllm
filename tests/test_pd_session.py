@@ -267,6 +267,32 @@ def test_curve_point_uses_exact_terminal_throughput_and_mean_request_delay():
     assert point.output_token_count == 8
 
 
+def test_compute_pricing_provenance_is_opt_in_and_absent_on_the_off_path():
+    baseline = _curve_request("off", 0, 100)
+    assert "compute_pricing" not in baseline.to_json()
+
+    selected = VllmPdRequestResult(
+        timeline=baseline.timeline,
+        prefill_engine_id=baseline.prefill_engine_id,
+        decode_engine_id=baseline.decode_engine_id,
+        prefill_internal_request_id=baseline.prefill_internal_request_id,
+        decode_internal_request_id=baseline.decode_internal_request_id,
+        bootstrap_token_id=baseline.bootstrap_token_id,
+        decode_token_ids=baseline.decode_token_ids,
+        kv_transfer_params=baseline.kv_transfer_params,
+        prefill_records=baseline.prefill_records,
+        decode_records=baseline.decode_records,
+        compute_pricing={
+            "decode": {
+                "record_sha256": "a" * 64,
+                "acceptance_status": "candidate",
+            }
+        },
+    )
+
+    assert selected.to_json()["compute_pricing"] == selected.compute_pricing
+
+
 def test_curve_record_is_machine_readable_and_load_ordered():
     requests = (_curve_request("a", 0, 100),)
     points = tuple(

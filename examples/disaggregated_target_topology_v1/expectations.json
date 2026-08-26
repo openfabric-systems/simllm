@@ -1,0 +1,119 @@
+{
+  "baseline": {
+    "commit": "4f7a316926ecd55fb00d376e5aae1bcfc01c1929",
+    "files": {
+      "examples/m1/topologies/clos_64_400g.topo": "69b2fc9c8183ff054149fee985217d37b69140e116dcfd28983fe3809624eb98",
+      "simllm/placement/disaggregated.py": "83a90bae0ff47fcb38a7dc6115f30b4b0db4f77ab702f05f9a2912e89ff9ef12",
+      "simllm/placement/manifest.py": "72391c60a7c0bbc39cb0af9676e52eb7b7dceb72894ae5691572f7e49fd01f87",
+      "tests/test_disaggregated_placement.py": "5c1a00e452f16a9703ff3cc47a17e4da69bf7a6af966d837f7bfd3a5c3838aaa"
+    },
+    "placement_records": {
+      "one_plus_one": {
+        "bytes": 15772,
+        "sha256": "019f818e02252407e560b37415da12151c8f6ca0ff01bcb7ff8aabfead47f286"
+      },
+      "target": {
+        "bytes": 2639042,
+        "sha256": "48029d871293762007ab33082d59a7b5a4efb22583394e718c97e733717fd709"
+      }
+    }
+  },
+  "cells": [
+    {
+      "decode_nodes": 1,
+      "decode_ranks": 8,
+      "endpoint_links": 16,
+      "fabric_nodes": 2,
+      "gpu_count": 16,
+      "goal_messages": 16,
+      "label": "one_plus_one",
+      "leaf_spine_links": 16,
+      "leaf_switches": 2,
+      "link_count": 32,
+      "nic_count": 16,
+      "prefill_nodes": 1,
+      "prefill_ranks": 8,
+      "rank_count": 16,
+      "spine_switches": 8,
+      "switch_count": 10,
+      "switch_port_count": 48
+    },
+    {
+      "decode_nodes": 40,
+      "decode_ranks": 320,
+      "endpoint_links": 448,
+      "fabric_nodes": 56,
+      "gpu_count": 448,
+      "goal_messages": 448,
+      "label": "target",
+      "leaf_spine_links": 448,
+      "leaf_switches": 56,
+      "link_count": 896,
+      "nic_count": 448,
+      "prefill_nodes": 16,
+      "prefill_ranks": 128,
+      "rank_count": 448,
+      "spine_switches": 8,
+      "switch_count": 64,
+      "switch_port_count": 1344
+    }
+  ],
+  "closure": {
+    "closes_if_literal": [
+      "PLACE-5"
+    ],
+    "does_not_close": [
+      "PLACE-1",
+      "PLACE-2",
+      "TRAF-62",
+      "TRAF-64"
+    ],
+    "dependency_note_updated_if_literal": "TRAF-62",
+    "reserved_ids": [
+      "PLACE-6",
+      "TRAF-66"
+    ]
+  },
+  "date": "2026-08-26",
+  "evidence": {
+    "fatal_unscored": [
+      "topology_cardinality",
+      "identity_conservation",
+      "role_conservation",
+      "complete_endpoint_reachability",
+      "goal_endpoint_reachability",
+      "path_arithmetic",
+      "physical_sanity",
+      "fabric_round_trip_identity",
+      "disabled_placement_byte_identity"
+    ],
+    "scored_behavioral_families": 0,
+    "violation_status": "VOID"
+  },
+  "goal_witness": {
+    "destination_rule": "(source_rank + 8) mod rank_count",
+    "expected_path_links": 4,
+    "expected_path_propagation_ps": 4000000,
+    "payload_bytes": 4096,
+    "serialization_ps_per_link": 81920,
+    "source_destination_multiplicity": 1
+  },
+  "physical_sanity": {
+    "cross_leaf_cut_through_floor_ps": 4081920,
+    "cross_leaf_store_and_forward_ceiling_ps": 4327680,
+    "scope": "no_queue_no_switch_latency"
+  },
+  "schema": "simllm-disaggregated-target-topology-expectations-v1",
+  "topology": {
+    "endpoint_links_per_leaf": 8,
+    "evidence_class": "declared",
+    "goal_rank_mapping": "gpu-rank",
+    "leaf_spine_fanout": 8,
+    "link_propagation_delay_ps": 1000000,
+    "link_rate_bps": 400000000000,
+    "name": "simllm-disaggregated-448-clos-declared-v1",
+    "spine_switches": 8,
+    "switch_latency_ps": 0,
+    "tiers": 2
+  }
+}
