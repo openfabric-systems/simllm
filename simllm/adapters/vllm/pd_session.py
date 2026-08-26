@@ -16,8 +16,6 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
-from typing_extensions import Self
-
 from simllm.adapters.vllm.executor import (
     SimExecutor,
     SimExecutorConfig,
@@ -1126,7 +1124,7 @@ class VllmDisaggregatedSession:
             engine.llm.llm_engine.engine_core.shutdown()
         reset_configuration()
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> VllmDisaggregatedSession:  # noqa: PYI034 (Self needs Python 3.11)
         return self
 
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
