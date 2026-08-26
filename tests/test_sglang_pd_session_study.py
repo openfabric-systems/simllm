@@ -52,3 +52,13 @@ def test_flagship_render_is_literal_104_rank_structure():
     assert flagship["decode_tp"] == [32]
     assert flagship["decode_dense_dp"] == [32]
     assert flagship["core54_claimed_ranks"] == 96
+
+
+def test_identity_conservation_does_not_require_handoff_completion_order():
+    identity_ledgers_hold = _namespace()["_identity_ledgers_hold"]
+    admitted = [f"request-{index}" for index in range(8)]
+    handed_off = [admitted[index] for index in (0, 1, 3, 2, 5, 4, 7, 6)]
+
+    assert identity_ledgers_hold(admitted, handed_off, list(admitted))
+    assert not identity_ledgers_hold(admitted, handed_off[:-1], list(admitted))
+    assert not identity_ledgers_hold(admitted, handed_off[:-1] + [admitted[0]], list(admitted))

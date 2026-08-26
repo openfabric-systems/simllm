@@ -620,6 +620,22 @@ def _curve_fraction(point: dict[str, Any], name: str) -> Fraction:
     return Fraction(point[name]["numerator"], point[name]["denominator"])
 
 
+def _identity_ledgers_hold(
+    admitted: list[str],
+    handed_off: list[str],
+    terminal: list[str],
+) -> bool:
+    """Check exact-once identity conservation without imposing completion order."""
+
+    return (
+        len(admitted) == len(handed_off) == len(terminal) == REQUESTS_PER_CELL
+        and len(set(admitted)) == REQUESTS_PER_CELL
+        and len(set(handed_off)) == REQUESTS_PER_CELL
+        and len(set(terminal)) == REQUESTS_PER_CELL
+        and set(admitted) == set(handed_off) == set(terminal)
+    )
+
+
 def analyze_observation(observation: dict[str, Any]) -> dict[str, Any]:
     """Apply the frozen fatal guards and behavioral relations."""
 
@@ -668,8 +684,7 @@ def analyze_observation(observation: dict[str, Any]) -> dict[str, Any]:
             for role, width in expected_widths.items()
         )
         identities_hold = (
-            admitted == handed_off == terminal
-            and len(set(admitted)) == REQUESTS_PER_CELL
+            _identity_ledgers_hold(admitted, handed_off, terminal)
             and len(set(prefill_internal)) == REQUESTS_PER_CELL
             and len(set(decode_internal)) == REQUESTS_PER_CELL
             and all(left != right for left, right in zip(
@@ -844,6 +859,8 @@ def analyze_observation(observation: dict[str, Any]) -> dict[str, Any]:
             and row["maximum_decode_batch_size"] >= 2
         )
         batching.append(row)
+        if not row["held"]:
+            fatal.append({"guard": "missing-multi-request-batch", "pool": row})
 
     curve_relations = []
     for curve in observation["curves"]:
@@ -873,20 +890,28 @@ def analyze_observation(observation: dict[str, Any]) -> dict[str, Any]:
         for cell in cells
         for prompt in (cell["prompt_tokens"],)
     )
-    behavioral_held = (
-        all(row["held"] for row in batching)
-        and all(row["throughput_nondecreasing"] for row in curve_relations)
-        and prompt_relation
-    )
-    if not behavioral_held:
-        fatal.append({"guard": "frozen-behavioral-relations"})
+    behavioral_findings = [
+        {
+            "relation": "throughput-nondecreasing-with-load",
+            "configuration_id": row["configuration_id"],
+        }
+        for row in curve_relations
+        if not row["throughput_nondecreasing"]
+    ]
+    if not prompt_relation:
+        behavioral_findings.append({"relation": "prompt-kv-byte-doubling"})
+    behavioral_held = not behavioral_findings
 
     maximum_residual = max(
         row["maximum_ttft_residual_ps"] for row in exact_rows
     )
     return {
-        "status": "PASS" if not fatal else "VOID",
+        "status": "VOID" if fatal else ("PASS" if behavioral_held else "REFUTED"),
         "fatal_guards": {"status": "HELD" if not fatal else "VIOLATED", "findings": fatal},
+        "behavioral_relations": {
+            "status": "HELD" if behavioral_held else "REFUTED",
+            "findings": behavioral_findings,
+        },
         "conservation": {
             "cells": len(exact_rows),
             "admissions": sum(row["admissions"] for row in exact_rows),
@@ -953,7 +978,9 @@ def run(args: argparse.Namespace) -> None:
     )
     print(json.dumps({"status": analysis["status"], "raw_result": raw_path.as_posix()}))
     if analysis["status"] != "PASS":
-        raise SystemExit("SGL-33 study is void; see retained raw findings")
+        raise SystemExit(
+            f"SGL-33 study is {analysis['status'].lower()}; see retained raw findings"
+        )
 
 
 def _parser() -> argparse.ArgumentParser:
