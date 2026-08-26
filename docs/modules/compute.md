@@ -1713,6 +1713,16 @@ and an explicit reason:
 | `simllmNetworkComplete` | simllm-invented: deterministic external completion injection until a native RNIC session supplies CQEs |
 | `simllmKernelComplete` | simllm-invented: stack-internal kernel-completion observation until runtime projection lands |
 
+The DeepSeek-V3 text inventory is published for both pinned framework
+configuration surfaces. Its 14 ordered families preserve the checkpoint's
+three dense plus 58 mixture-of-experts layer schedule, multi-head latent
+attention, shared and routed experts and optional multi-token-prediction
+block. All 20 cases conserve at 666 logical visits without MTP and 667 with
+it. The framework-neutral deployment projection carries exact static rank
+classes for EP32, EP72 and EP144 and exact dynamic work for the disclosed
+SGLang EP32 prefill and EP72 decode shapes. See
+[the DeepSeek inventory results](../../examples/model_extraction_deepseek_v3_v1/RESULTS.md).
+
 ## Open tasks
 
 ### Precision
@@ -2175,6 +2185,28 @@ and an explicit reason:
   only the installed ones. A measurement campaign run before COMP-44 supplies
   a non-overlappable term would therefore fail this bar by construction and
   could close nothing.
+- COMP-69 (Precision; P1; L): replace the deployment projection's uniform
+  per-unique-expert dispatch with the observed physical assignment across the
+  256 logical experts and 32 redundant slots. The current surrogate preserves
+  exact logical work and counts redundant slots only in residency; it does not
+  say which physical copy serves a visit. The identifying observables are the
+  framework load balancer's logical-expert-to-slot map, per-slot routed counts
+  and remap epoch under the frozen SGLang EP32 and EP72 workloads. Acceptance
+  requires every logical visit and routed FLOP to conserve across the physical
+  slots, a per-rank workload projection that changes the CORE-54 metric chain
+  in the expected direction under skew, and exact bytes and timestamps from
+  the current uniform projection when the observed-balancer path is disabled.
+- COMP-70 (Precision; P1; L): replace the enabled MTP case's one-block
+  aggregate with the realized multi-token-prediction proposal and acceptance
+  schedule before that arm contributes to CORE-54. The current logical family
+  charges one checkpoint MTP block when `mtp_enabled` is true, but it has no
+  proposal count, accepted-position, rejection or replay observation. Bind
+  those values from the owning framework execution and retain the aggregate
+  family as its exact projection. Acceptance requires exact family and token
+  conservation over accepted and rejected proposal patterns, a separately
+  frozen interpretation of the disclosure's simulated-MTP arm, a signed
+  TTFT/TPOT effect, and byte-identical ordinary cases when MTP is disabled.
+
 ### Completeness
 
 - COMP-4 (Completeness; P2; M): add generic multi-axis interpolation as an
@@ -2557,28 +2589,6 @@ and an explicit reason:
   whose category cycles conserve the sampled total within the frozen sampling
   uncertainty, one denied fixture, and exact bypass equivalence for every
   timestamp, component and compiled service value.
-
-- COMP-67 (Completeness; P1; L): extend the offline inventory family set for
-  DeepSeek-V3 and publish its column. Price the multi-head latent attention
-  path (the low-rank KV compression and decompression projections, the
-  compressed-cache read whose per-token bytes follow the latent width rather
-  than the head count, and the rotary split), the DeepSeek MoE layers
-  (shared plus routed experts with their gating, at the checkpoint's expert
-  counts and top-k), the dense early layers and the multi-token-prediction
-  head as declared families with exact integer FLOPs, HBM bytes and logical
-  launch counts per layer, derived from both pinned framework sources and
-  the model configuration with no weight download. Preserve the checkpoint's
-  exact layer schedule, prove family conservation for every declared case
-  through both framework configuration surfaces, and publish
-  byte-deterministic complete inventories for both frameworks with exact
-  cross-framework structural agreement. Additionally publish the
-  deployment-sharded projection: per-rank family shapes under the disclosed
-  parallelism configurations (the SGLang 96-GPU prefill EP32 and decode
-  EP72 arrangements and DeepSeek's production EP32 and EP144 units,
-  recorded in
-  [the deployment disclosures](../papers/deepseek-deployment-disclosures.md)),
-  so the capture campaign and the CORE-54 flagship price per-rank steps by
-  lookup. The Granite and Qwen suites and inventories stay byte-identical.
 
 ### Uncategorized
 

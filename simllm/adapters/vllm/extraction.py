@@ -10,6 +10,7 @@ from typing import Any
 from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
 from simllm.calibration.extraction import (
     FrameworkConfigurationProjection,
+    FrameworkDeepseekStack,
     FrameworkTextStack,
     extract_model_inventory,
 )
@@ -18,12 +19,15 @@ from simllm.calibration.model_inventory import (
     ModelGeometry,
     ModelKernelInventory,
 )
+from simllm.compute import ModelDims
 
 VLLM_SOURCE_COMMIT = "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac"
 VLLM_EXTRACTION_SEAM = "flagged-skeleton-step-record-v1"
 VLLM_CONFIGURATION_SEAM = "ModelConfig-with-skip-tokenizer-init"
 VLLM_QWEN35_BINDING = "model_executor/models/registry.py:573"
 VLLM_QWEN35_IMPLEMENTATION = "QwenGatedDeltaNetAttention"
+VLLM_DEEPSEEK_V3_BINDING = "model_executor/models/registry.py:93"
+VLLM_DEEPSEEK_V3_IMPLEMENTATION = "DeepseekV2Attention and DeepseekV2MoE"
 
 
 def _framework_identity(version: str) -> FrameworkIdentity:
@@ -100,6 +104,99 @@ def _qwen35_projection(
     )
 
 
+def _deepseek_v3_projection(
+    model_config: Any,
+    framework: FrameworkIdentity,
+) -> FrameworkConfigurationProjection | None:
+    hf = model_config.hf_config
+    architectures = tuple(hf.architectures or ())
+    if architectures != ("DeepseekV3ForCausalLM",):
+        return None
+    from vllm.model_executor.models.registry import ModelRegistry
+
+    architecture = architectures[0]
+    registered = ModelRegistry.models.get(architecture)
+    if (
+        registered is None
+        or getattr(registered, "module_name", None)
+        != "vllm.model_executor.models.deepseek_v2"
+        or getattr(registered, "class_name", None) != architecture
+    ):
+        raise RuntimeError("vLLM DeepSeek-V3 architecture binding does not match the pin")
+    quantization = hf.quantization_config
+    if not isinstance(quantization, dict):
+        raise TypeError("vLLM DeepSeek-V3 quantization config is not an object")
+    if float(hf.routed_scaling_factor) != 2.5:
+        raise RuntimeError("vLLM DeepSeek-V3 routed scaling factor changed")
+    geometry = ModelGeometry(
+        layers=hf.num_hidden_layers,
+        hidden_size=hf.hidden_size,
+        intermediate_size=hf.intermediate_size,
+        num_heads=hf.num_attention_heads,
+        num_kv_heads=hf.num_key_value_heads,
+        head_size=hf.qk_nope_head_dim + hf.qk_rope_head_dim,
+        num_experts=hf.n_routed_experts,
+        top_k=hf.num_experts_per_tok,
+        vocab_size=hf.vocab_size,
+    )
+    return FrameworkConfigurationProjection(
+        framework=framework,
+        configuration_seam=VLLM_CONFIGURATION_SEAM,
+        architecture_binding=VLLM_DEEPSEEK_V3_BINDING,
+        text_implementation=VLLM_DEEPSEEK_V3_IMPLEMENTATION,
+        deepseek_stack=FrameworkDeepseekStack(
+            architecture=architecture,
+            wrapper_model_type=hf.model_type,
+            scope="text-only",
+            geometry=geometry,
+            layer_types=("dense",) * hf.first_k_dense_replace
+            + ("moe",) * (hf.num_hidden_layers - hf.first_k_dense_replace),
+            q_lora_rank=hf.q_lora_rank,
+            kv_lora_rank=hf.kv_lora_rank,
+            qk_nope_head_dim=hf.qk_nope_head_dim,
+            qk_rope_head_dim=hf.qk_rope_head_dim,
+            v_head_dim=hf.v_head_dim,
+            first_k_dense_replace=hf.first_k_dense_replace,
+            moe_intermediate_size=hf.moe_intermediate_size,
+            moe_layer_freq=hf.moe_layer_freq,
+            n_shared_experts=hf.n_shared_experts,
+            n_group=hf.n_group,
+            topk_group=hf.topk_group,
+            scoring_func=hf.scoring_func,
+            topk_method=hf.topk_method,
+            norm_topk_prob=hf.norm_topk_prob,
+            routed_scaling_factor="5/2",
+            num_nextn_predict_layers=hf.num_nextn_predict_layers,
+            weight_block_size=tuple(quantization["weight_block_size"]),
+            excluded_components=(
+                "input-embedding-family",
+                "normalization-family",
+                "r1-reasoning-checkpoint",
+            ),
+        ),
+    )
+
+
+def _deepseek_v3_dims(stack: FrameworkDeepseekStack) -> ModelDims:
+    geometry = stack.geometry
+    return ModelDims(
+        num_layers=geometry.layers,
+        hidden_size=geometry.hidden_size,
+        intermediate_size=geometry.intermediate_size,
+        num_heads=geometry.num_heads,
+        num_kv_heads=geometry.num_kv_heads,
+        head_size=geometry.head_size,
+        vocab_size=geometry.vocab_size,
+        dtype_bytes=2,
+        weight_dtype_bytes=1,
+        kv_dtype_bytes=2,
+        num_experts=geometry.num_experts,
+        top_k=geometry.top_k,
+        moe_intermediate_size=stack.moe_intermediate_size,
+        local_num_experts=geometry.num_experts,
+    )
+
+
 def _configuration(
     checkpoint_root: Path,
 ) -> tuple[Any, Any, FrameworkConfigurationProjection | None]:
@@ -132,17 +229,24 @@ def _configuration(
             data_parallel_size=1,
         ),
     )
-    dims = model_dims_from_vllm_config(config)
     framework = _framework_identity(version)
-    return dims, framework, _qwen35_projection(model_config, dims, framework)
+    deepseek_projection = _deepseek_v3_projection(model_config, framework)
+    if deepseek_projection is not None:
+        assert deepseek_projection.deepseek_stack is not None
+        dims = _deepseek_v3_dims(deepseek_projection.deepseek_stack)
+        projection = deepseek_projection
+    else:
+        dims = model_dims_from_vllm_config(config)
+        projection = _qwen35_projection(model_config, dims, framework)
+    return dims, framework, projection
 
 
 def inspect_configuration(checkpoint_root: Path) -> dict[str, Any]:
-    """Return the pinned Qwen text-stack projection without loading weights."""
+    """Return the pinned framework structure without loading weights."""
 
     _, _, projection = _configuration(checkpoint_root)
     if projection is None:
-        raise RuntimeError("vLLM configuration is not the pinned Qwen3.5 wrapper")
+        raise RuntimeError("vLLM configuration has no pinned extraction wrapper")
     return projection.to_obj()
 
 
@@ -167,6 +271,8 @@ def extract(
 
 __all__ = [
     "VLLM_CONFIGURATION_SEAM",
+    "VLLM_DEEPSEEK_V3_BINDING",
+    "VLLM_DEEPSEEK_V3_IMPLEMENTATION",
     "VLLM_EXTRACTION_SEAM",
     "VLLM_QWEN35_BINDING",
     "VLLM_QWEN35_IMPLEMENTATION",
