@@ -33,6 +33,7 @@ def _synthetic_result():
                         "inter_node_attributed_ps": 40,
                         "intra_node_attributed_ps": 60,
                     },
+                    "fabric_attribution": {"raw_excess_ps": 80},
                     "bottleneck": {"classification": "intra-node"},
                 }
             )

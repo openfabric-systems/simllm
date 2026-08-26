@@ -75,10 +75,12 @@ def _report(result: dict[str, Any]) -> str:
 
 ## Gate verdict
 
-**{result['status']}**: {result['verdict']} The maximum absolute unexplained
-residual is **{max(abs(value) for value in residuals)} ps** across all
-{len(points)} swept points. Both attributed terms use the frozen inter-then-intra
-telescoping order; no residual was absorbed.
+**Accounting gate PASS; frozen bottleneck expectation {result['status']}.**
+{result['verdict']} The maximum absolute unexplained residual is
+**{max(abs(value) for value in residuals)} ps** across all {len(points)} swept
+points. Both attributed terms use the frozen inter-then-intra telescoping order;
+no residual was absorbed. The overall study is `REFUTED` because the frozen
+nine-node arm did not produce positive elapsed inter-node attribution.
 
 This is a roofline replay of the declared disaggregated-session decode step,
 not a live SGLang frontend run. Kernel simulation is off and
@@ -128,7 +130,7 @@ Times are milliseconds except for the exact residual column.
 - Expectations SHA-256: `{result['provenance']['expectations_sha256']}`
 - Implementation run commit: `{result['provenance']['head_commit']}`
 - htsim rnic-nn binary SHA-256: `{result['provenance']['htsim_rnic']['sha256']}`
-txt2bin SHA-256: `{result['provenance']['txt2bin']['sha256']}`
+- txt2bin SHA-256: `{result['provenance']['txt2bin']['sha256']}`
 
 All {result['preservation_lock']['artifacts_checked']} artifacts in the expanded
 preservation class remained byte-identical. No prior flagship runner was

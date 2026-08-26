@@ -1027,6 +1027,17 @@ request-result bytes differ in the two vLLM-owned random pool-local request
 identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
 [the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
 
+The frozen CORE-62 roofline replay passes its exact accounting gate at
+all 18 points: the residual after the inter-node then intra-node terms is 0 ps
+everywhere, kernel simulation is off, and the 43-artifact preservation class
+is byte-identical. The new log-log line-and-dot contract, the y-only horizontal
+anchor and both figure formats render literally, so CORE-62 is complete. The
+TRAF-68 study is still a refutation of its registered bottleneck direction
+because the nine-node htsim incast service remains below the H100 roofline over
+batch per GPU 1 through 32. The complete gate and refuted map remain published in
+[the analytical frontier result](../../examples/deployment_frontier_v1/RESULTS.md).
+TRAF-69 and COMP-77 remain reserved because the unexplained residual is zero.
+
 ## Open tasks
 
 ### Precision
@@ -1069,18 +1080,6 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   tokens-per-second calibration value is comparison evidence only and may not
   tune the depth rule. COMP-76 owns independent repetition of the four-layer
   basis, while COMP-72 owns the missing MTP cell.
-
-- CORE-62 (Precision; P1; M): add the versioned batch-sweep deployment-frontier
-  plot contract and its exact roofline consistency gate. The analytical line
-  must use only declared per-rank FLOPs, HBM bytes, GPU envelopes and ideal
-  exact-byte wire service; roofline-simulation dots must use the same batches
-  with kernel simulation disabled. Acceptance requires both logarithmic axes,
-  per-request decode speed on X, aggregate output throughput normalized per GPU
-  on Y, prior flagship byte identity, and an exactly zero residual after the
-  frozen inter-node then intra-node attribution. A nonzero residual is a
-  published refutation and is not absorbed; TRAF-69 and COMP-77 are reserved
-  for a fabric or compute and composition residual respectively. TRAF-68 owns
-  the accompanying two-network bottleneck map.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and

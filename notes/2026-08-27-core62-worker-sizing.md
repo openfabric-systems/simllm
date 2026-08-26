@@ -100,5 +100,21 @@ publishes those attributed terms and the binding mechanism per swept point.
 
 ## Completion accounting
 
-To be filled after validation with the actual touched-file count, handwritten
-line delta and any variance from this estimate.
+Completed on 2026-08-27 with 23 touched repository files: 16 handwritten
+source, test, freeze or registry files and seven generated publication files.
+The external packet run retained 56 files and 332 KiB under
+`wave-runs/core62/gated-run-1/`; no bulk file entered the repository.
+
+The final handwritten delta is 2,829 inserted lines and 4 removed lines, or
+2,825 net. Reusable study code is 1,679 lines, 879 above the estimated upper
+bound because the implementation keeps exact arithmetic, guarded packet
+execution, plotting and publication as four auditable surfaces. Focused tests
+are 503 lines and remain inside the 300 to 700 estimate. Freeze and registry
+documentation remains inside its estimated range.
+
+The dominant uncertainty resolved to a compact exact projection: two
+independent four-endpoint candidate domains reproduce the packet-object
+timestamps and byte ledgers without retaining millions of objects. All 18
+accounting residuals are 0 ps. CORE-62 closes literally. TRAF-68 stays open
+because its frozen nine-node arm exposes raw incast but no elapsed inter-node
+bottleneck, so the first study is published as a refutation.

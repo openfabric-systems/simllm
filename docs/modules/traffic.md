@@ -906,6 +906,19 @@ performed, and decode pricing, TRAF-65 and the NVLink scope remain untouched.
 The third scored run alone owns the held-out comparison; TRAF-68 remains the
 next reserved traffic ID.
 
+The first frozen
+[two-network bottleneck map](../../examples/deployment_frontier_v1/RESULTS.md)
+publishes both elapsed attributions and both raw excesses at all 18 CORE-62
+points. The raw fabric mechanism is serialization in the two-node arm and
+incast in the nine-node arm; the candidate intra-node module is TX credits and
+packetization throughout, with zero pass-through switch contention. Seventeen
+points are roofline-bound, one B100 batch-32 point is intra-node-bound and no
+point is inter-node-bound. The nine-node batch-32 raw incast excess is
+6.743004420 ms but remains off critical below the 9.535537623 ms H100 roofline.
+That misses the frozen positive elapsed-incast direction, so the published
+study is a refutation and TRAF-68 stays open. The A100 NVLink3 profile remains
+cross-architecture candidate evidence, not H100 or B100 measurement evidence.
+
 ## Open tasks
 
 ### Precision

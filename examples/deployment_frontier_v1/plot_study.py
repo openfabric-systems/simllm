@@ -64,6 +64,7 @@ def prepare_plot(result: dict[str, Any]) -> dict[str, Any]:
                         "intra_node_attributed_ps": point["accounting"][
                             "intra_node_attributed_ps"
                         ],
+                        "fabric_raw_excess_ps": point["fabric_attribution"]["raw_excess_ps"],
                         "bottleneck": point["bottleneck"]["classification"],
                     }
                     for point in points
@@ -120,13 +121,14 @@ def _draw_frontier(axis: Any, plot: dict[str, Any], *, annotate_batches: bool) -
         analytical_y = [point["analytical_y"] for point in points]
         simulated_x = [point["simulated_x"] for point in points]
         simulated_y = [point["simulated_y"] for point in points]
+        is_two_node = curve["id"] == "h100-two-node-serialized"
         axis.plot(
             analytical_x,
             analytical_y,
             color=curve["color"],
-            linewidth=1.8,
+            linewidth=3.2 if is_two_node else 1.8,
             label=f"{curve['label']} analytical",
-            zorder=3,
+            zorder=3 if is_two_node else 4,
         )
         axis.scatter(
             simulated_x,
@@ -134,9 +136,9 @@ def _draw_frontier(axis: Any, plot: dict[str, Any], *, annotate_batches: bool) -
             color=curve["color"],
             edgecolor="white",
             linewidth=0.45,
-            s=24,
+            s=44 if is_two_node else 24,
             label=f"{curve['label']} roofline dots",
-            zorder=5,
+            zorder=5 if is_two_node else 6,
         )
         if annotate_batches:
             for index in (0, len(points) - 1):
@@ -149,6 +151,21 @@ def _draw_frontier(axis: Any, plot: dict[str, Any], *, annotate_batches: bool) -
                     color=curve["color"],
                     fontsize=6.1,
                 )
+    if annotate_batches:
+        overlap_curve = next(
+            curve for curve in plot["curves"] if curve["id"] == "h100-nine-node-incast"
+        )
+        overlap_point = overlap_curve["points"][3]
+        axis.annotate(
+            "H100 2N and 9N elapsed curves overlap",
+            (overlap_point["simulated_x"], overlap_point["simulated_y"]),
+            xytext=(-8, 22),
+            textcoords="offset points",
+            ha="center",
+            fontsize=6.2,
+            color="#444444",
+            arrowprops={"arrowstyle": "-", "color": "#777777", "linewidth": 0.6},
+        )
     axis.set_xscale("log")
     axis.set_yscale("log")
     axis.set_xlabel("Per-request decode speed (token/s/request)")
@@ -161,7 +178,7 @@ def render_deployment_figure(plot: dict[str, Any], output_stem: Path) -> tuple[P
 
     plt = _matplotlib()
     figure, axis = plt.subplots(figsize=(7.0, 4.33))
-    figure.subplots_adjust(left=0.115, right=0.975, bottom=0.29, top=0.78)
+    figure.subplots_adjust(left=0.115, right=0.975, bottom=0.32, top=0.68)
     _draw_frontier(axis, plot, annotate_batches=True)
     paired = plot["paired_marker"]
     axis.scatter(
@@ -184,10 +201,10 @@ def render_deployment_figure(plot: dict[str, Any], output_stem: Path) -> tuple[P
         label=f"{anchor['label']} y-only anchor",
         zorder=2,
     )
-    axis.set_title("DeepSeek decode deployment frontier")
+    figure.suptitle("DeepSeek decode deployment frontier", y=0.975, fontsize=10.2)
     axis.legend(
         loc="lower left",
-        bbox_to_anchor=(0.0, 1.02, 1.0, 0.2),
+        bbox_to_anchor=(0.0, 1.05, 1.0, 0.25),
         mode="expand",
         ncol=2,
         borderaxespad=0,
@@ -196,14 +213,14 @@ def render_deployment_figure(plot: dict[str, Any], output_stem: Path) -> tuple[P
     )
     figure.text(
         0.115,
-        0.12,
-        "Analytical lines are floor-style step-time bounds: real and simulated points "
-        "sit on or below them. Dots use RooflineProvider with kernel simulation off.\n"
-        "Intra-node timing uses the cross-architecture A100 NVLink3 candidate; it is "
-        "not H100 or B100 measurement evidence.",
+        0.095,
+        "Analytical lines are floor-style step-time bounds: real and simulated points sit "
+        "on or below them.\nDots use RooflineProvider with kernel simulation off. "
+        "Intra-node timing uses the cross-architecture\nA100 NVLink3 candidate; it is not "
+        "H100 or B100 measurement evidence.",
         ha="left",
         va="bottom",
-        fontsize=6.8,
+        fontsize=6.6,
     )
     return _save(figure, output_stem)
 
@@ -218,12 +235,13 @@ def render_bottleneck_figure(plot: dict[str, Any], output_stem: Path) -> tuple[P
         figsize=(7.0, 6.0),
         gridspec_kw={"height_ratios": (1.22, 1.0)},
     )
-    figure.subplots_adjust(left=0.105, right=0.98, bottom=0.21, top=0.87, hspace=0.43)
+    figure.subplots_adjust(left=0.105, right=0.98, bottom=0.23, top=0.78, hspace=0.48)
     _draw_frontier(frontier_axis, plot, annotate_batches=False)
+    frontier_axis.set_ylabel("Throughput per GPU\n(token/s/GPU)")
     frontier_axis.set_title("Analytical frontier and roofline-simulation dots")
     frontier_axis.legend(
         loc="lower left",
-        bbox_to_anchor=(0.0, 1.01, 1.0, 0.2),
+        bbox_to_anchor=(0.0, 1.12, 1.0, 0.18),
         mode="expand",
         ncol=3,
         borderaxespad=0,
@@ -243,7 +261,12 @@ def render_bottleneck_figure(plot: dict[str, Any], output_stem: Path) -> tuple[P
             x_positions.append(index)
             inter_values.append(point["inter_node_attributed_ps"] / 1_000_000_000)
             intra_values.append(point["intra_node_attributed_ps"] / 1_000_000_000)
-            tick_labels.append(f"{curve['id'].split('-')[0]}\nB{point['batch_per_gpu']}")
+            short_id = {
+                "b100-one-node-intra": "B1N",
+                "h100-two-node-serialized": "H2N",
+                "h100-nine-node-incast": "H9N",
+            }[curve["id"]]
+            tick_labels.append(f"{short_id}\n{point['batch_per_gpu']}")
             colors.append(curve["color"])
             classifications.append(point["bottleneck"])
             index += 1
@@ -270,32 +293,51 @@ def render_bottleneck_figure(plot: dict[str, Any], output_stem: Path) -> tuple[P
         colors,
         strict=True,
     ):
+        total = inter + intra
         stack_axis.annotate(
             {"neither": "roof", "inter-node": "fabric", "intra-node": "intra"}.get(
                 classification,
                 "tie",
             ),
-            (x, inter + intra),
-            xytext=(0, 3),
+            (x, total / 2 if total else 0),
+            xytext=(0, 0 if total else 3),
             textcoords="offset points",
             ha="center",
-            va="bottom",
+            va="center" if total else "bottom",
             rotation=90,
-            color=color,
+            color="white" if total else color,
             fontsize=5.8,
         )
     stack_axis.set_xticks(x_positions, tick_labels, rotation=0)
-    stack_axis.set_ylabel("Attributed step-time deviation (ms)")
+    stack_axis.set_xlabel("Configuration shorthand / batch per GPU")
+    stack_axis.set_ylabel("Attributed deviation (ms)")
     stack_axis.set_title("Frozen inter-then-intra elapsed attribution")
     stack_axis.grid(True, axis="y", color="#d5d9df", linewidth=0.5, alpha=0.8)
     stack_axis.legend(loc="upper left", frameon=False, ncol=2)
+    stack_axis.margins(y=0.24)
+    nine_node_b32 = next(
+        curve["points"][-1]
+        for curve in plot["curves"]
+        if curve["id"] == "h100-nine-node-incast"
+    )
+    stack_axis.text(
+        0.99,
+        0.96,
+        "9N raw incast excess at B32: "
+        f"{nine_node_b32['fabric_raw_excess_ps'] / 1_000_000_000:.3f} ms, off critical",
+        transform=stack_axis.transAxes,
+        ha="right",
+        va="top",
+        fontsize=6.2,
+        color="#27845c",
+    )
     figure.text(
         0.105,
-        0.065,
+        0.06,
         "Each stack telescopes exactly from the analytical floor to the simulated step. "
-        "Raw off-critical network excess remains in the result table.\n"
-        "The intra-node profile is an A100 NVLink3 candidate used across architecture, "
-        "not H100 or B100 measurement evidence.",
+        "Raw off-critical network excess remains\nin the result table. The intra-node "
+        "profile is an A100 NVLink3 candidate used across architecture, not H100 or B100\n"
+        "measurement evidence.",
         ha="left",
         va="bottom",
         fontsize=6.7,
