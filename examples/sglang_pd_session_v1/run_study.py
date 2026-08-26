@@ -20,6 +20,7 @@ TRACE_PATH = REPOSITORY_ROOT / "examples/preplay_trace_v1/granite_length_cap.jso
 
 EXPECTATIONS_COMMIT = "191c237700431507639f963a0ee69e94292611c6"
 SESSION_IMPLEMENTATION_COMMIT = "f6bd963b9d92d786e9363d3e646364a329d7bc69"
+CONVERTER_CORRECTION_COMMIT = "a685a80b991d199a6de7ee8a39c490d8dd173aee"
 SGLANG_COMMIT = "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3"
 SGLANG_VERSION = "0.5.19.dev345+gbfeae4e79"
 MODEL_REVISION = "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445"
@@ -27,7 +28,7 @@ MODEL_CONFIG_SHA256 = "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96
 TRACE_SHA256 = "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341"
 HTSIM_GITLINK = "1dcbfec36a33753bf978cf6323bade1a6645fe4f"
 HTSIM_RNIC_SHA256 = "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9"
-TXT2BIN_SHA256 = "df348be0f3e9138b2bf2e1f360df0a8c377f07161f2e16940e47d68bf9a3c50a"
+TXT2BIN_SHA256 = "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b"
 
 POOL_RATIOS = ((1, 1), (1, 2), (2, 1))
 PROMPT_LENGTHS = (8, 16)
@@ -197,6 +198,7 @@ def check_registry(args: argparse.Namespace, *, require_clean: bool) -> dict[str
     _validate_frozen_registry(frozen)
     _require_ancestor(EXPECTATIONS_COMMIT)
     _require_ancestor(SESSION_IMPLEMENTATION_COMMIT)
+    _require_ancestor(CONVERTER_CORRECTION_COMMIT)
     if require_clean:
         _require_clean_tracked_worktree()
     paths = (args.run_dir, args.model_path, args.sglang_source, args.txt2bin, args.htsim_rnic)
@@ -237,6 +239,7 @@ def check_registry(args: argparse.Namespace, *, require_clean: bool) -> dict[str
     return {
         "expectations_commit": EXPECTATIONS_COMMIT,
         "session_implementation_commit": SESSION_IMPLEMENTATION_COMMIT,
+        "converter_correction_commit": CONVERTER_CORRECTION_COMMIT,
         "run_head": _git_head(),
         "python_version": ".".join(map(str, sys.version_info[:3])),
         "sglang_version": SGLANG_VERSION,
