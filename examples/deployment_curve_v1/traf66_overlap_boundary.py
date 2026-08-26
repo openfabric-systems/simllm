@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 EXPECTATIONS_SCHEMA = "simllm-deployment-curve-traf66-expectations-v1"
+RESULT_SCHEMA = "simllm-deployment-curve-traf66-calibration-v1"
 PS_PER_SECOND = 1_000_000_000_000
 
 
@@ -230,3 +231,119 @@ def compare_component_inputs(
             == comp75_expectations["traffic"]["moe_layers"]
         ),
     }
+
+
+def fraction_json(value: Fraction) -> dict[str, int]:
+    """Render one exact fraction without a floating-point conversion."""
+
+    return {"numerator": value.numerator, "denominator": value.denominator}
+
+
+def _movement(updated: Fraction, reference: Fraction) -> dict[str, Any]:
+    delta = updated - reference
+    direction = "decrease" if delta < 0 else "increase" if delta > 0 else "unchanged"
+    return {
+        "absolute_tokens_per_second_per_node": fraction_json(delta),
+        "direction": direction,
+        "relative_to_reference": fraction_json(delta / reference),
+    }
+
+
+def calibration_comparison(
+    expectations: Mapping[str, Any],
+    comp75_result: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Compare the frozen form with COMP-75's visible-only calibration row."""
+
+    validate_expectations(expectations)
+    if comp75_result.get("schema") != "simllm-deployment-curve-comp75-calibration-v1":
+        raise ValueError("TRAF-66 requires the clean COMP-75 calibration record")
+    if comp75_result.get("held_out_numeric_values_accessed"):
+        raise ValueError("TRAF-66 cannot consume a held-out COMP-75 result")
+    if comp75_result.get("accessed_visible_anchor_ids") != ["sglang_prefill_1k"]:
+        raise ValueError("TRAF-66 COMP-75 visible row disagrees")
+    rows = comp75_result.get("calibration_rows")
+    if not isinstance(rows, list) or len(rows) != 1:
+        raise ValueError("TRAF-66 requires exactly one visible calibration row")
+    row = rows[0]
+    if row.get("anchor_id") != "sglang_prefill_1k":
+        raise ValueError("TRAF-66 visible calibration identity disagrees")
+
+    composition = expectations["composition"]
+    previous_service = _require_int(
+        "comp75 total_service_ps", row["total_service_ps"], minimum=1
+    )
+    if previous_service != composition["packet_service_ps"]["selected"]:
+        raise ValueError("TRAF-66 COMP-75 service does not match the frozen packet service")
+    tokens = _require_int("per_node_tokens", row["per_node_tokens"], minimum=1)
+    published = row["published"]
+    target = Fraction(
+        _require_int("published.numerator", published["numerator"], minimum=1),
+        _require_int("published.denominator", published["denominator"], minimum=1),
+    )
+    previous_prediction = Fraction(tokens * PS_PER_SECOND, previous_service)
+    totals = _interval(composition, "total_service_ps")
+    predictions = {
+        edge: Fraction(tokens * PS_PER_SECOND, totals[edge])
+        for edge in ("lower", "selected", "upper")
+    }
+    updated = predictions["selected"]
+    previous_error = previous_prediction / target - 1
+    updated_error = updated / target - 1
+    target_service = Fraction(tokens * PS_PER_SECOND, target)
+    previous_surplus = Fraction(previous_service) - target_service
+    updated_surplus = Fraction(totals["selected"]) - target_service
+    boundary = Fraction(composition["boundary_service_ps"]["selected"])
+    return {
+        "anchor_id": "sglang_prefill_1k",
+        "per_node_tokens": tokens,
+        "published": fraction_json(target),
+        "comp75_prediction": fraction_json(previous_prediction),
+        "prediction": {
+            "lower": fraction_json(min(predictions.values())),
+            "point": fraction_json(updated),
+            "upper": fraction_json(max(predictions.values())),
+        },
+        "comp75_total_service_ps": previous_service,
+        "boundary_service_ps": boundary.numerator,
+        "total_service_ps": totals["selected"],
+        "signed_movement_from_comp75": _movement(updated, previous_prediction),
+        "signed_relative_error_before": fraction_json(previous_error),
+        "signed_relative_error_after": fraction_json(updated_error),
+        "signed_residual_movement": fraction_json(updated_error - previous_error),
+        "service_surplus_before_ps": fraction_json(previous_surplus),
+        "service_surplus_after_ps": fraction_json(updated_surplus),
+        "boundary_to_prior_surplus_ratio": fraction_json(boundary / previous_surplus),
+    }
+
+
+def validate_result(
+    result: Mapping[str, Any],
+    expectations: Mapping[str, Any],
+    comp75_result: Mapping[str, Any],
+) -> None:
+    """Validate the published calibration-only protocol-void result."""
+
+    if result.get("schema") != RESULT_SCHEMA:
+        raise ValueError("TRAF-66 result schema disagrees")
+    if result.get("status") != "PROTOCOL_VOID_HELD_OUT_COMPONENT_ACCESS":
+        raise ValueError("TRAF-66 result must retain its protocol-void status")
+    if result.get("task") != "TRAF-66":
+        raise ValueError("TRAF-66 result task identity disagrees")
+    expected_row = calibration_comparison(expectations, comp75_result)
+    if result.get("calibration_rows") != [expected_row]:
+        raise ValueError("TRAF-66 calibration row disagrees")
+    if result.get("event_conservation") != expectations["event_conservation"]:
+        raise ValueError("TRAF-66 published event conservation disagrees")
+    if result.get("held_out_access_ledger") != expectations["calibration_split"][
+        "held_out_access_ledger"
+    ]:
+        raise ValueError("TRAF-66 result must retain the access ledger")
+    if result.get("held_out_numeric_values_used_or_compared"):
+        raise ValueError("TRAF-66 result cannot use or compare a held-out value")
+    if result.get("scored_flagship_rerun_performed"):
+        raise ValueError("TRAF-66 result cannot rerun the scored flagship")
+    if result.get("decode_pricing_changed"):
+        raise ValueError("TRAF-66 result cannot change decode pricing")
+    if result.get("nvlink_scope_touched"):
+        raise ValueError("TRAF-66 result cannot touch TRAF-65 scope")

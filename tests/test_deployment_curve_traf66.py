@@ -28,6 +28,11 @@ def boundary():
     return _module("traf66_overlap_boundary")
 
 
+@pytest.fixture(scope="module")
+def signer():
+    return _module("traf66_independent_sign")
+
+
 def _json(name: str):
     return json.loads((STUDY_DIR / name).read_text(encoding="utf-8"))
 
@@ -149,6 +154,58 @@ def test_held_out_statement_is_structural_only(boundary):
         "rows": ["sglang_prefill_2k", "sglang_prefill_4k"],
         "service_term": "packet_service_ps + compute_service_ps / 2",
     }
+
+
+def test_visible_result_matches_frozen_form(boundary):
+    expectations = _json("traf66_expectations.json")
+    previous = _json("comp75_calibration_result.json")
+    result = _json("traf66_calibration_result.json")
+    boundary.validate_result(result, expectations, previous)
+    row = result["calibration_rows"][0]
+    assert row["boundary_service_ps"] == 681_624_980_000
+    assert row["total_service_ps"] == 2_967_804_740_360
+    assert row["signed_movement_from_comp75"]["direction"] == "decrease"
+    assert Fraction(
+        row["signed_relative_error_after"]["numerator"],
+        row["signed_relative_error_after"]["denominator"],
+    ) < Fraction(
+        row["signed_relative_error_before"]["numerator"],
+        row["signed_relative_error_before"]["denominator"],
+    )
+
+
+def test_independent_signer_reconstructs_visible_movement(boundary, signer):
+    expectations = _json("traf66_expectations.json")
+    result = _json("traf66_calibration_result.json")
+    row = result["calibration_rows"][0]
+    composition = expectations["composition"]
+    signed = signer.sign_visible_movement(
+        per_node_tokens=row["per_node_tokens"],
+        published_numerator=row["published"]["numerator"],
+        published_denominator=row["published"]["denominator"],
+        compute_service_ps=composition["candidate_compute_service_ps"],
+        packet_service_ps=composition["packet_service_ps"]["selected"],
+        children=expectations["event_conservation"]["counts"]["children"],
+    )
+    assert signed == result["independent_signoff"]
+    assert signed["movement"]["direction"] == "decrease"
+    assert signed["signed_residual_movement"]["direction"] == "more_negative"
+
+
+def test_result_retains_preservation_and_scope_fences(boundary):
+    expectations = _json("traf66_expectations.json")
+    result = _json("traf66_calibration_result.json")
+    lock = boundary.verify_preservation_locks(expectations, REPO_ROOT)
+    assert result["preservation_lock"] == {
+        "checked_count": lock["checked_count"],
+        "prior_records_mutated": lock["prior_records_mutated"],
+        "status": lock["status"],
+    }
+    assert result["scored_flagship_rerun_performed"] is False
+    assert result["decode_pricing_changed"] is False
+    assert result["nvlink_scope_touched"] is False
+    assert result["remainder"]["id"] == "TRAF-67"
+    assert result["held_out_numeric_values_used_or_compared"] is False
 
 
 @pytest.mark.parametrize("bad", [True, 0, -1, 1.5, "2"])

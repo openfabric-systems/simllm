@@ -1,0 +1,169 @@
+{
+  "calibration_rows": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "boundary_service_ps": 681624980000,
+      "boundary_to_prior_surplus_ratio": {
+        "denominator": 9764143737533,
+        "numerator": 491400488706500
+      },
+      "comp75_prediction": {
+        "denominator": 57154494009,
+        "numerator": 3276800000000000
+      },
+      "comp75_total_service_ps": 2286179760360,
+      "per_node_tokens": 131072,
+      "prediction": {
+        "lower": {
+          "denominator": 74195118567,
+          "numerator": 3276800000000000
+        },
+        "point": {
+          "denominator": 74195118509,
+          "numerator": 3276800000000000
+        },
+        "upper": {
+          "denominator": 74195118509,
+          "numerator": 3276800000000000
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 57674
+      },
+      "service_surplus_after_ps": {
+        "denominator": 28837,
+        "numerator": 20046585297761320
+      },
+      "service_surplus_before_ps": {
+        "denominator": 28837,
+        "numerator": 390565749501320
+      },
+      "signed_movement_from_comp75": {
+        "absolute_tokens_per_second_per_node": {
+          "denominator": 4240584456319685512581,
+          "numerator": -55838718361600000000000000
+        },
+        "direction": "decrease",
+        "relative_to_reference": {
+          "denominator": 74195118509,
+          "numerator": -17040624500
+        }
+      },
+      "signed_relative_error_after": {
+        "denominator": 2139564632444033,
+        "numerator": -501164632444033
+      },
+      "signed_relative_error_before": {
+        "denominator": 1648164143737533,
+        "numerator": -9764143737533
+      },
+      "signed_residual_movement": {
+        "denominator": 122285733966890771126298297,
+        "numerator": -27919359180800000000000000
+      },
+      "total_service_ps": 2967804740360
+    }
+  ],
+  "classification": "CALIBRATION_ONLY_PROTOCOL_VOID",
+  "component_reuse": {
+    "candidate_compute_service_reused": true,
+    "moe_layer_count_reused": true,
+    "packet_service_envelope_reused": true
+  },
+  "decode_pricing_changed": false,
+  "event_conservation": {
+    "central_interleave_iterations": 117,
+    "counts": {
+      "children": 2,
+      "combine_completions_per_child": 58,
+      "combine_completions_total": 116,
+      "combine_launches_per_child": 58,
+      "combine_launches_total": 116,
+      "dispatch_completions_per_child": 58,
+      "dispatch_completions_total": 116,
+      "dispatch_launches_per_child": 58,
+      "dispatch_launches_total": 116,
+      "moe_layers": 58,
+      "stage_advances_total": 234,
+      "stages_per_child": 117,
+      "yield_boundaries_per_child": 116,
+      "yield_boundaries_total": 232
+    },
+    "executor_epilogue_stage_advances": 0,
+    "executor_prologue_stage_advances": 0,
+    "moe_layers": 58,
+    "tbo_delta_stages": 0
+  },
+  "expectations_commit": "672afcf6b110ff2a72a3c82aae373b7029a579f5",
+  "expectations_sha256": "406a4ba250387268b9cf726f0888bcc65246f065a07e2b35b5564438ec4d3534",
+  "fitted_parameters": [],
+  "free_parameters": [],
+  "held_out_access_ledger": [
+    {
+      "disposition": "not_used_or_compared",
+      "event": "Accidental whole-file local read while inventorying component evidence",
+      "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+      "protocol_effect": "TRAF-66 cannot close with an empty ledger"
+    }
+  ],
+  "held_out_numeric_values_used_or_compared": false,
+  "independent_signoff": {
+    "boundary_service_ps": {
+      "denominator": 1,
+      "numerator": 681624980000
+    },
+    "children": 2,
+    "comp75": {
+      "denominator": 57154494009,
+      "numerator": 3276800000000000
+    },
+    "method": "direct Fraction reconstruction from child count and raw services",
+    "movement": {
+      "denominator": 4240584456319685512581,
+      "direction": "decrease",
+      "numerator": -55838718361600000000000000
+    },
+    "signed_relative_error_after": {
+      "denominator": 2139564632444033,
+      "numerator": -501164632444033
+    },
+    "signed_relative_error_before": {
+      "denominator": 1648164143737533,
+      "numerator": -9764143737533
+    },
+    "signed_residual_movement": {
+      "denominator": 122285733966890771126298297,
+      "direction": "more_negative",
+      "numerator": -27919359180800000000000000
+    },
+    "traf66": {
+      "denominator": 74195118509,
+      "numerator": 3276800000000000
+    }
+  },
+  "nvlink_scope_touched": false,
+  "preservation_lock": {
+    "checked_count": 27,
+    "prior_records_mutated": false,
+    "status": "PASS"
+  },
+  "remainder": {
+    "id": "TRAF-67",
+    "reason": "Repeat the frozen mechanism with an empty held-out access ledger"
+  },
+  "schema": "simllm-deployment-curve-traf66-calibration-v1",
+  "scored_flagship_rerun_performed": false,
+  "status": "PROTOCOL_VOID_HELD_OUT_COMPONENT_ACCESS",
+  "structural_held_out_prediction": {
+    "compute_dependence_reenters": true,
+    "numeric_values_used_or_compared": false,
+    "rows": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "service_term": "packet_service_ps + compute_service_ps / 2"
+  },
+  "task": "TRAF-66",
+  "web_pages_fetched": false
+}
