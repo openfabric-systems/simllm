@@ -1,0 +1,129 @@
+{
+  "schema": "simllm-deployment-curve-study-config-v1",
+  "study": {
+    "classification": "dry-run",
+    "label": "CORE-54 scaffold dry run",
+    "scored_flagship": false
+  },
+  "prompt_fixture": "examples/preplay_trace_v1/granite_length_cap.jsonl",
+  "constants": [
+    {
+      "id": "intra_node_collective_surcharge_ps",
+      "tunable": true,
+      "unit": "ps",
+      "selected": 0,
+      "envelope": {"lower": 0, "upper": 30128029},
+      "provenance": {
+        "source": "examples/collective_fixed_cost_envelope_v1/RESULTS.md",
+        "locator": "width-8 intra-node-fixed-cost-v1 surcharge row",
+        "physical_basis": "zero surcharge is the propagation floor and 30128029 ps is the captured DGX B200 width-8 upper selectable surcharge"
+      }
+    },
+    {
+      "id": "pcie_submission_ps",
+      "tunable": true,
+      "unit": "ps",
+      "selected": 20000000,
+      "envelope": {"lower": 100000, "upper": 20000000},
+      "provenance": {
+        "source": "examples/rnic_pcie_v1/results.csv and examples/pd_session_fabric_handoff_v1/expectations.json",
+        "locator": "fixed host-store analytical profile and transfer.pcie_submission_ps",
+        "physical_basis": "100000 ps is the repository analytical host-store floor and 20000000 ps is the declared request-level packet-handoff submission term"
+      }
+    },
+    {
+      "id": "kv_handoff_ps",
+      "tunable": true,
+      "unit": "ps",
+      "selected": 100000000,
+      "envelope": {"lower": 20983040, "upper": 101457280},
+      "provenance": {
+        "source": "examples/pd_session_fabric_handoff_v1/expectations.json",
+        "locator": "transfer.pcie_submission_ps plus physical_bounds_ps",
+        "physical_basis": "the lower endpoint adds the 20 microsecond submission term to the fastest 8-token parallel serialization floor; the upper endpoint adds it to the broadest frozen 16-token packet-service ceiling"
+      }
+    }
+  ],
+  "calibration_fit_rows": [],
+  "held_out_predictions": [],
+  "configurations": [
+    {
+      "configuration_id": "granite-vllm-1p1-bootstrap",
+      "legend_label": "Granite vLLM, 1P+1D, bootstrap",
+      "framework": "vllm",
+      "pool": {
+        "prefill_nodes": 1,
+        "decode_nodes": 1,
+        "gpus_per_node": 8
+      },
+      "arrangement": {
+        "prefill": {
+          "tensor_parallel": 8,
+          "expert_parallel": 1,
+          "data_parallel": 1,
+          "pipeline_parallel": 1
+        },
+        "decode": {
+          "tensor_parallel": 8,
+          "expert_parallel": 1,
+          "data_parallel": 1,
+          "pipeline_parallel": 1
+        }
+      },
+      "model": {
+        "id": "ibm-granite/granite-3.0-1b-a400m-instruct",
+        "revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+        "column": "granite-roofline-bootstrap",
+        "dims": {
+          "num_layers": 24,
+          "hidden_size": 1024,
+          "intermediate_size": 64,
+          "num_heads": 2,
+          "num_kv_heads": 1,
+          "head_size": 64,
+          "vocab_size": 49155,
+          "dtype_bytes": 2,
+          "num_experts": 32,
+          "top_k": 8,
+          "moe_intermediate_size": 64,
+          "local_num_experts": 32
+        },
+        "kv_geometry": {
+          "num_layers": 24,
+          "num_kv_heads": 8,
+          "head_size": 64,
+          "element_bytes": 2
+        }
+      },
+      "pricing": {
+        "mode": "bootstrap",
+        "gpu": "b100",
+        "roofline_efficiency": 0.7,
+        "record_uncertainty_relative": 0.5,
+        "collective_fixed_cost_envelope": "intra-node-fixed-cost-v1",
+        "collective_fixed_cost_arm": "lower",
+        "kv_handoff_constant_id": "kv_handoff_ps"
+      },
+      "requests": {
+        "offered_load_requests_per_second": [8000, 16000, 32000],
+        "prompt_tokens": 8,
+        "requests_per_point": 8,
+        "decode_output_tokens_per_request": 4,
+        "max_model_len": 64,
+        "max_num_seqs": 8,
+        "num_gpu_blocks_override": 64,
+        "token_id": 512
+      },
+      "uncertainty": {
+        "distribution_spreads": [],
+        "tuned_constant_envelopes": [
+          {
+            "constant_id": "kv_handoff_ps",
+            "throughput_tokens_per_second_per_ps": 0,
+            "delay_ps_per_ps": {"numerator": 1, "denominator": 4}
+          }
+        ]
+      }
+    }
+  ]
+}
