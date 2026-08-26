@@ -1,0 +1,85 @@
+{
+  "artifacts": {
+    "external_raw_result_sha256": "634d74143275acf875aed942d752efcad5bf252d9ac6ac1fe8bd85f17e793c7f",
+    "one_plus_one_goal_sha256": "dd02d8916cf5cfe6821178539ff91bdfb3da2cf8203ac369f66648bcddf01566",
+    "target_goal_sha256": "598c94cf1d56565593ac5eb77f3db47e6c7eac54b61a5e136ae9506861d13b89"
+  },
+  "cells": {
+    "one_plus_one": {
+      "counts": {
+        "decode_ranks": 8,
+        "gpu_count": 16,
+        "leaf_switches": 2,
+        "link_count": 32,
+        "nic_count": 16,
+        "prefill_ranks": 8,
+        "rank_count": 16,
+        "spine_switches": 8,
+        "switch_port_count": 48
+      },
+      "fabric_round_trip": {
+        "byte_identical": true,
+        "bytes": 21379,
+        "sha256": "36527abf437eb875ce8db097b301bd1c25789f98fd38271378d65f6416361367"
+      },
+      "goal": {
+        "message_count": 16,
+        "path_bottleneck_rate_bps": 400000000000,
+        "path_link_count": 4,
+        "path_propagation_ps": 4000000,
+        "payload_bytes": 65536
+      },
+      "placement_disabled_identity": {
+        "byte_identical_to_enabled": true,
+        "bytes": 15772,
+        "sha256": "019f818e02252407e560b37415da12151c8f6ca0ff01bcb7ff8aabfead47f286"
+      },
+      "reachable_endpoints": 16
+    },
+    "target": {
+      "counts": {
+        "decode_ranks": 320,
+        "gpu_count": 448,
+        "leaf_switches": 56,
+        "link_count": 896,
+        "nic_count": 448,
+        "prefill_ranks": 128,
+        "rank_count": 448,
+        "spine_switches": 8,
+        "switch_port_count": 1344
+      },
+      "fabric_round_trip": {
+        "byte_identical": true,
+        "bytes": 573301,
+        "sha256": "5f372f96b73e9b0c2c632ae4ffd4062f92620c4d1efb2b67c2cd2e0e1da70c75"
+      },
+      "goal": {
+        "message_count": 448,
+        "path_bottleneck_rate_bps": 400000000000,
+        "path_link_count": 4,
+        "path_propagation_ps": 4000000,
+        "payload_bytes": 1835008
+      },
+      "placement_disabled_identity": {
+        "byte_identical_to_enabled": true,
+        "bytes": 2639042,
+        "sha256": "48029d871293762007ab33082d59a7b5a4efb22583394e718c97e733717fd709"
+      },
+      "reachable_endpoints": 448
+    }
+  },
+  "evidence": {
+    "fatal_guard_classes": 9,
+    "findings": [],
+    "scored_behavioral_families": 0
+  },
+  "expectations_commit": "241ba81d545ab0b38703efefb153819ac1cd3eb8",
+  "implementation_commit": "faeaae928175f098ba3a12e065e0bc1d42838df7",
+  "physical_sanity": {
+    "cross_leaf_cut_through_floor_ps": 4081920,
+    "cross_leaf_store_and_forward_ceiling_ps": 4327680,
+    "serialization_ps_per_link": 81920
+  },
+  "schema": "simllm-disaggregated-target-topology-result-summary-v1",
+  "status": "PASS"
+}

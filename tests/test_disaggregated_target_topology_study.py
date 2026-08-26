@@ -8,6 +8,7 @@ STUDY_PATH = (
     ROOT / "examples" / "disaggregated_target_topology_v1" / "run_study.py"
 )
 EXPECTATIONS_PATH = STUDY_PATH.with_name("expectations.json")
+RESULTS_PATH = STUDY_PATH.with_name("results.json")
 
 
 def _study():
@@ -57,6 +58,38 @@ def test_place5_study_voids_a_goal_path_disagreement(tmp_path):
 
     assert analysis["status"] == "VOID"
     assert "target: GOAL path propagation" in analysis["findings"]
+
+
+def test_place5_recorded_result_closes_only_the_structural_scope():
+    result = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
+
+    assert result["status"] == "PASS"
+    assert result["evidence"] == {
+        "fatal_guard_classes": 9,
+        "findings": [],
+        "scored_behavioral_families": 0,
+    }
+    target = result["cells"]["target"]
+    assert target["counts"]["rank_count"] == 448
+    assert target["counts"]["gpu_count"] == 448
+    assert target["counts"]["nic_count"] == 448
+    assert target["counts"]["prefill_ranks"] == 128
+    assert target["counts"]["decode_ranks"] == 320
+    assert target["reachable_endpoints"] == 448
+    assert target["goal"] == {
+        "message_count": 448,
+        "path_bottleneck_rate_bps": 400_000_000_000,
+        "path_link_count": 4,
+        "path_propagation_ps": 4_000_000,
+        "payload_bytes": 1_835_008,
+    }
+    assert target["placement_disabled_identity"] == {
+        "byte_identical_to_enabled": True,
+        "bytes": 2_639_042,
+        "sha256": (
+            "48029d871293762007ab33082d59a7b5a4efb22583394e718c97e733717fd709"
+        ),
+    }
 
 
 def test_place5_study_uses_posix_rendering_for_windows_paths():
