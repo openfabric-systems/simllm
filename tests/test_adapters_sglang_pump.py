@@ -8,7 +8,9 @@ imports SGLang: the gate environment does not have it, and CI never does.
 from __future__ import annotations
 
 import importlib.util
+import sys
 from dataclasses import dataclass
+from types import ModuleType
 from typing import Any
 
 import pytest
@@ -17,6 +19,7 @@ from simllm.adapters.sglang.pump import (
     PumpCompletion,
     SchedulerOutputCollector,
     SglangSchedulerPump,
+    build_in_process_scheduler,
     read_output_batch,
 )
 
@@ -108,6 +111,45 @@ class _Scheduler:
 
     def on_idle(self) -> None:
         self.calls.append(("on_idle",))
+
+
+def test_in_process_builder_skips_unused_tokenizer_initialization(monkeypatch):
+    captured: dict[str, Any] = {}
+
+    class _ServerArgs:
+        def __init__(self, **values):
+            captured.update(values)
+            self.__dict__.update(values)
+
+    class _PortArgs:
+        @classmethod
+        def init_new(cls, server_args):
+            del server_args
+            return cls()
+
+    class _BuiltScheduler:
+        def __init__(self, *, server_args, **values):
+            del values
+            self.chunked_prefill_size = server_args.chunked_prefill_size
+
+    scheduler_module = ModuleType("sglang.srt.managers.scheduler")
+    scheduler_module.Scheduler = _BuiltScheduler
+    scheduler_module.publish = lambda server_args, role: None
+    server_args_module = ModuleType("sglang.srt.server_args")
+    server_args_module.PortArgs = _PortArgs
+    server_args_module.ServerArgs = _ServerArgs
+    for name in ("sglang", "sglang.srt", "sglang.srt.managers"):
+        monkeypatch.setitem(sys.modules, name, ModuleType(name))
+    monkeypatch.setitem(
+        sys.modules,
+        "sglang.srt.managers.scheduler",
+        scheduler_module,
+    )
+    monkeypatch.setitem(sys.modules, "sglang.srt.server_args", server_args_module)
+
+    build_in_process_scheduler(model_path="config-only-model")
+
+    assert captured["skip_tokenizer_init"] is True
 
 
 def test_read_output_batch_projects_finished_rows_only():
