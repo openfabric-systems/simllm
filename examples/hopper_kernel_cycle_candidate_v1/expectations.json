@@ -1,0 +1,311 @@
+{
+  "schema": "simllm-hopper-kernel-cycle-candidate-freeze-v1",
+  "study": "hopper_kernel_cycle_candidate_v1",
+  "date": "2026-08-26",
+  "status": "EXPECTATIONS_ONLY",
+  "reachability": {
+    "command": "timeout 12 ssh -o BatchMode=yes -o ConnectTimeout=8 merlin hostname",
+    "verbatim_output": [
+      "Connection timed out during banner exchange",
+      "Connection to UNKNOWN port 65535 timed out"
+    ],
+    "exit_status": 255,
+    "verdict": "LOCAL_ARM",
+    "retry_count": 0
+  },
+  "source_authorities": [
+    {
+      "id": "a100-report",
+      "configured_path": "$SIMLLM_KERNELPROBE_ROOT/REPORT.md",
+      "sha256": "95c56afd0cf5f974d748a9789129b2594a765cdbcc4170a76e3e9ba3b75e95f8"
+    },
+    {
+      "id": "gh200-report",
+      "configured_path": "$SIMLLM_KERNELPROBE_ROOT/gh200lane/REPORT.md",
+      "sha256": "8c4f21f0fdb99fd6b007b21fa3a631523294be616f4078b08d2a1934507cb798"
+    },
+    {
+      "id": "deepseek-deployment-projection",
+      "configured_path": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json",
+      "sha256": "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+    }
+  ],
+  "retained_nsys_inventory": {
+    "granite": {
+      "present": [
+        {
+          "source": "gh200lane/granite-repeats-198869-tp1-graph",
+          "cells": ["graph-decode-b32-kv16"]
+        },
+        {
+          "source": "gh200lane/granite-repeats-198874-tp1-graph",
+          "cells": [
+            "graph-decode-b1-kv16",
+            "graph-decode-b8-kv16",
+            "graph-prefill-l128",
+            "graph-prefill-l512",
+            "graph-prefill-l2048"
+          ]
+        },
+        {
+          "source": "gh200lane/granite-repeats-198878-tp1-eager",
+          "cells": [
+            "eager-decode-b1-kv16",
+            "eager-decode-b8-kv16",
+            "eager-decode-b32-kv16",
+            "eager-prefill-l128",
+            "eager-prefill-l512",
+            "eager-prefill-l2048"
+          ]
+        }
+      ],
+      "rejected_or_absent": [
+        {
+          "source": "gh200lane/granite-repeats-198853-tp1-graph",
+          "reason": "initialization failure, no accepted timing cell"
+        },
+        {
+          "source": "gh200lane/granite-repeats-198858-tp1-graph",
+          "reason": "partial batch-32 trace after cudaGraphLaunch fault"
+        },
+        {
+          "source": "kernel-cycle-v1 registered suite",
+          "cells": 1212,
+          "reason": "not executed as a registered Hopper campaign"
+        }
+      ]
+    },
+    "deepseek_v3": {
+      "present": [
+        {
+          "source": "gh200lane/capture-198883-deepseek-v3-tp1-graph-base",
+          "cells": [
+            "ep32-prefill-r16-l1024-t16384",
+            "ep32-prefill-r8-l2048-t16384",
+            "ep32-prefill-r4-l4096-t16384"
+          ],
+          "scope": "cell-scoped retained Nsys summaries; the capture-level compact analysis verdict stayed blocked"
+        },
+        {
+          "source": "gh200lane/capture-198891-deepseek-v3-tp1-graph-decode",
+          "cells": ["ep72-decode-b32-c2000"],
+          "scope": "final runtime-correlation boundary only"
+        }
+      ],
+      "rejected_or_absent": [
+        {
+          "source": "gh200lane/capture-198880-deepseek-v3-tp1-graph-base",
+          "reason": "compiler failure before timed cells"
+        },
+        {
+          "source": "gh200lane/capture-198886-deepseek-v3-tp1-graph-decode",
+          "reason": "admission produced batches 1 and 31"
+        },
+        {
+          "source": "gh200lane/capture-198889-deepseek-v3-tp1-graph-decode",
+          "reason": "asynchronous admission did not produce the exact batch-32 boundary"
+        },
+        {
+          "source": "unexecuted",
+          "cells": ["ep72-mtp-decode-b16-c4000"],
+          "reason": "MTP proposal and acceptance schedule absent"
+        }
+      ]
+    },
+    "local_retention_scope": "Lean pulls retain derived Nsys CSV evidence and hashes. Successful raw Nsys containers remain remote and are not claimed as local files."
+  },
+  "evidence_classes": {
+    "MEASURED": "Retained GH200 Nsys noncollective kernel service at the exact physical envelope and shape.",
+    "DISCLOSED": "A100 counter-derived component or KV bound transferred only as a disclosed bound; it never replaces GH200 service.",
+    "DECLARED": "An explicit arithmetic projection from a retained row, limited here to 61 / 4 DeepSeek depth scaling.",
+    "ABSENT": "No service entry is emitted. Merlin execution or missing framework evidence is required."
+  },
+  "ledger_expectations": {
+    "granite": {
+      "service_entries": {"MEASURED": 12, "DECLARED": 0},
+      "component_overlays": {"DISCLOSED": 12},
+      "registered_campaign_cells": {"ABSENT": 1212},
+      "non_additive_axes": true
+    },
+    "deepseek_v3": {
+      "service_entries": {"MEASURED": 4, "DECLARED": 4},
+      "component_overlays": {"DISCLOSED": 8},
+      "requested_physical_cells": {"MEASURED": 4, "ABSENT": 1},
+      "non_additive_axes": true
+    }
+  },
+  "cell_split": {
+    "calibration": [
+      "granite-graph-decode-b1-kv16",
+      "granite-graph-decode-b8-kv16",
+      "granite-graph-prefill-l128",
+      "granite-graph-prefill-l512",
+      "granite-eager-decode-b1-kv16",
+      "granite-eager-decode-b8-kv16",
+      "granite-eager-prefill-l128",
+      "granite-eager-prefill-l512",
+      "deepseek-ep32-prefill-r16-l1024-t16384",
+      "deepseek-ep32-prefill-r8-l2048-t16384",
+      "deepseek-ep72-decode-b32-c2000"
+    ],
+    "held_out": [
+      "granite-graph-decode-b32-kv16",
+      "granite-graph-prefill-l2048",
+      "granite-eager-decode-b32-kv16",
+      "granite-eager-prefill-l2048",
+      "deepseek-ep32-prefill-r4-l4096-t16384",
+      "deepseek-ep72-mtp-decode-b16-c4000"
+    ],
+    "rule": "Largest retained Granite shape per pool and mode, largest retained DeepSeek prefill request length, and the unexecuted MTP arm are held out."
+  },
+  "distribution_expectations": [
+    {
+      "family": "granite-graph-decode",
+      "verdict": "tight-single-peak",
+      "maximum_trimmed_cv_ppm": 5000,
+      "minimum_replays": 256
+    },
+    {
+      "family": "granite-graph-prefill",
+      "verdict": "insufficient-replays",
+      "maximum_observed_service_cv_ppm": 5000,
+      "minimum_replays": 30
+    },
+    {
+      "family": "granite-eager",
+      "verdict": "insufficient-replays",
+      "maximum_observed_service_cv_ppm": 5000,
+      "minimum_replays": 30
+    },
+    {
+      "family": "deepseek-v3-reduced-depth",
+      "verdict": "insufficient-replays",
+      "minimum_replays": 1,
+      "stability_claim": false
+    }
+  ],
+  "a100_over_gh200_ratio_envelopes": [
+    {
+      "family": "granite-graph-decode",
+      "lower_ppm": 1750000,
+      "upper_ppm": 1900000,
+      "retained_observed_lower_ppm": 1775973,
+      "retained_observed_upper_ppm": 1853030
+    },
+    {
+      "family": "granite-graph-prefill",
+      "lower_ppm": 1750000,
+      "upper_ppm": 2650000,
+      "retained_observed_lower_ppm": 1805001,
+      "retained_observed_upper_ppm": 2577125
+    },
+    {
+      "family": "granite-eager-decode",
+      "lower_ppm": 1850000,
+      "upper_ppm": 2100000,
+      "retained_observed_lower_ppm": 1916490,
+      "retained_observed_upper_ppm": 2014235
+    },
+    {
+      "family": "granite-eager-prefill",
+      "lower_ppm": 1900000,
+      "upper_ppm": 2900000,
+      "retained_observed_lower_ppm": 1969180,
+      "retained_observed_upper_ppm": 2788863
+    },
+    {
+      "family": "deepseek-v3",
+      "state": "ABSENT",
+      "reason": "no matched A100 DeepSeek capture at the retained implementation and shapes"
+    }
+  ],
+  "kv_slope_bounds": [
+    {
+      "family": "granite-tp1-flashattention",
+      "center_ps_per_token_per_layer": 1450,
+      "lower_ps_per_token_per_layer": 1305,
+      "upper_ps_per_token_per_layer": 1595,
+      "tolerance_ppm": 100000,
+      "application": "DISCLOSED bound only"
+    },
+    {
+      "family": "qwen-tp1-full-attention",
+      "center_ps_per_token_per_layer": 2493,
+      "lower_ps_per_token_per_layer": 2244,
+      "upper_ps_per_token_per_layer": 2742,
+      "tolerance_ppm": 100000,
+      "application": "DISCLOSED cross-family context only, not applied to DeepSeek MLA"
+    },
+    {
+      "family": "qwen-tp4-full-attention",
+      "center_ps_per_token_per_layer": 904,
+      "lower_ps_per_token_per_layer": 814,
+      "upper_ps_per_token_per_layer": 994,
+      "tolerance_ppm": 100000,
+      "application": "DISCLOSED TP-width-specific context only"
+    },
+    {
+      "family": "deepseek-mla",
+      "state": "ABSENT",
+      "reason": "one retained decode context and no executed MTP cell cannot identify a KV slope"
+    }
+  ],
+  "physical_floors_ps": [
+    {"cell": "granite-decode-b1-kv16", "floor_ps": 199000000},
+    {"cell": "granite-decode-b8-kv16", "floor_ps": 199000000},
+    {"cell": "granite-decode-b32-kv16", "floor_ps": 199000000},
+    {"cell": "granite-prefill-l128", "floor_ps": 199000000},
+    {"cell": "granite-prefill-l512", "floor_ps": 383000000},
+    {"cell": "granite-prefill-l2048", "floor_ps": 1531000000},
+    {"cell": "deepseek-ep32-prefill-r16-l1024-t16384", "floor_ps": 37050000000},
+    {"cell": "deepseek-ep32-prefill-r8-l2048-t16384", "floor_ps": 38320000000},
+    {"cell": "deepseek-ep32-prefill-r4-l4096-t16384", "floor_ps": 40890000000},
+    {"cell": "deepseek-ep72-decode-b32-c2000", "floor_ps": 1115000000}
+  ],
+  "deepseek_depth_projection": {
+    "reduced_layers": 4,
+    "full_layers": 61,
+    "rule": "full_service_ps = round_half_up(reduced_service_ps * 61 / 4)",
+    "per_layer_rule": "per_layer_service_ps = reduced_service_ps / 4",
+    "evidence_class": "DECLARED",
+    "forbidden_claims": [
+      "full-depth measurement",
+      "distributed expert-residency measurement",
+      "EP communication measurement",
+      "MTP timing",
+      "rank-class-specific service"
+    ]
+  },
+  "compilation_guards": [
+    "all configured retained-source digests match",
+    "every emitted entry has service and component evidence classes",
+    "every emitted service is at or above its physical floor",
+    "held-out rows are not read by calibration fitting",
+    "ABSENT cells emit no lookup, profile-table or device-service entry",
+    "lookup record validates as candidate under simllm-kernel-cycle-lut-v1",
+    "profile-table and device-service durations reconstruct lookup service exactly",
+    "content address is verified before selection",
+    "no raw or derived collective time is folded into service"
+  ],
+  "deferred_merlin": {
+    "task_id": "COMP-72",
+    "freeze": "examples/hopper_kernel_cycle_candidate_v1/expectations.json",
+    "granite_plan_command": ".venv/bin/python offline/calibration/kernel_cycle_capture.py plan --suite offline/calibration/suites/kernel-cycle-v1/suite.json --model ibm-granite/granite-3.0-1b-a400m-instruct --model-revision ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445 --model-family routed --max-context-tokens 4096 --output $SIMLLM_CAMPAIGN_RUN_ROOT/granite-plan.json",
+    "resumable_cell_command": ".venv/bin/python offline/calibration/kernel_cycle_capture.py run-cell --plan $SIMLLM_CAMPAIGN_RUN_ROOT/granite-plan.json --cell-id $SIMLLM_CAMPAIGN_CELL_ID --output-dir $SIMLLM_CAMPAIGN_RUN_ROOT/cells/$SIMLLM_CAMPAIGN_CELL_ID",
+    "deepseek_base_command": "ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:25:00 --job-name=gh-dsv3-base --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=4,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=base,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=16384,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch",
+    "deepseek_decode_command": "ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:20:00 --job-name=gh-dsv3-barrier --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=4,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=decode,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=65536,MAX_NUM_SEQS=64,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch",
+    "deepseek_mtp_command": "ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:20:00 --job-name=gh-dsv3-mtp --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=4,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=mtp,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=65536,MAX_NUM_SEQS=64,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch",
+    "resume_rule": "Use the first cell without a digest-complete output directory. Never overwrite a completed cell. Stop on SSH loss."
+  },
+  "forbidden_outcomes": [
+    "validated acceptance status",
+    "COMP-1 closure",
+    "COMP-5 closure",
+    "COMP-64 closure",
+    "CORE-54 closure",
+    "full GH200 coverage",
+    "missing-cell interpolation",
+    "DeepSeek MTP pricing",
+    "counter attribution on GH200"
+  ]
+}
