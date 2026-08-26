@@ -1,0 +1,168 @@
+{
+  "calibration_split": {
+    "forbidden_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "held_out_access_ledger": [
+      {
+        "disposition": "not_used_or_compared",
+        "event": "Accidental whole-file local read while inventorying component evidence",
+        "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+        "protocol_effect": "TRAF-66 cannot close with an empty ledger"
+      }
+    ],
+    "visible_anchor_ids": [
+      "sglang_prefill_1k"
+    ]
+  },
+  "chronology": {
+    "allowlist_extension_commit": "dcf6be1cf82b23a989d45b1d5ff50d15aa71ac5f",
+    "allowlist_extension_preceded_source_inspection": true,
+    "boundary_form_derived_before_visible_comparison": true,
+    "framework_evaluation_tables_accessed": false,
+    "held_out_component_record_accessed": true,
+    "scored_comparison_performed": false,
+    "scored_flagship_rerun_performed": false,
+    "visible_calibration_comparison_performed": false,
+    "web_pages_fetched": false
+  },
+  "composition": {
+    "boundary_service_ps": {
+      "lower": 681624980000,
+      "selected": 681624980000,
+      "upper": 681624980000
+    },
+    "candidate_compute_service_ps": 1363249960000,
+    "child_compute_service_ps": 681624980000,
+    "operator": "max(C, P) + min(C, P) / 2",
+    "packet_service_ps": {
+      "lower": 2286179760360,
+      "selected": 2286179760360,
+      "upper": 2286179762680
+    },
+    "selected_regime": "packet_dominant",
+    "steady_interleave_service_ps": {
+      "lower": 1143089880180,
+      "selected": 1143089880180,
+      "upper": 1143089881340
+    },
+    "total_service_ps": {
+      "lower": 2967804740360,
+      "selected": 2967804740360,
+      "upper": 2967804742680
+    }
+  },
+  "event_conservation": {
+    "central_interleave_iterations": 117,
+    "counts": {
+      "children": 2,
+      "combine_completions_per_child": 58,
+      "combine_completions_total": 116,
+      "combine_launches_per_child": 58,
+      "combine_launches_total": 116,
+      "dispatch_completions_per_child": 58,
+      "dispatch_completions_total": 116,
+      "dispatch_launches_per_child": 58,
+      "dispatch_launches_total": 116,
+      "moe_layers": 58,
+      "stage_advances_total": 234,
+      "stages_per_child": 117,
+      "yield_boundaries_per_child": 116,
+      "yield_boundaries_total": 232
+    },
+    "executor_epilogue_stage_advances": 0,
+    "executor_prologue_stage_advances": 0,
+    "moe_layers": 58,
+    "tbo_delta_stages": 0
+  },
+  "held_out_structural_prediction": {
+    "compute_dependence_reenters": true,
+    "numeric_values_accessed_for_prediction": false,
+    "rows": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "service_term": "packet_service_ps + compute_service_ps / 2"
+  },
+  "parameters": {
+    "child_fraction": {
+      "denominator": 2,
+      "numerator": 1
+    },
+    "fitted": [],
+    "free": [],
+    "rejected": [
+      "boundary_fraction_fit",
+      "dispatch_phase_subtraction",
+      "overlap_scale"
+    ]
+  },
+  "preservation_locks": [
+    {"path": "notes/2026-08-26-core60-worker-sizing.md", "sha256": "4b7f98b1b19193d0e2f4e1677329e68bd2bfee5ed698dd1fe28008a6b9429ce1"},
+    {"path": "examples/deployment_curve_v1/core60_expectations.json", "sha256": "d588a5df408e55410d8d1c09ef692f929f60393e30695bf46f13ce992b9fd8b0"},
+    {"path": "examples/deployment_curve_v1/core60_expectations.md", "sha256": "4ccde55a2425963d29379881491d3bf4812542eb9781d716d8355f90a2a9c117"},
+    {"path": "examples/deployment_curve_v1/core60_composition.py", "sha256": "6106375f5208181574dec46e01329516ff78bc497cf0d68cfbaef0b948f209e7"},
+    {"path": "examples/deployment_curve_v1/run_core60_composition.py", "sha256": "6574065214b4d2fb8b717e840c3c440f5c5e6d738d80f003cbaecdc359f72dd3"},
+    {"path": "examples/deployment_curve_v1/core60_calibration_result.json", "sha256": "85bf16992725b6bc56592b1dba46b69b0238c7992fb5bbdb06e2543b7b6a357e"},
+    {"path": "examples/deployment_curve_v1/core60_calibration_result.md", "sha256": "9e48a3f314c3a87b3469c73b67ab30702410d135668d9ca32152c0ff5a7237cd"},
+    {"path": "tests/test_deployment_curve_core60.py", "sha256": "8a523d6cf4017d9b7a265a2741c7a67a6f524c77aa0ba19f85e22f4cd2b17cf1"},
+    {"path": "notes/2026-08-26-comp75-worker-sizing.md", "sha256": "b2e2cc219d3055ad42751361dc4f923bdd0f5666ccfbcb5a7bf96a1ddaf7e476"},
+    {"path": "notes/2026-08-26-comp75-source-allowlist.md", "sha256": "5d0ef8d86dd105e9e18ddb87d7e6c30b5dcd918bd8ac63ca20ed751e21f33831"},
+    {"path": "examples/deployment_curve_v1/comp75_expectations.json", "sha256": "70344ee93b7557486ff4f61191aa4c0213d471a35981863d2e60be34e4a48f5a"},
+    {"path": "examples/deployment_curve_v1/comp75_expectations.md", "sha256": "24558903a3c0df5e9acf41d7e39b4ad0b82e5fb8d277f6ae85affd9533c0a5e3"},
+    {"path": "examples/deployment_curve_v1/comp75_repetition.py", "sha256": "0dd101735c10b050dd0d7ee81fd8be7676be662740c95a5334f951b4b1149a6e"},
+    {"path": "examples/deployment_curve_v1/run_comp75_repetition.py", "sha256": "7c77113fbcfb4b2cd8164ff739149f104e695857af441c4570e8b577c0c4676e"},
+    {"path": "examples/deployment_curve_v1/comp75_independent_sign.py", "sha256": "82bf3fdd455d4aadf64d19bc9df6485b108eb5e2a72a6a1211302e25656d8e02"},
+    {"path": "examples/deployment_curve_v1/comp75_calibration_result.json", "sha256": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb"},
+    {"path": "examples/deployment_curve_v1/comp75_calibration_result.md", "sha256": "fa05a54fd85b31193a30ea61b3a04354f6eabbc537c981bcb9efaf1de0d603d9"},
+    {"path": "tests/test_deployment_curve_comp75.py", "sha256": "c58559f2d264740e3c07529f786df25d6beb9afdae92efff81bda37d4ad6e37c"},
+    {"path": "examples/deployment_curve_v1/scored_expectations.json", "sha256": "9048342b4eaa1cc07183c82b16884eafaf3fb00e9664132db63f27572d2ee192"},
+    {"path": "examples/deployment_curve_v1/scored_expectations.md", "sha256": "dcba281b50ca91db89e0eaac09d67d222eef97d7ac197c127563652a22d470c3"},
+    {"path": "examples/deployment_curve_v1/flagship_config.json", "sha256": "0e16edd3224b33c7a587d15a792aa48d6770219200dc50b6c364567c59e67ea0"},
+    {"path": "examples/deployment_curve_v1/flagship_tools.py", "sha256": "e4324919ea1b4ccb2ad7cd4980901cd356f94e4883f82851531dd3c27a466075"},
+    {"path": "examples/deployment_curve_v1/run_flagship.py", "sha256": "f95a7fd3e98459d7ccc6f41167735b942dd1f2f00169a4d29a7fb1e6ffc3c34f"},
+    {"path": "examples/deployment_curve_v1/plot_flagship.py", "sha256": "92a93a2bd79c5a29054878bebcf9739486e083db0c802a7d6b88ca0e2088a5df"},
+    {"path": "examples/deployment_curve_v1/publish_flagship.py", "sha256": "9661288ca456fd59e1e4c20b2b67a6fea01eded50ec2540af3b6e184592b3e44"},
+    {"path": "examples/deployment_curve_v1/flagship_result.json", "sha256": "ed06a2e8bce838f96c8365151a450ddf9a80ebde7520c3e37c40960b4a633e08"},
+    {"path": "examples/deployment_curve_v1/RESULTS.md", "sha256": "699dc8d14bfc4fc20a9fafe81aa13ad216a23de664b9a9cec50e97d3e84a7dc3"}
+  ],
+  "schema": "simllm-deployment-curve-traf66-expectations-v1",
+  "signed_movement_expectation": {
+    "predicted_throughput_relative_to_comp75": "decrease",
+    "service_relative_to_comp75": "increase",
+    "visible_calibration_residual_movement": "more_negative"
+  },
+  "source_contracts": [
+    {
+      "commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "interpretation": "Zero-offset execution advances child A and child B once in each central stage iteration and asserts both complete before merge.",
+      "line_range": "38-71",
+      "path": "python/sglang/srt/batch_overlap/operations.py",
+      "range_sha256": "39c572ed113a16b8fe697e891b378a97f993408294f856a04dbbf54b3289aa06"
+    },
+    {
+      "commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "interpretation": "Every sparse prefill layer launches and completes dispatch around one yield, then launches and completes combine around a second yield.",
+      "line_range": "89-132",
+      "path": "python/sglang/srt/batch_overlap/operations_strategy.py",
+      "range_sha256": "70c89306abc488c4a9b583c088dc39b65c86ab806ac24f4e70c9845fe526480f"
+    },
+    {
+      "commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "interpretation": "The parent splits inputs, invokes two copies of the operation sequence at the frozen stage offsets, and merges only the two completed outputs.",
+      "line_range": "880-941",
+      "path": "python/sglang/srt/batch_overlap/two_batch_overlap.py",
+      "range_sha256": "4599687f7fad87739bdc5aba91bba758c8fd1f6313ee04a97ddf7159818041f8"
+    },
+    {
+      "commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "interpretation": "TBO constructs two distinct child dispatchers and routes dispatch and combine halves through the selected child backend.",
+      "line_range": "1085-1134",
+      "path": "python/sglang/srt/batch_overlap/two_batch_overlap.py",
+      "range_sha256": "235220c3b206047ff02b108c7a580a79290f382cad234afb12098cccbc8229f9"
+    }
+  ],
+  "status": "EXPECTATIONS_ONLY_PROTOCOL_VOID",
+  "task": "TRAF-66"
+}
