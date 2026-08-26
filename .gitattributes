@@ -219,3 +219,9 @@ docs/modules/traffic.md text eol=lf
 docs/task-ledger.json text eol=lf
 examples/deployment_curve_v1/figures/*.pdf -text -diff
 examples/deployment_curve_v1/figures/*.png -text -diff
+notes/2026-08-27-core61depth-worker-sizing.md text eol=lf
+examples/deployment_curve_v1/core61_depth_*.json text eol=lf
+examples/deployment_curve_v1/core61_depth_*.md text eol=lf
+examples/deployment_curve_v1/core61_depth_*.py text eol=lf
+examples/deployment_curve_v1/run_core61_depth.py text eol=lf
+tests/test_deployment_curve_core61.py text eol=lf
