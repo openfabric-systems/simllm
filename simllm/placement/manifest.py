@@ -22,6 +22,7 @@ Extraction rules that matter for correctness:
 from __future__ import annotations
 
 import json
+from collections import deque
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -92,7 +93,11 @@ class PlacementManifest:
         for rank in raw["ranks"]:
             if rank["pool_role"] is None:
                 del rank["pool_role"]
-        path.write_text(json.dumps(raw, indent=2) + "\n")
+        path.write_text(
+            json.dumps(raw, indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
         return path
 
     @classmethod
@@ -144,6 +149,37 @@ class NicFabricPlacement:
     node_id: str
     fabric_location: str
     affine_gpu_rank: int
+    switch_id: str | None = None
+    switch_port_id: str | None = None
+    link_id: str | None = None
+
+
+@dataclass(frozen=True)
+class FabricSwitchPort:
+    """One uniquely identified port owned by a fabric switch."""
+
+    port_id: str
+    switch_id: str
+
+
+@dataclass(frozen=True)
+class FabricSwitchPlacement:
+    """One switch and its physical ports in the declared fabric graph."""
+
+    switch_id: str
+    tier: int
+    ports: tuple[FabricSwitchPort, ...]
+
+
+@dataclass(frozen=True)
+class FabricLink:
+    """One undirected physical link between NIC or switch-port endpoints."""
+
+    link_id: str
+    endpoint_a: str
+    endpoint_b: str
+    link_rate_bps: int
+    propagation_delay_ps: int
 
 
 @dataclass(frozen=True)
@@ -164,6 +200,12 @@ class FabricTopologyManifest:
     goal_rank_mapping: str = "gpu-rank"
     source: str = "declared"
     schema: str = FABRIC_SCHEMA
+    physical_rendering_enabled: bool = False
+    topology_name: str | None = None
+    evidence_class: str | None = None
+    switch_latency_ps: int | None = None
+    switches: tuple[FabricSwitchPlacement, ...] = ()
+    links: tuple[FabricLink, ...] = ()
 
     def by_rank(self, global_rank: int) -> GpuFabricPlacement:
         for node in self.nodes:
@@ -179,9 +221,241 @@ class FabricTopologyManifest:
                     return nic
         raise KeyError(f"NIC {nic_id!r} not in fabric manifest")
 
+    def by_link(self, link_id: str) -> FabricLink:
+        for link in self.links:
+            if link.link_id == link_id:
+                return link
+        raise KeyError(f"link {link_id!r} not in fabric manifest")
+
+    def _physical_indexes(
+        self,
+    ) -> tuple[
+        dict[str, NicFabricPlacement],
+        dict[str, FabricSwitchPort],
+        dict[str, FabricLink],
+    ]:
+        if not self.physical_rendering_enabled:
+            raise ValueError("physical topology rendering is disabled")
+        nic_by_id = {
+            nic.nic_id: nic for node in self.nodes for nic in node.nics
+        }
+        port_by_id = {
+            port.port_id: port for switch in self.switches for port in switch.ports
+        }
+        link_by_id = {link.link_id: link for link in self.links}
+        return nic_by_id, port_by_id, link_by_id
+
+    def validate(self) -> None:
+        """Fail closed unless the optional physical graph is self-consistent."""
+
+        if self.schema != FABRIC_SCHEMA:
+            raise ValueError(f"unsupported schema: {self.schema!r}")
+        if self.goal_rank_mapping != "gpu-rank":
+            raise ValueError("fixed fabric topology requires gpu-rank mapping")
+        if type(self.physical_rendering_enabled) is not bool:
+            raise TypeError("physical_rendering_enabled must be a boolean")
+
+        nics = tuple(nic for node in self.nodes for nic in node.nics)
+        nic_ids = [nic.nic_id for nic in nics]
+        if len(nic_ids) != len(set(nic_ids)):
+            raise ValueError("fabric NIC identities must be unique")
+
+        if not self.physical_rendering_enabled:
+            if self.switches or self.links:
+                raise ValueError("disabled physical rendering cannot retain a graph")
+            if any(
+                value is not None
+                for value in (
+                    self.topology_name,
+                    self.evidence_class,
+                    self.switch_latency_ps,
+                )
+            ):
+                raise ValueError("disabled physical rendering cannot retain metadata")
+            if any(
+                nic.switch_id is not None
+                or nic.switch_port_id is not None
+                or nic.link_id is not None
+                for nic in nics
+            ):
+                raise ValueError("disabled physical rendering cannot retain NIC links")
+            return
+
+        for name, value in (
+            ("topology_name", self.topology_name),
+            ("evidence_class", self.evidence_class),
+        ):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a nonblank string")
+        if (
+            isinstance(self.switch_latency_ps, bool)
+            or type(self.switch_latency_ps) is not int
+            or self.switch_latency_ps < 0
+        ):
+            raise ValueError("switch_latency_ps must be a nonnegative integer")
+        if not self.switches or not self.links:
+            raise ValueError("enabled physical rendering requires switches and links")
+
+        switch_ids = [switch.switch_id for switch in self.switches]
+        if len(switch_ids) != len(set(switch_ids)):
+            raise ValueError("fabric switch identities must be unique")
+        switch_id_set = set(switch_ids)
+        ports = tuple(port for switch in self.switches for port in switch.ports)
+        port_ids = [port.port_id for port in ports]
+        if len(port_ids) != len(set(port_ids)):
+            raise ValueError("fabric switch-port identities must be unique")
+        for switch in self.switches:
+            if isinstance(switch.tier, bool) or type(switch.tier) is not int:
+                raise TypeError("fabric switch tier must be an integer")
+            if switch.tier not in (0, 1):
+                raise ValueError("fixed fabric switch tier must be zero or one")
+            if not switch.ports:
+                raise ValueError("every fabric switch must own at least one port")
+            if any(port.switch_id != switch.switch_id for port in switch.ports):
+                raise ValueError("fabric port owner disagrees with its switch")
+        if any(port.switch_id not in switch_id_set for port in ports):
+            raise ValueError("fabric port names an unknown switch")
+
+        link_ids = [link.link_id for link in self.links]
+        if len(link_ids) != len(set(link_ids)):
+            raise ValueError("fabric link identities must be unique")
+        known_endpoints = set(nic_ids) | set(port_ids)
+        endpoint_degree = {endpoint: 0 for endpoint in known_endpoints}
+        for link in self.links:
+            if link.endpoint_a == link.endpoint_b:
+                raise ValueError("fabric link endpoints must be distinct")
+            if link.endpoint_a not in known_endpoints or link.endpoint_b not in known_endpoints:
+                raise ValueError("fabric link names an unknown endpoint")
+            for name, value in (
+                ("link_rate_bps", link.link_rate_bps),
+                ("propagation_delay_ps", link.propagation_delay_ps),
+            ):
+                if isinstance(value, bool) or type(value) is not int or value < 1:
+                    raise ValueError(f"fabric {name} must be a positive integer")
+            endpoint_degree[link.endpoint_a] += 1
+            endpoint_degree[link.endpoint_b] += 1
+        if any(degree != 1 for degree in endpoint_degree.values()):
+            raise ValueError("every NIC and switch port must terminate one link")
+
+        nic_by_id, port_by_id, link_by_id = self._physical_indexes()
+        for nic in nics:
+            if nic.switch_id not in switch_id_set:
+                raise ValueError("fabric NIC names an unknown switch")
+            port = port_by_id.get(nic.switch_port_id or "")
+            if port is None or port.switch_id != nic.switch_id:
+                raise ValueError("fabric NIC switch-port binding is inconsistent")
+            if nic.fabric_location != port.port_id:
+                raise ValueError("fabric NIC location disagrees with its switch port")
+            link = link_by_id.get(nic.link_id or "")
+            if link is None or {link.endpoint_a, link.endpoint_b} != {
+                nic.nic_id,
+                port.port_id,
+            }:
+                raise ValueError("fabric NIC endpoint-link binding is inconsistent")
+
+        adjacency = self._adjacency()
+        first_nic = next(iter(nic_by_id), None)
+        if first_nic is None:
+            raise ValueError("physical fabric must contain at least one NIC")
+        reached = {first_nic}
+        pending = deque([first_nic])
+        while pending:
+            endpoint = pending.popleft()
+            for peer, _link in adjacency[endpoint]:
+                if peer not in reached:
+                    reached.add(peer)
+                    pending.append(peer)
+        if not set(nic_by_id).issubset(reached):
+            raise ValueError("physical fabric does not reach every NIC endpoint")
+
+    def _adjacency(self) -> dict[str, list[tuple[str, FabricLink | None]]]:
+        nic_by_id, port_by_id, _link_by_id = self._physical_indexes()
+        switch_ids = {switch.switch_id for switch in self.switches}
+        adjacency: dict[str, list[tuple[str, FabricLink | None]]] = {
+            endpoint: []
+            for endpoint in set(nic_by_id) | set(port_by_id) | switch_ids
+        }
+        for link in self.links:
+            adjacency[link.endpoint_a].append((link.endpoint_b, link))
+            adjacency[link.endpoint_b].append((link.endpoint_a, link))
+        for port in port_by_id.values():
+            adjacency[port.port_id].append((port.switch_id, None))
+            adjacency[port.switch_id].append((port.port_id, None))
+        for peers in adjacency.values():
+            peers.sort(
+                key=lambda item: (
+                    "" if item[1] is None else item[1].link_id,
+                    item[0],
+                )
+            )
+        return adjacency
+
+    def path_between_ranks(
+        self, source_rank: int, destination_rank: int
+    ) -> tuple[FabricLink, ...]:
+        """Return the deterministic shortest physical path between two ranks."""
+
+        if source_rank == destination_rank:
+            self.by_rank(source_rank)
+            return ()
+        source_nic = self.by_rank(source_rank).nic_id
+        destination_nic = self.by_rank(destination_rank).nic_id
+        adjacency = self._adjacency()
+        if source_nic not in adjacency or destination_nic not in adjacency:
+            raise ValueError("rank NIC is absent from the physical topology")
+
+        predecessor: dict[str, tuple[str, FabricLink | None] | None] = {
+            source_nic: None
+        }
+        pending = deque([source_nic])
+        while pending and destination_nic not in predecessor:
+            endpoint = pending.popleft()
+            for peer, link in adjacency[endpoint]:
+                if peer not in predecessor:
+                    predecessor[peer] = (endpoint, link)
+                    pending.append(peer)
+        if destination_nic not in predecessor:
+            raise ValueError(
+                f"no physical path from rank {source_rank} to {destination_rank}"
+            )
+
+        path: list[FabricLink] = []
+        endpoint = destination_nic
+        while endpoint != source_nic:
+            previous = predecessor[endpoint]
+            assert previous is not None
+            endpoint, link = previous
+            if link is not None:
+                path.append(link)
+        path.reverse()
+        return tuple(path)
+
+    def resolve_goal_paths(self, trace: object) -> tuple[tuple[FabricLink, ...], ...]:
+        """Resolve each structured GOAL message through this physical graph."""
+
+        from simllm.goal import GoalTrace
+
+        if not isinstance(trace, GoalTrace):
+            raise TypeError("trace must be a GoalTrace")
+        fabric_ranks = sorted(
+            gpu.global_rank for node in self.nodes for gpu in node.gpus
+        )
+        if fabric_ranks != list(range(len(fabric_ranks))):
+            raise ValueError("fabric GPU ranks must be dense for GOAL projection")
+        if trace.num_ranks != len(fabric_ranks):
+            raise ValueError("GOAL and fabric rank cardinalities disagree")
+        return tuple(
+            self.path_between_ranks(message.source_rank, message.destination_rank)
+            for message in trace.messages
+        )
+
     def save(self, path: str | Path) -> Path:
         path = Path(path)
-        path.write_text(json.dumps(asdict(self), indent=2) + "\n")
+        path.write_text(
+            json.dumps(asdict(self), indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
         return path
 
     @classmethod
@@ -203,8 +477,27 @@ class FabricTopologyManifest:
                     ),
                 )
             )
+        switches = tuple(
+            FabricSwitchPlacement(
+                switch_id=switch["switch_id"],
+                tier=switch["tier"],
+                ports=tuple(
+                    FabricSwitchPort(**port) for port in switch.get("ports", ())
+                ),
+            )
+            for switch in raw.get("switches", ())
+        )
+        links = tuple(FabricLink(**link) for link in raw.get("links", ()))
         return cls(
             nodes=nodes,
             goal_rank_mapping=raw.get("goal_rank_mapping", "gpu-rank"),
             source=raw.get("source", "declared"),
+            physical_rendering_enabled=raw.get(
+                "physical_rendering_enabled", False
+            ),
+            topology_name=raw.get("topology_name"),
+            evidence_class=raw.get("evidence_class"),
+            switch_latency_ps=raw.get("switch_latency_ps"),
+            switches=switches,
+            links=links,
         )
