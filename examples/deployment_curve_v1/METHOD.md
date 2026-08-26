@@ -85,3 +85,7 @@ does not invent one.
 
 Both axes increase toward the upper-right optimal corner. A dry-run result
 receives a visible `DRY RUN` label in the title and plot body.
+The inverse-delay axis is logarithmic so the small-model granite dry run does
+not collapse the approximately 100 millisecond disclosure context onto the
+axis border. This changes presentation only; the record and scoring quantities
+remain the exact untransformed values described above.

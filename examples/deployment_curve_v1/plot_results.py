@@ -196,16 +196,17 @@ def render_figure(
 
     axis.set_xlabel("Aggregated output throughput (tokens/s), rightward is better")
     axis.set_ylabel("Inverse per-token request delay (tokens/s), upward is better")
+    axis.set_yscale("log")
     title = "DeepSeek-V3 deployment curve scaffold"
     if plot_data["classification"] == "dry-run":
         title += " (DRY RUN)"
     axis.set_title(title, loc="left", fontweight="bold")
     axis.text(
-        0.985,
+        0.78,
         0.965,
         "UPPER-RIGHT\nOPTIMAL",
         transform=axis.transAxes,
-        ha="right",
+        ha="center",
         va="top",
         fontsize=7.5,
         color="#333333",
@@ -235,14 +236,13 @@ def render_figure(
         x_pad = max(0.06 * x_span, 1.0)
         axis.set_xlim(max(0.0, min(all_x) - x_pad), max(all_x) + x_pad)
     if all_y:
-        y_span = max(all_y) - min(all_y)
-        y_pad = max(0.08 * y_span, 0.1)
-        axis.set_ylim(max(0.0, min(all_y) - y_pad), max(all_y) + y_pad)
+        axis.set_ylim(min(all_y) / 1.35, max(all_y) * 1.35)
 
     configurations = axis.legend(
         handles=curve_handles,
         title="Simulated configurations",
-        loc="upper left",
+        loc="upper center",
+        bbox_to_anchor=(0.43, 0.99),
         frameon=True,
         facecolor="white",
         framealpha=0.92,
@@ -252,24 +252,13 @@ def render_figure(
     axis.legend(
         handles=disclosure_handles,
         title="Published disclosure context",
-        loc="lower right",
+        loc="center",
+        bbox_to_anchor=(0.66, 0.27),
         frameon=True,
         facecolor="white",
         framealpha=0.92,
         edgecolor="#cccccc",
     )
-    axis.text(
-        0.01,
-        0.01,
-        "SGLang markers share the approximate 100 ms headline latency; "
-        "they are not paired score rows.",
-        transform=axis.transAxes,
-        ha="left",
-        va="bottom",
-        fontsize=6.8,
-        color="#444444",
-    )
-
     output_stem.parent.mkdir(parents=True, exist_ok=True)
     pdf_path = output_stem.with_suffix(".pdf")
     png_path = output_stem.with_suffix(".png")
