@@ -5,6 +5,13 @@ curve. It precedes the scored runner, every fitted value, every held-out read,
 the scored result and the flagship figure. The machine-readable authority is
 `scored_expectations.json`.
 
+An implementation preflight then found that the first standard-decode
+powers-of-two grid exceeded the `2^12` factor in `10^12` ps, so its largest
+rates did not have integer-picosecond interarrivals. Before any fit, held-out
+read or scored observation, only the standard-decode and MTP grids were
+replaced with exact decimal divisors. No anchor, prediction, envelope, split or
+decision rule changed.
+
 ## Dependency and identity freeze
 
 The run may start only from a commit containing the merged CORE-53 binding,
@@ -56,8 +63,8 @@ The exact request-rate sweeps are:
 | SGLang prefill 1K | 32, 64, 128, 256 |
 | SGLang prefill 2K | 16, 32, 64, 128 |
 | SGLang prefill 4K | 8, 16, 32, 64 |
-| SGLang standard decode | 2,048, 4,096, 8,192, 16,384, 32,768 |
-| SGLang simulated MTP | 1,024, 2,048, 4,096, 8,192, 16,384 |
+| SGLang standard decode | 2,000, 4,000, 8,000, 16,000, 32,000 |
+| SGLang simulated MTP | 1,000, 2,000, 4,000, 8,000, 16,000 |
 
 Every rate has an exact integer-picosecond interarrival. The MTP grid is frozen
 but is not executed until an exact MTP price exists.

@@ -13,6 +13,13 @@
     "held_out_score_existed_before_this_freeze": false,
     "flagship_figure_existed_before_this_freeze": false
   },
+  "pre_observation_correction": {
+    "reason": "Implementation preflight found that the first standard-decode powers-of-two grid exceeded the 2^12 factor in 1000000000000 ps.",
+    "changed": "Only the standard-decode and MTP request rates were replaced with exact decimal divisors.",
+    "fit_existed_before_correction": false,
+    "held_out_value_was_read_before_correction": false,
+    "scored_observation_existed_before_correction": false
+  },
   "dispatch_identity": {
     "worktree": "core54run",
     "worktree_path": "/data3/yifeng/simllm-dev/worktrees/core54run",
@@ -137,8 +144,8 @@
     "sglang_prefill_1k": [32, 64, 128, 256],
     "sglang_prefill_2k": [16, 32, 64, 128],
     "sglang_prefill_4k": [8, 16, 32, 64],
-    "sglang_decode_standard": [2048, 4096, 8192, 16384, 32768],
-    "sglang_decode_simulated_mtp": [1024, 2048, 4096, 8192, 16384],
+    "sglang_decode_standard": [2000, 4000, 8000, 16000, 32000],
+    "sglang_decode_simulated_mtp": [1000, 2000, 4000, 8000, 16000],
     "rule": "Every load divides 1000000000000 ps exactly. The MTP grid is frozen but not executed until its exact price exists."
   },
   "constants": {

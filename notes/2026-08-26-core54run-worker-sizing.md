@@ -40,7 +40,8 @@
   CORE-54 changes state.
 - Bulk evidence: session work directories, per-request traces, intermediate
   records and reproducibility logs live under
-  `/data3/yifeng/simllm-dev/wave-runs/core54run/` and are not tracked.
+  `$SIMLLM_CORE54_RUN_ROOT` and are not tracked. Dispatch maps that variable to
+  the requested external `wave-runs/core54run` directory.
 
 ### Expected handwritten line ranges
 
