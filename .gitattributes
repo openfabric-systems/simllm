@@ -175,6 +175,7 @@ examples/deployment_curve_v1/run_comp75_repetition.py text eol=lf
 examples/deployment_curve_v1/comp75_calibration_result.json text eol=lf
 examples/deployment_curve_v1/comp75_calibration_result.md text eol=lf
 tests/test_deployment_curve_comp75.py text eol=lf
+tests/test_deployment_curve_run2_freeze.py text eol=lf
 .gitattributes text eol=lf
 docs/README_PRO.md text eol=lf
 docs/modules/core.md text eol=lf
