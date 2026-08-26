@@ -230,3 +230,34 @@ def test_unknown_code_objects_remain_nullable(record) -> None:
             "sass_sha256": None,
             "compile_configuration_sha256": None,
         }
+
+
+def test_candidate_entry_accepts_optional_measured_evidence(record) -> None:
+    payload = _mutable(record)
+    source_sha256 = payload["sources"][0]["fixture_sha256"]
+    payload["entries"][0]["evidence"] = {
+        "service_class": "MEASURED",
+        "component_class": "DISCLOSED",
+        "split": "calibration",
+        "source_sha256s": [source_sha256],
+        "derivation": None,
+    }
+
+    validated = validate_kernel_cycle_lut(payload)
+
+    assert validated.value["entries"][0]["evidence"]["service_class"] == "MEASURED"
+
+
+def test_declared_entry_evidence_requires_derivation(record) -> None:
+    payload = _mutable(record)
+    source_sha256 = payload["sources"][0]["fixture_sha256"]
+    payload["entries"][0]["evidence"] = {
+        "service_class": "DECLARED",
+        "component_class": "DISCLOSED",
+        "split": "held-out",
+        "source_sha256s": [source_sha256],
+        "derivation": None,
+    }
+
+    with pytest.raises(ValueError, match="declared service requires a derivation"):
+        validate_kernel_cycle_lut(payload)
