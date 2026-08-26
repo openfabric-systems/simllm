@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -87,7 +88,8 @@ def mock_binary(tmp_path_factory):
     compiler = shutil.which("c++")
     if compiler is None:
         pytest.skip("C++ compiler is unavailable")
-    output = tmp_path_factory.mktemp("traf65-build") / "nvlink-packet-mock"
+    executable_suffix = ".exe" if os.name == "nt" else ""
+    output = tmp_path_factory.mktemp("traf65-build") / f"nvlink-packet-mock{executable_suffix}"
     completed = subprocess.run(
         (
             compiler,
