@@ -22,7 +22,8 @@ from simllm.adapters.sglang import (
 )
 from simllm.adapters.sglang.plugin import ENABLE_ENV, enabled
 from simllm.adapters.sglang.replay import sample_adapter_tokens
-from simllm.adapters.sglang.worker import _sglang_moe_parallel_sizes
+from simllm.adapters.sglang.worker import _sglang_moe_parallel_sizes, _worker_model_dims
+from simllm.compute import ModelDims
 from simllm.core import RequestPhase, StepRecord, sampled_request_ids, step_record_to_json
 from simllm.preplay import (
     ForwardPhase,
@@ -621,6 +622,49 @@ def test_granite_moe_changes_active_and_resident_mlp_geometry():
 def test_model_dims_from_sglang_rejects_unsupported_moe_instead_of_dense(fields):
     with pytest.raises(NotImplementedError, match="SGL-18"):
         model_dims_from_sglang(_model_config(**fields))
+
+
+def test_explicit_study_dims_bypass_reader_without_weakening_default_refusal():
+    model_config = _model_config(
+        model_type="deepseek_v3",
+        architectures=["DeepseekV3ForCausalLM"],
+        n_routed_experts=256,
+        num_experts_per_tok=8,
+        moe_intermediate_size=2048,
+        n_shared_experts=1,
+    )
+    override = ModelDims(
+        num_layers=61,
+        hidden_size=7168,
+        intermediate_size=18432,
+        num_heads=128,
+        num_kv_heads=128,
+        head_size=192,
+        vocab_size=129280,
+        dtype_bytes=2,
+        num_experts=256,
+        top_k=8,
+        moe_intermediate_size=2048,
+        local_num_experts=32,
+    )
+
+    assert _worker_model_dims(
+        SimWorkerConfig(model_dims_override=override),
+        model_config,
+        1,
+        moe_ep_size=1,
+        moe_dp_size=1,
+        ep_num_redundant_experts=0,
+    ) is override
+    with pytest.raises(NotImplementedError, match="SGL-18"):
+        _worker_model_dims(
+            SimWorkerConfig(),
+            model_config,
+            1,
+            moe_ep_size=1,
+            moe_dp_size=1,
+            ep_num_redundant_experts=0,
+        )
 
 
 def test_model_dims_from_sglang_rejects_partial_or_disagreeing_moe_geometry():

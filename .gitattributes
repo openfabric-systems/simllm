@@ -131,3 +131,5 @@ tests/test_deployment_curve_flagship.py text eol=lf
 simllm/calibration/kernel_cycle_lut.py text eol=lf
 simllm/adapters/sglang/pump.py text eol=lf
 tests/test_adapters_sglang_pump.py text eol=lf
+simllm/adapters/sglang/worker.py text eol=lf
+tests/test_adapters_sglang.py text eol=lf

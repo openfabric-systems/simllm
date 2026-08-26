@@ -471,6 +471,7 @@ def _engine_process_main(connection: Any, config: _EngineLaunchConfig) -> None:
                 mode="virtual",
                 efficiency=getattr(config.provider, "efficiency", 0.7),
                 token_id=config.token_id,
+                model_dims_override=config.dims,
                 step_records_path=(
                     config.engine_workdir / "step-records.jsonl"
                 ).as_posix(),
