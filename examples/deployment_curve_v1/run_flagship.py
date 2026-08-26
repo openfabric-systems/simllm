@@ -390,7 +390,7 @@ def _packet_observation(
             {
                 "arm": label,
                 "link_rate_bps": rate,
-                "event": event.to_json(),
+                "event": _handoff_event_json(event),
                 "packet_service_ps": artifact.packet_service_ps,
                 "aggregate_kv_bytes": artifact.aggregate_kv_bytes,
                 "chunk_bytes": list(artifact.chunk_bytes),
@@ -410,6 +410,22 @@ def _packet_observation(
         "rows": rows,
         "byte_conserved": all(row["aggregate_kv_bytes"] == kv_bytes for row in rows),
         "endpoint_conserved": all(len(row["message_pairs"]) == 8 for row in rows),
+    }
+
+
+def _handoff_event_json(event: Any) -> dict[str, Any]:
+    """Project the framework-neutral handoff event without adding an API."""
+
+    return {
+        "request_id": event.request_id,
+        "authority": event.authority,
+        "pricing_arm": event.pricing_arm,
+        "kv_bytes": event.kv_bytes,
+        "submitted_at_ps": event.submitted_at_ps,
+        "eligible_at_ps": event.eligible_at_ps,
+        "started_at_ps": event.started_at_ps,
+        "finished_at_ps": event.finished_at_ps,
+        "completed_at_ps": event.completed_at_ps,
     }
 
 

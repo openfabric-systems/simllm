@@ -9,6 +9,8 @@ from pathlib import Path, PureWindowsPath
 
 import pytest
 
+from simllm.core import DeclaredKvHandoffPolicy
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 STUDY_DIR = REPOSITORY_ROOT / "examples/deployment_curve_v1"
 
@@ -144,6 +146,28 @@ def test_flagship_config_conserves_shapes_and_exact_interarrivals():
     ] == [16_384, 16_384, 16_384]
     assert config["packet_observation"]["prefill_ranks"] == list(range(8))
     assert config["packet_observation"]["decode_ranks"] == list(range(32, 40))
+    assert config["live_session"]["context_length"] > 4096
+
+
+def test_runner_projects_handoff_event_fields_without_assuming_a_json_method():
+    runner = _runner()
+    event = DeclaredKvHandoffPolicy(20).schedule(
+        submitted_at_ps=7,
+        request_id="request",
+        kv_bytes=8,
+    )
+
+    assert runner._handoff_event_json(event) == {
+        "request_id": "request",
+        "authority": "simllm-declared-kv-handoff-v1",
+        "pricing_arm": "declared-constant",
+        "kv_bytes": 8,
+        "submitted_at_ps": 7,
+        "eligible_at_ps": 7,
+        "started_at_ps": 7,
+        "finished_at_ps": 27,
+        "completed_at_ps": 27,
+    }
 
 
 def test_shared_curve_records_keep_output_axis_and_target_scale():

@@ -111,6 +111,8 @@ def validate_flagship_config(value: dict[str, Any]) -> None:
         if row["pool"] == "prefill"
     ):
         raise ValueError("prefill observations must conserve 16384 tokens per rank")
+    if live["context_length"] <= max(row["prompt_tokens"] for row in observations):
+        raise ValueError("live context must preserve every prompt plus scheduler margin")
     for curve in value["publication_curves"]:
         loads = curve["offered_load_requests_per_second"]
         if loads != sorted(set(loads)):

@@ -41,7 +41,7 @@
     "prefill_engines": 1,
     "decode_engines": 1,
     "simulated_gpus_per_engine": 8,
-    "context_length": 4096,
+    "context_length": 8192,
     "max_total_tokens": 65536,
     "max_running_requests": 64,
     "token_id": 512,
