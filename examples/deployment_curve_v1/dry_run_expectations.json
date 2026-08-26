@@ -1,0 +1,54 @@
+{
+  "schema": "simllm-deployment-curve-dry-run-expectations-v1",
+  "as_of_commit": "fefe847a88a0f2dd1811645d706a67a61d2ac199",
+  "chronology": {
+    "scaffold_implementation_existed_before_this_freeze": true,
+    "one_prompt_dry_run_existed_before_this_freeze": true,
+    "two_parameter_dry_run_existed_before_this_freeze": false,
+    "classification": "post-specified dry-run regression"
+  },
+  "scope": {
+    "framework": "vllm",
+    "model_column": "granite-roofline-bootstrap",
+    "pricing_mode": "bootstrap",
+    "prefill_nodes": 1,
+    "decode_nodes": 1,
+    "gpus_per_node": 8,
+    "prompt_tokens": [8, 16],
+    "offered_load_requests_per_second": [8000, 16000, 32000],
+    "configurations": 2,
+    "curve_points": 6,
+    "requests_per_point": 8,
+    "decode_output_tokens_per_request": 4
+  },
+  "expected_relations": [
+    "aggregated output throughput is nondecreasing with offered load within each prompt-length configuration",
+    "the 16-token prompt does not reduce per-token request delay relative to the 8-token prompt at a matched offered load",
+    "doubling prompt length doubles KV handoff bytes from 393216 to 786432 exactly",
+    "every point conserves 8 admissions, 8 terminals and 32 output tokens"
+  ],
+  "physical_bounds": {
+    "decode_weight_read": {
+      "active_parameter_count": 400000000,
+      "bytes_per_parameter": 2,
+      "tensor_parallel_ranks": 8,
+      "b100_hbm_bytes_per_second_per_rank": 8000000000000,
+      "per_rank_weight_bytes": 100000000,
+      "per_token_floor_ps": 12500000,
+      "memory_only_ceiling_tokens_per_second_per_request": 80000
+    },
+    "kv_handoff_400_gbit_parallel_serialization_floor_ps": {
+      "8": 983040,
+      "16": 1966080
+    },
+    "client_visible_decode_tokens_per_second_per_request": {
+      "lower": 10,
+      "upper": 100000
+    }
+  },
+  "disposition": {
+    "flagship_score": "NOT_SCORED",
+    "core54_closure": false,
+    "claim": "scaffold operation only"
+  }
+}
