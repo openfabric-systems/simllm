@@ -307,7 +307,8 @@ Four rules make the generalization concrete.
 | Device composition entry point, GPU-side fabric attachment | `GpuDeviceConfig` and `GpuDevice`, with endpoint identity, ordering-domain and region claims, peer read grants and one fabric transfer primitive; no service model of its own | `simllm/backends/rnic/include/simllm/rnic/gpu_device.h` | BACK-46 landed it and stays open for the metric clause; the typed port objects landed under the closed COMP-34 and the peer service stays with COMP-31 |
 | Virtual host memory | Tracked QPC, ring, doorbell-record and data allocations with the QPC translation asymmetry | `simllm/backends/rnic/include/simllm/rnic/host_memory.h` | BACK-19 closed |
 | Submission shapes | Host CPU, CPU proxy from a GPU-written descriptor queue, and GPU-initiated rings with a GPU-owned CQ; producer work as timed GPU tasks | `simllm/backends/rnic/include/simllm/rnic/submission.h` | BACK-20 and BACK-27 closed; BACK-37 open for the GPU CQ consumer |
-| GPU service model and NVLink egress cursor | One flat per-GPU egress serializer shared by every NVLINK store (opcodes `ST` and `STG`), plus the ring-collective egress kernel | `NvlinkProfile` in `simllm/compute/gpu_model.py`, launcher `nccl_ring_allreduce_launch` in `simllm/compute/nccl.py` | COMP-11 closed; COMP-31 open for peer topology, ingress and reduction lanes; COMP-34 closed, adding the peer-store egress port over this cursor |
+| GPU service model and NVLink egress cursor | One flat per-GPU egress serializer shared by every NVLINK store (opcodes `ST` and `STG`), plus the ring-collective egress kernel | `NvlinkProfile` in `simllm/compute/gpu_model.py`, launcher `nccl_ring_allreduce_launch` in `simllm/compute/nccl.py` | COMP-11 closed; TRAF-65 owns A100 packet, bond, credit, FIFO and wire calibration; COMP-31 consumes that evidence and owns receiving-HBM, reduction, proxy and cross-architecture detail; COMP-34 closed, adding the peer-store egress port over this cursor |
+| Candidate NVLink packet domain | Three separately parameterized htsim-style services in the fixed order TX, switch, RX. TX owns packetization, request and response direction, destination credits, four-link bonding and wire serialization; switch owns contention, FIFO placement and head-of-line policy; RX owns ingress rate, buffering, credit return, reassembly and delivery. The A100 direct-mesh profile selects an explicit zero-effect pass-through switch. No profile selection returns the analytic result by object identity. | `simllm/backends/htsim_nvlink.py` and `examples/a100_nvlink_packet_v1/candidate-profile.json` | TRAF-65 remains open. The profile is a declared, unscored candidate and makes no hardware claim. TRAF-45, TRAF-54, COMP-31 and COMP-40 may consume the versioned handoff without treating it as calibrated. |
 | GPU copy-engine service | Per-direction profiles with their own setup cost and bandwidth for host to device, device to host, device to device and peer transfers, and an estimate that rejects a direction the engine does not declare; this is the mechanism the measured copy-engine peer efficiencies calibrate | `CopyEngineProfile`, `CopyDirectionProfile` and `CopyEngineServiceModel` in `simllm/compute/gpu_model.py` | COMP-34 closed, adding typed ports over these directions rather than replacing them; COMP-41 open for measured per-port ceilings on a shipped profile |
 | NCCL stack skeleton | Name-mirrored communicator, planner, GPU FIFO, proxy, `ncclNet.isend` and `test`, verbs and doorbell, on one virtual clock | `simllm/compute/nccl_stack.py` | COMP-15 open; BACK-47 names the plugin seam as the producer boundary |
 | Host initiation | `HostInitiationModel` with the exact-zero ideal profile and calibrated launch-throughput profiles | `simllm/compute/host.py` | COMP-2 closed; COMP-28 open for the analytical submission fallback |
@@ -321,6 +322,15 @@ The doctrine is one line:
 ```text
 envelope = ceiling(port, architecture) x efficiency(stack, transfers across architectures)
 ```
+
+The calibrated peer service keeps packetization, directional serializers,
+credits and FIFO visits explicit until evidence permits a reduced form.
+TRAF-65 identifies that structure first on the observable four-A100 `NV4`
+mesh. A fitted saturation knee is an effective model parameter unless an
+independent counter identifies the physical credit unit or buffer depth, and an
+NCCL logical channel is never relabeled as a link-layer virtual channel. The
+analytic serializer remains the exact bypass for an unselected or uncalibrated
+architecture.
 
 The two hardware envelope studies were run on different NVLink generations,
 link counts, channel counts and host architectures, and they separate the two

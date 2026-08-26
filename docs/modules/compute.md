@@ -1961,13 +1961,19 @@ SGLang EP32 prefill and EP72 decode shapes. See
   one endpoint serializer and folds unresolved stack work into a
   participant-indexed base. Add peer topology and per-link routing, ingress
   service and receiving-HBM interaction, priced reduction lanes and proxy
-  operations. Identify those terms from pinned B200 per-link traffic, HBM
+  operations. TRAF-65 owns the A100 transport-side identification of packet
+  boundaries, four-link bonding, effective credits, ingress FIFOs and wire
+  service. Consume that profile without creating a second mutable packet or
+  queue authority. This task keeps receiving-HBM interaction, reduction lanes,
+  proxy operations and the pinned-B200 cross-architecture generalization.
+  Identify those remaining terms from pinned B200 per-link traffic, HBM
   counters, reduction-kernel timing and proxy timestamps over payload and
-  participant sweeps with held-out cells. Require exact byte and work
-  conservation, one timing authority for every term, no local/fabric double
-  count, and held-out phase-completion error no larger than 10 percent or
-  1 microsecond, whichever is larger. Report the reduced-form profile's
-  before error and preserve the exact `legacy` and all-remote identity paths.
+  participant sweeps with held-out cells, and report which TRAF-65 parameters
+  transfer and which are refitted. Require exact byte and work conservation,
+  one timing authority for every term, no local/fabric double count, and
+  held-out phase-completion error no larger than 10 percent or 1 microsecond,
+  whichever is larger. Report the reduced-form profile's before error and
+  preserve the exact `legacy` and all-remote identity paths.
 - COMP-17 (Precision; P1; M): audit and close the calibrated per-layer timing
   gap only after COMP-6 supplies exact per-invocation captured shapes and
   bindings and COMP-25 selects their resolved graph pricing on the live path.
@@ -2394,7 +2400,7 @@ SGLang EP32 prefill and EP72 decode shapes. See
   behavior: every accepted artifact and every priced step must stay
   byte-identical, and the pinning test must be updated in the same change rather
   than deleted.
-- COMP-40 (Completeness; P2; M): the landed GPU ports declare capabilities but
+- COMP-40 (Completeness; P1; M): the landed GPU ports declare capabilities but
   emit no packet event, so an intra-node leg still cannot report an extent, an
   attempt, a TX boundary or an arrival in the same language a wire port uses.
   The three transport-control capabilities (ECN marking, priority flow control,
@@ -2402,12 +2408,18 @@ SGLang EP32 prefill and EP72 decode shapes. See
   rejection diagnostic points at BACK-48. Boundary against BACK-48: that task
   owns making the ABI v2 vocabulary reachable from a non-wire port at all, while
   this one owns binding the GPU host and peer ports to it, including which
-  capabilities a GPU port may then honestly advertise. Acceptance: an intra-node
-  transfer emits session-unique extent and attempt identity through a GPU port,
-  loss, duplication and double-charged bytes are detectable from those events,
-  and the no-emission path preserves every accepted timestamp, counter and
-  artifact byte exactly. This is P2 while no study consumes port events and
-  becomes P1 when TRAF-45 packetizes the intra-node leg.
+  capabilities a GPU port may then honestly advertise. TRAF-65 owns the
+  hardware calibration and determines which packet, credit and FIFO quantities
+  are observable on A100; this task owns emitting the corresponding modeled
+  events and must not label an effective fitted quantity as a literal hardware
+  field. Acceptance: an intra-node transfer emits session-unique extent and
+  attempt identity through a GPU port, carries enough timestamps and link
+  identity to replay TRAF-65's transaction scoreboard, makes loss, duplication
+  and double-charged bytes detectable, and leaves every exact but undocumented
+  hardware field absent. The no-emission path preserves every accepted
+  timestamp, counter and artifact byte exactly. This is P1 because TRAF-65's
+  accepted live metric closure consumes the events through TRAF-45 and TRAF-54;
+  the hardware-only capture may precede this task, but cannot close TRAF-65.
 - COMP-44 (Completeness; P2; S): let a calibrated host profile carry a fixed
   per-invocation cost beside its per-launch constant. `HostInitiationModel`'s
   calibrated form has exactly one term, `point_ps_per_launch`, composed as

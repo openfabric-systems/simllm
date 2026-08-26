@@ -1262,6 +1262,183 @@ and [the target-topology result](../../examples/disaggregated_target_topology_v1
   `nccl_registration_v1` live cell. P1 because
   `examples/nccl_registration_v1` opts the registration on, which makes its
   calibration active-path precision.
+- TRAF-65 (Precision; P1; L): identify and land the A100 NVLink3 packet
+  service that replaces the active flat endpoint serializer. The
+  [A100 hardware envelope](../../examples/a100_hardware_envelope_v1/RESULTS.md)
+  measured 94.00 to 94.07 GB/s on every four-link ordered pair and
+  281.65 GB/s under three-way fan-out, but those rates identify only an
+  envelope. They do not identify packet boundaries, four-link bonding,
+  request and response direction, finite credits, FIFO placement or
+  head-of-line blocking. The current model therefore cannot say why the
+  measured pair rate is within 0.13 percent of the candidate
+  `100 * 256 / (256 + 16) = 94.1176 GB/s`, and it cannot distinguish that
+  packet-overhead explanation from copy-engine coalescing. Run a dedicated
+  study on one qualified four-A100-SXM4-80GB `NV4` Merlin node. Freeze the
+  expectations-only commit before the harness and first timed run. Use a
+  persistent SM peer-write producer, a dependent SM peer-read producer and a
+  copy-engine reference, with NCCL send and receive as a protocol validation
+  rather than as the packet-format authority. Each named parameter sweep below
+  is one case. The frozen catalog has five corners with exactly 16 cases each:
+
+  - **Packetization, `CORNER_NVPKT_001` through `CORNER_NVPKT_016`:** every
+    payload byte from 1 through 512; candidate-boundary neighbours through
+    4096; `256k+r` residuals; destination alignment; source alignment; access
+    width; active warp lanes; lane-mask shape; address stride; fixed total
+    bytes with varied message size; fixed message size with varied count;
+    address reuse versus separation; peer-write length and alignment; peer-read
+    length and alignment; copy-engine versus SM producers; and a seeded blind
+    holdout of lengths, masks and alignments.
+    Stable names in case order: `CORNER_NVPKT_001_payload_bytes`,
+    `CORNER_NVPKT_002_candidate_boundaries`,
+    `CORNER_NVPKT_003_256b_residuals`,
+    `CORNER_NVPKT_004_destination_alignment`,
+    `CORNER_NVPKT_005_source_alignment`, `CORNER_NVPKT_006_access_width`,
+    `CORNER_NVPKT_007_active_warp_lanes`,
+    `CORNER_NVPKT_008_lane_mask_shape`, `CORNER_NVPKT_009_address_stride`,
+    `CORNER_NVPKT_010_fixed_total_bytes`,
+    `CORNER_NVPKT_011_fixed_message_size`,
+    `CORNER_NVPKT_012_address_reuse`, `CORNER_NVPKT_013_peer_write`,
+    `CORNER_NVPKT_014_peer_read`, `CORNER_NVPKT_015_producer_comparison` and
+    `CORNER_NVPKT_016_blind_holdout`.
+  - **Bond and wire, `CORNER_NVBOND_017` through `CORNER_NVBOND_032`:** all
+    ordered pairs; per-link balance; stream count; producer concurrency;
+    bandwidth ramp; offered rate; burst length; source fan-out; destination
+    fan-in envelope; symmetric bidirectional traffic; asymmetric
+    bidirectional traffic; disjoint unidirectional pairs; disjoint
+    bidirectional pairs; all ordered mesh flows; cold versus warm startup; and
+    node-and-time repeatability.
+    Stable names in case order: `CORNER_NVBOND_017_ordered_pair_matrix`,
+    `CORNER_NVBOND_018_per_link_balance`, `CORNER_NVBOND_019_stream_count`,
+    `CORNER_NVBOND_020_producer_concurrency`,
+    `CORNER_NVBOND_021_bandwidth_ramp`, `CORNER_NVBOND_022_offered_rate`,
+    `CORNER_NVBOND_023_burst_length`, `CORNER_NVBOND_024_source_fanout`,
+    `CORNER_NVBOND_025_destination_fanin`,
+    `CORNER_NVBOND_026_symmetric_bidirectional`,
+    `CORNER_NVBOND_027_asymmetric_bidirectional`,
+    `CORNER_NVBOND_028_disjoint_unidirectional`,
+    `CORNER_NVBOND_029_disjoint_bidirectional`,
+    `CORNER_NVBOND_030_full_mesh`, `CORNER_NVBOND_031_startup_state` and
+    `CORNER_NVBOND_032_node_time_repeatability`.
+  - **Incast and destination FIFO, `CORNER_NVINC_033` through
+    `CORNER_NVINC_048`:** one-source baseline; two-source simultaneous incast;
+    three-source simultaneous incast; fixed aggregate rate across fan-in;
+    per-source offered rate; start skew; step-wise join and leave; burst depth;
+    equal message sizes; unequal sizes; one elephant with two mice; two
+    elephants with one mouse; push incast into distinct buffers; pull gather
+    from three buffers; a hot destination region with a dispersed-address
+    control; and a long fairness, tail and drain soak. A 3-to-1 `NV4` incast
+    uses three distinct four-link bundles, so any shared limit is attributed
+    first to destination ingress, its merge FIFO or memory acceptance, never
+    to one contended wire.
+    Stable names in case order: `CORNER_NVINC_033_one_source`,
+    `CORNER_NVINC_034_two_source`, `CORNER_NVINC_035_three_source`,
+    `CORNER_NVINC_036_fixed_aggregate_rate`,
+    `CORNER_NVINC_037_per_source_rate`, `CORNER_NVINC_038_start_skew`,
+    `CORNER_NVINC_039_join_leave`, `CORNER_NVINC_040_burst_depth`,
+    `CORNER_NVINC_041_equal_message_size`,
+    `CORNER_NVINC_042_unequal_message_size`,
+    `CORNER_NVINC_043_one_elephant_two_mice`,
+    `CORNER_NVINC_044_two_elephants_one_mouse`,
+    `CORNER_NVINC_045_push_distinct_buffers`,
+    `CORNER_NVINC_046_pull_gather`, `CORNER_NVINC_047_hot_destination` and
+    `CORNER_NVINC_048_long_soak`.
+  - **Credit depletion and return, `CORNER_NVCRD_049` through
+    `CORNER_NVCRD_064`:** dependent round trip; outstanding-write sweeps at
+    16, 32, 64, 128 and 256 bytes; outstanding reads; outstanding atomics;
+    burst length at a fixed window; inter-message gap; inter-burst recovery
+    gap; duty cycle; a predeclared adaptive zoom around the first 95-percent
+    throughput knee; two streams on one pair; one source to two peers; and
+    opposite directions on one pair.
+    Stable names in case order: `CORNER_NVCRD_049_dependent_round_trip`,
+    `CORNER_NVCRD_050_outstanding_write_16b`,
+    `CORNER_NVCRD_051_outstanding_write_32b`,
+    `CORNER_NVCRD_052_outstanding_write_64b`,
+    `CORNER_NVCRD_053_outstanding_write_128b`,
+    `CORNER_NVCRD_054_outstanding_write_256b`,
+    `CORNER_NVCRD_055_outstanding_read`,
+    `CORNER_NVCRD_056_outstanding_atomic`,
+    `CORNER_NVCRD_057_burst_length`, `CORNER_NVCRD_058_inter_message_gap`,
+    `CORNER_NVCRD_059_inter_burst_gap`, `CORNER_NVCRD_060_duty_cycle`,
+    `CORNER_NVCRD_061_adaptive_knee_zoom`,
+    `CORNER_NVCRD_062_two_streams_one_pair`,
+    `CORNER_NVCRD_063_one_source_two_peers` and
+    `CORNER_NVCRD_064_opposite_directions`.
+  - **FIFO partition and head-of-line behavior, `CORNER_NVHOL_065` through
+    `CORNER_NVHOL_080`:** small behind large; large behind small; separate
+    streams on one pair; alternating sizes; a seeded bimodal mix; a latency
+    flow under same-pair bulk; a latency flow under other-peer bulk from the
+    same source; a latency flow under remote incast; write with write; read
+    with read; read and write whose payloads use the same direction; read and
+    write whose payloads use opposite directions; distinct memory regions; a
+    shared-cache-line hotspot with a dispersed control; post-burst drain; and
+    a seeded blind mixed soak.
+    Stable names in case order: `CORNER_NVHOL_065_small_behind_large`,
+    `CORNER_NVHOL_066_large_behind_small`,
+    `CORNER_NVHOL_067_separate_streams`,
+    `CORNER_NVHOL_068_alternating_sizes`, `CORNER_NVHOL_069_bimodal_mix`,
+    `CORNER_NVHOL_070_same_pair_bulk`, `CORNER_NVHOL_071_other_peer_bulk`,
+    `CORNER_NVHOL_072_remote_incast`, `CORNER_NVHOL_073_write_write`,
+    `CORNER_NVHOL_074_read_read`,
+    `CORNER_NVHOL_075_same_direction_read_write`,
+    `CORNER_NVHOL_076_opposite_direction_read_write`,
+    `CORNER_NVHOL_077_distinct_regions`,
+    `CORNER_NVHOL_078_shared_cache_line`,
+    `CORNER_NVHOL_079_post_burst_drain` and
+    `CORNER_NVHOL_080_blind_mixed_soak`.
+
+  Every case runs both isolated and in ordered continuous `corner_frame` mode;
+  the complete catalog also runs once as `all_corners_frame`. Record logical
+  bytes, per-link and per-direction raw and data counter deltas, batch time,
+  issuer-local latency, completion and drain time, per-source rate, checksum,
+  topology, clocks, competing processes and CRC, replay and recovery deltas.
+  Repeat small operations until counter quantization is negligible, and never
+  launch or synchronize once per message. Fatal guards are payload corruption,
+  a non-`NV4` or fallback path, raw bytes below data bytes, a non-monotone
+  counter, an unexplained nominal replay or error, a rate above 25 GB/s per
+  physical link, 100 GB/s per ordered pair or 300 GB/s per GPU direction, and
+  a measurement contaminated by throttling or another process. A fired guard
+  voids the affected run rather than reducing a pass fraction.
+
+  Fit only what the observations identify: payload and overhead granularity,
+  maximum packet payload, four directional serializers and their bond policy,
+  an effective credit unit and window with return latency, per-link ingress
+  FIFO service and any shared destination merge service. Exact undocumented
+  virtual-channel counts, credit counts, buffer depths, bit fields and
+  arbitration rules remain unnamed unless independent observables identify
+  them. A fitted knee is reported as effective capacity, not promoted to a
+  literal hardware register. Acceptance requires exact logical-byte and
+  request/response conservation, packet-overhead steps within counter
+  resolution, held-out throughput and completion error no larger than
+  10 percent or 1 microsecond, whichever is larger, and the first saturation
+  knee within one frozen sweep point. The resulting structural model keeps
+  packetization, credits, FIFO visits and wire serialization explicit, then
+  reaches the supported TRAF-45 and TRAF-54 path so a registered contention
+  cell changes TTFT or TPOT in the frozen direction. The analytic path and any
+  uncalibrated architecture remain exact selectable bypasses. Capture alone is
+  component evidence and does not close this task. The handoff is explicitly
+  two-phase rather than a completion cycle: the hardware run publishes a
+  versioned `candidate` profile and conformance fixtures while TRAF-65 remains
+  open; TRAF-45 and TRAF-54 consume that candidate without waiting for this
+  task to close; the live held-out result promotes it to `calibrated` and closes
+  TRAF-65. No downstream task depends on TRAF-65 being closed.
+
+  Local-arm progress on 2026-08-26 does not close this entry. The final
+  expectations-only commit is `d74b123`, with SHA-256
+  `212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571`.
+  The GPU-free arm compiled the three-producer mock harness and completed all
+  86 resumable cells: 80 isolated, five ordered `corner_frame` and one
+  `all_corners_frame`, totaling 14,035 rows whose manifests verify. Those rows
+  carry no measurement claim. The additive htsim candidate composes separate
+  TX, switch and RX modules, makes the A100 direct-mesh switch an exact
+  pass-through, and returns the caller's analytic result by object identity
+  when no candidate is selected. Its comparison uses only the already
+  published 94.00 to 94.07 GB/s ordered-pair and 281.65 GB/s fan-out envelope
+  rows. The 80-case on-silicon campaign remains this entry's own resumable
+  remainder, so reserved IDs TRAF-67 and TRAF-68 are not consumed. Maintenance
+  reservation `SD26082026` holds every Merlin GPU node down until
+  `2026-08-28T06:30`; the exact digest-pinned staging, pending-index and
+  `sbatch` commands are in the
+  [TRAF-65 resume record](../../examples/a100_nvlink_packet_v1/RESUME.md).
 
 ### Completeness
 
@@ -1444,7 +1621,7 @@ and [the target-topology result](../../examples/disaggregated_target_topology_v1
   inventing order between independent operations and retain every supported
   projection byte and timestamp exactly.
 
-- TRAF-45 (Completeness; P2; L): add a packetized intra-node leg behind the
+- TRAF-45 (Completeness; P1; L): add a packetized intra-node leg behind the
   analytic locality path. `classify_step_locality` charges local segments from a
   per-endpoint byte ledger at one declared flat rate, which is exact arithmetic
   over a surrogate port: there is no packet, no attempt identity, no
@@ -1455,16 +1632,23 @@ and [the target-topology result](../../examples/disaggregated_target_topology_v1
   charge destination ingress explicitly at the receiving port instead of
   inheriting the analytic `max(egress_bytes, ingress_bytes)` endpoint-load
   surrogate that CORE-41 installed; CORE-48 keeps the cross-node
-  destination-ingress serializer and COMP-31 keeps the local mechanism detail,
-  and neither is closed here. Acceptance: the off path reproduces every accepted
+  destination-ingress serializer, TRAF-65 owns the A100 packet, bond, credit,
+  FIFO and wire calibration, and COMP-31 owns the remaining compute-side local
+  mechanism and cross-architecture generalization. None is closed here. The
+  implementation consumes TRAF-65's versioned `candidate` profile when selected
+  and never invents a measured constant from a study case name. The candidate
+  handoff does not require TRAF-65 to be closed. Acceptance: the off path
+  reproduces every accepted
   `nvlink_locality_v1` and `mixed_attribution_v1` byte, timestamp and component
   attribution exactly; the enabled path conserves bytes against the same
   endpoint ledger, emits one terminal per extent with no double charge against
   the semantic collective, and moves per-request TTFT and TPOT in the registered
   direction; and a converging combine, where the analytic surrogate is weakest,
   is the registered cell rather than a symmetric exchange. The design statement
-  is [the packet-device model](../design/packet-device-model.md).
-- TRAF-54 (Completeness; P2; L): land the packetized NCCL and RCCL collective
+  is [the packet-device model](../design/packet-device-model.md). This is P1
+  because the accepted TRAF-65 study requires the packet path for live metric
+  closure; its exact analytic bypass remains supported throughout.
+- TRAF-54 (Completeness; P1; L): land the packetized NCCL and RCCL collective
   protocol layer over the GPU ports. TRAF-45 owns the leg below this one, which
   turns a directed intra-node segment into packets on a port; this task owns
   the collective protocol above it, which today has no packet form at all: a
@@ -1476,15 +1660,25 @@ and [the target-topology result](../../examples/disaggregated_target_topology_v1
   the ring step order fall out of per-port arrival rather than out of a
   precomputed sum. Scope boundary: this task adds no port, no packet vocabulary
   and no port-kind taxonomy; it consumes TRAF-45's leg, COMP-40's port events
-  and BACK-48's port-kind-independent vocabulary. Acceptance: a collective's
+  and BACK-48's port-kind-independent vocabulary. It also consumes TRAF-65's
+  candidate A100 transport profile and NCCL validation rows, while keeping an
+  NCCL logical channel distinct from a physical link and from any
+  transaction-layer virtual channel the hardware study cannot observe.
+  Acceptance: a collective's
   completion is the arrival time of its last packet rather than a composed
   constant, byte conservation holds against the same endpoint ledger the
   analytic path uses, the analytic path stays selectable and reproduces every
   accepted `nvlink_locality_v1`, `mixed_attribution_v1` and
   `nccl_registration_v1` artifact byte-identically, and the interim
   constant-completion section of this document is replaced rather than amended.
-  Trigger: TRAF-45 lands the packetized intra-node leg and COMP-40 emits port
-  packet events.
+  Trigger: TRAF-45 lands the packetized intra-node leg, COMP-40 emits port
+  packet events and TRAF-65 publishes its candidate profile and conformance
+  fixtures for the selected architecture. That publication is an intermediate
+  handoff, not TRAF-65 closure. The hardware capture may run before those
+  software triggers; only TRAF-65's live metric closure waits on them. This is
+  P1 because that
+  accepted live closure requires the collective protocol, while the analytic
+  protocol remains the exact bypass.
 - TRAF-55 (Completeness; P2; M): make the registration handshake port traffic.
   `CollectiveRegistrationLedger` charges a declared constant that no packet
   carries, so a registration is invisible to every port, occupies no link and
