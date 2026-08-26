@@ -94,3 +94,35 @@
   Move CORE-54 only as far as its literal registry wording permits, retain the
   MTP blocker and registered decode residual, and register the dominant next
   mechanism without widening or adjusting any layer if a scorable point misses.
+
+### Completion accounting
+
+- Freeze commit: `45251494fa7c9dc0b872bf5324619380cf516a7b`.
+- Scored-runner commit: `3d13cde15b19d105d91df4986751c03bebdb56b7`.
+- Dispatch: one scored attempt under
+  `$SIMLLM_CORE54RUN3_RUN_ROOT/attempt-1`, after the serialized fit and before
+  any held-out access. No rerun or in-run layer adjustment was performed.
+- Outcome: `SCORABLE_HELD_OUT_PASS_MTP_BLOCKED`. The attenuated errors are
+  -4.519707 percent at 2K and +3.530310 percent at 4K. The corresponding
+  unattenuated errors remain +5.113992 percent and +13.976233 percent.
+- MTP and decode: the MTP numeric anchor was not read and remains blocked on
+  COMP-72. The standard-decode calibration error remains -59.834128 percent,
+  unattenuated and unadjusted.
+- Handwritten implementation: 1,751 lines across the reusable tools, runner,
+  renderer and publisher. This exceeds the 650 to 1,300 estimate because the
+  field-addressed access boundary, live-session conservation evidence and
+  full provenance projection remained explicit in the run-specific code.
+- Handwritten tests: 772 lines across freeze, mechanism, access chronology,
+  publication and byte-lock tests, inside the 350 to 800 estimate.
+- Expectations and documentation: 1,041 new lines across the JSON and Markdown
+  freeze, report, sizing note and registry additions, inside the 900 to 1,700
+  estimate. Generated compact JSON and publication binaries count as zero
+  handwritten lines.
+- Publication bytes: compact JSON 116 KiB, PDF 36 KiB and PNG 240 KiB. Bulk
+  evidence remains external; the full scored result is 408 KiB.
+- Preservation: all 33 inherited record locks pass byte for byte. The task
+  ledger was inspected and correctly left unchanged because CORE-54 and every
+  registered residual remain open. No README open-count cell changed.
+- Focused validation: 26 passed and 1 skipped for the freeze, runner and
+  publication suites. Final validation is Ruff green and 3,123 passed with 13
+  skipped in the full pytest suite, using pytest's direct exit status.

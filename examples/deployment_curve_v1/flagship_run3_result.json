@@ -1,0 +1,3527 @@
+{
+  "allocation": {
+    "decode_experiment": {
+      "expert_parallelism": 72,
+      "gpus_per_node": 8,
+      "nodes": 9,
+      "ranks": 72,
+      "simultaneous_with_prefill_experiment": false
+    },
+    "joint_deployments": "Second-legend what-if context only",
+    "prefill_experiment": {
+      "expert_parallelism": 32,
+      "gpus_per_node": 8,
+      "nodes": 4,
+      "ranks": 32,
+      "simultaneous_with_decode_experiment": false
+    },
+    "structural_comparator_only": {
+      "may_be_called_96_gpu_system": false,
+      "prefill_plus_decode_nodes": 13,
+      "ranks": 104
+    }
+  },
+  "anchor_access": {
+    "calibration_access_count": 2,
+    "held_out_access_count": 2,
+    "mtp_numeric_access_count": 0,
+    "sequence": [
+      {
+        "anchor_id": "sglang_prefill_1k",
+        "classification": "calibration",
+        "length": 344,
+        "offset": 4862,
+        "schema": "simllm-deployment-curve-run3-anchor-access-v1",
+        "status": "PASS",
+        "whole_record_loaded": false
+      },
+      {
+        "anchor_id": "sglang_decode_standard",
+        "classification": "calibration",
+        "length": 457,
+        "offset": 5906,
+        "schema": "simllm-deployment-curve-run3-anchor-access-v1",
+        "status": "PASS",
+        "whole_record_loaded": false
+      },
+      {
+        "anchor_id": "sglang_prefill_2k",
+        "classification": "held_out",
+        "length": 341,
+        "offset": 5212,
+        "schema": "simllm-deployment-curve-run3-anchor-access-v1",
+        "status": "PASS",
+        "whole_record_loaded": false
+      },
+      {
+        "anchor_id": "sglang_prefill_4k",
+        "classification": "held_out",
+        "length": 341,
+        "offset": 5559,
+        "schema": "simllm-deployment-curve-run3-anchor-access-v1",
+        "status": "PASS",
+        "whole_record_loaded": false
+      }
+    ],
+    "status": "PASS",
+    "whole_anchor_record_loaded": false
+  },
+  "anchor_predictions": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "layers": {
+        "physics_only": {
+          "absolute_relative_error": {
+            "denominator": 1648164143737533,
+            "numerator": 9764143737533
+          },
+          "point_passes_5_percent": true,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "relative_half_width": 0,
+                "source_id": "comp74-zero-width-insufficient-replays",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ],
+            "lower": {
+              "denominator": 57154494067,
+              "numerator": 3276800000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1648164143737533,
+            "numerator": -9764143737533
+          }
+        },
+        "physics_plus_boundary": {
+          "absolute_relative_error": {
+            "denominator": 1648164143737533,
+            "numerator": 9764143737533
+          },
+          "point_passes_5_percent": true,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "relative_half_width": 0,
+                "source_id": "comp74-zero-width-insufficient-replays",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              }
+            ],
+            "lower": {
+              "denominator": 74195118567,
+              "numerator": 3276800000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1648164143737533,
+            "numerator": -9764143737533
+          }
+        },
+        "physics_plus_boundary_plus_attenuation": {
+          "absolute_relative_error": {
+            "denominator": 1705032862487177228878773,
+            "numerator": 165441566759151628878773
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "relative_half_width": 0,
+                "source_id": "comp74-zero-width-insufficient-replays",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              },
+              {
+                "anchor_numeric_input_count": 0,
+                "factor": {
+                  "lower": {
+                    "denominator": 500000000000000,
+                    "numerator": 453445062427913
+                  },
+                  "point": {
+                    "denominator": 1034504281000,
+                    "numerator": 939691952959
+                  },
+                  "upper": {
+                    "denominator": 500000000000000,
+                    "numerator": 454904927241197
+                  }
+                },
+                "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ],
+            "lower": {
+              "denominator": 46371949104375,
+              "numerator": 1857310975704731648
+            },
+            "point": {
+              "denominator": 59126568730699352529,
+              "numerator": 3079182591456051200000000
+            },
+            "upper": {
+              "denominator": 35721558755625,
+              "numerator": 1863290581979942912
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1705032862487177228878773,
+            "numerator": -165441566759151628878773
+          }
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 57674
+      },
+      "status": "PREDICTED"
+    },
+    {
+      "anchor_id": "sglang_prefill_2k",
+      "layers": {
+        "physics_only": {
+          "absolute_relative_error": {
+            "denominator": 3117377566732887,
+            "numerator": 159422433267113
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "relative_half_width": 0,
+                "source_id": "comp74-zero-width-insufficient-replays",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ],
+            "lower": {
+              "denominator": 57154494067,
+              "numerator": 3276800000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 3117377566732887,
+            "numerator": 159422433267113
+          }
+        },
+        "physics_plus_boundary": {
+          "absolute_relative_error": {
+            "denominator": 3117377566732887,
+            "numerator": 159422433267113
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "relative_half_width": 0,
+                "source_id": "comp74-zero-width-insufficient-replays",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              }
+            ],
+            "lower": {
+              "denominator": 74908202467,
+              "numerator": 3276800000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 3117377566732887,
+            "numerator": 159422433267113
+          }
+        },
+        "physics_plus_boundary_plus_attenuation": {
+          "absolute_relative_error": {
+            "denominator": 3224940438278534784989247,
+            "numerator": 145757846822483584989247
+          },
+          "point_passes_5_percent": true,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "relative_half_width": 0,
+                "source_id": "comp74-zero-width-insufficient-replays",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              },
+              {
+                "anchor_numeric_input_count": 0,
+                "factor": {
+                  "lower": {
+                    "denominator": 500000000000000,
+                    "numerator": 453445062427913
+                  },
+                  "point": {
+                    "denominator": 1034504281000,
+                    "numerator": 939691952959
+                  },
+                  "upper": {
+                    "denominator": 500000000000000,
+                    "numerator": 454904927241197
+                  }
+                },
+                "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ],
+            "lower": {
+              "denominator": 46817626541875,
+              "numerator": 1857310975704731648
+            },
+            "point": {
+              "denominator": 59126568730699352529,
+              "numerator": 3079182591456051200000000
+            },
+            "upper": {
+              "denominator": 35721558755625,
+              "numerator": 1863290581979942912
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 3224940438278534784989247,
+            "numerator": -145757846822483584989247
+          }
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 54543
+      },
+      "status": "PREDICTED"
+    },
+    {
+      "anchor_id": "sglang_prefill_4k",
+      "layers": {
+        "physics_only": {
+          "absolute_relative_error": {
+            "denominator": 1437492678820359,
+            "numerator": 200907321179641
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "relative_half_width": 0,
+                "source_id": "comp74-zero-width-insufficient-replays",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ],
+            "lower": {
+              "denominator": 57154494067,
+              "numerator": 3276800000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1437492678820359,
+            "numerator": 200907321179641
+          }
+        },
+        "physics_plus_boundary": {
+          "absolute_relative_error": {
+            "denominator": 1437492678820359,
+            "numerator": 200907321179641
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "relative_half_width": 0,
+                "source_id": "comp74-zero-width-insufficient-replays",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              }
+            ],
+            "lower": {
+              "denominator": 616749291811,
+              "numerator": 26214400000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1437492678820359,
+            "numerator": 200907321179641
+          }
+        },
+        "physics_plus_boundary_plus_attenuation": {
+          "absolute_relative_error": {
+            "denominator": 1487092330145819415456879,
+            "numerator": 52498965582206184543121
+          },
+          "point_passes_5_percent": true,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "relative_half_width": 0,
+                "source_id": "comp74-zero-width-insufficient-replays",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              },
+              {
+                "anchor_numeric_input_count": 0,
+                "factor": {
+                  "lower": {
+                    "denominator": 500000000000000,
+                    "numerator": 453445062427913
+                  },
+                  "point": {
+                    "denominator": 1034504281000,
+                    "numerator": 939691952959
+                  },
+                  "upper": {
+                    "denominator": 500000000000000,
+                    "numerator": 454904927241197
+                  }
+                },
+                "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ],
+            "lower": {
+              "denominator": 385468307381875,
+              "numerator": 14858487805637853184
+            },
+            "point": {
+              "denominator": 59126568730699352529,
+              "numerator": 3079182591456051200000000
+            },
+            "upper": {
+              "denominator": 35721558755625,
+              "numerator": 1863290581979942912
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1487092330145819415456879,
+            "numerator": 52498965582206184543121
+          }
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 50302
+      },
+      "status": "PREDICTED"
+    },
+    {
+      "anchor_id": "sglang_decode_standard",
+      "layers": {
+        "physics_only": {
+          "absolute_relative_error": {
+            "denominator": 7966962523,
+            "numerator": 4766962523
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ],
+            "lower": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            },
+            "point": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            },
+            "upper": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 7966962523,
+            "numerator": -4766962523
+          }
+        },
+        "physics_plus_boundary": {
+          "absolute_relative_error": {
+            "denominator": 7966962523,
+            "numerator": 4766962523
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ],
+            "lower": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            },
+            "point": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            },
+            "upper": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 7966962523,
+            "numerator": -4766962523
+          }
+        },
+        "physics_plus_boundary_plus_attenuation": {
+          "absolute_relative_error": {
+            "denominator": 7966962523,
+            "numerator": 4766962523
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ],
+            "lower": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            },
+            "point": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            },
+            "upper": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 7966962523,
+            "numerator": -4766962523
+          }
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 22282
+      },
+      "status": "PREDICTED"
+    },
+    {
+      "anchor_id": "sglang_decode_simulated_mtp",
+      "dependency": "COMP-72 resumable Merlin execution",
+      "prediction": null,
+      "status": "BLOCKED"
+    }
+  ],
+  "artifact_identities": {
+    "anchor_access_ledger": {
+      "filename": "anchor-access-ledger.jsonl",
+      "sha256": "94b1b6cf5d402510bce5430d6bd39649473a79428121a9ed7c22a8bfc2cad631"
+    },
+    "frozen_fit": {
+      "filename": "frozen-fit.json",
+      "sha256": "78a798178234932325381aa7328ebd0dc816400e5a9caa3d6e5577edd0724883"
+    },
+    "held_out_score": {
+      "filename": "held-out-score.json",
+      "sha256": "877181ddc6441d07f38be00a79843efa603f3ccdd0f978744e2adbc28d4d5aa8"
+    },
+    "publication_pdf": {
+      "filename": "deepseek-deployment-curve-run3.pdf",
+      "sha256": "a28fcc56399dd980e0a9758e720916186206360934431a635f944a3ae359a536"
+    },
+    "publication_png": {
+      "filename": "deepseek-deployment-curve-run3.png",
+      "sha256": "03bdfc7fab4cc71e4991ff8c3683336a5625f7390b8a2e6fe402efc0dd3ca811"
+    },
+    "scored_result": {
+      "filename": "result.json",
+      "sha256": "e9b7e5a2094a97aeb7e0b10b3d43e170d1c074b2e20804027701e43f2cd8bbfd"
+    }
+  },
+  "attenuation_layer": {
+    "admitted_factor_count": 1,
+    "factors": [
+      {
+        "anchor_numeric_input_count": 0,
+        "application": "multiply the physics-plus-boundary throughput by the factor",
+        "applies_to_anchor_ids": [
+          "sglang_prefill_1k",
+          "sglang_prefill_2k",
+          "sglang_prefill_4k"
+        ],
+        "benchmark_simplification": "The disclosure uses in-distribution expert-balance data, while simLLM derives uniform top-k routing incidence with same-destination deduplication.",
+        "factor_count_is_less_than_touched_anchor_count": true,
+        "id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+        "magnitude": {
+          "expected_unique_destination_ranks": {
+            "denominator": 129313035125,
+            "numerator": 939691952959
+          },
+          "expert_parallel_ranks": 32,
+          "experts_per_rank": 8,
+          "factor": {
+            "denominator": 1034504281000,
+            "numerator": 939691952959
+          },
+          "formula": "E[unique destination ranks] / top_k",
+          "logical_experts": 256,
+          "p_one_rank_hit": {
+            "denominator": 4138017124000,
+            "numerator": 939691952959
+          },
+          "top_k": 8
+        },
+        "status": "ADMITTED",
+        "uncertainty": {
+          "interval": {
+            "lower": {
+              "denominator": 500000000000000,
+              "numerator": 453445062427913
+            },
+            "point": {
+              "denominator": 1034504281000,
+              "numerator": 939691952959
+            },
+            "upper": {
+              "denominator": 500000000000000,
+              "numerator": 454904927241197
+            }
+          },
+          "method": "two standard errors of the exact destination-indicator covariance over 16384 routed tokens",
+          "p_two_named_ranks_hit": {
+            "denominator": 11379547091000,
+            "numerator": 528807826297
+          },
+          "rounding": "decimal endpoints rounded outward at 15 places",
+          "standard_error": {
+            "denominator": 500000000000000,
+            "numerator": 364966203321
+          },
+          "tokens": 16384,
+          "unique_rank_count_variance": {
+            "denominator": 183940471585634321421875,
+            "numerator": 102764354724981604704634
+          }
+        }
+      }
+    ],
+    "policy_path": "docs/papers/deepseek-deployment-disclosures.md",
+    "policy_section": "Per-anchor benchmark-bias attenuation (maintainer, 2026-08-26)",
+    "rejected_candidates": [
+      {
+        "anchor_numeric_input_count": 0,
+        "benchmark_simplification": "Fixed exact-length requests packed to 16384 tokens per device",
+        "factor": null,
+        "id": "exact_length_packing_vs_per_request_overhead",
+        "reason": "The configured simLLM observations use the same exact-length packing. No relative correction remains, and no independent per-request overhead magnitude is published or mechanically derivable without anchor input.",
+        "status": "NOT_ADMITTED"
+      },
+      {
+        "benchmark_simplification": null,
+        "factor": null,
+        "id": "decode_depth_attenuation",
+        "reason": "The decode miss is the registered 61-over-4 modeling residual, not benchmark-condition bias.",
+        "status": "FORBIDDEN_BY_POLICY_RULE_FIVE"
+      }
+    ],
+    "scored_layer": "physics_plus_boundary_plus_attenuation"
+  },
+  "candidate_selections": [
+    {
+      "acceptance_status": "candidate",
+      "anchor_id": "sglang_prefill_1k",
+      "lookup_hits": 1,
+      "lookup_misses": 0,
+      "pool": "prefill",
+      "record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+      "selected": true,
+      "selected_entry_key_sha256s": [
+        "ecbe7732eeaec8de700bf82b1db34c3a220aeeb81012944f0c16c9ab5096bc40"
+      ]
+    },
+    {
+      "acceptance_status": "candidate",
+      "anchor_id": "sglang_prefill_2k",
+      "lookup_hits": 1,
+      "lookup_misses": 0,
+      "pool": "prefill",
+      "record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+      "selected": true,
+      "selected_entry_key_sha256s": [
+        "3a219ae5e79084e9d319eb704f5ccf63991f93a8e8e41b4ac027b0b0801df204"
+      ]
+    },
+    {
+      "acceptance_status": "candidate",
+      "anchor_id": "sglang_prefill_4k",
+      "lookup_hits": 1,
+      "lookup_misses": 0,
+      "pool": "prefill",
+      "record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+      "selected": true,
+      "selected_entry_key_sha256s": [
+        "7275952ede07e81dd3d327735ab962157b9c628529117e6149b7edea10fe2404"
+      ]
+    },
+    {
+      "acceptance_status": "candidate",
+      "anchor_id": "sglang_decode_standard",
+      "lookup_hits": 1,
+      "lookup_misses": 0,
+      "pool": "decode",
+      "record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+      "selected": true,
+      "selected_entry_key_sha256s": [
+        "05d1c33cdef9c12e25eb9159adc9dc80f1cd57b6333778f9efb5fb24cd6a74aa"
+      ]
+    }
+  ],
+  "classification": "THIRD_SCORED_FLAGSHIP",
+  "closure_reason": "The priced held-out prefill scope passes under the declared benchmark-bias model, but MTP and decode reproduction remain open.",
+  "constant_fit": {
+    "accessed_anchor_ids": [
+      "sglang_decode_standard",
+      "sglang_prefill_1k"
+    ],
+    "attenuation_factor_fitted": false,
+    "calibration_rows": [
+      {
+        "anchor_id": "sglang_prefill_1k",
+        "layers": {
+          "physics_only": {
+            "absolute_relative_error": {
+              "denominator": 1648164143737533,
+              "numerator": 9764143737533
+            },
+            "point_passes_5_percent": true,
+            "prediction": {
+              "contributions": [
+                {
+                  "service_ps": {
+                    "lower": 2286179760360,
+                    "selected": 2286179760360,
+                    "upper": 2286179762680
+                  },
+                  "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                  "source_kind": "comp75-clean-composition-record"
+                },
+                {
+                  "application_count": 0,
+                  "selected_ps": 0,
+                  "source_id": "intra_node_collective_surcharge_ps",
+                  "source_kind": "constant-envelope"
+                },
+                {
+                  "relative_half_width": 0,
+                  "source_id": "comp74-zero-width-insufficient-replays",
+                  "source_kind": "distribution",
+                  "stability_claim": false
+                }
+              ],
+              "lower": {
+                "denominator": 57154494067,
+                "numerator": 3276800000000000
+              },
+              "point": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              },
+              "upper": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 1648164143737533,
+              "numerator": -9764143737533
+            }
+          },
+          "physics_plus_boundary": {
+            "absolute_relative_error": {
+              "denominator": 1648164143737533,
+              "numerator": 9764143737533
+            },
+            "point_passes_5_percent": true,
+            "prediction": {
+              "contributions": [
+                {
+                  "service_ps": {
+                    "lower": 2286179760360,
+                    "selected": 2286179760360,
+                    "upper": 2286179762680
+                  },
+                  "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                  "source_kind": "comp75-clean-composition-record"
+                },
+                {
+                  "application_count": 0,
+                  "selected_ps": 0,
+                  "source_id": "intra_node_collective_surcharge_ps",
+                  "source_kind": "constant-envelope"
+                },
+                {
+                  "relative_half_width": 0,
+                  "source_id": "comp74-zero-width-insufficient-replays",
+                  "source_kind": "distribution",
+                  "stability_claim": false
+                },
+                {
+                  "lower_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "selected_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                  "source_kind": "overlap-exposure-envelope",
+                  "upper_fraction": {
+                    "denominator": 2,
+                    "numerator": 1
+                  }
+                }
+              ],
+              "lower": {
+                "denominator": 74195118567,
+                "numerator": 3276800000000000
+              },
+              "point": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              },
+              "upper": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 1648164143737533,
+              "numerator": -9764143737533
+            }
+          },
+          "physics_plus_boundary_plus_attenuation": {
+            "absolute_relative_error": {
+              "denominator": 1705032862487177228878773,
+              "numerator": 165441566759151628878773
+            },
+            "point_passes_5_percent": false,
+            "prediction": {
+              "contributions": [
+                {
+                  "service_ps": {
+                    "lower": 2286179760360,
+                    "selected": 2286179760360,
+                    "upper": 2286179762680
+                  },
+                  "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                  "source_kind": "comp75-clean-composition-record"
+                },
+                {
+                  "application_count": 0,
+                  "selected_ps": 0,
+                  "source_id": "intra_node_collective_surcharge_ps",
+                  "source_kind": "constant-envelope"
+                },
+                {
+                  "relative_half_width": 0,
+                  "source_id": "comp74-zero-width-insufficient-replays",
+                  "source_kind": "distribution",
+                  "stability_claim": false
+                },
+                {
+                  "lower_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "selected_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                  "source_kind": "overlap-exposure-envelope",
+                  "upper_fraction": {
+                    "denominator": 2,
+                    "numerator": 1
+                  }
+                },
+                {
+                  "anchor_numeric_input_count": 0,
+                  "factor": {
+                    "lower": {
+                      "denominator": 500000000000000,
+                      "numerator": 453445062427913
+                    },
+                    "point": {
+                      "denominator": 1034504281000,
+                      "numerator": 939691952959
+                    },
+                    "upper": {
+                      "denominator": 500000000000000,
+                      "numerator": 454904927241197
+                    }
+                  },
+                  "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+                  "source_kind": "benchmark-bias-attenuation"
+                }
+              ],
+              "lower": {
+                "denominator": 46371949104375,
+                "numerator": 1857310975704731648
+              },
+              "point": {
+                "denominator": 59126568730699352529,
+                "numerator": 3079182591456051200000000
+              },
+              "upper": {
+                "denominator": 35721558755625,
+                "numerator": 1863290581979942912
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 1705032862487177228878773,
+              "numerator": -165441566759151628878773
+            }
+          }
+        },
+        "published": {
+          "denominator": 1,
+          "numerator": 57674
+        }
+      },
+      {
+        "anchor_id": "sglang_decode_standard",
+        "layers": {
+          "physics_only": {
+            "absolute_relative_error": {
+              "denominator": 7966962523,
+              "numerator": 4766962523
+            },
+            "point_passes_5_percent": false,
+            "prediction": {
+              "contributions": [
+                {
+                  "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                  "source_kind": "candidate-record"
+                },
+                {
+                  "applied": false,
+                  "reason": "policy rule five registered modeling residual",
+                  "source_kind": "benchmark-bias-attenuation"
+                }
+              ],
+              "lower": {
+                "denominator": 715103,
+                "numerator": 6400000000
+              },
+              "point": {
+                "denominator": 715103,
+                "numerator": 6400000000
+              },
+              "upper": {
+                "denominator": 715103,
+                "numerator": 6400000000
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 7966962523,
+              "numerator": -4766962523
+            }
+          },
+          "physics_plus_boundary": {
+            "absolute_relative_error": {
+              "denominator": 7966962523,
+              "numerator": 4766962523
+            },
+            "point_passes_5_percent": false,
+            "prediction": {
+              "contributions": [
+                {
+                  "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                  "source_kind": "candidate-record"
+                },
+                {
+                  "applied": false,
+                  "reason": "policy rule five registered modeling residual",
+                  "source_kind": "benchmark-bias-attenuation"
+                }
+              ],
+              "lower": {
+                "denominator": 715103,
+                "numerator": 6400000000
+              },
+              "point": {
+                "denominator": 715103,
+                "numerator": 6400000000
+              },
+              "upper": {
+                "denominator": 715103,
+                "numerator": 6400000000
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 7966962523,
+              "numerator": -4766962523
+            }
+          },
+          "physics_plus_boundary_plus_attenuation": {
+            "absolute_relative_error": {
+              "denominator": 7966962523,
+              "numerator": 4766962523
+            },
+            "point_passes_5_percent": false,
+            "prediction": {
+              "contributions": [
+                {
+                  "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                  "source_kind": "candidate-record"
+                },
+                {
+                  "applied": false,
+                  "reason": "policy rule five registered modeling residual",
+                  "source_kind": "benchmark-bias-attenuation"
+                }
+              ],
+              "lower": {
+                "denominator": 715103,
+                "numerator": 6400000000
+              },
+              "point": {
+                "denominator": 715103,
+                "numerator": 6400000000
+              },
+              "upper": {
+                "denominator": 715103,
+                "numerator": 6400000000
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 7966962523,
+              "numerator": -4766962523
+            }
+          }
+        },
+        "published": {
+          "denominator": 1,
+          "numerator": 22282
+        }
+      }
+    ],
+    "constants": [
+      {
+        "application_count_per_step": 0,
+        "envelope": {
+          "lower": 0,
+          "upper": 30128029
+        },
+        "fitted": 0,
+        "id": "intra_node_collective_surcharge_ps",
+        "tie_break_applied": true
+      },
+      {
+        "clamped_to_envelope": true,
+        "envelope": {
+          "lower": {
+            "denominator": 1,
+            "numerator": 0
+          },
+          "upper": {
+            "denominator": 2,
+            "numerator": 1
+          }
+        },
+        "fitted": {
+          "denominator": 1,
+          "numerator": 0
+        },
+        "id": "overlap_exposed_fraction",
+        "tie_break_applied": false,
+        "unclamped_solution": {
+          "denominator": 1016711818504732805053000,
+          "numerator": -165441566759151628878773
+        }
+      }
+    ],
+    "forbidden_anchor_ids_accessed": [],
+    "in_run_adjustment_allowed": false,
+    "objective": "Minimize summed squared relative point error in the fully declared attenuation layer across calibration anchors inside both inherited closed envelopes.",
+    "objective_value": 0.36742735723362246,
+    "schema": "simllm-deployment-curve-flagship-run3-fit-v1",
+    "status": "FROZEN"
+  },
+  "constant_fit_sha256": "78a798178234932325381aa7328ebd0dc816400e5a9caa3d6e5577edd0724883",
+  "core54_closure": false,
+  "curves": [
+    {
+      "configuration_id": "sglang-standard-decode-ep72-run2",
+      "configuration_label": "SGLang H100 standard decode, separate EP72 experiment",
+      "decode_engines": 9,
+      "evidence_class": "candidate-priced-role-scaled",
+      "orientation": {
+        "x": "aggregated-output-throughput-rightward",
+        "y": "inverse-per-token-request-delay-upward"
+      },
+      "points": [
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 8000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 2000
+          },
+          "output_token_count": 8000,
+          "per_token_request_delay_ps": {
+            "denominator": 6484897,
+            "numerator": 720000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 2000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 8000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 8000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 8000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 720000,
+                "numerator": 6484897
+              },
+              "point": {
+                "denominator": 720000,
+                "numerator": 6484897
+              },
+              "upper": {
+                "denominator": 720000,
+                "numerator": 6484897
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 6484897,
+                "numerator": 720000000000000000
+              },
+              "point": {
+                "denominator": 6484897,
+                "numerator": 720000000000000000
+              },
+              "upper": {
+                "denominator": 6484897,
+                "numerator": 720000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 16000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 4000
+          },
+          "output_token_count": 16000,
+          "per_token_request_delay_ps": {
+            "denominator": 2884897,
+            "numerator": 360000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 4000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 16000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 16000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 16000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 360000,
+                "numerator": 2884897
+              },
+              "point": {
+                "denominator": 360000,
+                "numerator": 2884897
+              },
+              "upper": {
+                "denominator": 360000,
+                "numerator": 2884897
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 2884897,
+                "numerator": 360000000000000000
+              },
+              "point": {
+                "denominator": 2884897,
+                "numerator": 360000000000000000
+              },
+              "upper": {
+                "denominator": 2884897,
+                "numerator": 360000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 32000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 8000
+          },
+          "output_token_count": 32000,
+          "per_token_request_delay_ps": {
+            "denominator": 1084897,
+            "numerator": 180000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 8000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 32000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 32000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 32000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 180000,
+                "numerator": 1084897
+              },
+              "point": {
+                "denominator": 180000,
+                "numerator": 1084897
+              },
+              "upper": {
+                "denominator": 180000,
+                "numerator": 1084897
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 1084897,
+                "numerator": 180000000000000000
+              },
+              "point": {
+                "denominator": 1084897,
+                "numerator": 180000000000000000
+              },
+              "upper": {
+                "denominator": 1084897,
+                "numerator": 180000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 64000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 16000
+          },
+          "output_token_count": 64000,
+          "per_token_request_delay_ps": {
+            "denominator": 184897,
+            "numerator": 90000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 16000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 64000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 64000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 64000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 90000,
+                "numerator": 184897
+              },
+              "point": {
+                "denominator": 90000,
+                "numerator": 184897
+              },
+              "upper": {
+                "denominator": 90000,
+                "numerator": 184897
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 184897,
+                "numerator": 90000000000000000
+              },
+              "point": {
+                "denominator": 184897,
+                "numerator": 90000000000000000
+              },
+              "upper": {
+                "denominator": 184897,
+                "numerator": 90000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 715103,
+            "numerator": 57600000000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 715103000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 32000
+          },
+          "output_token_count": 57600000000,
+          "per_token_request_delay_ps": {
+            "denominator": 1,
+            "numerator": 2000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 14400000000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 715103,
+                "numerator": 57600000000
+              },
+              "point": {
+                "denominator": 715103,
+                "numerator": 57600000000
+              },
+              "upper": {
+                "denominator": 715103,
+                "numerator": 57600000000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 2,
+                "numerator": 1
+              },
+              "point": {
+                "denominator": 2,
+                "numerator": 1
+              },
+              "upper": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        }
+      ],
+      "prefill_engines": 0,
+      "prompt_tokens": 2000,
+      "schema": "simllm-deployment-curve-v1",
+      "target_nodes": 9
+    },
+    {
+      "configuration_id": "declared-place5-16p40d-what-if-run2",
+      "configuration_label": "Declared PLACE-5 16P+40D what-if",
+      "decode_engines": 40,
+      "evidence_class": "declared-node-linear-what-if",
+      "orientation": {
+        "x": "aggregated-output-throughput-rightward",
+        "y": "inverse-per-token-request-delay-upward"
+      },
+      "points": [
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 40000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 10000
+          },
+          "output_token_count": 40000,
+          "per_token_request_delay_ps": {
+            "denominator": 5684897,
+            "numerator": 640000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 10000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 40000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 40000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 40000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 640000,
+                "numerator": 5684897
+              },
+              "point": {
+                "denominator": 640000,
+                "numerator": 5684897
+              },
+              "upper": {
+                "denominator": 640000,
+                "numerator": 5684897
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 5684897,
+                "numerator": 640000000000000000
+              },
+              "point": {
+                "denominator": 5684897,
+                "numerator": 640000000000000000
+              },
+              "upper": {
+                "denominator": 5684897,
+                "numerator": 640000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 80000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 20000
+          },
+          "output_token_count": 80000,
+          "per_token_request_delay_ps": {
+            "denominator": 2484897,
+            "numerator": 320000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 20000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 80000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 80000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 80000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 320000,
+                "numerator": 2484897
+              },
+              "point": {
+                "denominator": 320000,
+                "numerator": 2484897
+              },
+              "upper": {
+                "denominator": 320000,
+                "numerator": 2484897
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 2484897,
+                "numerator": 320000000000000000
+              },
+              "point": {
+                "denominator": 2484897,
+                "numerator": 320000000000000000
+              },
+              "upper": {
+                "denominator": 2484897,
+                "numerator": 320000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 160000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 40000
+          },
+          "output_token_count": 160000,
+          "per_token_request_delay_ps": {
+            "denominator": 884897,
+            "numerator": 160000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 40000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 160000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 160000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 160000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 160000,
+                "numerator": 884897
+              },
+              "point": {
+                "denominator": 160000,
+                "numerator": 884897
+              },
+              "upper": {
+                "denominator": 160000,
+                "numerator": 884897
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 884897,
+                "numerator": 160000000000000000
+              },
+              "point": {
+                "denominator": 884897,
+                "numerator": 160000000000000000
+              },
+              "upper": {
+                "denominator": 884897,
+                "numerator": 160000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 320000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 80000
+          },
+          "output_token_count": 320000,
+          "per_token_request_delay_ps": {
+            "denominator": 84897,
+            "numerator": 80000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 80000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 320000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 320000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 320000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 80000,
+                "numerator": 84897
+              },
+              "point": {
+                "denominator": 80000,
+                "numerator": 84897
+              },
+              "upper": {
+                "denominator": 80000,
+                "numerator": 84897
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 84897,
+                "numerator": 80000000000000000
+              },
+              "point": {
+                "denominator": 84897,
+                "numerator": 80000000000000000
+              },
+              "upper": {
+                "denominator": 84897,
+                "numerator": 80000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 715103,
+            "numerator": 256000000000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 715103000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 160000
+          },
+          "output_token_count": 256000000000,
+          "per_token_request_delay_ps": {
+            "denominator": 1,
+            "numerator": 2000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 64000000000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 715103,
+                "numerator": 256000000000
+              },
+              "point": {
+                "denominator": 715103,
+                "numerator": 256000000000
+              },
+              "upper": {
+                "denominator": 715103,
+                "numerator": 256000000000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 2,
+                "numerator": 1
+              },
+              "point": {
+                "denominator": 2,
+                "numerator": 1
+              },
+              "upper": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ]
+          }
+        }
+      ],
+      "prefill_engines": 0,
+      "prompt_tokens": 2000,
+      "schema": "simllm-deployment-curve-v1",
+      "target_nodes": 40
+    }
+  ],
+  "decode_calibration_miss": {
+    "absolute_relative_error": {
+      "denominator": 7966962523,
+      "numerator": 4766962523
+    },
+    "attenuation_applied": false,
+    "candidate_key_sha256": "05d1c33cdef9c12e25eb9159adc9dc80f1cd57b6333778f9efb5fb24cd6a74aa",
+    "declared_step_ps": 28604120000,
+    "in_run_adjustment_performed": false,
+    "mechanism_count": 0,
+    "predicted": {
+      "denominator": 715103,
+      "numerator": 6400000000
+    },
+    "published": {
+      "denominator": 1,
+      "numerator": 22282
+    },
+    "published_throughput_implied_step_ps": {
+      "denominator": 11141,
+      "numerator": 128000000000000
+    },
+    "remote_kv_projection_enabled": true,
+    "signed_direction": "prediction low",
+    "signed_relative_error": {
+      "denominator": 7966962523,
+      "numerator": -4766962523
+    }
+  },
+  "dominant_held_out_contributor": {
+    "anchor_id": "sglang_prefill_2k",
+    "finding": "The unattenuated shared communication floor remains flat across prompt lengths. The independently frozen routing-balance factor corrects that benchmark-condition bias without changing physics."
+  },
+  "held_out_score": {
+    "acceptance_bar": {
+      "denominator": 20,
+      "numerator": 1
+    },
+    "accessed_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "blocked_rows": [
+      {
+        "anchor_id": "sglang_decode_simulated_mtp",
+        "dependency": "COMP-72 resumable Merlin execution",
+        "numeric_anchor_read": false,
+        "prediction": null,
+        "published": null,
+        "reason": "candidate record has no EP72 MTP batch-16 KV-4000 cell",
+        "status": "BLOCKED"
+      }
+    ],
+    "fit_sha256": "78a798178234932325381aa7328ebd0dc816400e5a9caa3d6e5577edd0724883",
+    "forbidden_anchor_ids_accessed": [],
+    "maximum_attenuated_absolute_relative_error": {
+      "denominator": 3224940438278534784989247,
+      "numerator": 145757846822483584989247
+    },
+    "maximum_unattenuated_absolute_relative_error": {
+      "denominator": 1437492678820359,
+      "numerator": 200907321179641
+    },
+    "rows": [
+      {
+        "anchor_id": "sglang_prefill_2k",
+        "layers": {
+          "physics_only": {
+            "absolute_relative_error": {
+              "denominator": 3117377566732887,
+              "numerator": 159422433267113
+            },
+            "point_passes_5_percent": false,
+            "prediction": {
+              "contributions": [
+                {
+                  "service_ps": {
+                    "lower": 2286179760360,
+                    "selected": 2286179760360,
+                    "upper": 2286179762680
+                  },
+                  "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                  "source_kind": "comp75-clean-composition-record"
+                },
+                {
+                  "application_count": 0,
+                  "selected_ps": 0,
+                  "source_id": "intra_node_collective_surcharge_ps",
+                  "source_kind": "constant-envelope"
+                },
+                {
+                  "relative_half_width": 0,
+                  "source_id": "comp74-zero-width-insufficient-replays",
+                  "source_kind": "distribution",
+                  "stability_claim": false
+                }
+              ],
+              "lower": {
+                "denominator": 57154494067,
+                "numerator": 3276800000000000
+              },
+              "point": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              },
+              "upper": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 3117377566732887,
+              "numerator": 159422433267113
+            }
+          },
+          "physics_plus_boundary": {
+            "absolute_relative_error": {
+              "denominator": 3117377566732887,
+              "numerator": 159422433267113
+            },
+            "point_passes_5_percent": false,
+            "prediction": {
+              "contributions": [
+                {
+                  "service_ps": {
+                    "lower": 2286179760360,
+                    "selected": 2286179760360,
+                    "upper": 2286179762680
+                  },
+                  "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                  "source_kind": "comp75-clean-composition-record"
+                },
+                {
+                  "application_count": 0,
+                  "selected_ps": 0,
+                  "source_id": "intra_node_collective_surcharge_ps",
+                  "source_kind": "constant-envelope"
+                },
+                {
+                  "relative_half_width": 0,
+                  "source_id": "comp74-zero-width-insufficient-replays",
+                  "source_kind": "distribution",
+                  "stability_claim": false
+                },
+                {
+                  "lower_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "selected_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                  "source_kind": "overlap-exposure-envelope",
+                  "upper_fraction": {
+                    "denominator": 2,
+                    "numerator": 1
+                  }
+                }
+              ],
+              "lower": {
+                "denominator": 74908202467,
+                "numerator": 3276800000000000
+              },
+              "point": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              },
+              "upper": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 3117377566732887,
+              "numerator": 159422433267113
+            }
+          },
+          "physics_plus_boundary_plus_attenuation": {
+            "absolute_relative_error": {
+              "denominator": 3224940438278534784989247,
+              "numerator": 145757846822483584989247
+            },
+            "point_passes_5_percent": true,
+            "prediction": {
+              "contributions": [
+                {
+                  "service_ps": {
+                    "lower": 2286179760360,
+                    "selected": 2286179760360,
+                    "upper": 2286179762680
+                  },
+                  "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                  "source_kind": "comp75-clean-composition-record"
+                },
+                {
+                  "application_count": 0,
+                  "selected_ps": 0,
+                  "source_id": "intra_node_collective_surcharge_ps",
+                  "source_kind": "constant-envelope"
+                },
+                {
+                  "relative_half_width": 0,
+                  "source_id": "comp74-zero-width-insufficient-replays",
+                  "source_kind": "distribution",
+                  "stability_claim": false
+                },
+                {
+                  "lower_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "selected_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                  "source_kind": "overlap-exposure-envelope",
+                  "upper_fraction": {
+                    "denominator": 2,
+                    "numerator": 1
+                  }
+                },
+                {
+                  "anchor_numeric_input_count": 0,
+                  "factor": {
+                    "lower": {
+                      "denominator": 500000000000000,
+                      "numerator": 453445062427913
+                    },
+                    "point": {
+                      "denominator": 1034504281000,
+                      "numerator": 939691952959
+                    },
+                    "upper": {
+                      "denominator": 500000000000000,
+                      "numerator": 454904927241197
+                    }
+                  },
+                  "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+                  "source_kind": "benchmark-bias-attenuation"
+                }
+              ],
+              "lower": {
+                "denominator": 46817626541875,
+                "numerator": 1857310975704731648
+              },
+              "point": {
+                "denominator": 59126568730699352529,
+                "numerator": 3079182591456051200000000
+              },
+              "upper": {
+                "denominator": 35721558755625,
+                "numerator": 1863290581979942912
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 3224940438278534784989247,
+              "numerator": -145757846822483584989247
+            }
+          }
+        },
+        "published": {
+          "denominator": 1,
+          "numerator": 54543
+        }
+      },
+      {
+        "anchor_id": "sglang_prefill_4k",
+        "layers": {
+          "physics_only": {
+            "absolute_relative_error": {
+              "denominator": 1437492678820359,
+              "numerator": 200907321179641
+            },
+            "point_passes_5_percent": false,
+            "prediction": {
+              "contributions": [
+                {
+                  "service_ps": {
+                    "lower": 2286179760360,
+                    "selected": 2286179760360,
+                    "upper": 2286179762680
+                  },
+                  "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                  "source_kind": "comp75-clean-composition-record"
+                },
+                {
+                  "application_count": 0,
+                  "selected_ps": 0,
+                  "source_id": "intra_node_collective_surcharge_ps",
+                  "source_kind": "constant-envelope"
+                },
+                {
+                  "relative_half_width": 0,
+                  "source_id": "comp74-zero-width-insufficient-replays",
+                  "source_kind": "distribution",
+                  "stability_claim": false
+                }
+              ],
+              "lower": {
+                "denominator": 57154494067,
+                "numerator": 3276800000000000
+              },
+              "point": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              },
+              "upper": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 1437492678820359,
+              "numerator": 200907321179641
+            }
+          },
+          "physics_plus_boundary": {
+            "absolute_relative_error": {
+              "denominator": 1437492678820359,
+              "numerator": 200907321179641
+            },
+            "point_passes_5_percent": false,
+            "prediction": {
+              "contributions": [
+                {
+                  "service_ps": {
+                    "lower": 2286179760360,
+                    "selected": 2286179760360,
+                    "upper": 2286179762680
+                  },
+                  "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                  "source_kind": "comp75-clean-composition-record"
+                },
+                {
+                  "application_count": 0,
+                  "selected_ps": 0,
+                  "source_id": "intra_node_collective_surcharge_ps",
+                  "source_kind": "constant-envelope"
+                },
+                {
+                  "relative_half_width": 0,
+                  "source_id": "comp74-zero-width-insufficient-replays",
+                  "source_kind": "distribution",
+                  "stability_claim": false
+                },
+                {
+                  "lower_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "selected_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                  "source_kind": "overlap-exposure-envelope",
+                  "upper_fraction": {
+                    "denominator": 2,
+                    "numerator": 1
+                  }
+                }
+              ],
+              "lower": {
+                "denominator": 616749291811,
+                "numerator": 26214400000000000
+              },
+              "point": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              },
+              "upper": {
+                "denominator": 57154494009,
+                "numerator": 3276800000000000
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 1437492678820359,
+              "numerator": 200907321179641
+            }
+          },
+          "physics_plus_boundary_plus_attenuation": {
+            "absolute_relative_error": {
+              "denominator": 1487092330145819415456879,
+              "numerator": 52498965582206184543121
+            },
+            "point_passes_5_percent": true,
+            "prediction": {
+              "contributions": [
+                {
+                  "service_ps": {
+                    "lower": 2286179760360,
+                    "selected": 2286179760360,
+                    "upper": 2286179762680
+                  },
+                  "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                  "source_kind": "comp75-clean-composition-record"
+                },
+                {
+                  "application_count": 0,
+                  "selected_ps": 0,
+                  "source_id": "intra_node_collective_surcharge_ps",
+                  "source_kind": "constant-envelope"
+                },
+                {
+                  "relative_half_width": 0,
+                  "source_id": "comp74-zero-width-insufficient-replays",
+                  "source_kind": "distribution",
+                  "stability_claim": false
+                },
+                {
+                  "lower_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "selected_fraction": {
+                    "denominator": 1,
+                    "numerator": 0
+                  },
+                  "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                  "source_kind": "overlap-exposure-envelope",
+                  "upper_fraction": {
+                    "denominator": 2,
+                    "numerator": 1
+                  }
+                },
+                {
+                  "anchor_numeric_input_count": 0,
+                  "factor": {
+                    "lower": {
+                      "denominator": 500000000000000,
+                      "numerator": 453445062427913
+                    },
+                    "point": {
+                      "denominator": 1034504281000,
+                      "numerator": 939691952959
+                    },
+                    "upper": {
+                      "denominator": 500000000000000,
+                      "numerator": 454904927241197
+                    }
+                  },
+                  "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+                  "source_kind": "benchmark-bias-attenuation"
+                }
+              ],
+              "lower": {
+                "denominator": 385468307381875,
+                "numerator": 14858487805637853184
+              },
+              "point": {
+                "denominator": 59126568730699352529,
+                "numerator": 3079182591456051200000000
+              },
+              "upper": {
+                "denominator": 35721558755625,
+                "numerator": 1863290581979942912
+              }
+            },
+            "signed_relative_error": {
+              "denominator": 1487092330145819415456879,
+              "numerator": 52498965582206184543121
+            }
+          }
+        },
+        "published": {
+          "denominator": 1,
+          "numerator": 50302
+        }
+      }
+    ],
+    "schema": "simllm-deployment-curve-flagship-run3-score-v1",
+    "scope": "priced held-out prefill anchors under the declared benchmark-bias model",
+    "status": "PASS",
+    "unattenuated_status": "REFUTED"
+  },
+  "held_out_score_sha256": "877181ddc6441d07f38be00a79843efa603f3ccdd0f978744e2adbc28d4d5aa8",
+  "offered_load_sweep_requests_per_second": {
+    "all_interarrivals_are_integer_picoseconds": true,
+    "authority": "flagship_run2_config.json, unchanged",
+    "sglang_decode_simulated_mtp": [
+      1000,
+      2000,
+      4000,
+      8000,
+      16000
+    ],
+    "sglang_decode_standard": [
+      2000,
+      4000,
+      8000,
+      16000,
+      32000
+    ],
+    "sglang_prefill_1k": [
+      32,
+      64,
+      128,
+      256
+    ],
+    "sglang_prefill_2k": [
+      16,
+      32,
+      64,
+      128
+    ],
+    "sglang_prefill_4k": [
+      8,
+      16,
+      32,
+      64
+    ]
+  },
+  "packet_observation": {
+    "byte_conserved": true,
+    "decode_ranks": [
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39
+    ],
+    "endpoint_conserved": true,
+    "kv_bytes": 281088000,
+    "prefill_ranks": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "prompt_tokens": 2000,
+    "rows": [
+      {
+        "aggregate_kv_bytes": 281088000,
+        "arm": "point",
+        "chunk_bytes": [
+          35136000,
+          35136000,
+          35136000,
+          35136000,
+          35136000,
+          35136000,
+          35136000,
+          35136000
+        ],
+        "event": {
+          "authority": "simllm-packet-kv-handoff-v1",
+          "completed_at_ps": 735784320,
+          "eligible_at_ps": 20000000,
+          "finished_at_ps": 735784320,
+          "kv_bytes": 281088000,
+          "pricing_arm": "packet",
+          "request_id": "core54-run2-standard-decode-kv2000-point",
+          "started_at_ps": 20000000,
+          "submitted_at_ps": 0
+        },
+        "link_rate_bps": 400000000000,
+        "message_pairs": [
+          [
+            0,
+            32
+          ],
+          [
+            1,
+            33
+          ],
+          [
+            2,
+            34
+          ],
+          [
+            3,
+            35
+          ],
+          [
+            4,
+            36
+          ],
+          [
+            5,
+            37
+          ],
+          [
+            6,
+            38
+          ],
+          [
+            7,
+            39
+          ]
+        ],
+        "packet_service_ps": 715784320,
+        "quiescent": true
+      },
+      {
+        "aggregate_kv_bytes": 281088000,
+        "arm": "sensitivity",
+        "chunk_bytes": [
+          35136000,
+          35136000,
+          35136000,
+          35136000,
+          35136000,
+          35136000,
+          35136000,
+          35136000
+        ],
+        "event": {
+          "authority": "simllm-packet-kv-handoff-v1",
+          "completed_at_ps": 1449568640,
+          "eligible_at_ps": 20000000,
+          "finished_at_ps": 1449568640,
+          "kv_bytes": 281088000,
+          "pricing_arm": "packet",
+          "request_id": "core54-run2-standard-decode-kv2000-sensitivity",
+          "started_at_ps": 20000000,
+          "submitted_at_ps": 0
+        },
+        "link_rate_bps": 200000000000,
+        "message_pairs": [
+          [
+            0,
+            32
+          ],
+          [
+            1,
+            33
+          ],
+          [
+            2,
+            34
+          ],
+          [
+            3,
+            35
+          ],
+          [
+            4,
+            36
+          ],
+          [
+            5,
+            37
+          ],
+          [
+            6,
+            38
+          ],
+          [
+            7,
+            39
+          ]
+        ],
+        "packet_service_ps": 1429568640,
+        "quiescent": true
+      }
+    ],
+    "topology_authority": "disaggregated_target_topology_v1"
+  },
+  "preservation_lock": {
+    "artifacts": [
+      {
+        "path": "examples/deployment_curve_v1/scored_expectations.json",
+        "sha256": "9048342b4eaa1cc07183c82b16884eafaf3fb00e9664132db63f27572d2ee192"
+      },
+      {
+        "path": "examples/deployment_curve_v1/scored_expectations.md",
+        "sha256": "dcba281b50ca91db89e0eaac09d67d222eef97d7ac197c127563652a22d470c3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_config.json",
+        "sha256": "0e16edd3224b33c7a587d15a792aa48d6770219200dc50b6c364567c59e67ea0"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_result.json",
+        "sha256": "ed06a2e8bce838f96c8365151a450ddf9a80ebde7520c3e37c40960b4a633e08"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS.md",
+        "sha256": "699dc8d14bfc4fc20a9fafe81aa13ad216a23de664b9a9cec50e97d3e84a7dc3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.pdf",
+        "sha256": "0105947ed8eb524c178f3ee7025c4e035aa93e2362d7842815947d50527e0063"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.png",
+        "sha256": "b51ff4726ba23ac65ea23be34b9394654517b66a14360dfd91478e9767e42553"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_expectations.json",
+        "sha256": "ac31943849b118b0d29b60f43c3ca239f66b070720bac4192b13cf57d6cda8e3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core59_calibration_result.json",
+        "sha256": "d28d1a99b585c4b10c6c501965579b08285ad7683222f0c43457d5ae25fbdf43"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_expectations.json",
+        "sha256": "d588a5df408e55410d8d1c09ef692f929f60393e30695bf46f13ce992b9fd8b0"
+      },
+      {
+        "path": "examples/deployment_curve_v1/core60_calibration_result.json",
+        "sha256": "85bf16992725b6bc56592b1dba46b69b0238c7992fb5bbdb06e2543b7b6a357e"
+      },
+      {
+        "path": "examples/deployment_curve_v1/comp75_expectations.json",
+        "sha256": "70344ee93b7557486ff4f61191aa4c0213d471a35981863d2e60be34e4a48f5a"
+      },
+      {
+        "path": "examples/deployment_curve_v1/comp75_calibration_result.json",
+        "sha256": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb"
+      },
+      {
+        "path": "examples/deployment_curve_v1/scored_run2_expectations.json",
+        "sha256": "abd29ea7c18667a7b0068cba1ee2b6690452034b2d8b677c4988241f83d9c95c"
+      },
+      {
+        "path": "examples/deployment_curve_v1/scored_run2_expectations.md",
+        "sha256": "c9710629eeb40c66be191d69cdf45515a28bddd7916413091c90bd39278eaee1"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run2_config.json",
+        "sha256": "3e5cca6693be05d9bd93870158ee24f7bee9092c2ce981c287fd94765d2d1970"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run2_tools.py",
+        "sha256": "a676010c6ae12b91c0041698c371c14656962cee3c8e09b9344e67d34ed1fa83"
+      },
+      {
+        "path": "examples/deployment_curve_v1/run_flagship_run2.py",
+        "sha256": "ef8f478ccd4fe3e90f4b4c762291a6ce9f8bfe98fd9fb3deb21acfaa91bfe607"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run2_result.json",
+        "sha256": "0e3db1a8d8ecc79d54618bbef7d2d2801862d1ec3188e3cc2a209f225a3919dd"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS_RUN2.md",
+        "sha256": "c4d3406998d1882cd63731ee62cb0eb064f696fca4f7dc4de259bd98366d4b3d"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run2.pdf",
+        "sha256": "3ec23203cbb5d154b635be8b5d05b230b41d777235028af931e3ca33bcca81ae"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run2.png",
+        "sha256": "7b389006d91b6928fa16e24dca5f154432a3dbd887867ca2da1ee3224107ea9a"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf66_expectations.json",
+        "sha256": "406a4ba250387268b9cf726f0888bcc65246f065a07e2b35b5564438ec4d3534"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf66_expectations.md",
+        "sha256": "faa90c47dc7ccb6035be4671f419e69f4a134a7a1a3ad589e7d5d8b90e28d624"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf66_overlap_boundary.py",
+        "sha256": "f2f19990de99cf04d4e8683c65707e0387e5aa521f5c20a6364788d271f6f619"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf66_calibration_result.json",
+        "sha256": "87c9623af8f49d51e15413b26c76c24a7bb1f3ef8dfefc709e2076413a66eaef"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf66_calibration_result.md",
+        "sha256": "86f4c10d13a36a9f4e7e44f0a7cee2b9768a9518b4eace2d95aac29972db00a1"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf67_expectations.json",
+        "sha256": "dd1368575ec576c97717a4fb53caac7233c2a1c7f906cce7f78497fc8b0759ab"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf67_expectations.md",
+        "sha256": "d4c56fc85ceddc8ef529ca197c027d5c492cc18e557eff03e4e92ebd758186d6"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf67_clean_boundary.py",
+        "sha256": "5b7c8d96b4040a03feeb2d0b4ec61ea7c094e6c13121de772bad385db1f9dbee"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf67_field_reader.py",
+        "sha256": "53fe2875625220d790a4cd4d5775ea806642bf392693c3655fc7b6a96b5d20b1"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf67_calibration_result.json",
+        "sha256": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1"
+      },
+      {
+        "path": "examples/deployment_curve_v1/traf67_calibration_result.md",
+        "sha256": "0170e98bd343dad383966170e5a1da6cb717cd5c0f8a4387a480bce1a0100e7b"
+      }
+    ],
+    "class": "prior-record-byte-identity",
+    "status": "PASS"
+  },
+  "pricing_configuration": {
+    "decode": {
+      "attenuation_allowed": false,
+      "declared_full_depth_service_ps": 28604120000,
+      "depth_extrapolation": "measured four-layer basis * 61 / 4",
+      "in_run_adjustment_allowed": false,
+      "measured_four_layer_basis_ps": 1875680000,
+      "mechanism_count": 0,
+      "per_node_tokens": 256,
+      "remote_kv_projection": {
+        "config_field": "project_remote_kv_length",
+        "default": false,
+        "enabled_for_this_run": true,
+        "exact_candidate_key_sha256": "05d1c33cdef9c12e25eb9159adc9dc80f1cd57b6333778f9efb5fb24cd6a74aa",
+        "expected_lookup_hits": 1,
+        "expected_lookup_misses": 0,
+        "remote_prefix_tokens_per_request": 2000,
+        "request_count": 32
+      }
+    },
+    "derived_refinements": [
+      {
+        "anchor_numeric_input_count": 0,
+        "authority": {
+          "path": "examples/deployment_curve_v1/comp75_expectations.json",
+          "sha256": "70344ee93b7557486ff4f61191aa4c0213d471a35981863d2e60be34e4a48f5a"
+        },
+        "fit_allowed": false,
+        "id": "ep32_rank_layout_locality_split",
+        "movement_from_second_run": "none; the derived split was already present and is now declared explicitly",
+        "pricing": "COMP-75 classifies same-node bytes to its analytic NVLink endpoint serializer and remote bytes to rnic-nn, then takes the per-phase maximum.",
+        "status": "FROZEN_DERIVED",
+        "topology": {
+          "fabric_destination_peers": 24,
+          "nodes": 4,
+          "ranks_per_node": 8,
+          "same_node_destination_peers": 7,
+          "source_rank_excluded": true
+        }
+      },
+      {
+        "anchor_numeric_input_count": 0,
+        "authority": {
+          "path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+          "sha256": "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f"
+        },
+        "id": "a100_three_module_packet_candidate_substitution",
+        "reason": "The merged profile is explicitly A100 NVLink3 candidate evidence, while the disclosure target is H100. Substitution would add unjustified cross-architecture physics.",
+        "status": "REJECTED"
+      }
+    ],
+    "prefill": {
+      "boundary_authority": {
+        "operator": "max(C, P) + min(C, P) / 2",
+        "path": "examples/deployment_curve_v1/traf67_calibration_result.json",
+        "sha256": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+        "status": "PASS_CLEAN_REPETITION",
+        "visible_residual_after_percent": "-23.423673",
+        "visible_residual_before_percent": "-0.592425"
+      },
+      "boundary_operator": "max(C, P) + f * min(C, P)",
+      "composition_authority": {
+        "path": "examples/deployment_curve_v1/comp75_calibration_result.json",
+        "sha256": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+        "status": "PASS",
+        "verdict": "REPRODUCED"
+      },
+      "compute_rows": [
+        {
+          "anchor_id": "sglang_prefill_1k",
+          "candidate_entry_index": 0,
+          "measured_compute_service_ps": 1363249960000
+        },
+        {
+          "anchor_id": "sglang_prefill_2k",
+          "candidate_entry_index": 2,
+          "measured_compute_service_ps": 1420296672000
+        },
+        {
+          "anchor_id": "sglang_prefill_4k",
+          "candidate_entry_index": 1,
+          "measured_compute_service_ps": 1595133392750
+        }
+      ],
+      "mechanism_path": "CORE-59 prefill dispatch and combine",
+      "per_node_tokens": 131072,
+      "per_rank_new_tokens": 16384,
+      "physics_only_operator": "max(C, P)",
+      "point_arm": {
+        "communication_service_ps": {
+          "lower": 2286179760360,
+          "selected": 2286179760360,
+          "upper": 2286179762680
+        },
+        "fabric_link_rate_bits_per_second": 400000000000
+      },
+      "sensitivity_arm": {
+        "fabric_link_rate_bits_per_second": 200000000000,
+        "role": "named sensitivity, not a substitute deployment point"
+      }
+    }
+  },
+  "provenance": {
+    "anchor_sha256": "b1a918ed02329a242d033943fb18b93fd9be8fdaa18093477e6abb8298540df5",
+    "base_main_sha": "ef7b10a85e1b728984b84e86f924bfdd267d92e8",
+    "boundary_record_sha256": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+    "branch": "codex/core54run3_scored",
+    "candidate_acceptance_status": "candidate",
+    "candidate_record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+    "composition_record_sha256": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+    "expectations_commit": "45251494fa7c9dc0b872bf5324619380cf516a7b",
+    "expectations_sha256": "9764f4c910c2ac7410c8ac447936b5ca48964096cf6240521c3f7888754fe637",
+    "htsim_rnic_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+    "inherited_configuration_sha256": "3e5cca6693be05d9bd93870158ee24f7bee9092c2ce981c287fd94765d2d1970",
+    "model_config_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
+    "model_weights_loaded": false,
+    "python_version": "3.10.18",
+    "run_head": "3d13cde15b19d105d91df4986751c03bebdb56b7",
+    "sglang_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+    "sglang_version": "0.5.19.dev345+gbfeae4e79",
+    "txt2bin_sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b",
+    "web_pages_fetched": false,
+    "worktree": "core54run3"
+  },
+  "residuals_required": [
+    "COMP-72 exact MTP and measured DeepSeek cells",
+    "COMP-74 repeat-derived distributions",
+    "COMP-76 standard-decode reproduction",
+    "CORE-61 depth-extrapolation validity",
+    "SGL-36 physical steady-state load surface",
+    "TRAF-64 full PLACE-5 path qualification"
+  ],
+  "scale_mapping": {
+    "decode_engines": 1,
+    "decode_target_multiplier": 9,
+    "live_ranks": 16,
+    "prefill_engines": 1,
+    "prefill_target_multiplier": 4,
+    "simulated_gpus_per_engine": 8
+  },
+  "schema": "simllm-deployment-curve-flagship-run3-publication-v1",
+  "scope": "priced held-out prefill anchors under the declared benchmark-bias model",
+  "scored_session_summary": [
+    {
+      "admissions": 16,
+      "anchor_id": "sglang_prefill_1k",
+      "batches": {
+        "decode": [
+          [
+            "sglang_prefill_1k-request-0",
+            "sglang_prefill_1k-request-1",
+            "sglang_prefill_1k-request-2",
+            "sglang_prefill_1k-request-3",
+            "sglang_prefill_1k-request-4",
+            "sglang_prefill_1k-request-5",
+            "sglang_prefill_1k-request-6",
+            "sglang_prefill_1k-request-7",
+            "sglang_prefill_1k-request-8",
+            "sglang_prefill_1k-request-9",
+            "sglang_prefill_1k-request-10",
+            "sglang_prefill_1k-request-11",
+            "sglang_prefill_1k-request-12",
+            "sglang_prefill_1k-request-13",
+            "sglang_prefill_1k-request-14",
+            "sglang_prefill_1k-request-15"
+          ]
+        ],
+        "prefill": [
+          [
+            "sglang_prefill_1k-request-0",
+            "sglang_prefill_1k-request-1",
+            "sglang_prefill_1k-request-2",
+            "sglang_prefill_1k-request-3",
+            "sglang_prefill_1k-request-4",
+            "sglang_prefill_1k-request-5",
+            "sglang_prefill_1k-request-6",
+            "sglang_prefill_1k-request-7",
+            "sglang_prefill_1k-request-8",
+            "sglang_prefill_1k-request-9",
+            "sglang_prefill_1k-request-10",
+            "sglang_prefill_1k-request-11",
+            "sglang_prefill_1k-request-12",
+            "sglang_prefill_1k-request-13",
+            "sglang_prefill_1k-request-14",
+            "sglang_prefill_1k-request-15"
+          ]
+        ]
+      },
+      "candidate_entry_index": 0,
+      "decode_ranks": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "pool": "prefill",
+      "prefill_ranks": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "prompt_tokens_per_request": 1024,
+      "remote_kv_projection_enabled": true,
+      "stable_projection_sha256": "6fb643758f3f37097770b012bf56d6eb3a34fd70ab695c66c181330ee6608cf4",
+      "terminals": 16,
+      "total_prompt_tokens": 16384
+    },
+    {
+      "admissions": 8,
+      "anchor_id": "sglang_prefill_2k",
+      "batches": {
+        "decode": [
+          [
+            "sglang_prefill_2k-request-0",
+            "sglang_prefill_2k-request-1",
+            "sglang_prefill_2k-request-2",
+            "sglang_prefill_2k-request-3",
+            "sglang_prefill_2k-request-4",
+            "sglang_prefill_2k-request-5",
+            "sglang_prefill_2k-request-6",
+            "sglang_prefill_2k-request-7"
+          ]
+        ],
+        "prefill": [
+          [
+            "sglang_prefill_2k-request-0",
+            "sglang_prefill_2k-request-1",
+            "sglang_prefill_2k-request-2",
+            "sglang_prefill_2k-request-3",
+            "sglang_prefill_2k-request-4",
+            "sglang_prefill_2k-request-5",
+            "sglang_prefill_2k-request-6",
+            "sglang_prefill_2k-request-7"
+          ]
+        ]
+      },
+      "candidate_entry_index": 2,
+      "decode_ranks": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "pool": "prefill",
+      "prefill_ranks": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "prompt_tokens_per_request": 2048,
+      "remote_kv_projection_enabled": true,
+      "stable_projection_sha256": "9c3f0067a9b40abdfcbe87a3e96d97d55a3bbbf85466d96b60e0e9cade7f8b97",
+      "terminals": 8,
+      "total_prompt_tokens": 16384
+    },
+    {
+      "admissions": 4,
+      "anchor_id": "sglang_prefill_4k",
+      "batches": {
+        "decode": [
+          [
+            "sglang_prefill_4k-request-0",
+            "sglang_prefill_4k-request-1",
+            "sglang_prefill_4k-request-2",
+            "sglang_prefill_4k-request-3"
+          ]
+        ],
+        "prefill": [
+          [
+            "sglang_prefill_4k-request-0",
+            "sglang_prefill_4k-request-1",
+            "sglang_prefill_4k-request-2",
+            "sglang_prefill_4k-request-3"
+          ]
+        ]
+      },
+      "candidate_entry_index": 1,
+      "decode_ranks": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "pool": "prefill",
+      "prefill_ranks": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "prompt_tokens_per_request": 4096,
+      "remote_kv_projection_enabled": true,
+      "stable_projection_sha256": "535f57d1126a61f0ef5264e1d90317e4c5c1fb40e303a5d3757a8a0af57fa881",
+      "terminals": 4,
+      "total_prompt_tokens": 16384
+    },
+    {
+      "admissions": 32,
+      "anchor_id": "sglang_decode_standard",
+      "batches": {
+        "decode": [
+          [
+            "sglang_decode_standard-request-0",
+            "sglang_decode_standard-request-1",
+            "sglang_decode_standard-request-2",
+            "sglang_decode_standard-request-3",
+            "sglang_decode_standard-request-4",
+            "sglang_decode_standard-request-5",
+            "sglang_decode_standard-request-6",
+            "sglang_decode_standard-request-7",
+            "sglang_decode_standard-request-8",
+            "sglang_decode_standard-request-9",
+            "sglang_decode_standard-request-10",
+            "sglang_decode_standard-request-11",
+            "sglang_decode_standard-request-12",
+            "sglang_decode_standard-request-13",
+            "sglang_decode_standard-request-14",
+            "sglang_decode_standard-request-15",
+            "sglang_decode_standard-request-16",
+            "sglang_decode_standard-request-17",
+            "sglang_decode_standard-request-18",
+            "sglang_decode_standard-request-19",
+            "sglang_decode_standard-request-20",
+            "sglang_decode_standard-request-21",
+            "sglang_decode_standard-request-22",
+            "sglang_decode_standard-request-23",
+            "sglang_decode_standard-request-24",
+            "sglang_decode_standard-request-25",
+            "sglang_decode_standard-request-26",
+            "sglang_decode_standard-request-27",
+            "sglang_decode_standard-request-28",
+            "sglang_decode_standard-request-29",
+            "sglang_decode_standard-request-30",
+            "sglang_decode_standard-request-31"
+          ]
+        ],
+        "prefill": [
+          [
+            "sglang_decode_standard-request-0",
+            "sglang_decode_standard-request-1",
+            "sglang_decode_standard-request-2",
+            "sglang_decode_standard-request-3",
+            "sglang_decode_standard-request-4",
+            "sglang_decode_standard-request-5",
+            "sglang_decode_standard-request-6",
+            "sglang_decode_standard-request-7",
+            "sglang_decode_standard-request-8",
+            "sglang_decode_standard-request-9",
+            "sglang_decode_standard-request-10",
+            "sglang_decode_standard-request-11",
+            "sglang_decode_standard-request-12",
+            "sglang_decode_standard-request-13",
+            "sglang_decode_standard-request-14",
+            "sglang_decode_standard-request-15",
+            "sglang_decode_standard-request-16",
+            "sglang_decode_standard-request-17",
+            "sglang_decode_standard-request-18",
+            "sglang_decode_standard-request-19",
+            "sglang_decode_standard-request-20",
+            "sglang_decode_standard-request-21",
+            "sglang_decode_standard-request-22",
+            "sglang_decode_standard-request-23",
+            "sglang_decode_standard-request-24",
+            "sglang_decode_standard-request-25",
+            "sglang_decode_standard-request-26",
+            "sglang_decode_standard-request-27",
+            "sglang_decode_standard-request-28",
+            "sglang_decode_standard-request-29",
+            "sglang_decode_standard-request-30",
+            "sglang_decode_standard-request-31"
+          ]
+        ]
+      },
+      "candidate_entry_index": 3,
+      "decode_ranks": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "pool": "decode",
+      "prefill_ranks": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "prompt_tokens_per_request": 2000,
+      "remote_kv_projection_enabled": true,
+      "stable_projection_sha256": "98a196d1a5ba2705218896afa4b2e7bf65cc89bc7f739f5a60a87b25597423f5",
+      "terminals": 32,
+      "total_prompt_tokens": 64000
+    }
+  ],
+  "second_legend": {
+    "deepseek_h800_latency_status": "undisclosed",
+    "deepseek_h800_production_decode_tokens_per_second": 266400,
+    "place5_what_if_decode_nodes": 40,
+    "place5_what_if_prefill_nodes": 16,
+    "place5_what_if_total_ranks": 448
+  },
+  "stable_identity_guard": {
+    "equal": true,
+    "field_set": "CORE-58 unchanged",
+    "first_sha256": "98a196d1a5ba2705218896afa4b2e7bf65cc89bc7f739f5a60a87b25597423f5",
+    "second_sha256": "98a196d1a5ba2705218896afa4b2e7bf65cc89bc7f739f5a60a87b25597423f5",
+    "whole_request_bytes_compared": false
+  },
+  "status": "PASS",
+  "topology": {
+    "place5_16p40d_what_if": {
+      "evidence_class": "declared",
+      "gpus": 448,
+      "nics": 448,
+      "nodes": 56,
+      "physical_rendering_enabled": true,
+      "ranks": 448,
+      "topology_name": "simllm-disaggregated-448-clos-declared-v1"
+    },
+    "separate_experiment_authority": {
+      "decode_rank_set": [
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103
+      ],
+      "may_be_called_96_gpu_system": false,
+      "prefill_rank_set": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "simultaneous_disclosure_claim": false,
+      "structural_comparator_ranks": 104
+    }
+  },
+  "verdict": "SCORABLE_HELD_OUT_PASS_MTP_BLOCKED"
+}

@@ -46,7 +46,11 @@ def prepare_flagship_plot(result: dict[str, Any]) -> dict[str, Any]:
         curves.append(
             {
                 "id": curve["configuration_id"],
-                "label": curve["configuration_label"],
+                "label": (
+                    "PLACE-5 16P+40D what-if"
+                    if curve["evidence_class"] == "declared-node-linear-what-if"
+                    else "simLLM H100 EP72 decode"
+                ),
                 "evidence_class": curve["evidence_class"],
                 "points": points,
             }
@@ -99,7 +103,7 @@ def prepare_flagship_plot(result: dict[str, Any]) -> dict[str, Any]:
         "curves": curves,
         "prefill": prefill,
         "standard_decode_disclosure": {
-            "label": "Published SGLang standard decode",
+            "label": "Published SGLang decode",
             "x": standard_published * 9,
             "y": 10.0,
         },
@@ -241,7 +245,7 @@ def render_flagship_figure(
             color="#555555",
             linestyle=":",
             linewidth=1.1,
-            label="DeepSeek H800 production, delay undisclosed",
+            label="DeepSeek H800 production",
         ),
     )
     curve_axis.set_xlabel("Aggregated output throughput (tokens/s) →")
@@ -255,20 +259,22 @@ def render_flagship_figure(
     x_span = max(all_x) - min(all_x)
     curve_axis.set_xlim(max(0.0, min(all_x) - 0.06 * x_span), max(all_x) + 0.06 * x_span)
     curve_axis.set_ylim(min(all_y) / 1.25, max(all_y) * 1.25)
-    first_legend = curve_axis.legend(
+    first_legend = figure.legend(
         handles=simulated_handles,
-        title="SGLang experiment",
-        loc="upper left",
+        loc="center",
+        bbox_to_anchor=(0.30, 0.835),
+        ncol=2,
         frameon=True,
         facecolor="white",
         framealpha=0.95,
         edgecolor="#cccccc",
     )
-    curve_axis.add_artist(first_legend)
-    curve_axis.legend(
+    figure.add_artist(first_legend)
+    figure.legend(
         handles=context_handles,
-        title="Other configurations",
-        loc="lower right",
+        loc="center",
+        bbox_to_anchor=(0.74, 0.835),
+        ncol=2,
         frameon=True,
         facecolor="white",
         framealpha=0.95,
@@ -278,7 +284,7 @@ def render_flagship_figure(
     prompt = [row["prompt_k"] for row in plot["prefill"]]
     published = [row["published"] for row in plot["prefill"]]
     layer_styles = (
-        ("physics_only", "Physics only", BLUE, ":", 1.4, 0.08),
+        ("physics_only", "Physics only", BLUE, ":", 1.4, 0.08, 5),
         (
             "physics_plus_boundary",
             "Physics + boundary",
@@ -286,6 +292,7 @@ def render_flagship_figure(
             "-",
             1.5,
             0.10,
+            4,
         ),
         (
             "physics_plus_boundary_plus_attenuation",
@@ -294,9 +301,10 @@ def render_flagship_figure(
             "--",
             1.8,
             0.13,
+            6,
         ),
     )
-    for layer_name, label, color, style, width, alpha in layer_styles:
+    for layer_name, label, color, style, width, alpha, zorder in layer_styles:
         point = [row["layers"][layer_name]["point"] for row in plot["prefill"]]
         lower = [row["layers"][layer_name]["lower"] for row in plot["prefill"]]
         upper = [row["layers"][layer_name]["upper"] for row in plot["prefill"]]
@@ -310,7 +318,7 @@ def render_flagship_figure(
             markersize=3.2,
             linewidth=width,
             label=label,
-            zorder=4,
+            zorder=zorder,
         )
     prefill_axis.scatter(
         prompt,
