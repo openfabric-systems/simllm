@@ -910,6 +910,18 @@ next reserved traffic ID.
 
 ### Precision
 
+- TRAF-68 (Precision; P1; M): publish the two-network bottleneck study for the
+  CORE-62 frontier. At every frozen configuration and batch, retain the
+  inter-node htsim excess over ideal zero-contention wire service and the
+  intra-node three-module NVLink candidate excess over ideal pair wire service,
+  then name the binding network and its dominant mechanism or module. The
+  study must distinguish fabric protocol, serialization and incast from
+  candidate TX credits and packetization, switch contention and RX return;
+  disclose the A100 candidate's cross-architecture status wherever it prices
+  H100 or B100; render analytical lines, roofline dots and stacked elapsed
+  attribution; and leave every prior scored flagship artifact byte-identical.
+  Close only if all swept points have complete byte and mechanism evidence.
+
 - TRAF-51 (Precision; P1; L): complete the Slingshot fabric calibration
   beyond the steady-state partial. The wave-19 comparison
   ([merlin ss fabric calibration](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md),

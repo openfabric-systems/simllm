@@ -1070,6 +1070,18 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   tune the depth rule. COMP-76 owns independent repetition of the four-layer
   basis, while COMP-72 owns the missing MTP cell.
 
+- CORE-62 (Precision; P1; M): add the versioned batch-sweep deployment-frontier
+  plot contract and its exact roofline consistency gate. The analytical line
+  must use only declared per-rank FLOPs, HBM bytes, GPU envelopes and ideal
+  exact-byte wire service; roofline-simulation dots must use the same batches
+  with kernel simulation disabled. Acceptance requires both logarithmic axes,
+  per-request decode speed on X, aggregate output throughput normalized per GPU
+  on Y, prior flagship byte identity, and an exactly zero residual after the
+  frozen inter-node then intra-node attribution. A nonzero residual is a
+  published refutation and is not absorbed; TRAF-69 and COMP-77 are reserved
+  for a fabric or compute and composition residual respectively. TRAF-68 owns
+  the accompanying two-network bottleneck map.
+
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
   nothing at the receiver, so an all-remote many-to-one combine completes at

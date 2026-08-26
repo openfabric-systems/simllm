@@ -1,0 +1,338 @@
+{
+  "schema": "simllm-deployment-frontier-expectations-v1",
+  "study": {
+    "date": "2026-08-27",
+    "source": "maintainer directive of 2026-08-27",
+    "status": "expectations_only",
+    "tasks": [
+      "CORE-62",
+      "TRAF-68"
+    ],
+    "reserved_residual_ids": [
+      "TRAF-69",
+      "COMP-77"
+    ],
+    "chronology": "This file is committed before implementation and before the first CORE-62 or TRAF-68 packet run."
+  },
+  "plot_contract": {
+    "schema": "simllm-deployment-frontier-plot-contract-v2",
+    "amends": "simllm-deployment-curve-anchor-freeze-v1",
+    "amendment_scope": "new batch-sweep frontier figures only",
+    "prior_flagship_axis_contract_unchanged": true,
+    "x": {
+      "quantity": "per_request_decode_speed",
+      "unit": "tokens_per_second_per_request",
+      "formula": "1000000000000 / step_time_ps",
+      "scale": "log",
+      "direction": "rightward"
+    },
+    "y": {
+      "quantity": "aggregate_output_throughput_normalized_per_gpu",
+      "unit": "tokens_per_second_per_gpu",
+      "formula": "batch_per_gpu * 1000000000000 / step_time_ps",
+      "scale": "log",
+      "direction": "upward"
+    },
+    "optimal_corner": "upper-right",
+    "sweep": "batch_per_gpu increases in ascending order; the trace moves from down-right toward up-left when batching raises throughput and lowers per-request speed",
+    "analytical_style": "solid line per deployment configuration",
+    "simulation_style": "filled dots at every swept batch",
+    "published_paired_style": "white diamond with black edge",
+    "published_y_only_style": "dashed horizontal line",
+    "bound_reading": "The analytical line is a floor-style step-time bound formed by the worst declared floor. Real and simulated points at a comparable context and batch must lie on or below it."
+  },
+  "model_inventory": {
+    "path": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json",
+    "sha256": "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2",
+    "unit_id": "sglang-decode-ep72-dp-attention",
+    "case_id": "sglang-decode-ep72-b32-c2000",
+    "rank_class": "rank-class-0",
+    "selection_rule": "Use the worst physical rank class by logical HBM bytes; no averaging across rank classes.",
+    "context_tokens": 2000,
+    "frozen_batch": 32,
+    "frozen_flops": 3594330365632,
+    "frozen_logical_hbm_bytes": 31944051040,
+    "static_logical_hbm_bytes": 27446643040,
+    "flops_per_batch_item": 112322823926,
+    "dynamic_hbm_bytes_per_batch_item": 140544000,
+    "batch_projection": {
+      "flops": "batch_per_gpu * flops_per_batch_item",
+      "logical_hbm_bytes": "static_logical_hbm_bytes + batch_per_gpu * dynamic_hbm_bytes_per_batch_item",
+      "exactness": "Both increments divide the frozen batch-32 case without a remainder and must reconstruct it exactly at batch 32."
+    },
+    "network_geometry": {
+      "moe_layers": 58,
+      "dispatch_and_combine_phases_per_layer": 2,
+      "top_k": 8,
+      "hidden_size": 7168,
+      "element_bytes": 2,
+      "logical_collective_bytes_per_gpu_per_batch_item": 13303808,
+      "formula": "58 * 2 * 8 * 7168 * 2"
+    }
+  },
+  "gpu_envelopes": {
+    "source_path": "simllm/compute/transformer.py",
+    "source_sha256": "9bf8f98e3a34e5c60ecaa287c5f08daf60d8a4da951abeb57a7037faee389091",
+    "roofline_source_path": "simllm/compute/provider.py",
+    "roofline_source_sha256": "37d4cbf8f0139686788cbef6745b48ac2e4a6a628123023358e6a45c77d46d3f",
+    "efficiency": 1.0,
+    "kernel_simulation_enabled": false,
+    "h100": {
+      "peak_flops_per_second": 989500000000000,
+      "hbm_bytes_per_second": 3350000000000
+    },
+    "b100": {
+      "peak_flops_per_second": 1800000000000000,
+      "hbm_bytes_per_second": 8000000000000
+    },
+    "integer_projection": "Match RooflineProvider exactly: int(seconds * 1000000000000), then take max(compute_ps, memory_ps)."
+  },
+  "network_inputs": {
+    "fabric": {
+      "implementation": "htsim rnic-nn packet profile",
+      "source_path": "simllm/backends/htsim_rnic.py",
+      "source_sha256": "33777ab17653b15fda068df3b76776408feaa921bdefeacff97c6aa63a808ad6",
+      "accepted_htsim_rnic_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+      "accepted_txt2bin_sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b",
+      "nominal_link_rate_bits_per_second": 400000000000,
+      "ideal_wire_formula": "max_flow_payload_bytes * 8 * 1000000000000 / nominal_link_rate_bits_per_second",
+      "ideal_assumptions": "zero contention, zero protocol overhead and no propagation charge",
+      "extraction": {
+        "isolated_reference": "Run the largest frozen flow alone through the same rnic-nn binary and profile.",
+        "protocol_ps": "min(max(0, isolated_service_ps - ideal_wire_ps), 2000000)",
+        "serialization_ps": "max(0, isolated_service_ps - ideal_wire_ps - protocol_ps)",
+        "incast_ps": "max(0, concurrent_service_ps - isolated_service_ps)",
+        "dominant_mechanism": "largest of protocol_ps, serialization_ps and incast_ps, ties in that order"
+      }
+    },
+    "intra_node": {
+      "profile_path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+      "profile_sha256": "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f",
+      "implementation_path": "simllm/backends/htsim_nvlink.py",
+      "implementation_sha256": "9b3abded62080a4ef93626e991a8f4e7d66917116670a8e1fac2897b58206e4b",
+      "status": "candidate",
+      "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+      "nominal_ideal_pair_rate_bytes_per_second": 100000000000,
+      "ideal_wire_formula": "max_transfer_payload_bytes * 1000000000000 / nominal_ideal_pair_rate_bytes_per_second",
+      "ideal_assumptions": "zero contention, zero packet headers, zero credits, zero launch overhead and zero completion overhead",
+      "extraction": {
+        "tx_credits_ps": "max_packet_tx_finish_ps - ideal_wire_ps; includes candidate TX packetization and any credit stall",
+        "switch_contention_ps": "max_packet_switch_finish_ps - max_packet_tx_finish_ps; zero on the frozen pass-through profile",
+        "rx_return_ps": "completion_time_ps - max_packet_switch_finish_ps",
+        "dominant_module": "largest nonnegative module term, ties in TX, switch, RX order"
+      }
+    },
+    "overlap": "Kernel, fabric and intra-node service overlap perfectly for this frontier step, so step time is their maximum."
+  },
+  "batch_per_gpu_sweep": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "configurations": [
+    {
+      "id": "b100-one-node-intra",
+      "label": "B100 one-node intra-node-heavy",
+      "gpu": "b100",
+      "gpus_per_node": 8,
+      "node_count": 1,
+      "local_fraction_denominator": 1,
+      "inter_node_fan_in": 0,
+      "intra_transfer_count": 8,
+      "expected_binding_family": "intra-node-or-roofline"
+    },
+    {
+      "id": "h100-two-node-serialized",
+      "label": "H100 two-node serialized split",
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "node_count": 2,
+      "local_fraction_denominator": 2,
+      "inter_node_fan_in": 1,
+      "intra_transfer_count": 8,
+      "expected_binding_family": "roofline-or-serialization"
+    },
+    {
+      "id": "h100-nine-node-incast",
+      "label": "H100 nine-node EP72 incast",
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "node_count": 9,
+      "local_fraction_denominator": 9,
+      "inter_node_fan_in": 8,
+      "intra_transfer_count": 8,
+      "expected_binding_family": "inter-node-incast"
+    }
+  ],
+  "byte_partition": {
+    "total": "batch_per_gpu * logical_collective_bytes_per_gpu_per_batch_item",
+    "local": "total // local_fraction_denominator",
+    "remote": "total - local",
+    "remote_flows": "Split remote bytes over inter_node_fan_in in source-rank order using quotient plus one byte for the first remainder flows.",
+    "conservation": "local + sum(remote_flows) == total at every point"
+  },
+  "analytical_reference": {
+    "compute_floor_ps": "int(flops * 1000000000000 / (peak_flops_per_second * efficiency))",
+    "memory_floor_ps": "int(logical_hbm_bytes * 1000000000000 / (hbm_bytes_per_second * efficiency))",
+    "kernel_floor_ps": "max(compute_floor_ps, memory_floor_ps)",
+    "step_floor_ps": "max(kernel_floor_ps, ideal_fabric_wire_ps, ideal_intra_node_wire_ps)",
+    "line_parameter": "batch_per_gpu",
+    "no_fitted_quantity": true
+  },
+  "accounting_identity": {
+    "schema": "simllm-roofline-network-accounting-v1",
+    "analytical_step_ps": "max(kernel_floor_ps, ideal_fabric_wire_ps, ideal_intra_node_wire_ps)",
+    "after_inter_node_ps": "max(kernel_floor_ps, simulated_fabric_ps, ideal_intra_node_wire_ps)",
+    "simulated_step_ps": "max(kernel_floor_ps, simulated_fabric_ps, simulated_intra_node_ps)",
+    "inter_node_attributed_ps": "after_inter_node_ps - analytical_step_ps",
+    "intra_node_attributed_ps": "simulated_step_ps - after_inter_node_ps",
+    "residual_ps": "simulated_step_ps - analytical_step_ps - inter_node_attributed_ps - intra_node_attributed_ps",
+    "ordering_reason": "The fixed inter-then-intra telescoping order is deterministic and prevents a masked medium from being charged as elapsed time.",
+    "pass_rule": "Every point has residual_ps == 0 and both attribution terms are nonnegative.",
+    "failure_rule": "Any nonzero residual is published as REFUTED with exact flow payload bytes, candidate logical and wire bytes, and the first mismatching byte ledger. It is never absorbed into either attribution term."
+  },
+  "bottleneck_map": {
+    "inter-node": "simulated_fabric_ps is strictly greater than both kernel_floor_ps and simulated_intra_node_ps",
+    "intra-node": "simulated_intra_node_ps is strictly greater than both kernel_floor_ps and simulated_fabric_ps",
+    "neither": "kernel_floor_ps is greater than or equal to both network services",
+    "tie": "A tie involving a network is named co-critical and lists every tied owner.",
+    "materiality": "A network is material only when its attributed elapsed term is positive. Raw off-critical excess remains published separately."
+  },
+  "published_context": {
+    "source_path": "examples/deployment_curve_v1/expectations.json",
+    "source_sha256": "b1a918ed02329a242d033943fb18b93fd9be8fdaa18093477e6abb8298540df5",
+    "paired": [
+      {
+        "id": "sglang_decode_standard",
+        "label": "Published SGLang H100 EP72 standard decode",
+        "batch_per_node": 256,
+        "gpus_per_node": 8,
+        "context_tokens": 2000,
+        "tokens_per_second_per_node": 22282,
+        "x_formula": "22282 / 256",
+        "y_formula": "22282 / 8",
+        "marker": "white diamond with black edge"
+      }
+    ],
+    "y_only": [
+      {
+        "id": "deepseek_production_decode",
+        "label": "Published DeepSeek H800 production decode",
+        "tokens_per_second_per_node": 14800,
+        "gpus_per_node": 8,
+        "batch": null,
+        "context": null,
+        "y_formula": "14800 / 8",
+        "style": "dashed horizontal line"
+      }
+    ]
+  },
+  "figure_contracts": {
+    "deployment": {
+      "stem": "figures/deployment-frontier",
+      "canvas_inches": [
+        7.0,
+        4.33
+      ],
+      "panels": 1
+    },
+    "bottleneck": {
+      "stem": "figures/two-network-bottleneck",
+      "canvas_inches": [
+        7.0,
+        6.0
+      ],
+      "panels": 2,
+      "top": "analytical lines and roofline-simulation dots",
+      "bottom": "per-point stacked inter-node and intra-node attributed picoseconds with binding labels"
+    },
+    "formats": [
+      "pdf",
+      "png"
+    ],
+    "path_rendering": "POSIX"
+  },
+  "preservation_lock": {
+    "class": "all-33-prior-flagship-locks-plus-10-third-run-artifacts",
+    "expected_total_artifacts": 43,
+    "inherited": {
+      "path": "examples/deployment_curve_v1/scored_run3_expectations.json",
+      "sha256": "9764f4c910c2ac7410c8ac447936b5ca48964096cf6240521c3f7888754fe637",
+      "json_pointer": "/preservation_lock/artifacts",
+      "expected_artifacts": 33
+    },
+    "additional_artifacts": [
+      {
+        "path": "examples/deployment_curve_v1/scored_run3_expectations.json",
+        "sha256": "9764f4c910c2ac7410c8ac447936b5ca48964096cf6240521c3f7888754fe637"
+      },
+      {
+        "path": "examples/deployment_curve_v1/scored_run3_expectations.md",
+        "sha256": "f10cabb436a4670f090983afed9c17ea1cb970d1c0da74ddc975ead8f9d6556c"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run3_tools.py",
+        "sha256": "f98eb67d2b89fb6cf81085f2bc285262cec424a1f715b36c662d3da563268951"
+      },
+      {
+        "path": "examples/deployment_curve_v1/run_flagship_run3.py",
+        "sha256": "b0b1df7a5d5d4390697b0800be0870a478434c5e832ba1f5dbe3e005cce9a959"
+      },
+      {
+        "path": "examples/deployment_curve_v1/plot_flagship_run3.py",
+        "sha256": "1083cbfa086bec299b9837dcb2a565d2d2f95c43c80a47e698409b28b738bf61"
+      },
+      {
+        "path": "examples/deployment_curve_v1/publish_flagship_run3.py",
+        "sha256": "f49e46a0a69c7cb9166c62d859a6d29984877d59d8ab64ca2e3ab9a41f3dcfb7"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run3_result.json",
+        "sha256": "255a73b120e2ad6e3a7b202475419d30174298590d6c9d3c22f9cfb6063489fe"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS_RUN3.md",
+        "sha256": "4f64189ec4150a93c3861aba8bbc1e8dbd8dfc78b0966f411e2a7ffb32017ea5"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run3.pdf",
+        "sha256": "a28fcc56399dd980e0a9758e720916186206360934431a635f944a3ae359a536"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run3.png",
+        "sha256": "03bdfc7fab4cc71e4991ff8c3683336a5625f7390b8a2e6fe402efc0dd3ca811"
+      }
+    ]
+  },
+  "fatal_guards": [
+    "expectations digest or commit is not the frozen run authority",
+    "tracked worktree is dirty before a gated run",
+    "kernel simulation is enabled or the provider is not RooflineProvider at efficiency 1.0",
+    "model inventory, GPU envelope, htsim, NVLink candidate or disclosure source digest changes",
+    "any of the 43 preservation artifacts changes",
+    "batch-32 projection does not reconstruct frozen FLOPs and HBM bytes exactly",
+    "byte partition does not conserve every local and remote byte",
+    "htsim does not report physical quiescence or flow payload conservation",
+    "NVLink candidate does not conserve logical, request, response and wire byte ledgers",
+    "a simulated network service is below its ideal zero-overhead wire service",
+    "an attribution term is negative or the residual is nonzero",
+    "a comparable published point lies above the H100 nine-node analytical line",
+    "a plotted axis receives a nonpositive value",
+    "a prior flagship runner, record or figure is executed or rewritten"
+  ],
+  "expected_directions": [
+    "increasing batch per GPU never increases per-request decode speed",
+    "aggregate throughput per GPU rises until a declared floor saturates it",
+    "nine-node incast produces a positive inter-node attribution at one or more points",
+    "the pass-through candidate produces zero switch-contention attribution",
+    "at least one point is roofline-bound with neither network material"
+  ],
+  "closure": {
+    "core_62": "Close only if all 18 points pass the exact residual gate, all plot-contract guards pass and both deployment figure formats render.",
+    "traf_68": "Close only if all 18 points publish both network terms, raw excess, dominant mechanism or module, one bottleneck classification, and the two-panel study figure.",
+    "refutation": "A nonzero unexplained residual is a published refutation. Reserve TRAF-69 for fabric residual work and COMP-77 for compute or composition residual work."
+  }
+}
