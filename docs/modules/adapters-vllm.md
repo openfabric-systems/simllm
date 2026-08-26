@@ -130,7 +130,10 @@ Disaggregated session driver (`simllm/adapters/vllm/pd_session.py`):
 - `VllmDisaggregatedSession` constructs separate in-process prefill and decode
   engines with pool-local adapter configuration, calls
   `reset_configuration()` between constructions, and injects one shared
-  virtual clock into every engine.
+  virtual clock into every engine. The session configuration may select one
+  provider per role while retaining its original shared provider as the exact
+  default. A provider that publishes pricing provenance is projected into the
+  request result; a provider with no provenance leaves that member absent.
 - The pinned vLLM v0.27.1 scheduler-side KV connector is the real control
   seam. It gates producer completion and consumer external-token admission,
   while an explicit core KV-handoff event is the sole transfer-time authority.
@@ -630,6 +633,14 @@ request lifecycles and exposes stock-scheduler batches as wide as eight. Its
 exact throughput curves are live, while the frozen nondecreasing delay claim
 is refuted and remains VLLM-35 through VLLM-39; see
 [the concurrent-session results](../../examples/pd_session_concurrent_v1/RESULTS.md).
+
+The same live driver now accepts pool-specific content-addressed lookup
+bindings for CORE-53. The retained candidate study selected its exact decode
+row twice and surfaced candidate status without a calibration claim. Both
+record-absent runs retained all accepted KV bytes and timestamps, but the
+frozen complete-result byte guard was voided by vLLM's fresh pool-local request
+identifier suffixes. CORE-58 owns the next frozen identity boundary; see
+[the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
 
 The pinned DeepSeek-V3 configuration surface now publishes a complete logical
 inventory beside SGLang's structurally identical record. Its physical code

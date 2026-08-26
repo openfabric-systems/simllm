@@ -979,6 +979,16 @@ live, but the frozen delay direction is refuted in all six curves, so VLLM-35
 stays open through VLLM-39; see
 [the concurrent-session results](../../examples/pd_session_concurrent_v1/RESULTS.md).
 
+The CORE-53 session binding is live as an explicit content-addressed candidate
+path through the existing compute provider chain. The retained candidate row
+is selected twice at the exact prior-KV-16 decode shape, its status and partial
+coverage remain in request provenance, and every miss delegates to an explicit
+roofline comparator. The first acceptance run is void: both record-absent arms
+reproduce every accepted KV byte count and timestamp, but their complete
+request-result bytes differ in the two vLLM-owned random pool-local request
+identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
+[the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
+
 ## Open tasks
 
 ### Precision
@@ -991,7 +1001,24 @@ stays open through VLLM-39; see
   signed TTFT and TPOT movement predicted from the selected rows, and an
   explicit roofline comparator that preserves this slice's accepted bytes and
   timestamps when the lookup record is absent. This task depends on COMP-64
-  and does not create another pricing model.
+  and does not create another pricing model. The candidate binding and exact
+  signed movement are implemented, but the frozen acceptance run is void on
+  complete request-result byte identity and the record covers only one decode
+  shape. CORE-58 owns the identity-proof boundary and COMP-73 owns the missing
+  target-record coverage; this task stays open on both.
+
+- CORE-58 (Precision; P1; S): repair the CORE-53 record-absent identity
+  acceptance boundary after its frozen run was voided solely by the fresh
+  random suffixes in vLLM's prefill and decode pool-local request identifiers.
+  Before rerunning, freeze either a canonical comparison projection that
+  retains every pricing-relevant and client-visible field, KV byte count and
+  timestamp while excluding only those two opaque identifiers, or a stable
+  identifier mechanism that does not change the accepted off path. Acceptance
+  requires two independent native sessions to match byte for byte on the
+  frozen boundary, an exact diagnostic proving that the unprojected results
+  differ only in the declared opaque fields, and unchanged accepted
+  `pd_session_v1` compact cells. The void run remains void and cannot be
+  retrospectively rescored.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and

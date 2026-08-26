@@ -8,7 +8,7 @@ import math
 from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 PS_PER_SECOND = 1_000_000_000_000
 
@@ -28,6 +28,34 @@ class GpuSpec:
 
 
 @dataclass(frozen=True)
+class KernelRequestShape:
+    """One scheduled request's exact token shape for record selection.
+
+    ``context_length`` is the context after this step's new tokens. A lookup
+    provider recovers the prior context as
+    ``context_length - num_new_tokens``. Analytical providers ignore this
+    projection and continue to price aggregate FLOPs and bytes.
+    """
+
+    num_new_tokens: int
+    context_length: int
+
+    def __post_init__(self) -> None:
+        for name in ("num_new_tokens", "context_length"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or type(value) is not int:
+                raise TypeError(f"{name} must be an integer")
+        if self.num_new_tokens <= 0:
+            raise ValueError("num_new_tokens must be positive")
+        if self.context_length < self.num_new_tokens:
+            raise ValueError("context_length must include every new token")
+
+    @property
+    def prior_context_tokens(self) -> int:
+        return self.context_length - self.num_new_tokens
+
+
+@dataclass(frozen=True)
 class KernelSpec:
     """One unit of GPU work whose duration the provider must estimate.
 
@@ -43,6 +71,8 @@ class KernelSpec:
     config: tuple[tuple[str, int], ...] = ()
     #: optional exact family decomposition of this fused kernel
     family_kernels: tuple[KernelSpec, ...] = ()
+    #: ordered request shapes used only by exact record selectors
+    request_shapes: tuple[KernelRequestShape, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -90,6 +120,32 @@ class ComputeProvider(abc.ABC):
         ``None`` selects the caller's scalar compatibility behavior.
         """
         return None
+
+    def pricing_provenance(self) -> dict[str, Any] | None:
+        """Return optional provider-owned run provenance.
+
+        The default is the compatibility path. It returns ``None``, so callers
+        do not add an empty provenance member to accepted result bytes.
+        """
+
+        return None
+
+
+@runtime_checkable
+class ProfileLookupBinding(Protocol):
+    """Translate a live kernel into one exact profile-table query."""
+
+    def profile_query(
+        self,
+        kernel: KernelSpec,
+    ) -> tuple[KernelSpec, GpuSpec] | None:
+        """Return one exact table query, or ``None`` for comparator service."""
+
+    def record_lookup(self, selected: bool) -> None:
+        """Record one provider estimate decision for run provenance."""
+
+    def pricing_provenance(self) -> dict[str, Any]:
+        """Return the immutable input identity plus the selection ledger."""
 
 
 class RooflineProvider(ComputeProvider):
@@ -306,6 +362,8 @@ class ProfileTableProvider(ComputeProvider):
         provenance: ProfileTableProvenance | None = None,
         *,
         enable_family_sum: bool = False,
+        lookup_binding: ProfileLookupBinding | None = None,
+        comparator: ComputeProvider | None = None,
     ):
         self._durations: dict[ProfileKey, int] = {}
         self._uncertainties: dict[ProfileKey, float] = {}
@@ -318,8 +376,26 @@ class ProfileTableProvider(ComputeProvider):
             self._uncertainties[key] = float(uncertainty)
         self.provenance = provenance
         self.enable_family_sum = enable_family_sum
+        if lookup_binding is not None and not isinstance(
+            lookup_binding, ProfileLookupBinding
+        ):
+            raise TypeError("lookup_binding must implement ProfileLookupBinding")
+        if comparator is not None and not isinstance(comparator, ComputeProvider):
+            raise TypeError("comparator must implement ComputeProvider")
+        if (lookup_binding is None) != (comparator is None):
+            raise ValueError("lookup_binding and comparator must be supplied together")
+        self.lookup_binding = lookup_binding
+        self.comparator = comparator
 
     def estimate(self, kernel: KernelSpec, gpu: GpuSpec) -> DurationEstimate:
+        if self.lookup_binding is not None:
+            query = self.lookup_binding.profile_query(kernel)
+            selected = query is not None
+            self.lookup_binding.record_lookup(selected)
+            if query is None:
+                assert self.comparator is not None
+                return self.comparator.estimate(kernel, gpu)
+            kernel, gpu = query
         key = (kernel.name, kernel.config, gpu.name)
         if key in self._durations:
             return DurationEstimate(
@@ -330,6 +406,24 @@ class ProfileTableProvider(ComputeProvider):
         if self.enable_family_sum and kernel.family_kernels:
             return self._estimate_family_sum(kernel, gpu)
         return self._interpolate(kernel, gpu)
+
+    def estimate_layers(
+        self,
+        kernel: KernelSpec,
+        gpu: GpuSpec,
+        num_layers: int,
+    ) -> tuple[DurationEstimate, ...] | None:
+        if self.lookup_binding is None:
+            return None
+        if self.lookup_binding.profile_query(kernel) is not None:
+            return None
+        assert self.comparator is not None
+        return self.comparator.estimate_layers(kernel, gpu, num_layers)
+
+    def pricing_provenance(self) -> dict[str, Any] | None:
+        if self.lookup_binding is None:
+            return None
+        return self.lookup_binding.pricing_provenance()
 
     def _estimate_family_sum(
         self,

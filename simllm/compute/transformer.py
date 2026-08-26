@@ -27,7 +27,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from simllm.compute.provider import ComputeProvider, GpuSpec, KernelSpec
+from simllm.compute.provider import (
+    ComputeProvider,
+    GpuSpec,
+    KernelRequestShape,
+    KernelSpec,
+)
 from simllm.core import StepRecord
 
 from .host import HostInitiationModel
@@ -240,6 +245,13 @@ def step_kernel(dims: ModelDims, record: StepRecord, num_sampled: int) -> Kernel
             ("kv_tokens", kv_read_tokens),
         ),
         family_kernels=tuple(step_kernels(dims, record, num_sampled)),
+        request_shapes=tuple(
+            KernelRequestShape(
+                num_new_tokens=request.num_new_tokens,
+                context_length=request.context_length,
+            )
+            for request in record.scheduled
+        ),
     )
 
 
