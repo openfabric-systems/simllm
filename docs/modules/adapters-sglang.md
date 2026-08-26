@@ -711,7 +711,22 @@ closed id.
   sweep. Acceptance requires calibrated throughput, median and p95 TTFT and
   TPOT within frozen bands on held-out loads, an explained direction for every
   curve segment, and exact preservation of the current constant-handoff,
-  packet-handoff and uncalibrated comparator records.
+  packet-handoff and uncalibrated comparator records. CORE-54's first scored
+  figure uses an explicitly labeled analytic capacity projection, not this
+  missing physical surface, so its 69.20% refutation does not close SGL-36.
+
+- SGL-38 (Precision; P1; M): project the driver-level handoff's remote KV
+  length into the decode scheduler's `KernelRequestShape`. The CORE-54
+  post-score qualification batches all 32 standard-decode requests together,
+  but the decode worker sees only their bootstrap input and therefore misses
+  candidate key
+  `05d1c33cdef9c12e25eb9159adc9dc80f1cd57b6333778f9efb5fb24cd6a74aa`
+  for 32 requests at prior KV length 2000. Carry the immutable remote-prefix
+  length through the join without fabricating KV tensors or changing the
+  scheduler's batching authority. Acceptance requires that exact key to select
+  once with zero comparator misses, the preregistered stable identity
+  projection to remain equal across repetitions, and every prompt, handoff,
+  token and timestamp in the feature-disabled session to remain byte-identical.
 
 ### Completeness
 

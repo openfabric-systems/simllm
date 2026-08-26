@@ -416,6 +416,7 @@ def build_in_process_scheduler(
     page_size: int = 1,
     context_length: int = 512,
     max_total_tokens: int = 4096,
+    max_prefill_tokens: int = 16384,
     max_running_requests: int = 8,
     chunked_prefill_size: int = -1,
     random_seed: int = 0,
@@ -437,6 +438,9 @@ def build_in_process_scheduler(
 
     ``disable_overlap_schedule`` is forced on, because the pump unrolls
     ``event_loop_normal`` and the overlap loop has different result semantics.
+    Tokenizer initialization is skipped because every request on this narrow
+    boundary already carries input token IDs and the simulator never decodes
+    text.
     """
 
     from sglang.srt.managers.scheduler import Scheduler, publish
@@ -451,11 +455,13 @@ def build_in_process_scheduler(
             page_size=int(page_size),
             context_length=int(context_length),
             max_total_tokens=int(max_total_tokens),
+            max_prefill_tokens=int(max_prefill_tokens),
             max_running_requests=int(max_running_requests),
             chunked_prefill_size=int(chunked_prefill_size),
             random_seed=int(random_seed),
             disable_overlap_schedule=True,
             disable_cuda_graph=True,
+            skip_tokenizer_init=True,
         )
         port_args = PortArgs.init_new(server_args)
         publish(server_args, role="scheduler")

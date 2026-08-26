@@ -1,0 +1,126 @@
+{
+  "schema": "simllm-deployment-curve-flagship-config-v1",
+  "study": {
+    "classification": "scored",
+    "label": "CORE-54 DeepSeek-V3 scored flagship",
+    "expectations_path": "examples/deployment_curve_v1/scored_expectations.json",
+    "expectations_commit": "c390618327de6950c542ef22698a337bf821e012"
+  },
+  "candidate_record": {
+    "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+    "sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+    "acceptance_status": "candidate"
+  },
+  "model": {
+    "id": "deepseek-ai/DeepSeek-V3",
+    "revision": "e815299b0bcbac849fa540c768ef21845365c9eb",
+    "config_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
+    "weights_required": false,
+    "dims": {
+      "num_layers": 61,
+      "hidden_size": 7168,
+      "intermediate_size": 18432,
+      "num_heads": 128,
+      "num_kv_heads": 128,
+      "head_size": 192,
+      "vocab_size": 129280,
+      "dtype_bytes": 2,
+      "num_experts": 256,
+      "top_k": 8,
+      "moe_intermediate_size": 2048,
+      "local_num_experts": 32
+    },
+    "kv_handoff_geometry": {
+      "num_layers": 61,
+      "num_kv_heads": 1,
+      "head_size": 576,
+      "element_bytes": 2
+    }
+  },
+  "live_session": {
+    "prefill_engines": 1,
+    "decode_engines": 1,
+    "simulated_gpus_per_engine": 8,
+    "context_length": 8192,
+    "max_total_tokens": 65536,
+    "max_running_requests": 64,
+    "token_id": 512,
+    "random_seed": 540026,
+    "handoff_constant_ps": 20000000,
+    "gpu": "b100",
+    "roofline_comparator_efficiency": 0.7
+  },
+  "exact_shape_observations": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "pool": "prefill",
+      "candidate_entry_index": 0,
+      "prompt_tokens": 1024,
+      "requests": 16,
+      "decode_output_tokens_per_request": 1
+    },
+    {
+      "anchor_id": "sglang_prefill_2k",
+      "pool": "prefill",
+      "candidate_entry_index": 2,
+      "prompt_tokens": 2048,
+      "requests": 8,
+      "decode_output_tokens_per_request": 1
+    },
+    {
+      "anchor_id": "sglang_prefill_4k",
+      "pool": "prefill",
+      "candidate_entry_index": 1,
+      "prompt_tokens": 4096,
+      "requests": 4,
+      "decode_output_tokens_per_request": 1
+    },
+    {
+      "anchor_id": "sglang_decode_standard",
+      "pool": "decode",
+      "candidate_entry_index": 3,
+      "prompt_tokens": 2000,
+      "requests": 32,
+      "decode_output_tokens_per_request": 1
+    }
+  ],
+  "publication_curves": [
+    {
+      "configuration_id": "sglang-standard-decode-ep72",
+      "configuration_label": "SGLang H100 standard decode, separate EP72 experiment",
+      "capacity_anchor_id": "sglang_decode_standard",
+      "target_nodes": 9,
+      "output_tokens_per_request": 4,
+      "base_per_token_delay_ps": 100000000000,
+      "offered_load_requests_per_second": [2000, 4000, 8000, 16000, 32000],
+      "evidence_class": "candidate-priced-role-scaled"
+    },
+    {
+      "configuration_id": "declared-place5-16p40d-what-if",
+      "configuration_label": "Declared PLACE-5 16P+40D what-if",
+      "capacity_anchor_id": "sglang_decode_standard",
+      "target_nodes": 40,
+      "output_tokens_per_request": 4,
+      "base_per_token_delay_ps": 100000000000,
+      "offered_load_requests_per_second": [10000, 20000, 40000, 80000, 160000],
+      "evidence_class": "declared-node-linear-what-if"
+    }
+  ],
+  "packet_observation": {
+    "request_id": "core54-standard-decode-kv2000",
+    "prompt_tokens": 2000,
+    "prefill_ranks": [0, 1, 2, 3, 4, 5, 6, 7],
+    "decode_ranks": [32, 33, 34, 35, 36, 37, 38, 39],
+    "point_link_rate_bps": 400000000000,
+    "sensitivity_link_rate_bps": 200000000000,
+    "pcie_submission_ps": 20000000,
+    "topology_authority": "disaggregated_target_topology_v1"
+  },
+  "second_legend": {
+    "deepseek_h800_production_decode_tokens_per_second": 266400,
+    "deepseek_h800_latency_status": "undisclosed",
+    "place5_what_if_prefill_nodes": 16,
+    "place5_what_if_decode_nodes": 40,
+    "place5_what_if_total_ranks": 448
+  }
+}

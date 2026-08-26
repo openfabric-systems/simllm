@@ -100,6 +100,8 @@ class SglangPdSessionConfig:
     provider: ComputeProvider = field(
         default_factory=lambda: RooflineProvider(efficiency=0.7)
     )
+    prefill_provider: ComputeProvider | None = None
+    decode_provider: ComputeProvider | None = None
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
     framework_version: str = SGLANG_VERSION
@@ -133,6 +135,10 @@ class SglangPdSessionConfig:
         _nonnegative_int("random_seed", self.random_seed)
         if not isinstance(self.provider, ComputeProvider):
             raise TypeError("provider must implement ComputeProvider")
+        for name in ("prefill_provider", "decode_provider"):
+            value = getattr(self, name)
+            if value is not None and not isinstance(value, ComputeProvider):
+                raise TypeError(f"{name} must implement ComputeProvider or be None")
         if not isinstance(self.gpu, GpuSpec):
             raise TypeError("gpu must be GpuSpec")
         if not isinstance(self.host_model, HostInitiationModel):
@@ -160,6 +166,15 @@ class SglangPdSessionConfig:
                         f"{role} {field_name} {size} does not divide simulated "
                         f"role width {width}"
                     )
+
+    def provider_for_role(self, role: ServingPoolRole) -> ComputeProvider:
+        """Resolve an optional pool-specific provider without changing defaults."""
+
+        if role is ServingPoolRole.PREFILL:
+            return self.prefill_provider or self.provider
+        if role is ServingPoolRole.DECODE:
+            return self.decode_provider or self.provider
+        raise ValueError(f"unsupported serving pool role {role!r}")
 
 
 @dataclass(frozen=True)
@@ -203,6 +218,7 @@ class SglangPdRequestResult:
     decode_records: tuple[StepRecord, ...]
     prefill_results: tuple[StepResult, ...]
     decode_results: tuple[StepResult, ...]
+    compute_pricing: dict[str, Any] | None = None
 
     def to_json(self) -> dict[str, object]:
         value = self.timeline.to_json()
@@ -219,6 +235,8 @@ class SglangPdRequestResult:
                 "decode_step_count": len(self.decode_records),
             }
         )
+        if self.compute_pricing is not None:
+            value["compute_pricing"] = dict(self.compute_pricing)
         return value
 
 
@@ -453,6 +471,7 @@ def _engine_process_main(connection: Any, config: _EngineLaunchConfig) -> None:
                 mode="virtual",
                 efficiency=getattr(config.provider, "efficiency", 0.7),
                 token_id=config.token_id,
+                model_dims_override=config.dims,
                 step_records_path=(
                     config.engine_workdir / "step-records.jsonl"
                 ).as_posix(),
@@ -467,6 +486,7 @@ def _engine_process_main(connection: Any, config: _EngineLaunchConfig) -> None:
             page_size=1,
             context_length=config.context_length,
             max_total_tokens=config.max_total_tokens,
+            max_prefill_tokens=max(config.max_total_tokens, 16_384),
             max_running_requests=config.max_running_requests,
             chunked_prefill_size=-1,
             random_seed=config.random_seed,
@@ -502,6 +522,14 @@ def _engine_process_main(connection: Any, config: _EngineLaunchConfig) -> None:
                 )
                 pump.submit([request])
                 connection.send({"ok": True})
+                continue
+            if operation == "pricing-provenance":
+                connection.send(
+                    {
+                        "ok": True,
+                        "pricing_provenance": config.provider.pricing_provenance(),
+                    }
+                )
                 continue
             if operation != "step":
                 raise ValueError(f"unknown engine operation {operation!r}")
@@ -673,6 +701,15 @@ class _ProcessPoolEngine:
             self._unfinished.remove(completion.request_id)
         return response
 
+    def pricing_provenance(self) -> dict[str, Any] | None:
+        """Return pricing selection evidence from the child-owned provider."""
+
+        response = self._rpc({"operation": "pricing-provenance"})
+        value = response["pricing_provenance"]
+        if value is not None and not isinstance(value, dict):
+            raise TypeError("pricing provenance must be an object or None")
+        return value
+
     def close(self) -> None:
         if not hasattr(self, "_process"):
             return
@@ -804,7 +841,7 @@ class SglangDisaggregatedSession:
                         ),
                         placement=self.manifests.placement,
                         dims=self.config.dims,
-                        provider=self.config.provider,
+                        provider=self.config.provider_for_role(role),
                         gpu=self.config.gpu,
                         host_model=self.config.host_model,
                         context_length=self.config.context_length,
@@ -1030,6 +1067,22 @@ class SglangDisaggregatedSession:
                 values.append(state.handoff.completed_at_ps)
         return tuple(value for value in values if value > now_ps)
 
+    def _compute_pricing(
+        self,
+        prefill: _ProcessPoolEngine,
+        decode: _ProcessPoolEngine,
+    ) -> dict[str, Any] | None:
+        configured = (
+            self.config.provider_for_role(ServingPoolRole.PREFILL),
+            self.config.provider_for_role(ServingPoolRole.DECODE),
+        )
+        if all(provider.pricing_provenance() is None for provider in configured):
+            return None
+        return {
+            "prefill": prefill.pricing_provenance(),
+            "decode": decode.pricing_provenance(),
+        }
+
     def run_requests(
         self,
         requests: Sequence[SglangPdRequest],
@@ -1210,6 +1263,10 @@ class SglangDisaggregatedSession:
                     decode_records=decode_records,
                     prefill_results=prefill_results,
                     decode_results=decode_results,
+                    compute_pricing=self._compute_pricing(
+                        state.prefill,
+                        state.decode,
+                    ),
                 )
             )
         return SglangPdConcurrentResult(

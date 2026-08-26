@@ -268,10 +268,16 @@ class SimWorkerConfig:
     replay_run_path: str | None = None
     communicator_tp_size: int | None = None
     communicator_events_path: str | None = None
+    model_dims_override: ModelDims | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.sample_identity, bool):
             raise TypeError("sample_identity must be a bool")
+        if self.model_dims_override is not None and not isinstance(
+            self.model_dims_override,
+            ModelDims,
+        ):
+            raise TypeError("model_dims_override must be a ModelDims or None")
         if self.mode not in ("virtual", "paced"):
             raise ValueError(
                 f"SIMLLM_SGLANG_MODE must be virtual or paced, got {self.mode!r}"
@@ -1098,6 +1104,28 @@ def model_dims_from_sglang(
     return dims
 
 
+def _worker_model_dims(
+    sim_config: SimWorkerConfig,
+    model_config: Any,
+    tp_size: Any,
+    *,
+    moe_ep_size: Any,
+    moe_dp_size: Any,
+    ep_num_redundant_experts: Any,
+) -> ModelDims:
+    """Use an explicit study projection or retain the strict config reader."""
+
+    if sim_config.model_dims_override is not None:
+        return sim_config.model_dims_override
+    return model_dims_from_sglang(
+        model_config,
+        tp_size,
+        moe_ep_size=moe_ep_size,
+        moe_dp_size=moe_dp_size,
+        ep_num_redundant_experts=ep_num_redundant_experts,
+    )
+
+
 # The runner stub and the worker (SGLang required beyond this point)
 
 class SimModelRunnerStub(_ModelRunnerBase):
@@ -1400,7 +1428,8 @@ class SimTpModelWorker(_TpWorkerBase):
             draft_attention_backend=draft_attention_backend,
         )
         tp_size = int(getattr(self.server_args, "tp_size", 1) or 1)
-        self.dims = model_dims_from_sglang(
+        self.dims = _worker_model_dims(
+            self.sim_config,
             self.model_config,
             tp_size,
             moe_ep_size=getattr(self.ps, "moe_ep_size", 1) or 1,

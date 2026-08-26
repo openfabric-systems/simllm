@@ -1,1 +1,3 @@
 * text eol=lf
+figures/*.pdf -text -diff
+figures/*.png -text -diff

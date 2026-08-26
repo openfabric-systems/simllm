@@ -1,0 +1,355 @@
+{
+  "schema": "simllm-deployment-curve-scored-expectations-v1",
+  "study": "CORE-54 scored DeepSeek-V3 deployment curve",
+  "date": "2026-08-26",
+  "status": "EXPECTATIONS_ONLY",
+  "chronology": {
+    "anchor_freeze_existed_before_this_freeze": true,
+    "candidate_record_existed_before_this_freeze": true,
+    "lookup_binding_existed_before_this_freeze": true,
+    "sglang_session_existed_before_this_freeze": true,
+    "scored_runner_existed_before_this_freeze": false,
+    "fitted_constants_existed_before_this_freeze": false,
+    "held_out_score_existed_before_this_freeze": false,
+    "flagship_figure_existed_before_this_freeze": false
+  },
+  "pre_observation_correction": {
+    "reason": "Implementation preflight found that the first standard-decode powers-of-two grid exceeded the 2^12 factor in 1000000000000 ps.",
+    "changed": "Only the standard-decode and MTP request rates were replaced with exact decimal divisors.",
+    "fit_existed_before_correction": false,
+    "held_out_value_was_read_before_correction": false,
+    "scored_observation_existed_before_correction": false
+  },
+  "dispatch_identity": {
+    "worktree": "core54run",
+    "worktree_path": "/data3/yifeng/simllm-dev/worktrees/core54run",
+    "branch": "codex/core54run_flagship",
+    "base_main_sha": "c41065b709dc600055b4aafe73222557ef9ffdeb"
+  },
+  "dependency_gate": {
+    "must_all_be_ancestors_of_run_head": [
+      {
+        "dependency": "CORE-53 lookup binding",
+        "merge_commit": "4ff1c3cb30f6907e215bfd69a3f594e4a2a8426f"
+      },
+      {
+        "dependency": "Hopper candidate record",
+        "merge_commit": "ca9e0bc10f73fcb419a4778dcfc18842878147dc"
+      },
+      {
+        "dependency": "SGL-33 SGLang disaggregated session",
+        "merge_commit": "c41065b709dc600055b4aafe73222557ef9ffdeb"
+      }
+    ],
+    "dispatch_before_all_merged": "VOID"
+  },
+  "frozen_inputs": {
+    "anchor_freeze": {
+      "path": "examples/deployment_curve_v1/expectations.json",
+      "sha256": "b1a918ed02329a242d033943fb18b93fd9be8fdaa18093477e6abb8298540df5"
+    },
+    "candidate_record": {
+      "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+      "sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+      "required_acceptance_status": "candidate",
+      "calibration_claim": false
+    },
+    "candidate_profile_projection": {
+      "path": "examples/hopper_kernel_cycle_candidate_v1/profile-table.json",
+      "sha256": "116f8fc58d82a92d87653a0e5d6203a5a6ede1fdd31759493367657ea85033f4"
+    },
+    "candidate_device_service_projection": {
+      "path": "examples/hopper_kernel_cycle_candidate_v1/device-service-entries.json",
+      "sha256": "bf1f4a2a9fcba459de864b1f6511d33eab77e656330d002d44cee5452eb508a3"
+    },
+    "deepseek_projection": {
+      "path": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json",
+      "sha256": "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2"
+    },
+    "sglang_session_result": {
+      "path": "examples/sglang_pd_session_v1/results.json",
+      "sha256": "d9e3104acf2c593d78df292d6ee3939e56e8ec2cea59cf142326c95fcd80b8fd"
+    },
+    "place5_result": {
+      "path": "examples/disaggregated_target_topology_v1/results.json",
+      "sha256": "45aa34874370c353d8c5a15a6b09939321cc1f4fafaed66d89529e8da37a7715"
+    },
+    "deepseek_config": {
+      "required_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
+      "weights_required": false
+    }
+  },
+  "allocation_ruling": {
+    "source_interpretation": "The four-node prefill and nine-node decode tables are separate benchmark experiments on the disclosed 12-node cluster.",
+    "prefill_experiment": {
+      "nodes": 4,
+      "ranks": 32,
+      "gpus_per_node": 8,
+      "expert_parallelism": 32,
+      "simultaneous_with_decode_experiment": false
+    },
+    "decode_experiment": {
+      "nodes": 9,
+      "ranks": 72,
+      "gpus_per_node": 8,
+      "expert_parallelism": 72,
+      "simultaneous_with_prefill_experiment": false
+    },
+    "structural_comparator_only": {
+      "prefill_plus_decode_nodes": 13,
+      "ranks": 104,
+      "may_be_called_96_gpu_system": false
+    },
+    "joint_deployments": "Second-legend what-if context only, never a disclosure reproduction anchor."
+  },
+  "largest_faithful_live_scale": {
+    "session_shape": {
+      "prefill_engines": 1,
+      "decode_engines": 1,
+      "simulated_gpus_per_engine": 8,
+      "live_ranks": 16
+    },
+    "reason": "The landed session has physical curve evidence only for isolated stock schedulers under one serialized parent clock. Adding engine processes changes parent scheduling rather than demonstrating parallel node service.",
+    "conserved_target_mapping": {
+      "prefill": {
+        "live_scored_role_nodes": 1,
+        "target_scored_role_nodes": 4,
+        "throughput_multiplier": {"numerator": 4, "denominator": 1},
+        "per_node_observables_unchanged": true
+      },
+      "decode": {
+        "live_scored_role_nodes": 1,
+        "target_scored_role_nodes": 9,
+        "throughput_multiplier": {"numerator": 9, "denominator": 1},
+        "per_node_observables_unchanged": true
+      }
+    },
+    "placement_authority": "The full EP32 and EP72 role subsets and the joint 16-prefill plus 40-decode context use disaggregated_target_topology_v1. The live one-plus-one scheduler scale is never relabeled as a full live engine deployment."
+  },
+  "expected_curve_shapes": [
+    {
+      "configuration_family": "separate-prefill-1k-2k-4k",
+      "expectation": "Throughput rises with offered load toward a prompt-length-dependent plateau; inverse per-token delay falls after queueing becomes material; longer prompts order the plateau 1K above 2K above 4K."
+    },
+    {
+      "configuration_family": "separate-standard-decode",
+      "expectation": "Throughput rises toward the priced standard-decode capacity while inverse per-token delay decreases as queueing accumulates."
+    },
+    {
+      "configuration_family": "joint-16-prefill-plus-40-decode-what-if",
+      "expectation": "The curve is decode-limited at saturation and appears only in the second legend as declared PLACE-5 context."
+    }
+  ],
+  "offered_load_sweep_requests_per_second": {
+    "sglang_prefill_1k": [32, 64, 128, 256],
+    "sglang_prefill_2k": [16, 32, 64, 128],
+    "sglang_prefill_4k": [8, 16, 32, 64],
+    "sglang_decode_standard": [2000, 4000, 8000, 16000, 32000],
+    "sglang_decode_simulated_mtp": [1000, 2000, 4000, 8000, 16000],
+    "rule": "Every load divides 1000000000000 ps exactly. The MTP grid is frozen but not executed until its exact price exists."
+  },
+  "constants": {
+    "tunable": [
+      {
+        "id": "intra_node_collective_surcharge_ps",
+        "unit": "ps_per_routed_collective",
+        "initial": 15064014,
+        "envelope": {"lower": 0, "upper": 30128029},
+        "application_count_per_step": 116,
+        "application_arithmetic": "2 routed collectives per MoE layer times 58 MoE layers",
+        "provenance": {
+          "source": "examples/collective_fixed_cost_envelope_v1/RESULTS.md",
+          "locator": "intra-node-fixed-cost-v1 width-8 selectable arms",
+          "physical_basis": "Zero is the modeled propagation floor; 30128029 ps is the measured width-8 pessimistic selectable surcharge."
+        },
+        "disposition": "fitted-parameter-not-measurement"
+      }
+    ],
+    "fixed_but_propagated": [
+      {
+        "id": "pcie_submission_ps",
+        "unit": "ps",
+        "selected": 20000000,
+        "envelope": {"lower": 100000, "upper": 20000000},
+        "provenance": {
+          "source": "examples/rnic_pcie_v1/results.csv and examples/pd_session_fabric_handoff_v1/expectations.json",
+          "physical_basis": "The analytical host-store floor is 100000 ps and the accepted request-level packet arm declares 20000000 ps."
+        },
+        "reason_not_tuned": "No calibration-split anchor provides an exact handoff latency observable."
+      },
+      {
+        "id": "fabric_link_rate_bps",
+        "unit": "bits_per_second",
+        "selected": 400000000000,
+        "envelope": {"lower": 200000000000, "upper": 400000000000},
+        "provenance": {
+          "source": "examples/disaggregated_target_topology_v1/results.json",
+          "physical_basis": "PLACE-5 fixes 400 Gbit/s physical links; the 200 Gbit/s endpoint is the frozen sensitivity arm."
+        },
+        "reason_not_tuned": "The public cluster disclosure names InfiniBand but provides no exact transfer-latency calibration anchor."
+      }
+    ],
+    "derived_and_propagated": [
+      {
+        "id": "kv_handoff_packet_service_ps",
+        "unit": "ps",
+        "formula": "last_required_arrival_ps - first_packet_start_ps from the packet arm",
+        "lower_rule": "PLACE-5 link arithmetic at 400 Gbit/s plus fixed propagation",
+        "upper_rule": "the same exact packet bytes and endpoints at 200 Gbit/s",
+        "reason_not_tuned": "Packet service is a backend result, not an adjustable fit constant."
+      }
+    ]
+  },
+  "pre_tuning_prediction_model": {
+    "formula": "per_node_tokens * 1000000000000 / (candidate_service_ps + 116 * intra_node_collective_surcharge_ps)",
+    "point_constant_ps": 15064014,
+    "band_rule": "Lower throughput uses the upper collective envelope; upper throughput uses the lower collective envelope.",
+    "candidate_scope": "Noncollective full-depth per-rank service from the pinned candidate. The predicted band is deterministic and is not a confidence interval."
+  },
+  "pre_tuning_predicted_bands": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "candidate_entry_index": 0,
+      "candidate_service_ps": 1363249960000,
+      "per_node_tokens": 131072,
+      "lower": {"numerator": 32768000000000000, "denominator": 341686202841},
+      "point": {"numerator": 16384000000000000, "denominator": 170624673203},
+      "upper": {"numerator": 3276800000000, "denominator": 34081249},
+      "unit": "tokens_per_second_per_node"
+    },
+    {
+      "anchor_id": "sglang_prefill_2k",
+      "candidate_entry_index": 2,
+      "candidate_service_ps": 1420296672000,
+      "per_node_tokens": 131072,
+      "lower": {"numerator": 32768000000000000, "denominator": 355947880841},
+      "point": {"numerator": 16384000000000000, "denominator": 177755512203},
+      "upper": {"numerator": 4096000000000, "denominator": 44384271},
+      "unit": "tokens_per_second_per_node"
+    },
+    {
+      "anchor_id": "sglang_prefill_4k",
+      "candidate_entry_index": 1,
+      "candidate_service_ps": 1595133392750,
+      "per_node_tokens": 131072,
+      "lower": {"numerator": 65536000000000000, "denominator": 799314122057},
+      "point": {"numerator": 65536000000000000, "denominator": 798440409187},
+      "upper": {"numerator": 524288000000000, "denominator": 6380533571},
+      "unit": "tokens_per_second_per_node"
+    },
+    {
+      "anchor_id": "sglang_decode_standard",
+      "candidate_entry_index": 3,
+      "candidate_service_ps": 28604120000,
+      "per_node_tokens": 256,
+      "lower": {"numerator": 64000000000000, "denominator": 8024742841},
+      "point": {"numerator": 32000000000000, "denominator": 3793943203},
+      "upper": {"numerator": 6400000000, "denominator": 715103},
+      "unit": "tokens_per_second_per_node"
+    },
+    {
+      "anchor_id": "sglang_decode_simulated_mtp",
+      "status": "BLOCKED",
+      "prediction": null,
+      "reason": "The candidate record has no EP72 MTP batch-16 KV-4000 cell.",
+      "dependency": "COMP-72 resumable Merlin execution"
+    }
+  ],
+  "fit_rule": {
+    "visible_anchor_ids": ["sglang_prefill_1k", "sglang_decode_standard"],
+    "forbidden_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k",
+      "sglang_decode_simulated_mtp"
+    ],
+    "objective": "Minimize the sum of squared relative point errors across calibration anchors inside every closed physical envelope.",
+    "resolution": "integer picoseconds",
+    "tie_break": "select the smallest physical value",
+    "out_of_envelope_rule": "select the in-envelope minimizer and report the calibration miss; never widen or clip an envelope after observing held-out data",
+    "freeze_after_fit": true
+  },
+  "scoring_rule": {
+    "scorable_held_out_anchor_ids": ["sglang_prefill_2k", "sglang_prefill_4k"],
+    "blocked_held_out_anchor_ids": ["sglang_decode_simulated_mtp"],
+    "maximum_absolute_relative_error": {"numerator": 1, "denominator": 20},
+    "formula": "abs(predicted_point - published) / published",
+    "decision": "PASS only when the maximum point error over all scorable held-out anchors is at most 0.05. Propagated intervals are reported but cannot convert a point-error miss into a pass.",
+    "one_shot": "Held-out values are read once after the fit artifact is serialized and content-addressed.",
+    "mtp_rule": "Do not read the MTP numeric anchor in the pricing or scoring path. Emit a BLOCKED row naming COMP-72 and no prediction.",
+    "overall_scope": "The numerical verdict covers the two priced prefill held-out anchors only and always names the MTP gap."
+  },
+  "uncertainty_rule": {
+    "method": "deterministic-additive-interval-v1",
+    "record_interval": "Use the candidate record's exact point. The single retained DeepSeek seed supplies zero statistical half-width and is labeled insufficient-replays, not stable.",
+    "distribution_interval": "Propagate the record's zero CV contribution explicitly; do not invent repeat evidence.",
+    "constant_interval": "Evaluate both endpoints of every declared constant envelope.",
+    "packet_interval": "Evaluate the same bytes and endpoints at the fixed 400 Gbit/s point and 200 Gbit/s sensitivity edge.",
+    "inverse_delay": "Invert only after the complete positive delay interval, reversing its endpoints."
+  },
+  "stable_cross_run_identity_fields": {
+    "included": [
+      "timeline.request_id",
+      "timeline.admitted_at_ps",
+      "timeline.prefill_eligible_at_ps",
+      "timeline.prefill_completed_at_ps",
+      "timeline.handoff.request_id",
+      "timeline.handoff.submitted_at_ps",
+      "timeline.handoff.completed_at_ps",
+      "timeline.handoff.kv_bytes",
+      "timeline.handoff.pricing_arm",
+      "timeline.handoff.authority",
+      "timeline.decode_eligible_at_ps",
+      "timeline.decode_token_completed_at_ps",
+      "prefill_engine_id",
+      "decode_engine_id",
+      "bootstrap_token_id",
+      "decode_token_ids",
+      "prefill_step_count",
+      "decode_step_count",
+      "join_metadata excluding process identifiers",
+      "compute_pricing record_sha256, acceptance_status, pool and selected entry key hashes"
+    ],
+    "excluded": [
+      "prefill_internal_request_id",
+      "decode_internal_request_id",
+      "prefill_process_id",
+      "decode_process_id",
+      "complete serialized request-result bytes"
+    ],
+    "reason": "Frontend-owned pool-local request suffixes and operating-system process IDs are fresh per run and are not client-visible, pricing-relevant or timing-relevant identities.",
+    "violation": "VOID"
+  },
+  "figure_contract": {
+    "canvas_inches": [7.0, 4.33],
+    "primary_format": "PDF",
+    "companion_format": "PNG",
+    "x": "aggregated output throughput, increasing rightward",
+    "y": "inverse per-token request delay, increasing upward",
+    "optimal_corner": "upper-right",
+    "dry_run_watermark": false,
+    "main_legend": "simulated SGLang configurations with deterministic bands",
+    "second_legend": [
+      "DeepSeek H800 production profile",
+      "declared 16-prefill plus 40-decode PLACE-5 what-if"
+    ],
+    "prefill_panel": "Published and simulated 1K, 2K and 4K per-node prefill anchors, because input throughput has no honest coordinate on the main output-throughput axis.",
+    "verdict_annotation": "Maximum scorable held-out point error plus an explicit MTP BLOCKED on COMP-72."
+  },
+  "fatal_guards": [
+    "dependency merge is absent from run head",
+    "frozen input digest or candidate status disagrees",
+    "prefill and decode disclosure experiments are rendered as one 96-GPU allocation",
+    "a scale reduction is missing its exact conserved multiplier",
+    "a fit path reads any held-out or context-only anchor",
+    "a stable identity guard compares complete serialized request results",
+    "the MTP anchor receives a non-MTP or imputed price",
+    "held-out scoring occurs before the fit artifact is frozen",
+    "a fitted value leaves its physical envelope",
+    "the figure carries a dry-run watermark or omits the verdict scope"
+  ],
+  "expected_disposition": {
+    "if_scorable_max_error_at_most_5_percent": "Publish a scoped PASS for the two priced held-out prefill anchors and keep the MTP anchor BLOCKED on COMP-72.",
+    "if_scorable_max_error_above_5_percent": "Publish REFUTED with every per-anchor row, the dominant mechanistic contributor and a registered residual.",
+    "core54_closure": "Only if the literal registered acceptance text is satisfied; a blocked or refuted required anchor keeps CORE-54 open."
+  }
+}
