@@ -13,10 +13,18 @@
   "chronology": {
     "core59_public_result_known": true,
     "core60_calibration_comparison_performed": false,
-    "held_out_numeric_values_accessed": false,
+    "held_out_numeric_values_accessed": true,
     "mechanism_service_derived_before_comparison": true,
     "scored_comparison_performed": false,
     "visible_calibration_values_already_public_from_core59": true
+  },
+  "invalidation": {
+    "external_source_exposed_forbidden_anchor_ids": [
+      "sglang_prefill_2k",
+      "sglang_prefill_4k"
+    ],
+    "reason": "The official SGLang overlap source rendered its evaluation table during source inspection before this freeze. The values were not used, but literal no-held-out-access acceptance is not met.",
+    "replacement_owner": "COMP-75"
   },
   "composition": {
     "candidate_compute_service_ps": 1363249960000,
@@ -302,7 +310,7 @@
       "reason": "SGL-38 remains the sole decode-bind owner and CORE-60 changes no decode service."
     }
   ],
-  "status": "EXPECTATIONS_ONLY",
+  "status": "EXPECTATIONS_ONLY_VOID",
   "task": "CORE-60",
   "traffic": {
     "combine": {

@@ -895,6 +895,20 @@ and [the target-topology result](../../examples/disaggregated_target_topology_v1
 
 ### Precision
 
+- TRAF-66 (Precision; P1; M): resolve CORE-60's finite two-batch-overlap
+  boundary remainder after its source-backed EP32 composition moves the 1K
+  calibration row from 51.4821% low to 0.5924% low. Capture the pinned SGLang
+  prefill schedule's two child batches through the prologue, all per-layer
+  dispatch and combine yield boundaries, the steady-state interleave and the
+  epilogue. Derive exposed boundary service from those events and the existing
+  component compute and packet services, then freeze the form and its envelope
+  before comparing it with the visible residual. The current service surplus
+  is exactly `390565749501320 / 28837` ps, numerically 1.009943992 frozen
+  dispatch phases, but that proximity is not authority to subtract a phase.
+  Acceptance requires exact child-stage and event conservation, an
+  independently justified signed movement, preservation of CORE-60 and its
+  packet evidence, no fitted overlap or boundary fraction, no held-out numeric
+  access and no scored flagship rerun. Decode pricing remains outside scope.
 - TRAF-51 (Precision; P1; L): complete the Slingshot fabric calibration
   beyond the steady-state partial. The wave-19 comparison
   ([merlin ss fabric calibration](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md),

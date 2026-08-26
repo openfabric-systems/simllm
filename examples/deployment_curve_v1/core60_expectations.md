@@ -1,10 +1,14 @@
 # CORE-60 EP32 prefill composition freeze
 
-Status: **EXPECTATIONS_ONLY**. The physical service below was derived before
-the CORE-60 calibration comparison. The visible calibration result was already
-public from CORE-59, but it was not used to select a contract, tune a value or
-compute the movement below. No held-out target value was read, no scored
-comparison is authorized, and no fitted or free constant exists.
+Status: **EXPECTATIONS_ONLY, PROTOCOL VOID**. The physical service below was
+derived before the CORE-60 calibration comparison. The visible calibration
+result was already public from CORE-59, but it was not used to select a
+contract, tune a value or compute the movement below. During source inspection,
+however, the official SGLang page rendered its evaluation table and exposed
+the forbidden 2K and 4K prefill rows. Those numbers were not used, but literal
+no-held-out-access acceptance is not met. No scored comparison is authorized
+and no fitted or free constant exists. COMP-75 owns a clean independent
+repetition.
 
 ## Adopted contracts and expected signed effects
 
