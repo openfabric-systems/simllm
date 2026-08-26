@@ -24,8 +24,6 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
-from typing_extensions import Self
-
 from simllm.compute import (
     GPU_ENVELOPES,
     ComputeProvider,
@@ -1237,7 +1235,7 @@ class SglangDisaggregatedSession:
         for engine in (*self.prefill_engines, *self.decode_engines):
             engine.close()
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> SglangDisaggregatedSession:  # noqa: PYI034 (Self needs Python 3.11)
         return self
 
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
