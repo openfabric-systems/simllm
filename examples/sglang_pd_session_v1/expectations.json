@@ -1,0 +1,149 @@
+{
+  "schema": "simllm-sglang-pd-session-expectations-v1",
+  "as_of_commit": "4f7a316926ecd55fb00d376e5aae1bcfc01c1929",
+  "chronology": {
+    "native_seam_audit_preceded_freeze": true,
+    "implementation_existed_before_freeze": false,
+    "scored_run_existed_before_freeze": false
+  },
+  "frontend": {
+    "name": "sglang",
+    "version": "0.5.19.dev345+gbfeae4e79",
+    "commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+    "python_version": "3.10.18",
+    "device": "cpu",
+    "dtype": "float32",
+    "model_id": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "model_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "fixture_sha256": "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341"
+  },
+  "source_audit_sha256": {
+    "simllm/adapters/sglang/worker.py": "de1da841b12eedf246b7c8810566e0da1ad219563230805bf28e192924d3fc21",
+    "simllm/adapters/sglang/pump.py": "8c3b2c92b622bf29df932a06a5e80d332a9d3b9d4071227a4254fbbe034ebf04",
+    "simllm/core/pd_session.py": "7970d5573d683f94b96e8075a32a564646ccde34fea64e594aa7a26010592052",
+    "simllm/placement/disaggregated.py": "83a90bae0ff47fcb38a7dc6115f30b4b0db4f77ab702f05f9a2912e89ff9ef12",
+    "simllm/traffic/kv_handoff.py": "27e6e4671c51fccb4c48af86f60797964f733e6c20c04d3f3e5315303ef3b94b",
+    "sglang/srt/arg_groups/pd_disaggregation_hook.py": "87a2468af7d584a79d76683a9c821266189f49de7898e02ceea3d4270fdba005",
+    "sglang/srt/disaggregation/fake/conn.py": "b0d6a7889317b68308bc258a56bf2b72b8feae7b4ad37a272f9372904d204375",
+    "sglang/srt/disaggregation/prefill.py": "b7dfc5e984207cb9cc17806382580cd5b7678ad95296c963fadc021069c69877",
+    "sglang/srt/disaggregation/decode.py": "a3677012e2cb2e86be5f643e0557ef32c0f9f9581211774771c6c6901c468998",
+    "sglang/srt/managers/scheduler.py": "1f620da28d06edd7253b101ed1d96b6b35a25c1a579a0faa0c849d8d4b6198a8"
+  },
+  "native_seam_audit": {
+    "prefill": "resolver rejects the fake transfer backend",
+    "decode": "native initialization requires registered KV metadata absent from the bufferless simulated worker",
+    "selected_join": "driver-level",
+    "timing_authority": "parent CORE-51 virtual clock"
+  },
+  "baseline_sha256": {
+    "examples/m4/fixtures/sglang-m3-steps.jsonl": "656772148cd8fbda71a25af08215d806f38f3886abb068f72c9e0ddc8cb7c26f",
+    "tests/fixtures/sglang/communicator_flag_identity.jsonl": "2049b0f65d16df2b5c3b7314da067e10ca1297d79cfc328cab265b653ecaea31",
+    "tests/fixtures/sglang/communicator_flag_identity_sampled.jsonl": "ac9e54528795ec4a2279322e2984bf394bd83b8d0db06359d41c19c01b25a8a2",
+    "examples/sglang_worker_seam_v1/results.json": "c3216b02c06ec057fc7e2dc04eb959c739cb4248196ee90d6d5833d23b847408",
+    "examples/sglang_composed_deployment_v1/fixtures/routing-trace.jsonl": "da0096b696564f365003d11565f4cbc5bed33ab47f7236c52b3ca7c989fd4982",
+    "examples/pd_session_v1/results.json": "9660a5bcd47706fe857694d68340aab9fdab2d7096632624e6f310118d4a435e",
+    "examples/pd_session_concurrent_v1/results.json": "ce6cbd1500ddfbd09baf899b7e22a3f692892aa3d0d92c2b55856f6968939bb2",
+    "examples/pd_session_fabric_handoff_v1/results.json": "969a1d9dde209921e15aeeb4cac573b493e53155583b054236e98aad00a03aa5"
+  },
+  "deployment": {
+    "scheduler_tensor_parallel_size": 1,
+    "simulated_gpus_per_engine": 8,
+    "max_running_requests": 8,
+    "pool_ratios": [
+      {"prefill_engines": 1, "decode_engines": 1},
+      {"prefill_engines": 1, "decode_engines": 2},
+      {"prefill_engines": 2, "decode_engines": 1}
+    ],
+    "arrangement_rule": "each role enables DP attention and uses its complete simulated role width for attn_dp, dense_dp and ep"
+  },
+  "request_sweep": {
+    "offered_load_requests_per_second": [8000, 16000, 32000],
+    "interarrival_ps": [125000000, 62500000, 31250000],
+    "prompt_tokens": [8, 16],
+    "requests_per_cell": 8,
+    "decode_output_tokens_per_request": 4,
+    "declared_handoff_ps": 100000000,
+    "cells": 18
+  },
+  "constant_sensitivity": {
+    "prompt_tokens": 8,
+    "handoff_ps": [100000000, 200000000],
+    "expected_ttft_delta_ps": 100000000,
+    "expected_tpot_delta_ps": 0
+  },
+  "packet_arm": {
+    "prompt_tokens": 8,
+    "aggregate_kv_bytes": 393216,
+    "rank_pairs": [[0, 8], [1, 9], [2, 10], [3, 11], [4, 12], [5, 13], [6, 14], [7, 15]],
+    "linkspeed_bps": 400000000000,
+    "pcie_submission_ps": 20000000,
+    "constant_comparator_ps": 100000000,
+    "expected_metric_relation": "packet TTFT minus constant TTFT equals packet handoff duration minus constant handoff duration",
+    "expected_tpot_delta_ps": 0,
+    "signed_delta": true
+  },
+  "curve_record": {
+    "schema": "simllm-deployment-curve-v1",
+    "point_schema": "simllm-deployment-curve-point-v1",
+    "exact_representation": "integer numerator and denominator pairs",
+    "orientation": "aggregated output throughput rightward and inverse per-token request delay upward",
+    "delay_direction_is_scored": false
+  },
+  "flagship_structural_render": {
+    "prefill_nodes": 4,
+    "decode_nodes": 9,
+    "gpus_per_node": 8,
+    "prefill": {"attention_data_parallel_size": 32, "dense_data_parallel_size": 32, "expert_parallel_size": 32},
+    "decode": {"attention_data_parallel_size": 72, "dense_data_parallel_size": 1, "expert_parallel_size": 72},
+    "combined_nodes": 13,
+    "combined_ranks": 104,
+    "core54_claimed_ranks": 96,
+    "arithmetic_disagreement_requires_core57": true
+  },
+  "physical_bounds": {
+    "per_step_service_ps": {"floor": 1000000, "ceiling": 100000000000},
+    "client_visible_decode_tokens_per_second": {"floor": 10, "ceiling": 100000},
+    "packet_shard_serialization_floor_ps": 983040,
+    "packet_service_ceiling_ps": 81457280
+  },
+  "exact_relations": [
+    "each stable identity is admitted handed off and terminated exactly once",
+    "each stable identity maps to distinct prefill-local and decode-local identities",
+    "every terminal carries exactly four ordered decode tokens",
+    "every request time-to-first-token decomposition has zero-picosecond residual",
+    "increasing the handoff constant by 100000000 ps moves TTFT by exactly 100000000 ps and TPOT by zero",
+    "packet versus constant TTFT moves by the exact signed handoff difference while TPOT is unchanged",
+    "packet chunks bytes and endpoints derive from and conserve the one-plus-one placement",
+    "every curve point conserves requests and output tokens and uses the vLLM curve schemas",
+    "every arrangement group has the frozen role-local cardinality",
+    "all frozen baseline files retain their SHA-256 digests"
+  ],
+  "behavioral_relations": [
+    "the highest offered load produces a genuine multi-request scheduler batch in both roles for every pool ratio",
+    "aggregated output throughput is nondecreasing within every prompt and pool-ratio curve",
+    "doubling prompt length doubles aggregate KV handoff bytes exactly"
+  ],
+  "evidence_classes": {
+    "concurrent_exact_rows": 18,
+    "constant_sensitivity_rows": 1,
+    "packet_exact_rows": 1,
+    "curve_families": 6,
+    "curve_points": 18,
+    "structural_flagship_rows": 1,
+    "fatal_conservation_and_identity": "unscored"
+  },
+  "fatal_guards": [
+    "pinned_source_model_fixture_or_runtime_disagreement",
+    "accepted_baseline_byte_disagreement",
+    "pool_role_process_isolation_or_parent_clock_disagreement",
+    "duplicate_lost_or_aliased_request_identity",
+    "admission_handoff_terminal_or_token_conservation_failure",
+    "nonmonotonic_timestamp_or_ttft_decomposition_disagreement",
+    "constant_sensitivity_or_packet_signed_delta_disagreement",
+    "arrangement_group_or_packet_endpoint_disagreement",
+    "curve_schema_request_or_output_token_conservation_failure",
+    "missing_multi-request_batch_in_either_role",
+    "step_service_decode_rate_or_packet_service_outside_physical_bounds"
+  ]
+}
