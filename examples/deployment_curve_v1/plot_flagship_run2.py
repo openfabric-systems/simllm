@@ -146,7 +146,7 @@ def render_flagship_figure(
         gridspec_kw={"width_ratios": (1.8, 1.0)},
         constrained_layout=False,
     )
-    figure.subplots_adjust(left=0.10, right=0.97, bottom=0.23, top=0.81, wspace=0.30)
+    figure.subplots_adjust(left=0.10, right=0.97, bottom=0.23, top=0.77, wspace=0.30)
     simulated_handles = []
     disclosure_handles = []
     context_handles = []
@@ -274,26 +274,6 @@ def render_flagship_figure(
         framealpha=0.94,
         edgecolor="#cccccc",
     )
-    curve_axis.text(
-        0.02,
-        0.04,
-        "Decode calibration miss\n"
-        f"{plot['decode_declared_step_ms']:.1f} ms declared vs "
-        f"{plot['decode_implied_step_ms']:.1f} ms implied\n"
-        f"throughput prediction {plot['decode_error_percent']:.2f}% low",
-        transform=curve_axis.transAxes,
-        ha="left",
-        va="bottom",
-        fontsize=6.5,
-        bbox={
-            "boxstyle": "round,pad=0.3",
-            "facecolor": "white",
-            "edgecolor": "#bbbbbb",
-            "alpha": 0.94,
-        },
-        zorder=8,
-    )
-
     prompt = [row["prompt_k"] for row in plot["prefill"]]
     published = [row["published"] for row in plot["prefill"]]
     predicted = [row["predicted"] for row in plot["prefill"]]
@@ -350,11 +330,14 @@ def render_flagship_figure(
     figure.suptitle(
         "DeepSeek-V3 second scored run: "
         f"held-out prefill {plot['verdict']} "
-        f"(max {plot['maximum_error_percent']:.2f}%); "
-        "MTP BLOCKED (COMP-72)",
-        fontsize=9.2,
+        f"(max {plot['maximum_error_percent']:.2f}%)\n"
+        "MTP BLOCKED (COMP-72); decode calibration "
+        f"{plot['decode_error_percent']:.2f}% low "
+        f"({plot['decode_declared_step_ms']:.1f} ms declared vs "
+        f"{plot['decode_implied_step_ms']:.1f} ms implied)",
+        fontsize=8.4,
         fontweight="bold",
-        y=0.97,
+        y=0.975,
     )
     figure.text(
         0.5,
