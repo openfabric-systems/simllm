@@ -93,7 +93,11 @@ class PlacementManifest:
         for rank in raw["ranks"]:
             if rank["pool_role"] is None:
                 del rank["pool_role"]
-        path.write_text(json.dumps(raw, indent=2) + "\n")
+        path.write_text(
+            json.dumps(raw, indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
         return path
 
     @classmethod
@@ -447,7 +451,11 @@ class FabricTopologyManifest:
 
     def save(self, path: str | Path) -> Path:
         path = Path(path)
-        path.write_text(json.dumps(asdict(self), indent=2) + "\n")
+        path.write_text(
+            json.dumps(asdict(self), indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
         return path
 
     @classmethod

@@ -1,6 +1,7 @@
 import hashlib
 import json
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
@@ -117,6 +118,32 @@ def test_disaggregated_manifests_round_trip(tmp_path):
     )
     assert fabric == manifests.fabric
     fabric.validate()
+
+
+def test_manifest_writers_pin_utf8_lf(monkeypatch, tmp_path):
+    original_open = Path.open
+    write_options = {}
+
+    def tracked_open(path, *args, **kwargs):
+        mode = kwargs.get("mode", args[0] if args else "r")
+        if path.parent == tmp_path and mode == "w":
+            write_options[path.name] = (
+                kwargs.get("encoding"),
+                kwargs.get("newline"),
+            )
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", tracked_open)
+    manifests = disaggregated_manifests(prefill_nodes=1, decode_nodes=1)
+    placement_path = manifests.placement.save(tmp_path / "placement.json")
+    fabric_path = manifests.fabric.save(tmp_path / "fabric.json")
+
+    assert write_options == {
+        "fabric.json": ("utf-8", "\n"),
+        "placement.json": ("utf-8", "\n"),
+    }
+    assert b"\r\n" not in placement_path.read_bytes()
+    assert b"\r\n" not in fabric_path.read_bytes()
 
 
 @pytest.mark.parametrize(
