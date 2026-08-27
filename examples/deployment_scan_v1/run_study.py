@@ -18,7 +18,7 @@ from dataclasses import replace
 from fractions import Fraction
 from itertools import pairwise
 from pathlib import Path
-from typing import Any, NoReturn, Self, TypeVar
+from typing import Any, NoReturn, TypeVar
 
 from simllm.calibration import BatchServicePoint
 from simllm.deploy import (
@@ -133,7 +133,7 @@ class ProcessGuard(AbstractContextManager["ProcessGuard"]):
         self.attempts.append(detail)
         raise ProcessCreationBlocked(f"process creation attempted: {detail}")
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> ProcessGuard:  # noqa: PYI034 (typing.Self needs 3.11; CI runs 3.10)
         self._popen = subprocess.Popen
         subprocess.Popen = self._blocked  # type: ignore[assignment]
         if hasattr(os, "posix_spawn"):
