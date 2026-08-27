@@ -20,13 +20,22 @@ SUCCESSOR_RESULT = (
     / "result.json"
 )
 ANCHOR_FREEZE = STUDY_DIR / "expectations.json"
+RUN3_PUBLICATION = STUDY_DIR / "flagship_run3_result.json"
 SUCCESSOR_LABEL = (
     "examples/hopper_kernel_cycle_candidate_v1/successors/"
     f"{SUCCESSOR_SHA256}/result.json"
 )
 ANCHOR_LABEL = "examples/deployment_curve_v1/expectations.json"
+RUN3_LABEL = "examples/deployment_curve_v1/flagship_run3_result.json"
 SUCCESSOR_SELECTOR = "/{lookup_record_sha256,score/{component_overlay_ledger,mtp}}"
 ANCHOR_SELECTOR = f"/anchors[id={MTP_ANCHOR_ID}]"
+RUN3_SELECTOR = (
+    "/{schema,status,verdict,scope,allocation,scale_mapping,topology,"
+    "pricing_configuration,attenuation_layer,constant_fit,constant_fit_sha256,"
+    "held_out_score,anchor_access,anchor_predictions,curves,"
+    "offered_load_sweep_requests_per_second,second_legend,"
+    "decode_calibration_miss,residuals_required}"
+)
 _WHITESPACE = b" \t\r\n"
 _DELIMITERS = _WHITESPACE + b",]}"
 _CAPTURE = object()
@@ -46,6 +55,30 @@ SUCCESSOR_PROJECTION: dict[str, Any] = {
         },
         "task_movement": {"comp74_repeat_inputs": _CAPTURE},
     },
+}
+RUN3_PROJECTION: dict[str, Any] = {
+    name: _CAPTURE
+    for name in (
+        "schema",
+        "status",
+        "verdict",
+        "scope",
+        "allocation",
+        "scale_mapping",
+        "topology",
+        "pricing_configuration",
+        "attenuation_layer",
+        "constant_fit",
+        "constant_fit_sha256",
+        "held_out_score",
+        "anchor_access",
+        "anchor_predictions",
+        "curves",
+        "offered_load_sweep_requests_per_second",
+        "second_legend",
+        "decode_calibration_miss",
+        "residuals_required",
+    )
 }
 
 
@@ -233,6 +266,15 @@ def extract_successor_evidence(stream: BinaryIO) -> tuple[dict[str, Any], int]:
     return value, cursor.bytes_consumed
 
 
+def extract_run3_publication(stream: BinaryIO) -> tuple[dict[str, Any], int]:
+    """Project only the prior publication fields needed for immutable carry."""
+
+    cursor = _Cursor(stream)
+    opening = _skip_space(cursor)
+    value = _project_object(cursor, RUN3_PROJECTION, opening)
+    return value, cursor.bytes_consumed
+
+
 def _project_object_id(cursor: _Cursor, first: bytes) -> str | None:
     projected = _project_object(cursor, {"id": _CAPTURE}, first)
     identifier = projected.get("id")
@@ -357,13 +399,42 @@ def read_mtp_anchor(record_path: Path, access_log: Path) -> dict[str, Any]:
         _append_access(access_log, entry)
 
 
+def read_run3_publication(record_path: Path, access_log: Path) -> dict[str, Any]:
+    """Read the allowlisted run-3 carry-forward projection and log it."""
+
+    entry: dict[str, Any] = {
+        "schema": ACCESS_SCHEMA,
+        "classification": "inherited_run3_publication",
+        "record": RUN3_LABEL,
+        "selector": RUN3_SELECTOR,
+        "whole_record_loaded": False,
+        "unselected_values_returned": False,
+    }
+    try:
+        if record_path.resolve() != RUN3_PUBLICATION.resolve():
+            raise ValueError("run-4 reader refuses every non-allowlisted run-3 record")
+        with record_path.open("rb", buffering=0) as stream:
+            value, consumed = extract_run3_publication(stream)
+        if value.get("schema") != "simllm-deployment-curve-flagship-run3-publication-v1":
+            raise ValueError("run-3 publication schema differs")
+        entry.update({"bytes_consumed": consumed, "status": "PASS"})
+        return value
+    except Exception as exc:
+        entry.update({"error": type(exc).__name__, "status": "REJECTED"})
+        raise
+    finally:
+        _append_access(access_log, entry)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=("evidence", "anchor"))
+    parser.add_argument("kind", choices=("evidence", "run3", "anchor"))
     parser.add_argument("--access-log", required=True, type=Path)
     args = parser.parse_args()
     if args.kind == "evidence":
         value = read_successor_mtp_evidence(SUCCESSOR_RESULT, args.access_log)
+    elif args.kind == "run3":
+        value = read_run3_publication(RUN3_PUBLICATION, args.access_log)
     else:
         value = read_mtp_anchor(ANCHOR_FREEZE, args.access_log)
     print(json.dumps(value, indent=2, sort_keys=True))

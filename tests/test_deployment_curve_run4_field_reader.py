@@ -92,6 +92,31 @@ def test_anchor_projection_decodes_only_the_selected_row() -> None:
     assert scanned < len(raw)
 
 
+def test_run3_projection_returns_only_carry_forward_fields() -> None:
+    reader = _reader()
+    source = {
+        "schema": "simllm-deployment-curve-flagship-run3-publication-v1",
+        "status": "PASS",
+        "held_out_score": {"rows": [1, 2]},
+        "anchor_predictions": [3],
+        "curves": [4],
+        "secret": 99,
+    }
+    raw = _encoded(source)
+
+    value, consumed = reader.extract_run3_publication(io.BytesIO(raw))
+
+    assert value == {
+        "schema": "simllm-deployment-curve-flagship-run3-publication-v1",
+        "status": "PASS",
+        "held_out_score": {"rows": [1, 2]},
+        "anchor_predictions": [3],
+        "curves": [4],
+    }
+    assert consumed < len(raw)
+    assert "secret" not in value
+
+
 def test_path_allowlists_reject_before_open_and_log(tmp_path: Path) -> None:
     reader = _reader()
     access_log = tmp_path / "access.jsonl"
@@ -100,7 +125,9 @@ def test_path_allowlists_reject_before_open_and_log(tmp_path: Path) -> None:
         reader.read_successor_mtp_evidence(tmp_path / "wrong.json", access_log)
     with pytest.raises(ValueError, match="non-allowlisted anchor"):
         reader.read_mtp_anchor(tmp_path / "wrong.json", access_log)
+    with pytest.raises(ValueError, match="non-allowlisted run-3"):
+        reader.read_run3_publication(tmp_path / "wrong.json", access_log)
 
     rows = [json.loads(line) for line in access_log.read_text(encoding="utf-8").splitlines()]
-    assert [row["status"] for row in rows] == ["REJECTED", "REJECTED"]
+    assert [row["status"] for row in rows] == ["REJECTED", "REJECTED", "REJECTED"]
     assert all(row["whole_record_loaded"] is False for row in rows)
