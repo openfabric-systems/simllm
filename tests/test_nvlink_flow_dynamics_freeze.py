@@ -144,6 +144,20 @@ def test_freeze_contains_no_result_or_runner_and_pins_posix_rendering():
     assert frozen["study"]["status"] == "expectations_only"
     assert frozen["plot_contract"]["path_rendering"] == "POSIX"
     assert frozen["plot_contract"]["raw_rate_style"].endswith("no smoothing")
-    assert not (STUDY / "run_study.py").exists()
-    assert not (STUDY / "results.json").exists()
-    assert not (STUDY / "RESULTS.md").exists()
+    for relative in ("run_study.py", "results.json", "RESULTS.md"):
+        object_name = (
+            "32a49805546bd038af5e49fd68b5d2ed0cea6174:"
+            f"examples/nvlink_flow_dynamics_v1/{relative}"
+        )
+        completed = subprocess.run(
+            [
+                "git",
+                "cat-file",
+                "-e",
+                object_name,
+            ],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+        )
+        assert completed.returncode != 0

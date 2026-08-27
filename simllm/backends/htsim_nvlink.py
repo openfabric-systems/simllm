@@ -60,6 +60,13 @@ class NvlinkSwitchMode(str, Enum):
     QUEUED = "queued"
 
 
+class NvlinkFlowPolicy(str, Enum):
+    """How multiple extents enter the independently parameterized modules."""
+
+    STATIC_INTERLEAVE = "static_interleave"
+    RELEASE_AWARE_ROUND_ROBIN = "release_aware_round_robin"
+
+
 class NvlinkFifoPlacement(str, Enum):
     """Queue ownership for a non-pass-through switch profile."""
 
@@ -545,6 +552,140 @@ class NvlinkTx:
             )
         return tuple(scheduled)
 
+    def transmit_flows(
+        self,
+        transfers: Sequence[NvlinkTransfer],
+        *,
+        credit_return_latency_ps: int,
+    ) -> tuple[NvlinkPacket, ...]:
+        """Schedule released extents round-robin without changing the static path."""
+
+        _require_nonnegative_int("credit_return_latency_ps", credit_return_latency_ps)
+        groups_by_source: dict[int, list[tuple[int, tuple[NvlinkPacket, ...]]]] = {}
+        for transfer_order, transfer in enumerate(transfers):
+            if not isinstance(transfer, NvlinkTransfer):
+                raise TypeError("transfers must contain NvlinkTransfer records")
+            packets_by_source: dict[int, list[NvlinkPacket]] = {}
+            for packet in self.packetize(transfer):
+                packets_by_source.setdefault(packet.source, []).append(packet)
+            for source, packets in packets_by_source.items():
+                groups_by_source.setdefault(source, []).append(
+                    (transfer_order, tuple(packets))
+                )
+
+        scheduled: list[tuple[int, NvlinkPacket]] = []
+        for groups in groups_by_source.values():
+            scheduled.extend(
+                self._transmit_source_flows(
+                    groups,
+                    credit_return_latency_ps=credit_return_latency_ps,
+                )
+            )
+        scheduled.sort(
+            key=lambda item: (
+                item[1].tx_finished_at_ps,
+                item[1].tx_started_at_ps,
+                item[0],
+                item[1].sequence,
+                item[1].source,
+                item[1].destination,
+            )
+        )
+        return tuple(packet for _, packet in scheduled)
+
+    def _transmit_source_flows(
+        self,
+        groups: list[tuple[int, tuple[NvlinkPacket, ...]]],
+        *,
+        credit_return_latency_ps: int,
+    ) -> list[tuple[int, NvlinkPacket]]:
+        ordered = sorted(
+            range(len(groups)),
+            key=lambda index: (
+                groups[index][1][0].released_at_ps,
+                groups[index][0],
+                groups[index][1][0].sequence,
+            ),
+        )
+        positions = [0] * len(groups)
+        active: deque[int] = deque()
+        inactive_index = 0
+        now_ps = 0
+        link_cursors: dict[tuple[int, int, int], int] = {}
+        endpoint_cursors: dict[int, int] = {}
+        credit_slots: dict[tuple[int, int], list[int]] = {}
+        pair_visits: dict[tuple[int, int], int] = {}
+        scheduled: list[tuple[int, NvlinkPacket]] = []
+
+        def activate_ready() -> None:
+            nonlocal inactive_index
+            while inactive_index < len(ordered):
+                group_index = ordered[inactive_index]
+                first_packet = groups[group_index][1][0]
+                if first_packet.released_at_ps > now_ps:
+                    break
+                active.append(group_index)
+                inactive_index += 1
+
+        while active or inactive_index < len(ordered):
+            activate_ready()
+            if not active:
+                next_group = ordered[inactive_index]
+                now_ps = max(now_ps, groups[next_group][1][0].released_at_ps)
+                activate_ready()
+
+            group_index = active.popleft()
+            transfer_order, packets = groups[group_index]
+            packet = packets[positions[group_index]]
+            pair = (packet.source, packet.destination)
+            slots = credit_slots.setdefault(
+                pair, [0] * self.config.credits_per_destination
+            )
+            visit = pair_visits.get(pair, 0)
+            slot_index = visit % self.config.credits_per_destination
+            pair_visits[pair] = visit + 1
+            links = [
+                link_cursors.get((packet.source, packet.destination, link), 0)
+                for link in range(self.config.links_per_peer)
+            ]
+            link_index = min(
+                range(len(links)), key=lambda candidate: (links[candidate], candidate)
+            )
+            link_key = (packet.source, packet.destination, link_index)
+            started_at_ps = max(
+                packet.released_at_ps,
+                links[link_index],
+                endpoint_cursors.get(packet.source, 0),
+                slots[slot_index],
+            )
+            link_duration = _serialize_ps(
+                packet.wire_bytes, self.config.per_link_rate_bytes_per_second
+            )
+            endpoint_duration = _serialize_ps(
+                packet.wire_bytes, self.config.endpoint_egress_rate_bytes_per_second
+            )
+            finished_at_ps = started_at_ps + link_duration
+            link_cursors[link_key] = finished_at_ps
+            endpoint_cursors[packet.source] = started_at_ps + endpoint_duration
+            slots[slot_index] = finished_at_ps + credit_return_latency_ps
+            scheduled.append(
+                (
+                    transfer_order,
+                    replace(
+                        packet,
+                        link_index=link_index,
+                        tx_started_at_ps=started_at_ps,
+                        tx_finished_at_ps=finished_at_ps,
+                    ),
+                )
+            )
+            positions[group_index] += 1
+            now_ps = endpoint_cursors[packet.source]
+            activate_ready()
+            if positions[group_index] < len(packets):
+                active.append(group_index)
+        return scheduled
+
     def _packet(
         self,
         *,
@@ -679,6 +820,93 @@ class NvlinkRx:
             )
         return tuple(delivered), max_occupancy
 
+    def receive_arrivals(
+        self, packets: Sequence[NvlinkPacket]
+    ) -> tuple[tuple[NvlinkPacket, ...], int]:
+        """Drain physical arrivals, then expose each extent in sequence order."""
+
+        indexed = []
+        for index, packet in enumerate(packets):
+            if not isinstance(packet, NvlinkPacket):
+                raise TypeError("packets must contain NvlinkPacket records")
+            arrival = (
+                packet.switch_finished_at_ps
+                if packet.switch_finished_at_ps is not None
+                else packet.tx_finished_at_ps
+            )
+            if arrival is None:
+                raise ValueError("RX input packet has no upstream completion")
+            indexed.append((arrival, index, packet))
+        indexed.sort(key=lambda item: (item[0], item[1]))
+
+        cursors: dict[int, int] = {}
+        buffered: dict[int, deque[tuple[int, int]]] = {}
+        occupancy: dict[int, int] = {}
+        ingressed: list[tuple[int, NvlinkPacket]] = []
+        max_occupancy = 0
+        for arrival, original_index, packet in indexed:
+            if packet.wire_bytes > self.config.buffer_capacity_bytes:
+                raise ValueError("packet exceeds declared NVLink RX buffer")
+            queue = buffered.setdefault(packet.destination, deque())
+            used = occupancy.get(packet.destination, 0)
+            while queue and queue[0][0] <= arrival:
+                _, released_bytes = queue.popleft()
+                used -= released_bytes
+            used += packet.wire_bytes
+            if used > self.config.buffer_capacity_bytes:
+                raise ValueError("packets exceed declared NVLink RX buffer occupancy")
+            started_at_ps = max(arrival, cursors.get(packet.destination, 0))
+            finished_at_ps = started_at_ps + _serialize_ps(
+                packet.wire_bytes, self.config.ingress_rate_bytes_per_second
+            )
+            cursors[packet.destination] = finished_at_ps
+            queue.append((finished_at_ps, packet.wire_bytes))
+            occupancy[packet.destination] = used
+            max_occupancy = max(max_occupancy, used)
+            ingressed.append(
+                (
+                    original_index,
+                    replace(
+                        packet,
+                        rx_started_at_ps=started_at_ps,
+                        rx_finished_at_ps=finished_at_ps,
+                    ),
+                )
+            )
+
+        by_extent: dict[str, list[tuple[int, NvlinkPacket]]] = {}
+        for item in ingressed:
+            by_extent.setdefault(item[1].extent_id, []).append(item)
+        delivered = []
+        for extent_packets in by_extent.values():
+            extent_packets.sort(key=lambda item: item[1].sequence)
+            extent_order = min(item[0] for item in extent_packets)
+            previous_sequence = -1
+            visible_at_ps = 0
+            for original_index, packet in extent_packets:
+                if packet.sequence <= previous_sequence:
+                    raise ValueError("NVLink RX sequence is not strictly increasing per extent")
+                previous_sequence = packet.sequence
+                if packet.rx_finished_at_ps is None:
+                    raise ValueError("NVLink RX packet has no ingress completion")
+                visible_at_ps = max(visible_at_ps, packet.rx_finished_at_ps)
+                delivered.append(
+                    (
+                        extent_order,
+                        original_index,
+                        replace(packet, delivered_at_ps=visible_at_ps),
+                    )
+                )
+        delivered.sort(
+            key=lambda item: (
+                item[2].delivered_at_ps,
+                item[0],
+                item[2].sequence,
+                item[1],
+            )
+        )
+        return tuple(packet for _, _, packet in delivered), max_occupancy
+
 
 class NvlinkDomainService(Generic[_AnalyticResult]):
     """Compose TX, switch, and RX, or preserve the analytical bypass exactly."""
@@ -694,6 +922,7 @@ class NvlinkDomainService(Generic[_AnalyticResult]):
         *,
         analytic_result: _AnalyticResult,
         include_switch: bool = True,
+        flow_policy: NvlinkFlowPolicy = NvlinkFlowPolicy.STATIC_INTERLEAVE,
     ) -> _AnalyticResult | NvlinkDomainResult:
         """Return the exact bypass object or the selected packet service."""
 
@@ -701,17 +930,28 @@ class NvlinkDomainService(Generic[_AnalyticResult]):
             return analytic_result
         if type(include_switch) is not bool:
             raise TypeError("include_switch must be a boolean")
+        _require_enum("flow_policy", flow_policy, NvlinkFlowPolicy)
         tx = NvlinkTx(self.profile.tx)
-        packetized = _interleave_packetized(tx, transfers)
-        transmitted = tx.transmit(
-            packetized,
-            credit_return_latency_ps=self.profile.rx.credit_return_latency_ps,
-        )
+        if flow_policy is NvlinkFlowPolicy.STATIC_INTERLEAVE:
+            packetized = _interleave_packetized(tx, transfers)
+            transmitted = tx.transmit(
+                packetized,
+                credit_return_latency_ps=self.profile.rx.credit_return_latency_ps,
+            )
+        else:
+            transmitted = tx.transmit_flows(
+                transfers,
+                credit_return_latency_ps=self.profile.rx.credit_return_latency_ps,
+            )
         if include_switch:
             forwarded = NvlinkSwitch(self.profile.switch).forward(transmitted)
         else:
             forwarded = transmitted
-        delivered, max_occupancy = NvlinkRx(self.profile.rx).receive(forwarded)
+        rx = NvlinkRx(self.profile.rx)
+        if flow_policy is NvlinkFlowPolicy.STATIC_INTERLEAVE:
+            delivered, max_occupancy = rx.receive(forwarded)
+        else:
+            delivered, max_occupancy = rx.receive_arrivals(forwarded)
         request_packets = tuple(
             packet for packet in delivered if packet.direction is NvlinkPacketDirection.REQUEST
         )

@@ -1,5 +1,6 @@
 import copy
 import dataclasses
+import hashlib
 import json
 import re
 from collections import Counter
@@ -16,6 +17,7 @@ from simllm.backends.htsim_nvlink import (
     NvlinkDomainResult,
     NvlinkDomainService,
     NvlinkFifoPlacement,
+    NvlinkFlowPolicy,
     NvlinkOperation,
     NvlinkPacketDirection,
     NvlinkRx,
@@ -348,6 +350,159 @@ def test_analytic_bypass_returns_the_callers_object_by_identity():
     )
 
     assert result is analytic
+
+
+def test_static_flow_policy_preserves_the_preimplementation_canonical_bytes(candidate):
+    transfers = [
+        NvlinkTransfer(
+            extent_id="identity-write-a",
+            source=0,
+            destination=1,
+            payload_bytes=769,
+        ),
+        NvlinkTransfer(
+            extent_id="identity-write-b",
+            source=0,
+            destination=2,
+            payload_bytes=513,
+            released_at_ps=17000,
+        ),
+        NvlinkTransfer(
+            extent_id="identity-read-c",
+            source=3,
+            destination=1,
+            payload_bytes=1025,
+            operation=NvlinkOperation.PEER_READ,
+            released_at_ps=9000,
+        ),
+    ]
+
+    implicit = NvlinkDomainService(candidate).serve(transfers, analytic_result=None)
+    explicit = NvlinkDomainService(candidate).serve(
+        transfers,
+        analytic_result=None,
+        flow_policy=NvlinkFlowPolicy.STATIC_INTERLEAVE,
+    )
+
+    assert isinstance(implicit, NvlinkDomainResult)
+    assert isinstance(explicit, NvlinkDomainResult)
+    assert implicit.canonical_json_bytes() == explicit.canonical_json_bytes()
+    assert hashlib.sha256(implicit.canonical_json_bytes()).hexdigest() == (
+        "2f2af64619ed3c6341b209d877d9f1e6984a67e44b97b5eb176a157294a6c252"
+    )
+
+
+def test_release_aware_join_matches_the_frozen_open_identity(candidate):
+    join_ps = 696320
+    result = NvlinkDomainService(candidate).serve(
+        [
+            NvlinkTransfer(
+                extent_id="incumbent",
+                source=0,
+                destination=1,
+                payload_bytes=1048576,
+            ),
+            NvlinkTransfer(
+                extent_id="joiner",
+                source=0,
+                destination=1,
+                payload_bytes=262144,
+                released_at_ps=join_ps,
+            ),
+        ],
+        analytic_result=None,
+        flow_policy=NvlinkFlowPolicy.RELEASE_AWARE_ROUND_ROBIN,
+    )
+
+    assert isinstance(result, NvlinkDomainResult)
+    boundary = next(
+        packet
+        for packet in result.packets
+        if packet.extent_id == "incumbent" and packet.sequence == 256
+    )
+    first_joiner = next(
+        packet for packet in result.packets if packet.extent_id == "joiner"
+    )
+    assert boundary.tx_started_at_ps == join_ps
+    assert first_joiner.tx_started_at_ps == join_ps + 1692
+    assert first_joiner.delivered_at_ps == join_ps + 13886
+
+
+def test_release_aware_exit_matches_the_frozen_phase_identity(candidate):
+    result = NvlinkDomainService(candidate).serve(
+        [
+            NvlinkTransfer(
+                extent_id="remaining",
+                source=0,
+                destination=1,
+                payload_bytes=1048576,
+            ),
+            NvlinkTransfer(
+                extent_id="departing",
+                source=0,
+                destination=1,
+                payload_bytes=65536,
+            ),
+        ],
+        analytic_result=None,
+        flow_policy=NvlinkFlowPolicy.RELEASE_AWARE_ROUND_ROBIN,
+    )
+
+    assert isinstance(result, NvlinkDomainResult)
+    departing_end = max(
+        packet.delivered_at_ps or 0
+        for packet in result.packets
+        if packet.extent_id == "departing"
+    )
+    after_exit = [
+        packet.delivered_at_ps or 0
+        for packet in result.packets
+        if packet.extent_id == "remaining"
+        and (packet.delivered_at_ps or 0) > departing_end
+    ]
+    assert after_exit[4] - departing_end == 16684
+
+
+def test_release_aware_incast_respects_pair_and_receiver_ceilings(candidate):
+    payload_ceiling = {1: 94.11764705882354, 2: 188.23529411764707, 3: 194.91945588329412}
+    for degree in (1, 2, 3):
+        result = NvlinkDomainService(candidate).serve(
+            [
+                NvlinkTransfer(
+                    extent_id=f"incast-{source}",
+                    source=source,
+                    destination=3,
+                    payload_bytes=524288,
+                )
+                for source in range(degree)
+            ],
+            analytic_result=None,
+            flow_policy=NvlinkFlowPolicy.RELEASE_AWARE_ROUND_ROBIN,
+        )
+        assert isinstance(result, NvlinkDomainResult)
+        aggregate_gbps = result.logical_bytes * 1000 / result.completion_time_ps
+        assert aggregate_gbps <= payload_ceiling[degree]
+
+
+def test_release_aware_flow_policy_preserves_read_direction_and_extent_order(candidate):
+    result = NvlinkDomainService(candidate).serve(
+        [
+            NvlinkTransfer(
+                extent_id="read-flow",
+                source=0,
+                destination=2,
+                payload_bytes=1025,
+                operation=NvlinkOperation.PEER_READ,
+            )
+        ],
+        analytic_result=None,
+        flow_policy=NvlinkFlowPolicy.RELEASE_AWARE_ROUND_ROBIN,
+    )
+
+    assert isinstance(result, NvlinkDomainResult)
+    assert result.request_payload_bytes == 0
+    assert result.response_payload_bytes == 1025
+    assert [packet.sequence for packet in result.packets] == list(range(6))
 
 
 def test_composition_conserves_write_and_read_directions(candidate):
