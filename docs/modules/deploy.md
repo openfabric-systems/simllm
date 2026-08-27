@@ -45,10 +45,24 @@ backend, allocating a GPU or importing a serving framework.
   Roofline work, declared link rates, measured surface entry keys and tracked
   simulation-record excess remain distinct evidence classes. Supplying no
   source for an enabled term is an error.
-- The frontier scan evaluates feasible candidates and batch widths in stable
-  order, reports exact tokens per second per request and tokens per second per
-  GPU, keeps Pareto ties, and prepares the versioned plotting projection. The
-  scan is an in-process closed form with zero subprocesses.
+- `ScanInputs` supplies the feasibility bounds plus one `EstimatorInputs`
+  record or a per-point resolver. `scan` retains candidate and batch
+  declaration order, emits no points for rejected candidates, and records
+  their stable reason codes. Accepted points carry exact reduced fractions,
+  the estimator stamp, and class `ESTIMATE` or `SIMULATED` according to
+  whether tracked `SIM-DERIVED` excess terms were consumed.
+- `FrontierRecord` is the strict
+  `simllm-deployment-frontier-record-v1` wire boundary. It nests every
+  candidate decision and point and carries measured external context as
+  paired or y-only anchors; a y-only production anchor is never converted
+  into an invented point. `pareto_front` maximizes both exact axes, keeps
+  coordinate ties, and returns a canonical order independent of input order.
+- `prepare_plot_v3` emits
+  `simllm-deployment-frontier-plot-contract-v3` data. It preserves the version
+  2 analytical lines, simulated dots, measured white diamonds and dashed
+  y-only anchors, then adds point-class marker metadata and Pareto-front
+  emphasis. The installed scan and plot preparation are in-process closed
+  forms with zero subprocesses.
 - Promotion renders an accepted candidate through the repository placement,
   execution and simulation contracts. The candidate key remains the stable
   join between planning evidence and the promoted run.
@@ -73,14 +87,16 @@ how long an unchanged execution takes.
 
 ## Status
 
-The strict candidate schema, canonical identity, backend-free feasibility gate
-and stamped capacity estimator are installed with their v1 boundaries locked
-by tests. The estimator reproduces the frozen roofline, byte partition, ideal
-network, telescoping, batch interpolation, queue and rate-match forms without
-starting a process. The deterministic frontier scan and wave-level study
-complete the planning rung under DEPLOY-1. Structural placement rendering and
-SGLang-side candidate construction remain explicit optional integrations under
-DEPLOY-2 and DEPLOY-3.
+The strict candidate schema, canonical identity, backend-free feasibility
+gate, stamped capacity estimator, deterministic frontier scan, exact Pareto
+selection and plot-contract v3 preparation are installed with their v1
+boundaries locked by tests. The estimator and frontier driver reproduce the
+frozen roofline, byte partition, ideal network, telescoping, coordinate and
+legacy plot-series forms without starting a process. The wave-level study
+completes the planning rung under DEPLOY-1. Structural placement rendering,
+SGLang-side candidate construction, parallel scanning and promoted simulation
+remain explicit optional integrations under DEPLOY-2, DEPLOY-3, DEPLOY-7 and
+DEPLOY-8.
 
 ## Open tasks
 
@@ -115,3 +131,13 @@ DEPLOY-2 and DEPLOY-3.
   collective profile to deployment pricing through the existing compute and
   traffic contracts. Preserve the three frozen byte partitions, link floors
   and every baseline estimate exactly when the profile connection is disabled.
+- DEPLOY-7 (Completeness; P2; M): In wave P-2, add an optional multiprocess
+  runner for large deployment scans. Preserve the single-process runner as the
+  identity off path, including candidate and batch order, exact fractions,
+  stamps, rejection records and the zero-subprocess guarantee when parallel
+  execution is disabled.
+- DEPLOY-8 (Completeness; P2; L): In wave P-4, define the promotion protocol
+  that joins an accepted frontier point and estimator stamp to the structural
+  placement, execution and simulation records by candidate key. Depend on
+  DEPLOY-2 for rendered host packing, and preserve the planning-only record
+  exactly when promotion is disabled.
