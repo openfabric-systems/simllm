@@ -17,6 +17,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import run_study
+
 STUDY_ROOT = Path(__file__).resolve().parent
 EXPECTATIONS_PATH = STUDY_ROOT / "expectations.json"
 CANDIDATE_PROFILE_PATH = STUDY_ROOT / "candidate-profile.json"
@@ -247,8 +249,7 @@ def audit_hardware(bulk_root: Path, *, scheduler_job: str = "") -> dict[str, Any
 def load_expectations() -> dict[str, Any]:
     if sha256(EXPECTATIONS_PATH) != FREEZE_SHA256:
         raise RuntimeError("TRAF-65 expectations digest changed")
-    if sha256(CANDIDATE_PROFILE_PATH) != CANDIDATE_PROFILE_SHA256:
-        raise RuntimeError("TRAF-65 candidate profile digest changed")
+    run_study._verify_candidate_handoff(FREEZE_SHA256)
     payload = load_json(EXPECTATIONS_PATH)
     if payload.get("status") != "expectations_only":
         raise RuntimeError("TRAF-65 expectations status changed")
