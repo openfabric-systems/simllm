@@ -86,3 +86,21 @@
   The dominant uncertainty is whether four-layer measured service extrapolates
   linearly to 61 layers and whether simulated-MTP emission accounting closes
   the 5 percent bar without an admissible decode attenuation factor.
+
+### Completion accounting
+
+- The field boundary, expectations freeze and one-shot scorer landed in five
+  reviewable commits before publication work began.
+- Attempt 1 was the only scored attempt. It realized 128 requests, 16 on each
+  GPU, emitted 256 simulated-MTP tokens per node step and returned the honest
+  52.493305 percent-low refutation in all three frozen layers.
+- Publication adds one compact content-addressed JSON record and SHA-256
+  sidecar, one nine-row CSV, one Markdown report, one PDF, one PNG, two small
+  publication programs and one focused result-lock test module. No previous
+  artifact changed.
+- The deployment-frontier figure was not refreshed because its frozen v2
+  contract has no MTP marker slot and its existing bytes are preservation
+  locked.
+- The final record retains the chronology breach above, the one held-out
+  access, the one score attempt and the later field-addressed publication
+  projections. No weights or web pages were fetched.

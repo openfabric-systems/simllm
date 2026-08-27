@@ -1435,9 +1435,19 @@ TRAF-69 and COMP-77 remain reserved because the unexplained residual is zero.
   both scorable held-out prefill anchors under the frozen benchmark-bias model:
   2K is 4.519707 percent low and 4K is 3.530310 percent high. The corresponding
   unattenuated errors remain 5.113992 percent and 13.976233 percent high. MTP
-  remains BLOCKED without numeric access and the decode calibration residual
-  remains unattenuated. CORE-54 stays open on COMP-72, COMP-74, COMP-76,
-  CORE-61, SGL-36 and TRAF-64.
+  was still BLOCKED without numeric access and the decode calibration residual
+  remained unattenuated. The fourth scored run removes that pricing blocker
+  and scores the final numeric held-out anchor once. Its frozen unattenuated
+  EP72 MTP prediction is 8,253.338082 tokens per second per node against
+  17,373 published, or 52.493305 percent low, so physics-only,
+  physics-plus-boundary and physics-plus-boundary-plus-attenuation all REFUTE
+  the 5 percent bar. No admissible decode factor exists. The run-3 2K and 4K
+  PASS rows remain byte-identical and unrescored, making the combined
+  three-anchor verdict REFUTED. The deployment-frontier figure stays
+  byte-locked because its v2 contract has no MTP marker slot. CORE-54 stays
+  open on COMP-76's decode calibration reproduction, COMP-74 distribution
+  propagation now partially unlocked by two retained observations, COMP-78's
+  Granite campaign arm, CORE-61 depth linearity, SGL-36 and TRAF-64.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool
