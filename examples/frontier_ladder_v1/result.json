@@ -1,0 +1,5133 @@
+{
+  "attempt_evidence": {
+    "policy": "each run uses a fresh attempt-N directory and refuses a later attempt until every earlier attempt has a verdict",
+    "portable_argv": "native/*/execution-*.json",
+    "stderr_bytes": "native/*/execution-*.stderr",
+    "stdout_bytes": "native/*/execution-*.stdout",
+    "verdict": "verdict.json"
+  },
+  "chronology": {
+    "expectations_commit": "228f3c77b98af1f0f60985405a8db67ebb67c0a6",
+    "expectations_sha256": "e3e83264df6e72e83736a06dddcba11a501c75a25c8c1fb0a9c7b1e9c0caeea3",
+    "implementation_commit": "5cdc42520da8a0bd5be3c2abee938fc7d3f771c4"
+  },
+  "evidence_separation": "exact-oracle, behavioral-relation, plot-contract and wall-time denominators remain separate; fatal guards are unscored and void the run",
+  "fabric_leg_envelope": [
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 1,
+      "configuration_id": "h100-two-node-serialized",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.02,
+          "denominator": 50,
+          "numerator": 51,
+          "reduced_denominator": 50,
+          "reduced_numerator": 51
+        }
+      },
+      "family": "M-1",
+      "id": "M-1-b1",
+      "ideal_ps": 135038000,
+      "packet_ps": 137201000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.016017713532487,
+        "denominator": 135038000,
+        "numerator": 137201000,
+        "reduced_denominator": 135038,
+        "reduced_numerator": 137201
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 2,
+      "configuration_id": "h100-two-node-serialized",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.02,
+          "denominator": 50,
+          "numerator": 51,
+          "reduced_denominator": 50,
+          "reduced_numerator": 51
+        }
+      },
+      "family": "M-1",
+      "id": "M-1-b2",
+      "ideal_ps": 268076000,
+      "packet_ps": 272317000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.0158201405571554,
+        "denominator": 268076000,
+        "numerator": 272317000,
+        "reduced_denominator": 268076,
+        "reduced_numerator": 272317
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 4,
+      "configuration_id": "h100-two-node-serialized",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.02,
+          "denominator": 50,
+          "numerator": 51,
+          "reduced_denominator": 50,
+          "reduced_numerator": 51
+        }
+      },
+      "family": "M-1",
+      "id": "M-1-b4",
+      "ideal_ps": 534152000,
+      "packet_ps": 542551000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.0157239886773801,
+        "denominator": 534152000,
+        "numerator": 542551000,
+        "reduced_denominator": 534152,
+        "reduced_numerator": 542551
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 8,
+      "configuration_id": "h100-two-node-serialized",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.02,
+          "denominator": 50,
+          "numerator": 51,
+          "reduced_denominator": 50,
+          "reduced_numerator": 51
+        }
+      },
+      "family": "M-1",
+      "id": "M-1-b8",
+      "ideal_ps": 1066304000,
+      "packet_ps": 1083018000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.0156747043994958,
+        "denominator": 1066304000,
+        "numerator": 1083018000,
+        "reduced_denominator": 533152,
+        "reduced_numerator": 541509
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 16,
+      "configuration_id": "h100-two-node-serialized",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.02,
+          "denominator": 50,
+          "numerator": 51,
+          "reduced_denominator": 50,
+          "reduced_numerator": 51
+        }
+      },
+      "family": "M-1",
+      "id": "M-1-b16",
+      "ideal_ps": 2130609000,
+      "packet_ps": 2163953000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.0156499855205718,
+        "denominator": 2130609000,
+        "numerator": 2163953000,
+        "reduced_denominator": 2130609,
+        "reduced_numerator": 2163953
+      }
+    },
+    {
+      "batch32_literal": {
+        "denominator": 4259218000,
+        "numerator": 4325821000
+      },
+      "batch_per_gpu": 32,
+      "configuration_id": "h100-two-node-serialized",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.02,
+          "denominator": 50,
+          "numerator": 51,
+          "reduced_denominator": 50,
+          "reduced_numerator": 51
+        }
+      },
+      "family": "M-1",
+      "id": "M-1-b32",
+      "ideal_ps": 4259218000,
+      "packet_ps": 4325821000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.0156373775655532,
+        "denominator": 4259218000,
+        "numerator": 4325821000,
+        "reduced_denominator": 4259218,
+        "reduced_numerator": 4325821
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 1,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 7.5,
+          "denominator": 2,
+          "numerator": 15,
+          "reduced_denominator": 2,
+          "reduced_numerator": 15
+        },
+        "upper": {
+          "decimal": 8.5,
+          "denominator": 2,
+          "numerator": 17,
+          "reduced_denominator": 2,
+          "reduced_numerator": 17
+        }
+      },
+      "family": "M-2",
+      "id": "M-2-b1",
+      "ideal_ps": 31564000,
+      "packet_ps": 242356000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 7.678241034089469,
+        "denominator": 31564000,
+        "numerator": 242356000,
+        "reduced_denominator": 7891,
+        "reduced_numerator": 60589
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 2,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 7.5,
+          "denominator": 2,
+          "numerator": 15,
+          "reduced_denominator": 2,
+          "reduced_numerator": 15
+        },
+        "upper": {
+          "decimal": 8.5,
+          "denominator": 2,
+          "numerator": 17,
+          "reduced_denominator": 2,
+          "reduced_numerator": 17
+        }
+      },
+      "family": "M-2",
+      "id": "M-2-b2",
+      "ideal_ps": 61128000,
+      "packet_ps": 482629000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 7.89538345766261,
+        "denominator": 61128000,
+        "numerator": 482629000,
+        "reduced_denominator": 61128,
+        "reduced_numerator": 482629
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 4,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 7.5,
+          "denominator": 2,
+          "numerator": 15,
+          "reduced_denominator": 2,
+          "reduced_numerator": 15
+        },
+        "upper": {
+          "decimal": 8.5,
+          "denominator": 2,
+          "numerator": 17,
+          "reduced_denominator": 2,
+          "reduced_numerator": 17
+        }
+      },
+      "family": "M-2",
+      "id": "M-2-b4",
+      "ideal_ps": 120256000,
+      "packet_ps": 963174000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 8.009363358169239,
+        "denominator": 120256000,
+        "numerator": 963174000,
+        "reduced_denominator": 60128,
+        "reduced_numerator": 481587
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 8,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 7.5,
+          "denominator": 2,
+          "numerator": 15,
+          "reduced_denominator": 2,
+          "reduced_numerator": 15
+        },
+        "upper": {
+          "decimal": 8.5,
+          "denominator": 2,
+          "numerator": 17,
+          "reduced_denominator": 2,
+          "reduced_numerator": 17
+        }
+      },
+      "family": "M-2",
+      "id": "M-2-b8",
+      "ideal_ps": 238512000,
+      "packet_ps": 1924264000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 8.067786945730195,
+        "denominator": 238512000,
+        "numerator": 1924264000,
+        "reduced_denominator": 29814,
+        "reduced_numerator": 240533
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 16,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 7.5,
+          "denominator": 2,
+          "numerator": 15,
+          "reduced_denominator": 2,
+          "reduced_numerator": 15
+        },
+        "upper": {
+          "decimal": 8.5,
+          "denominator": 2,
+          "numerator": 17,
+          "reduced_denominator": 2,
+          "reduced_numerator": 17
+        }
+      },
+      "family": "M-2",
+      "id": "M-2-b16",
+      "ideal_ps": 475024000,
+      "packet_ps": 3845860000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 8.096138300380613,
+        "denominator": 475024000,
+        "numerator": 3845860000,
+        "reduced_denominator": 118756,
+        "reduced_numerator": 961465
+      }
+    },
+    {
+      "batch32_literal": {
+        "denominator": 948048000,
+        "numerator": 7689053000
+      },
+      "batch_per_gpu": 32,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 7.5,
+          "denominator": 2,
+          "numerator": 15,
+          "reduced_denominator": 2,
+          "reduced_numerator": 15
+        },
+        "upper": {
+          "decimal": 8.5,
+          "denominator": 2,
+          "numerator": 17,
+          "reduced_denominator": 2,
+          "reduced_numerator": 17
+        }
+      },
+      "family": "M-2",
+      "id": "M-2-b32",
+      "ideal_ps": 948048000,
+      "packet_ps": 7689053000,
+      "packet_quantity": "concurrent_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 8.110404747438949,
+        "denominator": 948048000,
+        "numerator": 7689053000,
+        "reduced_denominator": 948048,
+        "reduced_numerator": 7689053
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 1,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.035,
+          "denominator": 200,
+          "numerator": 207,
+          "reduced_denominator": 200,
+          "reduced_numerator": 207
+        }
+      },
+      "family": "M-3",
+      "id": "M-3-b1",
+      "ideal_ps": 31564000,
+      "packet_ps": 32110000,
+      "packet_quantity": "isolated_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.0172981878088962,
+        "denominator": 31564000,
+        "numerator": 32110000,
+        "reduced_denominator": 1214,
+        "reduced_numerator": 1235
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 2,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.035,
+          "denominator": 200,
+          "numerator": 207,
+          "reduced_denominator": 200,
+          "reduced_numerator": 207
+        }
+      },
+      "family": "M-3",
+      "id": "M-3-b2",
+      "ideal_ps": 61128000,
+      "packet_ps": 62136000,
+      "packet_quantity": "isolated_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.0164899882214369,
+        "denominator": 61128000,
+        "numerator": 62136000,
+        "reduced_denominator": 849,
+        "reduced_numerator": 863
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 4,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.035,
+          "denominator": 200,
+          "numerator": 207,
+          "reduced_denominator": 200,
+          "reduced_numerator": 207
+        }
+      },
+      "family": "M-3",
+      "id": "M-3-b4",
+      "ideal_ps": 120256000,
+      "packet_ps": 122188000,
+      "packet_quantity": "isolated_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.0160657264502395,
+        "denominator": 120256000,
+        "numerator": 122188000,
+        "reduced_denominator": 30064,
+        "reduced_numerator": 30547
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 8,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.035,
+          "denominator": 200,
+          "numerator": 207,
+          "reduced_denominator": 200,
+          "reduced_numerator": 207
+        }
+      },
+      "family": "M-3",
+      "id": "M-3-b8",
+      "ideal_ps": 238512000,
+      "packet_ps": 242293000,
+      "packet_quantity": "isolated_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.01585245186825,
+        "denominator": 238512000,
+        "numerator": 242293000,
+        "reduced_denominator": 238512,
+        "reduced_numerator": 242293
+      }
+    },
+    {
+      "batch32_literal": null,
+      "batch_per_gpu": 16,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.035,
+          "denominator": 200,
+          "numerator": 207,
+          "reduced_denominator": 200,
+          "reduced_numerator": 207
+        }
+      },
+      "family": "M-3",
+      "id": "M-3-b16",
+      "ideal_ps": 475024000,
+      "packet_ps": 482500000,
+      "packet_quantity": "isolated_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.0157381521775741,
+        "denominator": 475024000,
+        "numerator": 482500000,
+        "reduced_denominator": 118756,
+        "reduced_numerator": 120625
+      }
+    },
+    {
+      "batch32_literal": {
+        "denominator": 948048000,
+        "numerator": 962915000
+      },
+      "batch_per_gpu": 32,
+      "configuration_id": "h100-nine-node-incast",
+      "expected_band": {
+        "lower": {
+          "decimal": 1.0,
+          "denominator": 1,
+          "numerator": 1,
+          "reduced_denominator": 1,
+          "reduced_numerator": 1
+        },
+        "upper": {
+          "decimal": 1.035,
+          "denominator": 200,
+          "numerator": 207,
+          "reduced_denominator": 200,
+          "reduced_numerator": 207
+        }
+      },
+      "family": "M-3",
+      "id": "M-3-b32",
+      "ideal_ps": 948048000,
+      "packet_ps": 962915000,
+      "packet_quantity": "isolated_service_ps",
+      "passed": true,
+      "quotient": {
+        "decimal": 1.015681695441581,
+        "denominator": 948048000,
+        "numerator": 962915000,
+        "reduced_denominator": 948048,
+        "reduced_numerator": 962915
+      }
+    }
+  ],
+  "fatal_guards": [
+    {
+      "enforcement": "runtime",
+      "evaluated": "pinned record, contract and LogGOPSim binary hashes match before execution",
+      "held": true,
+      "id": "FG-1",
+      "mutation_control": {
+        "kind": "predicate-exercised",
+        "mutant": "pinned record digest replaced with 64 zeroes",
+        "rejected": true
+      }
+    },
+    {
+      "enforcement": "runtime",
+      "evaluated": "all 18 ladder points carry three strict, correctly classified and distinct rung authorities",
+      "held": true,
+      "id": "FG-2",
+      "mutation_control": {
+        "kind": "predicate-exercised",
+        "mutant": "one packet rung relabeled ESTIMATE on the wire",
+        "rejected": true
+      }
+    },
+    {
+      "enforcement": "runtime",
+      "evaluated": "all 12 nonzero ideal fabric legs carry executed native provenance, portable argv and exact G",
+      "held": true,
+      "id": "FG-3",
+      "mutation_control": {
+        "kind": "predicate-exercised",
+        "mutant": "one real ideal-rung argv passed to the predicate without -G",
+        "rejected": true
+      }
+    },
+    {
+      "enforcement": "runtime",
+      "evaluated": "the frozen expectations commit is an ancestor of the implementation run commit",
+      "held": true,
+      "id": "FG-4",
+      "mutation_control": {
+        "kind": "predicate-exercised",
+        "mutant": "implementation and expectations revisions reversed",
+        "rejected": true
+      }
+    }
+  ],
+  "findings": [],
+  "input_hashes": [
+    {
+      "expected_sha256": "e3e83264df6e72e83736a06dddcba11a501c75a25c8c1fb0a9c7b1e9c0caeea3",
+      "matched": true,
+      "name": "frontier expectations",
+      "observed_sha256": "e3e83264df6e72e83736a06dddcba11a501c75a25c8c1fb0a9c7b1e9c0caeea3",
+      "path": "examples/frontier_ladder_v1/expectations.md"
+    },
+    {
+      "expected_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad",
+      "matched": true,
+      "name": "pinned frontier record",
+      "observed_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad",
+      "path": "examples/deployment_frontier_v1/result.json"
+    },
+    {
+      "expected_sha256": "934ee355e4d5a376d1eecdb1d0e62f6e4f7acfd9ada93def5ba1bcf8fa8508ff",
+      "matched": true,
+      "name": "LogGOPSim ideal expectations",
+      "observed_sha256": "934ee355e4d5a376d1eecdb1d0e62f6e4f7acfd9ada93def5ba1bcf8fa8508ff",
+      "path": "examples/loggopsim_ideal_v1/expectations.md"
+    },
+    {
+      "expected_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+      "matched": true,
+      "name": "LogGOPSim binary",
+      "observed_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+      "path": "LogGOPSim"
+    }
+  ],
+  "ladder_record": {
+    "anchors": [
+      {
+        "anchor_id": "sglang_decode_standard",
+        "label": "Published SGLang H100 EP72 standard decode",
+        "point_class": "MEASURED",
+        "x_tokens_per_second_per_request": {
+          "denominator": 128,
+          "numerator": 11141
+        },
+        "y_tokens_per_second_per_gpu": {
+          "denominator": 4,
+          "numerator": 11141
+        }
+      },
+      {
+        "anchor_id": "deepseek_production_decode",
+        "label": "Published DeepSeek H800 production decode",
+        "point_class": "MEASURED",
+        "x_tokens_per_second_per_request": null,
+        "y_tokens_per_second_per_gpu": {
+          "denominator": 1,
+          "numerator": 1850
+        }
+      }
+    ],
+    "points": [
+      {
+        "batch_per_gpu": 1,
+        "configuration_id": "b100-one-node-intra",
+        "configuration_label": "B100 one-node intra-node-heavy",
+        "rungs": [
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 3448398380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 172419919,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 172419919,
+              "numerator": 50000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 3448398380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 172419919,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 172419919,
+              "numerator": 50000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 3448398380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 172419919,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 172419919,
+              "numerator": 50000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 2,
+        "configuration_id": "b100-one-node-intra",
+        "configuration_label": "B100 one-node intra-node-heavy",
+        "rungs": [
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 3465966380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 173298319,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 173298319,
+              "numerator": 100000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 3465966380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 173298319,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 173298319,
+              "numerator": 100000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 3465966380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 173298319,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 173298319,
+              "numerator": 100000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 4,
+        "configuration_id": "b100-one-node-intra",
+        "configuration_label": "B100 one-node intra-node-heavy",
+        "rungs": [
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 3501102380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 175055119,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 175055119,
+              "numerator": 200000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 3501102380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 175055119,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 175055119,
+              "numerator": 200000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 3501102380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 175055119,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 175055119,
+              "numerator": 200000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 8,
+        "configuration_id": "b100-one-node-intra",
+        "configuration_label": "B100 one-node intra-node-heavy",
+        "rungs": [
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 3571374380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 178568719,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 178568719,
+              "numerator": 400000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 3571374380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 178568719,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 178568719,
+              "numerator": 400000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 3571374380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 178568719,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 178568719,
+              "numerator": 400000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 16,
+        "configuration_id": "b100-one-node-intra",
+        "configuration_label": "B100 one-node intra-node-heavy",
+        "rungs": [
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 3711918380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 185595919,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 185595919,
+              "numerator": 800000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 3711918380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 185595919,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 185595919,
+              "numerator": 800000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 3711918380,
+            "x_tokens_per_second_per_request": {
+              "denominator": 185595919,
+              "numerator": 50000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 185595919,
+              "numerator": 800000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 32,
+        "configuration_id": "b100-one-node-intra",
+        "configuration_label": "B100 one-node intra-node-heavy",
+        "rungs": [
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 4257218560,
+            "x_tokens_per_second_per_request": {
+              "denominator": 207872,
+              "numerator": 48828125
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 6496,
+              "numerator": 48828125
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 4257218560,
+            "x_tokens_per_second_per_request": {
+              "denominator": 207872,
+              "numerator": 48828125
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 6496,
+              "numerator": 48828125
+            }
+          },
+          {
+            "fabric_leg_ps": 0,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 4523298348,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1130824587,
+              "numerator": 250000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1130824587,
+              "numerator": 8000000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 1,
+        "configuration_id": "h100-two-node-serialized",
+        "configuration_label": "H100 two-node serialized split",
+        "rungs": [
+          {
+            "fabric_leg_ps": 133038080,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8234981205,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 135038000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b1.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "6651905",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "4fea069b2ff8a9370b453bfc8d285ffca6722895adca957557faf8b922858823",
+              "source_path": "goals/h100-two-node-serialized-b1.goal",
+              "source_sha256": "f9924d9dd23abdbdaa280b1bebcbd5e7bcead53070871974369218741b916f3a"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8234981205,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 137201000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8234981205,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 2,
+        "configuration_id": "h100-two-node-serialized",
+        "configuration_label": "H100 two-node serialized split",
+        "rungs": [
+          {
+            "fabric_leg_ps": 266076160,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8276934638,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4138467319,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4138467319,
+              "numerator": 1000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 268076000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b2.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "13303809",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "0b5d9348d61eefef3e535262f4735f6cf114c9c28845e28cc20dfb9c606537f6",
+              "source_path": "goals/h100-two-node-serialized-b2.goal",
+              "source_sha256": "1385d1b6351b242136976620dd11958cd0fab50746ce85a01efe42ab95ecebb3"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8276934638,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4138467319,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4138467319,
+              "numerator": 1000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 272317000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8276934638,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4138467319,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4138467319,
+              "numerator": 1000000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 4,
+        "configuration_id": "h100-two-node-serialized",
+        "configuration_label": "H100 two-node serialized split",
+        "rungs": [
+          {
+            "fabric_leg_ps": 532152320,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8360841504,
+            "x_tokens_per_second_per_request": {
+              "denominator": 261276297,
+              "numerator": 31250000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 261276297,
+              "numerator": 125000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 534152000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b4.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "26607617",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "e7329708bcb9e5d0db83dc98e21649095221c7f6ec425a6bee831084e0434439",
+              "source_path": "goals/h100-two-node-serialized-b4.goal",
+              "source_sha256": "55280bd5fa141a030b9932e4dcf56d58d9efbb6ff798d070660c7d4666fabfee"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8360841504,
+            "x_tokens_per_second_per_request": {
+              "denominator": 261276297,
+              "numerator": 31250000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 261276297,
+              "numerator": 125000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 542551000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8360841504,
+            "x_tokens_per_second_per_request": {
+              "denominator": 261276297,
+              "numerator": 31250000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 261276297,
+              "numerator": 125000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 8,
+        "configuration_id": "h100-two-node-serialized",
+        "configuration_label": "H100 two-node serialized split",
+        "rungs": [
+          {
+            "fabric_leg_ps": 1064304640,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8528655235,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1705731047,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1705731047,
+              "numerator": 1600000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 1066304000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b8.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "53215233",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "02be77b914a72cd4e0a00c1b8970fe72657a0829fa591f4f67d669e97d53c5bb",
+              "source_path": "goals/h100-two-node-serialized-b8.goal",
+              "source_sha256": "0858dc33606ece09735c67a7475b3bef17071659bc0574f99d523edfd5bb112b"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8528655235,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1705731047,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1705731047,
+              "numerator": 1600000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 1083018000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8528655235,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1705731047,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1705731047,
+              "numerator": 1600000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 16,
+        "configuration_id": "h100-two-node-serialized",
+        "configuration_label": "H100 two-node serialized split",
+        "rungs": [
+          {
+            "fabric_leg_ps": 2128609280,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8864282698,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4432141349,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4432141349,
+              "numerator": 8000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 2130609000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b16.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "106430465",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "bf5be1d174b8e2507f6949e083dde5999612028139d30d91ca3eabb7eba43ada",
+              "source_path": "goals/h100-two-node-serialized-b16.goal",
+              "source_sha256": "253f1fc87caca693978fccfc628302a261aa4b0bbd7a497a12723982cff3b369"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8864282698,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4432141349,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4432141349,
+              "numerator": 8000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 2163953000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8864282698,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4432141349,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4432141349,
+              "numerator": 8000000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 32,
+        "configuration_id": "h100-two-node-serialized",
+        "configuration_label": "H100 two-node serialized split",
+        "rungs": [
+          {
+            "fabric_leg_ps": 4257218560,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 9535537623,
+            "x_tokens_per_second_per_request": {
+              "denominator": 9535537623,
+              "numerator": 1000000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 9535537623,
+              "numerator": 32000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 4259218000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b32.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "212860929",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "fdf037e65dff32520e9e635019482c5d6f621e8dcde7ba5cb4e5922eb8967a39",
+              "source_path": "goals/h100-two-node-serialized-b32.goal",
+              "source_sha256": "e5ef47eef9400a53d9863df45d186b88cac4b18855b34a6690ab17e58a22c695"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 9535537623,
+            "x_tokens_per_second_per_request": {
+              "denominator": 9535537623,
+              "numerator": 1000000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 9535537623,
+              "numerator": 32000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 4325821000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 9535537623,
+            "x_tokens_per_second_per_request": {
+              "denominator": 9535537623,
+              "numerator": 1000000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 9535537623,
+              "numerator": 32000000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 1,
+        "configuration_id": "h100-nine-node-incast",
+        "configuration_label": "H100 nine-node EP72 incast",
+        "rungs": [
+          {
+            "fabric_leg_ps": 29564020,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8234981205,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 31564000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b1.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "1478202",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "32328dc4dd42d5fe51e60e07c5d72f52d40537718db1bbac478ca9b4805eabc9",
+              "source_path": "goals/h100-nine-node-incast-b1.goal",
+              "source_sha256": "8ad26fd3fce10fd6861be88a0d918d0f8103844d77cdef98e0c9c7bd0d368b27"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8234981205,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 242356000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8234981205,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1646996241,
+              "numerator": 200000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 2,
+        "configuration_id": "h100-nine-node-incast",
+        "configuration_label": "H100 nine-node EP72 incast",
+        "rungs": [
+          {
+            "fabric_leg_ps": 59128040,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8276934638,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4138467319,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4138467319,
+              "numerator": 1000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 61128000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b2.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "2956403",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "83e121b77935ba99aa0a8c5c34fd6c6052b831dfaa3df0ed3dbc3791205a9864",
+              "source_path": "goals/h100-nine-node-incast-b2.goal",
+              "source_sha256": "e24f1dfa11dc46b7e6a84e84c4da22e0cc8858301e9876b26f97dc0bb818c744"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8276934638,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4138467319,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4138467319,
+              "numerator": 1000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 482629000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8276934638,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4138467319,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4138467319,
+              "numerator": 1000000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 4,
+        "configuration_id": "h100-nine-node-incast",
+        "configuration_label": "H100 nine-node EP72 incast",
+        "rungs": [
+          {
+            "fabric_leg_ps": 118256080,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8360841504,
+            "x_tokens_per_second_per_request": {
+              "denominator": 261276297,
+              "numerator": 31250000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 261276297,
+              "numerator": 125000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 120256000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b4.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "5912805",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "56f5d3703ffd7eafe31367730442709e0a2d483733994553aabce4008c5a7be5",
+              "source_path": "goals/h100-nine-node-incast-b4.goal",
+              "source_sha256": "d1f7c98dec350f153f83686f37f5a1b14f0c0bd9b44af59c8f702839619ce04c"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8360841504,
+            "x_tokens_per_second_per_request": {
+              "denominator": 261276297,
+              "numerator": 31250000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 261276297,
+              "numerator": 125000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 963174000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8360841504,
+            "x_tokens_per_second_per_request": {
+              "denominator": 261276297,
+              "numerator": 31250000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 261276297,
+              "numerator": 125000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 8,
+        "configuration_id": "h100-nine-node-incast",
+        "configuration_label": "H100 nine-node EP72 incast",
+        "rungs": [
+          {
+            "fabric_leg_ps": 236512160,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8528655235,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1705731047,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1705731047,
+              "numerator": 1600000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 238512000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b8.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "11825609",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "abe153370670f83357017c5b9476cab74bd741bf6ef108caf23ebba072656ac4",
+              "source_path": "goals/h100-nine-node-incast-b8.goal",
+              "source_sha256": "da16ef42c3b40516448542e24596d5b5d492d13b459a3df67d06f1e15be8494d"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8528655235,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1705731047,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1705731047,
+              "numerator": 1600000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 1924264000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8528655235,
+            "x_tokens_per_second_per_request": {
+              "denominator": 1705731047,
+              "numerator": 200000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 1705731047,
+              "numerator": 1600000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 16,
+        "configuration_id": "h100-nine-node-incast",
+        "configuration_label": "H100 nine-node EP72 incast",
+        "rungs": [
+          {
+            "fabric_leg_ps": 473024300,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 8864282698,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4432141349,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4432141349,
+              "numerator": 8000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 475024000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b16.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "23651216",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "6bb3d2c486a314d622b1e7ff05126c5aa82dd37c005b428e4c353ecda954f314",
+              "source_path": "goals/h100-nine-node-incast-b16.goal",
+              "source_sha256": "3e393f3696f37235791dd36f64dbb9d081dfb122e2b998a047242b8bff9b6d85"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 8864282698,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4432141349,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4432141349,
+              "numerator": 8000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 3845860000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 8864282698,
+            "x_tokens_per_second_per_request": {
+              "denominator": 4432141349,
+              "numerator": 500000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 4432141349,
+              "numerator": 8000000000000
+            }
+          }
+        ]
+      },
+      {
+        "batch_per_gpu": 32,
+        "configuration_id": "h100-nine-node-incast",
+        "configuration_label": "H100 nine-node EP72 incast",
+        "rungs": [
+          {
+            "fabric_leg_ps": 946048580,
+            "point_class": "ESTIMATE",
+            "provenance": {
+              "argv": [],
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "estimate",
+            "step_ps": 9535537623,
+            "x_tokens_per_second_per_request": {
+              "denominator": 9535537623,
+              "numerator": 1000000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 9535537623,
+              "numerator": 32000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 948048000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b32.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "47302430",
+                "-n",
+                "LogGP"
+              ],
+              "authority": "loggopsim-ideal",
+              "authority_class": "level",
+              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "goal_sha256": "9313c019a5e96b11fbd0d487514c1132fc9fdb836a43abe90c9006946f63d58a",
+              "source_path": "goals/h100-nine-node-incast-b32.goal",
+              "source_sha256": "13d5477db27896d61b387bf37e047a2fd06b226df00ec0d1cf71dcdcf29759d6"
+            },
+            "rung": "loggopsim-ideal",
+            "step_ps": 9535537623,
+            "x_tokens_per_second_per_request": {
+              "denominator": 9535537623,
+              "numerator": 1000000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 9535537623,
+              "numerator": 32000000000000
+            }
+          },
+          {
+            "fabric_leg_ps": 7689053000,
+            "point_class": "SIMULATED",
+            "provenance": {
+              "argv": [],
+              "authority": "rnic-nn",
+              "authority_class": "level",
+              "binary_sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9",
+              "goal_sha256": null,
+              "source_path": "examples/deployment_frontier_v1/result.json",
+              "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+            },
+            "rung": "packet",
+            "step_ps": 9535537623,
+            "x_tokens_per_second_per_request": {
+              "denominator": 9535537623,
+              "numerator": 1000000000000
+            },
+            "y_tokens_per_second_per_gpu": {
+              "denominator": 9535537623,
+              "numerator": 32000000000000
+            }
+          }
+        ]
+      }
+    ],
+    "schema": "simllm-deployment-frontier-ladder-record-v1"
+  },
+  "native_tools": {
+    "loggopsim": {
+      "filename": "LogGOPSim",
+      "sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf"
+    },
+    "txt2bin": {
+      "filename": "txt2bin.prebuilt",
+      "sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b"
+    }
+  },
+  "physical_sanity": {
+    "batch_scaling": {
+      "expected_shape": "both serialization-dominated legs approximately double",
+      "ideal_b32_over_b16": {
+        "decimal": 1.9957896864158442,
+        "denominator": 475024,
+        "numerator": 948048,
+        "reduced_denominator": 29689,
+        "reduced_numerator": 59253
+      },
+      "packet_b32_over_b16": {
+        "decimal": 1.9993065270186643,
+        "denominator": 3845860000,
+        "numerator": 7689053000,
+        "reduced_denominator": 3845860,
+        "reduced_numerator": 7689053
+      }
+    },
+    "serialization_physics": {
+      "ceiling_ps": 4259218560,
+      "floor_ps": 4257218560,
+      "inside_bounds": true,
+      "meaning": "payload serialization is the floor and one declared propagation delay is the ceiling increment",
+      "observed_ps": 4259218000
+    },
+    "shared_ingress_physics": {
+      "ceiling_ps": 7703320000,
+      "floor_ps": 7568388560,
+      "inside_bounds": true,
+      "meaning": "eight payloads must cross one ingress and cannot exceed eight isolated completions in series",
+      "observed_ps": 7689053000
+    },
+    "step_plausibility": {
+      "h100_batch32_kernel_floor_ps": 9535537623,
+      "h100_batch32_packet_fabric_ps": 7689053000,
+      "kernel_masks_fabric": true,
+      "meaning": "the 9.536 ms H100 kernel is slower than the 7.689 ms packet fabric leg, so the step does not move"
+    }
+  },
+  "publication": {
+    "figures": [
+      {
+        "bytes": 29603,
+        "path": "figures/frontier-ladder.pdf",
+        "sha256": "236d43fbd233c1dcc87457380e8a1bd9e85ca9e065b6f8069b87c6cf9844f820"
+      },
+      {
+        "bytes": 192529,
+        "path": "figures/frontier-ladder.png",
+        "sha256": "706e1702e326b45b6f05ee7755e367e2a2960577e29f20bf90e6ecda1841c37c"
+      }
+    ],
+    "raw_result_sha256": "3e9cc3be470971c94e757bb3bf0f669bbab257d7e4f03cb9a2b6ca83d37a8acb"
+  },
+  "schema": "simllm-frontier-ladder-study-v1",
+  "scope": "Three-rung deployment frontier over the pinned CORE-62 grid. Only the twelve LogGOPSim ideal fabric legs execute here; packet values are read from the pinned record and no silicon accuracy is claimed.",
+  "score_classes": {
+    "behavioral_relations": {
+      "evidence_class": "behavioral-relation",
+      "families": {
+        "M-1": {
+          "denominator": 6,
+          "evidence_class": "behavioral-relation",
+          "passed": 6,
+          "rows": [
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-two-node-serialized",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.02,
+                  "denominator": 50,
+                  "numerator": 51,
+                  "reduced_denominator": 50,
+                  "reduced_numerator": 51
+                }
+              },
+              "id": "M-1-b1",
+              "ideal_ps": 135038000,
+              "packet_ps": 137201000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.016017713532487,
+                "denominator": 135038000,
+                "numerator": 137201000,
+                "reduced_denominator": 135038,
+                "reduced_numerator": 137201
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-two-node-serialized",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.02,
+                  "denominator": 50,
+                  "numerator": 51,
+                  "reduced_denominator": 50,
+                  "reduced_numerator": 51
+                }
+              },
+              "id": "M-1-b2",
+              "ideal_ps": 268076000,
+              "packet_ps": 272317000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.0158201405571554,
+                "denominator": 268076000,
+                "numerator": 272317000,
+                "reduced_denominator": 268076,
+                "reduced_numerator": 272317
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-two-node-serialized",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.02,
+                  "denominator": 50,
+                  "numerator": 51,
+                  "reduced_denominator": 50,
+                  "reduced_numerator": 51
+                }
+              },
+              "id": "M-1-b4",
+              "ideal_ps": 534152000,
+              "packet_ps": 542551000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.0157239886773801,
+                "denominator": 534152000,
+                "numerator": 542551000,
+                "reduced_denominator": 534152,
+                "reduced_numerator": 542551
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-two-node-serialized",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.02,
+                  "denominator": 50,
+                  "numerator": 51,
+                  "reduced_denominator": 50,
+                  "reduced_numerator": 51
+                }
+              },
+              "id": "M-1-b8",
+              "ideal_ps": 1066304000,
+              "packet_ps": 1083018000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.0156747043994958,
+                "denominator": 1066304000,
+                "numerator": 1083018000,
+                "reduced_denominator": 533152,
+                "reduced_numerator": 541509
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-two-node-serialized",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.02,
+                  "denominator": 50,
+                  "numerator": 51,
+                  "reduced_denominator": 50,
+                  "reduced_numerator": 51
+                }
+              },
+              "id": "M-1-b16",
+              "ideal_ps": 2130609000,
+              "packet_ps": 2163953000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.0156499855205718,
+                "denominator": 2130609000,
+                "numerator": 2163953000,
+                "reduced_denominator": 2130609,
+                "reduced_numerator": 2163953
+              }
+            },
+            {
+              "batch32_literal": {
+                "denominator": 4259218000,
+                "numerator": 4325821000
+              },
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-two-node-serialized",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.02,
+                  "denominator": 50,
+                  "numerator": 51,
+                  "reduced_denominator": 50,
+                  "reduced_numerator": 51
+                }
+              },
+              "id": "M-1-b32",
+              "ideal_ps": 4259218000,
+              "packet_ps": 4325821000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.0156373775655532,
+                "denominator": 4259218000,
+                "numerator": 4325821000,
+                "reduced_denominator": 4259218,
+                "reduced_numerator": 4325821
+              }
+            }
+          ]
+        },
+        "M-2": {
+          "denominator": 6,
+          "evidence_class": "behavioral-relation",
+          "passed": 6,
+          "rows": [
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 7.5,
+                  "denominator": 2,
+                  "numerator": 15,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 15
+                },
+                "upper": {
+                  "decimal": 8.5,
+                  "denominator": 2,
+                  "numerator": 17,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 17
+                }
+              },
+              "id": "M-2-b1",
+              "ideal_ps": 31564000,
+              "packet_ps": 242356000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 7.678241034089469,
+                "denominator": 31564000,
+                "numerator": 242356000,
+                "reduced_denominator": 7891,
+                "reduced_numerator": 60589
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 7.5,
+                  "denominator": 2,
+                  "numerator": 15,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 15
+                },
+                "upper": {
+                  "decimal": 8.5,
+                  "denominator": 2,
+                  "numerator": 17,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 17
+                }
+              },
+              "id": "M-2-b2",
+              "ideal_ps": 61128000,
+              "packet_ps": 482629000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 7.89538345766261,
+                "denominator": 61128000,
+                "numerator": 482629000,
+                "reduced_denominator": 61128,
+                "reduced_numerator": 482629
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 7.5,
+                  "denominator": 2,
+                  "numerator": 15,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 15
+                },
+                "upper": {
+                  "decimal": 8.5,
+                  "denominator": 2,
+                  "numerator": 17,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 17
+                }
+              },
+              "id": "M-2-b4",
+              "ideal_ps": 120256000,
+              "packet_ps": 963174000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 8.009363358169239,
+                "denominator": 120256000,
+                "numerator": 963174000,
+                "reduced_denominator": 60128,
+                "reduced_numerator": 481587
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 7.5,
+                  "denominator": 2,
+                  "numerator": 15,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 15
+                },
+                "upper": {
+                  "decimal": 8.5,
+                  "denominator": 2,
+                  "numerator": 17,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 17
+                }
+              },
+              "id": "M-2-b8",
+              "ideal_ps": 238512000,
+              "packet_ps": 1924264000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 8.067786945730195,
+                "denominator": 238512000,
+                "numerator": 1924264000,
+                "reduced_denominator": 29814,
+                "reduced_numerator": 240533
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 7.5,
+                  "denominator": 2,
+                  "numerator": 15,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 15
+                },
+                "upper": {
+                  "decimal": 8.5,
+                  "denominator": 2,
+                  "numerator": 17,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 17
+                }
+              },
+              "id": "M-2-b16",
+              "ideal_ps": 475024000,
+              "packet_ps": 3845860000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 8.096138300380613,
+                "denominator": 475024000,
+                "numerator": 3845860000,
+                "reduced_denominator": 118756,
+                "reduced_numerator": 961465
+              }
+            },
+            {
+              "batch32_literal": {
+                "denominator": 948048000,
+                "numerator": 7689053000
+              },
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 7.5,
+                  "denominator": 2,
+                  "numerator": 15,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 15
+                },
+                "upper": {
+                  "decimal": 8.5,
+                  "denominator": 2,
+                  "numerator": 17,
+                  "reduced_denominator": 2,
+                  "reduced_numerator": 17
+                }
+              },
+              "id": "M-2-b32",
+              "ideal_ps": 948048000,
+              "packet_ps": 7689053000,
+              "packet_quantity": "concurrent_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 8.110404747438949,
+                "denominator": 948048000,
+                "numerator": 7689053000,
+                "reduced_denominator": 948048,
+                "reduced_numerator": 7689053
+              }
+            }
+          ]
+        },
+        "M-3": {
+          "denominator": 6,
+          "evidence_class": "behavioral-relation",
+          "passed": 6,
+          "rows": [
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.035,
+                  "denominator": 200,
+                  "numerator": 207,
+                  "reduced_denominator": 200,
+                  "reduced_numerator": 207
+                }
+              },
+              "id": "M-3-b1",
+              "ideal_ps": 31564000,
+              "packet_ps": 32110000,
+              "packet_quantity": "isolated_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.0172981878088962,
+                "denominator": 31564000,
+                "numerator": 32110000,
+                "reduced_denominator": 1214,
+                "reduced_numerator": 1235
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.035,
+                  "denominator": 200,
+                  "numerator": 207,
+                  "reduced_denominator": 200,
+                  "reduced_numerator": 207
+                }
+              },
+              "id": "M-3-b2",
+              "ideal_ps": 61128000,
+              "packet_ps": 62136000,
+              "packet_quantity": "isolated_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.0164899882214369,
+                "denominator": 61128000,
+                "numerator": 62136000,
+                "reduced_denominator": 849,
+                "reduced_numerator": 863
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.035,
+                  "denominator": 200,
+                  "numerator": 207,
+                  "reduced_denominator": 200,
+                  "reduced_numerator": 207
+                }
+              },
+              "id": "M-3-b4",
+              "ideal_ps": 120256000,
+              "packet_ps": 122188000,
+              "packet_quantity": "isolated_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.0160657264502395,
+                "denominator": 120256000,
+                "numerator": 122188000,
+                "reduced_denominator": 30064,
+                "reduced_numerator": 30547
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.035,
+                  "denominator": 200,
+                  "numerator": 207,
+                  "reduced_denominator": 200,
+                  "reduced_numerator": 207
+                }
+              },
+              "id": "M-3-b8",
+              "ideal_ps": 238512000,
+              "packet_ps": 242293000,
+              "packet_quantity": "isolated_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.01585245186825,
+                "denominator": 238512000,
+                "numerator": 242293000,
+                "reduced_denominator": 238512,
+                "reduced_numerator": 242293
+              }
+            },
+            {
+              "batch32_literal": null,
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.035,
+                  "denominator": 200,
+                  "numerator": 207,
+                  "reduced_denominator": 200,
+                  "reduced_numerator": 207
+                }
+              },
+              "id": "M-3-b16",
+              "ideal_ps": 475024000,
+              "packet_ps": 482500000,
+              "packet_quantity": "isolated_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.0157381521775741,
+                "denominator": 475024000,
+                "numerator": 482500000,
+                "reduced_denominator": 118756,
+                "reduced_numerator": 120625
+              }
+            },
+            {
+              "batch32_literal": {
+                "denominator": 948048000,
+                "numerator": 962915000
+              },
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-nine-node-incast",
+              "expected_band": {
+                "lower": {
+                  "decimal": 1.0,
+                  "denominator": 1,
+                  "numerator": 1,
+                  "reduced_denominator": 1,
+                  "reduced_numerator": 1
+                },
+                "upper": {
+                  "decimal": 1.035,
+                  "denominator": 200,
+                  "numerator": 207,
+                  "reduced_denominator": 200,
+                  "reduced_numerator": 207
+                }
+              },
+              "id": "M-3-b32",
+              "ideal_ps": 948048000,
+              "packet_ps": 962915000,
+              "packet_quantity": "isolated_service_ps",
+              "passed": true,
+              "quotient": {
+                "decimal": 1.015681695441581,
+                "denominator": 948048000,
+                "numerator": 962915000,
+                "reduced_denominator": 948048,
+                "reduced_numerator": 962915
+              }
+            }
+          ]
+        },
+        "S": {
+          "denominator": 18,
+          "evidence_class": "behavioral-relation",
+          "passed": 18,
+          "rows": [
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "b100-one-node-intra",
+              "expected": "all three step times equal",
+              "id": "S-b100-one-node-intra-b1",
+              "observed_step_ps": {
+                "estimate": 3448398380,
+                "loggopsim-ideal": 3448398380,
+                "packet": 3448398380
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "b100-one-node-intra",
+              "expected": "all three step times equal",
+              "id": "S-b100-one-node-intra-b2",
+              "observed_step_ps": {
+                "estimate": 3465966380,
+                "loggopsim-ideal": 3465966380,
+                "packet": 3465966380
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "b100-one-node-intra",
+              "expected": "all three step times equal",
+              "id": "S-b100-one-node-intra-b4",
+              "observed_step_ps": {
+                "estimate": 3501102380,
+                "loggopsim-ideal": 3501102380,
+                "packet": 3501102380
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "b100-one-node-intra",
+              "expected": "all three step times equal",
+              "id": "S-b100-one-node-intra-b8",
+              "observed_step_ps": {
+                "estimate": 3571374380,
+                "loggopsim-ideal": 3571374380,
+                "packet": 3571374380
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "b100-one-node-intra",
+              "expected": "all three step times equal",
+              "id": "S-b100-one-node-intra-b16",
+              "observed_step_ps": {
+                "estimate": 3711918380,
+                "loggopsim-ideal": 3711918380,
+                "packet": 3711918380
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "b100-one-node-intra",
+              "expected": {
+                "estimate": 4257218560,
+                "loggopsim-ideal": 4257218560,
+                "packet": 4523298348
+              },
+              "id": "S-b100-one-node-intra-b32",
+              "observed_step_ps": {
+                "estimate": 4257218560,
+                "loggopsim-ideal": 4257218560,
+                "packet": 4523298348
+              },
+              "passed": true,
+              "relation": "packet intra-node excess is visible; estimate and ideal agree"
+            },
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-two-node-serialized",
+              "expected": "all three step times equal",
+              "id": "S-h100-two-node-serialized-b1",
+              "observed_step_ps": {
+                "estimate": 8234981205,
+                "loggopsim-ideal": 8234981205,
+                "packet": 8234981205
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-two-node-serialized",
+              "expected": "all three step times equal",
+              "id": "S-h100-two-node-serialized-b2",
+              "observed_step_ps": {
+                "estimate": 8276934638,
+                "loggopsim-ideal": 8276934638,
+                "packet": 8276934638
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-two-node-serialized",
+              "expected": "all three step times equal",
+              "id": "S-h100-two-node-serialized-b4",
+              "observed_step_ps": {
+                "estimate": 8360841504,
+                "loggopsim-ideal": 8360841504,
+                "packet": 8360841504
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-two-node-serialized",
+              "expected": "all three step times equal",
+              "id": "S-h100-two-node-serialized-b8",
+              "observed_step_ps": {
+                "estimate": 8528655235,
+                "loggopsim-ideal": 8528655235,
+                "packet": 8528655235
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-two-node-serialized",
+              "expected": "all three step times equal",
+              "id": "S-h100-two-node-serialized-b16",
+              "observed_step_ps": {
+                "estimate": 8864282698,
+                "loggopsim-ideal": 8864282698,
+                "packet": 8864282698
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-two-node-serialized",
+              "expected": "all three step times equal",
+              "id": "S-h100-two-node-serialized-b32",
+              "observed_step_ps": {
+                "estimate": 9535537623,
+                "loggopsim-ideal": 9535537623,
+                "packet": 9535537623
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-nine-node-incast",
+              "expected": "all three step times equal",
+              "id": "S-h100-nine-node-incast-b1",
+              "observed_step_ps": {
+                "estimate": 8234981205,
+                "loggopsim-ideal": 8234981205,
+                "packet": 8234981205
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-nine-node-incast",
+              "expected": "all three step times equal",
+              "id": "S-h100-nine-node-incast-b2",
+              "observed_step_ps": {
+                "estimate": 8276934638,
+                "loggopsim-ideal": 8276934638,
+                "packet": 8276934638
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-nine-node-incast",
+              "expected": "all three step times equal",
+              "id": "S-h100-nine-node-incast-b4",
+              "observed_step_ps": {
+                "estimate": 8360841504,
+                "loggopsim-ideal": 8360841504,
+                "packet": 8360841504
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-nine-node-incast",
+              "expected": "all three step times equal",
+              "id": "S-h100-nine-node-incast-b8",
+              "observed_step_ps": {
+                "estimate": 8528655235,
+                "loggopsim-ideal": 8528655235,
+                "packet": 8528655235
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-nine-node-incast",
+              "expected": "all three step times equal",
+              "id": "S-h100-nine-node-incast-b16",
+              "observed_step_ps": {
+                "estimate": 8864282698,
+                "loggopsim-ideal": 8864282698,
+                "packet": 8864282698
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-nine-node-incast",
+              "expected": "all three step times equal",
+              "id": "S-h100-nine-node-incast-b32",
+              "observed_step_ps": {
+                "estimate": 9535537623,
+                "loggopsim-ideal": 9535537623,
+                "packet": 9535537623
+              },
+              "passed": true,
+              "relation": "all three step times equal"
+            }
+          ]
+        }
+      }
+    },
+    "exact_oracles": {
+      "evidence_class": "exact-oracle",
+      "families": {
+        "L-A": {
+          "denominator": 6,
+          "evidence_class": "exact-oracle",
+          "passed": 6,
+          "rows": [
+            {
+              "all_observed_ns": [
+                135038,
+                135038,
+                135038,
+                135038,
+                135038,
+                135038,
+                135038
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b1.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "6651905",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-two-node-serialized",
+              "executions": 7,
+              "expected_ns": 135038,
+              "family": "L-A",
+              "flow_count": 1,
+              "goal_binary_path": "goals/h100-two-node-serialized-b1.bin",
+              "goal_binary_sha256": "4fea069b2ff8a9370b453bfc8d285ffca6722895adca957557faf8b922858823",
+              "goal_path": "goals/h100-two-node-serialized-b1.goal",
+              "goal_text_sha256": "f9924d9dd23abdbdaa280b1bebcbd5e7bcead53070871974369218741b916f3a",
+              "id": "L-A-b1",
+              "native_evidence": [
+                "native/L-A-b1-wall-sample-1/execution-0001.json",
+                "native/L-A-b1-wall-sample-2/execution-0001.json",
+                "native/L-A-b1-wall-sample-3/execution-0001.json",
+                "native/L-A-b1-wall-sample-4/execution-0001.json",
+                "native/L-A-b1-wall-sample-5/execution-0001.json",
+                "native/L-A-b1-wall-sample-6/execution-0001.json",
+                "native/L-A-b1-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 135038,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 6651905,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 6651904,
+              "rank_count": 2,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "6b8de6d03aac12f6a7dd4d63b0c071928b9ab485eabf0d30d9d374508cfaf906",
+                "6b8de6d03aac12f6a7dd4d63b0c071928b9ab485eabf0d30d9d374508cfaf906",
+                "6b8de6d03aac12f6a7dd4d63b0c071928b9ab485eabf0d30d9d374508cfaf906",
+                "6b8de6d03aac12f6a7dd4d63b0c071928b9ab485eabf0d30d9d374508cfaf906",
+                "6b8de6d03aac12f6a7dd4d63b0c071928b9ab485eabf0d30d9d374508cfaf906",
+                "6b8de6d03aac12f6a7dd4d63b0c071928b9ab485eabf0d30d9d374508cfaf906",
+                "6b8de6d03aac12f6a7dd4d63b0c071928b9ab485eabf0d30d9d374508cfaf906"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                268076,
+                268076,
+                268076,
+                268076,
+                268076,
+                268076,
+                268076
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b2.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "13303809",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-two-node-serialized",
+              "executions": 7,
+              "expected_ns": 268076,
+              "family": "L-A",
+              "flow_count": 1,
+              "goal_binary_path": "goals/h100-two-node-serialized-b2.bin",
+              "goal_binary_sha256": "0b5d9348d61eefef3e535262f4735f6cf114c9c28845e28cc20dfb9c606537f6",
+              "goal_path": "goals/h100-two-node-serialized-b2.goal",
+              "goal_text_sha256": "1385d1b6351b242136976620dd11958cd0fab50746ce85a01efe42ab95ecebb3",
+              "id": "L-A-b2",
+              "native_evidence": [
+                "native/L-A-b2-wall-sample-1/execution-0001.json",
+                "native/L-A-b2-wall-sample-2/execution-0001.json",
+                "native/L-A-b2-wall-sample-3/execution-0001.json",
+                "native/L-A-b2-wall-sample-4/execution-0001.json",
+                "native/L-A-b2-wall-sample-5/execution-0001.json",
+                "native/L-A-b2-wall-sample-6/execution-0001.json",
+                "native/L-A-b2-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 268076,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 13303809,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 13303808,
+              "rank_count": 2,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "2f48efc4643f1b0755950889a00a28ea0a3af9318fa6bcddeed6447a1a6afda1",
+                "2f48efc4643f1b0755950889a00a28ea0a3af9318fa6bcddeed6447a1a6afda1",
+                "2f48efc4643f1b0755950889a00a28ea0a3af9318fa6bcddeed6447a1a6afda1",
+                "2f48efc4643f1b0755950889a00a28ea0a3af9318fa6bcddeed6447a1a6afda1",
+                "2f48efc4643f1b0755950889a00a28ea0a3af9318fa6bcddeed6447a1a6afda1",
+                "2f48efc4643f1b0755950889a00a28ea0a3af9318fa6bcddeed6447a1a6afda1",
+                "2f48efc4643f1b0755950889a00a28ea0a3af9318fa6bcddeed6447a1a6afda1"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                534152,
+                534152,
+                534152,
+                534152,
+                534152,
+                534152,
+                534152
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b4.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "26607617",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-two-node-serialized",
+              "executions": 7,
+              "expected_ns": 534152,
+              "family": "L-A",
+              "flow_count": 1,
+              "goal_binary_path": "goals/h100-two-node-serialized-b4.bin",
+              "goal_binary_sha256": "e7329708bcb9e5d0db83dc98e21649095221c7f6ec425a6bee831084e0434439",
+              "goal_path": "goals/h100-two-node-serialized-b4.goal",
+              "goal_text_sha256": "55280bd5fa141a030b9932e4dcf56d58d9efbb6ff798d070660c7d4666fabfee",
+              "id": "L-A-b4",
+              "native_evidence": [
+                "native/L-A-b4-wall-sample-1/execution-0001.json",
+                "native/L-A-b4-wall-sample-2/execution-0001.json",
+                "native/L-A-b4-wall-sample-3/execution-0001.json",
+                "native/L-A-b4-wall-sample-4/execution-0001.json",
+                "native/L-A-b4-wall-sample-5/execution-0001.json",
+                "native/L-A-b4-wall-sample-6/execution-0001.json",
+                "native/L-A-b4-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 534152,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 26607617,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 26607616,
+              "rank_count": 2,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "0aaddb7a6ab1cc862b12a33cd5abf50f305bef94d655b071d4d4273cd7983fe2",
+                "0aaddb7a6ab1cc862b12a33cd5abf50f305bef94d655b071d4d4273cd7983fe2",
+                "0aaddb7a6ab1cc862b12a33cd5abf50f305bef94d655b071d4d4273cd7983fe2",
+                "0aaddb7a6ab1cc862b12a33cd5abf50f305bef94d655b071d4d4273cd7983fe2",
+                "0aaddb7a6ab1cc862b12a33cd5abf50f305bef94d655b071d4d4273cd7983fe2",
+                "0aaddb7a6ab1cc862b12a33cd5abf50f305bef94d655b071d4d4273cd7983fe2",
+                "0aaddb7a6ab1cc862b12a33cd5abf50f305bef94d655b071d4d4273cd7983fe2"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                1066304,
+                1066304,
+                1066304,
+                1066304,
+                1066304,
+                1066304,
+                1066304
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b8.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "53215233",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-two-node-serialized",
+              "executions": 7,
+              "expected_ns": 1066304,
+              "family": "L-A",
+              "flow_count": 1,
+              "goal_binary_path": "goals/h100-two-node-serialized-b8.bin",
+              "goal_binary_sha256": "02be77b914a72cd4e0a00c1b8970fe72657a0829fa591f4f67d669e97d53c5bb",
+              "goal_path": "goals/h100-two-node-serialized-b8.goal",
+              "goal_text_sha256": "0858dc33606ece09735c67a7475b3bef17071659bc0574f99d523edfd5bb112b",
+              "id": "L-A-b8",
+              "native_evidence": [
+                "native/L-A-b8-wall-sample-1/execution-0001.json",
+                "native/L-A-b8-wall-sample-2/execution-0001.json",
+                "native/L-A-b8-wall-sample-3/execution-0001.json",
+                "native/L-A-b8-wall-sample-4/execution-0001.json",
+                "native/L-A-b8-wall-sample-5/execution-0001.json",
+                "native/L-A-b8-wall-sample-6/execution-0001.json",
+                "native/L-A-b8-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 1066304,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 53215233,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 53215232,
+              "rank_count": 2,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "32ecda2f97759e9f768c51d57a82696ddc92d3f54cff8ff7161896e0234b517c",
+                "32ecda2f97759e9f768c51d57a82696ddc92d3f54cff8ff7161896e0234b517c",
+                "32ecda2f97759e9f768c51d57a82696ddc92d3f54cff8ff7161896e0234b517c",
+                "32ecda2f97759e9f768c51d57a82696ddc92d3f54cff8ff7161896e0234b517c",
+                "32ecda2f97759e9f768c51d57a82696ddc92d3f54cff8ff7161896e0234b517c",
+                "32ecda2f97759e9f768c51d57a82696ddc92d3f54cff8ff7161896e0234b517c",
+                "32ecda2f97759e9f768c51d57a82696ddc92d3f54cff8ff7161896e0234b517c"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                2130609,
+                2130609,
+                2130609,
+                2130609,
+                2130609,
+                2130609,
+                2130609
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b16.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "106430465",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-two-node-serialized",
+              "executions": 7,
+              "expected_ns": 2130609,
+              "family": "L-A",
+              "flow_count": 1,
+              "goal_binary_path": "goals/h100-two-node-serialized-b16.bin",
+              "goal_binary_sha256": "bf5be1d174b8e2507f6949e083dde5999612028139d30d91ca3eabb7eba43ada",
+              "goal_path": "goals/h100-two-node-serialized-b16.goal",
+              "goal_text_sha256": "253f1fc87caca693978fccfc628302a261aa4b0bbd7a497a12723982cff3b369",
+              "id": "L-A-b16",
+              "native_evidence": [
+                "native/L-A-b16-wall-sample-1/execution-0001.json",
+                "native/L-A-b16-wall-sample-2/execution-0001.json",
+                "native/L-A-b16-wall-sample-3/execution-0001.json",
+                "native/L-A-b16-wall-sample-4/execution-0001.json",
+                "native/L-A-b16-wall-sample-5/execution-0001.json",
+                "native/L-A-b16-wall-sample-6/execution-0001.json",
+                "native/L-A-b16-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 2130609,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 106430465,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 106430464,
+              "rank_count": 2,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "d197909dee4262d247f198a4468ea30e00d6bdd0d20f1853a0bf11f3def73f93",
+                "d197909dee4262d247f198a4468ea30e00d6bdd0d20f1853a0bf11f3def73f93",
+                "d197909dee4262d247f198a4468ea30e00d6bdd0d20f1853a0bf11f3def73f93",
+                "d197909dee4262d247f198a4468ea30e00d6bdd0d20f1853a0bf11f3def73f93",
+                "d197909dee4262d247f198a4468ea30e00d6bdd0d20f1853a0bf11f3def73f93",
+                "d197909dee4262d247f198a4468ea30e00d6bdd0d20f1853a0bf11f3def73f93",
+                "d197909dee4262d247f198a4468ea30e00d6bdd0d20f1853a0bf11f3def73f93"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                4259218,
+                4259218,
+                4259218,
+                4259218,
+                4259218,
+                4259218,
+                4259218
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-two-node-serialized-b32.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "212860929",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-two-node-serialized",
+              "executions": 7,
+              "expected_ns": 4259218,
+              "family": "L-A",
+              "flow_count": 1,
+              "goal_binary_path": "goals/h100-two-node-serialized-b32.bin",
+              "goal_binary_sha256": "fdf037e65dff32520e9e635019482c5d6f621e8dcde7ba5cb4e5922eb8967a39",
+              "goal_path": "goals/h100-two-node-serialized-b32.goal",
+              "goal_text_sha256": "e5ef47eef9400a53d9863df45d186b88cac4b18855b34a6690ab17e58a22c695",
+              "id": "L-A-b32",
+              "native_evidence": [
+                "native/L-A-b32-wall-sample-1/execution-0001.json",
+                "native/L-A-b32-wall-sample-2/execution-0001.json",
+                "native/L-A-b32-wall-sample-3/execution-0001.json",
+                "native/L-A-b32-wall-sample-4/execution-0001.json",
+                "native/L-A-b32-wall-sample-5/execution-0001.json",
+                "native/L-A-b32-wall-sample-6/execution-0001.json",
+                "native/L-A-b32-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 4259218,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 212860929,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 212860928,
+              "rank_count": 2,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "dce9c7d67b68a6a51ce644c8710d60bd2e1c1431ae01a0e0c17b8804b282873b",
+                "dce9c7d67b68a6a51ce644c8710d60bd2e1c1431ae01a0e0c17b8804b282873b",
+                "dce9c7d67b68a6a51ce644c8710d60bd2e1c1431ae01a0e0c17b8804b282873b",
+                "dce9c7d67b68a6a51ce644c8710d60bd2e1c1431ae01a0e0c17b8804b282873b",
+                "dce9c7d67b68a6a51ce644c8710d60bd2e1c1431ae01a0e0c17b8804b282873b",
+                "dce9c7d67b68a6a51ce644c8710d60bd2e1c1431ae01a0e0c17b8804b282873b",
+                "dce9c7d67b68a6a51ce644c8710d60bd2e1c1431ae01a0e0c17b8804b282873b"
+              ]
+            }
+          ]
+        },
+        "L-B": {
+          "denominator": 6,
+          "evidence_class": "exact-oracle",
+          "passed": 6,
+          "rows": [
+            {
+              "all_observed_ns": [
+                31564,
+                31564,
+                31564,
+                31564,
+                31564,
+                31564,
+                31564
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b1.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "1478202",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-nine-node-incast",
+              "executions": 7,
+              "expected_ns": 31564,
+              "family": "L-B",
+              "flow_count": 8,
+              "goal_binary_path": "goals/h100-nine-node-incast-b1.bin",
+              "goal_binary_sha256": "32328dc4dd42d5fe51e60e07c5d72f52d40537718db1bbac478ca9b4805eabc9",
+              "goal_path": "goals/h100-nine-node-incast-b1.goal",
+              "goal_text_sha256": "8ad26fd3fce10fd6861be88a0d918d0f8103844d77cdef98e0c9c7bd0d368b27",
+              "id": "L-B-b1",
+              "native_evidence": [
+                "native/L-B-b1-wall-sample-1/execution-0001.json",
+                "native/L-B-b1-wall-sample-2/execution-0001.json",
+                "native/L-B-b1-wall-sample-3/execution-0001.json",
+                "native/L-B-b1-wall-sample-4/execution-0001.json",
+                "native/L-B-b1-wall-sample-5/execution-0001.json",
+                "native/L-B-b1-wall-sample-6/execution-0001.json",
+                "native/L-B-b1-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 31564,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 1478202,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 1478201,
+              "rank_count": 9,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "b228a1563d3c537f07643e61030d7578bb5f4fa210ee8d8144444b1af30c69fa",
+                "b228a1563d3c537f07643e61030d7578bb5f4fa210ee8d8144444b1af30c69fa",
+                "b228a1563d3c537f07643e61030d7578bb5f4fa210ee8d8144444b1af30c69fa",
+                "b228a1563d3c537f07643e61030d7578bb5f4fa210ee8d8144444b1af30c69fa",
+                "b228a1563d3c537f07643e61030d7578bb5f4fa210ee8d8144444b1af30c69fa",
+                "b228a1563d3c537f07643e61030d7578bb5f4fa210ee8d8144444b1af30c69fa",
+                "b228a1563d3c537f07643e61030d7578bb5f4fa210ee8d8144444b1af30c69fa"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                61128,
+                61128,
+                61128,
+                61128,
+                61128,
+                61128,
+                61128
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b2.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "2956403",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-nine-node-incast",
+              "executions": 7,
+              "expected_ns": 61128,
+              "family": "L-B",
+              "flow_count": 8,
+              "goal_binary_path": "goals/h100-nine-node-incast-b2.bin",
+              "goal_binary_sha256": "83e121b77935ba99aa0a8c5c34fd6c6052b831dfaa3df0ed3dbc3791205a9864",
+              "goal_path": "goals/h100-nine-node-incast-b2.goal",
+              "goal_text_sha256": "e24f1dfa11dc46b7e6a84e84c4da22e0cc8858301e9876b26f97dc0bb818c744",
+              "id": "L-B-b2",
+              "native_evidence": [
+                "native/L-B-b2-wall-sample-1/execution-0001.json",
+                "native/L-B-b2-wall-sample-2/execution-0001.json",
+                "native/L-B-b2-wall-sample-3/execution-0001.json",
+                "native/L-B-b2-wall-sample-4/execution-0001.json",
+                "native/L-B-b2-wall-sample-5/execution-0001.json",
+                "native/L-B-b2-wall-sample-6/execution-0001.json",
+                "native/L-B-b2-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 61128,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 2956403,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 2956402,
+              "rank_count": 9,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "e264fc6e254e494e4939ca75a06513955279f20f82174710b2075ee4f0528de6",
+                "e264fc6e254e494e4939ca75a06513955279f20f82174710b2075ee4f0528de6",
+                "e264fc6e254e494e4939ca75a06513955279f20f82174710b2075ee4f0528de6",
+                "e264fc6e254e494e4939ca75a06513955279f20f82174710b2075ee4f0528de6",
+                "e264fc6e254e494e4939ca75a06513955279f20f82174710b2075ee4f0528de6",
+                "e264fc6e254e494e4939ca75a06513955279f20f82174710b2075ee4f0528de6",
+                "e264fc6e254e494e4939ca75a06513955279f20f82174710b2075ee4f0528de6"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                120256,
+                120256,
+                120256,
+                120256,
+                120256,
+                120256,
+                120256
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b4.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "5912805",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-nine-node-incast",
+              "executions": 7,
+              "expected_ns": 120256,
+              "family": "L-B",
+              "flow_count": 8,
+              "goal_binary_path": "goals/h100-nine-node-incast-b4.bin",
+              "goal_binary_sha256": "56f5d3703ffd7eafe31367730442709e0a2d483733994553aabce4008c5a7be5",
+              "goal_path": "goals/h100-nine-node-incast-b4.goal",
+              "goal_text_sha256": "d1f7c98dec350f153f83686f37f5a1b14f0c0bd9b44af59c8f702839619ce04c",
+              "id": "L-B-b4",
+              "native_evidence": [
+                "native/L-B-b4-wall-sample-1/execution-0001.json",
+                "native/L-B-b4-wall-sample-2/execution-0001.json",
+                "native/L-B-b4-wall-sample-3/execution-0001.json",
+                "native/L-B-b4-wall-sample-4/execution-0001.json",
+                "native/L-B-b4-wall-sample-5/execution-0001.json",
+                "native/L-B-b4-wall-sample-6/execution-0001.json",
+                "native/L-B-b4-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 120256,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 5912805,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 5912804,
+              "rank_count": 9,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "ff764a4a434c4c451ff7847c65803abe2e7868d2e53ca03b1673f9df36d01310",
+                "ff764a4a434c4c451ff7847c65803abe2e7868d2e53ca03b1673f9df36d01310",
+                "ff764a4a434c4c451ff7847c65803abe2e7868d2e53ca03b1673f9df36d01310",
+                "ff764a4a434c4c451ff7847c65803abe2e7868d2e53ca03b1673f9df36d01310",
+                "ff764a4a434c4c451ff7847c65803abe2e7868d2e53ca03b1673f9df36d01310",
+                "ff764a4a434c4c451ff7847c65803abe2e7868d2e53ca03b1673f9df36d01310",
+                "ff764a4a434c4c451ff7847c65803abe2e7868d2e53ca03b1673f9df36d01310"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                238512,
+                238512,
+                238512,
+                238512,
+                238512,
+                238512,
+                238512
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b8.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "11825609",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-nine-node-incast",
+              "executions": 7,
+              "expected_ns": 238512,
+              "family": "L-B",
+              "flow_count": 8,
+              "goal_binary_path": "goals/h100-nine-node-incast-b8.bin",
+              "goal_binary_sha256": "abe153370670f83357017c5b9476cab74bd741bf6ef108caf23ebba072656ac4",
+              "goal_path": "goals/h100-nine-node-incast-b8.goal",
+              "goal_text_sha256": "da16ef42c3b40516448542e24596d5b5d492d13b459a3df67d06f1e15be8494d",
+              "id": "L-B-b8",
+              "native_evidence": [
+                "native/L-B-b8-wall-sample-1/execution-0001.json",
+                "native/L-B-b8-wall-sample-2/execution-0001.json",
+                "native/L-B-b8-wall-sample-3/execution-0001.json",
+                "native/L-B-b8-wall-sample-4/execution-0001.json",
+                "native/L-B-b8-wall-sample-5/execution-0001.json",
+                "native/L-B-b8-wall-sample-6/execution-0001.json",
+                "native/L-B-b8-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 238512,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 11825609,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 11825608,
+              "rank_count": 9,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "66e5a9a93991f6da754b04107553787a37b7bf58e4a45f091bc7f7bd9dcbd1fc",
+                "66e5a9a93991f6da754b04107553787a37b7bf58e4a45f091bc7f7bd9dcbd1fc",
+                "66e5a9a93991f6da754b04107553787a37b7bf58e4a45f091bc7f7bd9dcbd1fc",
+                "66e5a9a93991f6da754b04107553787a37b7bf58e4a45f091bc7f7bd9dcbd1fc",
+                "66e5a9a93991f6da754b04107553787a37b7bf58e4a45f091bc7f7bd9dcbd1fc",
+                "66e5a9a93991f6da754b04107553787a37b7bf58e4a45f091bc7f7bd9dcbd1fc",
+                "66e5a9a93991f6da754b04107553787a37b7bf58e4a45f091bc7f7bd9dcbd1fc"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                475024,
+                475024,
+                475024,
+                475024,
+                475024,
+                475024,
+                475024
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b16.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "23651216",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-nine-node-incast",
+              "executions": 7,
+              "expected_ns": 475024,
+              "family": "L-B",
+              "flow_count": 8,
+              "goal_binary_path": "goals/h100-nine-node-incast-b16.bin",
+              "goal_binary_sha256": "6bb3d2c486a314d622b1e7ff05126c5aa82dd37c005b428e4c353ecda954f314",
+              "goal_path": "goals/h100-nine-node-incast-b16.goal",
+              "goal_text_sha256": "3e393f3696f37235791dd36f64dbb9d081dfb122e2b998a047242b8bff9b6d85",
+              "id": "L-B-b16",
+              "native_evidence": [
+                "native/L-B-b16-wall-sample-1/execution-0001.json",
+                "native/L-B-b16-wall-sample-2/execution-0001.json",
+                "native/L-B-b16-wall-sample-3/execution-0001.json",
+                "native/L-B-b16-wall-sample-4/execution-0001.json",
+                "native/L-B-b16-wall-sample-5/execution-0001.json",
+                "native/L-B-b16-wall-sample-6/execution-0001.json",
+                "native/L-B-b16-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 475024,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 23651216,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 23651215,
+              "rank_count": 9,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "44a9e3402fc78eb4dd3e3f69f1f506238b46fe5895460eaa861710de1147d240",
+                "44a9e3402fc78eb4dd3e3f69f1f506238b46fe5895460eaa861710de1147d240",
+                "44a9e3402fc78eb4dd3e3f69f1f506238b46fe5895460eaa861710de1147d240",
+                "44a9e3402fc78eb4dd3e3f69f1f506238b46fe5895460eaa861710de1147d240",
+                "44a9e3402fc78eb4dd3e3f69f1f506238b46fe5895460eaa861710de1147d240",
+                "44a9e3402fc78eb4dd3e3f69f1f506238b46fe5895460eaa861710de1147d240",
+                "44a9e3402fc78eb4dd3e3f69f1f506238b46fe5895460eaa861710de1147d240"
+              ]
+            },
+            {
+              "all_observed_ns": [
+                948048,
+                948048,
+                948048,
+                948048,
+                948048,
+                948048,
+                948048
+              ],
+              "argv": [
+                "LogGOPSim",
+                "-f",
+                "goals/h100-nine-node-incast-b32.bin",
+                "-L",
+                "2000",
+                "-o",
+                "0",
+                "-g",
+                "0",
+                "-G",
+                "0.02",
+                "-O",
+                "0",
+                "-S",
+                "47302430",
+                "-n",
+                "LogGP"
+              ],
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-nine-node-incast",
+              "executions": 7,
+              "expected_ns": 948048,
+              "family": "L-B",
+              "flow_count": 8,
+              "goal_binary_path": "goals/h100-nine-node-incast-b32.bin",
+              "goal_binary_sha256": "9313c019a5e96b11fbd0d487514c1132fc9fdb836a43abe90c9006946f63d58a",
+              "goal_path": "goals/h100-nine-node-incast-b32.goal",
+              "goal_text_sha256": "13d5477db27896d61b387bf37e047a2fd06b226df00ec0d1cf71dcdcf29759d6",
+              "id": "L-B-b32",
+              "native_evidence": [
+                "native/L-B-b32-wall-sample-1/execution-0001.json",
+                "native/L-B-b32-wall-sample-2/execution-0001.json",
+                "native/L-B-b32-wall-sample-3/execution-0001.json",
+                "native/L-B-b32-wall-sample-4/execution-0001.json",
+                "native/L-B-b32-wall-sample-5/execution-0001.json",
+                "native/L-B-b32-wall-sample-6/execution-0001.json",
+                "native/L-B-b32-wall-sample-7/execution-0001.json"
+              ],
+              "observed_ns": 948048,
+              "oracle_source": "frozen literal in expectations.md",
+              "parameters": {
+                "G_ns_per_byte": "0.02",
+                "L_ns": 2000,
+                "O_ns_per_byte": 0,
+                "S_bytes": 47302430,
+                "g_ns": 0,
+                "o_ns": 0
+              },
+              "passed": true,
+              "payload_bytes": 47302429,
+              "rank_count": 9,
+              "stderr_sha256": [
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              ],
+              "stdout_sha256": [
+                "0e0f624b36b11534aa26f7c3c2d716891e3f2792eb1a9563f03df8ba81d91e74",
+                "0e0f624b36b11534aa26f7c3c2d716891e3f2792eb1a9563f03df8ba81d91e74",
+                "0e0f624b36b11534aa26f7c3c2d716891e3f2792eb1a9563f03df8ba81d91e74",
+                "0e0f624b36b11534aa26f7c3c2d716891e3f2792eb1a9563f03df8ba81d91e74",
+                "0e0f624b36b11534aa26f7c3c2d716891e3f2792eb1a9563f03df8ba81d91e74",
+                "0e0f624b36b11534aa26f7c3c2d716891e3f2792eb1a9563f03df8ba81d91e74",
+                "0e0f624b36b11534aa26f7c3c2d716891e3f2792eb1a9563f03df8ba81d91e74"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "plot_contract": {
+      "denominator": 4,
+      "evidence_class": "plot-contract",
+      "passed": 4,
+      "plot_data": {
+        "axes": {
+          "optimal_corner": "upper-right",
+          "x": {
+            "direction": "rightward",
+            "quantity": "per-request decode speed",
+            "scale": "log",
+            "units": "token/s/request"
+          },
+          "y": {
+            "direction": "upward",
+            "quantity": "output throughput per GPU",
+            "scale": "log",
+            "units": "token/s/GPU"
+          }
+        },
+        "curves": [
+          {
+            "color": "#2563a6",
+            "configuration_id": "b100-one-node-intra",
+            "configuration_label": "B100 one-node intra-node-heavy",
+            "points": [
+              {
+                "batch_per_gpu": 1,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 0,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 3448398380,
+                    "x": 289.9896966080816,
+                    "y": 289.9896966080816
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3448398380,
+                    "x": 289.9896966080816,
+                    "y": 289.9896966080816
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3448398380,
+                    "x": 289.9896966080816,
+                    "y": 289.9896966080816
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 2,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 0,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 3465966380,
+                    "x": 288.51982112994415,
+                    "y": 577.0396422598883
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3465966380,
+                    "x": 288.51982112994415,
+                    "y": 577.0396422598883
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3465966380,
+                    "x": 288.51982112994415,
+                    "y": 577.0396422598883
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 4,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 0,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 3501102380,
+                    "x": 285.62432384510845,
+                    "y": 1142.4972953804338
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3501102380,
+                    "x": 285.62432384510845,
+                    "y": 1142.4972953804338
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3501102380,
+                    "x": 285.62432384510845,
+                    "y": 1142.4972953804338
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 8,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 0,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 3571374380,
+                    "x": 280.00424867246767,
+                    "y": 2240.0339893797413
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3571374380,
+                    "x": 280.00424867246767,
+                    "y": 2240.0339893797413
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3571374380,
+                    "x": 280.00424867246767,
+                    "y": 2240.0339893797413
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 16,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 0,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 3711918380,
+                    "x": 269.4024753852481,
+                    "y": 4310.43960616397
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3711918380,
+                    "x": 269.4024753852481,
+                    "y": 4310.43960616397
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 3711918380,
+                    "x": 269.4024753852481,
+                    "y": 4310.43960616397
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 32,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 0,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 4257218560,
+                    "x": 234.8951518241995,
+                    "y": 7516.644858374384
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 4257218560,
+                    "x": 234.8951518241995,
+                    "y": 7516.644858374384
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 0,
+                    "point_class": "SIMULATED",
+                    "step_ps": 4523298348,
+                    "x": 221.07761263241795,
+                    "y": 7074.4836042373745
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "color": "#d17c0f",
+            "configuration_id": "h100-two-node-serialized",
+            "configuration_label": "H100 two-node serialized split",
+            "points": [
+              {
+                "batch_per_gpu": 1,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 133038080,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8234981205,
+                    "x": 121.43318546894,
+                    "y": 121.43318546894
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 135038000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8234981205,
+                    "x": 121.43318546894,
+                    "y": 121.43318546894
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 137201000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8234981205,
+                    "x": 121.43318546894,
+                    "y": 121.43318546894
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 2,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 266076160,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8276934638,
+                    "x": 120.81767510992879,
+                    "y": 241.63535021985757
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 268076000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8276934638,
+                    "x": 120.81767510992879,
+                    "y": 241.63535021985757
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 272317000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8276934638,
+                    "x": 120.81767510992879,
+                    "y": 241.63535021985757
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 4,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 532152320,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8360841504,
+                    "x": 119.6051856169716,
+                    "y": 478.4207424678864
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 534152000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8360841504,
+                    "x": 119.6051856169716,
+                    "y": 478.4207424678864
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 542551000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8360841504,
+                    "x": 119.6051856169716,
+                    "y": 478.4207424678864
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 8,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 1064304640,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8528655235,
+                    "x": 117.25177914288149,
+                    "y": 938.0142331430519
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 1066304000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8528655235,
+                    "x": 117.25177914288149,
+                    "y": 938.0142331430519
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 1083018000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8528655235,
+                    "x": 117.25177914288149,
+                    "y": 938.0142331430519
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 16,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 2128609280,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8864282698,
+                    "x": 112.81228657403092,
+                    "y": 1804.9965851844947
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 2130609000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8864282698,
+                    "x": 112.81228657403092,
+                    "y": 1804.9965851844947
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 2163953000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8864282698,
+                    "x": 112.81228657403092,
+                    "y": 1804.9965851844947
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 32,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 4257218560,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 9535537623,
+                    "x": 104.87085673994619,
+                    "y": 3355.867415678278
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 4259218000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 9535537623,
+                    "x": 104.87085673994619,
+                    "y": 3355.867415678278
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 4325821000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 9535537623,
+                    "x": 104.87085673994619,
+                    "y": 3355.867415678278
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "color": "#27845c",
+            "configuration_id": "h100-nine-node-incast",
+            "configuration_label": "H100 nine-node EP72 incast",
+            "points": [
+              {
+                "batch_per_gpu": 1,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 29564020,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8234981205,
+                    "x": 121.43318546894,
+                    "y": 121.43318546894
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 31564000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8234981205,
+                    "x": 121.43318546894,
+                    "y": 121.43318546894
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 242356000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8234981205,
+                    "x": 121.43318546894,
+                    "y": 121.43318546894
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 2,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 59128040,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8276934638,
+                    "x": 120.81767510992879,
+                    "y": 241.63535021985757
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 61128000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8276934638,
+                    "x": 120.81767510992879,
+                    "y": 241.63535021985757
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 482629000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8276934638,
+                    "x": 120.81767510992879,
+                    "y": 241.63535021985757
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 4,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 118256080,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8360841504,
+                    "x": 119.6051856169716,
+                    "y": 478.4207424678864
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 120256000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8360841504,
+                    "x": 119.6051856169716,
+                    "y": 478.4207424678864
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 963174000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8360841504,
+                    "x": 119.6051856169716,
+                    "y": 478.4207424678864
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 8,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 236512160,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8528655235,
+                    "x": 117.25177914288149,
+                    "y": 938.0142331430519
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 238512000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8528655235,
+                    "x": 117.25177914288149,
+                    "y": 938.0142331430519
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 1924264000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8528655235,
+                    "x": 117.25177914288149,
+                    "y": 938.0142331430519
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 16,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 473024300,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 8864282698,
+                    "x": 112.81228657403092,
+                    "y": 1804.9965851844947
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 475024000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8864282698,
+                    "x": 112.81228657403092,
+                    "y": 1804.9965851844947
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 3845860000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 8864282698,
+                    "x": 112.81228657403092,
+                    "y": 1804.9965851844947
+                  }
+                }
+              },
+              {
+                "batch_per_gpu": 32,
+                "rungs": {
+                  "estimate": {
+                    "authority": "closed-form",
+                    "fabric_leg_ps": 946048580,
+                    "point_class": "ESTIMATE",
+                    "step_ps": 9535537623,
+                    "x": 104.87085673994619,
+                    "y": 3355.867415678278
+                  },
+                  "loggopsim-ideal": {
+                    "authority": "loggopsim-ideal",
+                    "fabric_leg_ps": 948048000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 9535537623,
+                    "x": 104.87085673994619,
+                    "y": 3355.867415678278
+                  },
+                  "packet": {
+                    "authority": "rnic-nn",
+                    "fabric_leg_ps": 7689053000,
+                    "point_class": "SIMULATED",
+                    "step_ps": 9535537623,
+                    "x": 104.87085673994619,
+                    "y": 3355.867415678278
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "envelope": [
+          {
+            "batch_per_gpu": 1,
+            "denominator": 135038000,
+            "family": "M-1",
+            "numerator": 137201000,
+            "quotient": 1.016017713532487
+          },
+          {
+            "batch_per_gpu": 2,
+            "denominator": 268076000,
+            "family": "M-1",
+            "numerator": 272317000,
+            "quotient": 1.0158201405571554
+          },
+          {
+            "batch_per_gpu": 4,
+            "denominator": 534152000,
+            "family": "M-1",
+            "numerator": 542551000,
+            "quotient": 1.0157239886773801
+          },
+          {
+            "batch_per_gpu": 8,
+            "denominator": 1066304000,
+            "family": "M-1",
+            "numerator": 1083018000,
+            "quotient": 1.0156747043994958
+          },
+          {
+            "batch_per_gpu": 16,
+            "denominator": 2130609000,
+            "family": "M-1",
+            "numerator": 2163953000,
+            "quotient": 1.0156499855205718
+          },
+          {
+            "batch_per_gpu": 32,
+            "denominator": 4259218000,
+            "family": "M-1",
+            "numerator": 4325821000,
+            "quotient": 1.0156373775655532
+          },
+          {
+            "batch_per_gpu": 1,
+            "denominator": 31564000,
+            "family": "M-2",
+            "numerator": 242356000,
+            "quotient": 7.678241034089469
+          },
+          {
+            "batch_per_gpu": 2,
+            "denominator": 61128000,
+            "family": "M-2",
+            "numerator": 482629000,
+            "quotient": 7.89538345766261
+          },
+          {
+            "batch_per_gpu": 4,
+            "denominator": 120256000,
+            "family": "M-2",
+            "numerator": 963174000,
+            "quotient": 8.009363358169239
+          },
+          {
+            "batch_per_gpu": 8,
+            "denominator": 238512000,
+            "family": "M-2",
+            "numerator": 1924264000,
+            "quotient": 8.067786945730195
+          },
+          {
+            "batch_per_gpu": 16,
+            "denominator": 475024000,
+            "family": "M-2",
+            "numerator": 3845860000,
+            "quotient": 8.096138300380613
+          },
+          {
+            "batch_per_gpu": 32,
+            "denominator": 948048000,
+            "family": "M-2",
+            "numerator": 7689053000,
+            "quotient": 8.110404747438949
+          },
+          {
+            "batch_per_gpu": 1,
+            "denominator": 31564000,
+            "family": "M-3",
+            "numerator": 32110000,
+            "quotient": 1.0172981878088962
+          },
+          {
+            "batch_per_gpu": 2,
+            "denominator": 61128000,
+            "family": "M-3",
+            "numerator": 62136000,
+            "quotient": 1.0164899882214369
+          },
+          {
+            "batch_per_gpu": 4,
+            "denominator": 120256000,
+            "family": "M-3",
+            "numerator": 122188000,
+            "quotient": 1.0160657264502395
+          },
+          {
+            "batch_per_gpu": 8,
+            "denominator": 238512000,
+            "family": "M-3",
+            "numerator": 242293000,
+            "quotient": 1.01585245186825
+          },
+          {
+            "batch_per_gpu": 16,
+            "denominator": 475024000,
+            "family": "M-3",
+            "numerator": 482500000,
+            "quotient": 1.0157381521775741
+          },
+          {
+            "batch_per_gpu": 32,
+            "denominator": 948048000,
+            "family": "M-3",
+            "numerator": 962915000,
+            "quotient": 1.015681695441581
+          }
+        ],
+        "packet_pareto": [
+          {
+            "batch_per_gpu": 1,
+            "configuration_id": "b100-one-node-intra",
+            "x": 289.9896966080816,
+            "y": 289.9896966080816
+          },
+          {
+            "batch_per_gpu": 2,
+            "configuration_id": "b100-one-node-intra",
+            "x": 288.51982112994415,
+            "y": 577.0396422598883
+          },
+          {
+            "batch_per_gpu": 4,
+            "configuration_id": "b100-one-node-intra",
+            "x": 285.62432384510845,
+            "y": 1142.4972953804338
+          },
+          {
+            "batch_per_gpu": 8,
+            "configuration_id": "b100-one-node-intra",
+            "x": 280.00424867246767,
+            "y": 2240.0339893797413
+          },
+          {
+            "batch_per_gpu": 16,
+            "configuration_id": "b100-one-node-intra",
+            "x": 269.4024753852481,
+            "y": 4310.43960616397
+          },
+          {
+            "batch_per_gpu": 32,
+            "configuration_id": "b100-one-node-intra",
+            "x": 221.07761263241795,
+            "y": 7074.4836042373745
+          }
+        ],
+        "paired_anchor": {
+          "label": "Published SGLang H100 EP72 standard decode",
+          "x": 87.0390625,
+          "y": 2785.25
+        },
+        "rung_styles": {
+          "estimate": {
+            "edge": "configuration",
+            "face": "none",
+            "line_width": 1.05,
+            "marker": "o",
+            "size": 45,
+            "zorder": 5
+          },
+          "loggopsim-ideal": {
+            "edge": "configuration",
+            "face": "white",
+            "line_width": 0.8,
+            "marker": "^",
+            "size": 28,
+            "zorder": 6
+          },
+          "packet": {
+            "edge": "configuration",
+            "face": "configuration",
+            "line_width": 0.4,
+            "marker": "o",
+            "size": 12,
+            "zorder": 7
+          }
+        },
+        "schema": "simllm-frontier-ladder-plot-v1",
+        "y_only_anchor": {
+          "label": "Published DeepSeek H800 production decode",
+          "y": 1850.0
+        }
+      },
+      "rows": [
+        {
+          "id": "P-record-round-trip",
+          "passed": true,
+          "predicate": "strict ladder record round trip"
+        },
+        {
+          "id": "P-rung-classes",
+          "passed": true,
+          "predicate": "per-rung point classes and authorities remain distinct"
+        },
+        {
+          "expected": [
+            [
+              "b100-one-node-intra",
+              1
+            ],
+            [
+              "b100-one-node-intra",
+              2
+            ],
+            [
+              "b100-one-node-intra",
+              4
+            ],
+            [
+              "b100-one-node-intra",
+              8
+            ],
+            [
+              "b100-one-node-intra",
+              16
+            ],
+            [
+              "b100-one-node-intra",
+              32
+            ]
+          ],
+          "id": "P-packet-pareto",
+          "observed": [
+            [
+              "b100-one-node-intra",
+              1
+            ],
+            [
+              "b100-one-node-intra",
+              2
+            ],
+            [
+              "b100-one-node-intra",
+              4
+            ],
+            [
+              "b100-one-node-intra",
+              8
+            ],
+            [
+              "b100-one-node-intra",
+              16
+            ],
+            [
+              "b100-one-node-intra",
+              32
+            ]
+          ],
+          "passed": true,
+          "predicate": "packet Pareto front is exactly the six B100 points"
+        },
+        {
+          "id": "P-plot-projection",
+          "passed": true,
+          "predicate": "plot projection round trips through the strict record"
+        }
+      ]
+    },
+    "wall_time": {
+      "ceiling_seconds": 5.0,
+      "denominator": 1,
+      "evidence_class": "wall-time",
+      "machine": {
+        "cpu_model": "AMD Ryzen 9 3950X 16-Core Processor",
+        "hostname": "teferi.ethz.ch",
+        "logical_cpus": 32,
+        "machine": "x86_64",
+        "platform": "Linux-5.14.21-150400.22-default-x86_64-with-glibc2.31",
+        "python": "3.12.12"
+      },
+      "median_seconds": 0.034612214,
+      "native_executions": 84,
+      "native_legs_per_sample": 12,
+      "packet_executions": 0,
+      "passed": 1,
+      "samples_seconds": [
+        0.036041949,
+        0.035533615,
+        0.035183546,
+        0.031346646,
+        0.033417042,
+        0.033004604,
+        0.034612214
+      ]
+    }
+  },
+  "verdict": "PASS"
+}
