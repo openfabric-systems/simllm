@@ -49,20 +49,5 @@
     "composed_validation_extent_bytes_per_destination": 524288,
     "registered_relative_error_limit": 0.1,
     "claim": "post-specified validation against measurements published before TRAF-65; not a new hardware measurement"
-  },
-  "hardware_scoring": {
-    "schema": "simllm-a100-nvlink-packet-hardware-score-v1",
-    "status": "RETAIN_DECLARED_CANDIDATE_NO_HARDWARE_PROMOTION",
-    "measurement_claim": false,
-    "measurement_validity": "VOID_FATAL_GUARD_COVERAGE_INCOMPLETE",
-    "execution_head": "2ab092f9255d77c00c547446b65534a3b273ec82",
-    "freeze_sha256": "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571",
-    "completed_cell_count": 86,
-    "completed_prefix_count": 86,
-    "pending_array": "",
-    "parameter_value_changes": [],
-    "switch_decision": "PASS_THROUGH_STANDS_STRUCTURALLY_NOT_MEASURED",
-    "packet_overhead_decision": "UNIDENTIFIABLE_FROM_CAPTURED_ROW_SCHEMA",
-    "copy_engine_coalescing_decision": "UNIDENTIFIABLE_FROM_CAPTURED_ROW_SCHEMA"
   }
 }

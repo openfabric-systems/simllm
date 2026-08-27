@@ -2835,7 +2835,7 @@
     "resume_compile_check_sha256": "96b4c544de54457d1fbed8e56b0a1cbe61344bcdab02d6445c07a0ab637277a4",
     "status": "BUILD_REPRODUCIBILITY_MISMATCH"
   },
-  "recorded_at": "2026-08-27T11:19:42.657117+00:00",
+  "recorded_at": "2026-08-27T11:34:06.187075+00:00",
   "scheduler_job": "198968",
   "schema": "simllm-a100-nvlink-packet-hardware-score-v1",
   "status": "COMPLETE_VOID_86_OF_86",

@@ -19,6 +19,7 @@ from typing import Any
 
 STUDY_ROOT = Path(__file__).resolve().parent
 EXPECTATIONS_PATH = STUDY_ROOT / "expectations.json"
+CANDIDATE_PROFILE_PATH = STUDY_ROOT / "candidate-profile.json"
 FREEZE_SHA256 = "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
 EXECUTION_HEAD = "2ab092f9255d77c00c547446b65534a3b273ec82"
 CANDIDATE_PROFILE_SHA256 = (
@@ -79,7 +80,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--bulk-root", type=Path, required=True)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--markdown-out", type=Path)
-    parser.add_argument("--profile-out", type=Path)
     parser.add_argument("--scheduler-job", default="")
     return parser.parse_args(argv)
 
@@ -91,9 +91,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(args.json_out, score)
     if args.markdown_out is not None:
         write_text(args.markdown_out, render_markdown(score))
-    if args.profile_out is not None:
-        publish_candidate_profile(score, args.profile_out)
-    if args.json_out is None and args.markdown_out is None and args.profile_out is None:
+    if args.json_out is None and args.markdown_out is None:
         print(json.dumps(score, indent=2, sort_keys=True))
     return 0
 
@@ -249,6 +247,8 @@ def audit_hardware(bulk_root: Path, *, scheduler_job: str = "") -> dict[str, Any
 def load_expectations() -> dict[str, Any]:
     if sha256(EXPECTATIONS_PATH) != FREEZE_SHA256:
         raise RuntimeError("TRAF-65 expectations digest changed")
+    if sha256(CANDIDATE_PROFILE_PATH) != CANDIDATE_PROFILE_SHA256:
+        raise RuntimeError("TRAF-65 candidate profile digest changed")
     payload = load_json(EXPECTATIONS_PATH)
     if payload.get("status") != "expectations_only":
         raise RuntimeError("TRAF-65 expectations status changed")
@@ -699,75 +699,6 @@ def render_markdown(score: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def publish_candidate_profile(score: dict[str, Any], path: Path) -> None:
-    if score["coverage"]["completed_cell_count"] == 0:
-        raise RuntimeError("refusing to publish a candidate-profile decision without a cell")
-    profile_path = STUDY_ROOT / "candidate-profile.json"
-    profile = load_json(profile_path)
-    prior = profile.pop("hardware_scoring", None)
-    base_profile_bytes = (json.dumps(profile, indent=2) + "\n").encode()
-    if hashlib.sha256(base_profile_bytes).hexdigest() != CANDIDATE_PROFILE_SHA256:
-        raise RuntimeError("candidate profile changed outside the TRAF-65 scoring path")
-    if prior is not None and (
-        not isinstance(prior, dict)
-        or prior.get("schema") != SCORE_SCHEMA
-        or prior.get("measurement_claim") is not False
-        or prior.get("execution_head") != EXECUTION_HEAD
-        or prior.get("freeze_sha256") != FREEZE_SHA256
-    ):
-        raise RuntimeError("candidate profile changed outside the TRAF-65 scoring path")
-    if profile.get("status") != "candidate":
-        raise RuntimeError("TRAF-65 profile is no longer a candidate")
-    if profile.get("evidence_class") != "declared_candidate_not_hardware_measurement":
-        raise RuntimeError("TRAF-65 profile has an unsupported evidence claim")
-    expected_parameters = {
-        "tx": {
-            "max_payload_bytes": 256,
-            "header_bytes": 16,
-            "links_per_peer": 4,
-            "per_link_rate_bytes_per_second": 25_000_000_000,
-            "endpoint_egress_rate_bytes_per_second": 300_000_000_000,
-            "bond_policy": "earliest_available_packet_striping",
-            "credits_per_destination": 256,
-            "credit_unit_bytes": 272,
-        },
-        "switch": {"mode": "pass_through"},
-        "rx": {
-            "ingress_rate_bytes_per_second": 300_000_000_000,
-            "buffer_capacity_bytes": 1_048_576,
-            "credit_return_latency_ps": 200_000,
-            "reassembly_policy": "extent_sequence",
-            "delivery_order": "per_extent",
-        },
-    }
-    for module, expected in expected_parameters.items():
-        if profile.get(module) != expected:
-            raise RuntimeError(f"candidate {module} values changed outside the scoring path")
-    hardware_scoring = {
-        "schema": SCORE_SCHEMA,
-        "status": score["candidate_profile_decision"]["status"],
-        "measurement_claim": False,
-        "measurement_validity": score["measurement_validity"],
-        "execution_head": score["execution_head"],
-        "freeze_sha256": score["freeze_sha256"],
-        "completed_cell_count": score["coverage"]["completed_cell_count"],
-        "completed_prefix_count": score["coverage"]["completed_prefix_count"],
-        "pending_array": score["coverage"]["pending_array"],
-        "parameter_value_changes": score["candidate_profile_decision"][
-            "parameter_value_changes"
-        ],
-        "switch_decision": score["candidate_profile_decision"]["switch_decision"],
-        "packet_overhead_decision": score["candidate_profile_decision"][
-            "packet_overhead_decision"
-        ],
-        "copy_engine_coalescing_decision": score["candidate_profile_decision"][
-            "copy_engine_coalescing_decision"
-        ],
-    }
-    profile["hardware_scoring"] = hardware_scoring
-    write_ordered_json(path, profile)
-
-
 def compress_indices(indices: list[int]) -> str:
     if not indices:
         return ""
@@ -807,10 +738,6 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, payload: object) -> None:
     write_text(path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
-
-
-def write_ordered_json(path: Path, payload: object) -> None:
-    write_text(path, json.dumps(payload, indent=2) + "\n")
 
 
 def write_text(path: Path, text: str) -> None:

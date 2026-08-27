@@ -13,6 +13,9 @@ STUDY = ROOT / "examples" / "a100_nvlink_packet_v1"
 FREEZE_SHA256 = "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
 EXECUTION_HEAD = "2ab092f9255d77c00c547446b65534a3b273ec82"
 PRODUCER_BINARY_SHA256 = "96b4c544de54457d1fbed8e56b0a1cbe61344bcdab02d6445c07a0ab637277a4"
+CANDIDATE_PROFILE_SHA256 = (
+    "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f"
+)
 
 
 def run_study(*arguments: str) -> subprocess.CompletedProcess[str]:
@@ -261,18 +264,16 @@ def test_mock_cell_is_digest_complete_and_resumable(tmp_path, mock_binary):
 
 
 def test_candidate_handoff_and_submission_are_pinned():
-    profile = json.loads((STUDY / "candidate-profile.json").read_text())
+    profile_path = STUDY / "candidate-profile.json"
+    profile = json.loads(profile_path.read_text())
     sbatch = (STUDY / "run_merlin_cell.sbatch").read_text()
     source = (STUDY / "nvlink_packet_lane.cu").read_text()
 
     assert profile["freeze_sha256"] == FREEZE_SHA256
     assert profile["status"] == "candidate"
     assert profile["handoff"]["measurement_claim"] is False
-    assert profile["hardware_scoring"]["measurement_claim"] is False
-    assert profile["hardware_scoring"]["parameter_value_changes"] == []
-    assert profile["hardware_scoring"]["status"] == (
-        "RETAIN_DECLARED_CANDIDATE_NO_HARDWARE_PROMOTION"
-    )
+    assert "hardware_scoring" not in profile
+    assert hashlib.sha256(profile_path.read_bytes()).hexdigest() == CANDIDATE_PROFILE_SHA256
     assert "#SBATCH --partition=a100-hourly" in sbatch
     assert "#SBATCH --gres=gpu:4" in sbatch
     assert "#SBATCH --array=0-85%1" in sbatch
@@ -334,7 +335,7 @@ def test_hardware_scorer_reports_verified_prefix_and_exact_remainder(tmp_path):
     make_hardware_attempt(tmp_path)
     score_path = tmp_path / "lean" / "score.json"
     report_path = tmp_path / "lean" / "RESULTS.md"
-    profile_path = tmp_path / "lean" / "candidate-profile.json"
+    candidate_before = (STUDY / "candidate-profile.json").read_bytes()
     completed = run_score(
         "--bulk-root",
         str(tmp_path),
@@ -342,8 +343,6 @@ def test_hardware_scorer_reports_verified_prefix_and_exact_remainder(tmp_path):
         str(score_path),
         "--markdown-out",
         str(report_path),
-        "--profile-out",
-        str(profile_path),
         "--scheduler-job",
         "198968",
     )
@@ -364,15 +363,7 @@ def test_hardware_scorer_reports_verified_prefix_and_exact_remainder(tmp_path):
     assert "Per-corner verdicts" in report
     assert "Module-parameter identification" in report
     assert "reservation lifted early" in report
-    source_profile = json.loads((STUDY / "candidate-profile.json").read_text())
-    published_profile = json.loads(profile_path.read_text())
-    assert published_profile["status"] == "candidate"
-    assert published_profile["evidence_class"] == "declared_candidate_not_hardware_measurement"
-    assert published_profile["tx"] == source_profile["tx"]
-    assert published_profile["switch"] == source_profile["switch"]
-    assert published_profile["rx"] == source_profile["rx"]
-    assert published_profile["hardware_scoring"]["measurement_claim"] is False
-    assert published_profile["hardware_scoring"]["parameter_value_changes"] == []
+    assert (STUDY / "candidate-profile.json").read_bytes() == candidate_before
 
 
 def test_hardware_scorer_rejects_a_changed_payload(tmp_path):

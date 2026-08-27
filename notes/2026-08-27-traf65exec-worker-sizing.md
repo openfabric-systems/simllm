@@ -35,9 +35,9 @@
 - External lean evidence: compact scoring and completion records under the
   requested `simllm-kernelprobe/traf65` evidence root.
 - Created or modified after measurement: study-owned score outputs and report
-  artifacts, the candidate profile's parameter values and status fields, the
-  TRAF-65 registry wording, and exact remainder metadata if the scheduler
-  permits only a completed prefix.
+  artifacts, the TRAF-65 registry wording, and exact remainder metadata if the
+  scheduler permits only a completed prefix. A no-promotion ruling leaves the
+  candidate profile byte-identical to its frozen input.
 - Preserved: the frozen expectations and decision rules, every digest-complete
   attempt, the deployment-curve studies, COMP-72 state, and htsim NVLink
   implementation code.
@@ -87,12 +87,12 @@
   unused-mock compile warning; the other 85 are empty.
 - Lean evidence: the JSON score and Markdown report under the requested
   `simllm-kernelprobe/traf65` root are byte-identical to the tracked copies.
-- Scoring and publisher implementation: 831 lines, above the estimated zero
+- Scoring implementation: 758 lines, above the estimated zero
   to 500 because content-addressed attempt verification, partial-prefix
-  publication, frozen-band reduction, module grading and guarded profile
-  publication remain explicit.
-- Focused tests: 200 added lines. The 1,031-line combined scorer and test
-  change is above the estimate for the same auditability reason.
+  publication, frozen-band reduction, module grading and immutable-profile
+  validation remain explicit.
+- Focused tests: 192 added lines. The combined scorer and test change adds 950
+  lines, above the estimate for the same auditability reason.
 - Generated publication: 2,845 JSON lines and 138 Markdown lines, counted as
   zero handwritten lines.
 - Outcome: `COMPLETE_VOID_86_OF_86`. The capture procedure is refuted as
