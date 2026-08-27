@@ -85,11 +85,11 @@ def test_transition_identities_and_rate_arithmetic_are_literal():
     assert convergence["exact_tolerance_ps"] == 0
     assert divergence["terms_ps"] == {
         "credit_wait": 0,
-        "one_four_link_cadence": 10880,
-        "packet_admission": 1692,
         "rx_serialization_difference": 0,
+        "three_packet_admissions": -5076,
+        "two_link_cadences": 21760,
     }
-    assert divergence["expected_time_to_target_ps"] == 12572
+    assert divergence["expected_time_to_target_ps"] == 16684
     assert divergence["exact_tolerance_ps"] == 0
 
 

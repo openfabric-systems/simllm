@@ -24,8 +24,8 @@
   "divergence_2_to_1": {
     "departing_target_bytes": 65536,
     "exact_tolerance_ps": 0,
-    "expected_time_to_target_ps": 12572,
-    "identity": "packet_admission + one_four_link_cadence",
+    "expected_time_to_target_ps": 16684,
+    "identity": "two_link_cadences - three_packet_admissions",
     "rate_band_half_width_gbps": 0.36764705882352944,
     "raw_bin_ps": 10880,
     "remaining_post_gbps": 94.11764705882354,
@@ -35,9 +35,9 @@
     "target_definition": "the receiver observes the fifth remaining-flow delivery after exit, which closes the first complete four-link solo cadence",
     "terms_ps": {
       "credit_wait": 0,
-      "one_four_link_cadence": 10880,
-      "packet_admission": 1692,
-      "rx_serialization_difference": 0
+      "rx_serialization_difference": 0,
+      "three_packet_admissions": -5076,
+      "two_link_cadences": 21760
     }
   },
   "fatal_guards": [
@@ -726,6 +726,7 @@
   "study": {
     "chronology": "Committed before release-aware flow scheduling, the study runner, any TRAF-69 simulated run, or any result-dependent edit.",
     "date": "2026-08-27",
+    "preimplementation_amendment": "The first expectations commit used packet admission plus one link cadence for divergence. Preimplementation phase review corrected the 64 KiB departing flow's phase-3 identity to two link cadences minus three packet admissions before any target edit or simulated run.",
     "source": "maintainer directive of 2026-08-27",
     "status": "expectations_only",
     "task": "TRAF-69"

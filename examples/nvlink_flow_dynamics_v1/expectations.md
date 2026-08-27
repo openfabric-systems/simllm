@@ -7,6 +7,12 @@ result-dependent edit. The machine-readable authority is
 [`expectations.json`](expectations.json). A miss leaves its band unchanged and
 publishes a refutation.
 
+The first expectations commit stated the divergence phase as packet admission
+plus one link cadence. A preimplementation review corrected it to the literal
+phase-3 identity below before any target-code edit or TRAF-69 simulated run.
+Both commits remain in history; this amended file is the final pre-run
+authority.
+
 ## Physical story and evidence boundary
 
 One A100 source turns each flow extent into packets. Four direct NVLink3 links
@@ -102,11 +108,15 @@ cadence.
 The credit slot is already free. RX serialization is common to the two
 receiver-visible anchors and cancels. The identity is:
 
-`T_target = C_wait + A_packet + S_link + delta(S_rx)`
+The departing 64 KiB flow contains 256 packets. Its last packet is phase 3 of
+the four-link cycle. The fifth remaining-flow delivery closes at the same
+phase in the second following link cadence. The phase-aware identity is:
 
-`T_target = 0 + 1,692 + 10,880 + 0 = 12,572 ps`.
+`T_target = C_wait + 2*S_link - 3*A_packet + delta(S_rx)`
 
-The observed value must equal 12,572 ps with zero tolerance. The remaining
+`T_target = 0 + 21,760 - 5,076 + 0 = 16,684 ps`.
+
+The observed value must equal 16,684 ps with zero tolerance. The remaining
 flow moves from 47.0588235294 back to 94.1176470588 GB/s. The plot again uses
 raw 10,880 ps bins and no smoothing.
 

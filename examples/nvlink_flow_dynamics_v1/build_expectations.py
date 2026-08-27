@@ -195,7 +195,7 @@ def build() -> dict[str, object]:
         for relative in ADDITIONAL_PRESERVATION_PATHS
     ]
     transition_open_ps = endpoint_packet_ps + link_packet_ps + rx_packet_ps
-    divergence_target_ps = endpoint_packet_ps + link_packet_ps
+    divergence_target_ps = 2 * link_packet_ps - 3 * endpoint_packet_ps
     return {
         "schema": "simllm-nvlink-flow-dynamics-expectations-v1",
         "study": {
@@ -206,6 +206,12 @@ def build() -> dict[str, object]:
             "chronology": (
                 "Committed before release-aware flow scheduling, the study runner, "
                 "any TRAF-69 simulated run, or any result-dependent edit."
+            ),
+            "preimplementation_amendment": (
+                "The first expectations commit used packet admission plus one link "
+                "cadence for divergence. Preimplementation phase review corrected the "
+                "64 KiB departing flow's phase-3 identity to two link cadences minus "
+                "three packet admissions before any target edit or simulated run."
             ),
         },
         "source_profile": {
@@ -290,11 +296,11 @@ def build() -> dict[str, object]:
         "divergence_2_to_1": {
             "remaining_target_bytes": 1048576,
             "departing_target_bytes": 65536,
-            "identity": "packet_admission + one_four_link_cadence",
+            "identity": "two_link_cadences - three_packet_admissions",
             "terms_ps": {
                 "credit_wait": 0,
-                "packet_admission": endpoint_packet_ps,
-                "one_four_link_cadence": link_packet_ps,
+                "two_link_cadences": 2 * link_packet_ps,
+                "three_packet_admissions": -3 * endpoint_packet_ps,
                 "rx_serialization_difference": 0,
             },
             "target_definition": (
