@@ -58,6 +58,17 @@ def test_transition_probe_matches_both_exact_identities():
     assert len(transitions["divergence"]["rate_rows"]) == 322
 
 
+def test_overall_schedule_scores_only_bins_away_from_membership_transitions():
+    frozen = run_study.load_expectations()
+    overall = run_study._run_overall(frozen, PROFILE)
+
+    assert overall["completion_order"] == ["flow-c", "flow-b", "flow-a"]
+    assert overall["reverse_target_verdict"] == "PASS"
+    assert overall["steady_rows"]
+    assert overall["steady_verdict"] == "PASS"
+    assert all(row["verdict"] == "PASS" for row in overall["steady_rows"])
+
+
 def test_raw_rate_bins_are_fixed_counts_without_smoothing():
     packets = (
         NvlinkPacket(
@@ -125,6 +136,25 @@ def test_empirical_cdf_mean_and_minmax_band_are_pointwise():
         "cdf_max": 2 / 3,
     }
     assert rows[-1]["cdf_min"] == rows[-1]["cdf_mean"] == rows[-1]["cdf_max"] == 1
+    assert run_study._cdf_is_valid(rows)
+
+
+def test_empirical_cdf_accepts_equal_fraction_rounding_at_one_third():
+    rows = run_study._cdf_rows(
+        {
+            1: [10, 20, 30],
+            2: [10, 20, 30],
+            3: [10, 20, 30],
+            4: [10, 20, 30],
+            5: [10, 20, 30],
+            6: [10, 20, 30],
+            7: [10, 20, 30],
+            8: [10, 20, 30],
+            9: [10, 20, 30],
+        }
+    )
+
+    assert run_study._cdf_is_valid(rows)
 
 
 def test_plot_and_publication_contract_names_all_five_figures():

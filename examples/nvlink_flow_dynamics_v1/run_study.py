@@ -13,6 +13,7 @@ import random
 import subprocess
 import sys
 from collections import defaultdict
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -262,11 +263,14 @@ def _steady_rows(
         transfer.extent_id: transfer.released_at_ps + completion_ps[transfer.extent_id]
         for transfer in transfers
     }
+    transition_events = [*releases.values(), *ends.values()]
     scored = []
     for row in rate_rows:
         flow_id = str(row["flow_id"])
         start = int(row["bin_start_ps"])
         end = int(row["bin_end_ps"])
+        if any(event - settle_ps < end and start < event + settle_ps for event in transition_events):
+            continue
         active = [
             candidate
             for candidate in releases
@@ -283,11 +287,11 @@ def _steady_rows(
                 "expected_gbps": expected,
                 "band_low_gbps": expected - half_width_gbps,
                 "band_high_gbps": expected + half_width_gbps,
-                "verdict": (
-                    "PASS"
-                    if expected - half_width_gbps <= observed <= expected + half_width_gbps
-                    else "REFUTED"
-                ),
+                "verdict": "PASS"
+                if expected - half_width_gbps - 1e-12
+                <= observed
+                <= expected + half_width_gbps + 1e-12
+                else "REFUTED",
             }
         )
     return scored
@@ -316,6 +320,28 @@ def _cdf_rows(samples: dict[int, list[int]]) -> list[dict[str, object]]:
             }
         )
     return rows
+
+
+def _cdf_is_valid(rows: list[dict[str, object]]) -> bool:
+    tolerance = 1e-12
+    if not rows:
+        return False
+    for row in rows:
+        if not (
+            -tolerance
+            <= row["cdf_min"]
+            <= row["cdf_mean"] + tolerance
+            <= row["cdf_max"] + 2 * tolerance
+            <= 1 + 2 * tolerance
+        ):
+            return False
+    for field in ("cdf_min", "cdf_mean", "cdf_max"):
+        if any(
+            left[field] > right[field] + tolerance
+            for left, right in pairwise(rows)
+        ):
+            return False
+    return True
 
 
 def _run_overall(frozen: dict[str, Any], profile_path: Path) -> dict[str, object]:
@@ -546,10 +572,7 @@ def _run_fct_and_incast(
             p95_mean = sum(p95_values) / len(p95_values)
             p50_pass = band["p50_band_ps"][0] <= p50_mean <= band["p50_band_ps"][1]
             p95_pass = band["p95_band_ps"][0] <= p95_mean <= band["p95_band_ps"][1]
-            cdf_pass = bool(curves) and all(
-                0 <= row["cdf_min"] <= row["cdf_mean"] <= row["cdf_max"] <= 1
-                for row in curves
-            )
+            cdf_pass = _cdf_is_valid(curves)
             terminal_pass = curves[-1]["cdf_min"] == curves[-1]["cdf_max"] == 1
             verdict_rows.append(
                 {
