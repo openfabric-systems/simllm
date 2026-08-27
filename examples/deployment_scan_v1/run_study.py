@@ -22,7 +22,6 @@ from typing import Any, NoReturn, Self, TypeVar
 
 from simllm.calibration import BatchServicePoint
 from simllm.deploy import (
-    DEPLOYMENT_ESTIMATE_SCHEMA,
     PIPELINE_PARALLEL_UNPRICED,
     BudgetSpec,
     DeploymentCandidate,
@@ -101,6 +100,19 @@ FROZEN_INPUTS = (
 BATCHES = (1, 2, 4, 8, 16, 32)
 PICOSECONDS_PER_SECOND = 1_000_000_000_000
 SYNTHETIC_SHA256 = "0" * 64
+ANALYTICAL_SPOT_LITERALS = {
+    ("b100-one-node-intra", 1): 3_448_398_380,
+    ("b100-one-node-intra", 32): 4_257_218_560,
+    ("h100-two-node-serialized", 1): 8_234_981_205,
+    ("h100-two-node-serialized", 32): 9_535_537_623,
+}
+SIMULATED_SPOT_LITERALS = {
+    ("b100-one-node-intra", 32): 4_523_298_348,
+}
+EXPECTED_SIMULATED_DIFFERENCES = ("b100-one-node-intra:b32",)
+DISCRIMINATION_CONFIGURATION = "h100-two-node-serialized"
+DISCRIMINATION_BATCH = 1
+DISCRIMINATION_RATE = 300_000_000_000
 T = TypeVar("T")
 
 
@@ -365,10 +377,40 @@ def _point_map(record: FrontierRecord) -> dict[tuple[str, int], FrontierPoint]:
     }
 
 
+def _independent_floor_components(
+    oracle: dict[str, Any],
+    *,
+    inter_node_bits_per_second: int,
+    intra_node_bytes_per_second: int,
+) -> dict[str, int]:
+    """Recompute one cell from pinned work and bytes, never emitted terms."""
+
+    partition = oracle["byte_partition"]
+    max_flow_bytes = max(partition["remote_flow_payload_bytes"], default=0)
+    local_logical_bytes = partition["local_logical_bytes_per_transfer"]
+    return {
+        "kernel_floor_ps": oracle["kernel"]["kernel_floor_ps"],
+        "max_flow_bytes": max_flow_bytes,
+        "local_logical_bytes": local_logical_bytes,
+        "fabric_floor_ps": (
+            max_flow_bytes
+            * 8
+            * PICOSECONDS_PER_SECOND
+            // inter_node_bits_per_second
+        ),
+        "intra_floor_ps": (
+            local_logical_bytes
+            * PICOSECONDS_PER_SECOND
+            // intra_node_bytes_per_second
+        ),
+    }
+
+
 def _strict_round_trip(
     candidates: tuple[DeploymentCandidate, ...],
     records: tuple[FrontierRecord, ...],
 ) -> tuple[bool, str]:
+    mutation_checked = False
     try:
         for candidate in candidates:
             rendered_candidate = candidate_to_json(candidate)
@@ -415,6 +457,29 @@ def _strict_round_trip(
                     return False, f"frontier schema was not checked first: {error}"
             else:
                 return False, "frontier parser accepted a wrong schema"
+            if not mutation_checked and record.points:
+                mutated_record = deepcopy(rendered_record)
+                raw_candidates = mutated_record["candidates"]
+                assert isinstance(raw_candidates, list)
+                raw_point = next(
+                    point
+                    for candidate in raw_candidates
+                    for point in candidate["points"]
+                )
+                original_class = raw_point["point_class"]
+                raw_point["point_class"] = (
+                    PointClass.SIMULATED.value
+                    if original_class == PointClass.ESTIMATE.value
+                    else PointClass.ESTIMATE.value
+                )
+                try:
+                    frontier_record_from_json(mutated_record)
+                except ValueError as error:
+                    if "point.point_class" not in str(error):
+                        return False, f"point-class mutation used wrong error: {error}"
+                    mutation_checked = True
+                else:
+                    return False, "frontier parser accepted a mutated point class"
             for point in record.points:
                 rendered_stamp = estimate_stamp_to_json(point.stamp)
                 if estimate_stamp_from_json(rendered_stamp) != point.stamp:
@@ -441,50 +506,87 @@ def _strict_round_trip(
                     return False, "estimate stamp parser accepted a wrong schema"
     except (TypeError, ValueError) as error:
         return False, str(error)
-    return True, "candidate, estimate stamp and frontier record boundaries are strict"
+    if not mutation_checked:
+        return False, "no frontier point was available for the point-class mutation control"
+    return (
+        True,
+        (
+            "candidate, estimate stamp and frontier record boundaries are strict; "
+            "the point-class mutation negative control was rejected"
+        ),
+    )
 
 
 def _evidence_guard(
-    analytical: FrontierRecord,
-    simulated: FrontierRecord,
+    records: tuple[FrontierRecord, ...],
     synthetic_estimates: tuple[Any, ...],
+    *,
+    declared_surface: Any,
+    measured_surface: Any,
+    prefill_estimate: Any,
 ) -> tuple[bool, str]:
     allowed = set(EvidenceClass)
-    for point in analytical.points:
-        expected = {
-            "kernel_floor": EvidenceClass.ROOFLINE,
-            "fabric_floor": EvidenceClass.DECLARED,
-            "intra_floor": EvidenceClass.DECLARED,
-        }
-        for name, evidence in expected.items():
-            term = _term(point, name)
-            if term.evidence is not evidence or not term.source:
-                return False, f"{point.configuration_id} batch {point.batch_per_gpu} {name}"
-    for point in simulated.points:
-        for name in ("fabric_excess", "intra_excess"):
-            term = _term(point, name)
-            if term.evidence is not EvidenceClass.SIM_DERIVED or not term.source:
-                return False, f"{point.configuration_id} batch {point.batch_per_gpu} {name}"
+    point_count = 0
+    for record in records:
+        for point in record.points:
+            point_count += 1
+            expected = {
+                "kernel_floor": EvidenceClass.ROOFLINE,
+                "fabric_floor": EvidenceClass.DECLARED,
+                "intra_floor": EvidenceClass.DECLARED,
+            }
+            if point.point_class is PointClass.SIMULATED:
+                expected.update(
+                    {
+                        "fabric_excess": EvidenceClass.SIM_DERIVED,
+                        "intra_excess": EvidenceClass.SIM_DERIVED,
+                    }
+                )
+            for named in point.stamp.terms:
+                term = named.estimate
+                if term.evidence not in allowed or not term.source:
+                    return False, (
+                        f"{point.configuration_id} batch {point.batch_per_gpu} "
+                        f"{named.name} lacks evidence"
+                    )
+            for name, evidence in expected.items():
+                term = _term(point, name)
+                if term.evidence is not evidence or not term.source:
+                    return False, (
+                        f"{point.configuration_id} batch {point.batch_per_gpu} {name}"
+                    )
     for estimate in synthetic_estimates:
         for named in estimate.stamp.terms:
             if named.estimate.evidence not in allowed or not named.estimate.source:
                 return False, f"synthetic term {named.name} lacks evidence"
-    return True, "every consumed duration has an allowed evidence class and source"
 
+    def synthetic_term(estimate: Any, name: str) -> TermEstimate:
+        for named in estimate.stamp.terms:
+            if named.name == name:
+                return named.estimate
+        raise KeyError(name)
 
-def _stamp_guard(records: tuple[FrontierRecord, ...]) -> tuple[bool, str]:
-    for record in records:
-        for point in record.points:
-            if point.stamp.schema != DEPLOYMENT_ESTIMATE_SCHEMA:
-                return False, f"{point.configuration_id} has the wrong stamp schema"
-            expected = (
-                PointClass.SIMULATED
-                if point.stamp.consumes_sim_derived
-                else PointClass.ESTIMATE
-            )
-            if point.point_class is not expected:
-                return False, f"{point.configuration_id} has the wrong point class"
-    return True, "all points carry strict estimate stamps and authority-correct classes"
+    expected_synthetic = (
+        (declared_surface, "batch_service", EvidenceClass.DECLARED),
+        (measured_surface, "batch_service", EvidenceClass.MEASURED),
+        (prefill_estimate, "prefill_service", EvidenceClass.DECLARED),
+        (prefill_estimate, "handoff", EvidenceClass.DECLARED),
+    )
+    for estimate, name, evidence in expected_synthetic:
+        try:
+            term = synthetic_term(estimate, name)
+        except KeyError:
+            return False, f"synthetic estimate omitted required term {name}"
+        if term.evidence is not evidence or not term.source:
+            return False, f"synthetic term {name} did not retain {evidence.value}"
+    return (
+        True,
+        (
+            f"all terms across {len(records)} records and {point_count} points have "
+            "allowed sourced evidence; declared handoff and prefill service classes "
+            "were checked individually"
+        ),
+    )
 
 
 def _synthetic_candidate(
@@ -706,6 +808,21 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
                 )
                 for rate in (200_000_000_000, 100_000_000_000)
             }
+            discrimination_configuration = next(
+                configuration
+                for configuration in frozen["configurations"]
+                if configuration["id"] == DISCRIMINATION_CONFIGURATION
+            )
+            discrimination_record = scan(
+                (
+                    _candidate(
+                        discrimination_configuration,
+                        inter_node_bits_per_second=DISCRIMINATION_RATE,
+                    ),
+                ),
+                (DISCRIMINATION_BATCH,),
+                _scan_inputs(frozen, legacy_rows, simulated=False),
+            )
 
             e1 = timer.call(
                 estimate_decode_step,
@@ -880,14 +997,16 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
         analytical,
         simulated,
         *bandwidth_records.values(),
+        discrimination_record,
         rejected_record,
         throughput_record,
     )
-    stamp_pass, stamp_detail = _stamp_guard(all_records)
     evidence_pass, evidence_detail = _evidence_guard(
-        analytical,
-        simulated,
+        all_records,
         (e1, e2, e3, e4, measured_surface_probe, prefill_estimate, rate_match),
+        declared_surface=e4,
+        measured_surface=measured_surface_probe,
+        prefill_estimate=prefill_estimate,
     )
     strict_pass, strict_detail = _strict_round_trip(
         (*candidates, rejected, rate_candidate),
@@ -906,7 +1025,16 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
             "detail": "subprocess.Popen and os.posix_spawn were intercepted around every call",
             "interceptions_fired": len(process_guard.attempts),
         },
-        {"id": "FG-2", "status": "PASS" if stamp_pass else "FAIL", "detail": stamp_detail},
+        {
+            "id": "FG-2",
+            "status": "ENFORCED_BY_CONSTRUCTION",
+            "runtime_evidence": False,
+            "detail": (
+                "EstimateStamp.schema fixes the v1 schema and "
+                "FrontierPoint.__post_init__ enforces point class against "
+                "SIM-DERIVED consumption; FG-4 carries the observable wire mutation control"
+            ),
+        },
         {
             "id": "FG-3",
             "status": "PASS" if evidence_pass else "FAIL",
@@ -920,19 +1048,24 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
         },
         {
             "id": "FG-6",
-            "status": "PASS",
+            "status": "VERIFIED_OUT_OF_PROCESS",
+            "runtime_evidence": False,
             "detail": (
-                f"expectations commit {EXPECTATIONS_COMMIT} contains only "
-                "examples/deployment_scan_v1/expectations.md"
+                f"chronology for expectations commit {EXPECTATIONS_COMMIT} is not "
+                "evaluated in-process; tests/test_deployment_scan_study.py and "
+                "the integrator verify it without weakening the subprocess guard"
             ),
         },
         {
             "id": "D4",
             "status": "PASS" if d4_pass else "FAIL",
-            "detail": "pipeline-parallel rejection retained its stable reason and emitted no points",
+            "detail": (
+                "the runtime negative-control scan retained the stable "
+                "pipeline-parallel reason and emitted no points"
+            ),
         },
     ]
-    if any(guard["status"] != "PASS" for guard in fatal_guards):
+    if any(guard["status"] == "FAIL" for guard in fatal_guards):
         return {
             **_void_result(input_hashes, [], implementation_commit),
             "fatal_guards": fatal_guards,
@@ -943,11 +1076,49 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
     c1_errors = []
     c2_errors = []
     c3_misses = []
+    c1_anchor_misses = []
+    c1_anchor_cells = []
+    intra_rate = frozen["network_inputs"]["intra_node"][
+        "nominal_ideal_pair_rate_bytes_per_second"
+    ]
     for key, oracle in legacy_rows.items():
         analytic = analytical_points[key]
         simulated_point = simulated_points[key]
         c1_errors.append(_analytical_step(analytic) - oracle["accounting"]["analytical_step_ps"])
         c2_errors.append(simulated_point.step_ps - oracle["accounting"]["simulated_step_ps"])
+        anchor_components = _independent_floor_components(
+            oracle,
+            inter_node_bits_per_second=400_000_000_000,
+            intra_node_bytes_per_second=intra_rate,
+        )
+        anchor_expected_step = max(
+            anchor_components["kernel_floor_ps"],
+            anchor_components["fabric_floor_ps"],
+            anchor_components["intra_floor_ps"],
+        )
+        c1_anchor_cells.append(
+            {
+                "configuration_id": key[0],
+                "batch_per_gpu": key[1],
+                "rate_bits_per_second": 400_000_000_000,
+                "max_flow_bytes": anchor_components["max_flow_bytes"],
+                "local_logical_bytes": anchor_components["local_logical_bytes"],
+                "kernel_floor_ps": anchor_components["kernel_floor_ps"],
+                "recomputed_fabric_floor_ps": anchor_components["fabric_floor_ps"],
+                "recomputed_intra_floor_ps": anchor_components["intra_floor_ps"],
+                "emitted_fabric_floor_ps": _term(
+                    analytic, "fabric_floor"
+                ).duration_ps,
+                "expected_step_ps": anchor_expected_step,
+                "emitted_step_ps": analytic.step_ps,
+            }
+        )
+        if (
+            _term(analytic, "fabric_floor").duration_ps
+            != anchor_components["fabric_floor_ps"]
+            or analytic.step_ps != anchor_expected_step
+        ):
+            c1_anchor_misses.append(f"{key[0]} batch {key[1]}")
         operating = oracle["simulated_operating_point"]
         expected_x = Fraction(
             operating["x_tokens_per_second_per_request"]["numerator"],
@@ -963,22 +1134,65 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
         ):
             c3_misses.append(f"{key[0]} batch {key[1]}")
 
+    analytical_spot_misses = [
+        f"{key[0]} batch {key[1]}"
+        for key, expected in ANALYTICAL_SPOT_LITERALS.items()
+        if legacy_rows[key]["accounting"]["analytical_step_ps"] != expected
+    ]
+    simulated_spot_misses = [
+        f"{key[0]} batch {key[1]}"
+        for key, expected in SIMULATED_SPOT_LITERALS.items()
+        if legacy_rows[key]["accounting"]["simulated_step_ps"] != expected
+    ]
+    simulated_difference_points = tuple(
+        f"{key[0]}:b{key[1]}"
+        for key, oracle in legacy_rows.items()
+        if oracle["accounting"]["simulated_step_ps"]
+        != oracle["accounting"]["analytical_step_ps"]
+    )
+    c1_pass = not any(c1_errors) and not analytical_spot_misses and not c1_anchor_misses
+    c2_pass = (
+        not any(c2_errors)
+        and not simulated_spot_misses
+        and simulated_difference_points == EXPECTED_SIMULATED_DIFFERENCES
+    )
     compatibility = [
         _check(
             "C1",
-            not any(c1_errors),
+            c1_pass,
             instances=18,
             detail="installed analytical step versus pinned CORE-62 oracle",
-            observed={"max_absolute_error_ps": max(map(abs, c1_errors))},
-            expected={"max_absolute_error_ps": 0},
+            observed={
+                "max_absolute_error_ps": max(map(abs, c1_errors)),
+                "frozen_spot_literal_mismatches": analytical_spot_misses,
+                "independent_400_gbit_component_mismatches": c1_anchor_misses,
+                "independent_400_gbit_recomputations": c1_anchor_cells,
+            },
+            expected={
+                "max_absolute_error_ps": 0,
+                "frozen_spot_literal_mismatches": [],
+                "independent_400_gbit_component_mismatches": [],
+            },
         ),
         _check(
             "C2",
-            not any(c2_errors),
+            c2_pass,
             instances=18,
             detail="SIM-DERIVED excess composition versus pinned simulated step",
-            observed={"max_absolute_error_ps": max(map(abs, c2_errors))},
-            expected={"max_absolute_error_ps": 0},
+            observed={
+                "max_absolute_error_ps": max(map(abs, c2_errors)),
+                "frozen_spot_literal_mismatches": simulated_spot_misses,
+                "simulated_differs_from_analytical": list(
+                    simulated_difference_points
+                ),
+            },
+            expected={
+                "max_absolute_error_ps": 0,
+                "frozen_spot_literal_mismatches": [],
+                "simulated_differs_from_analytical": list(
+                    EXPECTED_SIMULATED_DIFFERENCES
+                ),
+            },
         ),
         _check(
             "C3",
@@ -1066,7 +1280,9 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
         ),
     ]
 
-    bandwidth_misses = []
+    bandwidth_fabric_misses = []
+    bandwidth_composition_misses = []
+    bandwidth_cells = []
     bandwidth_maps = {
         rate: _point_map(record) for rate, record in bandwidth_records.items()
     }
@@ -1083,24 +1299,128 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
             points,
             strict=True,
         ):
-            kernel = _term(point, "kernel_floor").duration_ps
-            fabric = _term(point, "fabric_floor").duration_ps
-            intra = _term(point, "intra_floor").duration_ps
-            expected = max(kernel, fabric, intra)
-            if point.step_ps != expected:
-                bandwidth_misses.append(f"{key[0]} batch {key[1]} at {rate}")
+            if rate == 400_000_000_000:
+                continue
+            components = _independent_floor_components(
+                legacy_rows[key],
+                inter_node_bits_per_second=rate,
+                intra_node_bytes_per_second=intra_rate,
+            )
+            label = f"{key[0]} batch {key[1]} at {rate}"
+            if (
+                _term(point, "fabric_floor").duration_ps
+                != components["fabric_floor_ps"]
+            ):
+                bandwidth_fabric_misses.append(label)
+            expected_step = max(
+                components["kernel_floor_ps"],
+                components["fabric_floor_ps"],
+                components["intra_floor_ps"],
+            )
+            bandwidth_cells.append(
+                {
+                    "configuration_id": key[0],
+                    "batch_per_gpu": key[1],
+                    "rate_bits_per_second": rate,
+                    "max_flow_bytes": components["max_flow_bytes"],
+                    "local_logical_bytes": components["local_logical_bytes"],
+                    "kernel_floor_ps": components["kernel_floor_ps"],
+                    "recomputed_fabric_floor_ps": components["fabric_floor_ps"],
+                    "recomputed_intra_floor_ps": components["intra_floor_ps"],
+                    "emitted_fabric_floor_ps": _term(
+                        point, "fabric_floor"
+                    ).duration_ps,
+                    "expected_step_ps": expected_step,
+                    "emitted_step_ps": point.step_ps,
+                }
+            )
+            if point.step_ps != expected_step:
+                bandwidth_composition_misses.append(label)
         if not (points[2].step_ps >= points[1].step_ps >= points[0].step_ps):
             direction_pass = False
-        for lower, higher in ((points[0], points[1]), (points[1], points[2])):
-            fabric = _term(higher, "fabric_floor").duration_ps
+        for lower, higher, higher_rate in (
+            (points[0], points[1], 200_000_000_000),
+            (points[1], points[2], 100_000_000_000),
+        ):
+            components = _independent_floor_components(
+                legacy_rows[key],
+                inter_node_bits_per_second=higher_rate,
+                intra_node_bytes_per_second=intra_rate,
+            )
+            fabric = components["fabric_floor_ps"]
             other = max(
-                _term(higher, "kernel_floor").duration_ps,
-                _term(higher, "intra_floor").duration_ps,
+                components["kernel_floor_ps"],
+                components["intra_floor_ps"],
             )
             if fabric > other:
                 strict_binding_instances += 1
                 if higher.step_ps <= lower.step_ps:
                     direction_pass = False
+
+    discrimination_key = (
+        DISCRIMINATION_CONFIGURATION,
+        DISCRIMINATION_BATCH,
+    )
+    discrimination_oracle = legacy_rows[discrimination_key]
+    discrimination_components = _independent_floor_components(
+        discrimination_oracle,
+        inter_node_bits_per_second=DISCRIMINATION_RATE,
+        intra_node_bytes_per_second=intra_rate,
+    )
+    baseline_components = _independent_floor_components(
+        discrimination_oracle,
+        inter_node_bits_per_second=400_000_000_000,
+        intra_node_bytes_per_second=intra_rate,
+    )
+    direct_floor = discrimination_components["fabric_floor_ps"]
+    rounded_scaled_floor = round(
+        Fraction(
+            baseline_components["fabric_floor_ps"] * 400_000_000_000,
+            DISCRIMINATION_RATE,
+        )
+    )
+    discrimination_point = _point_map(discrimination_record)[discrimination_key]
+    discrimination_step = max(
+        discrimination_components["kernel_floor_ps"],
+        discrimination_components["fabric_floor_ps"],
+        discrimination_components["intra_floor_ps"],
+    )
+    discrimination_pass = (
+        direct_floor != rounded_scaled_floor
+        and _term(discrimination_point, "fabric_floor").duration_ps == direct_floor
+        and discrimination_point.step_ps == discrimination_step
+    )
+    post_specified = {
+        "classification": "POST-SPECIFIED",
+        "scored": False,
+        "checks": [
+            _check(
+                "B1-floor-division-discrimination",
+                discrimination_pass,
+                instances=1,
+                detail=(
+                    "direct floor division at 300 Gbit/s differs from rounded "
+                    "scaling of the 400 Gbit/s floor"
+                ),
+                observed={
+                    "configuration_id": DISCRIMINATION_CONFIGURATION,
+                    "batch_per_gpu": DISCRIMINATION_BATCH,
+                    "rate_bits_per_second": DISCRIMINATION_RATE,
+                    "max_flow_bytes": discrimination_components["max_flow_bytes"],
+                    "floor_division_candidate_ps": direct_floor,
+                    "rounded_scaling_candidate_ps": rounded_scaled_floor,
+                    "emitted_fabric_floor_ps": _term(
+                        discrimination_point, "fabric_floor"
+                    ).duration_ps,
+                    "emitted_step_ps": discrimination_point.step_ps,
+                },
+                expected={
+                    "fabric_floor_ps": direct_floor,
+                    "step_ps": discrimination_step,
+                },
+            )
+        ],
+    }
 
     target_membership = {}
     for target in (4_000_000_000, 8_500_000_000):
@@ -1152,22 +1472,58 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
     tight_set = set(target_membership[4_000_000_000])
     d3_pass = tight_set <= medium_set <= infinite_set
 
-    relations = [
-        _check(
+    if c1_pass:
+        b1_exact = _check(
             "B1-exact",
-            not bandwidth_misses,
+            not bandwidth_fabric_misses and not bandwidth_composition_misses,
             instances=36,
-            detail="floor-division bandwidth recomposition",
-            observed={"mismatches": bandwidth_misses},
-            expected={"mismatches": []},
-        ),
-        _check(
+            detail=(
+                "independent pinned-byte floor division and step recomposition "
+                "at 200 and 100 Gbit/s"
+            ),
+            observed={
+                "fabric_floor_mismatches": bandwidth_fabric_misses,
+                "step_composition_mismatches": bandwidth_composition_misses,
+                "independent_cell_recomputations": bandwidth_cells,
+            },
+            expected={
+                "fabric_floor_mismatches": [],
+                "step_composition_mismatches": [],
+            },
+        )
+        b1_direction = _check(
             "B1-direction",
             direction_pass,
             instances=1,
-            detail="100 Gbit/s is no faster than 200 Gbit/s, which is no faster than 400 Gbit/s",
+            detail=(
+                "100 Gbit/s is no faster than 200 Gbit/s, which is no faster "
+                "than 400 Gbit/s"
+            ),
             observed={"strict_binding_comparisons": strict_binding_instances},
-        ),
+        )
+    else:
+        b1_exact = {
+            "family": "B1-exact",
+            "status": "UNEVALUATED",
+            "instances": 36,
+            "detail": "C1 anchor failed, so frozen B1 is not interpretable",
+            "observed": {
+                "fabric_floor_mismatches": bandwidth_fabric_misses,
+                "step_composition_mismatches": bandwidth_composition_misses,
+                "independent_cell_recomputations": bandwidth_cells,
+            },
+        }
+        b1_direction = {
+            "family": "B1-direction",
+            "status": "UNEVALUATED",
+            "instances": 1,
+            "detail": "C1 anchor failed, so frozen B1 direction is not interpretable",
+            "observed": {"strict_binding_comparisons": strict_binding_instances},
+        }
+
+    relations = [
+        b1_exact,
+        b1_direction,
         _check(
             "S1",
             target_membership == expected_sla,
@@ -1214,7 +1570,7 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
     wall_time = [
         _check(
             "W1a",
-            primary_seconds <= 10,
+            primary_seconds <= 10 and primary_points >= 64,
             instances=1,
             detail="complete study scan and estimator call time, single process",
             observed={"seconds": primary_seconds, "priced_points": primary_points},
@@ -1256,17 +1612,21 @@ def run_study(*, implementation_commit: str) -> dict[str, object]:
         if class_name != "reported_unscored"
         for row in rows
     ]
-    passed = all(row["status"] == "PASS" for row in scored_rows)
+    frozen_passed = all(row["status"] == "PASS" for row in scored_rows)
+    passed = frozen_passed and discrimination_pass
     return {
         "schema": RESULT_SCHEMA,
         "status": "PASS" if passed else "FAIL",
         "verdict": (
-            "PASS: every frozen scored family passed and the maximum compatibility error was 0 ps."
+            "PASS: every frozen scored family and the post-specified "
+            "floor-division regression passed; the maximum compatibility error was 0 ps."
             if passed
-            else "FAIL: one or more frozen scored families missed; see the per-family ledger."
+            else "FAIL: a frozen family failed or was unevaluated, or the "
+            "post-specified regression failed; see the ledgers."
         ),
         "fatal_guards": fatal_guards,
         "score_classes": score_classes,
+        "post_specified_regressions": post_specified,
         "records": {
             "analytical": frontier_record_to_json(analytical),
             "simulated": frontier_record_to_json(simulated),
