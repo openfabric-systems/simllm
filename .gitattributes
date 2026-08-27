@@ -270,3 +270,4 @@ examples/deployment_curve_v1/flagship_run4_result.sha256 text eol=lf
 examples/deployment_curve_v1/flagship_run4_score_table.csv text eol=lf
 examples/deployment_curve_v1/RESULTS_RUN4.md text eol=lf
 tests/test_deployment_curve_run4_result.py text eol=lf
+docs/papers/deepseek-deployment-disclosures.md text eol=lf
