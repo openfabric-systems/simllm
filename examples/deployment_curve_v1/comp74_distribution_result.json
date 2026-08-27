@@ -1,0 +1,5245 @@
+{
+  "access": {
+    "rows": [
+      {
+        "bytes_consumed": 3628,
+        "classification": "successor_repeat_evidence",
+        "record": "examples/hopper_kernel_cycle_candidate_v1/successors/d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107/result.json",
+        "schema": "simllm-deployment-curve-comp74-field-access-v1",
+        "selector": "/{acceptance_status,lookup_record_sha256,predecessor_lookup_record_sha256,score/{lookup_service_ledger,priced_repeat_observations[]/{implementation_suffix,published_point_ps,independent_repeat_ps,signed_repeat_minus_point_ps,retained_independent_observations,distribution_propagation},task_movement/{comp74_repeat_inputs}}}",
+        "status": "PASS",
+        "unselected_values_returned": false,
+        "whole_record_loaded": false
+      },
+      {
+        "bytes_consumed": 116918,
+        "classification": "prior_scored_publication",
+        "record": "examples/deployment_curve_v1/flagship_run4_result.json",
+        "schema": "simllm-deployment-curve-comp74-field-access-v1",
+        "selector": "/{schema,status,verdict,core54_closure,run3_carry_forward/{status,authority_sha256,held_out_score,anchor_predictions,curves,decode_calibration_miss},mtp_score,provenance/{candidate_acceptance_status}}",
+        "status": "PASS",
+        "unselected_values_returned": false,
+        "whole_record_loaded": false
+      },
+      {
+        "bytes_consumed": 4444,
+        "classification": "curve_configuration",
+        "record": "examples/deployment_curve_v1/flagship_run2_config.json",
+        "schema": "simllm-deployment-curve-comp74-field-access-v1",
+        "selector": "/{schema,publication_curves}",
+        "status": "PASS",
+        "unselected_values_returned": false,
+        "whole_record_loaded": false
+      }
+    ],
+    "successful_projection_count": 3,
+    "whole_record_loaded": false
+  },
+  "band_movement": {
+    "new_boundary_contact_count": 1,
+    "new_boundary_contacts": [
+      {
+        "anchor_id": "sglang_prefill_2k",
+        "layer": "physics_only"
+      }
+    ],
+    "rescore_performed": false,
+    "rows": [
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 10,
+            "numerator": 547903
+          },
+          "upper": {
+            "denominator": 10,
+            "numerator": 605577
+          }
+        },
+        "anchor_id": "sglang_prefill_1k",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "CALIBRATION_CONTEXT",
+        "layer": "physics_only",
+        "movement": {
+          "lower": {
+            "denominator": 10644243397758127,
+            "numerator": -12671385600000000000
+          },
+          "upper": {
+            "denominator": 10644243397758127,
+            "numerator": 12671385600000000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "relative_half_width": 0,
+              "source_id": "comp74-zero-width-insufficient-replays",
+              "source_kind": "distribution",
+              "stability_claim": false
+            }
+          ],
+          "lower": {
+            "denominator": 57154494067,
+            "numerator": 3276800000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 10644243397758127,
+                  "numerator": -12671385600000000000
+                },
+                "upper": {
+                  "denominator": 10644243397758127,
+                  "numerator": 12671385600000000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 558709,
+                "numerator": 11601
+              },
+              "service_interval_ps": {
+                "lower": 87537280000,
+                "point": 89393440000,
+                "upper": 91249600000
+              },
+              "source_id": "comp74-repeat-envelope:ep32-prefill-r16-l1024-t16384",
+              "source_kind": "distribution",
+              "stability_claim": false
+            }
+          ],
+          "lower": {
+            "denominator": 20978149866374854852501121,
+            "numerator": 1177752763195791769600000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 778847077884741,
+            "numerator": 45580288000000000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": true,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": {
+          "denominator": 558709,
+          "numerator": 11601
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 10,
+            "numerator": 547903
+          },
+          "upper": {
+            "denominator": 10,
+            "numerator": 605577
+          }
+        },
+        "anchor_id": "sglang_prefill_1k",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "CALIBRATION_CONTEXT",
+        "layer": "physics_plus_boundary",
+        "movement": {
+          "lower": {
+            "denominator": 10644243397758127,
+            "numerator": -12671385600000000000
+          },
+          "upper": {
+            "denominator": 10644243397758127,
+            "numerator": 12671385600000000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "relative_half_width": 0,
+              "source_id": "comp74-zero-width-insufficient-replays",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            }
+          ],
+          "lower": {
+            "denominator": 74195118567,
+            "numerator": 3276800000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          }
+        },
+        "prior_touches_lower_boundary": true,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 10644243397758127,
+                  "numerator": -12671385600000000000
+                },
+                "upper": {
+                  "denominator": 10644243397758127,
+                  "numerator": 12671385600000000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 558709,
+                "numerator": 11601
+              },
+              "service_interval_ps": {
+                "lower": 87537280000,
+                "point": 89393440000,
+                "upper": 91249600000
+              },
+              "source_id": "comp74-repeat-envelope:ep32-prefill-r16-l1024-t16384",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            }
+          ],
+          "lower": {
+            "denominator": 789750900952671174752844009,
+            "numerator": 33938901808773654118400000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 778847077884741,
+            "numerator": 45580288000000000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": true,
+        "propagated_touches_lower_boundary": true,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": {
+          "denominator": 558709,
+          "numerator": 11601
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 10,
+            "numerator": 547903
+          },
+          "upper": {
+            "denominator": 10,
+            "numerator": 605577
+          }
+        },
+        "anchor_id": "sglang_prefill_1k",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "CALIBRATION_CONTEXT",
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "movement": {
+          "lower": {
+            "denominator": 11011515362986768184041687,
+            "numerator": -11907199081160549990400000000
+          },
+          "upper": {
+            "denominator": 11011515362986768184041687,
+            "numerator": 11907199081160549990400000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "relative_half_width": 0,
+              "source_id": "comp74-zero-width-insufficient-replays",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            {
+              "anchor_numeric_input_count": 0,
+              "factor": {
+                "lower": {
+                  "denominator": 500000000000000,
+                  "numerator": 453445062427913
+                },
+                "point": {
+                  "denominator": 1034504281000,
+                  "numerator": 939691952959
+                },
+                "upper": {
+                  "denominator": 500000000000000,
+                  "numerator": 454904927241197
+                }
+              },
+              "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+              "source_kind": "benchmark-bias-attenuation"
+            }
+          ],
+          "lower": {
+            "denominator": 46371949104375,
+            "numerator": 1857310975704731648
+          },
+          "point": {
+            "denominator": 59126568730699352529,
+            "numerator": 3079182591456051200000000
+          },
+          "upper": {
+            "denominator": 35721558755625,
+            "numerator": 1863290581979942912
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 11011515362986768184041687,
+                  "numerator": -11907199081160549990400000000
+                },
+                "upper": {
+                  "denominator": 11011515362986768184041687,
+                  "numerator": 11907199081160549990400000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 558709,
+                "numerator": 11601
+              },
+              "service_interval_ps": {
+                "lower": 87537280000,
+                "point": 89393440000,
+                "upper": 91249600000
+              },
+              "source_id": "comp74-repeat-envelope:ep32-prefill-r16-l1024-t16384",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            {
+              "anchor_numeric_input_count": 0,
+              "factor": {
+                "lower": {
+                  "denominator": 500000000000000,
+                  "numerator": 453445062427913
+                },
+                "point": {
+                  "denominator": 1034504281000,
+                  "numerator": 939691952959
+                },
+                "upper": {
+                  "denominator": 500000000000000,
+                  "numerator": 454904927241197
+                }
+              },
+              "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+              "source_kind": "benchmark-bias-attenuation"
+            }
+          ],
+          "lower": {
+            "denominator": 510625429974465817916947652647314080625,
+            "numerator": 19899648313049358907673516772300490380210176
+          },
+          "point": {
+            "denominator": 59126568730699352529,
+            "numerator": 3079182591456051200000000
+          },
+          "upper": {
+            "denominator": 20646591305600190345078163125,
+            "numerator": 1099283456737913619421187420622848
+          }
+        },
+        "propagated_intersects_acceptance_interval": false,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": {
+          "denominator": 558709,
+          "numerator": 11601
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 20,
+            "numerator": 1036317
+          },
+          "upper": {
+            "denominator": 20,
+            "numerator": 1145403
+          }
+        },
+        "anchor_id": "sglang_prefill_2k",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "PASS",
+        "layer": "physics_only",
+        "movement": {
+          "lower": {
+            "denominator": 41586238540382499,
+            "numerator": -38976716800000000000
+          },
+          "upper": {
+            "denominator": 41586238540382499,
+            "numerator": 38976716800000000000
+          }
+        },
+        "new_boundary_contact": true,
+        "prior": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "relative_half_width": 0,
+              "source_id": "comp74-zero-width-insufficient-replays",
+              "source_kind": "distribution",
+              "stability_claim": false
+            }
+          ],
+          "lower": {
+            "denominator": 57154494067,
+            "numerator": 3276800000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 41586238540382499,
+                  "numerator": -38976716800000000000
+                },
+                "upper": {
+                  "denominator": 41586238540382499,
+                  "numerator": 38976716800000000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 2910444,
+                "numerator": 47579
+              },
+              "service_interval_ps": {
+                "lower": 91611680000,
+                "point": 93134208000,
+                "upper": 94656736000
+              },
+              "source_id": "comp74-repeat-envelope:ep32-prefill-r8-l2048-t16384",
+              "source_kind": "distribution",
+              "stability_claim": false
+            }
+          ],
+          "lower": {
+            "denominator": 81960014618108216517452877,
+            "numerator": 4622141100690642534400000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 41586238540382499,
+            "numerator": 2423212441600000000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": true,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": true,
+        "relative_half_width": {
+          "denominator": 2910444,
+          "numerator": 47579
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 20,
+            "numerator": 1036317
+          },
+          "upper": {
+            "denominator": 20,
+            "numerator": 1145403
+          }
+        },
+        "anchor_id": "sglang_prefill_2k",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "PASS",
+        "layer": "physics_plus_boundary",
+        "movement": {
+          "lower": {
+            "denominator": 41586238540382499,
+            "numerator": -38976716800000000000
+          },
+          "upper": {
+            "denominator": 41586238540382499,
+            "numerator": 38976716800000000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "relative_half_width": 0,
+              "source_id": "comp74-zero-width-insufficient-replays",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            }
+          ],
+          "lower": {
+            "denominator": 74908202467,
+            "numerator": 3276800000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          }
+        },
+        "prior_touches_lower_boundary": true,
+        "prior_touches_upper_boundary": true,
+        "propagated": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 41586238540382499,
+                  "numerator": -38976716800000000000
+                },
+                "upper": {
+                  "denominator": 41586238540382499,
+                  "numerator": 38976716800000000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 2910444,
+                "numerator": 47579
+              },
+              "service_interval_ps": {
+                "lower": 91611680000,
+                "point": 93134208000,
+                "upper": 94656736000
+              },
+              "source_id": "comp74-repeat-envelope:ep32-prefill-r8-l2048-t16384",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            }
+          ],
+          "lower": {
+            "denominator": 3115150376423930790715425033,
+            "numerator": 133350110655572052377600000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 41586238540382499,
+            "numerator": 2423212441600000000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": true,
+        "propagated_touches_lower_boundary": true,
+        "propagated_touches_upper_boundary": true,
+        "relative_half_width": {
+          "denominator": 2910444,
+          "numerator": 47579
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 20,
+            "numerator": 1036317
+          },
+          "upper": {
+            "denominator": 20,
+            "numerator": 1145403
+          }
+        },
+        "anchor_id": "sglang_prefill_2k",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "PASS",
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "movement": {
+          "lower": {
+            "denominator": 43021141800712886592978219,
+            "numerator": -36626107129721865011200000000
+          },
+          "upper": {
+            "denominator": 43021141800712886592978219,
+            "numerator": 36626107129721865011200000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "relative_half_width": 0,
+              "source_id": "comp74-zero-width-insufficient-replays",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            {
+              "anchor_numeric_input_count": 0,
+              "factor": {
+                "lower": {
+                  "denominator": 500000000000000,
+                  "numerator": 453445062427913
+                },
+                "point": {
+                  "denominator": 1034504281000,
+                  "numerator": 939691952959
+                },
+                "upper": {
+                  "denominator": 500000000000000,
+                  "numerator": 454904927241197
+                }
+              },
+              "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+              "source_kind": "benchmark-bias-attenuation"
+            }
+          ],
+          "lower": {
+            "denominator": 46817626541875,
+            "numerator": 1857310975704731648
+          },
+          "point": {
+            "denominator": 59126568730699352529,
+            "numerator": 3079182591456051200000000
+          },
+          "upper": {
+            "denominator": 35721558755625,
+            "numerator": 1863290581979942912
+          }
+        },
+        "prior_touches_lower_boundary": true,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 43021141800712886592978219,
+                  "numerator": -36626107129721865011200000000
+                },
+                "upper": {
+                  "denominator": 43021141800712886592978219,
+                  "numerator": 36626107129721865011200000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 2910444,
+                "numerator": 47579
+              },
+              "service_interval_ps": {
+                "lower": 91611680000,
+                "point": 93134208000,
+                "upper": 94656736000
+              },
+              "source_id": "comp74-repeat-envelope:ep32-prefill-r8-l2048-t16384",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            {
+              "anchor_numeric_input_count": 0,
+              "factor": {
+                "lower": {
+                  "denominator": 500000000000000,
+                  "numerator": 453445062427913
+                },
+                "point": {
+                  "denominator": 1034504281000,
+                  "numerator": 939691952959
+                },
+                "upper": {
+                  "denominator": 500000000000000,
+                  "numerator": 454904927241197
+                }
+              },
+              "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+              "source_kind": "benchmark-bias-attenuation"
+            }
+          ],
+          "lower": {
+            "denominator": 118479279425342568891280229756362730625,
+            "numerator": 4599346555795979040711294189059774735527936
+          },
+          "point": {
+            "denominator": 59126568730699352529,
+            "numerator": 3079182591456051200000000
+          },
+          "upper": {
+            "denominator": 26888213625445554120611386875,
+            "numerator": 1425421244535685116409458119176192
+          }
+        },
+        "propagated_intersects_acceptance_interval": true,
+        "propagated_touches_lower_boundary": true,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": {
+          "denominator": 2910444,
+          "numerator": 47579
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 10,
+            "numerator": 477869
+          },
+          "upper": {
+            "denominator": 10,
+            "numerator": 528171
+          }
+        },
+        "anchor_id": "sglang_prefill_4k",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "PASS",
+        "layer": "physics_only",
+        "movement": {
+          "lower": {
+            "denominator": 5978297832097424199,
+            "numerator": -997611929600000000000
+          },
+          "upper": {
+            "denominator": 5978297832097424199,
+            "numerator": 997611929600000000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "relative_half_width": 0,
+              "source_id": "comp74-zero-width-insufficient-replays",
+              "source_kind": "distribution",
+              "stability_claim": false
+            }
+          ],
+          "lower": {
+            "denominator": 57154494067,
+            "numerator": 3276800000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 5978297832097424199,
+                  "numerator": -997611929600000000000
+                },
+                "upper": {
+                  "denominator": 5978297832097424199,
+                  "numerator": 997611929600000000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 104598911,
+                "numerator": 304447
+              },
+              "service_interval_ps": {
+                "lower": 104294464000,
+                "point": 104598911000,
+                "upper": 104903358000
+              },
+              "source_id": "comp74-repeat-envelope:ep32-prefill-r4-l4096-t16384",
+              "source_kind": "distribution",
+              "stability_claim": false
+            }
+          ],
+          "lower": {
+            "denominator": 11782296137081765294749231977,
+            "numerator": 673540287279494758400000000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 1992765944032474733,
+            "numerator": 114582441164800000000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": false,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": {
+          "denominator": 104598911,
+          "numerator": 304447
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 10,
+            "numerator": 477869
+          },
+          "upper": {
+            "denominator": 10,
+            "numerator": 528171
+          }
+        },
+        "anchor_id": "sglang_prefill_4k",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "PASS",
+        "layer": "physics_plus_boundary",
+        "movement": {
+          "lower": {
+            "denominator": 5978297832097424199,
+            "numerator": -997611929600000000000
+          },
+          "upper": {
+            "denominator": 5978297832097424199,
+            "numerator": 997611929600000000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "relative_half_width": 0,
+              "source_id": "comp74-zero-width-insufficient-replays",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            }
+          ],
+          "lower": {
+            "denominator": 616749291811,
+            "numerator": 26214400000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          }
+        },
+        "prior_touches_lower_boundary": true,
+        "prior_touches_upper_boundary": true,
+        "propagated": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 5978297832097424199,
+                  "numerator": -997611929600000000000
+                },
+                "upper": {
+                  "denominator": 5978297832097424199,
+                  "numerator": 997611929600000000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 104598911,
+                "numerator": 304447
+              },
+              "service_interval_ps": {
+                "lower": 104294464000,
+                "point": 104598911000,
+                "upper": 104903358000
+              },
+              "source_id": "comp74-repeat-envelope:ep32-prefill-r4-l4096-t16384",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            }
+          ],
+          "lower": {
+            "denominator": 127141757040735274465189790841,
+            "numerator": 5382834973746610749440000000000000
+          },
+          "point": {
+            "denominator": 57154494009,
+            "numerator": 3276800000000000
+          },
+          "upper": {
+            "denominator": 1992765944032474733,
+            "numerator": 114582441164800000000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": true,
+        "propagated_touches_lower_boundary": true,
+        "propagated_touches_upper_boundary": true,
+        "relative_half_width": {
+          "denominator": 104598911,
+          "numerator": 304447
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 10,
+            "numerator": 477869
+          },
+          "upper": {
+            "denominator": 10,
+            "numerator": 528171
+          }
+        },
+        "anchor_id": "sglang_prefill_4k",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "PASS",
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "movement": {
+          "lower": {
+            "denominator": 6184574700397804542938495919,
+            "numerator": -937447902421020419686400000000
+          },
+          "upper": {
+            "denominator": 6184574700397804542938495919,
+            "numerator": 937447902421020419686400000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "relative_half_width": 0,
+              "source_id": "comp74-zero-width-insufficient-replays",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            {
+              "anchor_numeric_input_count": 0,
+              "factor": {
+                "lower": {
+                  "denominator": 500000000000000,
+                  "numerator": 453445062427913
+                },
+                "point": {
+                  "denominator": 1034504281000,
+                  "numerator": 939691952959
+                },
+                "upper": {
+                  "denominator": 500000000000000,
+                  "numerator": 454904927241197
+                }
+              },
+              "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+              "source_kind": "benchmark-bias-attenuation"
+            }
+          ],
+          "lower": {
+            "denominator": 385468307381875,
+            "numerator": 14858487805637853184
+          },
+          "point": {
+            "denominator": 59126568730699352529,
+            "numerator": 3079182591456051200000000
+          },
+          "upper": {
+            "denominator": 35721558755625,
+            "numerator": 1863290581979942912
+          }
+        },
+        "prior_touches_lower_boundary": true,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "service_ps": {
+                "lower": 2286179760360,
+                "selected": 2286179760360,
+                "upper": 2286179762680
+              },
+              "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+              "source_kind": "comp75-clean-composition-record"
+            },
+            {
+              "application_count": 0,
+              "selected_ps": 0,
+              "source_id": "intra_node_collective_surcharge_ps",
+              "source_kind": "constant-envelope"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 6184574700397804542938495919,
+                  "numerator": -937447902421020419686400000000
+                },
+                "upper": {
+                  "denominator": 6184574700397804542938495919,
+                  "numerator": 937447902421020419686400000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 104598911,
+                "numerator": 304447
+              },
+              "service_interval_ps": {
+                "lower": 104294464000,
+                "point": 104598911000,
+                "upper": 104903358000
+              },
+              "source_id": "comp74-repeat-envelope:ep32-prefill-r4-l4096-t16384",
+              "source_kind": "distribution",
+              "stability_claim": false
+            },
+            {
+              "lower_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "selected_fraction": {
+                "denominator": 1,
+                "numerator": 0
+              },
+              "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+              "source_kind": "overlap-exposure-envelope",
+              "upper_fraction": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            {
+              "anchor_numeric_input_count": 0,
+              "factor": {
+                "lower": {
+                  "denominator": 500000000000000,
+                  "numerator": 453445062427913
+                },
+                "point": {
+                  "denominator": 1034504281000,
+                  "numerator": 939691952959
+                },
+                "upper": {
+                  "denominator": 500000000000000,
+                  "numerator": 454904927241197
+                }
+              },
+              "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+              "source_kind": "benchmark-bias-attenuation"
+            }
+          ],
+          "lower": {
+            "denominator": 82205432470314083013718015064068181450625,
+            "numerator": 3156278321128008215663236307590834763210522624
+          },
+          "point": {
+            "denominator": 59126568730699352529,
+            "numerator": 3079182591456051200000000
+          },
+          "upper": {
+            "denominator": 1288453062582875946445519983125,
+            "numerator": 67402963922717060919246913693323264
+          }
+        },
+        "propagated_intersects_acceptance_interval": true,
+        "propagated_touches_lower_boundary": true,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": {
+          "denominator": 104598911,
+          "numerator": 304447
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 10,
+            "numerator": 211679
+          },
+          "upper": {
+            "denominator": 10,
+            "numerator": 233961
+          }
+        },
+        "anchor_id": "sglang_decode_standard",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "CALIBRATION_CONTEXT",
+        "layer": "physics_only",
+        "movement": {
+          "lower": {
+            "denominator": 8383152469,
+            "numerator": -308480000000
+          },
+          "upper": {
+            "denominator": 8383152469,
+            "numerator": 308480000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+              "source_kind": "candidate-record"
+            },
+            {
+              "applied": false,
+              "reason": "policy rule five registered modeling residual",
+              "source_kind": "benchmark-bias-attenuation"
+            }
+          ],
+          "lower": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          },
+          "point": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          },
+          "upper": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+              "source_kind": "candidate-record"
+            },
+            {
+              "applied": false,
+              "reason": "policy rule five registered modeling residual",
+              "source_kind": "benchmark-bias-attenuation"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 8383152469,
+                  "numerator": -308480000000
+                },
+                "upper": {
+                  "denominator": 8383152469,
+                  "numerator": 308480000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 58615,
+                "numerator": 241
+              },
+              "service_interval_ps": {
+                "lower": 1867968000,
+                "point": 1875680000,
+                "upper": 1883392000
+              },
+              "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+              "source_kind": "distribution",
+              "stability_claim": false
+            }
+          ],
+          "lower": {
+            "denominator": 8383152469,
+            "numerator": 74718720000000
+          },
+          "point": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          },
+          "upper": {
+            "denominator": 8383152469,
+            "numerator": 75335680000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": false,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": {
+          "denominator": 58615,
+          "numerator": 241
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 10,
+            "numerator": 211679
+          },
+          "upper": {
+            "denominator": 10,
+            "numerator": 233961
+          }
+        },
+        "anchor_id": "sglang_decode_standard",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "CALIBRATION_CONTEXT",
+        "layer": "physics_plus_boundary",
+        "movement": {
+          "lower": {
+            "denominator": 8383152469,
+            "numerator": -308480000000
+          },
+          "upper": {
+            "denominator": 8383152469,
+            "numerator": 308480000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+              "source_kind": "candidate-record"
+            },
+            {
+              "applied": false,
+              "reason": "policy rule five registered modeling residual",
+              "source_kind": "benchmark-bias-attenuation"
+            }
+          ],
+          "lower": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          },
+          "point": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          },
+          "upper": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+              "source_kind": "candidate-record"
+            },
+            {
+              "applied": false,
+              "reason": "policy rule five registered modeling residual",
+              "source_kind": "benchmark-bias-attenuation"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 8383152469,
+                  "numerator": -308480000000
+                },
+                "upper": {
+                  "denominator": 8383152469,
+                  "numerator": 308480000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 58615,
+                "numerator": 241
+              },
+              "service_interval_ps": {
+                "lower": 1867968000,
+                "point": 1875680000,
+                "upper": 1883392000
+              },
+              "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+              "source_kind": "distribution",
+              "stability_claim": false
+            }
+          ],
+          "lower": {
+            "denominator": 8383152469,
+            "numerator": 74718720000000
+          },
+          "point": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          },
+          "upper": {
+            "denominator": 8383152469,
+            "numerator": 75335680000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": false,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": {
+          "denominator": 58615,
+          "numerator": 241
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 10,
+            "numerator": 211679
+          },
+          "upper": {
+            "denominator": 10,
+            "numerator": 233961
+          }
+        },
+        "anchor_id": "sglang_decode_standard",
+        "distribution_status": "REPEAT_DERIVED",
+        "frozen_point_verdict": "CALIBRATION_CONTEXT",
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "movement": {
+          "lower": {
+            "denominator": 8383152469,
+            "numerator": -308480000000
+          },
+          "upper": {
+            "denominator": 8383152469,
+            "numerator": 308480000000
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "contributions": [
+            {
+              "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+              "source_kind": "candidate-record"
+            },
+            {
+              "applied": false,
+              "reason": "policy rule five registered modeling residual",
+              "source_kind": "benchmark-bias-attenuation"
+            }
+          ],
+          "lower": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          },
+          "point": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          },
+          "upper": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "contributions": [
+            {
+              "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+              "source_kind": "candidate-record"
+            },
+            {
+              "applied": false,
+              "reason": "policy rule five registered modeling residual",
+              "source_kind": "benchmark-bias-attenuation"
+            },
+            {
+              "observation_count": 2,
+              "prediction_delta": {
+                "lower": {
+                  "denominator": 8383152469,
+                  "numerator": -308480000000
+                },
+                "upper": {
+                  "denominator": 8383152469,
+                  "numerator": 308480000000
+                }
+              },
+              "relative_half_width": {
+                "denominator": 58615,
+                "numerator": 241
+              },
+              "service_interval_ps": {
+                "lower": 1867968000,
+                "point": 1875680000,
+                "upper": 1883392000
+              },
+              "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+              "source_kind": "distribution",
+              "stability_claim": false
+            }
+          ],
+          "lower": {
+            "denominator": 8383152469,
+            "numerator": 74718720000000
+          },
+          "point": {
+            "denominator": 715103,
+            "numerator": 6400000000
+          },
+          "upper": {
+            "denominator": 8383152469,
+            "numerator": 75335680000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": false,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": {
+          "denominator": 58615,
+          "numerator": 241
+        },
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 20,
+            "numerator": 330087
+          },
+          "upper": {
+            "denominator": 20,
+            "numerator": 364833
+          }
+        },
+        "anchor_id": "sglang_decode_simulated_mtp",
+        "distribution_status": "SINGLE_SEED_NOT_PROPAGATED",
+        "frozen_point_verdict": "REFUTED",
+        "layer": "physics_only",
+        "movement": {
+          "lower": {
+            "denominator": 1,
+            "numerator": 0
+          },
+          "upper": {
+            "denominator": 1,
+            "numerator": 0
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "lower": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "point": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "upper": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "lower": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "point": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "upper": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": false,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": 0,
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 20,
+            "numerator": 330087
+          },
+          "upper": {
+            "denominator": 20,
+            "numerator": 364833
+          }
+        },
+        "anchor_id": "sglang_decode_simulated_mtp",
+        "distribution_status": "SINGLE_SEED_NOT_PROPAGATED",
+        "frozen_point_verdict": "REFUTED",
+        "layer": "physics_plus_boundary",
+        "movement": {
+          "lower": {
+            "denominator": 1,
+            "numerator": 0
+          },
+          "upper": {
+            "denominator": 1,
+            "numerator": 0
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "lower": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "point": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "upper": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "lower": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "point": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "upper": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": false,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": 0,
+        "rescore_performed": false
+      },
+      {
+        "acceptance_interval": {
+          "lower": {
+            "denominator": 20,
+            "numerator": 330087
+          },
+          "upper": {
+            "denominator": 20,
+            "numerator": 364833
+          }
+        },
+        "anchor_id": "sglang_decode_simulated_mtp",
+        "distribution_status": "SINGLE_SEED_NOT_PROPAGATED",
+        "frozen_point_verdict": "REFUTED",
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "movement": {
+          "lower": {
+            "denominator": 1,
+            "numerator": 0
+          },
+          "upper": {
+            "denominator": 1,
+            "numerator": 0
+          }
+        },
+        "new_boundary_contact": false,
+        "prior": {
+          "lower": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "point": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "upper": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          }
+        },
+        "prior_touches_lower_boundary": false,
+        "prior_touches_upper_boundary": false,
+        "propagated": {
+          "lower": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "point": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          },
+          "upper": {
+            "denominator": 124071011,
+            "numerator": 1024000000000
+          }
+        },
+        "propagated_intersects_acceptance_interval": false,
+        "propagated_touches_lower_boundary": false,
+        "propagated_touches_upper_boundary": false,
+        "relative_half_width": 0,
+        "rescore_performed": false
+      }
+    ]
+  },
+  "classification": "REPEAT_DERIVED_DISTRIBUTION_PROPAGATION",
+  "closure": {
+    "all_priced_keys_have_two_observations": true,
+    "all_varying_keys_have_nonzero_intervals": true,
+    "comp74": "CLOSED_LITERAL",
+    "priced_key_count": 4,
+    "residuals_registered": [
+      {
+        "id": "COMP-79",
+        "scope": "single-seed DeepSeek keys including simulated MTP"
+      },
+      {
+        "id": "COMP-80",
+        "scope": "Granite arm repetitions absent from the retained partial campaign"
+      }
+    ]
+  },
+  "curve_band_movement": [
+    {
+      "configuration_id": "sglang-standard-decode-ep72-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 2000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 720000,
+          "numerator": 6484897
+        },
+        "point": {
+          "denominator": 720000,
+          "numerator": 6484897
+        },
+        "upper": {
+          "denominator": 720000,
+          "numerator": 6484897
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 8000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 8000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 8000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 8405856000,
+          "numerator": 75675407531
+        },
+        "point": {
+          "denominator": 720000,
+          "numerator": 6484897
+        },
+        "upper": {
+          "denominator": 8475264000,
+          "numerator": 76369487531
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 8000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 8000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 8000
+        }
+      }
+    },
+    {
+      "configuration_id": "sglang-standard-decode-ep72-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 4000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 360000,
+          "numerator": 2884897
+        },
+        "point": {
+          "denominator": 360000,
+          "numerator": 2884897
+        },
+        "upper": {
+          "denominator": 360000,
+          "numerator": 2884897
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 16000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 16000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 16000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 4202928000,
+          "numerator": 33646127531
+        },
+        "point": {
+          "denominator": 360000,
+          "numerator": 2884897
+        },
+        "upper": {
+          "denominator": 4237632000,
+          "numerator": 33993167531
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 16000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 16000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 16000
+        }
+      }
+    },
+    {
+      "configuration_id": "sglang-standard-decode-ep72-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 8000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 180000,
+          "numerator": 1084897
+        },
+        "point": {
+          "denominator": 180000,
+          "numerator": 1084897
+        },
+        "upper": {
+          "denominator": 180000,
+          "numerator": 1084897
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 32000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 32000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 32000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 2101464000,
+          "numerator": 12631487531
+        },
+        "point": {
+          "denominator": 180000,
+          "numerator": 1084897
+        },
+        "upper": {
+          "denominator": 2118816000,
+          "numerator": 12805007531
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 32000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 32000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 32000
+        }
+      }
+    },
+    {
+      "configuration_id": "sglang-standard-decode-ep72-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 16000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 90000,
+          "numerator": 184897
+        },
+        "point": {
+          "denominator": 90000,
+          "numerator": 184897
+        },
+        "upper": {
+          "denominator": 90000,
+          "numerator": 184897
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 64000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 64000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 64000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 1050732000,
+          "numerator": 2124167531
+        },
+        "point": {
+          "denominator": 90000,
+          "numerator": 184897
+        },
+        "upper": {
+          "denominator": 1059408000,
+          "numerator": 2210927531
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 64000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 64000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 64000
+        }
+      }
+    },
+    {
+      "configuration_id": "sglang-standard-decode-ep72-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 32000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 2,
+          "numerator": 1
+        },
+        "point": {
+          "denominator": 2,
+          "numerator": 1
+        },
+        "upper": {
+          "denominator": 2,
+          "numerator": 1
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 715103,
+          "numerator": 57600000000
+        },
+        "point": {
+          "denominator": 715103,
+          "numerator": 57600000000
+        },
+        "upper": {
+          "denominator": 715103,
+          "numerator": 57600000000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 2,
+          "numerator": 1
+        },
+        "point": {
+          "denominator": 2,
+          "numerator": 1
+        },
+        "upper": {
+          "denominator": 2,
+          "numerator": 1
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 8383152469,
+          "numerator": 672468480000000
+        },
+        "point": {
+          "denominator": 715103,
+          "numerator": 57600000000
+        },
+        "upper": {
+          "denominator": 8383152469,
+          "numerator": 678021120000000
+        }
+      }
+    },
+    {
+      "configuration_id": "declared-place5-16p40d-what-if-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 10000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 640000,
+          "numerator": 5684897
+        },
+        "point": {
+          "denominator": 640000,
+          "numerator": 5684897
+        },
+        "upper": {
+          "denominator": 640000,
+          "numerator": 5684897
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 40000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 40000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 40000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 7471872000,
+          "numerator": 66335567531
+        },
+        "point": {
+          "denominator": 640000,
+          "numerator": 5684897
+        },
+        "upper": {
+          "denominator": 7533568000,
+          "numerator": 66952527531
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 40000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 40000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 40000
+        }
+      }
+    },
+    {
+      "configuration_id": "declared-place5-16p40d-what-if-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 20000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 320000,
+          "numerator": 2484897
+        },
+        "point": {
+          "denominator": 320000,
+          "numerator": 2484897
+        },
+        "upper": {
+          "denominator": 320000,
+          "numerator": 2484897
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 80000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 80000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 80000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 3735936000,
+          "numerator": 28976207531
+        },
+        "point": {
+          "denominator": 320000,
+          "numerator": 2484897
+        },
+        "upper": {
+          "denominator": 3766784000,
+          "numerator": 29284687531
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 80000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 80000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 80000
+        }
+      }
+    },
+    {
+      "configuration_id": "declared-place5-16p40d-what-if-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 40000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 160000,
+          "numerator": 884897
+        },
+        "point": {
+          "denominator": 160000,
+          "numerator": 884897
+        },
+        "upper": {
+          "denominator": 160000,
+          "numerator": 884897
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 160000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 160000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 160000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 1867968000,
+          "numerator": 10296527531
+        },
+        "point": {
+          "denominator": 160000,
+          "numerator": 884897
+        },
+        "upper": {
+          "denominator": 1883392000,
+          "numerator": 10450767531
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 160000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 160000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 160000
+        }
+      }
+    },
+    {
+      "configuration_id": "declared-place5-16p40d-what-if-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 80000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 80000,
+          "numerator": 84897
+        },
+        "point": {
+          "denominator": 80000,
+          "numerator": 84897
+        },
+        "upper": {
+          "denominator": 80000,
+          "numerator": 84897
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 320000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 320000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 320000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 933984000,
+          "numerator": 956687531
+        },
+        "point": {
+          "denominator": 80000,
+          "numerator": 84897
+        },
+        "upper": {
+          "denominator": 941696000,
+          "numerator": 1033807531
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 320000
+        },
+        "point": {
+          "denominator": 1,
+          "numerator": 320000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 320000
+        }
+      }
+    },
+    {
+      "configuration_id": "declared-place5-16p40d-what-if-run2",
+      "offered_load_requests_per_second": {
+        "denominator": 1,
+        "numerator": 160000
+      },
+      "point_predictions_equal": true,
+      "prior_inverse_delay_interval": {
+        "lower": {
+          "denominator": 2,
+          "numerator": 1
+        },
+        "point": {
+          "denominator": 2,
+          "numerator": 1
+        },
+        "upper": {
+          "denominator": 2,
+          "numerator": 1
+        }
+      },
+      "prior_throughput_interval": {
+        "lower": {
+          "denominator": 715103,
+          "numerator": 256000000000
+        },
+        "point": {
+          "denominator": 715103,
+          "numerator": 256000000000
+        },
+        "upper": {
+          "denominator": 715103,
+          "numerator": 256000000000
+        }
+      },
+      "propagated_inverse_delay_interval": {
+        "lower": {
+          "denominator": 2,
+          "numerator": 1
+        },
+        "point": {
+          "denominator": 2,
+          "numerator": 1
+        },
+        "upper": {
+          "denominator": 2,
+          "numerator": 1
+        }
+      },
+      "propagated_throughput_interval": {
+        "lower": {
+          "denominator": 8383152469,
+          "numerator": 2988748800000000
+        },
+        "point": {
+          "denominator": 715103,
+          "numerator": 256000000000
+        },
+        "upper": {
+          "denominator": 8383152469,
+          "numerator": 3013427200000000
+        }
+      }
+    }
+  ],
+  "distribution_off_reproduction": {
+    "all_interval_objects_equal": true,
+    "all_points_exact": true,
+    "all_stored_curves_equal": true,
+    "anchor_layers": [
+      {
+        "anchor_id": "sglang_prefill_1k",
+        "distribution_off_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_only",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        }
+      },
+      {
+        "anchor_id": "sglang_prefill_1k",
+        "distribution_off_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        }
+      },
+      {
+        "anchor_id": "sglang_prefill_1k",
+        "distribution_off_point": {
+          "denominator": 59126568730699352529,
+          "numerator": 3079182591456051200000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 59126568730699352529,
+          "numerator": 3079182591456051200000000
+        }
+      },
+      {
+        "anchor_id": "sglang_prefill_2k",
+        "distribution_off_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_only",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        }
+      },
+      {
+        "anchor_id": "sglang_prefill_2k",
+        "distribution_off_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        }
+      },
+      {
+        "anchor_id": "sglang_prefill_2k",
+        "distribution_off_point": {
+          "denominator": 59126568730699352529,
+          "numerator": 3079182591456051200000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 59126568730699352529,
+          "numerator": 3079182591456051200000000
+        }
+      },
+      {
+        "anchor_id": "sglang_prefill_4k",
+        "distribution_off_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_only",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        }
+      },
+      {
+        "anchor_id": "sglang_prefill_4k",
+        "distribution_off_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 57154494009,
+          "numerator": 3276800000000000
+        }
+      },
+      {
+        "anchor_id": "sglang_prefill_4k",
+        "distribution_off_point": {
+          "denominator": 59126568730699352529,
+          "numerator": 3079182591456051200000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 59126568730699352529,
+          "numerator": 3079182591456051200000000
+        }
+      },
+      {
+        "anchor_id": "sglang_decode_standard",
+        "distribution_off_point": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_only",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        }
+      },
+      {
+        "anchor_id": "sglang_decode_standard",
+        "distribution_off_point": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        }
+      },
+      {
+        "anchor_id": "sglang_decode_standard",
+        "distribution_off_point": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 715103,
+          "numerator": 6400000000
+        }
+      },
+      {
+        "anchor_id": "sglang_decode_simulated_mtp",
+        "distribution_off_point": {
+          "denominator": 124071011,
+          "numerator": 1024000000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_only",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 124071011,
+          "numerator": 1024000000000
+        }
+      },
+      {
+        "anchor_id": "sglang_decode_simulated_mtp",
+        "distribution_off_point": {
+          "denominator": 124071011,
+          "numerator": 1024000000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 124071011,
+          "numerator": 1024000000000
+        }
+      },
+      {
+        "anchor_id": "sglang_decode_simulated_mtp",
+        "distribution_off_point": {
+          "denominator": 124071011,
+          "numerator": 1024000000000
+        },
+        "interval_object_equal": true,
+        "layer": "physics_plus_boundary_plus_attenuation",
+        "point_exact": true,
+        "prior_point": {
+          "denominator": 124071011,
+          "numerator": 1024000000000
+        }
+      }
+    ],
+    "current_point_prediction_count": 15,
+    "curves": [
+      {
+        "configuration_id": "sglang-standard-decode-ep72-run2",
+        "point_count": 5,
+        "stored_curve_equal": true
+      },
+      {
+        "configuration_id": "declared-place5-16p40d-what-if-run2",
+        "point_count": 5,
+        "stored_curve_equal": true
+      }
+    ],
+    "status": "PASS"
+  },
+  "evidence": {
+    "acceptance_status_after": "candidate",
+    "acceptance_status_before": "candidate",
+    "candidate_promotion_performed": false,
+    "ledger_equal": true,
+    "lookup_record_sha256": "d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107",
+    "lookup_service_ledger_after": {
+      "deepseek_v3": {
+        "DECLARED": 4,
+        "MEASURED": 4
+      },
+      "granite": {
+        "MEASURED": 12
+      }
+    },
+    "lookup_service_ledger_before": {
+      "deepseek_v3": {
+        "DECLARED": 4,
+        "MEASURED": 4
+      },
+      "granite": {
+        "MEASURED": 12
+      }
+    },
+    "predecessor_lookup_record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52"
+  },
+  "interval_method": "deterministic-additive-interval-v1",
+  "key_intervals": [
+    {
+      "absolute_repeat_deviation_ps": 1856160000,
+      "anchor_id": "sglang_prefill_1k",
+      "implementation_suffix": "ep32-prefill-r16-l1024-t16384",
+      "independent_repeat_ps": 91249600000,
+      "mtp_mode": "standard",
+      "nonzero": true,
+      "observation_count": 2,
+      "observed_max_ps": 91249600000,
+      "observed_min_ps": 89393440000,
+      "pool": "prefill",
+      "prompt_tokens": 1024,
+      "published_point_ps": 89393440000,
+      "relative_half_width": {
+        "denominator": 558709,
+        "numerator": 11601
+      },
+      "relative_half_width_percent": 2.0763939725331073,
+      "service_interval_ps": {
+        "lower": 87537280000,
+        "point": 89393440000,
+        "upper": 91249600000
+      },
+      "signed_repeat_minus_point_ps": 1856160000,
+      "stability_claim": false
+    },
+    {
+      "absolute_repeat_deviation_ps": 1522528000,
+      "anchor_id": "sglang_prefill_2k",
+      "implementation_suffix": "ep32-prefill-r8-l2048-t16384",
+      "independent_repeat_ps": 94656736000,
+      "mtp_mode": "standard",
+      "nonzero": true,
+      "observation_count": 2,
+      "observed_max_ps": 94656736000,
+      "observed_min_ps": 93134208000,
+      "pool": "prefill",
+      "prompt_tokens": 2048,
+      "published_point_ps": 93134208000,
+      "relative_half_width": {
+        "denominator": 2910444,
+        "numerator": 47579
+      },
+      "relative_half_width_percent": 1.6347677536485843,
+      "service_interval_ps": {
+        "lower": 91611680000,
+        "point": 93134208000,
+        "upper": 94656736000
+      },
+      "signed_repeat_minus_point_ps": 1522528000,
+      "stability_claim": false
+    },
+    {
+      "absolute_repeat_deviation_ps": 304447000,
+      "anchor_id": "sglang_prefill_4k",
+      "implementation_suffix": "ep32-prefill-r4-l4096-t16384",
+      "independent_repeat_ps": 104294464000,
+      "mtp_mode": "standard",
+      "nonzero": true,
+      "observation_count": 2,
+      "observed_max_ps": 104598911000,
+      "observed_min_ps": 104294464000,
+      "pool": "prefill",
+      "prompt_tokens": 4096,
+      "published_point_ps": 104598911000,
+      "relative_half_width": {
+        "denominator": 104598911,
+        "numerator": 304447
+      },
+      "relative_half_width_percent": 0.2910613476654647,
+      "service_interval_ps": {
+        "lower": 104294464000,
+        "point": 104598911000,
+        "upper": 104903358000
+      },
+      "signed_repeat_minus_point_ps": -304447000,
+      "stability_claim": false
+    },
+    {
+      "absolute_repeat_deviation_ps": 7712000,
+      "anchor_id": "sglang_decode_standard",
+      "implementation_suffix": "ep72-decode-b32-c2000",
+      "independent_repeat_ps": 1883392000,
+      "mtp_mode": "standard",
+      "nonzero": true,
+      "observation_count": 2,
+      "observed_max_ps": 1883392000,
+      "observed_min_ps": 1875680000,
+      "pool": "decode",
+      "prompt_tokens": 2000,
+      "published_point_ps": 1875680000,
+      "relative_half_width": {
+        "denominator": 58615,
+        "numerator": 241
+      },
+      "relative_half_width_percent": 0.4111575535272541,
+      "service_interval_ps": {
+        "lower": 1867968000,
+        "point": 1875680000,
+        "upper": 1883392000
+      },
+      "signed_repeat_minus_point_ps": 7712000,
+      "stability_claim": false
+    }
+  ],
+  "preservation_lock": {
+    "artifacts": [
+      {
+        "path": "examples/deployment_curve_v1/flagship_result.json",
+        "sha256": "ed06a2e8bce838f96c8365151a450ddf9a80ebde7520c3e37c40960b4a633e08"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run2_result.json",
+        "sha256": "0e3db1a8d8ecc79d54618bbef7d2d2801862d1ec3188e3cc2a209f225a3919dd"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run3_result.json",
+        "sha256": "255a73b120e2ad6e3a7b202475419d30174298590d6c9d3c22f9cfb6063489fe"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run4_result.json",
+        "sha256": "e2fd0811638af02ea4389f456e0e796d9a2b24e550da3217dddd2ecc6872a6cd"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run4_result.sha256",
+        "sha256": "3335572bbd2d427ba777c7e2ff8531aefcfdcae37246ff0e70b8f9148cb407d2"
+      },
+      {
+        "path": "examples/deployment_curve_v1/flagship_run4_score_table.csv",
+        "sha256": "7fe5c27d0a5350f79d39fb20bdfcaba13324a82ee50048c29a4216697dababa4"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.pdf",
+        "sha256": "0105947ed8eb524c178f3ee7025c4e035aa93e2362d7842815947d50527e0063"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.png",
+        "sha256": "b51ff4726ba23ac65ea23be34b9394654517b66a14360dfd91478e9767e42553"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run2.pdf",
+        "sha256": "3ec23203cbb5d154b635be8b5d05b230b41d777235028af931e3ca33bcca81ae"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run2.png",
+        "sha256": "7b389006d91b6928fa16e24dca5f154432a3dbd887867ca2da1ee3224107ea9a"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run3.pdf",
+        "sha256": "a28fcc56399dd980e0a9758e720916186206360934431a635f944a3ae359a536"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run3.png",
+        "sha256": "03bdfc7fab4cc71e4991ff8c3683336a5625f7390b8a2e6fe402efc0dd3ca811"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run4.pdf",
+        "sha256": "6a5249b04826a3ce1176daa152014cf236a695dff542927799925aac421c4be2"
+      },
+      {
+        "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run4.png",
+        "sha256": "6041fd4e94b1d7ae7ac2cae513892cd11ddbbdc089a89a393ecba5b81def4a94"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS.md",
+        "sha256": "699dc8d14bfc4fc20a9fafe81aa13ad216a23de664b9a9cec50e97d3e84a7dc3"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS_RUN2.md",
+        "sha256": "c4d3406998d1882cd63731ee62cb0eb064f696fca4f7dc4de259bd98366d4b3d"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS_RUN3.md",
+        "sha256": "4f64189ec4150a93c3861aba8bbc1e8dbd8dfc78b0966f411e2a7ffb32017ea5"
+      },
+      {
+        "path": "examples/deployment_curve_v1/RESULTS_RUN4.md",
+        "sha256": "44d06a9037c8d54d14adbd56152aff153a518939d2582ae9192e601fb2f3f591"
+      }
+    ],
+    "class": "all-prior-core54-scored-publication-artifacts",
+    "status": "PASS"
+  },
+  "propagated_anchor_predictions": [
+    {
+      "anchor_id": "sglang_prefill_1k",
+      "layers": {
+        "physics_only": {
+          "absolute_relative_error": {
+            "denominator": 1648164143737533,
+            "numerator": 9764143737533
+          },
+          "point_passes_5_percent": true,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 10644243397758127,
+                    "numerator": -12671385600000000000
+                  },
+                  "upper": {
+                    "denominator": 10644243397758127,
+                    "numerator": 12671385600000000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 558709,
+                  "numerator": 11601
+                },
+                "service_interval_ps": {
+                  "lower": 87537280000,
+                  "point": 89393440000,
+                  "upper": 91249600000
+                },
+                "source_id": "comp74-repeat-envelope:ep32-prefill-r16-l1024-t16384",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ],
+            "lower": {
+              "denominator": 20978149866374854852501121,
+              "numerator": 1177752763195791769600000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 778847077884741,
+              "numerator": 45580288000000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1648164143737533,
+            "numerator": -9764143737533
+          }
+        },
+        "physics_plus_boundary": {
+          "absolute_relative_error": {
+            "denominator": 1648164143737533,
+            "numerator": 9764143737533
+          },
+          "point_passes_5_percent": true,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 10644243397758127,
+                    "numerator": -12671385600000000000
+                  },
+                  "upper": {
+                    "denominator": 10644243397758127,
+                    "numerator": 12671385600000000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 558709,
+                  "numerator": 11601
+                },
+                "service_interval_ps": {
+                  "lower": 87537280000,
+                  "point": 89393440000,
+                  "upper": 91249600000
+                },
+                "source_id": "comp74-repeat-envelope:ep32-prefill-r16-l1024-t16384",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              }
+            ],
+            "lower": {
+              "denominator": 789750900952671174752844009,
+              "numerator": 33938901808773654118400000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 778847077884741,
+              "numerator": 45580288000000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1648164143737533,
+            "numerator": -9764143737533
+          }
+        },
+        "physics_plus_boundary_plus_attenuation": {
+          "absolute_relative_error": {
+            "denominator": 1705032862487177228878773,
+            "numerator": 165441566759151628878773
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 11011515362986768184041687,
+                    "numerator": -11907199081160549990400000000
+                  },
+                  "upper": {
+                    "denominator": 11011515362986768184041687,
+                    "numerator": 11907199081160549990400000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 558709,
+                  "numerator": 11601
+                },
+                "service_interval_ps": {
+                  "lower": 87537280000,
+                  "point": 89393440000,
+                  "upper": 91249600000
+                },
+                "source_id": "comp74-repeat-envelope:ep32-prefill-r16-l1024-t16384",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              },
+              {
+                "anchor_numeric_input_count": 0,
+                "factor": {
+                  "lower": {
+                    "denominator": 500000000000000,
+                    "numerator": 453445062427913
+                  },
+                  "point": {
+                    "denominator": 1034504281000,
+                    "numerator": 939691952959
+                  },
+                  "upper": {
+                    "denominator": 500000000000000,
+                    "numerator": 454904927241197
+                  }
+                },
+                "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ],
+            "lower": {
+              "denominator": 510625429974465817916947652647314080625,
+              "numerator": 19899648313049358907673516772300490380210176
+            },
+            "point": {
+              "denominator": 59126568730699352529,
+              "numerator": 3079182591456051200000000
+            },
+            "upper": {
+              "denominator": 20646591305600190345078163125,
+              "numerator": 1099283456737913619421187420622848
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1705032862487177228878773,
+            "numerator": -165441566759151628878773
+          }
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 57674
+      },
+      "status": "PREDICTED"
+    },
+    {
+      "anchor_id": "sglang_prefill_2k",
+      "layers": {
+        "physics_only": {
+          "absolute_relative_error": {
+            "denominator": 3117377566732887,
+            "numerator": 159422433267113
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 41586238540382499,
+                    "numerator": -38976716800000000000
+                  },
+                  "upper": {
+                    "denominator": 41586238540382499,
+                    "numerator": 38976716800000000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 2910444,
+                  "numerator": 47579
+                },
+                "service_interval_ps": {
+                  "lower": 91611680000,
+                  "point": 93134208000,
+                  "upper": 94656736000
+                },
+                "source_id": "comp74-repeat-envelope:ep32-prefill-r8-l2048-t16384",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ],
+            "lower": {
+              "denominator": 81960014618108216517452877,
+              "numerator": 4622141100690642534400000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 41586238540382499,
+              "numerator": 2423212441600000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 3117377566732887,
+            "numerator": 159422433267113
+          }
+        },
+        "physics_plus_boundary": {
+          "absolute_relative_error": {
+            "denominator": 3117377566732887,
+            "numerator": 159422433267113
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 41586238540382499,
+                    "numerator": -38976716800000000000
+                  },
+                  "upper": {
+                    "denominator": 41586238540382499,
+                    "numerator": 38976716800000000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 2910444,
+                  "numerator": 47579
+                },
+                "service_interval_ps": {
+                  "lower": 91611680000,
+                  "point": 93134208000,
+                  "upper": 94656736000
+                },
+                "source_id": "comp74-repeat-envelope:ep32-prefill-r8-l2048-t16384",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              }
+            ],
+            "lower": {
+              "denominator": 3115150376423930790715425033,
+              "numerator": 133350110655572052377600000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 41586238540382499,
+              "numerator": 2423212441600000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 3117377566732887,
+            "numerator": 159422433267113
+          }
+        },
+        "physics_plus_boundary_plus_attenuation": {
+          "absolute_relative_error": {
+            "denominator": 3224940438278534784989247,
+            "numerator": 145757846822483584989247
+          },
+          "point_passes_5_percent": true,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 43021141800712886592978219,
+                    "numerator": -36626107129721865011200000000
+                  },
+                  "upper": {
+                    "denominator": 43021141800712886592978219,
+                    "numerator": 36626107129721865011200000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 2910444,
+                  "numerator": 47579
+                },
+                "service_interval_ps": {
+                  "lower": 91611680000,
+                  "point": 93134208000,
+                  "upper": 94656736000
+                },
+                "source_id": "comp74-repeat-envelope:ep32-prefill-r8-l2048-t16384",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              },
+              {
+                "anchor_numeric_input_count": 0,
+                "factor": {
+                  "lower": {
+                    "denominator": 500000000000000,
+                    "numerator": 453445062427913
+                  },
+                  "point": {
+                    "denominator": 1034504281000,
+                    "numerator": 939691952959
+                  },
+                  "upper": {
+                    "denominator": 500000000000000,
+                    "numerator": 454904927241197
+                  }
+                },
+                "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ],
+            "lower": {
+              "denominator": 118479279425342568891280229756362730625,
+              "numerator": 4599346555795979040711294189059774735527936
+            },
+            "point": {
+              "denominator": 59126568730699352529,
+              "numerator": 3079182591456051200000000
+            },
+            "upper": {
+              "denominator": 26888213625445554120611386875,
+              "numerator": 1425421244535685116409458119176192
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 3224940438278534784989247,
+            "numerator": -145757846822483584989247
+          }
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 54543
+      },
+      "status": "PREDICTED"
+    },
+    {
+      "anchor_id": "sglang_prefill_4k",
+      "layers": {
+        "physics_only": {
+          "absolute_relative_error": {
+            "denominator": 1437492678820359,
+            "numerator": 200907321179641
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 5978297832097424199,
+                    "numerator": -997611929600000000000
+                  },
+                  "upper": {
+                    "denominator": 5978297832097424199,
+                    "numerator": 997611929600000000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 104598911,
+                  "numerator": 304447
+                },
+                "service_interval_ps": {
+                  "lower": 104294464000,
+                  "point": 104598911000,
+                  "upper": 104903358000
+                },
+                "source_id": "comp74-repeat-envelope:ep32-prefill-r4-l4096-t16384",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ],
+            "lower": {
+              "denominator": 11782296137081765294749231977,
+              "numerator": 673540287279494758400000000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 1992765944032474733,
+              "numerator": 114582441164800000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1437492678820359,
+            "numerator": 200907321179641
+          }
+        },
+        "physics_plus_boundary": {
+          "absolute_relative_error": {
+            "denominator": 1437492678820359,
+            "numerator": 200907321179641
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 5978297832097424199,
+                    "numerator": -997611929600000000000
+                  },
+                  "upper": {
+                    "denominator": 5978297832097424199,
+                    "numerator": 997611929600000000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 104598911,
+                  "numerator": 304447
+                },
+                "service_interval_ps": {
+                  "lower": 104294464000,
+                  "point": 104598911000,
+                  "upper": 104903358000
+                },
+                "source_id": "comp74-repeat-envelope:ep32-prefill-r4-l4096-t16384",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              }
+            ],
+            "lower": {
+              "denominator": 127141757040735274465189790841,
+              "numerator": 5382834973746610749440000000000000
+            },
+            "point": {
+              "denominator": 57154494009,
+              "numerator": 3276800000000000
+            },
+            "upper": {
+              "denominator": 1992765944032474733,
+              "numerator": 114582441164800000000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1437492678820359,
+            "numerator": 200907321179641
+          }
+        },
+        "physics_plus_boundary_plus_attenuation": {
+          "absolute_relative_error": {
+            "denominator": 1487092330145819415456879,
+            "numerator": 52498965582206184543121
+          },
+          "point_passes_5_percent": true,
+          "prediction": {
+            "contributions": [
+              {
+                "service_ps": {
+                  "lower": 2286179760360,
+                  "selected": 2286179760360,
+                  "upper": 2286179762680
+                },
+                "source_id": "702b12259973d35072e20cd34c9fbb9e319fefd07cb1cafcb9f5e0856fbceecb",
+                "source_kind": "comp75-clean-composition-record"
+              },
+              {
+                "application_count": 0,
+                "selected_ps": 0,
+                "source_id": "intra_node_collective_surcharge_ps",
+                "source_kind": "constant-envelope"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 6184574700397804542938495919,
+                    "numerator": -937447902421020419686400000000
+                  },
+                  "upper": {
+                    "denominator": 6184574700397804542938495919,
+                    "numerator": 937447902421020419686400000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 104598911,
+                  "numerator": 304447
+                },
+                "service_interval_ps": {
+                  "lower": 104294464000,
+                  "point": 104598911000,
+                  "upper": 104903358000
+                },
+                "source_id": "comp74-repeat-envelope:ep32-prefill-r4-l4096-t16384",
+                "source_kind": "distribution",
+                "stability_claim": false
+              },
+              {
+                "lower_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "selected_fraction": {
+                  "denominator": 1,
+                  "numerator": 0
+                },
+                "source_id": "37d56e5ac0793a5fe8071be03021ba3c4a66a36d90c1a984b4b531f4877c3cd1",
+                "source_kind": "overlap-exposure-envelope",
+                "upper_fraction": {
+                  "denominator": 2,
+                  "numerator": 1
+                }
+              },
+              {
+                "anchor_numeric_input_count": 0,
+                "factor": {
+                  "lower": {
+                    "denominator": 500000000000000,
+                    "numerator": 453445062427913
+                  },
+                  "point": {
+                    "denominator": 1034504281000,
+                    "numerator": 939691952959
+                  },
+                  "upper": {
+                    "denominator": 500000000000000,
+                    "numerator": 454904927241197
+                  }
+                },
+                "source_id": "in_distribution_expert_balance_vs_uniform_destination_incidence",
+                "source_kind": "benchmark-bias-attenuation"
+              }
+            ],
+            "lower": {
+              "denominator": 82205432470314083013718015064068181450625,
+              "numerator": 3156278321128008215663236307590834763210522624
+            },
+            "point": {
+              "denominator": 59126568730699352529,
+              "numerator": 3079182591456051200000000
+            },
+            "upper": {
+              "denominator": 1288453062582875946445519983125,
+              "numerator": 67402963922717060919246913693323264
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 1487092330145819415456879,
+            "numerator": 52498965582206184543121
+          }
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 50302
+      },
+      "status": "PREDICTED"
+    },
+    {
+      "anchor_id": "sglang_decode_standard",
+      "layers": {
+        "physics_only": {
+          "absolute_relative_error": {
+            "denominator": 7966962523,
+            "numerator": 4766962523
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ],
+            "lower": {
+              "denominator": 8383152469,
+              "numerator": 74718720000000
+            },
+            "point": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            },
+            "upper": {
+              "denominator": 8383152469,
+              "numerator": 75335680000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 7966962523,
+            "numerator": -4766962523
+          }
+        },
+        "physics_plus_boundary": {
+          "absolute_relative_error": {
+            "denominator": 7966962523,
+            "numerator": 4766962523
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ],
+            "lower": {
+              "denominator": 8383152469,
+              "numerator": 74718720000000
+            },
+            "point": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            },
+            "upper": {
+              "denominator": 8383152469,
+              "numerator": 75335680000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 7966962523,
+            "numerator": -4766962523
+          }
+        },
+        "physics_plus_boundary_plus_attenuation": {
+          "absolute_relative_error": {
+            "denominator": 7966962523,
+            "numerator": 4766962523
+          },
+          "point_passes_5_percent": false,
+          "prediction": {
+            "contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ],
+            "lower": {
+              "denominator": 8383152469,
+              "numerator": 74718720000000
+            },
+            "point": {
+              "denominator": 715103,
+              "numerator": 6400000000
+            },
+            "upper": {
+              "denominator": 8383152469,
+              "numerator": 75335680000000
+            }
+          },
+          "signed_relative_error": {
+            "denominator": 7966962523,
+            "numerator": -4766962523
+          }
+        }
+      },
+      "published": {
+        "denominator": 1,
+        "numerator": 22282
+      },
+      "status": "PREDICTED"
+    },
+    {
+      "anchor_id": "sglang_decode_simulated_mtp",
+      "dependency": "COMP-72 resumable Merlin execution",
+      "prediction": null,
+      "status": "BLOCKED"
+    }
+  ],
+  "propagated_curves": [
+    {
+      "configuration_id": "sglang-standard-decode-ep72-run2",
+      "configuration_label": "SGLang H100 standard decode, separate EP72 experiment",
+      "decode_engines": 9,
+      "evidence_class": "candidate-priced-role-scaled",
+      "orientation": {
+        "x": "aggregated-output-throughput-rightward",
+        "y": "inverse-per-token-request-delay-upward"
+      },
+      "points": [
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 8000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 2000
+          },
+          "output_token_count": 8000,
+          "per_token_request_delay_ps": {
+            "denominator": 6484897,
+            "numerator": 720000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 2000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 8000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 8000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 8000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 8405856000,
+                "numerator": 75675407531
+              },
+              "point": {
+                "denominator": 720000,
+                "numerator": 6484897
+              },
+              "upper": {
+                "denominator": 8475264000,
+                "numerator": 76369487531
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 75675407531,
+                "numerator": 8405856000000000000000
+              },
+              "point": {
+                "denominator": 6484897,
+                "numerator": 720000000000000000
+              },
+              "upper": {
+                "denominator": 76369487531,
+                "numerator": 8475264000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 16000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 4000
+          },
+          "output_token_count": 16000,
+          "per_token_request_delay_ps": {
+            "denominator": 2884897,
+            "numerator": 360000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 4000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 16000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 16000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 16000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 4202928000,
+                "numerator": 33646127531
+              },
+              "point": {
+                "denominator": 360000,
+                "numerator": 2884897
+              },
+              "upper": {
+                "denominator": 4237632000,
+                "numerator": 33993167531
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 33646127531,
+                "numerator": 4202928000000000000000
+              },
+              "point": {
+                "denominator": 2884897,
+                "numerator": 360000000000000000
+              },
+              "upper": {
+                "denominator": 33993167531,
+                "numerator": 4237632000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 32000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 8000
+          },
+          "output_token_count": 32000,
+          "per_token_request_delay_ps": {
+            "denominator": 1084897,
+            "numerator": 180000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 8000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 32000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 32000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 32000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 2101464000,
+                "numerator": 12631487531
+              },
+              "point": {
+                "denominator": 180000,
+                "numerator": 1084897
+              },
+              "upper": {
+                "denominator": 2118816000,
+                "numerator": 12805007531
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 12631487531,
+                "numerator": 2101464000000000000000
+              },
+              "point": {
+                "denominator": 1084897,
+                "numerator": 180000000000000000
+              },
+              "upper": {
+                "denominator": 12805007531,
+                "numerator": 2118816000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 64000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 16000
+          },
+          "output_token_count": 64000,
+          "per_token_request_delay_ps": {
+            "denominator": 184897,
+            "numerator": 90000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 16000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 64000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 64000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 64000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 1050732000,
+                "numerator": 2124167531
+              },
+              "point": {
+                "denominator": 90000,
+                "numerator": 184897
+              },
+              "upper": {
+                "denominator": 1059408000,
+                "numerator": 2210927531
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 2124167531,
+                "numerator": 1050732000000000000000
+              },
+              "point": {
+                "denominator": 184897,
+                "numerator": 90000000000000000
+              },
+              "upper": {
+                "denominator": 2210927531,
+                "numerator": 1059408000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 715103,
+            "numerator": 57600000000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 715103000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 32000
+          },
+          "output_token_count": 57600000000,
+          "per_token_request_delay_ps": {
+            "denominator": 1,
+            "numerator": 2000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 14400000000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 8383152469,
+                "numerator": 672468480000000
+              },
+              "point": {
+                "denominator": 715103,
+                "numerator": 57600000000
+              },
+              "upper": {
+                "denominator": 8383152469,
+                "numerator": 678021120000000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 2,
+                "numerator": 1
+              },
+              "point": {
+                "denominator": 2,
+                "numerator": 1
+              },
+              "upper": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        }
+      ],
+      "prefill_engines": 0,
+      "prompt_tokens": 2000,
+      "schema": "simllm-deployment-curve-v1",
+      "target_nodes": 9
+    },
+    {
+      "configuration_id": "declared-place5-16p40d-what-if-run2",
+      "configuration_label": "Declared PLACE-5 16P+40D what-if",
+      "decode_engines": 40,
+      "evidence_class": "declared-node-linear-what-if",
+      "orientation": {
+        "x": "aggregated-output-throughput-rightward",
+        "y": "inverse-per-token-request-delay-upward"
+      },
+      "points": [
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 40000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 10000
+          },
+          "output_token_count": 40000,
+          "per_token_request_delay_ps": {
+            "denominator": 5684897,
+            "numerator": 640000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 10000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 40000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 40000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 40000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 7471872000,
+                "numerator": 66335567531
+              },
+              "point": {
+                "denominator": 640000,
+                "numerator": 5684897
+              },
+              "upper": {
+                "denominator": 7533568000,
+                "numerator": 66952527531
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 66335567531,
+                "numerator": 7471872000000000000000
+              },
+              "point": {
+                "denominator": 5684897,
+                "numerator": 640000000000000000
+              },
+              "upper": {
+                "denominator": 66952527531,
+                "numerator": 7533568000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 80000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 20000
+          },
+          "output_token_count": 80000,
+          "per_token_request_delay_ps": {
+            "denominator": 2484897,
+            "numerator": 320000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 20000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 80000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 80000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 80000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 3735936000,
+                "numerator": 28976207531
+              },
+              "point": {
+                "denominator": 320000,
+                "numerator": 2484897
+              },
+              "upper": {
+                "denominator": 3766784000,
+                "numerator": 29284687531
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 28976207531,
+                "numerator": 3735936000000000000000
+              },
+              "point": {
+                "denominator": 2484897,
+                "numerator": 320000000000000000
+              },
+              "upper": {
+                "denominator": 29284687531,
+                "numerator": 3766784000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 160000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 40000
+          },
+          "output_token_count": 160000,
+          "per_token_request_delay_ps": {
+            "denominator": 884897,
+            "numerator": 160000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 40000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 160000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 160000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 160000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 1867968000,
+                "numerator": 10296527531
+              },
+              "point": {
+                "denominator": 160000,
+                "numerator": 884897
+              },
+              "upper": {
+                "denominator": 1883392000,
+                "numerator": 10450767531
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 10296527531,
+                "numerator": 1867968000000000000000
+              },
+              "point": {
+                "denominator": 884897,
+                "numerator": 160000000000000000
+              },
+              "upper": {
+                "denominator": 10450767531,
+                "numerator": 1883392000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 1,
+            "numerator": 320000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 1000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 80000
+          },
+          "output_token_count": 320000,
+          "per_token_request_delay_ps": {
+            "denominator": 84897,
+            "numerator": 80000000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 80000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 320000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 320000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 320000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 933984000,
+                "numerator": 956687531
+              },
+              "point": {
+                "denominator": 80000,
+                "numerator": 84897
+              },
+              "upper": {
+                "denominator": 941696000,
+                "numerator": 1033807531
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 956687531,
+                "numerator": 933984000000000000000
+              },
+              "point": {
+                "denominator": 84897,
+                "numerator": 80000000000000000
+              },
+              "upper": {
+                "denominator": 1033807531,
+                "numerator": 941696000000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        },
+        {
+          "aggregated_output_throughput_tokens_per_second": {
+            "denominator": 715103,
+            "numerator": 256000000000
+          },
+          "first_admitted_at_ps": 0,
+          "last_completed_at_ps": 715103000000000000,
+          "offered_load_requests_per_second": {
+            "denominator": 1,
+            "numerator": 160000
+          },
+          "output_token_count": 256000000000,
+          "per_token_request_delay_ps": {
+            "denominator": 1,
+            "numerator": 2000000000000
+          },
+          "point_kind": "analytic-capacity-projection",
+          "request_count": 64000000000,
+          "schema": "simllm-deployment-curve-point-v1",
+          "uncertainty": {
+            "aggregated_output_throughput_tokens_per_second": {
+              "lower": {
+                "denominator": 8383152469,
+                "numerator": 2988748800000000
+              },
+              "point": {
+                "denominator": 715103,
+                "numerator": 256000000000
+              },
+              "upper": {
+                "denominator": 8383152469,
+                "numerator": 3013427200000000
+              }
+            },
+            "inverse_per_token_request_delay_tokens_per_second": {
+              "lower": {
+                "denominator": 2,
+                "numerator": 1
+              },
+              "point": {
+                "denominator": 2,
+                "numerator": 1
+              },
+              "upper": {
+                "denominator": 2,
+                "numerator": 1
+              }
+            },
+            "method": "deterministic-additive-interval-v1",
+            "per_token_request_delay_ps": {
+              "lower": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              },
+              "point": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              },
+              "upper": {
+                "denominator": 1,
+                "numerator": 2000000000000
+              }
+            },
+            "schema": "simllm-deployment-curve-point-interval-v1",
+            "source_contributions": [
+              {
+                "source_id": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+                "source_kind": "candidate-record"
+              },
+              {
+                "applied": false,
+                "reason": "policy rule five registered modeling residual",
+                "source_kind": "benchmark-bias-attenuation"
+              },
+              {
+                "observation_count": 2,
+                "prediction_delta": {
+                  "lower": {
+                    "denominator": 8383152469,
+                    "numerator": -308480000000
+                  },
+                  "upper": {
+                    "denominator": 8383152469,
+                    "numerator": 308480000000
+                  }
+                },
+                "relative_half_width": {
+                  "denominator": 58615,
+                  "numerator": 241
+                },
+                "service_interval_ps": {
+                  "lower": 1867968000,
+                  "point": 1875680000,
+                  "upper": 1883392000
+                },
+                "source_id": "comp74-repeat-envelope:ep72-decode-b32-c2000",
+                "source_kind": "distribution",
+                "stability_claim": false
+              }
+            ]
+          }
+        }
+      ],
+      "prefill_engines": 0,
+      "prompt_tokens": 2000,
+      "schema": "simllm-deployment-curve-v1",
+      "target_nodes": 40
+    }
+  ],
+  "provenance": {
+    "merlin_submissions_performed": false,
+    "model_weights_loaded_or_downloaded": false,
+    "published_throughput_values_used_for_distribution": false,
+    "traffic_module_touched": false,
+    "web_pages_fetched": false
+  },
+  "schema": "simllm-deployment-curve-comp74-distribution-result-v1",
+  "single_seed_keys": [
+    {
+      "anchor_id": "sglang_decode_simulated_mtp",
+      "reason": "pooling standard decode into simulated MTP is forbidden",
+      "residual_id": "COMP-79",
+      "status": "SINGLE_SEED_NOT_PROPAGATED"
+    }
+  ],
+  "source_checks": [
+    {
+      "path": "examples/hopper_kernel_cycle_candidate_v1/successors/d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107/result.json",
+      "sha256": "e38f08dd231b6dec681b90135a5ad9c9588f4627df9778680379572c2ae0a20d"
+    },
+    {
+      "path": "examples/deployment_curve_v1/flagship_run4_result.json",
+      "sha256": "e2fd0811638af02ea4389f456e0e796d9a2b24e550da3217dddd2ecc6872a6cd"
+    },
+    {
+      "path": "examples/deployment_curve_v1/flagship_run2_config.json",
+      "sha256": "3e5cca6693be05d9bd93870158ee24f7bee9092c2ce981c287fd94765d2d1970"
+    }
+  ],
+  "statistic": {
+    "distributional_claim": "Observed-repeat envelope only. It is not a confidence interval and two observations do not establish broad stability.",
+    "minimum_independent_observations": 2,
+    "nonzero_rule": "The relative half-width and propagated interval must be nonzero exactly when at least one retained observation differs from the point.",
+    "observations": "The immutable published_point_ps and independent_repeat_ps form the key-local retained observation set.",
+    "point_rule": "Keep published_point_ps as the immutable scored center. Never refit or average the point.",
+    "pooling": {
+      "across_implementation_suffixes": false,
+      "across_mtp_modes": false,
+      "across_prompt_lengths": false,
+      "across_roles": false
+    },
+    "relative_half_width_formula": "max_i(abs(observation_i - published_point_ps)) / published_point_ps",
+    "repeat_statistic": "maximum absolute service deviation from published_point_ps divided by published_point_ps",
+    "service_interval_formula": "published_point_ps * [1 - relative_half_width, 1 + relative_half_width]"
+  },
+  "status": "PASS",
+  "task_id": "COMP-74",
+  "verdicts": {
+    "changed": false,
+    "combined": "ALL_SCORABLE_HELD_OUT_REFUTED",
+    "rule": "band widening never flips or recomputes a frozen point verdict",
+    "run3_prefill": "PASS",
+    "run4_mtp": "REFUTED"
+  }
+}

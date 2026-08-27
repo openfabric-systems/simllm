@@ -1,0 +1,131 @@
+{
+  "schema": "simllm-deployment-curve-comp74-expectations-v1",
+  "status": "EXPECTATIONS_ONLY",
+  "task_id": "COMP-74",
+  "authored_against": "7a906bfa322685316a5973f4c40cfb9e555f3d3b",
+  "chronology": {
+    "additional_retained_repetition_values_accessed": false,
+    "comp74_result_existed_before_freeze": false,
+    "comp74_runner_existed_before_freeze": false,
+    "distribution_intervals_computed": false,
+    "field_reader_must_be_committed_before_record_access": true,
+    "published_throughput_values_used": false
+  },
+  "sources": [
+    {
+      "path": "examples/hopper_kernel_cycle_candidate_v1/successors/d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107/result.json",
+      "sha256": "e38f08dd231b6dec681b90135a5ad9c9588f4627df9778680379572c2ae0a20d",
+      "selector": "/{acceptance_status,lookup_record_sha256,predecessor_lookup_record_sha256,score/{lookup_service_ledger,priced_repeat_observations[]/{implementation_suffix,published_point_ps,independent_repeat_ps,signed_repeat_minus_point_ps,retained_independent_observations,distribution_propagation},task_movement/{comp74_repeat_inputs}}}"
+    },
+    {
+      "path": "examples/deployment_curve_v1/flagship_run4_result.json",
+      "sha256": "e2fd0811638af02ea4389f456e0e796d9a2b24e550da3217dddd2ecc6872a6cd",
+      "selector": "/{schema,status,verdict,core54_closure,run3_carry_forward/{status,authority_sha256,held_out_score,anchor_predictions,curves,decode_calibration_miss},mtp_score,provenance/{candidate_acceptance_status}}"
+    },
+    {
+      "path": "examples/deployment_curve_v1/flagship_run2_config.json",
+      "sha256": "3e5cca6693be05d9bd93870158ee24f7bee9092c2ce981c287fd94765d2d1970",
+      "selector": "/{schema,publication_curves}"
+    }
+  ],
+  "access_protocol": {
+    "schema": "simllm-deployment-curve-comp74-field-access-v1",
+    "reader": "examples/deployment_curve_v1/comp74_field_reader.py",
+    "log_format": "append-only-jsonl",
+    "whole_record_loaded": false,
+    "unselected_values_returned": false,
+    "published_throughput_fields_allowed": [],
+    "record_paths_are_exact_allowlists": true
+  },
+  "key_mapping": [
+    {
+      "implementation_suffix": "ep32-prefill-r16-l1024-t16384",
+      "anchor_id": "sglang_prefill_1k",
+      "pool": "prefill",
+      "prompt_tokens": 1024,
+      "mtp_mode": "standard"
+    },
+    {
+      "implementation_suffix": "ep32-prefill-r8-l2048-t16384",
+      "anchor_id": "sglang_prefill_2k",
+      "pool": "prefill",
+      "prompt_tokens": 2048,
+      "mtp_mode": "standard"
+    },
+    {
+      "implementation_suffix": "ep32-prefill-r4-l4096-t16384",
+      "anchor_id": "sglang_prefill_4k",
+      "pool": "prefill",
+      "prompt_tokens": 4096,
+      "mtp_mode": "standard"
+    },
+    {
+      "implementation_suffix": "ep72-decode-b32-c2000",
+      "anchor_id": "sglang_decode_standard",
+      "pool": "decode",
+      "prompt_tokens": 2000,
+      "mtp_mode": "standard"
+    }
+  ],
+  "estimation_rule": {
+    "observations": "The immutable published_point_ps and independent_repeat_ps form the key-local retained observation set.",
+    "point_rule": "Keep published_point_ps as the immutable scored center. Never refit or average the point.",
+    "repeat_statistic": "maximum absolute service deviation from published_point_ps divided by published_point_ps",
+    "relative_half_width_formula": "max_i(abs(observation_i - published_point_ps)) / published_point_ps",
+    "service_interval_formula": "published_point_ps * [1 - relative_half_width, 1 + relative_half_width]",
+    "minimum_independent_observations": 2,
+    "nonzero_rule": "The relative half-width and propagated interval must be nonzero exactly when at least one retained observation differs from the point.",
+    "distributional_claim": "Observed-repeat envelope only. It is not a confidence interval and two observations do not establish broad stability.",
+    "pooling": {
+      "across_roles": false,
+      "across_prompt_lengths": false,
+      "across_mtp_modes": false,
+      "across_implementation_suffixes": false
+    }
+  },
+  "propagation_rule": {
+    "method": "deterministic-additive-interval-v1",
+    "enabled": "For each keyed prediction interval [lower, point, upper], add the symmetric point-relative distribution interval by Minkowski sum: [lower - point * relative_half_width, upper + point * relative_half_width].",
+    "disabled": "Return every inherited interval and every current scored point prediction exactly, with no numeric conversion or recomputation.",
+    "curve_rule": "Rebuild each flagship curve through the existing capacity interval engine using the widened standard-decode capacity interval.",
+    "verdict_rule": "Never rescore. Restate the frozen point verdicts. Report any new contact with a closed 5 percent bar boundary only as context.",
+    "mtp_rule": "The simulated-MTP row receives no standard-decode spread because pooling across MTP modes is forbidden. Its single-seed zero width remains explicit."
+  },
+  "evidence_invariants": {
+    "lookup_record_acceptance_status": "candidate",
+    "evidence_class_ledger_must_be_byte_equal": true,
+    "candidate_promotion_allowed": false,
+    "predecessor_and_successor_records_mutable": false
+  },
+  "preservation_lock": {
+    "class": "all-prior-core54-scored-publication-artifacts",
+    "artifacts": [
+      {"path": "examples/deployment_curve_v1/flagship_result.json", "sha256": "ed06a2e8bce838f96c8365151a450ddf9a80ebde7520c3e37c40960b4a633e08"},
+      {"path": "examples/deployment_curve_v1/flagship_run2_result.json", "sha256": "0e3db1a8d8ecc79d54618bbef7d2d2801862d1ec3188e3cc2a209f225a3919dd"},
+      {"path": "examples/deployment_curve_v1/flagship_run3_result.json", "sha256": "255a73b120e2ad6e3a7b202475419d30174298590d6c9d3c22f9cfb6063489fe"},
+      {"path": "examples/deployment_curve_v1/flagship_run4_result.json", "sha256": "e2fd0811638af02ea4389f456e0e796d9a2b24e550da3217dddd2ecc6872a6cd"},
+      {"path": "examples/deployment_curve_v1/flagship_run4_result.sha256", "sha256": "3335572bbd2d427ba777c7e2ff8531aefcfdcae37246ff0e70b8f9148cb407d2"},
+      {"path": "examples/deployment_curve_v1/flagship_run4_score_table.csv", "sha256": "7fe5c27d0a5350f79d39fb20bdfcaba13324a82ee50048c29a4216697dababa4"},
+      {"path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.pdf", "sha256": "0105947ed8eb524c178f3ee7025c4e035aa93e2362d7842815947d50527e0063"},
+      {"path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve.png", "sha256": "b51ff4726ba23ac65ea23be34b9394654517b66a14360dfd91478e9767e42553"},
+      {"path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run2.pdf", "sha256": "3ec23203cbb5d154b635be8b5d05b230b41d777235028af931e3ca33bcca81ae"},
+      {"path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run2.png", "sha256": "7b389006d91b6928fa16e24dca5f154432a3dbd887867ca2da1ee3224107ea9a"},
+      {"path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run3.pdf", "sha256": "a28fcc56399dd980e0a9758e720916186206360934431a635f944a3ae359a536"},
+      {"path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run3.png", "sha256": "03bdfc7fab4cc71e4991ff8c3683336a5625f7390b8a2e6fe402efc0dd3ca811"},
+      {"path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run4.pdf", "sha256": "6a5249b04826a3ce1176daa152014cf236a695dff542927799925aac421c4be2"},
+      {"path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run4.png", "sha256": "6041fd4e94b1d7ae7ac2cae513892cd11ddbbdc089a89a393ecba5b81def4a94"},
+      {"path": "examples/deployment_curve_v1/RESULTS.md", "sha256": "699dc8d14bfc4fc20a9fafe81aa13ad216a23de664b9a9cec50e97d3e84a7dc3"},
+      {"path": "examples/deployment_curve_v1/RESULTS_RUN2.md", "sha256": "c4d3406998d1882cd63731ee62cb0eb064f696fca4f7dc4de259bd98366d4b3d"},
+      {"path": "examples/deployment_curve_v1/RESULTS_RUN3.md", "sha256": "4f64189ec4150a93c3861aba8bbc1e8dbd8dfc78b0966f411e2a7ffb32017ea5"},
+      {"path": "examples/deployment_curve_v1/RESULTS_RUN4.md", "sha256": "44d06a9037c8d54d14adbd56152aff153a518939d2582ae9192e601fb2f3f591"}
+    ]
+  },
+  "closure_rule": {
+    "close_comp74_only_if_literal": true,
+    "required_priced_key_count": 4,
+    "residuals": [
+      {"id": "COMP-79", "scope": "single-seed DeepSeek keys including simulated MTP"},
+      {"id": "COMP-80", "scope": "Granite arm repetitions absent from the retained partial campaign"}
+    ]
+  }
+}
