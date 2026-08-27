@@ -181,6 +181,7 @@ examples/a100_nvlink_packet_v2/*.json text eol=lf
 examples/a100_nvlink_packet_v2/*.md text eol=lf
 examples/a100_nvlink_packet_v2/*.py text eol=lf
 examples/a100_nvlink_packet_v2/*.cu text eol=lf
+examples/a100_nvlink_packet_v2/*.h text eol=lf
 examples/a100_nvlink_packet_v2/*.sh text eol=lf
 examples/a100_nvlink_packet_v2/*.sbatch text eol=lf
 simllm/backends/htsim_nvlink.py text eol=lf
