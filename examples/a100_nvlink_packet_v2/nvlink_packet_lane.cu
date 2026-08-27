@@ -638,9 +638,24 @@ std::uint64_t field_unsigned(const nvmlFieldValue_t& field) {
   throw std::runtime_error("NVML throughput field has a non-unsigned value type");
 }
 
-std::vector<LinkSnapshot> capture_gpu_links(
-    const HardwareContext& context, int gpu,
-    const std::array<unsigned int, 4>& fields) {
+std::array<unsigned int, 5> error_field_ids(unsigned int link) {
+  if (link >= NVML_NVLINK_MAX_LINKS) {
+    throw std::runtime_error("NVLink index exceeds the field map");
+  }
+  const unsigned int upper_offset = link < 6 ? link : link - 6;
+  return {
+      link < 6 ? NVML_FI_DEV_NVLINK_REPLAY_ERROR_COUNT_L0 + upper_offset
+               : NVML_FI_DEV_NVLINK_REPLAY_ERROR_COUNT_L6 + upper_offset,
+      link < 6 ? NVML_FI_DEV_NVLINK_RECOVERY_ERROR_COUNT_L0 + upper_offset
+               : NVML_FI_DEV_NVLINK_RECOVERY_ERROR_COUNT_L6 + upper_offset,
+      link < 6 ? NVML_FI_DEV_NVLINK_CRC_FLIT_ERROR_COUNT_L0 + upper_offset
+               : NVML_FI_DEV_NVLINK_CRC_FLIT_ERROR_COUNT_L6 + upper_offset,
+      link < 6 ? NVML_FI_DEV_NVLINK_CRC_DATA_ERROR_COUNT_L0 + upper_offset
+               : NVML_FI_DEV_NVLINK_CRC_DATA_ERROR_COUNT_L6 + upper_offset,
+      NVML_FI_DEV_NVLINK_ECC_DATA_ERROR_COUNT_L0 + link};
+}
+
+std::vector<LinkSnapshot> capture_gpu_links(const HardwareContext& context, int gpu) {
   std::vector<LinkSnapshot> snapshots;
   for (unsigned int link = 0; link < NVML_NVLINK_MAX_LINKS; ++link) {
     nvmlEnableState_t active = NVML_FEATURE_DISABLED;
@@ -661,10 +676,20 @@ std::vector<LinkSnapshot> capture_gpu_links(
         }
       }
     }
-    std::array<nvmlFieldValue_t, 4> values{};
-    for (std::size_t index = 0; index < values.size(); ++index) {
-      values[index].fieldId = fields[index];
+    const std::array<unsigned int, 4> throughput_fields = {
+        NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX,
+        NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX,
+        NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_TX,
+        NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_RX};
+    const auto error_fields = error_field_ids(link);
+    std::array<nvmlFieldValue_t, 9> values{};
+    for (std::size_t index = 0; index < throughput_fields.size(); ++index) {
+      values[index].fieldId = throughput_fields[index];
       values[index].scopeId = link;
+    }
+    for (std::size_t index = 0; index < error_fields.size(); ++index) {
+      values[throughput_fields.size() + index].fieldId = error_fields[index];
+      values[throughput_fields.size() + index].scopeId = link;
     }
     const auto field_status = nvmlDeviceGetFieldValues(
         context.nvml_devices[gpu], static_cast<int>(values.size()), values.data());
@@ -673,16 +698,13 @@ std::vector<LinkSnapshot> capture_gpu_links(
           ? static_cast<int>(values[index].nvmlReturn)
           : static_cast<int>(field_status);
       if (snapshot.statuses[index] == NVML_SUCCESS) {
-        snapshot.throughput[index] = field_unsigned(values[index]);
+        const auto value = field_unsigned(values[index]);
+        if (index < throughput_fields.size()) {
+          snapshot.throughput[index] = value;
+        } else {
+          snapshot.errors[index - throughput_fields.size()] = value;
+        }
       }
-    }
-    for (int counter = 0; counter < 5; ++counter) {
-      unsigned long long value = 0;
-      const auto error_status = nvmlDeviceGetNvLinkErrorCounter(
-          context.nvml_devices[gpu], link,
-          static_cast<nvmlNvLinkErrorCounter_t>(counter), &value);
-      snapshot.statuses[4 + counter] = static_cast<int>(error_status);
-      if (error_status == NVML_SUCCESS) snapshot.errors[counter] = value;
     }
     snapshots.push_back(snapshot);
   }
@@ -690,18 +712,13 @@ std::vector<LinkSnapshot> capture_gpu_links(
 }
 
 std::vector<LinkSnapshot> capture_links(const HardwareContext& context) {
-  const std::array<unsigned int, 4> fields = {
-      NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX,
-      NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX,
-      NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_TX,
-      NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_RX};
   std::array<std::vector<LinkSnapshot>, 4> by_gpu;
   std::array<std::exception_ptr, 4> failures{};
   std::array<std::thread, 4> workers;
   for (int gpu = 0; gpu < 4; ++gpu) {
-    workers[gpu] = std::thread([&context, &fields, &by_gpu, &failures, gpu]() {
+    workers[gpu] = std::thread([&context, &by_gpu, &failures, gpu]() {
       try {
-        by_gpu[gpu] = capture_gpu_links(context, gpu, fields);
+        by_gpu[gpu] = capture_gpu_links(context, gpu);
       } catch (...) {
         failures[gpu] = std::current_exception();
       }

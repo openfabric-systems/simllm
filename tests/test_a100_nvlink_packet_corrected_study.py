@@ -212,7 +212,11 @@ def test_hardware_source_and_submission_pin_required_interfaces():
     assert "nvmlDeviceGetFieldValues" in source
     assert "NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX" in source
     assert "NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_RX" in source
-    assert "nvmlDeviceGetNvLinkErrorCounter" in source
+    assert "NVML_FI_DEV_NVLINK_REPLAY_ERROR_COUNT_L0" in source
+    assert "NVML_FI_DEV_NVLINK_RECOVERY_ERROR_COUNT_L0" in source
+    assert "NVML_FI_DEV_NVLINK_CRC_FLIT_ERROR_COUNT_L0" in source
+    assert "NVML_FI_DEV_NVLINK_CRC_DATA_ERROR_COUNT_L0" in source
+    assert "NVML_FI_DEV_NVLINK_ECC_DATA_ERROR_COUNT_L0" in source
     assert "std::array<std::thread, 4> workers" in source
     assert "nvmlDeviceGetCurrentClocksThrottleReasons" in source
     assert "cudaMemcpyPeerAsync" in source
@@ -319,3 +323,89 @@ print(json.dumps({{
         "gpu_list_count": 4,
         "nv4_row_count": 4,
     }
+
+
+def test_publication_path_requires_complete_score_and_preserves_input(tmp_path):
+    score_run = subprocess.run(
+        (
+            sys.executable,
+            str(STUDY / "score_hardware.py"),
+            "--bulk-root",
+            str(tmp_path / "absent"),
+        ),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert score_run.returncode == 0, score_run.stderr
+    score = json.loads(score_run.stdout)
+    score_path = tmp_path / "score.json"
+    score_path.write_text(json.dumps(score) + "\n", encoding="utf-8", newline="\n")
+    candidate = PREVIOUS_STUDY / "candidate-profile.json"
+    before = candidate.read_bytes()
+    rejected = subprocess.run(
+        (
+            sys.executable,
+            str(STUDY / "publish_score.py"),
+            "--score",
+            str(score_path),
+            "--output",
+            str(tmp_path / "rejected.json"),
+        ),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert rejected.returncode != 0
+    assert not (tmp_path / "rejected.json").exists()
+    assert candidate.read_bytes() == before
+
+    score["status"] = "COMPLETE_VALID_86_OF_86"
+    score["measurement_validity"] = "VALID_FOR_FROZEN_RULES"
+    score["coverage"]["completed_cell_count"] = 86
+    score["coverage"]["pending_indices"] = []
+    score["producer_binary_audit"] = {
+        "observed_batch_binary_sha256": ["0" * 64],
+        "status": "SINGLE_DIGEST",
+    }
+    score["fatal_guard_verdicts"] = {
+        "status": "PASS",
+        "guards": [
+            {"guard_id": f"FG{index:02d}", "status": "PASS", "decidable": True}
+            for index in range(1, 11)
+        ],
+    }
+    for result in score["module_parameter_identification"]:
+        result["status"] = "INCONCLUSIVE"
+        result["reason"] = "synthetic publication-path test"
+    score["profile_patch"] = {
+        "status": "APPLY_EXACTLY_LISTED_CHANGES_AFTER_SCORE_PUBLICATION",
+        "changes": [],
+        "unchanged_parameter_count": len(score["module_parameter_identification"]),
+    }
+    score_path.write_text(json.dumps(score) + "\n", encoding="utf-8", newline="\n")
+    output = tmp_path / "published.json"
+    published_run = subprocess.run(
+        (
+            sys.executable,
+            str(STUDY / "publish_score.py"),
+            "--score",
+            str(score_path),
+            "--output",
+            str(output),
+        ),
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert published_run.returncode == 0, published_run.stderr
+    published = json.loads(output.read_text())
+    assert published["status"] == "scored_mixed_parameter_evidence"
+    assert published["traf70_score_publication"]["runtime_changes"] == []
+    assert candidate.read_bytes() == before
