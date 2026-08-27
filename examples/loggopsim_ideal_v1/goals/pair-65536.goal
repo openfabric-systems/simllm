@@ -1,0 +1,7 @@
+num_ranks 2
+rank 0 {
+r0op0: send 65536b to 1 tag 0
+}
+rank 1 {
+r1op0: recv 65536b from 0 tag 0
+}

@@ -1,0 +1,20 @@
+num_ranks 4
+rank 0 {
+r0op0: send 4096b to 1 tag 20
+r0op1: recv 4096b from 3 tag 23
+}
+rank 1 {
+r1op0: recv 4096b from 0 tag 20
+r1op1: send 4096b to 2 tag 21
+r1op1 requires r1op0
+}
+rank 2 {
+r2op0: recv 4096b from 1 tag 21
+r2op1: send 4096b to 3 tag 22
+r2op1 requires r2op0
+}
+rank 3 {
+r3op0: recv 4096b from 2 tag 22
+r3op1: send 4096b to 0 tag 23
+r3op1 requires r3op0
+}

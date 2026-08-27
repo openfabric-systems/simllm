@@ -1,0 +1,9 @@
+num_ranks 2
+rank 0 {
+r0op0: calc 123 cpu 0
+r0op1: calc 17 cpu 1
+r0op1 irequires r0op0
+}
+rank 1 {
+r1op0: calc 0
+}
