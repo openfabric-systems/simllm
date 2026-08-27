@@ -14,6 +14,7 @@ __all__ = [
     "KERNEL_CYCLE_INPUT_SCHEMA",
     "KERNEL_CYCLE_LUT_SCHEMA",
     "KERNEL_CYCLE_PRICING_PROVENANCE_SCHEMA",
+    "BatchServicePoint",
     "CalibrationCompiler",
     "CalibrationValidationError",
     "DeviceServiceCompilation",
@@ -28,8 +29,10 @@ __all__ = [
     "ValidationResult",
     "analyze_kernel_cycle_capture",
     "compile_device_service_entries",
+    "compile_pool_local_batch_service_provider",
     "compile_profile_table",
     "compile_session_profile_provider",
+    "interpolate_batch_service_ps",
     "resolve_registry_root",
     "resolve_suite_root",
     "validate_kernel_cycle_lut",
@@ -100,6 +103,18 @@ _EXPORTS = {
     "compile_session_profile_provider": (
         "simllm.calibration.kernel_cycle_lut",
         "compile_session_profile_provider",
+    ),
+    "BatchServicePoint": (
+        "simllm.calibration.batch_service_surface",
+        "BatchServicePoint",
+    ),
+    "compile_pool_local_batch_service_provider": (
+        "simllm.calibration.batch_service_surface",
+        "compile_pool_local_batch_service_provider",
+    ),
+    "interpolate_batch_service_ps": (
+        "simllm.calibration.batch_service_surface",
+        "interpolate_batch_service_ps",
     ),
     "resolve_registry_root": (
         "simllm.calibration.registry",

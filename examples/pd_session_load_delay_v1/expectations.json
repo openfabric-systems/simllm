@@ -1,0 +1,1330 @@
+{
+  "authored_against": "b1aab70",
+  "chronology": {
+    "concurrent_surface_priced_run_existed_before_freeze": false,
+    "curve_values_accessed_before_freeze": false,
+    "reader_commits_before_successful_access": [
+      "bc1cc69",
+      "bd72cc7",
+      "b1aab70"
+    ],
+    "successful_surface_access_existed_before_freeze": true
+  },
+  "date": "2026-08-27",
+  "decision_rule": {
+    "direction": "compare every observed adjacent delay point with the pre-run expected sign; no zero tolerance or post-run sign amendment",
+    "held_out_band": "PASS only when every held-out observed per-token request delay lies within its inclusive frozen band",
+    "monotonic_claim": "validate only if all 30 observed segments increase; otherwise withdraw it and name batching gain below the knee plus scheduler wait above the knee",
+    "task_state": "VLLM-39 remains open because exposure is contaminated; allocate VLLM-40 to a clean repetition and VLLM-41 only to any distinct model residual exposed by the run"
+  },
+  "decomposition": {
+    "batching_gain": "four decode steps times imported total batch service S(b), divided by b; S(b)/b must fall from batch 1 through 8",
+    "prediction_band": "central surface-plus-queue prediction plus or minus 15 percent of decode service, one max-batch per-request service share, 25 percent of modeled queue wait and 10 percent of comparator prefill service, divided across four output tokens",
+    "prefill_comparator_ps": {
+      "16": 114936000,
+      "8": 95424000
+    },
+    "queue_model": "finite D/D/c overload wait across 64 requests, max batch 8 and four decode steps; negative excess service interval is clamped to zero",
+    "scheduler_queue_wait": "arrival-to-admission wait is prefill_queue_ps plus decode_admission_wait_ps from each exact request timeline; it is reported separately from provider service"
+  },
+  "expected_segments": [
+    {
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "expected_direction": "decrease",
+      "from_load": 250,
+      "to_load": 500
+    },
+    {
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "expected_direction": "decrease",
+      "from_load": 500,
+      "to_load": 1000
+    },
+    {
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "expected_direction": "increase",
+      "from_load": 1000,
+      "to_load": 2000
+    },
+    {
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "expected_direction": "increase",
+      "from_load": 2000,
+      "to_load": 4000
+    },
+    {
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "expected_direction": "increase",
+      "from_load": 4000,
+      "to_load": 8000
+    },
+    {
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "expected_direction": "decrease",
+      "from_load": 250,
+      "to_load": 500
+    },
+    {
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "expected_direction": "decrease",
+      "from_load": 500,
+      "to_load": 1000
+    },
+    {
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "expected_direction": "increase",
+      "from_load": 1000,
+      "to_load": 2000
+    },
+    {
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "expected_direction": "increase",
+      "from_load": 2000,
+      "to_load": 4000
+    },
+    {
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "expected_direction": "increase",
+      "from_load": 4000,
+      "to_load": 8000
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "expected_direction": "decrease",
+      "from_load": 250,
+      "to_load": 500
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "expected_direction": "decrease",
+      "from_load": 500,
+      "to_load": 1000
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "expected_direction": "decrease",
+      "from_load": 1000,
+      "to_load": 2000
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "expected_direction": "increase",
+      "from_load": 2000,
+      "to_load": 4000
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "expected_direction": "increase",
+      "from_load": 4000,
+      "to_load": 8000
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "expected_direction": "decrease",
+      "from_load": 250,
+      "to_load": 500
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "expected_direction": "decrease",
+      "from_load": 500,
+      "to_load": 1000
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "expected_direction": "decrease",
+      "from_load": 1000,
+      "to_load": 2000
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "expected_direction": "increase",
+      "from_load": 2000,
+      "to_load": 4000
+    },
+    {
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "expected_direction": "increase",
+      "from_load": 4000,
+      "to_load": 8000
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "expected_direction": "decrease",
+      "from_load": 250,
+      "to_load": 500
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "expected_direction": "decrease",
+      "from_load": 500,
+      "to_load": 1000
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "expected_direction": "increase",
+      "from_load": 1000,
+      "to_load": 2000
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "expected_direction": "increase",
+      "from_load": 2000,
+      "to_load": 4000
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "expected_direction": "increase",
+      "from_load": 4000,
+      "to_load": 8000
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "expected_direction": "decrease",
+      "from_load": 250,
+      "to_load": 500
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "expected_direction": "decrease",
+      "from_load": 500,
+      "to_load": 1000
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "expected_direction": "increase",
+      "from_load": 1000,
+      "to_load": 2000
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "expected_direction": "increase",
+      "from_load": 2000,
+      "to_load": 4000
+    },
+    {
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "expected_direction": "increase",
+      "from_load": 4000,
+      "to_load": 8000
+    }
+  ],
+  "exposure": {
+    "access_event_count": 8,
+    "access_ledger_sha256": "0394d2789a11e8dc68c6d3a18c563d19f493d1d27c21d53b3ea74f37b3d14fec",
+    "clean_close_permitted": false,
+    "pre_protocol_scan_usable_for_freeze_or_score": false,
+    "record_bytes_consumed": 45043,
+    "record_total_bytes": 57417,
+    "rejected_attempt_count": 2,
+    "source_held_out_batch_32_decoded_or_captured": false,
+    "status": "CONTAMINATED",
+    "successful_field_count": 5,
+    "successful_reader_deepseek_rows_decoded_or_captured": false,
+    "whole_record_loaded_by_successful_reader": false
+  },
+  "held_out_prediction_bands": [
+    {
+      "batch_service_ps": 1326588335,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 2653176670
+      },
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 250,
+      "predicted_batch_size": 2,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 2,
+        "numerator": 1434056335
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 555509658
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 878546677
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1584616101,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 1584616101
+      },
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 500,
+      "predicted_batch_size": 4,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 1799552101
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 80,
+          "numerator": 26275242967
+        },
+        "upper": {
+          "denominator": 80,
+          "numerator": 45706841073
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 1000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 2,
+        "numerator": 580675875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 2,
+          "numerator": 385645925
+        },
+        "upper": {
+          "denominator": 2,
+          "numerator": 775705825
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 2000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 15223447875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 45271455775
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 76516127225
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 14062096125
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 4000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 23098447875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 68896455775
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 115891127225
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 21937096125
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 8000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 27035947875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 80708955775
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 135578627225
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 25874596125
+      }
+    },
+    {
+      "batch_service_ps": 1110576000,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 4442304000
+      },
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "offered_load_requests_per_second": 250,
+      "predicted_batch_size": 1,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 1,
+        "numerator": 1164310000
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 8,
+          "numerator": 7485593725
+        },
+        "upper": {
+          "denominator": 8,
+          "numerator": 11143366275
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1326588335,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 2653176670
+      },
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "offered_load_requests_per_second": 500,
+      "predicted_batch_size": 2,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 2,
+        "numerator": 1434056335
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 555509658
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 878546677
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1584616101,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 1584616101
+      },
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "offered_load_requests_per_second": 1000,
+      "predicted_batch_size": 4,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 1799552101
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 80,
+          "numerator": 26275242967
+        },
+        "upper": {
+          "denominator": 80,
+          "numerator": 45706841073
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "offered_load_requests_per_second": 2000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 2,
+        "numerator": 580675875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 2,
+          "numerator": 385645925
+        },
+        "upper": {
+          "denominator": 2,
+          "numerator": 775705825
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "offered_load_requests_per_second": 4000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 8,
+        "numerator": 16384799625
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 32,
+          "numerator": 48356623175
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 82721773825
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 2,
+        "numerator": 14062096125
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "offered_load_requests_per_second": 8000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 8,
+        "numerator": 24259799625
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 32,
+          "numerator": 71981623175
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 122096773825
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 2,
+        "numerator": 21937096125
+      }
+    },
+    {
+      "batch_service_ps": 1326588335,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 2653176670
+      },
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "offered_load_requests_per_second": 250,
+      "predicted_batch_size": 2,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 2,
+        "numerator": 1424300335
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 551119458
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 873180877
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1584616101,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 1584616101
+      },
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "offered_load_requests_per_second": 500,
+      "predicted_batch_size": 4,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 1780040101
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 80,
+          "numerator": 25924026967
+        },
+        "upper": {
+          "denominator": 80,
+          "numerator": 45277577073
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "offered_load_requests_per_second": 1000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 2,
+        "numerator": 570919875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 2,
+          "numerator": 376865525
+        },
+        "upper": {
+          "denominator": 2,
+          "numerator": 764974225
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "offered_load_requests_per_second": 2000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 15203935875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 45201212575
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 76430274425
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 14062096125
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "offered_load_requests_per_second": 4000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 23078935875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 68826212575
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 115805274425
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 21937096125
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "offered_load_requests_per_second": 8000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 27016435875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 80638712575
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 135492774425
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 25874596125
+      }
+    },
+    {
+      "batch_service_ps": 1326588335,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 2653176670
+      },
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 250,
+      "predicted_batch_size": 2,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 2,
+        "numerator": 1434056335
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 555509658
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 878546677
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1584616101,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 1584616101
+      },
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 500,
+      "predicted_batch_size": 4,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 1799552101
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 80,
+          "numerator": 26275242967
+        },
+        "upper": {
+          "denominator": 80,
+          "numerator": 45706841073
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 1000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 2,
+        "numerator": 580675875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 2,
+          "numerator": 385645925
+        },
+        "upper": {
+          "denominator": 2,
+          "numerator": 775705825
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 2000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 15223447875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 45271455775
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 76516127225
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 14062096125
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 4000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 23098447875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 68896455775
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 115891127225
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 21937096125
+      }
+    },
+    {
+      "batch_service_ps": 1892831500,
+      "batching_gain_service_per_request_ps": {
+        "denominator": 1,
+        "numerator": 946415750
+      },
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "offered_load_requests_per_second": 8000,
+      "predicted_batch_size": 8,
+      "predicted_per_token_request_delay_ps": {
+        "denominator": 4,
+        "numerator": 27035947875
+      },
+      "prediction_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 80708955775
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 135578627225
+        }
+      },
+      "scheduler_queue_wait_ps": {
+        "denominator": 1,
+        "numerator": 25874596125
+      }
+    }
+  ],
+  "predicted_knees_requests_per_second": {
+    "1": {
+      "denominator": 3785663,
+      "numerator": 4000000000
+    },
+    "2": {
+      "denominator": 3785663,
+      "numerator": 8000000000
+    }
+  },
+  "preservation_locks": {
+    "core51_one_request_control": {
+      "artifact_count": 6,
+      "manifest_sha256": "092d79c35c7632e87427804cda11bc6fe0890d2c98ceec23ff30af2e1143ad4d",
+      "total_bytes": 61248
+    },
+    "deterministic_concurrent_comparator": {
+      "artifact_count": 9,
+      "manifest_sha256": "d09202846afeba9efc019d4f44f881fde6639457c0398f1ed4ae8da1e0c804c3",
+      "total_bytes": 56495
+    },
+    "flagship_selection_rule": "tracked deployment_curve_v1 basenames beginning flagship or RESULTS, plus every tracked figures member",
+    "scored_flagship_artifacts": {
+      "artifact_count": 17,
+      "manifest_sha256": "7630ebdaf91a722ff5004184a03a38fac98bbf11f2adbbfd5e8e32838ff130d5",
+      "total_bytes": 1198680
+    }
+  },
+  "schema": "simllm-pd-session-load-delay-expectations-v1",
+  "split": {
+    "calibration_configurations": [
+      [
+        1,
+        1,
+        8
+      ],
+      [
+        1,
+        2,
+        8
+      ]
+    ],
+    "held_out_configurations": [
+      [
+        1,
+        1,
+        16
+      ],
+      [
+        1,
+        2,
+        16
+      ],
+      [
+        2,
+        1,
+        8
+      ],
+      [
+        2,
+        1,
+        16
+      ]
+    ],
+    "held_out_pool_ratio": [
+      2,
+      1
+    ],
+    "held_out_prompt_length": 16
+  },
+  "status": "EXPECTATIONS_ONLY",
+  "surface": {
+    "acceptance_status": "candidate",
+    "calibration_claim": false,
+    "path": "examples/pd_session_load_delay_v1/surface.json",
+    "record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+    "selected_keys": [
+      {
+        "batch_size": 1,
+        "entry_key": {
+          "framework_identity": {
+            "name": "vllm",
+            "package_sha256": "d73c897b0bde9e515c30101f694989fb65821a8543e7cad8f95e5440dc6bae81",
+            "revision": null,
+            "version": "0.27.1+cu129"
+          },
+          "input_dependency": "moe-routing-dependent",
+          "launch_mode": "cuda-graph",
+          "model_identity": {
+            "config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+            "family": "routed",
+            "name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+            "revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+            "weights_sha256": null
+          },
+          "parallelism": {
+            "data_parallel": 1,
+            "expert_parallel": 1,
+            "pipeline_parallel": 1,
+            "tensor_parallel": 1
+          },
+          "pool": "decode",
+          "routing": {
+            "availability": "not-captured",
+            "evidence_sha256": "38aac5614f44aeb77d3f73ec360deb65580e999acab27d90208b13037685eb16",
+            "expert_loads": null
+          },
+          "shape": {
+            "batch_size": 1,
+            "per_request_kv_lengths": [
+              16
+            ]
+          }
+        },
+        "entry_key_sha256": "d8fdebd7051f530bed3232cfeb2e3d5c87a1ab9a22fe68db9cca51436853a502",
+        "evidence_class": "MEASURED",
+        "measured_service_ps": 1110576000,
+        "split": "calibration"
+      },
+      {
+        "batch_size": 8,
+        "entry_key": {
+          "framework_identity": {
+            "name": "vllm",
+            "package_sha256": "d73c897b0bde9e515c30101f694989fb65821a8543e7cad8f95e5440dc6bae81",
+            "revision": null,
+            "version": "0.27.1+cu129"
+          },
+          "input_dependency": "moe-routing-dependent",
+          "launch_mode": "cuda-graph",
+          "model_identity": {
+            "config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+            "family": "routed",
+            "name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+            "revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+            "weights_sha256": null
+          },
+          "parallelism": {
+            "data_parallel": 1,
+            "expert_parallel": 1,
+            "pipeline_parallel": 1,
+            "tensor_parallel": 1
+          },
+          "pool": "decode",
+          "routing": {
+            "availability": "not-captured",
+            "evidence_sha256": "05783744264172276265b494bf361ea694fdc35adf0ec7ae5ac7d08bb8008967",
+            "expert_loads": null
+          },
+          "shape": {
+            "batch_size": 8,
+            "per_request_kv_lengths": [
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16,
+              16
+            ]
+          }
+        },
+        "entry_key_sha256": "38978457b27e56dbc0e9ffbe2385b7d53538a2515c826284be4d6d414520c830",
+        "evidence_class": "MEASURED",
+        "measured_service_ps": 1892831500,
+        "split": "calibration"
+      }
+    ],
+    "sha256": "26fc547d8b47ccec7108872e05fbedfe71ebb6229b88799ca254089d3f2b6e9d"
+  },
+  "sweep": {
+    "curve_count": 6,
+    "decode_output_tokens_per_request": 4,
+    "handoff_ps": 100000000,
+    "interarrival_ps": [
+      4000000000,
+      2000000000,
+      1000000000,
+      500000000,
+      250000000,
+      125000000
+    ],
+    "maximum_scheduler_batch_size": 8,
+    "offered_load_requests_per_second": [
+      250,
+      500,
+      1000,
+      2000,
+      4000,
+      8000
+    ],
+    "point_count": 36,
+    "pool_ratios": [
+      [
+        1,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        1
+      ]
+    ],
+    "prompt_tokens": [
+      8,
+      16
+    ],
+    "requests_per_cell": 64
+  },
+  "task": "VLLM-39"
+}
