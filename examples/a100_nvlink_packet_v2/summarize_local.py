@@ -1,4 +1,4 @@
-"""Audit all local mock cells and render one deterministic TRAF-65 summary."""
+"""Audit all local mock cells and render one deterministic TRAF-70 summary."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 
 import run_study
 
-FREEZE_COMMIT = "d74b123"
-LOCAL_RESULT_SCHEMA = "simllm-a100-nvlink-packet-local-validation-v1"
+FREEZE_COMMIT = "fd7bc6b"
+LOCAL_RESULT_SCHEMA = "simllm-a100-nvlink-packet-local-validation-v2"
 
 
 def parse_args() -> argparse.Namespace:
@@ -20,7 +20,7 @@ def parse_args() -> argparse.Namespace:
         "--root",
         type=Path,
         default=run_study.LOCAL_BULK_ROOT,
-        help="TRAF-65 bulk root",
+        help="TRAF-70 bulk root",
     )
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
@@ -47,8 +47,8 @@ def main() -> int:
                 continue
             if plan.get("implementation_sha256") != run_study._implementation_digest():
                 continue
-            if plan.get("candidate_profile_sha256") not in (
-                run_study._admissible_candidate_plan_digests()
+            if plan.get("protected_candidate_profile_sha256") != run_study._sha256(
+                run_study.PROTECTED_CANDIDATE_PROFILE_PATH
             ):
                 continue
             if summary.get("status") != "mock_complete":
@@ -86,7 +86,9 @@ def main() -> int:
         "task_status": "OPEN",
         "freeze_commit": FREEZE_COMMIT,
         "freeze_sha256": run_study.FREEZE_SHA256,
-        "candidate_profile_sha256": run_study._sha256(run_study.CANDIDATE_PROFILE_PATH),
+        "protected_candidate_profile_sha256": run_study._sha256(
+            run_study.PROTECTED_CANDIDATE_PROFILE_PATH
+        ),
         "implementation_sha256": run_study._implementation_digest(),
         "cell_count": len(cell_records),
         "isolated_cell_count": sum(cell.frame == "isolated" for cell in cells),
@@ -98,8 +100,8 @@ def main() -> int:
         "measurement_claim": False,
         "hardware_remainder": {
             "status": "not_run",
-            "reason": "Merlin maintenance reservation SD26082026",
-            "available_after": "2026-08-28T06:30",
+            "reason": "corrected hardware implementation not yet staged",
+            "availability": "Merlin verified up on 2026-08-27",
         },
         "cells": cell_records,
     }

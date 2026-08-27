@@ -1,4 +1,4 @@
-"""Run or resume digest-pinned TRAF-65 cells in mock or hardware mode."""
+"""Run or resume digest-pinned TRAF-70 cells in mock or hardware mode."""
 
 from __future__ import annotations
 
@@ -29,24 +29,26 @@ from case_matrix import (
 STUDY_ROOT = Path(__file__).resolve().parent
 REPOSITORY_ROOT = STUDY_ROOT.parents[1]
 EXPECTATIONS_PATH = STUDY_ROOT / "expectations.json"
-CANDIDATE_PROFILE_PATH = STUDY_ROOT / "candidate-profile.json"
+PROTECTED_CANDIDATE_PROFILE_PATH = STUDY_ROOT.parent / "a100_nvlink_packet_v1" / (
+    "candidate-profile.json"
+)
 PROTECTED_CANDIDATE_SHA256 = (
     "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f"
 )
-TRAF70_FREEZE_SHA256 = (
-    "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6"
-)
-TRAF70_SCORE_PATH = STUDY_ROOT.parent / "a100_nvlink_packet_v2" / "hardware-score.json"
+PUBLISHED_SCORE_PATH = STUDY_ROOT / "hardware-score.json"
+PUBLISHED_PROFILE_STATUS = "scored_mixed_parameter_evidence"
+PUBLISHED_PROFILE_EVIDENCE_CLASS = "parameter_specific_evidence_see_traf70_score"
 IMPLEMENTATION_PATHS = (
     STUDY_ROOT / "case_matrix.py",
     STUDY_ROOT / "nvlink_packet_lane.cu",
     STUDY_ROOT / "run_study.py",
+    STUDY_ROOT / "sha256.h",
 )
-FREEZE_SHA256 = "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
-LOCAL_BULK_ROOT = REPOSITORY_ROOT.parents[1] / "wave-runs" / "traf65"
-CELL_SCHEMA = "simllm-a100-nvlink-packet-cell-v1"
-MANIFEST_SCHEMA = "simllm-a100-nvlink-packet-attempt-manifest-v1"
-CELL_TIMEOUT_SECONDS = 5 * 60
+FREEZE_SHA256 = "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6"
+LOCAL_BULK_ROOT = REPOSITORY_ROOT.parents[1] / "wave-runs" / "traf70"
+CELL_SCHEMA = "simllm-a100-nvlink-packet-cell-v2"
+MANIFEST_SCHEMA = "simllm-a100-nvlink-packet-attempt-manifest-v2"
+CELL_TIMEOUT_SECONDS = 10 * 60
 
 _ACTIVE_CHILD: subprocess.Popen[str] | None = None
 _STOP_SIGNAL: int | None = None
@@ -86,7 +88,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     freeze = _load_freeze(args.freeze_sha256)
-    _verify_candidate_handoff(args.freeze_sha256)
+    _verify_protected_candidate()
     cells = _cells(freeze)
     if args.list_cells:
         print(json.dumps([asdict(cell) for cell in cells], indent=2, sort_keys=True))
@@ -97,7 +99,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.check_only:
         _check_cli(args, cells)
         print(
-            f"TRAF-65 local check passed: {len(freeze['catalog'])} cases, "
+            f"TRAF-70 local check passed: {len(freeze['catalog'])} cases, "
             f"{len(cells)} resumable cells, freeze {FREEZE_SHA256}"
         )
         return 0
@@ -143,39 +145,37 @@ def _load_freeze(expected_digest: str) -> dict[str, Any]:
         )
     actual = _sha256(EXPECTATIONS_PATH)
     if actual != expected_digest:
-        raise RuntimeError(f"TRAF-65 expectations digest is {actual}, expected {expected_digest}")
+        raise RuntimeError(f"TRAF-70 expectations digest is {actual}, expected {expected_digest}")
     with open(EXPECTATIONS_PATH, encoding="utf-8", newline="") as handle:
         freeze = json.load(handle)
     catalog = freeze.get("catalog")
     if not isinstance(catalog, list) or len(catalog) != 80:
-        raise RuntimeError("TRAF-65 freeze must contain exactly 80 cases")
+        raise RuntimeError("TRAF-70 freeze must contain exactly 80 cases")
     ordinals = [case.get("ordinal") for case in catalog]
     if ordinals != list(range(1, 81)):
-        raise RuntimeError("TRAF-65 case ordinals are not the frozen 1 through 80")
+        raise RuntimeError("TRAF-70 case ordinals are not the frozen 1 through 80")
     names = [case.get("stable_name") for case in catalog]
     if len(set(names)) != 80:
-        raise RuntimeError("TRAF-65 stable case names are not unique")
+        raise RuntimeError("TRAF-70 stable case names are not unique")
     return freeze
 
 
-def _verify_candidate_handoff(expected_digest: str) -> None:
-    with open(CANDIDATE_PROFILE_PATH, encoding="utf-8", newline="") as handle:
+def _verify_protected_candidate() -> None:
+    with open(PROTECTED_CANDIDATE_PROFILE_PATH, encoding="utf-8", newline="") as handle:
         profile = json.load(handle)
-    profile_sha256 = _sha256(CANDIDATE_PROFILE_PATH)
+    profile_sha256 = _sha256(PROTECTED_CANDIDATE_PROFILE_PATH)
     if profile_sha256 == PROTECTED_CANDIDATE_SHA256:
-        if profile.get("freeze_sha256") != expected_digest:
-            raise RuntimeError("candidate profile does not name the frozen expectations digest")
         if profile.get("status") != "candidate":
-            raise RuntimeError("TRAF-65 profile must remain candidate before hardware scoring")
+            raise RuntimeError("TRAF-70 profile must remain candidate before hardware scoring")
         if profile.get("evidence_class") != "declared_candidate_not_hardware_measurement":
-            raise RuntimeError("TRAF-65 candidate profile makes an invalid evidence claim")
+            raise RuntimeError("TRAF-70 candidate profile makes an invalid evidence claim")
         return
 
-    if profile.get("status") != "scored_mixed_parameter_evidence":
+    if profile.get("status") != PUBLISHED_PROFILE_STATUS:
         raise RuntimeError("A100 profile is neither the protected candidate nor scored output")
-    if profile.get("evidence_class") != "parameter_specific_evidence_see_traf70_score":
+    if profile.get("evidence_class") != PUBLISHED_PROFILE_EVIDENCE_CLASS:
         raise RuntimeError("scored A100 profile lacks parameter-specific evidence")
-    if profile.get("freeze_sha256") != TRAF70_FREEZE_SHA256:
+    if profile.get("freeze_sha256") != FREEZE_SHA256:
         raise RuntimeError("scored A100 profile is not bound to the TRAF-70 freeze")
     publication = profile.get("traf70_score_publication")
     if not isinstance(publication, dict):
@@ -184,16 +184,18 @@ def _verify_candidate_handoff(expected_digest: str) -> None:
         raise RuntimeError("scored A100 profile does not descend from the protected candidate")
     if publication.get("score_status") != "COMPLETE_VALID_86_OF_86":
         raise RuntimeError("scored A100 profile does not cite a complete valid score")
-    if not TRAF70_SCORE_PATH.is_file():
+    if not PUBLISHED_SCORE_PATH.is_file():
         raise RuntimeError("scored A100 profile cites a missing TRAF-70 score")
-    if publication.get("score_sha256") != _sha256(TRAF70_SCORE_PATH):
+    if publication.get("score_sha256") != _sha256(PUBLISHED_SCORE_PATH):
         raise RuntimeError("scored A100 profile score digest does not match the published score")
-
-
-def _admissible_candidate_plan_digests() -> set[str]:
-    """Accept the frozen capture input and the later scored publication."""
-
-    return {PROTECTED_CANDIDATE_SHA256, _sha256(CANDIDATE_PROFILE_PATH)}
+    with open(PUBLISHED_SCORE_PATH, encoding="utf-8", newline="") as handle:
+        score = json.load(handle)
+    if score.get("status") != "COMPLETE_VALID_86_OF_86":
+        raise RuntimeError("published TRAF-70 score is not complete and valid")
+    if score.get("freeze_sha256") != FREEZE_SHA256:
+        raise RuntimeError("published TRAF-70 score has the wrong freeze digest")
+    if score.get("protected_candidate_before_sha256") != PROTECTED_CANDIDATE_SHA256:
+        raise RuntimeError("published TRAF-70 score has the wrong candidate digest")
 
 
 def _cells(freeze: dict[str, Any]) -> tuple[Cell, ...]:
@@ -232,7 +234,7 @@ def _cells(freeze: dict[str, Any]) -> tuple[Cell, ...]:
         )
     )
     if len(cells) != 86:
-        raise RuntimeError(f"TRAF-65 cell construction produced {len(cells)}, expected 86")
+        raise RuntimeError(f"TRAF-70 cell construction produced {len(cells)}, expected 86")
     return tuple(cells)
 
 
@@ -242,7 +244,7 @@ def _select_cells(args: argparse.Namespace, cells: tuple[Cell, ...]) -> tuple[Ce
     if args.cell_id is not None:
         selected = tuple(cell for cell in cells if cell.cell_id == args.cell_id)
         if not selected:
-            raise ValueError(f"unknown TRAF-65 cell {args.cell_id!r}")
+            raise ValueError(f"unknown TRAF-70 cell {args.cell_id!r}")
         return selected
     index = 0 if args.array_index is None else args.array_index
     if index < 0 or index >= len(cells):
@@ -259,7 +261,7 @@ def _check_cli(args: argparse.Namespace, cells: tuple[Cell, ...]) -> None:
     if not args.dry_run and not args.check_only and args.binary is None:
         raise ValueError("--binary is required for a result-producing run")
     if args.binary is not None and not args.dry_run and not os.access(args.binary, os.X_OK):
-        raise FileNotFoundError(f"TRAF-65 producer binary is not executable: {args.binary}")
+        raise FileNotFoundError(f"TRAF-70 producer binary is not executable: {args.binary}")
     if args.mode == "hardware" and not args.expected_head:
         raise ValueError("hardware mode requires --expected-head")
 
@@ -315,7 +317,9 @@ def _produce_attempt(
         "cell": asdict(cell),
         "mode": args.mode,
         "freeze_sha256": args.freeze_sha256,
-        "candidate_profile_sha256": _sha256(CANDIDATE_PROFILE_PATH),
+        "protected_candidate_profile_sha256": _sha256(
+            PROTECTED_CANDIDATE_PROFILE_PATH
+        ),
         "implementation_sha256": _implementation_digest(),
         "producer_binary_sha256": _sha256(args.binary),
         "expected_head": args.expected_head or None,
@@ -332,6 +336,8 @@ def _produce_attempt(
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "slurm_array_task_id": os.environ.get("SLURM_ARRAY_TASK_ID"),
         "slurm_partition": os.environ.get("SLURM_JOB_PARTITION"),
+        "slurm_job_node_list": os.environ.get("SLURM_JOB_NODELIST"),
+        "slurm_job_gpus": os.environ.get("SLURM_JOB_GPUS"),
         "source_head": args.expected_head or _local_head(),
     }
     _write_json_exclusive(attempt / "environment.json", environment)
@@ -440,6 +446,8 @@ def _collect_hardware_guard(attempt: Path, when: str) -> None:
         ),
         ("nvlink_data", ("nvidia-smi", "nvlink", "-gt", "d")),
         ("nvlink_raw", ("nvidia-smi", "nvlink", "-gt", "r")),
+        ("nvlink_errors", ("nvidia-smi", "nvlink", "-e")),
+        ("nvlink_crc", ("nvidia-smi", "nvlink", "-ec")),
     )
     outputs = []
     records: dict[str, subprocess.CompletedProcess[str]] = {}
@@ -486,8 +494,38 @@ def _summarize_results(path: Path, expected_rows: int, mode: str) -> dict[str, A
         raise RuntimeError(f"producer returned {len(rows)} rows, expected {expected_rows}")
     if any(row.get("mode") != mode for row in rows):
         raise RuntimeError("producer result mode does not match the requested mode")
-    if any(row.get("checksum_ok") is not True for row in rows):
-        raise RuntimeError("producer reported payload corruption")
+    forbidden = {"candidate_packet_count", "candidate_raw_bytes", "predicted_raw_bytes"}
+    for row in rows:
+        if forbidden.intersection(row):
+            raise RuntimeError("producer mixed candidate-derived fields into observations")
+        if row.get("schema") != "simllm-a100-nvlink-packet-observation-v2":
+            raise RuntimeError("producer returned an unexpected observation schema")
+        required = {
+            "observed_data_bytes",
+            "observed_raw_bytes",
+            "observed_counter_deltas",
+            "destination_checksum",
+            "ordering_ledger",
+            "applied_controls",
+            "applied_control_sha256",
+            "throttle_verdict",
+            "copy_engine_host_enqueue_count",
+            "replay_recovery_crc_ecc_deltas",
+            "latency_flow_ledger",
+            "bulk_flow_ledger",
+            "drain_time_us",
+            "candidate_blind_fit_membership",
+        }
+        missing = sorted(required.difference(row))
+        if missing:
+            raise RuntimeError(f"producer row omitted required fields: {missing}")
+        if row.get("producer") == "copy_engine_reference":
+            enqueue_count = row.get("copy_engine_host_enqueue_count")
+            message_count = row.get("message_count")
+            if not isinstance(enqueue_count, int) or not isinstance(message_count, int):
+                raise RuntimeError("copy-engine batch ledger is not integral")
+            if message_count > 1 and enqueue_count >= message_count:
+                raise RuntimeError("copy engine enqueued once per logical message")
     return {
         "schema": CELL_SCHEMA,
         "status": "mock_complete" if mode == "mock" else "hardware_unscored",
@@ -496,6 +534,7 @@ def _summarize_results(path: Path, expected_rows: int, mode: str) -> dict[str, A
             producer: sum(row.get("producer") == producer for row in rows)
             for producer in sorted({str(row.get("producer")) for row in rows})
         },
+        "checksum_failure_count": sum(row.get("checksum_ok") is not True for row in rows),
         "measurement_claim": False if mode == "mock" else "pending_scoring",
     }
 
@@ -552,7 +591,9 @@ def _attempt_matches(attempt: Path, args: argparse.Namespace) -> bool:
         return False
     if plan.get("implementation_sha256") != _implementation_digest():
         return False
-    if plan.get("candidate_profile_sha256") not in _admissible_candidate_plan_digests():
+    if plan.get("protected_candidate_profile_sha256") != _sha256(
+        PROTECTED_CANDIDATE_PROFILE_PATH
+    ):
         return False
     if args.binary is None or plan.get("producer_binary_sha256") != _sha256(args.binary):
         return False
@@ -578,8 +619,8 @@ def _pending_indices(cells: tuple[Cell, ...], args: argparse.Namespace) -> tuple
                 continue
             if plan.get("implementation_sha256") != _implementation_digest():
                 continue
-            if plan.get("candidate_profile_sha256") not in (
-                _admissible_candidate_plan_digests()
+            if plan.get("protected_candidate_profile_sha256") != _sha256(
+                PROTECTED_CANDIDATE_PROFILE_PATH
             ):
                 continue
             if args.expected_head and plan.get("expected_head") != args.expected_head:

@@ -15,6 +15,9 @@ from examples.deployment_frontier_v1.run_study import (
 )
 
 EXPECTATIONS = ROOT / "examples" / "deployment_frontier_v1" / "expectations.json"
+PRE_TRAF70_NVLINK_PROFILE = (
+    ROOT / "examples" / "a100_nvlink_packet_v1" / "candidate-profile-pre-traf70.json"
+)
 
 
 def test_expectations_are_bound_to_the_preimplementation_commit():
@@ -97,7 +100,23 @@ def test_all_frozen_sources_and_43_preservation_entries_match():
         ),
     ]
     for relative, expected in checks:
-        assert sha256_file(ROOT / relative) == expected
+        path = ROOT / relative
+        if relative == "examples/a100_nvlink_packet_v1/candidate-profile.json":
+            published = json.loads(path.read_text(encoding="utf-8"))
+            assert published["traf70_score_publication"][
+                "protected_candidate_before_sha256"
+            ] == expected
+            path = PRE_TRAF70_NVLINK_PROFILE
+        elif relative == "simllm/backends/htsim_nvlink.py":
+            frozen_source = subprocess.run(
+                ["git", "show", f"{EXPECTATIONS_COMMIT}:{relative}"],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+            ).stdout
+            assert hashlib.sha256(frozen_source).hexdigest() == expected
+            continue
+        assert sha256_file(path) == expected
 
     lock = frozen["preservation_lock"]
     inherited_path = ROOT / lock["inherited"]["path"]

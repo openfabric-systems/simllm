@@ -13,8 +13,14 @@ STUDY = ROOT / "examples" / "a100_nvlink_packet_v1"
 FREEZE_SHA256 = "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
 EXECUTION_HEAD = "2ab092f9255d77c00c547446b65534a3b273ec82"
 PRODUCER_BINARY_SHA256 = "96b4c544de54457d1fbed8e56b0a1cbe61344bcdab02d6445c07a0ab637277a4"
-CANDIDATE_PROFILE_SHA256 = (
+PROTECTED_CANDIDATE_PROFILE_SHA256 = (
     "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f"
+)
+PUBLISHED_CANDIDATE_PROFILE_SHA256 = (
+    "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2"
+)
+TRAF70_FREEZE_SHA256 = (
+    "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6"
 )
 
 
@@ -263,17 +269,24 @@ def test_mock_cell_is_digest_complete_and_resumable(tmp_path, mock_binary):
     assert all(row["checksum_ok"] is True for row in rows)
 
 
-def test_candidate_handoff_and_submission_are_pinned():
+def test_scored_handoff_and_historical_submission_are_pinned():
     profile_path = STUDY / "candidate-profile.json"
     profile = json.loads(profile_path.read_text())
     sbatch = (STUDY / "run_merlin_cell.sbatch").read_text()
     source = (STUDY / "nvlink_packet_lane.cu").read_text()
 
-    assert profile["freeze_sha256"] == FREEZE_SHA256
-    assert profile["status"] == "candidate"
-    assert profile["handoff"]["measurement_claim"] is False
+    assert profile["freeze_sha256"] == TRAF70_FREEZE_SHA256
+    assert profile["status"] == "scored_mixed_parameter_evidence"
+    assert profile["handoff"]["measurement_claim"] is True
     assert "hardware_scoring" not in profile
-    assert hashlib.sha256(profile_path.read_bytes()).hexdigest() == CANDIDATE_PROFILE_SHA256
+    assert (
+        profile["traf70_score_publication"]["protected_candidate_before_sha256"]
+        == PROTECTED_CANDIDATE_PROFILE_SHA256
+    )
+    assert (
+        hashlib.sha256(profile_path.read_bytes()).hexdigest()
+        == PUBLISHED_CANDIDATE_PROFILE_SHA256
+    )
     assert "#SBATCH --partition=a100-hourly" in sbatch
     assert "#SBATCH --gres=gpu:4" in sbatch
     assert "#SBATCH --array=0-85%1" in sbatch

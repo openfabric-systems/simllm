@@ -1,4 +1,6 @@
+import copy
 import dataclasses
+import json
 import re
 from collections import Counter
 from itertools import pairwise
@@ -8,7 +10,8 @@ from xml.etree import ElementTree
 import pytest
 
 from simllm.backends.htsim_nvlink import (
-    NVLINK_CANDIDATE_EVIDENCE_CLASS,
+    NVLINK_SCORED_EVIDENCE_CLASS,
+    NVLINK_SCORED_PROFILE_STATUS,
     NvlinkCandidateProfile,
     NvlinkDomainResult,
     NvlinkDomainService,
@@ -28,6 +31,15 @@ from simllm.backends.htsim_nvlink import (
 
 ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples" / "a100_nvlink_packet_v1"
+TRAF65_FREEZE_SHA256 = (
+    "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
+)
+TRAF70_FREEZE_SHA256 = (
+    "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6"
+)
+PUBLISHED_PROFILE_SHA256 = (
+    "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2"
+)
 FIGURE = ROOT / "resources" / "figures" / "nvlink-domain-model.svg"
 FREEZE_SHA256 = "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
 SVG = "{http://www.w3.org/2000/svg}"
@@ -130,12 +142,57 @@ def candidate() -> NvlinkCandidateProfile:
     return load_nvlink_candidate_profile(STUDY / "candidate-profile.json")
 
 
-def test_candidate_handoff_is_digest_bound_and_not_measured(candidate):
-    assert sha256_file(STUDY / "expectations.json") == FREEZE_SHA256
-    assert candidate.freeze_sha256 == FREEZE_SHA256
-    assert candidate.status == "candidate"
-    assert candidate.evidence_class == NVLINK_CANDIDATE_EVIDENCE_CLASS
+def test_scored_handoff_keeps_parameter_evidence_distinct(candidate):
+    assert sha256_file(STUDY / "expectations.json") == TRAF65_FREEZE_SHA256
+    assert sha256_file(STUDY / "candidate-profile.json") == PUBLISHED_PROFILE_SHA256
+    assert candidate.freeze_sha256 == TRAF70_FREEZE_SHA256
+    assert candidate.status == NVLINK_SCORED_PROFILE_STATUS
+    assert candidate.evidence_class == NVLINK_SCORED_EVIDENCE_CLASS
     assert candidate.switch.mode is NvlinkSwitchMode.PASS_THROUGH
+    assert candidate.tx.endpoint_egress_rate_bytes_per_second == 160_795_737_454
+    assert candidate.rx.ingress_rate_bytes_per_second == 207_101_921_876
+
+    tx_rate = candidate.evidence_for("tx", "endpoint_egress_rate_bytes_per_second")
+    rx_rate = candidate.evidence_for("rx", "ingress_rate_bytes_per_second")
+    payload = candidate.evidence_for("tx", "max_payload_bytes")
+    switch = candidate.evidence_for("switch", "mode")
+    assert (tx_rate.status, tx_rate.candidate_relation) == (
+        "IDENTIFIED",
+        "REFUTED_AND_REPLACED",
+    )
+    assert (rx_rate.status, rx_rate.candidate_relation) == (
+        "IDENTIFIED",
+        "REFUTED_AND_REPLACED",
+    )
+    assert payload.status == "INCONCLUSIVE"
+    assert switch.status == "STRUCTURAL"
+
+
+def test_scored_handoff_rejects_runtime_values_without_matching_evidence(tmp_path):
+    raw = json.loads((STUDY / "candidate-profile.json").read_text(encoding="utf-8"))
+    changed = copy.deepcopy(raw)
+    changed["tx"]["endpoint_egress_rate_bytes_per_second"] += 1
+    path = tmp_path / "changed-profile.json"
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(changed, handle)
+        handle.write("\n")
+
+    with pytest.raises(ValueError, match="does not match runtime parameter"):
+        load_nvlink_candidate_profile(path)
+
+
+def test_scored_handoff_rejects_unpublished_identification(tmp_path):
+    raw = json.loads((STUDY / "candidate-profile.json").read_text(encoding="utf-8"))
+    raw["traf70_score_publication"]["runtime_changes"] = raw[
+        "traf70_score_publication"
+    ]["runtime_changes"][1:]
+    path = tmp_path / "missing-publication.json"
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(raw, handle)
+        handle.write("\n")
+
+    with pytest.raises(ValueError, match="exactly match identified parameters"):
+        load_nvlink_candidate_profile(path)
 
 
 def test_tx_packetizes_write_at_the_declared_boundary(candidate):
@@ -317,14 +374,14 @@ def test_composition_conserves_write_and_read_directions(candidate):
     assert all(packet.delivered_at_ps is not None for packet in result.packets)
 
 
-def test_declared_candidate_contains_the_published_envelope(candidate):
+def test_scored_profile_reports_its_derived_published_envelope_comparison(candidate):
     validation = validate_candidate_against_published_a100_envelope(candidate)
 
-    assert validation.within_registered_error
-    assert 94.0 <= validation.predicted_pair_payload_rate_gbps <= 94.07
-    assert validation.pair_worst_relative_error < 0.0008
-    assert validation.predicted_fanout_payload_rate_gbps == pytest.approx(281.6991815868504)
-    assert validation.fanout_relative_error < 0.0002
+    assert not validation.within_registered_error
+    assert validation.predicted_pair_payload_rate_gbps == pytest.approx(94.009808228512)
+    assert validation.pair_worst_relative_error < 0.0007
+    assert validation.predicted_fanout_payload_rate_gbps == pytest.approx(151.14754255896753)
+    assert validation.fanout_relative_error == pytest.approx(0.4633497512552191)
 
 
 def test_domain_figure_routes_are_continuous_and_clear_of_blocks_and_text():
