@@ -223,3 +223,36 @@ def test_runner_is_portable_and_has_no_module_scope_vllm_import(monkeypatch) -> 
     monkeypatch.setattr(builtins, "__import__", blocked_import)
     reloaded = _study()
     assert reloaded.RESULT_SCHEMA == "simllm-pd-session-queue-onset-result-v1"
+
+
+def test_parallel_cell_registry_merges_without_total_delay_curves() -> None:
+    study = _study()
+    cell_runner = _module("run_cell.py", "pd_session_queue_onset_cell_runner")
+    merger = _module("merge_cells.py", "pd_session_queue_onset_cell_merger")
+    provenance = {"run_head": "frozen-run-head"}
+    runtime = {"python": "3.10.18", "vllm": "0.27.1", "offline": True}
+    documents = [
+        {
+            "schema": cell_runner.CELL_RESULT_SCHEMA,
+            "provenance": provenance,
+            "runtime": runtime,
+            "cell": {
+                "prefill_engines": prefill,
+                "decode_engines": decode,
+                "prompt_tokens": prompt,
+                "offered_load_requests_per_second": load,
+            },
+            "total_delay_direction_scored": False,
+        }
+        for prefill, decode in study.POOL_RATIOS
+        for prompt in study.PROMPT_LENGTHS
+        for load in reversed(study.OFFERED_LOADS)
+    ]
+
+    merged = merger.merge_cell_documents(documents)
+
+    assert len(merged["cells"]) == 78
+    assert study._cell_key(merged["cells"][0]) == (1, 1, 8, 50)
+    assert study._cell_key(merged["cells"][-1]) == (2, 1, 16, 250)
+    assert merged["provenance"] == provenance
+    assert merged["runtime"] == runtime
