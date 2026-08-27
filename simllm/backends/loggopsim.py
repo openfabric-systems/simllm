@@ -25,11 +25,14 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from simllm._native import cmake_binary_candidates, find_native_binary
 
 #: Network models ``simulator.ggo`` accepts for ``-n``.
 LOGGOPSIM_NETWORK_TYPES = ("LogGP", "simple")
+LOGGOPSIM_DECLARED_EVIDENCE_SOURCE = "DECLARED"
+DEFAULT_LOGGOPSIM_EAGER_THRESHOLD_BYTES = (1 << 63) - 1
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_BUILD_ROOT = _REPO_ROOT / "build" / "loggopsim"
@@ -80,6 +83,8 @@ class LogGopsimConfig:
     message_gap_ns: int = 1000
     #: LogGOPS G, the gap per payload byte, in nanoseconds per byte
     byte_gap_ns: float = 6.0
+    #: exact decimal spelling for G; None uses the shortest float spelling
+    byte_gap_ns_string: str | None = None
     #: LogGOPS O, the CPU overhead per payload byte, in whole nanoseconds
     byte_overhead_ns: int = 0
     #: LogGOPS S, the eager to rendezvous switch point, in bytes
@@ -101,8 +106,155 @@ class LogGopsimConfig:
             raise TypeError("batch_mode must be a boolean")
         if self.rendezvous_threshold_bytes < 0:
             raise ValueError("rendezvous_threshold_bytes must not be negative")
+        if self.byte_gap_ns_string is not None:
+            if not isinstance(self.byte_gap_ns_string, str):
+                raise TypeError("byte_gap_ns_string must be a string or None")
+            try:
+                parsed_gap = float(self.byte_gap_ns_string)
+            except ValueError:
+                parsed_gap = float("nan")
+            if not math.isfinite(parsed_gap) or parsed_gap < 0:
+                raise ValueError(
+                    "byte_gap_ns_string must be a finite nonnegative decimal"
+                )
         if self.network_type == "simple" and self.network_file is None:
             raise ValueError("the simple network model requires network_file")
+
+
+@dataclass(frozen=True)
+class DeclaredLoggpParameter:
+    """One LogGP parameter and the evidence class behind its value."""
+
+    value: int | str
+    units: str
+    source: str
+    evidence_source: str = LOGGOPSIM_DECLARED_EVIDENCE_SOURCE
+
+    def to_json(self) -> dict[str, int | str]:
+        """Return a JSON-ready declaration record."""
+
+        return {
+            "value": self.value,
+            "units": self.units,
+            "source": self.source,
+            "evidence_source": self.evidence_source,
+        }
+
+
+@dataclass(frozen=True)
+class DerivedLoggpParams:
+    """Declared LogGP parameters derived for one ideal-network level.
+
+    ``L`` comes from the caller's declared latency. ``G`` is the ideal wire
+    serialization gap derived from the declared bit rate. The conservative
+    defaults set CPU overhead and both message gaps to zero, and put the eager
+    threshold at the largest positive signed 64-bit byte count. The sink
+    checks every rendered payload against that threshold before invocation.
+    """
+
+    latency: DeclaredLoggpParameter
+    overhead: DeclaredLoggpParameter
+    message_gap: DeclaredLoggpParameter
+    byte_gap: DeclaredLoggpParameter
+    byte_overhead: DeclaredLoggpParameter
+    rendezvous_threshold: DeclaredLoggpParameter
+
+    @property
+    def exact_g_string(self) -> str:
+        """The exact decimal string passed to LogGOPSim for ``G``."""
+
+        value = self.byte_gap.value
+        if not isinstance(value, str):
+            raise TypeError("derived byte gap lost its decimal spelling")
+        return value
+
+    def to_loggopsim_config(self, goal_bin: Path) -> LogGopsimConfig:
+        """Build one native invocation config without changing any spelling."""
+
+        return LogGopsimConfig(
+            goal_bin=goal_bin,
+            latency_ns=int(self.latency.value),
+            overhead_ns=int(self.overhead.value),
+            message_gap_ns=int(self.message_gap.value),
+            byte_gap_ns=float(self.exact_g_string),
+            byte_gap_ns_string=self.exact_g_string,
+            byte_overhead_ns=int(self.byte_overhead.value),
+            rendezvous_threshold_bytes=int(self.rendezvous_threshold.value),
+            network_type="LogGP",
+        )
+
+    def to_json(self) -> dict[str, Any]:
+        """Return the six named parameters as a JSON-ready run record."""
+
+        return {
+            "L": self.latency.to_json(),
+            "o": self.overhead.to_json(),
+            "g": self.message_gap.to_json(),
+            "G": self.byte_gap.to_json(),
+            "O": self.byte_overhead.to_json(),
+            "S": self.rendezvous_threshold.to_json(),
+        }
+
+
+def _nonnegative_integer(name: str, value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{name} must be a nonnegative integer")
+    return value
+
+
+def derive_loggp_params(
+    *,
+    rate_bits_per_second: int,
+    latency_ns: int,
+    overhead_ns: int = 0,
+    message_gap_ns: int = 0,
+    byte_overhead_ns: int = 0,
+    rendezvous_threshold_bytes: int = DEFAULT_LOGGOPSIM_EAGER_THRESHOLD_BYTES,
+) -> DerivedLoggpParams:
+    """Derive the frozen ideal-network LogGP mapping from declared inputs.
+
+    ``G`` is ``8e9 / rate_bits_per_second`` nanoseconds per byte. Python's
+    ``repr`` supplies the shortest decimal that round-trips to the binary64
+    value consumed by LogGOPSim, so 400 Gbit/s is exactly ``"0.02"`` and
+    200 Gbit/s is exactly ``"0.04"`` in the argument vector and provenance.
+    """
+
+    if (
+        isinstance(rate_bits_per_second, bool)
+        or not isinstance(rate_bits_per_second, int)
+        or rate_bits_per_second <= 0
+    ):
+        raise ValueError("rate_bits_per_second must be a positive integer")
+    latency = _nonnegative_integer("latency_ns", latency_ns)
+    overhead = _nonnegative_integer("overhead_ns", overhead_ns)
+    message_gap = _nonnegative_integer("message_gap_ns", message_gap_ns)
+    byte_overhead = _nonnegative_integer("byte_overhead_ns", byte_overhead_ns)
+    threshold = _nonnegative_integer(
+        "rendezvous_threshold_bytes", rendezvous_threshold_bytes
+    )
+    exact_g_string = repr(8e9 / rate_bits_per_second)
+    return DerivedLoggpParams(
+        latency=DeclaredLoggpParameter(
+            latency, "ns", "declared latency_ns input"
+        ),
+        overhead=DeclaredLoggpParameter(
+            overhead, "ns", "declared conservative CPU-overhead input"
+        ),
+        message_gap=DeclaredLoggpParameter(
+            message_gap, "ns", "declared conservative message-gap input"
+        ),
+        byte_gap=DeclaredLoggpParameter(
+            exact_g_string,
+            "ns/byte",
+            "8e9 / declared rate_bits_per_second",
+        ),
+        byte_overhead=DeclaredLoggpParameter(
+            byte_overhead, "ns/byte", "declared conservative byte-overhead input"
+        ),
+        rendezvous_threshold=DeclaredLoggpParameter(
+            threshold, "bytes", "declared eager-protocol threshold input"
+        ),
+    )
 
 
 def build_loggopsim_command(binary: Path, cfg: LogGopsimConfig) -> list[str]:
@@ -114,7 +266,11 @@ def build_loggopsim_command(binary: Path, cfg: LogGopsimConfig) -> list[str]:
         "-L", str(cfg.latency_ns),
         "-o", str(cfg.overhead_ns),
         "-g", str(cfg.message_gap_ns),
-        "-G", repr(float(cfg.byte_gap_ns)),
+        "-G", (
+            cfg.byte_gap_ns_string
+            if cfg.byte_gap_ns_string is not None
+            else repr(float(cfg.byte_gap_ns))
+        ),
         "-O", str(cfg.byte_overhead_ns),
         "-S", str(cfg.rendezvous_threshold_bytes),
         "-n", cfg.network_type,
@@ -155,6 +311,18 @@ class LogGopsimRunResult:
         """Completion of all schedule work released at time zero."""
 
         return self.max_finish_ps
+
+    @property
+    def flows(self) -> tuple[()]:
+        """Per-flow transport rows are outside the ideal level's contract."""
+
+        return ()
+
+    @property
+    def quiescent(self) -> bool:
+        """A parsed run with no unmatched messages is quiescent."""
+
+        return not self.unmatched_queue_diagnostics
 
 
 def parse_loggopsim_stdout(stdout: str) -> LogGopsimRunResult:
