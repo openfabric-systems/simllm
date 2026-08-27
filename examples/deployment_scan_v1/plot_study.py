@@ -9,13 +9,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from examples.deployment_scan_v1.run_study import RESULT_SCHEMA, STUDY_DIR
 from simllm.deploy import (
     frontier_record_from_json,
     pareto_front,
     prepare_plot_v3,
 )
 
+STUDY_DIR = Path(__file__).resolve().parent
+RESULT_SCHEMA = "simllm-deployment-scan-result-v1"
 COLORS = {
     "b100-one-node-intra": "#2563a6",
     "h100-two-node-serialized": "#d17c0f",
