@@ -184,6 +184,8 @@ def _matplotlib() -> Any:
 
 
 def _frontier_panel(axis: Any, plot: dict[str, Any]) -> None:
+    from matplotlib.lines import Line2D
+
     for curve in plot["curves"]:
         estimate = [point["rungs"][FrontierRung.ESTIMATE.value] for point in curve["points"]]
         axis.plot(
@@ -264,6 +266,30 @@ def _frontier_panel(axis: Any, plot: dict[str, Any]) -> None:
     axis.set_ylabel("Output throughput per GPU (token/s/GPU)")
     axis.set_title("a. Three-rung deployment frontier", loc="left")
     axis.grid(True, which="both", color="#d5d9df", linewidth=0.45, alpha=0.75)
+    configuration_labels = {
+        "b100-one-node-intra": "B100 1N",
+        "h100-two-node-serialized": "H100 2N",
+        "h100-nine-node-incast": "H100 9N",
+    }
+    axis.legend(
+        [
+            Line2D([0], [0], color=curve["color"], linewidth=1.5)
+            for curve in plot["curves"]
+        ],
+        [
+            configuration_labels.get(
+                curve["configuration_id"],
+                curve["configuration_label"],
+            )
+            for curve in plot["curves"]
+        ],
+        loc="upper left",
+        frameon=True,
+        facecolor="white",
+        edgecolor="none",
+        framealpha=0.95,
+        handlelength=1.7,
+    )
 
 
 def _envelope_panel(axis: Any, plot: dict[str, Any]) -> None:
@@ -311,7 +337,14 @@ def _envelope_panel(axis: Any, plot: dict[str, Any]) -> None:
     axis.set_ylabel("Packet fabric leg / ideal fabric leg")
     axis.set_title("b. Mechanism envelope", loc="left")
     axis.grid(True, axis="y", color="#d5d9df", linewidth=0.45, alpha=0.75)
-    axis.legend(loc="center right", frameon=False, handlelength=2.3)
+    axis.legend(
+        loc="center right",
+        frameon=True,
+        facecolor="white",
+        edgecolor="none",
+        framealpha=0.95,
+        handlelength=2.3,
+    )
 
 
 def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
@@ -386,10 +419,11 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
     figure.text(
         0.095,
         0.055,
-        "The ideal level stays within about 1.6% for serialized point-to-point traffic. "
-        "It is about 8x optimistic for eight-into-one incast because it does not serialize "
-        "the shared receiver ingress.\nAt step level the H100 kernel masks both fabric "
-        "differences; only the pinned B100 batch-32 intra-node packet excess moves a point.",
+        "The ideal level stays within about 1.6% for serialized point-to-point traffic.\n"
+        "It is about 8x optimistic for eight-into-one incast because it does not "
+        "serialize the shared receiver ingress.\n"
+        "At step level the H100 kernel masks both fabric differences; only the pinned "
+        "B100 batch-32 intra-node packet excess moves a point.",
         ha="left",
         va="bottom",
         fontsize=6.45,

@@ -120,15 +120,15 @@ contention model: the batch-32 eight-into-one packet observation is
 **{m2['decimal']:.2f}x** the ideal leg because eight flows share one packet
 receiver ingress while the ideal receiver charges no per-byte gap.
 
-The result is non-void. Exact-oracle families are L-A {tallies['L-A'][0]} of
-{tallies['L-A'][1]} and L-B {tallies['L-B'][0]} of {tallies['L-B'][1]}.
-Behavioral-relation families are M-1 {tallies['M-1'][0]} of
-{tallies['M-1'][1]}, M-2 {tallies['M-2'][0]} of {tallies['M-2'][1]}, M-3
-{tallies['M-3'][0]} of {tallies['M-3'][1]} and S {tallies['S'][0]} of
-{tallies['S'][1]}. The plot contract P is {tallies['P'][0]} of
-{tallies['P'][1]}. Wall-time family W is {tallies['W'][0]} of
-{tallies['W'][1]}, with a median of {wall['median_seconds']:.6f} seconds for
-all twelve native legs. These evidence classes are not summed.
+The result is non-void. Exact-oracle families are L-A {tallies['L-A'][0]} of {tallies['L-A'][1]}
+and L-B {tallies['L-B'][0]} of {tallies['L-B'][1]}. Behavioral-relation
+families are M-1 {tallies['M-1'][0]} of {tallies['M-1'][1]}, M-2
+{tallies['M-2'][0]} of {tallies['M-2'][1]}, M-3 {tallies['M-3'][0]} of
+{tallies['M-3'][1]} and S {tallies['S'][0]} of {tallies['S'][1]}. The plot
+contract P is {tallies['P'][0]} of {tallies['P'][1]}. Wall-time family W is
+{tallies['W'][0]} of {tallies['W'][1]}, with a median of
+{wall['median_seconds']:.6f} seconds for all twelve native legs. These evidence
+classes are not summed.
 
 ## Mechanism envelope
 
@@ -182,18 +182,19 @@ the three mechanism quotients and labels M-2 at {m2['decimal']:.2f}x.
 Before reading the batch-32 serialized observation, payload bytes over 400
 Gbit/s set a floor of {sanity['serialization_physics']['floor_ps']:,} ps and
 one 2,000 ns propagation delay set a ceiling of
-{sanity['serialization_physics']['ceiling_ps']:,} ps. The measured ideal leg
-is {sanity['serialization_physics']['observed_ps']:,} ps, inside those bounds.
+{sanity['serialization_physics']['ceiling_ps']:,} ps. The measured ideal leg is
+{sanity['serialization_physics']['observed_ps']:,} ps, inside those bounds.
 
 For batch-32 incast, all remote bytes over one 400 Gbit/s ingress set a floor
 of {sanity['shared_ingress_physics']['floor_ps']:,} ps, while eight isolated
 packet completions set a ceiling of
-{sanity['shared_ingress_physics']['ceiling_ps']:,} ps. The packet observation
-is {sanity['shared_ingress_physics']['observed_ps']:,} ps, inside the range.
-From batch 16 to 32, the ideal and packet incast legs scale by
+{sanity['shared_ingress_physics']['ceiling_ps']:,} ps. The packet observation is
+{sanity['shared_ingress_physics']['observed_ps']:,} ps, inside the range. From
+batch 16 to 32, the ideal and packet incast legs scale by
 {sanity['batch_scaling']['ideal_b32_over_b16']['decimal']:.6f}x and
 {sanity['batch_scaling']['packet_b32_over_b16']['decimal']:.6f}x. At the step
-boundary, the {sanity['step_plausibility']['h100_batch32_kernel_floor_ps'] / 1_000_000_000:.3f}
+boundary, the
+{sanity['step_plausibility']['h100_batch32_kernel_floor_ps'] / 1_000_000_000:.3f}
 ms H100 kernel remains above the
 {sanity['step_plausibility']['h100_batch32_packet_fabric_ps'] / 1_000_000_000:.3f}
 ms packet fabric leg, which independently explains the unchanged step.
