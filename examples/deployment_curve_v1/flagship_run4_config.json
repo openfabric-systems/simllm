@@ -1,0 +1,35 @@
+{
+  "allocation": {
+    "expert_parallel": 72,
+    "gpus_per_node": 8,
+    "nodes": 9,
+    "separate_from_prefill": true
+  },
+  "candidate_evidence": {
+    "component_overlay": "DISCLOSED",
+    "evidence_class": "MEASURED",
+    "lookup_record_sha256": "d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107",
+    "measured_layers": 4
+  },
+  "model": {
+    "config_sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9",
+    "name": "deepseek-ai/DeepSeek-V3",
+    "revision": "e815299b0bcbac849fa540c768ef21845365c9eb",
+    "weights_required": false
+  },
+  "schema": "simllm-deployment-curve-flagship-run4-config-v1",
+  "shape": {
+    "anchor_id": "sglang_decode_simulated_mtp",
+    "base_tokens_per_request": 1,
+    "batch_per_gpu": 16,
+    "batch_per_node": 128,
+    "emitted_tokens_per_request": 2,
+    "kv_tokens_per_request": 4000,
+    "pool": "decode",
+    "simulated_speculative_tokens_per_request": 1
+  },
+  "study": {
+    "classification": "FOURTH_SCORED_FLAGSHIP",
+    "score_attempts": 1
+  }
+}

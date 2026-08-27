@@ -1,0 +1,61 @@
+{
+  "attenuation_ruling": {
+    "admitted_factor_count": 0,
+    "anchor_numeric_input_count": 0,
+    "decision": "NO_ADMISSIBLE_DECODE_FACTOR",
+    "fresh_ep72_architecture_check": {
+      "candidate_formula": "(40 * (1 - C(252, 8) / C(256, 8)) + 32 * (1 - C(253, 8) / C(256, 8))) / 8",
+      "expert_parallel_ranks": 72,
+      "logical_experts": 256,
+      "logical_rank_classes": [
+        {
+          "experts_per_rank": 4,
+          "rank_count": 40
+        },
+        {
+          "experts_per_rank": 3,
+          "rank_count": 32
+        }
+      ],
+      "rejection": "Destination-rank incidence has no anchor-independent coefficient that maps it to the measured total MTP step service. Applying it to the complete service would turn a disclosed component overlay into measured latency attribution."
+    },
+    "policy_basis": "Incomplete data-parallel-attention integration and open depth linearity are simLLM mechanism residuals, not benchmark-condition biases. Policy rule five forbids attenuating them away.",
+    "run3_factor_reuse_allowed": false
+  },
+  "chronology": {
+    "evidence_record_fields_read": false,
+    "expected_numeric_bands_computed": false,
+    "held_out_mtp_anchor_read": false,
+    "mtp_fit_performed": false,
+    "scored_comparison_performed": false,
+    "source_contents_read": false
+  },
+  "depth_doctrine": {
+    "core61_open_question_disclosed": true,
+    "measured_reduced_layers": 4,
+    "operator": "target_step_service_ps = measured_four_layer_step_service_ps * 61 / 4",
+    "target_model_layers": 61,
+    "treatment": "The same declared linear extrapolation doctrine as the standard decode cell. No depth fit or depth attenuation is permitted."
+  },
+  "evidence_protocol": {
+    "access_log_location": "$SIMLLM_CORE54RUN4_RUN_ROOT/access.jsonl",
+    "reader": "flagship_run4_field_reader.py",
+    "successor_result": "examples/hopper_kernel_cycle_candidate_v1/successors/d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107/result.json",
+    "whole_file_semantic_reads_allowed": false
+  },
+  "fit_ruling": {
+    "decision": "INHERIT_RUN3_FROZEN_FIT",
+    "held_out_anchor_input_count": 0,
+    "reason": "The MTP row introduces no fitted parameter and the run-3 calibration-only fit already governs every inherited prefill row."
+  },
+  "schema": "simllm-deployment-curve-scored-run4-model-preregistration-v1",
+  "status": "EXPECTATIONS_ONLY_PRE_ARITHMETIC",
+  "step_to_token_doctrine": {
+    "batch_mapping": "The disclosure's batch 128 per node maps over eight GPUs to batch 16 per GPU, matching the measured physical cell.",
+    "emission_operator": "emitted_tokens_per_node_step = nodes_local_gpus * requests_per_gpu * (base_tokens_per_request + simulated_speculative_tokens_per_request)",
+    "integration_caveat": "The disclosure calls this simulated MTP and states that MTP integration with data-parallel attention is incomplete. The run prices only the disclosed simulated accounting and makes no production MTP integration claim.",
+    "local_gpus_per_node": 8,
+    "requests_per_gpu": 16,
+    "simulated_semantics": "One ordinary decode token plus one simulated speculative token is emitted for each request in the measured step. Rejection and replay are not modeled."
+  }
+}

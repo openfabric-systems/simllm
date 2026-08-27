@@ -1,7 +1,14 @@
 import copy
 import dataclasses
+<<<<<<< HEAD
 import json
+=======
+import re
+from collections import Counter
+from itertools import pairwise
+>>>>>>> origin/main
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 
@@ -27,6 +34,7 @@ from simllm.backends.htsim_nvlink import (
 
 ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples" / "a100_nvlink_packet_v1"
+<<<<<<< HEAD
 TRAF65_FREEZE_SHA256 = (
     "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
 )
@@ -36,6 +44,103 @@ TRAF70_FREEZE_SHA256 = (
 PUBLISHED_PROFILE_SHA256 = (
     "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2"
 )
+=======
+FIGURE = ROOT / "resources" / "figures" / "nvlink-domain-model.svg"
+FREEZE_SHA256 = "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
+SVG = "{http://www.w3.org/2000/svg}"
+PATH_TOKEN = re.compile(r"[MHV]|-?(?:\d+(?:\.\d*)?|\.\d+)")
+
+
+def _orthogonal_points(path: ElementTree.Element) -> tuple[tuple[float, float], ...]:
+    data = path.attrib["d"]
+    tokens = PATH_TOKEN.findall(data)
+    remainder = PATH_TOKEN.sub("", data)
+    assert not remainder.replace(",", "").strip(), data
+    assert tokens.count("M") == 1, data
+    assert tokens[0] == "M", data
+    assert all(token not in {"L", "C", "Q", "S", "T", "A", "Z"} for token in tokens)
+
+    points: list[tuple[float, float]] = []
+    index = 0
+    current: tuple[float, float] | None = None
+    while index < len(tokens):
+        command = tokens[index]
+        index += 1
+        if command == "M":
+            current = (float(tokens[index]), float(tokens[index + 1]))
+            index += 2
+        elif command == "H":
+            assert current is not None
+            current = (float(tokens[index]), current[1])
+            index += 1
+        elif command == "V":
+            assert current is not None
+            current = (current[0], float(tokens[index]))
+            index += 1
+        else:
+            raise AssertionError(f"non-orthogonal SVG command {command!r} in {data!r}")
+        points.append(current)
+    return tuple(points)
+
+
+def _rect_box(rect: ElementTree.Element) -> tuple[float, float, float, float]:
+    left = float(rect.attrib["x"])
+    top = float(rect.attrib["y"])
+    return (
+        left,
+        top,
+        left + float(rect.attrib["width"]),
+        top + float(rect.attrib["height"]),
+    )
+
+
+def _text_box(text: ElementTree.Element) -> tuple[float, float, float, float]:
+    """Return a conservative box without depending on an installed font."""
+
+    content = "".join(text.itertext())
+    size = float(text.attrib["font-size"])
+    width = max(size, len(content) * size * 0.58)
+    x = float(text.attrib["x"])
+    y = float(text.attrib["y"])
+    anchor = text.attrib.get("text-anchor", "start")
+    if anchor == "middle":
+        left = x - width / 2
+    elif anchor == "end":
+        left = x - width
+    else:
+        left = x
+    if text.attrib.get("dominant-baseline") == "central":
+        top = y - size * 0.6
+    else:
+        top = y - size
+    return left, top, left + width, top + size * 1.2
+
+
+def _segment_crosses_box(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    box: tuple[float, float, float, float],
+) -> bool:
+    left, top, right, bottom = box
+    if start[0] == end[0]:
+        low, high = sorted((start[1], end[1]))
+        return left < start[0] < right and max(low, top) < min(high, bottom)
+    if start[1] == end[1]:
+        low, high = sorted((start[0], end[0]))
+        return top < start[1] < bottom and max(low, left) < min(high, right)
+    raise AssertionError(f"non-orthogonal segment {start!r} to {end!r}")
+
+
+def _point_on_box_boundary(
+    point: tuple[float, float], box: tuple[float, float, float, float]
+) -> bool:
+    left, top, right, bottom = box
+    return (
+        left <= point[0] <= right
+        and top <= point[1] <= bottom
+        and (point[0] in {left, right} or point[1] in {top, bottom})
+    )
+>>>>>>> origin/main
 
 
 @pytest.fixture
@@ -278,8 +383,96 @@ def test_composition_conserves_write_and_read_directions(candidate):
 def test_scored_profile_reports_its_derived_published_envelope_comparison(candidate):
     validation = validate_candidate_against_published_a100_envelope(candidate)
 
+<<<<<<< HEAD
     assert not validation.within_registered_error
     assert validation.predicted_pair_payload_rate_gbps == pytest.approx(94.009808228512)
     assert validation.pair_worst_relative_error < 0.0007
     assert validation.predicted_fanout_payload_rate_gbps == pytest.approx(151.14754255896753)
     assert validation.fanout_relative_error == pytest.approx(0.4633497512552191)
+=======
+    assert validation.within_registered_error
+    assert 94.0 <= validation.predicted_pair_payload_rate_gbps <= 94.07
+    assert validation.pair_worst_relative_error < 0.0008
+    assert validation.predicted_fanout_payload_rate_gbps == pytest.approx(281.6991815868504)
+    assert validation.fanout_relative_error < 0.0002
+
+
+def test_domain_figure_routes_are_continuous_and_clear_of_blocks_and_text():
+    root = ElementTree.parse(FIGURE).getroot()
+    routes = root.findall(f".//{SVG}path[@data-logical-path]")
+    assert routes == root.findall(f"./{SVG}path")
+    assert not root.findall(f".//{SVG}line")
+    assert not root.findall(f".//{SVG}polyline")
+    route_names = [route.attrib["data-logical-path"] for route in routes]
+    assert Counter(route_names) == Counter(
+        {
+            "tx-staging-packetizer",
+            "tx-packetizer-credit",
+            "tx-credit-bond",
+            "switch-pass",
+            "switch-fifo-a",
+            "switch-fifo-b",
+            "switch-fifo-other",
+            "switch-egress",
+            "rx-ingress-reassembly",
+            "rx-reassembly-delivery",
+            "rx-delivery-credit",
+            "packet-tx-switch",
+            "packet-switch-rx",
+            "credit-return",
+            "request-direction",
+            "response-direction",
+        }
+    )
+
+    rects_by_id = {
+        rect.attrib["id"]: rect
+        for rect in root.findall(f".//{SVG}rect[@id]")
+    }
+    non_obstacle_kinds = {"canvas", "frame", "container", "lane", "decoration"}
+    obstacle_rects = [
+        rect
+        for rect in root.findall(f".//{SVG}rect")
+        if rect.attrib.get("data-geometry") not in non_obstacle_kinds
+    ]
+    text_boxes = [
+        ("".join(text.itertext()), _text_box(text))
+        for text in root.findall(f".//{SVG}text")
+    ]
+
+    for route in routes:
+        points = _orthogonal_points(route)
+        assert len(points) >= 2
+        for attribute, endpoint in (
+            ("data-start-rect", points[0]),
+            ("data-end-rect", points[-1]),
+        ):
+            rect_id = route.attrib.get(attribute)
+            if rect_id is not None:
+                assert _point_on_box_boundary(endpoint, _rect_box(rects_by_id[rect_id]))
+
+        for start, end in pairwise(points):
+            for rect in obstacle_rects:
+                assert not _segment_crosses_box(start, end, _rect_box(rect)), (
+                    route.attrib["id"],
+                    rect.attrib.get("id", "unnamed-rect"),
+                )
+            for content, box in text_boxes:
+                assert not _segment_crosses_box(start, end, box), (
+                    route.attrib["id"],
+                    content,
+                )
+
+    credit_routes = [
+        route for route in routes if route.attrib["data-logical-path"] == "credit-return"
+    ]
+    assert len(credit_routes) == 1
+    assert _orthogonal_points(credit_routes[0]) == (
+        (1250.0, 649.0),
+        (1215.0, 649.0),
+        (1215.0, 820.0),
+        (625.0, 820.0),
+        (625.0, 470.0),
+        (550.0, 470.0),
+    )
+>>>>>>> origin/main
