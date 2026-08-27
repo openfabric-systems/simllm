@@ -26,11 +26,11 @@ PINNED_BINARY_SHA256 = (
     "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf"
 )
 ARTIFACT_SHA256 = {
-    "RESULTS.md": "5f90ab2348656bf30191a2881a15b9b3506ce0dca3c2dcf3dbcba546c21c70b1",
-    "figures/frontier-ladder.pdf": "236d43fbd233c1dcc87457380e8a1bd9e85ca9e065b6f8069b87c6cf9844f820",
-    "figures/frontier-ladder.png": "706e1702e326b45b6f05ee7755e367e2a2960577e29f20bf90e6ecda1841c37c",
-    "result.json": "5d95bd5788620dd28b2d827245dabe2b195e571ad3c6d0f8f6ffe922e770a4da",
-    "results.csv": "f824b8347f57fabe7fdabccd1638299fe1d1f6c328638f8c0dd444203f242715",
+    "RESULTS.md": "27dfb96ec392aea3f3211d440fb953622296b75fa69f738fcc55495496608c48",
+    "figures/frontier-ladder.pdf": "d681868fb34b3282ddfc70f800c99dd8d81cf901cac81109659dd8f1374a6eea",
+    "figures/frontier-ladder.png": "16bb26584e17c4c6cc146f42bca210b2df0654492f55deacd2951d2d5179e910",
+    "result.json": "6b399398917b751344a307ab5ed7c59cfcbdb383621720eb0f0ae293df979d6c",
+    "results.csv": "6e682f19ad7c828e0fa167c323def1cf8a62f5b98bfb7ea565fb3ca37d237f6d",
 }
 
 
@@ -54,7 +54,7 @@ def test_frontier_ladder_record_keeps_scores_guards_and_authorities_separate() -
     assert result["verdict"] == "PASS"
     assert result["findings"] == []
     assert result["chronology"]["implementation_commit"] == (
-        "5cdc42520da8a0bd5be3c2abee938fc7d3f771c4"
+        "b66e621a395af0e614825d2b1268e7efc13d6956"
     )
     exact = result["score_classes"]["exact_oracles"]["families"]
     assert (exact["L-A"]["passed"], exact["L-A"]["denominator"]) == (6, 6)
@@ -71,6 +71,14 @@ def test_frontier_ladder_record_keeps_scores_guards_and_authorities_separate() -
     assert (wall["passed"], wall["denominator"]) == (1, 1)
     assert wall["packet_executions"] == 0
     assert len(wall["samples_seconds"]) == 7
+    corrections = result["post_specified_corrections"]
+    assert corrections["withdrawn_closure"] == "TRAF-20"
+    assert corrections["preserved_closure"] == "TRAF-68"
+    assert corrections["original_published_wall_median_seconds"] == 0.034612214
+    assert corrections["modeled_quantity_reproduction"]["matched"] is True
+    assert corrections["enforcement_acceptance_study"] == (
+        "not authored or run; integrator-owned"
+    )
 
     guards = result["fatal_guards"]
     assert [guard["id"] for guard in guards] == ["FG-1", "FG-2", "FG-3", "FG-4"]
@@ -84,10 +92,12 @@ def test_frontier_ladder_record_keeps_scores_guards_and_authorities_separate() -
     record = frontier_ladder_record_from_json(result["ladder_record"])
     assert len(record.points) == 18
     corrected_record = frontier_ladder_record_to_json(record)
-    if "post_specified_corrections" in result:
-        assert corrected_record == result["ladder_record"]
-    else:
-        assert corrected_record != result["ladder_record"]
+    assert corrected_record == result["ladder_record"]
+    assert plot["point_class_tallies"] == {
+        "ESTIMATE": 24,
+        "MEASURED": 0,
+        "SIMULATED": 30,
+    }
     for point in record.points:
         assert [rung.rung for rung in point.rungs] == list(FrontierRung)
         ideal = point.rung(FrontierRung.LOGGOPSIM_IDEAL)
@@ -107,10 +117,65 @@ def test_frontier_ladder_record_keeps_scores_guards_and_authorities_separate() -
             assert argv[argv.index("-G") + 1] == "0.02"
             assert not Path(argv[argv.index("-f") + 1]).is_absolute()
 
+    exact = result["score_classes"]["exact_oracles"]["families"]
+    assert all(
+        not row["fan_in"]["fan_in_detected"]
+        and not row["fan_in"]["acknowledged"]
+        for row in exact["L-A"]["rows"]
+    )
+    assert all(
+        row["fan_in"]["fan_in_detected"] and row["fan_in"]["acknowledged"]
+        for row in exact["L-B"]["rows"]
+    )
+    schedule = exact["L-B"]["rows"][-1]["schedule_comparison"]
+    assert schedule["pinned_packet_flow_payload_bytes"] == [
+        47_302_429,
+        47_302_429,
+        47_302_429,
+        47_302_429,
+        47_302_428,
+        47_302_428,
+        47_302_428,
+        47_302_428,
+    ]
+    assert schedule["ideal_flow_payload_bytes"] == [47_302_429] * 8
+    assert schedule["flow_sets_equal"] is False
+
+    curves = {
+        curve["configuration_id"]: curve
+        for curve in plot["plot_data"]["curves"]
+    }
+    two_node = curves["h100-two-node-serialized"]
+    nine_node = curves["h100-nine-node-incast"]
+    assert two_node["line_style"] == "--"
+    assert two_node["line_width"] < nine_node["line_width"]
+    assert [point["rungs"]["packet"]["x"] for point in two_node["points"]] == [
+        point["rungs"]["packet"]["x"] for point in nine_node["points"]
+    ]
+    assert [point["rungs"]["packet"]["y"] for point in two_node["points"]] == [
+        point["rungs"]["packet"]["y"] for point in nine_node["points"]
+    ]
+
     serialized = json.dumps(result)
     assert "/data3/" not in serialized
     assert "/home/" not in serialized
     assert b"\r" not in result_path.read_bytes()
+
+
+def test_fg1_mutant_changes_only_the_observed_digest() -> None:
+    rows = [
+        {
+            "expected_sha256": "1" * 64,
+            "observed_sha256": "1" * 64,
+            "matched": True,
+        }
+    ]
+    mutant = [dict(rows[0])]
+    mutant[0]["observed_sha256"] = "0" * 64
+
+    assert study._fg1_holds(rows)
+    assert not study._fg1_holds(mutant)
+    assert mutant[0]["matched"] is True
 
 
 def test_native_l_a_batch_1_cell_when_pinned_binary_is_available(tmp_path: Path) -> None:

@@ -9,7 +9,7 @@
   "chronology": {
     "expectations_commit": "228f3c77b98af1f0f60985405a8db67ebb67c0a6",
     "expectations_sha256": "e3e83264df6e72e83736a06dddcba11a501c75a25c8c1fb0a9c7b1e9c0caeea3",
-    "implementation_commit": "5cdc42520da8a0bd5be3c2abee938fc7d3f771c4"
+    "implementation_commit": "b66e621a395af0e614825d2b1268e7efc13d6956"
   },
   "evidence_separation": "exact-oracle, behavioral-relation, plot-contract and wall-time denominators remain separate; fatal guards are unscored and void the run",
   "fabric_leg_envelope": [
@@ -649,12 +649,12 @@
     },
     {
       "enforcement": "runtime",
-      "evaluated": "all 18 ladder points carry three strict, correctly classified and distinct rung authorities",
+      "evaluated": "all 18 ladder points carry strict, distinct authorities with 24 ESTIMATE and 30 SIMULATED points",
       "held": true,
       "id": "FG-2",
       "mutation_control": {
         "kind": "predicate-exercised",
-        "mutant": "one packet rung relabeled ESTIMATE on the wire",
+        "mutant": "one nonexecuted B100 ideal rung relabeled SIMULATED on the wire",
         "rejected": true
       }
     },
@@ -769,12 +769,12 @@
           },
           {
             "fabric_leg_ps": 0,
-            "point_class": "SIMULATED",
+            "point_class": "ESTIMATE",
             "provenance": {
               "argv": [],
-              "authority": "loggopsim-ideal",
-              "authority_class": "level",
-              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
               "goal_sha256": null,
               "source_path": "examples/deployment_frontier_v1/result.json",
               "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
@@ -845,12 +845,12 @@
           },
           {
             "fabric_leg_ps": 0,
-            "point_class": "SIMULATED",
+            "point_class": "ESTIMATE",
             "provenance": {
               "argv": [],
-              "authority": "loggopsim-ideal",
-              "authority_class": "level",
-              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
               "goal_sha256": null,
               "source_path": "examples/deployment_frontier_v1/result.json",
               "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
@@ -921,12 +921,12 @@
           },
           {
             "fabric_leg_ps": 0,
-            "point_class": "SIMULATED",
+            "point_class": "ESTIMATE",
             "provenance": {
               "argv": [],
-              "authority": "loggopsim-ideal",
-              "authority_class": "level",
-              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
               "goal_sha256": null,
               "source_path": "examples/deployment_frontier_v1/result.json",
               "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
@@ -997,12 +997,12 @@
           },
           {
             "fabric_leg_ps": 0,
-            "point_class": "SIMULATED",
+            "point_class": "ESTIMATE",
             "provenance": {
               "argv": [],
-              "authority": "loggopsim-ideal",
-              "authority_class": "level",
-              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
               "goal_sha256": null,
               "source_path": "examples/deployment_frontier_v1/result.json",
               "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
@@ -1073,12 +1073,12 @@
           },
           {
             "fabric_leg_ps": 0,
-            "point_class": "SIMULATED",
+            "point_class": "ESTIMATE",
             "provenance": {
               "argv": [],
-              "authority": "loggopsim-ideal",
-              "authority_class": "level",
-              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
               "goal_sha256": null,
               "source_path": "examples/deployment_frontier_v1/result.json",
               "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
@@ -1149,12 +1149,12 @@
           },
           {
             "fabric_leg_ps": 0,
-            "point_class": "SIMULATED",
+            "point_class": "ESTIMATE",
             "provenance": {
               "argv": [],
-              "authority": "loggopsim-ideal",
-              "authority_class": "level",
-              "binary_sha256": "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf",
+              "authority": "closed-form",
+              "authority_class": "estimator",
+              "binary_sha256": null,
               "goal_sha256": null,
               "source_path": "examples/deployment_frontier_v1/result.json",
               "source_sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
@@ -2375,20 +2375,34 @@
       "meaning": "the 9.536 ms H100 kernel is slower than the 7.689 ms packet fabric leg, so the step does not move"
     }
   },
+  "post_specified_corrections": {
+    "chronology": "Adversarial review followed the original publication. These are post-specified corrections, not amendments to the frozen expectations.",
+    "enforcement_acceptance_study": "not authored or run; integrator-owned",
+    "modeled_quantity_reproduction": {
+      "excluded": "nondeterministic wall-clock samples and corrected metadata",
+      "matched": true,
+      "scope": "all L-A and L-B native observations and repetitions, M-1 through M-3 operands and quotients, S step times, and physical-sanity values"
+    },
+    "original_publication_sha256": "5d95bd5788620dd28b2d827245dabe2b195e571ad3c6d0f8f6ffe922e770a4da",
+    "original_published_wall_median_seconds": 0.034612214,
+    "packet_executions": 0,
+    "preserved_closure": "TRAF-68",
+    "withdrawn_closure": "TRAF-20"
+  },
   "publication": {
     "figures": [
       {
-        "bytes": 29603,
+        "bytes": 29752,
         "path": "figures/frontier-ladder.pdf",
-        "sha256": "236d43fbd233c1dcc87457380e8a1bd9e85ca9e065b6f8069b87c6cf9844f820"
+        "sha256": "d681868fb34b3282ddfc70f800c99dd8d81cf901cac81109659dd8f1374a6eea"
       },
       {
-        "bytes": 192529,
+        "bytes": 204763,
         "path": "figures/frontier-ladder.png",
-        "sha256": "706e1702e326b45b6f05ee7755e367e2a2960577e29f20bf90e6ecda1841c37c"
+        "sha256": "16bb26584e17c4c6cc146f42bca210b2df0654492f55deacd2951d2d5179e910"
       }
     ],
-    "raw_result_sha256": "3e9cc3be470971c94e757bb3bf0f669bbab257d7e4f03cb9a2b6ca83d37a8acb"
+    "raw_result_sha256": "9dd2b78b9f2fc35ddc780ebf435fd57c172df42c9e15fa0c1accab562b64b44c"
   },
   "schema": "simllm-frontier-ladder-study-v1",
   "scope": "Three-rung deployment frontier over the pinned CORE-62 grid. Only the twelve LogGOPSim ideal fabric legs execute here; packet values are read from the pinned record and no silicon accuracy is claimed.",
@@ -3036,6 +3050,11 @@
                 "packet": 3448398380
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "ESTIMATE",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3049,6 +3068,11 @@
                 "packet": 3465966380
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "ESTIMATE",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3062,6 +3086,11 @@
                 "packet": 3501102380
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "ESTIMATE",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3075,6 +3104,11 @@
                 "packet": 3571374380
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "ESTIMATE",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3088,6 +3122,11 @@
                 "packet": 3711918380
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "ESTIMATE",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3105,6 +3144,11 @@
                 "packet": 4523298348
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "ESTIMATE",
+                "packet": "SIMULATED"
+              },
               "relation": "packet intra-node excess is visible; estimate and ideal agree"
             },
             {
@@ -3118,6 +3162,11 @@
                 "packet": 8234981205
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3131,6 +3180,11 @@
                 "packet": 8276934638
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3144,6 +3198,11 @@
                 "packet": 8360841504
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3157,6 +3216,11 @@
                 "packet": 8528655235
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3170,6 +3234,11 @@
                 "packet": 8864282698
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3183,6 +3252,11 @@
                 "packet": 9535537623
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3196,6 +3270,11 @@
                 "packet": 8234981205
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3209,6 +3288,11 @@
                 "packet": 8276934638
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3222,6 +3306,11 @@
                 "packet": 8360841504
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3235,6 +3324,11 @@
                 "packet": 8528655235
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3248,6 +3342,11 @@
                 "packet": 8864282698
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             },
             {
@@ -3261,6 +3360,11 @@
                 "packet": 9535537623
               },
               "passed": true,
+              "point_classes": {
+                "estimate": "ESTIMATE",
+                "loggopsim-ideal": "SIMULATED",
+                "packet": "SIMULATED"
+              },
               "relation": "all three step times equal"
             }
           ]
@@ -3309,6 +3413,15 @@
               "executions": 7,
               "expected_ns": 135038,
               "family": "L-A",
+              "fan_in": {
+                "acknowledged": false,
+                "destinations": [],
+                "fan_in_detected": false,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 1,
               "goal_binary_path": "goals/h100-two-node-serialized-b1.bin",
               "goal_binary_sha256": "4fea069b2ff8a9370b453bfc8d285ffca6722895adca957557faf8b922858823",
@@ -3390,6 +3503,15 @@
               "executions": 7,
               "expected_ns": 268076,
               "family": "L-A",
+              "fan_in": {
+                "acknowledged": false,
+                "destinations": [],
+                "fan_in_detected": false,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 1,
               "goal_binary_path": "goals/h100-two-node-serialized-b2.bin",
               "goal_binary_sha256": "0b5d9348d61eefef3e535262f4735f6cf114c9c28845e28cc20dfb9c606537f6",
@@ -3471,6 +3593,15 @@
               "executions": 7,
               "expected_ns": 534152,
               "family": "L-A",
+              "fan_in": {
+                "acknowledged": false,
+                "destinations": [],
+                "fan_in_detected": false,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 1,
               "goal_binary_path": "goals/h100-two-node-serialized-b4.bin",
               "goal_binary_sha256": "e7329708bcb9e5d0db83dc98e21649095221c7f6ec425a6bee831084e0434439",
@@ -3552,6 +3683,15 @@
               "executions": 7,
               "expected_ns": 1066304,
               "family": "L-A",
+              "fan_in": {
+                "acknowledged": false,
+                "destinations": [],
+                "fan_in_detected": false,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 1,
               "goal_binary_path": "goals/h100-two-node-serialized-b8.bin",
               "goal_binary_sha256": "02be77b914a72cd4e0a00c1b8970fe72657a0829fa591f4f67d669e97d53c5bb",
@@ -3633,6 +3773,15 @@
               "executions": 7,
               "expected_ns": 2130609,
               "family": "L-A",
+              "fan_in": {
+                "acknowledged": false,
+                "destinations": [],
+                "fan_in_detected": false,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 1,
               "goal_binary_path": "goals/h100-two-node-serialized-b16.bin",
               "goal_binary_sha256": "bf5be1d174b8e2507f6949e083dde5999612028139d30d91ca3eabb7eba43ada",
@@ -3714,6 +3863,15 @@
               "executions": 7,
               "expected_ns": 4259218,
               "family": "L-A",
+              "fan_in": {
+                "acknowledged": false,
+                "destinations": [],
+                "fan_in_detected": false,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 1,
               "goal_binary_path": "goals/h100-two-node-serialized-b32.bin",
               "goal_binary_sha256": "fdf037e65dff32520e9e635019482c5d6f621e8dcde7ba5cb4e5922eb8967a39",
@@ -3802,6 +3960,29 @@
               "executions": 7,
               "expected_ns": 31564,
               "family": "L-B",
+              "fan_in": {
+                "acknowledged": true,
+                "destinations": [
+                  {
+                    "receiver_rank": 0,
+                    "source_ranks": [
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8
+                    ]
+                  }
+                ],
+                "fan_in_detected": true,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 8,
               "goal_binary_path": "goals/h100-nine-node-incast-b1.bin",
               "goal_binary_sha256": "32328dc4dd42d5fe51e60e07c5d72f52d40537718db1bbac478ca9b4805eabc9",
@@ -3830,6 +4011,30 @@
               "passed": true,
               "payload_bytes": 1478201,
               "rank_count": 9,
+              "schedule_comparison": {
+                "flow_sets_equal": true,
+                "ideal_flow_payload_bytes": [
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201
+                ],
+                "invariance": "The audited ideal receiver charges zero per-message overhead and no receiver per-byte gap. Its makespan is therefore the largest incoming flow completion; the pinned partition retains at least one max-size flow, so replacing its smaller flows with max-size flows does not change the ideal makespan.",
+                "pinned_packet_flow_payload_bytes": [
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201,
+                  1478201
+                ]
+              },
               "stderr_sha256": [
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -3883,6 +4088,29 @@
               "executions": 7,
               "expected_ns": 61128,
               "family": "L-B",
+              "fan_in": {
+                "acknowledged": true,
+                "destinations": [
+                  {
+                    "receiver_rank": 0,
+                    "source_ranks": [
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8
+                    ]
+                  }
+                ],
+                "fan_in_detected": true,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 8,
               "goal_binary_path": "goals/h100-nine-node-incast-b2.bin",
               "goal_binary_sha256": "83e121b77935ba99aa0a8c5c34fd6c6052b831dfaa3df0ed3dbc3791205a9864",
@@ -3911,6 +4139,30 @@
               "passed": true,
               "payload_bytes": 2956402,
               "rank_count": 9,
+              "schedule_comparison": {
+                "flow_sets_equal": false,
+                "ideal_flow_payload_bytes": [
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956402
+                ],
+                "invariance": "The audited ideal receiver charges zero per-message overhead and no receiver per-byte gap. Its makespan is therefore the largest incoming flow completion; the pinned partition retains at least one max-size flow, so replacing its smaller flows with max-size flows does not change the ideal makespan.",
+                "pinned_packet_flow_payload_bytes": [
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956402,
+                  2956401
+                ]
+              },
               "stderr_sha256": [
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -3964,6 +4216,29 @@
               "executions": 7,
               "expected_ns": 120256,
               "family": "L-B",
+              "fan_in": {
+                "acknowledged": true,
+                "destinations": [
+                  {
+                    "receiver_rank": 0,
+                    "source_ranks": [
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8
+                    ]
+                  }
+                ],
+                "fan_in_detected": true,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 8,
               "goal_binary_path": "goals/h100-nine-node-incast-b4.bin",
               "goal_binary_sha256": "56f5d3703ffd7eafe31367730442709e0a2d483733994553aabce4008c5a7be5",
@@ -3992,6 +4267,30 @@
               "passed": true,
               "payload_bytes": 5912804,
               "rank_count": 9,
+              "schedule_comparison": {
+                "flow_sets_equal": false,
+                "ideal_flow_payload_bytes": [
+                  5912804,
+                  5912804,
+                  5912804,
+                  5912804,
+                  5912804,
+                  5912804,
+                  5912804,
+                  5912804
+                ],
+                "invariance": "The audited ideal receiver charges zero per-message overhead and no receiver per-byte gap. Its makespan is therefore the largest incoming flow completion; the pinned partition retains at least one max-size flow, so replacing its smaller flows with max-size flows does not change the ideal makespan.",
+                "pinned_packet_flow_payload_bytes": [
+                  5912804,
+                  5912804,
+                  5912804,
+                  5912804,
+                  5912804,
+                  5912803,
+                  5912803,
+                  5912803
+                ]
+              },
               "stderr_sha256": [
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -4045,6 +4344,29 @@
               "executions": 7,
               "expected_ns": 238512,
               "family": "L-B",
+              "fan_in": {
+                "acknowledged": true,
+                "destinations": [
+                  {
+                    "receiver_rank": 0,
+                    "source_ranks": [
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8
+                    ]
+                  }
+                ],
+                "fan_in_detected": true,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 8,
               "goal_binary_path": "goals/h100-nine-node-incast-b8.bin",
               "goal_binary_sha256": "abe153370670f83357017c5b9476cab74bd741bf6ef108caf23ebba072656ac4",
@@ -4073,6 +4395,30 @@
               "passed": true,
               "payload_bytes": 11825608,
               "rank_count": 9,
+              "schedule_comparison": {
+                "flow_sets_equal": false,
+                "ideal_flow_payload_bytes": [
+                  11825608,
+                  11825608,
+                  11825608,
+                  11825608,
+                  11825608,
+                  11825608,
+                  11825608,
+                  11825608
+                ],
+                "invariance": "The audited ideal receiver charges zero per-message overhead and no receiver per-byte gap. Its makespan is therefore the largest incoming flow completion; the pinned partition retains at least one max-size flow, so replacing its smaller flows with max-size flows does not change the ideal makespan.",
+                "pinned_packet_flow_payload_bytes": [
+                  11825608,
+                  11825607,
+                  11825607,
+                  11825607,
+                  11825607,
+                  11825607,
+                  11825607,
+                  11825607
+                ]
+              },
               "stderr_sha256": [
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -4126,6 +4472,29 @@
               "executions": 7,
               "expected_ns": 475024,
               "family": "L-B",
+              "fan_in": {
+                "acknowledged": true,
+                "destinations": [
+                  {
+                    "receiver_rank": 0,
+                    "source_ranks": [
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8
+                    ]
+                  }
+                ],
+                "fan_in_detected": true,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 8,
               "goal_binary_path": "goals/h100-nine-node-incast-b16.bin",
               "goal_binary_sha256": "6bb3d2c486a314d622b1e7ff05126c5aa82dd37c005b428e4c353ecda954f314",
@@ -4154,6 +4523,30 @@
               "passed": true,
               "payload_bytes": 23651215,
               "rank_count": 9,
+              "schedule_comparison": {
+                "flow_sets_equal": false,
+                "ideal_flow_payload_bytes": [
+                  23651215,
+                  23651215,
+                  23651215,
+                  23651215,
+                  23651215,
+                  23651215,
+                  23651215,
+                  23651215
+                ],
+                "invariance": "The audited ideal receiver charges zero per-message overhead and no receiver per-byte gap. Its makespan is therefore the largest incoming flow completion; the pinned partition retains at least one max-size flow, so replacing its smaller flows with max-size flows does not change the ideal makespan.",
+                "pinned_packet_flow_payload_bytes": [
+                  23651215,
+                  23651215,
+                  23651214,
+                  23651214,
+                  23651214,
+                  23651214,
+                  23651214,
+                  23651214
+                ]
+              },
               "stderr_sha256": [
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -4207,6 +4600,29 @@
               "executions": 7,
               "expected_ns": 948048,
               "family": "L-B",
+              "fan_in": {
+                "acknowledged": true,
+                "destinations": [
+                  {
+                    "receiver_rank": 0,
+                    "source_ranks": [
+                      1,
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      8
+                    ]
+                  }
+                ],
+                "fan_in_detected": true,
+                "frozen_cell_error": "about 8x optimistic",
+                "mechanism": "receiver per-byte gap unmodeled",
+                "schema": "simllm-loggopsim-fan-in-envelope-v1",
+                "study": "examples/frontier_ladder_v1/RESULTS.md"
+              },
               "flow_count": 8,
               "goal_binary_path": "goals/h100-nine-node-incast-b32.bin",
               "goal_binary_sha256": "9313c019a5e96b11fbd0d487514c1132fc9fdb836a43abe90c9006946f63d58a",
@@ -4235,6 +4651,30 @@
               "passed": true,
               "payload_bytes": 47302429,
               "rank_count": 9,
+              "schedule_comparison": {
+                "flow_sets_equal": false,
+                "ideal_flow_payload_bytes": [
+                  47302429,
+                  47302429,
+                  47302429,
+                  47302429,
+                  47302429,
+                  47302429,
+                  47302429,
+                  47302429
+                ],
+                "invariance": "The audited ideal receiver charges zero per-message overhead and no receiver per-byte gap. Its makespan is therefore the largest incoming flow completion; the pinned partition retains at least one max-size flow, so replacing its smaller flows with max-size flows does not change the ideal makespan.",
+                "pinned_packet_flow_payload_bytes": [
+                  47302429,
+                  47302429,
+                  47302429,
+                  47302429,
+                  47302428,
+                  47302428,
+                  47302428,
+                  47302428
+                ]
+              },
               "stderr_sha256": [
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -4283,6 +4723,11 @@
             "color": "#2563a6",
             "configuration_id": "b100-one-node-intra",
             "configuration_label": "B100 one-node intra-node-heavy",
+            "draw_order": 0,
+            "line_alpha": 0.82,
+            "line_style": "-",
+            "line_width": 1.35,
+            "line_zorder": 3,
             "points": [
               {
                 "batch_per_gpu": 1,
@@ -4296,9 +4741,9 @@
                     "y": 289.9896966080816
                   },
                   "loggopsim-ideal": {
-                    "authority": "loggopsim-ideal",
+                    "authority": "closed-form",
                     "fabric_leg_ps": 0,
-                    "point_class": "SIMULATED",
+                    "point_class": "ESTIMATE",
                     "step_ps": 3448398380,
                     "x": 289.9896966080816,
                     "y": 289.9896966080816
@@ -4325,9 +4770,9 @@
                     "y": 577.0396422598883
                   },
                   "loggopsim-ideal": {
-                    "authority": "loggopsim-ideal",
+                    "authority": "closed-form",
                     "fabric_leg_ps": 0,
-                    "point_class": "SIMULATED",
+                    "point_class": "ESTIMATE",
                     "step_ps": 3465966380,
                     "x": 288.51982112994415,
                     "y": 577.0396422598883
@@ -4354,9 +4799,9 @@
                     "y": 1142.4972953804338
                   },
                   "loggopsim-ideal": {
-                    "authority": "loggopsim-ideal",
+                    "authority": "closed-form",
                     "fabric_leg_ps": 0,
-                    "point_class": "SIMULATED",
+                    "point_class": "ESTIMATE",
                     "step_ps": 3501102380,
                     "x": 285.62432384510845,
                     "y": 1142.4972953804338
@@ -4383,9 +4828,9 @@
                     "y": 2240.0339893797413
                   },
                   "loggopsim-ideal": {
-                    "authority": "loggopsim-ideal",
+                    "authority": "closed-form",
                     "fabric_leg_ps": 0,
-                    "point_class": "SIMULATED",
+                    "point_class": "ESTIMATE",
                     "step_ps": 3571374380,
                     "x": 280.00424867246767,
                     "y": 2240.0339893797413
@@ -4412,9 +4857,9 @@
                     "y": 4310.43960616397
                   },
                   "loggopsim-ideal": {
-                    "authority": "loggopsim-ideal",
+                    "authority": "closed-form",
                     "fabric_leg_ps": 0,
-                    "point_class": "SIMULATED",
+                    "point_class": "ESTIMATE",
                     "step_ps": 3711918380,
                     "x": 269.4024753852481,
                     "y": 4310.43960616397
@@ -4441,9 +4886,9 @@
                     "y": 7516.644858374384
                   },
                   "loggopsim-ideal": {
-                    "authority": "loggopsim-ideal",
+                    "authority": "closed-form",
                     "fabric_leg_ps": 0,
-                    "point_class": "SIMULATED",
+                    "point_class": "ESTIMATE",
                     "step_ps": 4257218560,
                     "x": 234.8951518241995,
                     "y": 7516.644858374384
@@ -4464,6 +4909,11 @@
             "color": "#d17c0f",
             "configuration_id": "h100-two-node-serialized",
             "configuration_label": "H100 two-node serialized split",
+            "draw_order": 2,
+            "line_alpha": 1.0,
+            "line_style": "--",
+            "line_width": 1.4,
+            "line_zorder": 4,
             "points": [
               {
                 "batch_per_gpu": 1,
@@ -4645,6 +5095,11 @@
             "color": "#27845c",
             "configuration_id": "h100-nine-node-incast",
             "configuration_label": "H100 nine-node EP72 incast",
+            "draw_order": 1,
+            "line_alpha": 0.55,
+            "line_style": "-",
+            "line_width": 3.0,
+            "line_zorder": 2,
             "points": [
               {
                 "batch_per_gpu": 1,
@@ -5026,6 +5481,11 @@
           "y": 1850.0
         }
       },
+      "point_class_tallies": {
+        "ESTIMATE": 24,
+        "MEASURED": 0,
+        "SIMULATED": 30
+      },
       "rows": [
         {
           "id": "P-record-round-trip",
@@ -5113,19 +5573,19 @@
         "platform": "Linux-5.14.21-150400.22-default-x86_64-with-glibc2.31",
         "python": "3.12.12"
       },
-      "median_seconds": 0.034612214,
+      "median_seconds": 0.012780299,
       "native_executions": 84,
       "native_legs_per_sample": 12,
       "packet_executions": 0,
       "passed": 1,
       "samples_seconds": [
-        0.036041949,
-        0.035533615,
-        0.035183546,
-        0.031346646,
-        0.033417042,
-        0.033004604,
-        0.034612214
+        0.020897044,
+        0.012780299,
+        0.012715121,
+        0.012631094,
+        0.012675352,
+        0.013601954,
+        0.012859186
       ]
     }
   },

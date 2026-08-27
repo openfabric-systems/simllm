@@ -51,4 +51,4 @@ plot-contract,P,P-record-round-trip,strict ladder record round trip,predicate he
 plot-contract,P,P-rung-classes,per-rung point classes and authorities remain distinct,predicate held,predicate,true
 plot-contract,P,P-packet-pareto,packet Pareto front is exactly the six B100 points,predicate held,predicate,true
 plot-contract,P,P-plot-projection,plot projection round trips through the strict record,predicate held,predicate,true
-wall-time,W,W-total,5.0,0.034612214,s,true
+wall-time,W,W-total,5.0,0.012780299,s,true

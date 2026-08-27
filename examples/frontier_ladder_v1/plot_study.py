@@ -333,7 +333,7 @@ def _frontier_panel(axis: Any, plot: dict[str, Any]) -> None:
         frameon=True,
         facecolor="white",
         edgecolor="none",
-        framealpha=0.95,
+        framealpha=1.0,
         handlelength=1.7,
     )
 
@@ -388,7 +388,7 @@ def _envelope_panel(axis: Any, plot: dict[str, Any]) -> None:
         frameon=True,
         facecolor="white",
         edgecolor="none",
-        framealpha=0.95,
+        framealpha=1.0,
         handlelength=2.3,
     )
 
