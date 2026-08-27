@@ -716,7 +716,7 @@ def _check(
     return row
 
 
-def _machine() -> dict[str, object]:
+def _collect_machine_disclosure() -> dict[str, object]:
     cpu_model = "not disclosed by this operating system"
     cpu_info = Path("/proc/cpuinfo")
     if cpu_info.is_file():
@@ -733,6 +733,16 @@ def _machine() -> dict[str, object]:
         "python": platform.python_version(),
         "processes": 1,
     }
+
+
+# Collected at import time, outside any armed process guard: on Windows
+# CPython 3.10 the platform module can spawn a "ver" child process, which
+# the FG-1 interception would otherwise correctly catch inside the scan.
+_MACHINE_DISCLOSURE = _collect_machine_disclosure()
+
+
+def _machine() -> dict[str, object]:
+    return dict(_MACHINE_DISCLOSURE)
 
 
 def _void_result(
