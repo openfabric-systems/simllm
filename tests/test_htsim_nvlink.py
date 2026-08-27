@@ -1,12 +1,9 @@
 import copy
 import dataclasses
-<<<<<<< HEAD
 import json
-=======
 import re
 from collections import Counter
 from itertools import pairwise
->>>>>>> origin/main
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -34,7 +31,6 @@ from simllm.backends.htsim_nvlink import (
 
 ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples" / "a100_nvlink_packet_v1"
-<<<<<<< HEAD
 TRAF65_FREEZE_SHA256 = (
     "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
 )
@@ -44,7 +40,6 @@ TRAF70_FREEZE_SHA256 = (
 PUBLISHED_PROFILE_SHA256 = (
     "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2"
 )
-=======
 FIGURE = ROOT / "resources" / "figures" / "nvlink-domain-model.svg"
 FREEZE_SHA256 = "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
 SVG = "{http://www.w3.org/2000/svg}"
@@ -140,7 +135,6 @@ def _point_on_box_boundary(
         and top <= point[1] <= bottom
         and (point[0] in {left, right} or point[1] in {top, bottom})
     )
->>>>>>> origin/main
 
 
 @pytest.fixture
@@ -383,18 +377,11 @@ def test_composition_conserves_write_and_read_directions(candidate):
 def test_scored_profile_reports_its_derived_published_envelope_comparison(candidate):
     validation = validate_candidate_against_published_a100_envelope(candidate)
 
-<<<<<<< HEAD
     assert not validation.within_registered_error
     assert validation.predicted_pair_payload_rate_gbps == pytest.approx(94.009808228512)
     assert validation.pair_worst_relative_error < 0.0007
     assert validation.predicted_fanout_payload_rate_gbps == pytest.approx(151.14754255896753)
     assert validation.fanout_relative_error == pytest.approx(0.4633497512552191)
-=======
-    assert validation.within_registered_error
-    assert 94.0 <= validation.predicted_pair_payload_rate_gbps <= 94.07
-    assert validation.pair_worst_relative_error < 0.0008
-    assert validation.predicted_fanout_payload_rate_gbps == pytest.approx(281.6991815868504)
-    assert validation.fanout_relative_error < 0.0002
 
 
 def test_domain_figure_routes_are_continuous_and_clear_of_blocks_and_text():
@@ -475,4 +462,3 @@ def test_domain_figure_routes_are_continuous_and_clear_of_blocks_and_text():
         (625.0, 470.0),
         (550.0, 470.0),
     )
->>>>>>> origin/main
