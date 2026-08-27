@@ -72,6 +72,29 @@ Berkeley National Laboratory.
 
 <p align="center"><a href="https://ethz.ch"><img src="resources/figures/supporters/tile-ethz.png" height="64" alt="ETH Zurich"></a><a href="https://www.cscs.ch"><img src="resources/figures/supporters/tile-cscs.png" height="64" alt="Swiss National Supercomputing Centre (CSCS)"></a><a href="https://spcl.inf.ethz.ch"><img src="resources/figures/supporters/tile-spcl.png" height="64" alt="Scalable Parallel Computing Laboratory (SPCL)"></a><a href="https://www.stanford.edu"><img src="resources/figures/supporters/tile-stanford.png" height="64" alt="Stanford University"></a><a href="https://www.nersc.gov"><img src="resources/figures/supporters/tile-nersc.png" height="64" alt="NERSC"></a></p>
 
+### Hardware supported
+
+SimLLM models the accelerators that define today's AI infrastructure.
+NVIDIA GPUs, whose NVLink-connected systems set the pace for large-scale
+training and serving, are the calibrated first target, with device
+models measured directly on real A100 and GH200 nodes. AMD Instinct
+GPUs compose behind the same device shape, with xGMI / Infinity Fabric
+scale-up ports behind the same port interface
+([COMP-35](docs/modules/compute.md#open-tasks)).
+
+<p align="center"><a href="https://www.nvidia.com"><img src="resources/figures/hardware/tile-nvidia.png" height="64" alt="NVIDIA"></a><a href="https://www.amd.com"><img src="resources/figures/hardware/tile-amd.png" height="64" alt="AMD"></a></p>
+
+### Frameworks supported
+
+SimLLM supports vLLM (pinned v0.26.0) and SGLang as serving frontends.
+Each framework's own scheduler, batching policy and KV/prefix-cache
+accounting run unmodified; SimLLM plugs in through extension points the
+frameworks already ship, with no fork of either project. The support
+runs in one direction: SimLLM integrates with vLLM and SGLang, and is
+not affiliated with or endorsed by either project.
+
+<p align="center"><a href="https://github.com/vllm-project/vllm"><img src="resources/figures/frameworks/tile-vllm.png" height="64" alt="vLLM"></a><a href="https://github.com/sgl-project/sglang"><img src="resources/figures/frameworks/tile-sglang.png" height="64" alt="SGLang"></a></p>
+
 ## Architecture
 
 ```
