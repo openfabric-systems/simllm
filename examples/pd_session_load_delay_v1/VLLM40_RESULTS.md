@@ -115,7 +115,7 @@ comparison used the frozen rational picosecond bounds without rounding.
 
 - Scored HEAD: `dea94a2a3a6a26e2ce8975735741ecd68db52eed`.
 - Raw result:
-  `/data3/yifeng/simllm-dev/wave-runs/vllm40/qualified-sweep/result.json`,
+  `$SIMLLM_VLLM40_RUN_ROOT/qualified-sweep/result.json`,
   7,169,930 bytes, SHA-256
   `5cee648ebb0d401426f5e55884e3ba2e8b0ce0562719f09256d32fda2450f238`.
 - Runner exit code: 0; worktree Python 3.10.18; vLLM 0.27.1.

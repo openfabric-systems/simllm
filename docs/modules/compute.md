@@ -2654,8 +2654,9 @@ depth extrapolation, and TRAF-66 owns the finite-overlap residual.
   carries this clause as far as the lean pull allows: one canonical candidate
   compiles 12 Granite and eight DeepSeek service entries into both established
   forms, with per-entry `MEASURED`, `DECLARED` and `DISCLOSED` classes and no
-  imputed absent row. The registered campaign itself did not run, so COMP-64
-  remains open through COMP-72.
+  imputed absent row. The 2026-08-27 campaign measured the DeepSeek physical
+  cells but could not start the unstaged Granite targets, so COMP-64 remains
+  open through COMP-72 and its exact COMP-78 remainder.
 - COMP-65 (Completeness; P1; L): add static decode-graph inference where a
   pinned framework exposes a compile product. Before a GPU replay, read the
   framework-owned compiled graph and emit the ordered kernel implementation
@@ -2699,6 +2700,24 @@ depth extrapolation, and TRAF-66 owns the finite-overlap residual.
   Acceptance requires all registered Granite cells plus the exact DeepSeek
   physical cells, retained source and output digests, and a resumable campaign
   record whose completed-cell prefix survives interruption byte for byte.
+  The `2026-08-27` execution led with the exact MTP submission and retained
+  2,033,951,000 ps of measured non-collective service from its exact
+  speculative-generation NVTX boundary. The exact base and decode submissions
+  then retained independent observations for all four priced keys, with the
+  batch-32 decode repetition at 1,883,392,000 ps. These new observations do
+  not change any frozen point or distribution before COMP-74. The canonical
+  1,212-cell Granite plan has SHA-256
+  `19a6d6fb93d7b3f4faa1ad9cdd94724ecddb9fdae147f71c0f8403a5c0b19d36`,
+  but Merlin had neither real framework target executable named by its two
+  required environment variables. No Granite cell started and the retained
+  digest-complete prefix remains the empty sequence with SHA-256
+  `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+  CORE-61 remained forbidden by its future time gate, so its measurement and
+  signed residual remain absent. The partial successor record is
+  `d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107`;
+  the `ff46f6d8...` predecessor remains immutable. This does not meet the
+  literal acceptance above, so COMP-72 stays open and COMP-78 owns the exact
+  remainder.
 - COMP-73 (Completeness; P1; L): produce the key-compatible target record that
   makes the CORE-53 frozen disaggregated session grid total. The accepted
   retained fixture is A100, vLLM 0.26, tensor parallel one and partial decode
@@ -2735,6 +2754,24 @@ depth extrapolation, and TRAF-66 owns the finite-overlap residual.
   explicit evidence-class ledger without promoting candidate status. CORE-61
   separately tests the 61-layer extrapolation; COMP-72 separately owns MTP;
   COMP-74 separately owns repeat-derived distribution intervals.
+- COMP-78 (Completeness; P1; L): finish the literal COMP-72 campaign remainder
+  without amending the scored freeze or overwriting any completed or failed
+  attempt. Stage pinned real vLLM and SGLang target executables on Merlin for
+  `SIMLLM_VLLM_KERNEL_CAPTURE_TARGET` and
+  `SIMLLM_SGLANG_KERNEL_CAPTURE_TARGET`. Resume the canonical
+  `19a6d6fb...` Granite plan at its first cell without a digest-complete
+  directory, currently
+  `sglang-decode-cuda-graph-te1-pi1-da1-ex1-b1-kv1311-deliberately-fragmented`,
+  and complete all 1,212 cells while preserving the current empty completed
+  prefix byte for byte. After `2026-08-28T06:30` in `Europe/Zurich`, submit
+  the exact registered CORE-61 depth-8 base then decode jobs, compare the
+  measured decode step against 3,751,359,511 ps, and retain the signed
+  residual. Queue politely on hourly partitions, pace short submissions, and
+  stop cleanly on SSH loss. Recompile a final content-addressed successor
+  through the landed pipeline while keeping both `ff46f6d8...` and
+  `d868a4f3...` immutable. Acceptance requires the complete Granite prefix,
+  both digest-complete CORE-61 outputs, the signed depth residual, all retained
+  source and output digests, and only then literal COMP-72 closure.
 ### Uncategorized
 
 - COMP-8: the fused-vs-family sum invariant test compares in float; above
