@@ -91,8 +91,10 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
     analytical_contract = plot["analytical"]
     simulated_contract = plot["simulated"]
     plt = _matplotlib()
+    from matplotlib.lines import Line2D
+
     figure, axis = plt.subplots(figsize=(7.0, 4.33))
-    figure.subplots_adjust(left=0.105, right=0.975, bottom=0.24, top=0.72)
+    figure.subplots_adjust(left=0.105, right=0.975, bottom=0.24, top=0.68)
 
     for analytical_curve, simulated_curve in zip(
         analytical_contract["curves"],
@@ -101,15 +103,15 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
     ):
         configuration_id = analytical_curve["id"]
         color = COLORS[configuration_id]
+        is_two_node = configuration_id == "h100-two-node-serialized"
         analytical_points = analytical_curve["points"]
         simulated_points = simulated_curve["points"]
         axis.plot(
             [point["analytical_x"] for point in analytical_points],
             [point["analytical_y"] for point in analytical_points],
             color=color,
-            linewidth=1.7,
-            label=f"{analytical_curve['label']} analytical",
-            zorder=3,
+            linewidth=3.2 if is_two_node else 1.7,
+            zorder=2 if is_two_node else 3,
         )
         axis.scatter(
             [point["simulated_x"] for point in analytical_points],
@@ -118,9 +120,8 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
             facecolor="none",
             edgecolor=color,
             linewidth=0.9,
-            s=31,
-            label=f"{analytical_curve['label']} ESTIMATE",
-            zorder=5,
+            s=49 if is_two_node else 31,
+            zorder=4 if is_two_node else 5,
         )
         axis.scatter(
             [point["simulated_x"] for point in simulated_points],
@@ -129,9 +130,8 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
             facecolor=color,
             edgecolor="white",
             linewidth=0.45,
-            s=22,
-            label=f"{analytical_curve['label']} SIMULATED",
-            zorder=6,
+            s=38 if is_two_node else 22,
+            zorder=5 if is_two_node else 6,
         )
 
     front = plot["pareto_points"]
@@ -141,7 +141,6 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
         color="#111111",
         linewidth=3.8,
         alpha=0.28,
-        label="Pareto front",
         zorder=2,
     )
     axis.scatter(
@@ -175,7 +174,6 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
             edgecolor="black",
             linewidth=0.9,
             s=42,
-            label=paired["label"],
             zorder=8,
         )
     y_only = simulated_contract["y_only_anchor"]
@@ -185,7 +183,6 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
             color="#4a4a4a",
             linestyle="--",
             linewidth=1.1,
-            label=f"{y_only['label']} y-only anchor",
             zorder=1,
         )
 
@@ -195,27 +192,68 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
     axis.set_ylabel("Output throughput per GPU (token/s/GPU)")
     axis.grid(True, which="both", color="#d5d9df", linewidth=0.5, alpha=0.8)
     axis.margins(x=0.07, y=0.11)
-    figure.suptitle("Backend-free DeepSeek deployment scan", y=0.965, fontsize=10.2)
-    handles, labels = axis.get_legend_handles_labels()
-    order = [
-        index
-        for index, label in enumerate(labels)
-        if "analytical" in label or label in {"Pareto front"}
-    ] + [
-        index
-        for index, label in enumerate(labels)
-        if "analytical" not in label and label != "Pareto front"
+    figure.suptitle("Backend-free DeepSeek deployment scan", y=0.985, fontsize=10.2)
+    configuration_handles = [
+        Line2D([0], [0], color=COLORS[configuration_id], linewidth=2.1)
+        for configuration_id in COLORS
     ]
-    axis.legend(
-        [handles[index] for index in order],
-        [labels[index] for index in order],
-        loc="lower left",
-        bbox_to_anchor=(0.0, 1.04, 1.0, 0.22),
-        mode="expand",
+    configuration_legend = figure.legend(
+        configuration_handles,
+        ("B100 1-node", "H100 2-node serialized", "H100 9-node incast"),
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.925),
         ncol=3,
-        borderaxespad=0,
         frameon=False,
-        handlelength=2.1,
+        columnspacing=2.2,
+        handlelength=2.5,
+    )
+    figure.add_artist(configuration_legend)
+    semantic_handles = (
+        Line2D([0], [0], color="#333333", linewidth=1.7),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            markerfacecolor="none",
+            markeredgecolor="#333333",
+            linestyle="none",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            markerfacecolor="#777777",
+            markeredgecolor="white",
+            linestyle="none",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            markerfacecolor="none",
+            markeredgecolor="#111111",
+            markeredgewidth=1.3,
+            linestyle="none",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="D",
+            markerfacecolor="white",
+            markeredgecolor="black",
+            linestyle="none",
+        ),
+        Line2D([0], [0], color="#4a4a4a", linestyle="--", linewidth=1.1),
+    )
+    figure.legend(
+        semantic_handles,
+        ("Analytical", "ESTIMATE", "SIMULATED", "Pareto", "Paired", "Y-only"),
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.84),
+        ncol=6,
+        frameon=False,
+        columnspacing=1.3,
+        handlelength=2.0,
     )
     figure.text(
         0.105,
