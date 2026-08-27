@@ -66,3 +66,36 @@
   pending indices. Promote the A100 candidate only where the frozen decision
   rules classify a parameter as measured; otherwise retain it as declared or
   publish its refutation.
+
+### Completion accounting
+
+- Sizing commit: `cbd670d8656e09f0d7318b1423b29e64832fafc9`.
+- Pre-measurement scoring commit:
+  `8d6202869735f1b6e9f5a70050ec2b29e4141ab1`.
+- Execution: Merlin array `198968` ran all 86 `%1`-paced cells on `gpu105`.
+  Every scheduler task exited `0:0`, no stop record was written, all 14,035
+  rows and 86 manifests verify, and the final pending-index result is empty.
+- Compatibility: the default Merlin Python 3.6.15 could not parse the frozen
+  runner, so the installed Python 3.10.16 binary and runtime-library paths were
+  prepended without changing the staged archive or batch script.
+- Build: all cell plans bind batch binary SHA-256
+  `992eaa12d5953806a1f21d12fce612d72f721a141d425a666404ffb26770c3e1`.
+  It differs from the earlier compile-check digest, and the score publishes
+  the reproducibility mismatch.
+- Bulk evidence: 89.7 MB under the requested `wave-runs/traf65x` root,
+  including all 172 scheduler logs. One stderr contains only the first-cell
+  unused-mock compile warning; the other 85 are empty.
+- Lean evidence: the JSON score and Markdown report under the requested
+  `simllm-kernelprobe/traf65` root are byte-identical to the tracked copies.
+- Scoring and publisher implementation: 831 lines, above the estimated zero
+  to 500 because content-addressed attempt verification, partial-prefix
+  publication, frozen-band reduction, module grading and guarded profile
+  publication remain explicit.
+- Focused tests: 200 added lines. The 1,031-line combined scorer and test
+  change is above the estimate for the same auditability reason.
+- Generated publication: 2,845 JSON lines and 138 Markdown lines, counted as
+  zero handwritten lines.
+- Outcome: `COMPLETE_VOID_86_OF_86`. The capture procedure is refuted as
+  identification evidence; no candidate value changes, the profile remains
+  declared, the switch pass-through invariant stands structurally only,
+  TRAF-65 remains open and TRAF-70 owns the corrected capture.

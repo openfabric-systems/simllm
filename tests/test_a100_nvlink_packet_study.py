@@ -268,6 +268,11 @@ def test_candidate_handoff_and_submission_are_pinned():
     assert profile["freeze_sha256"] == FREEZE_SHA256
     assert profile["status"] == "candidate"
     assert profile["handoff"]["measurement_claim"] is False
+    assert profile["hardware_scoring"]["measurement_claim"] is False
+    assert profile["hardware_scoring"]["parameter_value_changes"] == []
+    assert profile["hardware_scoring"]["status"] == (
+        "RETAIN_DECLARED_CANDIDATE_NO_HARDWARE_PROMOTION"
+    )
     assert "#SBATCH --partition=a100-hourly" in sbatch
     assert "#SBATCH --gres=gpu:4" in sbatch
     assert "#SBATCH --array=0-85%1" in sbatch
@@ -297,6 +302,34 @@ def test_tracked_local_validation_makes_no_hardware_claim():
     }
 
 
+def test_tracked_hardware_score_publishes_the_complete_void_result():
+    score = json.loads((STUDY / "hardware-score.json").read_text())
+
+    assert score["status"] == "COMPLETE_VOID_86_OF_86"
+    assert score["task_status"] == "OPEN"
+    assert score["freeze_sha256"] == FREEZE_SHA256
+    assert score["coverage"]["completed_indices"] == list(range(86))
+    assert score["coverage"]["completed_prefix_indices"] == list(range(86))
+    assert score["coverage"]["pending_array"] == ""
+    assert score["coverage"]["rejected_attempts"] == []
+    assert score["coverage"]["result_row_count"] == 14_035
+    assert score["coverage"]["protocol_validation_row_count"] == 4
+    assert [corner["verdict"] for corner in score["corner_verdicts"]] == [
+        "UNSCORABLE_RUN_VOID",
+        "MEASURED_BAND_REFUTED_BUT_RUN_VOID",
+        "MEASURED_BAND_REFUTED_BUT_RUN_VOID",
+        "UNSCORABLE_RUN_VOID",
+        "UNSCORABLE_RUN_VOID",
+    ]
+    assert score["producer_binary_audit"]["status"] == (
+        "BUILD_REPRODUCIBILITY_MISMATCH"
+    )
+    assert score["capture_contract_audit"]["status"] == (
+        "REFUTED_AS_IDENTIFICATION_CAPTURE"
+    )
+    assert score["candidate_profile_decision"]["parameter_value_changes"] == []
+
+
 def test_hardware_scorer_reports_verified_prefix_and_exact_remainder(tmp_path):
     make_hardware_attempt(tmp_path)
     score_path = tmp_path / "lean" / "score.json"
@@ -323,6 +356,10 @@ def test_hardware_scorer_reports_verified_prefix_and_exact_remainder(tmp_path):
     assert score["coverage"]["pending_array"] == "1-85"
     assert score["case_scores"][0]["metric_score"]["status"] == "UNSCORABLE"
     assert score["candidate_profile_decision"]["parameter_value_changes"] == []
+    capture = score["capture_contract_audit"]
+    assert capture["status"] == "REFUTED_AS_IDENTIFICATION_CAPTURE"
+    assert "outstanding" in capture["parsed_but_not_applied_hardware_controls"]
+    assert capture["copy_engine_batch_contract"].startswith("REFUTED")
     report = report_path.read_text()
     assert "Per-corner verdicts" in report
     assert "Module-parameter identification" in report

@@ -129,6 +129,13 @@ def audit_hardware(bulk_root: Path, *, scheduler_job: str = "") -> dict[str, Any
     while prefix_count in attempts:
         prefix_count += 1
     pending_indices = [cell.index for cell in cells if cell.index not in attempts]
+    binary_digests = sorted(
+        {str(attempt.plan["producer_binary_sha256"]) for attempt in attempts.values()}
+    )
+    result_rows = [row for attempt in attempts.values() for row in attempt.rows]
+    protocol_validation_row_count = sum(
+        row.get("protocol_scope") == "protocol_validation_only" for row in result_rows
+    )
     case_scores = score_cases(expectations, cells, attempts)
     corner_verdicts = score_corners(case_scores)
     validity = "VOID_FATAL_GUARD_COVERAGE_INCOMPLETE" if attempts else "PENDING"
@@ -157,7 +164,25 @@ def audit_hardware(bulk_root: Path, *, scheduler_job: str = "") -> dict[str, Any
             "completed_prefix_indices": list(range(prefix_count)),
             "pending_indices": pending_indices,
             "pending_array": compress_indices(pending_indices),
+            "result_row_count": len(result_rows),
+            "protocol_validation_row_count": protocol_validation_row_count,
             "rejected_attempts": rejected_attempts,
+        },
+        "producer_binary_audit": {
+            "resume_compile_check_sha256": PRODUCER_BINARY_SHA256,
+            "observed_batch_binary_sha256": binary_digests,
+            "status": (
+                "MATCH"
+                if binary_digests == [PRODUCER_BINARY_SHA256]
+                else "BUILD_REPRODUCIBILITY_MISMATCH"
+                if binary_digests
+                else "PENDING"
+            ),
+            "decision": (
+                "The merged batch entry point pins the binary digest into each plan but does "
+                "not require equality to the earlier compile-check digest. A single observed "
+                "batch digest is accepted as execution lineage and the mismatch is published."
+            ),
         },
         "fatal_guard_audit": {
             "status": validity,
@@ -173,6 +198,34 @@ def audit_hardware(bulk_root: Path, *, scheduler_job: str = "") -> dict[str, Any
                 "The freeze says a fired guard voids a run. The capture does not record enough "
                 "information to decide five guards, so completed timings cannot be promoted to "
                 "measurement evidence."
+            ),
+        },
+        "capture_contract_audit": {
+            "status": "REFUTED_AS_IDENTIFICATION_CAPTURE",
+            "candidate_not_observation_fields": [
+                "candidate_packet_count",
+                "candidate_raw_bytes",
+            ],
+            "parsed_but_not_applied_hardware_controls": [
+                "access_width",
+                "lane_mask",
+                "stream_count",
+                "outstanding",
+                "burst_messages",
+                "gap_ns",
+                "offered_rate_percent",
+            ],
+            "copy_engine_batch_contract": (
+                "REFUTED: run_hardware enqueues one cudaMemcpyPeerAsync operation per "
+                "message, contrary to the frozen no-launch-per-message requirement"
+            ),
+            "payload_conservation_contract": (
+                "UNMEASURED: the emitted checksum is a point-id hash and checksum_ok "
+                "is never derived from destination bytes"
+            ),
+            "counter_contract": (
+                "UNMEASURED: only cell-boundary text snapshots are retained; no result "
+                "row carries raw, data, direction, link, replay, recovery, or error deltas"
             ),
         },
         "corner_verdicts": corner_verdicts,
@@ -289,12 +342,18 @@ def load_attempt(path: Path, cell: CellSpec) -> Attempt:
         "freeze_sha256": FREEZE_SHA256,
         "candidate_profile_sha256": CANDIDATE_PROFILE_SHA256,
         "implementation_sha256": IMPLEMENTATION_SHA256,
-        "producer_binary_sha256": PRODUCER_BINARY_SHA256,
         "expected_head": EXECUTION_HEAD,
     }
     for key, expected in expected_plan.items():
         if plan.get(key) != expected:
             raise RuntimeError(f"plan {key} mismatch")
+    binary_digest = plan.get("producer_binary_sha256")
+    if (
+        not isinstance(binary_digest, str)
+        or len(binary_digest) != 64
+        or any(character not in "0123456789abcdef" for character in binary_digest)
+    ):
+        raise RuntimeError("plan producer binary digest is invalid")
     if plan.get("cell", {}).get("index") != cell.index:
         raise RuntimeError("plan array index mismatch")
     if environment.get("mode") != "hardware" or environment.get("source_head") != EXECUTION_HEAD:
@@ -313,9 +372,20 @@ def load_attempt(path: Path, cell: CellSpec) -> Attempt:
             raise RuntimeError("observation was scored before this scoring path")
         if row.get("checksum_ok") is not True:
             raise RuntimeError("observation reports checksum failure")
-        if row.get("case_name") not in cell.case_names:
+        if not observation_belongs_to_cell(row, cell):
             raise RuntimeError("observation case is outside its cell")
     return Attempt(path=path, cell=cell, rows=rows, plan=plan, environment=environment)
+
+
+def observation_belongs_to_cell(row: dict[str, Any], cell: CellSpec) -> bool:
+    if row.get("case_name") in cell.case_names:
+        return True
+    return (
+        cell.frame == "all_corners_frame"
+        and row.get("case_name") == cell.cell_id
+        and row.get("producer") == "nccl_send_receive_validation"
+        and row.get("protocol_scope") == "protocol_validation_only"
+    )
 
 
 def score_cases(
@@ -575,11 +645,21 @@ def render_markdown(score: dict[str, Any]) -> str:
             f"- Frozen execution head: `{score['execution_head']}`.",
             f"- Frozen expectations SHA-256: `{score['freeze_sha256']}`.",
             f"- Digest-complete cells: {coverage['completed_cell_count']} of 86.",
+            (
+                f"- Hardware rows: {coverage['result_row_count']:,}, including "
+                f"{coverage['protocol_validation_row_count']} protocol-validation rows."
+            ),
             f"- Consecutive completed prefix: indices 0 through "
             f"{coverage['completed_prefix_count'] - 1}."
             if coverage["completed_prefix_count"]
             else "- Consecutive completed prefix: empty.",
             f"- Exact pending array: `{coverage['pending_array'] or 'none'}`.",
+            (
+                f"- Batch binary audit: `{score['producer_binary_audit']['status']}`; observed "
+                f"`{','.join(score['producer_binary_audit']['observed_batch_binary_sha256']) or 'none'}` "
+                "against compile-check "
+                f"`{score['producer_binary_audit']['resume_compile_check_sha256']}`."
+            ),
             "",
             "## Freeze chronology and guard ruling",
             "",
@@ -592,6 +672,15 @@ def render_markdown(score: dict[str, Any]) -> str:
             ),
             "",
             score["fatal_guard_audit"]["decision"],
+            "",
+            (
+                "The capture contract is `REFUTED_AS_IDENTIFICATION_CAPTURE`: candidate packet "
+                "and raw-byte counts are derived fields rather than observations; access width, "
+                "lane mask, stream count, outstanding window, burst length, gap, and offered "
+                "rate are parsed but not applied by the hardware path; and the copy-engine loop "
+                "enqueues one peer copy per message. The emitted checksum is a point-id hash, "
+                "not a measured destination checksum."
+            ),
             "",
             "The scorer made no expectations amendment and changed no candidate parameter value.",
             "",
@@ -614,9 +703,19 @@ def publish_candidate_profile(score: dict[str, Any], path: Path) -> None:
     if score["coverage"]["completed_cell_count"] == 0:
         raise RuntimeError("refusing to publish a candidate-profile decision without a cell")
     profile_path = STUDY_ROOT / "candidate-profile.json"
-    if sha256(profile_path) not in {CANDIDATE_PROFILE_SHA256, sha256_if_exists(path)}:
-        raise RuntimeError("candidate profile changed outside the TRAF-65 scoring path")
     profile = load_json(profile_path)
+    prior = profile.pop("hardware_scoring", None)
+    base_profile_bytes = (json.dumps(profile, indent=2) + "\n").encode()
+    if hashlib.sha256(base_profile_bytes).hexdigest() != CANDIDATE_PROFILE_SHA256:
+        raise RuntimeError("candidate profile changed outside the TRAF-65 scoring path")
+    if prior is not None and (
+        not isinstance(prior, dict)
+        or prior.get("schema") != SCORE_SCHEMA
+        or prior.get("measurement_claim") is not False
+        or prior.get("execution_head") != EXECUTION_HEAD
+        or prior.get("freeze_sha256") != FREEZE_SHA256
+    ):
+        raise RuntimeError("candidate profile changed outside the TRAF-65 scoring path")
     if profile.get("status") != "candidate":
         raise RuntimeError("TRAF-65 profile is no longer a candidate")
     if profile.get("evidence_class") != "declared_candidate_not_hardware_measurement":
@@ -644,7 +743,7 @@ def publish_candidate_profile(score: dict[str, Any], path: Path) -> None:
     for module, expected in expected_parameters.items():
         if profile.get(module) != expected:
             raise RuntimeError(f"candidate {module} values changed outside the scoring path")
-    profile["hardware_scoring"] = {
+    hardware_scoring = {
         "schema": SCORE_SCHEMA,
         "status": score["candidate_profile_decision"]["status"],
         "measurement_claim": False,
@@ -665,7 +764,8 @@ def publish_candidate_profile(score: dict[str, Any], path: Path) -> None:
             "copy_engine_coalescing_decision"
         ],
     }
-    write_json(path, profile)
+    profile["hardware_scoring"] = hardware_scoring
+    write_ordered_json(path, profile)
 
 
 def compress_indices(indices: list[int]) -> str:
@@ -709,6 +809,10 @@ def write_json(path: Path, payload: object) -> None:
     write_text(path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
+def write_ordered_json(path: Path, payload: object) -> None:
+    write_text(path, json.dumps(payload, indent=2) + "\n")
+
+
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8", newline="\n") as handle:
@@ -721,10 +825,6 @@ def sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
-
-
-def sha256_if_exists(path: Path) -> str:
-    return sha256(path) if path.is_file() else ""
 
 
 if __name__ == "__main__":
