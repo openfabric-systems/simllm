@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1060" viewBox="0 0 1800 1060">
+  <title>Queue-level NVLink domain model</title>
+  <desc>TX, parameterized switch, and RX modules with explicit staging, credits, bonded links, ingress buffering, reassembly, and evidence classes.</desc>
+  <defs>
+    <marker id="ab" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1,1 L11,6 L1,11 z" fill="#000000"/>
+    </marker>
+    <marker id="au" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="13" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1,1 L11,6 L1,11 z" fill="#6c8ebf"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1800" height="1060" fill="#ffffff"/>
+
+  <!-- stacked shadow box, then main domain box -->
+  <rect x="48" y="68" width="1720" height="750" rx="12" fill="#ffffff" stroke="#000000" stroke-width="2.5"/>
+  <rect x="30" y="50" width="1720" height="750" rx="12" fill="#ffffff" stroke="#000000" stroke-width="2.5"/>
+
+  <!-- TX, switch, and RX modules -->
+  <rect x="70" y="110" width="480" height="620" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+  <rect x="660" y="110" width="480" height="620" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+  <rect x="1250" y="110" width="460" height="620" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+
+  <!-- TX queue and service boxes -->
+  <rect x="100" y="175" width="420" height="88" fill="#ffffff" stroke="#82b366" stroke-width="1.5"/>
+  <rect x="120" y="217" width="82" height="28" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+  <rect x="212" y="217" width="82" height="28" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+  <rect x="304" y="217" width="82" height="28" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+  <rect x="396" y="217" width="102" height="28" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+
+  <rect x="100" y="300" width="420" height="82" fill="#ffffff" stroke="#82b366" stroke-width="1.5"/>
+  <rect x="100" y="420" width="420" height="100" fill="#ffffff" stroke="#82b366" stroke-width="1.5"/>
+  <rect x="100" y="558" width="420" height="108" fill="#ffffff" stroke="#82b366" stroke-width="1.5"/>
+  <rect x="100" y="687" width="420" height="28" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+
+  <!-- TX internal arrows -->
+  <path d="M310,263 V296" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M310,382 V416" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M310,520 V554" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+
+  <!-- Switch pass-through configuration -->
+  <rect x="690" y="175" width="420" height="100" fill="#ffffff" stroke="#d79b00" stroke-width="1.5"/>
+  <path d="M715,238 H731" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <rect x="735" y="218" width="330" height="40" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+  <path d="M1065,238 H1090" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+
+  <!-- Switch queued configuration -->
+  <rect x="690" y="315" width="420" height="280" fill="#ffffff" stroke="#d79b00" stroke-width="1.5"/>
+  <rect x="720" y="385" width="125" height="38" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+  <rect x="720" y="433" width="125" height="38" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+  <rect x="720" y="481" width="125" height="38" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+  <circle cx="935" cy="452" r="48" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/>
+  <rect x="1020" y="414" width="62" height="76" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+  <path d="M845,404 H887" fill="none" stroke="#000000" stroke-width="2" marker-end="url(#ab)"/>
+  <path d="M845,452 H883" fill="none" stroke="#000000" stroke-width="2" marker-end="url(#ab)"/>
+  <path d="M845,500 H887" fill="none" stroke="#000000" stroke-width="2" marker-end="url(#ab)"/>
+  <path d="M983,452 H1016" fill="none" stroke="#000000" stroke-width="2" marker-end="url(#ab)"/>
+  <rect x="690" y="625" width="420" height="75" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+
+  <!-- RX queue and service boxes -->
+  <rect x="1280" y="175" width="400" height="116" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="1310" y="240" width="330" height="26" fill="#f5f5f5" stroke="#666666" stroke-width="1.2"/>
+  <rect x="1310" y="240" width="165" height="26" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.2"/>
+  <rect x="1280" y="338" width="400" height="96" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="1280" y="480" width="400" height="72" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+  <rect x="1280" y="598" width="400" height="102" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+
+  <!-- RX internal arrows -->
+  <path d="M1480,291 V334" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M1480,434 V476" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M1480,552 V594" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+
+  <!-- Selected packet path and returned-credit path -->
+  <path d="M520,612 H605 V238 H686" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M1110,238 H1192 V220 H1276" fill="none" stroke="#000000" stroke-width="2.5" marker-end="url(#ab)"/>
+  <path d="M1280,649 H1192 V792 H310 V524" fill="none" stroke="#6c8ebf" stroke-width="2.5" marker-end="url(#au)"/>
+
+  <!-- Explicit request and response direction paths -->
+  <path d="M365,744 H500" fill="none" stroke="#000000" stroke-width="2" marker-end="url(#ab)"/>
+  <path d="M500,766 H365" fill="none" stroke="#000000" stroke-width="2" marker-end="url(#ab)"/>
+
+  <!-- Evidence panels -->
+  <rect x="30" y="850" width="840" height="160" fill="#f5f5f5" stroke="#666666" stroke-width="2"/>
+  <rect x="900" y="850" width="850" height="160" fill="#fff2cc" stroke="#d6b656" stroke-width="2"/>
+
+  <!-- Labels -->
+  <g font-family="'Times New Roman','Nimbus Roman','Liberation Serif','DejaVu Serif',serif" fill="#000000">
+    <text x="48" y="85" font-size="28">NVLink domain: queue-level TX → switch → RX composition</text>
+    <text x="1725" y="86" font-size="16" text-anchor="end">every numeric module parameter below is DECLARED CANDIDATE</text>
+
+    <text x="310" y="142" font-size="25" text-anchor="middle" dominant-baseline="central">TX module, per endpoint</text>
+    <text x="900" y="142" font-size="25" text-anchor="middle" dominant-baseline="central">switch module, one parameterized box</text>
+    <text x="1480" y="142" font-size="25" text-anchor="middle" dominant-baseline="central">RX module, per endpoint</text>
+
+    <text x="310" y="195" font-size="19" text-anchor="middle" dominant-baseline="central">per-destination egress staging queues</text>
+    <text x="161" y="231" font-size="14" text-anchor="middle" dominant-baseline="central">peer A</text>
+    <text x="253" y="231" font-size="14" text-anchor="middle" dominant-baseline="central">peer B</text>
+    <text x="345" y="231" font-size="14" text-anchor="middle" dominant-baseline="central">peer C</text>
+    <text x="447" y="231" font-size="14" text-anchor="middle" dominant-baseline="central">ready extents</text>
+
+    <text x="310" y="321" font-size="19" text-anchor="middle" dominant-baseline="central">packetizer</text>
+    <text x="310" y="349" font-size="15" text-anchor="middle" dominant-baseline="central">256 B payload (DECLARED CANDIDATE)</text>
+    <text x="310" y="369" font-size="15" text-anchor="middle" dominant-baseline="central">16 B header (DECLARED CANDIDATE)</text>
+
+    <text x="310" y="443" font-size="19" text-anchor="middle" dominant-baseline="central">per-destination credit counter</text>
+    <text x="310" y="473" font-size="15" text-anchor="middle" dominant-baseline="central">256 credits (DECLARED CANDIDATE)</text>
+    <text x="310" y="496" font-size="15" text-anchor="middle" dominant-baseline="central">272 B per credit (DECLARED CANDIDATE)</text>
+    <text x="310" y="513" font-size="13" text-anchor="middle" dominant-baseline="central">consume on send; refill on returned credit</text>
+
+    <text x="310" y="579" font-size="19" text-anchor="middle" dominant-baseline="central">bonded-link scheduler</text>
+    <text x="310" y="608" font-size="15" text-anchor="middle" dominant-baseline="central">4 links (DECLARED CANDIDATE)</text>
+    <text x="310" y="631" font-size="15" text-anchor="middle" dominant-baseline="central">25 GB/s each (DECLARED CANDIDATE)</text>
+    <text x="310" y="651" font-size="15" text-anchor="middle" dominant-baseline="central">earliest available packet striping</text>
+    <text x="310" y="701" font-size="13" text-anchor="middle" dominant-baseline="central">endpoint egress: 300 GB/s (DECLARED CANDIDATE)</text>
+    <text x="110" y="748" font-size="14">request: write data / read control</text>
+    <text x="110" y="770" font-size="14">response: read data</text>
+
+    <text x="900" y="192" font-size="19" text-anchor="middle" dominant-baseline="central">A100 NV4 direct mesh: selected PASS-THROUGH</text>
+    <text x="900" y="238" font-size="15" text-anchor="middle" dominant-baseline="central">exact packet tuple, bytes, ordering, and timestamps</text>
+    <text x="900" y="264" font-size="14" text-anchor="middle" dominant-baseline="central">byte-identical to direct TX → RX composition</text>
+
+    <text x="900" y="340" font-size="19" text-anchor="middle" dominant-baseline="central">NVSwitch-class QUEUED parameterization</text>
+    <text x="782" y="372" font-size="14" text-anchor="middle" dominant-baseline="central">per-port ingress FIFOs</text>
+    <text x="782" y="404" font-size="14" text-anchor="middle" dominant-baseline="central">port A</text>
+    <text x="782" y="452" font-size="14" text-anchor="middle" dominant-baseline="central">port B</text>
+    <text x="782" y="500" font-size="14" text-anchor="middle" dominant-baseline="central">port …</text>
+    <text x="935" y="444" font-size="14" text-anchor="middle" dominant-baseline="central">contention</text>
+    <text x="935" y="462" font-size="14" text-anchor="middle" dominant-baseline="central">point</text>
+    <text x="1051" y="444" font-size="13" text-anchor="middle" dominant-baseline="central">egress</text>
+    <text x="1051" y="462" font-size="13" text-anchor="middle" dominant-baseline="central">service</text>
+    <text x="900" y="548" font-size="14" text-anchor="middle">FIFO arbitration, placement, HOL policy, service and buffer fields</text>
+    <text x="900" y="574" font-size="14" text-anchor="middle">H100 / GH200 path; profile required, no values shipped here</text>
+    <text x="900" y="650" font-size="16" text-anchor="middle" dominant-baseline="central">same NvlinkSwitch interface in both modes</text>
+    <text x="900" y="678" font-size="14" text-anchor="middle" dominant-baseline="central">PASS-THROUGH has no queue parameters; QUEUED supplies them</text>
+
+    <text x="1480" y="196" font-size="19" text-anchor="middle" dominant-baseline="central">per-destination ingress FIFO + occupancy</text>
+    <text x="1480" y="222" font-size="15" text-anchor="middle" dominant-baseline="central">1 MiB capacity (DECLARED CANDIDATE)</text>
+    <text x="1480" y="253" font-size="13" text-anchor="middle" dominant-baseline="central">occupied wire bytes</text>
+    <text x="1480" y="280" font-size="14" text-anchor="middle">ingress: 300 GB/s (DECLARED CANDIDATE)</text>
+
+    <text x="1480" y="364" font-size="19" text-anchor="middle" dominant-baseline="central">extent-sequence reassembly</text>
+    <text x="1480" y="394" font-size="15" text-anchor="middle" dominant-baseline="central">strictly increasing sequence per extent</text>
+    <text x="1480" y="418" font-size="14" text-anchor="middle" dominant-baseline="central">request / response conservation</text>
+
+    <text x="1480" y="505" font-size="19" text-anchor="middle" dominant-baseline="central">in-order per-extent delivery</text>
+    <text x="1480" y="534" font-size="14" text-anchor="middle" dominant-baseline="central">packet completion visible at RX finish</text>
+
+    <text x="1480" y="621" font-size="19" text-anchor="middle" dominant-baseline="central">credit return to sender</text>
+    <text x="1480" y="652" font-size="15" text-anchor="middle" dominant-baseline="central">200,000 ps latency (DECLARED CANDIDATE)</text>
+    <text x="1480" y="681" font-size="14" text-anchor="middle" dominant-baseline="central">refills the matching destination slot</text>
+
+    <rect x="550" y="584" width="105" height="24" fill="#ffffff"/>
+    <text x="602" y="596" font-size="13" text-anchor="middle" dominant-baseline="central">packet stream</text>
+    <rect x="1180" y="772" width="210" height="25" fill="#ffffff"/>
+    <text x="1285" y="785" font-size="14" text-anchor="middle" dominant-baseline="central" fill="#6c8ebf">returned-credit path</text>
+
+    <text x="55" y="880" font-size="20">CURRENT IDENTIFICATION STATUS</text>
+    <text x="55" y="913" font-size="16">TRAF-65 capture: VOID; no TX or RX parameter promotion</text>
+    <text x="55" y="943" font-size="16">A100 switch identity: structural direct-mesh invariant, not measurement</text>
+    <text x="55" y="973" font-size="16">TRAF-70 corrected capture: IN PROGRESS and required before promotion</text>
+
+    <text x="925" y="880" font-size="20">PUBLISHED-MEASUREMENT CHECKS, NOT IDENTIFICATION</text>
+    <text x="925" y="917" font-size="17">ordered pair: candidate 94.056 GB/s; measured 94.00 to 94.07 GB/s</text>
+    <text x="925" y="953" font-size="17">three-way fan-out: candidate 281.699 GB/s; measured 281.65 GB/s</text>
+    <text x="925" y="986" font-size="15">Both checks pass the registered envelope; neither calibrates a queue or parameter.</text>
+  </g>
+</svg>

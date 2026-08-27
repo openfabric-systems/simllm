@@ -229,6 +229,15 @@ wire port goes out to the fabric.
 <img src="resources/figures/xpu-rnic-model.png" width="72%" alt="The xPU and RNIC mental model: one simulated node holds xPU and RNIC devices, each composed from module boxes; PCIe connects the xPU host interface, the RNIC DMA engine and the host CPU with DRAM, so network invocation can come from the host driver, a CPU proxy or the GPU itself; scale-up ports connect peer xPUs inside the node, and the RNIC network port feeds the packet fabric">
 </p>
 
+The selected A100 packet candidate decomposes one scale-up transfer into
+queue-level TX, switch and RX services. Its parameters remain declared
+candidates; the [NVLink domain-model study](docs/design/nvlink-domain-model.md)
+records the exact evidence boundary and analytic bypass.
+
+<p align="center">
+<img src="resources/figures/nvlink-domain-model.png" width="96%" alt="The NVLink queue-level domain: a per-endpoint TX packetizes per-destination staging queues, gates them on returned credits and stripes packets over four bonded links; one parameterized switch is exact pass-through on the A100 direct mesh or exposes ingress FIFOs and a contention point for an NVSwitch-class profile; the per-endpoint RX tracks ingress-buffer occupancy, returns credits, reassembles extent sequences and delivers them in order. All numeric module values are declared candidates, while the pair and fan-out rates are published-measurement checks only.">
+</p>
+
 ### The xPU device
 
 The accelerator is modeled the way the NIC is, as boxes already: the

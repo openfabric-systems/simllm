@@ -285,3 +285,7 @@ tests/test_deployment_curve_comp74_freeze.py text eol=lf
 tests/test_deployment_curve_comp74.py text eol=lf
 tests/test_deployment_curve_comp74_result.py text eol=lf
 docs/papers/deepseek-deployment-disclosures.md text eol=lf
+README.md text eol=lf
+docs/design/nvlink-domain-model.md text eol=lf
+resources/figures/nvlink-domain-model.svg text eol=lf
+resources/figures/nvlink-domain-model.png -text -diff
