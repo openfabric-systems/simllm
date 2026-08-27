@@ -12,6 +12,11 @@ from typing import Any
 import run_study
 import score_hardware
 
+from simllm.backends.htsim_nvlink import (
+    nvlink_candidate_profile_from_mapping,
+    validate_candidate_against_published_a100_envelope,
+)
+
 STUDY_ROOT = Path(__file__).resolve().parent
 DEFAULT_PROFILE = STUDY_ROOT.parent / "a100_nvlink_packet_v1" / "candidate-profile.json"
 PUBLISHED_STATUS = "scored_mixed_parameter_evidence"
@@ -140,7 +145,50 @@ def build_published_profile(
     if isinstance(handoff, dict):
         handoff["measurement_claim"] = bool(expected_patch["changes"])
         handoff["measurement_scope"] = "only parameters listed in parameter_evidence"
+    update_published_envelope_validation(published)
     return published
+
+
+def update_published_envelope_validation(profile: dict[str, Any]) -> None:
+    """Refresh derived pre-TRAF-65 envelope comparisons after scored changes."""
+
+    validation_raw = profile.get("published_envelope_validation")
+    if not isinstance(validation_raw, dict):
+        raise TypeError("published_envelope_validation must be an object")
+    parsed = nvlink_candidate_profile_from_mapping(profile)
+    validation = validate_candidate_against_published_a100_envelope(parsed)
+    payload_fraction = parsed.tx.max_payload_bytes / (
+        parsed.tx.max_payload_bytes + parsed.tx.header_bytes
+    )
+    pair_wire_rate = min(
+        parsed.tx.links_per_peer * parsed.tx.per_link_rate_bytes_per_second,
+        parsed.tx.endpoint_egress_rate_bytes_per_second,
+        parsed.rx.ingress_rate_bytes_per_second,
+    )
+    fanout_wire_rate = min(
+        3 * parsed.tx.links_per_peer * parsed.tx.per_link_rate_bytes_per_second,
+        parsed.tx.endpoint_egress_rate_bytes_per_second,
+        3 * parsed.rx.ingress_rate_bytes_per_second,
+    )
+    validation_raw.update(
+        {
+            "ordered_pair_composed_candidate_gbps": (
+                validation.predicted_pair_payload_rate_gbps
+            ),
+            "ordered_pair_formula_candidate_gbps": pair_wire_rate * payload_fraction / 1e9,
+            "three_way_fanout_composed_candidate_gbps": (
+                validation.predicted_fanout_payload_rate_gbps
+            ),
+            "three_way_fanout_formula_candidate_gbps": (
+                fanout_wire_rate * payload_fraction / 1e9
+            ),
+            "traf70_post_score_within_registered_error": validation.within_registered_error,
+            "traf70_post_score_pair_worst_relative_error": (
+                validation.pair_worst_relative_error
+            ),
+            "traf70_post_score_fanout_relative_error": validation.fanout_relative_error,
+        }
+    )
 
 
 def validate_complete_score(score: dict[str, Any]) -> None:

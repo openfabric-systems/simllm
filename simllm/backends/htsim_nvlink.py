@@ -1,17 +1,17 @@
-"""Candidate packet-level NVLink service for htsim-style compositions.
+"""Packet-level NVLink service for htsim-style compositions.
 
 The active SimLLM intra-node path remains analytical.  This module is an
-additive candidate-profile handoff for TRAF-65: callers that provide no
+additive versioned-profile handoff: callers that provide no
 profile receive their analytical result back by object identity.  Selecting a
 profile composes three independently parameterized services in this order:
 
 ``TX -> switch -> RX``
 
-The four-A100 NV4 profile uses an explicit pass-through switch.  Queues,
+The four-A100 NV4 profile uses an explicit pass-through switch. Queues,
 arbitration, FIFO placement, and head-of-line blocking belong to the switch
 module for future NVSwitch profiles, but none is inferred from a direct mesh.
-All shipped numbers in this module are declared candidates.  The only measured
-values accepted by the validator are the already published A100 envelope rows.
+TRAF-70 publishes evidence per parameter: measured fields, unchanged declared
+candidates, and the structural direct-mesh switch invariant remain distinct.
 """
 
 from __future__ import annotations
@@ -28,6 +28,12 @@ from typing import Generic, TypeVar
 NVLINK_CANDIDATE_PROFILE_SCHEMA = "simllm-htsim-nvlink-candidate-profile-v1"
 NVLINK_CANDIDATE_PROFILE_IMPLEMENTATION = "simllm-htsim-nvlink-domain-v1"
 NVLINK_CANDIDATE_EVIDENCE_CLASS = "declared_candidate_not_hardware_measurement"
+NVLINK_SCORED_PROFILE_STATUS = "scored_mixed_parameter_evidence"
+NVLINK_SCORED_EVIDENCE_CLASS = "parameter_specific_evidence_see_traf70_score"
+NVLINK_REQUEST_RESPONSE_DIRECTION = (
+    "write payload travels as request; read control travels as request and "
+    "read payload travels as response"
+)
 
 _PS_PER_SECOND = 1_000_000_000_000
 _AnalyticResult = TypeVar("_AnalyticResult")
@@ -236,8 +242,117 @@ class NvlinkSwitchConfig:
 
 
 @dataclass(frozen=True, kw_only=True)
+class NvlinkParameterEvidence:
+    """Evidence class and frozen decision-rule result for one parameter."""
+
+    module: str
+    parameter: str
+    status: str
+    value: object
+    candidate_relation: str
+    evidence_class: str
+    rule_id: str
+    reason: str
+
+    def __post_init__(self) -> None:
+        for name in (
+            "module",
+            "parameter",
+            "status",
+            "candidate_relation",
+            "evidence_class",
+            "rule_id",
+            "reason",
+        ):
+            _require_text(name, getattr(self, name))
+        if self.status == "IDENTIFIED":
+            if not self.evidence_class.startswith("measured_"):
+                raise ValueError("identified NVLink evidence must name its measured class")
+            if self.candidate_relation not in {"CONFIRMED", "REFUTED_AND_REPLACED"}:
+                raise ValueError("identified NVLink evidence has an invalid candidate relation")
+        elif self.status == "INCONCLUSIVE":
+            if self.evidence_class != NVLINK_CANDIDATE_EVIDENCE_CLASS:
+                raise ValueError("inconclusive NVLink evidence must remain declared candidate")
+            if self.candidate_relation != "UNCHANGED":
+                raise ValueError("inconclusive NVLink evidence must remain unchanged")
+        elif self.status == "STRUCTURAL":
+            if self.evidence_class != "structural_direct_mesh_invariant_not_measurement":
+                raise ValueError("structural NVLink evidence must not claim measurement")
+            if self.candidate_relation != "RETAINED_STRUCTURAL":
+                raise ValueError("structural NVLink evidence has an invalid candidate relation")
+        else:
+            raise ValueError(f"unsupported NVLink parameter evidence status {self.status!r}")
+
+
+@dataclass(frozen=True, kw_only=True)
+class NvlinkPublishedParameter:
+    """One parameter explicitly carried by the score publication patch."""
+
+    module: str
+    parameter: str
+    value: object
+    candidate_relation: str
+    evidence_class: str
+    rule_id: str
+    publication_surface: str
+
+    def __post_init__(self) -> None:
+        for name in (
+            "module",
+            "parameter",
+            "candidate_relation",
+            "evidence_class",
+            "rule_id",
+            "publication_surface",
+        ):
+            _require_text(name, getattr(self, name))
+        if self.publication_surface not in {
+            "runtime_profile",
+            "existing_htsim_directional_packetization",
+        }:
+            raise ValueError("unsupported NVLink publication surface")
+
+
+@dataclass(frozen=True, kw_only=True)
+class NvlinkScorePublication:
+    """Digest-bound TRAF-70 score metadata attached to a published profile."""
+
+    score_sha256: str
+    score_status: str
+    protected_candidate_before_sha256: str
+    scheduler_job: str
+    runtime_changes: tuple[NvlinkPublishedParameter, ...]
+    metadata_only_changes: tuple[NvlinkPublishedParameter, ...]
+    unchanged_parameter_count: int
+
+    def __post_init__(self) -> None:
+        for name in (
+            "score_sha256",
+            "score_status",
+            "protected_candidate_before_sha256",
+            "scheduler_job",
+        ):
+            _require_text(name, getattr(self, name))
+        for name in ("score_sha256", "protected_candidate_before_sha256"):
+            _require_sha256(name, getattr(self, name))
+        if self.score_status != "COMPLETE_VALID_86_OF_86":
+            raise ValueError("NVLink publication must reference a complete valid score")
+        if any(
+            change.publication_surface != "runtime_profile"
+            for change in self.runtime_changes
+        ):
+            raise ValueError("runtime NVLink changes have an invalid publication surface")
+        if any(
+            change.publication_surface != "existing_htsim_directional_packetization"
+            for change in self.metadata_only_changes
+        ):
+            raise ValueError("metadata-only NVLink changes have an invalid publication surface")
+        _require_nonnegative_int("unchanged_parameter_count", self.unchanged_parameter_count)
+
+
+@dataclass(frozen=True, kw_only=True)
 class NvlinkCandidateProfile:
-    """Versioned, unscored candidate profile handed to downstream tasks."""
+    """Versioned packet profile with candidate or parameter-specific evidence."""
 
     profile_id: str
     status: str
@@ -247,26 +362,46 @@ class NvlinkCandidateProfile:
     switch: NvlinkSwitchConfig
     rx: NvlinkRxConfig
     schema: str = NVLINK_CANDIDATE_PROFILE_SCHEMA
+    parameter_evidence: tuple[NvlinkParameterEvidence, ...] = ()
+    score_publication: NvlinkScorePublication | None = None
 
     def __post_init__(self) -> None:
         for name in ("profile_id", "status", "evidence_class", "freeze_sha256"):
             _require_text(name, getattr(self, name))
         if self.schema != NVLINK_CANDIDATE_PROFILE_SCHEMA:
             raise ValueError(f"unsupported NVLink candidate schema {self.schema!r}")
-        if self.status != "candidate":
-            raise ValueError("TRAF-65 handoff must remain a candidate until hardware scoring")
-        if self.evidence_class != NVLINK_CANDIDATE_EVIDENCE_CLASS:
-            raise ValueError("candidate profile must not claim measured evidence")
-        if len(self.freeze_sha256) != 64 or any(
-            character not in "0123456789abcdef" for character in self.freeze_sha256
-        ):
-            raise ValueError("freeze_sha256 must be a lowercase SHA-256 digest")
+        _require_sha256("freeze_sha256", self.freeze_sha256)
         if not isinstance(self.tx, NvlinkTxConfig):
             raise TypeError("tx must be an NvlinkTxConfig")
         if not isinstance(self.switch, NvlinkSwitchConfig):
             raise TypeError("switch must be an NvlinkSwitchConfig")
         if not isinstance(self.rx, NvlinkRxConfig):
             raise TypeError("rx must be an NvlinkRxConfig")
+        if self.status == "candidate":
+            if self.evidence_class != NVLINK_CANDIDATE_EVIDENCE_CLASS:
+                raise ValueError("candidate profile must not claim measured evidence")
+            if self.parameter_evidence or self.score_publication is not None:
+                raise ValueError("unscored candidate must not contain score evidence")
+            return
+        if self.status != NVLINK_SCORED_PROFILE_STATUS:
+            raise ValueError(f"unsupported NVLink profile status {self.status!r}")
+        if self.evidence_class != NVLINK_SCORED_EVIDENCE_CLASS:
+            raise ValueError("scored profile must declare parameter-specific evidence")
+        if self.score_publication is None:
+            raise ValueError("scored profile is missing its score publication")
+        _validate_scored_profile(self)
+
+    def evidence_for(self, module: str, parameter: str) -> NvlinkParameterEvidence:
+        """Return the unique evidence record for a module parameter."""
+
+        matches = tuple(
+            evidence
+            for evidence in self.parameter_evidence
+            if evidence.module == module and evidence.parameter == parameter
+        )
+        if len(matches) != 1:
+            raise KeyError(f"NVLink evidence is not uniquely defined for {module}.{parameter}")
+        return matches[0]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -600,16 +735,26 @@ class NvlinkDomainService(Generic[_AnalyticResult]):
 
 
 def load_nvlink_candidate_profile(path: str | Path) -> NvlinkCandidateProfile:
-    """Load the versioned candidate-profile handoff."""
+    """Load a versioned candidate or scored mixed-evidence profile."""
 
     with open(path, encoding="utf-8", newline="") as handle:
         raw = json.load(handle)
+    return nvlink_candidate_profile_from_mapping(raw)
+
+
+def nvlink_candidate_profile_from_mapping(
+    raw: Mapping[object, object],
+) -> NvlinkCandidateProfile:
+    """Parse an already-loaded candidate or scored profile mapping."""
+
     if not isinstance(raw, Mapping):
         raise TypeError("NVLink candidate profile must be a JSON object")
     tx_raw = _mapping_field(raw, "tx")
     switch_raw = _mapping_field(raw, "switch")
     rx_raw = _mapping_field(raw, "rx")
     fifo_value = switch_raw.get("fifo_placement")
+    parameter_evidence = _load_parameter_evidence(raw.get("parameter_evidence"))
+    score_publication = _load_score_publication(raw.get("traf70_score_publication"))
     return NvlinkCandidateProfile(
         schema=str(raw.get("schema", "")),
         profile_id=str(raw.get("profile_id", "")),
@@ -626,6 +771,8 @@ def load_nvlink_candidate_profile(path: str | Path) -> NvlinkCandidateProfile:
             head_of_line_blocking=switch_raw.get("head_of_line_blocking"),
         ),
         rx=NvlinkRxConfig(**rx_raw),
+        parameter_evidence=parameter_evidence,
+        score_publication=score_publication,
     )
 
 
@@ -731,11 +878,151 @@ def _mapping_field(raw: Mapping[object, object], name: str) -> dict[str, object]
     return {str(key): item for key, item in value.items()}
 
 
+def _load_parameter_evidence(raw: object) -> tuple[NvlinkParameterEvidence, ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, Mapping):
+        raise TypeError("NVLink parameter_evidence must be an object")
+    records = []
+    for module, module_raw in raw.items():
+        if not isinstance(module, str) or not isinstance(module_raw, Mapping):
+            raise TypeError("NVLink parameter_evidence modules must be named objects")
+        for parameter, evidence_raw in module_raw.items():
+            if not isinstance(parameter, str) or not isinstance(evidence_raw, Mapping):
+                raise TypeError("NVLink parameter evidence entries must be named objects")
+            records.append(
+                NvlinkParameterEvidence(
+                    module=module,
+                    parameter=parameter,
+                    status=str(evidence_raw.get("status", "")),
+                    value=evidence_raw.get("value"),
+                    candidate_relation=str(evidence_raw.get("candidate_relation", "")),
+                    evidence_class=str(evidence_raw.get("evidence_class", "")),
+                    rule_id=str(evidence_raw.get("rule_id", "")),
+                    reason=str(evidence_raw.get("reason", "")),
+                )
+            )
+    return tuple(records)
+
+
+def _load_score_publication(raw: object) -> NvlinkScorePublication | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping):
+        raise TypeError("NVLink traf70_score_publication must be an object")
+    return NvlinkScorePublication(
+        score_sha256=str(raw.get("score_sha256", "")),
+        score_status=str(raw.get("score_status", "")),
+        protected_candidate_before_sha256=str(
+            raw.get("protected_candidate_before_sha256", "")
+        ),
+        scheduler_job=str(raw.get("scheduler_job", "")),
+        runtime_changes=_load_published_changes(raw.get("runtime_changes")),
+        metadata_only_changes=_load_published_changes(raw.get("metadata_only_changes")),
+        unchanged_parameter_count=raw.get("unchanged_parameter_count", -1),
+    )
+
+
+def _load_published_changes(raw: object) -> tuple[NvlinkPublishedParameter, ...]:
+    if not isinstance(raw, list):
+        raise TypeError("NVLink published parameter changes must be a list")
+    changes = []
+    for item in raw:
+        if not isinstance(item, Mapping):
+            raise TypeError("NVLink published parameter changes must be objects")
+        changes.append(
+            NvlinkPublishedParameter(
+                module=str(item.get("module", "")),
+                parameter=str(item.get("parameter", "")),
+                value=item.get("value"),
+                candidate_relation=str(item.get("candidate_relation", "")),
+                evidence_class=str(item.get("evidence_class", "")),
+                rule_id=str(item.get("rule_id", "")),
+                publication_surface=str(item.get("publication_surface", "")),
+            )
+        )
+    return tuple(changes)
+
+
+def _validate_scored_profile(profile: NvlinkCandidateProfile) -> None:
+    expected_values: dict[tuple[str, str], object] = {
+        ("tx", "max_payload_bytes"): profile.tx.max_payload_bytes,
+        ("tx", "header_bytes"): profile.tx.header_bytes,
+        ("tx", "links_per_peer"): profile.tx.links_per_peer,
+        ("tx", "per_link_rate_bytes_per_second"): (
+            profile.tx.per_link_rate_bytes_per_second
+        ),
+        ("tx", "endpoint_egress_rate_bytes_per_second"): (
+            profile.tx.endpoint_egress_rate_bytes_per_second
+        ),
+        ("tx", "bond_policy"): profile.tx.bond_policy,
+        ("tx", "credits_per_destination"): profile.tx.credits_per_destination,
+        ("tx", "credit_unit_bytes"): profile.tx.credit_unit_bytes,
+        ("tx", "request_response_direction"): NVLINK_REQUEST_RESPONSE_DIRECTION,
+        ("switch", "mode"): profile.switch.mode.value,
+        ("rx", "ingress_rate_bytes_per_second"): profile.rx.ingress_rate_bytes_per_second,
+        ("rx", "buffer_capacity_bytes"): profile.rx.buffer_capacity_bytes,
+        ("rx", "credit_return_latency_ps"): profile.rx.credit_return_latency_ps,
+        ("rx", "reassembly_policy"): profile.rx.reassembly_policy,
+        ("rx", "delivery_order"): profile.rx.delivery_order,
+        ("tx_rx", "queue_scope"): None,
+    }
+    evidence_by_key = {
+        (evidence.module, evidence.parameter): evidence
+        for evidence in profile.parameter_evidence
+    }
+    if len(evidence_by_key) != len(profile.parameter_evidence):
+        raise ValueError("scored NVLink profile contains duplicate parameter evidence")
+    if evidence_by_key.keys() != expected_values.keys():
+        raise ValueError("scored NVLink profile does not cover the complete parameter catalog")
+    for key, expected_value in expected_values.items():
+        if evidence_by_key[key].value != expected_value:
+            raise ValueError(f"scored evidence value does not match runtime parameter {key}")
+
+    publication = profile.score_publication
+    if publication is None:
+        raise ValueError("scored profile is missing its score publication")
+    published_changes = (*publication.runtime_changes, *publication.metadata_only_changes)
+    published_by_key = {
+        (change.module, change.parameter): change for change in published_changes
+    }
+    if len(published_by_key) != len(published_changes):
+        raise ValueError("scored NVLink profile publishes a parameter more than once")
+    identified_keys = {
+        key for key, evidence in evidence_by_key.items() if evidence.status == "IDENTIFIED"
+    }
+    if published_by_key.keys() != identified_keys:
+        raise ValueError("score publication does not exactly match identified parameters")
+    if publication.unchanged_parameter_count != len(expected_values) - len(identified_keys):
+        raise ValueError("score publication has an invalid unchanged parameter count")
+    for key, change in published_by_key.items():
+        evidence = evidence_by_key[key]
+        for name in ("value", "candidate_relation", "evidence_class", "rule_id"):
+            if getattr(change, name) != getattr(evidence, name):
+                raise ValueError(f"published change does not match parameter evidence for {key}")
+    runtime_keys = {(change.module, change.parameter) for change in publication.runtime_changes}
+    if runtime_keys - (expected_values.keys() - {("tx", "request_response_direction")}):
+        raise ValueError("score publication names an unknown runtime parameter")
+    metadata_keys = {
+        (change.module, change.parameter) for change in publication.metadata_only_changes
+    }
+    if metadata_keys - {("tx", "request_response_direction")}:
+        raise ValueError("score publication has an invalid metadata-only parameter set")
+
+
 def _require_text(name: str, value: object) -> None:
     if not isinstance(value, str):
         raise TypeError(f"{name} must be a string")
     if not value:
         raise ValueError(f"{name} must not be empty")
+
+
+def _require_sha256(name: str, value: object) -> None:
+    _require_text(name, value)
+    if len(value) != 64 or any(
+        character not in "0123456789abcdef" for character in value
+    ):
+        raise ValueError(f"{name} must be a lowercase SHA-256 digest")
 
 
 def _require_enum(name: str, value: object, enum_type: type[Enum]) -> None:

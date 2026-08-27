@@ -35,6 +35,9 @@ PROTECTED_CANDIDATE_PROFILE_PATH = STUDY_ROOT.parent / "a100_nvlink_packet_v1" /
 PROTECTED_CANDIDATE_SHA256 = (
     "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f"
 )
+PUBLISHED_SCORE_PATH = STUDY_ROOT / "hardware-score.json"
+PUBLISHED_PROFILE_STATUS = "scored_mixed_parameter_evidence"
+PUBLISHED_PROFILE_EVIDENCE_CLASS = "parameter_specific_evidence_see_traf70_score"
 IMPLEMENTATION_PATHS = (
     STUDY_ROOT / "case_matrix.py",
     STUDY_ROOT / "nvlink_packet_lane.cu",
@@ -158,14 +161,41 @@ def _load_freeze(expected_digest: str) -> dict[str, Any]:
 
 
 def _verify_protected_candidate() -> None:
-    if _sha256(PROTECTED_CANDIDATE_PROFILE_PATH) != PROTECTED_CANDIDATE_SHA256:
-        raise RuntimeError("protected A100 candidate changed before TRAF-70 scoring")
     with open(PROTECTED_CANDIDATE_PROFILE_PATH, encoding="utf-8", newline="") as handle:
         profile = json.load(handle)
-    if profile.get("status") != "candidate":
-        raise RuntimeError("TRAF-70 profile must remain candidate before hardware scoring")
-    if profile.get("evidence_class") != "declared_candidate_not_hardware_measurement":
-        raise RuntimeError("TRAF-70 candidate profile makes an invalid evidence claim")
+    profile_sha256 = _sha256(PROTECTED_CANDIDATE_PROFILE_PATH)
+    if profile_sha256 == PROTECTED_CANDIDATE_SHA256:
+        if profile.get("status") != "candidate":
+            raise RuntimeError("TRAF-70 profile must remain candidate before hardware scoring")
+        if profile.get("evidence_class") != "declared_candidate_not_hardware_measurement":
+            raise RuntimeError("TRAF-70 candidate profile makes an invalid evidence claim")
+        return
+
+    if profile.get("status") != PUBLISHED_PROFILE_STATUS:
+        raise RuntimeError("A100 profile is neither the protected candidate nor scored output")
+    if profile.get("evidence_class") != PUBLISHED_PROFILE_EVIDENCE_CLASS:
+        raise RuntimeError("scored A100 profile lacks parameter-specific evidence")
+    if profile.get("freeze_sha256") != FREEZE_SHA256:
+        raise RuntimeError("scored A100 profile is not bound to the TRAF-70 freeze")
+    publication = profile.get("traf70_score_publication")
+    if not isinstance(publication, dict):
+        raise TypeError("scored A100 profile lacks publication metadata")
+    if publication.get("protected_candidate_before_sha256") != PROTECTED_CANDIDATE_SHA256:
+        raise RuntimeError("scored A100 profile does not descend from the protected candidate")
+    if publication.get("score_status") != "COMPLETE_VALID_86_OF_86":
+        raise RuntimeError("scored A100 profile does not cite a complete valid score")
+    if not PUBLISHED_SCORE_PATH.is_file():
+        raise RuntimeError("scored A100 profile cites a missing TRAF-70 score")
+    if publication.get("score_sha256") != _sha256(PUBLISHED_SCORE_PATH):
+        raise RuntimeError("scored A100 profile score digest does not match the published score")
+    with open(PUBLISHED_SCORE_PATH, encoding="utf-8", newline="") as handle:
+        score = json.load(handle)
+    if score.get("status") != "COMPLETE_VALID_86_OF_86":
+        raise RuntimeError("published TRAF-70 score is not complete and valid")
+    if score.get("freeze_sha256") != FREEZE_SHA256:
+        raise RuntimeError("published TRAF-70 score has the wrong freeze digest")
+    if score.get("protected_candidate_before_sha256") != PROTECTED_CANDIDATE_SHA256:
+        raise RuntimeError("published TRAF-70 score has the wrong candidate digest")
 
 
 def _cells(freeze: dict[str, Any]) -> tuple[Cell, ...]:

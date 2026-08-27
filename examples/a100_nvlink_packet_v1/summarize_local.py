@@ -47,8 +47,8 @@ def main() -> int:
                 continue
             if plan.get("implementation_sha256") != run_study._implementation_digest():
                 continue
-            if plan.get("candidate_profile_sha256") != run_study._sha256(
-                run_study.CANDIDATE_PROFILE_PATH
+            if plan.get("candidate_profile_sha256") not in (
+                run_study._admissible_candidate_plan_digests()
             ):
                 continue
             if summary.get("status") != "mock_complete":

@@ -30,6 +30,13 @@ STUDY_ROOT = Path(__file__).resolve().parent
 REPOSITORY_ROOT = STUDY_ROOT.parents[1]
 EXPECTATIONS_PATH = STUDY_ROOT / "expectations.json"
 CANDIDATE_PROFILE_PATH = STUDY_ROOT / "candidate-profile.json"
+PROTECTED_CANDIDATE_SHA256 = (
+    "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f"
+)
+TRAF70_FREEZE_SHA256 = (
+    "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6"
+)
+TRAF70_SCORE_PATH = STUDY_ROOT.parent / "a100_nvlink_packet_v2" / "hardware-score.json"
 IMPLEMENTATION_PATHS = (
     STUDY_ROOT / "case_matrix.py",
     STUDY_ROOT / "nvlink_packet_lane.cu",
@@ -154,12 +161,39 @@ def _load_freeze(expected_digest: str) -> dict[str, Any]:
 def _verify_candidate_handoff(expected_digest: str) -> None:
     with open(CANDIDATE_PROFILE_PATH, encoding="utf-8", newline="") as handle:
         profile = json.load(handle)
-    if profile.get("freeze_sha256") != expected_digest:
-        raise RuntimeError("candidate profile does not name the frozen expectations digest")
-    if profile.get("status") != "candidate":
-        raise RuntimeError("TRAF-65 profile must remain candidate before hardware scoring")
-    if profile.get("evidence_class") != "declared_candidate_not_hardware_measurement":
-        raise RuntimeError("TRAF-65 candidate profile makes an invalid evidence claim")
+    profile_sha256 = _sha256(CANDIDATE_PROFILE_PATH)
+    if profile_sha256 == PROTECTED_CANDIDATE_SHA256:
+        if profile.get("freeze_sha256") != expected_digest:
+            raise RuntimeError("candidate profile does not name the frozen expectations digest")
+        if profile.get("status") != "candidate":
+            raise RuntimeError("TRAF-65 profile must remain candidate before hardware scoring")
+        if profile.get("evidence_class") != "declared_candidate_not_hardware_measurement":
+            raise RuntimeError("TRAF-65 candidate profile makes an invalid evidence claim")
+        return
+
+    if profile.get("status") != "scored_mixed_parameter_evidence":
+        raise RuntimeError("A100 profile is neither the protected candidate nor scored output")
+    if profile.get("evidence_class") != "parameter_specific_evidence_see_traf70_score":
+        raise RuntimeError("scored A100 profile lacks parameter-specific evidence")
+    if profile.get("freeze_sha256") != TRAF70_FREEZE_SHA256:
+        raise RuntimeError("scored A100 profile is not bound to the TRAF-70 freeze")
+    publication = profile.get("traf70_score_publication")
+    if not isinstance(publication, dict):
+        raise TypeError("scored A100 profile lacks publication metadata")
+    if publication.get("protected_candidate_before_sha256") != PROTECTED_CANDIDATE_SHA256:
+        raise RuntimeError("scored A100 profile does not descend from the protected candidate")
+    if publication.get("score_status") != "COMPLETE_VALID_86_OF_86":
+        raise RuntimeError("scored A100 profile does not cite a complete valid score")
+    if not TRAF70_SCORE_PATH.is_file():
+        raise RuntimeError("scored A100 profile cites a missing TRAF-70 score")
+    if publication.get("score_sha256") != _sha256(TRAF70_SCORE_PATH):
+        raise RuntimeError("scored A100 profile score digest does not match the published score")
+
+
+def _admissible_candidate_plan_digests() -> set[str]:
+    """Accept the frozen capture input and the later scored publication."""
+
+    return {PROTECTED_CANDIDATE_SHA256, _sha256(CANDIDATE_PROFILE_PATH)}
 
 
 def _cells(freeze: dict[str, Any]) -> tuple[Cell, ...]:
@@ -518,7 +552,7 @@ def _attempt_matches(attempt: Path, args: argparse.Namespace) -> bool:
         return False
     if plan.get("implementation_sha256") != _implementation_digest():
         return False
-    if plan.get("candidate_profile_sha256") != _sha256(CANDIDATE_PROFILE_PATH):
+    if plan.get("candidate_profile_sha256") not in _admissible_candidate_plan_digests():
         return False
     if args.binary is None or plan.get("producer_binary_sha256") != _sha256(args.binary):
         return False
@@ -544,7 +578,9 @@ def _pending_indices(cells: tuple[Cell, ...], args: argparse.Namespace) -> tuple
                 continue
             if plan.get("implementation_sha256") != _implementation_digest():
                 continue
-            if plan.get("candidate_profile_sha256") != _sha256(CANDIDATE_PROFILE_PATH):
+            if plan.get("candidate_profile_sha256") not in (
+                _admissible_candidate_plan_digests()
+            ):
                 continue
             if args.expected_head and plan.get("expected_head") != args.expected_head:
                 continue

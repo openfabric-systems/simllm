@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import json
 import os
@@ -17,6 +18,9 @@ PROTECTED_EXPECTATIONS_SHA256 = (
 )
 PROTECTED_CANDIDATE_SHA256 = (
     "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f"
+)
+PUBLISHED_CANDIDATE_SHA256 = (
+    "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2"
 )
 
 
@@ -49,14 +53,19 @@ def test_expectations_freeze_is_immutable_and_complete():
     }
 
 
-def test_traf65_and_candidate_inputs_remain_byte_locked_before_score():
+def test_traf65_stays_locked_and_candidate_records_its_score_boundary():
     expectations = PREVIOUS_STUDY / "expectations.json"
     candidate = PREVIOUS_STUDY / "candidate-profile.json"
+    profile = json.loads(candidate.read_text(encoding="utf-8"))
 
     assert hashlib.sha256(expectations.read_bytes()).hexdigest() == (
         PROTECTED_EXPECTATIONS_SHA256
     )
-    assert hashlib.sha256(candidate.read_bytes()).hexdigest() == PROTECTED_CANDIDATE_SHA256
+    assert hashlib.sha256(candidate.read_bytes()).hexdigest() == PUBLISHED_CANDIDATE_SHA256
+    assert profile["status"] == "scored_mixed_parameter_evidence"
+    assert profile["traf70_score_publication"][
+        "protected_candidate_before_sha256"
+    ] == PROTECTED_CANDIDATE_SHA256
 
 
 def test_cell_registry_has_80_isolated_5_ordered_and_1_all_frame():
@@ -383,32 +392,57 @@ def test_publication_path_requires_complete_score_and_preserves_input(tmp_path):
         ],
     }
     for result in score["module_parameter_identification"]:
-        result["status"] = "INCONCLUSIVE"
-        result["reason"] = "synthetic publication-path test"
+        if result["status"] != "STRUCTURAL":
+            result["status"] = "INCONCLUSIVE"
+            result["candidate_relation"] = "UNCHANGED"
+            result["evidence_class"] = "declared_candidate_not_hardware_measurement"
+            result["reason"] = "synthetic publication-path test"
     score["profile_patch"] = {
         "status": "APPLY_EXACTLY_LISTED_CHANGES_AFTER_SCORE_PUBLICATION",
         "changes": [],
         "unchanged_parameter_count": len(score["module_parameter_identification"]),
     }
-    score_path.write_text(json.dumps(score) + "\n", encoding="utf-8", newline="\n")
-    output = tmp_path / "published.json"
-    published_run = subprocess.run(
-        (
-            sys.executable,
-            str(STUDY / "publish_score.py"),
-            "--score",
-            str(score_path),
-            "--output",
-            str(output),
-        ),
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        timeout=30,
-        check=False,
-    )
-    assert published_run.returncode == 0, published_run.stderr
-    published = json.loads(output.read_text())
+    pre_score_profile = copy.deepcopy(json.loads(candidate.read_text(encoding="utf-8")))
+    pre_score_profile["status"] = "candidate"
+    pre_score_profile["evidence_class"] = "declared_candidate_not_hardware_measurement"
+    pre_score_profile["freeze_path"] = "examples/a100_nvlink_packet_v1/expectations.json"
+    pre_score_profile["freeze_sha256"] = PROTECTED_EXPECTATIONS_SHA256
+    pre_score_profile["handoff"]["measurement_claim"] = False
+    pre_score_profile["handoff"].pop("measurement_scope", None)
+    pre_score_profile["tx"]["endpoint_egress_rate_bytes_per_second"] = 300_000_000_000
+    pre_score_profile["rx"]["ingress_rate_bytes_per_second"] = 300_000_000_000
+    pre_score_profile.pop("parameter_evidence")
+    pre_score_profile.pop("traf70_score_publication")
+
+    previous_run_study = sys.modules.get("run_study")
+    previous_score_hardware = sys.modules.get("score_hardware")
+    previous_publish_score = sys.modules.get("publish_score")
+    sys.path.insert(0, str(STUDY))
+    try:
+        import publish_score
+
+        published = publish_score.build_published_profile(
+            score,
+            pre_score_profile,
+            score_path=score_path,
+            score_sha256="0" * 64,
+            profile_sha256=PROTECTED_CANDIDATE_SHA256,
+        )
+    finally:
+        sys.path.pop(0)
+        for name, previous in (
+            ("run_study", previous_run_study),
+            ("score_hardware", previous_score_hardware),
+            ("publish_score", previous_publish_score),
+        ):
+            if previous is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = previous
+
     assert published["status"] == "scored_mixed_parameter_evidence"
     assert published["traf70_score_publication"]["runtime_changes"] == []
+    assert published["published_envelope_validation"][
+        "traf70_post_score_within_registered_error"
+    ] is True
     assert candidate.read_bytes() == before

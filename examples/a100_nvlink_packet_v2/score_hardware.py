@@ -21,6 +21,9 @@ STUDY_ROOT = Path(__file__).resolve().parent
 EXPECTATIONS_PATH = STUDY_ROOT / "expectations.json"
 FREEZE_SHA256 = run_study.FREEZE_SHA256
 PROTECTED_CANDIDATE_SHA256 = run_study.PROTECTED_CANDIDATE_SHA256
+CAPTURE_IMPLEMENTATION_SHA256 = (
+    "c9afbb2abe234933b478e2ee0bdf624cdb37ab5537d9888e118ba87aef6cdc96"
+)
 OBSERVATION_SCHEMA = "simllm-a100-nvlink-packet-observation-v2"
 SCORE_SCHEMA = "simllm-a100-nvlink-packet-hardware-score-v2"
 GUARD_IDS = tuple(f"FG{index:02d}" for index in range(1, 11))
@@ -232,8 +235,7 @@ def audit_hardware(
 def load_expectations() -> dict[str, Any]:
     if sha256(EXPECTATIONS_PATH) != FREEZE_SHA256:
         raise RuntimeError("TRAF-70 expectations digest changed")
-    if sha256(run_study.PROTECTED_CANDIDATE_PROFILE_PATH) != PROTECTED_CANDIDATE_SHA256:
-        raise RuntimeError("protected A100 candidate changed before score publication")
+    run_study._verify_protected_candidate()
     payload = load_json(EXPECTATIONS_PATH)
     if payload.get("status") != "expectations_only_frozen_before_harness":
         raise RuntimeError("TRAF-70 expectations status changed")
@@ -304,7 +306,7 @@ def load_attempt(path: Path, cell: CellSpec, *, expected_head: str) -> Attempt:
         "mode": "hardware",
         "freeze_sha256": FREEZE_SHA256,
         "protected_candidate_profile_sha256": PROTECTED_CANDIDATE_SHA256,
-        "implementation_sha256": run_study._implementation_digest(),
+        "implementation_sha256": CAPTURE_IMPLEMENTATION_SHA256,
     }
     for key, expected in expected_plan.items():
         if plan.get(key) != expected:
