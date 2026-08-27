@@ -253,3 +253,6 @@ notes/2026-08-27-core54run4-source-allowlist.md text eol=lf
 examples/deployment_curve_v1/scored_run4_model_preregistration.json text eol=lf
 examples/deployment_curve_v1/flagship_run4_field_reader.py text eol=lf
 tests/test_deployment_curve_run4_field_reader.py text eol=lf
+examples/deployment_curve_v1/scored_run4_expectations.json text eol=lf
+examples/deployment_curve_v1/scored_run4_expectations.md text eol=lf
+tests/test_deployment_curve_run4_freeze.py text eol=lf
