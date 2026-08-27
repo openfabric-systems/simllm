@@ -605,8 +605,7 @@ struct HardwareContext {
         const auto state_status =
             nvmlDeviceGetNvLinkState(nvml_devices[device], link, &active);
         if (state_status == NVML_ERROR_INVALID_ARGUMENT) break;
-        NVML_CHECK(state_status);
-        if (active != NVML_FEATURE_ENABLED) continue;
+        if (state_status != NVML_SUCCESS || active != NVML_FEATURE_ENABLED) continue;
         int remote_gpu = -1;
         nvmlPciInfo_t remote{};
         const auto remote_status =
