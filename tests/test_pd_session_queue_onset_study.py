@@ -132,6 +132,9 @@ def test_runner_pins_the_committed_expectations_only_freeze() -> None:
     assert study.QUEUE_MODEL_SHA256 == (
         "d3b63d1a50e3615c7c65d0396a6dc038bbdcab569d43c5e8620babb9fbbce1e3"
     )
+    base = study._base_runner_module()
+    assert base.HANDOFF_PS == 100_000_000
+    assert base.OFFERED_LOADS == (250, 500, 1_000, 2_000, 4_000, 8_000)
 
 
 def test_exact_model_observation_identifies_onset_without_delay_rescore() -> None:

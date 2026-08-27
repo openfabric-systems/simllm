@@ -50,6 +50,7 @@ FREEZE_BUILDER_PATH = STUDY_DIR / "freeze_expectations.py"
 REFERENCE_STUDY_DIR = REPOSITORY_ROOT / "examples" / "pd_session_load_delay_v1"
 SURFACE_PATH = REFERENCE_STUDY_DIR / "surface.json"
 BASE_RUNNER_PATH = REFERENCE_STUDY_DIR / "run_study.py"
+BASE_QUEUE_MODEL_PATH = REFERENCE_STUDY_DIR / "queue_model.py"
 
 FREEZE_COMMIT = "b3e225e6a4b97280c86536bef136e9945cc239fb"
 EXPECTATIONS_SHA256 = (
@@ -194,6 +195,24 @@ def _surface_points(surface: dict[str, Any]) -> tuple[BatchServicePoint, ...]:
     )
 
 
+def _base_runner_module():
+    """Load the historical helpers with their sibling frozen queue model."""
+
+    previous = sys.modules.get("queue_model")
+    base_queue_model = _module(
+        BASE_QUEUE_MODEL_PATH,
+        "vllm41_historical_queue_model",
+    )
+    sys.modules["queue_model"] = base_queue_model
+    try:
+        return _module(BASE_RUNNER_PATH, "vllm41_base_session_helpers")
+    finally:
+        if previous is None:
+            del sys.modules["queue_model"]
+        else:
+            sys.modules["queue_model"] = previous
+
+
 def _request_id(
     prefill_engines: int,
     decode_engines: int,
@@ -295,7 +314,7 @@ def run_observation(run_dir: Path) -> dict[str, Any]:
     from simllm.adapters.vllm.pd_session import VllmDisaggregatedSession
 
     vllm_version = _validate_runtime()
-    base = _module(BASE_RUNNER_PATH, "vllm41_base_session_helpers")
+    base = _base_runner_module()
     prompt = base._prompt_tokens()
     surface = _load_json(SURFACE_PATH)
     points = _surface_points(surface)
