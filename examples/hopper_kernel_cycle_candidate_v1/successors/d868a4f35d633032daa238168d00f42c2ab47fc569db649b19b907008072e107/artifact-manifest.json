@@ -1,0 +1,25 @@
+{
+  "artifacts": [
+    {
+      "bytes": 60675,
+      "name": "candidate-record.json",
+      "sha256": "d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107"
+    },
+    {
+      "bytes": 49255,
+      "name": "device-service-entries.json",
+      "sha256": "1a8815dcdf3d8df4f8143b845c19be9c3b8a93846e1696cf713eaba2767d29b5"
+    },
+    {
+      "bytes": 33587,
+      "name": "profile-table.json",
+      "sha256": "ff5f4d5376a90a82fd3588355c3671e02c06778290dc906416374b496f2e08f1"
+    },
+    {
+      "bytes": 3629,
+      "name": "result.json",
+      "sha256": "e38f08dd231b6dec681b90135a5ad9c9588f4627df9778680379572c2ae0a20d"
+    }
+  ],
+  "schema": "simllm-hopper-candidate-artifact-manifest-v1"
+}

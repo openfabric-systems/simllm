@@ -906,9 +906,34 @@ performed, and decode pricing, TRAF-65 and the NVLink scope remain untouched.
 The third scored run alone owns the held-out comparison; TRAF-68 remains the
 next reserved traffic ID.
 
+The first frozen
+[two-network bottleneck map](../../examples/deployment_frontier_v1/RESULTS.md)
+publishes both elapsed attributions and both raw excesses at all 18 CORE-62
+points. The raw fabric mechanism is serialization in the two-node arm and
+incast in the nine-node arm; the candidate intra-node module is TX credits and
+packetization throughout, with zero pass-through switch contention. Seventeen
+points are roofline-bound, one B100 batch-32 point is intra-node-bound and no
+point is inter-node-bound. The nine-node batch-32 raw incast excess is
+6.743004420 ms but remains off critical below the 9.535537623 ms H100 roofline.
+That misses the frozen positive elapsed-incast direction, so the published
+study is a refutation and TRAF-68 stays open. The A100 NVLink3 profile remains
+cross-architecture candidate evidence, not H100 or B100 measurement evidence.
+
 ## Open tasks
 
 ### Precision
+
+- TRAF-68 (Precision; P1; M): publish the two-network bottleneck study for the
+  CORE-62 frontier. At every frozen configuration and batch, retain the
+  inter-node htsim excess over ideal zero-contention wire service and the
+  intra-node three-module NVLink candidate excess over ideal pair wire service,
+  then name the binding network and its dominant mechanism or module. The
+  study must distinguish fabric protocol, serialization and incast from
+  candidate TX credits and packetization, switch contention and RX return;
+  disclose the A100 candidate's cross-architecture status wherever it prices
+  H100 or B100; render analytical lines, roofline dots and stacked elapsed
+  attribution; and leave every prior scored flagship artifact byte-identical.
+  Close only if all swept points have complete byte and mechanism evidence.
 
 - TRAF-51 (Precision; P1; L): complete the Slingshot fabric calibration
   beyond the steady-state partial. The wave-19 comparison
