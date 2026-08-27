@@ -190,7 +190,12 @@ required, unknown fields and values are rejected, and a string is never
 coerced to a nearby level. Construction validates the combination and refuses
 an incompatible one with a diagnostic that names both seams and both escapes:
 `composed-native` RNIC hardware cannot run on the `rnic-nn-fluid` closed form,
-because the fluid path is the explicit nonstructural bypass anchor.
+because the fluid path is the explicit nonstructural bypass anchor. It also
+cannot run on `analytic-composition`, whose in-process timing model likewise
+requires `timing-neutral-bypass`; each refused pair keeps its own exact
+diagnostic. Backend spellings map `rnic-nn-fluid` to the fluid level,
+`analytic-composition` to the analytic level, and the existing `rnic-nn`,
+`rnic-cn` and `dcqcn` spellings to `packet-level`.
 `PrecisionConfig.compatibility()` is the byte-locked baseline level at every
 seam.
 
@@ -1037,6 +1042,13 @@ because the nine-node htsim incast service remains below the H100 roofline over
 batch per GPU 1 through 32. The complete gate and refuted map remain published in
 [the analytical frontier result](../../examples/deployment_frontier_v1/RESULTS.md).
 TRAF-69 and COMP-77 remain reserved because the unexplained residual is zero.
+
+The precision surface includes `analytic-composition` as a distinct network
+level. It serializes through the existing strict configuration schema, maps
+from its exact backend profile spelling and refuses composed-native RNIC
+hardware with the frozen analytic diagnostic. The existing fluid diagnostic,
+compatibility selection and packet-profile mappings retain their accepted
+bytes.
 
 ## Open tasks
 

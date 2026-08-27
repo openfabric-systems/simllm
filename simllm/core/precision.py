@@ -85,6 +85,7 @@ class NetworkLevel(str, enum.Enum):
     """How network completion is modeled."""
 
     RNIC_NN_FLUID = "rnic-nn-fluid"
+    ANALYTIC_COMPOSITION = "analytic-composition"
     PACKET_LEVEL = "packet-level"
 
 
@@ -114,6 +115,7 @@ COMPUTE_LEVEL_ATTRIBUTE = "precision_compute_level"
 #: backend profile spelling to the network level it selects
 PROFILE_NETWORK_LEVELS = {
     "rnic-nn-fluid": NetworkLevel.RNIC_NN_FLUID,
+    "analytic-composition": NetworkLevel.ANALYTIC_COMPOSITION,
     "rnic-nn": NetworkLevel.PACKET_LEVEL,
     "rnic-cn": NetworkLevel.PACKET_LEVEL,
     "dcqcn": NetworkLevel.PACKET_LEVEL,
@@ -154,6 +156,15 @@ class PrecisionConfig:
             raise ValueError(
                 "precision.rnic_hardware='composed-native' is incompatible with "
                 "precision.network='rnic-nn-fluid'; select "
+                "rnic_hardware='timing-neutral-bypass' or network='packet-level'"
+            )
+        if (
+            self.network is NetworkLevel.ANALYTIC_COMPOSITION
+            and self.rnic_hardware is RnicHardwareLevel.COMPOSED_NATIVE
+        ):
+            raise ValueError(
+                "precision.rnic_hardware='composed-native' is incompatible with "
+                "precision.network='analytic-composition'; select "
                 "rnic_hardware='timing-neutral-bypass' or network='packet-level'"
             )
 

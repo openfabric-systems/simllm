@@ -22,6 +22,10 @@ patterns rather than abstract ops.
 
 COLLECTIVE_TRACE_SCHEMA = "simllm-collective-trace-v1"
 
+from simllm.traffic.analytic_composition import (
+    analytic_collective_price_ps,
+    analytic_step_service_ps,
+)
 from simllm.traffic.collective_latency import (
     A100_NCCL_2_31_CROSS_NODE_SOCKET_PROFILE,
     B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE,
@@ -236,6 +240,8 @@ __all__ = [
     "RoutedTokenOwnership",
     "StepLocalityPlan",
     "TpAllReduce",
+    "analytic_collective_price_ps",
+    "analytic_step_service_ps",
     "arm_ratio_envelope",
     "binomial_broadcast",
     "classify_step_locality",

@@ -72,6 +72,11 @@ REFUSAL_DIAGNOSTIC = (
     "precision.network='rnic-nn-fluid'; select "
     "rnic_hardware='timing-neutral-bypass' or network='packet-level'"
 )
+ANALYTIC_REFUSAL_DIAGNOSTIC = (
+    "precision.rnic_hardware='composed-native' is incompatible with "
+    "precision.network='analytic-composition'; select "
+    "rnic_hardware='timing-neutral-bypass' or network='packet-level'"
+)
 LEGAL_PRECISION_JSON = (
     '{"compute":"roofline","dependency":"serial","framework":"recorded-steps",'
     '"locality":"all-remote","network":"packet-level",'
@@ -253,6 +258,35 @@ def test_the_refusal_survives_the_parser_and_never_degrades_silently():
     assert str(error.value) == REFUSAL_DIAGNOSTIC
 
 
+def test_analytic_network_with_composed_native_hardware_is_refused_exactly():
+    with pytest.raises(ValueError) as error:
+        PrecisionConfig(
+            workload=WorkloadLevel.FIXED_TRACE,
+            request_outcome=RequestOutcomeLevel.FABRICATED,
+            framework=FrameworkLevel.RECORDED_STEPS,
+            compute=ComputeLevel.ROOFLINE,
+            dependency=DependencyLevel.SERIAL,
+            locality=LocalityLevel.ALL_REMOTE,
+            network=NetworkLevel.ANALYTIC_COMPOSITION,
+            rnic_hardware=RnicHardwareLevel.COMPOSED_NATIVE,
+        )
+    assert str(error.value) == ANALYTIC_REFUSAL_DIAGNOSTIC
+
+
+def test_analytic_network_with_timing_neutral_hardware_is_accepted():
+    config = PrecisionConfig(
+        workload=WorkloadLevel.FIXED_TRACE,
+        request_outcome=RequestOutcomeLevel.FABRICATED,
+        framework=FrameworkLevel.RECORDED_STEPS,
+        compute=ComputeLevel.ROOFLINE,
+        dependency=DependencyLevel.SERIAL,
+        locality=LocalityLevel.ALL_REMOTE,
+        network=NetworkLevel.ANALYTIC_COMPOSITION,
+        rnic_hardware=RnicHardwareLevel.TIMING_NEUTRAL_BYPASS,
+    )
+    assert config.network is NetworkLevel.ANALYTIC_COMPOSITION
+
+
 @pytest.mark.parametrize(
     ("network", "rnic_hardware"),
     [
@@ -370,6 +404,7 @@ def test_a_stamp_requires_the_schema_and_hash_it_claims():
     ("profile", "level"),
     [
         ("rnic-nn-fluid", NetworkLevel.RNIC_NN_FLUID),
+        ("analytic-composition", NetworkLevel.ANALYTIC_COMPOSITION),
         ("rnic-nn", NetworkLevel.PACKET_LEVEL),
         ("rnic-cn", NetworkLevel.PACKET_LEVEL),
         ("dcqcn", NetworkLevel.PACKET_LEVEL),

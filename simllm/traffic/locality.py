@@ -247,6 +247,24 @@ class ClassifiedCommunicationPhase:
         return sum(segment.payload_bytes for segment in self.fabric_segments)
 
     @property
+    def fabric_endpoint_bytes(self) -> tuple[tuple[int, int, int], ...]:
+        """Sorted fabric endpoint ledger of rank, egress and ingress bytes."""
+
+        return _endpoint_byte_ledger(self.fabric_segments)
+
+    @property
+    def fabric_peak_endpoint_bytes(self) -> int:
+        """Largest full-duplex endpoint load on the fabric in this phase."""
+
+        return max(
+            (
+                max(egress_bytes, ingress_bytes)
+                for _, egress_bytes, ingress_bytes in self.fabric_endpoint_bytes
+            ),
+            default=0,
+        )
+
+    @property
     def nvlink_bytes(self) -> int:
         return sum(segment.payload_bytes for segment in self.nvlink_segments)
 

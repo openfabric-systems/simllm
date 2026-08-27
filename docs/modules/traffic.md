@@ -134,6 +134,23 @@ the flow-level work the GOAL emitter renders.
   endpoint rate and adds one width-indexed semantic-collective base latency
   outside the phase-local maximum. TRAF-31 owns the missing same-generation
   point-to-point capture.
+- `analytic_collective_price_ps` is the process-free collective evaluator for
+  the `analytic-composition` level. It supports the sink's serial ring
+  all-reduce and pairwise all-to-allv shapes. The profile first selects one
+  exact rational bandwidth from the full semantic endpoint byte count. Every
+  classified phase then exposes the largest full-duplex local and fabric
+  endpoint loads from the same segment-owned ledger rule. Local service rounds
+  up to whole nanoseconds; fabric serialization rounds up to picoseconds and
+  adds the profile propagation reference only when a fabric segment exists.
+  The evaluator charges the maximum of those two services per phase, sums the
+  phases after one profile base latency and composes the registration amount
+  supplied by `CollectiveRegistrationLedger`, which remains the sole mutable
+  registration authority. `analytic_step_service_ps` separately applies the
+  COMP-75 step rule `max(compute, sum(collective prices))`. A missing profile,
+  an unsupported width, an endpoint load outside the profile envelope or an
+  unsupported collective shape fails closed. TRAF-19 remains the statistical
+  network rung; TRAF-45 and TRAF-54 remain the packetized locality and
+  collective rungs.
 - `CollectiveFixedCostEnvelope` is that same selection expressed as a named
   bracket rather than one silently chosen constant. An envelope names a
   `lower` and an `upper` profile beside the `off` arm that charges nothing,
@@ -922,9 +939,42 @@ The TX, switch and RX queues, analytic identity bypass, frozen identification
 map and current evidence split are documented in the
 [NVLink domain-model study](../design/nvlink-domain-model.md).
 
+The traffic-owned analytic evaluator implements the frozen integer collective
+composition for ring all-reduce and pairwise all-to-allv. The E1 through E7
+component oracles reproduce 4,014,000 ps for the width-2 ring, 12,044,000 ps
+for the mixed width-4 ring, 2,028,000 ps and 2,035,000 ps for uniform and
+sparse all-to-allv, the 4,000 ps curve discriminator, the 24,014,000 ps first
+registration and 4,014,000 ps reuse prices, and the 9,000,000 ps and
+8,028,000 ps COMP-75 maxima. Profile selection uses exact `Fraction` rates;
+local phases quantize to nanoseconds and fabric phases to picoseconds. The
+existing registration ledger supplies identity and reuse, while the evaluator
+remains deterministic and launches no process. Statistical fitting stays
+TRAF-19, packet behavior stays TRAF-45 and TRAF-54, and registration
+calibration stays TRAF-56.
+
 ## Open tasks
 
 ### Precision
+
+- TRAF-72 (Precision; P1; M): replace the curve's off-anchor logarithmic
+  interpolation through floating point with an exact, declared rational law.
+  The analytic evaluator consumes the landed `Fraction` result without
+  floating-point service arithmetic, but the current off-anchor rate is first
+  obtained through logarithms and then rationalized to denominator 1,000,000.
+  Freeze anchor identity, monotonic direction and representative interior
+  rates before changing the law. Acceptance preserves every anchor price
+  exactly, reports the current surrogate and new rate at each interior holdout,
+  and bounds the resulting collective-price movement against measured
+  completion evidence.
+- TRAF-73 (Precision; P1; M): replace the ring and uniform all-to-allv payload
+  floors with byte-conserving remainder ownership. Ring chunks currently use
+  `max(1, source_payload_bytes // participant_count)` and uniform expert
+  traffic floors each per-pair share, so semantic bytes may be dropped or
+  manufactured before the analytic evaluator sees its landed phases. Freeze
+  nondivisible payloads and endpoint ledgers first. Acceptance conserves every
+  source byte exactly, identifies which endpoints own each remainder, moves
+  analytic prices by the exact frozen direction and amount, and preserves all
+  divisible-payload bytes and timestamps.
 
 - TRAF-68 (Precision; P1; M): publish the two-network bottleneck study for the
   CORE-62 frontier. At every frozen configuration and batch, retain the
@@ -1510,6 +1560,15 @@ map and current evidence split are documented in the
   published.
 
 ### Completeness
+
+- TRAF-71 (Completeness; P2; M): extend analytic composition beyond ring
+  all-reduce and pairwise all-to-allv to each additional traffic-owned
+  collective shape a supported study selects. The current evaluator refuses
+  every other collective and algorithm before pricing it. Preserve that
+  explicit refusal as the off path, add one phase and endpoint-load oracle per
+  admitted algorithm, and require the enabled shape to reach TTFT or TPOT while
+  all existing ring, all-to-allv and legacy selections retain their accepted
+  bytes and timestamps.
 
 - TRAF-49 (Completeness; P2; M): let a profile that supports only the widths it
   measured join a fixed-cost envelope. `CollectiveFixedCostEnvelope` requires

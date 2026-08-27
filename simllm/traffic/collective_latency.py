@@ -465,6 +465,22 @@ class CollectiveLatencyProfile:
                 return curve
         return None
 
+    def effective_bandwidth_bytes_per_second(
+        self,
+        participant_count: int,
+        endpoint_bytes: int,
+    ) -> Fraction:
+        """Return the exact rate selected by full semantic endpoint bytes."""
+
+        endpoint_bytes = self.validate_endpoint_bytes(
+            participant_count,
+            endpoint_bytes,
+        )
+        curve = self.bandwidth_curve(participant_count)
+        if curve is None:
+            return Fraction(self.bandwidth_bytes_per_second)
+        return curve.bandwidth_bytes_per_second(endpoint_bytes)
+
     def endpoint_serialization_ps(
         self,
         participant_count: int,
@@ -480,17 +496,10 @@ class CollectiveLatencyProfile:
         bandwidth is still climbing.
         """
 
-        endpoint_bytes = self.validate_endpoint_bytes(
+        rate = self.effective_bandwidth_bytes_per_second(
             participant_count,
             endpoint_bytes,
         )
-        curve = self.bandwidth_curve(participant_count)
-        if curve is None:
-            return _ceil_div(
-                endpoint_bytes * PICOSECONDS_PER_SECOND,
-                self.bandwidth_bytes_per_second,
-            )
-        rate = curve.bandwidth_bytes_per_second(endpoint_bytes)
         return _ceil_div(
             endpoint_bytes * PICOSECONDS_PER_SECOND * rate.denominator,
             rate.numerator,
