@@ -6,7 +6,8 @@ What ran: the frozen `loggopsim_ideal_v1` study executed the pinned
 LogGOPSim binary over every E1 through E6 exact oracle, the L1 live metric
 chain, the W wall-time cells, and fatal guards FG-1 through FG-6.
 
-What came out: the run passed, with 28 of 28 exact arithmetic oracles, 3 of
+What came out: the corrected run passed, with 30 of 30 exact arithmetic
+observables, 3 of
 3 live identities and 3 of 3 wall-time ceilings in their separate evidence
 classes. The deciding live number is 202,000 ps: the sink's independently
 re-executed network makespan and the remote-minus-control time to first token
@@ -18,7 +19,8 @@ and returns a standard `StepResult`. Its result therefore reaches TTFT and
 time per output token (TPOT) through the unchanged metric reducer. The level
 has exact declared parameter provenance, preserves the analytic intra-node
 path, and refuses composed-native remote direct memory access (RNIC)
-hardware. TRAF-20 remains open for its packet-reference acceptance clauses.
+hardware. The corrected record replaces the under-scored record. TRAF-20
+remains open for its packet-reference acceptance clauses.
 
 What it does not change: this study does not validate packet contention,
 congestion control, per-flow completion behavior, or error against a
@@ -29,11 +31,12 @@ artifacts remain unchanged. No task closes and no milestone moves.
 
 The frozen expectations are commit
 `6523a625ce67ba4f8522b42a6e1e7872ba3379d0`. The level implementation is
-commit `ce8f28ce4ae766f5b90f16da4128752266d361c1`, so the freeze precedes the
+commit `ddf79f3df3c9818d02971a47f76b9cc550dc5bb1`, so the freeze precedes the
 implementation. The run used the required binary SHA-256
 `7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf`.
-Every scored native row records the complete argv and exact `G` string in
-[results.json](results.json).
+Every scored native row records a portable complete argv and exact `G` string
+in [results.json](results.json). The resolved argv lives with the retained
+stdout in the external attempt directory.
 
 ## Scored families
 
@@ -42,7 +45,7 @@ in any denominator.
 
 | Evidence class | Family | Passed | Registered |
 |---|---|---:|---:|
-| exact oracle | E1 single-send parameters | 9 | 9 |
+| exact oracle | E1 single-send parameters | 11 | 11 |
 | exact oracle | E2 400 Gbit/s quantization | 7 | 7 |
 | exact oracle | E3 dependency semantics | 2 | 2 |
 | exact oracle | E4 ring forms | 6 | 6 |
@@ -51,7 +54,9 @@ in any denominator.
 | live identity | L1 sink and metric chain | 3 | 3 |
 | wall time | W speed ceilings | 3 | 3 |
 
-The spot literals held: E1 base was 175 ns, the held E1 cell was 579 ns,
+The spot literals held: E1 base was 175 ns. At the protocol boundary, `S=50`
+produced hosts 0 and 1 at 277 ns, while `S=51` produced host 0 at 10 ns and
+host 1 at 277 ns. The held E1 cell was 579 ns.
 E2 crossed from 0 ns at 50 bytes to 1 ns at 51 bytes, E3 `requires` and
 `irequires` were 140 ns and 123 ns, the two E4 all-reduces were 1,050 ns and
 39,486 ns, E5 was 1,462 ns and 13,569 ns, and E6 was 4,422,432 ns for the
@@ -77,9 +82,9 @@ Each value is the median of seven executions.
 
 | Cell | Schedule | Median s | Ceiling s | Unscored ratio to 7.252 s |
 |---|---|---:|---:|---:|
-| W1 | four-rank 4 KiB ring all-reduce | 0.002033177 | 1 | 0.000280361 |
-| W2 | 64-rank 1 MiB all-to-allv | 0.020580883 | 5 | 0.002837960 |
-| W3 | 129,024-event chain | 0.516878711 | 30 | 0.071273954 |
+| W1 | four-rank 4 KiB ring all-reduce | 0.002313387 | 1 | 0.000319000 |
+| W2 | 64-rank 1 MiB all-to-allv | 0.020375621 | 5 | 0.002809655 |
+| W3 | 129,024-event chain | 0.325131915 | 30 | 0.044833414 |
 
 The ratios are context only. The 7.252 s htsim invocation used a different
 schedule and machine condition, so it is neither a speedup measurement nor a
@@ -91,17 +96,17 @@ ran Linux 5.14 on x86-64 with Python 3.12.12.
 
 ## Fatal guards
 
-All fatal guards held. Each guard also carried a mutation negative control
-that failed the guard as intended.
+All fatal guards held. Each mutation control invoked the same predicate as its
+guard with the named input changed, and every predicate rejected its mutant.
 
 | Guard | Enforcement | Outcome | Mutation control |
 |---|---|---|---|
-| FG-1 binary hash | runtime | held | detected |
-| FG-2 GOAL hashes | runtime | held | detected |
-| FG-3 full argv, exact `G`, maximum host finish | by construction | held | detected |
-| FG-4 byte-identical repeated stdout | runtime | held | detected |
-| FG-5 E5 separated-domain precondition | runtime | held | detected |
-| FG-6 expectation chronology | runtime | held | detected |
+| FG-1 binary hash | runtime | held | predicate exercised, mutant rejected |
+| FG-2 GOAL hashes | runtime | held | predicate exercised, mutant rejected |
+| FG-3 full argv, exact `G`, maximum host finish | runtime | held | predicate exercised, mutant rejected |
+| FG-4 byte-identical repeated stdout | runtime | held | predicate exercised, mutant rejected |
+| FG-5 E5 separated-domain precondition | runtime | held | predicate exercised, mutant rejected |
+| FG-6 expectation chronology | runtime | held | predicate exercised, mutant rejected |
 
 The run would be void if any guard failed. These rows are therefore not a
 score and are not added to the family denominators.
@@ -118,15 +123,38 @@ score and are not added to the family denominators.
   stated physical bracket. This supports the ideal serialization mechanism,
   not packet-level fidelity.
 
-## Determinism deviation and correction
+## Corrections and prior void disclosure
 
-An earlier retained run was void under FG-4. The 129,024-event chain produced
-the same maximum host finishing time twice, but the binary's integer-second
-performance banner printed `Time: 0 s` in one stdout and `Time: 1 s` in the
-other. The run of record launches each repeated pair against one shared start
-boundary within 20 ms after a wall-second rollover. Binary, argv, GOAL and
-modeled finish time are unchanged. Every final scored stdout pair is byte
-identical. The void evidence remains outside the repository.
+The earlier scoring record counted only each E1 cell's host maximum. That made
+the `S=50` rendezvous cell and `S=51` eager cell score the same 277 ns value.
+The corrected record scores the four frozen host values individually. This
+raises E1 from 9 to 11 observables and the exact class from 28 to 30. Every
+modeled maximum, host time, live identity and wall-cell finish reproduced
+identically.
+
+The earlier run under FG-4 remains void and is not rescored. Its 129,024-event
+chain produced the same modeled maximum twice, while the integer-second
+performance banner differed between `Time: 0 s` and `Time: 1 s`. Contrary to
+the prior RESULTS claim, those differing stdout bytes were not retained. Only
+their SHA-256 hashes reached the committed record. Five of the six legacy run
+directories also had no verdict of their own because later attempts overwrote
+the single record destination. The prior retention claim is withdrawn.
+
+The corrected protocol creates a fresh `attempt-N` directory, refuses to
+start a later attempt until every earlier attempt has a verdict, and writes
+stdout plus resolved-argv provenance as each native execution completes. The
+corrected `attempt-1` contains 85 stdout files, 85 matching invocation records
+and its own byte-identical `verdict.json`. Every repeated scored pair is byte
+identical. The FG-4 control now passes one real captured stdout and a perturbed
+copy through the byte comparator. FG-3 removes `-G` from a real recorded argv
+and invokes the same argv validator. The FG-1 early-void path hashes an actual
+perturbed binary byte sequence and invokes the binary-hash predicate.
+
+Tracked argv now names `LogGOPSim` and records each GOAL path relative to the
+attempt directory. Resolved machine paths stay only in the external attempt
+provenance. Both `--binary` and `--txt2bin` reach the exact-oracle, live L1 and
+wall paths; a flag-only process run with both discovery environment variables
+removed passed this same 30-observable study.
 
 ## TRAF-20 verdict
 
@@ -149,12 +177,12 @@ registered.
 ## Reproduction
 
 The run record is [results.json](results.json), and the flattened evidence
-table is [results.csv](results.csv). Bulk GOAL binaries and stdout remain
-outside Git.
+table is [results.csv](results.csv). Bulk GOAL binaries, stdout, resolved argv
+and per-attempt verdicts remain outside Git.
 
 ```bash
-SIMLLM_LOGGOPSIM="${SIMLLM_LOGGOPSIM:?configure the pinned LogGOPSim binary}" \
-SIMLLM_TXT2BIN="${SIMLLM_TXT2BIN:?configure txt2bin}" \
 .venv/bin/python examples/loggopsim_ideal_v1/run_study.py \
-  --run-dir "${SIMLLM_LOGGOPSIM_RUN_ROOT:?configure an external run root}"
+  --run-dir "${SIMLLM_LOGGOPSIM_RUN_ROOT:?configure an external run root}" \
+  --binary "${SIMLLM_LOGGOPSIM:?configure the pinned LogGOPSim binary}" \
+  --txt2bin "${SIMLLM_TXT2BIN:?configure txt2bin}"
 ```

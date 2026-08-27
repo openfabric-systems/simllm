@@ -24,9 +24,9 @@ _PINNED_BINARY_SHA256 = (
     "7e0f13ee3c87a20e9d2e94dbbd74c46075fd03df2f1b04d1ed9739c43ee0a2bf"
 )
 _ARTIFACT_SHA256 = {
-    "RESULTS.md": "d12f2c0033d713415c3d58978a5a5c7f474a23cb4f00ba84c4b8717b2c9be7e5",
-    "results.csv": "18b8f9f20e40d497478dae26313d24f464bcd183026a0e1bec45351da1358dc1",
-    "results.json": "02a7985de910059c44766b4e2057a81f180eed014bfc8f4bf3c2a465329dfac3",
+    "RESULTS.md": "e285d9e4d637f5b425671d1ec5da7f8a9c0caf706f8a687365aaf68160575c96",
+    "results.csv": "32674c5afa0186176f9e6cf95578818fb6ef4425c07a9da97f23dc69a7d9fdb1",
+    "results.json": "8d84d4d8ebc2a46953d271a8ef92e3509495a5c3c7953a8a87632ce4b62759a1",
     "run_study.py": "9fcfec3cc0972c30bc44b3218688a283a97b4d2fbf341ca3902661de4dacd6e3",
 }
 _FROZEN_EXPECTATIONS_SHA256 = (
@@ -69,8 +69,10 @@ def test_study_record_keeps_evidence_classes_and_fatal_guards_separate() -> None
     record = json.loads((_STUDY_DIR / "results.json").read_text(encoding="utf-8"))
     assert record["verdict"] == "PASS"
     assert record["findings"] == []
-    assert record["exact_oracles"]["passed"] == 28
-    assert record["exact_oracles"]["denominator"] == 28
+    assert record["exact_oracles"]["passed"] == 30
+    assert record["exact_oracles"]["denominator"] == 30
+    assert record["exact_oracles"]["families"]["E1"]["passed"] == 11
+    assert record["exact_oracles"]["families"]["E1"]["denominator"] == 11
     assert record["live_chain"]["passed"] == 3
     assert record["live_chain"]["denominator"] == 3
     assert record["wall_time"]["passed"] == 3
@@ -84,7 +86,30 @@ def test_study_record_keeps_evidence_classes_and_fatal_guards_separate() -> None
         "FG-6",
     ]
     assert all(row["held"] for row in record["fatal_guards"])
-    assert all(row["mutation_negative_control"] for row in record["fatal_guards"])
+    assert all(
+        row["mutation_control"]["kind"] == "predicate-exercised"
+        and row["mutation_control"]["rejected"]
+        for row in record["fatal_guards"]
+    )
+    boundaries = {
+        row["id"]: row
+        for row in record["exact_oracles"]["rows"]
+        if row["id"] in {"E1-S50", "E1-S51"}
+    }
+    assert boundaries["E1-S50"]["observed_host_finish_ns"] == {
+        "0": 277,
+        "1": 277,
+    }
+    assert boundaries["E1-S51"]["observed_host_finish_ns"] == {
+        "0": 10,
+        "1": 277,
+    }
+    assert record["run_history"]["prior_void_stdout_bytes_retained"] is False
+    assert record["run_history"]["legacy_attempts_without_own_verdict"] == 5
+    assert record["attempt_evidence"]["verdict"] == "verdict.json"
+    serialized = json.dumps(record)
+    assert "/data3/" not in serialized
+    assert "/home/" not in serialized
 
 
 def test_attempts_are_append_only_and_require_a_predecessor_verdict(

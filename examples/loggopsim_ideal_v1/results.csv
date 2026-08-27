@@ -5,8 +5,10 @@ exact-oracle,E1,E1-o,181,181,ns,true
 exact-oracle,E1,E1-g,179,179,ns,true
 exact-oracle,E1,E1-G,207,207,ns,true
 exact-oracle,E1,E1-O,239,239,ns,true
-exact-oracle,E1,E1-S50,277,277,ns,true
-exact-oracle,E1,E1-S51,277,277,ns,true
+exact-oracle,E1,E1-S50-host-0,277,277,ns,true
+exact-oracle,E1,E1-S50-host-1,277,277,ns,true
+exact-oracle,E1,E1-S51-host-0,10,10,ns,true
+exact-oracle,E1,E1-S51-host-1,277,277,ns,true
 exact-oracle,E1,E1-held,579,579,ns,true
 exact-oracle,E2,E2-s50,0,0,ns,true
 exact-oracle,E2,E2-s51,1,1,ns,true
@@ -30,6 +32,6 @@ exact-oracle,E6,E6-alltoall,1408731,1408731,ns,true
 live-identity,L1,L1a,0,0,identity,true
 live-identity,L1,L1b,202000,202000,identity,true
 live-identity,L1,L1c,"{""200000000000"": ""0.04"", ""400000000000"": ""0.02""}","{""200000000000"": ""0.04"", ""400000000000"": ""0.02""}",identity,true
-wall-time,W,W1,1.0,0.002033177,s,true
-wall-time,W,W2,5.0,0.020580883,s,true
-wall-time,W,W3,30.0,0.516878711,s,true
+wall-time,W,W1,1.0,0.002313387,s,true
+wall-time,W,W2,5.0,0.020375621,s,true
+wall-time,W,W3,30.0,0.325131915,s,true

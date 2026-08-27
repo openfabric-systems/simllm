@@ -490,8 +490,8 @@ Historical
 all-remote, cross-node what-if under this model.
 
 The `loggopsim-ideal` level passes the frozen
-[ideal-network study](../../examples/loggopsim_ideal_v1/RESULTS.md): 28 of 28
-exact arithmetic oracles, 3 of 3 live metric-chain identities and 3 of 3
+[ideal-network study](../../examples/loggopsim_ideal_v1/RESULTS.md): 30 of 30
+exact arithmetic observables, 3 of 3 live metric-chain identities and 3 of 3
 wall-time ceilings in separate evidence classes, with all fatal guards held.
 The live step's independently reproduced network makespan and its TTFT delta
 against the zero-collective control are both exactly 202,000 ps. The study

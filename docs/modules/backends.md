@@ -953,8 +953,8 @@ serialization floor
 ([loggopsim_helper_v1](../../examples/loggopsim_helper_v1/RESULTS.md)). The
 helper remains the generic invocation seam.
 
-The TRAF-20 ideal-network slice passes 28 of 28 exact LogGOPS arithmetic
-oracles, 3 of 3 live metric-chain identities and 3 of 3 generous wall-time
+The TRAF-20 ideal-network slice passes 30 of 30 exact LogGOPS arithmetic
+observables, 3 of 3 live metric-chain identities and 3 of 3 generous wall-time
 ceilings in separate evidence classes. The sink's 202,000 ps network
 makespan equals an independent execution of its emitted artifact, and the
 remote step's TTFT exceeds the zero-collective control by exactly the same
