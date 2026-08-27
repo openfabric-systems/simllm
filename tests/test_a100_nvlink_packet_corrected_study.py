@@ -228,6 +228,7 @@ def test_hardware_source_and_submission_pin_required_interfaces():
     assert "#SBATCH --partition=a100-hourly" in sbatch
     assert "#SBATCH --gres=gpu:4" in sbatch
     assert "#SBATCH --exclusive" in sbatch
+    assert "#SBATCH --time=00:12:00" in sbatch
     assert "#SBATCH --array=0-85%1" in sbatch
     assert FREEZE_SHA256 in sbatch
     assert "-lnvidia-ml" in sbatch

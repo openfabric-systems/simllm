@@ -27,7 +27,7 @@ Neither may change before the TRAF-70 score is published.
 Merlin was verified available on 2026-08-27. The `a100-hourly` partition had
 mixed and allocated qualified nodes, and the staged NCCL 2.31.2 tree was
 present. Submission still requires one exclusive four-GPU allocation, the
-qualified `NV4` topology, short six-minute cells and `%1` array pacing.
+qualified `NV4` topology, short twelve-minute cells and `%1` array pacing.
 
 ## Local entry point
 

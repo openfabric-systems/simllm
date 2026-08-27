@@ -8,7 +8,7 @@
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:4
 #SBATCH --exclusive
-#SBATCH --time=00:06:00
+#SBATCH --time=00:12:00
 #SBATCH --array=0-85%1
 #SBATCH --signal=B:TERM@60
 #SBATCH --output=%x-%A_%a.out

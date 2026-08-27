@@ -45,7 +45,7 @@ FREEZE_SHA256 = "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da
 LOCAL_BULK_ROOT = REPOSITORY_ROOT.parents[1] / "wave-runs" / "traf70"
 CELL_SCHEMA = "simllm-a100-nvlink-packet-cell-v2"
 MANIFEST_SCHEMA = "simllm-a100-nvlink-packet-attempt-manifest-v2"
-CELL_TIMEOUT_SECONDS = 5 * 60
+CELL_TIMEOUT_SECONDS = 10 * 60
 
 _ACTIVE_CHILD: subprocess.Popen[str] | None = None
 _STOP_SIGNAL: int | None = None
