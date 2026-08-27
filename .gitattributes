@@ -177,6 +177,12 @@ examples/a100_nvlink_packet_v1/*.py text eol=lf
 examples/a100_nvlink_packet_v1/*.cu text eol=lf
 examples/a100_nvlink_packet_v1/*.sh text eol=lf
 examples/a100_nvlink_packet_v1/*.sbatch text eol=lf
+examples/a100_nvlink_packet_v2/*.json text eol=lf
+examples/a100_nvlink_packet_v2/*.md text eol=lf
+examples/a100_nvlink_packet_v2/*.py text eol=lf
+examples/a100_nvlink_packet_v2/*.cu text eol=lf
+examples/a100_nvlink_packet_v2/*.sh text eol=lf
+examples/a100_nvlink_packet_v2/*.sbatch text eol=lf
 simllm/backends/htsim_nvlink.py text eol=lf
 tests/test_htsim_nvlink.py text eol=lf
 tests/test_a100_nvlink_packet_study.py text eol=lf
@@ -240,6 +246,7 @@ examples/deployment_curve_v1/figures/*.pdf -text -diff
 examples/deployment_curve_v1/figures/*.png -text -diff
 notes/2026-08-27-core61depth-worker-sizing.md text eol=lf
 notes/2026-08-27-traf65exec-worker-sizing.md text eol=lf
+notes/2026-08-27-traf70-worker-sizing.md text eol=lf
 examples/deployment_curve_v1/core61_depth_*.json text eol=lf
 examples/deployment_curve_v1/core61_depth_*.md text eol=lf
 examples/deployment_curve_v1/core61_depth_*.py text eol=lf
