@@ -248,3 +248,4 @@ tests/test_hopper_mtp_recovery.py text eol=lf
 tests/test_hopper_deepseek_repeat_recovery.py text eol=lf
 tests/test_hopper_campaign_successor.py text eol=lf
 notes/2026-08-27-comp72-worker-sizing.md text eol=lf
+notes/2026-08-27-core54run4-worker-sizing.md text eol=lf
