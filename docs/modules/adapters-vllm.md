@@ -714,34 +714,6 @@ framework-owned join; see
   matrix. Hold out at least one model and group size; require modeled median
   and p95 call cost within a pre-registered relative or additive band, then
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
-- VLLM-39 (Precision; P1; M): identify the load-delay shape of the concurrent
-  disaggregated session before VLLM-35 closes. The current deterministic
-  roofline path amortizes batch service strongly enough that per-token request
-  delay falls or dips in all six post-specified curves even while throughput
-  rises, refuting the frozen monotonic-delay claim. Measure or import an
-  accepted pool-local batch-service surface over a frozen offered-load range,
-  separate batching gain from scheduler queue wait, and hold out at least one
-  prompt length and one prefill-to-decode ratio. Acceptance requires exact
-  request conservation, a quantitative prediction band for every held-out
-  curve point, and either a validated direction or an explicit withdrawal of
-  the monotonic claim. The CORE-51 one-request control and the current
-  deterministic comparator remain byte-for-byte and timestamp-for-timestamp
-  identical. The 2026-08-27 imported-surface run held every fatal guard,
-  preserved those controls and validated increasing delay in all six curves,
-  but only 1 of 24 frozen bands held because live scheduler queue wait
-  dominated before the predicted knee. The result is published as a frozen
-  refutation. This task stays open because a pre-reader repository search
-  violated the literal access protocol; VLLM-40 owns the clean repetition.
-- VLLM-40 (Precision; P1; M): repeat VLLM-39 from a fresh exposure boundary
-  after the field-addressed reader and exact two-key selection are committed.
-  Access only the Granite CUDA-graph decode batch-1 and batch-8 rows by their
-  content-addressed keys, log every field access, load no whole candidate
-  record and decode no DeepSeek or source batch-32 row. Rerun the unchanged
-  36-cell sweep and require exact conservation, identical surface and freeze
-  identities, the same complete direction and held-out-band evaluation, and
-  all three preservation manifests unchanged. Close VLLM-39 only if the
-  repetition is clean and the observed result is reported without widening a
-  band or changing a signed expectation.
 - VLLM-41 (Precision; P1; M): identify the scheduler queue-wait onset below
   the VLLM-39 sweep. Freeze a lower offered-load ladder before running it,
   retain the imported surface and its no-calibration status unchanged, and
@@ -763,25 +735,6 @@ framework-owned join; see
   DeepSeek capture absent or disabled, preserve both published logical
   inventory bytes, every StepRecord and every existing physical capture byte
   exactly.
-
-- VLLM-35 (Completeness; P1; L): admit multiple in-flight session requests to
-  the prefill and decode pools while each stock vLLM scheduler remains the sole
-  batching authority for its pool. Preserve one stable session identity across
-  both pool-local scheduler identities and allow independent producer
-  completions to make consumers eligible without serializing unrelated
-  requests in the driver. Acceptance sweeps offered load, prompt length and
-  small prefill-to-decode engine ratios, observes a genuine multi-request
-  scheduler batch in both roles, and conserves every admission, handoff and
-  terminal token exactly. The one-request-at-a-time CORE-51 slice is the
-  explicit baseline and must retain its accepted timestamps and artifacts.
-  The concurrent mechanism, all conservation guards and genuine batches in
-  both roles are delivered, but the frozen delay-direction relation is
-  refuted in all six deterministic-comparator curves. The VLLM-39
-  imported-surface run now validates increasing delay in all six curves with
-  scheduler queue wait as the measured mechanism, while preserving the
-  one-request control and deterministic comparator. This task moves only to
-  clean qualification: it stays open until VLLM-40 permits the literal
-  VLLM-39 close.
 
 - VLLM-25 (Completeness; P2; M): support shared-expert and mixed dense and
   routed MoE geometries in the config reader. `model_dims_from_vllm_config`
