@@ -852,15 +852,25 @@ class NvlinkRx:
             while queue and queue[0][0] <= arrival:
                 _, released_bytes = queue.popleft()
                 used -= released_bytes
+            while used + packet.wire_bytes > self.config.buffer_capacity_bytes:
+                if not queue:
+                    raise AssertionError("NVLink RX occupancy has no credit to return")
+                arrival = max(arrival, queue[0][0])
+                while queue and queue[0][0] <= arrival:
+                    _, released_bytes = queue.popleft()
+                    used -= released_bytes
             used += packet.wire_bytes
-            if used > self.config.buffer_capacity_bytes:
-                raise ValueError("packets exceed declared NVLink RX buffer occupancy")
             started_at_ps = max(arrival, cursors.get(packet.destination, 0))
             finished_at_ps = started_at_ps + _serialize_ps(
                 packet.wire_bytes, self.config.ingress_rate_bytes_per_second
             )
             cursors[packet.destination] = finished_at_ps
-            queue.append((finished_at_ps, packet.wire_bytes))
+            queue.append(
+                (
+                    finished_at_ps + self.config.credit_return_latency_ps,
+                    packet.wire_bytes,
+                )
+            )
             occupancy[packet.destination] = used
             max_occupancy = max(max_occupancy, used)
             ingressed.append(

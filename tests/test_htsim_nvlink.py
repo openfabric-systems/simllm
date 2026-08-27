@@ -484,6 +484,31 @@ def test_release_aware_incast_respects_pair_and_receiver_ceilings(candidate):
         assert aggregate_gbps <= payload_ceiling[degree]
 
 
+def test_release_aware_rx_waits_for_credit_instead_of_overrunning_buffer(candidate):
+    tx = NvlinkTx(candidate.tx)
+    transfers = [
+        NvlinkTransfer(
+            extent_id=f"credit-source-{source}",
+            source=source,
+            destination=3,
+            payload_bytes=256,
+        )
+        for source in range(3)
+    ]
+    sent = tx.transmit_flows(
+        transfers,
+        credit_return_latency_ps=candidate.rx.credit_return_latency_ps,
+    )
+    rx = NvlinkRx(dataclasses.replace(candidate.rx, buffer_capacity_bytes=544))
+
+    delivered, max_occupancy = rx.receive_arrivals(sent)
+
+    assert max_occupancy == 544
+    assert delivered[2].rx_started_at_ps == (
+        delivered[0].rx_finished_at_ps + candidate.rx.credit_return_latency_ps
+    )
+
+
 def test_release_aware_flow_policy_preserves_read_direction_and_extent_order(candidate):
     result = NvlinkDomainService(candidate).serve(
         [
