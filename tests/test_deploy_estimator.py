@@ -145,7 +145,7 @@ def _inputs(
         model_work=_model_work() if model_work is None else model_work,
         envelopes={selected_envelope.device: selected_envelope},
         surfaces=surfaces,
-        surface_evidence=surface_evidence,
+        surface_evidence=surface_evidence if surfaces is not None else None,
         surface_source=surface_source,
         sim_derived=sim_derived,
         prefill_service=prefill_service,
@@ -669,4 +669,67 @@ def test_rate_match_requires_a_workload_rate() -> None:
             prefill_request_ps=1,
             decode_step_ps=1,
             batch_per_gpu=1,
+        )
+
+
+def test_zero_collective_bytes_fail_closed_beyond_width_eight() -> None:
+    candidate = _candidate(pools=(_pool("decode", width=16),))
+    with pytest.raises(ValueError, match="zero collective bytes have no partition source"):
+        estimate_decode_step(
+            candidate,
+            1,
+            _inputs(model_work=_model_work(collective_bytes_per_item=0)),
+        )
+
+
+def test_pipeline_parallel_pool_is_unpriced_by_the_estimator() -> None:
+    pool = PoolSpec(
+        role="decode",
+        engines=1,
+        gpus_per_engine=8,
+        tensor_parallel=8,
+        pipeline_parallel=2,
+        expert_parallel=1,
+        data_parallel=1,
+        device="b100",
+    )
+    with pytest.raises(ValueError, match="pipeline-parallel-unpriced"):
+        estimate_decode_step(_candidate(pools=(pool,)), 1, _inputs())
+
+
+def test_supplied_surfaces_require_explicit_evidence_class() -> None:
+    with pytest.raises(ValueError, match="state the evidence class"):
+        EstimatorInputs(
+            model_work=_model_work(),
+            envelopes={"b100": _envelope()},
+            surfaces=_surface(),
+        )
+
+
+def test_surface_evidence_without_surfaces_is_rejected() -> None:
+    with pytest.raises(ValueError, match="supplied without inputs.surfaces"):
+        EstimatorInputs(
+            model_work=_model_work(),
+            envelopes={"b100": _envelope()},
+            surface_evidence=EvidenceClass.MEASURED,
+        )
+
+
+def test_queue_helpers_fail_closed_without_bracketing_surface() -> None:
+    with pytest.raises(ValueError, match="unique bracketing points"):
+        queue_delay_ps(
+            (),
+            offered_load_rps=1,
+            output_tokens=1,
+            max_batch=1,
+            decode_engines=1,
+            cell_requests=2,
+        )
+    with pytest.raises(ValueError, match="unique bracketing points"):
+        queue_occupancy(
+            (),
+            offered_load_rps=1,
+            output_tokens=1,
+            max_batch=1,
+            decode_engines=1,
         )

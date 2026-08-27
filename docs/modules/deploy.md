@@ -40,11 +40,16 @@ backend, allocating a GPU or importing a serving framework.
   engine requirements, exact utilization, capacities and service-level
   agreement membership for separate or combined role pools.
 - `EstimateStamp` is the strict `simllm-deployment-estimate-v1` evidence
-  record. Every estimator result carries the candidate key, estimator class
-  `ESTIMATE`, and a uniquely named source for every consumed duration.
-  Roofline work, declared link rates, measured surface entry keys and tracked
-  simulation-record excess remain distinct evidence classes. Supplying no
-  source for an enabled term is an error.
+  record. Every stamped result record (`StepEstimate`, `RateMatchReport`)
+  carries the candidate key, estimator class `ESTIMATE`, and a uniquely
+  named source for every consumed duration; the bare exact-arithmetic
+  helpers (`queue_delay_ps`, `queue_occupancy`,
+  `decode_capacity_requests_per_second`) return unstamped exact values by
+  contract and take no candidate. Roofline work, declared link rates,
+  measured surface entry keys and tracked simulation-record excess remain
+  distinct evidence classes. Supplying no source for an enabled term is an
+  error, and supplied batch-service points must state their evidence class
+  explicitly.
 - `ScanInputs` supplies the feasibility bounds plus one `EstimatorInputs`
   record or a per-point resolver. `scan` retains candidate and batch
   declaration order, emits no points for rejected candidates, and records

@@ -24,7 +24,12 @@ from simllm.core._wire import (
     _require_tuple,
     _string,
 )
-from simllm.deploy.candidate import DeploymentCandidate, PoolSpec, candidate_key
+from simllm.deploy.candidate import (
+    PIPELINE_PARALLEL_UNPRICED,
+    DeploymentCandidate,
+    PoolSpec,
+    candidate_key,
+)
 
 DEPLOYMENT_ESTIMATE_SCHEMA = "simllm-deployment-estimate-v1"
 PICOSECONDS_PER_SECOND = 1_000_000_000_000
@@ -314,7 +319,7 @@ class EstimatorInputs:
     handoff_source: str | None = None
     sim_derived: SimDerivedTerms | None = None
     prefill_service: TermEstimate | None = None
-    surface_evidence: EvidenceClass = EvidenceClass.MEASURED
+    surface_evidence: EvidenceClass | None = None
     surface_source: str | None = None
 
     def __post_init__(self) -> None:
@@ -359,15 +364,27 @@ class EstimatorInputs:
             if not isinstance(self.prefill_service, TermEstimate):
                 raise TypeError("inputs.prefill_service: expected TermEstimate")
             self.prefill_service.__post_init__()
-        if not isinstance(self.surface_evidence, EvidenceClass):
-            raise TypeError("inputs.surface_evidence: expected EvidenceClass")
-        if self.surface_evidence not in {
-            EvidenceClass.MEASURED,
-            EvidenceClass.DECLARED,
-        }:
+        if self.surfaces is not None and self.surface_evidence is None:
             raise ValueError(
-                "inputs.surface_evidence: batch service must be MEASURED or DECLARED"
+                "inputs.surface_evidence: state the evidence class of the "
+                "supplied batch-service points explicitly (MEASURED or "
+                "DECLARED); nothing defaults"
             )
+        if self.surfaces is None and self.surface_evidence is not None:
+            raise ValueError(
+                "inputs.surface_evidence: supplied without inputs.surfaces"
+            )
+        if self.surface_evidence is not None:
+            if not isinstance(self.surface_evidence, EvidenceClass):
+                raise TypeError("inputs.surface_evidence: expected EvidenceClass")
+            if self.surface_evidence not in {
+                EvidenceClass.MEASURED,
+                EvidenceClass.DECLARED,
+            }:
+                raise ValueError(
+                    "inputs.surface_evidence: batch service must be MEASURED "
+                    "or DECLARED"
+                )
         if self.surface_source is not None:
             _string(self.surface_source, "inputs.surface_source")
         if (
@@ -574,6 +591,12 @@ def _partition_bytes(pool: PoolSpec, total: int) -> tuple[int, tuple[int, ...]]:
             f"{pool.gpus_per_engine}; DEPLOY-4 owns coverage beyond 8, 16 and 72"
         )
     denominator, fan_in = shape
+    if fan_in > 0 and total == 0:
+        raise ValueError(
+            "model_work: zero collective bytes have no partition source at "
+            f"width {pool.gpus_per_engine}; supply positive collective bytes "
+            "or the width-8 shape (DEPLOY-4 owns wider coverage)"
+        )
     local = total // denominator
     remote = total - local
     if fan_in == 0:
@@ -783,6 +806,12 @@ def estimate_decode_step(
         raise TypeError("inputs: expected EstimatorInputs")
     inputs.__post_init__()
     pool = _service_pool(candidate, "decode")
+    if pool.pipeline_parallel > 1:
+        raise ValueError(
+            "candidate: the decode pool declares pipeline_parallel > 1, which "
+            "this rung cannot price (feasibility rejects it as "
+            f"{PIPELINE_PARALLEL_UNPRICED!r})"
+        )
     kernel = _kernel_floor(candidate, pool, batch, inputs)
     fabric, intra = _network_floors(candidate, pool, batch, inputs)
     named_terms = [
@@ -919,7 +948,11 @@ def decode_capacity_requests_per_second(
     max_batch: int,
     decode_engines: int,
 ) -> Fraction:
-    """Return exact max-batch decode capacity in requests per second."""
+    """Return exact max-batch decode capacity in requests per second.
+
+    Promote pd_session_load_delay_v1.decode_capacity_requests_per_second
+    with parameterized output tokens, max batch and engine count.
+    """
 
     output = _positive_integer(output_tokens, "output_tokens")
     batch = _positive_integer(max_batch, "max_batch")
@@ -939,7 +972,11 @@ def queue_occupancy(
     max_batch: int,
     decode_engines: int,
 ) -> int:
-    """Return the exact ceil-clamped deterministic occupancy bucket."""
+    """Return the exact ceil-clamped deterministic occupancy bucket.
+
+    Promote pd_session_load_delay_v1.predicted_batch_size with
+    parameterized output tokens, max batch and engine count.
+    """
 
     load = _positive_integer(offered_load_rps, "offered_load_rps")
     output = _positive_integer(output_tokens, "output_tokens")
@@ -983,7 +1020,16 @@ def match_pools(
     decode_step_ps: int,
     batch_per_gpu: int,
 ) -> RateMatchReport:
-    """Match exact per-role engine demand to the declared workload point."""
+    """Match exact per-role engine demand to the declared workload point.
+
+    ``sla_pass`` is the conjunction of capacity feasibility (utilization at
+    most one) and the declared latency targets: an overloaded pool fails even
+    when both latency targets are met, because overload voids any
+    steady-state service claim. The caller-supplied durations are stamped
+    DECLARED at this boundary regardless of their upstream evidence class;
+    carry the originating StepEstimate stamps alongside this report when the
+    full provenance chain matters.
+    """
 
     if not isinstance(candidate, DeploymentCandidate):
         raise TypeError("candidate: expected DeploymentCandidate")

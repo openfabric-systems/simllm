@@ -401,3 +401,12 @@ def test_point_class_cannot_mislabel_simulation_evidence() -> None:
 
     with pytest.raises(ValueError, match="must reflect"):
         replace(simulated, point_class=PointClass.ESTIMATE)
+
+
+def test_single_axis_tie_uses_weak_dominance() -> None:
+    dominant = _published_point("tie-dominant", 1, 1_000)
+    dominated = _published_point("tie-dominated", 2, 2_000)
+    assert dominated.y_tokens_per_second_per_gpu == dominant.y_tokens_per_second_per_gpu
+    assert dominant.x_tokens_per_second_per_request > dominated.x_tokens_per_second_per_request
+    assert pareto_front((dominant, dominated)) == (dominant,)
+    assert pareto_front((dominated, dominant)) == (dominant,)
