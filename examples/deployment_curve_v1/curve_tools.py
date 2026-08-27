@@ -309,6 +309,25 @@ def _relative_delta(point: Fraction, width: object, name: str) -> Fraction:
     return point * half_width
 
 
+def add_symmetric_relative_spread(
+    lower: Fraction,
+    point: Fraction,
+    upper: Fraction,
+    relative_half_width: object,
+    name: str,
+) -> tuple[Fraction, Fraction, Fraction]:
+    """Minkowski-add one symmetric point-relative spread to an interval."""
+
+    if not 0 < lower <= point <= upper:
+        raise ValueError(f"{name} base interval must be positive and ordered")
+    delta = _relative_delta(point, relative_half_width, name)
+    widened_lower = lower - delta
+    widened_upper = upper + delta
+    if widened_lower <= 0:
+        raise ValueError(f"{name} spread crossed a nonphysical zero bound")
+    return widened_lower, widened_upper, delta
+
+
 def propagate_curve_interval(
     point: dict[str, Any],
     uncertainty: dict[str, Any],
@@ -365,20 +384,20 @@ def propagate_curve_interval(
     ]
 
     for index, spread in enumerate(uncertainty.get("distribution_spreads", [])):
-        x_delta = _relative_delta(
+        throughput_lower, throughput_upper, x_delta = add_symmetric_relative_spread(
+            throughput_lower,
             throughput,
+            throughput_upper,
             spread["throughput_relative_half_width"],
             f"distribution_spreads[{index}].throughput_relative_half_width",
         )
-        d_delta = _relative_delta(
+        delay_lower, delay_upper, d_delta = add_symmetric_relative_spread(
+            delay_lower,
             delay,
+            delay_upper,
             spread["delay_relative_half_width"],
             f"distribution_spreads[{index}].delay_relative_half_width",
         )
-        throughput_lower -= x_delta
-        throughput_upper += x_delta
-        delay_lower -= d_delta
-        delay_upper += d_delta
         contributions.append(
             {
                 "source_kind": "distribution-spread",

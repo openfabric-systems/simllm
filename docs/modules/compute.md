@@ -1763,6 +1763,21 @@ known low direction. It is not repaired by changing the retained candidate
 row: COMP-76 owns a clean repetition of its four-layer basis, CORE-61 owns the
 depth extrapolation, and TRAF-66 owns the finite-overlap residual.
 
+The [COMP-74 distribution study](../../examples/deployment_curve_v1/COMP74_RESULTS.md)
+replaces the zero-width placeholder for all four priced DeepSeek keys with
+exact key-local observed-repeat envelopes. Every key retains two independent
+observations and every pair varies, giving relative half-widths from 0.291061
+to 2.076394 percent without pooling roles, prompt lengths or MTP modes.
+Distribution propagation OFF reproduces all 15 current anchor-layer point
+predictions, all inherited intervals and both stored flagship curves exactly.
+ON widens the prefill bands and both standard-decode curves without changing a
+point or verdict. The 2K physics-only context band newly reaches the upper
+5 percent boundary, but the scored attenuated layer does not and no rescore is
+performed. Candidate status, the evidence-class ledger and all 18 prior scored
+publication artifacts remain unchanged. COMP-74 closes literally; COMP-79
+owns single-seed DeepSeek keys including simulated MTP, and COMP-80 owns the
+Granite arm's absent repetitions.
+
 ## Open tasks
 
 ### Precision
@@ -2731,18 +2746,6 @@ depth extrapolation, and TRAF-66 owns the finite-overlap residual.
   record remains the exact roofline comparator path. This is the bounded
   session-coverage slice of COMP-64, not a second capture format or pricing
   authority.
-- COMP-74 (Completeness; P1; M): replace CORE-54's zero-width candidate
-  distribution placeholder with repeat-derived DeepSeek row uncertainty. The
-  scored result propagates the record point, physical constant envelope and a
-  distribution contribution of zero that explicitly makes no stability claim
-  because only one retained seed exists. After COMP-72 supplies repeated exact
-  EP32 prefill and EP72 decode cells, estimate the per-key distribution without
-  pooling roles, prompt lengths or MTP modes; preserve the evidence-class
-  ledger and candidate status. Acceptance requires a preregistered repeat
-  statistic and interval rule, at least two independent retained repetitions
-  per priced key, nonzero intervals where the observations vary, and exact
-  reproduction of the current point predictions when distribution propagation
-  is disabled.
 - COMP-76 (Completeness; P1; M): independently repeat the measured four-layer
   DeepSeek EP72 standard-decode basis used by the CORE-54 candidate projection.
   Freeze the source allowlist, exact batch-32 and remote-KV-2000 key, profiler
@@ -2753,7 +2756,8 @@ depth extrapolation, and TRAF-66 owns the finite-overlap residual.
   a preregistered agreement verdict for the 1,875,680,000 ps basis, and an
   explicit evidence-class ledger without promoting candidate status. CORE-61
   separately tests the 61-layer extrapolation; COMP-72 separately owns MTP;
-  COMP-74 separately owns repeat-derived distribution intervals.
+  the closed COMP-74 artifact separately owns repeat-derived distribution
+  intervals.
 - COMP-78 (Completeness; P1; L): finish the literal COMP-72 campaign remainder
   without amending the scored freeze or overwriting any completed or failed
   attempt. Stage pinned real vLLM and SGLang target executables on Merlin for
@@ -2772,6 +2776,24 @@ depth extrapolation, and TRAF-66 owns the finite-overlap residual.
   `d868a4f3...` immutable. Acceptance requires the complete Granite prefix,
   both digest-complete CORE-61 outputs, the signed depth residual, all retained
   source and output digests, and only then literal COMP-72 closure.
+- COMP-79 (Completeness; P1; M): extend key-local repeat-derived distribution
+  propagation to DeepSeek candidate keys that still have only one independent
+  seed, beginning with the separately measured EP72 simulated-MTP mode. Freeze
+  each exact role, prompt, KV, batch and MTP-mode key before inspection; retain
+  at least two independent digest-complete observations per key; and apply the
+  COMP-74 statistic without borrowing a standard-decode or prefill spread.
+  Acceptance requires nonzero intervals for varying repetitions, the existing
+  point and evidence class unchanged, and exact OFF reproduction.
+- COMP-80 (Completeness; P1; L): collect independent repetitions for the
+  Granite arm absent from the partial COMP-72 campaign and propagate them per
+  exact framework, pool, launch mode, parallelism and shape key. Resume only
+  after the COMP-78 Granite campaign has retained digest-complete physical
+  cells. Do not pool across framework, role, launch mode, KV placement or shape,
+  and do not reinterpret the predecessor's 12 retained Granite rows as campaign
+  repetitions. Acceptance requires at least two independent observations for
+  every priced Granite key selected by a flagship consumer, nonzero intervals
+  where observations vary, unchanged candidate or validated status, and exact
+  distribution-OFF reproduction.
 ### Uncategorized
 
 - COMP-8: the fused-vs-family sum invariant test compares in float; above

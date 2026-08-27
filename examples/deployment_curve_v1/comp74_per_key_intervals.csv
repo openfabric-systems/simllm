@@ -1,0 +1,5 @@
+anchor_id,implementation_suffix,published_point_ps,independent_repeat_ps,signed_repeat_minus_point_ps,service_lower_ps,service_upper_ps,relative_half_width_fraction,relative_half_width_percent,observation_count,candidate_status
+sglang_prefill_1k,ep32-prefill-r16-l1024-t16384,89393440000,91249600000,1856160000,87537280000,91249600000,11601/558709,2.076393973,2,candidate
+sglang_prefill_2k,ep32-prefill-r8-l2048-t16384,93134208000,94656736000,1522528000,91611680000,94656736000,47579/2910444,1.634767754,2,candidate
+sglang_prefill_4k,ep32-prefill-r4-l4096-t16384,104598911000,104294464000,-304447000,104294464000,104903358000,304447/104598911,0.291061348,2,candidate
+sglang_decode_standard,ep72-decode-b32-c2000,1875680000,1883392000,7712000,1867968000,1883392000,241/58615,0.411157554,2,candidate
