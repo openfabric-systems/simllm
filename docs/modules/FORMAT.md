@@ -86,11 +86,12 @@ Rules the linter enforces:
 ```
 
 `<PREFIX>` is the module's stable prefix (`CORE-`, `WORK-`, `COMP-`,
-`PLACE-`, `TRAF-`, `GOAL-`, `PLAY-`, `BACK-`, `VLLM-`, `SGL-`, `BRIDGE-`, and
-`HTSIM-`/`ATLAHS-` for backend-repo follow-ups). The category tag is the first
-parenthetical after the id; an optional second parenthetical carries a
-qualifier such as `(remaining half)`. Categories, priorities and difficulties
-are defined in AGENTS.md, which is the authority on what each level means.
+`PLACE-`, `TRAF-`, `GOAL-`, `PLAY-`, `BACK-`, `VLLM-`, `SGL-`, `BRIDGE-`,
+`DEPLOY-`, and `HTSIM-`/`ATLAHS-` for backend-repo follow-ups). The category
+tag is the first parenthetical after the id; an optional second parenthetical
+carries a qualifier such as `(remaining half)`. Categories, priorities and
+difficulties are defined in AGENTS.md, which is the authority on what each
+level means.
 
 ### The Uncategorized bucket
 

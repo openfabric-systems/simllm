@@ -40,6 +40,7 @@ TASK_PREFIXES = (
     "BRIDGE",
     "COMP",
     "CORE",
+    "DEPLOY",
     "GOAL",
     "HTSIM",
     "PLACE",
