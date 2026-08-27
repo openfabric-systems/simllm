@@ -36,6 +36,14 @@ RUN3_SELECTOR = (
     "offered_load_sweep_requests_per_second,second_legend,"
     "decode_calibration_miss,residuals_required}"
 )
+RUN4_RESULT_LABEL = "wave-runs/core54run4/attempt-1/result.json"
+RUN4_RESULT_SELECTOR = (
+    "/{schema,status,verdict,classification,scope,core54_closure,closure_reason,"
+    "allocation,shape_observation/{schema,status,anchor_id,allocation,request_count,"
+    "requests_per_gpu,total_emitted_tokens,weights_loaded},fit,attenuation_layer,"
+    "run3_carry_forward,mtp_score,access,preservation_lock,dominant_contributor,"
+    "remaining_work,deployment_frontier,provenance}"
+)
 _WHITESPACE = b" \t\r\n"
 _DELIMITERS = _WHITESPACE + b",]}"
 _CAPTURE = object()
@@ -78,6 +86,42 @@ RUN3_PROJECTION: dict[str, Any] = {
         "second_legend",
         "decode_calibration_miss",
         "residuals_required",
+    )
+}
+RUN4_RESULT_PROJECTION: dict[str, Any] = {
+    name: _CAPTURE
+    for name in (
+        "schema",
+        "status",
+        "verdict",
+        "classification",
+        "scope",
+        "core54_closure",
+        "closure_reason",
+        "allocation",
+        "fit",
+        "attenuation_layer",
+        "run3_carry_forward",
+        "mtp_score",
+        "access",
+        "preservation_lock",
+        "dominant_contributor",
+        "remaining_work",
+        "deployment_frontier",
+        "provenance",
+    )
+}
+RUN4_RESULT_PROJECTION["shape_observation"] = {
+    name: _CAPTURE
+    for name in (
+        "schema",
+        "status",
+        "anchor_id",
+        "allocation",
+        "request_count",
+        "requests_per_gpu",
+        "total_emitted_tokens",
+        "weights_loaded",
     )
 }
 
@@ -275,6 +319,15 @@ def extract_run3_publication(stream: BinaryIO) -> tuple[dict[str, Any], int]:
     return value, cursor.bytes_consumed
 
 
+def extract_run4_result(stream: BinaryIO) -> tuple[dict[str, Any], int]:
+    """Project the scored result without returning its bulk request trace."""
+
+    cursor = _Cursor(stream)
+    opening = _skip_space(cursor)
+    value = _project_object(cursor, RUN4_RESULT_PROJECTION, opening)
+    return value, cursor.bytes_consumed
+
+
 def _project_object_id(cursor: _Cursor, first: bytes) -> str | None:
     projected = _project_object(cursor, {"id": _CAPTURE}, first)
     identifier = projected.get("id")
@@ -426,17 +479,61 @@ def read_run3_publication(record_path: Path, access_log: Path) -> dict[str, Any]
         _append_access(access_log, entry)
 
 
+def read_run4_result(
+    record_path: Path,
+    access_log: Path,
+    run_root: Path,
+) -> dict[str, Any]:
+    """Read the sole external attempt through its publication projection."""
+
+    entry: dict[str, Any] = {
+        "schema": ACCESS_SCHEMA,
+        "classification": "run4_publication",
+        "record": RUN4_RESULT_LABEL,
+        "selector": RUN4_RESULT_SELECTOR,
+        "whole_record_loaded": False,
+        "unselected_values_returned": False,
+    }
+    try:
+        resolved_root = run_root.resolve()
+        if resolved_root.parts[-2:] != ("wave-runs", "core54run4"):
+            raise ValueError("run-4 publication root differs")
+        expected = resolved_root / "attempt-1" / "result.json"
+        if record_path.resolve() != expected:
+            raise ValueError("run-4 reader refuses every non-allowlisted result")
+        with record_path.open("rb", buffering=0) as stream:
+            value, consumed = extract_run4_result(stream)
+        if value.get("schema") != "simllm-deployment-curve-flagship-run4-result-v1":
+            raise ValueError("run-4 result schema differs")
+        entry.update({"bytes_consumed": consumed, "status": "PASS"})
+        return value
+    except Exception as exc:
+        entry.update({"error": type(exc).__name__, "status": "REJECTED"})
+        raise
+    finally:
+        _append_access(access_log, entry)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("kind", choices=("evidence", "run3", "anchor"))
+    parser.add_argument("kind", choices=("evidence", "run3", "anchor", "result"))
     parser.add_argument("--access-log", required=True, type=Path)
+    parser.add_argument("--run-root", type=Path)
     args = parser.parse_args()
     if args.kind == "evidence":
         value = read_successor_mtp_evidence(SUCCESSOR_RESULT, args.access_log)
     elif args.kind == "run3":
         value = read_run3_publication(RUN3_PUBLICATION, args.access_log)
-    else:
+    elif args.kind == "anchor":
         value = read_mtp_anchor(ANCHOR_FREEZE, args.access_log)
+    else:
+        if args.run_root is None:
+            raise SystemExit("--run-root is required for a result projection")
+        value = read_run4_result(
+            args.run_root / "attempt-1" / "result.json",
+            args.access_log,
+            args.run_root,
+        )
     print(json.dumps(value, indent=2, sort_keys=True))
     return 0
 

@@ -117,6 +117,38 @@ def test_run3_projection_returns_only_carry_forward_fields() -> None:
     assert "secret" not in value
 
 
+def test_run4_projection_excludes_bulk_requests_and_duplicate_rows() -> None:
+    reader = _reader()
+    source = {
+        "schema": "simllm-deployment-curve-flagship-run4-result-v1",
+        "status": "REFUTED",
+        "verdict": "ALL_SCORABLE_HELD_OUT_REFUTED",
+        "shape_observation": {
+            "schema": "shape-v1",
+            "status": "PASS",
+            "anchor_id": reader.MTP_ANCHOR_ID,
+            "allocation": {"gpus_per_node": 8},
+            "request_count": 128,
+            "requests_per_gpu": [16] * 8,
+            "total_emitted_tokens": 256,
+            "requests": [{"request_ordinal": index} for index in range(128)],
+            "weights_loaded": False,
+        },
+        "mtp_score": {"status": "REFUTED"},
+        "combined_held_out_rows": [{"secret_duplicate": True}],
+        "secret": 99,
+    }
+    raw = _encoded(source)
+
+    value, consumed = reader.extract_run4_result(io.BytesIO(raw))
+
+    assert value["shape_observation"]["request_count"] == 128
+    assert "requests" not in value["shape_observation"]
+    assert "combined_held_out_rows" not in value
+    assert "secret" not in value
+    assert consumed < len(raw)
+
+
 def test_path_allowlists_reject_before_open_and_log(tmp_path: Path) -> None:
     reader = _reader()
     access_log = tmp_path / "access.jsonl"
@@ -127,7 +159,18 @@ def test_path_allowlists_reject_before_open_and_log(tmp_path: Path) -> None:
         reader.read_mtp_anchor(tmp_path / "wrong.json", access_log)
     with pytest.raises(ValueError, match="non-allowlisted run-3"):
         reader.read_run3_publication(tmp_path / "wrong.json", access_log)
+    with pytest.raises(ValueError, match="publication root differs"):
+        reader.read_run4_result(
+            tmp_path / "wrong.json",
+            access_log,
+            tmp_path / "wrong-root",
+        )
 
     rows = [json.loads(line) for line in access_log.read_text(encoding="utf-8").splitlines()]
-    assert [row["status"] for row in rows] == ["REJECTED", "REJECTED", "REJECTED"]
+    assert [row["status"] for row in rows] == [
+        "REJECTED",
+        "REJECTED",
+        "REJECTED",
+        "REJECTED",
+    ]
     assert all(row["whole_record_loaded"] is False for row in rows)
