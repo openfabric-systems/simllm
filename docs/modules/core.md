@@ -1069,6 +1069,16 @@ identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
   tokens-per-second calibration value is comparison evidence only and may not
   tune the depth rule. COMP-76 owns independent repetition of the four-layer
   basis, while COMP-72 owns the missing MTP cell.
+  The [CORE-61 local derivation](../../examples/deployment_curve_v1/core61_depth_result.md)
+  separates the retained step into 489 ps fixed plus 1,875,679,511 ps
+  repeatable across four layers. Its corrected 61-layer declaration is
+  28.604113032 ms, only 6.96825 ns below the 28.604120000 ms linear rule, so
+  the fixed-component hypothesis has the expected sign but a materially null
+  magnitude. The result remains a `DECLARED` derivation from one `MEASURED`
+  service decomposition with `DISCLOSED` component attribution. CORE-61 stays
+  open with a frozen 3.751359511 ms prediction for the held-out eight-layer,
+  batch-32, remote-KV-2000 cell. That measurement joins COMP-72's resumable
+  Merlin remainder; COMP-76 is unchanged and CORE-63 remains reserved.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
