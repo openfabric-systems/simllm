@@ -918,6 +918,9 @@ point is inter-node-bound. The nine-node batch-32 raw incast excess is
 That misses the frozen positive elapsed-incast direction, so the published
 study is a refutation and TRAF-68 stays open. The A100 NVLink3 profile remains
 cross-architecture candidate evidence, not H100 or B100 measurement evidence.
+The TX, switch and RX queues, analytic identity bypass, frozen identification
+map and current evidence split are documented in the
+[NVLink domain-model study](../design/nvlink-domain-model.md).
 
 ## Open tasks
 
