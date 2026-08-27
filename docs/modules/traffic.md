@@ -95,6 +95,14 @@ the flow-level work the GOAL emitter renders.
   source-local issue dependencies. The aggregate APIs above remain the
   default and expose no second fidelity selector; `simllm.core.PrecisionConfig`
   is the one selection surface.
+- `NetworkLevel.LOGGOPSIM_IDEAL` selects the ideal-network step sink. It
+  preserves the graph-owned collective plan, GOAL rendering, analytic
+  intra-node service and standard `StepResult` metric path while replacing
+  only remote packet execution with the LogGOP cost model. The level records
+  declared `L`, `o`, `g`, `G`, `O` and `S` values, including the exact `G`
+  string derived from bit rate. It rejects composed-native RNIC hardware at
+  precision validation because those two remote-network authorities cannot
+  own the same step.
 - `plan_step_locality` expands TP ring rounds and MoE dispatch/combine tables
   into ordered directed phases over semantic global ranks, then joins an
   optional placement manifest through `RankMapper.is_intra_node` before any
@@ -480,6 +488,16 @@ diagnostic switch and names no seam level.
 Historical
 `examples/breakdown` fabric-TP columns remain byte-unchanged and are the
 all-remote, cross-node what-if under this model.
+
+The `loggopsim-ideal` level passes the frozen
+[ideal-network study](../../examples/loggopsim_ideal_v1/RESULTS.md): 28 of 28
+exact arithmetic oracles, 3 of 3 live metric-chain identities and 3 of 3
+wall-time ceilings in separate evidence classes, with all fatal guards held.
+The live step's independently reproduced network makespan and its TTFT delta
+against the zero-collective control are both exactly 202,000 ps. The study
+does not compare modeled error or wall-clock gain against packet execution on
+identical schedules, so TRAF-20 retains that qualification work.
+
 TRAF-7 is complete for observation-driven step lowering and the coarse live
 metric chain. The frozen two-layer study crossed `C/D` from 1/2 to 2 and
 realized independent, two-stage pipeline and serial graphs at their exact
@@ -1259,14 +1277,15 @@ map and current evidence split are documented in the
   against. Acceptance compares fitted quantiles against held-out
   packet-level runs at registered accuracy, and states plainly that a
   marginal fit does not reproduce correlations it never observed.
-- TRAF-20 (Precision; P2; M): add a fluid LogGOPSim fast level for
-  schedule-shape studies that do not need per-flow transport behavior.
-  The GOAL already compiles to the LogGOPSim toolchain, so this level
-  reuses it analytically and bypasses the event-driven RNIC path. Its
-  purpose is sweep throughput, so acceptance must state the measured
-  wall-clock gain and the measured error against the packet-level
-  reference on the same schedules, and it must refuse configurations
-  whose questions it cannot answer rather than returning a number.
+- TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
+  fast level for schedule-shape studies that do not need per-flow transport
+  behavior. The level prices the existing GOAL artifacts through LogGOPSim
+  and bypasses the event-driven RNIC path. Its exact arithmetic, live metric
+  wiring and generous speed ceilings are validated by
+  `examples/loggopsim_ideal_v1`. Remaining acceptance must measure wall-clock
+  gain and modeled error against the packet-level reference on identical
+  schedules, then define and enforce the envelope of questions the level
+  cannot answer.
 - TRAF-56 (Precision; P1; M): calibrate the collective registration cost and
   the model choices around it. `DECLARED_NCCL_CHANNEL_REGISTRATION_COST` charges
   20,000,000 ps per `(communicator, generation, channel, buffer)` identity, and

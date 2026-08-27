@@ -4,8 +4,8 @@
 with the LogGOPS model instead of a packet fabric, so it is the fast level for
 sweeps that only need a schedule completion time. This module is the
 invocation seam and its result parser, in the same shape as
-:mod:`simllm.backends.htsim_rnic`. It is not a new fidelity level: the fluid
-fast level itself is owned by TRAF-20.
+:mod:`simllm.backends.htsim_rnic`. The invocation helper also supplies the
+declared ideal-network parameter mapping used by ``LogGopsimStepSink``.
 
 Binary discovery order: the ``SIMLLM_LOGGOPSIM`` environment variable, then
 the single- or multi-configuration ``build/loggopsim`` CMake layout under the
