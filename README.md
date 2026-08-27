@@ -348,6 +348,7 @@ status and numbered open tasks; the README stays a map.
 | Module | Purpose | Doc |
 |---|---|---|
 | `simllm/core` | Virtual clock, scheduler-step records, execution graphs, central bookkeeping, completion contracts | [core](docs/modules/core.md) |
+| `simllm/deploy` | The planning rung: declared deployment candidates, closed-form capacity estimates and Pareto frontier scans in milliseconds, with every number labeled as an estimate, never a simulation result | [deploy](docs/modules/deploy.md) |
 | `simllm/workload` | Arrival processes, length distributions, deterministic generation requests, shared-prefix structure | [workload](docs/modules/workload.md) |
 | `simllm/compute` | Pluggable compute-time providers, the GPU service model and its concurrent task primitive, host initiation, and the NCCL stack skeleton | [compute](docs/modules/compute.md) |
 | `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |
