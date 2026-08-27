@@ -1,0 +1,114 @@
+{
+  "acceptance_status": "candidate",
+  "calibration_claim": false,
+  "campaign_id": "hopper-local-candidate-2026-08-26",
+  "coverage": "complete-kernel-stream",
+  "deepseek_row_decoded_or_captured_by_successful_reader": false,
+  "held_out_batch_32_decoded_or_captured": false,
+  "interpolation": "power-law-linear-in-log-batch-and-log-total-service",
+  "points": [
+    {
+      "batch_size": 1,
+      "entry_key": {
+        "framework_identity": {
+          "name": "vllm",
+          "package_sha256": "d73c897b0bde9e515c30101f694989fb65821a8543e7cad8f95e5440dc6bae81",
+          "revision": null,
+          "version": "0.27.1+cu129"
+        },
+        "input_dependency": "moe-routing-dependent",
+        "launch_mode": "cuda-graph",
+        "model_identity": {
+          "config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+          "family": "routed",
+          "name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+          "revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+          "weights_sha256": null
+        },
+        "parallelism": {
+          "data_parallel": 1,
+          "expert_parallel": 1,
+          "pipeline_parallel": 1,
+          "tensor_parallel": 1
+        },
+        "pool": "decode",
+        "routing": {
+          "availability": "not-captured",
+          "evidence_sha256": "38aac5614f44aeb77d3f73ec360deb65580e999acab27d90208b13037685eb16",
+          "expert_loads": null
+        },
+        "shape": {
+          "batch_size": 1,
+          "per_request_kv_lengths": [
+            16
+          ]
+        }
+      },
+      "entry_key_sha256": "d8fdebd7051f530bed3232cfeb2e3d5c87a1ab9a22fe68db9cca51436853a502",
+      "evidence_class": "MEASURED",
+      "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-graph-decode-b1-kv16",
+      "measured_service_ps": 1110576000,
+      "replay_count": 300,
+      "split": "calibration",
+      "trimmed_coefficient_of_variation_ppm": 4232
+    },
+    {
+      "batch_size": 8,
+      "entry_key": {
+        "framework_identity": {
+          "name": "vllm",
+          "package_sha256": "d73c897b0bde9e515c30101f694989fb65821a8543e7cad8f95e5440dc6bae81",
+          "revision": null,
+          "version": "0.27.1+cu129"
+        },
+        "input_dependency": "moe-routing-dependent",
+        "launch_mode": "cuda-graph",
+        "model_identity": {
+          "config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+          "family": "routed",
+          "name": "ibm-granite/granite-3.0-1b-a400m-instruct",
+          "revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+          "weights_sha256": null
+        },
+        "parallelism": {
+          "data_parallel": 1,
+          "expert_parallel": 1,
+          "pipeline_parallel": 1,
+          "tensor_parallel": 1
+        },
+        "pool": "decode",
+        "routing": {
+          "availability": "not-captured",
+          "evidence_sha256": "05783744264172276265b494bf361ea694fdc35adf0ec7ae5ac7d08bb8008967",
+          "expert_loads": null
+        },
+        "shape": {
+          "batch_size": 8,
+          "per_request_kv_lengths": [
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16,
+            16
+          ]
+        }
+      },
+      "entry_key_sha256": "38978457b27e56dbc0e9ffbe2385b7d53538a2515c826284be4d6d414520c830",
+      "evidence_class": "MEASURED",
+      "implementation_id": "granite-3.0-1b-a400m-instruct-vllm-graph-decode-b8-kv16",
+      "measured_service_ps": 1892831500,
+      "replay_count": 300,
+      "split": "calibration",
+      "trimmed_coefficient_of_variation_ppm": 1538
+    }
+  ],
+  "record_bytes_consumed": 45043,
+  "record_device_kind_id": "nvidia-gh200-sm90",
+  "record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+  "record_total_bytes": 57417,
+  "schema": "simllm-pd-session-load-delay-surface-v1",
+  "whole_record_loaded": false
+}

@@ -634,6 +634,20 @@ exact throughput curves are live, while the frozen nondecreasing delay claim
 is refuted and remains VLLM-35 through VLLM-39; see
 [the concurrent-session results](../../examples/pd_session_concurrent_v1/RESULTS.md).
 
+The imported-surface follow-up prices only the decode pool from two MEASURED
+Granite rows in the merged Hopper candidate record and keeps batching service
+separate from live scheduler queue wait. It conserves 2,304 request
+lifecycles across 36 frozen cells and observes increasing per-token request
+delay on all 30 segments. Scheduler queue wait dominates from the first 250
+to 500 requests/s segment even while imported batch service per token falls.
+Only 1 of 24 frozen held-out bands holds, refuting the queue model and its
+1,056.6 and 2,113.2 requests/s predicted knees. The monotonic-delay claim is
+validated, but the attempt is exposure-contaminated by a disclosed
+pre-reader reconnaissance command, so VLLM-39 and VLLM-35 remain open on the
+clean VLLM-40 repetition. VLLM-41 owns the distinct lower-load queue-onset
+residual; see
+[the imported-surface result](../../examples/pd_session_load_delay_v1/RESULTS.md).
+
 The same live driver now accepts pool-specific content-addressed lookup
 bindings for CORE-53. The retained candidate study selected its exact decode
 row twice and surfaced candidate status without a calibration claim. Both
@@ -712,7 +726,31 @@ framework-owned join; see
   curve point, and either a validated direction or an explicit withdrawal of
   the monotonic claim. The CORE-51 one-request control and the current
   deterministic comparator remain byte-for-byte and timestamp-for-timestamp
-  identical.
+  identical. The 2026-08-27 imported-surface run held every fatal guard,
+  preserved those controls and validated increasing delay in all six curves,
+  but only 1 of 24 frozen bands held because live scheduler queue wait
+  dominated before the predicted knee. The result is published as a frozen
+  refutation. This task stays open because a pre-reader repository search
+  violated the literal access protocol; VLLM-40 owns the clean repetition.
+- VLLM-40 (Precision; P1; M): repeat VLLM-39 from a fresh exposure boundary
+  after the field-addressed reader and exact two-key selection are committed.
+  Access only the Granite CUDA-graph decode batch-1 and batch-8 rows by their
+  content-addressed keys, log every field access, load no whole candidate
+  record and decode no DeepSeek or source batch-32 row. Rerun the unchanged
+  36-cell sweep and require exact conservation, identical surface and freeze
+  identities, the same complete direction and held-out-band evaluation, and
+  all three preservation manifests unchanged. Close VLLM-39 only if the
+  repetition is clean and the observed result is reported without widening a
+  band or changing a signed expectation.
+- VLLM-41 (Precision; P1; M): identify the scheduler queue-wait onset below
+  the VLLM-39 sweep. Freeze a lower offered-load ladder before running it,
+  retain the imported surface and its no-calibration status unchanged, and
+  report batching service per token separately from arrival-to-prefill plus
+  handoff-to-decode admission wait. Hold out at least one sub-250 load and one
+  pool ratio, predict the first queue-dominated segment with quantitative
+  bands and refuse to fit from the observed curve. The purpose is to replace
+  the refuted 1,056.6 and 2,113.2 requests/s knee predictions, not to reopen
+  the validated monotonic direction over 250 to 8,000 requests/s.
 
 ### Completeness
 
@@ -738,8 +776,12 @@ framework-owned join; see
   explicit baseline and must retain its accepted timestamps and artifacts.
   The concurrent mechanism, all conservation guards and genuine batches in
   both roles are delivered, but the frozen delay-direction relation is
-  refuted in all six curves. This task stays open on VLLM-39 rather than
-  weakening that relation after observation.
+  refuted in all six deterministic-comparator curves. The VLLM-39
+  imported-surface run now validates increasing delay in all six curves with
+  scheduler queue wait as the measured mechanism, while preserving the
+  one-request control and deterministic comparator. This task moves only to
+  clean qualification: it stays open until VLLM-40 permits the literal
+  VLLM-39 close.
 
 - VLLM-25 (Completeness; P2; M): support shared-expert and mixed dense and
   routed MoE geometries in the config reader. `model_dims_from_vllm_config`
