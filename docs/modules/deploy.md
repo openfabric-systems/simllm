@@ -97,11 +97,14 @@ gate, stamped capacity estimator, deterministic frontier scan, exact Pareto
 selection and plot-contract v3 preparation are installed with their v1
 boundaries locked by tests. The estimator and frontier driver reproduce the
 frozen roofline, byte partition, ideal network, telescoping, coordinate and
-legacy plot-series forms without starting a process. The wave-level study
-completes the planning rung under DEPLOY-1. Structural placement rendering,
-SGLang-side candidate construction, parallel scanning and promoted simulation
-remain explicit optional integrations under DEPLOY-2, DEPLOY-3, DEPLOY-7 and
-DEPLOY-8.
+legacy plot-series forms without starting a process. The frozen
+`deployment_scan_v1` study passes every scored family with 0 ps maximum error
+across both 18-cell compatibility reproductions; its process guards fire zero
+times, its 72-point primary pricing takes 0.030626657 seconds and its
+6,000-point throughput grid takes 2.084882394 seconds on the disclosed study
+machine. Structural placement rendering, SGLang-side candidate construction,
+parallel scanning and promoted simulation remain explicit optional
+integrations under DEPLOY-2, DEPLOY-3, DEPLOY-7 and DEPLOY-8.
 
 ## Open tasks
 
@@ -120,10 +123,6 @@ DEPLOY-8.
 
 ### Completeness
 
-- DEPLOY-1 (Completeness; P1; L): Install the estimator, queue and rate-match
-  forms, deterministic frontier scan, plot projection and frozen deployment
-  scan study, while leaving every existing simulator and adapter entry point
-  unchanged when deployment planning is not selected.
 - DEPLOY-2 (Completeness; P2; M): Wire accepted candidates into the structural
   placement and fabric renderers and return rendered host packing to
   feasibility; preserve the declared one-engine-per-node arithmetic exactly
