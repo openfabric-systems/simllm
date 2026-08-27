@@ -10,9 +10,24 @@ digest-complete rows. The tracked summary is
 `measurement_claim: false`; it validates compilation, catalog expansion,
 resumption, checksums, manifests, and the candidate service only.
 
-The hardware remainder has not run. Maintenance reservation
-`SD26082026` holds Merlin GPU nodes down until
-`2026-08-28T06:30`. No job should be submitted before that time.
+The hardware remainder ran on 2026-08-27 as Merlin job `198968`. All 86 cells
+are digest-complete on `gpu105`, with 14,035 hardware rows and an empty pending
+set. Every scheduler task exited `0:0` and no scheduler stop record exists.
+
+This does not promote the result to measurement evidence. The frozen capture
+cannot evaluate five fatal guards, derives packet and raw-byte fields from the
+candidate, leaves seven named sweep controls unapplied in hardware mode, and
+enqueues one copy-engine operation per message. The scored state is
+`COMPLETE_VOID_86_OF_86`; see [the hardware score](RESULTS.md). TRAF-65 remains
+OPEN, and the profile remains a declared candidate with no parameter value
+changed.
+
+The written maintenance record said reservation `SD26082026` held Merlin GPU
+nodes down until `2026-08-28T06:30`. On 2026-08-27 the integrator verified that
+the reservation lifted early and the A100 partitions were visible in mixed and
+allocated states. That verified state superseded the submission date only.
+The `a100-hourly`, exclusive four-GPU, `%1`, six-minute, and task-indexed pacing
+rules remained in force.
 
 The final expectations digest is:
 
@@ -56,6 +71,14 @@ composition over 524,288 bytes per destination gives 94.056390 GB/s and
 already measured 94.00 to 94.07 GB/s pair row and 281.65 GB/s fan-out row. The
 comparison is post-specified validation, not a new measurement.
 
+The hardware score did not identify the 256-byte payload, 16-byte header,
+four-link striping, direction mapping, effective credits, RX buffer, credit
+return latency, or reassembly policy. The direct-mesh switch pass-through
+invariant stands structurally but is not a hardware measurement. The captured
+elapsed-time bands refuted three bond cases and all 16 incast cases, but those
+rows are void under the frozen guard contract and therefore refute this capture
+as an identification procedure rather than the physical candidate constants.
+
 ## Exact local entry point
 
 From the worktree root:
@@ -78,10 +101,10 @@ a new attempt directory is created.
 
 ## Exact Merlin staging and resume entry point
 
-Run these commands from this worktree after
-`2026-08-28T06:30`. They stage the exact local commit without requiring a
-remote Git branch. The archive first lands as a `.part` file, so SSH loss
-cannot create a stage that the submission command accepts.
+These are the commands used from this worktree after the integrator's verified
+early release of the reservation. They stage the exact local commit without
+requiring a remote Git branch. The archive first lands as a `.part` file, so
+SSH loss cannot create a stage that the submission command accepts.
 
 ```bash
 TRAF65_HEAD="$(git rev-parse HEAD)"
@@ -154,3 +177,13 @@ record, and leaves the cell resumable.
 Re-running the pending-index command and the same `sbatch` command is the
 complete resume procedure. It never treats a directory as complete unless all
 payload digests and the manifest digest verify.
+
+The post-run pending-index command returns an empty string. Merlin's login-node
+default `python3` is Python 3.6.15, which cannot parse the frozen runner. The
+execution prepended the installed Python 3.10.16 binary and runtime-library
+paths to the environment before invoking the exact pending and `sbatch`
+commands; the staged source, archive, freeze, and batch script were unchanged.
+The batch-built binary SHA-256 was
+`992eaa12d5953806a1f21d12fce612d72f721a141d425a666404ffb26770c3e1`,
+which differs from the earlier compile-check digest. Every cell plan binds the
+single batch digest, and the score publishes the reproducibility mismatch.
