@@ -9,18 +9,22 @@ backend, allocating a GPU or importing a serving framework.
 ## Interface
 
 - `DeploymentCandidate` is the immutable
-  `simllm-deployment-candidate-v1` declaration. Its nested `ModelRef`,
+  `simllm-deployment-candidate-v1` declaration. The top-level declaration
+  rejects wrong schema tags and duplicate pool roles; its nested `ModelRef`,
   `PoolSpec`, `FabricSpec`, `WorkloadPoint`, `SlaSpec` and `BudgetSpec`
-  records reject unknown fields, wrong schema tags, booleans in integer
-  fields, duplicate pool roles, nonpositive widths and devices absent from
-  `GPU_ENVELOPES`. `to_json` and `from_json` are the strict wire boundary,
+  records reject unknown fields, booleans in integer fields, nonpositive
+  widths, devices absent from `GPU_ENVELOPES` and non-ASCII strings (the v1
+  restriction that keeps the canonical identity total over valid
+  candidates). `to_json` and `from_json` are the strict wire boundary,
   while `candidate_key` is the SHA-256 of its canonical JSON object.
 - `check_feasibility` rejects pipeline-parallel pools that this rung cannot
   price, static per-rank state that meets or exceeds device high-bandwidth
   memory capacity, and candidates above declared GPU or node budgets. The v1
-  node count is the number of declared engine slots. An accepted
-  `FeasibilityReport` has `accepted=True` and an empty reason tuple; every
-  refusal uses stable reason codes.
+  node count is the number of declared engine slots; an engine spanning more
+  than one physical node still counts as one slot, so the node-budget
+  refusal is a lower bound until DEPLOY-2 returns rendered host packing. An
+  accepted `FeasibilityReport` has `accepted=True` and an empty reason
+  tuple; every refusal uses stable reason codes.
 - The capacity estimator prices prefill, decode, handoff and queue terms in
   integer picoseconds or exact fractions. Every duration carries its evidence
   class and source, and rate matching reports required role-pool engine counts,

@@ -31,7 +31,10 @@ _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 
 
 def _validated_string(value: object, path: str) -> str:
-    return _string(value, path)
+    text = _string(value, path)
+    if not text.isascii():
+        raise ValueError(f"{path}: v1 candidate strings must be ASCII")
+    return text
 
 
 def _validated_positive_integer(value: object, path: str) -> int:
@@ -341,8 +344,20 @@ def _pool_from_json(value: object, path: str) -> PoolSpec:
             "device",
         },
     )
+    role = _string(payload["role"], f"{path}.role")
+    if role not in _POOL_ROLES:
+        raise ValueError(
+            f"{path}.role: unknown value {role!r}; "
+            f"expected one of {sorted(_POOL_ROLES)}"
+        )
+    device = _string(payload["device"], f"{path}.device")
+    if device not in GPU_ENVELOPES:
+        raise ValueError(
+            f"{path}.device: unknown GPU envelope {device!r}; "
+            f"expected one of {sorted(GPU_ENVELOPES)}"
+        )
     return PoolSpec(
-        role=_string(payload["role"], f"{path}.role"),
+        role=role,
         engines=_integer(payload["engines"], f"{path}.engines", minimum=1),
         gpus_per_engine=_integer(
             payload["gpus_per_engine"],
@@ -369,7 +384,7 @@ def _pool_from_json(value: object, path: str) -> PoolSpec:
             f"{path}.data_parallel",
             minimum=1,
         ),
-        device=_string(payload["device"], f"{path}.device"),
+        device=device,
     )
 
 
@@ -518,7 +533,12 @@ def candidate_from_json(value: object) -> DeploymentCandidate:
 
 
 def candidate_key(candidate: DeploymentCandidate) -> str:
-    """Return the SHA-256 identity of the candidate's canonical JSON object."""
+    """Return the SHA-256 identity of the candidate's canonical JSON object.
+
+    Total over schema-valid candidates: v1 restricts every candidate string
+    field to ASCII, so the canonical family accepts every candidate that
+    validation accepts, independent of the interpreter's Unicode handling.
+    """
 
     return canonical_sha256(to_json(candidate))
 
@@ -547,7 +567,10 @@ def check_feasibility(
 
     ``static_rank_bytes_per_pool`` is keyed by pool role and
     ``device_hbm_capacity_bytes`` is keyed by the candidate's GPU envelope
-    name. One declared engine is one node slot for the v1 node-budget check.
+    name. One declared engine is one node slot for the v1 node-budget check;
+    an engine spanning more than one physical node is still counted as one
+    slot, so the budget-nodes-exceeded refusal is a lower bound until
+    DEPLOY-2 returns rendered host packing.
     """
 
     _require_instance(candidate, DeploymentCandidate, "candidate")

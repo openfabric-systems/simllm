@@ -1,4 +1,4 @@
-"""Backend-free deployment candidate, estimator, and frontier contracts."""
+"""Backend-free deployment candidate and feasibility contracts."""
 
 from simllm.deploy.candidate import (
     BUDGET_GPUS_EXCEEDED,

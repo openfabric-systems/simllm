@@ -271,3 +271,42 @@ def test_feasibility_requires_sizing_inputs_for_every_pool_and_device() -> None:
             static_rank_bytes_per_pool={"decode": 0},
             device_hbm_capacity_bytes={},
         )
+
+
+def test_non_ascii_candidate_string_is_rejected_everywhere() -> None:
+    with pytest.raises(ValueError, match="model.model_id: v1 candidate strings must be ASCII"):
+        replace(
+            _candidate().model,
+            model_id="Qwen/通义千问-72B",
+        ).__post_init__()
+    payload = to_json(_candidate())
+    payload = deepcopy(payload)
+    payload["candidate_id"] = "decode-é"
+    with pytest.raises(ValueError, match="candidate.candidate_id: v1 candidate strings must be ASCII"):
+        from_json(payload)
+
+
+def test_unpaired_surrogate_candidate_id_is_rejected() -> None:
+    with pytest.raises(ValueError, match="candidate.candidate_id: v1 candidate strings must be ASCII"):
+        replace(_candidate(), candidate_id="bad-\ud800").__post_init__()
+
+
+def test_candidate_key_is_total_over_valid_candidates() -> None:
+    first = candidate_key(_candidate())
+    second = candidate_key(_candidate())
+    assert first == second
+    assert len(first) == 64
+
+
+def test_pool_parse_errors_carry_indexed_paths() -> None:
+    payload = deepcopy(to_json(_candidate()))
+    prefill = deepcopy(payload["pools"][0])
+    prefill["role"] = "prefill"
+    payload["pools"] = [prefill, deepcopy(payload["pools"][0])]
+    payload["pools"][1]["role"] = "chat"
+    with pytest.raises(ValueError, match=r"candidate\.pools\[1\]\.role: unknown value 'chat'"):
+        from_json(payload)
+    payload["pools"][1]["role"] = "decode"
+    payload["pools"][1]["device"] = "tpu9"
+    with pytest.raises(ValueError, match=r"candidate\.pools\[1\]\.device: unknown GPU envelope 'tpu9'"):
+        from_json(payload)
