@@ -383,6 +383,15 @@ def _strict_round_trip(
                     return False, f"candidate unknown field used wrong error: {error}"
             else:
                 return False, "candidate parser accepted an unknown field"
+            wrong_schema_candidate = deepcopy(unknown_candidate)
+            wrong_schema_candidate["schema"] = "simllm-deployment-candidate-v0"
+            try:
+                candidate_from_json(wrong_schema_candidate)
+            except ValueError as error:
+                if "unsupported schema" not in str(error) or "unknown fields" in str(error):
+                    return False, f"candidate schema was not checked first: {error}"
+            else:
+                return False, "candidate parser accepted a wrong schema"
 
         for record in records:
             rendered_record = frontier_record_to_json(record)
@@ -397,6 +406,15 @@ def _strict_round_trip(
                     return False, f"frontier unknown field used wrong error: {error}"
             else:
                 return False, "frontier parser accepted an unknown field"
+            wrong_schema_record = deepcopy(unknown_record)
+            wrong_schema_record["schema"] = "simllm-deployment-frontier-record-v0"
+            try:
+                frontier_record_from_json(wrong_schema_record)
+            except ValueError as error:
+                if "unsupported schema" not in str(error) or "unknown fields" in str(error):
+                    return False, f"frontier schema was not checked first: {error}"
+            else:
+                return False, "frontier parser accepted a wrong schema"
             for point in record.points:
                 rendered_stamp = estimate_stamp_to_json(point.stamp)
                 if estimate_stamp_from_json(rendered_stamp) != point.stamp:
@@ -410,6 +428,17 @@ def _strict_round_trip(
                         return False, f"stamp unknown field used wrong error: {error}"
                 else:
                     return False, "estimate stamp parser accepted an unknown field"
+                wrong_schema_stamp = deepcopy(unknown_stamp)
+                wrong_schema_stamp["schema"] = "simllm-deployment-estimate-v0"
+                try:
+                    estimate_stamp_from_json(wrong_schema_stamp)
+                except ValueError as error:
+                    if "unsupported schema" not in str(error) or "unknown fields" in str(
+                        error
+                    ):
+                        return False, f"stamp schema was not checked first: {error}"
+                else:
+                    return False, "estimate stamp parser accepted a wrong schema"
     except (TypeError, ValueError) as error:
         return False, str(error)
     return True, "candidate, estimate stamp and frontier record boundaries are strict"
