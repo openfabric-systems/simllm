@@ -93,6 +93,7 @@ class LogGopsimStepSinkConfig:
     byte_overhead_ns: int = 0
     rendezvous_threshold_bytes: int = DEFAULT_LOGGOPSIM_EAGER_THRESHOLD_BYTES
     binary: Path | None = None
+    txt2bin: Path | None = None
     timeout_s: int = 600
     provider: ComputeProvider = field(
         default_factory=lambda: RooflineProvider(efficiency=0.7)
@@ -153,10 +154,12 @@ class _LogGopsimExecutionSink(HtsimStepSink):
         *,
         binary: Path,
         parameters: DerivedLoggpParams,
+        txt2bin: Path | None,
         timeout_s: int,
     ) -> None:
         self._loggopsim_binary = binary
         self._loggp_parameters = parameters
+        self._txt2bin = txt2bin
         self._loggopsim_timeout_s = timeout_s
         self.loggopsim_invocations: list[LogGopsimInvocationProvenance] = []
         super().__init__(config)
@@ -174,7 +177,7 @@ class _LogGopsimExecutionSink(HtsimStepSink):
                 "LogGOPSim ideal level requires every rendered payload to be "
                 f"eager, but {max(payloads)} bytes exceeds declared S={threshold}"
             )
-        goal_bin = to_binary(goal_path)
+        goal_bin = to_binary(goal_path, tool=self._txt2bin)
         invocation = self._loggp_parameters.to_loggopsim_config(goal_bin)
         argv = tuple(build_loggopsim_command(self._loggopsim_binary, invocation))
         result = run_loggopsim(
@@ -230,6 +233,7 @@ class LogGopsimStepSink:
             planner_config,
             binary=binary,
             parameters=config.parameters,
+            txt2bin=config.txt2bin,
             timeout_s=config.timeout_s,
         )
         self._binary_sha256 = binary_sha256

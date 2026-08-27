@@ -56,7 +56,9 @@ def _binary(path: Path) -> Path:
 
 
 def _stub_native(monkeypatch, *, makespan_ps: int = 123_000) -> None:
-    def convert(goal_path: Path) -> Path:
+    def convert(goal_path: Path, bin_path=None, tool=None) -> Path:
+        del bin_path
+        assert tool is None or tool.name == "txt2bin"
         target = goal_path.with_suffix(".bin")
         target.write_bytes(b"binary:" + goal_path.read_bytes())
         return target
@@ -91,6 +93,7 @@ def test_the_sink_prices_shared_goal_artifacts_and_records_exact_provenance(
             workdir=tmp_path / "run",
             latency_ns=100,
             binary=_binary(tmp_path / "LogGOPSim"),
+            txt2bin=tmp_path / "txt2bin",
             provider=_FixedProvider(),
         )
     )

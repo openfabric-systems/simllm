@@ -262,7 +262,7 @@ Legend: **landed** is usable today, **registered** names the owning task.
 | Network | fluid closed form (`rnic-nn-fluid`) | deterministic analytic | landed |
 | | packet-level event driven (`rnic-nn`, `rnic-cn`, DCQCN) | deterministic given seed | landed |
 | | statistical flow model: tail latency, ECMP collision, link failure | calibrated, distribution | registered, TRAF-19 |
-| | fluid LogGOPSim fast path | deterministic analytic | registered, TRAF-20 |
+| | ideal LogGOPSim fast level (`loggopsim-ideal`) | deterministic analytic | landed, TRAF-20 owns same-schedule packet-reference speed and error acceptance |
 | RNIC hardware | timing-neutral bypass ledger | deterministic | landed, compatibility level |
 | | composed native RNIC with PCIe, QPC, DMA and packet issue | deterministic | landed, BACK-8 and HTSIM-9 |
 
