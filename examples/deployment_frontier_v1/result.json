@@ -1,0 +1,3331 @@
+{
+  "accounting_schema": "simllm-roofline-network-accounting-v1",
+  "bulk_artifacts": [
+    {
+      "bytes": 178,
+      "path": "cells/h100-two-node-serialized/batch-1/concurrent.goal",
+      "sha256": "0d498cdae5d0ce62c49f4f0d571f0e8e595cbbf77bbc79d71e36e7f68ed6a152"
+    },
+    {
+      "bytes": 234,
+      "path": "cells/h100-two-node-serialized/batch-1/concurrent.bin",
+      "sha256": "1922be940280ac8f9a5876616d46147bdab5e37410fbcb45de9e39033f6d09f5"
+    },
+    {
+      "bytes": 152,
+      "path": "cells/h100-two-node-serialized/batch-1/concurrent-completion.csv",
+      "sha256": "8d6d09e6726643befab7f9f37f737891f6ee8eafc91b0f7687c30cf3fda420f3"
+    },
+    {
+      "bytes": 180,
+      "path": "cells/h100-two-node-serialized/batch-2/concurrent.goal",
+      "sha256": "fce1d42001361594b7c9b9f174d59d714a41238196582869564a75d743283c3b"
+    },
+    {
+      "bytes": 234,
+      "path": "cells/h100-two-node-serialized/batch-2/concurrent.bin",
+      "sha256": "ca78463cf24655c308fd08a8e7d4553c7b8123fa005cf0a0f61dd2a9a2c74c33"
+    },
+    {
+      "bytes": 153,
+      "path": "cells/h100-two-node-serialized/batch-2/concurrent-completion.csv",
+      "sha256": "d05b9cdd130204d475aa9205954bf461232b5745b38c6c7fbbaa2bf1a46a34ae"
+    },
+    {
+      "bytes": 180,
+      "path": "cells/h100-two-node-serialized/batch-4/concurrent.goal",
+      "sha256": "4cc664912115b5bc5b63b9081d8a39fa234394b4fc7ca8efc2039fd6498e8898"
+    },
+    {
+      "bytes": 234,
+      "path": "cells/h100-two-node-serialized/batch-4/concurrent.bin",
+      "sha256": "0f4caa77f945f0043cf72b708d1bba49b402d884624432d27c37e84ec8deb5fe"
+    },
+    {
+      "bytes": 153,
+      "path": "cells/h100-two-node-serialized/batch-4/concurrent-completion.csv",
+      "sha256": "8c2b5fcc51ad6178ff0df4c453b0232925dbd7c708bad6ce570e256b484819c6"
+    },
+    {
+      "bytes": 180,
+      "path": "cells/h100-two-node-serialized/batch-8/concurrent.goal",
+      "sha256": "7683570773a33557dce05d2e933f08ace210e0f4219769b2624b94972478f9fc"
+    },
+    {
+      "bytes": 234,
+      "path": "cells/h100-two-node-serialized/batch-8/concurrent.bin",
+      "sha256": "a0fa66834934a2a23a168394e787b34fdcda50a49c81ea0d2ad217ded1074e87"
+    },
+    {
+      "bytes": 155,
+      "path": "cells/h100-two-node-serialized/batch-8/concurrent-completion.csv",
+      "sha256": "fd4940b695ff6bee74f70cc3b03d556f475e6508cac40898fb55be493b5b05ac"
+    },
+    {
+      "bytes": 182,
+      "path": "cells/h100-two-node-serialized/batch-16/concurrent.goal",
+      "sha256": "813344978a6f53a8a81abab6ed934708e2219b1ef2c17d992319c4b3ba3ba2b5"
+    },
+    {
+      "bytes": 234,
+      "path": "cells/h100-two-node-serialized/batch-16/concurrent.bin",
+      "sha256": "5ad8d21d3cc87385f11bcd98b58ecff83d9a87a16ca3d91dc2a08275f20c296f"
+    },
+    {
+      "bytes": 156,
+      "path": "cells/h100-two-node-serialized/batch-16/concurrent-completion.csv",
+      "sha256": "c44d0534077b2fdc0b0393ebd5a3d297abaf67aaafdd4f7a130db1705e3f2668"
+    },
+    {
+      "bytes": 182,
+      "path": "cells/h100-two-node-serialized/batch-32/concurrent.goal",
+      "sha256": "38b611d91e37231596ba63cf1674d0e6d013048b73b32cb0454810c69d858612"
+    },
+    {
+      "bytes": 234,
+      "path": "cells/h100-two-node-serialized/batch-32/concurrent.bin",
+      "sha256": "fa32217a44ba72c09e0d69ebf06d841ff1db393e49a32ee039b6108b10b3797b"
+    },
+    {
+      "bytes": 156,
+      "path": "cells/h100-two-node-serialized/batch-32/concurrent-completion.csv",
+      "sha256": "b5bd7db26b68b74cfa82a98cceb1c44984b192fd753ed1e1ffee41a9c3713957"
+    },
+    {
+      "bytes": 1165,
+      "path": "cells/h100-nine-node-incast/batch-1/concurrent.goal",
+      "sha256": "14454e7b432a0dce98bdfbebc53bcf1d58add9a483c4769d01c55111c9ea2a22"
+    },
+    {
+      "bytes": 1333,
+      "path": "cells/h100-nine-node-incast/batch-1/concurrent.bin",
+      "sha256": "79feddcdb3473dbc4dcca0fb36b28205961434ff95817aed7362e9fd05d86765"
+    },
+    {
+      "bytes": 571,
+      "path": "cells/h100-nine-node-incast/batch-1/concurrent-completion.csv",
+      "sha256": "c77efc8979b1cadbd35a28a4802ee6b6f786d6f1d684b79d7b8e20494e3c1c72"
+    },
+    {
+      "bytes": 255,
+      "path": "cells/h100-nine-node-incast/batch-1/isolated.goal",
+      "sha256": "89adfdab36a39b4baf9a2bc6d5a66d7396020a7bb393bbf021c36e68010474a5"
+    },
+    {
+      "bytes": 402,
+      "path": "cells/h100-nine-node-incast/batch-1/isolated.bin",
+      "sha256": "94fcd9f22d952769e6bd33995bd0f14baeddc2c315d8e5c38a1ffc2d8afb49f2"
+    },
+    {
+      "bytes": 150,
+      "path": "cells/h100-nine-node-incast/batch-1/isolated-completion.csv",
+      "sha256": "52c6b2b180f91681d2d658891b409a037fe7917ea1936be9388f6387990862a1"
+    },
+    {
+      "bytes": 1165,
+      "path": "cells/h100-nine-node-incast/batch-2/concurrent.goal",
+      "sha256": "d5402e404ea75dc864a2936d9c3b5c929fd72e20b1d9bab9c88abe5c3a6959e5"
+    },
+    {
+      "bytes": 1333,
+      "path": "cells/h100-nine-node-incast/batch-2/concurrent.bin",
+      "sha256": "f7be8e68aec9276e5e01ca7b0e05bf59c5855dca4349aa8781b1e36900e4100a"
+    },
+    {
+      "bytes": 571,
+      "path": "cells/h100-nine-node-incast/batch-2/concurrent-completion.csv",
+      "sha256": "f0e4325837772a2cbcc28895853f8315bc32fdeecbd414da06b971cadd35087d"
+    },
+    {
+      "bytes": 255,
+      "path": "cells/h100-nine-node-incast/batch-2/isolated.goal",
+      "sha256": "c90c5e497af32abb2ebc848eb6bad323f8e388f94befdab6a9cfc277540d2279"
+    },
+    {
+      "bytes": 402,
+      "path": "cells/h100-nine-node-incast/batch-2/isolated.bin",
+      "sha256": "c9f2bdf248153dbd72171ccca9bf00b0fb0ce6798a451c45da590a3440a7c3fa"
+    },
+    {
+      "bytes": 150,
+      "path": "cells/h100-nine-node-incast/batch-2/isolated-completion.csv",
+      "sha256": "5384402f9132261de8534c0b55ef199ca9936fa6375ef9c9c47650fc082ee41a"
+    },
+    {
+      "bytes": 1165,
+      "path": "cells/h100-nine-node-incast/batch-4/concurrent.goal",
+      "sha256": "14f3f6e0479d179ecdcb7e1fb66f049f65a06ae7e5c9a4304ec6b0213d17e16c"
+    },
+    {
+      "bytes": 1333,
+      "path": "cells/h100-nine-node-incast/batch-4/concurrent.bin",
+      "sha256": "ce59c355459c645aafc122b1127fcaeea058dbf37a7f8367a0407d432f4ccb11"
+    },
+    {
+      "bytes": 571,
+      "path": "cells/h100-nine-node-incast/batch-4/concurrent-completion.csv",
+      "sha256": "e8f873dc00e6c15681ab9dbcc35567ec080b161d4ee59bac3314479f8f3ea876"
+    },
+    {
+      "bytes": 255,
+      "path": "cells/h100-nine-node-incast/batch-4/isolated.goal",
+      "sha256": "9ce925281b45f47c93598480b7b29d6d45baa2dcdd7a44518d9d84923e829e20"
+    },
+    {
+      "bytes": 402,
+      "path": "cells/h100-nine-node-incast/batch-4/isolated.bin",
+      "sha256": "45b743e8835124f5ad6118232d540bdea3222cd1438bd2c7a637e89b7a1792f4"
+    },
+    {
+      "bytes": 152,
+      "path": "cells/h100-nine-node-incast/batch-4/isolated-completion.csv",
+      "sha256": "9b519ed04759818cb7369491c73a0ed4ee724cc273fb8affe7bee52588bf31d6"
+    },
+    {
+      "bytes": 1181,
+      "path": "cells/h100-nine-node-incast/batch-8/concurrent.goal",
+      "sha256": "4ebdc1423b95e6e8df3b89b1e728375e65adeff7cc4980d1f025c9f1d682efbd"
+    },
+    {
+      "bytes": 1333,
+      "path": "cells/h100-nine-node-incast/batch-8/concurrent.bin",
+      "sha256": "665ed0ae6fe31ba36bff8b61ed3024425aa3cab13fa5b5821e979bf953593f49"
+    },
+    {
+      "bytes": 595,
+      "path": "cells/h100-nine-node-incast/batch-8/concurrent-completion.csv",
+      "sha256": "2f3aa6e14be27e3548968b734ebe0a1b0e45a21cdd0a684af1cc37b1e7807fea"
+    },
+    {
+      "bytes": 257,
+      "path": "cells/h100-nine-node-incast/batch-8/isolated.goal",
+      "sha256": "8c6f675111d2344ea6b606788f5ee37347b36c145404ea11ecdf1f5fbc5b7823"
+    },
+    {
+      "bytes": 402,
+      "path": "cells/h100-nine-node-incast/batch-8/isolated.bin",
+      "sha256": "788421df13b9ac8b86fb791b23baa5b38466b57377b823cb695db646c03d81ef"
+    },
+    {
+      "bytes": 153,
+      "path": "cells/h100-nine-node-incast/batch-8/isolated-completion.csv",
+      "sha256": "35aceb48e6d967bb0e45f752d2954aa9d565850ca0193f8520335a0f1de09e2d"
+    },
+    {
+      "bytes": 1181,
+      "path": "cells/h100-nine-node-incast/batch-16/concurrent.goal",
+      "sha256": "d01370efcd9f003ca82a755d01e223359adacd89314a168e6f3f5405d33a6e71"
+    },
+    {
+      "bytes": 1333,
+      "path": "cells/h100-nine-node-incast/batch-16/concurrent.bin",
+      "sha256": "932e622cea300c82cb09ef556a0768d057623fd6249bca8dbbf00e4d0a583422"
+    },
+    {
+      "bytes": 595,
+      "path": "cells/h100-nine-node-incast/batch-16/concurrent-completion.csv",
+      "sha256": "e50d94911782a537e7ca6ff598ac1e956e85764956a7cef04cd1b36647c7c1f3"
+    },
+    {
+      "bytes": 257,
+      "path": "cells/h100-nine-node-incast/batch-16/isolated.goal",
+      "sha256": "deaa19c9132cc8fcbb581fee633b227679356ede75fb0ac9f20b81bf7f2a8eaf"
+    },
+    {
+      "bytes": 402,
+      "path": "cells/h100-nine-node-incast/batch-16/isolated.bin",
+      "sha256": "d4215c744c7087c5c4fb73c15a8497b46ca30f9de0a654360ac59c8f679e0d73"
+    },
+    {
+      "bytes": 153,
+      "path": "cells/h100-nine-node-incast/batch-16/isolated-completion.csv",
+      "sha256": "55d4f21cdce7de65273c4baa737979979dd4dfbaded3edb23092cbbe5e51186b"
+    },
+    {
+      "bytes": 1181,
+      "path": "cells/h100-nine-node-incast/batch-32/concurrent.goal",
+      "sha256": "fecbcc8ec7ad2818d00489da84726557cc9cbb86834cecc61e42caa6c365b31d"
+    },
+    {
+      "bytes": 1333,
+      "path": "cells/h100-nine-node-incast/batch-32/concurrent.bin",
+      "sha256": "d9b7f4122a81b8eecaf979b4fc59d00835cf28abc2d2dfb2f83b78951ff2d63a"
+    },
+    {
+      "bytes": 595,
+      "path": "cells/h100-nine-node-incast/batch-32/concurrent-completion.csv",
+      "sha256": "906c397584e88ee11bffcb1be0c552a72ba014e9e422002cad862392c13f4a8a"
+    },
+    {
+      "bytes": 257,
+      "path": "cells/h100-nine-node-incast/batch-32/isolated.goal",
+      "sha256": "5f64692584e0fcc3057744f5aac857b7ac5a060e17adaeebd2521d32e68eb923"
+    },
+    {
+      "bytes": 402,
+      "path": "cells/h100-nine-node-incast/batch-32/isolated.bin",
+      "sha256": "76eca13257507ede618cc1f97af9942607d7866972eab42e8d2aff737ede3c6c"
+    },
+    {
+      "bytes": 153,
+      "path": "cells/h100-nine-node-incast/batch-32/isolated-completion.csv",
+      "sha256": "b6608a96650e3fffeffa31f199a9840a33382302ac3b8119376c8e278e5d9a7d"
+    }
+  ],
+  "expected_direction_checks": [
+    {
+      "name": "per-request speed is nonincreasing with batch",
+      "passed": true
+    },
+    {
+      "name": "aggregate per-GPU throughput is nondecreasing with batch",
+      "passed": true
+    },
+    {
+      "name": "nine-node incast has positive elapsed inter-node attribution",
+      "passed": false
+    },
+    {
+      "name": "pass-through candidate switch attribution is zero",
+      "passed": true
+    },
+    {
+      "name": "at least one point is roofline-bound with neither network material",
+      "passed": true
+    }
+  ],
+  "fatal_guards": {
+    "all_coordinates_positive": true,
+    "all_residuals_zero": true,
+    "attributions_nonnegative": true,
+    "published_comparable_point_on_or_below_analytical": true
+  },
+  "intra_node_candidate_disclosure": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+  "plot_contract": {
+    "amendment_scope": "new batch-sweep frontier figures only",
+    "amends": "simllm-deployment-curve-anchor-freeze-v1",
+    "analytical_style": "solid line per deployment configuration",
+    "bound_reading": "The analytical line is a floor-style step-time bound formed by the worst declared floor. Real and simulated points at a comparable context and batch must lie on or below it.",
+    "optimal_corner": "upper-right",
+    "prior_flagship_axis_contract_unchanged": true,
+    "published_paired_style": "white diamond with black edge",
+    "published_y_only_style": "dashed horizontal line",
+    "schema": "simllm-deployment-frontier-plot-contract-v2",
+    "simulation_style": "filled dots at every swept batch",
+    "sweep": "batch_per_gpu increases in ascending order; the trace moves from down-right toward up-left when batching raises throughput and lowers per-request speed",
+    "x": {
+      "direction": "rightward",
+      "formula": "1000000000000 / step_time_ps",
+      "quantity": "per_request_decode_speed",
+      "scale": "log",
+      "unit": "tokens_per_second_per_request"
+    },
+    "y": {
+      "direction": "upward",
+      "formula": "batch_per_gpu * 1000000000000 / step_time_ps",
+      "quantity": "aggregate_output_throughput_normalized_per_gpu",
+      "scale": "log",
+      "unit": "tokens_per_second_per_gpu"
+    }
+  },
+  "points": [
+    {
+      "accounting": {
+        "after_inter_node_ps": 3448398380,
+        "analytical_step_ps": 3448398380,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 3448398380
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 289.9896966080816,
+          "denominator": 172419919,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 289.9896966080816,
+          "denominator": 172419919,
+          "numerator": 50000000000
+        }
+      },
+      "artifacts": {},
+      "batch_per_gpu": 1,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 13303808,
+        "remote_flow_payload_bytes": [],
+        "remote_logical_bytes": 0,
+        "total_logical_bytes": 13303808
+      },
+      "configuration_id": "b100-one-node-intra",
+      "configuration_label": "B100 one-node intra-node-heavy",
+      "fabric_attribution": {
+        "dominant_mechanism": "none",
+        "incast_ps": 0,
+        "protocol_ps": 0,
+        "raw_excess_ps": 0,
+        "serialization_ps": 0
+      },
+      "fabric_observation": {
+        "concurrent_flows": [],
+        "concurrent_service_ps": 0,
+        "isolated_flows": [],
+        "isolated_service_ps": 0,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "b100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 0,
+        "ideal_intra_node_wire_ps": 133038080
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 8318508,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 8317601
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 141356588,
+        "domain_count": 2,
+        "logical_bytes": 106430464,
+        "max_packet_switch_finish_ps": 141355681,
+        "max_packet_tx_finish_ps": 141355681,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 51968,
+        "payload_bytes_per_transfer": 13303808,
+        "request_payload_bytes": 106430464,
+        "request_wire_bytes": 113082368,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 62401568,
+        "flops": 112322823926,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 3448398380,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 27587187040,
+        "memory_floor_ps": 3448398380,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 1,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 289.9896966080816,
+          "denominator": 172419919,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 289.9896966080816,
+          "denominator": 172419919,
+          "numerator": 50000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 3465966380,
+        "analytical_step_ps": 3465966380,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 3465966380
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 288.51982112994415,
+          "denominator": 173298319,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 577.0396422598883,
+          "denominator": 173298319,
+          "numerator": 100000000000
+        }
+      },
+      "artifacts": {},
+      "batch_per_gpu": 2,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 26607616,
+        "remote_flow_payload_bytes": [],
+        "remote_logical_bytes": 0,
+        "total_logical_bytes": 26607616
+      },
+      "configuration_id": "b100-one-node-intra",
+      "configuration_label": "B100 one-node intra-node-heavy",
+      "fabric_attribution": {
+        "dominant_mechanism": "none",
+        "incast_ps": 0,
+        "protocol_ps": 0,
+        "raw_excess_ps": 0,
+        "serialization_ps": 0
+      },
+      "fabric_observation": {
+        "concurrent_flows": [],
+        "concurrent_service_ps": 0,
+        "isolated_flows": [],
+        "isolated_service_ps": 0,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "b100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 0,
+        "ideal_intra_node_wire_ps": 266076160
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 16633388,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 16632481
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 282709548,
+        "domain_count": 2,
+        "logical_bytes": 212860928,
+        "max_packet_switch_finish_ps": 282708641,
+        "max_packet_tx_finish_ps": 282708641,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 103936,
+        "payload_bytes_per_transfer": 26607616,
+        "request_payload_bytes": 212860928,
+        "request_wire_bytes": 226164736,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 124803137,
+        "flops": 224645647852,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 3465966380,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 27727731040,
+        "memory_floor_ps": 3465966380,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 1,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 288.51982112994415,
+          "denominator": 173298319,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 577.0396422598883,
+          "denominator": 173298319,
+          "numerator": 100000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 3501102380,
+        "analytical_step_ps": 3501102380,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 3501102380
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 285.62432384510845,
+          "denominator": 175055119,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 1142.4972953804338,
+          "denominator": 175055119,
+          "numerator": 200000000000
+        }
+      },
+      "artifacts": {},
+      "batch_per_gpu": 4,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 53215232,
+        "remote_flow_payload_bytes": [],
+        "remote_logical_bytes": 0,
+        "total_logical_bytes": 53215232
+      },
+      "configuration_id": "b100-one-node-intra",
+      "configuration_label": "B100 one-node intra-node-heavy",
+      "fabric_attribution": {
+        "dominant_mechanism": "none",
+        "incast_ps": 0,
+        "protocol_ps": 0,
+        "raw_excess_ps": 0,
+        "serialization_ps": 0
+      },
+      "fabric_observation": {
+        "concurrent_flows": [],
+        "concurrent_service_ps": 0,
+        "isolated_flows": [],
+        "isolated_service_ps": 0,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "b100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 0,
+        "ideal_intra_node_wire_ps": 532152320
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 33263148,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 33262241
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 565415468,
+        "domain_count": 2,
+        "logical_bytes": 425721856,
+        "max_packet_switch_finish_ps": 565414561,
+        "max_packet_tx_finish_ps": 565414561,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 207872,
+        "payload_bytes_per_transfer": 53215232,
+        "request_payload_bytes": 425721856,
+        "request_wire_bytes": 452329472,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 249606275,
+        "flops": 449291295704,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 3501102380,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 28008819040,
+        "memory_floor_ps": 3501102380,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 1,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 285.62432384510845,
+          "denominator": 175055119,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 1142.4972953804338,
+          "denominator": 175055119,
+          "numerator": 200000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 3571374380,
+        "analytical_step_ps": 3571374380,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 3571374380
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 280.00424867246767,
+          "denominator": 178568719,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 2240.0339893797413,
+          "denominator": 178568719,
+          "numerator": 400000000000
+        }
+      },
+      "artifacts": {},
+      "batch_per_gpu": 8,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 106430464,
+        "remote_flow_payload_bytes": [],
+        "remote_logical_bytes": 0,
+        "total_logical_bytes": 106430464
+      },
+      "configuration_id": "b100-one-node-intra",
+      "configuration_label": "B100 one-node intra-node-heavy",
+      "fabric_attribution": {
+        "dominant_mechanism": "none",
+        "incast_ps": 0,
+        "protocol_ps": 0,
+        "raw_excess_ps": 0,
+        "serialization_ps": 0
+      },
+      "fabric_observation": {
+        "concurrent_flows": [],
+        "concurrent_service_ps": 0,
+        "isolated_flows": [],
+        "isolated_service_ps": 0,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "b100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 0,
+        "ideal_intra_node_wire_ps": 1064304640
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 66522668,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 66521761
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 1130827308,
+        "domain_count": 2,
+        "logical_bytes": 851443712,
+        "max_packet_switch_finish_ps": 1130826401,
+        "max_packet_tx_finish_ps": 1130826401,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 415744,
+        "payload_bytes_per_transfer": 106430464,
+        "request_payload_bytes": 851443712,
+        "request_wire_bytes": 904658944,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 499212550,
+        "flops": 898582591408,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 3571374380,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 28570995040,
+        "memory_floor_ps": 3571374380,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 1,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 280.00424867246767,
+          "denominator": 178568719,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 2240.0339893797413,
+          "denominator": 178568719,
+          "numerator": 400000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 3711918380,
+        "analytical_step_ps": 3711918380,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 3711918380
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 269.4024753852481,
+          "denominator": 185595919,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 4310.43960616397,
+          "denominator": 185595919,
+          "numerator": 800000000000
+        }
+      },
+      "artifacts": {},
+      "batch_per_gpu": 16,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 212860928,
+        "remote_flow_payload_bytes": [],
+        "remote_logical_bytes": 0,
+        "total_logical_bytes": 212860928
+      },
+      "configuration_id": "b100-one-node-intra",
+      "configuration_label": "B100 one-node intra-node-heavy",
+      "fabric_attribution": {
+        "dominant_mechanism": "none",
+        "incast_ps": 0,
+        "protocol_ps": 0,
+        "raw_excess_ps": 0,
+        "serialization_ps": 0
+      },
+      "fabric_observation": {
+        "concurrent_flows": [],
+        "concurrent_service_ps": 0,
+        "isolated_flows": [],
+        "isolated_service_ps": 0,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "b100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 0,
+        "ideal_intra_node_wire_ps": 2128609280
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 133041708,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 133040801
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 2261650988,
+        "domain_count": 2,
+        "logical_bytes": 1702887424,
+        "max_packet_switch_finish_ps": 2261650081,
+        "max_packet_tx_finish_ps": 2261650081,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 831488,
+        "payload_bytes_per_transfer": 212860928,
+        "request_payload_bytes": 1702887424,
+        "request_wire_bytes": 1809317888,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 998425101,
+        "flops": 1797165182816,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 3711918380,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 29695347040,
+        "memory_floor_ps": 3711918380,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 1,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 269.4024753852481,
+          "denominator": 185595919,
+          "numerator": 50000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 4310.43960616397,
+          "denominator": 185595919,
+          "numerator": 800000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 4257218560,
+        "analytical_step_ps": 4257218560,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 266079788,
+        "residual_ps": 0,
+        "simulated_step_ps": 4523298348
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 234.8951518241995,
+          "denominator": 207872,
+          "numerator": 48828125
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 7516.644858374384,
+          "denominator": 6496,
+          "numerator": 48828125
+        }
+      },
+      "artifacts": {},
+      "batch_per_gpu": 32,
+      "bottleneck": {
+        "classification": "intra-node",
+        "critical_owners": [
+          "intra-node"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 425721856,
+        "remote_flow_payload_bytes": [],
+        "remote_logical_bytes": 0,
+        "total_logical_bytes": 425721856
+      },
+      "configuration_id": "b100-one-node-intra",
+      "configuration_label": "B100 one-node intra-node-heavy",
+      "fabric_attribution": {
+        "dominant_mechanism": "none",
+        "incast_ps": 0,
+        "protocol_ps": 0,
+        "raw_excess_ps": 0,
+        "serialization_ps": 0
+      },
+      "fabric_observation": {
+        "concurrent_flows": [],
+        "concurrent_service_ps": 0,
+        "isolated_flows": [],
+        "isolated_service_ps": 0,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "b100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 0,
+        "ideal_intra_node_wire_ps": 4257218560
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 266079788,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 266078881
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 4523298348,
+        "domain_count": 2,
+        "logical_bytes": 3405774848,
+        "max_packet_switch_finish_ps": 4523297441,
+        "max_packet_tx_finish_ps": 4523297441,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 1662976,
+        "payload_bytes_per_transfer": 425721856,
+        "request_payload_bytes": 3405774848,
+        "request_wire_bytes": 3618635776,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 1996850203,
+        "flops": 3594330365632,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 3993006379,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 31944051040,
+        "memory_floor_ps": 3993006379,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 1,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 221.07761263241795,
+          "denominator": 1130824587,
+          "numerator": 250000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 7074.4836042373745,
+          "denominator": 1130824587,
+          "numerator": 8000000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8234981205,
+        "analytical_step_ps": 8234981205,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8234981205
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 121.43318546894,
+          "denominator": 1646996241,
+          "numerator": 200000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 121.43318546894,
+          "denominator": 1646996241,
+          "numerator": 200000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 234,
+          "path": "cells/h100-two-node-serialized/batch-1/concurrent.bin",
+          "sha256": "1922be940280ac8f9a5876616d46147bdab5e37410fbcb45de9e39033f6d09f5"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 152,
+          "path": "cells/h100-two-node-serialized/batch-1/concurrent-completion.csv",
+          "sha256": "8d6d09e6726643befab7f9f37f737891f6ee8eafc91b0f7687c30cf3fda420f3"
+        },
+        "concurrent_goal": {
+          "bytes": 178,
+          "path": "cells/h100-two-node-serialized/batch-1/concurrent.goal",
+          "sha256": "0d498cdae5d0ce62c49f4f0d571f0e8e595cbbf77bbc79d71e36e7f68ed6a152"
+        }
+      },
+      "batch_per_gpu": 1,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 6651904,
+        "remote_flow_payload_bytes": [
+          6651904
+        ],
+        "remote_logical_bytes": 6651904,
+        "total_logical_bytes": 13303808
+      },
+      "configuration_id": "h100-two-node-serialized",
+      "configuration_label": "H100 two-node serialized split",
+      "fabric_attribution": {
+        "dominant_mechanism": "serialization",
+        "incast_ps": 0,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 4162920,
+        "serialization_ps": 2162920
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 137200000,
+            "destination": 0,
+            "fct_ps": 137200000,
+            "payload_bytes": 6651904,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 137201000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 137200000,
+            "destination": 0,
+            "fct_ps": 137200000,
+            "payload_bytes": 6651904,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 137201000,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 133038080,
+        "ideal_intra_node_wire_ps": 66519040
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 4161068,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 4160161
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 70680108,
+        "domain_count": 2,
+        "logical_bytes": 53215232,
+        "max_packet_switch_finish_ps": 70679201,
+        "max_packet_tx_finish_ps": 70679201,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 25984,
+        "payload_bytes_per_transfer": 6651904,
+        "request_payload_bytes": 53215232,
+        "request_wire_bytes": 56541184,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 113514728,
+        "flops": 112322823926,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8234981205,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 27587187040,
+        "memory_floor_ps": 8234981205,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 2,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 121.43318546894,
+          "denominator": 1646996241,
+          "numerator": 200000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 121.43318546894,
+          "denominator": 1646996241,
+          "numerator": 200000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8276934638,
+        "analytical_step_ps": 8276934638,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8276934638
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 120.81767510992879,
+          "denominator": 4138467319,
+          "numerator": 500000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 241.63535021985757,
+          "denominator": 4138467319,
+          "numerator": 1000000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 234,
+          "path": "cells/h100-two-node-serialized/batch-2/concurrent.bin",
+          "sha256": "ca78463cf24655c308fd08a8e7d4553c7b8123fa005cf0a0f61dd2a9a2c74c33"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 153,
+          "path": "cells/h100-two-node-serialized/batch-2/concurrent-completion.csv",
+          "sha256": "d05b9cdd130204d475aa9205954bf461232b5745b38c6c7fbbaa2bf1a46a34ae"
+        },
+        "concurrent_goal": {
+          "bytes": 180,
+          "path": "cells/h100-two-node-serialized/batch-2/concurrent.goal",
+          "sha256": "fce1d42001361594b7c9b9f174d59d714a41238196582869564a75d743283c3b"
+        }
+      },
+      "batch_per_gpu": 2,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 13303808,
+        "remote_flow_payload_bytes": [
+          13303808
+        ],
+        "remote_logical_bytes": 13303808,
+        "total_logical_bytes": 26607616
+      },
+      "configuration_id": "h100-two-node-serialized",
+      "configuration_label": "H100 two-node serialized split",
+      "fabric_attribution": {
+        "dominant_mechanism": "serialization",
+        "incast_ps": 0,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 6240840,
+        "serialization_ps": 4240840
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 272316800,
+            "destination": 0,
+            "fct_ps": 272316800,
+            "payload_bytes": 13303808,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 272317000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 272316800,
+            "destination": 0,
+            "fct_ps": 272316800,
+            "payload_bytes": 13303808,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 272317000,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 266076160,
+        "ideal_intra_node_wire_ps": 133038080
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 8318508,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 8317601
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 141356588,
+        "domain_count": 2,
+        "logical_bytes": 106430464,
+        "max_packet_switch_finish_ps": 141355681,
+        "max_packet_tx_finish_ps": 141355681,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 51968,
+        "payload_bytes_per_transfer": 13303808,
+        "request_payload_bytes": 106430464,
+        "request_wire_bytes": 113082368,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 227029457,
+        "flops": 224645647852,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8276934638,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 27727731040,
+        "memory_floor_ps": 8276934638,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 2,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 120.81767510992879,
+          "denominator": 4138467319,
+          "numerator": 500000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 241.63535021985757,
+          "denominator": 4138467319,
+          "numerator": 1000000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8360841504,
+        "analytical_step_ps": 8360841504,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8360841504
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 119.6051856169716,
+          "denominator": 261276297,
+          "numerator": 31250000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 478.4207424678864,
+          "denominator": 261276297,
+          "numerator": 125000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 234,
+          "path": "cells/h100-two-node-serialized/batch-4/concurrent.bin",
+          "sha256": "0f4caa77f945f0043cf72b708d1bba49b402d884624432d27c37e84ec8deb5fe"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 153,
+          "path": "cells/h100-two-node-serialized/batch-4/concurrent-completion.csv",
+          "sha256": "8c2b5fcc51ad6178ff0df4c453b0232925dbd7c708bad6ce570e256b484819c6"
+        },
+        "concurrent_goal": {
+          "bytes": 180,
+          "path": "cells/h100-two-node-serialized/batch-4/concurrent.goal",
+          "sha256": "4cc664912115b5bc5b63b9081d8a39fa234394b4fc7ca8efc2039fd6498e8898"
+        }
+      },
+      "batch_per_gpu": 4,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 26607616,
+        "remote_flow_payload_bytes": [
+          26607616
+        ],
+        "remote_logical_bytes": 26607616,
+        "total_logical_bytes": 53215232
+      },
+      "configuration_id": "h100-two-node-serialized",
+      "configuration_label": "H100 two-node serialized split",
+      "fabric_attribution": {
+        "dominant_mechanism": "serialization",
+        "incast_ps": 0,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 10398680,
+        "serialization_ps": 8398680
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 542550400,
+            "destination": 0,
+            "fct_ps": 542550400,
+            "payload_bytes": 26607616,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 542551000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 542550400,
+            "destination": 0,
+            "fct_ps": 542550400,
+            "payload_bytes": 26607616,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 542551000,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 532152320,
+        "ideal_intra_node_wire_ps": 266076160
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 16633388,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 16632481
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 282709548,
+        "domain_count": 2,
+        "logical_bytes": 212860928,
+        "max_packet_switch_finish_ps": 282708641,
+        "max_packet_tx_finish_ps": 282708641,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 103936,
+        "payload_bytes_per_transfer": 26607616,
+        "request_payload_bytes": 212860928,
+        "request_wire_bytes": 226164736,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 454058914,
+        "flops": 449291295704,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8360841504,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 28008819040,
+        "memory_floor_ps": 8360841504,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 2,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 119.6051856169716,
+          "denominator": 261276297,
+          "numerator": 31250000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 478.4207424678864,
+          "denominator": 261276297,
+          "numerator": 125000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8528655235,
+        "analytical_step_ps": 8528655235,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8528655235
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 117.25177914288149,
+          "denominator": 1705731047,
+          "numerator": 200000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 938.0142331430519,
+          "denominator": 1705731047,
+          "numerator": 1600000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 234,
+          "path": "cells/h100-two-node-serialized/batch-8/concurrent.bin",
+          "sha256": "a0fa66834934a2a23a168394e787b34fdcda50a49c81ea0d2ad217ded1074e87"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 155,
+          "path": "cells/h100-two-node-serialized/batch-8/concurrent-completion.csv",
+          "sha256": "fd4940b695ff6bee74f70cc3b03d556f475e6508cac40898fb55be493b5b05ac"
+        },
+        "concurrent_goal": {
+          "bytes": 180,
+          "path": "cells/h100-two-node-serialized/batch-8/concurrent.goal",
+          "sha256": "7683570773a33557dce05d2e933f08ace210e0f4219769b2624b94972478f9fc"
+        }
+      },
+      "batch_per_gpu": 8,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 53215232,
+        "remote_flow_payload_bytes": [
+          53215232
+        ],
+        "remote_logical_bytes": 53215232,
+        "total_logical_bytes": 106430464
+      },
+      "configuration_id": "h100-two-node-serialized",
+      "configuration_label": "H100 two-node serialized split",
+      "fabric_attribution": {
+        "dominant_mechanism": "serialization",
+        "incast_ps": 0,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 18713360,
+        "serialization_ps": 16713360
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 1083017600,
+            "destination": 0,
+            "fct_ps": 1083017600,
+            "payload_bytes": 53215232,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 1083018000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 1083017600,
+            "destination": 0,
+            "fct_ps": 1083017600,
+            "payload_bytes": 53215232,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 1083018000,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 1064304640,
+        "ideal_intra_node_wire_ps": 532152320
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 33263148,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 33262241
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 565415468,
+        "domain_count": 2,
+        "logical_bytes": 425721856,
+        "max_packet_switch_finish_ps": 565414561,
+        "max_packet_tx_finish_ps": 565414561,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 207872,
+        "payload_bytes_per_transfer": 53215232,
+        "request_payload_bytes": 425721856,
+        "request_wire_bytes": 452329472,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 908117828,
+        "flops": 898582591408,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8528655235,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 28570995040,
+        "memory_floor_ps": 8528655235,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 2,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 117.25177914288149,
+          "denominator": 1705731047,
+          "numerator": 200000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 938.0142331430519,
+          "denominator": 1705731047,
+          "numerator": 1600000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8864282698,
+        "analytical_step_ps": 8864282698,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8864282698
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 112.81228657403092,
+          "denominator": 4432141349,
+          "numerator": 500000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 1804.9965851844947,
+          "denominator": 4432141349,
+          "numerator": 8000000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 234,
+          "path": "cells/h100-two-node-serialized/batch-16/concurrent.bin",
+          "sha256": "5ad8d21d3cc87385f11bcd98b58ecff83d9a87a16ca3d91dc2a08275f20c296f"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 156,
+          "path": "cells/h100-two-node-serialized/batch-16/concurrent-completion.csv",
+          "sha256": "c44d0534077b2fdc0b0393ebd5a3d297abaf67aaafdd4f7a130db1705e3f2668"
+        },
+        "concurrent_goal": {
+          "bytes": 182,
+          "path": "cells/h100-two-node-serialized/batch-16/concurrent.goal",
+          "sha256": "813344978a6f53a8a81abab6ed934708e2219b1ef2c17d992319c4b3ba3ba2b5"
+        }
+      },
+      "batch_per_gpu": 16,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 106430464,
+        "remote_flow_payload_bytes": [
+          106430464
+        ],
+        "remote_logical_bytes": 106430464,
+        "total_logical_bytes": 212860928
+      },
+      "configuration_id": "h100-two-node-serialized",
+      "configuration_label": "H100 two-node serialized split",
+      "fabric_attribution": {
+        "dominant_mechanism": "serialization",
+        "incast_ps": 0,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 35343720,
+        "serialization_ps": 33343720
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 2163952000,
+            "destination": 0,
+            "fct_ps": 2163952000,
+            "payload_bytes": 106430464,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 2163953000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 2163952000,
+            "destination": 0,
+            "fct_ps": 2163952000,
+            "payload_bytes": 106430464,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 2163953000,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 2128609280,
+        "ideal_intra_node_wire_ps": 1064304640
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 66522668,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 66521761
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 1130827308,
+        "domain_count": 2,
+        "logical_bytes": 851443712,
+        "max_packet_switch_finish_ps": 1130826401,
+        "max_packet_tx_finish_ps": 1130826401,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 415744,
+        "payload_bytes_per_transfer": 106430464,
+        "request_payload_bytes": 851443712,
+        "request_wire_bytes": 904658944,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 1816235657,
+        "flops": 1797165182816,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8864282698,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 29695347040,
+        "memory_floor_ps": 8864282698,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 2,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 112.81228657403092,
+          "denominator": 4432141349,
+          "numerator": 500000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 1804.9965851844947,
+          "denominator": 4432141349,
+          "numerator": 8000000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 9535537623,
+        "analytical_step_ps": 9535537623,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 9535537623
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 104.87085673994619,
+          "denominator": 9535537623,
+          "numerator": 1000000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 3355.867415678278,
+          "denominator": 9535537623,
+          "numerator": 32000000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 234,
+          "path": "cells/h100-two-node-serialized/batch-32/concurrent.bin",
+          "sha256": "fa32217a44ba72c09e0d69ebf06d841ff1db393e49a32ee039b6108b10b3797b"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 156,
+          "path": "cells/h100-two-node-serialized/batch-32/concurrent-completion.csv",
+          "sha256": "b5bd7db26b68b74cfa82a98cceb1c44984b192fd753ed1e1ffee41a9c3713957"
+        },
+        "concurrent_goal": {
+          "bytes": 182,
+          "path": "cells/h100-two-node-serialized/batch-32/concurrent.goal",
+          "sha256": "38b611d91e37231596ba63cf1674d0e6d013048b73b32cb0454810c69d858612"
+        }
+      },
+      "batch_per_gpu": 32,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 212860928,
+        "remote_flow_payload_bytes": [
+          212860928
+        ],
+        "remote_logical_bytes": 212860928,
+        "total_logical_bytes": 425721856
+      },
+      "configuration_id": "h100-two-node-serialized",
+      "configuration_label": "H100 two-node serialized split",
+      "fabric_attribution": {
+        "dominant_mechanism": "serialization",
+        "incast_ps": 0,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 68602440,
+        "serialization_ps": 66602440
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 4325820800,
+            "destination": 0,
+            "fct_ps": 4325820800,
+            "payload_bytes": 212860928,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 4325821000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 4325820800,
+            "destination": 0,
+            "fct_ps": 4325820800,
+            "payload_bytes": 212860928,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 4325821000,
+        "isolated_trace_reused_concurrent": true,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 4257218560,
+        "ideal_intra_node_wire_ps": 2128609280
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 133041708,
+        "rx_return_ps": 907,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 133040801
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 2261650988,
+        "domain_count": 2,
+        "logical_bytes": 1702887424,
+        "max_packet_switch_finish_ps": 2261650081,
+        "max_packet_tx_finish_ps": 2261650081,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 831488,
+        "payload_bytes_per_transfer": 212860928,
+        "request_payload_bytes": 1702887424,
+        "request_wire_bytes": 1809317888,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 3632471314,
+        "flops": 3594330365632,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 9535537623,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 31944051040,
+        "memory_floor_ps": 9535537623,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 2,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 104.87085673994619,
+          "denominator": 9535537623,
+          "numerator": 1000000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 3355.867415678278,
+          "denominator": 9535537623,
+          "numerator": 32000000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8234981205,
+        "analytical_step_ps": 8234981205,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8234981205
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 121.43318546894,
+          "denominator": 1646996241,
+          "numerator": 200000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 121.43318546894,
+          "denominator": 1646996241,
+          "numerator": 200000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 1333,
+          "path": "cells/h100-nine-node-incast/batch-1/concurrent.bin",
+          "sha256": "79feddcdb3473dbc4dcca0fb36b28205961434ff95817aed7362e9fd05d86765"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 571,
+          "path": "cells/h100-nine-node-incast/batch-1/concurrent-completion.csv",
+          "sha256": "c77efc8979b1cadbd35a28a4802ee6b6f786d6f1d684b79d7b8e20494e3c1c72"
+        },
+        "concurrent_goal": {
+          "bytes": 1165,
+          "path": "cells/h100-nine-node-incast/batch-1/concurrent.goal",
+          "sha256": "14454e7b432a0dce98bdfbebc53bcf1d58add9a483c4769d01c55111c9ea2a22"
+        },
+        "isolated_binary_goal": {
+          "bytes": 402,
+          "path": "cells/h100-nine-node-incast/batch-1/isolated.bin",
+          "sha256": "94fcd9f22d952769e6bd33995bd0f14baeddc2c315d8e5c38a1ffc2d8afb49f2"
+        },
+        "isolated_completion_csv": {
+          "bytes": 150,
+          "path": "cells/h100-nine-node-incast/batch-1/isolated-completion.csv",
+          "sha256": "52c6b2b180f91681d2d658891b409a037fe7917ea1936be9388f6387990862a1"
+        },
+        "isolated_goal": {
+          "bytes": 255,
+          "path": "cells/h100-nine-node-incast/batch-1/isolated.goal",
+          "sha256": "89adfdab36a39b4baf9a2bc6d5a66d7396020a7bb393bbf021c36e68010474a5"
+        }
+      },
+      "batch_per_gpu": 1,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 1478200,
+        "remote_flow_payload_bytes": [
+          1478201,
+          1478201,
+          1478201,
+          1478201,
+          1478201,
+          1478201,
+          1478201,
+          1478201
+        ],
+        "remote_logical_bytes": 11825608,
+        "total_logical_bytes": 13303808
+      },
+      "configuration_id": "h100-nine-node-incast",
+      "configuration_label": "H100 nine-node EP72 incast",
+      "fabric_attribution": {
+        "dominant_mechanism": "incast",
+        "incast_ps": 210246000,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 212791980,
+        "serialization_ps": 545980
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 241773300,
+            "destination": 0,
+            "fct_ps": 241773300,
+            "payload_bytes": 1478201,
+            "source": 1,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 241856500,
+            "destination": 0,
+            "fct_ps": 241856500,
+            "payload_bytes": 1478201,
+            "source": 2,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 241939700,
+            "destination": 0,
+            "fct_ps": 241939700,
+            "payload_bytes": 1478201,
+            "source": 3,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 242022900,
+            "destination": 0,
+            "fct_ps": 242022900,
+            "payload_bytes": 1478201,
+            "source": 4,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 242106100,
+            "destination": 0,
+            "fct_ps": 242106100,
+            "payload_bytes": 1478201,
+            "source": 5,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 242189300,
+            "destination": 0,
+            "fct_ps": 242189300,
+            "payload_bytes": 1478201,
+            "source": 6,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 242272500,
+            "destination": 0,
+            "fct_ps": 242272500,
+            "payload_bytes": 1478201,
+            "source": 7,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 242355700,
+            "destination": 0,
+            "fct_ps": 242355700,
+            "payload_bytes": 1478201,
+            "source": 8,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 242356000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 32109300,
+            "destination": 0,
+            "fct_ps": 32109300,
+            "payload_bytes": 1478201,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 32110000,
+        "isolated_trace_reused_concurrent": false,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 29564020,
+        "ideal_intra_node_wire_ps": 14782000
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 930774,
+        "rx_return_ps": 1147,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 929627
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 15712774,
+        "domain_count": 2,
+        "logical_bytes": 11825600,
+        "max_packet_switch_finish_ps": 15711627,
+        "max_packet_tx_finish_ps": 15711627,
+        "max_rx_buffer_occupancy_bytes": 344,
+        "packets_per_transfer": 5775,
+        "payload_bytes_per_transfer": 1478200,
+        "request_payload_bytes": 11825600,
+        "request_wire_bytes": 12564800,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 113514728,
+        "flops": 112322823926,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8234981205,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 27587187040,
+        "memory_floor_ps": 8234981205,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 9,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 121.43318546894,
+          "denominator": 1646996241,
+          "numerator": 200000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 121.43318546894,
+          "denominator": 1646996241,
+          "numerator": 200000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8276934638,
+        "analytical_step_ps": 8276934638,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8276934638
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 120.81767510992879,
+          "denominator": 4138467319,
+          "numerator": 500000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 241.63535021985757,
+          "denominator": 4138467319,
+          "numerator": 1000000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 1333,
+          "path": "cells/h100-nine-node-incast/batch-2/concurrent.bin",
+          "sha256": "f7be8e68aec9276e5e01ca7b0e05bf59c5855dca4349aa8781b1e36900e4100a"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 571,
+          "path": "cells/h100-nine-node-incast/batch-2/concurrent-completion.csv",
+          "sha256": "f0e4325837772a2cbcc28895853f8315bc32fdeecbd414da06b971cadd35087d"
+        },
+        "concurrent_goal": {
+          "bytes": 1165,
+          "path": "cells/h100-nine-node-incast/batch-2/concurrent.goal",
+          "sha256": "d5402e404ea75dc864a2936d9c3b5c929fd72e20b1d9bab9c88abe5c3a6959e5"
+        },
+        "isolated_binary_goal": {
+          "bytes": 402,
+          "path": "cells/h100-nine-node-incast/batch-2/isolated.bin",
+          "sha256": "c9f2bdf248153dbd72171ccca9bf00b0fb0ce6798a451c45da590a3440a7c3fa"
+        },
+        "isolated_completion_csv": {
+          "bytes": 150,
+          "path": "cells/h100-nine-node-incast/batch-2/isolated-completion.csv",
+          "sha256": "5384402f9132261de8534c0b55ef199ca9936fa6375ef9c9c47650fc082ee41a"
+        },
+        "isolated_goal": {
+          "bytes": 255,
+          "path": "cells/h100-nine-node-incast/batch-2/isolated.goal",
+          "sha256": "c90c5e497af32abb2ebc848eb6bad323f8e388f94befdab6a9cfc277540d2279"
+        }
+      },
+      "batch_per_gpu": 2,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 2956401,
+        "remote_flow_payload_bytes": [
+          2956402,
+          2956402,
+          2956402,
+          2956402,
+          2956402,
+          2956402,
+          2956402,
+          2956401
+        ],
+        "remote_logical_bytes": 23651215,
+        "total_logical_bytes": 26607616
+      },
+      "configuration_id": "h100-nine-node-incast",
+      "configuration_label": "H100 nine-node EP72 incast",
+      "fabric_attribution": {
+        "dominant_mechanism": "incast",
+        "incast_ps": 420493000,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 423500960,
+        "serialization_ps": 1007960
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 482045800,
+            "destination": 0,
+            "fct_ps": 482045800,
+            "payload_bytes": 2956402,
+            "source": 1,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 482129000,
+            "destination": 0,
+            "fct_ps": 482129000,
+            "payload_bytes": 2956402,
+            "source": 2,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 482212200,
+            "destination": 0,
+            "fct_ps": 482212200,
+            "payload_bytes": 2956402,
+            "source": 3,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 482295400,
+            "destination": 0,
+            "fct_ps": 482295400,
+            "payload_bytes": 2956402,
+            "source": 4,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 482378600,
+            "destination": 0,
+            "fct_ps": 482378600,
+            "payload_bytes": 2956402,
+            "source": 5,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 482461800,
+            "destination": 0,
+            "fct_ps": 482461800,
+            "payload_bytes": 2956402,
+            "source": 6,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 482545000,
+            "destination": 0,
+            "fct_ps": 482545000,
+            "payload_bytes": 2956402,
+            "source": 7,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 482628180,
+            "destination": 0,
+            "fct_ps": 482628180,
+            "payload_bytes": 2956401,
+            "source": 8,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 482629000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 62135400,
+            "destination": 0,
+            "fct_ps": 62135400,
+            "payload_bytes": 2956402,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 62136000,
+        "isolated_trace_reused_concurrent": false,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 59128040,
+        "ideal_intra_node_wire_ps": 29564010
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 1852140,
+        "rx_return_ps": 430,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 1851710
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 31416150,
+        "domain_count": 2,
+        "logical_bytes": 23651208,
+        "max_packet_switch_finish_ps": 31415720,
+        "max_packet_tx_finish_ps": 31415720,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 11549,
+        "payload_bytes_per_transfer": 2956401,
+        "request_payload_bytes": 23651208,
+        "request_wire_bytes": 25129480,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 227029457,
+        "flops": 224645647852,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8276934638,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 27727731040,
+        "memory_floor_ps": 8276934638,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 9,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 120.81767510992879,
+          "denominator": 4138467319,
+          "numerator": 500000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 241.63535021985757,
+          "denominator": 4138467319,
+          "numerator": 1000000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8360841504,
+        "analytical_step_ps": 8360841504,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8360841504
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 119.6051856169716,
+          "denominator": 261276297,
+          "numerator": 31250000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 478.4207424678864,
+          "denominator": 261276297,
+          "numerator": 125000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 1333,
+          "path": "cells/h100-nine-node-incast/batch-4/concurrent.bin",
+          "sha256": "ce59c355459c645aafc122b1127fcaeea058dbf37a7f8367a0407d432f4ccb11"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 571,
+          "path": "cells/h100-nine-node-incast/batch-4/concurrent-completion.csv",
+          "sha256": "e8f873dc00e6c15681ab9dbcc35567ec080b161d4ee59bac3314479f8f3ea876"
+        },
+        "concurrent_goal": {
+          "bytes": 1165,
+          "path": "cells/h100-nine-node-incast/batch-4/concurrent.goal",
+          "sha256": "14f3f6e0479d179ecdcb7e1fb66f049f65a06ae7e5c9a4304ec6b0213d17e16c"
+        },
+        "isolated_binary_goal": {
+          "bytes": 402,
+          "path": "cells/h100-nine-node-incast/batch-4/isolated.bin",
+          "sha256": "45b743e8835124f5ad6118232d540bdea3222cd1438bd2c7a637e89b7a1792f4"
+        },
+        "isolated_completion_csv": {
+          "bytes": 152,
+          "path": "cells/h100-nine-node-incast/batch-4/isolated-completion.csv",
+          "sha256": "9b519ed04759818cb7369491c73a0ed4ee724cc273fb8affe7bee52588bf31d6"
+        },
+        "isolated_goal": {
+          "bytes": 255,
+          "path": "cells/h100-nine-node-incast/batch-4/isolated.goal",
+          "sha256": "9ce925281b45f47c93598480b7b29d6d45baa2dcdd7a44518d9d84923e829e20"
+        }
+      },
+      "batch_per_gpu": 4,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 5912803,
+        "remote_flow_payload_bytes": [
+          5912804,
+          5912804,
+          5912804,
+          5912804,
+          5912804,
+          5912803,
+          5912803,
+          5912803
+        ],
+        "remote_logical_bytes": 47302429,
+        "total_logical_bytes": 53215232
+      },
+      "configuration_id": "h100-nine-node-incast",
+      "configuration_label": "H100 nine-node EP72 incast",
+      "fabric_attribution": {
+        "dominant_mechanism": "incast",
+        "incast_ps": 840986000,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 844917920,
+        "serialization_ps": 1931920
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 962590800,
+            "destination": 0,
+            "fct_ps": 962590800,
+            "payload_bytes": 5912804,
+            "source": 1,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 962674000,
+            "destination": 0,
+            "fct_ps": 962674000,
+            "payload_bytes": 5912804,
+            "source": 2,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 962757200,
+            "destination": 0,
+            "fct_ps": 962757200,
+            "payload_bytes": 5912804,
+            "source": 3,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 962840400,
+            "destination": 0,
+            "fct_ps": 962840400,
+            "payload_bytes": 5912804,
+            "source": 4,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 962923600,
+            "destination": 0,
+            "fct_ps": 962923600,
+            "payload_bytes": 5912804,
+            "source": 5,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 963006780,
+            "destination": 0,
+            "fct_ps": 963006780,
+            "payload_bytes": 5912803,
+            "source": 6,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 963089980,
+            "destination": 0,
+            "fct_ps": 963089980,
+            "payload_bytes": 5912803,
+            "source": 7,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 963173180,
+            "destination": 0,
+            "fct_ps": 963173180,
+            "payload_bytes": 5912803,
+            "source": 8,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 963174000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 122187600,
+            "destination": 0,
+            "fct_ps": 122187600,
+            "payload_bytes": 5912804,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 122188000,
+        "isolated_trace_reused_concurrent": false,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 118256080,
+        "ideal_intra_node_wire_ps": 59128030
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 3703620,
+        "rx_return_ps": 810,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 3702810
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 62831650,
+        "domain_count": 2,
+        "logical_bytes": 47302424,
+        "max_packet_switch_finish_ps": 62830840,
+        "max_packet_tx_finish_ps": 62830840,
+        "max_rx_buffer_occupancy_bytes": 272,
+        "packets_per_transfer": 23097,
+        "payload_bytes_per_transfer": 5912803,
+        "request_payload_bytes": 47302424,
+        "request_wire_bytes": 50258840,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 454058914,
+        "flops": 449291295704,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8360841504,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 28008819040,
+        "memory_floor_ps": 8360841504,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 9,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 119.6051856169716,
+          "denominator": 261276297,
+          "numerator": 31250000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 478.4207424678864,
+          "denominator": 261276297,
+          "numerator": 125000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8528655235,
+        "analytical_step_ps": 8528655235,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8528655235
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 117.25177914288149,
+          "denominator": 1705731047,
+          "numerator": 200000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 938.0142331430519,
+          "denominator": 1705731047,
+          "numerator": 1600000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 1333,
+          "path": "cells/h100-nine-node-incast/batch-8/concurrent.bin",
+          "sha256": "665ed0ae6fe31ba36bff8b61ed3024425aa3cab13fa5b5821e979bf953593f49"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 595,
+          "path": "cells/h100-nine-node-incast/batch-8/concurrent-completion.csv",
+          "sha256": "2f3aa6e14be27e3548968b734ebe0a1b0e45a21cdd0a684af1cc37b1e7807fea"
+        },
+        "concurrent_goal": {
+          "bytes": 1181,
+          "path": "cells/h100-nine-node-incast/batch-8/concurrent.goal",
+          "sha256": "4ebdc1423b95e6e8df3b89b1e728375e65adeff7cc4980d1f025c9f1d682efbd"
+        },
+        "isolated_binary_goal": {
+          "bytes": 402,
+          "path": "cells/h100-nine-node-incast/batch-8/isolated.bin",
+          "sha256": "788421df13b9ac8b86fb791b23baa5b38466b57377b823cb695db646c03d81ef"
+        },
+        "isolated_completion_csv": {
+          "bytes": 153,
+          "path": "cells/h100-nine-node-incast/batch-8/isolated-completion.csv",
+          "sha256": "35aceb48e6d967bb0e45f752d2954aa9d565850ca0193f8520335a0f1de09e2d"
+        },
+        "isolated_goal": {
+          "bytes": 257,
+          "path": "cells/h100-nine-node-incast/batch-8/isolated.goal",
+          "sha256": "8c6f675111d2344ea6b606788f5ee37347b36c145404ea11ecdf1f5fbc5b7823"
+        }
+      },
+      "batch_per_gpu": 8,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 11825607,
+        "remote_flow_payload_bytes": [
+          11825608,
+          11825607,
+          11825607,
+          11825607,
+          11825607,
+          11825607,
+          11825607,
+          11825607
+        ],
+        "remote_logical_bytes": 94604857,
+        "total_logical_bytes": 106430464
+      },
+      "configuration_id": "h100-nine-node-incast",
+      "configuration_label": "H100 nine-node EP72 incast",
+      "fabric_attribution": {
+        "dominant_mechanism": "incast",
+        "incast_ps": 1681971000,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 1687751840,
+        "serialization_ps": 3780840
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 1923680800,
+            "destination": 0,
+            "fct_ps": 1923680800,
+            "payload_bytes": 11825608,
+            "source": 1,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 1923763980,
+            "destination": 0,
+            "fct_ps": 1923763980,
+            "payload_bytes": 11825607,
+            "source": 2,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 1923847180,
+            "destination": 0,
+            "fct_ps": 1923847180,
+            "payload_bytes": 11825607,
+            "source": 3,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 1923930380,
+            "destination": 0,
+            "fct_ps": 1923930380,
+            "payload_bytes": 11825607,
+            "source": 4,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 1924013580,
+            "destination": 0,
+            "fct_ps": 1924013580,
+            "payload_bytes": 11825607,
+            "source": 5,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 1924096780,
+            "destination": 0,
+            "fct_ps": 1924096780,
+            "payload_bytes": 11825607,
+            "source": 6,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 1924179980,
+            "destination": 0,
+            "fct_ps": 1924179980,
+            "payload_bytes": 11825607,
+            "source": 7,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 1924263180,
+            "destination": 0,
+            "fct_ps": 1924263180,
+            "payload_bytes": 11825607,
+            "source": 8,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 1924264000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 242292000,
+            "destination": 0,
+            "fct_ps": 242292000,
+            "payload_bytes": 11825608,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 242293000,
+        "isolated_trace_reused_concurrent": false,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 236512160,
+        "ideal_intra_node_wire_ps": 118256070
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 7398674,
+        "rx_return_ps": 1624,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 7397050
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 125654744,
+        "domain_count": 2,
+        "logical_bytes": 94604856,
+        "max_packet_switch_finish_ps": 125653120,
+        "max_packet_tx_finish_ps": 125653120,
+        "max_rx_buffer_occupancy_bytes": 487,
+        "packets_per_transfer": 46194,
+        "payload_bytes_per_transfer": 11825607,
+        "request_payload_bytes": 94604856,
+        "request_wire_bytes": 100517688,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 908117828,
+        "flops": 898582591408,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8528655235,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 28570995040,
+        "memory_floor_ps": 8528655235,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 9,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 117.25177914288149,
+          "denominator": 1705731047,
+          "numerator": 200000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 938.0142331430519,
+          "denominator": 1705731047,
+          "numerator": 1600000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 8864282698,
+        "analytical_step_ps": 8864282698,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 8864282698
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 112.81228657403092,
+          "denominator": 4432141349,
+          "numerator": 500000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 1804.9965851844947,
+          "denominator": 4432141349,
+          "numerator": 8000000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 1333,
+          "path": "cells/h100-nine-node-incast/batch-16/concurrent.bin",
+          "sha256": "932e622cea300c82cb09ef556a0768d057623fd6249bca8dbbf00e4d0a583422"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 595,
+          "path": "cells/h100-nine-node-incast/batch-16/concurrent-completion.csv",
+          "sha256": "e50d94911782a537e7ca6ff598ac1e956e85764956a7cef04cd1b36647c7c1f3"
+        },
+        "concurrent_goal": {
+          "bytes": 1181,
+          "path": "cells/h100-nine-node-incast/batch-16/concurrent.goal",
+          "sha256": "d01370efcd9f003ca82a755d01e223359adacd89314a168e6f3f5405d33a6e71"
+        },
+        "isolated_binary_goal": {
+          "bytes": 402,
+          "path": "cells/h100-nine-node-incast/batch-16/isolated.bin",
+          "sha256": "d4215c744c7087c5c4fb73c15a8497b46ca30f9de0a654360ac59c8f679e0d73"
+        },
+        "isolated_completion_csv": {
+          "bytes": 153,
+          "path": "cells/h100-nine-node-incast/batch-16/isolated-completion.csv",
+          "sha256": "55d4f21cdce7de65273c4baa737979979dd4dfbaded3edb23092cbbe5e51186b"
+        },
+        "isolated_goal": {
+          "bytes": 257,
+          "path": "cells/h100-nine-node-incast/batch-16/isolated.goal",
+          "sha256": "deaa19c9132cc8fcbb581fee633b227679356ede75fb0ac9f20b81bf7f2a8eaf"
+        }
+      },
+      "batch_per_gpu": 16,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 23651214,
+        "remote_flow_payload_bytes": [
+          23651215,
+          23651215,
+          23651214,
+          23651214,
+          23651214,
+          23651214,
+          23651214,
+          23651214
+        ],
+        "remote_logical_bytes": 189209714,
+        "total_logical_bytes": 212860928
+      },
+      "configuration_id": "h100-nine-node-incast",
+      "configuration_label": "H100 nine-node EP72 incast",
+      "fabric_attribution": {
+        "dominant_mechanism": "incast",
+        "incast_ps": 3363360000,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 3372835700,
+        "serialization_ps": 7475700
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 3845277100,
+            "destination": 0,
+            "fct_ps": 3845277100,
+            "payload_bytes": 23651215,
+            "source": 1,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 3845360300,
+            "destination": 0,
+            "fct_ps": 3845360300,
+            "payload_bytes": 23651215,
+            "source": 2,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 3845443480,
+            "destination": 0,
+            "fct_ps": 3845443480,
+            "payload_bytes": 23651214,
+            "source": 3,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 3845526680,
+            "destination": 0,
+            "fct_ps": 3845526680,
+            "payload_bytes": 23651214,
+            "source": 4,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 3845609880,
+            "destination": 0,
+            "fct_ps": 3845609880,
+            "payload_bytes": 23651214,
+            "source": 5,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 3845693080,
+            "destination": 0,
+            "fct_ps": 3845693080,
+            "payload_bytes": 23651214,
+            "source": 6,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 3845776280,
+            "destination": 0,
+            "fct_ps": 3845776280,
+            "payload_bytes": 23651214,
+            "source": 7,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 3845859480,
+            "destination": 0,
+            "fct_ps": 3845859480,
+            "payload_bytes": 23651214,
+            "source": 8,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 3845860000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 482499500,
+            "destination": 0,
+            "fct_ps": 482499500,
+            "payload_bytes": 23651215,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 482500000,
+        "isolated_trace_reused_concurrent": false,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 473024300,
+        "ideal_intra_node_wire_ps": 236512140
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 14786468,
+        "rx_return_ps": 1434,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 14785034
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 251298608,
+        "domain_count": 2,
+        "logical_bytes": 189209712,
+        "max_packet_switch_finish_ps": 251297174,
+        "max_packet_tx_finish_ps": 251297174,
+        "max_rx_buffer_occupancy_bytes": 430,
+        "packets_per_transfer": 92388,
+        "payload_bytes_per_transfer": 23651214,
+        "request_payload_bytes": 189209712,
+        "request_wire_bytes": 201035376,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 1816235657,
+        "flops": 1797165182816,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 8864282698,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 29695347040,
+        "memory_floor_ps": 8864282698,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 9,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 112.81228657403092,
+          "denominator": 4432141349,
+          "numerator": 500000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 1804.9965851844947,
+          "denominator": 4432141349,
+          "numerator": 8000000000000
+        }
+      }
+    },
+    {
+      "accounting": {
+        "after_inter_node_ps": 9535537623,
+        "analytical_step_ps": 9535537623,
+        "inter_node_attributed_ps": 0,
+        "intra_node_attributed_ps": 0,
+        "residual_ps": 0,
+        "simulated_step_ps": 9535537623
+      },
+      "analytical_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 104.87085673994619,
+          "denominator": 9535537623,
+          "numerator": 1000000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 3355.867415678278,
+          "denominator": 9535537623,
+          "numerator": 32000000000000
+        }
+      },
+      "artifacts": {
+        "concurrent_binary_goal": {
+          "bytes": 1333,
+          "path": "cells/h100-nine-node-incast/batch-32/concurrent.bin",
+          "sha256": "d9b7f4122a81b8eecaf979b4fc59d00835cf28abc2d2dfb2f83b78951ff2d63a"
+        },
+        "concurrent_completion_csv": {
+          "bytes": 595,
+          "path": "cells/h100-nine-node-incast/batch-32/concurrent-completion.csv",
+          "sha256": "906c397584e88ee11bffcb1be0c552a72ba014e9e422002cad862392c13f4a8a"
+        },
+        "concurrent_goal": {
+          "bytes": 1181,
+          "path": "cells/h100-nine-node-incast/batch-32/concurrent.goal",
+          "sha256": "fecbcc8ec7ad2818d00489da84726557cc9cbb86834cecc61e42caa6c365b31d"
+        },
+        "isolated_binary_goal": {
+          "bytes": 402,
+          "path": "cells/h100-nine-node-incast/batch-32/isolated.bin",
+          "sha256": "76eca13257507ede618cc1f97af9942607d7866972eab42e8d2aff737ede3c6c"
+        },
+        "isolated_completion_csv": {
+          "bytes": 153,
+          "path": "cells/h100-nine-node-incast/batch-32/isolated-completion.csv",
+          "sha256": "b6608a96650e3fffeffa31f199a9840a33382302ac3b8119376c8e278e5d9a7d"
+        },
+        "isolated_goal": {
+          "bytes": 257,
+          "path": "cells/h100-nine-node-incast/batch-32/isolated.goal",
+          "sha256": "5f64692584e0fcc3057744f5aac857b7ac5a060e17adaeebd2521d32e68eb923"
+        }
+      },
+      "batch_per_gpu": 32,
+      "bottleneck": {
+        "classification": "neither",
+        "critical_owners": [
+          "roofline"
+        ]
+      },
+      "byte_partition": {
+        "local_logical_bytes_per_transfer": 47302428,
+        "remote_flow_payload_bytes": [
+          47302429,
+          47302429,
+          47302429,
+          47302429,
+          47302428,
+          47302428,
+          47302428,
+          47302428
+        ],
+        "remote_logical_bytes": 378419428,
+        "total_logical_bytes": 425721856
+      },
+      "configuration_id": "h100-nine-node-incast",
+      "configuration_label": "H100 nine-node EP72 incast",
+      "fabric_attribution": {
+        "dominant_mechanism": "incast",
+        "incast_ps": 6726138000,
+        "protocol_ps": 2000000,
+        "raw_excess_ps": 6743004420,
+        "serialization_ps": 14866420
+      },
+      "fabric_observation": {
+        "concurrent_flows": [
+          {
+            "completion_time_ps": 7688469700,
+            "destination": 0,
+            "fct_ps": 7688469700,
+            "payload_bytes": 47302429,
+            "source": 1,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 7688552900,
+            "destination": 0,
+            "fct_ps": 7688552900,
+            "payload_bytes": 47302429,
+            "source": 2,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 7688636100,
+            "destination": 0,
+            "fct_ps": 7688636100,
+            "payload_bytes": 47302429,
+            "source": 3,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 7688719300,
+            "destination": 0,
+            "fct_ps": 7688719300,
+            "payload_bytes": 47302429,
+            "source": 4,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 7688802480,
+            "destination": 0,
+            "fct_ps": 7688802480,
+            "payload_bytes": 47302428,
+            "source": 5,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 7688885680,
+            "destination": 0,
+            "fct_ps": 7688885680,
+            "payload_bytes": 47302428,
+            "source": 6,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 7688968880,
+            "destination": 0,
+            "fct_ps": 7688968880,
+            "payload_bytes": 47302428,
+            "source": 7,
+            "start_time_ps": 0
+          },
+          {
+            "completion_time_ps": 7689052080,
+            "destination": 0,
+            "fct_ps": 7689052080,
+            "payload_bytes": 47302428,
+            "source": 8,
+            "start_time_ps": 0
+          }
+        ],
+        "concurrent_service_ps": 7689053000,
+        "isolated_flows": [
+          {
+            "completion_time_ps": 962914500,
+            "destination": 0,
+            "fct_ps": 962914500,
+            "payload_bytes": 47302429,
+            "source": 1,
+            "start_time_ps": 0
+          }
+        ],
+        "isolated_service_ps": 962915000,
+        "isolated_trace_reused_concurrent": false,
+        "physical_quiescence": true
+      },
+      "gpu": "h100",
+      "gpus_per_node": 8,
+      "ideal_network": {
+        "ideal_fabric_wire_ps": 946048580,
+        "ideal_intra_node_wire_ps": 473024280
+      },
+      "intra_node_attribution": {
+        "dominant_module": "TX credits and packetization",
+        "raw_excess_ps": 29569308,
+        "rx_return_ps": 1054,
+        "switch_contention_ps": 0,
+        "tx_credits_ps": 29568254
+      },
+      "intra_node_candidate": {
+        "completion_time_ps": 502593588,
+        "domain_count": 2,
+        "logical_bytes": 378419424,
+        "max_packet_switch_finish_ps": 502592534,
+        "max_packet_tx_finish_ps": 502592534,
+        "max_rx_buffer_occupancy_bytes": 316,
+        "packets_per_transfer": 184776,
+        "payload_bytes_per_transfer": 47302428,
+        "request_payload_bytes": 378419424,
+        "request_wire_bytes": 402070752,
+        "response_payload_bytes": 0,
+        "response_wire_bytes": 0,
+        "transfer_count": 8
+      },
+      "intra_node_evidence": {
+        "cross_architecture_use": "The A100 NVLink3 candidate is used to expose module mechanics for H100 and B100 configurations. It is not promoted to H100 or B100 measurement evidence.",
+        "domain_mapping": "two independent four-endpoint candidate domains for eight transfers",
+        "profile_id": "a100-nvlink3-packet-candidate-v1",
+        "status": "candidate"
+      },
+      "kernel": {
+        "compute_floor_ps": 3632471314,
+        "flops": 3594330365632,
+        "kernel_bound": "memory",
+        "kernel_floor_ps": 9535537623,
+        "kernel_simulation_enabled": false,
+        "logical_hbm_bytes": 31944051040,
+        "memory_floor_ps": 9535537623,
+        "provider": "RooflineProvider",
+        "provider_efficiency": 1.0
+      },
+      "node_count": 9,
+      "simulated_operating_point": {
+        "x_tokens_per_second_per_request": {
+          "decimal": 104.87085673994619,
+          "denominator": 9535537623,
+          "numerator": 1000000000000
+        },
+        "y_tokens_per_second_per_gpu": {
+          "decimal": 3355.867415678278,
+          "denominator": 9535537623,
+          "numerator": 32000000000000
+        }
+      }
+    }
+  ],
+  "preservation_lock": {
+    "all_byte_identical": true,
+    "artifacts_checked": 43,
+    "class": "all-33-prior-flagship-locks-plus-10-third-run-artifacts"
+  },
+  "provenance": {
+    "bulk_run_id": "gated-run-1",
+    "expectations_commit": "a7c86086dff5b3039cb84cfe0fa84875404f397d",
+    "expectations_sha256": "54295c81cebe36ee32d12b8ab1432c9fc060094ddf98403152b0d619cc37438f",
+    "head_commit": "227e24dac2c786cbf937bbbf0460b001fae3be23",
+    "htsim_rnic": {
+      "filename": "htsim_rnic",
+      "sha256": "388415f92d6ef54c84bb5d2b7f7dabcaad27574ec235d62260f08175f3958bd9"
+    },
+    "kernel_provider": "RooflineProvider",
+    "kernel_simulation_enabled": false,
+    "preservation_artifacts_checked": 43,
+    "roofline_efficiency": 1.0,
+    "source_digests_checked": 7,
+    "txt2bin": {
+      "filename": "txt2bin",
+      "sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b"
+    }
+  },
+  "publication": {
+    "figures": [
+      {
+        "bytes": 18586,
+        "path": "figures/deployment-frontier.pdf",
+        "sha256": "dd7729f98d975357370169264124b8b2c660bd87e3f337fe1c22cc6759a8fcce"
+      },
+      {
+        "bytes": 129441,
+        "path": "figures/deployment-frontier.png",
+        "sha256": "63d42d6f306fb77d4d4fa5ba6deaa0229ba90d66762dbef56aee484fe668a3aa"
+      },
+      {
+        "bytes": 20558,
+        "path": "figures/two-network-bottleneck.pdf",
+        "sha256": "cd7cf8468de06284341cbd5f4425350a7843b97ea048693736bab2826dd3146c"
+      },
+      {
+        "bytes": 145557,
+        "path": "figures/two-network-bottleneck.png",
+        "sha256": "9cd1d1794e8d3736c58d0643f7b03cd72c14af71faebee81414e0efb47193758"
+      }
+    ],
+    "result_source_sha256": "3726aec42b28adef0a82cd2def2cb5b41dd0407713d11428b5411e6b90c6b1c8"
+  },
+  "published_context": {
+    "paired": [
+      {
+        "batch_per_node": 256,
+        "context_tokens": 2000,
+        "gpus_per_node": 8,
+        "id": "sglang_decode_standard",
+        "label": "Published SGLang H100 EP72 standard decode",
+        "marker": "white diamond with black edge",
+        "tokens_per_second_per_node": 22282,
+        "x_formula": "22282 / 256",
+        "y_formula": "22282 / 8"
+      }
+    ],
+    "source_path": "examples/deployment_curve_v1/expectations.json",
+    "source_sha256": "b1a918ed02329a242d033943fb18b93fd9be8fdaa18093477e6abb8298540df5",
+    "y_only": [
+      {
+        "batch": null,
+        "context": null,
+        "gpus_per_node": 8,
+        "id": "deepseek_production_decode",
+        "label": "Published DeepSeek H800 production decode",
+        "style": "dashed horizontal line",
+        "tokens_per_second_per_node": 14800,
+        "y_formula": "14800 / 8"
+      }
+    ]
+  },
+  "published_guard": {
+    "comparison_batch_per_gpu": 32,
+    "comparison_configuration_id": "h100-nine-node-incast",
+    "published_id": "sglang_decode_standard",
+    "published_on_or_below_analytical": true,
+    "published_x": {
+      "denominator": 128,
+      "numerator": 11141
+    },
+    "published_y": {
+      "denominator": 4,
+      "numerator": 11141
+    }
+  },
+  "reserved_residual_ids": [
+    "TRAF-69",
+    "COMP-77"
+  ],
+  "schema": "simllm-deployment-frontier-result-v1",
+  "scope": "Roofline replay of the declared disaggregated-session decode step; this is not a live SGLang frontend run.",
+  "status": "REFUTED",
+  "verdict": "All 18 residuals are exactly zero after the two frozen network terms."
+}

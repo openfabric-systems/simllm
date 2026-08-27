@@ -1027,6 +1027,17 @@ request-result bytes differ in the two vLLM-owned random pool-local request
 identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
 [the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
 
+The frozen CORE-62 roofline replay passes its exact accounting gate at
+all 18 points: the residual after the inter-node then intra-node terms is 0 ps
+everywhere, kernel simulation is off, and the 43-artifact preservation class
+is byte-identical. The new log-log line-and-dot contract, the y-only horizontal
+anchor and both figure formats render literally, so CORE-62 is complete. The
+TRAF-68 study is still a refutation of its registered bottleneck direction
+because the nine-node htsim incast service remains below the H100 roofline over
+batch per GPU 1 through 32. The complete gate and refuted map remain published in
+[the analytical frontier result](../../examples/deployment_frontier_v1/RESULTS.md).
+TRAF-69 and COMP-77 remain reserved because the unexplained residual is zero.
+
 ## Open tasks
 
 ### Precision
