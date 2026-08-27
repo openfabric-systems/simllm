@@ -922,6 +922,24 @@ The TX, switch and RX queues, analytic identity bypass, frozen identification
 map and current evidence split are documented in the
 [NVLink domain-model study](../design/nvlink-domain-model.md).
 
+The scored NV4 domain now publishes its packet-level flow joins, convergence,
+divergence and flow-completion-time distributions in
+[the TRAF-69 result](../../examples/nvlink_flow_dynamics_v1/RESULTS.md).
+The 1-to-2 open identity lands at 13,886 ps and the 2-to-1 solo-target identity
+at 16,684 ps, both with 0 ps residual. The reverse-target schedule completes
+flow C, flow B, then flow A, and all 219 stable raw-bin rate checks pass. Every
+one of the 21 incast-degree-by-size CDF cells passes its frozen p50 and p95
+bands. Simulated payload reaches 94.009808, 187.880751 and 194.562756 GB/s at
+degrees one through three, respectively, without exceeding the frozen
+94.117647, 188.235294 and 194.919456 GB/s ceilings. The published 281.65 GB/s
+sender fan-out row remains separate and is honestly refuted by a 46.334975
+percent miss. All 13 fatal guards and all 60 preservation locks pass, including
+the byte-identical default flow-inactive path, so TRAF-69 closes. The result
+keeps the measured TX and RX plateaus, ten declared candidate parameters and
+the structural pass-through switch, the score's eleven unchanged internals in
+total, visibly separate; TRAF-65 remains open on its live held-out integration
+bar.
+
 ## Open tasks
 
 ### Precision

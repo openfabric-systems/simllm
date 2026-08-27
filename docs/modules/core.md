@@ -1036,7 +1036,12 @@ TRAF-68 study is still a refutation of its registered bottleneck direction
 because the nine-node htsim incast service remains below the H100 roofline over
 batch per GPU 1 through 32. The complete gate and refuted map remain published in
 [the analytical frontier result](../../examples/deployment_frontier_v1/RESULTS.md).
-TRAF-69 and COMP-77 remain reserved because the unexplained residual is zero.
+COMP-77 remains reserved because the unexplained compute residual is zero.
+The separately directed
+[TRAF-69 NVLink flow-dynamics study](../../examples/nvlink_flow_dynamics_v1/RESULTS.md)
+closes with both transition identities exact, every CDF rung and incast ceiling
+passing, and the separate sender fan-out row honestly refuted. It selects an
+opt-in release-aware packet policy and leaves every core default unchanged.
 
 ## Open tasks
 
