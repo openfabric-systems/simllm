@@ -233,3 +233,6 @@ examples/deployment_curve_v1/core61_depth_*.md text eol=lf
 examples/deployment_curve_v1/core61_depth_*.py text eol=lf
 examples/deployment_curve_v1/run_core61_depth.py text eol=lf
 tests/test_deployment_curve_core61.py text eol=lf
+tests/test_hopper_mtp_recovery.py text eol=lf
+tests/test_hopper_deepseek_repeat_recovery.py text eol=lf
+tests/test_hopper_campaign_successor.py text eol=lf

@@ -1,0 +1,123 @@
+{
+  "campaign_id": "hopper-comp72-partial-2026-08-27",
+  "core61": {
+    "earliest_submit_time": "2026-08-28T06:30:00+02:00",
+    "evidence_class": "ABSENT",
+    "measured_service_ps": null,
+    "preregistered_prediction_ps": 3751359511,
+    "signed_residual_ps": null,
+    "status": "NOT_SUBMITTED_TIME_GATE"
+  },
+  "created": "2026-08-27",
+  "deepseek": {
+    "mtp": {
+      "measured_service_ps": 2033951000,
+      "source_name": "comp72-deepseek-mtp"
+    },
+    "priced_repeats": [
+      {
+        "implementation_suffix": "ep32-prefill-r16-l1024-t16384",
+        "reader": "recovery-json-service-ps",
+        "source_names": [
+          "comp72-deepseek-base-repeat"
+        ],
+        "value_source": "comp72-deepseek-base-repeat"
+      },
+      {
+        "implementation_suffix": "ep32-prefill-r4-l4096-t16384",
+        "reader": "recovery-json-service-ps",
+        "source_names": [
+          "comp72-deepseek-base-repeat"
+        ],
+        "value_source": "comp72-deepseek-base-repeat"
+      },
+      {
+        "implementation_suffix": "ep32-prefill-r8-l2048-t16384",
+        "reader": "recovery-json-service-ps",
+        "source_names": [
+          "comp72-deepseek-base-repeat"
+        ],
+        "value_source": "comp72-deepseek-base-repeat"
+      },
+      {
+        "implementation_suffix": "ep72-decode-b32-c2000",
+        "reader": "recovery-json-service-ps",
+        "source_names": [
+          "comp72-deepseek-decode-repeat"
+        ],
+        "value_source": "comp72-deepseek-decode-repeat"
+      }
+    ]
+  },
+  "granite": {
+    "blocker": "SIMLLM_VLLM_KERNEL_CAPTURE_TARGET and SIMLLM_SGLANG_KERNEL_CAPTURE_TARGET were not staged on Merlin; run-cell rejects before a real framework target is selected",
+    "completed_cell_count": 0,
+    "completed_prefix_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "plan_source_name": "comp72-granite-plan"
+  },
+  "sources": [
+    {
+      "bytes": 68,
+      "name": "comp72-completed-prefix",
+      "path": "retained/control/completed-prefix-initial.sha256",
+      "publish_in_lookup_record": true,
+      "sha256": "abcfa6a9d4df344d1781bc2560b5e4cdcae08b39ed303063535e7e1e926a304a"
+    },
+    {
+      "bytes": 366,
+      "name": "comp72-control-source-digests",
+      "path": "retained/control/source-digests.sha256",
+      "publish_in_lookup_record": true,
+      "sha256": "589131e73ec53390a40fd9ee57f67f8904b7816f49e051cc2f1b8febcfbdc44d"
+    },
+    {
+      "bytes": 6691,
+      "name": "comp72-core61-expectations",
+      "path": "retained/control/core61_depth_expectations.json",
+      "publish_in_lookup_record": true,
+      "sha256": "f6af234593d3b0ca7844b9dba4928514d60f517296a0b101f3e708eb4379bd11"
+    },
+    {
+      "bytes": 2404,
+      "name": "comp72-deepseek-base-repeat",
+      "path": "retained/deepseek/base-198985/reanalysis/repeat-services-v2.json",
+      "publish_in_lookup_record": true,
+      "sha256": "58f14f4fef95d27086f0bc340ff3cb1f0a3750b0d71900c5d2c9e76a38282d21"
+    },
+    {
+      "bytes": 1854,
+      "name": "comp72-deepseek-decode-repeat",
+      "path": "retained/deepseek/decode-198987/reanalysis/repeat-services-v2.json",
+      "publish_in_lookup_record": true,
+      "sha256": "04fea4ee45a2e7f39bfa2317e9a4bde053ac7467ce461637bbbb9c46f85a3f11"
+    },
+    {
+      "bytes": 2025,
+      "name": "comp72-deepseek-mtp",
+      "path": "retained/deepseek/mtp-198967/reanalysis/mtp-service.json",
+      "publish_in_lookup_record": true,
+      "sha256": "52bce88e870e1cd1b00073d81572fedca900e5c08671d5ffe99420ffc6570b0c"
+    },
+    {
+      "bytes": 13067,
+      "name": "comp72-expectations-freeze",
+      "path": "retained/control/expectations.json",
+      "publish_in_lookup_record": true,
+      "sha256": "9c92756d2deab0a1cf18509b3b5f96770c7a18c96fb4eb14feb1f58af45a20fa"
+    },
+    {
+      "bytes": 1728702,
+      "name": "comp72-granite-plan",
+      "path": "granite-plan.json",
+      "publish_in_lookup_record": true,
+      "sha256": "19a6d6fb93d7b3f4faa1ad9cdd94724ecddb9fdae147f71c0f8403a5c0b19d36"
+    },
+    {
+      "bytes": 2290,
+      "name": "comp72-suite",
+      "path": "retained/control/suite.json",
+      "publish_in_lookup_record": true,
+      "sha256": "c567dce24ee4480203cc09b212dcfcffbde41c5471021cd8d7d5c8dc16cda090"
+    }
+  ]
+}

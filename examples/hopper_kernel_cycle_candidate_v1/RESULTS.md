@@ -1,10 +1,54 @@
 # Local Hopper kernel-cycle candidate result
 
-## Outcome
+## Campaign successor, 2026-08-27
 
-Record digest: `ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52`.
-The record is a `candidate` `simllm-kernel-cycle-lut-v1` artifact with 20
-service entries. It is not a validated device release.
+Successor record digest:
+`d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107`.
+The flagship MTP cell measures 2.033951 ms of non-collective service from 119
+GPU kernel records selected by 109 runtime correlations at the exact
+`generation_16(32)` NVTX boundary. Its service class moves from `ABSENT` to
+`MEASURED`, with its component split `DISCLOSED`; the freeze still forbids an
+MTP lookup price.
+
+The campaign result is `PARTIAL_CAMPAIGN_RECOMPILED`. The exact DeepSeek MTP,
+base and decode submissions ran as jobs 198967, 198985 and 198987 on the
+`gh-hourly` partition, paced one at a time. No model weight was downloaded.
+The base and decode runs retain a second independent observation for every
+priced physical key. No repeat is pooled and no distribution is changed
+before COMP-74.
+
+The staged compact analyzer passed the decode job but blocked after the MTP
+and base captures because its all-cells decode boundary did not match those
+runtime labels. Both blocked outputs are preserved. A fail-closed recovery
+reads the exact registered profile cases and NVTX runtime correlations from
+their retained SQLite sources, rejects any weight file, and records each raw
+source byte count and digest.
+
+The 1,212-cell Granite plan rendered canonically with SHA-256
+`19a6d6fb93d7b3f4faa1ad9cdd94724ecddb9fdae147f71c0f8403a5c0b19d36`.
+Neither pinned framework target executable named by
+`SIMLLM_VLLM_KERNEL_CAPTURE_TARGET` and
+`SIMLLM_SGLANG_KERNEL_CAPTURE_TARGET` was staged on Merlin, so no real
+Granite cell could start. The digest-complete prefix therefore remains the
+empty sequence with SHA-256
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`,
+byte for byte. The first incomplete cell remains
+`sglang-decode-cuda-graph-te1-pi1-da1-ex1-b1-kv1311-deliberately-fragmented`.
+
+CORE-61 was not submitted because its frozen earliest time,
+`2026-08-28T06:30` in `Europe/Zurich`, had not arrived. The preregistered
+3,751,359,511 ps depth-8 prediction therefore retains no measurement or
+signed residual. COMP-72 stays open and COMP-78 owns this exact Granite and
+CORE-61 remainder.
+
+## Frozen predecessor
+
+The immutable predecessor digest is
+`ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52`.
+It remains the original `candidate` `simllm-kernel-cycle-lut-v1` artifact with
+20 service entries and is not a validated device release. The successor
+preserves every predecessor service point and distribution; its content
+address changes because the new retained source digests are attached.
 
 What was frozen: the expectations-only commit `748e6b6` fixed the one-shot
 Merlin reachability verdict, every retained source digest, the exact Nsys cell
@@ -25,11 +69,11 @@ Connection to UNKNOWN port 65535 timed out
 
 It was not retried.
 
-What ran: after the freeze, the local compiler verified the byte count and
-SHA-256 of every retained report and derived CSV, cross-checked the selected
-cell values against those CSVs, verified the tracked DeepSeek projection,
-compiled the lookup, and projected it through the existing profile-table and
-device-service compilers. No model weight was downloaded. The portable local
+What ran for the predecessor: after the freeze, the local compiler verified
+the byte count and SHA-256 of every retained report and derived CSV,
+cross-checked the selected cell values against those CSVs, verified the
+tracked DeepSeek projection, compiled the lookup, and projected it through
+the existing profile-table and device-service compilers. The portable local
 command is:
 
 ```text
@@ -38,24 +82,21 @@ SIMLLM_KERNELPROBE_ROOT=$SIMLLM_KERNELPROBE_ROOT \
   --output-dir $SIMLLM_CAMPAIGN_RUN_ROOT/hopper-kernel-cycle-candidate-v1
 ```
 
-What came out: `CANDIDATE_COMPILED`. All frozen Granite distribution, ratio
+What came out then: `CANDIDATE_COMPILED`. All frozen Granite distribution, ratio
 and physical-floor checks passed. The DeepSeek cells stayed
 `insufficient-replays`, as frozen, and no stability result is inferred from a
 single retained observation. Held-out entries underwent the same identity
 transform as calibration entries; the compiler has no fitted parameter that a
 held-out value could influence.
 
-What this changes: CORE-54 and the CORE-53 binding seam can identify this
-candidate by content address and consume its exact per-rank durations once the
-binding lands. Current main does not contain the CORE-53 seam, so the proof is
-against the landed kernel-cycle record, profile and device-service contracts.
-The contract test validates the content address, exact profile duration,
-candidate acceptance status and one-for-one device-service projection without
-a binding adapter.
+What this changes now: consumers can select the successor by its new content
+address, the unpriced MTP anchor has measured GH200 Nsys service, and COMP-74
+has two independent observations for all four priced keys.
 
-What this does not change: no registered Merlin campaign cell ran, no GH200
-counter pass exists, no full-depth DeepSeek model ran, no MTP row is priced,
-and no task closes. COMP-1, COMP-5, COMP-64 and CORE-54 remain open.
+What this does not change: no frozen lookup point or distribution changes, no
+MTP row is priced, no full-depth DeepSeek model ran, no Granite campaign cell
+ran, and no candidate is promoted. COMP-1, COMP-5, COMP-64, COMP-72 and
+CORE-54 remain open.
 
 ## Evidence-class ledger
 
@@ -63,10 +104,16 @@ Service and component rows are separate, non-additive ledgers. A row with
 `MEASURED` service and `DISCLOSED` components counts once in each named axis,
 not twice as service.
 
-| Family | MEASURED service | DECLARED service | DISCLOSED component bounds | ABSENT requested cells |
-|---|---:|---:|---:|---:|
-| Granite 3.0 1B A400M | 12 | 0 | 12 | 1,212 registered campaign cells |
-| DeepSeek-V3 | 4 reduced-depth | 4 full-depth projections | 8 | 1 MTP physical cell |
+| Family | Lookup MEASURED | Lookup DECLARED | Lookup DISCLOSED | Requested physical MEASURED | Requested physical ABSENT |
+|---|---:|---:|---:|---:|---:|
+| Granite 3.0 1B A400M | 12 | 0 | 12 | 0 | 1,212 campaign cells |
+| DeepSeek-V3 COMP-72 cells | 4 reduced-depth | 4 full-depth projections | 8 | 5 | 0 |
+
+The only class movement is the registered MTP physical cell from `ABSENT` to
+`MEASURED` plus one `DISCLOSED` component overlay. The four priced keys remain
+`MEASURED` at reduced depth and `DECLARED` at full depth; their new independent
+repetitions extend provenance but do not reclassify or reprice them. The
+CORE-61 depth-8 held-out cell remains separately `ABSENT` under its time gate.
 
 Every emitted lookup, profile-table and device-service entry carries its
 service class, component class, split and source digests. Granite and DeepSeek
@@ -77,7 +124,7 @@ component bound. It does not replace the GH200 Nsys service authority.
 The remaining absent evidence is:
 
 - all 1,212 registered Granite campaign cells;
-- DeepSeek EP72 MTP batch 16 at KV 4,000;
+- the CORE-61 depth-8 held-out physical cell and signed residual;
 - GH200 program-counter or counter-pass attribution;
 - full-depth DeepSeek silicon service;
 - tensor-parallel widths not present in the lean pull; and
@@ -96,11 +143,23 @@ for that four-layer physical envelope. `DECLARED` means only the frozen
 | EP32 prefill, 8 x 2,048 input tokens | 93.134208 ms | 23.283552 ms | 1,420.296672 ms | DECLARED |
 | EP32 prefill, 4 x 4,096 input tokens | 104.598911 ms | 26.14972775 ms | 1,595.13339275 ms | DECLARED, held-out |
 | EP72 decode, batch 32 at KV 2,000 | 1.875680 ms | 0.468920 ms | 28.604120 ms | DECLARED |
-| EP72 MTP decode, batch 16 at KV 4,000 | ABSENT | ABSENT | ABSENT | ABSENT |
+| EP72 MTP decode, batch 16 at KV 4,000 | 2.033951 ms | not derived | not priced | MEASURED, unpriced |
 
 The per-layer values are reported to expose the arithmetic consumed by the
 flagship. The actual lookup keys select the 61-layer per-rank entries, not a
 new per-layer pricing authority.
+
+The independent priced-key repetitions are retained as COMP-74 inputs:
+
+| Physical key | Frozen point | Independent repeat | Signed repeat minus point |
+|---|---:|---:|---:|
+| EP32 prefill, 16 x 1,024 | 89.393440 ms | 91.249600 ms | +1.856160 ms |
+| EP32 prefill, 8 x 2,048 | 93.134208 ms | 94.656736 ms | +1.522528 ms |
+| EP32 prefill, 4 x 4,096 | 104.598911 ms | 104.294464 ms | -0.304447 ms |
+| EP72 decode, batch 32 at KV 2,000 | 1.875680 ms | 1.883392 ms | +0.007712 ms |
+
+These are raw signed observations only. COMP-74 owns the preregistered
+statistic and interval rule.
 
 ## Granite checks
 
@@ -130,20 +189,27 @@ only. No DeepSeek MLA KV slope was present.
 
 | Artifact | SHA-256 | Bytes | Status |
 |---|---|---:|---|
-| `candidate-record.json` | `ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52` | 57,417 | candidate lookup |
-| `profile-table.json` | `116f8fc58d82a92d87653a0e5d6203a5a6ede1fdd31759493367657ea85033f4` | 32,963 | candidate profile-table projection |
-| `device-service-entries.json` | `bf1f4a2a9fcba459de864b1f6511d33eab77e656330d002d44cee5452eb508a3` | 48,631 | candidate device-service projection |
-| `result.json` | `8112afe70fdd5b8f9c47f4e3af4f567f848862dc967832f142abd39fdab77e6e` | 3,091 | scored result |
-| `artifact-manifest.json` | `3777d98495985312cdd8c411adf606a5f1d1cfdad7f85c571c4d4a8225e3c93f` | 704 | artifact ledger |
+| successor `candidate-record.json` | `d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107` | 60,675 | candidate lookup |
+| successor `profile-table.json` | `ff5f4d5376a90a82fd3588355c3671e02c06778290dc906416374b496f2e08f1` | 33,587 | candidate profile-table projection |
+| successor `device-service-entries.json` | `1a8815dcdf3d8df4f8143b845c19be9c3b8a93846e1696cf713eaba2767d29b5` | 49,255 | candidate device-service projection |
+| successor `result.json` | `e38f08dd231b6dec681b90135a5ad9c9588f4627df9778680379572c2ae0a20d` | 3,629 | partial campaign result |
+| successor `artifact-manifest.json` | `e5a68bdcedc375996b99ab38f7f9b951b883a6929be57416cc82b7dade25051e` | 704 | artifact ledger |
+| immutable predecessor `candidate-record.json` | `ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52` | 57,417 | immutable history |
 
 The manifest SHA-256 was computed after the four payload artifacts. It is not
 included in its own payload list.
 
 ## Run integrity and deferral
 
-Three stopped local attempts are preserved under the bulk run root. The first
-stopped before a result because a zero-count ledger key was omitted. The
-second was rejected during publication audit because its Granite label and
+The COMP-72 remote campaign is retained under the registered campaign root,
+and the lean local pull retains control digests, exact profiles, derived
+kernel tables and recovery outputs under the external bulk root. Full Nsys
+SQLite and report sources remain remote with their byte counts and SHA-256
+digests embedded in each recovery output.
+
+Three earlier stopped local attempts are preserved under the bulk run root.
+The first stopped before a result because a zero-count ledger key was omitted.
+The second was rejected during publication audit because its Granite label and
 family did not match the retained report. The third used an explanatory
 synthetic name instead of the exact full-depth DeepSeek identity and was also
 rejected before publication. None is published. Regression tests cover the
@@ -151,9 +217,9 @@ ledger and exact model identities, and the final digest above binds both the
 corrected Granite 3.0 1B A400M routed identity and the exact disclosed
 DeepSeek-V3 target identity.
 
-COMP-72 owns the deferred Merlin run under `expectations.json`. It starts by
-rendering the Granite plan with the exact command in that freeze, then resumes
-at the first cell without a digest-complete directory:
+COMP-78 now owns the literal COMP-72 remainder under `expectations.json`. It
+resumes the rendered Granite plan at the first cell without a digest-complete
+directory:
 
 ```text
 .venv/bin/python offline/calibration/kernel_cycle_capture.py run-cell \
