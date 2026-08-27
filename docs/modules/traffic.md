@@ -494,9 +494,15 @@ The `loggopsim-ideal` level passes the frozen
 exact arithmetic observables, 3 of 3 live metric-chain identities and 3 of 3
 wall-time ceilings in separate evidence classes, with all fatal guards held.
 The live step's independently reproduced network makespan and its TTFT delta
-against the zero-collective control are both exactly 202,000 ps. The study
-does not compare modeled error or wall-clock gain against packet execution on
-identical schedules, so TRAF-20 retains that qualification work.
+against the zero-collective control are both exactly 202,000 ps. The
+[frontier ladder](../../examples/frontier_ladder_v1/RESULTS.md) measures
+modeled error against pinned packet observations through M-1, M-2 and M-3,
+but executes no packet reference and therefore measures no packet wall clock.
+The level refuses overlapping multi-source receiver fan-in by default, with
+an explicit acknowledgment and provenance stamp for deliberate envelope
+measurements. TRAF-20 remains open for measured packet-reference wall-clock
+gain on identical flow sets and the separately frozen enforcement acceptance
+study.
 
 TRAF-7 is complete for observation-driven step lowering and the coarse live
 metric chain. The frozen two-layer study crossed `C/D` from 1/2 to 2 and
@@ -942,27 +948,48 @@ identity bypass, frozen identification map and current evidence split are
 documented in the [NVLink domain-model study](../design/nvlink-domain-model.md).
 
 The
-[frontier ladder](../../examples/frontier_ladder_v1/RESULTS.md) carries the
-closed-form ESTIMATE rung, the executed loggopsim-ideal SIMULATED rung and the
-pinned packet SIMULATED rung together without merging their authorities. Its
-twelve ideal fabric legs execute from rendered GOALs through the digest-pinned
-binary with the exact `G` string `0.02`; all twelve match the frozen literals
-across seven repetitions, and all four fatal guards reject genuine mutations.
+[frontier ladder](../../examples/frontier_ladder_v1/RESULTS.md) carries 24
+ESTIMATE and 30 SIMULATED points without merging their authorities. The six
+B100 ideal-rung points are closed-form ESTIMATE points with no execution; the
+twelve H100 ideal-rung points execute from rendered GOALs through the
+digest-pinned binary with the exact `G` string `0.02`. All twelve native legs
+match the frozen literals across seven repetitions, and all four fatal guards
+reject genuine mutations.
 At batch 32, the packet-to-ideal quotient is 1.015637 for the serialized
 two-node shape, 8.110405 for eight-into-one incast and 1.015682 for the
 isolated incast control. The mechanism is explicit: the ideal receiver charges
 no per-byte gap, while the packet receiver serializes the shared ingress. At
 step level, the H100 kernel masks every fabric difference and the sole rung
-movement remains the pinned B100 batch-32 intra-node excess. The 0.036258
-second median for all twelve ideal legs and the quantified packet-error
-envelope close TRAF-20; the fabric-leg view that exposes the contention masked
-by the original step map closes TRAF-68. Neither closure makes an absolute
-accuracy claim against silicon.
+movement remains the pinned B100 batch-32 intra-node excess. The original
+published median is 0.034612 seconds for all twelve ideal legs. The quantified
+packet-error envelope completes TRAF-20's modeled-error half, while its packet
+wall-clock and enforcement-acceptance halves remain open. The fabric-leg view
+that exposes the contention masked by the original step map closes TRAF-68.
+Neither result makes an absolute-accuracy claim against silicon.
 
 ## Open tasks
 
 ### Precision
 
+- TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
+  fast level for schedule-shape studies that do not need per-flow transport
+  behavior. The
+  [frontier ladder](../../examples/frontier_ladder_v1/RESULTS.md) measures the
+  modeled-error half against pinned packet observations through M-1, M-2 and
+  M-3: batch-32 packet over ideal is 1.015637 for serialized traffic, 8.110405
+  for incast and 1.015682 for the isolated incast control. It executes no
+  packet reference and therefore measures no packet wall clock. The level now
+  computes receiver fan-in from each rendered GOAL and refuses overlapping
+  flows from multiple sources by default, naming the unmodeled receiver
+  per-byte gap, the about 8x frozen-cell optimism and the ladder evidence. An
+  explicit `acknowledge_fan_in=True` permits a deliberate run and stamps both
+  fan-in and acknowledgment in provenance; fan-in-free runs preserve their
+  accepted GOAL bytes. The post-specified ladder correction exercises that
+  acknowledgment for L-B but is not enforcement acceptance. Remaining
+  acceptance is limited to (a) wall-clock gain against an actually measured
+  packet reference on identical flow sets and (b) a separately frozen study
+  that exercises default refusal, explicit acknowledgment and stamp, and the
+  byte-identical clean path through the supported metric chain.
 - TRAF-51 (Precision; P1; L): complete the Slingshot fabric calibration
   beyond the steady-state partial. The wave-19 comparison
   ([merlin ss fabric calibration](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md),

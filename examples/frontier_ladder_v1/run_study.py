@@ -28,7 +28,9 @@ if str(REPOSITORY_ROOT) not in sys.path:
 from examples.frontier_ladder_v1.plot_study import prepare_plot_data
 from simllm.backends import (
     LogGopsimConfig,
+    LogGopsimFanInStamp,
     build_loggopsim_command,
+    inspect_loggopsim_fan_in,
     parse_loggopsim_stdout,
 )
 from simllm.deploy import (
@@ -55,6 +57,7 @@ PINNED_RECORD_PATH = (
 LOGGOPSIM_EXPECTATIONS_PATH = (
     REPOSITORY_ROOT / "examples" / "loggopsim_ideal_v1" / "expectations.md"
 )
+PUBLISHED_RESULT_PATH = STUDY_DIR / "result.json"
 
 RESULT_SCHEMA = "simllm-frontier-ladder-study-v1"
 EXPECTATIONS_COMMIT = "228f3c77b98af1f0f60985405a8db67ebb67c0a6"
@@ -84,6 +87,7 @@ class FabricCell:
     flow_count: int
     payload_bytes: int
     expected_ns: int
+    acknowledge_fan_in: bool = False
 
     @property
     def cell_id(self) -> str:
@@ -144,6 +148,7 @@ def _cells() -> tuple[FabricCell, ...]:
                 8,
                 payload,
                 expected,
+                True,
             )
             for batch, payload, expected in incast
         ]
@@ -302,7 +307,9 @@ def _portable_argv(argv: list[str], attempt_dir: Path) -> list[str]:
     return portable
 
 
-def _render_goal(cell: FabricCell, goal_dir: Path, txt2bin: Path) -> tuple[Path, Path]:
+def _render_goal(
+    cell: FabricCell, goal_dir: Path, txt2bin: Path
+) -> tuple[Path, Path, LogGopsimFanInStamp]:
     trace = GoalTrace(cell.rank_count)
     messages = tuple(
         (f"flow-{index}", index + 1, 0, cell.payload_bytes)
@@ -320,12 +327,16 @@ def _render_goal(cell: FabricCell, goal_dir: Path, txt2bin: Path) -> tuple[Path,
     if any(message.payload_bytes != cell.payload_bytes for message in trace.messages):
         raise AssertionError("rendered GOAL changed the frozen payload")
     text_path = trace.write(goal_dir / f"{cell.stem}.goal")
+    fan_in = inspect_loggopsim_fan_in(
+        text_path.read_text(encoding="utf-8"),
+        acknowledge_fan_in=cell.acknowledge_fan_in,
+    )
     binary_path = to_binary(
         text_path,
         goal_dir / f"{cell.stem}.bin",
         tool=txt2bin,
     )
-    return text_path, binary_path
+    return text_path, binary_path, fan_in
 
 
 def _config(cell: FabricCell, binary_goal: Path) -> LogGopsimConfig:
@@ -454,6 +465,10 @@ def _point(
         ideal_source_sha256 = PINNED_RECORD_SHA256
         ideal_goal_sha256 = None
         ideal_argv: tuple[str, ...] = ()
+        ideal_point_class = PointClass.ESTIMATE
+        ideal_authority_class = RungAuthorityClass.ESTIMATOR
+        ideal_authority = "closed-form"
+        ideal_binary_sha256 = None
     else:
         ideal_fabric = ideal["observed_ns"] * 1_000
         ideal_step = max(
@@ -465,6 +480,10 @@ def _point(
         ideal_source_sha256 = ideal["goal_text_sha256"]
         ideal_goal_sha256 = ideal["goal_binary_sha256"]
         ideal_argv = tuple(ideal["argv"])
+        ideal_point_class = PointClass.SIMULATED
+        ideal_authority_class = RungAuthorityClass.LEVEL
+        ideal_authority = "loggopsim-ideal"
+        ideal_binary_sha256 = binary_sha256
 
     def rung(
         identity: FrontierRung,
@@ -504,15 +523,15 @@ def _point(
             ),
             rung(
                 FrontierRung.LOGGOPSIM_IDEAL,
-                PointClass.SIMULATED,
+                ideal_point_class,
                 ideal_step,
                 ideal_fabric,
                 RungProvenance(
-                    authority_class=RungAuthorityClass.LEVEL,
-                    authority="loggopsim-ideal",
+                    authority_class=ideal_authority_class,
+                    authority=ideal_authority,
                     source_path=ideal_source_path,
                     source_sha256=ideal_source_sha256,
-                    binary_sha256=binary_sha256,
+                    binary_sha256=ideal_binary_sha256,
                     goal_sha256=ideal_goal_sha256,
                     argv=ideal_argv,
                 ),
@@ -669,6 +688,9 @@ def _step_family(record: FrontierLadderRecord) -> dict[str, object]:
                 "batch_per_gpu": point.batch_per_gpu,
                 "expected": expected,
                 "observed_step_ps": values,
+                "point_classes": {
+                    rung.rung.value: rung.point_class.value for rung in point.rungs
+                },
                 "relation": relation,
                 "passed": passed,
             }
@@ -690,18 +712,44 @@ def _plot_family(record: FrontierLadderRecord, envelope: list[dict[str, object]]
         for point in record.points
         for rung in point.rungs
     ]
-    expected_classes = {
-        FrontierRung.ESTIMATE.value: (PointClass.ESTIMATE.value, "closed-form"),
-        FrontierRung.LOGGOPSIM_IDEAL.value: (
-            PointClass.SIMULATED.value,
-            "loggopsim-ideal",
-        ),
-        FrontierRung.PACKET.value: (PointClass.SIMULATED.value, "rnic-nn"),
+    expected_class_rows = []
+    for point in record.points:
+        expected_class_rows.extend(
+            [
+                (
+                    FrontierRung.ESTIMATE.value,
+                    PointClass.ESTIMATE.value,
+                    "closed-form",
+                ),
+                (
+                    FrontierRung.LOGGOPSIM_IDEAL.value,
+                    (
+                        PointClass.SIMULATED.value
+                        if point.rung(FrontierRung.LOGGOPSIM_IDEAL).fabric_leg_ps
+                        else PointClass.ESTIMATE.value
+                    ),
+                    (
+                        "loggopsim-ideal"
+                        if point.rung(FrontierRung.LOGGOPSIM_IDEAL).fabric_leg_ps
+                        else "closed-form"
+                    ),
+                ),
+                (
+                    FrontierRung.PACKET.value,
+                    PointClass.SIMULATED.value,
+                    "rnic-nn",
+                ),
+            ]
+        )
+    classes_pass = class_rows == expected_class_rows
+    point_class_tallies = {
+        point_class.value: sum(
+            rung.point_class is point_class
+            for point in record.points
+            for rung in point.rungs
+        )
+        for point_class in PointClass
     }
-    classes_pass = all(
-        (point_class, authority) == expected_classes[rung]
-        for rung, point_class, authority in class_rows
-    )
     packet_front = [
         (point.configuration_id, point.batch_per_gpu)
         for point in ladder_pareto_front(record, FrontierRung.PACKET)
@@ -750,6 +798,7 @@ def _plot_family(record: FrontierLadderRecord, envelope: list[dict[str, object]]
         "denominator": len(rows),
         "passed": sum(row["passed"] for row in rows),
         "rows": rows,
+        "point_class_tallies": point_class_tallies,
         "plot_data": plot,
     }
 
@@ -781,7 +830,10 @@ def _mutation_control(mutant: str, rejected: bool) -> dict[str, object]:
 
 
 def _fg1_holds(input_rows: list[dict[str, object]]) -> bool:
-    return all(bool(row["matched"]) for row in input_rows)
+    return all(
+        row.get("observed_sha256") == row.get("expected_sha256")
+        for row in input_rows
+    )
 
 
 def _record_holds(value: object) -> bool:
@@ -831,9 +883,8 @@ def _fatal_guards(
 
     mutant_inputs = deepcopy(input_rows)
     mutant_inputs[1]["observed_sha256"] = "0" * 64
-    mutant_inputs[1]["matched"] = False
     class_mutant = deepcopy(record_json)
-    class_mutant["points"][0]["rungs"][2]["point_class"] = PointClass.ESTIMATE.value  # type: ignore[index]
+    class_mutant["points"][0]["rungs"][1]["point_class"] = PointClass.SIMULATED.value  # type: ignore[index]
     execution_mutant = deepcopy(record_json)
     ideal_rung = next(
         rung
@@ -860,9 +911,12 @@ def _fatal_guards(
             "id": "FG-2",
             "held": record_valid,
             "enforcement": "runtime",
-            "evaluated": "all 18 ladder points carry three strict, correctly classified and distinct rung authorities",
+            "evaluated": (
+                "all 18 ladder points carry strict, distinct authorities with "
+                "24 ESTIMATE and 30 SIMULATED points"
+            ),
             "mutation_control": _mutation_control(
-                "one packet rung relabeled ESTIMATE on the wire",
+                "one nonexecuted B100 ideal rung relabeled SIMULATED on the wire",
                 not _record_holds(class_mutant),
             ),
         },
@@ -896,7 +950,7 @@ def _preflight_void(
 ) -> dict[str, object]:
     mutant_inputs = deepcopy(input_rows)
     if mutant_inputs:
-        mutant_inputs[0]["matched"] = False
+        mutant_inputs[0]["observed_sha256"] = "0" * 64
     return {
         "schema": RESULT_SCHEMA,
         "verdict": "VOID",
@@ -1042,6 +1096,44 @@ def _csv_rows(result: dict[str, Any]) -> list[dict[str, object]]:
     return rows
 
 
+def _modeled_quantity_projection(result: dict[str, Any]) -> dict[str, object]:
+    exact = result["score_classes"]["exact_oracles"]["families"]
+    relations = result["score_classes"]["behavioral_relations"]["families"]
+    return {
+        "exact_observations": {
+            family: [
+                {
+                    "id": row["id"],
+                    "observed_ns": row["observed_ns"],
+                    "all_observed_ns": row["all_observed_ns"],
+                }
+                for row in exact[family]["rows"]
+            ]
+            for family in ("L-A", "L-B")
+        },
+        "mechanism_rows": {
+            family: [
+                {
+                    "id": row["id"],
+                    "ideal_ps": row["ideal_ps"],
+                    "packet_ps": row["packet_ps"],
+                    "quotient": row["quotient"],
+                }
+                for row in relations[family]["rows"]
+            ]
+            for family in ("M-1", "M-2", "M-3")
+        },
+        "step_rows": [
+            {
+                "id": row["id"],
+                "observed_step_ps": row["observed_step_ps"],
+            }
+            for row in relations["S"]["rows"]
+        ],
+        "physical_sanity": result["physical_sanity"],
+    }
+
+
 def run_study(args: argparse.Namespace) -> dict[str, object]:
     """Execute seven native batches and score every frozen family."""
 
@@ -1065,6 +1157,8 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
         raise SystemExit(f"txt2bin is not a file: {txt2bin}")
 
     legacy = json.loads(PINNED_RECORD_PATH.read_text(encoding="utf-8"))
+    published_before = json.loads(PUBLISHED_RESULT_PATH.read_text(encoding="utf-8"))
+    published_before_sha256 = _sha256_path(PUBLISHED_RESULT_PATH)
     legacy_rows = {
         (row["configuration_id"], row["batch_per_gpu"]): row
         for row in legacy["points"]
@@ -1073,7 +1167,7 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
     goal_dir.mkdir(parents=True, exist_ok=True)
     prepared: dict[str, dict[str, Any]] = {}
     for cell in _cells():
-        source, binary_goal = _render_goal(cell, goal_dir, txt2bin)
+        source, binary_goal, fan_in = _render_goal(cell, goal_dir, txt2bin)
         prepared[cell.cell_id] = {
             "cell": cell,
             "goal_path": source,
@@ -1081,6 +1175,7 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
             "goal_text_sha256": _sha256_path(source),
             "goal_binary_sha256": _sha256_path(binary_goal),
             "argv": build_loggopsim_command(binary, _config(cell, binary_goal)),
+            "fan_in": fan_in.to_json(),
         }
 
     recorder = NativeEvidenceRecorder(attempt_dir)
@@ -1136,9 +1231,28 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
                 "stderr_sha256": [item.stderr_sha256 for item in cell_executions],
                 "native_evidence": [item.evidence_path for item in cell_executions],
                 "executions": len(cell_executions),
+                "fan_in": prepared[cell.cell_id]["fan_in"],
                 "oracle_source": "frozen literal in expectations.md",
                 "passed": passed,
             }
+            if family == "L-B":
+                packet_payloads = legacy_rows[
+                    (cell.configuration_id, cell.batch_per_gpu)
+                ]["byte_partition"]["remote_flow_payload_bytes"]
+                ideal_payloads = [cell.payload_bytes] * cell.flow_count
+                row["schedule_comparison"] = {
+                    "ideal_flow_payload_bytes": ideal_payloads,
+                    "pinned_packet_flow_payload_bytes": packet_payloads,
+                    "flow_sets_equal": ideal_payloads == packet_payloads,
+                    "invariance": (
+                        "The audited ideal receiver charges zero per-message "
+                        "overhead and no receiver per-byte gap. Its makespan is "
+                        "therefore the largest incoming flow completion; the "
+                        "pinned partition retains at least one max-size flow, "
+                        "so replacing its smaller flows with max-size flows does "
+                        "not change the ideal makespan."
+                    ),
+                }
             rows.append(row)
             ideal_rows[(cell.configuration_id, cell.batch_per_gpu)] = row
         exact_families[family] = {
@@ -1244,6 +1358,32 @@ def run_study(args: argparse.Namespace) -> dict[str, object]:
             "exact-oracle, behavioral-relation, plot-contract and wall-time "
             "denominators remain separate; fatal guards are unscored and void the run"
         ),
+    }
+    modeled_projection = _modeled_quantity_projection(result)
+    original_modeled_projection = _modeled_quantity_projection(published_before)
+    if modeled_projection != original_modeled_projection:
+        raise AssertionError(
+            "post-specified correction changed a published modeled quantity"
+        )
+    result["post_specified_corrections"] = {
+        "chronology": (
+            "Adversarial review followed the original publication. These are "
+            "post-specified corrections, not amendments to the frozen expectations."
+        ),
+        "original_publication_sha256": published_before_sha256,
+        "original_published_wall_median_seconds": 0.034612214,
+        "modeled_quantity_reproduction": {
+            "matched": True,
+            "scope": (
+                "all L-A and L-B native observations and repetitions, M-1 through "
+                "M-3 operands and quotients, S step times, and physical-sanity values"
+            ),
+            "excluded": "nondeterministic wall-clock samples and corrected metadata",
+        },
+        "withdrawn_closure": "TRAF-20",
+        "preserved_closure": "TRAF-68",
+        "packet_executions": 0,
+        "enforcement_acceptance_study": "not authored or run; integrator-owned",
     }
     return result
 

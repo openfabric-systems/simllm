@@ -55,10 +55,17 @@ def _exact_table(result: dict[str, Any]) -> str:
     families = result["score_classes"]["exact_oracles"]["families"]
     for family in ("L-A", "L-B"):
         for row in families[family]["rows"]:
+            fan_in = row["fan_in"]
+            envelope = (
+                "ACKNOWLEDGED"
+                if fan_in["fan_in_detected"] and fan_in["acknowledged"]
+                else "CLEAN"
+            )
             rows.append(
                 f"| {family} | {row['batch_per_gpu']} | {row['flow_count']} | "
                 f"{row['payload_bytes']:,} | {row['expected_ns']:,} | "
-                f"{row['observed_ns']:,} | {'PASS' if row['passed'] else 'MISS'} |"
+                f"{row['observed_ns']:,} | {envelope} | "
+                f"{'PASS' if row['passed'] else 'MISS'} |"
             )
     return "\n".join(rows)
 
@@ -86,6 +93,7 @@ def _step_table(result: dict[str, Any]) -> str:
         rows.append(
             f"| {row['configuration_id']} | {row['batch_per_gpu']} | "
             f"{observed[FrontierRung.ESTIMATE.value]:,} | "
+            f"{row['point_classes'][FrontierRung.LOGGOPSIM_IDEAL.value]} | "
             f"{observed[FrontierRung.LOGGOPSIM_IDEAL.value]:,} | "
             f"{observed[FrontierRung.PACKET.value]:,} | "
             f"{'PASS' if row['passed'] else 'MISS'} |"
@@ -108,6 +116,14 @@ def _report(result: dict[str, Any]) -> str:
     m2 = _ratio(result, "M-2", 32)
     m3 = _ratio(result, "M-3", 32)
     wall = result["score_classes"]["wall_time"]
+    class_tallies = result["score_classes"]["plot_contract"]["point_class_tallies"]
+    corrections = result["post_specified_corrections"]
+    l_b_b32 = next(
+        row
+        for row in result["score_classes"]["exact_oracles"]["families"]["L-B"]["rows"]
+        if row["batch_per_gpu"] == 32
+    )
+    schedule = l_b_b32["schedule_comparison"]
     sanity = result["physical_sanity"]
     return f"""# Frontier ladder result
 
@@ -130,17 +146,31 @@ contract P is {tallies['P'][0]} of {tallies['P'][1]}. Wall-time family W is
 {wall['median_seconds']:.6f} seconds for all twelve native legs. These evidence
 classes are not summed.
 
+The strict ladder record now contains {class_tallies['ESTIMATE']} ESTIMATE
+points and {class_tallies['SIMULATED']} SIMULATED points. The six B100 ideal-rung
+points are closed-form ESTIMATE points with no execution provenance. The twelve
+H100 ideal-rung points remain executed SIMULATED points.
+
 ## Mechanism envelope
 
 Family L-A executes one flow of the frozen maximum payload. Family L-B
-executes eight equal concurrent flows into rank zero. Every row was executed
-seven times through the pinned binary with the exact argument spelling
+deliberately executes eight equal concurrent flows into rank zero. Its six
+receiver fan-in stamps are detected and acknowledged; L-A's six stamps are
+clean and unacknowledged. Every row was executed seven times through the pinned binary with the exact argument spelling
 `-G 0.02`; the expected column is the frozen literal, not a closed form
 evaluated by the runner.
 
-| Family | Batch | Flows | Bytes per flow | Expected ns | Observed ns | Verdict |
-|---|---:|---:|---:|---:|---:|---|
+| Family | Batch | Flows | Bytes per flow | Expected ns | Observed ns | Envelope | Verdict |
+|---|---:|---:|---:|---:|---:|---|---|
 {_exact_table(result)}
+
+The L-B comparison is not schedule-identical. At batch 32, the pinned packet
+record carries payloads {schedule['pinned_packet_flow_payload_bytes']}, four of
+N and four of N-1, while the ideal execution carries
+{schedule['ideal_flow_payload_bytes']}, eight uniform max-size flows. The
+comparison remains valid for this audited ideal rule because the receiver
+charges zero per-message overhead and no receiver per-byte gap. Completion is
+set by the largest incoming flow, and both flow sets retain that same maximum.
 
 The quotient table keeps packet and ideal picoseconds as the unreduced source
 integers. M-1 is serialized concurrent packet over ideal, M-2 is incast
@@ -165,8 +195,8 @@ The same is true for five B100 points. Only B100 batch 32 differs: the packet
 rung includes the pinned intra-node candidate and reaches 4,523,298,348 ps,
 while ESTIMATE and loggopsim-ideal remain at 4,257,218,560 ps.
 
-| Configuration | Batch | ESTIMATE ps | Ideal SIMULATED ps | Packet SIMULATED ps | Verdict |
-|---|---:|---:|---:|---:|---|
+| Configuration | Batch | ESTIMATE ps | Ideal class | Ideal rung ps | Packet SIMULATED ps | Verdict |
+|---|---:|---:|---|---:|---:|---|
 {_step_table(result)}
 
 ## Figure
@@ -175,7 +205,9 @@ while ESTIMATE and loggopsim-ideal remain at 4,257,218,560 ps.
 render one NV-style two-panel figure through the Agg backend. The left panel
 keeps the frozen logarithmic axes, uses a distinct marker for each rung and
 emphasizes the exact six-point B100 packet Pareto front. The right panel shows
-the three mechanism quotients and labels M-2 at {m2['decimal']:.2f}x.
+the three mechanism quotients and labels M-2 at {m2['decimal']:.2f}x. The H100
+2N and 9N configurations coincide at step level in the pinned record, so the
+figure draws dashed 2N over a wider 9N line to make both configurations visible.
 
 ## Physical sanity
 
@@ -209,6 +241,43 @@ Every mutation control exercised the real predicate and was rejected. Native
 stdout and stderr bytes, portable argument vectors and rendered GOALs remain in
 the append-only external attempt directory.
 
+## Post-specified corrections
+
+These corrections follow adversarial review of the original publication. They
+are post-specified regression checks and record repairs, not amendments to the
+immutable ladder expectations.
+
+- The TRAF-20 closure is withdrawn. The ladder measured modeled error through
+  M-1, M-2 and M-3, but it read packet observations from a pinned record and
+  executed no packet reference, so it measured no packet wall clock. TRAF-68's
+  closure remains earned.
+- The ideal level now refuses overlapping multi-source receiver fan-in by
+  default because the receiver per-byte gap is unmodeled and the frozen cell is
+  about 8x optimistic. An explicit acknowledgment permits deliberate runs and
+  is stamped in provenance. This rerun exercises that acknowledgment for L-B;
+  it is not the separately frozen enforcement acceptance study.
+- Registry and backend prose state the same narrowed open scope for TRAF-20.
+- The original published ideal wall-time median is
+  {corrections['original_published_wall_median_seconds']:.6f} seconds. The
+  superseded unpublished-attempt value is no longer used. This correction
+  rerun's nondeterministic median is {wall['median_seconds']:.6f} seconds.
+- L-B discloses the mixed pinned packet payloads and uniform ideal payloads,
+  plus the maximum-flow invariance that makes the ideal makespan unchanged.
+- FG-1 mutates only the observed digest. Its predicate derives the comparison
+  from observed and expected digests and rejects the mutant without editing a
+  cached `matched` flag.
+- The publication figure makes the coincident H100 2N and 9N curves visible and
+  states why they coincide.
+- Six nonexecuted B100 ideal-rung points are corrected from SIMULATED to
+  ESTIMATE. The record now tallies {class_tallies['ESTIMATE']} ESTIMATE and
+  {class_tallies['SIMULATED']} SIMULATED points.
+
+The modeled-quantity reproduction check is
+{'PASS' if corrections['modeled_quantity_reproduction']['matched'] else 'MISS'}:
+{corrections['modeled_quantity_reproduction']['scope']} match the original
+published artifact exactly. Wall-clock samples and corrected metadata are
+excluded from that deterministic comparison.
+
 ## Provenance
 
 - Frozen expectations commit: `{result['chronology']['expectations_commit']}`
@@ -227,17 +296,19 @@ packet points, and rendered the three-rung frontier plus mechanism envelope.
 What came out: the ideal level stays within about 1.6 percent of packet timing
 for serialized point-to-point traffic but is about 8.11x optimistic for
 eight-into-one incast, with the shared receiver ingress identified as the
-missing mechanism.
+missing mechanism. All deterministic modeled quantities reproduce exactly.
 
-What it changes: TRAF-20 closes with an executable validity envelope for the
-fast level, and TRAF-68 closes with the fabric-leg view that exposes the
-contention its step-level map masks. The ladder and its six-point packet Pareto
-front become the deployment planning comparison surface.
+What it changes: TRAF-20 reopens because no packet wall clock was measured.
+Its remaining acceptance is narrowed to measured packet-reference speed on
+identical flow sets and the separately frozen enforcement study. TRAF-68 stays
+closed because the fabric-leg view still exposes the contention its step-level
+map masks. The ladder and its six-point packet Pareto front remain the
+deployment planning comparison surface.
 
 What it does not change: no rung gains an absolute-accuracy claim against
-silicon, no pricing semantic or protected predecessor artifact changes, the
+silicon, no packet execution or enforcement acceptance study occurred, the
 TRAF-68 step-masking result remains literal, and statistical transport tails
-remain owned by TRAF-19.
+remain owned by TRAF-19. TRAF-20 does not close.
 """
 
 

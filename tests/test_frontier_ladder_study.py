@@ -83,12 +83,22 @@ def test_frontier_ladder_record_keeps_scores_guards_and_authorities_separate() -
 
     record = frontier_ladder_record_from_json(result["ladder_record"])
     assert len(record.points) == 18
-    assert frontier_ladder_record_to_json(record) == result["ladder_record"]
+    corrected_record = frontier_ladder_record_to_json(record)
+    if "post_specified_corrections" in result:
+        assert corrected_record == result["ladder_record"]
+    else:
+        assert corrected_record != result["ladder_record"]
     for point in record.points:
         assert [rung.rung for rung in point.rungs] == list(FrontierRung)
         ideal = point.rung(FrontierRung.LOGGOPSIM_IDEAL)
         packet = point.rung(FrontierRung.PACKET)
-        assert ideal.provenance.authority == "loggopsim-ideal"
+        if ideal.fabric_leg_ps:
+            assert ideal.point_class.value == "SIMULATED"
+            assert ideal.provenance.authority == "loggopsim-ideal"
+        else:
+            assert ideal.point_class.value == "ESTIMATE"
+            assert ideal.provenance.authority == "closed-form"
+            assert ideal.provenance.binary_sha256 is None
         assert packet.provenance.authority == "rnic-nn"
         assert ideal.provenance != packet.provenance
         if ideal.fabric_leg_ps:
@@ -117,7 +127,7 @@ def test_native_l_a_batch_1_cell_when_pinned_binary_is_available(tmp_path: Path)
         pytest.skip("SIMLLM_TXT2BIN is unavailable; the native cell needs txt2bin")
     cell = study._cells()[0]
     assert cell.cell_id == "L-A-b1"
-    goal, binary_goal = study._render_goal(cell, tmp_path, txt2bin)
+    goal, binary_goal, fan_in = study._render_goal(cell, tmp_path, txt2bin)
     argv = build_loggopsim_command(binary, study._config(cell, binary_goal))
 
     completed = subprocess.run(
@@ -132,6 +142,8 @@ def test_native_l_a_batch_1_cell_when_pinned_binary_is_available(tmp_path: Path)
     assert parsed.quiescent
     assert parsed.max_finish_ps == 135_038_000
     assert argv[argv.index("-G") + 1] == "0.02"
+    assert fan_in.fan_in_detected is False
+    assert fan_in.acknowledged is False
     rendered = goal.read_text(encoding="utf-8")
     assert rendered.count("send 6651904b to 0") == 1
     assert rendered.count("recv 6651904b from 1") == 1

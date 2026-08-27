@@ -10,6 +10,7 @@ import simllm.backends.loggopsim_step_sink as sink_module
 from simllm.backends import (
     HtsimStepSink,
     HtsimStepSinkConfig,
+    LogGopsimFanInError,
     LogGopsimRunResult,
     LogGopsimStepSink,
     LogGopsimStepSinkConfig,
@@ -28,6 +29,11 @@ _DIMS = ModelDims(
     vocab_size=256,
     dtype_bytes=2,
 )
+
+_CLEAN_GOAL_SHA256 = {
+    "a301c8b950a6d1514b98dc9442385fb94711706693b8a31fcc140bd43252ae0d",
+    "fcef8e27444b2bcac146bcde20fbcdbc1d7f578835a107c22c4d7c61e16b15b2",
+}
 
 
 class _FixedProvider(ComputeProvider):
@@ -82,6 +88,42 @@ def _stub_native(monkeypatch, *, makespan_ps: int = 123_000) -> None:
     monkeypatch.setattr(sink_module, "run_loggopsim", run)
 
 
+def _fan_in_goal(path: Path, *, serialize_receives: bool = False) -> Path:
+    dependency = "r0op1 requires r0op0\n" if serialize_receives else ""
+    path.write_text(
+        "num_ranks 3\n"
+        "rank 0 {\n"
+        "r0op0: recv 64b from 1 tag 7\n"
+        "r0op1: recv 64b from 2 tag 7\n"
+        f"{dependency}"
+        "}\n"
+        "rank 1 {\n"
+        "r1op0: send 64b to 0 tag 7\n"
+        "}\n"
+        "rank 2 {\n"
+        "r2op0: send 64b to 0 tag 7\n"
+        "}\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return path
+
+
+def _direct_sink(tmp_path: Path, *, acknowledge_fan_in: bool = False):
+    sink = LogGopsimStepSink(
+        LogGopsimStepSinkConfig(
+            tp_ranks=(0, 1),
+            dims=_DIMS,
+            workdir=tmp_path / "run",
+            latency_ns=100,
+            binary=_binary(tmp_path / "LogGOPSim"),
+            provider=_FixedProvider(),
+            acknowledge_fan_in=acknowledge_fan_in,
+        )
+    )
+    return sink
+
+
 def test_the_sink_prices_shared_goal_artifacts_and_records_exact_provenance(
     tmp_path, monkeypatch
 ):
@@ -115,6 +157,69 @@ def test_the_sink_prices_shared_goal_artifacts_and_records_exact_provenance(
         assert invocation.max_finish_ps == 123_000
         assert len(invocation.goal_sha256) == 64
         assert len(invocation.goal_binary_sha256) == 64
+        assert invocation.goal_sha256 in _CLEAN_GOAL_SHA256
+        assert invocation.fan_in.to_json() == {
+            "schema": "simllm-loggopsim-fan-in-envelope-v1",
+            "fan_in_detected": False,
+            "acknowledged": False,
+            "mechanism": "receiver per-byte gap unmodeled",
+            "frozen_cell_error": "about 8x optimistic",
+            "study": "examples/frontier_ladder_v1/RESULTS.md",
+            "destinations": [],
+        }
+
+
+def test_sink_refuses_unacknowledged_receiver_fan_in_before_native_work(
+    tmp_path, monkeypatch
+):
+    _stub_native(monkeypatch)
+    sink = _direct_sink(tmp_path)
+    goal = _fan_in_goal(tmp_path / "incast.goal")
+
+    with pytest.raises(LogGopsimFanInError) as error:
+        sink._sink._run_goal(None, goal, tmp_path / "unused.csv")
+
+    diagnostic = str(error.value)
+    assert "receiver per-byte gap is unmodeled" in diagnostic
+    assert "about 8x optimistic" in diagnostic
+    assert "examples/frontier_ladder_v1/RESULTS.md" in diagnostic
+    assert "acknowledge_fan_in=True" in diagnostic
+    assert not goal.with_suffix(".bin").exists()
+    assert sink.provenance.invocations == ()
+
+
+def test_sink_acknowledges_receiver_fan_in_and_stamps_the_run(tmp_path, monkeypatch):
+    _stub_native(monkeypatch)
+    sink = _direct_sink(tmp_path, acknowledge_fan_in=True)
+    goal = _fan_in_goal(tmp_path / "acknowledged-incast.goal")
+
+    result = sink._sink._run_goal(None, goal, tmp_path / "unused.csv")
+
+    assert result.max_finish_ps == 123_000
+    stamp = sink.provenance.invocations[0].fan_in.to_json()
+    assert stamp["fan_in_detected"] is True
+    assert stamp["acknowledged"] is True
+    assert stamp["destinations"] == [
+        {"receiver_rank": 0, "source_ranks": [1, 2]}
+    ]
+
+
+def test_sink_accepts_explicitly_serialized_receives_without_acknowledgment(
+    tmp_path, monkeypatch
+):
+    _stub_native(monkeypatch)
+    sink = _direct_sink(tmp_path)
+    goal = _fan_in_goal(tmp_path / "serialized.goal", serialize_receives=True)
+    before = goal.read_bytes()
+
+    result = sink._sink._run_goal(None, goal, tmp_path / "unused.csv")
+
+    assert result.max_finish_ps == 123_000
+    assert goal.read_bytes() == before
+    stamp = sink.provenance.invocations[0].fan_in
+    assert stamp.fan_in_detected is False
+    assert stamp.acknowledged is False
+    assert stamp.destinations == ()
 
 
 def test_intra_node_service_is_identical_to_the_existing_analytic_path(tmp_path):

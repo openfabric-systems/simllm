@@ -34,6 +34,7 @@ def _rung(
     point_class: PointClass,
     step_ps: int,
     batch: int,
+    fabric_leg_ps: int = 10,
 ) -> FrontierRungPoint:
     if rung is FrontierRung.ESTIMATE:
         provenance = RungProvenance(
@@ -43,33 +44,41 @@ def _rung(
             source_sha256=_digest("estimate"),
         )
     elif rung is FrontierRung.LOGGOPSIM_IDEAL:
-        provenance = RungProvenance(
-            authority_class=RungAuthorityClass.LEVEL,
-            authority="loggopsim-ideal",
-            source_path="goals/cell.goal",
-            source_sha256=_digest("goal-text"),
-            binary_sha256=_digest("binary"),
-            goal_sha256=_digest("goal-binary"),
-            argv=(
-                "LogGOPSim",
-                "-f",
-                "goals/cell.bin",
-                "-L",
-                "2000",
-                "-o",
-                "0",
-                "-g",
-                "0",
-                "-G",
-                "0.02",
-                "-O",
-                "0",
-                "-S",
-                "1001",
-                "-n",
-                "LogGP",
-            ),
-        )
+        if point_class is PointClass.ESTIMATE:
+            provenance = RungProvenance(
+                authority_class=RungAuthorityClass.ESTIMATOR,
+                authority="closed-form",
+                source_path="examples/source.json",
+                source_sha256=_digest("estimate"),
+            )
+        else:
+            provenance = RungProvenance(
+                authority_class=RungAuthorityClass.LEVEL,
+                authority="loggopsim-ideal",
+                source_path="goals/cell.goal",
+                source_sha256=_digest("goal-text"),
+                binary_sha256=_digest("binary"),
+                goal_sha256=_digest("goal-binary"),
+                argv=(
+                    "LogGOPSim",
+                    "-f",
+                    "goals/cell.bin",
+                    "-L",
+                    "2000",
+                    "-o",
+                    "0",
+                    "-g",
+                    "0",
+                    "-G",
+                    "0.02",
+                    "-O",
+                    "0",
+                    "-S",
+                    "1001",
+                    "-n",
+                    "LogGP",
+                ),
+            )
     else:
         provenance = RungProvenance(
             authority_class=RungAuthorityClass.LEVEL,
@@ -83,7 +92,7 @@ def _rung(
         rung=rung,
         point_class=point_class,
         step_ps=step_ps,
-        fabric_leg_ps=10,
+        fabric_leg_ps=fabric_leg_ps,
         x_tokens_per_second_per_request=x_value,
         y_tokens_per_second_per_gpu=batch * x_value,
         provenance=provenance,
@@ -193,6 +202,70 @@ def test_ladder_record_requires_ideal_execution_for_a_nonzero_fabric_leg() -> No
 
     with pytest.raises(ValueError, match="execution provenance is incomplete"):
         frontier_ladder_record_from_json(payload)
+
+
+def test_zero_fabric_ideal_rung_is_a_nonexecuted_estimate() -> None:
+    point = FrontierLadderPoint(
+        configuration_id="local",
+        configuration_label="Local",
+        batch_per_gpu=1,
+        rungs=(
+            _rung(FrontierRung.ESTIMATE, PointClass.ESTIMATE, 100, 1),
+            _rung(
+                FrontierRung.LOGGOPSIM_IDEAL,
+                PointClass.ESTIMATE,
+                100,
+                1,
+                fabric_leg_ps=0,
+            ),
+            _rung(FrontierRung.PACKET, PointClass.SIMULATED, 100, 1),
+        ),
+    )
+
+    rendered = frontier_ladder_record_to_json(FrontierLadderRecord(points=(point,)))
+    ideal = rendered["points"][0]["rungs"][1]
+
+    assert ideal["point_class"] == "ESTIMATE"
+    assert ideal["provenance"]["authority_class"] == "estimator"
+    assert ideal["provenance"]["authority"] == "closed-form"
+    assert ideal["provenance"]["binary_sha256"] is None
+    assert ideal["provenance"]["goal_sha256"] is None
+    assert ideal["provenance"]["argv"] == []
+
+
+def test_published_v1_nonexecuted_ideal_level_is_corrected_on_read() -> None:
+    point = FrontierLadderPoint(
+        configuration_id="local",
+        configuration_label="Local",
+        batch_per_gpu=1,
+        rungs=(
+            _rung(FrontierRung.ESTIMATE, PointClass.ESTIMATE, 100, 1),
+            _rung(
+                FrontierRung.LOGGOPSIM_IDEAL,
+                PointClass.ESTIMATE,
+                100,
+                1,
+                fabric_leg_ps=0,
+            ),
+            _rung(FrontierRung.PACKET, PointClass.SIMULATED, 100, 1),
+        ),
+    )
+    payload = frontier_ladder_record_to_json(FrontierLadderRecord(points=(point,)))
+    legacy_ideal = payload["points"][0]["rungs"][1]
+    legacy_ideal["point_class"] = "SIMULATED"
+    legacy_ideal["provenance"]["authority_class"] = "level"
+    legacy_ideal["provenance"]["authority"] = "loggopsim-ideal"
+    legacy_ideal["provenance"]["binary_sha256"] = _digest("binary")
+
+    corrected = frontier_ladder_record_to_json(
+        frontier_ladder_record_from_json(payload)
+    )
+    ideal = corrected["points"][0]["rungs"][1]
+
+    assert ideal["point_class"] == "ESTIMATE"
+    assert ideal["provenance"]["authority_class"] == "estimator"
+    assert ideal["provenance"]["authority"] == "closed-form"
+    assert ideal["provenance"]["binary_sha256"] is None
 
 
 def test_packet_pareto_uses_only_the_selected_rung() -> None:

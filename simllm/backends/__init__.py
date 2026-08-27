@@ -74,10 +74,16 @@ from simllm.backends.loggopsim import (
     run_loggopsim,
 )
 from simllm.backends.loggopsim_step_sink import (
+    LOGGOPSIM_FAN_IN_STAMP_SCHEMA,
+    LOGGOPSIM_FAN_IN_STUDY,
+    LogGopsimFanInDestination,
+    LogGopsimFanInError,
+    LogGopsimFanInStamp,
     LogGopsimInvocationProvenance,
     LogGopsimSinkProvenance,
     LogGopsimStepSink,
     LogGopsimStepSinkConfig,
+    inspect_loggopsim_fan_in,
 )
 from simllm.backends.rnic_records import (
     BypassArtifactComparison,
@@ -145,6 +151,8 @@ __all__ = [
     "KERNEL_OWNER",
     "LOCAL_SERVICE_MEDIA",
     "LOGGOPSIM_DECLARED_EVIDENCE_SOURCE",
+    "LOGGOPSIM_FAN_IN_STAMP_SCHEMA",
+    "LOGGOPSIM_FAN_IN_STUDY",
     "LOGGOPSIM_NETWORK_TYPES",
     "NATIVE_AUTHORITY",
     "NVLINK_CANDIDATE_EVIDENCE_CLASS",
@@ -180,6 +188,9 @@ __all__ = [
     "HtsimStepSinkConfig",
     "HtsimUecConfig",
     "LogGopsimConfig",
+    "LogGopsimFanInDestination",
+    "LogGopsimFanInError",
+    "LogGopsimFanInStamp",
     "LogGopsimInvocationProvenance",
     "LogGopsimRunResult",
     "LogGopsimSinkProvenance",
@@ -239,6 +250,7 @@ __all__ = [
     "find_htsim_dcqcn",
     "find_htsim_rnic",
     "find_loggopsim",
+    "inspect_loggopsim_fan_in",
     "invoke_composed_tier_a_producer",
     "load_nvlink_candidate_profile",
     "normalized_fct",

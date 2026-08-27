@@ -179,16 +179,24 @@ class FrontierLadderPoint:
                 "ladder_point.rungs: expected estimate, loggopsim-ideal and packet"
             )
         self._validate_authority(rungs[0], PointClass.ESTIMATE, "closed-form", False)
-        self._validate_authority(
-            rungs[1],
-            PointClass.SIMULATED,
-            "loggopsim-ideal",
-            rungs[1].fabric_leg_ps > 0,
-        )
+        if rungs[1].fabric_leg_ps > 0:
+            self._validate_authority(
+                rungs[1],
+                PointClass.SIMULATED,
+                "loggopsim-ideal",
+                True,
+            )
+        else:
+            self._validate_authority(
+                rungs[1],
+                PointClass.ESTIMATE,
+                "closed-form",
+                False,
+            )
         self._validate_authority(rungs[2], PointClass.SIMULATED, "rnic-nn", False)
         if rungs[1].provenance == rungs[2].provenance:
             raise ValueError(
-                "ladder_point.rungs: the two SIMULATED authorities must stay distinct"
+                "ladder_point.rungs: ideal and packet authorities must stay distinct"
             )
 
     @staticmethod
@@ -204,7 +212,7 @@ class FrontierLadderPoint:
             )
         expected_authority_class = (
             RungAuthorityClass.ESTIMATOR
-            if point.rung is FrontierRung.ESTIMATE
+            if point_class is PointClass.ESTIMATE
             else RungAuthorityClass.LEVEL
         )
         provenance = point.provenance
@@ -363,19 +371,42 @@ def _rung_from_json(value: object, path: str) -> FrontierRungPoint:
             "provenance",
         },
     )
+    rung = _enum_value(FrontierRung, payload["rung"], f"{path}.rung")
+    point_class = _enum_value(
+        PointClass,
+        payload["point_class"],
+        f"{path}.point_class",
+    )
+    fabric_leg_ps = _integer(
+        payload["fabric_leg_ps"],
+        f"{path}.fabric_leg_ps",
+        nonnegative=True,
+    )
+    provenance = _provenance_from_json(
+        payload["provenance"],
+        f"{path}.provenance",
+    )
+    if (
+        rung is FrontierRung.LOGGOPSIM_IDEAL
+        and fabric_leg_ps == 0
+        and point_class is PointClass.SIMULATED
+        and provenance.authority_class is RungAuthorityClass.LEVEL
+        and provenance.authority == "loggopsim-ideal"
+        and provenance.goal_sha256 is None
+        and not provenance.argv
+    ):
+        point_class = PointClass.ESTIMATE
+        provenance = RungProvenance(
+            authority_class=RungAuthorityClass.ESTIMATOR,
+            authority="closed-form",
+            source_path=provenance.source_path,
+            source_sha256=provenance.source_sha256,
+        )
     return FrontierRungPoint(
-        rung=_enum_value(FrontierRung, payload["rung"], f"{path}.rung"),
-        point_class=_enum_value(
-            PointClass,
-            payload["point_class"],
-            f"{path}.point_class",
-        ),
+        rung=rung,
+        point_class=point_class,
         step_ps=_integer(payload["step_ps"], f"{path}.step_ps", minimum=1),
-        fabric_leg_ps=_integer(
-            payload["fabric_leg_ps"],
-            f"{path}.fabric_leg_ps",
-            nonnegative=True,
-        ),
+        fabric_leg_ps=fabric_leg_ps,
         x_tokens_per_second_per_request=_fraction_from_json(
             payload["x_tokens_per_second_per_request"],
             f"{path}.x_tokens_per_second_per_request",
@@ -384,10 +415,7 @@ def _rung_from_json(value: object, path: str) -> FrontierRungPoint:
             payload["y_tokens_per_second_per_gpu"],
             f"{path}.y_tokens_per_second_per_gpu",
         ),
-        provenance=_provenance_from_json(
-            payload["provenance"],
-            f"{path}.provenance",
-        ),
+        provenance=provenance,
     )
 
 

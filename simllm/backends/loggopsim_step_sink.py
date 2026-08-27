@@ -12,6 +12,7 @@ import hashlib
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from itertools import combinations
 from pathlib import Path
 
 from simllm.backends.loggopsim import (
@@ -49,6 +50,165 @@ from simllm.traffic import (
 )
 
 _PAYLOAD_RE = re.compile(r"\b(?:send|recv) (\d+)b\b")
+_RANK_RE = re.compile(r"^rank (\d+) \{$")
+_RECEIVE_RE = re.compile(
+    r"^(?P<label>\S+): recv \d+b from (?P<source>\d+) tag \d+(?: nic \d+)?$"
+)
+_DEPENDENCY_RE = re.compile(
+    r"^(?P<label>\S+) (?P<relation>i?requires) (?P<predecessor>\S+)$"
+)
+
+LOGGOPSIM_FAN_IN_STAMP_SCHEMA = "simllm-loggopsim-fan-in-envelope-v1"
+LOGGOPSIM_FAN_IN_STUDY = "examples/frontier_ladder_v1/RESULTS.md"
+
+
+@dataclass(frozen=True)
+class LogGopsimFanInDestination:
+    """One receiver with incoming flows that may overlap."""
+
+    receiver_rank: int
+    source_ranks: tuple[int, ...]
+
+    def to_json(self) -> dict[str, object]:
+        """Return a portable record of the detected receiver fan-in."""
+
+        return {
+            "receiver_rank": self.receiver_rank,
+            "source_ranks": list(self.source_ranks),
+        }
+
+
+@dataclass(frozen=True)
+class LogGopsimFanInStamp:
+    """Envelope decision made from one rendered GOAL."""
+
+    fan_in_detected: bool
+    acknowledged: bool
+    destinations: tuple[LogGopsimFanInDestination, ...]
+
+    def to_json(self) -> dict[str, object]:
+        """Return the refusal-envelope stamp carried by run records."""
+
+        return {
+            "schema": LOGGOPSIM_FAN_IN_STAMP_SCHEMA,
+            "fan_in_detected": self.fan_in_detected,
+            "acknowledged": self.acknowledged,
+            "mechanism": "receiver per-byte gap unmodeled",
+            "frozen_cell_error": "about 8x optimistic",
+            "study": LOGGOPSIM_FAN_IN_STUDY,
+            "destinations": [item.to_json() for item in self.destinations],
+        }
+
+
+class LogGopsimFanInError(ValueError):
+    """Raised when the ideal level sees unacknowledged receiver fan-in."""
+
+
+def _finish_ancestors(
+    label: str,
+    predecessors: dict[str, set[str]],
+    memo: dict[str, set[str]],
+) -> set[str]:
+    if label in memo:
+        return memo[label]
+    ancestors: set[str] = set()
+    for predecessor in predecessors.get(label, set()):
+        ancestors.add(predecessor)
+        ancestors.update(_finish_ancestors(predecessor, predecessors, memo))
+    memo[label] = ancestors
+    return ancestors
+
+
+def inspect_loggopsim_fan_in(
+    goal_text: str,
+    *,
+    acknowledge_fan_in: bool = False,
+) -> LogGopsimFanInStamp:
+    """Inspect receiver dependencies and enforce the ideal-level envelope.
+
+    Two receives from different sources may overlap unless one is transitively
+    gated by completion of the other through ``requires`` edges. ``irequires``
+    preserves issue order but permits overlap, so it cannot make fan-in clean.
+    """
+
+    if not isinstance(goal_text, str):
+        raise TypeError("goal_text must be a string")
+    if type(acknowledge_fan_in) is not bool:
+        raise TypeError("acknowledge_fan_in must be a boolean")
+
+    receives: dict[int, list[tuple[str, int]]] = {}
+    predecessors: dict[int, dict[str, set[str]]] = {}
+    current_rank: int | None = None
+    for line in goal_text.splitlines():
+        text = line.strip()
+        if match := _RANK_RE.fullmatch(text):
+            current_rank = int(match.group(1))
+            receives.setdefault(current_rank, [])
+            predecessors.setdefault(current_rank, {})
+            continue
+        if text == "}":
+            current_rank = None
+            continue
+        if current_rank is None:
+            continue
+        if match := _RECEIVE_RE.fullmatch(text):
+            receives[current_rank].append(
+                (match.group("label"), int(match.group("source")))
+            )
+            continue
+        if (match := _DEPENDENCY_RE.fullmatch(text)) and match.group(
+            "relation"
+        ) == "requires":
+            predecessors[current_rank].setdefault(match.group("label"), set()).add(
+                match.group("predecessor")
+            )
+
+    fan_in_destinations = []
+    for receiver_rank, incoming in sorted(receives.items()):
+        memo: dict[str, set[str]] = {}
+        overlapping_sources: set[int] = set()
+        for (left_label, left_source), (right_label, right_source) in combinations(
+            incoming, 2
+        ):
+            if left_source == right_source:
+                continue
+            left_ancestors = _finish_ancestors(
+                left_label, predecessors[receiver_rank], memo
+            )
+            right_ancestors = _finish_ancestors(
+                right_label, predecessors[receiver_rank], memo
+            )
+            if right_label not in left_ancestors and left_label not in right_ancestors:
+                overlapping_sources.update((left_source, right_source))
+        if overlapping_sources:
+            fan_in_destinations.append(
+                LogGopsimFanInDestination(
+                    receiver_rank=receiver_rank,
+                    source_ranks=tuple(sorted(overlapping_sources)),
+                )
+            )
+
+    destinations = tuple(fan_in_destinations)
+    detected = bool(destinations)
+    stamp = LogGopsimFanInStamp(
+        fan_in_detected=detected,
+        acknowledged=detected and acknowledge_fan_in,
+        destinations=destinations,
+    )
+    if detected and not acknowledge_fan_in:
+        summary = "; ".join(
+            f"receiver rank {item.receiver_rank} from sources "
+            f"{', '.join(str(rank) for rank in item.source_ranks)}"
+            for item in destinations
+        )
+        raise LogGopsimFanInError(
+            "LogGOPSim ideal level refuses receiver fan-in by default "
+            f"({summary}): the receiver per-byte gap is unmodeled and the "
+            "frozen cell is about 8x optimistic. See "
+            f"{LOGGOPSIM_FAN_IN_STUDY}. Pass acknowledge_fan_in=True only "
+            "for a deliberate envelope measurement."
+        )
+    return stamp
 
 
 @dataclass(frozen=True)
@@ -61,6 +221,7 @@ class LogGopsimInvocationProvenance:
     argv: tuple[str, ...]
     exact_g_string: str
     max_finish_ps: int
+    fan_in: LogGopsimFanInStamp
 
 
 @dataclass(frozen=True)
@@ -108,6 +269,7 @@ class LogGopsimStepSinkConfig:
         DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
     )
     precision: PrecisionConfig | None = None
+    acknowledge_fan_in: bool = False
     parameters: DerivedLoggpParams = field(init=False)
     selected_precision_levels: dict[str, object] = field(
         init=False,
@@ -127,6 +289,8 @@ class LogGopsimStepSinkConfig:
             raise TypeError("timeout_s must be an integer")
         if self.timeout_s <= 0:
             raise ValueError("timeout_s must be positive")
+        if type(self.acknowledge_fan_in) is not bool:
+            raise TypeError("acknowledge_fan_in must be a boolean")
         self.parameters = derive_loggp_params(
             rate_bits_per_second=self.linkspeed_bps,
             latency_ns=self.latency_ns,
@@ -156,17 +320,23 @@ class _LogGopsimExecutionSink(HtsimStepSink):
         parameters: DerivedLoggpParams,
         txt2bin: Path | None,
         timeout_s: int,
+        acknowledge_fan_in: bool,
     ) -> None:
         self._loggopsim_binary = binary
         self._loggp_parameters = parameters
         self._txt2bin = txt2bin
         self._loggopsim_timeout_s = timeout_s
+        self._acknowledge_fan_in = acknowledge_fan_in
         self.loggopsim_invocations: list[LogGopsimInvocationProvenance] = []
         super().__init__(config)
 
     def _run_goal(self, plan, goal_path: Path, completion_csv: Path):
         del plan, completion_csv
         goal_payload = goal_path.read_bytes()
+        fan_in = inspect_loggopsim_fan_in(
+            goal_payload.decode("utf-8"),
+            acknowledge_fan_in=self._acknowledge_fan_in,
+        )
         payloads = tuple(
             int(match.group(1))
             for match in _PAYLOAD_RE.finditer(goal_payload.decode("utf-8"))
@@ -193,6 +363,7 @@ class _LogGopsimExecutionSink(HtsimStepSink):
                 argv=argv,
                 exact_g_string=self._loggp_parameters.exact_g_string,
                 max_finish_ps=result.max_finish_ps,
+                fan_in=fan_in,
             )
         )
         return result
@@ -235,6 +406,7 @@ class LogGopsimStepSink:
             parameters=config.parameters,
             txt2bin=config.txt2bin,
             timeout_s=config.timeout_s,
+            acknowledge_fan_in=config.acknowledge_fan_in,
         )
         self._binary_sha256 = binary_sha256
         self.outcomes = self._sink.outcomes
@@ -266,8 +438,14 @@ class LogGopsimStepSink:
 
 
 __all__ = [
+    "LOGGOPSIM_FAN_IN_STAMP_SCHEMA",
+    "LOGGOPSIM_FAN_IN_STUDY",
+    "LogGopsimFanInDestination",
+    "LogGopsimFanInError",
+    "LogGopsimFanInStamp",
     "LogGopsimInvocationProvenance",
     "LogGopsimSinkProvenance",
     "LogGopsimStepSink",
     "LogGopsimStepSinkConfig",
+    "inspect_loggopsim_fan_in",
 ]

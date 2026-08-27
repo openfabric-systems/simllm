@@ -960,8 +960,17 @@ makespan equals an independent execution of its emitted artifact, and the
 remote step's TTFT exceeds the zero-collective control by exactly the same
 202,000 ps
 ([loggopsim_ideal_v1](../../examples/loggopsim_ideal_v1/RESULTS.md)). All six
-fatal guards held. TRAF-20 remains open because same-schedule packet-reference
-speed and modeled-error comparisons have not run.
+fatal guards held. The
+[frontier ladder](../../examples/frontier_ladder_v1/RESULTS.md) measures the
+modeled-error half against pinned packet observations: batch-32 packet over
+ideal is 1.015637 for serialized traffic, 8.110405 for incast and 1.015682 for
+the isolated incast control. It executes no packet reference and therefore
+measures no packet wall clock. The level refuses overlapping multi-source
+receiver fan-in by default because its receiver per-byte gap is unmodeled; an
+explicit acknowledgment permits the run and is stamped in provenance.
+TRAF-20 remains open for wall-clock gain against an actually measured packet
+reference on identical flow sets and for the separately frozen enforcement
+acceptance study.
 
 HTSIM-25 and HTSIM-8 closed on 2026-08-13, each against its own acceptance
 clauses. An exact bound-authorship reproduction classified all 17 previously

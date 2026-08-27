@@ -26,6 +26,29 @@ COLORS = {
     "h100-nine-node-incast": "#27845c",
 }
 FALLBACK_COLORS = ("#7656a3", "#8f3f71", "#4b84c4")
+CURVE_STYLES = {
+    "b100-one-node-intra": {
+        "line_style": "-",
+        "line_width": 1.35,
+        "line_alpha": 0.82,
+        "line_zorder": 3,
+        "draw_order": 0,
+    },
+    "h100-nine-node-incast": {
+        "line_style": "-",
+        "line_width": 3.0,
+        "line_alpha": 0.55,
+        "line_zorder": 2,
+        "draw_order": 1,
+    },
+    "h100-two-node-serialized": {
+        "line_style": "--",
+        "line_width": 1.4,
+        "line_alpha": 1.0,
+        "line_zorder": 4,
+        "draw_order": 2,
+    },
+}
 RUNG_STYLES = {
     FrontierRung.ESTIMATE.value: {
         "marker": "o",
@@ -73,6 +96,16 @@ def prepare_plot_data(result: dict[str, Any]) -> dict[str, Any]:
                 "color": COLORS.get(
                     configuration_id,
                     FALLBACK_COLORS[curve_index % len(FALLBACK_COLORS)],
+                ),
+                **CURVE_STYLES.get(
+                    configuration_id,
+                    {
+                        "line_style": "-",
+                        "line_width": 1.35,
+                        "line_alpha": 0.82,
+                        "line_zorder": 3,
+                        "draw_order": curve_index,
+                    },
                 ),
                 "points": [
                     {
@@ -186,15 +219,17 @@ def _matplotlib() -> Any:
 def _frontier_panel(axis: Any, plot: dict[str, Any]) -> None:
     from matplotlib.lines import Line2D
 
-    for curve in plot["curves"]:
+    curves = sorted(plot["curves"], key=lambda curve: curve["draw_order"])
+    for curve in curves:
         estimate = [point["rungs"][FrontierRung.ESTIMATE.value] for point in curve["points"]]
         axis.plot(
             [point["x"] for point in estimate],
             [point["y"] for point in estimate],
             color=curve["color"],
-            linewidth=1.35,
-            alpha=0.82,
-            zorder=3,
+            linestyle=curve["line_style"],
+            linewidth=curve["line_width"],
+            alpha=curve["line_alpha"],
+            zorder=curve["line_zorder"],
         )
         for rung_id, style in plot["rung_styles"].items():
             values = [point["rungs"][rung_id] for point in curve["points"]]
@@ -210,7 +245,12 @@ def _frontier_panel(axis: Any, plot: dict[str, Any]) -> None:
                 linewidths=style["line_width"],
                 zorder=style["zorder"],
             )
-        for point in (curve["points"][0], curve["points"][-1]):
+        annotated_points = (
+            (curve["points"][0], curve["points"][-1])
+            if curve["configuration_id"] == "b100-one-node-intra"
+            else ()
+        )
+        for point in annotated_points:
             packet = point["rungs"][FrontierRung.PACKET.value]
             axis.annotate(
                 f"B={point['batch_per_gpu']}",
@@ -273,7 +313,13 @@ def _frontier_panel(axis: Any, plot: dict[str, Any]) -> None:
     }
     axis.legend(
         [
-            Line2D([0], [0], color=curve["color"], linewidth=1.5)
+            Line2D(
+                [0],
+                [0],
+                color=curve["color"],
+                linestyle=curve["line_style"],
+                linewidth=curve["line_width"],
+            )
             for curve in plot["curves"]
         ],
         [
@@ -358,10 +404,10 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
     figure, (frontier_axis, envelope_axis) = plt.subplots(
         1,
         2,
-        figsize=(7.0, 4.45),
+        figsize=(7.0, 4.6),
         gridspec_kw={"width_ratios": (1.22, 1.0)},
     )
-    figure.subplots_adjust(left=0.095, right=0.985, bottom=0.22, top=0.78, wspace=0.34)
+    figure.subplots_adjust(left=0.095, right=0.985, bottom=0.25, top=0.78, wspace=0.34)
     _frontier_panel(frontier_axis, plot)
     _envelope_panel(envelope_axis, plot)
 
@@ -408,7 +454,7 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
     figure.suptitle("Deployment frontier ladder and ideal-level validity envelope", y=0.955)
     figure.legend(
         semantic_handles,
-        ("Closed-form line", "ESTIMATE", "Ideal SIMULATED", "Packet SIMULATED", "Packet Pareto", "Published paired"),
+        ("Closed-form line", "ESTIMATE", "Ideal rung", "Packet SIMULATED", "Packet Pareto", "Published paired"),
         loc="upper center",
         bbox_to_anchor=(0.5, 0.88),
         ncol=6,
@@ -423,7 +469,9 @@ def render(plot: dict[str, Any], output_stem: Path) -> tuple[Path, Path]:
         "It is about 8x optimistic for eight-into-one incast because it does not "
         "serialize the shared receiver ingress.\n"
         "At step level the H100 kernel masks both fabric differences; only the pinned "
-        "B100 batch-32 intra-node packet excess moves a point.",
+        "B100 batch-32 intra-node packet excess moves a point.\n"
+        "H100 2N and 9N coincide at step level in the pinned record; dashed 2N "
+        "over the wider 9N line makes both visible.",
         ha="left",
         va="bottom",
         fontsize=6.45,
