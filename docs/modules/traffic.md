@@ -922,9 +922,37 @@ The TX, switch and RX queues, analytic identity bypass, frozen identification
 map and current evidence split are documented in the
 [NVLink domain-model study](../design/nvlink-domain-model.md).
 
+The scored NV4 domain renders packet-level flow joins, convergence, divergence
+and flow-completion-time distributions through one release-aware flow schedule.
+The presentation keeps measured TX and RX plateaus, ten declared candidate
+parameters and the structural pass-through switch, the score's eleven
+unchanged internals in total, visibly separate. It treats
+the 281.65 GB/s sender fan-out row as a separate check rather than an incast
+receiver ceiling, and it preserves every earlier scored record through the
+inherited preservation-lock class.
+
 ## Open tasks
 
 ### Precision
+
+- TRAF-69 (Precision; P1; M): publish the scored NV4 flow-dynamics study in the
+  rnic-cn join and exit presentation grammar. Freeze before the first run: a
+  three-flow fixed-stagger schedule with reverse byte targets, raw unsmoothed
+  receiver-goodput bins, exact 1-to-2 and 2-to-1 transition identities from
+  packet admission, credit return, link serialization and RX ingress, a
+  single-packet through largest-supported flow-size ladder, a fixed multi-seed
+  empirical flow-completion-time CDF with a shaded cross-seed band, and incast
+  degrees 1 through 3 on the four-GPU topology. Each incast degree must publish
+  its schedule, CDF and simulated aggregate against the ceiling formed from the
+  measured 160,795,737,454 byte/s TX endpoint plateau, measured
+  207,101,921,876 byte/s RX plateau and declared-candidate per-pair link
+  arithmetic. Keep the published 281.65 GB/s sender fan-out row separate and
+  score it honestly. Acceptance requires exact transition checks, a verdict at
+  every FCT rung, explicit evidence class on every consumed parameter, all
+  frozen bands scored without widening, the default flow-inactive path
+  byte-identical, every inherited preservation artifact unchanged, POSIX paths,
+  and both PDF and PNG figures visually checked. Any miss is published as a
+  refutation rather than tuned away.
 
 - TRAF-68 (Precision; P1; M): publish the two-network bottleneck study for the
   CORE-62 frontier. At every frozen configuration and batch, retain the

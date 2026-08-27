@@ -1,0 +1,741 @@
+{
+  "convergence_1_to_2": {
+    "boundary_rule": "the incumbent owns the packet-256 grant at the join timestamp",
+    "credit_inactive_reason": "256 packet credits recycle much earlier than the packet-256 join; the 200,000 ps declared return constant contributes exactly zero.",
+    "exact_tolerance_ps": 0,
+    "expected_open_ps": 13886,
+    "identity": "credit_wait + packet_admission + link_serialization + rx_serialization",
+    "incumbent_post_gbps": 47.05882352941177,
+    "incumbent_pre_gbps": 94.11764705882354,
+    "incumbent_target_bytes": 1048576,
+    "join_after_incumbent_packet": 256,
+    "join_ps": 696320,
+    "joiner_target_bytes": 262144,
+    "rate_band_half_width_gbps": 0.36764705882352944,
+    "raw_bin_ps": 10880,
+    "smoothing": "none",
+    "terms_ps": {
+      "credit_wait": 0,
+      "link_serialization": 10880,
+      "packet_admission": 1692,
+      "rx_serialization": 1314
+    }
+  },
+  "divergence_2_to_1": {
+    "departing_target_bytes": 65536,
+    "exact_tolerance_ps": 0,
+    "expected_time_to_target_ps": 12572,
+    "identity": "packet_admission + one_four_link_cadence",
+    "rate_band_half_width_gbps": 0.36764705882352944,
+    "raw_bin_ps": 10880,
+    "remaining_post_gbps": 94.11764705882354,
+    "remaining_pre_gbps": 47.05882352941177,
+    "remaining_target_bytes": 1048576,
+    "smoothing": "none",
+    "target_definition": "the receiver observes the fifth remaining-flow delivery after exit, which closes the first complete four-link solo cadence",
+    "terms_ps": {
+      "credit_wait": 0,
+      "one_four_link_cadence": 10880,
+      "packet_admission": 1692,
+      "rx_serialization_difference": 0
+    }
+  },
+  "fatal_guards": [
+    "expectations digest or expectations commit is not the run authority",
+    "tracked worktree is dirty before the gated run",
+    "the scored profile, score status, score digest or flow-dynamics gate changes",
+    "the parameter evidence catalog is incomplete or changes evidence class",
+    "any inherited or additional preservation artifact changes",
+    "a byte, packet, extent, request direction or response direction is lost or duplicated",
+    "a per-extent delivery sequence is not strictly increasing",
+    "the pass-through switch changes any packet object or timestamp",
+    "the default flow-inactive domain result differs from its pre-change canonical bytes",
+    "a simulated rate exceeds its physical ceiling",
+    "a CDF is not monotone, does not end at one or leaves its frozen quantile band",
+    "a transition identity differs by any picosecond",
+    "a prior runner, record or figure is executed or rewritten"
+  ],
+  "fct_cdf": {
+    "band": "pointwise minimum to maximum empirical CDF across seeds",
+    "bands": [
+      {
+        "degree": 1,
+        "p50_band_ps": [
+          12194,
+          70536
+        ],
+        "p95_band_ps": [
+          12194,
+          168088
+        ],
+        "release_interval_ps": 9145,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 12194,
+        "size_bytes": 256,
+        "wave_service_ps": 12194
+      },
+      {
+        "degree": 1,
+        "p50_band_ps": [
+          17270,
+          90840
+        ],
+        "p95_band_ps": [
+          17270,
+          229000
+        ],
+        "release_interval_ps": 12952,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 17270,
+        "size_bytes": 1024,
+        "wave_service_ps": 17270
+      },
+      {
+        "degree": 1,
+        "p50_band_ps": [
+          49910,
+          221400
+        ],
+        "p95_band_ps": [
+          49910,
+          620680
+        ],
+        "release_interval_ps": 37432,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 49910,
+        "size_bytes": 4096,
+        "wave_service_ps": 49910
+      },
+      {
+        "degree": 1,
+        "p50_band_ps": [
+          180470,
+          743640
+        ],
+        "p95_band_ps": [
+          180470,
+          2187400
+        ],
+        "release_interval_ps": 135352,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 180470,
+        "size_bytes": 16384,
+        "wave_service_ps": 180470
+      },
+      {
+        "degree": 1,
+        "p50_band_ps": [
+          702710,
+          2832600
+        ],
+        "p95_band_ps": [
+          702710,
+          8454280
+        ],
+        "release_interval_ps": 527032,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 702710,
+        "size_bytes": 65536,
+        "wave_service_ps": 702710
+      },
+      {
+        "degree": 1,
+        "p50_band_ps": [
+          2791670,
+          11188440
+        ],
+        "p95_band_ps": [
+          2791670,
+          33521800
+        ],
+        "release_interval_ps": 2093752,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 2791670,
+        "size_bytes": 262144,
+        "wave_service_ps": 2791670
+      },
+      {
+        "degree": 1,
+        "p50_band_ps": [
+          5576950,
+          22329560
+        ],
+        "p95_band_ps": [
+          5576950,
+          66945160
+        ],
+        "release_interval_ps": 4182712,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 5576950,
+        "size_bytes": 524288,
+        "wave_service_ps": 5576950
+      },
+      {
+        "degree": 2,
+        "p50_band_ps": [
+          12194,
+          70536
+        ],
+        "p95_band_ps": [
+          12194,
+          168088
+        ],
+        "release_interval_ps": 9145,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 12194,
+        "size_bytes": 256,
+        "wave_service_ps": 12194
+      },
+      {
+        "degree": 2,
+        "p50_band_ps": [
+          17270,
+          90840
+        ],
+        "p95_band_ps": [
+          17270,
+          229000
+        ],
+        "release_interval_ps": 12952,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 17270,
+        "size_bytes": 1024,
+        "wave_service_ps": 17270
+      },
+      {
+        "degree": 2,
+        "p50_band_ps": [
+          49910,
+          221400
+        ],
+        "p95_band_ps": [
+          49910,
+          620680
+        ],
+        "release_interval_ps": 37432,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 49910,
+        "size_bytes": 4096,
+        "wave_service_ps": 49910
+      },
+      {
+        "degree": 2,
+        "p50_band_ps": [
+          180470,
+          743640
+        ],
+        "p95_band_ps": [
+          180470,
+          2187400
+        ],
+        "release_interval_ps": 135352,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 180470,
+        "size_bytes": 16384,
+        "wave_service_ps": 180470
+      },
+      {
+        "degree": 2,
+        "p50_band_ps": [
+          702710,
+          2832600
+        ],
+        "p95_band_ps": [
+          702710,
+          8454280
+        ],
+        "release_interval_ps": 527032,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 702710,
+        "size_bytes": 65536,
+        "wave_service_ps": 702710
+      },
+      {
+        "degree": 2,
+        "p50_band_ps": [
+          2791670,
+          11188440
+        ],
+        "p95_band_ps": [
+          2791670,
+          33521800
+        ],
+        "release_interval_ps": 2093752,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 2791670,
+        "size_bytes": 262144,
+        "wave_service_ps": 2791670
+      },
+      {
+        "degree": 2,
+        "p50_band_ps": [
+          5576950,
+          22329560
+        ],
+        "p95_band_ps": [
+          5576950,
+          66945160
+        ],
+        "release_interval_ps": 4182712,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 5576950,
+        "size_bytes": 524288,
+        "wave_service_ps": 5576950
+      },
+      {
+        "degree": 3,
+        "p50_band_ps": [
+          12194,
+          81044
+        ],
+        "p95_band_ps": [
+          12194,
+          199612
+        ],
+        "release_interval_ps": 11115,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 12194,
+        "size_bytes": 256,
+        "wave_service_ps": 14821
+      },
+      {
+        "degree": 3,
+        "p50_band_ps": [
+          17270,
+          128324
+        ],
+        "p95_band_ps": [
+          17270,
+          341452
+        ],
+        "release_interval_ps": 19980,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 17270,
+        "size_bytes": 1024,
+        "wave_service_ps": 26641
+      },
+      {
+        "degree": 3,
+        "p50_band_ps": [
+          49910,
+          317448
+        ],
+        "p95_band_ps": [
+          49910,
+          908824
+        ],
+        "release_interval_ps": 55441,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 49910,
+        "size_bytes": 4096,
+        "wave_service_ps": 73922
+      },
+      {
+        "degree": 3,
+        "p50_band_ps": [
+          180470,
+          1073944
+        ],
+        "p95_band_ps": [
+          180470,
+          3178312
+        ],
+        "release_interval_ps": 197284,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 180470,
+        "size_bytes": 16384,
+        "wave_service_ps": 263046
+      },
+      {
+        "degree": 3,
+        "p50_band_ps": [
+          702710,
+          4099932
+        ],
+        "p95_band_ps": [
+          702710,
+          12256276
+        ],
+        "release_interval_ps": 764657,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 702710,
+        "size_bytes": 65536,
+        "wave_service_ps": 1019543
+      },
+      {
+        "degree": 3,
+        "p50_band_ps": [
+          2791670,
+          16203888
+        ],
+        "p95_band_ps": [
+          2791670,
+          48568144
+        ],
+        "release_interval_ps": 3034149,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 2791670,
+        "size_bytes": 262144,
+        "wave_service_ps": 4045532
+      },
+      {
+        "degree": 3,
+        "p50_band_ps": [
+          5576950,
+          32342492
+        ],
+        "p95_band_ps": [
+          5576950,
+          96983956
+        ],
+        "release_interval_ps": 6060137,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "single_flow_physical_floor_ps": 5576950,
+        "size_bytes": 524288,
+        "wave_service_ps": 8080183
+      }
+    ],
+    "flow_sizes_bytes": [
+      256,
+      1024,
+      4096,
+      16384,
+      65536,
+      262144,
+      524288
+    ],
+    "grid": "sorted union of observed FCT values within each degree and size rung",
+    "largest_supported_basis": "TRAF-70 scored profile published_envelope_validation.composed_validation_extent_bytes_per_destination",
+    "mean": "pointwise arithmetic mean empirical CDF across seeds",
+    "samples_per_seed_per_sender": 12,
+    "seed_count": 9,
+    "seeds": [
+      1103,
+      1907,
+      2801,
+      3691,
+      4513,
+      5381,
+      6271,
+      7159,
+      8053
+    ]
+  },
+  "flow_schedule": {
+    "flow_ids": [
+      "flow-a",
+      "flow-b",
+      "flow-c"
+    ],
+    "raw_bin_basis": "64 candidate maximum-wire-packet per-link serializations",
+    "raw_bin_ps": 696320,
+    "release_ps": [
+      0,
+      11141120,
+      22282240
+    ],
+    "reverse_target_rule": "first joiner has the largest target and completes last",
+    "smoothing": "none",
+    "steady_bands": [
+      {
+        "active_flows": 1,
+        "half_width_gbps": 0.36764705882352944,
+        "per_flow_center_gbps": 94.11764705882354
+      },
+      {
+        "active_flows": 2,
+        "half_width_gbps": 0.36764705882352944,
+        "per_flow_center_gbps": 47.05882352941177
+      },
+      {
+        "active_flows": 3,
+        "half_width_gbps": 0.36764705882352944,
+        "per_flow_center_gbps": 31.372549019607845
+      }
+    ],
+    "target_bytes": [
+      4194304,
+      2097152,
+      1048576
+    ],
+    "topology": "NV4 four-GPU direct mesh, source 0 to receiver 1"
+  },
+  "incast": {
+    "degrees": [
+      {
+        "degree": 1,
+        "expected_binding_module": "tx_pair_links",
+        "payload_ceiling_gbps": 94.11764705882354,
+        "per_flow_payload_gbps": 94.11764705882354,
+        "raw_ceiling_bytes_per_second": 100000000000,
+        "steady_band_quantum_gbps": 0.36764705882352944
+      },
+      {
+        "degree": 2,
+        "expected_binding_module": "tx_pair_links",
+        "payload_ceiling_gbps": 188.23529411764707,
+        "per_flow_payload_gbps": 94.11764705882354,
+        "raw_ceiling_bytes_per_second": 200000000000,
+        "steady_band_quantum_gbps": 0.36764705882352944
+      },
+      {
+        "degree": 3,
+        "expected_binding_module": "rx",
+        "payload_ceiling_gbps": 194.91945588329412,
+        "per_flow_payload_gbps": 64.97315196109804,
+        "raw_ceiling_bytes_per_second": 207101921876,
+        "steady_band_quantum_gbps": 0.36764705882352944
+      }
+    ],
+    "fanout_check": {
+      "expected_verdict": "REFUTED",
+      "predicted_formula_payload_gbps": 151.33716466258824,
+      "published_payload_gbps": 281.65,
+      "relative_error_limit": 0.1,
+      "shape": "one sender to three receivers, not incast"
+    },
+    "raw_bin_ps": 696320,
+    "receiver": 3,
+    "schedule_target_bytes_per_flow": 524288,
+    "smoothing": "none",
+    "sources_by_degree": {
+      "1": [
+        0
+      ],
+      "2": [
+        0,
+        1
+      ],
+      "3": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  "packet_arithmetic": {
+    "credit_return_ps": 200000,
+    "credits_per_destination": 256,
+    "endpoint_packet_ps": 1692,
+    "header_bytes": 16,
+    "link_packet_ps": 10880,
+    "links_per_peer": 4,
+    "pair_payload_rate_gbps": 94.11764705882354,
+    "pair_raw_rate_bytes_per_second": 100000000000,
+    "payload_bytes": 256,
+    "rx_packet_ps": 1314,
+    "wire_bytes": 272
+  },
+  "parameter_ledger": {
+    "candidate_count": 10,
+    "declared_candidates": [
+      "rx.buffer_capacity_bytes",
+      "rx.credit_return_latency_ps",
+      "tx.bond_policy",
+      "tx.credit_unit_bytes",
+      "tx.credits_per_destination",
+      "tx.header_bytes",
+      "tx.links_per_peer",
+      "tx.max_payload_bytes",
+      "tx.per_link_rate_bytes_per_second",
+      "tx_rx.queue_scope"
+    ],
+    "figure_disclosure": "Every figure states that packet size, header, links, link rate, bond, credits, RX buffer, return latency and queue scope remain candidates; the TX and RX plateaus are measured and the switch is structural.",
+    "measured": [
+      "rx.delivery_order",
+      "rx.ingress_rate_bytes_per_second",
+      "rx.reassembly_policy",
+      "tx.endpoint_egress_rate_bytes_per_second",
+      "tx.request_response_direction"
+    ],
+    "structural": [
+      "switch.mode"
+    ],
+    "unchanged_parameter_count": 11
+  },
+  "plot_contract": {
+    "candidate_disclosure_required_on_every_figure": true,
+    "fct_panels": "one panel per size rung with mean CDF and shaded min-max band",
+    "flow_dynamics_panels": [
+      "overall_schedule",
+      "convergence_1_to_2",
+      "divergence_2_to_1"
+    ],
+    "formats": [
+      "pdf",
+      "png"
+    ],
+    "grammar": "rnic-cn join and exit rate presentation",
+    "incast_panels": "one schedule plus one FCT CDF panel per degree",
+    "path_rendering": "POSIX",
+    "raw_rate_style": "steps from fixed bins with no smoothing"
+  },
+  "preservation_lock": {
+    "additional_artifacts": [
+      {
+        "path": "examples/deployment_frontier_v1/expectations.json",
+        "sha256": "54295c81cebe36ee32d12b8ab1432c9fc060094ddf98403152b0d619cc37438f"
+      },
+      {
+        "path": "examples/deployment_frontier_v1/expectations.md",
+        "sha256": "f3a2a5a3aca60a5a7203560e9366c9d1c579cb08e28b67ca4a3644af0f122acb"
+      },
+      {
+        "path": "examples/deployment_frontier_v1/result.json",
+        "sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+      },
+      {
+        "path": "examples/deployment_frontier_v1/results.csv",
+        "sha256": "0f4a46a1676cc5d5985167378b249bd578944dcf252a85b423b1f8cb44c162db"
+      },
+      {
+        "path": "examples/deployment_frontier_v1/RESULTS.md",
+        "sha256": "f1f6b3aafddea1551b9ca724467d671cef9de666fe8e10e13430fc29a99ee978"
+      },
+      {
+        "path": "examples/deployment_frontier_v1/figures/deployment-frontier.pdf",
+        "sha256": "dd7729f98d975357370169264124b8b2c660bd87e3f337fe1c22cc6759a8fcce"
+      },
+      {
+        "path": "examples/deployment_frontier_v1/figures/deployment-frontier.png",
+        "sha256": "63d42d6f306fb77d4d4fa5ba6deaa0229ba90d66762dbef56aee484fe668a3aa"
+      },
+      {
+        "path": "examples/deployment_frontier_v1/figures/two-network-bottleneck.pdf",
+        "sha256": "cd7cf8468de06284341cbd5f4425350a7843b97ea048693736bab2826dd3146c"
+      },
+      {
+        "path": "examples/deployment_frontier_v1/figures/two-network-bottleneck.png",
+        "sha256": "9cd1d1794e8d3736c58d0643f7b03cd72c14af71faebee81414e0efb47193758"
+      },
+      {
+        "path": "examples/a100_nvlink_packet_v1/candidate-profile-pre-traf70.json",
+        "sha256": "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f"
+      },
+      {
+        "path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+        "sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2"
+      },
+      {
+        "path": "examples/a100_nvlink_packet_v2/expectations.json",
+        "sha256": "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6"
+      },
+      {
+        "path": "examples/a100_nvlink_packet_v2/expectations.md",
+        "sha256": "8ae7778a802ea626b17f0220b7de4cd865f303c84d45b8cb8e1d3a774eefc1c2"
+      },
+      {
+        "path": "examples/a100_nvlink_packet_v2/hardware-score.json",
+        "sha256": "d08ee9032bc87fd9fbef99ec6027a8250f7c20cfc3d365f39c55ffd9b54a9b3f"
+      },
+      {
+        "path": "examples/a100_nvlink_packet_v2/local-validation.json",
+        "sha256": "b9196f7b01c3d325175891a743b024c81ff542c94e267d483235eff2fb192bc5"
+      },
+      {
+        "path": "examples/a100_nvlink_packet_v2/RESUME.md",
+        "sha256": "66df984bfc4f573431a4d82018b2e81deb8c78b1f6c809357060974ba71e16b4"
+      },
+      {
+        "path": "examples/a100_nvlink_packet_v2/RESULTS.md",
+        "sha256": "b93915e2229f9e826d3990cb675baf0bd3161daffba8ab66bdddb0934e0718b4"
+      }
+    ],
+    "class": "all-43-prior-flagship-locks-plus-frontier-and-traf70-publication",
+    "expected_total_artifacts": 60,
+    "inherited": {
+      "expected_artifacts": 43,
+      "json_pointer": "/preservation_lock",
+      "path": "examples/deployment_frontier_v1/expectations.json",
+      "sha256": "54295c81cebe36ee32d12b8ab1432c9fc060094ddf98403152b0d619cc37438f"
+    }
+  },
+  "schema": "simllm-nvlink-flow-dynamics-expectations-v1",
+  "source_profile": {
+    "flow_dynamics_gate": "OPEN",
+    "path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+    "profile_id": "a100-nvlink3-packet-candidate-v1",
+    "score_sha256": "d08ee9032bc87fd9fbef99ec6027a8250f7c20cfc3d365f39c55ffd9b54a9b3f",
+    "score_status": "COMPLETE_VALID_86_OF_86",
+    "sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2",
+    "status": "scored_mixed_parameter_evidence"
+  },
+  "study": {
+    "chronology": "Committed before release-aware flow scheduling, the study runner, any TRAF-69 simulated run, or any result-dependent edit.",
+    "date": "2026-08-27",
+    "source": "maintainer directive of 2026-08-27",
+    "status": "expectations_only",
+    "task": "TRAF-69"
+  },
+  "verdict_rules": {
+    "cdf": "Each degree and size rung must pass monotonicity, terminal-one, p50 and p95 bands.",
+    "closure": "Close TRAF-69 only after all figures render in both formats, every panel and rung is scored, preservation holds, and all fatal guards pass.",
+    "fatal": "Any fatal-guard failure voids the study and TRAF-69 stays open.",
+    "honest_miss": "Any nonfatal miss is published as REFUTED with its frozen band unchanged.",
+    "steady_rate": "Every scored steady window must land in its pre-run quantized band.",
+    "transition": "Both exact timing identities must match with zero-picosecond tolerance."
+  }
+}
