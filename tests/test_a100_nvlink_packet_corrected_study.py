@@ -217,6 +217,8 @@ def test_hardware_source_and_submission_pin_required_interfaces():
     assert "NVML_FI_DEV_NVLINK_CRC_FLIT_ERROR_COUNT_L0" in source
     assert "NVML_FI_DEV_NVLINK_CRC_DATA_ERROR_COUNT_L0" in source
     assert "NVML_FI_DEV_NVLINK_ECC_DATA_ERROR_COUNT_L0" in source
+    assert "link_topology" in source
+    assert "values(snapshots.size() * kFieldsPerLink)" in source
     assert "std::array<std::thread, 4> workers" in source
     assert "nvmlDeviceGetCurrentClocksThrottleReasons" in source
     assert "cudaMemcpyPeerAsync" in source

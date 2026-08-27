@@ -558,6 +558,7 @@ struct HardwareContext {
   cudaStream_t streams[4][4][kMaximumStreams]{};
   std::array<nvmlDevice_t, 4> nvml_devices{};
   std::array<std::string, 4> pci_bus_ids{};
+  std::array<std::vector<std::pair<unsigned int, int>>, 4> link_topology{};
   std::array<int, 4> clock_rate_khz{};
 #ifdef SIMLLM_NVLINK_ENABLE_NCCL
   std::array<ncclComm_t, 4> communicators{};
@@ -596,6 +597,26 @@ struct HardwareContext {
           CUDA_CHECK(error);
         }
         cudaGetLastError();
+      }
+    }
+    for (int device = 0; device < 4; ++device) {
+      for (unsigned int link = 0; link < NVML_NVLINK_MAX_LINKS; ++link) {
+        nvmlEnableState_t active = NVML_FEATURE_DISABLED;
+        const auto state_status =
+            nvmlDeviceGetNvLinkState(nvml_devices[device], link, &active);
+        if (state_status == NVML_ERROR_INVALID_ARGUMENT) break;
+        NVML_CHECK(state_status);
+        if (active != NVML_FEATURE_ENABLED) continue;
+        int remote_gpu = -1;
+        nvmlPciInfo_t remote{};
+        const auto remote_status =
+            nvmlDeviceGetNvLinkRemotePciInfo_v2(nvml_devices[device], link, &remote);
+        if (remote_status == NVML_SUCCESS) {
+          for (int candidate = 0; candidate < 4; ++candidate) {
+            if (pci_bus_ids[candidate] == remote.busId) remote_gpu = candidate;
+          }
+        }
+        link_topology[device].emplace_back(link, remote_gpu);
       }
     }
 #ifdef SIMLLM_NVLINK_ENABLE_NCCL
@@ -657,56 +678,56 @@ std::array<unsigned int, 5> error_field_ids(unsigned int link) {
 
 std::vector<LinkSnapshot> capture_gpu_links(const HardwareContext& context, int gpu) {
   std::vector<LinkSnapshot> snapshots;
-  for (unsigned int link = 0; link < NVML_NVLINK_MAX_LINKS; ++link) {
-    nvmlEnableState_t active = NVML_FEATURE_DISABLED;
-    const auto state_status =
-        nvmlDeviceGetNvLinkState(context.nvml_devices[gpu], link, &active);
-    if (state_status == NVML_ERROR_INVALID_ARGUMENT) break;
-    if (state_status != NVML_SUCCESS || active != NVML_FEATURE_ENABLED) continue;
+  snapshots.reserve(context.link_topology[gpu].size());
+  for (const auto& [link, remote_gpu] : context.link_topology[gpu]) {
     LinkSnapshot snapshot;
     snapshot.gpu = gpu;
     snapshot.link = static_cast<int>(link);
-    nvmlPciInfo_t remote{};
-    const auto remote_status = nvmlDeviceGetNvLinkRemotePciInfo_v2(
-        context.nvml_devices[gpu], link, &remote);
-    if (remote_status == NVML_SUCCESS) {
-      for (int candidate = 0; candidate < 4; ++candidate) {
-        if (context.pci_bus_ids[candidate] == remote.busId) {
-          snapshot.remote_gpu = candidate;
-        }
-      }
-    }
+    snapshot.remote_gpu = remote_gpu;
+    snapshots.push_back(snapshot);
+  }
+  constexpr std::size_t kFieldsPerLink = 9;
+  std::vector<nvmlFieldValue_t> values(snapshots.size() * kFieldsPerLink);
+  for (std::size_t snapshot_index = 0; snapshot_index < snapshots.size();
+       ++snapshot_index) {
+    const auto link = static_cast<unsigned int>(snapshots[snapshot_index].link);
     const std::array<unsigned int, 4> throughput_fields = {
         NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX,
         NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX,
         NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_TX,
         NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_RX};
     const auto error_fields = error_field_ids(link);
-    std::array<nvmlFieldValue_t, 9> values{};
     for (std::size_t index = 0; index < throughput_fields.size(); ++index) {
-      values[index].fieldId = throughput_fields[index];
-      values[index].scopeId = link;
+      auto& value = values[snapshot_index * kFieldsPerLink + index];
+      value.fieldId = throughput_fields[index];
+      value.scopeId = link;
     }
     for (std::size_t index = 0; index < error_fields.size(); ++index) {
-      values[throughput_fields.size() + index].fieldId = error_fields[index];
-      values[throughput_fields.size() + index].scopeId = link;
+      auto& value =
+          values[snapshot_index * kFieldsPerLink + throughput_fields.size() + index];
+      value.fieldId = error_fields[index];
+      value.scopeId = link;
     }
-    const auto field_status = nvmlDeviceGetFieldValues(
-        context.nvml_devices[gpu], static_cast<int>(values.size()), values.data());
-    for (std::size_t index = 0; index < values.size(); ++index) {
+  }
+  const auto field_status = nvmlDeviceGetFieldValues(
+      context.nvml_devices[gpu], static_cast<int>(values.size()), values.data());
+  for (std::size_t snapshot_index = 0; snapshot_index < snapshots.size();
+       ++snapshot_index) {
+    auto& snapshot = snapshots[snapshot_index];
+    for (std::size_t index = 0; index < kFieldsPerLink; ++index) {
+      const auto& value = values[snapshot_index * kFieldsPerLink + index];
       snapshot.statuses[index] = field_status == NVML_SUCCESS
-          ? static_cast<int>(values[index].nvmlReturn)
+          ? static_cast<int>(value.nvmlReturn)
           : static_cast<int>(field_status);
       if (snapshot.statuses[index] == NVML_SUCCESS) {
-        const auto value = field_unsigned(values[index]);
-        if (index < throughput_fields.size()) {
-          snapshot.throughput[index] = value;
+        const auto count = field_unsigned(value);
+        if (index < snapshot.throughput.size()) {
+          snapshot.throughput[index] = count;
         } else {
-          snapshot.errors[index - throughput_fields.size()] = value;
+          snapshot.errors[index - snapshot.throughput.size()] = count;
         }
       }
     }
-    snapshots.push_back(snapshot);
   }
   return snapshots;
 }
