@@ -82,6 +82,26 @@
 ### Completion accounting
 
 - Sizing note created before the TRAF-70 expectations tree.
-- Expectations freeze, implementation, Merlin job IDs, exact completion
-  counts, evidence digests, score, parameter changes and flow-dynamics gate
-  verdict will be appended only as those milestones become true.
+- Expectations-only commit: `fd7bc6b`; freeze SHA-256
+  `f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6`.
+- Accepted execution head: `a89b987e81b8c5ac8f04a1f27ae9af0ed09839d1`;
+  implementation SHA-256
+  `c9afbb2abe234933b478e2ee0bdf624cdb37ab5537d9888e118ba87aef6cdc96`;
+  producer binary SHA-256
+  `9c39603234969c5a7b01dd80008788a8649367f8ee003942e6462b344fa6c9d8`.
+- Merlin job `199957` completed array index 85. Job `199960` completed
+  indices 0 through 84. The final `sacct` audit reports `COMPLETED` and
+  `0:0` for all 85 elements of job `199960` and for accepted task
+  `199957_85`, with no pending index and no accepted stop record.
+- Exact accepted coverage: 86 of 86 cells and 11,542 hardware rows. The lean
+  pull has 1,118 files containing accepted attempt payloads and scheduler
+  logs, with no CUDA build tree.
+- Score commit: `7f729d7`; score SHA-256
+  `d08ee9032bc87fd9fbef99ec6027a8250f7c20cfc3d365f39c55ffd9b54a9b3f`;
+  status `COMPLETE_VALID_86_OF_86`.
+- Profile publication commit: `0efcdf0`. The scorer identified TX endpoint
+  egress `160795737454` bytes per second and RX ingress `207101921876` bytes
+  per second, and confirmed request/response direction, reassembly and
+  delivery behavior. Eleven parameters remain unchanged.
+- All ten fatal guards are decidable passes, every result-row throttle verdict
+  is `CLEAR`, and the flow-dynamics gate is `OPEN`.

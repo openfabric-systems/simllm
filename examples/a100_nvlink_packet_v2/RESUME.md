@@ -1,5 +1,33 @@
 # TRAF-70 corrected A100 NVLink capture resume record
 
+## Final outcome
+
+The corrected capture is `COMPLETE_VALID_86_OF_86`. Merlin job `199957`
+completed the all-corners frame at array index 85, and job `199960` completed
+array indices 0 through 84. The final `sacct` audit reports `COMPLETED` with
+exit code `0:0` for all 85 elements of job `199960` and for the accepted
+`199957_85` task. The pending set is empty, no accepted attempt has a stop
+record, and all 86 manifests bind one producer binary SHA-256:
+
+```text
+9c39603234969c5a7b01dd80008788a8649367f8ee003942e6462b344fa6c9d8
+```
+
+The lean local pull contains the accepted attempt payloads and the scheduler
+logs for jobs `199957` and `199960`, with 1,118 files total and no CUDA build
+tree. All 11,542 hardware rows verify against their manifests. The score is
+[hardware-score.json](hardware-score.json), its readable report is
+[RESULTS.md](RESULTS.md), and the score SHA-256 is:
+
+```text
+d08ee9032bc87fd9fbef99ec6027a8250f7c20cfc3d365f39c55ffd9b54a9b3f
+```
+
+All ten fatal guards are decidable passes. The explicit throttle verdict is
+`CLEAR` on every one of the 11,542 result rows; `FG07` has zero failures and
+zero missing observations. The flow-dynamics gate is `OPEN` because every
+frozen prerequisite has a decidable non-void outcome.
+
 ## Frozen state
 
 The expectations-only commit is `fd7bc6b`. The expectations SHA-256 is:
@@ -20,9 +48,13 @@ does not score a hardware parameter.
 
 TRAF-65 expectations remain SHA-256
 `212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571`.
-The protected A100 candidate remains SHA-256
+The protected pre-score A100 candidate is preserved in
+[candidate-profile-pre-traf70.json](../a100_nvlink_packet_v1/candidate-profile-pre-traf70.json)
+with SHA-256
 `899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f`.
-Neither may change before the TRAF-70 score is published.
+The live profile changed only after score commit `7f729d7`, through
+`publish_score.py`. Its scored SHA-256 is
+`d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2`.
 
 Merlin was verified available on 2026-08-27. The `a100-hourly` partition had
 mixed and allocated qualified nodes, and the staged NCCL 2.31.2 tree was
@@ -141,3 +173,19 @@ Only the scorer's `profile_patch.changes` list may update the A100 profile.
 Each listed entry names its rule and evidence class. An identified value that
 differs from the candidate is an explicit refutation and replacement. An
 inconclusive or void parameter remains byte-unchanged and declared.
+
+## Published parameter result
+
+The score identifies the TX endpoint egress rate as
+`160795737454` bytes per second and the RX ingress rate as
+`207101921876` bytes per second. Both replace the 300,000,000,000-byte per
+second candidates with measured effective counter-plateau evidence. It also
+confirms the existing request and response direction, `extent_sequence`
+reassembly and `per_extent` delivery with their rule-specific measured
+evidence classes.
+
+Packet payload and header size, link count and per-link rate, bond policy,
+credit unit and count, RX buffer and credit-return latency, and TX/RX queue
+scope remain inconclusive declared candidates. The A100 direct-mesh switch
+remains `pass_through` as a structural invariant, not a measurement. No other
+runtime value or evidence class changed.
