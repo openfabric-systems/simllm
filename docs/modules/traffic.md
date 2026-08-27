@@ -1466,6 +1466,46 @@ cross-architecture candidate evidence, not H100 or B100 measurement evidence.
   `sbatch` commands are in the
   [TRAF-65 resume record](../../examples/a100_nvlink_packet_v1/RESUME.md).
 
+  The on-silicon remainder executed early after the integrator verified on
+  2026-08-27 that reservation `SD26082026` had lifted and the A100 partitions
+  were visible in mixed and allocated states. Merlin job `198968` ran the exact
+  frozen head on one exclusive `NV4` node with the registered `%1` pacing. All
+  86 cells completed on `gpu105`, all 14,035 rows and manifests verify, every
+  scheduler task exited `0:0`, no stop record exists, and the post-run pending
+  set is empty. The written maintenance date and its verified early
+  supersession are both retained in the resume record.
+
+  The literal score is
+  [COMPLETE_VOID_86_OF_86](../../examples/a100_nvlink_packet_v1/RESULTS.md),
+  not a calibration. The hardware row schema records elapsed time but no
+  observed per-row raw/data, link, direction, replay, recovery or error
+  deltas. Its checksum is a point-id hash rather than a destination-byte
+  comparison, it derives `candidate_packet_count` and `candidate_raw_bytes`
+  from the hypothesis, it parses but does not apply access width, lane mask,
+  stream count, outstanding window, burst length, gap or offered rate in the
+  hardware path, and the copy-engine loop enqueues once per message. Five
+  frozen fatal guards are therefore undecidable and the completed timings are
+  void for promotion. The visible rate reductions refute the capture
+  procedure's three scored bond bands and all 16 incast bands, not the physical
+  NVLink constants. Packet overhead versus copy-engine coalescing remains
+  unidentifiable; every TX and RX parameter remains declared and unmeasured;
+  the A100 pass-through switch stands as a structural direct-mesh invariant,
+  not a hardware measurement. The candidate profile stays `candidate` with no
+  parameter value changed, and TRAF-65 stays OPEN.
+- TRAF-70 (Precision; P1; L): replace the void TRAF-65 identification capture
+  with a new expectations-frozen A100 NVLink packet study. Apply every named
+  sweep control in the hardware producer, batch copy-engine work without one
+  enqueue per message, and emit observed per-row raw/data and per-link,
+  per-direction counter deltas, replay, recovery and error deltas, an actual
+  destination-byte checksum and ordering ledger, and an explicit throttle
+  verdict. Preserve the qualified `NV4`, exclusive `a100-hourly`, short `%1`
+  pacing and digest-complete resumption rules. Acceptance: every frozen fatal
+  guard is decidable, candidate-derived packet fields are kept separate from
+  observations, all 80 cases plus ordered frames complete, and only parameters
+  identified by the new frozen decision rules may change evidence class or
+  value. TRAF-65 and the A100 candidate remain unchanged until that score is
+  published.
+
 ### Completeness
 
 - TRAF-49 (Completeness; P2; M): let a profile that supports only the widths it
