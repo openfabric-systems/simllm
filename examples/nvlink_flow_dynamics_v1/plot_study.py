@@ -20,7 +20,7 @@ SURFACE = "#fcfcfa"
 FLOW_COLORS = ("#2878b5", "#e76f51", "#2a9d8f")
 SIZE_COLORS = ("#264653", "#2a9d8f", "#72a93b", "#e9c46a", "#f4a261", "#e76f51", "#8f5da2")
 DISCLOSURE = (
-    "Mixed evidence: TX/RX plateaus measured; packet, link, bond, credit, buffer and "
+    "Mixed evidence: TX/RX plateaus measured; packet, link, bond, credit, buffer and\n"
     "queue terms candidates; NV4 switch structural."
 )
 
@@ -63,7 +63,17 @@ def _style(axis: Any, title: str, xlabel: str, ylabel: str) -> None:
 
 
 def _footer(figure: Any, text: str, *, y: float = 0.012) -> None:
-    figure.text(0.5, y, text, ha="center", va="bottom", fontsize=7.2, color=MUTED)
+    figure.text(
+        0.5,
+        y,
+        text,
+        ha="center",
+        va="bottom",
+        multialignment="center",
+        linespacing=1.25,
+        fontsize=7.2,
+        color=MUTED,
+    )
 
 
 def _group_rates(rows: list[dict[str, str]]) -> dict[str, list[tuple[float, float]]]:
@@ -179,9 +189,13 @@ def render_flow_dynamics(
     )
     _footer(
         figure,
-        "Raw fixed bins, no smoothing. " + DISCLOSURE,
+        (
+            f"Raw fixed bins, no smoothing: overall {frozen['flow_schedule']['raw_bin_ps']:,} ps; "
+            f"transitions {frozen['convergence_1_to_2']['raw_bin_ps']:,} ps.\n"
+            + DISCLOSURE
+        ),
     )
-    figure.tight_layout(rect=(0.04, 0.045, 0.98, 0.965))
+    figure.tight_layout(rect=(0.04, 0.075, 0.98, 0.965))
     paths = []
     for suffix in ("pdf", "png"):
         path = out_dir / f"nvlink-flow-dynamics.{suffix}"
@@ -252,9 +266,9 @@ def render_fct_ladder(
     )
     _footer(
         figure,
-        "9 frozen seeds; shaded band is pointwise seed min-max. " + DISCLOSURE,
+        "9 frozen seeds; shaded band is pointwise seed min-max.\n" + DISCLOSURE,
     )
-    figure.tight_layout(rect=(0.03, 0.045, 0.99, 0.96))
+    figure.tight_layout(rect=(0.03, 0.072, 0.99, 0.96))
     paths = []
     for suffix in ("pdf", "png"):
         path = out_dir / f"nvlink-fct-cdf.{suffix}"
@@ -332,10 +346,13 @@ def render_incast(
     )
     _footer(
         figure,
-        "Raw fixed bins, no smoothing. 9 seeds; CDF shade is pointwise min-max. "
-        + DISCLOSURE,
+        (
+            f"Raw {frozen['incast']['raw_bin_ps']:,} ps fixed bins, no smoothing; "
+            "9 frozen seeds; CDF shade is pointwise seed min-max.\n"
+            + DISCLOSURE
+        ),
     )
-    figure.tight_layout(rect=(0.03, 0.055, 0.99, 0.955))
+    figure.tight_layout(rect=(0.03, 0.105, 0.99, 0.955))
     paths = []
     for suffix in ("pdf", "png"):
         path = out_dir / f"nvlink-incast-degree-{degree}.{suffix}"

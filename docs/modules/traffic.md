@@ -922,37 +922,27 @@ The TX, switch and RX queues, analytic identity bypass, frozen identification
 map and current evidence split are documented in the
 [NVLink domain-model study](../design/nvlink-domain-model.md).
 
-The scored NV4 domain renders packet-level flow joins, convergence, divergence
-and flow-completion-time distributions through one release-aware flow schedule.
-The presentation keeps measured TX and RX plateaus, ten declared candidate
-parameters and the structural pass-through switch, the score's eleven
-unchanged internals in total, visibly separate. It treats
-the 281.65 GB/s sender fan-out row as a separate check rather than an incast
-receiver ceiling, and it preserves every earlier scored record through the
-inherited preservation-lock class.
+The scored NV4 domain now publishes its packet-level flow joins, convergence,
+divergence and flow-completion-time distributions in
+[the TRAF-69 result](../../examples/nvlink_flow_dynamics_v1/RESULTS.md).
+The 1-to-2 open identity lands at 13,886 ps and the 2-to-1 solo-target identity
+at 16,684 ps, both with 0 ps residual. The reverse-target schedule completes
+flow C, flow B, then flow A, and all 219 stable raw-bin rate checks pass. Every
+one of the 21 incast-degree-by-size CDF cells passes its frozen p50 and p95
+bands. Simulated payload reaches 94.009808, 187.880751 and 194.562756 GB/s at
+degrees one through three, respectively, without exceeding the frozen
+94.117647, 188.235294 and 194.919456 GB/s ceilings. The published 281.65 GB/s
+sender fan-out row remains separate and is honestly refuted by a 46.334975
+percent miss. All 13 fatal guards and all 60 preservation locks pass, including
+the byte-identical default flow-inactive path, so TRAF-69 closes. The result
+keeps the measured TX and RX plateaus, ten declared candidate parameters and
+the structural pass-through switch, the score's eleven unchanged internals in
+total, visibly separate; TRAF-65 remains open on its live held-out integration
+bar.
 
 ## Open tasks
 
 ### Precision
-
-- TRAF-69 (Precision; P1; M): publish the scored NV4 flow-dynamics study in the
-  rnic-cn join and exit presentation grammar. Freeze before the first run: a
-  three-flow fixed-stagger schedule with reverse byte targets, raw unsmoothed
-  receiver-goodput bins, exact 1-to-2 and 2-to-1 transition identities from
-  packet admission, credit return, link serialization and RX ingress, a
-  single-packet through largest-supported flow-size ladder, a fixed multi-seed
-  empirical flow-completion-time CDF with a shaded cross-seed band, and incast
-  degrees 1 through 3 on the four-GPU topology. Each incast degree must publish
-  its schedule, CDF and simulated aggregate against the ceiling formed from the
-  measured 160,795,737,454 byte/s TX endpoint plateau, measured
-  207,101,921,876 byte/s RX plateau and declared-candidate per-pair link
-  arithmetic. Keep the published 281.65 GB/s sender fan-out row separate and
-  score it honestly. Acceptance requires exact transition checks, a verdict at
-  every FCT rung, explicit evidence class on every consumed parameter, all
-  frozen bands scored without widening, the default flow-inactive path
-  byte-identical, every inherited preservation artifact unchanged, POSIX paths,
-  and both PDF and PNG figures visually checked. Any miss is published as a
-  refutation rather than tuned away.
 
 - TRAF-68 (Precision; P1; M): publish the two-network bottleneck study for the
   CORE-62 frontier. At every frozen configuration and batch, retain the

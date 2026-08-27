@@ -1,0 +1,741 @@
+{
+  "attempt_history": [
+    {
+      "commit": "b808a6b",
+      "finding": "the degree-3 large-flow guard exposed missing receiver-side credit backpressure on the opt-in policy",
+      "outcome": "STOPPED_BEFORE_SCORING"
+    },
+    {
+      "commit": "97cb90d",
+      "finding": "the first complete run exposed event-neighborhood rate scoring and floating-point CDF containment defects",
+      "outcome": "INVALID_SCORER_REFUTATION"
+    },
+    {
+      "commit": "4f4022e",
+      "finding": "the corrected scorer changed no raw CSV evidence",
+      "outcome": "PASS_WITH_EXPECTED_FANOUT_REFUTATION"
+    }
+  ],
+  "authority": {
+    "expectations_commit": "32a49805546bd038af5e49fd68b5d2ed0cea6174",
+    "expectations_sha256": "6e6e8f0ed7c79572f1ef893f7f7869d8a4e854200bdee514b4338b87955e1261",
+    "preservation_artifacts_checked": 60,
+    "profile_sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2",
+    "score_sha256": "d08ee9032bc87fd9fbef99ec6027a8250f7c20cfc3d365f39c55ffd9b54a9b3f",
+    "static_identity_sha256": "2f2af64619ed3c6341b209d877d9f1e6984a67e44b97b5eb176a157294a6c252"
+  },
+  "convergence_1_to_2": {
+    "expected_open_ps": 13886,
+    "observed_open_ps": 13886,
+    "residual_ps": 0,
+    "verdict": "PASS"
+  },
+  "divergence_2_to_1": {
+    "departing_completion_ps": 1399030,
+    "expected_time_to_target_ps": 16684,
+    "observed_time_to_target_ps": 16684,
+    "residual_ps": 0,
+    "verdict": "PASS"
+  },
+  "fanout_separate_check": {
+    "expected_verdict": "REFUTED",
+    "published_payload_gbps": 281.65,
+    "relative_error": 0.4633497512552191,
+    "relative_error_limit": 0.1,
+    "simulated_payload_gbps": 151.14754255896753,
+    "verdict": "REFUTED"
+  },
+  "fatal_guard_verdict": "PASS",
+  "fatal_guards": [
+    {
+      "guard": "expectations digest or expectations commit is not the run authority",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "tracked worktree is dirty before the gated run",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "the scored profile, score status, score digest or flow-dynamics gate changes",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "the parameter evidence catalog is incomplete or changes evidence class",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "any inherited or additional preservation artifact changes",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "a byte, packet, extent, request direction or response direction is lost or duplicated",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "a per-extent delivery sequence is not strictly increasing",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "the pass-through switch changes any packet object or timestamp",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "the default flow-inactive domain result differs from its pre-change canonical bytes",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "a simulated rate exceeds its physical ceiling",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "a CDF is not monotone, does not end at one or leaves its frozen quantile band",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "a transition identity differs by any picosecond",
+      "verdict": "PASS"
+    },
+    {
+      "guard": "a prior runner, record or figure is executed or rewritten",
+      "verdict": "PASS"
+    }
+  ],
+  "fct_cdf": {
+    "band": "pointwise minimum to maximum empirical CDF across seeds",
+    "seed_count": 9,
+    "verdicts": [
+      {
+        "degree": 1,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          12194,
+          70536
+        ],
+        "p50_mean_ps": 12194.0,
+        "p50_seed_max_ps": 12194,
+        "p50_seed_min_ps": 12194,
+        "p95_band_ps": [
+          12194,
+          168088
+        ],
+        "p95_mean_ps": 13067.333333333334,
+        "p95_seed_max_ps": 14282,
+        "p95_seed_min_ps": 12194,
+        "sample_count": 108,
+        "size_bytes": 256,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 1,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          17270,
+          90840
+        ],
+        "p50_mean_ps": 23717.11111111111,
+        "p50_seed_max_ps": 40751,
+        "p50_seed_min_ps": 17270,
+        "p95_band_ps": [
+          17270,
+          229000
+        ],
+        "p95_mean_ps": 35820.666666666664,
+        "p95_seed_max_ps": 52290,
+        "p95_seed_min_ps": 23374,
+        "sample_count": 108,
+        "size_bytes": 1024,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 1,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          49910,
+          221400
+        ],
+        "p50_mean_ps": 127261.55555555556,
+        "p50_seed_max_ps": 178430,
+        "p50_seed_min_ps": 107886,
+        "p95_band_ps": [
+          49910,
+          620680
+        ],
+        "p95_mean_ps": 172411.11111111112,
+        "p95_seed_max_ps": 225471,
+        "p95_seed_min_ps": 143525,
+        "sample_count": 108,
+        "size_bytes": 4096,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 1,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          180470,
+          743640
+        ],
+        "p50_mean_ps": 606642.1111111111,
+        "p50_seed_max_ps": 650124,
+        "p50_seed_min_ps": 578655,
+        "p95_band_ps": [
+          180470,
+          2187400
+        ],
+        "p95_mean_ps": 828548.8888888889,
+        "p95_seed_max_ps": 879961,
+        "p95_seed_min_ps": 799682,
+        "sample_count": 108,
+        "size_bytes": 16384,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 1,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          702710,
+          2832600
+        ],
+        "p50_mean_ps": 2582308.111111111,
+        "p50_seed_max_ps": 2599424,
+        "p50_seed_min_ps": 2550218,
+        "p95_band_ps": [
+          702710,
+          8454280
+        ],
+        "p95_mean_ps": 3519332.6666666665,
+        "p95_seed_max_ps": 3546432,
+        "p95_seed_min_ps": 3490391,
+        "sample_count": 108,
+        "size_bytes": 65536,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 1,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          2791670,
+          11188440
+        ],
+        "p50_mean_ps": 10404908.777777778,
+        "p50_seed_max_ps": 10439683,
+        "p50_seed_min_ps": 10376299,
+        "p95_band_ps": [
+          2791670,
+          33521800
+        ],
+        "p95_mean_ps": 14233746.888888888,
+        "p95_seed_max_ps": 14269370,
+        "p95_seed_min_ps": 14189850,
+        "sample_count": 108,
+        "size_bytes": 262144,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 1,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          5576950,
+          22329560
+        ],
+        "p50_mean_ps": 20862777.222222224,
+        "p50_seed_max_ps": 20923820,
+        "p50_seed_min_ps": 20836455,
+        "p95_band_ps": [
+          5576950,
+          66945160
+        ],
+        "p95_mean_ps": 28555775.666666668,
+        "p95_seed_max_ps": 28631845,
+        "p95_seed_min_ps": 28533094,
+        "sample_count": 108,
+        "size_bytes": 524288,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 2,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          12194,
+          70536
+        ],
+        "p50_mean_ps": 12194.0,
+        "p50_seed_max_ps": 12194,
+        "p50_seed_min_ps": 12194,
+        "p95_band_ps": [
+          12194,
+          168088
+        ],
+        "p95_mean_ps": 13621.111111111111,
+        "p95_seed_max_ps": 14619,
+        "p95_seed_min_ps": 13232,
+        "sample_count": 216,
+        "size_bytes": 256,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 2,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          17270,
+          90840
+        ],
+        "p50_mean_ps": 24938.0,
+        "p50_seed_max_ps": 47464,
+        "p50_seed_min_ps": 19142,
+        "p95_band_ps": [
+          17270,
+          229000
+        ],
+        "p95_mean_ps": 35149.11111111111,
+        "p95_seed_max_ps": 53881,
+        "p95_seed_min_ps": 27726,
+        "sample_count": 216,
+        "size_bytes": 1024,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 2,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          49910,
+          221400
+        ],
+        "p50_mean_ps": 135002.88888888888,
+        "p50_seed_max_ps": 178918,
+        "p50_seed_min_ps": 74555,
+        "p95_band_ps": [
+          49910,
+          620680
+        ],
+        "p95_mean_ps": 174521.0,
+        "p95_seed_max_ps": 230603,
+        "p95_seed_min_ps": 91069,
+        "sample_count": 216,
+        "size_bytes": 4096,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 2,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          180470,
+          743640
+        ],
+        "p50_mean_ps": 617701.5555555555,
+        "p50_seed_max_ps": 637427,
+        "p50_seed_min_ps": 598146,
+        "p95_band_ps": [
+          180470,
+          2187400
+        ],
+        "p95_mean_ps": 840400.8888888889,
+        "p95_seed_max_ps": 869194,
+        "p95_seed_min_ps": 814625,
+        "sample_count": 216,
+        "size_bytes": 16384,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 2,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          702710,
+          2832600
+        ],
+        "p50_mean_ps": 2589703.3333333335,
+        "p50_seed_max_ps": 2618862,
+        "p50_seed_min_ps": 2550254,
+        "p95_band_ps": [
+          702710,
+          8454280
+        ],
+        "p95_mean_ps": 3528996.888888889,
+        "p95_seed_max_ps": 3562970,
+        "p95_seed_min_ps": 3479706,
+        "sample_count": 216,
+        "size_bytes": 65536,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 2,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          2791670,
+          11188440
+        ],
+        "p50_mean_ps": 10414850.222222222,
+        "p50_seed_max_ps": 10436268,
+        "p50_seed_min_ps": 10368044,
+        "p95_band_ps": [
+          2791670,
+          33521800
+        ],
+        "p95_mean_ps": 14242106.333333334,
+        "p95_seed_max_ps": 14286741,
+        "p95_seed_min_ps": 14195955,
+        "sample_count": 216,
+        "size_bytes": 262144,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 2,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          5576950,
+          22329560
+        ],
+        "p50_mean_ps": 20876967.222222224,
+        "p50_seed_max_ps": 20929017,
+        "p50_seed_min_ps": 20842674,
+        "p95_band_ps": [
+          5576950,
+          66945160
+        ],
+        "p95_mean_ps": 28575221.111111112,
+        "p95_seed_max_ps": 28624911,
+        "p95_seed_min_ps": 28517717,
+        "sample_count": 216,
+        "size_bytes": 524288,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 3,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          12194,
+          81044
+        ],
+        "p50_mean_ps": 12381.111111111111,
+        "p50_seed_max_ps": 13187,
+        "p50_seed_min_ps": 12194,
+        "p95_band_ps": [
+          12194,
+          199612
+        ],
+        "p95_mean_ps": 15473.666666666666,
+        "p95_seed_max_ps": 20713,
+        "p95_seed_min_ps": 13412,
+        "sample_count": 324,
+        "size_bytes": 256,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 3,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          17270,
+          128324
+        ],
+        "p50_mean_ps": 22113.88888888889,
+        "p50_seed_max_ps": 23823,
+        "p50_seed_min_ps": 20078,
+        "p95_band_ps": [
+          17270,
+          341452
+        ],
+        "p95_mean_ps": 28325.333333333332,
+        "p95_seed_max_ps": 34879,
+        "p95_seed_min_ps": 22878,
+        "sample_count": 324,
+        "size_bytes": 1024,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 3,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          49910,
+          317448
+        ],
+        "p50_mean_ps": 103118.33333333333,
+        "p50_seed_max_ps": 122452,
+        "p50_seed_min_ps": 89660,
+        "p95_band_ps": [
+          49910,
+          908824
+        ],
+        "p95_mean_ps": 147206.33333333334,
+        "p95_seed_max_ps": 175649,
+        "p95_seed_min_ps": 122647,
+        "sample_count": 324,
+        "size_bytes": 4096,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 3,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          180470,
+          1073944
+        ],
+        "p50_mean_ps": 522291.1111111111,
+        "p50_seed_max_ps": 539675,
+        "p50_seed_min_ps": 504281,
+        "p95_band_ps": [
+          180470,
+          3178312
+        ],
+        "p95_mean_ps": 847333.1111111111,
+        "p95_seed_max_ps": 872307,
+        "p95_seed_min_ps": 827826,
+        "sample_count": 324,
+        "size_bytes": 16384,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 3,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          702710,
+          4099932
+        ],
+        "p50_mean_ps": 2237490.6666666665,
+        "p50_seed_max_ps": 2249593,
+        "p50_seed_min_ps": 2213899,
+        "p95_band_ps": [
+          702710,
+          12256276
+        ],
+        "p95_mean_ps": 3700047.888888889,
+        "p95_seed_max_ps": 3722555,
+        "p95_seed_min_ps": 3670024,
+        "sample_count": 324,
+        "size_bytes": 65536,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 3,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          2791670,
+          16203888
+        ],
+        "p50_mean_ps": 9044893.666666666,
+        "p50_seed_max_ps": 9067481,
+        "p50_seed_min_ps": 9023967,
+        "p95_band_ps": [
+          2791670,
+          48568144
+        ],
+        "p95_mean_ps": 15063088.888888888,
+        "p95_seed_max_ps": 15098530,
+        "p95_seed_min_ps": 15033010,
+        "sample_count": 324,
+        "size_bytes": 262144,
+        "terminal_one": true,
+        "verdict": "PASS"
+      },
+      {
+        "degree": 3,
+        "monotone_cdf": true,
+        "p50_band_ps": [
+          5576950,
+          32342492
+        ],
+        "p50_mean_ps": 18145397.111111112,
+        "p50_seed_max_ps": 18162071,
+        "p50_seed_min_ps": 18127387,
+        "p95_band_ps": [
+          5576950,
+          96983956
+        ],
+        "p95_mean_ps": 30216775.888888888,
+        "p95_seed_max_ps": 30239377,
+        "p95_seed_min_ps": 30193486,
+        "sample_count": 324,
+        "size_bytes": 524288,
+        "terminal_one": true,
+        "verdict": "PASS"
+      }
+    ]
+  },
+  "figure_artifacts": [
+    {
+      "bytes": 18371,
+      "path": "nvlink-flow-dynamics.pdf",
+      "sha256": "ae771a01e1f20afec23912aaf56bcf086544e3ba8754419a8324f1699b194c5d"
+    },
+    {
+      "bytes": 236345,
+      "path": "nvlink-flow-dynamics.png",
+      "sha256": "cf1f34bc4a1c9dfcbc3cafd51e8c4452f4d234bd70c313df57448e6ccf0a7a5e"
+    },
+    {
+      "bytes": 74562,
+      "path": "nvlink-fct-cdf.pdf",
+      "sha256": "85bbaec757c0f3fdadc807fd1738238d53e99e8bf7e6a75c88f2e8a7c1618fd1"
+    },
+    {
+      "bytes": 266371,
+      "path": "nvlink-fct-cdf.png",
+      "sha256": "85fe0389be7269c4770e8734c02da4aa83eba1c80987c9f0631435c6ee8d6411"
+    },
+    {
+      "bytes": 26856,
+      "path": "nvlink-incast-degree-1.pdf",
+      "sha256": "0603e085fbb065b30775ee27b827b06165964e06b36000a05d9c2eecf5463a6b"
+    },
+    {
+      "bytes": 201109,
+      "path": "nvlink-incast-degree-1.png",
+      "sha256": "44066be1db4f75c28885505449ee6b2e3fb3126ed6b018237f1a0979e8a2d325"
+    },
+    {
+      "bytes": 35843,
+      "path": "nvlink-incast-degree-2.pdf",
+      "sha256": "b95394d911c13bbdc42f90507a56197fa945daa5a15d9b1f3d9b3c5598462866"
+    },
+    {
+      "bytes": 205951,
+      "path": "nvlink-incast-degree-2.png",
+      "sha256": "15de61f42f54b65280a00dbe462cbf659f4bb6a385f61fb2a0a6ee4c647801c0"
+    },
+    {
+      "bytes": 42384,
+      "path": "nvlink-incast-degree-3.pdf",
+      "sha256": "1b872235faab51dd37edda79e076a2205da71b1ce9297b6b7b8b1fa29271c2ac"
+    },
+    {
+      "bytes": 207429,
+      "path": "nvlink-incast-degree-3.png",
+      "sha256": "32cf9ea4e1131228ee81a4d7c7d5321ceacecde07d13cd7f2dd7b3c45b3f0767"
+    }
+  ],
+  "incast": [
+    {
+      "ceiling_fraction": 0.9988542124279399,
+      "completion_time_ps": 5576950,
+      "degree": 1,
+      "expected_binding_module": "tx_pair_links",
+      "max_rx_buffer_occupancy_bytes": 20672,
+      "payload_ceiling_gbps": 94.11764705882354,
+      "simulated_payload_gbps": 94.009808228512,
+      "verdict": "PASS"
+    },
+    {
+      "ceiling_fraction": 0.9981164908820384,
+      "completion_time_ps": 5581072,
+      "degree": 2,
+      "expected_binding_module": "tx_pair_links",
+      "max_rx_buffer_occupancy_bytes": 41344,
+      "payload_ceiling_gbps": 188.23529411764707,
+      "simulated_payload_gbps": 187.8807512248543,
+      "verdict": "PASS"
+    },
+    {
+      "ceiling_fraction": 0.9981700155278838,
+      "completion_time_ps": 8084096,
+      "degree": 3,
+      "expected_binding_module": "rx",
+      "max_rx_buffer_occupancy_bytes": 560864,
+      "payload_ceiling_gbps": 194.91945588329412,
+      "simulated_payload_gbps": 194.56275630571434,
+      "verdict": "PASS"
+    }
+  ],
+  "overall_schedule": {
+    "completion_order": [
+      "flow-c",
+      "flow-b",
+      "flow-a"
+    ],
+    "completion_ps": {
+      "flow-a": 77994230,
+      "flow-b": 55711990,
+      "flow-c": 33429750
+    },
+    "reverse_target_verdict": "PASS",
+    "steady_rate_checks": 219,
+    "steady_rate_failures": 0,
+    "steady_verdict": "PASS"
+  },
+  "packet_arithmetic": {
+    "credit_return_ps": 200000,
+    "credits_per_destination": 256,
+    "endpoint_packet_ps": 1692,
+    "header_bytes": 16,
+    "link_packet_ps": 10880,
+    "links_per_peer": 4,
+    "pair_payload_rate_gbps": 94.11764705882354,
+    "pair_raw_rate_bytes_per_second": 100000000000,
+    "payload_bytes": 256,
+    "rx_packet_ps": 1314,
+    "wire_bytes": 272
+  },
+  "parameter_ledger": {
+    "candidate_count": 10,
+    "declared_candidates": [
+      "rx.buffer_capacity_bytes",
+      "rx.credit_return_latency_ps",
+      "tx.bond_policy",
+      "tx.credit_unit_bytes",
+      "tx.credits_per_destination",
+      "tx.header_bytes",
+      "tx.links_per_peer",
+      "tx.max_payload_bytes",
+      "tx.per_link_rate_bytes_per_second",
+      "tx_rx.queue_scope"
+    ],
+    "figure_disclosure": "Every figure states that packet size, header, links, link rate, bond, credits, RX buffer, return latency and queue scope remain candidates; the TX and RX plateaus are measured and the switch is structural.",
+    "measured": [
+      "rx.delivery_order",
+      "rx.ingress_rate_bytes_per_second",
+      "rx.reassembly_policy",
+      "tx.endpoint_egress_rate_bytes_per_second",
+      "tx.request_response_direction"
+    ],
+    "structural": [
+      "switch.mode"
+    ],
+    "unchanged_parameter_count": 11
+  },
+  "plot_contract": {
+    "candidate_disclosure_required_on_every_figure": true,
+    "fct_panels": "one panel per size rung with mean CDF and shaded min-max band",
+    "flow_dynamics_panels": [
+      "overall_schedule",
+      "convergence_1_to_2",
+      "divergence_2_to_1"
+    ],
+    "formats": [
+      "pdf",
+      "png"
+    ],
+    "grammar": "rnic-cn join and exit rate presentation",
+    "incast_panels": "one schedule plus one FCT CDF panel per degree",
+    "path_rendering": "POSIX",
+    "raw_rate_style": "steps from fixed bins with no smoothing"
+  },
+  "raw_evidence_sha256": {
+    "convergence-rate.csv": "0932b93e6f2df6c347681afbf0543b06a37d0e59db3d944828c662fd649e85e5",
+    "divergence-rate.csv": "e079bc095ae81182e2557a369944c67f42b04ae48e6b876742ce2b47fb3b1417",
+    "fct-cdf.csv": "500f4a2a2aa971d33e31b7769199d4107ec7cf29f617d3d36524b1ea8283ab65",
+    "fct-samples.csv": "d051bb65d802d4a3e90a65f7dbf3ba573bee32b7d76ea5956c51d172f841bef8",
+    "incast-degree-1-rate.csv": "10fd2c85fb13dff27fee4ed224f72163cee453d8b8fb301b81541388bd6d6536",
+    "incast-degree-2-rate.csv": "231992b0fe21108f39dd4c4808e3ebae31c5def0a983d31841e0846d811bbfcb",
+    "incast-degree-3-rate.csv": "00bc0d34a12c7e05b9ff43806b3ce30356478d97707f085882f56b122a974825",
+    "overall-rate.csv": "8cf9bc0d6db61f7a190ccdf2d00ca3f3794ccaea2177a9b01e38d3992201780b"
+  },
+  "schema": "simllm-nvlink-flow-dynamics-result-v1",
+  "study_verdict": "PASS_WITH_EXPECTED_FANOUT_REFUTATION",
+  "task": "TRAF-69"
+}

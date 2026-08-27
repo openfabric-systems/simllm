@@ -175,6 +175,7 @@ def test_plot_and_publication_contract_names_all_five_figures():
     }
     plot_source = (STUDY / "plot_study.py").read_text(encoding="utf-8")
     assert "Raw fixed bins, no smoothing" in plot_source
+    assert "raw_bin_ps" in plot_source
     assert "pointwise seed min-max" in plot_source
     assert plot_study.DISCLOSURE.startswith("Mixed evidence")
 
