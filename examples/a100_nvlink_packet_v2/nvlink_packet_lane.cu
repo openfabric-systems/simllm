@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -637,79 +638,115 @@ std::uint64_t field_unsigned(const nvmlFieldValue_t& field) {
   throw std::runtime_error("NVML throughput field has a non-unsigned value type");
 }
 
-std::vector<LinkSnapshot> capture_links(const HardwareContext& context) {
+std::vector<LinkSnapshot> capture_gpu_links(
+    const HardwareContext& context, int gpu,
+    const std::array<unsigned int, 4>& fields) {
   std::vector<LinkSnapshot> snapshots;
+  for (unsigned int link = 0; link < NVML_NVLINK_MAX_LINKS; ++link) {
+    nvmlEnableState_t active = NVML_FEATURE_DISABLED;
+    const auto state_status =
+        nvmlDeviceGetNvLinkState(context.nvml_devices[gpu], link, &active);
+    if (state_status == NVML_ERROR_INVALID_ARGUMENT) break;
+    if (state_status != NVML_SUCCESS || active != NVML_FEATURE_ENABLED) continue;
+    LinkSnapshot snapshot;
+    snapshot.gpu = gpu;
+    snapshot.link = static_cast<int>(link);
+    nvmlPciInfo_t remote{};
+    const auto remote_status = nvmlDeviceGetNvLinkRemotePciInfo_v2(
+        context.nvml_devices[gpu], link, &remote);
+    if (remote_status == NVML_SUCCESS) {
+      for (int candidate = 0; candidate < 4; ++candidate) {
+        if (context.pci_bus_ids[candidate] == remote.busId) {
+          snapshot.remote_gpu = candidate;
+        }
+      }
+    }
+    std::array<nvmlFieldValue_t, 4> values{};
+    for (std::size_t index = 0; index < values.size(); ++index) {
+      values[index].fieldId = fields[index];
+      values[index].scopeId = link;
+    }
+    const auto field_status = nvmlDeviceGetFieldValues(
+        context.nvml_devices[gpu], static_cast<int>(values.size()), values.data());
+    for (std::size_t index = 0; index < values.size(); ++index) {
+      snapshot.statuses[index] = field_status == NVML_SUCCESS
+          ? static_cast<int>(values[index].nvmlReturn)
+          : static_cast<int>(field_status);
+      if (snapshot.statuses[index] == NVML_SUCCESS) {
+        snapshot.throughput[index] = field_unsigned(values[index]);
+      }
+    }
+    for (int counter = 0; counter < 5; ++counter) {
+      unsigned long long value = 0;
+      const auto error_status = nvmlDeviceGetNvLinkErrorCounter(
+          context.nvml_devices[gpu], link,
+          static_cast<nvmlNvLinkErrorCounter_t>(counter), &value);
+      snapshot.statuses[4 + counter] = static_cast<int>(error_status);
+      if (error_status == NVML_SUCCESS) snapshot.errors[counter] = value;
+    }
+    snapshots.push_back(snapshot);
+  }
+  return snapshots;
+}
+
+std::vector<LinkSnapshot> capture_links(const HardwareContext& context) {
   const std::array<unsigned int, 4> fields = {
       NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX,
       NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX,
       NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_TX,
       NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_RX};
+  std::array<std::vector<LinkSnapshot>, 4> by_gpu;
+  std::array<std::exception_ptr, 4> failures{};
+  std::array<std::thread, 4> workers;
   for (int gpu = 0; gpu < 4; ++gpu) {
-    for (unsigned int link = 0; link < NVML_NVLINK_MAX_LINKS; ++link) {
-      nvmlEnableState_t active = NVML_FEATURE_DISABLED;
-      const auto state_status =
-          nvmlDeviceGetNvLinkState(context.nvml_devices[gpu], link, &active);
-      if (state_status == NVML_ERROR_INVALID_ARGUMENT) break;
-      if (state_status != NVML_SUCCESS || active != NVML_FEATURE_ENABLED) continue;
-      LinkSnapshot snapshot;
-      snapshot.gpu = gpu;
-      snapshot.link = static_cast<int>(link);
-      nvmlPciInfo_t remote{};
-      const auto remote_status = nvmlDeviceGetNvLinkRemotePciInfo_v2(
-          context.nvml_devices[gpu], link, &remote);
-      if (remote_status == NVML_SUCCESS) {
-        for (int candidate = 0; candidate < 4; ++candidate) {
-          if (context.pci_bus_ids[candidate] == remote.busId) snapshot.remote_gpu = candidate;
-        }
+    workers[gpu] = std::thread([&context, &fields, &by_gpu, &failures, gpu]() {
+      try {
+        by_gpu[gpu] = capture_gpu_links(context, gpu, fields);
+      } catch (...) {
+        failures[gpu] = std::current_exception();
       }
-      std::array<nvmlFieldValue_t, 4> values{};
-      for (std::size_t index = 0; index < values.size(); ++index) {
-        values[index].fieldId = fields[index];
-        values[index].scopeId = link;
-      }
-      const auto field_status = nvmlDeviceGetFieldValues(
-          context.nvml_devices[gpu], static_cast<int>(values.size()), values.data());
-      for (std::size_t index = 0; index < values.size(); ++index) {
-        snapshot.statuses[index] = field_status == NVML_SUCCESS
-            ? static_cast<int>(values[index].nvmlReturn)
-            : static_cast<int>(field_status);
-        if (snapshot.statuses[index] == NVML_SUCCESS) {
-          snapshot.throughput[index] = field_unsigned(values[index]);
-        }
-      }
-      for (int counter = 0; counter < 5; ++counter) {
-        unsigned long long value = 0;
-        const auto error_status = nvmlDeviceGetNvLinkErrorCounter(
-            context.nvml_devices[gpu], link,
-            static_cast<nvmlNvLinkErrorCounter_t>(counter), &value);
-        snapshot.statuses[4 + counter] = static_cast<int>(error_status);
-        if (error_status == NVML_SUCCESS) snapshot.errors[counter] = value;
-      }
-      snapshots.push_back(snapshot);
-    }
+    });
+  }
+  for (auto& worker : workers) worker.join();
+  std::vector<LinkSnapshot> snapshots;
+  for (int gpu = 0; gpu < 4; ++gpu) {
+    if (failures[gpu]) std::rethrow_exception(failures[gpu]);
+    snapshots.insert(snapshots.end(), by_gpu[gpu].begin(), by_gpu[gpu].end());
   }
   return snapshots;
 }
 
 std::vector<DeviceTelemetry> capture_telemetry(const HardwareContext& context) {
-  std::vector<DeviceTelemetry> telemetry;
+  std::array<DeviceTelemetry, 4> by_gpu;
+  std::array<std::exception_ptr, 4> failures{};
+  std::array<std::thread, 4> workers;
   for (int gpu = 0; gpu < 4; ++gpu) {
-    DeviceTelemetry value;
-    value.gpu = gpu;
-    unsigned long long reasons = 0;
-    value.statuses[0] = nvmlDeviceGetCurrentClocksThrottleReasons(
-        context.nvml_devices[gpu], &reasons);
-    value.clock_event_reasons = reasons;
-    value.statuses[1] = nvmlDeviceGetClockInfo(
-        context.nvml_devices[gpu], NVML_CLOCK_SM, &value.sm_clock_mhz);
-    value.statuses[2] = nvmlDeviceGetClockInfo(
-        context.nvml_devices[gpu], NVML_CLOCK_MEM, &value.memory_clock_mhz);
-    value.statuses[3] = nvmlDeviceGetPowerUsage(context.nvml_devices[gpu], &value.power_mw);
-    value.statuses[4] = nvmlDeviceGetTemperature(
-        context.nvml_devices[gpu], NVML_TEMPERATURE_GPU, &value.temperature_c);
-    telemetry.push_back(value);
+    workers[gpu] = std::thread([&context, &by_gpu, &failures, gpu]() {
+      try {
+        auto& value = by_gpu[gpu];
+        value.gpu = gpu;
+        unsigned long long reasons = 0;
+        value.statuses[0] = nvmlDeviceGetCurrentClocksThrottleReasons(
+            context.nvml_devices[gpu], &reasons);
+        value.clock_event_reasons = reasons;
+        value.statuses[1] = nvmlDeviceGetClockInfo(
+            context.nvml_devices[gpu], NVML_CLOCK_SM, &value.sm_clock_mhz);
+        value.statuses[2] = nvmlDeviceGetClockInfo(
+            context.nvml_devices[gpu], NVML_CLOCK_MEM, &value.memory_clock_mhz);
+        value.statuses[3] =
+            nvmlDeviceGetPowerUsage(context.nvml_devices[gpu], &value.power_mw);
+        value.statuses[4] = nvmlDeviceGetTemperature(
+            context.nvml_devices[gpu], NVML_TEMPERATURE_GPU, &value.temperature_c);
+      } catch (...) {
+        failures[gpu] = std::current_exception();
+      }
+    });
   }
-  return telemetry;
+  for (auto& worker : workers) worker.join();
+  for (const auto& failure : failures) {
+    if (failure) std::rethrow_exception(failure);
+  }
+  return {by_gpu.begin(), by_gpu.end()};
 }
 
 std::vector<LinkDelta> link_deltas(const std::vector<LinkSnapshot>& before,

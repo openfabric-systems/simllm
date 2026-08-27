@@ -213,6 +213,7 @@ def test_hardware_source_and_submission_pin_required_interfaces():
     assert "NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX" in source
     assert "NVML_FI_DEV_NVLINK_THROUGHPUT_RAW_RX" in source
     assert "nvmlDeviceGetNvLinkErrorCounter" in source
+    assert "std::array<std::thread, 4> workers" in source
     assert "nvmlDeviceGetCurrentClocksThrottleReasons" in source
     assert "cudaMemcpyPeerAsync" in source
     assert "ncclSend" in source and "ncclRecv" in source
@@ -254,11 +255,27 @@ def test_scorer_exposes_all_frozen_guards_and_gate_logic():
 
 
 def test_scorer_refuses_shortcut_promotions_and_uses_frozen_rate_band():
+    guard_text = """=== gpu_list returncode=0 ===
+GPU 0: NVIDIA A100-SXM4-80GB
+GPU 1: NVIDIA A100-SXM4-80GB
+GPU 2: NVIDIA A100-SXM4-80GB
+GPU 3: NVIDIA A100-SXM4-80GB
+
+=== topology returncode=0 ===
+GPU0 X NV4 NV4 NV4
+GPU1 NV4 X NV4 NV4
+GPU2 NV4 NV4 X NV4
+GPU3 NV4 NV4 NV4 X
+
+=== clocks returncode=0 ===
+GPU 0: NVIDIA A100-SXM4-80GB
+"""
     script = f"""
 import json
 import sys
 sys.path.insert(0, {str(STUDY)!r})
 import score_hardware as scorer
+guard_text = {guard_text!r}
 packet_audit = {{}}
 packet = scorer._score_packet_fit([], packet_audit)
 link_audit = {{}}
@@ -278,6 +295,8 @@ print(json.dumps({{
     "credit_statuses": sorted({{value[0] for value in credits.values()}}),
     "confirmed": scorer._identified_relation(spec, 27_250_000_000),
     "refuted": scorer._identified_relation(spec, 27_750_000_001),
+    "gpu_list_count": scorer._gpu_list_count(guard_text),
+    "nv4_row_count": scorer._nv4_row_count(guard_text),
 }}))
 """
     completed = subprocess.run(
@@ -297,4 +316,6 @@ print(json.dumps({{
         "credit_statuses": ["INCONCLUSIVE"],
         "confirmed": "CONFIRMED",
         "refuted": "REFUTED_AND_REPLACED",
+        "gpu_list_count": 4,
+        "nv4_row_count": 4,
     }

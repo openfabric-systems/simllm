@@ -357,7 +357,7 @@ def score_cell_guards(attempt: Attempt) -> dict[str, Any]:
     before = attempt.guards_before
     after = attempt.guards_after
     topology_ok = all(
-        text.count("A100-SXM4-80GB") == 4 and _nv4_row_count(text) == 4
+        _gpu_list_count(text) == 4 and _nv4_row_count(text) == 4
         for text in (before, after)
     )
     processes_clear = all(not _process_section(text).strip() for text in (before, after))
@@ -414,6 +414,21 @@ def _nv4_row_count(text: str) -> int:
         line.startswith(tuple(f"GPU{index}" for index in range(4)))
         and line.split().count("NV4") == 3
         for line in text.splitlines()
+    )
+
+
+def _gpu_list_count(text: str) -> int:
+    match = re.search(
+        r"=== gpu_list returncode=0 ===\n(.*?)(?=\n=== |\Z)",
+        text,
+        flags=re.DOTALL,
+    )
+    if match is None:
+        return 0
+    return sum(
+        line.startswith(tuple(f"GPU {index}:" for index in range(4)))
+        and "A100-SXM4-80GB" in line
+        for line in match.group(1).splitlines()
     )
 
 
