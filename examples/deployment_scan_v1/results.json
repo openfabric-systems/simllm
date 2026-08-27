@@ -7,17 +7,18 @@
       "status": "PASS"
     },
     {
-      "detail": "all points carry strict estimate stamps and authority-correct classes",
+      "detail": "EstimateStamp.schema fixes the v1 schema and FrontierPoint.__post_init__ enforces point class against SIM-DERIVED consumption; FG-4 carries the observable wire mutation control",
       "id": "FG-2",
-      "status": "PASS"
+      "runtime_evidence": false,
+      "status": "ENFORCED_BY_CONSTRUCTION"
     },
     {
-      "detail": "every consumed duration has an allowed evidence class and source",
+      "detail": "all terms across 7 records and 6073 points have allowed sourced evidence; declared handoff and prefill service classes were checked individually",
       "id": "FG-3",
       "status": "PASS"
     },
     {
-      "detail": "candidate, estimate stamp and frontier record boundaries are strict",
+      "detail": "candidate, estimate stamp and frontier record boundaries are strict; the point-class mutation negative control was rejected",
       "id": "FG-4",
       "status": "PASS"
     },
@@ -27,12 +28,13 @@
       "status": "PASS"
     },
     {
-      "detail": "expectations commit 15ee956e2ba54a851884d2cba5d6abd7ca0cdd8d contains only examples/deployment_scan_v1/expectations.md",
+      "detail": "chronology for expectations commit 15ee956e2ba54a851884d2cba5d6abd7ca0cdd8d is not evaluated in-process; tests/test_deployment_scan_study.py and the integrator verify it without weakening the subprocess guard",
       "id": "FG-6",
-      "status": "PASS"
+      "runtime_evidence": false,
+      "status": "VERIFIED_OUT_OF_PROCESS"
     },
     {
-      "detail": "pipeline-parallel rejection retained its stable reason and emitted no points",
+      "detail": "the runtime negative-control scan retained the stable pipeline-parallel reason and emitted no points",
       "id": "D4",
       "status": "PASS"
     }
@@ -72,6 +74,32 @@
     "serialized_ceiling": "B100 batch 32 is 4,523,298,348 ps, between its 4,257,218,560 ps intra-node floor and the conservative 8,516,304,727 ps sum of kernel and simulated intra-node service.",
     "system_plausibility": "The H100 batch-32 estimate is 104.87 token/s/request and 3,355.88 token/s/GPU, above the paired published 87.04 and 2,785.25 anchors as a floor-style estimate should be."
   },
+  "post_specified_regressions": {
+    "checks": [
+      {
+        "detail": "direct floor division at 300 Gbit/s differs from rounded scaling of the 400 Gbit/s floor",
+        "expected": {
+          "fabric_floor_ps": 177384106,
+          "step_ps": 8234981205
+        },
+        "family": "B1-floor-division-discrimination",
+        "instances": 1,
+        "observed": {
+          "batch_per_gpu": 1,
+          "configuration_id": "h100-two-node-serialized",
+          "emitted_fabric_floor_ps": 177384106,
+          "emitted_step_ps": 8234981205,
+          "floor_division_candidate_ps": 177384106,
+          "max_flow_bytes": 6651904,
+          "rate_bits_per_second": 300000000000,
+          "rounded_scaling_candidate_ps": 177384107
+        },
+        "status": "PASS"
+      }
+    ],
+    "classification": "POST-SPECIFIED",
+    "scored": false
+  },
   "provenance": {
     "expectations_commit": "15ee956e2ba54a851884d2cba5d6abd7ca0cdd8d",
     "expectations_path": "examples/deployment_scan_v1/expectations.md",
@@ -81,7 +109,7 @@
       "6e16070fb4d8a772ed738a9490998b30e44183a4",
       "4ec8538823a944b22a20b24f808dea28ecaddb66",
       "110020e80226fd02cd12f037b8c51652e12a27be",
-      "069ac9d409c31d6f4f883d34079199e88fc2257a"
+      "ee48d2a66b271fc3475632bf879c36aafb24f64b"
     ]
   },
   "records": {
@@ -3414,14 +3442,486 @@
   "score_classes": {
     "behavioral_relations": [
       {
-        "detail": "floor-division bandwidth recomposition",
+        "detail": "independent pinned-byte floor division and step recomposition at 200 and 100 Gbit/s",
         "expected": {
-          "mismatches": []
+          "fabric_floor_mismatches": [],
+          "step_composition_mismatches": []
         },
         "family": "B1-exact",
         "instances": 36,
         "observed": {
-          "mismatches": []
+          "fabric_floor_mismatches": [],
+          "independent_cell_recomputations": [
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3448398380,
+              "expected_step_ps": 3448398380,
+              "kernel_floor_ps": 3448398380,
+              "local_logical_bytes": 13303808,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 133038080
+            },
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3448398380,
+              "expected_step_ps": 3448398380,
+              "kernel_floor_ps": 3448398380,
+              "local_logical_bytes": 13303808,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 133038080
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3465966380,
+              "expected_step_ps": 3465966380,
+              "kernel_floor_ps": 3465966380,
+              "local_logical_bytes": 26607616,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 266076160
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3465966380,
+              "expected_step_ps": 3465966380,
+              "kernel_floor_ps": 3465966380,
+              "local_logical_bytes": 26607616,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 266076160
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3501102380,
+              "expected_step_ps": 3501102380,
+              "kernel_floor_ps": 3501102380,
+              "local_logical_bytes": 53215232,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 532152320
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3501102380,
+              "expected_step_ps": 3501102380,
+              "kernel_floor_ps": 3501102380,
+              "local_logical_bytes": 53215232,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 532152320
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3571374380,
+              "expected_step_ps": 3571374380,
+              "kernel_floor_ps": 3571374380,
+              "local_logical_bytes": 106430464,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 1064304640
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3571374380,
+              "expected_step_ps": 3571374380,
+              "kernel_floor_ps": 3571374380,
+              "local_logical_bytes": 106430464,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 1064304640
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3711918380,
+              "expected_step_ps": 3711918380,
+              "kernel_floor_ps": 3711918380,
+              "local_logical_bytes": 212860928,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 2128609280
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3711918380,
+              "expected_step_ps": 3711918380,
+              "kernel_floor_ps": 3711918380,
+              "local_logical_bytes": 212860928,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 2128609280
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 4257218560,
+              "expected_step_ps": 4257218560,
+              "kernel_floor_ps": 3993006379,
+              "local_logical_bytes": 425721856,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 4257218560
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 4257218560,
+              "expected_step_ps": 4257218560,
+              "kernel_floor_ps": 3993006379,
+              "local_logical_bytes": 425721856,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 4257218560
+            },
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 266076160,
+              "emitted_step_ps": 8234981205,
+              "expected_step_ps": 8234981205,
+              "kernel_floor_ps": 8234981205,
+              "local_logical_bytes": 6651904,
+              "max_flow_bytes": 6651904,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 266076160,
+              "recomputed_intra_floor_ps": 66519040
+            },
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 532152320,
+              "emitted_step_ps": 8234981205,
+              "expected_step_ps": 8234981205,
+              "kernel_floor_ps": 8234981205,
+              "local_logical_bytes": 6651904,
+              "max_flow_bytes": 6651904,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 532152320,
+              "recomputed_intra_floor_ps": 66519040
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 532152320,
+              "emitted_step_ps": 8276934638,
+              "expected_step_ps": 8276934638,
+              "kernel_floor_ps": 8276934638,
+              "local_logical_bytes": 13303808,
+              "max_flow_bytes": 13303808,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 532152320,
+              "recomputed_intra_floor_ps": 133038080
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 1064304640,
+              "emitted_step_ps": 8276934638,
+              "expected_step_ps": 8276934638,
+              "kernel_floor_ps": 8276934638,
+              "local_logical_bytes": 13303808,
+              "max_flow_bytes": 13303808,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 1064304640,
+              "recomputed_intra_floor_ps": 133038080
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 1064304640,
+              "emitted_step_ps": 8360841504,
+              "expected_step_ps": 8360841504,
+              "kernel_floor_ps": 8360841504,
+              "local_logical_bytes": 26607616,
+              "max_flow_bytes": 26607616,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 1064304640,
+              "recomputed_intra_floor_ps": 266076160
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 2128609280,
+              "emitted_step_ps": 8360841504,
+              "expected_step_ps": 8360841504,
+              "kernel_floor_ps": 8360841504,
+              "local_logical_bytes": 26607616,
+              "max_flow_bytes": 26607616,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 2128609280,
+              "recomputed_intra_floor_ps": 266076160
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 2128609280,
+              "emitted_step_ps": 8528655235,
+              "expected_step_ps": 8528655235,
+              "kernel_floor_ps": 8528655235,
+              "local_logical_bytes": 53215232,
+              "max_flow_bytes": 53215232,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 2128609280,
+              "recomputed_intra_floor_ps": 532152320
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 4257218560,
+              "emitted_step_ps": 8528655235,
+              "expected_step_ps": 8528655235,
+              "kernel_floor_ps": 8528655235,
+              "local_logical_bytes": 53215232,
+              "max_flow_bytes": 53215232,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 4257218560,
+              "recomputed_intra_floor_ps": 532152320
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 4257218560,
+              "emitted_step_ps": 8864282698,
+              "expected_step_ps": 8864282698,
+              "kernel_floor_ps": 8864282698,
+              "local_logical_bytes": 106430464,
+              "max_flow_bytes": 106430464,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 4257218560,
+              "recomputed_intra_floor_ps": 1064304640
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 8514437120,
+              "emitted_step_ps": 8864282698,
+              "expected_step_ps": 8864282698,
+              "kernel_floor_ps": 8864282698,
+              "local_logical_bytes": 106430464,
+              "max_flow_bytes": 106430464,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 8514437120,
+              "recomputed_intra_floor_ps": 1064304640
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 8514437120,
+              "emitted_step_ps": 9535537623,
+              "expected_step_ps": 9535537623,
+              "kernel_floor_ps": 9535537623,
+              "local_logical_bytes": 212860928,
+              "max_flow_bytes": 212860928,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 8514437120,
+              "recomputed_intra_floor_ps": 2128609280
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 17028874240,
+              "emitted_step_ps": 17028874240,
+              "expected_step_ps": 17028874240,
+              "kernel_floor_ps": 9535537623,
+              "local_logical_bytes": 212860928,
+              "max_flow_bytes": 212860928,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 17028874240,
+              "recomputed_intra_floor_ps": 2128609280
+            },
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 59128040,
+              "emitted_step_ps": 8234981205,
+              "expected_step_ps": 8234981205,
+              "kernel_floor_ps": 8234981205,
+              "local_logical_bytes": 1478200,
+              "max_flow_bytes": 1478201,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 59128040,
+              "recomputed_intra_floor_ps": 14782000
+            },
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 118256080,
+              "emitted_step_ps": 8234981205,
+              "expected_step_ps": 8234981205,
+              "kernel_floor_ps": 8234981205,
+              "local_logical_bytes": 1478200,
+              "max_flow_bytes": 1478201,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 118256080,
+              "recomputed_intra_floor_ps": 14782000
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 118256080,
+              "emitted_step_ps": 8276934638,
+              "expected_step_ps": 8276934638,
+              "kernel_floor_ps": 8276934638,
+              "local_logical_bytes": 2956401,
+              "max_flow_bytes": 2956402,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 118256080,
+              "recomputed_intra_floor_ps": 29564010
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 236512160,
+              "emitted_step_ps": 8276934638,
+              "expected_step_ps": 8276934638,
+              "kernel_floor_ps": 8276934638,
+              "local_logical_bytes": 2956401,
+              "max_flow_bytes": 2956402,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 236512160,
+              "recomputed_intra_floor_ps": 29564010
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 236512160,
+              "emitted_step_ps": 8360841504,
+              "expected_step_ps": 8360841504,
+              "kernel_floor_ps": 8360841504,
+              "local_logical_bytes": 5912803,
+              "max_flow_bytes": 5912804,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 236512160,
+              "recomputed_intra_floor_ps": 59128030
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 473024320,
+              "emitted_step_ps": 8360841504,
+              "expected_step_ps": 8360841504,
+              "kernel_floor_ps": 8360841504,
+              "local_logical_bytes": 5912803,
+              "max_flow_bytes": 5912804,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 473024320,
+              "recomputed_intra_floor_ps": 59128030
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 473024320,
+              "emitted_step_ps": 8528655235,
+              "expected_step_ps": 8528655235,
+              "kernel_floor_ps": 8528655235,
+              "local_logical_bytes": 11825607,
+              "max_flow_bytes": 11825608,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 473024320,
+              "recomputed_intra_floor_ps": 118256070
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 946048640,
+              "emitted_step_ps": 8528655235,
+              "expected_step_ps": 8528655235,
+              "kernel_floor_ps": 8528655235,
+              "local_logical_bytes": 11825607,
+              "max_flow_bytes": 11825608,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 946048640,
+              "recomputed_intra_floor_ps": 118256070
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 946048600,
+              "emitted_step_ps": 8864282698,
+              "expected_step_ps": 8864282698,
+              "kernel_floor_ps": 8864282698,
+              "local_logical_bytes": 23651214,
+              "max_flow_bytes": 23651215,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 946048600,
+              "recomputed_intra_floor_ps": 236512140
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 1892097200,
+              "emitted_step_ps": 8864282698,
+              "expected_step_ps": 8864282698,
+              "kernel_floor_ps": 8864282698,
+              "local_logical_bytes": 23651214,
+              "max_flow_bytes": 23651215,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 1892097200,
+              "recomputed_intra_floor_ps": 236512140
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 1892097160,
+              "emitted_step_ps": 9535537623,
+              "expected_step_ps": 9535537623,
+              "kernel_floor_ps": 9535537623,
+              "local_logical_bytes": 47302428,
+              "max_flow_bytes": 47302429,
+              "rate_bits_per_second": 200000000000,
+              "recomputed_fabric_floor_ps": 1892097160,
+              "recomputed_intra_floor_ps": 473024280
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 3784194320,
+              "emitted_step_ps": 9535537623,
+              "expected_step_ps": 9535537623,
+              "kernel_floor_ps": 9535537623,
+              "local_logical_bytes": 47302428,
+              "max_flow_bytes": 47302429,
+              "rate_bits_per_second": 100000000000,
+              "recomputed_fabric_floor_ps": 3784194320,
+              "recomputed_intra_floor_ps": 473024280
+            }
+          ],
+          "step_composition_mismatches": []
         },
         "status": "PASS"
       },
@@ -3531,11 +4031,251 @@
       {
         "detail": "installed analytical step versus pinned CORE-62 oracle",
         "expected": {
+          "frozen_spot_literal_mismatches": [],
+          "independent_400_gbit_component_mismatches": [],
           "max_absolute_error_ps": 0
         },
         "family": "C1",
         "instances": 18,
         "observed": {
+          "frozen_spot_literal_mismatches": [],
+          "independent_400_gbit_component_mismatches": [],
+          "independent_400_gbit_recomputations": [
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3448398380,
+              "expected_step_ps": 3448398380,
+              "kernel_floor_ps": 3448398380,
+              "local_logical_bytes": 13303808,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 133038080
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3465966380,
+              "expected_step_ps": 3465966380,
+              "kernel_floor_ps": 3465966380,
+              "local_logical_bytes": 26607616,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 266076160
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3501102380,
+              "expected_step_ps": 3501102380,
+              "kernel_floor_ps": 3501102380,
+              "local_logical_bytes": 53215232,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 532152320
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3571374380,
+              "expected_step_ps": 3571374380,
+              "kernel_floor_ps": 3571374380,
+              "local_logical_bytes": 106430464,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 1064304640
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 3711918380,
+              "expected_step_ps": 3711918380,
+              "kernel_floor_ps": 3711918380,
+              "local_logical_bytes": 212860928,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 2128609280
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "b100-one-node-intra",
+              "emitted_fabric_floor_ps": 0,
+              "emitted_step_ps": 4257218560,
+              "expected_step_ps": 4257218560,
+              "kernel_floor_ps": 3993006379,
+              "local_logical_bytes": 425721856,
+              "max_flow_bytes": 0,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 0,
+              "recomputed_intra_floor_ps": 4257218560
+            },
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 133038080,
+              "emitted_step_ps": 8234981205,
+              "expected_step_ps": 8234981205,
+              "kernel_floor_ps": 8234981205,
+              "local_logical_bytes": 6651904,
+              "max_flow_bytes": 6651904,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 133038080,
+              "recomputed_intra_floor_ps": 66519040
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 266076160,
+              "emitted_step_ps": 8276934638,
+              "expected_step_ps": 8276934638,
+              "kernel_floor_ps": 8276934638,
+              "local_logical_bytes": 13303808,
+              "max_flow_bytes": 13303808,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 266076160,
+              "recomputed_intra_floor_ps": 133038080
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 532152320,
+              "emitted_step_ps": 8360841504,
+              "expected_step_ps": 8360841504,
+              "kernel_floor_ps": 8360841504,
+              "local_logical_bytes": 26607616,
+              "max_flow_bytes": 26607616,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 532152320,
+              "recomputed_intra_floor_ps": 266076160
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 1064304640,
+              "emitted_step_ps": 8528655235,
+              "expected_step_ps": 8528655235,
+              "kernel_floor_ps": 8528655235,
+              "local_logical_bytes": 53215232,
+              "max_flow_bytes": 53215232,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 1064304640,
+              "recomputed_intra_floor_ps": 532152320
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 2128609280,
+              "emitted_step_ps": 8864282698,
+              "expected_step_ps": 8864282698,
+              "kernel_floor_ps": 8864282698,
+              "local_logical_bytes": 106430464,
+              "max_flow_bytes": 106430464,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 2128609280,
+              "recomputed_intra_floor_ps": 1064304640
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-two-node-serialized",
+              "emitted_fabric_floor_ps": 4257218560,
+              "emitted_step_ps": 9535537623,
+              "expected_step_ps": 9535537623,
+              "kernel_floor_ps": 9535537623,
+              "local_logical_bytes": 212860928,
+              "max_flow_bytes": 212860928,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 4257218560,
+              "recomputed_intra_floor_ps": 2128609280
+            },
+            {
+              "batch_per_gpu": 1,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 29564020,
+              "emitted_step_ps": 8234981205,
+              "expected_step_ps": 8234981205,
+              "kernel_floor_ps": 8234981205,
+              "local_logical_bytes": 1478200,
+              "max_flow_bytes": 1478201,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 29564020,
+              "recomputed_intra_floor_ps": 14782000
+            },
+            {
+              "batch_per_gpu": 2,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 59128040,
+              "emitted_step_ps": 8276934638,
+              "expected_step_ps": 8276934638,
+              "kernel_floor_ps": 8276934638,
+              "local_logical_bytes": 2956401,
+              "max_flow_bytes": 2956402,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 59128040,
+              "recomputed_intra_floor_ps": 29564010
+            },
+            {
+              "batch_per_gpu": 4,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 118256080,
+              "emitted_step_ps": 8360841504,
+              "expected_step_ps": 8360841504,
+              "kernel_floor_ps": 8360841504,
+              "local_logical_bytes": 5912803,
+              "max_flow_bytes": 5912804,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 118256080,
+              "recomputed_intra_floor_ps": 59128030
+            },
+            {
+              "batch_per_gpu": 8,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 236512160,
+              "emitted_step_ps": 8528655235,
+              "expected_step_ps": 8528655235,
+              "kernel_floor_ps": 8528655235,
+              "local_logical_bytes": 11825607,
+              "max_flow_bytes": 11825608,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 236512160,
+              "recomputed_intra_floor_ps": 118256070
+            },
+            {
+              "batch_per_gpu": 16,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 473024300,
+              "emitted_step_ps": 8864282698,
+              "expected_step_ps": 8864282698,
+              "kernel_floor_ps": 8864282698,
+              "local_logical_bytes": 23651214,
+              "max_flow_bytes": 23651215,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 473024300,
+              "recomputed_intra_floor_ps": 236512140
+            },
+            {
+              "batch_per_gpu": 32,
+              "configuration_id": "h100-nine-node-incast",
+              "emitted_fabric_floor_ps": 946048580,
+              "emitted_step_ps": 9535537623,
+              "expected_step_ps": 9535537623,
+              "kernel_floor_ps": 9535537623,
+              "local_logical_bytes": 47302428,
+              "max_flow_bytes": 47302429,
+              "rate_bits_per_second": 400000000000,
+              "recomputed_fabric_floor_ps": 946048580,
+              "recomputed_intra_floor_ps": 473024280
+            }
+          ],
           "max_absolute_error_ps": 0
         },
         "status": "PASS"
@@ -3543,12 +4283,20 @@
       {
         "detail": "SIM-DERIVED excess composition versus pinned simulated step",
         "expected": {
-          "max_absolute_error_ps": 0
+          "frozen_spot_literal_mismatches": [],
+          "max_absolute_error_ps": 0,
+          "simulated_differs_from_analytical": [
+            "b100-one-node-intra:b32"
+          ]
         },
         "family": "C2",
         "instances": 18,
         "observed": {
-          "max_absolute_error_ps": 0
+          "frozen_spot_literal_mismatches": [],
+          "max_absolute_error_ps": 0,
+          "simulated_differs_from_analytical": [
+            "b100-one-node-intra:b32"
+          ]
         },
         "status": "PASS"
       },
@@ -3569,10 +4317,10 @@
       {
         "detail": "observed single-process throughput, not a frozen score",
         "family": "W1b",
-        "primary_points_per_second": 2350.893210447356,
+        "primary_points_per_second": 1954.633870878461,
         "scored": false,
         "status": "REPORTED",
-        "throughput_grid_points_per_second": 2877.8601696034084
+        "throughput_grid_points_per_second": 2881.5594547940827
       }
     ],
     "synthetic_exact_oracles": [
@@ -3669,7 +4417,7 @@
         "instances": 1,
         "observed": {
           "priced_points": 72,
-          "seconds": 0.030626657
+          "seconds": 0.036835543
         },
         "status": "PASS"
       },
@@ -3683,12 +4431,12 @@
         "instances": 1,
         "observed": {
           "priced_points": 6000,
-          "seconds": 2.084882394
+          "seconds": 2.082205866
         },
         "status": "PASS"
       }
     ]
   },
   "status": "PASS",
-  "verdict": "PASS: every frozen scored family passed and the maximum compatibility error was 0 ps."
+  "verdict": "PASS: every frozen scored family and the post-specified floor-division regression passed; the maximum compatibility error was 0 ps."
 }
