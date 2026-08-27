@@ -168,6 +168,13 @@ examples/deployment_frontier_v1/*.csv text eol=lf
 examples/deployment_frontier_v1/figures/*.pdf -text -diff
 examples/deployment_frontier_v1/figures/*.png -text -diff
 tests/test_deployment_frontier_*.py text eol=lf
+examples/deployment_scan_v1/*.json text eol=lf
+examples/deployment_scan_v1/*.csv text eol=lf
+examples/deployment_scan_v1/*.md text eol=lf
+examples/deployment_scan_v1/*.py text eol=lf
+examples/deployment_scan_v1/figures/*.pdf -text -diff
+examples/deployment_scan_v1/figures/*.png -text -diff
+tests/test_deployment_scan_study.py text eol=lf
 simllm/compute/transformer.py text eol=lf
 simllm/compute/provider.py text eol=lf
 simllm/backends/htsim_rnic.py text eol=lf
