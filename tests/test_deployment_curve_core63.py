@@ -247,6 +247,21 @@ def test_csv_reader_header_rejection_carries_observed_fields() -> None:
     assert caught.value.observed_header == ("pool", "shape", "name")
 
 
+def test_csv_reader_selection_rejection_carries_only_routing_labels() -> None:
+    reader = _reader()
+    payload = _legacy_csv_header() + _legacy_csv_row(
+        pool="decode_graph",
+        shape=32,
+        name="secret_kernel_payload",
+    )
+
+    with pytest.raises(reader.KernelSummarySelectionError) as caught:
+        reader.extract_standard_decode_kernels(io.BytesIO(payload))
+
+    assert caught.value.observed_routes == (("decode_graph", "32"),)
+    assert "secret_kernel_payload" not in str(caught.value.observed_routes)
+
+
 def test_public_reader_refuses_other_candidate_and_logs_attempt(tmp_path: Path) -> None:
     access_log = tmp_path / "access.jsonl"
 

@@ -74,6 +74,14 @@ class KernelSummaryHeaderError(ValueError):
         self.observed_header = observed_header
 
 
+class KernelSummarySelectionError(ValueError):
+    """Carry routing labels without carrying any kernel payload values."""
+
+    def __init__(self, observed_routes: tuple[tuple[str, str], ...]) -> None:
+        super().__init__("standard decode noncollective kernel rows are missing")
+        self.observed_routes = observed_routes
+
+
 def _append_access(log_path: Path, entry: Mapping[str, Any]) -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8", newline="\n") as stream:
@@ -125,6 +133,7 @@ def extract_standard_decode_kernels(
         raise KernelSummaryHeaderError(header)
     selected: list[dict[str, str]] = []
     saw_selected_shape = False
+    observed_routes: set[tuple[str, str]] = set()
     for raw in stream:
         consumed += len(raw)
         prefix = raw.split(b",", 2 if legacy_schema else 3)
@@ -132,6 +141,10 @@ def extract_standard_decode_kernels(
         if len(prefix) != expected_prefix_width:
             raise ValueError("kernel summary row lacks routing fields")
         pool, shape = prefix[:2]
+        try:
+            observed_routes.add((pool.decode("ascii"), shape.decode("ascii")))
+        except UnicodeDecodeError as exc:
+            raise ValueError("kernel summary routing fields are not ASCII") from exc
         if (pool, shape) != (b"decode", b"32"):
             continue
         if not legacy_schema and prefix[2] != b"0":
@@ -147,7 +160,7 @@ def extract_standard_decode_kernels(
             continue
         selected.append({name: row[name] for name in CAPTURED_KERNEL_FIELDS})
     if not saw_selected_shape or not selected:
-        raise ValueError("standard decode noncollective kernel rows are missing")
+        raise KernelSummarySelectionError(tuple(sorted(observed_routes)))
     return selected, consumed
 
 
@@ -217,6 +230,8 @@ def read_standard_decode_kernels(
     except Exception as exc:
         if isinstance(exc, KernelSummaryHeaderError):
             entry["observed_header"] = list(exc.observed_header)
+        if isinstance(exc, KernelSummarySelectionError):
+            entry["observed_routes"] = [list(route) for route in exc.observed_routes]
         entry.update({"error": type(exc).__name__, "status": "REJECTED"})
         raise
     finally:
