@@ -12,6 +12,9 @@ from typing import Any
 from core64_field_reader import ACCESS_SCHEMA
 
 EXPECTATIONS_SCHEMA = "simllm-deployment-curve-core64-expectations-v1"
+RETRY_EXPECTATIONS_SCHEMA = (
+    "simllm-deployment-curve-core64-structural-retry-expectations-v1"
+)
 RESULT_SCHEMA = "simllm-deployment-curve-core64-shape-result-v1"
 EXPECTED_ACCESS_COUNT = 3
 EXPECTED_ACCESS_EVENT_COUNT = 6
@@ -134,6 +137,32 @@ def validate_access_events(
         "held_out_mtp_numeric_values_accessed_or_compared": False,
         "whole_file_streams": 0,
     }
+
+
+def validate_retry_expectations(expectations: Mapping[str, Any]) -> None:
+    """Require a retry that changes only the literal label validation."""
+
+    if expectations.get("schema") != RETRY_EXPECTATIONS_SCHEMA:
+        raise ValueError("CORE-64 retry expectations schema differs")
+    if expectations.get("task") != "CORE-64":
+        raise ValueError("CORE-64 retry task identity differs")
+    if expectations.get("status") != "EXPECTATIONS_ONLY_STRUCTURAL_RETRY":
+        raise ValueError("CORE-64 retry must precede the next access")
+    if expectations.get("arithmetic_or_direction_amended"):
+        raise ValueError("CORE-64 retry cannot amend arithmetic or direction")
+    if expectations.get("component_classification_amended"):
+        raise ValueError("CORE-64 retry cannot amend component classification")
+    if expectations.get("expected_forbidden_access_ledger") != []:
+        raise ValueError("CORE-64 retry forbidden ledger must remain empty")
+    prior = _mapping("prior_structural_rejection", expectations.get("prior_structural_rejection"))
+    if prior.get("access_count") != 3 or prior.get("event_count") != 6:
+        raise ValueError("CORE-64 prior structural access count differs")
+    if prior.get("end_statuses") != ["PASS", "PASS", "PASS"]:
+        raise ValueError("CORE-64 prior selector status sequence differs")
+    if prior.get("whole_file_streamed"):
+        raise ValueError("CORE-64 prior tranche cannot report a whole-file stream")
+    if prior.get("held_out_mtp_numeric_value_accessed"):
+        raise ValueError("CORE-64 prior tranche cannot report MTP exposure")
 
 
 def _git_blob_sha1(payload: bytes) -> str:
@@ -271,8 +300,10 @@ def _logical_family_ledger(
 
 def build_result(
     expectations: Mapping[str, Any],
+    retry_expectations: Mapping[str, Any],
     inputs: Mapping[str, Any],
     events: Sequence[Mapping[str, Any]],
+    preflight_events: Sequence[Mapping[str, Any]],
     preservation: Mapping[str, Any],
     *,
     base_commit: str,
@@ -282,9 +313,12 @@ def build_result(
     """Derive the frozen null movement from the selected standard fields."""
 
     validate_expectations(expectations)
+    validate_retry_expectations(retry_expectations)
     access = validate_access_events(events)
-    if inputs.get("attention_parallelism") != "data-parallel":
-        raise ValueError("EP72 attention parallelism differs from data-parallel")
+    preflight = validate_access_events(preflight_events)
+    attention_parallelism = inputs.get("attention_parallelism")
+    if not isinstance(attention_parallelism, str) or not attention_parallelism:
+        raise ValueError("EP72 attention parallelism label is not a string")
     standard_case = _mapping("standard_case", inputs.get("standard_case"))
     if standard_case.get("case_id") != STANDARD_CASE_ID:
         raise ValueError("selected EP72 case is not standard decode")
@@ -357,7 +391,22 @@ def build_result(
         raise ValueError("CORE-64 preservation class differs")
 
     return {
-        "access": access,
+        "access": {
+            **access,
+            "cumulative_access_count": (
+                preflight["access_count"] + access["access_count"]
+            ),
+            "cumulative_access_event_count": (
+                preflight["access_event_count"] + access["access_event_count"]
+            ),
+            "preflight_attempts": [
+                {
+                    **preflight,
+                    "arithmetic_or_result_produced": False,
+                    "rejection": "AttentionParallelismLiteralMismatch",
+                }
+            ],
+        },
         "base_commit": base_commit,
         "calibration_only": {
             "anchor_tokens_per_second_per_node": str(anchor),
@@ -386,7 +435,7 @@ def build_result(
         },
         "expectations_commit": expectations_commit,
         "per_rank_shape": {
-            "attention_parallelism": inputs["attention_parallelism"],
+            "attention_parallelism": attention_parallelism,
             "batch_per_node": shape["batch_per_node"],
             "decode_nodes": shape["decode_nodes"],
             "global_requests": shape["decode_nodes"] * shape["batch_per_node"],
@@ -537,6 +586,7 @@ __all__ = [
     "render_markdown",
     "validate_access_events",
     "validate_expectations",
+    "validate_retry_expectations",
     "verify_preservation",
     "write_new_json",
     "write_new_text",

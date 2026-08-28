@@ -137,7 +137,23 @@ def test_null_shape_result_retains_the_exact_remainder() -> None:
     expectations = _expectations()
     result = shape.build_result(
         expectations,
+        {
+            "arithmetic_or_direction_amended": False,
+            "component_classification_amended": False,
+            "expected_forbidden_access_ledger": [],
+            "prior_structural_rejection": {
+                "access_count": 3,
+                "end_statuses": ["PASS", "PASS", "PASS"],
+                "event_count": 6,
+                "held_out_mtp_numeric_value_accessed": False,
+                "whole_file_streamed": False,
+            },
+            "schema": "simllm-deployment-curve-core64-structural-retry-expectations-v1",
+            "status": "EXPECTATIONS_ONLY_STRUCTURAL_RETRY",
+            "task": "CORE-64",
+        },
         _inputs(expectations),
+        _events(),
         _events(),
         {"checked_count": 134},
         base_commit="base",
@@ -159,6 +175,7 @@ def test_null_shape_result_retains_the_exact_remainder() -> None:
         "signed_residual_movement_percentage_points": "0.000000",
     }
     assert result["registry_disposition"]["exact_remainder_id"] == "CORE-65"
+    assert result["access"]["cumulative_access_count"] == 6
 
 
 def test_access_validation_rejects_complete_byte_coverage() -> None:

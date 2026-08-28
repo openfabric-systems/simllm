@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -20,7 +21,9 @@ from core64_shape import (
 STUDY_DIR = Path(__file__).resolve().parent
 REPOSITORY_ROOT = STUDY_DIR.parents[1]
 EXPECTATIONS_PATH = STUDY_DIR / "core64_expectations.json"
-ACCESS_LEDGER_PATH = STUDY_DIR / "core64_access_ledger.jsonl"
+RETRY_EXPECTATIONS_PATH = STUDY_DIR / "core64_retry_expectations.json"
+PREFLIGHT_ACCESS_LEDGER_PATH = STUDY_DIR / "core64_access_ledger.jsonl"
+ACCESS_LEDGER_PATH = STUDY_DIR / "core64_access_ledger_retry.jsonl"
 FORBIDDEN_LEDGER_PATH = STUDY_DIR / "core64_forbidden_access_ledger.json"
 RESULT_JSON_PATH = STUDY_DIR / "core64_shape_result.json"
 RESULT_MARKDOWN_PATH = STUDY_DIR / "core64_shape_result.md"
@@ -76,15 +79,24 @@ def main() -> int:
             raise FileExistsError(f"refusing to overwrite {output}")
 
     expectations = _load_json(EXPECTATIONS_PATH)
+    retry_expectations = _load_json(RETRY_EXPECTATIONS_PATH)
     if json.loads(FORBIDDEN_LEDGER_PATH.read_text(encoding="utf-8")) != []:
         raise ValueError("forbidden-access ledger is not empty")
+    preflight_payload = PREFLIGHT_ACCESS_LEDGER_PATH.read_bytes()
+    if hashlib.sha256(preflight_payload).hexdigest() != retry_expectations[
+        "prior_structural_rejection"
+    ]["ledger_sha256"]:
+        raise ValueError("prior structural access ledger identity differs")
+    preflight_events = _load_jsonl(PREFLIGHT_ACCESS_LEDGER_PATH)
     inputs = read_core64_inputs(ACCESS_LEDGER_PATH)
     events = _load_jsonl(ACCESS_LEDGER_PATH)
     preservation = verify_preservation(expectations, REPOSITORY_ROOT)
     result = build_result(
         expectations,
+        retry_expectations,
         inputs,
         events,
+        preflight_events,
         preservation,
         base_commit=args.base_commit,
         expectations_commit=args.expectations_commit,
@@ -105,6 +117,10 @@ def main() -> int:
     write_new_text(
         args.run_dir / "access-ledger.jsonl",
         ACCESS_LEDGER_PATH.read_text(encoding="utf-8"),
+    )
+    write_new_text(
+        args.run_dir / "preflight-access-ledger.jsonl",
+        PREFLIGHT_ACCESS_LEDGER_PATH.read_text(encoding="utf-8"),
     )
     write_new_text(args.run_dir / "shape-result.json", rendered_json)
     write_new_text(args.run_dir / "shape-result.md", rendered_markdown)
