@@ -224,6 +224,16 @@ examples/deployment_curve_v1/core60_composition.py text eol=lf
 examples/deployment_curve_v1/run_core60_composition.py text eol=lf
 examples/deployment_curve_v1/core60_calibration_result.json text eol=lf
 examples/deployment_curve_v1/core60_calibration_result.md text eol=lf
+examples/external_db_parity_v1/*.csv text eol=lf
+examples/external_db_parity_v1/*.json text eol=lf
+examples/external_db_parity_v1/*.md text eol=lf
+examples/external_db_parity_v1/*.py text eol=lf
+offline/calibration/external-databases/**/*.json text eol=lf
+offline/calibration/external-databases/**/*.sha256 text eol=lf
+offline/calibration/external-databases/**/LICENSE text eol=lf
+offline/calibration/external-databases/**/MODIFIED text eol=lf
+offline/calibration/external-databases/**/THIRD_PARTY_NOTICE text eol=lf
+offline/calibration/external-databases/**/*.xz -text -diff
 tests/test_deployment_curve_core60.py text eol=lf
 examples/deployment_curve_v1/comp75_expectations.json text eol=lf
 examples/deployment_curve_v1/comp75_expectations.md text eol=lf

@@ -1,0 +1,164 @@
+{
+  "schema": "simllm-external-family-mapping-v1",
+  "source_slice_sha256": "85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284",
+  "rules": [
+    {
+      "family": "lm_head",
+      "status": "exact",
+      "external_operations": ["gemm"],
+      "declaration": "One GEMM after model geometry, vocabulary sharding, dtype and sampled-token count are supplied."
+    },
+    {
+      "family": "attn_gemm",
+      "status": "composite",
+      "external_operations": ["gemm", "gemm"],
+      "constituents": ["qkv_projection", "output_projection"],
+      "declaration": "The simllm family aggregates two distinct GEMM sites and is priceable only as a declared two-term composite."
+    },
+    {
+      "family": "attn_score+kv_read",
+      "status": "composite",
+      "external_operations": ["context_attention", "generation_attention"],
+      "constituents": ["attn_score", "kv_read"],
+      "declaration": "The external attention kernel fuses score, value and KV traffic. Neither constituent may claim the fused latency alone."
+    },
+    {
+      "family": "mlp_gemm",
+      "status": "composite",
+      "external_operations": ["gemm", "memory_operation", "gemm"],
+      "constituents": ["gate_up", "activation_gate", "down_projection"],
+      "declaration": "The external path is gate-up GEMM, analytical activation or gating, then down GEMM."
+    },
+    {
+      "family": "gdn_input_projection",
+      "status": "exact",
+      "external_operations": ["gemm"],
+      "declaration": "One GDN input-projection GEMM."
+    },
+    {
+      "family": "gdn_output_projection",
+      "status": "exact",
+      "external_operations": ["gemm"],
+      "declaration": "One GDN output-projection GEMM."
+    },
+    {
+      "family": "gdn_short_convolution",
+      "status": "exact",
+      "external_operations": ["gdn"],
+      "declaration": "causal_conv1d_fn in context or causal_conv1d_update in generation."
+    },
+    {
+      "family": "gdn_state_recurrence",
+      "status": "composite",
+      "external_operations": ["gdn"],
+      "constituents": ["gdn_state_read", "gdn_state_update", "gdn_state_write"],
+      "declaration": "The external row is the fused chunked or generation recurrence and cannot be split into three independently priced state families."
+    },
+    {
+      "family": "gdn_gated_norm",
+      "status": "gap",
+      "external_operations": [],
+      "declaration": "No measured record matches this inventory split; the external elementwise estimate is analytical."
+    },
+    {
+      "family": "mla_block",
+      "status": "composite",
+      "external_operations": ["context_mla_module", "generation_mla_module"],
+      "constituents": ["mla_q_compression", "mla_q_decompression", "mla_kv_compression", "mla_kv_decompression", "mla_rotary_split", "mla_attention", "mla_compressed_kv_read", "mla_output_projection"],
+      "declaration": "The installed primary path profiles the complete MLA module as one whole-block composite."
+    },
+    {
+      "family": "mla_granular_fallback",
+      "status": "composite",
+      "external_operations": ["gemm", "context_mla", "generation_mla", "mla_bmm"],
+      "constituents": ["mla_projection_gemms", "mla_attention", "mla_bmm"],
+      "declaration": "The forced granular path is partially decomposable but is not interchangeable with the primary complete-module record."
+    },
+    {
+      "family": "dense_early_mlp",
+      "status": "composite",
+      "external_operations": ["gemm", "memory_operation", "gemm"],
+      "constituents": ["gate_up", "activation", "down_projection"],
+      "declaration": "Gate-up GEMM, analytical activation and down GEMM form one declared composite."
+    },
+    {
+      "family": "moe_router",
+      "status": "exact",
+      "external_operations": ["gemm"],
+      "declaration": "One BF16 router GEMM."
+    },
+    {
+      "family": "moe_shared_expert",
+      "status": "composite",
+      "external_operations": ["gemm", "memory_operation", "gemm"],
+      "constituents": ["gate_up", "activation", "down_projection"],
+      "declaration": "The shared expert is a dense MLP composite and does not use the routed-MoE table."
+    },
+    {
+      "family": "moe_routed_experts",
+      "status": "exact",
+      "external_operations": ["moe", "wideep_moe"],
+      "declaration": "One fused routed-expert compute row when distribution, tensor and expert parallelism, slots and expert geometry are available."
+    },
+    {
+      "family": "multi_token_prediction_head",
+      "status": "gap",
+      "external_operations": [],
+      "declaration": "No single external operation records the head; nextn scaling is distributed through external model composition."
+    },
+    {
+      "family": "input_embedding",
+      "status": "gap",
+      "external_operations": ["memory_operation"],
+      "declaration": "The external path is analytical and has no measured table row."
+    },
+    {
+      "family": "elementwise",
+      "status": "gap",
+      "external_operations": ["memory_operation"],
+      "declaration": "AddNorm, activation and other elementwise work use the external analytical memory formula, not a measured record."
+    },
+    {
+      "family": "custom_allreduce",
+      "status": "gap",
+      "external_operations": ["custom_allreduce"],
+      "declaration": "The external table is measured, but the current simllm compute inventory has no independent family for this operation."
+    },
+    {
+      "family": "p2p",
+      "status": "gap",
+      "external_operations": ["memory_operation"],
+      "declaration": "The external operation is analytical and the current compute inventory has no matching family."
+    },
+    {
+      "family": "moe_dispatch_combine",
+      "status": "gap",
+      "external_operations": [],
+      "declaration": "The imported slice contains no matching dispatch or combine communication table."
+    },
+    {
+      "family": "quantization_overhead",
+      "status": "gap",
+      "external_operations": ["compute_scale", "scale_matrix"],
+      "declaration": "Measured overhead tables exist, but the current simllm inventory has no independent quantization-overhead family."
+    },
+    {
+      "family": "encoder_attention",
+      "status": "gap",
+      "external_operations": ["encoder_attention"],
+      "declaration": "A measured table exists, but the current simllm inventory has no encoder-attention family."
+    },
+    {
+      "family": "mamba2",
+      "status": "gap",
+      "external_operations": ["mamba2"],
+      "declaration": "Measured rows exist, but the current simllm inventory has no matching Mamba2 family."
+    },
+    {
+      "family": "dsa_sparse_attention_module",
+      "status": "gap",
+      "external_operations": ["generation_dsa_module"],
+      "declaration": "A fused DSA module table exists, but the current simllm inventory has no matching whole-module family."
+    }
+  ]
+}

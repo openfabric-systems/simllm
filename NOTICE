@@ -2,3 +2,10 @@ SimLLM
 Copyright 2026 Yifeng Wang
 
 Developed as part of the OpenFabric Systems project.
+
+The converted NVIDIA AIConfigurator operation database under
+offline/calibration/external-databases is derived from aiconfigurator 0.11.0
+and aiconfigurator-core 0.11.0. Copyright (c) 2026 NVIDIA CORPORATION &
+AFFILIATES. All rights reserved. Licensed under the Apache License, Version
+2.0. The artifact preserves the upstream notices and carries its own license
+and modified-file statement.

@@ -1,0 +1,7 @@
+Modified-file statement
+
+SimLLM converted the source Parquet and YAML slice into deterministic compressed
+JSON Lines plus portable JSON metadata. The conversion normalizes audited lookup
+keys and records both the source latency and the latency after the source tool's
+GEMM and generation-attention speed-of-light clamps. No measured latency was
+otherwise altered. The converted files are not original NVIDIA distribution files.
