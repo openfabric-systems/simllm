@@ -247,7 +247,7 @@ def test_ordinary_import_and_extract_help_load_no_framework_runtime() -> None:
     assert completed.returncode == 0, completed.stderr
 
 
-@pytest.mark.parametrize("command", ["run", "pack", "submit"])
+@pytest.mark.parametrize("command", ["pack", "submit"])
 def test_unimplemented_commands_fail_without_side_effects(
     command: str,
     tmp_path: Path,
@@ -269,6 +269,75 @@ def test_unimplemented_commands_fail_without_side_effects(
     assert output.getvalue() == ""
     assert errors.getvalue().startswith(f"simllm-calibrate: {command}:")
     assert tuple(tmp_path.iterdir()) == before
+
+
+def test_run_requires_explicit_request_target_and_output_without_side_effects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    before = tuple(tmp_path.iterdir())
+    errors = io.StringIO()
+
+    status = main(["run", "--suite-root", str(tmp_path / "suite")], stderr=errors)
+
+    assert status == 2
+    assert "requires --request, --target, --output-root" in errors.getvalue()
+    assert tuple(tmp_path.iterdir()) == before
+
+
+def test_run_lazily_calls_external_local_shard_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = tmp_path / "request.json"
+    request.write_bytes(b"request bytes")
+    output_root = tmp_path / "capture"
+    calls: list[dict[str, object]] = []
+    module = types.ModuleType("simllm.calibration.local_shard")
+
+    class Run:
+        def to_obj(self) -> dict[str, object]:
+            return {
+                "schema": "simllm-local-shard-kernel-capture-run-v1",
+                "request_sha256": "1" * 64,
+                "result_sha256": "2" * 64,
+                "kernel_count": 3,
+            }
+
+    def run_local_shard_capture(raw: bytes, **kwargs: object) -> Run:
+        calls.append({"raw": raw, **kwargs})
+        return Run()
+
+    module.run_local_shard_capture = run_local_shard_capture
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    output = io.StringIO()
+
+    status = main(
+        [
+            "run",
+            "--request",
+            str(request),
+            "--target",
+            "framework-target",
+            "--target-arg",
+            "target-script.py",
+            "--output-root",
+            str(output_root),
+        ],
+        stdout=output,
+    )
+
+    assert status == 0
+    assert calls == [
+        {
+            "raw": b"request bytes",
+            "target": "framework-target",
+            "target_args": ("target-script.py",),
+            "output_root": output_root,
+        }
+    ]
+    assert json.loads(output.getvalue())["kernel_count"] == 3
 
 
 def test_validate_fails_cleanly_when_validator_is_unavailable(

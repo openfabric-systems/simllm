@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the TRAF-73 measured-hardware and simulated-goodput comparison."""
+"""Render the TRAF-74 measured-hardware and simulated-goodput comparison."""
 
 from __future__ import annotations
 
@@ -57,9 +57,9 @@ def load_result(path: Path) -> dict[str, Any]:
     with open(path, encoding="utf-8", newline="") as handle:
         value = json.load(handle)
     if not isinstance(value, dict):
-        raise TypeError("TRAF-73 result must be a JSON object")
+        raise TypeError("TRAF-74 result must be a JSON object")
     if value.get("schema") != "simllm-nvlink-incast-validation-score-v1":
-        raise RuntimeError("unexpected TRAF-73 result schema")
+        raise RuntimeError("unexpected TRAF-74 result schema")
     return value
 
 
@@ -173,7 +173,7 @@ def render(result: dict[str, Any], output_dir: Path) -> tuple[Path, Path]:
     fig.savefig(
         pdf,
         metadata={
-            "Creator": "SimLLM TRAF-73",
+            "Creator": "SimLLM TRAF-74",
             "Title": "NV4 long-flow incast hardware against simulation",
             "CreationDate": None,
             "ModDate": None,
@@ -182,7 +182,7 @@ def render(result: dict[str, Any], output_dir: Path) -> tuple[Path, Path]:
     fig.savefig(
         png,
         dpi=180,
-        metadata={"Software": "SimLLM TRAF-73"},
+        metadata={"Software": "SimLLM TRAF-74"},
     )
     plt.close(fig)
     return pdf, png

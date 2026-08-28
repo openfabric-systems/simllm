@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Score TRAF-73 hardware rows against the frozen simulation predictions."""
+"""Score NV4 hardware rows for the validation registered as TRAF-74."""
 
 from __future__ import annotations
 
@@ -46,6 +46,8 @@ finally:
         sys.modules["run_study"] = _previous_run_study
 
 SCORE_SCHEMA = "simllm-nvlink-incast-validation-score-v1"
+FROZEN_TASK_ID = "TRAF-73"
+REGISTRY_TASK_ID = "TRAF-74"
 COMPARISON_FIELDS = (
     "degree",
     "size_bytes",
@@ -120,23 +122,26 @@ def audit_hardware(
     if not measurement_valid:
         status = "VOID_FATAL_GUARD"
         task_status = "OPEN"
-        registry_effect = "TRAF-73 stays open because the run is void"
+        registry_effect = f"{REGISTRY_TASK_ID} stays open because the run is void"
     elif miss_count:
         if not residual_task:
             raise RuntimeError("a valid miss requires --residual-task before publication")
         status = f"VALID_MIXED_{pass_count}_PASS_{miss_count}_MISS"
         task_status = "CLOSED_WITH_FINDING"
         registry_effect = (
-            f"TRAF-73 closes as a completed validation; {residual_task} owns the "
+            f"{REGISTRY_TASK_ID} closes as a completed validation; "
+            f"{residual_task} owns the "
             "identified model precision residual"
         )
     else:
         status = "VALID_PASS_6_OF_6"
         task_status = "CLOSED_VALIDATED"
-        registry_effect = "TRAF-73 closes with no residual model task"
+        registry_effect = (
+            f"{REGISTRY_TASK_ID} closes with no residual model task"
+        )
     return {
         "schema": SCORE_SCHEMA,
-        "task_id": "TRAF-73",
+        "task_id": FROZEN_TASK_ID,
         "status": status,
         "task_status": task_status,
         "registry_effect": registry_effect,
@@ -235,9 +240,13 @@ def read_rows(path: Path) -> list[dict[str, Any]]:
             except json.JSONDecodeError as error:
                 raise RuntimeError(f"invalid result JSON at line {line_number}") from error
             if row.get("schema") != run_campaign.OBSERVATION_SCHEMA:
-                raise RuntimeError("unexpected TRAF-73 observation schema")
+                raise RuntimeError(
+                    f"unexpected {REGISTRY_TASK_ID} observation schema"
+                )
             if row.get("mode") != "hardware" or row.get("measurement_claim") != "unscored":
-                raise RuntimeError("TRAF-73 row is not an unscored hardware observation")
+                raise RuntimeError(
+                    f"{REGISTRY_TASK_ID} row is not an unscored hardware observation"
+                )
             rows.append(row)
     return rows
 
@@ -339,19 +348,19 @@ def score_fatal_guards(
 def observation_key(row: dict[str, Any]) -> tuple[int, int, int]:
     controls = row.get("applied_controls")
     if not isinstance(controls, dict):
-        raise TypeError("TRAF-73 row has no applied controls")
+        raise TypeError(f"{REGISTRY_TASK_ID} row has no applied controls")
     sources = [value for value in str(controls["sources"]).split(",") if value]
     size_bytes = int(row["payload_bytes"]) * int(row["message_count"])
     match = re.search(r":repeat=(\d+)$", str(row.get("point_id", "")))
     if match is None:
-        raise RuntimeError("TRAF-73 point has no repetition identity")
+        raise RuntimeError(f"{REGISTRY_TASK_ID} point has no repetition identity")
     return len(sources), size_bytes, int(match.group(1))
 
 
 def flow_ledgers(row: dict[str, Any]) -> list[dict[str, Any]]:
     values = [*row.get("latency_flow_ledger", []), *row.get("bulk_flow_ledger", [])]
     if any(not isinstance(value, dict) for value in values):
-        raise RuntimeError("TRAF-73 flow ledger is malformed")
+        raise RuntimeError(f"{REGISTRY_TASK_ID} flow ledger is malformed")
     return sorted(values, key=lambda value: int(value["source"]))
 
 
@@ -367,12 +376,16 @@ def summarize_samples(
         degree, size_bytes, repetition = observation_key(row)
         key = (degree, size_bytes, repetition)
         if key in seen:
-            raise RuntimeError(f"duplicate TRAF-73 observation key {key}")
+            raise RuntimeError(
+                f"duplicate {REGISTRY_TASK_ID} observation key {key}"
+            )
         seen.add(key)
         ledgers = flow_ledgers(row)
         completions = [float(value["completion_us"]) for value in ledgers]
         if len(completions) != degree or any(value <= 0 for value in completions):
-            raise RuntimeError("TRAF-73 per-flow completion ledger is incomplete")
+            raise RuntimeError(
+                f"{REGISTRY_TASK_ID} per-flow completion ledger is incomplete"
+            )
         per_flow_goodput = [size_bytes / (value * 1000) for value in completions]
         aggregate = degree * size_bytes / (max(completions) * 1000)
         samples.append(
@@ -398,7 +411,9 @@ def summarize_samples(
             * frozen["hardware_arm"]["repetitions_per_cell"]
         )
         if len(samples) != expected:
-            raise RuntimeError(f"TRAF-73 has {len(samples)} samples, expected {expected}")
+            raise RuntimeError(
+                f"{REGISTRY_TASK_ID} has {len(samples)} samples, expected {expected}"
+            )
     return samples
 
 
@@ -526,10 +541,22 @@ def write_comparison_csv(path: Path, comparisons: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def _current_registry_effect(score: dict[str, Any]) -> str:
+    if score["measurement_validity"] == "VOID_FATAL_GUARD":
+        return f"{REGISTRY_TASK_ID} stays open because the run is void"
+    residual_task = score.get("residual_task")
+    if score["summary"]["miss_cells"]:
+        return (
+            f"{REGISTRY_TASK_ID} closes as a completed validation; "
+            f"{residual_task} owns the identified model precision residual"
+        )
+    return f"{REGISTRY_TASK_ID} closes with no residual model task"
+
+
 def render_markdown(score: dict[str, Any]) -> str:
     comparisons = score["comparisons"]
     lines = [
-        "# TRAF-73 NV4 long-flow incast validation result",
+        f"# {REGISTRY_TASK_ID} NV4 long-flow incast validation result",
         "",
         "## Hardware against simulation",
         "",
@@ -611,7 +638,7 @@ def render_markdown(score: dict[str, Any]) -> str:
         "",
         "## What it changes for the project",
         "",
-        f"{score['registry_effect']}.",
+        f"{_current_registry_effect(score)}.",
         "The observations exercise the scored NVLink",
         *effect_detail,
         "",

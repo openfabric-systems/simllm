@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run or resume the single frozen TRAF-73 hardware-validation cell."""
+"""Run or resume the single frozen NV4 cell registered as TRAF-74."""
 
 from __future__ import annotations
 
@@ -51,6 +51,7 @@ finally:
 EXPECTATIONS_PATH = HERE / "expectations.json"
 EXPECTATIONS_COMMIT = "092080e682acaee9d68779c6ebb2195e97d0d6fb"
 EXPECTATIONS_SHA256 = "9f50aadba0085a54e78c156d61837e4c7db19a498d8fef9c1aba7b32e0a163b4"
+REGISTRY_TASK_ID = "TRAF-74"
 CELL_ID = "nv4-long-flow-incast"
 CELL_SCHEMA = "simllm-nvlink-incast-validation-cell-v1"
 MANIFEST_SCHEMA = "simllm-nvlink-incast-validation-attempt-manifest-v1"
@@ -97,7 +98,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     check_arguments(args, output_root)
     if args.check_only:
         print(
-            f"TRAF-73 check passed: {len(points)} rows, freeze {EXPECTATIONS_SHA256}"
+            f"{REGISTRY_TASK_ID} check passed: {len(points)} rows, "
+            f"freeze {EXPECTATIONS_SHA256}"
         )
         return 0
     if args.dry_run:
@@ -148,9 +150,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def load_expectations(expected_digest: str = EXPECTATIONS_SHA256) -> dict[str, Any]:
     if expected_digest != EXPECTATIONS_SHA256:
-        raise ValueError("requested TRAF-73 freeze does not equal the committed freeze")
+        raise ValueError(
+            f"requested {REGISTRY_TASK_ID} freeze does not equal the committed freeze"
+        )
     if sha256(EXPECTATIONS_PATH) != EXPECTATIONS_SHA256:
-        raise RuntimeError("TRAF-73 expectations digest changed")
+        raise RuntimeError(f"{REGISTRY_TASK_ID} expectations digest changed")
     repository = subprocess.run(
         ("git", "rev-parse", "--is-inside-work-tree"),
         cwd=ROOT,
@@ -169,11 +173,13 @@ def load_expectations(expected_digest: str = EXPECTATIONS_SHA256) -> dict[str, A
             check=False,
         )
         if completed.returncode:
-            raise RuntimeError("the TRAF-73 expectations commit is not an ancestor")
+            raise RuntimeError(
+                f"the {REGISTRY_TASK_ID} expectations commit is not an ancestor"
+            )
     with open(EXPECTATIONS_PATH, encoding="utf-8", newline="") as handle:
         frozen = json.load(handle)
     if frozen.get("study", {}).get("status") != "expectations_only":
-        raise RuntimeError("TRAF-73 expectations status changed")
+        raise RuntimeError(f"{REGISTRY_TASK_ID} expectations status changed")
     return frozen
 
 
@@ -181,7 +187,7 @@ def verify_preservation(frozen: dict[str, Any]) -> None:
     lock = frozen["preservation_lock"]
     artifacts = lock["artifacts"]
     if len(artifacts) != lock["artifact_count"]:
-        raise RuntimeError("TRAF-73 preservation inventory count changed")
+        raise RuntimeError(f"{REGISTRY_TASK_ID} preservation inventory count changed")
     for artifact in artifacts:
         path = ROOT / str(artifact["path"])
         if not path.is_file():
@@ -229,7 +235,7 @@ def campaign_points(frozen: dict[str, Any]) -> tuple[traf70_cases.SweepPoint, ..
         * arm["repetitions_per_cell"]
     )
     if len(rows) != expected:
-        raise RuntimeError("TRAF-73 point expansion changed")
+        raise RuntimeError(f"{REGISTRY_TASK_ID} point expansion changed")
     return tuple(rows)
 
 
@@ -258,7 +264,7 @@ def check_arguments(args: argparse.Namespace, output_root: Path) -> None:
         and not os.access(args.binary, os.X_OK)
     ):
         raise FileNotFoundError(
-            f"TRAF-73 producer binary is not executable: {args.binary}"
+            f"{REGISTRY_TASK_ID} producer binary is not executable: {args.binary}"
         )
 
 
@@ -365,7 +371,9 @@ def produce_attempt(
         },
     )
     if not verify_attempt(attempt):
-        raise RuntimeError("newly completed TRAF-73 attempt failed its digest audit")
+        raise RuntimeError(
+            f"newly completed {REGISTRY_TASK_ID} attempt failed its digest audit"
+        )
     return f"complete ({len(points)} points)"
 
 

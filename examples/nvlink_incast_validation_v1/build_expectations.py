@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the expectations-only TRAF-73 NV4 incast validation freeze."""
+"""Build the expectations-only NV4 incast freeze registered as TRAF-74."""
 
 from __future__ import annotations
 
@@ -31,7 +31,8 @@ PRODUCER_PATH = ROOT / "examples" / "a100_nvlink_packet_v2" / "nvlink_packet_lan
 PRODUCER_SHA_HEADER = ROOT / "examples" / "a100_nvlink_packet_v2" / "sha256.h"
 TRAF70_SCORE_PATH = ROOT / "examples" / "a100_nvlink_packet_v2" / "hardware-score.json"
 
-TASK_ID = "TRAF-73"
+FROZEN_TASK_ID = "TRAF-73"
+REGISTRY_TASK_ID = "TRAF-74"
 SCHEMA = "simllm-nvlink-incast-validation-expectations-v1"
 FLOW_SIZES_BYTES = (262_144, 524_288)
 DEGREES = (1, 2, 3)
@@ -90,7 +91,44 @@ def _tracked_paths(root: str) -> list[str]:
     return paths
 
 
-def _preservation_lock() -> dict[str, object]:
+def _recorded_preservation_lock(
+    recorded: dict[str, object],
+) -> dict[str, object]:
+    artifacts = recorded.get("artifacts")
+    if not isinstance(artifacts, list):
+        raise TypeError("the recorded preservation lock has no artifact list")
+    if recorded.get("artifact_count") != len(artifacts):
+        raise RuntimeError("the recorded preservation inventory count changed")
+    if recorded.get("artifacts_sha256") != _canonical_sha256(artifacts):
+        raise RuntimeError("the recorded preservation inventory digest changed")
+    paths = []
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            raise TypeError("the recorded preservation artifact is not an object")
+        path = artifact.get("path")
+        digest = artifact.get("sha256")
+        size = artifact.get("bytes")
+        if (
+            not isinstance(path, str)
+            or Path(path).is_absolute()
+            or ".." in Path(path).parts
+        ):
+            raise ValueError("the recorded preservation artifact path is not portable")
+        if not isinstance(digest, str) or len(digest) != 64:
+            raise ValueError("the recorded preservation artifact digest is malformed")
+        if not isinstance(size, int) or size < 0:
+            raise ValueError("the recorded preservation artifact size is malformed")
+        paths.append(path)
+    if len(paths) != len(set(paths)):
+        raise RuntimeError("the recorded preservation inventory has duplicate paths")
+    return json.loads(json.dumps(recorded))
+
+
+def _preservation_lock(
+    recorded: dict[str, object] | None = None,
+) -> dict[str, object]:
+    if recorded is not None:
+        return _recorded_preservation_lock(recorded)
     paths: list[str] = []
     for root in PRESERVED_ROOTS:
         paths.extend(_tracked_paths(root))
@@ -113,6 +151,22 @@ def _preservation_lock() -> dict[str, object]:
         "artifacts_sha256": _canonical_sha256(artifacts),
         "artifacts": artifacts,
     }
+
+
+def _recorded_or_current_sha256(
+    path: Path, preservation: dict[str, object]
+) -> str:
+    relative = path.relative_to(ROOT).as_posix()
+    artifacts = preservation["artifacts"]
+    assert isinstance(artifacts, list)
+    for artifact in artifacts:
+        assert isinstance(artifact, dict)
+        if artifact.get("path") == relative:
+            digest = artifact.get("sha256")
+            if not isinstance(digest, str):
+                raise TypeError(f"the recorded digest for {relative} is malformed")
+            return digest
+    return _sha256(path)
 
 
 def _flow_completion_ps(
@@ -251,21 +305,32 @@ def _launch_skew_arithmetic() -> dict[str, object]:
     }
 
 
-def build() -> dict[str, object]:
+def build(
+    *, recorded_preservation: dict[str, object] | None = None
+) -> dict[str, object]:
+    if recorded_preservation is None and EXPECTATIONS_JSON.is_file():
+        with open(EXPECTATIONS_JSON, encoding="utf-8", newline="") as handle:
+            existing = json.load(handle)
+        value = existing.get("preservation_lock")
+        if not isinstance(value, dict):
+            raise TypeError("the existing freeze has no recorded preservation lock")
+        recorded_preservation = value
     with open(PROFILE_PATH, encoding="utf-8", newline="") as handle:
         profile = json.load(handle)
     with open(TRAF70_SCORE_PATH, encoding="utf-8", newline="") as handle:
         traf70_score = json.load(handle)
     if profile.get("status") != "scored_mixed_parameter_evidence":
-        raise RuntimeError("TRAF-73 requires the scored TRAF-70 profile")
+        raise RuntimeError(f"{REGISTRY_TASK_ID} requires the scored TRAF-70 profile")
     if traf70_score.get("status") != "COMPLETE_VALID_86_OF_86":
-        raise RuntimeError("TRAF-73 requires the complete valid TRAF-70 score")
+        raise RuntimeError(
+            f"{REGISTRY_TASK_ID} requires the complete valid TRAF-70 score"
+        )
     predictions = _predictions(profile)
-    preservation = _preservation_lock()
+    preservation = _preservation_lock(recorded_preservation)
     payload = {
         "schema": SCHEMA,
         "study": {
-            "task_id": TASK_ID,
+            "task_id": FROZEN_TASK_ID,
             "status": "expectations_only",
             "date": "2026-08-28",
             "title": "NV4 long-flow incast hardware validation",
@@ -282,9 +347,13 @@ def build() -> dict[str, object]:
             "allocation": "one exclusive short cell, submitted once and paced",
             "producer": PRODUCER,
             "producer_path": PRODUCER_PATH.relative_to(ROOT).as_posix(),
-            "producer_sha256": _sha256(PRODUCER_PATH),
+            "producer_sha256": _recorded_or_current_sha256(
+                PRODUCER_PATH, preservation
+            ),
             "producer_sha_header_path": PRODUCER_SHA_HEADER.relative_to(ROOT).as_posix(),
-            "producer_sha_header_sha256": _sha256(PRODUCER_SHA_HEADER),
+            "producer_sha_header_sha256": _recorded_or_current_sha256(
+                PRODUCER_SHA_HEADER, preservation
+            ),
             "producer_payload_bytes": PRODUCER_PAYLOAD_BYTES,
             "degrees": list(DEGREES),
             "flow_sizes_bytes": list(FLOW_SIZES_BYTES),
@@ -312,9 +381,11 @@ def build() -> dict[str, object]:
             "flow_policy": "release_aware_round_robin",
             "release_ps": 0,
             "profile_path": PROFILE_PATH.relative_to(ROOT).as_posix(),
-            "profile_sha256": _sha256(PROFILE_PATH),
+            "profile_sha256": _recorded_or_current_sha256(
+                PROFILE_PATH, preservation
+            ),
             "model_path": MODEL_PATH.relative_to(ROOT).as_posix(),
-            "model_sha256": _sha256(MODEL_PATH),
+            "model_sha256": _recorded_or_current_sha256(MODEL_PATH, preservation),
             "profile_status": profile["status"],
             "profile_evidence_class": profile["evidence_class"],
             "parameter_snapshot": {
@@ -372,8 +443,9 @@ def build() -> dict[str, object]:
         "fatal_guards": {
             "inherited": {
                 "source_path": "examples/a100_nvlink_packet_v2/expectations.json",
-                "source_sha256": _sha256(
-                    ROOT / "examples" / "a100_nvlink_packet_v2" / "expectations.json"
+                "source_sha256": _recorded_or_current_sha256(
+                    ROOT / "examples" / "a100_nvlink_packet_v2" / "expectations.json",
+                    preservation,
                 ),
                 "ids": [guard["id"] for guard in json.loads(
                     (

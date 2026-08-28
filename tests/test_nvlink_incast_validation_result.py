@@ -35,6 +35,9 @@ def test_result_binds_the_one_completed_hardware_attempt() -> None:
 
     assert result["status"] == "VOID_FATAL_GUARD"
     assert result["task_status"] == "OPEN"
+    assert result["task_id"] == score_study.FROZEN_TASK_ID == "TRAF-73"
+    assert score_study.REGISTRY_TASK_ID == "TRAF-74"
+    assert score_study.FROZEN_TASK_ID != score_study.REGISTRY_TASK_ID
     assert result["scheduler_job"] == "200456"
     assert result["execution_head"] == (
         "9cf29a1046933604dcad0efae2b2a57d9d07fa74"
@@ -133,7 +136,7 @@ def test_report_leads_with_table_and_preserves_the_scope_boundary() -> None:
     assert report.index("## Hardware against simulation") < report.index("## What ran")
     assert "None of the six hardware cells" in normalized
     assert "receives a pass or miss verdict" in normalized
-    assert "TRAF-73 stays open" in normalized
+    assert "TRAF-74 stays open" in normalized
     assert "Degrees 4, 8 and 16 remain DECLARED SIMULATION" in normalized
     assert "This result covers long flows only" in normalized
     assert "supports but does not prove" in normalized

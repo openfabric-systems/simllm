@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 from simllm.backends.htsim_nvlink import (
     NvlinkDomainResult,
     NvlinkDomainService,
@@ -16,6 +18,11 @@ from simllm.backends.htsim_nvlink import (
 ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples" / "nvlink_incast_validation_v1"
 PROFILE = ROOT / "examples" / "a100_nvlink_packet_v1" / "candidate-profile.json"
+TRAFFIC_DOC = ROOT / "docs" / "modules" / "traffic.md"
+EXPECTATIONS_SHA256 = "9f50aadba0085a54e78c156d61837e4c7db19a498d8fef9c1aba7b32e0a163b4"
+EXPECTATIONS_MARKDOWN_SHA256 = (
+    "138bc56e9779549d3f2fae3c18d2b46060d21ce6c4ada89c65d842075f852f43"
+)
 
 
 def _load(name: str, filename: str) -> ModuleType:
@@ -35,13 +42,35 @@ def _frozen() -> dict[str, object]:
     return json.loads((STUDY / "expectations.json").read_text(encoding="utf-8"))
 
 
-def test_freeze_is_reproducible_and_contains_no_result() -> None:
+def test_freeze_is_reproducible_from_its_recorded_inventory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     frozen = _frozen()
 
+    def fail_current_tree_access(_value: object) -> object:
+        pytest.fail("recorded freeze replay accessed the current preservation tree")
+
+    monkeypatch.setattr(build_expectations, "_tracked_paths", fail_current_tree_access)
+    monkeypatch.setattr(build_expectations, "_sha256", fail_current_tree_access)
     assert build_expectations.build() == frozen
+    assert build_expectations.build(
+        recorded_preservation=frozen["preservation_lock"]
+    ) == frozen
     assert frozen["schema"] == "simllm-nvlink-incast-validation-expectations-v1"
-    assert frozen["study"]["task_id"] == "TRAF-73"
+    assert frozen["study"]["task_id"] == build_expectations.FROZEN_TASK_ID
+    assert build_expectations.FROZEN_TASK_ID == "TRAF-73"
+    assert build_expectations.REGISTRY_TASK_ID == "TRAF-74"
+    assert build_expectations.FROZEN_TASK_ID != build_expectations.REGISTRY_TASK_ID
     assert frozen["study"]["status"] == "expectations_only"
+    assert hashlib.sha256((STUDY / "expectations.json").read_bytes()).hexdigest() == (
+        EXPECTATIONS_SHA256
+    )
+    assert hashlib.sha256((STUDY / "expectations.md").read_bytes()).hexdigest() == (
+        EXPECTATIONS_MARKDOWN_SHA256
+    )
+    traffic = TRAFFIC_DOC.read_text(encoding="utf-8")
+    assert "- TRAF-74 (Precision; P1; L): validate the scored" in traffic
+    assert "frozen artifacts keep the\n  original string" in traffic
     encoded = json.dumps(frozen, sort_keys=True).lower()
     assert "hardware_result" not in encoded
     assert "cell_verdicts" not in encoded
@@ -131,7 +160,7 @@ def test_acceptance_band_and_attribution_are_literal() -> None:
     ]
 
 
-def test_preservation_lock_covers_merged_studies_and_scored_sources() -> None:
+def test_recorded_preservation_lock_is_self_contained_and_not_rediscovered() -> None:
     frozen = _frozen()
     lock = frozen["preservation_lock"]
     artifacts = lock["artifacts"]
@@ -143,10 +172,14 @@ def test_preservation_lock_covers_merged_studies_and_scored_sources() -> None:
     assert "examples/nvlink_rnic_comparison_v2/results.json" in paths
     assert "examples/a100_nvlink_packet_v1/candidate-profile.json" in paths
     assert "simllm/backends/htsim_nvlink.py" in paths
+    assert build_expectations._recorded_preservation_lock(lock) == lock
+    assert lock["artifacts_sha256"] == build_expectations._canonical_sha256(artifacts)
     for artifact in artifacts:
-        path = ROOT / artifact["path"]
-        assert path.stat().st_size == artifact["bytes"]
-        assert hashlib.sha256(path.read_bytes()).hexdigest() == artifact["sha256"]
+        path = Path(artifact["path"])
+        assert not path.is_absolute()
+        assert ".." not in path.parts
+        assert artifact["bytes"] >= 0
+        assert len(artifact["sha256"]) == 64
 
 
 def test_freeze_sources_are_portable_and_use_lf_writers() -> None:

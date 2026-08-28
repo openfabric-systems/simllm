@@ -13,7 +13,7 @@
 #SBATCH --output=%x-%j.out
 #SBATCH --error=%x-%j.err
 
-# One short, paced and resumable TRAF-73 cell. Slurm owns the submitted job,
+# One short, paced and resumable TRAF-74 cell. Slurm owns the submitted job,
 # so loss of the staging SSH session does not orphan a local child. Signals
 # stop the producer, write one stop record and preserve prior attempts.
 
@@ -50,7 +50,7 @@ trap 'stop_cell INT' INT
 trap 'stop_cell TERM' TERM
 
 fail() {
-  echo "TRAF-73 FATAL: $*" >&2
+  echo "TRAF-74 FATAL: $*" >&2
   exit 2
 }
 

@@ -1,4 +1,4 @@
-# TRAF-73 NV4 long-flow incast validation result
+# TRAF-74 NV4 long-flow incast validation result
 
 ## Hardware against simulation
 
@@ -36,7 +36,7 @@ receives a pass or miss verdict.
 
 ## What it changes for the project
 
-TRAF-73 stays open because the run is void.
+TRAF-74 stays open because the run is void.
 The observations exercise the scored NVLink
 domain at the only incast degrees this node can realize, but the void result
 validates no behavioral prediction. It refutes the frozen claim that the
