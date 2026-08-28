@@ -154,6 +154,7 @@ def test_freeze_is_portable_lf_text_and_contains_no_observation_files():
         ROOT / "tests" / "test_nvlink_rnic_comparison_freeze.py",
     ):
         assert b"\r" not in path.read_bytes()
-    assert not (STUDY / "run_study.py").exists()
     assert not (STUDY / "results.json").exists()
     assert not (STUDY / "RESULTS.md").exists()
+    assert not (STUDY / "dispersion.csv").exists()
+    assert not (STUDY / "figures").exists()
