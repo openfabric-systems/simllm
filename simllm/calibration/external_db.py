@@ -630,7 +630,8 @@ def _write_worker_artifact(output_root: Path) -> Path:
             f"data-slice hash mismatch: expected {EXPECTED_SLICE_HASH}, found {slice_hash}"
         )
 
-    closure_paths = [f"systems/data/{EXPECTED_SYSTEM}/{relative}" for relative in slice_paths]
+    data_prefix = Path("systems") / "data" / EXPECTED_SYSTEM
+    closure_paths = [(data_prefix / relative).as_posix() for relative in slice_paths]
     closure_paths.append(f"systems/{EXPECTED_SYSTEM}.yaml")
     closure_manifest = _sorted_sha256_manifest(package_root, closure_paths)
     closure_hash = _sha256_bytes(closure_manifest)
