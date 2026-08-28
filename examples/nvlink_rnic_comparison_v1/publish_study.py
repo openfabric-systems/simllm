@@ -189,11 +189,22 @@ def _mechanism_text(result: dict[str, Any]) -> str:
             < by_key[("rnic-nn", 1, size_bytes)]["p50_seed_mean_ps"]
         ):
             rnic_oddity.append(SIZE_LABELS[size_bytes])
-    if nvlink_oddity and rnic_oddity:
+    shared_oddity = [label for label in nvlink_oddity if label in rnic_oddity]
+    nvlink_only_oddity = [
+        label for label in nvlink_oddity if label not in rnic_oddity
+    ]
+    if shared_oddity:
         oddity_attribution = (
-            "Because both transports show it, the frozen decision rule assigns "
-            "the common sign to the staggered release pattern. Transport-specific "
-            "differences in magnitude remain algorithm effects."
+            f"The common {', '.join(shared_oddity)} sign is assigned to the "
+            "staggered release pattern.\n  "
+            + (
+                f"The NVLink-only {', '.join(nvlink_only_oddity)} signs\n  "
+                "remain transport effects; with zero credit wait, the named mechanisms\n  "
+                "are release-aware packet round robin and stable RX admission order,\n  "
+                "not credit-window stalls."
+                if nvlink_only_oddity
+                else "Transport-specific differences in magnitude remain algorithm effects."
+            )
         )
     elif nvlink_oddity:
         oddity_attribution = (
@@ -208,7 +219,9 @@ def _mechanism_text(result: dict[str, Any]) -> str:
     return f"""- Credit window: positive reconstructed credit wait appeared in
   {credit_cells}/21 NVLink cells, covering {credit_packets:,} packets and
   {credit_wait_ps:,} ps in aggregate. This is the direct test for credit-window
-  stalls. rnic-nn has no credit or congestion window.
+  stalls. The first credit returns after 10.880 + 200 = 210.880 ns, while one
+  256-packet bonded-link credit round spans 696.320 ns, so credits recycle
+  before exhaustion. rnic-nn has no credit or congestion window.
 - Pacing: the pinned rnic-nn arm is a central progressive max-min allocator
   feeding deterministic full-packet slots. It emitted DATA events only, with
   zero ACK events and zero reverse bytes. Any smoothness is max-min slot pacing,
@@ -225,6 +238,12 @@ def _mechanism_text(result: dict[str, Any]) -> str:
   {', '.join(nvlink_oddity) if nvlink_oddity else 'no scored rung'}; rnic-nn
   reproduced it on {', '.join(rnic_oddity) if rnic_oddity else 'no scored rung'}.
   {oddity_attribution}
+- CDF roughness: each seed contains only 12, 24 or 36 flows at degree 1, 2 or
+  3, so a single observation moves its empirical CDF by 8.333, 4.167 or 2.778
+  percentage points. At 1 KiB the median-relative seed widths are 16.983 to
+  246.307 percent; at 512 KiB they fall to 0.186 to 0.419 percent. The visible
+  small-rung steps and bands are finite-sample and stagger-alignment effects,
+  not evidence of credit-window exhaustion.
 
 The homogeneous rnic-nn adapter accepts one endpoint capacity. Its
 degree-specific mapping is exact at full incast membership, but a temporarily

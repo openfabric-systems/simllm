@@ -154,7 +154,21 @@ def test_freeze_is_portable_lf_text_and_contains_no_observation_files():
         ROOT / "tests" / "test_nvlink_rnic_comparison_freeze.py",
     ):
         assert b"\r" not in path.read_bytes()
-    assert not (STUDY / "results.json").exists()
-    assert not (STUDY / "RESULTS.md").exists()
-    assert not (STUDY / "dispersion.csv").exists()
-    assert not (STUDY / "figures").exists()
+    tree = subprocess.run(
+        [
+            "git",
+            "ls-tree",
+            "-r",
+            "--name-only",
+            "6224d90fea2eed788b8e6ba876787fe7f0e52319",
+            "examples/nvlink_rnic_comparison_v1",
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert "results.json" not in tree
+    assert "RESULTS.md" not in tree
+    assert "dispersion.csv" not in tree
+    assert "/figures/" not in tree

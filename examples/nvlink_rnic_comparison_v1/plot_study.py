@@ -92,6 +92,7 @@ def _save(figure: Any, out_dir: Path, stem: str) -> list[Path]:
 def render_cdf(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> list[Path]:
     plt = _matplotlib()
     from matplotlib.lines import Line2D
+    from matplotlib.ticker import LogFormatterSciNotation, LogLocator, NullFormatter
 
     rows = _read_csv(run_dir / "fct-cdf.csv")
     grouped: dict[tuple[int, int, str], list[dict[str, str]]] = defaultdict(list)
@@ -100,14 +101,26 @@ def render_cdf(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> list[Pat
             row
         )
 
-    figure, axes = plt.subplots(4, 2, figsize=(7.0, 8.5))
+    figure, axes = plt.subplots(4, 2, figsize=(8.2, 10.0))
     flat = list(axes.flat)
     sizes = frozen["workload"]["flow_sizes_bytes"]
     for axis, size_bytes in zip(flat, sizes, strict=False):
         _style(axis, SIZE_LABELS[size_bytes], "Empirical CDF")
         axis.set_xscale("log")
+        axis.xaxis.set_major_locator(
+            LogLocator(base=10, subs=(1.0, 2.0, 5.0), numticks=5)
+        )
+        axis.xaxis.set_major_formatter(
+            LogFormatterSciNotation(
+                base=10,
+                labelOnlyBase=False,
+                minor_thresholds=(float("inf"), float("inf")),
+            )
+        )
+        axis.xaxis.set_minor_formatter(NullFormatter())
         axis.set_ylim(0, 1.03)
         axis.set_xlabel("FCT (us, log)")
+        axis.tick_params(axis="x", labelsize=8.4)
         for degree in (1, 2, 3):
             for transport in ("nvlink-credit", "rnic-nn"):
                 curve = grouped[(size_bytes, degree, transport)]
@@ -162,25 +175,40 @@ def render_cdf(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> list[Pat
     )
     figure.text(
         0.5,
-        0.018,
-        "9 frozen seeds; every shade is the pointwise seed min-max. Solid: NVLink credit. "
-        "Dashed: pinned rnic-nn max-min packet slots.",
+        0.035,
+        "9 frozen seeds; every shade is the pointwise seed min-max.",
         ha="center",
         va="bottom",
-        fontsize=8.3,
+        fontsize=8.2,
         color=MUTED,
     )
     figure.text(
         0.5,
-        0.003,
-        "rnic-nn has no ACK pacing. Degree-specific homogeneous capacity is exact at full "
-        "incast but can bias transient rnic-nn service left.",
+        0.021,
+        "Solid: NVLink credit. Dashed: pinned rnic-nn max-min packet slots; no ACK pacing.",
         ha="center",
         va="bottom",
-        fontsize=7.7,
+        fontsize=7.8,
         color=MUTED,
     )
-    figure.subplots_adjust(left=0.09, right=0.985, top=0.94, bottom=0.07, hspace=0.53, wspace=0.30)
+    figure.text(
+        0.5,
+        0.007,
+        "Homogeneous rnic-nn capacity is exact at full incast but can bias transient "
+        "rnic-nn service left.",
+        ha="center",
+        va="bottom",
+        fontsize=7.6,
+        color=MUTED,
+    )
+    figure.subplots_adjust(
+        left=0.085,
+        right=0.985,
+        top=0.945,
+        bottom=0.085,
+        hspace=0.54,
+        wspace=0.27,
+    )
     paths = _save(figure, out_dir, frozen["plot_contract"]["cdf_stem"])
     plt.close(figure)
     return paths
@@ -194,11 +222,13 @@ def render_dispersion(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> l
         for row in rows
     }
     sizes = frozen["workload"]["flow_sizes_bytes"]
-    figure, axes = plt.subplots(1, 3, figsize=(7.0, 3.7), sharey=True)
+    figure, axes = plt.subplots(1, 3, figsize=(8.2, 4.8), sharey=True)
     x = list(range(len(sizes)))
     width = 0.36
     for axis, degree in zip(axes, (1, 2, 3), strict=True):
         _style(axis, f"Incast degree {degree}", "Seed p50 width / median (%)" if degree == 1 else None)
+        axis.set_yscale("symlog", linthresh=0.1, linscale=0.7)
+        axis.set_yticks([0, 0.1, 1, 10, 100])
         values = {
             transport: [
                 100 * float(by_key[(transport, degree, size)]["dispersion_ratio"])
@@ -234,7 +264,7 @@ def render_dispersion(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> l
     )
     figure.text(
         0.5,
-        0.035,
+        0.055,
         "D = (max seed p50 - min seed p50) / median seed p50. Lower is tighter.",
         ha="center",
         va="bottom",
@@ -243,15 +273,30 @@ def render_dispersion(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> l
     )
     figure.text(
         0.5,
-        0.009,
-        "256 B is one packet: NVLink 12.194 ns; mapped rnic-nn is 5.440 / 2.720 / "
-        "2.628 ns. One NVLink credit round is 64 KiB payload and returns in 200 ns.",
+        0.036,
+        "Symmetric-log y scale; 0 to 0.1% is linear. 256 B is one packet: "
+        "NVLink 12.194 ns; rnic-nn is 5.440 / 2.720 / 2.628 ns.",
         ha="center",
         va="bottom",
-        fontsize=7.5,
+        fontsize=7.4,
         color=MUTED,
     )
-    figure.subplots_adjust(left=0.085, right=0.99, top=0.88, bottom=0.29, wspace=0.13)
+    figure.text(
+        0.5,
+        0.017,
+        "One NVLink credit round is 64 KiB payload and returns in 200 ns.",
+        ha="center",
+        va="bottom",
+        fontsize=7.4,
+        color=MUTED,
+    )
+    figure.subplots_adjust(
+        left=0.085,
+        right=0.99,
+        top=0.87,
+        bottom=0.29,
+        wspace=0.13,
+    )
     paths = _save(figure, out_dir, frozen["plot_contract"]["dispersion_stem"])
     plt.close(figure)
     return paths

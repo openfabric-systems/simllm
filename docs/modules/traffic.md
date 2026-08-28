@@ -996,28 +996,28 @@ the structural pass-through switch, the score's eleven unchanged internals in
 total, visibly separate; TRAF-65 remains open on its live held-out integration
 bar.
 
+The [TRAF-71 comparison](../../examples/nvlink_rnic_comparison_v1/RESULTS.md)
+places that scored three-module credit domain and pinned htsim `rnic-nn` on one
+zero-fit NVLink physical mapping and the byte-identical seven-rung, nine-seed
+staggered workload. rnic-nn is tighter in 8 of 21 rung-degree cells, NVLink in
+11, with two ties; at 64 KiB and above rnic-nn is tighter in only 5 of 9, so
+the frozen 7-of-9 smoothness prediction is honestly refuted. The merged NVLink
+raw sample and CDF hashes reproduce exactly. No credit-window stall occurs:
+the first credit returns at 210.880 ns while one 256-packet bonded-link round
+spans 696.320 ns. The small-rung roughness instead follows finite empirical-CDF
+steps and frozen stagger alignment, with RX arbitration contributing to the
+NVLink transport shape. Both arms share the degree-3-left-of-degree-1 sign only
+at 1 KiB; the five larger NVLink-only signs stay attributed to release-aware
+packet round robin and stable RX admission order. The pinned rnic-nn profile is
+central max-min packet-slot pacing with zero ACK events and reverse bytes, not
+ACK pacing. All 16 fatal guards pass, the inherited 60 artifacts and all 18
+merged flow-dynamics files remain byte-identical, both final figure pairs pass
+visual inspection, the two frozen scientific misses E3 and E5 remain visible,
+and TRAF-71 closes.
+
 ## Open tasks
 
 ### Precision
-
-- TRAF-71 (Precision; P1; M): compare the scored NV4 credit domain with the
-  pinned htsim `rnic-nn` packet scheduler on one zero-fit physical mapping and
-  the byte-identical TRAF-69 seven-rung workload. Freeze the measured TX and RX
-  plateaus, four bonded 25 GB/s ordered-pair links, zero explicit transit term,
-  256-plus-16-byte packet, degree-specific endpoint-rate projection, exact
-  nine-seed picosecond releases, CDF definition, median-relative dispersion
-  formula and signed mechanism predictions before the first transport run.
-  Every size panel overlays both transports with pointwise seed min-max bands
-  on a log FCT axis; the dispersion figure places both transports side by side
-  for every rung and degree. The report must distinguish NVLink credit-window
-  and RX arbitration from rnic-nn central max-min packet-slot pacing, state
-  that the pinned rnic-nn profile has no ACK pacing, quantify the homogeneous
-  capacity mapping bias, and reproduce and explain the degree-3-left-of-degree-1
-  oddity or publish the failure. Acceptance requires all 21 cells for both
-  transports, every frozen direction scored without fitting, both PDF and PNG
-  figures visually checked, the inherited 60-artifact lock and all 18 merged
-  flow-dynamics files byte-identical, POSIX paths, and every fatal guard clear.
-  Any scientific miss remains visible and keeps its frozen expectation.
 
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
