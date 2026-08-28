@@ -11,6 +11,14 @@
     "shared_layer": false,
     "surface": "python"
   },
+  "load_time_mutation_guard": {
+    "id": "FG-5-GEMM",
+    "rule": "GEMM load raises a raw latency below the analytical speed-of-light floor",
+    "operation": "gemm",
+    "args": {"m": 32768, "n": 64, "k": 512, "quant_mode": "bfloat16"},
+    "raw_hex": "0x1.eb4af55555555p-8",
+    "served_hex": "0x1.02253ae9a795bp-7"
+  },
   "queries": [
     {
       "id": "I2-01",
