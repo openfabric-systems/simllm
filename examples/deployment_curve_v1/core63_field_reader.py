@@ -60,6 +60,14 @@ CAPTURED_KERNEL_FIELDS = (
 )
 
 
+class KernelSummaryHeaderError(ValueError):
+    """Carry the observed header into the append-only rejected-access row."""
+
+    def __init__(self, observed_header: tuple[str, ...]) -> None:
+        super().__init__("kernel summary header differs from the frozen schema")
+        self.observed_header = observed_header
+
+
 def _append_access(log_path: Path, entry: Mapping[str, Any]) -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8", newline="\n") as stream:
@@ -103,7 +111,7 @@ def extract_standard_decode_kernels(
     consumed += len(header_raw)
     header = tuple(_csv_values(header_raw))
     if header[:3] != EXPECTED_HEADER[:3] or not set(EXPECTED_HEADER) <= set(header):
-        raise ValueError("kernel summary header differs from the frozen schema")
+        raise KernelSummaryHeaderError(header)
     selected: list[dict[str, str]] = []
     saw_selected_shape = False
     for raw in stream:
@@ -192,6 +200,8 @@ def read_standard_decode_kernels(
         )
         return rows
     except Exception as exc:
+        if isinstance(exc, KernelSummaryHeaderError):
+            entry["observed_header"] = list(exc.observed_header)
         entry.update({"error": type(exc).__name__, "status": "REJECTED"})
         raise
     finally:

@@ -206,6 +206,16 @@ def test_csv_reader_accepts_unselected_schema_columns() -> None:
     assert [row["name"] for row in rows] == ["fused_moe_kernel"]
 
 
+def test_csv_reader_header_rejection_carries_observed_fields() -> None:
+    reader = _reader()
+    payload = b"pool,shape,name\r\ndecode,32,fused_moe_kernel\r\n"
+
+    with pytest.raises(reader.KernelSummaryHeaderError) as caught:
+        reader.extract_standard_decode_kernels(io.BytesIO(payload))
+
+    assert caught.value.observed_header == ("pool", "shape", "name")
+
+
 def test_public_reader_refuses_other_candidate_and_logs_attempt(tmp_path: Path) -> None:
     access_log = tmp_path / "access.jsonl"
 
