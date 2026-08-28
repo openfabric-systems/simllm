@@ -65,6 +65,7 @@ from simllm.deploy.frontier import (
     pareto_front,
     prepare_plot_v3,
     scan,
+    weak_dominance_pareto,
 )
 from simllm.deploy.ladder import (
     FRONTIER_LADDER_RECORD_SCHEMA,
@@ -148,4 +149,5 @@ __all__ = [
     "scan",
     "to_json",
     "validate_external_scored_stamp",
+    "weak_dominance_pareto",
 ]
