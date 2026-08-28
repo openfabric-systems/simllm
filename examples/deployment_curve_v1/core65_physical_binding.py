@@ -83,7 +83,11 @@ def _mapping(name: str, value: object) -> Mapping[str, Any]:
 
 
 def _integer(name: str, value: object, *, minimum: int = 0) -> int:
-    if isinstance(value, bool) or type(value) is not int:
+    if isinstance(value, bool):
+        raise TypeError(f"{name} must be an integer")
+    if type(value) is float and value.is_integer():
+        value = int(value)
+    if type(value) is not int:
         raise TypeError(f"{name} must be an integer")
     if value < minimum:
         raise ValueError(f"{name} must be at least {minimum}")
